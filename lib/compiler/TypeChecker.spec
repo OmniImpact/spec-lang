@@ -66,6 +66,12 @@ class TypeChecker{
 	## Field types in the current class: name -> Type name.
 	local Map of String to String is fieldTypes: Map:init();
 
+	## Uninitialized fields of the current class tracked for definite assignment in init.
+	local Map of String to String is unassignedFields: Map:init();
+
+	## Current source line number for expression-level diagnostics.
+	local Int is currentLine: 0;
+
 	## Currently analyzed class name.
 	local String is currentClassName: "";
 
@@ -89,6 +95,8 @@ class TypeChecker{
 		self:allStringBackedEnums: Map:init();
 		self:localVars: Map:init();
 		self:fieldTypes: Map:init();
+		self:unassignedFields: Map:init();
+		self:currentLine: 0;
 		self:currentSourceFile: "";
 	}
 
@@ -261,7 +269,7 @@ class TypeChecker{
 		if ((target == "Float" || target == "float") && (source == "Float" || source == "float" || source == "Int" || source == "int")) {
 			return true;
 		}
-		if ((target == "Int" || target == "int") && (source == "Int" || source == "int" || source == "Float" || source == "float")) {
+		if ((target == "Int" || target == "int") && (source == "Int" || source == "int")) {
 			return true;
 		}
 		if ((target == "Boolean" || target == "bool") && (source == "Boolean" || source == "bool")) {
@@ -270,13 +278,23 @@ class TypeChecker{
 		if ((target == "String" || target == "string") && (source == "String" || source == "string")) {
 			return true;
 		}
-		if (target:startsWith(prefix: "Array") && source:startsWith(prefix: "Array")) {
+		if (target == "Array" && source:startsWith(prefix: "Array")) {
 			return true;
 		}
-		if (target:startsWith(prefix: "Map") && source:startsWith(prefix: "Map")) {
+		if (source == "Array" && target:startsWith(prefix: "Array")) {
+			return true;
+		}
+		if (target == "Map" && source:startsWith(prefix: "Map")) {
+			return true;
+		}
+		if (source == "Map" && target:startsWith(prefix: "Map")) {
 			return true;
 		}
 		if (target:startsWith(prefix: "Function") && source:startsWith(prefix: "Function")) {
+			return true;
+		}
+		local Class is curCls: self:findClass(name: self:currentClassName);
+		if (curCls:getTypeParams():indexOf(search: target, default: -1) >= 0 || curCls:getTypeParams():indexOf(search: source, default: -1) >= 0) {
 			return true;
 		}
 		local Array of String is tParts: target:split(delimiter: ":");
@@ -284,16 +302,28 @@ class TypeChecker{
 		if (tParts:length() > 0 && sParts:length() > 0) {
 			local String is tBase: tParts:get(index: 0);
 			local String is sBase: sParts:get(index: 0);
-			if (tBase == sBase) {
+			if (tBase == sBase || self:isSubclassOf(subName: sBase, baseName: tBase)) {
+				if (tParts:length() > 1 && sParts:length() > 1) {
+					local Boolean is argsOk: true;
+					local Int is pIdx: 1;
+					While:condition(
+						evaluate: local Function of Boolean(){
+							return pIdx < tParts:length() && pIdx < sParts:length();
+						},
+						iteration: local Function of Boolean(){
+							local String is tp: tParts:get(index: pIdx);
+							local String is sp: sParts:get(index: pIdx);
+							if (!self:isAssignable(target: tp, source: sp)) {
+								argsOk: false;
+							}
+							pIdx: pIdx + 1;
+							return true;
+						}
+					);
+					return argsOk;
+				}
 				return true;
 			}
-			if (self:isSubclassOf(subName: sBase, baseName: tBase)) {
-				return true;
-			}
-		}
-		local Class is curCls: self:findClass(name: self:currentClassName);
-		if (curCls:getTypeParams():indexOf(search: target, default: -1) >= 0 || curCls:getTypeParams():indexOf(search: source, default: -1) >= 0) {
-			return true;
 		}
 		if (self:isSubclassOf(subName: source, baseName: target)) {
 			return true;
@@ -478,13 +508,18 @@ class TypeChecker{
 				} else if (self:localVars:has(key: name)) {
 					res: self:localVars:getString(key: name, default: "Any");
 				} else if (self:fieldTypes:has(key: name)) {
+					if (self:unassignedFields:has(key: name)) {
+						self:addError(line: self:currentLine, msg: "Field '" . name . "' in class '" . self:currentClassName . "' is read before being initialized.");
+					}
 					res: self:fieldTypes:getString(key: name, default: "Any");
 				} else if (self:allEnumVariants:has(key: name)) {
 					res: self:allEnumVariants:getString(key: name, default: "Any");
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
-				} else if (name == "File" || name == "Process" || name == "Math" || name == "math" || name == "Map" || name == "Array" || name == "While" || name == "Input" || name == "LoopControl" || name == "output") {
+				} else if (name == "File" || name == "Process" || name == "Math" || name == "math" || name == "Map" || name == "Array" || name == "While" || name == "Input" || name == "LoopControl" || name == "output" || name == "Output" || name == "String" || name == "Int" || name == "Float" || name == "Boolean" || name == "Function" || name == "Any") {
 					res: name;
+				} else if (name != "") {
+					self:addError(line: self:currentLine, msg: "Undefined identifier '" . name . "'.");
 				}
 			}
 			is "PATH": {
@@ -494,9 +529,15 @@ class TypeChecker{
 					local String is rootType: "";
 					if (root == "self") {
 						rootType: self:currentClassName;
+						if (segs:length() >= 2 && self:unassignedFields:has(key: segs:get(index: 1))) {
+							self:addError(line: self:currentLine, msg: "Field '" . segs:get(index: 1) . "' in class '" . self:currentClassName . "' is read before being initialized.");
+						}
 					} else if (self:localVars:has(key: root)) {
 						rootType: self:localVars:getString(key: root, default: "");
 					} else if (self:fieldTypes:has(key: root)) {
+						if (self:unassignedFields:has(key: root)) {
+							self:addError(line: self:currentLine, msg: "Field '" . root . "' in class '" . self:currentClassName . "' is read before being initialized.");
+						}
 						rootType: self:fieldTypes:getString(key: root, default: "");
 					} else if (self:allEnumNames:has(key: root)) {
 						rootType: root;
@@ -818,26 +859,36 @@ class TypeChecker{
 	##
 	## @param stmt: [Statement] AST node.
 	replace local Function is checkStatement(Statement is stmt){
+		if (stmt:getLine() > 0) {
+			self:currentLine: stmt:getLine();
+		}
 		local String is kind: stmt:getKind();
 
 		when (kind) {
 			is "VAR_DECL": {
 				local String is varName: stmt:varName;
-				local String is declaredType: stmt:varType:getName();
 				local String is fullType: self:formatVarTypeString(t: stmt:varType);
 				self:localVars:set(key: varName, value: fullType);
 
 				if (stmt:hasInit) {
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr);
-					if (!self:isAssignable(target: declaredType, source: initType)) {
-						local String is msg: "Type mismatch in variable declaration for '" . varName . "': cannot assign '" . initType . "' to '" . declaredType . "'.";
+					if (!self:isAssignable(target: fullType, source: initType)) {
+						local String is msg: "Type mismatch in variable declaration for '" . varName . "': cannot assign '" . initType . "' to '" . fullType . "'.";
 						self:addError(line: stmt:getLine(), msg: msg);
 					}
 				}
 			}
 			is "ASSIGN": {
-				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue);
+				if (stmt:assignTarget:getKind() == "PATH") {
+					local Array of String is tSegs: stmt:assignTarget:pathSegments;
+					if (tSegs:length() == 2 && tSegs:get(index: 0) == "self") {
+						self:unassignedFields:remove(key: tSegs:get(index: 1));
+					}
+				} else if (stmt:assignTarget:getKind() == "IDENT") {
+					self:unassignedFields:remove(key: stmt:assignTarget:stringValue);
+				}
+				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				if (!self:isAssignable(target: targetType, source: valType)) {
 					local String is msg: "Type mismatch in assignment: cannot assign '" . valType . "' to '" . targetType . "'.";
 					self:addError(line: stmt:getLine(), msg: msg);
@@ -900,6 +951,11 @@ class TypeChecker{
 				fKeys:each(action: local Function(String is k){
 					savedFields:set(key: k, value: self:fieldTypes:getString(key: k, default: ""));
 				});
+				local Map of String to String is savedUnassigned: Map:init();
+				local Array of String is uKeys: self:unassignedFields:keys();
+				uKeys:each(action: local Function(String is k){
+					savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ""));
+				});
 
 				self:checkClass(classDef: stmt:nestedClass);
 
@@ -907,6 +963,7 @@ class TypeChecker{
 				self:currentMethodReturnType: savedRet;
 				self:localVars: savedVars;
 				self:fieldTypes: savedFields;
+				self:unassignedFields: savedUnassigned;
 			}
 			else: {}
 		}
@@ -924,10 +981,14 @@ class TypeChecker{
 	##
 	## @param method: Method [Member] descriptor.
 	replace local Function is checkMethod(Member is method){
+		if (method:getLine() > 0) {
+			self:currentLine: method:getLine();
+		}
 		method:getParameters():each(action: local Function(Parameter is p){
 			if (p:getType():getName() == "SELF_FIELD") {
 				local String is ft: self:fieldTypes:getString(key: p:getName(), default: "Any");
 				p:setType(t: Type:init(name: ft));
+				self:unassignedFields:remove(key: p:getName());
 			}
 		});
 		self:currentMethodReturnType: self:resolveReturnType(t: method:getType());
@@ -1094,7 +1155,8 @@ class TypeChecker{
 		classDef:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is FIELD: {
-					local String is declaredType: m:getType():getName();
+					self:currentLine: m:getLine();
+					local String is declaredType: self:formatVarTypeString(t: m:getType());
 					if (m:hasInit) {
 						local String is initType: self:inferExpressionType(expr: m:initExpr);
 						if (!self:isAssignable(target: declaredType, source: initType)) {
@@ -1110,7 +1172,16 @@ class TypeChecker{
 		classDef:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is METHOD: {
+					self:unassignedFields: Map:init();
+					if (m:getName() == "init") {
+						classDef:getMembers():each(action: local Function(Member is fm){
+							if (fm:getKind() == "FIELD" && !fm:hasInit && fm:getName() != "using") {
+								self:unassignedFields:set(key: fm:getName(), value: "true");
+							}
+						});
+					}
 					self:checkMethod(method: m);
+					self:unassignedFields: Map:init();
 				}
 				is CLASS: {
 					local String is savedClass: self:currentClassName;
@@ -1119,11 +1190,17 @@ class TypeChecker{
 					fKeys:each(action: local Function(String is k){
 						savedFields:set(key: k, value: self:fieldTypes:getString(key: k, default: ""));
 					});
+					local Map of String to String is savedUnassigned: Map:init();
+					local Array of String is uKeys: self:unassignedFields:keys();
+					uKeys:each(action: local Function(String is k){
+						savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ""));
+					});
 
 					self:checkClass(classDef: m:getNestedClass());
 
 					self:currentClassName: savedClass;
 					self:fieldTypes: savedFields;
+					self:unassignedFields: savedUnassigned;
 				}
 				else: {}
 			}

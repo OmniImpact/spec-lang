@@ -390,6 +390,33 @@ class CodeGenerator{
 		return binds;
 	}
 
+	replace local Function of String is findMethodImplementingClass(String is className, String is methodName, Int is paramCount){
+		if (className == "" || className == "Any") {
+			return "";
+		}
+		local Array of String is parts: className:split(delimiter: ":");
+		local String is baseClassName: parts:get(index: 0);
+		local Class is cls: self:findClass(name: baseClassName);
+		if (cls:getName() == "") {
+			return "";
+		}
+		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:getMembers(), methodName: methodName);
+		While:run(loop: ml);
+		if (ml:found) {
+			local Member is subM: ml:res;
+			if (subM:getBody():length() > 0 && (paramCount < 0 || subM:getParameters():length() == paramCount)) {
+				return baseClassName;
+			}
+		}
+		local String is inherited: "";
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (inherited == "") {
+				inherited: self:findMethodImplementingClass(className: baseName, methodName: methodName, paramCount: paramCount);
+			}
+		});
+		return inherited;
+	}
+
 	replace local Function of Member is lookupMethodMember(String is className, String is methodName){
 		if (className == "" || className == "Any") {
 			return Member:init(kind: "");
@@ -1251,7 +1278,13 @@ class CodeGenerator{
 					local Array of String is parts: objType:split(delimiter: ":");
 					objType: parts:get(index: 0);
 				}
-				local String is callStr: objType . "_" . expr:methodName . "(" . targetC . self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs) . ")";
+				local String is dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
+				local String is targetExprC: targetC;
+				if (dispatchCls != "" && dispatchCls != objType) {
+					objType: dispatchCls;
+					targetExprC: "((" . dispatchCls . "*)" . targetC . ")";
+				}
+				local String is callStr: objType . "_" . expr:methodName . "(" . targetExprC . self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs) . ")";
 				local Member is targetM: self:lookupMethodMember(className: objType, methodName: expr:methodName);
 				local Class is targetCls: self:findClass(name: objType);
 				if (targetM:getKind() == "METHOD" && targetCls:getTypeParams():length() > 0) {
@@ -1325,27 +1358,6 @@ class CodeGenerator{
 				});
 				if (firstP) { paramsC: "void"; }
 
-				local String is capDecls: "";
-				local String is capBinds: "";
-				local String is capAssigns: "";
-				if (self:inMethod && self:currentClassName != "" && !self:isBuiltinClass(name: self:currentClassName) && !self:allEnumNames:has(key: self:currentClassName)) {
-					capDecls: capDecls . "static " . self:currentClassName . "* _cap_" . id . "_self = NULL;\n";
-					capBinds: capBinds . "    " . self:currentClassName . "* self = _cap_" . id . "_self;\n    (void)self;\n";
-					capAssigns: capAssigns . " _cap_" . id . "_self = self;";
-				}
-				outerKeys:each(action: local Function(String is k){
-					if (paramNames:indexOf(search: k, default: -1) < 0) {
-						local String is vType: savedVars:getString(key: k, default: "");
-						local String is vCType: self:cTypeFor(typeName: vType);
-						if (vCType != "void" && vCType != "") {
-							local String is cVar: self:cIdent(name: k);
-							capDecls: capDecls . "static " . vCType . " _cap_" . id . "_" . cVar . ";\n";
-							capBinds: capBinds . "    " . vCType . " " . cVar . " = _cap_" . id . "_" . cVar . ";\n    (void)" . cVar . ";\n";
-							capAssigns: capAssigns . " _cap_" . id . "_" . cVar . " = " . cVar . ";";
-						}
-					}
-				});
-
 				local String is savedRetVar: self:inlineReturnVar;
 				local String is savedRetLbl: self:inlineReturnLabel;
 				self:inlineReturnVar: "";
@@ -1357,6 +1369,30 @@ class CodeGenerator{
 				self:inlineReturnVar: savedRetVar;
 				self:inlineReturnLabel: savedRetLbl;
 				self:localVars: savedVars;
+
+				local String is capDecls: "";
+				local String is capBinds: "";
+				local String is capAssigns: "";
+				if (self:inMethod && self:currentClassName != "" && !self:isBuiltinClass(name: self:currentClassName) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: "self")) {
+					capDecls: capDecls . "static " . self:currentClassName . "* _cap_" . id . "_self = NULL;\n";
+					capBinds: capBinds . "    " . self:currentClassName . "* self = _cap_" . id . "_self;\n    (void)self;\n";
+					capAssigns: capAssigns . " _cap_" . id . "_self = self;";
+				}
+				outerKeys:each(action: local Function(String is k){
+					if (paramNames:indexOf(search: k, default: -1) < 0) {
+						local String is cVar: self:cIdent(name: k);
+						if (bodyC:contains(needle: cVar)) {
+							local String is vType: savedVars:getString(key: k, default: "");
+							local String is vCType: self:cTypeFor(typeName: vType);
+							if (vCType != "void" && vCType != "") {
+								capDecls: capDecls . "static " . vCType . " _cap_" . id . "_" . cVar . ";\n";
+								capBinds: capBinds . "    " . vCType . " " . cVar . " = _cap_" . id . "_" . cVar . ";\n    (void)" . cVar . ";\n";
+								capAssigns: capAssigns . " _cap_" . id . "_" . cVar . " = " . cVar . ";";
+							}
+						}
+					}
+				});
+
 				self:helperFunctions: self:helperFunctions . capDecls . "static " . retC . " " . fnName . "(" . paramsC . ") {\n" . capBinds . bodyC . "}\n\n";
 				if (capAssigns != "") {
 					return "({" . capAssigns . " " . fnName . "; })";
@@ -1534,20 +1570,16 @@ class CodeGenerator{
 		if (method:getName() != "init") {
 			local Int is paramCount: method:getParameters():length();
 			self:programClasses:each(action: local Function(Class is subCls){
-				if (self:isSubclassOf(subName: subCls:getName(), baseName: classDef:getName())) {
-					local MethodMemberLoop is ml: MethodMemberLoop:init(members: subCls:getMembers(), methodName: method:getName());
-					While:run(loop: ml);
-					if (ml:found) {
-						local Member is subM: ml:res;
-						if (subM:getBody():length() > 0 && subM:getParameters():length() == paramCount) {
-							out: out . "    if (self && self->_type_name && strcmp(self->_type_name, \"" . subCls:getName() . "\") == 0) {\n";
-							if (retType == "void") {
-								out: out . "        " . subCls:getName() . "_" . method:getName() . "((" . subCls:getName() . "*)self" . callArgs . ");\n        return;\n";
-							} else {
-								out: out . "        return " . subCls:getName() . "_" . method:getName() . "((" . subCls:getName() . "*)self" . callArgs . ");\n";
-							}
-							out: out . "    }\n";
+				if (subCls:getName() != classDef:getName() && self:isSubclassOf(subName: subCls:getName(), baseName: classDef:getName())) {
+					local String is implCls: self:findMethodImplementingClass(className: subCls:getName(), methodName: method:getName(), paramCount: paramCount);
+					if (implCls != "" && implCls != classDef:getName()) {
+						out: out . "    if (self && self->_type_name && strcmp(self->_type_name, \"" . subCls:getName() . "\") == 0) {\n";
+						if (retType == "void") {
+							out: out . "        " . implCls . "_" . method:getName() . "((" . implCls . "*)self" . callArgs . ");\n        return;\n";
+						} else {
+							out: out . "        return " . implCls . "_" . method:getName() . "((" . implCls . "*)self" . callArgs . ");\n";
 						}
+						out: out . "    }\n";
 					}
 				}
 			});

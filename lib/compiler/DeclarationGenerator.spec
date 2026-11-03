@@ -192,7 +192,23 @@ class DeclarationGenerator{
 						out: out . "    }\n}\n\n";
 					} else {
 						out: out . "static inline long long " . name . "_value(" . name . " self) {\n";
-						out: out . "    return (long long)self;\n}\n\n";
+						out: out . "    switch (self) {\n";
+						local Int is vIdx: 0;
+						c:getMembers():each(action: local Function(Member is m){
+							local String is valNum: "" . vIdx;
+							if (m:hasInit) {
+								local Expression is initE: m:initExpr;
+								if (initE:getKind() == "NUMBER" && initE:stringValue != "") {
+									valNum: initE:stringValue;
+								} else if (initE:getKind() == "UNARY" && initE:unaryOp == "-" && initE:unaryExpr:getKind() == "NUMBER") {
+									valNum: "-" . initE:unaryExpr:stringValue;
+								}
+							}
+							out: out . "        case " . name . "_" . self:cIdent(name: m:getName()) . ": return " . valNum . "LL;\n";
+							vIdx: vIdx + 1;
+						});
+						out: out . "        default: return 0LL;\n";
+						out: out . "    }\n}\n\n";
 					}
 
 					out: out . "static inline long long " . name . "_ordinal(" . name . " self) {\n";

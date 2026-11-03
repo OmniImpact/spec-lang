@@ -901,7 +901,13 @@ static inline const char* MemberKind_name(MemberKind self) {
 }
 
 static inline long long MemberKind_value(MemberKind self) {
-    return (long long)self;
+    switch (self) {
+        case MemberKind_METHOD: return 0LL;
+        case MemberKind_FIELD: return 1LL;
+        case MemberKind_CLASS: return 2LL;
+        case MemberKind_ENUM: return 3LL;
+        default: return 0LL;
+    }
 }
 
 static inline long long MemberKind_ordinal(MemberKind self) {
@@ -1452,6 +1458,7 @@ const char* CodeGenerator_lookupFieldType(CodeGenerator* self, const char* class
 Member* CodeGenerator_lookupEnumVariant(CodeGenerator* self, const char* enumName, const char* variantName);
 const char* CodeGenerator_generateWhenCondition(CodeGenerator* self, Expression* subjExpr, const char* subjC, Expression* c);
 const char* CodeGenerator_generateWhenBindings(CodeGenerator* self, const char* subjC, WhenArm* arm);
+const char* CodeGenerator_findMethodImplementingClass(CodeGenerator* self, const char* className, const char* methodName, long long paramCount);
 Member* CodeGenerator_lookupMethodMember(CodeGenerator* self, const char* className, const char* methodName);
 const char* CodeGenerator_formatCallArguments(CodeGenerator* self, const char* className, const char* methodName, SpecArray* args);
 const char* CodeGenerator_lookupMethodReturnType(CodeGenerator* self, const char* className, const char* methodName);
@@ -1830,6 +1837,8 @@ struct TypeChecker {
     SpecMap* allStringBackedEnums;
     SpecMap* localVars;
     SpecMap* fieldTypes;
+    SpecMap* unassignedFields;
+    long long currentLine;
     const char* currentClassName;
     const char* currentSourceFile;
     const char* currentMethodReturnType;
@@ -2356,6 +2365,8 @@ TypeChecker* TypeChecker_new(void) {
     self->allStringBackedEnums = spec_map_new();
     self->localVars = spec_map_new();
     self->fieldTypes = spec_map_new();
+    self->unassignedFields = spec_map_new();
+    self->currentLine = 0;
     self->currentClassName = "";
     self->currentSourceFile = "";
     self->currentMethodReturnType = "";
@@ -4867,6 +4878,8 @@ void TypeChecker_init(TypeChecker* self) {
     self->allStringBackedEnums = spec_map_new();
     self->localVars = spec_map_new();
     self->fieldTypes = spec_map_new();
+    self->unassignedFields = spec_map_new();
+    self->currentLine = 0;
     self->currentSourceFile = "";
 }
 
@@ -5001,7 +5014,7 @@ bool TypeChecker_isAssignable(TypeChecker* self, const char* target, const char*
     if (((((spec_str_equals(target, "Float")) || (spec_str_equals(target, "float")))) && (((((((spec_str_equals(source, "Float")) || (spec_str_equals(source, "float")))) || (spec_str_equals(source, "Int")))) || (spec_str_equals(source, "int")))))) {
         return true;
     }
-    if (((((spec_str_equals(target, "Int")) || (spec_str_equals(target, "int")))) && (((((((spec_str_equals(source, "Int")) || (spec_str_equals(source, "int")))) || (spec_str_equals(source, "Float")))) || (spec_str_equals(source, "float")))))) {
+    if (((((spec_str_equals(target, "Int")) || (spec_str_equals(target, "int")))) && (((spec_str_equals(source, "Int")) || (spec_str_equals(source, "int")))))) {
         return true;
     }
     if (((((spec_str_equals(target, "Boolean")) || (spec_str_equals(target, "bool")))) && (((spec_str_equals(source, "Boolean")) || (spec_str_equals(source, "bool")))))) {
@@ -5010,13 +5023,23 @@ bool TypeChecker_isAssignable(TypeChecker* self, const char* target, const char*
     if (((((spec_str_equals(target, "String")) || (spec_str_equals(target, "string")))) && (((spec_str_equals(source, "String")) || (spec_str_equals(source, "string")))))) {
         return true;
     }
-    if (((spec_str_starts_with(target, "Array")) && (spec_str_starts_with(source, "Array")))) {
+    if (((spec_str_equals(target, "Array")) && (spec_str_starts_with(source, "Array")))) {
         return true;
     }
-    if (((spec_str_starts_with(target, "Map")) && (spec_str_starts_with(source, "Map")))) {
+    if (((spec_str_equals(source, "Array")) && (spec_str_starts_with(target, "Array")))) {
+        return true;
+    }
+    if (((spec_str_equals(target, "Map")) && (spec_str_starts_with(source, "Map")))) {
+        return true;
+    }
+    if (((spec_str_equals(source, "Map")) && (spec_str_starts_with(target, "Map")))) {
         return true;
     }
     if (((spec_str_starts_with(target, "Function")) && (spec_str_starts_with(source, "Function")))) {
+        return true;
+    }
+    Class* curCls = (Class*)(TypeChecker_findClass(self, self->currentClassName));
+    if (((((spec_array_index_of_str(Class_getTypeParams(curCls), target, (-(1)))) >= (0))) || (((spec_array_index_of_str(Class_getTypeParams(curCls), source, (-(1)))) >= (0))))) {
         return true;
     }
     SpecArray* tParts = spec_str_split(target, ":");
@@ -5024,16 +5047,28 @@ bool TypeChecker_isAssignable(TypeChecker* self, const char* target, const char*
     if (((((spec_array_length(tParts)) > (0))) && (((spec_array_length(sParts)) > (0))))) {
         const char* tBase = spec_array_get(tParts, 0);
         const char* sBase = spec_array_get(sParts, 0);
-        if (spec_str_equals(tBase, sBase)) {
+        if (((spec_str_equals(tBase, sBase)) || (TypeChecker_isSubclassOf(self, sBase, tBase)))) {
+        if (((((spec_array_length(tParts)) > (1))) && (((spec_array_length(sParts)) > (1))))) {
+        bool argsOk = true;
+        long long pIdx = 1;
+        ({ while (1) {
+        bool _ev_27 = false;
+    _ev_27 = ((((pIdx) < (spec_array_length(tParts)))) && (((pIdx) < (spec_array_length(sParts))))); goto _ev_done_27;
+        _ev_done_27: ;
+        if (!_ev_27) break;
+    const char* tp = spec_array_get(tParts, pIdx);
+    const char* sp = spec_array_get(sParts, pIdx);
+    if ((!(TypeChecker_isAssignable(self, tp, sp)))) {
+        argsOk = false;
+    }
+    pIdx = ((pIdx) + (1));
+    goto _it_done_27;
+        _it_done_27: ;
+    } });
+        return argsOk;
+    }
         return true;
     }
-        if (TypeChecker_isSubclassOf(self, sBase, tBase)) {
-        return true;
-    }
-    }
-    Class* curCls = (Class*)(TypeChecker_findClass(self, self->currentClassName));
-    if (((((spec_array_index_of_str(Class_getTypeParams(curCls), target, (-(1)))) >= (0))) || (((spec_array_index_of_str(Class_getTypeParams(curCls), source, (-(1)))) >= (0))))) {
-        return true;
     }
     if (TypeChecker_isSubclassOf(self, source, target)) {
         return true;
@@ -5060,12 +5095,12 @@ const char* TypeChecker_lookupFieldType(TypeChecker* self, const char* className
         return TypeChecker_substituteTypeParam(self, rawT, cls, typeArgs);
     }
     const char* inherited = "";
-    ({ SpecArray* _a_27 = Class_getBaseClasses(cls); if (_a_27) { for (size_t _i_27 = 0; _i_27 < _a_27->length; _i_27++) {
-        const char* baseName = (const char*)(intptr_t)_a_27->items[_i_27];
+    ({ SpecArray* _a_28 = Class_getBaseClasses(cls); if (_a_28) { for (size_t _i_28 = 0; _i_28 < _a_28->length; _i_28++) {
+        const char* baseName = (const char*)(intptr_t)_a_28->items[_i_28];
     if (spec_str_equals(inherited, "")) {
         inherited = TypeChecker_lookupFieldType(self, baseName, fieldName);
     }
-        _loop_next_27: ;
+        _loop_next_28: ;
     } } });
     return inherited;
 }
@@ -5092,12 +5127,12 @@ const char* TypeChecker_lookupMethodReturnType(TypeChecker* self, const char* cl
         return TypeChecker_substituteTypeParam(self, rawT, cls, typeArgs);
     }
     const char* inherited = "";
-    ({ SpecArray* _a_28 = Class_getBaseClasses(cls); if (_a_28) { for (size_t _i_28 = 0; _i_28 < _a_28->length; _i_28++) {
-        const char* baseName = (const char*)(intptr_t)_a_28->items[_i_28];
+    ({ SpecArray* _a_29 = Class_getBaseClasses(cls); if (_a_29) { for (size_t _i_29 = 0; _i_29 < _a_29->length; _i_29++) {
+        const char* baseName = (const char*)(intptr_t)_a_29->items[_i_29];
     if (spec_str_equals(inherited, "")) {
         inherited = TypeChecker_lookupMethodReturnType(self, baseName, methodName);
     }
-        _loop_next_28: ;
+        _loop_next_29: ;
     } } });
     return inherited;
 }
@@ -5125,6 +5160,9 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         res = spec_map_get_string(self->localVars, name, "Any");
     } else {
         if (spec_map_has(self->fieldTypes, name)) {
+        if (spec_map_has(self->unassignedFields, name)) {
+        TypeChecker_addError(self, self->currentLine, spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Field '", name), "' in class '"), self->currentClassName), "' is read before being initialized."));
+    }
         res = spec_map_get_string(self->fieldTypes, name, "Any");
     } else {
         if (spec_map_has(self->allEnumVariants, name)) {
@@ -5133,8 +5171,12 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         if (spec_map_has(self->registeredClasses, name)) {
         res = name;
     } else {
-        if (((((((((((((((((((spec_str_equals(name, "File")) || (spec_str_equals(name, "Process")))) || (spec_str_equals(name, "Math")))) || (spec_str_equals(name, "math")))) || (spec_str_equals(name, "Map")))) || (spec_str_equals(name, "Array")))) || (spec_str_equals(name, "While")))) || (spec_str_equals(name, "Input")))) || (spec_str_equals(name, "LoopControl")))) || (spec_str_equals(name, "output")))) {
+        if (((((((((((((((((((((((((((((((((spec_str_equals(name, "File")) || (spec_str_equals(name, "Process")))) || (spec_str_equals(name, "Math")))) || (spec_str_equals(name, "math")))) || (spec_str_equals(name, "Map")))) || (spec_str_equals(name, "Array")))) || (spec_str_equals(name, "While")))) || (spec_str_equals(name, "Input")))) || (spec_str_equals(name, "LoopControl")))) || (spec_str_equals(name, "output")))) || (spec_str_equals(name, "Output")))) || (spec_str_equals(name, "String")))) || (spec_str_equals(name, "Int")))) || (spec_str_equals(name, "Float")))) || (spec_str_equals(name, "Boolean")))) || (spec_str_equals(name, "Function")))) || (spec_str_equals(name, "Any")))) {
         res = name;
+    } else {
+        if ((!spec_str_equals(name, ""))) {
+        TypeChecker_addError(self, self->currentLine, spec_str_concat(spec_str_concat("Undefined identifier '", name), "'."));
+    }
     }
     }
     }
@@ -5149,11 +5191,17 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         const char* rootType = "";
         if (spec_str_equals(root, "self")) {
         rootType = self->currentClassName;
+        if (((((spec_array_length(segs)) >= (2))) && (spec_map_has(self->unassignedFields, spec_array_get(segs, 1))))) {
+        TypeChecker_addError(self, self->currentLine, spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Field '", spec_array_get(segs, 1)), "' in class '"), self->currentClassName), "' is read before being initialized."));
+    }
     } else {
         if (spec_map_has(self->localVars, root)) {
         rootType = spec_map_get_string(self->localVars, root, "");
     } else {
         if (spec_map_has(self->fieldTypes, root)) {
+        if (spec_map_has(self->unassignedFields, root)) {
+        TypeChecker_addError(self, self->currentLine, spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Field '", root), "' in class '"), self->currentClassName), "' is read before being initialized."));
+    }
         rootType = spec_map_get_string(self->fieldTypes, root, "");
     } else {
         if (spec_map_has(self->allEnumNames, root)) {
@@ -5196,13 +5244,13 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     }
     } else if (spec_str_equals(kind, "ARRAY")) {
         const char* firstElemType = "";
-        ({ SpecArray* _a_29 = expr->arrayItems; if (_a_29) { for (size_t _i_29 = 0; _i_29 < _a_29->length; _i_29++) {
-        Expression* item = (Expression*)(intptr_t)_a_29->items[_i_29];
+        ({ SpecArray* _a_30 = expr->arrayItems; if (_a_30) { for (size_t _i_30 = 0; _i_30 < _a_30->length; _i_30++) {
+        Expression* item = (Expression*)(intptr_t)_a_30->items[_i_30];
     const char* itemT = TypeChecker_inferExpressionType(self, item);
     if (((((spec_str_equals(firstElemType, "")) && ((!spec_str_equals(itemT, ""))))) && ((!spec_str_equals(itemT, "Any"))))) {
         firstElemType = itemT;
     }
-        _loop_next_29: ;
+        _loop_next_30: ;
     } } });
         if ((!spec_str_equals(firstElemType, ""))) {
         res = spec_str_concat("Array:", firstElemType);
@@ -5212,21 +5260,21 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     } else if (spec_str_equals(kind, "MAP")) {
         const char* firstKeyType = "";
         const char* firstValType = "";
-        ({ SpecArray* _a_30 = expr->mapKeys; if (_a_30) { for (size_t _i_30 = 0; _i_30 < _a_30->length; _i_30++) {
-        Expression* k = (Expression*)(intptr_t)_a_30->items[_i_30];
+        ({ SpecArray* _a_31 = expr->mapKeys; if (_a_31) { for (size_t _i_31 = 0; _i_31 < _a_31->length; _i_31++) {
+        Expression* k = (Expression*)(intptr_t)_a_31->items[_i_31];
     const char* kt = TypeChecker_inferExpressionType(self, k);
     if (((((spec_str_equals(firstKeyType, "")) && ((!spec_str_equals(kt, ""))))) && ((!spec_str_equals(kt, "Any"))))) {
         firstKeyType = kt;
     }
-        _loop_next_30: ;
+        _loop_next_31: ;
     } } });
-        ({ SpecArray* _a_31 = expr->mapValues; if (_a_31) { for (size_t _i_31 = 0; _i_31 < _a_31->length; _i_31++) {
-        Expression* v = (Expression*)(intptr_t)_a_31->items[_i_31];
+        ({ SpecArray* _a_32 = expr->mapValues; if (_a_32) { for (size_t _i_32 = 0; _i_32 < _a_32->length; _i_32++) {
+        Expression* v = (Expression*)(intptr_t)_a_32->items[_i_32];
     const char* vt = TypeChecker_inferExpressionType(self, v);
     if (((((spec_str_equals(firstValType, "")) && ((!spec_str_equals(vt, ""))))) && ((!spec_str_equals(vt, "Any"))))) {
         firstValType = vt;
     }
-        _loop_next_31: ;
+        _loop_next_32: ;
     } } });
         if ((((!spec_str_equals(firstKeyType, ""))) && ((!spec_str_equals(firstValType, ""))))) {
         res = spec_str_concat(spec_str_concat(spec_str_concat("Map:", firstKeyType), ":"), firstValType);
@@ -5263,8 +5311,8 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     } else if (spec_str_equals(kind, "WHEN")) {
         TypeChecker_inferExpressionType(self, expr->whenSubject);
         const char* armType = "Any";
-        ({ SpecArray* _a_32 = expr->whenArms; if (_a_32) { for (size_t _i_32 = 0; _i_32 < _a_32->length; _i_32++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_32->items[_i_32];
+        ({ SpecArray* _a_33 = expr->whenArms; if (_a_33) { for (size_t _i_33 = 0; _i_33 < _a_33->length; _i_33++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_33->items[_i_33];
     TypeChecker_bindWhenPatternVars(self, arm);
     if (arm->hasValueExpr) {
         const char* vt = TypeChecker_inferExpressionType(self, arm->valueExpr);
@@ -5272,33 +5320,33 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         armType = vt;
     }
     }
-    ({ SpecArray* _a_33 = arm->body; if (_a_33) { for (size_t _i_33 = 0; _i_33 < _a_33->length; _i_33++) {
-        Statement* s = (Statement*)(intptr_t)_a_33->items[_i_33];
+    ({ SpecArray* _a_34 = arm->body; if (_a_34) { for (size_t _i_34 = 0; _i_34 < _a_34->length; _i_34++) {
+        Statement* s = (Statement*)(intptr_t)_a_34->items[_i_34];
     TypeChecker_checkStatement(self, s);
-        _loop_next_33: ;
+        _loop_next_34: ;
     } } });
-        _loop_next_32: ;
+        _loop_next_33: ;
     } } });
         res = armType;
     } else if (spec_str_equals(kind, "ANON_FN")) {
         SpecMap* savedVars = spec_map_new();
         SpecArray* existingKeys = spec_map_keys(self->localVars);
-        ({ SpecArray* _a_34 = existingKeys; if (_a_34) { for (size_t _i_34 = 0; _i_34 < _a_34->length; _i_34++) {
-        const char* k = (const char*)(intptr_t)_a_34->items[_i_34];
+        ({ SpecArray* _a_35 = existingKeys; if (_a_35) { for (size_t _i_35 = 0; _i_35 < _a_35->length; _i_35++) {
+        const char* k = (const char*)(intptr_t)_a_35->items[_i_35];
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
-        _loop_next_34: ;
+        _loop_next_35: ;
     } } });
         const char* savedRet = self->currentMethodReturnType;
         self->currentMethodReturnType = TypeChecker_resolveReturnType(self, expr->anonReturnType);
-        ({ SpecArray* _a_35 = expr->anonParams; if (_a_35) { for (size_t _i_35 = 0; _i_35 < _a_35->length; _i_35++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_35->items[_i_35];
+        ({ SpecArray* _a_36 = expr->anonParams; if (_a_36) { for (size_t _i_36 = 0; _i_36 < _a_36->length; _i_36++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_36->items[_i_36];
     spec_map_set(self->localVars, Parameter_getName(p), TypeChecker_formatVarTypeString(self, Parameter_getType(p)));
-        _loop_next_35: ;
-    } } });
-        ({ SpecArray* _a_36 = expr->anonBody; if (_a_36) { for (size_t _i_36 = 0; _i_36 < _a_36->length; _i_36++) {
-        Statement* s = (Statement*)(intptr_t)_a_36->items[_i_36];
-    TypeChecker_checkStatement(self, s);
         _loop_next_36: ;
+    } } });
+        ({ SpecArray* _a_37 = expr->anonBody; if (_a_37) { for (size_t _i_37 = 0; _i_37 < _a_37->length; _i_37++) {
+        Statement* s = (Statement*)(intptr_t)_a_37->items[_i_37];
+    TypeChecker_checkStatement(self, s);
+        _loop_next_37: ;
     } } });
         self->localVars = savedVars;
         self->currentMethodReturnType = savedRet;
@@ -5333,19 +5381,19 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     }
     }
     } else {
-        ({ SpecArray* _a_37 = expr->methodArgs; if (_a_37) { for (size_t _i_37 = 0; _i_37 < _a_37->length; _i_37++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_37->items[_i_37];
+        ({ SpecArray* _a_38 = expr->methodArgs; if (_a_38) { for (size_t _i_38 = 0; _i_38 < _a_38->length; _i_38++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_38->items[_i_38];
     Expression* av = (Expression*)(NamedArg_getValue(arg));
     if (spec_str_equals(Expression_getKind(av), "ANON_FN")) {
-        ({ SpecArray* _a_38 = av->anonParams; if (_a_38) { for (size_t _i_38 = 0; _i_38 < _a_38->length; _i_38++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_38->items[_i_38];
+        ({ SpecArray* _a_39 = av->anonParams; if (_a_39) { for (size_t _i_39 = 0; _i_39 < _a_39->length; _i_39++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_39->items[_i_39];
     if (((spec_str_equals(Type_getName(Parameter_getType(p)), "Any")) || (spec_str_equals(Type_getName(Parameter_getType(p)), "")))) {
         Parameter_setType(p, ({ Type* _inst = Type_new(); Type_init(_inst, elemTypeName); _inst; }));
     }
-        _loop_next_38: ;
+        _loop_next_39: ;
     } } });
     }
-        _loop_next_37: ;
+        _loop_next_38: ;
     } } });
     }
     } else {
@@ -5356,8 +5404,8 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < ((long long)strlen(afterMap)))))) {
         valTypeName = spec_str_substring(afterMap, ((colonIdx) + (1)), (long long)strlen(afterMap));
     }
-        ({ SpecArray* _a_39 = expr->methodArgs; if (_a_39) { for (size_t _i_39 = 0; _i_39 < _a_39->length; _i_39++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_39->items[_i_39];
+        ({ SpecArray* _a_40 = expr->methodArgs; if (_a_40) { for (size_t _i_40 = 0; _i_40 < _a_40->length; _i_40++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_40->items[_i_40];
     Expression* av = (Expression*)(NamedArg_getValue(arg));
     if (spec_str_equals(Expression_getKind(av), "ANON_FN")) {
         if (((spec_array_length(av->anonParams)) >= (1))) {
@@ -5373,14 +5421,14 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     }
     }
     }
-        _loop_next_39: ;
+        _loop_next_40: ;
     } } });
     }
     }
-        ({ SpecArray* _a_40 = expr->methodArgs; if (_a_40) { for (size_t _i_40 = 0; _i_40 < _a_40->length; _i_40++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_40->items[_i_40];
+        ({ SpecArray* _a_41 = expr->methodArgs; if (_a_41) { for (size_t _i_41 = 0; _i_41 < _a_41->length; _i_41++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_41->items[_i_41];
     TypeChecker_inferExpressionType(self, NamedArg_getValue(arg));
-        _loop_next_40: ;
+        _loop_next_41: ;
     } } });
         if (((spec_str_equals(targetType, "self")) || (spec_str_equals(targetType, "")))) {
         targetType = self->currentClassName;
@@ -5495,22 +5543,34 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
 }
 
 void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
+    if (((Statement_getLine(stmt)) > (0))) {
+        self->currentLine = Statement_getLine(stmt);
+    }
     const char* kind = Statement_getKind(stmt);
     if (spec_str_equals(kind, "VAR_DECL")) {
         const char* varName = stmt->varName;
-        const char* declaredType = Type_getName(stmt->varType);
         const char* fullType = TypeChecker_formatVarTypeString(self, stmt->varType);
         spec_map_set(self->localVars, varName, fullType);
         if (stmt->hasInit) {
         const char* initType = TypeChecker_inferExpressionType(self, stmt->initExpr);
-        if ((!(TypeChecker_isAssignable(self, declaredType, initType)))) {
-        const char* msg = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Type mismatch in variable declaration for '", varName), "': cannot assign '"), initType), "' to '"), declaredType), "'.");
+        if ((!(TypeChecker_isAssignable(self, fullType, initType)))) {
+        const char* msg = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Type mismatch in variable declaration for '", varName), "': cannot assign '"), initType), "' to '"), fullType), "'.");
         TypeChecker_addError(self, Statement_getLine(stmt), msg);
     }
     }
     } else if (spec_str_equals(kind, "ASSIGN")) {
-        const char* targetType = TypeChecker_inferExpressionType(self, stmt->assignTarget);
         const char* valType = TypeChecker_inferExpressionType(self, stmt->assignValue);
+        if (spec_str_equals(Expression_getKind(stmt->assignTarget), "PATH")) {
+        SpecArray* tSegs = stmt->assignTarget->pathSegments;
+        if (((((spec_array_length(tSegs)) == (2))) && (spec_str_equals(spec_array_get(tSegs, 0), "self")))) {
+        spec_map_remove(self->unassignedFields, spec_array_get(tSegs, 1));
+    }
+    } else {
+        if (spec_str_equals(Expression_getKind(stmt->assignTarget), "IDENT")) {
+        spec_map_remove(self->unassignedFields, stmt->assignTarget->stringValue);
+    }
+    }
+        const char* targetType = TypeChecker_inferExpressionType(self, stmt->assignTarget);
         if ((!(TypeChecker_isAssignable(self, targetType, valType)))) {
         const char* msg = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Type mismatch in assignment: cannot assign '", valType), "' to '"), targetType), "'.");
         TypeChecker_addError(self, Statement_getLine(stmt), msg);
@@ -5521,32 +5581,32 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
         const char* msg = spec_str_concat(spec_str_concat("Condition in 'if' must be Boolean, found '", condType), "'.");
         TypeChecker_addError(self, Statement_getLine(stmt), msg);
     }
-        ({ SpecArray* _a_41 = stmt->thenBranch; if (_a_41) { for (size_t _i_41 = 0; _i_41 < _a_41->length; _i_41++) {
-        Statement* s = (Statement*)(intptr_t)_a_41->items[_i_41];
-    TypeChecker_checkStatement(self, s);
-        _loop_next_41: ;
-    } } });
-        if (stmt->hasElse) {
-        ({ SpecArray* _a_42 = stmt->elseBranch; if (_a_42) { for (size_t _i_42 = 0; _i_42 < _a_42->length; _i_42++) {
+        ({ SpecArray* _a_42 = stmt->thenBranch; if (_a_42) { for (size_t _i_42 = 0; _i_42 < _a_42->length; _i_42++) {
         Statement* s = (Statement*)(intptr_t)_a_42->items[_i_42];
     TypeChecker_checkStatement(self, s);
         _loop_next_42: ;
     } } });
+        if (stmt->hasElse) {
+        ({ SpecArray* _a_43 = stmt->elseBranch; if (_a_43) { for (size_t _i_43 = 0; _i_43 < _a_43->length; _i_43++) {
+        Statement* s = (Statement*)(intptr_t)_a_43->items[_i_43];
+    TypeChecker_checkStatement(self, s);
+        _loop_next_43: ;
+    } } });
     }
     } else if (spec_str_equals(kind, "WHEN")) {
         TypeChecker_inferExpressionType(self, stmt->whenSubject);
-        ({ SpecArray* _a_43 = stmt->whenArms; if (_a_43) { for (size_t _i_43 = 0; _i_43 < _a_43->length; _i_43++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_43->items[_i_43];
+        ({ SpecArray* _a_44 = stmt->whenArms; if (_a_44) { for (size_t _i_44 = 0; _i_44 < _a_44->length; _i_44++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_44->items[_i_44];
     TypeChecker_bindWhenPatternVars(self, arm);
     if (arm->hasValueExpr) {
         TypeChecker_inferExpressionType(self, arm->valueExpr);
     }
-    ({ SpecArray* _a_44 = arm->body; if (_a_44) { for (size_t _i_44 = 0; _i_44 < _a_44->length; _i_44++) {
-        Statement* s = (Statement*)(intptr_t)_a_44->items[_i_44];
+    ({ SpecArray* _a_45 = arm->body; if (_a_45) { for (size_t _i_45 = 0; _i_45 < _a_45->length; _i_45++) {
+        Statement* s = (Statement*)(intptr_t)_a_45->items[_i_45];
     TypeChecker_checkStatement(self, s);
-        _loop_next_44: ;
+        _loop_next_45: ;
     } } });
-        _loop_next_43: ;
+        _loop_next_44: ;
     } } });
     } else if (spec_str_equals(kind, "RETURN")) {
         if (stmt->hasReturnExpr) {
@@ -5568,23 +5628,31 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
         const char* savedRet = self->currentMethodReturnType;
         SpecMap* savedVars = spec_map_new();
         SpecArray* vKeys = spec_map_keys(self->localVars);
-        ({ SpecArray* _a_45 = vKeys; if (_a_45) { for (size_t _i_45 = 0; _i_45 < _a_45->length; _i_45++) {
-        const char* k = (const char*)(intptr_t)_a_45->items[_i_45];
+        ({ SpecArray* _a_46 = vKeys; if (_a_46) { for (size_t _i_46 = 0; _i_46 < _a_46->length; _i_46++) {
+        const char* k = (const char*)(intptr_t)_a_46->items[_i_46];
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
-        _loop_next_45: ;
+        _loop_next_46: ;
     } } });
         SpecMap* savedFields = spec_map_new();
         SpecArray* fKeys = spec_map_keys(self->fieldTypes);
-        ({ SpecArray* _a_46 = fKeys; if (_a_46) { for (size_t _i_46 = 0; _i_46 < _a_46->length; _i_46++) {
-        const char* k = (const char*)(intptr_t)_a_46->items[_i_46];
+        ({ SpecArray* _a_47 = fKeys; if (_a_47) { for (size_t _i_47 = 0; _i_47 < _a_47->length; _i_47++) {
+        const char* k = (const char*)(intptr_t)_a_47->items[_i_47];
     spec_map_set(savedFields, k, spec_map_get_string(self->fieldTypes, k, ""));
-        _loop_next_46: ;
+        _loop_next_47: ;
+    } } });
+        SpecMap* savedUnassigned = spec_map_new();
+        SpecArray* uKeys = spec_map_keys(self->unassignedFields);
+        ({ SpecArray* _a_48 = uKeys; if (_a_48) { for (size_t _i_48 = 0; _i_48 < _a_48->length; _i_48++) {
+        const char* k = (const char*)(intptr_t)_a_48->items[_i_48];
+    spec_map_set(savedUnassigned, k, spec_map_get_string(self->unassignedFields, k, ""));
+        _loop_next_48: ;
     } } });
         TypeChecker_checkClass(self, stmt->nestedClass);
         self->currentClassName = savedClass;
         self->currentMethodReturnType = savedRet;
         self->localVars = savedVars;
         self->fieldTypes = savedFields;
+        self->unassignedFields = savedUnassigned;
     } else {
     }
 }
@@ -5594,13 +5662,17 @@ const char* TypeChecker_resolveReturnType(TypeChecker* self, Type* t) {
 }
 
 void TypeChecker_checkMethod(TypeChecker* self, Member* method) {
-    ({ SpecArray* _a_47 = Member_getParameters(method); if (_a_47) { for (size_t _i_47 = 0; _i_47 < _a_47->length; _i_47++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_47->items[_i_47];
+    if (((Member_getLine(method)) > (0))) {
+        self->currentLine = Member_getLine(method);
+    }
+    ({ SpecArray* _a_49 = Member_getParameters(method); if (_a_49) { for (size_t _i_49 = 0; _i_49 < _a_49->length; _i_49++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_49->items[_i_49];
     if (spec_str_equals(Type_getName(Parameter_getType(p)), "SELF_FIELD")) {
         const char* ft = spec_map_get_string(self->fieldTypes, Parameter_getName(p), "Any");
         Parameter_setType(p, ({ Type* _inst = Type_new(); Type_init(_inst, ft); _inst; }));
+        spec_map_remove(self->unassignedFields, Parameter_getName(p));
     }
-        _loop_next_47: ;
+        _loop_next_49: ;
     } } });
     self->currentMethodReturnType = TypeChecker_resolveReturnType(self, Member_getType(method));
     if (((spec_str_equals(self->currentMethodReturnType, "")) || (spec_str_equals(self->currentMethodReturnType, "void")))) {
@@ -5610,30 +5682,30 @@ void TypeChecker_checkMethod(TypeChecker* self, Member* method) {
     }
     }
     self->localVars = spec_map_new();
-    ({ SpecArray* _a_48 = Member_getParameters(method); if (_a_48) { for (size_t _i_48 = 0; _i_48 < _a_48->length; _i_48++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_48->items[_i_48];
+    ({ SpecArray* _a_50 = Member_getParameters(method); if (_a_50) { for (size_t _i_50 = 0; _i_50 < _a_50->length; _i_50++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_50->items[_i_50];
     spec_map_set(self->localVars, Parameter_getName(p), TypeChecker_formatVarTypeString(self, Parameter_getType(p)));
-        _loop_next_48: ;
+        _loop_next_50: ;
     } } });
-    ({ SpecArray* _a_49 = Member_getBody(method); if (_a_49) { for (size_t _i_49 = 0; _i_49 < _a_49->length; _i_49++) {
-        Statement* stmt = (Statement*)(intptr_t)_a_49->items[_i_49];
+    ({ SpecArray* _a_51 = Member_getBody(method); if (_a_51) { for (size_t _i_51 = 0; _i_51 < _a_51->length; _i_51++) {
+        Statement* stmt = (Statement*)(intptr_t)_a_51->items[_i_51];
     TypeChecker_checkStatement(self, stmt);
-        _loop_next_49: ;
+        _loop_next_51: ;
     } } });
 }
 
 void TypeChecker_checkInheritance(TypeChecker* self, Class* classDef) {
     self->currentSourceFile = Class_getSourceFile(classDef);
     bool hasInit = false;
-    ({ SpecArray* _a_50 = Class_getMembers(classDef); if (_a_50) { for (size_t _i_50 = 0; _i_50 < _a_50->length; _i_50++) {
-        Member* m = (Member*)(intptr_t)_a_50->items[_i_50];
+    ({ SpecArray* _a_52 = Class_getMembers(classDef); if (_a_52) { for (size_t _i_52 = 0; _i_52 < _a_52->length; _i_52++) {
+        Member* m = (Member*)(intptr_t)_a_52->items[_i_52];
     if (spec_str_equals(Member_getName(m), "init")) {
         hasInit = true;
     }
-        _loop_next_50: ;
+        _loop_next_52: ;
     } } });
-    ({ SpecArray* _a_51 = Class_getMembers(classDef); if (_a_51) { for (size_t _i_51 = 0; _i_51 < _a_51->length; _i_51++) {
-        Member* m = (Member*)(intptr_t)_a_51->items[_i_51];
+    ({ SpecArray* _a_53 = Class_getMembers(classDef); if (_a_53) { for (size_t _i_53 = 0; _i_53 < _a_53->length; _i_53++) {
+        Member* m = (Member*)(intptr_t)_a_53->items[_i_53];
     if (spec_str_equals(Member_getName(m), "init") || spec_str_equals(Member_getName(m), "evaluate") || spec_str_equals(Member_getName(m), "iteration") || spec_str_equals(Member_getName(m), "using") || spec_str_equals(Member_getName(m), "toString")) {
         SpecArray* mods = Member_getModifiers(m);
         if (((spec_array_index_of_str(mods, "replace", (-(1)))) < (0))) {
@@ -5642,15 +5714,15 @@ void TypeChecker_checkInheritance(TypeChecker* self, Class* classDef) {
     }
     } else {
     }
-        _loop_next_51: ;
+        _loop_next_53: ;
     } } });
-    ({ SpecArray* _a_52 = Class_getBaseClasses(classDef); if (_a_52) { for (size_t _i_52 = 0; _i_52 < _a_52->length; _i_52++) {
-        const char* baseName = (const char*)(intptr_t)_a_52->items[_i_52];
+    ({ SpecArray* _a_54 = Class_getBaseClasses(classDef); if (_a_54) { for (size_t _i_54 = 0; _i_54 < _a_54->length; _i_54++) {
+        const char* baseName = (const char*)(intptr_t)_a_54->items[_i_54];
     Class* parent = (Class*)(TypeChecker_findClass(self, baseName));
     if (spec_str_equals(Class_getName(parent), baseName)) {
         if (hasInit) {
-        ({ SpecArray* _a_53 = Class_getMembers(parent); if (_a_53) { for (size_t _i_53 = 0; _i_53 < _a_53->length; _i_53++) {
-        Member* parentM = (Member*)(intptr_t)_a_53->items[_i_53];
+        ({ SpecArray* _a_55 = Class_getMembers(parent); if (_a_55) { for (size_t _i_55 = 0; _i_55 < _a_55->length; _i_55++) {
+        Member* parentM = (Member*)(intptr_t)_a_55->items[_i_55];
     bool isAbstract = ((((spec_str_equals(Member_getKind(parentM), "FIELD")) && ((!(Member_getHasInit(parentM)))))) || (((spec_str_equals(Member_getKind(parentM), "METHOD")) && (((spec_array_length(Member_getBody(parentM))) == (0))))));
     if (isAbstract) {
         MemberImplementLoop* chk = (MemberImplementLoop*)(({ MemberImplementLoop* _inst = MemberImplementLoop_new(); MemberImplementLoop_init(_inst, Class_getMembers(classDef), parentM); _inst; }));
@@ -5660,13 +5732,13 @@ void TypeChecker_checkInheritance(TypeChecker* self, Class* classDef) {
         TypeChecker_addError(self, Class_getLine(classDef), msg);
     }
     }
-        _loop_next_53: ;
+        _loop_next_55: ;
     } } });
     }
-        ({ SpecArray* _a_54 = Class_getMembers(classDef); if (_a_54) { for (size_t _i_54 = 0; _i_54 < _a_54->length; _i_54++) {
-        Member* subM = (Member*)(intptr_t)_a_54->items[_i_54];
-    ({ SpecArray* _a_55 = Class_getMembers(parent); if (_a_55) { for (size_t _i_55 = 0; _i_55 < _a_55->length; _i_55++) {
-        Member* parentM = (Member*)(intptr_t)_a_55->items[_i_55];
+        ({ SpecArray* _a_56 = Class_getMembers(classDef); if (_a_56) { for (size_t _i_56 = 0; _i_56 < _a_56->length; _i_56++) {
+        Member* subM = (Member*)(intptr_t)_a_56->items[_i_56];
+    ({ SpecArray* _a_57 = Class_getMembers(parent); if (_a_57) { for (size_t _i_57 = 0; _i_57 < _a_57->length; _i_57++) {
+        Member* parentM = (Member*)(intptr_t)_a_57->items[_i_57];
     if (spec_str_equals(Member_getName(subM), Member_getName(parentM))) {
         SpecArray* subMods = Member_getModifiers(subM);
         if (((spec_array_index_of_str(subMods, "replace", (-(1)))) < (0))) {
@@ -5679,14 +5751,14 @@ void TypeChecker_checkInheritance(TypeChecker* self, Class* classDef) {
         TypeChecker_addError(self, Member_getLine(subM), msg);
     } else {
         long long pIdx = 0;
-        ({ SpecArray* _a_56 = Member_getParameters(subM); if (_a_56) { for (size_t _i_56 = 0; _i_56 < _a_56->length; _i_56++) {
-        Parameter* subP = (Parameter*)(intptr_t)_a_56->items[_i_56];
+        ({ SpecArray* _a_58 = Member_getParameters(subM); if (_a_58) { for (size_t _i_58 = 0; _i_58 < _a_58->length; _i_58++) {
+        Parameter* subP = (Parameter*)(intptr_t)_a_58->items[_i_58];
     Parameter* parentP = (Parameter*)(spec_array_get(Member_getParameters(parentM), pIdx));
     if (((spec_str_equals(Type_getName(Parameter_getType(subP)), "Any")) || (spec_str_equals(Type_getName(Parameter_getType(subP)), "")))) {
         Parameter_setType(subP, Parameter_getType(parentP));
     }
     pIdx = ((pIdx) + (1));
-        _loop_next_56: ;
+        _loop_next_58: ;
     } } });
     }
         const char* subRet = TypeChecker_resolveReturnType(self, Member_getType(subM));
@@ -5701,30 +5773,30 @@ void TypeChecker_checkInheritance(TypeChecker* self, Class* classDef) {
     }
     }
     }
-        _loop_next_55: ;
+        _loop_next_57: ;
     } } });
-        _loop_next_54: ;
+        _loop_next_56: ;
     } } });
     }
-        _loop_next_52: ;
+        _loop_next_54: ;
     } } });
 }
 
 void TypeChecker_collectClassFieldTypes(TypeChecker* self, Class* classDef) {
-    ({ SpecArray* _a_57 = Class_getBaseClasses(classDef); if (_a_57) { for (size_t _i_57 = 0; _i_57 < _a_57->length; _i_57++) {
-        const char* baseName = (const char*)(intptr_t)_a_57->items[_i_57];
+    ({ SpecArray* _a_59 = Class_getBaseClasses(classDef); if (_a_59) { for (size_t _i_59 = 0; _i_59 < _a_59->length; _i_59++) {
+        const char* baseName = (const char*)(intptr_t)_a_59->items[_i_59];
     Class* parent = (Class*)(TypeChecker_findClass(self, baseName));
     if ((!spec_str_equals(Class_getName(parent), ""))) {
         TypeChecker_collectClassFieldTypes(self, parent);
     }
-        _loop_next_57: ;
+        _loop_next_59: ;
     } } });
-    ({ SpecArray* _a_58 = Class_getMembers(classDef); if (_a_58) { for (size_t _i_58 = 0; _i_58 < _a_58->length; _i_58++) {
-        Member* m = (Member*)(intptr_t)_a_58->items[_i_58];
+    ({ SpecArray* _a_60 = Class_getMembers(classDef); if (_a_60) { for (size_t _i_60 = 0; _i_60 < _a_60->length; _i_60++) {
+        Member* m = (Member*)(intptr_t)_a_60->items[_i_60];
     if (spec_str_equals(Member_getKind(m), "FIELD")) {
         spec_map_set(self->fieldTypes, Member_getName(m), TypeChecker_formatVarTypeString(self, Member_getType(m)));
     }
-        _loop_next_58: ;
+        _loop_next_60: ;
     } } });
 }
 
@@ -5733,10 +5805,11 @@ void TypeChecker_checkClass(TypeChecker* self, Class* classDef) {
     self->currentSourceFile = Class_getSourceFile(classDef);
     self->fieldTypes = spec_map_new();
     TypeChecker_collectClassFieldTypes(self, classDef);
-    ({ SpecArray* _a_59 = Class_getMembers(classDef); if (_a_59) { for (size_t _i_59 = 0; _i_59 < _a_59->length; _i_59++) {
-        Member* m = (Member*)(intptr_t)_a_59->items[_i_59];
+    ({ SpecArray* _a_61 = Class_getMembers(classDef); if (_a_61) { for (size_t _i_61 = 0; _i_61 < _a_61->length; _i_61++) {
+        Member* m = (Member*)(intptr_t)_a_61->items[_i_61];
     if (((Member_getMemberKind(m)) == (MemberKind_FIELD))) {
-        const char* declaredType = Type_getName(Member_getType(m));
+        self->currentLine = Member_getLine(m);
+        const char* declaredType = TypeChecker_formatVarTypeString(self, Member_getType(m));
         if (m->hasInit) {
         const char* initType = TypeChecker_inferExpressionType(self, m->initExpr);
         if ((!(TypeChecker_isAssignable(self, declaredType, initType)))) {
@@ -5746,27 +5819,46 @@ void TypeChecker_checkClass(TypeChecker* self, Class* classDef) {
     }
     } else {
     }
-        _loop_next_59: ;
+        _loop_next_61: ;
     } } });
-    ({ SpecArray* _a_60 = Class_getMembers(classDef); if (_a_60) { for (size_t _i_60 = 0; _i_60 < _a_60->length; _i_60++) {
-        Member* m = (Member*)(intptr_t)_a_60->items[_i_60];
+    ({ SpecArray* _a_62 = Class_getMembers(classDef); if (_a_62) { for (size_t _i_62 = 0; _i_62 < _a_62->length; _i_62++) {
+        Member* m = (Member*)(intptr_t)_a_62->items[_i_62];
     if (((Member_getMemberKind(m)) == (MemberKind_METHOD))) {
+        self->unassignedFields = spec_map_new();
+        if (spec_str_equals(Member_getName(m), "init")) {
+        ({ SpecArray* _a_63 = Class_getMembers(classDef); if (_a_63) { for (size_t _i_63 = 0; _i_63 < _a_63->length; _i_63++) {
+        Member* fm = (Member*)(intptr_t)_a_63->items[_i_63];
+    if (((((spec_str_equals(Member_getKind(fm), "FIELD")) && ((!(fm->hasInit))))) && ((!spec_str_equals(Member_getName(fm), "using"))))) {
+        spec_map_set(self->unassignedFields, Member_getName(fm), "true");
+    }
+        _loop_next_63: ;
+    } } });
+    }
         TypeChecker_checkMethod(self, m);
+        self->unassignedFields = spec_map_new();
     } else if (((Member_getMemberKind(m)) == (MemberKind_CLASS))) {
         const char* savedClass = self->currentClassName;
         SpecMap* savedFields = spec_map_new();
         SpecArray* fKeys = spec_map_keys(self->fieldTypes);
-        ({ SpecArray* _a_61 = fKeys; if (_a_61) { for (size_t _i_61 = 0; _i_61 < _a_61->length; _i_61++) {
-        const char* k = (const char*)(intptr_t)_a_61->items[_i_61];
+        ({ SpecArray* _a_64 = fKeys; if (_a_64) { for (size_t _i_64 = 0; _i_64 < _a_64->length; _i_64++) {
+        const char* k = (const char*)(intptr_t)_a_64->items[_i_64];
     spec_map_set(savedFields, k, spec_map_get_string(self->fieldTypes, k, ""));
-        _loop_next_61: ;
+        _loop_next_64: ;
+    } } });
+        SpecMap* savedUnassigned = spec_map_new();
+        SpecArray* uKeys = spec_map_keys(self->unassignedFields);
+        ({ SpecArray* _a_65 = uKeys; if (_a_65) { for (size_t _i_65 = 0; _i_65 < _a_65->length; _i_65++) {
+        const char* k = (const char*)(intptr_t)_a_65->items[_i_65];
+    spec_map_set(savedUnassigned, k, spec_map_get_string(self->unassignedFields, k, ""));
+        _loop_next_65: ;
     } } });
         TypeChecker_checkClass(self, Member_getNestedClass(m));
         self->currentClassName = savedClass;
         self->fieldTypes = savedFields;
+        self->unassignedFields = savedUnassigned;
     } else {
     }
-        _loop_next_60: ;
+        _loop_next_62: ;
     } } });
 }
 
@@ -5774,27 +5866,27 @@ void TypeChecker_collectClassesFromStatement(TypeChecker* self, Statement* stmt,
     if (spec_str_equals(Statement_getKind(stmt), "CLASS")) {
         TypeChecker_collectClasses(self, stmt->nestedClass, acc);
     } else if (spec_str_equals(Statement_getKind(stmt), "IF")) {
-        ({ SpecArray* _a_62 = stmt->thenBranch; if (_a_62) { for (size_t _i_62 = 0; _i_62 < _a_62->length; _i_62++) {
-        Statement* s = (Statement*)(intptr_t)_a_62->items[_i_62];
+        ({ SpecArray* _a_66 = stmt->thenBranch; if (_a_66) { for (size_t _i_66 = 0; _i_66 < _a_66->length; _i_66++) {
+        Statement* s = (Statement*)(intptr_t)_a_66->items[_i_66];
     TypeChecker_collectClassesFromStatement(self, s, acc);
-        _loop_next_62: ;
+        _loop_next_66: ;
     } } });
         if (stmt->hasElse) {
-        ({ SpecArray* _a_63 = stmt->elseBranch; if (_a_63) { for (size_t _i_63 = 0; _i_63 < _a_63->length; _i_63++) {
-        Statement* s = (Statement*)(intptr_t)_a_63->items[_i_63];
+        ({ SpecArray* _a_67 = stmt->elseBranch; if (_a_67) { for (size_t _i_67 = 0; _i_67 < _a_67->length; _i_67++) {
+        Statement* s = (Statement*)(intptr_t)_a_67->items[_i_67];
     TypeChecker_collectClassesFromStatement(self, s, acc);
-        _loop_next_63: ;
+        _loop_next_67: ;
     } } });
     }
     } else if (spec_str_equals(Statement_getKind(stmt), "WHEN")) {
-        ({ SpecArray* _a_64 = stmt->whenArms; if (_a_64) { for (size_t _i_64 = 0; _i_64 < _a_64->length; _i_64++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_64->items[_i_64];
-    ({ SpecArray* _a_65 = arm->body; if (_a_65) { for (size_t _i_65 = 0; _i_65 < _a_65->length; _i_65++) {
-        Statement* s = (Statement*)(intptr_t)_a_65->items[_i_65];
+        ({ SpecArray* _a_68 = stmt->whenArms; if (_a_68) { for (size_t _i_68 = 0; _i_68 < _a_68->length; _i_68++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_68->items[_i_68];
+    ({ SpecArray* _a_69 = arm->body; if (_a_69) { for (size_t _i_69 = 0; _i_69 < _a_69->length; _i_69++) {
+        Statement* s = (Statement*)(intptr_t)_a_69->items[_i_69];
     TypeChecker_collectClassesFromStatement(self, s, acc);
-        _loop_next_65: ;
+        _loop_next_69: ;
     } } });
-        _loop_next_64: ;
+        _loop_next_68: ;
     } } });
     } else {
     }
@@ -5802,60 +5894,60 @@ void TypeChecker_collectClassesFromStatement(TypeChecker* self, Statement* stmt,
 
 void TypeChecker_collectClasses(TypeChecker* self, Class* c, SpecArray* acc) {
     spec_array_add(acc, (void*)(c));
-    ({ SpecArray* _a_66 = Class_getMembers(c); if (_a_66) { for (size_t _i_66 = 0; _i_66 < _a_66->length; _i_66++) {
-        Member* m = (Member*)(intptr_t)_a_66->items[_i_66];
+    ({ SpecArray* _a_70 = Class_getMembers(c); if (_a_70) { for (size_t _i_70 = 0; _i_70 < _a_70->length; _i_70++) {
+        Member* m = (Member*)(intptr_t)_a_70->items[_i_70];
     if (((Member_getMemberKind(m)) == (MemberKind_CLASS))) {
         TypeChecker_collectClasses(self, Member_getNestedClass(m), acc);
     } else if (((Member_getMemberKind(m)) == (MemberKind_METHOD))) {
-        ({ SpecArray* _a_67 = Member_getBody(m); if (_a_67) { for (size_t _i_67 = 0; _i_67 < _a_67->length; _i_67++) {
-        Statement* s = (Statement*)(intptr_t)_a_67->items[_i_67];
+        ({ SpecArray* _a_71 = Member_getBody(m); if (_a_71) { for (size_t _i_71 = 0; _i_71 < _a_71->length; _i_71++) {
+        Statement* s = (Statement*)(intptr_t)_a_71->items[_i_71];
     TypeChecker_collectClassesFromStatement(self, s, acc);
-        _loop_next_67: ;
+        _loop_next_71: ;
     } } });
     } else {
     }
-        _loop_next_66: ;
+        _loop_next_70: ;
     } } });
 }
 
 SpecArray* TypeChecker_checkProgram(TypeChecker* self, ProgramNode* program) {
     self->errors = ({ SpecArray* _arr = spec_array_new(); _arr; });
     SpecArray* flattened = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ SpecArray* _a_68 = ProgramNode_getClasses(program); if (_a_68) { for (size_t _i_68 = 0; _i_68 < _a_68->length; _i_68++) {
-        Class* c = (Class*)(intptr_t)_a_68->items[_i_68];
+    ({ SpecArray* _a_72 = ProgramNode_getClasses(program); if (_a_72) { for (size_t _i_72 = 0; _i_72 < _a_72->length; _i_72++) {
+        Class* c = (Class*)(intptr_t)_a_72->items[_i_72];
     TypeChecker_collectClasses(self, c, flattened);
-        _loop_next_68: ;
+        _loop_next_72: ;
     } } });
     self->programClasses = flattened;
     self->registeredClasses = spec_map_new();
     self->allEnumNames = spec_map_new();
     self->allEnumVariants = spec_map_new();
     self->allStringBackedEnums = spec_map_new();
-    ({ SpecArray* _a_69 = flattened; if (_a_69) { for (size_t _i_69 = 0; _i_69 < _a_69->length; _i_69++) {
-        Class* c = (Class*)(intptr_t)_a_69->items[_i_69];
+    ({ SpecArray* _a_73 = flattened; if (_a_73) { for (size_t _i_73 = 0; _i_73 < _a_73->length; _i_73++) {
+        Class* c = (Class*)(intptr_t)_a_73->items[_i_73];
     spec_map_set(self->registeredClasses, Class_getName(c), Class_getName(c));
     if (spec_str_equals(Class_getBaseClass(c), "Enum")) {
         spec_map_set(self->allEnumNames, Class_getName(c), "true");
-        ({ SpecArray* _a_70 = Class_getMembers(c); if (_a_70) { for (size_t _i_70 = 0; _i_70 < _a_70->length; _i_70++) {
-        Member* m = (Member*)(intptr_t)_a_70->items[_i_70];
+        ({ SpecArray* _a_74 = Class_getMembers(c); if (_a_74) { for (size_t _i_74 = 0; _i_74 < _a_74->length; _i_74++) {
+        Member* m = (Member*)(intptr_t)_a_74->items[_i_74];
     spec_map_set(self->allEnumVariants, Member_getName(m), Class_getName(c));
     if (((spec_str_equals(Type_getName(Member_getType(m)), "String")) || (spec_str_equals(Type_getName(Member_getType(m)), "string")))) {
         spec_map_set(self->allStringBackedEnums, Class_getName(c), "true");
     }
-        _loop_next_70: ;
+        _loop_next_74: ;
     } } });
     }
-        _loop_next_69: ;
+        _loop_next_73: ;
     } } });
-    ({ SpecArray* _a_71 = flattened; if (_a_71) { for (size_t _i_71 = 0; _i_71 < _a_71->length; _i_71++) {
-        Class* c = (Class*)(intptr_t)_a_71->items[_i_71];
+    ({ SpecArray* _a_75 = flattened; if (_a_75) { for (size_t _i_75 = 0; _i_75 < _a_75->length; _i_75++) {
+        Class* c = (Class*)(intptr_t)_a_75->items[_i_75];
     TypeChecker_checkInheritance(self, c);
-        _loop_next_71: ;
+        _loop_next_75: ;
     } } });
-    ({ SpecArray* _a_72 = ProgramNode_getClasses(program); if (_a_72) { for (size_t _i_72 = 0; _i_72 < _a_72->length; _i_72++) {
-        Class* c = (Class*)(intptr_t)_a_72->items[_i_72];
+    ({ SpecArray* _a_76 = ProgramNode_getClasses(program); if (_a_76) { for (size_t _i_76 = 0; _i_76 < _a_76->length; _i_76++) {
+        Class* c = (Class*)(intptr_t)_a_76->items[_i_76];
     TypeChecker_checkClass(self, c);
-        _loop_next_72: ;
+        _loop_next_76: ;
     } } });
     return self->errors;
 }
@@ -6904,94 +6996,94 @@ bool DeclarationGenerator_hasFieldNamed(DeclarationGenerator* self, SpecArray* l
 }
 
 void DeclarationGenerator_collectStructFields(DeclarationGenerator* self, Class* c, SpecArray* allClasses, SpecArray* acc) {
-    ({ SpecArray* _a_73 = Class_getMembers(c); if (_a_73) { for (size_t _i_73 = 0; _i_73 < _a_73->length; _i_73++) {
-        Member* m = (Member*)(intptr_t)_a_73->items[_i_73];
+    ({ SpecArray* _a_77 = Class_getMembers(c); if (_a_77) { for (size_t _i_77 = 0; _i_77 < _a_77->length; _i_77++) {
+        Member* m = (Member*)(intptr_t)_a_77->items[_i_77];
     if (((Member_getMemberKind(m)) == (MemberKind_FIELD))) {
         if ((((!spec_str_equals(Member_getName(m), "using"))) && ((!(DeclarationGenerator_hasFieldNamed(self, acc, Member_getName(m))))))) {
         spec_array_add(acc, (void*)(m));
     }
     } else {
     }
-        _loop_next_73: ;
+        _loop_next_77: ;
     } } });
-    ({ SpecArray* _a_74 = Class_getBaseClasses(c); if (_a_74) { for (size_t _i_74 = 0; _i_74 < _a_74->length; _i_74++) {
-        const char* baseName = (const char*)(intptr_t)_a_74->items[_i_74];
-    ({ SpecArray* _a_75 = allClasses; if (_a_75) { for (size_t _i_75 = 0; _i_75 < _a_75->length; _i_75++) {
-        Class* cand = (Class*)(intptr_t)_a_75->items[_i_75];
+    ({ SpecArray* _a_78 = Class_getBaseClasses(c); if (_a_78) { for (size_t _i_78 = 0; _i_78 < _a_78->length; _i_78++) {
+        const char* baseName = (const char*)(intptr_t)_a_78->items[_i_78];
+    ({ SpecArray* _a_79 = allClasses; if (_a_79) { for (size_t _i_79 = 0; _i_79 < _a_79->length; _i_79++) {
+        Class* cand = (Class*)(intptr_t)_a_79->items[_i_79];
     if (spec_str_equals(Class_getName(cand), baseName)) {
         DeclarationGenerator_collectStructFields(self, cand, allClasses, acc);
     }
-        _loop_next_75: ;
+        _loop_next_79: ;
     } } });
-        _loop_next_74: ;
+        _loop_next_78: ;
     } } });
 }
 
 const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray* classes) {
     const char* out = "/* Enum Definitions */\n";
-    ({ SpecArray* _a_76 = classes; if (_a_76) { for (size_t _i_76 = 0; _i_76 < _a_76->length; _i_76++) {
-        Class* c = (Class*)(intptr_t)_a_76->items[_i_76];
+    ({ SpecArray* _a_80 = classes; if (_a_80) { for (size_t _i_80 = 0; _i_80 < _a_80->length; _i_80++) {
+        Class* c = (Class*)(intptr_t)_a_80->items[_i_80];
     if (spec_str_equals(Class_getBaseClass(c), "Enum")) {
         const char* name = Class_getName(c);
         if (spec_map_has(self->allTaggedEnums, name)) {
         out = spec_str_concat(out, "typedef enum {\n");
         long long tIdx = 0;
-        ({ SpecArray* _a_77 = Class_getMembers(c); if (_a_77) { for (size_t _i_77 = 0; _i_77 < _a_77->length; _i_77++) {
-        Member* m = (Member*)(intptr_t)_a_77->items[_i_77];
+        ({ SpecArray* _a_81 = Class_getMembers(c); if (_a_81) { for (size_t _i_81 = 0; _i_81 < _a_81->length; _i_81++) {
+        Member* m = (Member*)(intptr_t)_a_81->items[_i_81];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_TAG_"), vName), " = "), spec_to_string_int(tIdx)), ",\n");
     tIdx = ((tIdx) + (1));
-        _loop_next_77: ;
+        _loop_next_81: ;
     } } });
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "} "), name), "_Tag;\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "typedef struct "), name), " "), name), ";\n\n");
     } else {
         out = spec_str_concat(out, "typedef enum {\n");
         long long idx = 0;
-        ({ SpecArray* _a_78 = Class_getMembers(c); if (_a_78) { for (size_t _i_78 = 0; _i_78 < _a_78->length; _i_78++) {
-        Member* m = (Member*)(intptr_t)_a_78->items[_i_78];
+        ({ SpecArray* _a_82 = Class_getMembers(c); if (_a_82) { for (size_t _i_82 = 0; _i_82 < _a_82->length; _i_82++) {
+        Member* m = (Member*)(intptr_t)_a_82->items[_i_82];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_"), vName), " = "), spec_to_string_int(idx)), ",\n");
     idx = ((idx) + (1));
-        _loop_next_78: ;
+        _loop_next_82: ;
     } } });
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "} "), name), ";\n\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "static const char* "), name), "_names[] = {\n");
-        ({ SpecArray* _a_79 = Class_getMembers(c); if (_a_79) { for (size_t _i_79 = 0; _i_79 < _a_79->length; _i_79++) {
-        Member* m = (Member*)(intptr_t)_a_79->items[_i_79];
+        ({ SpecArray* _a_83 = Class_getMembers(c); if (_a_83) { for (size_t _i_83 = 0; _i_83 < _a_83->length; _i_83++) {
+        Member* m = (Member*)(intptr_t)_a_83->items[_i_83];
     out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    \""), Member_getName(m)), "\",\n");
-        _loop_next_79: ;
+        _loop_next_83: ;
     } } });
         out = spec_str_concat(out, "};\n\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static const "), name), " "), name), "_all_values[] = {\n");
-        ({ SpecArray* _a_80 = Class_getMembers(c); if (_a_80) { for (size_t _i_80 = 0; _i_80 < _a_80->length; _i_80++) {
-        Member* m = (Member*)(intptr_t)_a_80->items[_i_80];
+        ({ SpecArray* _a_84 = Class_getMembers(c); if (_a_84) { for (size_t _i_84 = 0; _i_84 < _a_84->length; _i_84++) {
+        Member* m = (Member*)(intptr_t)_a_84->items[_i_84];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ",\n");
-        _loop_next_80: ;
+        _loop_next_84: ;
     } } });
         out = spec_str_concat(out, "};\n\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline const char* "), name), "_name("), name), " self) {\n");
         out = spec_str_concat(out, "    switch (self) {\n");
-        ({ SpecArray* _a_81 = Class_getMembers(c); if (_a_81) { for (size_t _i_81 = 0; _i_81 < _a_81->length; _i_81++) {
-        Member* m = (Member*)(intptr_t)_a_81->items[_i_81];
+        ({ SpecArray* _a_85 = Class_getMembers(c); if (_a_85) { for (size_t _i_85 = 0; _i_85 < _a_85->length; _i_85++) {
+        Member* m = (Member*)(intptr_t)_a_85->items[_i_85];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return \""), Member_getName(m)), "\";\n");
-        _loop_next_81: ;
+        _loop_next_85: ;
     } } });
         out = spec_str_concat(out, "        default: return \"UNKNOWN\";\n");
         out = spec_str_concat(out, "    }\n}\n\n");
         bool isStrBacked = false;
-        ({ SpecArray* _a_82 = Class_getMembers(c); if (_a_82) { for (size_t _i_82 = 0; _i_82 < _a_82->length; _i_82++) {
-        Member* m = (Member*)(intptr_t)_a_82->items[_i_82];
+        ({ SpecArray* _a_86 = Class_getMembers(c); if (_a_86) { for (size_t _i_86 = 0; _i_86 < _a_86->length; _i_86++) {
+        Member* m = (Member*)(intptr_t)_a_86->items[_i_86];
     if (((spec_str_equals(Type_getName(Member_getType(m)), "String")) || (spec_str_equals(Type_getName(Member_getType(m)), "string")))) {
         isStrBacked = true;
     }
-        _loop_next_82: ;
+        _loop_next_86: ;
     } } });
         if (isStrBacked) {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline const char* "), name), "_value("), name), " self) {\n");
         out = spec_str_concat(out, "    switch (self) {\n");
-        ({ SpecArray* _a_83 = Class_getMembers(c); if (_a_83) { for (size_t _i_83 = 0; _i_83 < _a_83->length; _i_83++) {
-        Member* m = (Member*)(intptr_t)_a_83->items[_i_83];
+        ({ SpecArray* _a_87 = Class_getMembers(c); if (_a_87) { for (size_t _i_87 = 0; _i_87 < _a_87->length; _i_87++) {
+        Member* m = (Member*)(intptr_t)_a_87->items[_i_87];
     const char* valStr = Member_getName(m);
     if (m->hasInit) {
         Expression* initE = (Expression*)(m->initExpr);
@@ -7000,22 +7092,42 @@ const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecA
     }
     }
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return \""), valStr), "\";\n");
-        _loop_next_83: ;
+        _loop_next_87: ;
     } } });
         out = spec_str_concat(out, "        default: return \"\";\n");
         out = spec_str_concat(out, "    }\n}\n\n");
     } else {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline long long "), name), "_value("), name), " self) {\n");
-        out = spec_str_concat(out, "    return (long long)self;\n}\n\n");
+        out = spec_str_concat(out, "    switch (self) {\n");
+        long long vIdx = 0;
+        ({ SpecArray* _a_88 = Class_getMembers(c); if (_a_88) { for (size_t _i_88 = 0; _i_88 < _a_88->length; _i_88++) {
+        Member* m = (Member*)(intptr_t)_a_88->items[_i_88];
+    const char* valNum = spec_str_concat("", spec_to_string_int(vIdx));
+    if (m->hasInit) {
+        Expression* initE = (Expression*)(m->initExpr);
+        if (((spec_str_equals(Expression_getKind(initE), "NUMBER")) && ((!spec_str_equals(initE->stringValue, ""))))) {
+        valNum = initE->stringValue;
+    } else {
+        if (((((spec_str_equals(Expression_getKind(initE), "UNARY")) && (spec_str_equals(initE->unaryOp, "-")))) && (spec_str_equals(Expression_getKind(initE->unaryExpr), "NUMBER")))) {
+        valNum = spec_str_concat("-", initE->unaryExpr->stringValue);
+    }
+    }
+    }
+    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return "), valNum), "LL;\n");
+    vIdx = ((vIdx) + (1));
+        _loop_next_88: ;
+    } } });
+        out = spec_str_concat(out, "        default: return 0LL;\n");
+        out = spec_str_concat(out, "    }\n}\n\n");
     }
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline long long "), name), "_ordinal("), name), " self) {\n");
         out = spec_str_concat(out, "    switch (self) {\n");
         long long ordIdx = 0;
-        ({ SpecArray* _a_84 = Class_getMembers(c); if (_a_84) { for (size_t _i_84 = 0; _i_84 < _a_84->length; _i_84++) {
-        Member* m = (Member*)(intptr_t)_a_84->items[_i_84];
+        ({ SpecArray* _a_89 = Class_getMembers(c); if (_a_89) { for (size_t _i_89 = 0; _i_89 < _a_89->length; _i_89++) {
+        Member* m = (Member*)(intptr_t)_a_89->items[_i_89];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return "), spec_to_string_int(ordIdx)), ";\n");
     ordIdx = ((ordIdx) + (1));
-        _loop_next_84: ;
+        _loop_next_89: ;
     } } });
         out = spec_str_concat(out, "        default: return -1;\n");
         out = spec_str_concat(out, "    }\n}\n\n");
@@ -7026,39 +7138,39 @@ const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecA
         out = spec_str_concat(out, "    }\n    return arr;\n}\n\n");
     }
     }
-        _loop_next_76: ;
+        _loop_next_80: ;
     } } });
     return out;
 }
 
 const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* self, SpecArray* classes) {
     const char* out = "/* Forward Declarations */\n";
-    ({ SpecArray* _a_85 = classes; if (_a_85) { for (size_t _i_85 = 0; _i_85 < _a_85->length; _i_85++) {
-        Class* c = (Class*)(intptr_t)_a_85->items[_i_85];
+    ({ SpecArray* _a_90 = classes; if (_a_90) { for (size_t _i_90 = 0; _i_90 < _a_90->length; _i_90++) {
+        Class* c = (Class*)(intptr_t)_a_90->items[_i_90];
     if ((((!(DeclarationGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "typedef struct "), Class_getName(c)), " "), Class_getName(c)), ";\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, Class_getName(c)), "* "), Class_getName(c)), "_new(void);\n");
         bool hasInit = false;
-        ({ SpecArray* _a_86 = Class_getMembers(c); if (_a_86) { for (size_t _i_86 = 0; _i_86 < _a_86->length; _i_86++) {
-        Member* m = (Member*)(intptr_t)_a_86->items[_i_86];
+        ({ SpecArray* _a_91 = Class_getMembers(c); if (_a_91) { for (size_t _i_91 = 0; _i_91 < _a_91->length; _i_91++) {
+        Member* m = (Member*)(intptr_t)_a_91->items[_i_91];
     if (spec_str_equals(Member_getName(m), "init")) {
         hasInit = true;
     }
-        _loop_next_86: ;
+        _loop_next_91: ;
     } } });
         if ((!(hasInit))) {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "void "), Class_getName(c)), "_init("), Class_getName(c)), "* self);\n");
     }
     }
-        _loop_next_85: ;
+        _loop_next_90: ;
     } } });
     out = spec_str_concat(out, "\n");
-    ({ SpecArray* _a_87 = classes; if (_a_87) { for (size_t _i_87 = 0; _i_87 < _a_87->length; _i_87++) {
-        Class* c = (Class*)(intptr_t)_a_87->items[_i_87];
+    ({ SpecArray* _a_92 = classes; if (_a_92) { for (size_t _i_92 = 0; _i_92 < _a_92->length; _i_92++) {
+        Class* c = (Class*)(intptr_t)_a_92->items[_i_92];
     if ((((!(DeclarationGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
         SpecArray* tps = Class_getTypeParams(c);
-        ({ SpecArray* _a_88 = Class_getMembers(c); if (_a_88) { for (size_t _i_88 = 0; _i_88 < _a_88->length; _i_88++) {
-        Member* m = (Member*)(intptr_t)_a_88->items[_i_88];
+        ({ SpecArray* _a_93 = Class_getMembers(c); if (_a_93) { for (size_t _i_93 = 0; _i_93 < _a_93->length; _i_93++) {
+        Member* m = (Member*)(intptr_t)_a_93->items[_i_93];
     if (((Member_getMemberKind(m)) == (MemberKind_METHOD))) {
         const char* retType = DeclarationGenerator_resolveReturnTypeForClass(self, Member_getType(m), tps);
         if (spec_str_equals(retType, "void")) {
@@ -7067,18 +7179,18 @@ const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerato
     }
     }
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, retType), " "), Class_getName(c)), "_"), Member_getName(m)), "("), Class_getName(c)), "* self");
-        ({ SpecArray* _a_89 = Member_getParameters(m); if (_a_89) { for (size_t _i_89 = 0; _i_89 < _a_89->length; _i_89++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_89->items[_i_89];
+        ({ SpecArray* _a_94 = Member_getParameters(m); if (_a_94) { for (size_t _i_94 = 0; _i_94 < _a_94->length; _i_94++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_94->items[_i_94];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, ", "), DeclarationGenerator_cTypeForClass(self, Type_getName(Parameter_getType(p)), tps)), " "), DeclarationGenerator_cIdent(self, Parameter_getName(p)));
-        _loop_next_89: ;
+        _loop_next_94: ;
     } } });
         out = spec_str_concat(out, ");\n");
     } else {
     }
-        _loop_next_88: ;
+        _loop_next_93: ;
     } } });
     }
-        _loop_next_87: ;
+        _loop_next_92: ;
     } } });
     out = spec_str_concat(out, "\n");
     return out;
@@ -7086,18 +7198,18 @@ const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerato
 
 const char* DeclarationGenerator_generateStructs(DeclarationGenerator* self, SpecArray* classes) {
     const char* out = "/* Struct Layouts */\n";
-    ({ SpecArray* _a_90 = classes; if (_a_90) { for (size_t _i_90 = 0; _i_90 < _a_90->length; _i_90++) {
-        Class* c = (Class*)(intptr_t)_a_90->items[_i_90];
+    ({ SpecArray* _a_95 = classes; if (_a_95) { for (size_t _i_95 = 0; _i_95 < _a_95->length; _i_95++) {
+        Class* c = (Class*)(intptr_t)_a_95->items[_i_95];
     if ((((!(DeclarationGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
         SpecArray* tps = Class_getTypeParams(c);
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "struct "), Class_getName(c)), " {\n");
         out = spec_str_concat(out, "    const char* _type_name;\n");
         SpecArray* allFields = ({ SpecArray* _arr = spec_array_new(); _arr; });
         DeclarationGenerator_collectStructFields(self, c, classes, allFields);
-        ({ SpecArray* _a_91 = allFields; if (_a_91) { for (size_t _i_91 = 0; _i_91 < _a_91->length; _i_91++) {
-        Member* m = (Member*)(intptr_t)_a_91->items[_i_91];
+        ({ SpecArray* _a_96 = allFields; if (_a_96) { for (size_t _i_96 = 0; _i_96 < _a_96->length; _i_96++) {
+        Member* m = (Member*)(intptr_t)_a_96->items[_i_96];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), DeclarationGenerator_cTypeForClass(self, Type_getName(Member_getType(m)), tps)), " "), DeclarationGenerator_cIdent(self, Member_getName(m))), ";\n");
-        _loop_next_91: ;
+        _loop_next_96: ;
     } } });
         out = spec_str_concat(out, "};\n\n");
     } else {
@@ -7106,19 +7218,19 @@ const char* DeclarationGenerator_generateStructs(DeclarationGenerator* self, Spe
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "struct "), name), " {\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_Tag _tag;\n");
         out = spec_str_concat(out, "    const char* _variant_name;\n");
-        ({ SpecArray* _a_92 = Class_getMembers(c); if (_a_92) { for (size_t _i_92 = 0; _i_92 < _a_92->length; _i_92++) {
-        Member* m = (Member*)(intptr_t)_a_92->items[_i_92];
+        ({ SpecArray* _a_97 = Class_getMembers(c); if (_a_97) { for (size_t _i_97 = 0; _i_97 < _a_97->length; _i_97++) {
+        Member* m = (Member*)(intptr_t)_a_97->items[_i_97];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
-    ({ SpecArray* _a_93 = Member_getParameters(m); if (_a_93) { for (size_t _i_93 = 0; _i_93 < _a_93->length; _i_93++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_93->items[_i_93];
+    ({ SpecArray* _a_98 = Member_getParameters(m); if (_a_98) { for (size_t _i_98 = 0; _i_98 < _a_98->length; _i_98++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_98->items[_i_98];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), DeclarationGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), vName), "_"), DeclarationGenerator_cIdent(self, Parameter_getName(p))), ";\n");
-        _loop_next_93: ;
+        _loop_next_98: ;
     } } });
-        _loop_next_92: ;
+        _loop_next_97: ;
     } } });
         out = spec_str_concat(out, "};\n\n");
-        ({ SpecArray* _a_94 = Class_getMembers(c); if (_a_94) { for (size_t _i_94 = 0; _i_94 < _a_94->length; _i_94++) {
-        Member* m = (Member*)(intptr_t)_a_94->items[_i_94];
+        ({ SpecArray* _a_99 = Class_getMembers(c); if (_a_99) { for (size_t _i_99 = 0; _i_99 < _a_99->length; _i_99++) {
+        Member* m = (Member*)(intptr_t)_a_99->items[_i_99];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
     if (((spec_array_length(Member_getParameters(m))) == (0))) {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline "), name), "* "), name), "_"), vName), "_ctor(void) {\n");
@@ -7129,27 +7241,27 @@ const char* DeclarationGenerator_generateStructs(DeclarationGenerator* self, Spe
     } else {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline "), name), "* "), name), "_"), vName), "(");
         bool firstP = true;
-        ({ SpecArray* _a_95 = Member_getParameters(m); if (_a_95) { for (size_t _i_95 = 0; _i_95 < _a_95->length; _i_95++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_95->items[_i_95];
+        ({ SpecArray* _a_100 = Member_getParameters(m); if (_a_100) { for (size_t _i_100 = 0; _i_100 < _a_100->length; _i_100++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_100->items[_i_100];
     if ((!(firstP))) {
         out = spec_str_concat(out, ", ");
     }
     out = spec_str_concat(spec_str_concat(spec_str_concat(out, DeclarationGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), DeclarationGenerator_cIdent(self, Parameter_getName(p)));
     firstP = false;
-        _loop_next_95: ;
+        _loop_next_100: ;
     } } });
         out = spec_str_concat(out, ") {\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "* _e = ("), name), "*)calloc(1, sizeof("), name), "));\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->_tag = "), name), "_TAG_"), vName), ";\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->_variant_name = \""), Member_getName(m)), "\";\n");
-        ({ SpecArray* _a_96 = Member_getParameters(m); if (_a_96) { for (size_t _i_96 = 0; _i_96 < _a_96->length; _i_96++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_96->items[_i_96];
+        ({ SpecArray* _a_101 = Member_getParameters(m); if (_a_101) { for (size_t _i_101 = 0; _i_101 < _a_101->length; _i_101++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_101->items[_i_101];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->"), vName), "_"), DeclarationGenerator_cIdent(self, Parameter_getName(p))), " = "), DeclarationGenerator_cIdent(self, Parameter_getName(p))), ";\n");
-        _loop_next_96: ;
+        _loop_next_101: ;
     } } });
         out = spec_str_concat(out, "    return _e;\n}\n\n");
     }
-        _loop_next_94: ;
+        _loop_next_99: ;
     } } });
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline const char* "), name), "_name("), name), "* self) {\n");
         out = spec_str_concat(out, "    return self ? self->_variant_name : \"UNKNOWN\";\n}\n\n");
@@ -7157,7 +7269,7 @@ const char* DeclarationGenerator_generateStructs(DeclarationGenerator* self, Spe
         out = spec_str_concat(out, "    return self ? (long long)self->_tag : -1;\n}\n\n");
     }
     }
-        _loop_next_90: ;
+        _loop_next_95: ;
     } } });
     return out;
 }
@@ -7258,26 +7370,26 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         if (spec_str_equals(expr->methodName, "execute")) {
         const char* cmdC = "\"\"";
         const char* argsC = "NULL";
-        ({ SpecArray* _a_97 = expr->methodArgs; if (_a_97) { for (size_t _i_97 = 0; _i_97 < _a_97->length; _i_97++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_97->items[_i_97];
+        ({ SpecArray* _a_102 = expr->methodArgs; if (_a_102) { for (size_t _i_102 = 0; _i_102 < _a_102->length; _i_102++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_102->items[_i_102];
     if (spec_str_equals(NamedArg_getName(arg), "command")) {
         cmdC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "args")) {
         argsC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_97: ;
+        _loop_next_102: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_process_execute(", cmdC), ", "), argsC), ")");
     }
         if (spec_str_equals(expr->methodName, "sleep")) {
         const char* msC = "0";
-        ({ SpecArray* _a_98 = expr->methodArgs; if (_a_98) { for (size_t _i_98 = 0; _i_98 < _a_98->length; _i_98++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_98->items[_i_98];
+        ({ SpecArray* _a_103 = expr->methodArgs; if (_a_103) { for (size_t _i_103 = 0; _i_103 < _a_103->length; _i_103++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_103->items[_i_103];
     if (spec_str_equals(NamedArg_getName(arg), "milliseconds")) {
         msC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_98: ;
+        _loop_next_103: ;
     } } });
         return spec_str_concat(spec_str_concat("spec_process_sleep(", msC), ")");
     }
@@ -7288,23 +7400,23 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (spec_str_equals(targetC, "File")) {
         if (spec_str_equals(expr->methodName, "exists")) {
         const char* pathC = "\"\"";
-        ({ SpecArray* _a_99 = expr->methodArgs; if (_a_99) { for (size_t _i_99 = 0; _i_99 < _a_99->length; _i_99++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_99->items[_i_99];
+        ({ SpecArray* _a_104 = expr->methodArgs; if (_a_104) { for (size_t _i_104 = 0; _i_104 < _a_104->length; _i_104++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_104->items[_i_104];
     if (spec_str_equals(NamedArg_getName(arg), "path")) {
         pathC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_99: ;
+        _loop_next_104: ;
     } } });
         return spec_str_concat(spec_str_concat("spec_file_exists(", pathC), ")");
     }
         if (spec_str_equals(expr->methodName, "remove")) {
         const char* pathC = "\"\"";
-        ({ SpecArray* _a_100 = expr->methodArgs; if (_a_100) { for (size_t _i_100 = 0; _i_100 < _a_100->length; _i_100++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_100->items[_i_100];
+        ({ SpecArray* _a_105 = expr->methodArgs; if (_a_105) { for (size_t _i_105 = 0; _i_105 < _a_105->length; _i_105++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_105->items[_i_105];
     if (spec_str_equals(NamedArg_getName(arg), "path")) {
         pathC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_100: ;
+        _loop_next_105: ;
     } } });
         return spec_str_concat(spec_str_concat("spec_file_remove(", pathC), ")");
     }
@@ -7313,8 +7425,8 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         const char* defC = "\"\"";
         const char* onSuccC = "NULL";
         const char* onErrC = "NULL";
-        ({ SpecArray* _a_101 = expr->methodArgs; if (_a_101) { for (size_t _i_101 = 0; _i_101 < _a_101->length; _i_101++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_101->items[_i_101];
+        ({ SpecArray* _a_106 = expr->methodArgs; if (_a_106) { for (size_t _i_106 = 0; _i_106 < _a_106->length; _i_106++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_106->items[_i_106];
     if (spec_str_equals(NamedArg_getName(arg), "path")) {
         pathC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
@@ -7327,7 +7439,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (spec_str_equals(NamedArg_getName(arg), "onError")) {
         onErrC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_101: ;
+        _loop_next_106: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_read(", pathC), ", "), defC), ", (void (*)(const char*))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
     }
@@ -7336,8 +7448,8 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         const char* defC = "\"\"";
         const char* onSuccC = "NULL";
         const char* onErrC = "NULL";
-        ({ SpecArray* _a_102 = expr->methodArgs; if (_a_102) { for (size_t _i_102 = 0; _i_102 < _a_102->length; _i_102++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_102->items[_i_102];
+        ({ SpecArray* _a_107 = expr->methodArgs; if (_a_107) { for (size_t _i_107 = 0; _i_107 < _a_107->length; _i_107++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_107->items[_i_107];
     if (spec_str_equals(NamedArg_getName(arg), "path")) {
         pathC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
@@ -7350,7 +7462,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (spec_str_equals(NamedArg_getName(arg), "onError")) {
         onErrC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_102: ;
+        _loop_next_107: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_read_async(", pathC), ", "), defC), ", (void (*)(const char*))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
     }
@@ -7359,8 +7471,8 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         const char* contentC = "\"\"";
         const char* onSuccC = "NULL";
         const char* onErrC = "NULL";
-        ({ SpecArray* _a_103 = expr->methodArgs; if (_a_103) { for (size_t _i_103 = 0; _i_103 < _a_103->length; _i_103++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_103->items[_i_103];
+        ({ SpecArray* _a_108 = expr->methodArgs; if (_a_108) { for (size_t _i_108 = 0; _i_108 < _a_108->length; _i_108++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_108->items[_i_108];
     if (spec_str_equals(NamedArg_getName(arg), "path")) {
         pathC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
@@ -7373,7 +7485,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (spec_str_equals(NamedArg_getName(arg), "onError")) {
         onErrC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_103: ;
+        _loop_next_108: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_write(", pathC), ", "), contentC), ", (void (*)(long long))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
     }
@@ -7382,8 +7494,8 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         const char* contentC = "\"\"";
         const char* onSuccC = "NULL";
         const char* onErrC = "NULL";
-        ({ SpecArray* _a_104 = expr->methodArgs; if (_a_104) { for (size_t _i_104 = 0; _i_104 < _a_104->length; _i_104++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_104->items[_i_104];
+        ({ SpecArray* _a_109 = expr->methodArgs; if (_a_109) { for (size_t _i_109 = 0; _i_109 < _a_109->length; _i_109++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_109->items[_i_109];
     if (spec_str_equals(NamedArg_getName(arg), "path")) {
         pathC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
@@ -7396,7 +7508,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (spec_str_equals(NamedArg_getName(arg), "onError")) {
         onErrC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_104: ;
+        _loop_next_109: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_write_async(", pathC), ", "), contentC), ", (void (*)(long long))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
     }
@@ -7449,8 +7561,8 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         const char* keyC = "\"\"";
         const char* valC = "\"\"";
         bool valIsStr = true;
-        ({ SpecArray* _a_105 = expr->methodArgs; if (_a_105) { for (size_t _i_105 = 0; _i_105 < _a_105->length; _i_105++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_105->items[_i_105];
+        ({ SpecArray* _a_110 = expr->methodArgs; if (_a_110) { for (size_t _i_110 = 0; _i_110 < _a_110->length; _i_110++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_110->items[_i_110];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
@@ -7459,7 +7571,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         valC = CodeGenerator_generateExpression(cg, valExpr);
         valIsStr = CodeGenerator_isStringExpr(cg, valExpr);
     }
-        _loop_next_105: ;
+        _loop_next_110: ;
     } } });
         if (valIsStr) {
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_set(", targetC), ", "), keyC), ", "), valC), ")");
@@ -7469,97 +7581,97 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         if (spec_str_equals(expr->methodName, "getString")) {
         const char* keyC = "\"\"";
         const char* defC = "\"\"";
-        ({ SpecArray* _a_106 = expr->methodArgs; if (_a_106) { for (size_t _i_106 = 0; _i_106 < _a_106->length; _i_106++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_106->items[_i_106];
+        ({ SpecArray* _a_111 = expr->methodArgs; if (_a_111) { for (size_t _i_111 = 0; _i_111 < _a_111->length; _i_111++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_111->items[_i_111];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_106: ;
+        _loop_next_111: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_get_string(", targetC), ", "), keyC), ", "), defC), ")");
     }
         if (spec_str_equals(expr->methodName, "getInt")) {
         const char* keyC = "\"\"";
         const char* defC = "0";
-        ({ SpecArray* _a_107 = expr->methodArgs; if (_a_107) { for (size_t _i_107 = 0; _i_107 < _a_107->length; _i_107++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_107->items[_i_107];
+        ({ SpecArray* _a_112 = expr->methodArgs; if (_a_112) { for (size_t _i_112 = 0; _i_112 < _a_112->length; _i_112++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_112->items[_i_112];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_107: ;
+        _loop_next_112: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_get_int(", targetC), ", "), keyC), ", "), defC), ")");
     }
         if (spec_str_equals(expr->methodName, "getFloat")) {
         const char* keyC = "\"\"";
         const char* defC = "0.0";
-        ({ SpecArray* _a_108 = expr->methodArgs; if (_a_108) { for (size_t _i_108 = 0; _i_108 < _a_108->length; _i_108++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_108->items[_i_108];
+        ({ SpecArray* _a_113 = expr->methodArgs; if (_a_113) { for (size_t _i_113 = 0; _i_113 < _a_113->length; _i_113++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_113->items[_i_113];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_108: ;
+        _loop_next_113: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_get_float(", targetC), ", "), keyC), ", "), defC), ")");
     }
         if (spec_str_equals(expr->methodName, "getBool")) {
         const char* keyC = "\"\"";
         const char* defC = "false";
-        ({ SpecArray* _a_109 = expr->methodArgs; if (_a_109) { for (size_t _i_109 = 0; _i_109 < _a_109->length; _i_109++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_109->items[_i_109];
+        ({ SpecArray* _a_114 = expr->methodArgs; if (_a_114) { for (size_t _i_114 = 0; _i_114 < _a_114->length; _i_114++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_114->items[_i_114];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_109: ;
+        _loop_next_114: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_get_bool(", targetC), ", "), keyC), ", "), defC), ")");
     }
         if (spec_str_equals(expr->methodName, "get")) {
         const char* keyC = "\"\"";
         const char* defC = "NULL";
-        ({ SpecArray* _a_110 = expr->methodArgs; if (_a_110) { for (size_t _i_110 = 0; _i_110 < _a_110->length; _i_110++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_110->items[_i_110];
+        ({ SpecArray* _a_115 = expr->methodArgs; if (_a_115) { for (size_t _i_115 = 0; _i_115 < _a_115->length; _i_115++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_115->items[_i_115];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_110: ;
+        _loop_next_115: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_get(", targetC), ", "), keyC), ", (void*)(intptr_t)("), defC), "))");
     }
         if (spec_str_equals(expr->methodName, "has")) {
         const char* keyC = "\"\"";
-        ({ SpecArray* _a_111 = expr->methodArgs; if (_a_111) { for (size_t _i_111 = 0; _i_111 < _a_111->length; _i_111++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_111->items[_i_111];
+        ({ SpecArray* _a_116 = expr->methodArgs; if (_a_116) { for (size_t _i_116 = 0; _i_116 < _a_116->length; _i_116++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_116->items[_i_116];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_111: ;
+        _loop_next_116: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_has(", targetC), ", "), keyC), ")");
     }
         if (spec_str_equals(expr->methodName, "remove")) {
         const char* keyC = "\"\"";
-        ({ SpecArray* _a_112 = expr->methodArgs; if (_a_112) { for (size_t _i_112 = 0; _i_112 < _a_112->length; _i_112++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_112->items[_i_112];
+        ({ SpecArray* _a_117 = expr->methodArgs; if (_a_117) { for (size_t _i_117 = 0; _i_117 < _a_117->length; _i_117++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_117->items[_i_117];
     if (spec_str_equals(NamedArg_getName(arg), "key")) {
         keyC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_112: ;
+        _loop_next_117: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_map_remove(", targetC), ", "), keyC), ")");
     }
@@ -7583,27 +7695,27 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (isArr) {
         if (spec_str_equals(expr->methodName, "get")) {
         const char* idxC = "0";
-        ({ SpecArray* _a_113 = expr->methodArgs; if (_a_113) { for (size_t _i_113 = 0; _i_113 < _a_113->length; _i_113++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_113->items[_i_113];
+        ({ SpecArray* _a_118 = expr->methodArgs; if (_a_118) { for (size_t _i_118 = 0; _i_118 < _a_118->length; _i_118++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_118->items[_i_118];
     if (spec_str_equals(NamedArg_getName(arg), "index")) {
         idxC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_113: ;
+        _loop_next_118: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_get(", targetC), ", "), idxC), ")");
     }
         if (spec_str_equals(expr->methodName, "set")) {
         const char* idxC = "0";
         const char* itemC = "NULL";
-        ({ SpecArray* _a_114 = expr->methodArgs; if (_a_114) { for (size_t _i_114 = 0; _i_114 < _a_114->length; _i_114++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_114->items[_i_114];
+        ({ SpecArray* _a_119 = expr->methodArgs; if (_a_119) { for (size_t _i_119 = 0; _i_119 < _a_119->length; _i_119++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_119->items[_i_119];
     if (spec_str_equals(NamedArg_getName(arg), "index")) {
         idxC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (((spec_str_equals(NamedArg_getName(arg), "item")) || (spec_str_equals(NamedArg_getName(arg), "value")))) {
         itemC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_114: ;
+        _loop_next_119: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_set(", targetC), ", "), idxC), ", (void*)(intptr_t)("), itemC), "))");
     }
@@ -7627,27 +7739,27 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         if (spec_str_equals(expr->methodName, "removeAt")) {
         const char* idxC = "0";
-        ({ SpecArray* _a_115 = expr->methodArgs; if (_a_115) { for (size_t _i_115 = 0; _i_115 < _a_115->length; _i_115++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_115->items[_i_115];
+        ({ SpecArray* _a_120 = expr->methodArgs; if (_a_120) { for (size_t _i_120 = 0; _i_120 < _a_120->length; _i_120++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_120->items[_i_120];
     if (spec_str_equals(NamedArg_getName(arg), "index")) {
         idxC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_115: ;
+        _loop_next_120: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_remove_at(", targetC), ", "), idxC), ")");
     }
         if (spec_str_equals(expr->methodName, "slice")) {
         const char* startC = "0";
         const char* endC = "0";
-        ({ SpecArray* _a_116 = expr->methodArgs; if (_a_116) { for (size_t _i_116 = 0; _i_116 < _a_116->length; _i_116++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_116->items[_i_116];
+        ({ SpecArray* _a_121 = expr->methodArgs; if (_a_121) { for (size_t _i_121 = 0; _i_121 < _a_121->length; _i_121++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_121->items[_i_121];
     if (spec_str_equals(NamedArg_getName(arg), "start")) {
         startC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "end")) {
         endC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_116: ;
+        _loop_next_121: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_slice(", targetC), ", "), startC), ", "), endC), ")");
     }
@@ -7657,15 +7769,15 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         if (spec_str_equals(expr->methodName, "indexOf")) {
         const char* searchC = "\"\"";
         const char* defC = "-1";
-        ({ SpecArray* _a_117 = expr->methodArgs; if (_a_117) { for (size_t _i_117 = 0; _i_117 < _a_117->length; _i_117++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_117->items[_i_117];
+        ({ SpecArray* _a_122 = expr->methodArgs; if (_a_122) { for (size_t _i_122 = 0; _i_122 < _a_122->length; _i_122++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_122->items[_i_122];
     if (spec_str_equals(NamedArg_getName(arg), "search")) {
         searchC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_117: ;
+        _loop_next_122: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_index_of_str(", targetC), ", "), searchC), ", "), defC), ")");
     }
@@ -7678,12 +7790,12 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
     }
         const char* fnC = "NULL";
-        ({ SpecArray* _a_118 = expr->methodArgs; if (_a_118) { for (size_t _i_118 = 0; _i_118 < _a_118->length; _i_118++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_118->items[_i_118];
+        ({ SpecArray* _a_123 = expr->methodArgs; if (_a_123) { for (size_t _i_123 = 0; _i_123 < _a_123->length; _i_123++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_123->items[_i_123];
     if (spec_str_equals(NamedArg_getName(arg), "action")) {
         fnC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_118: ;
+        _loop_next_123: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_each(", targetC), ", (void (*)(void*))("), fnC), "))");
     }
@@ -7696,12 +7808,12 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
     }
         const char* fnC = "NULL";
-        ({ SpecArray* _a_119 = expr->methodArgs; if (_a_119) { for (size_t _i_119 = 0; _i_119 < _a_119->length; _i_119++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_119->items[_i_119];
+        ({ SpecArray* _a_124 = expr->methodArgs; if (_a_124) { for (size_t _i_124 = 0; _i_124 < _a_124->length; _i_124++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_124->items[_i_124];
     if (spec_str_equals(NamedArg_getName(arg), "predicate")) {
         fnC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_119: ;
+        _loop_next_124: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_filter(", targetC), ", (bool (*)(void*))("), fnC), "))");
     }
@@ -7714,12 +7826,12 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
     }
         const char* fnC = "NULL";
-        ({ SpecArray* _a_120 = expr->methodArgs; if (_a_120) { for (size_t _i_120 = 0; _i_120 < _a_120->length; _i_120++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_120->items[_i_120];
+        ({ SpecArray* _a_125 = expr->methodArgs; if (_a_125) { for (size_t _i_125 = 0; _i_125 < _a_125->length; _i_125++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_125->items[_i_125];
     if (spec_str_equals(NamedArg_getName(arg), "predicate")) {
         fnC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_120: ;
+        _loop_next_125: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_count(", targetC), ", (bool (*)(void*))("), fnC), "))");
     }
@@ -7732,12 +7844,12 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
     }
         const char* fnC = "NULL";
-        ({ SpecArray* _a_121 = expr->methodArgs; if (_a_121) { for (size_t _i_121 = 0; _i_121 < _a_121->length; _i_121++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_121->items[_i_121];
+        ({ SpecArray* _a_126 = expr->methodArgs; if (_a_126) { for (size_t _i_126 = 0; _i_126 < _a_126->length; _i_126++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_126->items[_i_126];
     if (spec_str_equals(NamedArg_getName(arg), "predicate")) {
         fnC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_121: ;
+        _loop_next_126: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_any(", targetC), ", (bool (*)(void*))("), fnC), "))");
     }
@@ -7762,12 +7874,12 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         if (spec_str_equals(expr->methodName, "join")) {
         const char* sepC = "\"\"";
-        ({ SpecArray* _a_122 = expr->methodArgs; if (_a_122) { for (size_t _i_122 = 0; _i_122 < _a_122->length; _i_122++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_122->items[_i_122];
+        ({ SpecArray* _a_127 = expr->methodArgs; if (_a_127) { for (size_t _i_127 = 0; _i_127 < _a_127->length; _i_127++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_127->items[_i_127];
     if (((spec_str_equals(NamedArg_getName(arg), "separator")) || (spec_str_equals(sepC, "\"\"")))) {
         sepC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_122: ;
+        _loop_next_127: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_array_join(", targetC), ", "), sepC), ")");
     }
@@ -7778,89 +7890,89 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     if (spec_str_equals(expr->methodName, "charAt")) {
         const char* idxC = "0";
         const char* defC = "\"\"";
-        ({ SpecArray* _a_123 = expr->methodArgs; if (_a_123) { for (size_t _i_123 = 0; _i_123 < _a_123->length; _i_123++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_123->items[_i_123];
+        ({ SpecArray* _a_128 = expr->methodArgs; if (_a_128) { for (size_t _i_128 = 0; _i_128 < _a_128->length; _i_128++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_128->items[_i_128];
     if (spec_str_equals(NamedArg_getName(arg), "index")) {
         idxC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_123: ;
+        _loop_next_128: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_char_at(", targetC), ", "), idxC), ", "), defC), ")");
     }
     if (spec_str_equals(expr->methodName, "substring")) {
         const char* startC = "0";
         const char* endC = "0";
-        ({ SpecArray* _a_124 = expr->methodArgs; if (_a_124) { for (size_t _i_124 = 0; _i_124 < _a_124->length; _i_124++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_124->items[_i_124];
+        ({ SpecArray* _a_129 = expr->methodArgs; if (_a_129) { for (size_t _i_129 = 0; _i_129 < _a_129->length; _i_129++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_129->items[_i_129];
     if (spec_str_equals(NamedArg_getName(arg), "start")) {
         startC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "end")) {
         endC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_124: ;
+        _loop_next_129: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_substring(", targetC), ", "), startC), ", "), endC), ")");
     }
     if (spec_str_equals(expr->methodName, "startsWith")) {
         const char* pfxC = "\"\"";
-        ({ SpecArray* _a_125 = expr->methodArgs; if (_a_125) { for (size_t _i_125 = 0; _i_125 < _a_125->length; _i_125++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_125->items[_i_125];
+        ({ SpecArray* _a_130 = expr->methodArgs; if (_a_130) { for (size_t _i_130 = 0; _i_130 < _a_130->length; _i_130++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_130->items[_i_130];
     if (((spec_str_equals(NamedArg_getName(arg), "prefix")) || (spec_str_equals(pfxC, "\"\"")))) {
         pfxC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_125: ;
+        _loop_next_130: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_starts_with(", targetC), ", "), pfxC), ")");
     }
     if (spec_str_equals(expr->methodName, "endsWith")) {
         const char* sfxC = "\"\"";
-        ({ SpecArray* _a_126 = expr->methodArgs; if (_a_126) { for (size_t _i_126 = 0; _i_126 < _a_126->length; _i_126++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_126->items[_i_126];
+        ({ SpecArray* _a_131 = expr->methodArgs; if (_a_131) { for (size_t _i_131 = 0; _i_131 < _a_131->length; _i_131++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_131->items[_i_131];
     if (((spec_str_equals(NamedArg_getName(arg), "suffix")) || (spec_str_equals(sfxC, "\"\"")))) {
         sfxC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_126: ;
+        _loop_next_131: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_ends_with(", targetC), ", "), sfxC), ")");
     }
     if (spec_str_equals(expr->methodName, "contains")) {
         const char* needleC = "\"\"";
-        ({ SpecArray* _a_127 = expr->methodArgs; if (_a_127) { for (size_t _i_127 = 0; _i_127 < _a_127->length; _i_127++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_127->items[_i_127];
+        ({ SpecArray* _a_132 = expr->methodArgs; if (_a_132) { for (size_t _i_132 = 0; _i_132 < _a_132->length; _i_132++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_132->items[_i_132];
     if (((((spec_str_equals(NamedArg_getName(arg), "needle")) || (spec_str_equals(NamedArg_getName(arg), "search")))) || (spec_str_equals(needleC, "\"\"")))) {
         needleC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_127: ;
+        _loop_next_132: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_contains(", targetC), ", "), needleC), ")");
     }
     if (spec_str_equals(expr->methodName, "replaceAll")) {
         const char* searchC = "\"\"";
         const char* replC = "\"\"";
-        ({ SpecArray* _a_128 = expr->methodArgs; if (_a_128) { for (size_t _i_128 = 0; _i_128 < _a_128->length; _i_128++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_128->items[_i_128];
+        ({ SpecArray* _a_133 = expr->methodArgs; if (_a_133) { for (size_t _i_133 = 0; _i_133 < _a_133->length; _i_133++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_133->items[_i_133];
     if (spec_str_equals(NamedArg_getName(arg), "search")) {
         searchC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "replacement")) {
         replC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_128: ;
+        _loop_next_133: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_replace_all(", targetC), ", "), searchC), ", "), replC), ")");
     }
     if (spec_str_equals(expr->methodName, "split")) {
         const char* delimC = "\"\"";
-        ({ SpecArray* _a_129 = expr->methodArgs; if (_a_129) { for (size_t _i_129 = 0; _i_129 < _a_129->length; _i_129++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_129->items[_i_129];
+        ({ SpecArray* _a_134 = expr->methodArgs; if (_a_134) { for (size_t _i_134 = 0; _i_134 < _a_134->length; _i_134++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_134->items[_i_134];
     if (((spec_str_equals(NamedArg_getName(arg), "delimiter")) || (spec_str_equals(delimC, "\"\"")))) {
         delimC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_129: ;
+        _loop_next_134: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_split(", targetC), ", "), delimC), ")");
     }
@@ -7881,27 +7993,27 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
     if (spec_str_equals(expr->methodName, "countLeading")) {
         const char* searchC = "\"\"";
-        ({ SpecArray* _a_130 = expr->methodArgs; if (_a_130) { for (size_t _i_130 = 0; _i_130 < _a_130->length; _i_130++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_130->items[_i_130];
+        ({ SpecArray* _a_135 = expr->methodArgs; if (_a_135) { for (size_t _i_135 = 0; _i_135 < _a_135->length; _i_135++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_135->items[_i_135];
     if (spec_str_equals(NamedArg_getName(arg), "search")) {
         searchC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_130: ;
+        _loop_next_135: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_count_leading(", targetC), ", "), searchC), ")");
     }
     if (spec_str_equals(expr->methodName, "indexOf")) {
         const char* needleC = "\"\"";
         const char* defC = "-1";
-        ({ SpecArray* _a_131 = expr->methodArgs; if (_a_131) { for (size_t _i_131 = 0; _i_131 < _a_131->length; _i_131++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_131->items[_i_131];
+        ({ SpecArray* _a_136 = expr->methodArgs; if (_a_136) { for (size_t _i_136 = 0; _i_136 < _a_136->length; _i_136++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_136->items[_i_136];
     if (spec_str_equals(NamedArg_getName(arg), "needle")) {
         needleC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
     if (spec_str_equals(NamedArg_getName(arg), "default")) {
         defC = CodeGenerator_generateExpression(cg, NamedArg_getValue(arg));
     }
-        _loop_next_131: ;
+        _loop_next_136: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_index_of(", targetC), ", "), needleC), ", "), defC), ")");
     }
@@ -8075,12 +8187,12 @@ const char* CodeGenerator_lookupFieldType(CodeGenerator* self, const char* class
         return CodeGenerator_substituteTypeParam(self, rawT, cls, typeArgs);
     }
     const char* inherited = "";
-    ({ SpecArray* _a_132 = Class_getBaseClasses(cls); if (_a_132) { for (size_t _i_132 = 0; _i_132 < _a_132->length; _i_132++) {
-        const char* baseName = (const char*)(intptr_t)_a_132->items[_i_132];
+    ({ SpecArray* _a_137 = Class_getBaseClasses(cls); if (_a_137) { for (size_t _i_137 = 0; _i_137 < _a_137->length; _i_137++) {
+        const char* baseName = (const char*)(intptr_t)_a_137->items[_i_137];
     if (spec_str_equals(inherited, "")) {
         inherited = CodeGenerator_lookupFieldType(self, baseName, fieldName);
     }
-        _loop_next_132: ;
+        _loop_next_137: ;
     } } });
     return inherited;
 }
@@ -8122,16 +8234,16 @@ const char* CodeGenerator_generateWhenCondition(CodeGenerator* self, Expression*
 
 const char* CodeGenerator_generateWhenBindings(CodeGenerator* self, const char* subjC, WhenArm* arm) {
     const char* binds = "";
-    ({ SpecArray* _a_133 = arm->conditions; if (_a_133) { for (size_t _i_133 = 0; _i_133 < _a_133->length; _i_133++) {
-        Expression* c = (Expression*)(intptr_t)_a_133->items[_i_133];
+    ({ SpecArray* _a_138 = arm->conditions; if (_a_138) { for (size_t _i_138 = 0; _i_138 < _a_138->length; _i_138++) {
+        Expression* c = (Expression*)(intptr_t)_a_138->items[_i_138];
     if (((spec_str_equals(Expression_getKind(c), "CALL")) && (spec_map_has(self->allEnumVariants, c->methodName)))) {
         const char* eName = spec_map_get_string(self->allEnumVariants, c->methodName, "");
         if (spec_map_has(self->allTaggedEnums, eName)) {
         Member* vMem = (Member*)(CodeGenerator_lookupEnumVariant(self, eName, c->methodName));
         const char* vNameC = CodeGenerator_cIdent(self, c->methodName);
         long long idx = 0;
-        ({ SpecArray* _a_134 = c->methodArgs; if (_a_134) { for (size_t _i_134 = 0; _i_134 < _a_134->length; _i_134++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_134->items[_i_134];
+        ({ SpecArray* _a_139 = c->methodArgs; if (_a_139) { for (size_t _i_139 = 0; _i_139 < _a_139->length; _i_139++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_139->items[_i_139];
     if (((idx) < (spec_array_length(Member_getParameters(vMem))))) {
         Expression* av = (Expression*)(NamedArg_getValue(arg));
         if (spec_str_equals(Expression_getKind(av), "IDENT")) {
@@ -8143,13 +8255,42 @@ const char* CodeGenerator_generateWhenBindings(CodeGenerator* self, const char* 
     }
     }
     idx = ((idx) + (1));
-        _loop_next_134: ;
+        _loop_next_139: ;
     } } });
     }
     }
-        _loop_next_133: ;
+        _loop_next_138: ;
     } } });
     return binds;
+}
+
+const char* CodeGenerator_findMethodImplementingClass(CodeGenerator* self, const char* className, const char* methodName, long long paramCount) {
+    if (((spec_str_equals(className, "")) || (spec_str_equals(className, "Any")))) {
+        return "";
+    }
+    SpecArray* parts = spec_str_split(className, ":");
+    const char* baseClassName = spec_array_get(parts, 0);
+    Class* cls = (Class*)(CodeGenerator_findClass(self, baseClassName));
+    if (spec_str_equals(Class_getName(cls), "")) {
+        return "";
+    }
+    MethodMemberLoop* ml = (MethodMemberLoop*)(({ MethodMemberLoop* _inst = MethodMemberLoop_new(); MethodMemberLoop_init(_inst, Class_getMembers(cls), methodName); _inst; }));
+    ({ void* _lp = (void*)(ml); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (MethodMemberLoop_evaluate((void*)_lp)) { if (!MethodMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    if (ml->found) {
+        Member* subM = (Member*)(ml->res);
+        if (((((spec_array_length(Member_getBody(subM))) > (0))) && (((((paramCount) < (0))) || (((spec_array_length(Member_getParameters(subM))) == (paramCount))))))) {
+        return baseClassName;
+    }
+    }
+    const char* inherited = "";
+    ({ SpecArray* _a_140 = Class_getBaseClasses(cls); if (_a_140) { for (size_t _i_140 = 0; _i_140 < _a_140->length; _i_140++) {
+        const char* baseName = (const char*)(intptr_t)_a_140->items[_i_140];
+    if (spec_str_equals(inherited, "")) {
+        inherited = CodeGenerator_findMethodImplementingClass(self, baseName, methodName, paramCount);
+    }
+        _loop_next_140: ;
+    } } });
+    return inherited;
 }
 
 Member* CodeGenerator_lookupMethodMember(CodeGenerator* self, const char* className, const char* methodName) {
@@ -8168,12 +8309,12 @@ Member* CodeGenerator_lookupMethodMember(CodeGenerator* self, const char* classN
         return ml->res;
     }
     Member* inherited = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
-    ({ SpecArray* _a_135 = Class_getBaseClasses(cls); if (_a_135) { for (size_t _i_135 = 0; _i_135 < _a_135->length; _i_135++) {
-        const char* baseName = (const char*)(intptr_t)_a_135->items[_i_135];
+    ({ SpecArray* _a_141 = Class_getBaseClasses(cls); if (_a_141) { for (size_t _i_141 = 0; _i_141 < _a_141->length; _i_141++) {
+        const char* baseName = (const char*)(intptr_t)_a_141->items[_i_141];
     if (spec_str_equals(Member_getKind(inherited), "")) {
         inherited = CodeGenerator_lookupMethodMember(self, baseName, methodName);
     }
-        _loop_next_135: ;
+        _loop_next_141: ;
     } } });
     return inherited;
 }
@@ -8189,18 +8330,18 @@ const char* CodeGenerator_formatCallArguments(CodeGenerator* self, const char* c
         if (((spec_array_length(params)) > (0))) {
         const char* joined = "";
         long long pIdx = 0;
-        ({ SpecArray* _a_136 = params; if (_a_136) { for (size_t _i_136 = 0; _i_136 < _a_136->length; _i_136++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_136->items[_i_136];
+        ({ SpecArray* _a_142 = params; if (_a_142) { for (size_t _i_142 = 0; _i_142 < _a_142->length; _i_142++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_142->items[_i_142];
     const char* pName = Parameter_getName(p);
     bool matched = false;
     const char* argC = "0";
-    ({ SpecArray* _a_137 = args; if (_a_137) { for (size_t _i_137 = 0; _i_137 < _a_137->length; _i_137++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_137->items[_i_137];
+    ({ SpecArray* _a_143 = args; if (_a_143) { for (size_t _i_143 = 0; _i_143 < _a_143->length; _i_143++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_143->items[_i_143];
     if ((((((!(matched))) && (spec_str_equals(NamedArg_getName(a), pName)))) && ((!spec_str_equals(pName, ""))))) {
         argC = CodeGenerator_generateExpression(self, NamedArg_getValue(a));
         matched = true;
     }
-        _loop_next_137: ;
+        _loop_next_143: ;
     } } });
     if ((((!(matched))) && (((pIdx) < (spec_array_length(args)))))) {
         NamedArg* posArg = (NamedArg*)(spec_array_get(args, pIdx));
@@ -8218,16 +8359,16 @@ const char* CodeGenerator_formatCallArguments(CodeGenerator* self, const char* c
     }
     joined = spec_str_concat(spec_str_concat(joined, ", "), argC);
     pIdx = ((pIdx) + (1));
-        _loop_next_136: ;
+        _loop_next_142: ;
     } } });
         return joined;
     }
     }
     const char* fallbackJoined = "";
-    ({ SpecArray* _a_138 = args; if (_a_138) { for (size_t _i_138 = 0; _i_138 < _a_138->length; _i_138++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_138->items[_i_138];
+    ({ SpecArray* _a_144 = args; if (_a_144) { for (size_t _i_144 = 0; _i_144 < _a_144->length; _i_144++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_144->items[_i_144];
     fallbackJoined = spec_str_concat(spec_str_concat(fallbackJoined, ", "), CodeGenerator_generateExpression(self, NamedArg_getValue(arg)));
-        _loop_next_138: ;
+        _loop_next_144: ;
     } } });
     return fallbackJoined;
 }
@@ -8254,12 +8395,12 @@ const char* CodeGenerator_lookupMethodReturnType(CodeGenerator* self, const char
         return CodeGenerator_substituteTypeParam(self, rawT, cls, typeArgs);
     }
     const char* inherited = "";
-    ({ SpecArray* _a_139 = Class_getBaseClasses(cls); if (_a_139) { for (size_t _i_139 = 0; _i_139 < _a_139->length; _i_139++) {
-        const char* baseName = (const char*)(intptr_t)_a_139->items[_i_139];
+    ({ SpecArray* _a_145 = Class_getBaseClasses(cls); if (_a_145) { for (size_t _i_145 = 0; _i_145 < _a_145->length; _i_145++) {
+        const char* baseName = (const char*)(intptr_t)_a_145->items[_i_145];
     if (spec_str_equals(inherited, "")) {
         inherited = CodeGenerator_lookupMethodReturnType(self, baseName, methodName);
     }
-        _loop_next_139: ;
+        _loop_next_145: ;
     } } });
     return inherited;
 }
@@ -8428,8 +8569,8 @@ bool CodeGenerator_isSubclassOf(CodeGenerator* self, const char* subName, const 
         return false;
     }
     bool matched = false;
-    ({ SpecArray* _a_140 = Class_getBaseClasses(subCls); if (_a_140) { for (size_t _i_140 = 0; _i_140 < _a_140->length; _i_140++) {
-        const char* parent = (const char*)(intptr_t)_a_140->items[_i_140];
+    ({ SpecArray* _a_146 = Class_getBaseClasses(subCls); if (_a_146) { for (size_t _i_146 = 0; _i_146 < _a_146->length; _i_146++) {
+        const char* parent = (const char*)(intptr_t)_a_146->items[_i_146];
     if (spec_str_equals(parent, baseName)) {
         matched = true;
     } else {
@@ -8437,30 +8578,30 @@ bool CodeGenerator_isSubclassOf(CodeGenerator* self, const char* subName, const 
         matched = true;
     }
     }
-        _loop_next_140: ;
+        _loop_next_146: ;
     } } });
     return matched;
 }
 
 const char* CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classes) {
     const char* out = "/* Constructor Implementations */\n";
-    ({ SpecArray* _a_141 = classes; if (_a_141) { for (size_t _i_141 = 0; _i_141 < _a_141->length; _i_141++) {
-        Class* c = (Class*)(intptr_t)_a_141->items[_i_141];
+    ({ SpecArray* _a_147 = classes; if (_a_147) { for (size_t _i_147 = 0; _i_147 < _a_147->length; _i_147++) {
+        Class* c = (Class*)(intptr_t)_a_147->items[_i_147];
     if ((((!(CodeGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
         self->currentClassName = Class_getName(c);
         self->fieldTypes = spec_map_new();
         SpecArray* allFields = ({ SpecArray* _arr = spec_array_new(); _arr; });
         DeclarationGenerator_collectStructFields(self->declGen, c, classes, allFields);
-        ({ SpecArray* _a_142 = allFields; if (_a_142) { for (size_t _i_142 = 0; _i_142 < _a_142->length; _i_142++) {
-        Member* f = (Member*)(intptr_t)_a_142->items[_i_142];
+        ({ SpecArray* _a_148 = allFields; if (_a_148) { for (size_t _i_148 = 0; _i_148 < _a_148->length; _i_148++) {
+        Member* f = (Member*)(intptr_t)_a_148->items[_i_148];
     spec_map_set(self->fieldTypes, Member_getName(f), CodeGenerator_formatTypeString(self, Member_getType(f)));
-        _loop_next_142: ;
+        _loop_next_148: ;
     } } });
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, Class_getName(c)), "* "), Class_getName(c)), "_new(void) {\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), Class_getName(c)), "* self = ("), Class_getName(c)), "*)calloc(1, sizeof("), Class_getName(c)), "));\n");
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->_type_name = \""), Class_getName(c)), "\";\n");
-        ({ SpecArray* _a_143 = allFields; if (_a_143) { for (size_t _i_143 = 0; _i_143 < _a_143->length; _i_143++) {
-        Member* m = (Member*)(intptr_t)_a_143->items[_i_143];
+        ({ SpecArray* _a_149 = allFields; if (_a_149) { for (size_t _i_149 = 0; _i_149 < _a_149->length; _i_149++) {
+        Member* m = (Member*)(intptr_t)_a_149->items[_i_149];
     if (m->hasInit) {
         out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = "), CodeGenerator_generateExpression(self, m->initExpr)), ";\n");
     } else {
@@ -8477,12 +8618,12 @@ const char* CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* c
     }
     }
     }
-        _loop_next_143: ;
+        _loop_next_149: ;
     } } });
         out = spec_str_concat(out, "    return self;\n");
         out = spec_str_concat(out, "}\n\n");
     }
-        _loop_next_141: ;
+        _loop_next_147: ;
     } } });
     return out;
 }
@@ -8500,10 +8641,10 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
     }
     SpecMap* savedVars = spec_map_new();
     SpecArray* outerKeys = spec_map_keys(self->localVars);
-    ({ SpecArray* _a_144 = outerKeys; if (_a_144) { for (size_t _i_144 = 0; _i_144 < _a_144->length; _i_144++) {
-        const char* k = (const char*)(intptr_t)_a_144->items[_i_144];
+    ({ SpecArray* _a_150 = outerKeys; if (_a_150) { for (size_t _i_150 = 0; _i_150 < _a_150->length; _i_150++) {
+        const char* k = (const char*)(intptr_t)_a_150->items[_i_150];
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
-        _loop_next_144: ;
+        _loop_next_150: ;
     } } });
     const char* paramDecl = "";
     if (((spec_array_length(fnExpr->anonParams)) > (0))) {
@@ -8513,10 +8654,10 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
         paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("        ", pCType), " "), CodeGenerator_cIdent(self, Parameter_getName(p))), " = ("), pCType), ")(intptr_t)_a_"), spec_to_string_int(id)), "->items[_i_"), spec_to_string_int(id)), "];\n");
     }
     const char* bodyC = "";
-    ({ SpecArray* _a_145 = fnExpr->anonBody; if (_a_145) { for (size_t _i_145 = 0; _i_145 < _a_145->length; _i_145++) {
-        Statement* s = (Statement*)(intptr_t)_a_145->items[_i_145];
+    ({ SpecArray* _a_151 = fnExpr->anonBody; if (_a_151) { for (size_t _i_151 = 0; _i_151 < _a_151->length; _i_151++) {
+        Statement* s = (Statement*)(intptr_t)_a_151->items[_i_151];
     bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
-        _loop_next_145: ;
+        _loop_next_151: ;
     } } });
     self->localVars = savedVars;
     self->inlineReturnVar = savedRetVar;
@@ -8568,10 +8709,10 @@ const char* CodeGenerator_generateInlineArrayFold(CodeGenerator* self, const cha
     const char* savedRetLbl = self->inlineReturnLabel;
     SpecMap* savedVars = spec_map_new();
     SpecArray* outerKeys = spec_map_keys(self->localVars);
-    ({ SpecArray* _a_146 = outerKeys; if (_a_146) { for (size_t _i_146 = 0; _i_146 < _a_146->length; _i_146++) {
-        const char* k = (const char*)(intptr_t)_a_146->items[_i_146];
+    ({ SpecArray* _a_152 = outerKeys; if (_a_152) { for (size_t _i_152 = 0; _i_152 < _a_152->length; _i_152++) {
+        const char* k = (const char*)(intptr_t)_a_152->items[_i_152];
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
-        _loop_next_146: ;
+        _loop_next_152: ;
     } } });
     const char* accVar = spec_str_concat("_acc_", spec_to_string_int(id));
     const char* nextLbl = spec_str_concat("_loop_next_", spec_to_string_int(id));
@@ -8601,10 +8742,10 @@ const char* CodeGenerator_generateInlineArrayFold(CodeGenerator* self, const cha
         paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(paramDecl, "        "), p1CType), " "), CodeGenerator_cIdent(self, Parameter_getName(p1))), " = ("), p1CType), ")(intptr_t)"), arrVar), "->items["), idxVar), "];\n");
     }
     const char* bodyC = "";
-    ({ SpecArray* _a_147 = fnExpr->anonBody; if (_a_147) { for (size_t _i_147 = 0; _i_147 < _a_147->length; _i_147++) {
-        Statement* s = (Statement*)(intptr_t)_a_147->items[_i_147];
+    ({ SpecArray* _a_153 = fnExpr->anonBody; if (_a_153) { for (size_t _i_153 = 0; _i_153 < _a_153->length; _i_153++) {
+        Statement* s = (Statement*)(intptr_t)_a_153->items[_i_153];
     bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
-        _loop_next_147: ;
+        _loop_next_153: ;
     } } });
     self->localVars = savedVars;
     self->inlineReturnVar = savedRetVar;
@@ -8621,10 +8762,10 @@ const char* CodeGenerator_generateInlineMapEach(CodeGenerator* self, const char*
     const char* savedRetLbl = self->inlineReturnLabel;
     SpecMap* savedVars = spec_map_new();
     SpecArray* outerKeys = spec_map_keys(self->localVars);
-    ({ SpecArray* _a_148 = outerKeys; if (_a_148) { for (size_t _i_148 = 0; _i_148 < _a_148->length; _i_148++) {
-        const char* k = (const char*)(intptr_t)_a_148->items[_i_148];
+    ({ SpecArray* _a_154 = outerKeys; if (_a_154) { for (size_t _i_154 = 0; _i_154 < _a_154->length; _i_154++) {
+        const char* k = (const char*)(intptr_t)_a_154->items[_i_154];
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
-        _loop_next_148: ;
+        _loop_next_154: ;
     } } });
     const char* mapVar = spec_str_concat("_m_", spec_to_string_int(id));
     const char* bVar = spec_str_concat("_b_", spec_to_string_int(id));
@@ -8645,10 +8786,10 @@ const char* CodeGenerator_generateInlineMapEach(CodeGenerator* self, const char*
         paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(paramDecl, "            "), p1CType), " "), CodeGenerator_cIdent(self, Parameter_getName(p1))), " = ("), p1CType), ")(intptr_t)"), eVar), "->value;\n");
     }
     const char* bodyC = "";
-    ({ SpecArray* _a_149 = fnExpr->anonBody; if (_a_149) { for (size_t _i_149 = 0; _i_149 < _a_149->length; _i_149++) {
-        Statement* s = (Statement*)(intptr_t)_a_149->items[_i_149];
+    ({ SpecArray* _a_155 = fnExpr->anonBody; if (_a_155) { for (size_t _i_155 = 0; _i_155 < _a_155->length; _i_155++) {
+        Statement* s = (Statement*)(intptr_t)_a_155->items[_i_155];
     bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
-        _loop_next_149: ;
+        _loop_next_155: ;
     } } });
     self->localVars = savedVars;
     self->inlineReturnVar = savedRetVar;
@@ -8668,19 +8809,19 @@ const char* CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expr
     self->inlineReturnVar = evVar;
     self->inlineReturnLabel = evLbl;
     const char* evalBodyC = "";
-    ({ SpecArray* _a_150 = evalExpr->anonBody; if (_a_150) { for (size_t _i_150 = 0; _i_150 < _a_150->length; _i_150++) {
-        Statement* s = (Statement*)(intptr_t)_a_150->items[_i_150];
+    ({ SpecArray* _a_156 = evalExpr->anonBody; if (_a_156) { for (size_t _i_156 = 0; _i_156 < _a_156->length; _i_156++) {
+        Statement* s = (Statement*)(intptr_t)_a_156->items[_i_156];
     evalBodyC = spec_str_concat(evalBodyC, CodeGenerator_generateStatement(self, s));
-        _loop_next_150: ;
+        _loop_next_156: ;
     } } });
     const char* itLbl = spec_str_concat("_it_done_", spec_to_string_int(id));
     self->inlineReturnVar = "";
     self->inlineReturnLabel = itLbl;
     const char* iterBodyC = "";
-    ({ SpecArray* _a_151 = iterExpr->anonBody; if (_a_151) { for (size_t _i_151 = 0; _i_151 < _a_151->length; _i_151++) {
-        Statement* s = (Statement*)(intptr_t)_a_151->items[_i_151];
+    ({ SpecArray* _a_157 = iterExpr->anonBody; if (_a_157) { for (size_t _i_157 = 0; _i_157 < _a_157->length; _i_157++) {
+        Statement* s = (Statement*)(intptr_t)_a_157->items[_i_157];
     iterBodyC = spec_str_concat(iterBodyC, CodeGenerator_generateStatement(self, s));
-        _loop_next_151: ;
+        _loop_next_157: ;
     } } });
     self->inlineReturnVar = savedRetVar;
     self->inlineReturnLabel = savedRetLbl;
@@ -8692,19 +8833,19 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     const char* kind = Expression_getKind(expr);
     if (spec_str_equals(kind, "ARRAY")) {
         const char* res = "({ SpecArray* _arr = spec_array_new();";
-        ({ SpecArray* _a_152 = expr->arrayItems; if (_a_152) { for (size_t _i_152 = 0; _i_152 < _a_152->length; _i_152++) {
-        Expression* item = (Expression*)(intptr_t)_a_152->items[_i_152];
+        ({ SpecArray* _a_158 = expr->arrayItems; if (_a_158) { for (size_t _i_158 = 0; _i_158 < _a_158->length; _i_158++) {
+        Expression* item = (Expression*)(intptr_t)_a_158->items[_i_158];
     const char* itemC = CodeGenerator_generateExpression(self, item);
     res = spec_str_concat(spec_str_concat(spec_str_concat(res, " spec_array_add(_arr, (void*)("), itemC), "));");
-        _loop_next_152: ;
+        _loop_next_158: ;
     } } });
         res = spec_str_concat(res, " _arr; })");
         return res;
     } else if (spec_str_equals(kind, "MAP")) {
         const char* res = "({ SpecMap* _map = spec_map_new();";
         long long idx = 0;
-        ({ SpecArray* _a_153 = expr->mapKeys; if (_a_153) { for (size_t _i_153 = 0; _i_153 < _a_153->length; _i_153++) {
-        Expression* kExpr = (Expression*)(intptr_t)_a_153->items[_i_153];
+        ({ SpecArray* _a_159 = expr->mapKeys; if (_a_159) { for (size_t _i_159 = 0; _i_159 < _a_159->length; _i_159++) {
+        Expression* kExpr = (Expression*)(intptr_t)_a_159->items[_i_159];
     Expression* vExpr = (Expression*)(spec_array_get(expr->mapValues, idx));
     const char* kC = CodeGenerator_generateExpression(self, kExpr);
     const char* vC = CodeGenerator_generateExpression(self, vExpr);
@@ -8714,7 +8855,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         res = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(res, " spec_map_set_any(_map, "), kC), ", (void*)(intptr_t)("), vC), "));");
     }
     idx = ((idx) + (1));
-        _loop_next_153: ;
+        _loop_next_159: ;
     } } });
         res = spec_str_concat(res, " _map; })");
         return res;
@@ -8877,8 +9018,8 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* pTypesC = "";
         const char* cArgsC = "";
         bool firstA = true;
-        ({ SpecArray* _a_154 = expr->methodArgs; if (_a_154) { for (size_t _i_154 = 0; _i_154 < _a_154->length; _i_154++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_154->items[_i_154];
+        ({ SpecArray* _a_160 = expr->methodArgs; if (_a_160) { for (size_t _i_160 = 0; _i_160 < _a_160->length; _i_160++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_160->items[_i_160];
     if ((!(firstA))) {
         pTypesC = spec_str_concat(pTypesC, ", ");
         cArgsC = spec_str_concat(cArgsC, ", ");
@@ -8889,7 +9030,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     pTypesC = spec_str_concat(pTypesC, aCType);
     cArgsC = spec_str_concat(cArgsC, aValC);
     firstA = false;
-        _loop_next_154: ;
+        _loop_next_160: ;
     } } });
         if (firstA) {
         pTypesC = "void";
@@ -8904,21 +9045,21 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         SpecArray* vParams = Member_getParameters(vMem);
         const char* vArgsC = "";
         long long pIdx = 0;
-        ({ SpecArray* _a_155 = vParams; if (_a_155) { for (size_t _i_155 = 0; _i_155 < _a_155->length; _i_155++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_155->items[_i_155];
+        ({ SpecArray* _a_161 = vParams; if (_a_161) { for (size_t _i_161 = 0; _i_161 < _a_161->length; _i_161++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_161->items[_i_161];
     if (((pIdx) > (0))) {
         vArgsC = spec_str_concat(vArgsC, ", ");
     }
     const char* pName = Parameter_getName(p);
     bool matched = false;
     const char* argC = "0";
-    ({ SpecArray* _a_156 = expr->methodArgs; if (_a_156) { for (size_t _i_156 = 0; _i_156 < _a_156->length; _i_156++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_156->items[_i_156];
+    ({ SpecArray* _a_162 = expr->methodArgs; if (_a_162) { for (size_t _i_162 = 0; _i_162 < _a_162->length; _i_162++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_162->items[_i_162];
     if ((((((!(matched))) && (spec_str_equals(NamedArg_getName(a), pName)))) && ((!spec_str_equals(pName, ""))))) {
         argC = CodeGenerator_generateExpression(self, NamedArg_getValue(a));
         matched = true;
     }
-        _loop_next_156: ;
+        _loop_next_162: ;
     } } });
     if ((((!(matched))) && (((pIdx) < (spec_array_length(expr->methodArgs)))))) {
         NamedArg* posArg = (NamedArg*)(spec_array_get(expr->methodArgs, pIdx));
@@ -8927,7 +9068,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     }
     vArgsC = spec_str_concat(vArgsC, argC);
     pIdx = ((pIdx) + (1));
-        _loop_next_155: ;
+        _loop_next_161: ;
     } } });
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(eName, "_"), CodeGenerator_cIdent(self, expr->methodName)), "("), vArgsC), ")");
     }
@@ -8959,7 +9100,13 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     }
     }
     }
-        const char* callStr = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(objType, "_"), expr->methodName), "("), targetC), CodeGenerator_formatCallArguments(self, fullObjType, expr->methodName, expr->methodArgs)), ")");
+        const char* dispatchCls = CodeGenerator_findMethodImplementingClass(self, objType, expr->methodName, (-(1)));
+        const char* targetExprC = targetC;
+        if ((((!spec_str_equals(dispatchCls, ""))) && ((!spec_str_equals(dispatchCls, objType))))) {
+        objType = dispatchCls;
+        targetExprC = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((", dispatchCls), "*)"), targetC), ")");
+    }
+        const char* callStr = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(objType, "_"), expr->methodName), "("), targetExprC), CodeGenerator_formatCallArguments(self, fullObjType, expr->methodName, expr->methodArgs)), ")");
         Member* targetM = (Member*)(CodeGenerator_lookupMethodMember(self, objType, expr->methodName));
         Class* targetCls = (Class*)(CodeGenerator_findClass(self, objType));
         if (((spec_str_equals(Member_getKind(targetM), "METHOD")) && (((spec_array_length(Class_getTypeParams(targetCls))) > (0))))) {
@@ -8981,15 +9128,15 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     } else if (spec_str_equals(kind, "WHEN")) {
         const char* subjC = CodeGenerator_generateExpression(self, expr->whenSubject);
         const char* chain = "0";
-        ({ SpecArray* _a_157 = expr->whenArms; if (_a_157) { for (size_t _i_157 = 0; _i_157 < _a_157->length; _i_157++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_157->items[_i_157];
+        ({ SpecArray* _a_163 = expr->whenArms; if (_a_163) { for (size_t _i_163 = 0; _i_163 < _a_163->length; _i_163++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_163->items[_i_163];
     if (((arm->isElse) && (arm->hasValueExpr))) {
         chain = CodeGenerator_generateExpression(self, arm->valueExpr);
     }
-        _loop_next_157: ;
+        _loop_next_163: ;
     } } });
-        ({ SpecArray* _a_158 = expr->whenArms; if (_a_158) { for (size_t _i_158 = 0; _i_158 < _a_158->length; _i_158++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_158->items[_i_158];
+        ({ SpecArray* _a_164 = expr->whenArms; if (_a_164) { for (size_t _i_164 = 0; _i_164 < _a_164->length; _i_164++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_164->items[_i_164];
     if ((((!(arm->isElse))) && (arm->hasValueExpr))) {
         const char* bindsC = CodeGenerator_generateWhenBindings(self, subjC, arm);
         const char* armVal = CodeGenerator_generateExpression(self, arm->valueExpr);
@@ -8997,19 +9144,19 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         armVal = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ ", bindsC), " "), armVal), "; })");
     }
         const char* condOr = "";
-        ({ SpecArray* _a_159 = arm->conditions; if (_a_159) { for (size_t _i_159 = 0; _i_159 < _a_159->length; _i_159++) {
-        Expression* c = (Expression*)(intptr_t)_a_159->items[_i_159];
+        ({ SpecArray* _a_165 = arm->conditions; if (_a_165) { for (size_t _i_165 = 0; _i_165 < _a_165->length; _i_165++) {
+        Expression* c = (Expression*)(intptr_t)_a_165->items[_i_165];
     const char* cmp = CodeGenerator_generateWhenCondition(self, expr->whenSubject, subjC, c);
     if (spec_str_equals(condOr, "")) {
         condOr = cmp;
     } else {
         condOr = spec_str_concat(spec_str_concat(condOr, " || "), cmp);
     }
-        _loop_next_159: ;
+        _loop_next_165: ;
     } } });
         chain = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((", condOr), ") ? ("), armVal), ") : ("), chain), "))");
     }
-        _loop_next_158: ;
+        _loop_next_164: ;
     } } });
         return chain;
     } else if (spec_str_equals(kind, "ANON_FN")) {
@@ -9019,16 +9166,16 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* retC = CodeGenerator_cTypeFor(self, Type_getName(expr->anonReturnType));
         SpecMap* savedVars = spec_map_new();
         SpecArray* outerKeys = spec_map_keys(self->localVars);
-        ({ SpecArray* _a_160 = outerKeys; if (_a_160) { for (size_t _i_160 = 0; _i_160 < _a_160->length; _i_160++) {
-        const char* k = (const char*)(intptr_t)_a_160->items[_i_160];
+        ({ SpecArray* _a_166 = outerKeys; if (_a_166) { for (size_t _i_166 = 0; _i_166 < _a_166->length; _i_166++) {
+        const char* k = (const char*)(intptr_t)_a_166->items[_i_166];
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
-        _loop_next_160: ;
+        _loop_next_166: ;
     } } });
         const char* paramsC = "";
         bool firstP = true;
         SpecArray* paramNames = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ SpecArray* _a_161 = expr->anonParams; if (_a_161) { for (size_t _i_161 = 0; _i_161 < _a_161->length; _i_161++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_161->items[_i_161];
+        ({ SpecArray* _a_167 = expr->anonParams; if (_a_167) { for (size_t _i_167 = 0; _i_167 < _a_167->length; _i_167++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_167->items[_i_167];
     spec_array_add(paramNames, (void*)(Parameter_getName(p)));
     spec_map_set(self->localVars, Parameter_getName(p), CodeGenerator_formatVarTypeString(self, Parameter_getType(p)));
     if ((!(firstP))) {
@@ -9036,46 +9183,48 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     }
     paramsC = spec_str_concat(spec_str_concat(spec_str_concat(paramsC, CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), CodeGenerator_cIdent(self, Parameter_getName(p)));
     firstP = false;
-        _loop_next_161: ;
+        _loop_next_167: ;
     } } });
         if (firstP) {
         paramsC = "void";
     }
-        const char* capDecls = "";
-        const char* capBinds = "";
-        const char* capAssigns = "";
-        if (((((((self->inMethod) && ((!spec_str_equals(self->currentClassName, ""))))) && ((!(CodeGenerator_isBuiltinClass(self, self->currentClassName)))))) && ((!(spec_map_has(self->allEnumNames, self->currentClassName)))))) {
-        capDecls = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capDecls, "static "), self->currentClassName), "* _cap_"), spec_to_string_int(id)), "_self = NULL;\n");
-        capBinds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capBinds, "    "), self->currentClassName), "* self = _cap_"), spec_to_string_int(id)), "_self;\n    (void)self;\n");
-        capAssigns = spec_str_concat(spec_str_concat(spec_str_concat(capAssigns, " _cap_"), spec_to_string_int(id)), "_self = self;");
-    }
-        ({ SpecArray* _a_162 = outerKeys; if (_a_162) { for (size_t _i_162 = 0; _i_162 < _a_162->length; _i_162++) {
-        const char* k = (const char*)(intptr_t)_a_162->items[_i_162];
-    if (((spec_array_index_of_str(paramNames, k, (-(1)))) < (0))) {
-        const char* vType = spec_map_get_string(savedVars, k, "");
-        const char* vCType = CodeGenerator_cTypeFor(self, vType);
-        if ((((!spec_str_equals(vCType, "void"))) && ((!spec_str_equals(vCType, ""))))) {
-        const char* cVar = CodeGenerator_cIdent(self, k);
-        capDecls = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capDecls, "static "), vCType), " _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n");
-        capBinds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capBinds, "    "), vCType), " "), cVar), " = _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n    (void)"), cVar), ";\n");
-        capAssigns = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capAssigns, " _cap_"), spec_to_string_int(id)), "_"), cVar), " = "), cVar), ";");
-    }
-    }
-        _loop_next_162: ;
-    } } });
         const char* savedRetVar = self->inlineReturnVar;
         const char* savedRetLbl = self->inlineReturnLabel;
         self->inlineReturnVar = "";
         self->inlineReturnLabel = "";
         const char* bodyC = "";
-        ({ SpecArray* _a_163 = expr->anonBody; if (_a_163) { for (size_t _i_163 = 0; _i_163 < _a_163->length; _i_163++) {
-        Statement* s = (Statement*)(intptr_t)_a_163->items[_i_163];
+        ({ SpecArray* _a_168 = expr->anonBody; if (_a_168) { for (size_t _i_168 = 0; _i_168 < _a_168->length; _i_168++) {
+        Statement* s = (Statement*)(intptr_t)_a_168->items[_i_168];
     bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
-        _loop_next_163: ;
+        _loop_next_168: ;
     } } });
         self->inlineReturnVar = savedRetVar;
         self->inlineReturnLabel = savedRetLbl;
         self->localVars = savedVars;
+        const char* capDecls = "";
+        const char* capBinds = "";
+        const char* capAssigns = "";
+        if (((((((((self->inMethod) && ((!spec_str_equals(self->currentClassName, ""))))) && ((!(CodeGenerator_isBuiltinClass(self, self->currentClassName)))))) && ((!(spec_map_has(self->allEnumNames, self->currentClassName)))))) && (spec_str_contains(bodyC, "self")))) {
+        capDecls = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capDecls, "static "), self->currentClassName), "* _cap_"), spec_to_string_int(id)), "_self = NULL;\n");
+        capBinds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capBinds, "    "), self->currentClassName), "* self = _cap_"), spec_to_string_int(id)), "_self;\n    (void)self;\n");
+        capAssigns = spec_str_concat(spec_str_concat(spec_str_concat(capAssigns, " _cap_"), spec_to_string_int(id)), "_self = self;");
+    }
+        ({ SpecArray* _a_169 = outerKeys; if (_a_169) { for (size_t _i_169 = 0; _i_169 < _a_169->length; _i_169++) {
+        const char* k = (const char*)(intptr_t)_a_169->items[_i_169];
+    if (((spec_array_index_of_str(paramNames, k, (-(1)))) < (0))) {
+        const char* cVar = CodeGenerator_cIdent(self, k);
+        if (spec_str_contains(bodyC, cVar)) {
+        const char* vType = spec_map_get_string(savedVars, k, "");
+        const char* vCType = CodeGenerator_cTypeFor(self, vType);
+        if ((((!spec_str_equals(vCType, "void"))) && ((!spec_str_equals(vCType, ""))))) {
+        capDecls = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capDecls, "static "), vCType), " _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n");
+        capBinds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capBinds, "    "), vCType), " "), cVar), " = _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n    (void)"), cVar), ";\n");
+        capAssigns = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capAssigns, " _cap_"), spec_to_string_int(id)), "_"), cVar), " = "), cVar), ";");
+    }
+    }
+    }
+        _loop_next_169: ;
+    } } });
         self->helperFunctions = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(self->helperFunctions, capDecls), "static "), retC), " "), fnName), "("), paramsC), ") {\n"), capBinds), bodyC), "}\n\n");
         if ((!spec_str_equals(capAssigns, ""))) {
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({", capAssigns), " "), fnName), "; })");
@@ -9135,17 +9284,17 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
     } else if (spec_str_equals(kind, "IF")) {
         const char* condC = CodeGenerator_generateExpression(self, stmt->ifCondition);
         const char* out = spec_str_concat(spec_str_concat("    if (", condC), ") {\n");
-        ({ SpecArray* _a_164 = stmt->thenBranch; if (_a_164) { for (size_t _i_164 = 0; _i_164 < _a_164->length; _i_164++) {
-        Statement* s = (Statement*)(intptr_t)_a_164->items[_i_164];
+        ({ SpecArray* _a_170 = stmt->thenBranch; if (_a_170) { for (size_t _i_170 = 0; _i_170 < _a_170->length; _i_170++) {
+        Statement* s = (Statement*)(intptr_t)_a_170->items[_i_170];
     out = spec_str_concat(spec_str_concat(out, "    "), CodeGenerator_generateStatement(self, s));
-        _loop_next_164: ;
+        _loop_next_170: ;
     } } });
         if (stmt->hasElse) {
         out = spec_str_concat(out, "    } else {\n");
-        ({ SpecArray* _a_165 = stmt->elseBranch; if (_a_165) { for (size_t _i_165 = 0; _i_165 < _a_165->length; _i_165++) {
-        Statement* s = (Statement*)(intptr_t)_a_165->items[_i_165];
+        ({ SpecArray* _a_171 = stmt->elseBranch; if (_a_171) { for (size_t _i_171 = 0; _i_171 < _a_171->length; _i_171++) {
+        Statement* s = (Statement*)(intptr_t)_a_171->items[_i_171];
     out = spec_str_concat(spec_str_concat(out, "    "), CodeGenerator_generateStatement(self, s));
-        _loop_next_165: ;
+        _loop_next_171: ;
     } } });
     }
         out = spec_str_concat(out, "    }\n");
@@ -9171,22 +9320,22 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         const char* subjC = CodeGenerator_generateExpression(self, stmt->whenSubject);
         const char* out = "";
         bool first = true;
-        ({ SpecArray* _a_166 = stmt->whenArms; if (_a_166) { for (size_t _i_166 = 0; _i_166 < _a_166->length; _i_166++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_166->items[_i_166];
+        ({ SpecArray* _a_172 = stmt->whenArms; if (_a_172) { for (size_t _i_172 = 0; _i_172 < _a_172->length; _i_172++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_172->items[_i_172];
     const char* bindsC = "";
     if (arm->isElse) {
         out = spec_str_concat(out, "    } else {\n");
     } else {
         const char* condOr = "";
-        ({ SpecArray* _a_167 = arm->conditions; if (_a_167) { for (size_t _i_167 = 0; _i_167 < _a_167->length; _i_167++) {
-        Expression* c = (Expression*)(intptr_t)_a_167->items[_i_167];
+        ({ SpecArray* _a_173 = arm->conditions; if (_a_173) { for (size_t _i_173 = 0; _i_173 < _a_173->length; _i_173++) {
+        Expression* c = (Expression*)(intptr_t)_a_173->items[_i_173];
     const char* cmp = CodeGenerator_generateWhenCondition(self, stmt->whenSubject, subjC, c);
     if (spec_str_equals(condOr, "")) {
         condOr = cmp;
     } else {
         condOr = spec_str_concat(spec_str_concat(condOr, " || "), cmp);
     }
-        _loop_next_167: ;
+        _loop_next_173: ;
     } } });
         bindsC = CodeGenerator_generateWhenBindings(self, subjC, arm);
         if (first) {
@@ -9197,12 +9346,12 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
     }
         out = spec_str_concat(out, bindsC);
     }
-    ({ SpecArray* _a_168 = arm->body; if (_a_168) { for (size_t _i_168 = 0; _i_168 < _a_168->length; _i_168++) {
-        Statement* s = (Statement*)(intptr_t)_a_168->items[_i_168];
+    ({ SpecArray* _a_174 = arm->body; if (_a_174) { for (size_t _i_174 = 0; _i_174 < _a_174->length; _i_174++) {
+        Statement* s = (Statement*)(intptr_t)_a_174->items[_i_174];
     out = spec_str_concat(spec_str_concat(out, "    "), CodeGenerator_generateStatement(self, s));
-        _loop_next_168: ;
+        _loop_next_174: ;
     } } });
-        _loop_next_166: ;
+        _loop_next_172: ;
     } } });
         out = spec_str_concat(out, "    }\n");
         return out;
@@ -9226,47 +9375,43 @@ const char* CodeGenerator_generateMethod(CodeGenerator* self, Class* classDef, M
     }
     }
     self->localVars = spec_map_new();
-    ({ SpecArray* _a_169 = Member_getParameters(method); if (_a_169) { for (size_t _i_169 = 0; _i_169 < _a_169->length; _i_169++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_169->items[_i_169];
+    ({ SpecArray* _a_175 = Member_getParameters(method); if (_a_175) { for (size_t _i_175 = 0; _i_175 < _a_175->length; _i_175++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_175->items[_i_175];
     spec_map_set(self->localVars, Parameter_getName(p), CodeGenerator_formatVarTypeString(self, Parameter_getType(p)));
-        _loop_next_169: ;
+        _loop_next_175: ;
     } } });
     const char* out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(retType, " "), Class_getName(classDef)), "_"), Member_getName(method)), "("), Class_getName(classDef)), "* self");
     const char* callArgs = "";
-    ({ SpecArray* _a_170 = Member_getParameters(method); if (_a_170) { for (size_t _i_170 = 0; _i_170 < _a_170->length; _i_170++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_170->items[_i_170];
+    ({ SpecArray* _a_176 = Member_getParameters(method); if (_a_176) { for (size_t _i_176 = 0; _i_176 < _a_176->length; _i_176++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_176->items[_i_176];
     out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, ", "), CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), CodeGenerator_cIdent(self, Parameter_getName(p)));
     callArgs = spec_str_concat(spec_str_concat(callArgs, ", "), CodeGenerator_cIdent(self, Parameter_getName(p)));
-        _loop_next_170: ;
+        _loop_next_176: ;
     } } });
     out = spec_str_concat(out, ") {\n");
     if ((!spec_str_equals(Member_getName(method), "init"))) {
         long long paramCount = spec_array_length(Member_getParameters(method));
-        ({ SpecArray* _a_171 = self->programClasses; if (_a_171) { for (size_t _i_171 = 0; _i_171 < _a_171->length; _i_171++) {
-        Class* subCls = (Class*)(intptr_t)_a_171->items[_i_171];
-    if (CodeGenerator_isSubclassOf(self, Class_getName(subCls), Class_getName(classDef))) {
-        MethodMemberLoop* ml = (MethodMemberLoop*)(({ MethodMemberLoop* _inst = MethodMemberLoop_new(); MethodMemberLoop_init(_inst, Class_getMembers(subCls), Member_getName(method)); _inst; }));
-        ({ void* _lp = (void*)(ml); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (MethodMemberLoop_evaluate((void*)_lp)) { if (!MethodMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-        if (ml->found) {
-        Member* subM = (Member*)(ml->res);
-        if (((((spec_array_length(Member_getBody(subM))) > (0))) && (((spec_array_length(Member_getParameters(subM))) == (paramCount))))) {
+        ({ SpecArray* _a_177 = self->programClasses; if (_a_177) { for (size_t _i_177 = 0; _i_177 < _a_177->length; _i_177++) {
+        Class* subCls = (Class*)(intptr_t)_a_177->items[_i_177];
+    if ((((!spec_str_equals(Class_getName(subCls), Class_getName(classDef)))) && (CodeGenerator_isSubclassOf(self, Class_getName(subCls), Class_getName(classDef))))) {
+        const char* implCls = CodeGenerator_findMethodImplementingClass(self, Class_getName(subCls), Member_getName(method), paramCount);
+        if ((((!spec_str_equals(implCls, ""))) && ((!spec_str_equals(implCls, Class_getName(classDef)))))) {
         out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    if (self && self->_type_name && strcmp(self->_type_name, \""), Class_getName(subCls)), "\") == 0) {\n");
         if (spec_str_equals(retType, "void")) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        "), Class_getName(subCls)), "_"), Member_getName(method)), "(("), Class_getName(subCls)), "*)self"), callArgs), ");\n        return;\n");
+        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        "), implCls), "_"), Member_getName(method)), "(("), implCls), "*)self"), callArgs), ");\n        return;\n");
     } else {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        return "), Class_getName(subCls)), "_"), Member_getName(method)), "(("), Class_getName(subCls)), "*)self"), callArgs), ");\n");
+        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        return "), implCls), "_"), Member_getName(method)), "(("), implCls), "*)self"), callArgs), ");\n");
     }
         out = spec_str_concat(out, "    }\n");
     }
     }
-    }
-        _loop_next_171: ;
+        _loop_next_177: ;
     } } });
     }
-    ({ SpecArray* _a_172 = Member_getBody(method); if (_a_172) { for (size_t _i_172 = 0; _i_172 < _a_172->length; _i_172++) {
-        Statement* stmt = (Statement*)(intptr_t)_a_172->items[_i_172];
+    ({ SpecArray* _a_178 = Member_getBody(method); if (_a_178) { for (size_t _i_178 = 0; _i_178 < _a_178->length; _i_178++) {
+        Statement* stmt = (Statement*)(intptr_t)_a_178->items[_i_178];
     out = spec_str_concat(out, CodeGenerator_generateStatement(self, stmt));
-        _loop_next_172: ;
+        _loop_next_178: ;
     } } });
     if (((((spec_array_length(Member_getBody(method))) == (0))) && ((!spec_str_equals(retType, "void"))))) {
         if (spec_str_equals(retType, "const char*")) {
@@ -9314,27 +9459,27 @@ void CodeGenerator_collectClassesFromStatement(CodeGenerator* self, Statement* s
     if (spec_str_equals(Statement_getKind(stmt), "CLASS")) {
         CodeGenerator_collectClasses(self, stmt->nestedClass, acc);
     } else if (spec_str_equals(Statement_getKind(stmt), "IF")) {
-        ({ SpecArray* _a_173 = stmt->thenBranch; if (_a_173) { for (size_t _i_173 = 0; _i_173 < _a_173->length; _i_173++) {
-        Statement* s = (Statement*)(intptr_t)_a_173->items[_i_173];
+        ({ SpecArray* _a_179 = stmt->thenBranch; if (_a_179) { for (size_t _i_179 = 0; _i_179 < _a_179->length; _i_179++) {
+        Statement* s = (Statement*)(intptr_t)_a_179->items[_i_179];
     CodeGenerator_collectClassesFromStatement(self, s, acc);
-        _loop_next_173: ;
+        _loop_next_179: ;
     } } });
         if (stmt->hasElse) {
-        ({ SpecArray* _a_174 = stmt->elseBranch; if (_a_174) { for (size_t _i_174 = 0; _i_174 < _a_174->length; _i_174++) {
-        Statement* s = (Statement*)(intptr_t)_a_174->items[_i_174];
+        ({ SpecArray* _a_180 = stmt->elseBranch; if (_a_180) { for (size_t _i_180 = 0; _i_180 < _a_180->length; _i_180++) {
+        Statement* s = (Statement*)(intptr_t)_a_180->items[_i_180];
     CodeGenerator_collectClassesFromStatement(self, s, acc);
-        _loop_next_174: ;
+        _loop_next_180: ;
     } } });
     }
     } else if (spec_str_equals(Statement_getKind(stmt), "WHEN")) {
-        ({ SpecArray* _a_175 = stmt->whenArms; if (_a_175) { for (size_t _i_175 = 0; _i_175 < _a_175->length; _i_175++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_175->items[_i_175];
-    ({ SpecArray* _a_176 = arm->body; if (_a_176) { for (size_t _i_176 = 0; _i_176 < _a_176->length; _i_176++) {
-        Statement* s = (Statement*)(intptr_t)_a_176->items[_i_176];
+        ({ SpecArray* _a_181 = stmt->whenArms; if (_a_181) { for (size_t _i_181 = 0; _i_181 < _a_181->length; _i_181++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_181->items[_i_181];
+    ({ SpecArray* _a_182 = arm->body; if (_a_182) { for (size_t _i_182 = 0; _i_182 < _a_182->length; _i_182++) {
+        Statement* s = (Statement*)(intptr_t)_a_182->items[_i_182];
     CodeGenerator_collectClassesFromStatement(self, s, acc);
-        _loop_next_176: ;
+        _loop_next_182: ;
     } } });
-        _loop_next_175: ;
+        _loop_next_181: ;
     } } });
     } else {
     }
@@ -9342,28 +9487,28 @@ void CodeGenerator_collectClassesFromStatement(CodeGenerator* self, Statement* s
 
 void CodeGenerator_collectClasses(CodeGenerator* self, Class* c, SpecArray* acc) {
     spec_array_add(acc, (void*)(c));
-    ({ SpecArray* _a_177 = Class_getMembers(c); if (_a_177) { for (size_t _i_177 = 0; _i_177 < _a_177->length; _i_177++) {
-        Member* m = (Member*)(intptr_t)_a_177->items[_i_177];
+    ({ SpecArray* _a_183 = Class_getMembers(c); if (_a_183) { for (size_t _i_183 = 0; _i_183 < _a_183->length; _i_183++) {
+        Member* m = (Member*)(intptr_t)_a_183->items[_i_183];
     if (((Member_getMemberKind(m)) == (MemberKind_CLASS))) {
         CodeGenerator_collectClasses(self, Member_getNestedClass(m), acc);
     } else if (((Member_getMemberKind(m)) == (MemberKind_METHOD))) {
-        ({ SpecArray* _a_178 = Member_getBody(m); if (_a_178) { for (size_t _i_178 = 0; _i_178 < _a_178->length; _i_178++) {
-        Statement* s = (Statement*)(intptr_t)_a_178->items[_i_178];
+        ({ SpecArray* _a_184 = Member_getBody(m); if (_a_184) { for (size_t _i_184 = 0; _i_184 < _a_184->length; _i_184++) {
+        Statement* s = (Statement*)(intptr_t)_a_184->items[_i_184];
     CodeGenerator_collectClassesFromStatement(self, s, acc);
-        _loop_next_178: ;
+        _loop_next_184: ;
     } } });
     } else {
     }
-        _loop_next_177: ;
+        _loop_next_183: ;
     } } });
 }
 
 const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, const char* entryClass) {
     SpecArray* flattenedClasses = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ SpecArray* _a_179 = ProgramNode_getClasses(program); if (_a_179) { for (size_t _i_179 = 0; _i_179 < _a_179->length; _i_179++) {
-        Class* c = (Class*)(intptr_t)_a_179->items[_i_179];
+    ({ SpecArray* _a_185 = ProgramNode_getClasses(program); if (_a_185) { for (size_t _i_185 = 0; _i_185 < _a_185->length; _i_185++) {
+        Class* c = (Class*)(intptr_t)_a_185->items[_i_185];
     CodeGenerator_collectClasses(self, c, flattenedClasses);
-        _loop_next_179: ;
+        _loop_next_185: ;
     } } });
     self->programClasses = flattenedClasses;
     self->allClassNames = spec_map_new();
@@ -9371,13 +9516,13 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     self->allEnumVariants = spec_map_new();
     self->allStringBackedEnums = spec_map_new();
     self->allTaggedEnums = spec_map_new();
-    ({ SpecArray* _a_180 = flattenedClasses; if (_a_180) { for (size_t _i_180 = 0; _i_180 < _a_180->length; _i_180++) {
-        Class* c = (Class*)(intptr_t)_a_180->items[_i_180];
+    ({ SpecArray* _a_186 = flattenedClasses; if (_a_186) { for (size_t _i_186 = 0; _i_186 < _a_186->length; _i_186++) {
+        Class* c = (Class*)(intptr_t)_a_186->items[_i_186];
     spec_map_set(self->allClassNames, Class_getName(c), "true");
     if (spec_str_equals(Class_getBaseClass(c), "Enum")) {
         spec_map_set(self->allEnumNames, Class_getName(c), "true");
-        ({ SpecArray* _a_181 = Class_getMembers(c); if (_a_181) { for (size_t _i_181 = 0; _i_181 < _a_181->length; _i_181++) {
-        Member* m = (Member*)(intptr_t)_a_181->items[_i_181];
+        ({ SpecArray* _a_187 = Class_getMembers(c); if (_a_187) { for (size_t _i_187 = 0; _i_187 < _a_187->length; _i_187++) {
+        Member* m = (Member*)(intptr_t)_a_187->items[_i_187];
     spec_map_set(self->allEnumVariants, Member_getName(m), Class_getName(c));
     if (((spec_array_length(Member_getParameters(m))) > (0))) {
         spec_map_set(self->allTaggedEnums, Class_getName(c), "true");
@@ -9385,10 +9530,10 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     if (((spec_str_equals(Type_getName(Member_getType(m)), "String")) || (spec_str_equals(Type_getName(Member_getType(m)), "string")))) {
         spec_map_set(self->allStringBackedEnums, Class_getName(c), "true");
     }
-        _loop_next_181: ;
+        _loop_next_187: ;
     } } });
     }
-        _loop_next_180: ;
+        _loop_next_186: ;
     } } });
     DeclarationGenerator_setEnumNames(self->declGen, self->allEnumNames);
     DeclarationGenerator_setTaggedEnums(self->declGen, self->allTaggedEnums);
@@ -9398,21 +9543,21 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     const char* structs = DeclarationGenerator_generateStructs(self->declGen, flattenedClasses);
     const char* ctors = CodeGenerator_generateConstructors(self, flattenedClasses);
     const char* methods = "";
-    ({ SpecArray* _a_182 = flattenedClasses; if (_a_182) { for (size_t _i_182 = 0; _i_182 < _a_182->length; _i_182++) {
-        Class* c = (Class*)(intptr_t)_a_182->items[_i_182];
+    ({ SpecArray* _a_188 = flattenedClasses; if (_a_188) { for (size_t _i_188 = 0; _i_188 < _a_188->length; _i_188++) {
+        Class* c = (Class*)(intptr_t)_a_188->items[_i_188];
     if ((!(CodeGenerator_isBuiltinClass(self, Class_getName(c))))) {
         self->currentClassName = Class_getName(c);
         self->fieldTypes = spec_map_new();
         SpecArray* allFields = ({ SpecArray* _arr = spec_array_new(); _arr; });
         DeclarationGenerator_collectStructFields(self->declGen, c, flattenedClasses, allFields);
-        ({ SpecArray* _a_183 = allFields; if (_a_183) { for (size_t _i_183 = 0; _i_183 < _a_183->length; _i_183++) {
-        Member* m = (Member*)(intptr_t)_a_183->items[_i_183];
+        ({ SpecArray* _a_189 = allFields; if (_a_189) { for (size_t _i_189 = 0; _i_189 < _a_189->length; _i_189++) {
+        Member* m = (Member*)(intptr_t)_a_189->items[_i_189];
     spec_map_set(self->fieldTypes, Member_getName(m), CodeGenerator_formatVarTypeString(self, Member_getType(m)));
-        _loop_next_183: ;
+        _loop_next_189: ;
     } } });
         bool hasInit = false;
-        ({ SpecArray* _a_184 = Class_getMembers(c); if (_a_184) { for (size_t _i_184 = 0; _i_184 < _a_184->length; _i_184++) {
-        Member* m = (Member*)(intptr_t)_a_184->items[_i_184];
+        ({ SpecArray* _a_190 = Class_getMembers(c); if (_a_190) { for (size_t _i_190 = 0; _i_190 < _a_190->length; _i_190++) {
+        Member* m = (Member*)(intptr_t)_a_190->items[_i_190];
     if (((Member_getMemberKind(m)) == (MemberKind_METHOD))) {
         if (spec_str_equals(Member_getName(m), "init")) {
         hasInit = true;
@@ -9420,13 +9565,13 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
         methods = spec_str_concat(methods, CodeGenerator_generateMethod(self, c, m));
     } else {
     }
-        _loop_next_184: ;
+        _loop_next_190: ;
     } } });
         if ((((!(hasInit))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
         methods = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(methods, "void "), Class_getName(c)), "_init("), Class_getName(c)), "* self) {\n    /* default initializer */\n}\n\n");
     }
     }
-        _loop_next_182: ;
+        _loop_next_188: ;
     } } });
     const char* mainFn = CodeGenerator_generateMain(self, entryClass);
     const char* cSource = "";
@@ -9590,38 +9735,38 @@ void Loader_loadFile(Loader* self, const char* filePath) {
     Parser_setSourceFile(parser, filePath);
     ProgramNode* prog = (ProgramNode*)(Parser_parseProgram(parser));
     if (Parser_hasErrors(parser)) {
-        ({ SpecArray* _a_185 = Parser_getErrors(parser); if (_a_185) { for (size_t _i_185 = 0; _i_185 < _a_185->length; _i_185++) {
-        const char* err = (const char*)(intptr_t)_a_185->items[_i_185];
+        ({ SpecArray* _a_191 = Parser_getErrors(parser); if (_a_191) { for (size_t _i_191 = 0; _i_191 < _a_191->length; _i_191++) {
+        const char* err = (const char*)(intptr_t)_a_191->items[_i_191];
     spec_array_add(self->parseErrors, (void*)(err));
-        _loop_next_185: ;
+        _loop_next_191: ;
     } } });
     }
-    ({ SpecArray* _a_186 = ProgramNode_getClasses(prog); if (_a_186) { for (size_t _i_186 = 0; _i_186 < _a_186->length; _i_186++) {
-        Class* c = (Class*)(intptr_t)_a_186->items[_i_186];
+    ({ SpecArray* _a_192 = ProgramNode_getClasses(prog); if (_a_192) { for (size_t _i_192 = 0; _i_192 < _a_192->length; _i_192++) {
+        Class* c = (Class*)(intptr_t)_a_192->items[_i_192];
     if ((!(spec_map_has(self->seenClassNames, Class_getName(c))))) {
         spec_map_set(self->seenClassNames, Class_getName(c), "true");
         spec_array_add(self->loadedClasses, (void*)(c));
     }
     Loader_collectImportsFromClass(self, c);
-        _loop_next_186: ;
+        _loop_next_192: ;
     } } });
 }
 
 void Loader_collectImportsFromClass(Loader* self, Class* c) {
-    ({ SpecArray* _a_187 = Class_getMembers(c); if (_a_187) { for (size_t _i_187 = 0; _i_187 < _a_187->length; _i_187++) {
-        Member* m = (Member*)(intptr_t)_a_187->items[_i_187];
+    ({ SpecArray* _a_193 = Class_getMembers(c); if (_a_193) { for (size_t _i_193 = 0; _i_193 < _a_193->length; _i_193++) {
+        Member* m = (Member*)(intptr_t)_a_193->items[_i_193];
     if (((spec_str_equals(Member_getName(m), "using")) && (Member_getHasInit(m)))) {
         Expression* initExpr = (Expression*)(Member_getInitExpr(m));
         if (spec_str_equals(Expression_getKind(initExpr), "ARRAY")) {
-        ({ SpecArray* _a_188 = initExpr->arrayItems; if (_a_188) { for (size_t _i_188 = 0; _i_188 < _a_188->length; _i_188++) {
-        Expression* item = (Expression*)(intptr_t)_a_188->items[_i_188];
+        ({ SpecArray* _a_194 = initExpr->arrayItems; if (_a_194) { for (size_t _i_194 = 0; _i_194 < _a_194->length; _i_194++) {
+        Expression* item = (Expression*)(intptr_t)_a_194->items[_i_194];
     const char* importStr = item->stringValue;
     SpecArray* wildcards = Loader_expandWildcard(self, importStr);
     if (((spec_array_length(wildcards)) > (0))) {
-        ({ SpecArray* _a_189 = wildcards; if (_a_189) { for (size_t _i_189 = 0; _i_189 < _a_189->length; _i_189++) {
-        const char* f = (const char*)(intptr_t)_a_189->items[_i_189];
+        ({ SpecArray* _a_195 = wildcards; if (_a_195) { for (size_t _i_195 = 0; _i_195 < _a_195->length; _i_195++) {
+        const char* f = (const char*)(intptr_t)_a_195->items[_i_195];
     Loader_loadFile(self, f);
-        _loop_next_189: ;
+        _loop_next_195: ;
     } } });
     } else {
         const char* resolved = Loader_resolvePath(self, importStr);
@@ -9629,11 +9774,11 @@ void Loader_collectImportsFromClass(Loader* self, Class* c) {
         Loader_loadFile(self, resolved);
     }
     }
-        _loop_next_188: ;
+        _loop_next_194: ;
     } } });
     }
     }
-        _loop_next_187: ;
+        _loop_next_193: ;
     } } });
 }
 
