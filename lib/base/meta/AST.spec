@@ -31,10 +31,12 @@ class Expression{
 
 	replace local Array of String is using: [
 		base:struct:Array,
+		base:reflect:Type,
 		base:meta:AST
 	];
 
 	local String is kind: "";
+	local Type is inferredType;
 	local String is stringValue: "";
 	local Int is intValue: 0;
 	local Float is floatValue: 0.0;
@@ -111,6 +113,14 @@ class Expression{
 
 	replace local Function of String is getKind(){
 		return self:kind;
+	}
+
+	replace local Function is setInferredType(Type is t){
+		self:inferredType: t;
+	}
+
+	replace local Function of Type is getInferredType(){
+		return self:inferredType;
 	}
 
 }
