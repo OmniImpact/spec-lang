@@ -43,6 +43,6 @@ $ Create Phase 3 Lexer test suite in examples/phase3_lexer_test.spec and verify
 $ Update documentation and commit Phase 3 as v0.000.005
 $ Remove primitive while and break keywords in favor of decoupled iterator model
 $ Add .gitattributes mapping *.spec files to Spec on GitHub
-- [ ] Phase 4: Implement AST models in Spec (lib/compiler/AST.spec)
-- [ ] Phase 4: Implement recursive-descent Parser in Spec (lib/compiler/Parser.spec)
-- [ ] Phase 4: Create Phase 4 Parser test suite in examples/phase4_parser_test.spec and verify
+$ Phase 4: Implement AST models in Spec (lib/compiler/AST.spec)
+$ Phase 4: Implement recursive-descent Parser in Spec (lib/compiler/Parser.spec)
+$ Phase 4: Create Phase 4 Parser test suite in examples/phase4_parser_test.spec and verify

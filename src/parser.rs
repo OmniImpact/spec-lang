@@ -367,12 +367,16 @@ impl Parser {
 
         let semi_idx = semi_pos?;
 
-        // Check for receiver:field : value; (e.g. self:length: source:length();)
+        // Check for receiver:field : value; (e.g. self:length: source:length(); or callExpr:methodTarget: currentExpr;)
         if self.pos + 3 < semi_idx
             && self.tokens[self.pos + 1].kind == TokenKind::Colon
             && self.tokens[self.pos + 3].kind == TokenKind::Colon
         {
-            return Some(self.pos + 3);
+            let is_rhs_method_call = self.pos + 5 < self.tokens.len()
+                && self.tokens[self.pos + 5].kind == TokenKind::LParen;
+            if !is_rhs_method_call {
+                return Some(self.pos + 3);
+            }
         }
 
         // Check for target : value; (e.g. length: source:length(); or idx: idx + 1;)

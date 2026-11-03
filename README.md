@@ -182,7 +182,7 @@ spec-lang/
 - [x] **Phase 1**: File I/O (`File:read`, `File:write`), process execution (`Process:execute`), and string inspection primitives (`charAt`, `substring`, `indexOf`, `isDigit`, `isAlpha`, `isWhitespace`).
 - [x] **Phase 2**: Rich collections (`Array:pop`, `removeAt`, `slice`, `clear`, `indexOf`; `Map:set`, `has`, `remove`, `keys`, `length`).
 - [x] **Phase 3**: Implement lexer in Spec (`compiler:Lexer.spec`, `compiler:Token.spec`).
-- [ ] **Phase 4**: Implement parser and AST in Spec (`compiler:Parser.spec`).
+- [x] **Phase 4**: Implement parser and AST in Spec (`compiler:Parser.spec`, `compiler:AST.spec`).
 - [ ] **Phase 5**: Implement code generator in Spec (`compiler:CodeGen.spec`).
 - [ ] **Phase 6**: Stage 1 & Stage 2 bootstrap verification.
 

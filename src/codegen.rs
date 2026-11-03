@@ -1337,6 +1337,23 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                             return Ok(format!("spec_process_execute({}, {})", cmd_c, args_c));
                         }
                     }
+
+                    // Named constructor or method on class: <Class>:<method>(...)
+                    if self.all_classes.contains_key(target_name) {
+                        let mut arg_c_list = Vec::new();
+                        for arg in args {
+                            arg_c_list.push(self.generate_expression(&arg.value)?);
+                        }
+                        let joined_args = if arg_c_list.is_empty() {
+                            String::new()
+                        } else {
+                            format!(", {}", arg_c_list.join(", "))
+                        };
+                        return Ok(format!(
+                            "({{ {}* _inst = {}_new(); {}_{}(_inst{}); _inst; }})",
+                            target_name, target_name, target_name, method, joined_args
+                        ));
+                    }
                 }
 
                 // Check for String inspection methods
@@ -1717,6 +1734,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 if id == "game" {
                     return Some("Blackjack".to_string());
                 }
+                if self.all_classes.contains_key(id) {
+                    return Some(id.clone());
+                }
             }
             Expression::Path(segments) => {
                 if let Some(last) = segments.last() {
@@ -1732,6 +1752,51 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     }
                     if last == "game" {
                         return Some("Blackjack".to_string());
+                    }
+                }
+            }
+            Expression::MethodCall { target, method, .. } => {
+                if let Some(mut current_class) = self.infer_target_class(target) {
+                    while let Some(cdef) = self.all_classes.get(&current_class) {
+                        for m in &cdef.members {
+                            if let Member::Method {
+                                name,
+                                return_type,
+                                ..
+                            } = m
+                            {
+                                if name == method {
+                                    if let Some(ret_t) = return_type {
+                                        match ret_t {
+                                            Type::Simple(ret_name) => {
+                                                return Some(ret_name.clone());
+                                            }
+                                            Type::Generic(gen_name, params) => {
+                                                if gen_name == "Function" {
+                                                    if let Some(first) = params.first() {
+                                                        match first {
+                                                            Type::Simple(n) => {
+                                                                return Some(n.clone());
+                                                            }
+                                                            Type::Generic(n, _) => {
+                                                                return Some(n.clone());
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    return Some(gen_name.clone());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if let Some(ref base) = cdef.base_class {
+                            current_class = base.clone();
+                        } else {
+                            break;
+                        }
                     }
                 }
             }
