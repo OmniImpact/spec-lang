@@ -14,7 +14,7 @@ class Phase6TypeCheckerTest{
 		compiler:TypeChecker
 	];
 
-	init(Map of String to String is args){
+	replace local Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("     Phase 6 Semantic Type Checker    ");
 		output:line("======================================\n");

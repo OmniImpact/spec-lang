@@ -16,7 +16,7 @@ class Phase6CodegenTest{
 		compiler:CodeGenerator
 	];
 
-	init(Map of String to String is args){
+	replace local Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("     Phase 6 Pure-Spec Code Generator ");
 		output:line("======================================\n");

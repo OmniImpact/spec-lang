@@ -174,6 +174,7 @@ fn main() {
         .arg(&c_path)
         .arg("-o")
         .arg(&output_path)
+        .arg("-pthread")
         .arg("-lm")
         .status();
 

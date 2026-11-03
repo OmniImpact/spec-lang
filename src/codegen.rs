@@ -34,7 +34,9 @@ impl CodeGenerator {
         out.push_str("#include <stdbool.h>\n");
         out.push_str("#include <stdint.h>\n");
         out.push_str("#include <math.h>\n");
-        out.push_str("#include <time.h>\n\n");
+        out.push_str("#include <time.h>\n");
+        out.push_str("#include <errno.h>\n");
+        out.push_str("#include <pthread.h>\n\n");
 
         out.push_str(&self.runtime_prelude());
 
@@ -49,6 +51,11 @@ impl CodeGenerator {
         for class_def in &flattened_classes {
             self.all_classes
                 .insert(class_def.name.clone(), class_def.clone());
+        }
+
+        // Validate Multiple Inheritance, Abstract Implementation on Init, and Strict 'replace' Modifier
+        for class_def in &flattened_classes {
+            self.validate_class_inheritance_and_replacements(class_def)?;
         }
 
         // Collect enums
@@ -140,6 +147,7 @@ impl CodeGenerator {
         acc.push(ClassDef {
             name: class_def.name.clone(),
             base_class: class_def.base_class.clone(),
+            base_classes: class_def.base_classes.clone(),
             members: cleaned_members,
         });
     }
@@ -712,29 +720,115 @@ char* spec_str_trim(const char* s) {
 }
 
 /* File Package Primitives */
-const char* spec_file_read(const char* path, const char* def) {
-    if (!path) return def;
+/* File Package Primitives with Callbacks and Async Worker Support */
+typedef struct {
+    char* path;
+    char* content;
+    char* def;
+    void (*on_success_read)(const char*);
+    void (*on_success_write)(long long);
+    void (*on_error)(const char*);
+} SpecFileTask;
+
+const char* spec_file_read(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {
+    if (!path || strlen(path) == 0) {
+        if (on_error) on_error("File error: Empty or invalid file path provided");
+        return def ? def : "";
+    }
     FILE* f = fopen(path, "rb");
-    if (!f) return def;
-    fseek(f, 0, SEEK_END);
+    if (!f) {
+        if (on_error) on_error(strerror(errno));
+        return def ? def : "";
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        if (on_error) on_error(strerror(errno));
+        return def ? def : "";
+    }
     long size = ftell(f);
+    if (size < 0) {
+        fclose(f);
+        if (on_error) on_error(strerror(errno));
+        return def ? def : "";
+    }
     fseek(f, 0, SEEK_SET);
-    if (size < 0) { fclose(f); return def; }
     char* buf = (char*)malloc(size + 1);
+    if (!buf) {
+        fclose(f);
+        if (on_error) on_error("File error: Memory allocation failed during read");
+        return def ? def : "";
+    }
     size_t read_bytes = fread(buf, 1, size, f);
     buf[read_bytes] = '\0';
     fclose(f);
+    if (on_success) {
+        on_success(buf);
+    }
     return buf;
 }
 
-bool spec_file_write(const char* path, const char* content) {
-    if (!path || !content) return false;
+bool spec_file_write(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {
+    if (!path || strlen(path) == 0) {
+        if (on_error) on_error("File error: Empty or invalid file path provided");
+        return false;
+    }
+    if (!content) content = "";
     FILE* f = fopen(path, "wb");
-    if (!f) return false;
+    if (!f) {
+        if (on_error) on_error(strerror(errno));
+        return false;
+    }
     size_t len = strlen(content);
     size_t written = fwrite(content, 1, len, f);
     fclose(f);
-    return written == len;
+    if (written != len) {
+        if (on_error) on_error(strerror(errno));
+        return false;
+    }
+    if (on_success) {
+        on_success((long long)written);
+    }
+    return true;
+}
+
+static void* spec_file_read_worker(void* arg) {
+    SpecFileTask* task = (SpecFileTask*)arg;
+    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);
+    if (task->path) free(task->path);
+    if (task->def) free(task->def);
+    free(task);
+    return NULL;
+}
+
+void spec_file_read_async(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {
+    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));
+    task->path = path ? strdup(path) : NULL;
+    task->def = def ? strdup(def) : NULL;
+    task->on_success_read = on_success;
+    task->on_error = on_error;
+    pthread_t tid;
+    pthread_create(&tid, NULL, spec_file_read_worker, task);
+    pthread_detach(tid);
+}
+
+static void* spec_file_write_worker(void* arg) {
+    SpecFileTask* task = (SpecFileTask*)arg;
+    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);
+    if (task->path) free(task->path);
+    if (task->content) free(task->content);
+    free(task);
+    return NULL;
+}
+
+void spec_file_write_async(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {
+    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));
+    task->path = path ? strdup(path) : NULL;
+    task->content = content ? strdup(content) : NULL;
+    task->on_success_write = on_success;
+    task->on_error = on_error;
+    pthread_t tid;
+    pthread_create(&tid, NULL, spec_file_write_worker, task);
+    pthread_detach(tid);
 }
 
 bool spec_file_exists(const char* path) {
@@ -826,22 +920,203 @@ long long spec_process_execute(const char* command, SpecArray* args) {
 
     fn generate_struct_def(&self, class_def: &ClassDef) -> Result<String, String> {
         let mut out = format!("struct {} {{\n", class_def.name);
-        for m in &class_def.members {
-            if let Member::Field {
-                name, field_type, ..
-            } = m
-            {
-                if name != "using" {
-                    out.push_str(&format!(
-                        "    {} {};\n",
-                        self.c_type_for(field_type),
-                        name
-                    ));
-                }
-            }
+        let mut seen_fields = HashSet::new();
+        let mut all_fields = Vec::new();
+        self.collect_all_struct_fields(class_def, &mut seen_fields, &mut all_fields);
+
+        for (name, field_type) in all_fields {
+            out.push_str(&format!(
+                "    {} {};\n",
+                self.c_type_for(field_type),
+                name
+            ));
         }
         out.push_str("};\n\n");
         Ok(out)
+    }
+
+    fn collect_all_struct_fields<'a>(
+        &'a self,
+        class_def: &'a ClassDef,
+        seen: &mut HashSet<String>,
+        fields: &mut Vec<(&'a String, &'a Type)>,
+    ) {
+        for parent_name in &class_def.base_classes {
+            if let Some(parent_def) = self.all_classes.get(parent_name) {
+                self.collect_all_struct_fields(parent_def, seen, fields);
+            }
+        }
+        for m in &class_def.members {
+            if let Member::Field { name, field_type, .. } = m {
+                if name != "using" && seen.insert(name.clone()) {
+                    fields.push((name, field_type));
+                }
+            }
+        }
+    }
+
+    fn validate_class_inheritance_and_replacements(&self, class_def: &ClassDef) -> Result<(), String> {
+        let mut ancestors = Vec::new();
+        self.collect_ancestor_classes(class_def, &mut ancestors);
+
+        // 1. Strict 'replace' modifier enforcement
+        for m in &class_def.members {
+            let (m_name, modifiers) = match m {
+                Member::Method { name, modifiers, .. } => (name.as_str(), modifiers),
+                Member::Field { name, modifiers, .. } => (name.as_str(), modifiers),
+                _ => continue,
+            };
+
+            let is_builtin = m_name == "init" || m_name == "evaluate" || m_name == "iteration" || m_name == "using";
+            let mut overrides_ancestor = false;
+            for ancestor in &ancestors {
+                if ancestor.members.iter().any(|am| match am {
+                    Member::Method { name, .. } => name == m_name,
+                    Member::Field { name, .. } => name == m_name,
+                    _ => false,
+                }) {
+                    overrides_ancestor = true;
+                    break;
+                }
+            }
+
+            if (is_builtin || overrides_ancestor) && !modifiers.contains(&"replace".to_string()) {
+                return Err(format!(
+                    "Member '{}' in class '{}' overrides a superclass or built-in function, but is missing the 'replace' modifier.",
+                    m_name, class_def.name
+                ));
+            }
+        }
+
+        // 2. Abstract member enforcement on concrete classes with `init`
+        let has_init = class_def.members.iter().any(|m| match m {
+            Member::Method { name, .. } => name == "init",
+            _ => false,
+        });
+
+        if has_init {
+            for ancestor in &ancestors {
+                for am in &ancestor.members {
+                    match am {
+                        Member::Field { name, init, .. } if init.is_none() && name != "using" => {
+                            let implemented = self.find_field_initializer(class_def, name).is_some();
+                            if !implemented {
+                                return Err(format!(
+                                    "Concrete class '{}' extends abstract parent '{}' but does not implement abstract field '{}'.",
+                                    class_def.name, ancestor.name, name
+                                ));
+                            }
+                        }
+                        Member::Method { name, body, .. } if body.is_empty() => {
+                            let implemented = self.find_concrete_method(class_def, name).is_some();
+                            if !implemented {
+                                return Err(format!(
+                                    "Concrete class '{}' extends abstract parent '{}' but does not implement abstract method '{}'.",
+                                    class_def.name, ancestor.name, name
+                                ));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn collect_ancestor_classes<'a>(&'a self, class_def: &'a ClassDef, acc: &mut Vec<&'a ClassDef>) {
+        for parent_name in &class_def.base_classes {
+            if let Some(parent_def) = self.all_classes.get(parent_name) {
+                if !acc.iter().any(|c| c.name == parent_def.name) {
+                    acc.push(parent_def);
+                    self.collect_ancestor_classes(parent_def, acc);
+                }
+            }
+        }
+    }
+
+    fn find_field_initializer<'a>(&'a self, class_def: &'a ClassDef, field_name: &str) -> Option<&'a Expression> {
+        for m in &class_def.members {
+            if let Member::Field { name, init, .. } = m {
+                if name == field_name && init.is_some() {
+                    return init.as_ref();
+                }
+            }
+        }
+        for parent_name in &class_def.base_classes {
+            if let Some(parent_def) = self.all_classes.get(parent_name) {
+                if let Some(init) = self.find_field_initializer(parent_def, field_name) {
+                    return Some(init);
+                }
+            }
+        }
+        None
+    }
+
+    fn find_concrete_method<'a>(&'a self, class_def: &'a ClassDef, method_name: &str) -> Option<&'a Member> {
+        for m in &class_def.members {
+            if let Member::Method { name, body, .. } = m {
+                if name == method_name && !body.is_empty() {
+                    return Some(m);
+                }
+            }
+        }
+        for parent_name in &class_def.base_classes {
+            if let Some(parent_def) = self.all_classes.get(parent_name) {
+                if let Some(m) = self.find_concrete_method(parent_def, method_name) {
+                    return Some(m);
+                }
+            }
+        }
+        None
+    }
+
+    fn find_class_for_method(&self, class_name: &str, method: &str) -> Option<String> {
+        if let Some(cdef) = self.all_classes.get(class_name) {
+            if cdef.members.iter().any(|m| match m {
+                Member::Method { name, body, .. } => name == method && !body.is_empty(),
+                _ => false,
+            }) {
+                return Some(class_name.to_string());
+            }
+            for parent in &cdef.base_classes {
+                if let Some(found) = self.find_class_for_method(parent, method) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+
+    fn collect_all_impl_fields(
+        &mut self,
+        class_def: &ClassDef,
+        seen: &mut HashSet<String>,
+        fields: &mut Vec<(String, Type, Option<Expression>)>,
+    ) {
+        for parent_name in &class_def.base_classes {
+            if let Some(parent_def) = self.all_classes.get(parent_name).cloned() {
+                self.collect_all_impl_fields(&parent_def, seen, fields);
+            }
+        }
+        for m in &class_def.members {
+            if let Member::Field { name, field_type, init, .. } = m {
+                if name != "using" {
+                    self.current_class_fields.insert(name.clone());
+                    self.field_types.insert(name.clone(), field_type.clone());
+                    if seen.insert(name.clone()) {
+                        fields.push((name.clone(), field_type.clone(), init.clone()));
+                    } else {
+                        if init.is_some() {
+                            if let Some(existing) = fields.iter_mut().find(|(n, _, _)| n == name) {
+                                existing.2 = init.clone();
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn c_ident(name: &str) -> String {
@@ -975,22 +1250,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         self.current_class_fields.clear();
         self.field_types.clear();
 
+        let mut seen_fields = HashSet::new();
         let mut fields = Vec::new();
-        for m in &class_def.members {
-            if let Member::Field {
-                name,
-                field_type,
-                init,
-                ..
-            } = m
-            {
-                if name != "using" {
-                    self.current_class_fields.insert(name.clone());
-                    self.field_types.insert(name.clone(), field_type.clone());
-                    fields.push((name.clone(), field_type.clone(), init.clone()));
-                }
-            }
-        }
+        self.collect_all_impl_fields(class_def, &mut seen_fields, &mut fields);
 
         let is_builtin = Self::is_builtin_runtime_class(&class_def.name);
         if !is_builtin {
@@ -1720,14 +1982,44 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     if target_name == "File" {
                         match method.as_str() {
                             "read" => {
-                                let path_c = self.extract_arg(args, "path", 0)?;
-                                let def_c = self.extract_arg(args, "default", 1)?;
-                                return Ok(format!("spec_file_read({}, {})", path_c, def_c));
+                                let path_c = self.extract_arg_named(args, "path", 0)?;
+                                let def_c = self.extract_arg_opt(args, "default")?.unwrap_or_else(|| "\"\"".to_string());
+                                let on_succ = self.extract_arg_opt(args, "onSuccess")?.unwrap_or_else(|| "NULL".to_string());
+                                let on_err = self.extract_arg_opt(args, "onError")?.unwrap_or_else(|| "NULL".to_string());
+                                return Ok(format!(
+                                    "spec_file_read({}, {}, (void (*)(const char*))({}), (void (*)(const char*))({}))",
+                                    path_c, def_c, on_succ, on_err
+                                ));
+                            }
+                            "readAsync" => {
+                                let path_c = self.extract_arg_named(args, "path", 0)?;
+                                let def_c = self.extract_arg_opt(args, "default")?.unwrap_or_else(|| "\"\"".to_string());
+                                let on_succ = self.extract_arg_opt(args, "onSuccess")?.unwrap_or_else(|| "NULL".to_string());
+                                let on_err = self.extract_arg_opt(args, "onError")?.unwrap_or_else(|| "NULL".to_string());
+                                return Ok(format!(
+                                    "spec_file_read_async({}, {}, (void (*)(const char*))({}), (void (*)(const char*))({}))",
+                                    path_c, def_c, on_succ, on_err
+                                ));
                             }
                             "write" => {
-                                let path_c = self.extract_arg(args, "path", 0)?;
-                                let content_c = self.extract_arg(args, "content", 1)?;
-                                return Ok(format!("spec_file_write({}, {})", path_c, content_c));
+                                let path_c = self.extract_arg_named(args, "path", 0)?;
+                                let content_c = self.extract_arg_named(args, "content", 1)?;
+                                let on_succ = self.extract_arg_opt(args, "onSuccess")?.unwrap_or_else(|| "NULL".to_string());
+                                let on_err = self.extract_arg_opt(args, "onError")?.unwrap_or_else(|| "NULL".to_string());
+                                return Ok(format!(
+                                    "spec_file_write({}, {}, (void (*)(long long))({}), (void (*)(const char*))({}))",
+                                    path_c, content_c, on_succ, on_err
+                                ));
+                            }
+                            "writeAsync" => {
+                                let path_c = self.extract_arg_named(args, "path", 0)?;
+                                let content_c = self.extract_arg_named(args, "content", 1)?;
+                                let on_succ = self.extract_arg_opt(args, "onSuccess")?.unwrap_or_else(|| "NULL".to_string());
+                                let on_err = self.extract_arg_opt(args, "onError")?.unwrap_or_else(|| "NULL".to_string());
+                                return Ok(format!(
+                                    "spec_file_write_async({}, {}, (void (*)(long long))({}), (void (*)(const char*))({}))",
+                                    path_c, content_c, on_succ, on_err
+                                ));
                             }
                             "exists" => {
                                 let path_c = self.extract_arg(args, "path", 0)?;
@@ -2080,12 +2372,13 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     arg_strings.push(self.generate_expression(&arg.value)?);
                 }
                 if let Some(cname) = class_name {
+                    let actual_class = self.find_class_for_method(&cname, method).unwrap_or(cname);
                     let joined = if arg_strings.is_empty() {
                         String::new()
                     } else {
                         format!(", {}", arg_strings.join(", "))
                     };
-                    Ok(format!("{}_{}({}{})", cname, method, target_c, joined))
+                    Ok(format!("{}_{}({}{})", actual_class, method, target_c, joined))
                 } else {
                     let joined = if arg_strings.is_empty() {
                         String::new()
@@ -2751,6 +3044,27 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     return self.generate_expression(&arg.value);
                 }
             }
+        }
+        if pos < args.len() {
+            return self.generate_expression(&args[pos].value);
+        }
+        Ok("0".to_string())
+    }
+
+    fn extract_arg_opt(&mut self, args: &[NamedArg], name: &str) -> Result<Option<String>, String> {
+        for arg in args {
+            if let Some(ref n) = arg.name {
+                if n == name {
+                    return Ok(Some(self.generate_expression(&arg.value)?));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    fn extract_arg_named(&mut self, args: &[NamedArg], name: &str, pos: usize) -> Result<String, String> {
+        if let Some(val) = self.extract_arg_opt(args, name)? {
+            return Ok(val);
         }
         if pos < args.len() {
             return self.generate_expression(&args[pos].value);

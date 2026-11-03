@@ -33,15 +33,15 @@ class Blackjack{
 		local Array of Int is targetDeck;
 		local Int is currentVal: 1;
 
-		init(Array of Int is targetDeck){
+		replace init(Array of Int is targetDeck){
 			self:targetDeck: targetDeck;
 		}
 
-		evaluate(){
+		replace evaluate(){
 			return currentVal <= 10;
 		}
 
-		iteration(control){
+		replace iteration(control){
 			# Batch add 4 cards at once using array parameter shorthand
 			targetDeck:add([currentVal, currentVal, currentVal, currentVal]);
 			currentVal: currentVal + 1;
@@ -55,15 +55,15 @@ class Blackjack{
 	class DealerTurnLoop extends Loop{
 		local Blackjack is game;
 
-		init(Blackjack is game){
+		replace init(Blackjack is game){
 			self:game: game;
 		}
 
-		evaluate(){
+		replace evaluate(){
 			return game:handValue(game:dealerHand) < 17;
 		}
 
-		iteration(control){
+		replace iteration(control){
 			local Int is card: game:drawCard();
 			game:dealerHand:add(card);
 
@@ -79,11 +79,11 @@ class Blackjack{
 	class DealerTurnCompleteCallback extends LoopCallback{
 		local Blackjack is game;
 
-		init(Blackjack is game){
+		replace init(Blackjack is game){
 			self:game: game;
 		}
 
-		onComplete(control){
+		replace onComplete(control){
 			output:line("\nDealer stands or busts.");
 			game:evaluateRoundOutcome();
 		}
@@ -95,11 +95,11 @@ class Blackjack{
 	class PlayerTurnHandler extends InputHandler{
 		local Blackjack is game;
 
-		init(Blackjack is game){
+		replace init(Blackjack is game){
 			self:game: game;
 		}
 
-		onInput(action){
+		replace onInput(action){
 			when (action) {
 				is "h", "hit": {
 					local Int is card: game:drawCard();
@@ -153,16 +153,16 @@ class Blackjack{
 			local ScoreAccumulator is acc;
 			local Int is idx: 0;
 
-			init(Array of Int is hand, ScoreAccumulator is acc){
+			replace init(Array of Int is hand, ScoreAccumulator is acc){
 				self:hand: hand;
 				self:acc: acc;
 			}
 
-			evaluate(){
+			replace evaluate(){
 				return idx < hand:length();
 			}
 
-			iteration(control){
+			replace iteration(control){
 				local Int is card: hand[idx];
 				if (card == 1) {
 					acc:aceCount: acc:aceCount + 1;
@@ -180,15 +180,15 @@ class Blackjack{
 		class AceAdjustLoop extends Loop{
 			local ScoreAccumulator is acc;
 
-			init(ScoreAccumulator is acc){
+			replace init(ScoreAccumulator is acc){
 				self:acc: acc;
 			}
 
-			evaluate(){
+			replace evaluate(){
 				return acc:total > 21 && acc:aceCount > 0;
 			}
 
-			iteration(control){
+			replace iteration(control){
 				acc:total: acc:total - 10;
 				acc:aceCount: acc:aceCount - 1;
 				return true;
@@ -237,7 +237,7 @@ class Blackjack{
 	# =========================================================================
 	# Application Entry Point
 	# =========================================================================
-	init(Map of String to String is args){
+	replace init(Map of String to String is args){
 		output:line("======================================");
 		output:line("      Welcome to SpecJack (Clean)     ");
 		output:line("======================================\n");

@@ -55,9 +55,14 @@ class AppName{
   local String is msg: "Loading...";
   local Array of String is items: ["a", "b", "c"];
   ```
-- **Modifiers**:
+- **Modifiers & Strict Overriding**:
   - `local`: Enforces lexical scope / instance scope.
-  - `replace`: Overrides base class method or field.
+  - `replace`: **Strictly required** when overriding any superclass member, interface contract, or built-in lifecycle method (`init`, `evaluate`, `iteration`, `using`, `toString`). Omitting `replace` on overrides produces a compile error.
+- **Multiple Inheritance & Abstraction Contracts**:
+  - **Inherently Abstract**: Any field declared without an initial value (`local String is name;`) or method with an empty body (`describe() -> String{}`) is abstract.
+  - **Interfaces as Abstract Classes**: A class composed of abstract members acts as an interface.
+  - **Multiple Inheritance**: Classes can extend multiple parents: `class Service extends Named, Identifiable { ... }`.
+  - **Enforcement on `init`**: Concrete classes defining or calling `init(...)` must implement all abstract fields and methods inherited from all parents.
 
 ---
 
@@ -158,10 +163,12 @@ While:run(loop: CountLoop:init(max: 5));
 - **Console I/O**:
   - `output:line(text)`
   - `local String is input: Input:prompt("Enter value: ");`
-- **File System**:
+- **File System (Synchronous, Callback-Driven & Asynchronous)**:
   - `File:exists(path: "path/to/file") -> Boolean`
-  - `File:read(path: "path/to/file", default: "") -> String`
-  - `File:write(path: "path/to/file", content: "data") -> Boolean`
+  - `File:read(path: "...", onSuccess: local Function(String is data){ ... }, onError: local Function(String is err){ ... })`
+  - `File:write(path: "...", content: "...", onSuccess: local Function(Int is bytes){ ... }, onError: local Function(String is err){ ... })`
+  - `File:readAsync(...)` and `File:writeAsync(...)` for non-blocking worker thread execution.
+  - Fallback signatures: `File:read(path: "...", default: "")`, `File:write(path: "...", content: "")`
 - **Process Execution**:
   - `Process:execute(command: "gcc", args: ["-O2", "file.c"]) -> Int`
 - **Arrays**:

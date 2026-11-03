@@ -20,7 +20,7 @@ class Driver{
 		compiler:Loader
 	];
 
-	init(Map of String to String is args){
+	replace local Function is init(Map of String to String is args){
 		local String is inputPath: args:getString(key: "i", default: "");
 		if (inputPath == "") {
 			inputPath: args:getString(key: "input", default: "");
@@ -118,7 +118,7 @@ class Driver{
 		}
 
 		# 7. GCC C Compilation
-		local Array of String is gccArgs: ["-O2", tempCPath, "-o", outputPath];
+		local Array of String is gccArgs: ["-O2", tempCPath, "-o", outputPath, "-pthread", "-lm"];
 		local Int is gccStatus: Process:execute(command: "gcc", args: gccArgs);
 		if (gccStatus != 0) {
 			output:line("Error: Backend C compiler (gcc) failed with exit status " . gccStatus);

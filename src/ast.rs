@@ -155,6 +155,7 @@ pub enum Member {
 pub struct ClassDef {
     pub name: String,
     pub base_class: Option<String>,
+    pub base_classes: Vec<String>,
     pub members: Vec<Member>,
 }
 

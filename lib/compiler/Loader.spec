@@ -37,17 +37,17 @@ class Loader{
 			local Int is pos: 0;
 			local String is res: "";
 
-			init(String is src){
+			replace local Function is init(String is src){
 				self:src: src;
 				self:pos: 0;
 				self:res: "";
 			}
 
-			evaluate(){
+			replace local Function of Boolean is evaluate(){
 				return pos < src:length();
 			}
 
-			iteration(control){
+			replace local Function of Boolean is iteration(LoopControl is control){
 				local String is ch: src:charAt(index: pos, default: "");
 				pos: pos + 1;
 				if (ch == ":") {

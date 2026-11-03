@@ -48,17 +48,17 @@ class CodeGenerator{
 			local Int is pos: 0;
 			local String is res: "";
 
-			init(String is src){
+			replace local Function is init(String is src){
 				self:src: src;
 				self:pos: 0;
 				self:res: "";
 			}
 
-			evaluate(){
+			replace local Function of Boolean is evaluate(){
 				return pos < src:length();
 			}
 
-			iteration(control){
+			replace local Function of Boolean is iteration(LoopControl is control){
 				local String is ch: src:charAt(index: pos, default: "");
 				pos: pos + 1;
 				when (ch) {
@@ -89,9 +89,16 @@ class CodeGenerator{
 		p: p . "#include <string.h>\n";
 		p: p . "#include <stdbool.h>\n";
 		p: p . "#include <stdint.h>\n";
-		p: p . "#include <time.h>\n\n";
+		p: p . "#include <time.h>\n";
+		p: p . "#include <errno.h>\n";
+		p: p . "#include <pthread.h>\n\n";
 
 		p: p . "/* Spec Runtime String Utilities */\n";
+		p: p . "bool spec_str_equals(const char* a, const char* b) {\n";
+		p: p . "    if (a == b) return true;\n";
+		p: p . "    if (!a || !b) return false;\n";
+		p: p . "    return strcmp(a, b) == 0;\n";
+		p: p . "}\n\n";
 		p: p . "char* spec_str_concat(const char* a, const char* b) {\n";
 		p: p . "    if (!a) a = \"\";\n";
 		p: p . "    if (!b) b = \"\";\n";
@@ -196,6 +203,123 @@ class CodeGenerator{
 		p: p . "        curr = curr->next;\n";
 		p: p . "    }\n";
 		p: p . "    return def ? def : \"\";\n";
+		p: p . "}\n\n";
+
+		p: p . "/* File Package Primitives with Callbacks and Async Worker Support */\n";
+		p: p . "typedef struct {\n";
+		p: p . "    char* path;\n";
+		p: p . "    char* content;\n";
+		p: p . "    char* def;\n";
+		p: p . "    void (*on_success_read)(const char*);\n";
+		p: p . "    void (*on_success_write)(long long);\n";
+		p: p . "    void (*on_error)(const char*);\n";
+		p: p . "} SpecFileTask;\n\n";
+
+		p: p . "const char* spec_file_read(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {\n";
+		p: p . "    if (!path || strlen(path) == 0) {\n";
+		p: p . "        if (on_error) on_error(\"File error: Empty or invalid file path provided\");\n";
+		p: p . "        return def ? def : \"\";\n";
+		p: p . "    }\n";
+		p: p . "    FILE* f = fopen(path, \"rb\");\n";
+		p: p . "    if (!f) {\n";
+		p: p . "        if (on_error) on_error(strerror(errno));\n";
+		p: p . "        return def ? def : \"\";\n";
+		p: p . "    }\n";
+		p: p . "    if (fseek(f, 0, SEEK_END) != 0) {\n";
+		p: p . "        fclose(f);\n";
+		p: p . "        if (on_error) on_error(strerror(errno));\n";
+		p: p . "        return def ? def : \"\";\n";
+		p: p . "    }\n";
+		p: p . "    long size = ftell(f);\n";
+		p: p . "    if (size < 0) {\n";
+		p: p . "        fclose(f);\n";
+		p: p . "        if (on_error) on_error(strerror(errno));\n";
+		p: p . "        return def ? def : \"\";\n";
+		p: p . "    }\n";
+		p: p . "    fseek(f, 0, SEEK_SET);\n";
+		p: p . "    char* buf = (char*)malloc(size + 1);\n";
+		p: p . "    if (!buf) {\n";
+		p: p . "        fclose(f);\n";
+		p: p . "        if (on_error) on_error(\"File error: Memory allocation failed during read\");\n";
+		p: p . "        return def ? def : \"\";\n";
+		p: p . "    }\n";
+		p: p . "    size_t read_bytes = fread(buf, 1, size, f);\n";
+		p: p . "    buf[read_bytes] = '\\0';\n";
+		p: p . "    fclose(f);\n";
+		p: p . "    if (on_success) on_success(buf);\n";
+		p: p . "    return buf;\n";
+		p: p . "}\n\n";
+
+		p: p . "bool spec_file_write(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {\n";
+		p: p . "    if (!path || strlen(path) == 0) {\n";
+		p: p . "        if (on_error) on_error(\"File error: Empty or invalid file path provided\");\n";
+		p: p . "        return false;\n";
+		p: p . "    }\n";
+		p: p . "    if (!content) content = \"\";\n";
+		p: p . "    FILE* f = fopen(path, \"wb\");\n";
+		p: p . "    if (!f) {\n";
+		p: p . "        if (on_error) on_error(strerror(errno));\n";
+		p: p . "        return false;\n";
+		p: p . "    }\n";
+		p: p . "    size_t len = strlen(content);\n";
+		p: p . "    size_t written = fwrite(content, 1, len, f);\n";
+		p: p . "    fclose(f);\n";
+		p: p . "    if (written != len) {\n";
+		p: p . "        if (on_error) on_error(strerror(errno));\n";
+		p: p . "        return false;\n";
+		p: p . "    }\n";
+		p: p . "    if (on_success) on_success((long long)written);\n";
+		p: p . "    return true;\n";
+		p: p . "}\n\n";
+
+		p: p . "static void* spec_file_read_worker(void* arg) {\n";
+		p: p . "    SpecFileTask* task = (SpecFileTask*)arg;\n";
+		p: p . "    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);\n";
+		p: p . "    if (task->path) free(task->path);\n";
+		p: p . "    if (task->def) free(task->def);\n";
+		p: p . "    free(task);\n";
+		p: p . "    return NULL;\n";
+		p: p . "}\n\n";
+
+		p: p . "void spec_file_read_async(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {\n";
+		p: p . "    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n";
+		p: p . "    task->path = path ? strdup(path) : NULL;\n";
+		p: p . "    task->def = def ? strdup(def) : NULL;\n";
+		p: p . "    task->on_success_read = on_success;\n";
+		p: p . "    task->on_error = on_error;\n";
+		p: p . "    pthread_t tid;\n";
+		p: p . "    pthread_create(&tid, NULL, spec_file_read_worker, task);\n";
+		p: p . "    pthread_detach(tid);\n";
+		p: p . "}\n\n";
+
+		p: p . "static void* spec_file_write_worker(void* arg) {\n";
+		p: p . "    SpecFileTask* task = (SpecFileTask*)arg;\n";
+		p: p . "    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);\n";
+		p: p . "    if (task->path) free(task->path);\n";
+		p: p . "    if (task->content) free(task->content);\n";
+		p: p . "    free(task);\n";
+		p: p . "    return NULL;\n";
+		p: p . "}\n\n";
+
+		p: p . "void spec_file_write_async(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {\n";
+		p: p . "    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n";
+		p: p . "    task->path = path ? strdup(path) : NULL;\n";
+		p: p . "    task->content = content ? strdup(content) : NULL;\n";
+		p: p . "    task->on_success_write = on_success;\n";
+		p: p . "    task->on_error = on_error;\n";
+		p: p . "    pthread_t tid;\n";
+		p: p . "    pthread_create(&tid, NULL, spec_file_write_worker, task);\n";
+		p: p . "    pthread_detach(tid);\n";
+		p: p . "}\n\n";
+
+		p: p . "bool spec_file_exists(const char* path) {\n";
+		p: p . "    if (!path) return false;\n";
+		p: p . "    FILE* f = fopen(path, \"r\");\n";
+		p: p . "    if (f) {\n";
+		p: p . "        fclose(f);\n";
+		p: p . "        return true;\n";
+		p: p . "    }\n";
+		p: p . "    return false;\n";
 		p: p . "}\n\n";
 
 		return p;
@@ -359,12 +483,142 @@ class CodeGenerator{
 
 				# Method call on self: self:method(...)
 				local String is targetC: self:generateExpression(expr: expr:methodTarget);
+
+				# File static methods
+				if (targetC == "File") {
+					if (expr:methodName == "exists") {
+						local String is pathC: "\"\"";
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							if (arg:getName() == "path") {
+								pathC: self:generateExpression(expr: arg:getValue());
+							}
+						});
+						return "spec_file_exists(" . pathC . ")";
+					}
+					if (expr:methodName == "read") {
+						local String is pathC: "\"\"";
+						local String is defC: "\"\"";
+						local String is onSuccC: "NULL";
+						local String is onErrC: "NULL";
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							if (arg:getName() == "path") {
+								pathC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "default") {
+								defC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onSuccess") {
+								onSuccC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onError") {
+								onErrC: self:generateExpression(expr: arg:getValue());
+							}
+						});
+						return "spec_file_read(" . pathC . ", " . defC . ", (void (*)(const char*))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+					}
+					if (expr:methodName == "readAsync") {
+						local String is pathC: "\"\"";
+						local String is defC: "\"\"";
+						local String is onSuccC: "NULL";
+						local String is onErrC: "NULL";
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							if (arg:getName() == "path") {
+								pathC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "default") {
+								defC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onSuccess") {
+								onSuccC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onError") {
+								onErrC: self:generateExpression(expr: arg:getValue());
+							}
+						});
+						return "spec_file_read_async(" . pathC . ", " . defC . ", (void (*)(const char*))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+					}
+					if (expr:methodName == "write") {
+						local String is pathC: "\"\"";
+						local String is contentC: "\"\"";
+						local String is onSuccC: "NULL";
+						local String is onErrC: "NULL";
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							if (arg:getName() == "path") {
+								pathC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "content") {
+								contentC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onSuccess") {
+								onSuccC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onError") {
+								onErrC: self:generateExpression(expr: arg:getValue());
+							}
+						});
+						return "spec_file_write(" . pathC . ", " . contentC . ", (void (*)(long long))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+					}
+					if (expr:methodName == "writeAsync") {
+						local String is pathC: "\"\"";
+						local String is contentC: "\"\"";
+						local String is onSuccC: "NULL";
+						local String is onErrC: "NULL";
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							if (arg:getName() == "path") {
+								pathC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "content") {
+								contentC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onSuccess") {
+								onSuccC: self:generateExpression(expr: arg:getValue());
+							}
+							if (arg:getName() == "onError") {
+								onErrC: self:generateExpression(expr: arg:getValue());
+							}
+						});
+						return "spec_file_write_async(" . pathC . ", " . contentC . ", (void (*)(long long))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+					}
+				}
+
 				local String is callStr: self:currentClassName . "_" . expr:methodName . "(" . targetC;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					callStr: callStr . ", " . self:generateExpression(expr: arg:getValue());
 				});
 				callStr: callStr . ")";
 				return callStr;
+			}
+			is "IF_ELSE": {
+				local String is condC: self:generateExpression(expr: expr:condExpr);
+				local String is thenC: self:generateExpression(expr: expr:thenExpr);
+				local String is elseC: self:generateExpression(expr: expr:elseExpr);
+				return "((" . condC . ") ? (" . thenC . ") : (" . elseC . "))";
+			}
+			is "WHEN": {
+				local String is subjC: self:generateExpression(expr: expr:whenSubject);
+				local String is chain: "0";
+				expr:whenArms:each(action: local Function(WhenArm is arm){
+					if (arm:isElse && arm:hasValueExpr) {
+						chain: self:generateExpression(expr: arm:valueExpr);
+					}
+				});
+				expr:whenArms:each(action: local Function(WhenArm is arm){
+					if (!arm:isElse && arm:hasValueExpr) {
+						local String is armVal: self:generateExpression(expr: arm:valueExpr);
+						local String is condOr: "";
+						arm:conditions:each(action: local Function(Expression is c){
+							local String is cVal: self:generateExpression(expr: c);
+							local String is cmp: "(((" . subjC . ") == (" . cVal . ")) || (spec_str_equals(" . subjC . ", " . cVal . ")))";
+							if (condOr == "") {
+								condOr: cmp;
+							} else {
+								condOr: condOr . " || " . cmp;
+							}
+						});
+						chain: "((" . condOr . ") ? (" . armVal . ") : (" . chain . "))";
+					}
+				});
+				return chain;
 			}
 			else: {
 				return "0";
@@ -415,6 +669,38 @@ class CodeGenerator{
 					return "    return " . retC . ";\n";
 				}
 				return "    return;\n";
+			}
+			is "WHEN": {
+				local String is subjC: self:generateExpression(expr: stmt:whenSubject);
+				local String is out: "";
+				local Boolean is first: true;
+				stmt:whenArms:each(action: local Function(WhenArm is arm){
+					if (arm:isElse) {
+						out: out . "    } else {\n";
+					} else {
+						local String is condOr: "";
+						arm:conditions:each(action: local Function(Expression is c){
+							local String is cVal: self:generateExpression(expr: c);
+							local String is cmp: "(((" . subjC . ") == (" . cVal . ")) || (spec_str_equals(" . subjC . ", " . cVal . ")))";
+							if (condOr == "") {
+								condOr: cmp;
+							} else {
+								condOr: condOr . " || " . cmp;
+							}
+						});
+						if (first) {
+							out: out . "    if (" . condOr . ") {\n";
+							first: false;
+						} else {
+							out: out . "    } else if (" . condOr . ") {\n";
+						}
+					}
+					arm:body:each(action: local Function(Statement is s){
+						out: out . "    " . self:generateStatement(stmt: s);
+					});
+				});
+				out: out . "    }\n";
+				return out;
 			}
 			is "EXPR": {
 				local String is exprC: self:generateExpression(expr: stmt:exprStmt);

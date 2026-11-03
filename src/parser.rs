@@ -100,15 +100,22 @@ impl Parser {
             }
         };
 
-        let base_class = if self.check(&TokenKind::Extends) {
+        let mut base_classes = Vec::new();
+        if self.check(&TokenKind::Extends) {
             self.advance();
-            match self.advance().kind {
-                TokenKind::Ident(b) => Some(b),
-                other => return Err(format!("Expected base class name, found {:?}", other)),
+            loop {
+                match self.advance().kind {
+                    TokenKind::Ident(b) => base_classes.push(b),
+                    other => return Err(format!("Expected base class name, found {:?}", other)),
+                }
+                if self.check(&TokenKind::Comma) {
+                    self.advance();
+                } else {
+                    break;
+                }
             }
-        } else {
-            None
-        };
+        }
+        let base_class = base_classes.first().cloned();
 
         self.expect(&TokenKind::LBrace)?;
         let mut members = Vec::new();
@@ -120,6 +127,7 @@ impl Parser {
         Ok(ClassDef {
             name,
             base_class,
+            base_classes,
             members,
         })
     }

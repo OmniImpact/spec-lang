@@ -51,6 +51,11 @@ class Expression{
 	local Expression is rightExpr;
 	local String is unaryOp: "";
 	local Expression is unaryExpr;
+	local Expression is condExpr;
+	local Expression is thenExpr;
+	local Expression is elseExpr;
+	local Expression is whenSubject;
+	local Array of WhenArm is whenArms: [];
 
 	replace local Function is init(String is kind){
 		self:kind: kind;
@@ -111,6 +116,19 @@ class Expression{
 		self:unaryExpr: expr;
 	}
 
+	replace local Function is makeIfElse(Expression is condition, Expression is thenExpr, Expression is elseExpr){
+		self:kind: "IF_ELSE";
+		self:condExpr: condition;
+		self:thenExpr: thenExpr;
+		self:elseExpr: elseExpr;
+	}
+
+	replace local Function is makeWhen(Expression is subject, Array of WhenArm is arms){
+		self:kind: "WHEN";
+		self:whenSubject: subject;
+		self:whenArms: arms;
+	}
+
 	replace local Function of String is getKind(){
 		return self:kind;
 	}
@@ -151,6 +169,8 @@ class Statement{
 	local Boolean is hasReturnExpr: false;
 	local Class is nestedClass;
 	local Expression is exprStmt;
+	local Expression is whenSubject;
+	local Array of WhenArm is whenArms: [];
 
 	replace local Function is init(String is kind){
 		self:kind: kind;
@@ -195,6 +215,12 @@ class Statement{
 		self:exprStmt: expr;
 	}
 
+	replace local Function is whenStmt(Expression is subject, Array of WhenArm is arms){
+		self:kind: "WHEN";
+		self:whenSubject: subject;
+		self:whenArms: arms;
+	}
+
 	replace local Function of String is getKind(){
 		return self:kind;
 	}
@@ -225,6 +251,49 @@ class ProgramNode{
 
 	replace local Function is setClasses(Array of Class is classes){
 		self:classes: classes;
+	}
+
+}
+
+## Represents a pattern matching branch in a `when` statement or expression.
+class WhenArm{
+
+	replace local Array of String is using: [
+		base:struct:Array,
+		base:meta:AST
+	];
+
+	local Array of Expression is conditions: [];
+	local Boolean is isElse: false;
+	local Array of Statement is body: [];
+	local Expression is valueExpr;
+	local Boolean is hasValueExpr: false;
+
+	replace local Function is init(){
+	}
+
+	replace local Function is arm(Array of Expression is conditions, Array of Statement is body){
+		self:conditions: conditions;
+		self:isElse: false;
+		self:body: body;
+	}
+
+	replace local Function is elseArm(Array of Statement is body){
+		self:isElse: true;
+		self:body: body;
+	}
+
+	replace local Function is exprArm(Array of Expression is conditions, Expression is value){
+		self:conditions: conditions;
+		self:isElse: false;
+		self:valueExpr: value;
+		self:hasValueExpr: true;
+	}
+
+	replace local Function is elseExprArm(Expression is value){
+		self:isElse: true;
+		self:valueExpr: value;
+		self:hasValueExpr: true;
 	}
 
 }

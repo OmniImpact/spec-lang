@@ -10,7 +10,7 @@ class LoopControl{
 	## Initializes a loop controller with an optional completion callback.
 	##
 	## @param callback: Optional completion handler.
-	init(Any is callback){
+	replace Function is init(Any is callback){
 	}
 
 	## Requests an immediate halt of loop execution.
