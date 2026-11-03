@@ -66,6 +66,33 @@ class Array{
 	replace Function of Int is indexOf(String is search, Int is default){
 	}
 
+	## Iterates through each element in the array, invoking [action] with the element.
+	##
+	## @param action: Function invoked for each item.
+	replace Function is each(Function is action){
+	}
+
+	## Evaluates whether any element in the array satisfies the [predicate].
+	##
+	## @param predicate: Function returning `true` for a match.
+	## @return: `true` if any element matches, `false` otherwise.
+	replace Function of Boolean is any(Function is predicate){
+	}
+
+	## Counts how many elements in the array satisfy the [predicate].
+	##
+	## @param predicate: Function returning `true` for elements to count.
+	## @return: Count of matching elements.
+	replace Function of Int is count(Function is predicate){
+	}
+
+	## Returns a new array containing all elements that satisfy the [predicate].
+	##
+	## @param predicate: Function returning `true` for elements to retain.
+	## @return: Filtered [Array].
+	replace Function of Array is filter(Function is predicate){
+	}
+
 	## Returns whether the array contains zero elements.
 	##
 	## @return: `true` if empty, `false` otherwise.

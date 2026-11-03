@@ -159,6 +159,11 @@ impl Linter {
                     Self::lint_expr(item, issues);
                 }
             }
+            Expression::AnonymousFunction { body, .. } => {
+                for s in body {
+                    Self::lint_statement(s, issues);
+                }
+            }
             _ => {}
         }
     }

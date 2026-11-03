@@ -59,3 +59,11 @@ $ Add SpecDoc comments across standard library classes (lib/base/) and compiler 
 $ Port compiler linter to pure Spec (lib/compiler/Linter.spec) and verify with test suite
 $ Verify lint and test suites across the repository
 $ Commit and tag code style guide, SpecDoc documentation, and pure Spec linter
+$ Add String helper inspection methods (lines, startsWith, countLeading, trim) to C runtime, Array.spec, and docs
+$ Add Array higher-order methods (each, any, count, filter) to C runtime and Array.spec
+$ Implement keyword-based anonymous Function expressions in parser and codegen
+$ Implement `is` comparison operator in expressions (if (x is y))
+$ Implement `self:field` automatic constructor property initialization in parser and codegen
+$ Refactor Linter.spec using new higher-order methods and syntactic sugar
+$ Verify lint, tests, and documentation across repository
+$ Commit and tag release

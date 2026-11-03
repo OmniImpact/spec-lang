@@ -228,6 +228,23 @@ impl Parser {
     }
 
     fn parse_param(&mut self) -> Result<Parameter, String> {
+        // Shorthand field property initializer: self:fieldName
+        if self.check(&TokenKind::Ident("self".to_string()))
+            && self.peek_next() == &TokenKind::Colon
+        {
+            self.advance(); // consume 'self'
+            self.advance(); // consume ':'
+            let field_name = match self.advance().kind {
+                TokenKind::Ident(n) => n,
+                other => return Err(format!("Expected field name after self:, found {:?}", other)),
+            };
+            return Ok(Parameter {
+                param_type: None,
+                name: field_name,
+                is_field_init: true,
+            });
+        }
+
         // Shorthand parameter: name without type
         if let TokenKind::Ident(id) = self.peek_token().clone().kind {
             if self.peek_next() == &TokenKind::Comma || self.peek_next() == &TokenKind::RParen {
@@ -235,13 +252,31 @@ impl Parser {
                 return Ok(Parameter {
                     param_type: None,
                     name: id,
+                    is_field_init: false,
                 });
             }
         }
 
-        // Typed parameter: Type is name
+        // Typed parameter: Type is name OR Type is self:name
         let param_type = self.parse_type()?;
         self.expect(&TokenKind::Is)?;
+
+        if self.check(&TokenKind::Ident("self".to_string()))
+            && self.peek_next() == &TokenKind::Colon
+        {
+            self.advance(); // consume 'self'
+            self.advance(); // consume ':'
+            let field_name = match self.advance().kind {
+                TokenKind::Ident(n) => n,
+                other => return Err(format!("Expected field name after self:, found {:?}", other)),
+            };
+            return Ok(Parameter {
+                param_type: Some(param_type),
+                name: field_name,
+                is_field_init: true,
+            });
+        }
+
         let param_name = match self.advance().kind {
             TokenKind::Ident(n) => n,
             other => return Err(format!("Expected parameter name, found {:?}", other)),
@@ -249,6 +284,7 @@ impl Parser {
         Ok(Parameter {
             param_type: Some(param_type),
             name: param_name,
+            is_field_init: false,
         })
     }
 
@@ -371,28 +407,34 @@ impl Parser {
         if self.pos + 3 < semi_idx
             && self.tokens[self.pos + 1].kind == TokenKind::Colon
             && self.tokens[self.pos + 3].kind == TokenKind::Colon
+            && self.has_whitespace_after(self.pos + 3)
         {
-            let is_rhs_method_call = self.pos + 5 < self.tokens.len()
-                && self.tokens[self.pos + 5].kind == TokenKind::LParen;
-            if !is_rhs_method_call {
-                return Some(self.pos + 3);
-            }
+            return Some(self.pos + 3);
         }
 
         // Check for target : value; (e.g. length: source:length(); or idx: idx + 1;)
         // Note: "self" alone can never be an assignment target (self: value; is invalid).
-        if self.pos + 1 < semi_idx && self.tokens[self.pos + 1].kind == TokenKind::Colon {
+        if self.pos + 1 < semi_idx
+            && self.tokens[self.pos + 1].kind == TokenKind::Colon
+            && self.has_whitespace_after(self.pos + 1)
+        {
             let is_self = matches!(&self.tokens[self.pos].kind, TokenKind::Ident(id) if id == "self");
             if !is_self {
-                let is_method_call = self.pos + 3 < self.tokens.len()
-                    && self.tokens[self.pos + 3].kind == TokenKind::LParen;
-                if !is_method_call {
-                    return Some(self.pos + 1);
-                }
+                return Some(self.pos + 1);
             }
         }
 
         None
+    }
+
+    fn has_whitespace_after(&self, colon_idx: usize) -> bool {
+        if colon_idx + 1 < self.tokens.len() {
+            let colon_tok = &self.tokens[colon_idx];
+            let next_tok = &self.tokens[colon_idx + 1];
+            next_tok.line > colon_tok.line || next_tok.col > colon_tok.col + 1
+        } else {
+            true
+        }
     }
 
     fn parse_assignment_target(&mut self, colon_pos: usize) -> Result<Expression, String> {
@@ -498,9 +540,12 @@ impl Parser {
 
     fn parse_equality(&mut self) -> Result<Expression, String> {
         let mut left = self.parse_relational()?;
-        while self.check(&TokenKind::EqualEqual) || self.check(&TokenKind::BangEqual) {
+        while self.check(&TokenKind::EqualEqual)
+            || self.check(&TokenKind::BangEqual)
+            || self.check(&TokenKind::Is)
+        {
             let op = match self.advance().kind {
-                TokenKind::EqualEqual => BinaryOp::Equal,
+                TokenKind::EqualEqual | TokenKind::Is => BinaryOp::Equal,
                 TokenKind::BangEqual => BinaryOp::NotEqual,
                 _ => unreachable!(),
             };
@@ -754,6 +799,50 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> Result<Expression, String> {
+        // Check for anonymous function: local Function(...) or Function(...)
+        let is_anon_fn = (self.check(&TokenKind::Local)
+            && self.pos + 1 < self.tokens.len()
+            && matches!(&self.tokens[self.pos + 1].kind, TokenKind::Ident(n) if n == "Function"))
+            || (matches!(&self.peek_token().kind, TokenKind::Ident(n) if n == "Function")
+                && (self.peek_next() == &TokenKind::LParen || self.peek_next() == &TokenKind::Of));
+
+        if is_anon_fn {
+            if self.check(&TokenKind::Local) {
+                self.advance(); // consume 'local'
+            }
+            self.advance(); // consume 'Function'
+            let return_type = if self.check(&TokenKind::Of) {
+                self.advance(); // consume 'of'
+                Some(self.parse_type()?)
+            } else {
+                None
+            };
+            self.expect(&TokenKind::LParen)?;
+            let mut params = Vec::new();
+            if !self.check(&TokenKind::RParen) {
+                loop {
+                    params.push(self.parse_param()?);
+                    if self.check(&TokenKind::Comma) {
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            self.expect(&TokenKind::RParen)?;
+            self.expect(&TokenKind::LBrace)?;
+            let mut body = Vec::new();
+            while !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Eof) {
+                body.push(self.parse_statement()?);
+            }
+            self.expect(&TokenKind::RBrace)?;
+            return Ok(Expression::AnonymousFunction {
+                return_type,
+                params,
+                body,
+            });
+        }
+
         let tok = self.peek_token().clone();
         match tok.kind {
             TokenKind::StringLit(s) => {

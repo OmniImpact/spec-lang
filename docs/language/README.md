@@ -80,6 +80,36 @@ Function is logMessage(String is msg){
 }
 ```
 
+#### Property Initialization Shorthand (`self:field`)
+Constructors can initialize instance fields directly from parameter lists using the `self:field` parameter shorthand:
+
+```spec
+class Issue{
+	Int is line;
+	Boolean is isWarning;
+	String is message;
+
+	## Constructor auto-assigns fields without manual assignment statements
+	replace local Function is init(self:line, self:isWarning, self:message){
+	}
+}
+```
+
+#### Anonymous Function Literals
+Functions can be passed inline as first-class expressions using keyword-based anonymous function syntax:
+
+```spec
+# Anonymous function expression
+words:each(action: local Function(word){
+	output:line(word);
+});
+
+# Anonymous function with explicit return type
+local Boolean is hasMatch: words:any(predicate: local Function of Boolean(String is word){
+	return word is "target";
+});
+```
+
 ### Imports & `using`
 Packages are imported via the class `using` property:
 ```spec
@@ -195,13 +225,17 @@ local Float is r: math:round(value: 3.7);
 ## Control Flow & Branching
 
 ### Conditionals
-Standard `if`, `else if`, and `else` blocks with boolean comparisons (`==`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`):
+Standard `if`, `else if`, and `else` blocks with boolean comparisons (`==`, `is`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`):
+
+The `is` keyword can be used interchangeably with `==` for expressive, natural equality checks:
 
 ```spec
-if (score > 21) {
-	output:line("Bust!");
-} else if (score == 21) {
+if (score is 21) {
 	output:line("Blackjack!");
+} else if (status is "ERROR") {
+	output:line("Failed!");
+} else if (score > 21) {
+	output:line("Bust!");
 } else {
 	output:line("Continue play");
 }

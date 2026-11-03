@@ -7,6 +7,7 @@ pub struct CodeGenerator {
     field_types: HashMap<String, Type>,
     local_var_types: HashMap<String, Type>,
     all_classes: HashMap<String, ClassDef>,
+    anon_fn_counter: usize,
 }
 
 impl CodeGenerator {
@@ -17,6 +18,7 @@ impl CodeGenerator {
             field_types: HashMap::new(),
             local_var_types: HashMap::new(),
             all_classes: HashMap::new(),
+            anon_fn_counter: 0,
         }
     }
 
@@ -81,7 +83,19 @@ impl CodeGenerator {
         }
 
         // 6. Emit main entry point if an entry class exists
-        if let Some(entry_class) = program.classes.first() {
+        let entry_class = program
+            .classes
+            .iter()
+            .find(|c| {
+                c.members.iter().any(|m| match m {
+                    Member::Method { name, params, .. } => name == "init" && params.len() == 1,
+                    _ => false,
+                })
+            })
+            .or_else(|| program.classes.last())
+            .or_else(|| program.classes.first());
+
+        if let Some(entry_class) = entry_class {
             out.push_str(&self.generate_main(&entry_class.name));
         }
 
@@ -315,6 +329,41 @@ long long spec_array_index_of_str(SpecArray* a, const char* needle, long long de
     return def;
 }
 
+void spec_array_each(SpecArray* a, void (*fn)(void*)) {
+    if (!a || !fn) return;
+    for (size_t i = 0; i < a->length; i++) {
+        fn(a->items[i]);
+    }
+}
+
+bool spec_array_any(SpecArray* a, bool (*fn)(void*)) {
+    if (!a || !fn) return false;
+    for (size_t i = 0; i < a->length; i++) {
+        if (fn(a->items[i])) return true;
+    }
+    return false;
+}
+
+long long spec_array_count(SpecArray* a, bool (*fn)(void*)) {
+    if (!a || !fn) return 0;
+    long long count = 0;
+    for (size_t i = 0; i < a->length; i++) {
+        if (fn(a->items[i])) count++;
+    }
+    return count;
+}
+
+SpecArray* spec_array_filter(SpecArray* a, bool (*fn)(void*)) {
+    SpecArray* res = spec_array_new();
+    if (!a || !fn) return res;
+    for (size_t i = 0; i < a->length; i++) {
+        if (fn(a->items[i])) {
+            spec_array_add(res, a->items[i]);
+        }
+    }
+    return res;
+}
+
 SpecArray* spec_map_keys(SpecMap* m) {
     SpecArray* arr = spec_array_new();
     if (!m) return arr;
@@ -435,6 +484,67 @@ bool spec_str_is_whitespace(const char* s) {
         if (*p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') return false;
     }
     return true;
+}
+
+SpecArray* spec_str_lines(const char* s) {
+    SpecArray* res = spec_array_new();
+    if (!s) return res;
+    const char* start = s;
+    const char* p = s;
+    while (*p) {
+        if (*p == '\n') {
+            size_t len = (size_t)(p - start);
+            if (len > 0 && *(p - 1) == '\r') len--;
+            char* line = (char*)malloc(len + 1);
+            memcpy(line, start, len);
+            line[len] = '\0';
+            spec_array_add(res, line);
+            start = p + 1;
+        }
+        p++;
+    }
+    if (p >= start && *start) {
+        size_t len = (size_t)(p - start);
+        if (len > 0 && *(p - 1) == '\r') len--;
+        char* line = (char*)malloc(len + 1);
+        memcpy(line, start, len);
+        line[len] = '\0';
+        spec_array_add(res, line);
+    }
+    return res;
+}
+
+bool spec_str_starts_with(const char* s, const char* prefix) {
+    if (!s || !prefix) return false;
+    size_t slen = strlen(s);
+    size_t plen = strlen(prefix);
+    if (plen > slen) return false;
+    return strncmp(s, prefix, plen) == 0;
+}
+
+long long spec_str_count_leading(const char* s, const char* search) {
+    if (!s || !search || strlen(search) == 0) return 0;
+    size_t slen = strlen(search);
+    long long count = 0;
+    const char* p = s;
+    while (*p && strncmp(p, search, slen) == 0) {
+        count++;
+        p += slen;
+    }
+    return count;
+}
+
+char* spec_str_trim(const char* s) {
+    if (!s) return "";
+    while (*s && (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r')) s++;
+    if (*s == '\0') return "";
+    const char* end = s + strlen(s) - 1;
+    while (end > s && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) end--;
+    size_t len = (size_t)(end - s + 1);
+    char* res = (char*)malloc(len + 1);
+    memcpy(res, s, len);
+    res[len] = '\0';
+    return res;
 }
 
 /* File Package Primitives */
@@ -620,6 +730,10 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 | ("Array", "slice")
                 | ("Array", "clear")
                 | ("Array", "indexOf")
+                | ("Array", "each")
+                | ("Array", "any")
+                | ("Array", "count")
+                | ("Array", "filter")
                 | ("Map", "set")
                 | ("Map", "has")
                 | ("Map", "remove")
@@ -672,7 +786,16 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         .param_type
                         .as_ref()
                         .map(Self::c_type_for)
-                        .unwrap_or_else(|| "void*".to_string());
+                        .unwrap_or_else(|| {
+                            if let Some(field_ty) = class_def.members.iter().find_map(|m| match m {
+                                Member::Field { name, field_type, .. } if name == &param.name => Some(field_type),
+                                _ => None,
+                            }) {
+                                Self::c_type_for(field_ty)
+                            } else {
+                                "void*".to_string()
+                            }
+                        });
                     out.push_str(&format!(", {} {}", c_type, Self::c_ident(&param.name)));
                 }
                 out.push_str(");\n");
@@ -789,19 +912,27 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         ));
 
         for param in params {
-            let c_type = param
-                .param_type
-                .as_ref()
-                .map(Self::c_type_for)
-                .unwrap_or_else(|| "void*".to_string());
-            let t = param
-                .param_type
-                .clone()
-                .unwrap_or(Type::Simple("void*".to_string()));
+            let (c_type, t) = if let Some(pt) = &param.param_type {
+                (Self::c_type_for(pt), pt.clone())
+            } else if let Some(ft) = self.field_types.get(&param.name) {
+                (Self::c_type_for(ft), ft.clone())
+            } else {
+                ("void*".to_string(), Type::Simple("void*".to_string()))
+            };
             self.local_var_types.insert(param.name.clone(), t);
             out.push_str(&format!(", {} {}", c_type, Self::c_ident(&param.name)));
         }
         out.push_str(") {\n");
+
+        for param in params {
+            if param.is_field_init {
+                out.push_str(&format!(
+                    "    self->{} = {};\n",
+                    Self::c_ident(&param.name),
+                    Self::c_ident(&param.name)
+                ));
+            }
+        }
 
         for stmt in body {
             out.push_str(&self.generate_statement(stmt)?);
@@ -951,7 +1082,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 if method == "isEmpty" {
                     return format!("spec_to_string_bool({})", expr_c);
                 }
-                if method == "has" || method == "remove" {
+                if method == "has" || method == "remove" || method == "any" || method == "startsWith" {
                     return format!("spec_to_string_bool({})", expr_c);
                 }
                 if method == "pop" || method == "removeAt" {
@@ -964,7 +1095,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         return format!("spec_to_string_bool({})", expr_c);
                     }
                 }
-                if method == "indexOf" || method == "execute" {
+                if method == "indexOf" || method == "execute" || method == "count" || method == "countLeading" {
                     return format!("spec_to_string_int({})", expr_c);
                 }
                 if method == "isDigit"
@@ -1051,7 +1182,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         }
     }
 
-    fn generate_expression(&self, expr: &Expression) -> Result<String, String> {
+    fn generate_expression(&mut self, expr: &Expression) -> Result<String, String> {
         match expr {
             Expression::StringLiteral(s) => {
                 let mut escaped = String::new();
@@ -1408,6 +1539,54 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     return Ok(format!("spec_str_is_whitespace({})", target_c));
                 }
 
+                // String helper inspection methods
+                if method == "lines" {
+                    let target_c = self.generate_expression(target)?;
+                    return Ok(format!("spec_str_lines({})", target_c));
+                }
+
+                if method == "startsWith" {
+                    let target_c = self.generate_expression(target)?;
+                    let prefix_c = self.extract_arg(args, "prefix", 0)?;
+                    return Ok(format!("spec_str_starts_with({}, {})", target_c, prefix_c));
+                }
+
+                if method == "countLeading" {
+                    let target_c = self.generate_expression(target)?;
+                    let search_c = self.extract_arg(args, "search", 0)?;
+                    return Ok(format!("spec_str_count_leading({}, {})", target_c, search_c));
+                }
+
+                if method == "trim" {
+                    let target_c = self.generate_expression(target)?;
+                    return Ok(format!("spec_str_trim({})", target_c));
+                }
+
+                // Array higher-order methods
+                if method == "each" {
+                    let target_c = self.generate_expression(target)?;
+                    let fn_c = self.extract_arg(args, "action", 0)?;
+                    return Ok(format!("spec_array_each({}, (void (*)(void*))({}))", target_c, fn_c));
+                }
+
+                if method == "any" {
+                    let target_c = self.generate_expression(target)?;
+                    let fn_c = self.extract_arg(args, "predicate", 0)?;
+                    return Ok(format!("spec_array_any({}, (bool (*)(void*))({}))", target_c, fn_c));
+                }
+
+                if method == "count" {
+                    let target_c = self.generate_expression(target)?;
+                    let fn_c = self.extract_arg(args, "predicate", 0)?;
+                    return Ok(format!("spec_array_count({}, (bool (*)(void*))({}))", target_c, fn_c));
+                }
+
+                if method == "filter" {
+                    let target_c = self.generate_expression(target)?;
+                    let fn_c = self.extract_arg(args, "predicate", 0)?;
+                    return Ok(format!("spec_array_filter({}, (bool (*)(void*))({}))", target_c, fn_c));
+                }
+
                 // Check for `control:stop()`
                 if method == "stop" {
                     let target_c = self.generate_expression(target)?;
@@ -1562,6 +1741,35 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     }
                 }
 
+                if let Expression::Identifier(ref id) = **target {
+                    if id == "self" {
+                        if let Some(t) = self.local_var_types.get(method).or_else(|| self.field_types.get(method)) {
+                            if matches!(t, Type::Simple(n) if n == "Function") || matches!(t, Type::Generic(n, _) if n == "Function") {
+                                let fn_expr = if self.local_var_types.contains_key(method) {
+                                    Self::c_ident(method)
+                                } else {
+                                    format!("self->{}", method)
+                                };
+                                let mut arg_c_list = Vec::new();
+                                for arg in args {
+                                    arg_c_list.push(self.generate_expression(&arg.value)?);
+                                }
+                                let joined = arg_c_list.join(", ");
+                                return Ok(format!("((void* (*)(void*))({}))({})", fn_expr, joined));
+                            }
+                        }
+                    }
+                }
+                if method.is_empty() {
+                    let fn_c = self.generate_expression(target)?;
+                    let mut arg_c_list = Vec::new();
+                    for arg in args {
+                        arg_c_list.push(self.generate_expression(&arg.value)?);
+                    }
+                    let joined = arg_c_list.join(", ");
+                    return Ok(format!("((void* (*)(void*))({}))({})", fn_c, joined));
+                }
+
                 // Method call on self or other instance
                 let class_name = self.infer_target_class(target);
                 let target_c = if let Expression::Identifier(ref id) = **target {
@@ -1605,6 +1813,92 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 }
                 out.push_str("_arr; })");
                 Ok(out)
+            }
+            Expression::AnonymousFunction {
+                return_type,
+                params,
+                body,
+            } => {
+                self.anon_fn_counter += 1;
+                let fn_name = format!("_anon_fn_{}", self.anon_fn_counter);
+                let old_locals = self.local_var_types.clone();
+
+                let ret_c = if let Some(t) = return_type {
+                    Self::c_type_for(t)
+                } else {
+                    fn find_return(stmts: &[Statement]) -> Option<&Expression> {
+                        for s in stmts {
+                            match s {
+                                Statement::Return(Some(e)) => return Some(e),
+                                Statement::If {
+                                    then_branch,
+                                    else_branch,
+                                    ..
+                                } => {
+                                    if let Some(e) = find_return(then_branch) {
+                                        return Some(e);
+                                    }
+                                    if let Some(eb) = else_branch {
+                                        if let Some(e) = find_return(eb) {
+                                            return Some(e);
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        None
+                    }
+                    if let Some(ret_expr) = find_return(body) {
+                        if self.is_string_expr(ret_expr) {
+                            "const char*".to_string()
+                        } else if matches!(ret_expr, Expression::Binary { op, .. } if matches!(op, BinaryOp::Equal | BinaryOp::NotEqual | BinaryOp::Less | BinaryOp::LessEqual | BinaryOp::Greater | BinaryOp::GreaterEqual | BinaryOp::And | BinaryOp::Or))
+                            || matches!(ret_expr, Expression::MethodCall { method, .. } if matches!(method.as_str(), "startsWith" | "isDigit" | "isAlpha" | "isWhitespace" | "has" | "any"))
+                            || matches!(ret_expr, Expression::BooleanLiteral(_))
+                        {
+                            "bool".to_string()
+                        } else if matches!(ret_expr, Expression::NumberLiteral(_)) {
+                            "long long".to_string()
+                        } else if matches!(ret_expr, Expression::FloatLiteral(_)) {
+                            "double".to_string()
+                        } else {
+                            "void*".to_string()
+                        }
+                    } else {
+                        "void".to_string()
+                    }
+                };
+
+                let mut param_c_list = Vec::new();
+                for p in params {
+                    let pt = p
+                        .param_type
+                        .clone()
+                        .unwrap_or(Type::Simple("void*".to_string()));
+                    let c_t = p
+                        .param_type
+                        .as_ref()
+                        .map(Self::c_type_for)
+                        .unwrap_or_else(|| "void*".to_string());
+                    self.local_var_types.insert(p.name.clone(), pt);
+                    param_c_list.push(format!("{} {}", c_t, Self::c_ident(&p.name)));
+                }
+                let params_c = if param_c_list.is_empty() {
+                    "void".to_string()
+                } else {
+                    param_c_list.join(", ")
+                };
+
+                let mut body_c = String::new();
+                for stmt in body {
+                    body_c.push_str(&self.generate_statement(stmt)?);
+                }
+                self.local_var_types = old_locals;
+
+                Ok(format!(
+                    "({{ {} {}({}) {{\n{} }}; {}; }})",
+                    ret_c, fn_name, params_c, body_c, fn_name
+                ))
             }
         }
     }
@@ -1660,6 +1954,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         | "getValue"
                         | "read"
                         | "advance"
+                        | "trim"
                 )
             }
             Expression::Binary {
@@ -1778,6 +2073,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 }
             }
             Expression::MethodCall { target, method, .. } => {
+                if method == "lines" || method == "filter" || method == "slice" {
+                    return Some("Array".to_string());
+                }
                 if let Some(mut current_class) = self.infer_target_class(target) {
                     while let Some(cdef) = self.all_classes.get(&current_class) {
                         for m in &cdef.members {
@@ -1827,7 +2125,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         None
     }
 
-    fn extract_arg(&self, args: &[NamedArg], name: &str, pos: usize) -> Result<String, String> {
+    fn extract_arg(&mut self, args: &[NamedArg], name: &str, pos: usize) -> Result<String, String> {
         for arg in args {
             if let Some(ref n) = arg.name {
                 if n == name {

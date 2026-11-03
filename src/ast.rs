@@ -61,12 +61,18 @@ pub enum Expression {
         op: UnaryOp,
         expr: Box<Expression>,
     },
+    AnonymousFunction {
+        return_type: Option<Type>,
+        params: Vec<Parameter>,
+        body: Vec<Statement>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     pub param_type: Option<Type>,
     pub name: String,
+    pub is_field_init: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

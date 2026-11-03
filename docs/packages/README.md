@@ -218,6 +218,38 @@ local Array of Int is primes: [2, 3, 5, 7];
   local Int is idx: fruits:indexOf(search: "Apple", default: -1);
   ```
 
+- **`each(Function is action)`**:
+  Iterates through each element in the array, invoking `action` with the item.
+  ```spec
+  fruits:each(action: local Function(item){
+  	output:line(item);
+  });
+  ```
+
+- **`any(Function is predicate) -> Boolean`**:
+  Returns `true` if any element satisfies the `predicate`.
+  ```spec
+  local Boolean is hasApple: fruits:any(predicate: local Function of Boolean(item){
+  	return item is "Apple";
+  });
+  ```
+
+- **`count(Function is predicate) -> Int`**:
+  Counts how many elements satisfy the `predicate`.
+  ```spec
+  local Int is count: fruits:count(predicate: local Function of Boolean(item){
+  	return item:startsWith(prefix: "A");
+  });
+  ```
+
+- **`filter(Function is predicate) -> Array`**:
+  Returns a new array containing all elements that satisfy the `predicate`.
+  ```spec
+  local Array of String is filtered: fruits:filter(predicate: local Function of Boolean(item){
+  	return item:startsWith(prefix: "A");
+  });
+  ```
+
 ---
 
 ### `base:struct:Map`
@@ -381,6 +413,10 @@ Strings in Spec provide built-in methods for lexical scanning, text transformati
 - **`str:isDigit() -> Boolean`**: Returns `true` if the string is non-empty and contains only numeric digits (`0`-`9`).
 - **`str:isAlpha() -> Boolean`**: Returns `true` if the string is non-empty and contains ASCII letters or underscores (`_`).
 - **`str:isWhitespace() -> Boolean`**: Returns `true` if the string is non-empty and contains only whitespace characters (` `, `\t`, `\n`, `\r`).
+- **`str:lines() -> Array of String`**: Splits the string on newline boundaries (`\n`, `\r\n`), returning an array of lines.
+- **`str:startsWith(prefix: String) -> Boolean`**: Returns `true` if the string begins with `prefix`.
+- **`str:countLeading(search: String) -> Int`**: Counts consecutive occurrences of `search` at the start of the string (e.g. leading spaces or tabs).
+- **`str:trim() -> String`**: Strips leading and trailing whitespace characters (` `, `\t`, `\n`, `\r`).
 
 ---
 
