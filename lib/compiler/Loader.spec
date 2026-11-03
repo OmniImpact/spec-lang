@@ -20,11 +20,17 @@ class Loader{
 	local Map of String to String is loadedFiles: Map:init();
 	local Array of Class is loadedClasses: [];
 	local Map of String to String is seenClassNames: Map:init();
+	local Array of String is parseErrors: [];
 
 	replace local Function is init(){
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
+		self:parseErrors: [];
+	}
+
+	replace local Function of Array of String is getParseErrors(){
+		return self:parseErrors;
 	}
 
 	class PathConvLoop extends Loop{
@@ -150,7 +156,13 @@ class Loader{
 		local Lexer is lexer: Lexer:init(source: src);
 		local Array of Token is tokens: lexer:tokenize();
 		local Parser is parser: Parser:init(tokens: tokens);
+		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();
+		if (parser:hasErrors()) {
+			parser:getErrors():each(action: local Function(String is err){
+				self:parseErrors:add(item: err);
+			});
+		}
 
 		prog:getClasses():each(action: local Function(Class is c){
 			if (!self:seenClassNames:has(key: c:getName())) {
@@ -196,6 +208,7 @@ class Loader{
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
+		self:parseErrors: [];
 
 		self:loadFile(filePath: rootPath);
 

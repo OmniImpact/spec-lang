@@ -19,6 +19,8 @@ class Parser{
 	local Array of Token is tokens: [];
 	local Int is pos: 0;
 	local Int is length: 0;
+	local String is sourceFile: "";
+	local Array of String is errors: [];
 
 	class EnumVariantsLoop extends Loop{
 		local Parser is parser;
@@ -40,6 +42,12 @@ class Parser{
 		replace local Function of Boolean is iteration(LoopControl is control){
 			local Token is vTok: self:parser:advance();
 			local String is vName: vTok:getValue();
+			local Array of Parameter is vParams: [];
+			if (self:parser:check(kind: "SYMBOL", value: "(")) {
+				self:parser:advance();
+				While:run(loop: ParamLoop:init(parser: self:parser, params: vParams));
+				self:parser:matchToken(kind: "SYMBOL", value: ")");
+			}
 			local Expression is valExpr: Expression:init(kind: "NUMBER");
 			local Boolean is hasInit: false;
 			if (self:parser:check(kind: "SYMBOL", value: ":")) {
@@ -58,6 +66,7 @@ class Parser{
 			m:modifiers: ["static", "local"];
 			m:memberType: Type:init(name: self:backingType);
 			m:name: vName;
+			m:params: vParams;
 			m:initExpr: valExpr;
 			m:hasInit: hasInit;
 			self:members:add(item: m);
@@ -270,6 +279,35 @@ class Parser{
 		}
 	}
 
+	class MapItemsLoop extends Loop{
+		local Parser is parser;
+		local Array of Expression is keys;
+		local Array of Expression is values;
+
+		replace local Function is init(Parser is parser, Array of Expression is keys, Array of Expression is values){
+			self:parser: parser;
+			self:keys: keys;
+			self:values: values;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return !self:parser:check(kind: "SYMBOL", value: "]") && !self:parser:check(kind: "EOF", value: "");
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			local Expression is k: self:parser:parseExpression();
+			self:parser:matchToken(kind: "SYMBOL", value: ":");
+			local Expression is v: self:parser:parseExpression();
+			self:keys:add(item: k);
+			self:values:add(item: v);
+			if (self:parser:check(kind: "SYMBOL", value: ",")) {
+				self:parser:advance();
+				return true;
+			}
+			return false;
+		}
+	}
+
 	class ModifierLoop extends Loop{
 		local Parser is parser;
 		local Array of String is mods;
@@ -308,7 +346,12 @@ class Parser{
 				self:parser:advance();
 				self:parser:advance();
 				local Token is fTok: self:parser:advance();
-				self:params:add(item: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: "SELF_FIELD")));
+				local Parameter is param: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: "SELF_FIELD"));
+				if (self:parser:check(kind: "SYMBOL", value: ":")) {
+					self:parser:advance();
+					param:setDefault(expr: self:parser:parseExpression());
+				}
+				self:params:add(item: param);
 				if (self:parser:check(kind: "SYMBOL", value: ",")) {
 					self:parser:advance();
 					return true;
@@ -328,7 +371,12 @@ class Parser{
 			local Type is pType: self:parser:parseType();
 			self:parser:matchToken(kind: "KEYWORD", value: "is");
 			local Token is pTok: self:parser:advance();
-			self:params:add(item: Parameter:init(name: pTok:getValue(), paramType: pType));
+			local Parameter is param: Parameter:init(name: pTok:getValue(), paramType: pType);
+			if (self:parser:check(kind: "SYMBOL", value: ":")) {
+				self:parser:advance();
+				param:setDefault(expr: self:parser:parseExpression());
+			}
+			self:params:add(item: param);
 			if (self:parser:check(kind: "SYMBOL", value: ",")) {
 				self:parser:advance();
 				return true;
@@ -687,6 +735,48 @@ class Parser{
 		self:tokens: tokens;
 		self:length: tokens:length();
 		self:pos: 0;
+		self:sourceFile: "";
+		self:errors: [];
+	}
+
+	replace local Function is setSourceFile(String is file){
+		self:sourceFile: file;
+	}
+
+	replace local Function of Array of String is getErrors(){
+		return self:errors;
+	}
+
+	replace local Function of Boolean is hasErrors(){
+		return self:errors:length() > 0;
+	}
+
+	replace local Function is addError(Token is tok, String is message){
+		local String is prefix: if (self:sourceFile != "") self:sourceFile . ":" else "Line ";
+		local String is errStr: "  [SyntaxError] [" . prefix . tok:getLine() . ":" . tok:getCol() . "] " . message;
+		self:errors:add(item: errStr);
+	}
+
+	replace local Function is synchronize(){
+		While:condition(
+			evaluate: local Function of Boolean(){
+				local Token is t: self:peek();
+				if (t:getTokenKind() == TokenKind:EOF) {
+					return false;
+				}
+				if (t:getValue() == ";" || t:getValue() == "}") {
+					return false;
+				}
+				return true;
+			},
+			iteration: local Function of Boolean(){
+				self:advance();
+				return true;
+			}
+		);
+		if (self:peek():getValue() == ";") {
+			self:advance();
+		}
 	}
 
 	replace local Function of Token is peek(){
@@ -737,6 +827,9 @@ class Parser{
 			self:advance();
 			return true;
 		}
+		local Token is tok: self:peek();
+		local String is exp: if (value != "") "'" . value . "'" else kind;
+		self:addError(tok: tok, message: "Expected " . exp . ", found '" . tok:getValue() . "'");
 		return false;
 	}
 
@@ -1131,14 +1224,46 @@ class Parser{
 
 				if (self:check(kind: "SYMBOL", value: "[")) {
 					self:advance();
-					local Array of Expression is items: [];
-					While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
+					if (self:check(kind: "SYMBOL", value: "]")) {
+						self:advance();
+						local Expression is e: Expression:init(kind: "ARRAY");
+						e:arrayItems: [];
+						return e;
+					}
+					if (self:check(kind: "SYMBOL", value: ":")) {
+						self:advance();
+						self:matchToken(kind: "SYMBOL", value: "]");
+						local Expression is e: Expression:init(kind: "MAP");
+						e:makeMap(keys: [], values: []);
+						return e;
+					}
+					local Expression is firstItem: self:parseExpression();
+					if (self:check(kind: "SYMBOL", value: ":")) {
+						self:advance();
+						local Expression is firstVal: self:parseExpression();
+						local Array of Expression is mKeys: [firstItem];
+						local Array of Expression is mVals: [firstVal];
+						if (self:check(kind: "SYMBOL", value: ",")) {
+							self:advance();
+							While:run(loop: MapItemsLoop:init(parser: self, keys: mKeys, values: mVals));
+						}
+						self:matchToken(kind: "SYMBOL", value: "]");
+						local Expression is e: Expression:init(kind: "MAP");
+						e:makeMap(keys: mKeys, values: mVals);
+						return e;
+					}
+					local Array of Expression is items: [firstItem];
+					if (self:check(kind: "SYMBOL", value: ",")) {
+						self:advance();
+						While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
+					}
 					self:matchToken(kind: "SYMBOL", value: "]");
 					local Expression is e: Expression:init(kind: "ARRAY");
 					e:arrayItems: items;
 					return e;
 				}
 
+				self:addError(tok: tok, message: "Unexpected token '" . tok:getValue() . "' in expression");
 				self:advance();
 				return Expression:init(kind: "UNKNOWN");
 			}
@@ -1230,6 +1355,18 @@ class Parser{
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
 
+		local Array of String is typeParams: [];
+		if (self:check(kind: "KEYWORD", value: "of")) {
+			self:advance();
+			local Token is tp1: self:advance();
+			typeParams:add(item: tp1:getValue());
+			if (self:check(kind: "KEYWORD", value: "to")) {
+				self:advance();
+				local Token is tp2: self:advance();
+				typeParams:add(item: tp2:getValue());
+			}
+		}
+
 		local Array of String is baseClasses: [];
 		if (self:check(kind: "KEYWORD", value: "extends")) {
 			self:advance();
@@ -1243,6 +1380,8 @@ class Parser{
 
 		local Class is c: Class:init(name: name, baseClass: "", members: members);
 		c:setLine(line: nameTok:getLine());
+		c:setSourceFile(file: self:sourceFile);
+		c:setTypeParams(params: typeParams);
 		c:withBaseClasses(name: name, baseClasses: baseClasses, members: members);
 		return c;
 	}
@@ -1268,6 +1407,8 @@ class Parser{
 		}
 
 		local Class is c: Class:init(name: name, baseClass: "Enum", members: members);
+		c:setLine(line: nameTok:getLine());
+		c:setSourceFile(file: self:sourceFile);
 		c:withBaseClasses(name: name, baseClasses: ["Enum"], members: members);
 		return c;
 	}

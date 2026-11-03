@@ -69,6 +69,9 @@ class TypeChecker{
 	## Currently analyzed class name.
 	local String is currentClassName: "";
 
+	## Source file path of the currently analyzed class.
+	local String is currentSourceFile: "";
+
 	## Currently analyzed method return type name.
 	local String is currentMethodReturnType: "";
 
@@ -86,6 +89,7 @@ class TypeChecker{
 		self:allStringBackedEnums: Map:init();
 		self:localVars: Map:init();
 		self:fieldTypes: Map:init();
+		self:currentSourceFile: "";
 	}
 
 	## Records a type error with line coordinates.
@@ -93,21 +97,56 @@ class TypeChecker{
 	## @param line: Source line number.
 	## @param msg: Diagnostic error message.
 	replace local Function is addError(Int is line, String is msg){
-		self:errors:add(item: TypeError:init(line: line, message: msg));
+		local String is fullMsg: if (self:currentSourceFile != "") "[" . self:currentSourceFile . "] " . msg else msg;
+		self:errors:add(item: TypeError:init(line: line, message: fullMsg));
 	}
 
-	## Formats a [Type] descriptor into a canonical static type string (e.g., "Array:Token", "Map:String:String").
+	## Formats a [Type] descriptor for a variable or field (preserving "Function:RetType").
+	replace local Function of String is formatVarTypeString(Type is t){
+		if (t:getName() == "Function") {
+			if (t:getParams():length() > 0) {
+				local Type is ret: t:getParams():get(index: 0);
+				return "Function:" . self:formatTypeString(t: ret);
+			}
+			return "Function";
+		}
+		return self:formatTypeString(t: t);
+	}
+
+	replace local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
+		local Class is cls: self:findClass(name: enumName);
+		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:getMembers(), fieldName: variantName);
+		While:run(loop: fl);
+		if (fl:found) {
+			return fl:res;
+		}
+		return Member:init(kind: "UNKNOWN");
+	}
+
+	replace local Function is bindWhenPatternVars(WhenArm is arm){
+		arm:conditions:each(action: local Function(Expression is c){
+			if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
+				local String is enumName: self:allEnumVariants:getString(key: c:methodName, default: "");
+				local Member is vMem: self:lookupEnumVariant(enumName: enumName, variantName: c:methodName);
+				local Int is idx: 0;
+				c:methodArgs:each(action: local Function(NamedArg is arg){
+					if (idx < vMem:getParameters():length()) {
+						local Expression is av: arg:getValue();
+						if (av:getKind() == "IDENT") {
+							local Parameter is pDef: vMem:getParameters():get(index: idx);
+							self:localVars:set(key: av:stringValue, value: self:formatVarTypeString(t: pDef:getType()));
+						}
+					}
+					idx: idx + 1;
+				});
+				c:setResolvedType(t: enumName);
+			} else {
+				self:inferExpressionType(expr: c);
+			}
+		});
+	}
 	replace local Function of String is formatTypeString(Type is t){
 		local String is baseName: t:getName();
-		if (baseName == "Array" && t:getParams():length() > 0) {
-			local Type is elemType: t:getParams():get(index: 0);
-			return "Array:" . elemType:getName();
-		}
-		if (baseName == "Map" && t:getParams():length() >= 2) {
-			local Type is kType: t:getParams():get(index: 0);
-			local Type is vType: t:getParams():get(index: 1);
-			return "Map:" . kType:getName() . ":" . vType:getName();
-		}
 		if (baseName == "Function") {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
@@ -115,7 +154,35 @@ class TypeChecker{
 			}
 			return "void";
 		}
+		if (t:getParams():length() == 1) {
+			local Type is p0: t:getParams():get(index: 0);
+			return baseName . ":" . p0:getName();
+		}
+		if (t:getParams():length() >= 2) {
+			local Type is p0: t:getParams():get(index: 0);
+			local Type is p1: t:getParams():get(index: 1);
+			return baseName . ":" . p0:getName() . ":" . p1:getName();
+		}
 		return baseName;
+	}
+
+	replace local Function of String is substituteTypeParam(String is rawType, Class is cls, Array of String is typeArgs){
+		local Array of String is tps: cls:getTypeParams();
+		if (tps:length() == 0 || typeArgs:length() == 0) {
+			return rawType;
+		}
+		local Int is idx: tps:indexOf(search: rawType, default: -1);
+		if (idx >= 0 && idx < typeArgs:length()) {
+			return typeArgs:get(index: idx);
+		}
+		if (rawType:startsWith(prefix: "Array:") && rawType:length() > 6) {
+			local String is elem: rawType:substring(start: 6, end: rawType:length());
+			local Int is eIdx: tps:indexOf(search: elem, default: -1);
+			if (eIdx >= 0 && eIdx < typeArgs:length()) {
+				return "Array:" . typeArgs:get(index: eIdx);
+			}
+		}
+		return rawType;
 	}
 
 	class SearchLoop extends Loop{
@@ -209,6 +276,25 @@ class TypeChecker{
 		if (target:startsWith(prefix: "Map") && source:startsWith(prefix: "Map")) {
 			return true;
 		}
+		if (target:startsWith(prefix: "Function") && source:startsWith(prefix: "Function")) {
+			return true;
+		}
+		local Array of String is tParts: target:split(delimiter: ":");
+		local Array of String is sParts: source:split(delimiter: ":");
+		if (tParts:length() > 0 && sParts:length() > 0) {
+			local String is tBase: tParts:get(index: 0);
+			local String is sBase: sParts:get(index: 0);
+			if (tBase == sBase) {
+				return true;
+			}
+			if (self:isSubclassOf(subName: sBase, baseName: tBase)) {
+				return true;
+			}
+		}
+		local Class is curCls: self:findClass(name: self:currentClassName);
+		if (curCls:getTypeParams():indexOf(search: target, default: -1) >= 0 || curCls:getTypeParams():indexOf(search: source, default: -1) >= 0) {
+			return true;
+		}
 		if (self:isSubclassOf(subName: source, baseName: target)) {
 			return true;
 		}
@@ -250,7 +336,10 @@ class TypeChecker{
 		if (className == "" || className == "Any") {
 			return "";
 		}
-		local Class is cls: self:findClass(name: className);
+		local Array of String is parts: className:split(delimiter: ":");
+		local String is baseClassName: parts:get(index: 0);
+		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local Class is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}
@@ -258,7 +347,8 @@ class TypeChecker{
 		While:run(loop: fl);
 		if (fl:found) {
 			local Member is foundM: fl:res;
-			return self:formatTypeString(t: foundM:getType());
+			local String is rawT: self:formatTypeString(t: foundM:getType());
+			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
 		local String is inherited: "";
 		cls:getBaseClasses():each(action: local Function(String is baseName){
@@ -304,10 +394,13 @@ class TypeChecker{
 		if (className == "" || className == "Any") {
 			return "";
 		}
-		if (methodName == "init" && self:registeredClasses:has(key: className) && !self:allEnumNames:has(key: className)) {
+		local Array of String is parts: className:split(delimiter: ":");
+		local String is baseClassName: parts:get(index: 0);
+		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		if (methodName == "init" && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
 		}
-		local Class is cls: self:findClass(name: className);
+		local Class is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}
@@ -315,7 +408,8 @@ class TypeChecker{
 		While:run(loop: ml);
 		if (ml:found) {
 			local Member is foundM: ml:res;
-			return self:formatTypeString(t: foundM:getType());
+			local String is rawT: self:formatTypeString(t: foundM:getType());
+			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
 		local String is inherited: "";
 		cls:getBaseClasses():each(action: local Function(String is baseName){
@@ -460,11 +554,42 @@ class TypeChecker{
 					res: "Array";
 				}
 			}
+			is "MAP": {
+				local String is firstKeyType: "";
+				local String is firstValType: "";
+				expr:mapKeys:each(action: local Function(Expression is k){
+					local String is kt: self:inferExpressionType(expr: k);
+					if (firstKeyType == "" && kt != "" && kt != "Any") {
+						firstKeyType: kt;
+					}
+				});
+				expr:mapValues:each(action: local Function(Expression is v){
+					local String is vt: self:inferExpressionType(expr: v);
+					if (firstValType == "" && vt != "" && vt != "Any") {
+						firstValType: vt;
+					}
+				});
+				if (firstKeyType != "" && firstValType != "") {
+					res: "Map:" . firstKeyType . ":" . firstValType;
+				} else {
+					res: "Map";
+				}
+			}
 			is "INDEX": {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
 				self:inferExpressionType(expr: expr:rightExpr);
 				if (leftT:startsWith(prefix: "Array:") && leftT:length() > 6) {
 					res: leftT:substring(start: 6, end: leftT:length());
+				} else if (leftT:startsWith(prefix: "Map:") && leftT:length() > 4) {
+					local String is afterMap: leftT:substring(start: 4, end: leftT:length());
+					local Int is colonIdx: afterMap:indexOf(needle: ":", default: -1);
+					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
+						res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
+					} else {
+						res: "String";
+					}
+				} else if (leftT == "Map") {
+					res: "String";
 				} else {
 					res: "Any";
 				}
@@ -479,9 +604,7 @@ class TypeChecker{
 				self:inferExpressionType(expr: expr:whenSubject);
 				local String is armType: "Any";
 				expr:whenArms:each(action: local Function(WhenArm is arm){
-					arm:conditions:each(action: local Function(Expression is c){
-						self:inferExpressionType(expr: c);
-					});
+					self:bindWhenPatternVars(arm: arm);
 					if (arm:hasValueExpr) {
 						local String is vt: self:inferExpressionType(expr: arm:valueExpr);
 						if (armType == "Any" && vt != "" && vt != "Any") {
@@ -504,7 +627,7 @@ class TypeChecker{
 
 				self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
 				expr:anonParams:each(action: local Function(Parameter is p){
-					self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
+					self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
 				});
 				expr:anonBody:each(action: local Function(Statement is s){
 					self:checkStatement(stmt: s);
@@ -512,20 +635,71 @@ class TypeChecker{
 
 				self:localVars: savedVars;
 				self:currentMethodReturnType: savedRet;
-				res: "Function";
+				local String is anonRetName: expr:anonReturnType:getName();
+				if (anonRetName != "" && anonRetName != "void" && anonRetName != "Void") {
+					res: "Function:" . self:formatTypeString(t: expr:anonReturnType);
+				} else {
+					res: "Function";
+				}
 			}
 			is "CALL": {
 				local String is targetType: self:inferExpressionType(expr: expr:methodTarget);
+				local String is method: expr:methodName;
 				if (targetType:startsWith(prefix: "Array:") && targetType:length() > 6) {
 					local String is elemTypeName: targetType:substring(start: 6, end: targetType:length());
+					if (method == "fold" && expr:methodArgs:length() >= 2) {
+						local NamedArg is a0: expr:methodArgs:get(index: 0);
+						local String is initType: self:inferExpressionType(expr: a0:getValue());
+						local NamedArg is a1: expr:methodArgs:get(index: 1);
+						local Expression is av: a1:getValue();
+						if (av:getKind() == "ANON_FN") {
+							if (av:anonParams:length() >= 1) {
+								local Parameter is p0: av:anonParams:get(index: 0);
+								if (p0:getType():getName() == "Any" || p0:getType():getName() == "") {
+									p0:setType(t: Type:init(name: initType));
+								}
+							}
+							if (av:anonParams:length() >= 2) {
+								local Parameter is p1: av:anonParams:get(index: 1);
+								if (p1:getType():getName() == "Any" || p1:getType():getName() == "") {
+									p1:setType(t: Type:init(name: elemTypeName));
+								}
+							}
+						}
+					} else {
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							local Expression is av: arg:getValue();
+							if (av:getKind() == "ANON_FN") {
+								av:anonParams:each(action: local Function(Parameter is p){
+									if (p:getType():getName() == "Any" || p:getType():getName() == "") {
+										p:setType(t: Type:init(name: elemTypeName));
+									}
+								});
+							}
+						});
+					}
+				} else if (targetType:startsWith(prefix: "Map:") && method == "each") {
+					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
+					local Int is colonIdx: afterMap:indexOf(needle: ":", default: -1);
+					local String is valTypeName: "String";
+					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
+						valTypeName: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
+					}
 					expr:methodArgs:each(action: local Function(NamedArg is arg){
 						local Expression is av: arg:getValue();
 						if (av:getKind() == "ANON_FN") {
-							av:anonParams:each(action: local Function(Parameter is p){
-								if (p:getType():getName() == "Any" || p:getType():getName() == "") {
-									p:setType(t: Type:init(name: elemTypeName));
+							if (av:anonParams:length() >= 1) {
+								local Parameter is p0: av:anonParams:get(index: 0);
+								if (p0:getType():getName() == "Any" || p0:getType():getName() == "") {
+									p0:setType(t: Type:init(name: "String"));
 								}
-							});
+							}
+							if (av:anonParams:length() >= 2) {
+								local Parameter is p1: av:anonParams:get(index: 1);
+								if (p1:getType():getName() == "Any" || p1:getType():getName() == "") {
+									p1:setType(t: Type:init(name: valTypeName));
+								}
+							}
 						}
 					});
 				}
@@ -533,12 +707,23 @@ class TypeChecker{
 					self:inferExpressionType(expr: arg:getValue());
 				});
 
-				local String is method: expr:methodName;
 				if (targetType == "self" || targetType == "") {
 					targetType: self:currentClassName;
 				}
 
-				if (method == "init" && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
+				local String is fnVarT: "";
+				if (expr:methodTarget:getKind() == "IDENT" && expr:methodTarget:stringValue == "self") {
+					fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ""));
+				}
+				if (fnVarT:startsWith(prefix: "Function")) {
+					if (fnVarT:startsWith(prefix: "Function:") && fnVarT:length() > 9) {
+						res: fnVarT:substring(start: 9, end: fnVarT:length());
+					} else {
+						res: "Any";
+					}
+				} else if (self:allEnumVariants:has(key: method) && (self:allEnumNames:has(key: targetType) || targetType == self:currentClassName)) {
+					res: self:allEnumVariants:getString(key: method, default: "Any");
+				} else if (method == "init" && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 					res: targetType;
 				} else if (targetType:startsWith(prefix: "Array") && (method == "get" || method == "pop" || method == "removeAt")) {
 					if (targetType:startsWith(prefix: "Array:") && targetType:length() > 6) {
@@ -548,6 +733,26 @@ class TypeChecker{
 					}
 				} else if (targetType:startsWith(prefix: "Array") && (method == "filter" || method == "slice")) {
 					res: targetType;
+				} else if (targetType:startsWith(prefix: "Array") && method == "map") {
+					local String is mappedElem: "Any";
+					if (expr:methodArgs:length() > 0) {
+						local NamedArg is a0: expr:methodArgs:get(index: 0);
+						local Expression is fnExpr: a0:getValue();
+						if (fnExpr:getKind() == "ANON_FN") {
+							local String is fnRet: fnExpr:anonReturnType:getName();
+							if (fnRet != "" && fnRet != "Void" && fnRet != "void" && fnRet != "Any") {
+								mappedElem: self:formatTypeString(t: fnExpr:anonReturnType);
+							}
+						}
+					}
+					res: if (mappedElem != "Any") "Array:" . mappedElem else "Array";
+				} else if (targetType:startsWith(prefix: "Array") && method == "fold") {
+					if (expr:methodArgs:length() > 0) {
+						local NamedArg is a0: expr:methodArgs:get(index: 0);
+						res: a0:getValue():getResolvedType();
+					} else {
+						res: "Any";
+					}
 				} else if (targetType:startsWith(prefix: "Map:") && method == "get") {
 					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
 					local Int is colonIdx: afterMap:indexOf(needle: ":", default: -1);
@@ -619,7 +824,7 @@ class TypeChecker{
 			is "VAR_DECL": {
 				local String is varName: stmt:varName;
 				local String is declaredType: stmt:varType:getName();
-				local String is fullType: self:formatTypeString(t: stmt:varType);
+				local String is fullType: self:formatVarTypeString(t: stmt:varType);
 				self:localVars:set(key: varName, value: fullType);
 
 				if (stmt:hasInit) {
@@ -656,9 +861,7 @@ class TypeChecker{
 			is "WHEN": {
 				self:inferExpressionType(expr: stmt:whenSubject);
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
-					arm:conditions:each(action: local Function(Expression is c){
-						self:inferExpressionType(expr: c);
-					});
+					self:bindWhenPatternVars(arm: arm);
 					if (arm:hasValueExpr) {
 						self:inferExpressionType(expr: arm:valueExpr);
 					}
@@ -737,7 +940,7 @@ class TypeChecker{
 		self:localVars: Map:init();
 
 		method:getParameters():each(action: local Function(Parameter is p){
-			self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
+			self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
 		});
 
 		method:getBody():each(action: local Function(Statement is stmt){
@@ -783,6 +986,7 @@ class TypeChecker{
 	##
 	## @param classDef: [Class] definition to inspect.
 	replace local Function is checkInheritance(Class is classDef){
+		self:currentSourceFile: classDef:getSourceFile();
 		local Boolean is hasInit: false;
 		classDef:getMembers():each(action: local Function(Member is m){
 			if (m:getName() == "init") {
@@ -873,7 +1077,7 @@ class TypeChecker{
 		});
 		classDef:getMembers():each(action: local Function(Member is m){
 			if (m:getKind() == "FIELD") {
-				self:fieldTypes:set(key: m:getName(), value: self:formatTypeString(t: m:getType()));
+				self:fieldTypes:set(key: m:getName(), value: self:formatVarTypeString(t: m:getType()));
 			}
 		});
 	}
@@ -883,6 +1087,7 @@ class TypeChecker{
 	## @param classDef: [Class] definition.
 	replace local Function is checkClass(Class is classDef){
 		self:currentClassName: classDef:getName();
+		self:currentSourceFile: classDef:getSourceFile();
 		self:fieldTypes: Map:init();
 		self:collectClassFieldTypes(classDef: classDef);
 

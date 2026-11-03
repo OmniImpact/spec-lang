@@ -15,11 +15,17 @@ class Class{
 	## Source line coordinate where this class was declared.
 	local Int is line: 0;
 
+	## Source file path where this class was declared.
+	local String is sourceFile: "";
+
 	## Base class name if inheritance is specified, or empty string.
 	local String is baseClass: "";
 
 	## List of parent classes for multiple inheritance.
 	local Array of String is baseClasses: [];
+
+	## Generic type parameter names declared on this class (e.g. ["T"] or ["A", "B"]).
+	local Array of String is typeParams: [];
 
 	## List of class members (methods, fields, and nested classes).
 	local Array of Member is members: [];
@@ -82,6 +88,22 @@ class Class{
 
 	replace local Function of Int is getLine(){
 		return self:line;
+	}
+
+	replace local Function is setSourceFile(String is file){
+		self:sourceFile: file;
+	}
+
+	replace local Function of String is getSourceFile(){
+		return self:sourceFile;
+	}
+
+	replace local Function is setTypeParams(Array of String is params){
+		self:typeParams: params;
+	}
+
+	replace local Function of Array of String is getTypeParams(){
+		return self:typeParams;
 	}
 
 }

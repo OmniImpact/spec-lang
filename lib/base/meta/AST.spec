@@ -46,6 +46,8 @@ class Expression{
 	local Boolean is boolValue: false;
 	local Array of String is pathSegments: [];
 	local Array of Expression is arrayItems: [];
+	local Array of Expression is mapKeys: [];
+	local Array of Expression is mapValues: [];
 	local Expression is methodTarget;
 	local String is methodName: "";
 	local Array of NamedArg is methodArgs: [];
@@ -100,6 +102,12 @@ class Expression{
 	replace local Function is makeArray(Array of Expression is items){
 		self:kind: "ARRAY";
 		self:arrayItems: items;
+	}
+
+	replace local Function is makeMap(Array of Expression is keys, Array of Expression is values){
+		self:kind: "MAP";
+		self:mapKeys: keys;
+		self:mapValues: values;
 	}
 
 	replace local Function is makeCall(Expression is target, String is method, Array of NamedArg is args){

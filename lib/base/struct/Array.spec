@@ -28,6 +28,13 @@ class Array{
 	replace Function is add(Any is item){
 	}
 
+	## Replaces the element at the specified zero-based [index] with [item].
+	##
+	## @param index: Zero-based position.
+	## @param item: Replacement element value.
+	replace Function is set(Int is index, Any is item){
+	}
+
 	## Removes and returns the last element in the array.
 	##
 	## @param default: Fallback value returned if the array is empty.
@@ -91,6 +98,21 @@ class Array{
 	## @param predicate: Function returning `true` for elements to retain.
 	## @return: Filtered [Array].
 	replace Function of Array is filter(Function is predicate){
+	}
+
+	## Transforms each element in the array using [transform], returning a new [Array].
+	##
+	## @param transform: Function mapping each item to a transformed value.
+	## @return: Mapped [Array].
+	replace Function of Array is map(Function is transform){
+	}
+
+	## Reduces the array to a single accumulated value starting from [initial].
+	##
+	## @param initial: Initial accumulator value.
+	## @param accumulate: Function combining (accumulator, item) into the next accumulator.
+	## @return: Final accumulated value.
+	replace Function of Any is fold(Any is initial, Function is accumulate){
 	}
 
 	## Joins all string elements of the array into a single string separated by [separator].

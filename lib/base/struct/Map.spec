@@ -62,4 +62,10 @@ class Map{
 	replace Function of Int is length(){
 	}
 
+	## Iterates through each key-value pair in the map, invoking [action] with (key, value).
+	##
+	## @param action: Function invoked with (key, value) for each entry.
+	replace Function is each(Function is action){
+	}
+
 }

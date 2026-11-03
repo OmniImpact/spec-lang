@@ -180,6 +180,13 @@ local Array of Int is primes: [2, 3, 5, 7];
   local String is same: fruits[0];
   ```
 
+- **`set(Int is index, Any is item)`**:
+  Replaces the element at zero-based `index` with `item`. Alternatively, use bracket assignment `fruits[index]: item;`.
+  ```spec
+  fruits:set(index: 0, item: "Apple");
+  fruits[1]: "Banana";
+  ```
+
 - **`add(item: Any)` / `push(item: Any)`**:
   Appends an element to the dynamic array. Supports single items or array batches:
   ```spec
@@ -255,6 +262,23 @@ local Array of Int is primes: [2, 3, 5, 7];
   });
   ```
 
+- **`map(Function is transform) -> Array`**:
+  Transforms each element in the array using `transform`, returning a new mapped array.
+  ```spec
+  local Array of Int is nums: [1, 2, 3, 4];
+  local Array of Int is doubled: nums:map(transform: local Function of Int(Int is x){
+  	return x * 2;
+  });
+  ```
+
+- **`fold(Any is initial, Function is reducer) -> Any`**:
+  Reduces all elements of the array to a single accumulated value starting from `initial`.
+  ```spec
+  local Int is sum: nums:fold(initial: 0, reducer: local Function of Int(Int is acc, Int is x){
+  	return acc + x;
+  });
+  ```
+
 - **`join(String is separator) -> String`**:
   Joins all string elements in the array using `separator`.
   ```spec
@@ -265,6 +289,24 @@ local Array of Int is primes: [2, 3, 5, 7];
 
 ### `base:struct:Map`
 A thread-safe, 64-bucket FNV-1a key-value hash table container supporting `String`, `Int`, `Float`, `Boolean`, and arbitrary object value types (`lib/base/struct/Map.spec`).
+
+#### Literal Initialization & Bracket Syntax
+Maps can be initialized with inline map literals and accessed via bracket notation:
+
+```spec
+# Map literal
+local Map of String to Int is scores: ["alice": 95, "bob": 88];
+
+# Empty map literal
+local Map of String to String is cache: [:];
+
+# Bracket indexing (R-value)
+local Int is aScore: scores["alice"];
+
+# Bracket assignment (L-value)
+scores["charlie"]: 100; # Inserts new key-value pair
+scores["alice"]: 98;   # Updates existing entry
+```
 
 #### Methods
 
@@ -315,6 +357,14 @@ A thread-safe, 64-bucket FNV-1a key-value hash table container supporting `Strin
   Returns the number of key-value pairs stored in the map.
   ```spec
   local Int is count: symbolTable:length();
+  ```
+
+- **`each(Function is action)`**:
+  Iterates through each entry in the map, invoking `action` with `(key, value)`.
+  ```spec
+  scores:each(action: local Function(String is name, Int is score){
+  	output:line("Student: " . name . " => " . score);
+  });
   ```
 
 ---

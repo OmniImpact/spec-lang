@@ -240,9 +240,13 @@ class BuiltinCallGenerator{
 		}
 
 		# Map methods
-		if (targetC == "Map" || targetType == "Map" || targetType:startsWith(prefix: "Map:") ||
-			expr:methodName == "set" || expr:methodName == "getString" || expr:methodName == "getInt" ||
-			expr:methodName == "getFloat" || expr:methodName == "getBool" || expr:methodName == "has" || expr:methodName == "keys") {
+		local Boolean is isMap: targetC == "Map" || targetType == "Map" || targetType:startsWith(prefix: "Map:") ||
+			((targetType == "" || targetType == "Any") && (
+				(expr:methodName == "set" && !targetType:startsWith(prefix: "Array")) || expr:methodName == "getString" || expr:methodName == "getInt" ||
+				expr:methodName == "getFloat" || expr:methodName == "getBool" || expr:methodName == "has" || expr:methodName == "keys"
+			));
+
+		if (isMap) {
 			if (expr:methodName == "init") {
 				return "spec_map_new()";
 			}
@@ -328,14 +332,26 @@ class BuiltinCallGenerator{
 			if (expr:methodName == "length") {
 				return "(long long)spec_map_length(" . targetC . ")";
 			}
+			if (expr:methodName == "each") {
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local Expression is fnExpr: a0:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineMapEach(targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+			}
 		}
 
 		# Array methods
 		local Boolean is isArr: targetC == "Array" || targetType == "Array" || targetType:startsWith(prefix: "Array") ||
-			expr:methodName == "get" || expr:methodName == "add" || expr:methodName == "pop" ||
-			expr:methodName == "removeAt" || expr:methodName == "slice" || expr:methodName == "clear" || expr:methodName == "join" ||
-			expr:methodName == "each" || expr:methodName == "filter" || expr:methodName == "count" || expr:methodName == "any" ||
-			(expr:methodName == "length" && targetType != "String" && targetType != "string" && targetC != "Map" && targetType != "Map" && !targetType:startsWith(prefix: "Map:"));
+			((targetType == "" || targetType == "Any") && (
+				expr:methodName == "get" || expr:methodName == "add" || expr:methodName == "set" || expr:methodName == "pop" ||
+				expr:methodName == "removeAt" || expr:methodName == "slice" || expr:methodName == "clear" || expr:methodName == "join" ||
+				expr:methodName == "each" || expr:methodName == "filter" || expr:methodName == "count" || expr:methodName == "any" ||
+				expr:methodName == "map" || expr:methodName == "fold" ||
+				(expr:methodName == "length" && targetType != "String" && targetType != "string" && targetC != "Map" && targetType != "Map" && !targetType:startsWith(prefix: "Map:"))
+			));
 
 		if (isArr) {
 			if (expr:methodName == "get") {
@@ -344,6 +360,15 @@ class BuiltinCallGenerator{
 					if (arg:getName() == "index") { idxC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return "spec_array_get(" . targetC . ", " . idxC . ")";
+			}
+			if (expr:methodName == "set") {
+				local String is idxC: "0";
+				local String is itemC: "NULL";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "index") { idxC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "item" || arg:getName() == "value") { itemC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_array_set(" . targetC . ", " . idxC . ", (void*)(intptr_t)(" . itemC . "))";
 			}
 			if (expr:methodName == "add") {
 				local String is itemC: "NULL";
@@ -446,6 +471,25 @@ class BuiltinCallGenerator{
 					if (arg:getName() == "predicate") { fnC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return "spec_array_any(" . targetC . ", (bool (*)(void*))(" . fnC . "))";
+			}
+			if (expr:methodName == "map") {
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local Expression is fnExpr: a0:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineArrayOp(mode: "map", targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+			}
+			if (expr:methodName == "fold") {
+				if (expr:methodArgs:length() >= 2) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local NamedArg is a1: expr:methodArgs:get(index: 1);
+					local Expression is fnExpr: a1:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineArrayFold(targetC: targetC, initExpr: a0:getValue(), fnExpr: fnExpr);
+					}
+				}
 			}
 			if (expr:methodName == "join") {
 				local String is sepC: "\"\"";

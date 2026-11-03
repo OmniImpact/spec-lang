@@ -19,6 +19,15 @@ class CBackendUtils{
 	## @param typeName: Spec type name.
 	## @return: C11 type signature string.
 	replace local Function of String is cTypeFor(String is typeName){
+		if (typeName:startsWith(prefix: "Array")) {
+			return "SpecArray*";
+		}
+		if (typeName:startsWith(prefix: "Map")) {
+			return "SpecMap*";
+		}
+		if (typeName:startsWith(prefix: "Function")) {
+			return "void*";
+		}
 		return when (typeName) {
 			is "Int", "int": "long long";
 			is "Float", "float": "double";

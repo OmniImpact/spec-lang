@@ -217,6 +217,14 @@ class RuntimePrelude{
 		p: p . "    pthread_mutex_unlock(&a->lock);\n";
 		p: p . "    return val;\n";
 		p: p . "}\n\n";
+		p: p . "void spec_array_set(SpecArray* a, long long idx, void* item) {\n";
+		p: p . "    if (!a || idx < 0) return;\n";
+		p: p . "    pthread_mutex_lock(&a->lock);\n";
+		p: p . "    if ((size_t)idx < a->length) {\n";
+		p: p . "        a->items[idx] = item;\n";
+		p: p . "    }\n";
+		p: p . "    pthread_mutex_unlock(&a->lock);\n";
+		p: p . "}\n\n";
 		p: p . "void* spec_array_pop(SpecArray* a, void* def) {\n";
 		p: p . "    if (!a) return def;\n";
 		p: p . "    pthread_mutex_lock(&a->lock);\n";
@@ -273,6 +281,13 @@ class RuntimePrelude{
 		p: p . "        fn(a->items[i]);\n";
 		p: p . "    }\n";
 		p: p . "    pthread_mutex_unlock(&a->lock);\n";
+		p: p . "}\n\n";
+		p: p . "typedef struct { void* fn; void* env; } SpecClosure;\n";
+		p: p . "static inline SpecClosure* spec_closure_new(void* fn, void* env) {\n";
+		p: p . "    SpecClosure* c = (SpecClosure*)malloc(sizeof(SpecClosure));\n";
+		p: p . "    c->fn = fn;\n";
+		p: p . "    c->env = env;\n";
+		p: p . "    return c;\n";
 		p: p . "}\n\n";
 		p: p . "SpecArray* spec_array_filter(SpecArray* a, bool (*fn)(void*)) {\n";
 		p: p . "    SpecArray* res = spec_array_new();\n";

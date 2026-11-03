@@ -56,7 +56,14 @@ class Driver{
 			local Lexer is lexer: Lexer:init(source: source);
 			local Array of Token is tokens: lexer:tokenize();
 			local Parser is parser: Parser:init(tokens: tokens);
+			parser:setSourceFile(file: inputPath);
 			local ProgramNode is lintProgram: parser:parseProgram();
+			if (parser:hasErrors()) {
+				output:line("Syntax errors encountered during linting:");
+				parser:getErrors():each(action: local Function(String is err){
+					output:line(err);
+				});
+			}
 
 			local Linter is linter: Linter:init();
 			local Array of LintIssue is issues: linter:lint(source: source, program: lintProgram);
@@ -72,6 +79,14 @@ class Driver{
 		# 2. Multi-File Module Loading & Dependency Resolution
 		local Loader is loader: Loader:init();
 		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
+		if (loader:getParseErrors():length() > 0) {
+			output:line("Syntax errors encountered during compilation:");
+			loader:getParseErrors():each(action: local Function(String is err){
+				output:line(err);
+			});
+			output:line("Compilation aborted due to syntax errors.");
+			return;
+		}
 
 		# 4. Semantic Static Type Checking
 		local TypeChecker is tc: TypeChecker:init();

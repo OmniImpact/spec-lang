@@ -79,6 +79,17 @@ replace local Array of String is using: [
 ];
 ```
 
+### 7. Next-Generation Language Features
+Spec includes modern, expressive language capabilities designed for type safety and clarity:
+- **User-Defined Generic Classes**: Express reusable parametric types such as `class Box of T` or `class Pair of A to B` with automated type parameter substitution and casting.
+- **First-Class Capturing Closures & Direct Invocation**: Anonymous function expressions capture outer local variables and `self` automatically, and `Function` variables can be invoked directly (`scale(x: 4)`).
+- **Tagged Union Enums (Algebraic Data Types)**: Enums support payload-carrying variants (`Enum is Result { Ok(String is data), Err(Int is code, String is msg), Pending }`).
+- **Destructuring `when` Branching**: Destructure and extract tagged enum payloads in both `when` statements and `when` expressions.
+- **Default Parameter Values & Call-Site Reordering**: Functions declare optional parameters with default values; call sites may omit defaults and pass named arguments in any order.
+- **Map Literals & Index Assignment**: First-class map literals (`["alice": 95]`, empty `[:]`), bracket indexing (`scores["alice"]`, `arr[0]`), and index assignment (`scores["charlie"]: 100;`, `arr[1]: "updated";`).
+- **Functional Collection Combinators**: Transform and reduce collections fluently using `Array:map`, `Array:fold`, and `Map:each`.
+- **Parser Error Recovery & Source Provenance**: Syntax errors report precise source coordinates `[SyntaxError] [file:line:col]` and halt cleanly, while type errors retain multi-file provenance.
+
 ---
 
 ## Documentation
@@ -123,7 +134,7 @@ replace local Array of String is using: [
 |---|---|---|
 | **`base:io`** | `output:line`, `Input:prompt`, `File:read`, `File:write`, `File:readAsync`, `File:writeAsync`, `File:exists`, `File:remove`, `InputHandler` | Terminal and synchronous/asynchronous filesystem I/O. |
 | **`base:math`** | `round`, `floor`, `ceil`, `random`, `abs`, `min`, `max`, `clamp` | Math primitives and pure Spec algorithms. |
-| **`base:struct`** | `Array` (`length`, `get`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `each`, `filter`, `count`, `any`, `isEmpty`), `Map` (`getString`, `getInt`, `getFloat`, `getBool`, `get`, `set`, `has`, `remove`, `keys`, `length`) | Thread-safe dynamic array and 64-bucket FNV-1a hash map collections. |
+| **`base:struct`** | `Array` (`length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `each`, `map`, `fold`, `filter`, `count`, `any`, `isEmpty`, bracket indexing `arr[i]`), `Map` (`getString`, `getInt`, `getFloat`, `getBool`, `get`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals `["k": v]`, `[:]`, bracket indexing `map[k]`) | Thread-safe dynamic array and 64-bucket FNV-1a hash map collections with functional combinators. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop execution engine and inline closure-based iteration. |
 | **`base:sys`** | `Process:execute`, `Process:getPid`, `SourceLocation`, `StackFrame` | Subprocess execution, process inspection, source coordinates, and execution frames. |
 | **`base:reflect`** | `Type`, `Parameter`, `Member`, `Class` | Runtime type information, signature inspection, and reflection metadata. |
