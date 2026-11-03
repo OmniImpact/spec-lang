@@ -244,7 +244,7 @@ While:run(CounterLoop:init(), LoopControl:init());
 Interactive console I/O delegates to event handlers rather than freezing thread execution:
 ```spec
 class ActionHandler extends InputHandler{
-	replace Function of null is onInput(String is action){
+	replace Function is onInput(String is action){
 		output:line("User chose: " . action);
 	}
 }

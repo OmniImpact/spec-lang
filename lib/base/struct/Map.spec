@@ -3,7 +3,7 @@ class Map{
 	replace Function of String is getString(String is key, String is default){
 	}
 
-	replace Function of null is set(String is key, String is value){
+	replace Function is set(String is key, String is value){
 	}
 
 	replace Function of Boolean is has(String is key){

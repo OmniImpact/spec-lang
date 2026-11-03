@@ -215,13 +215,13 @@ class Blackjack{
 		return acc:total;
 	}
 
-	Function of null is promptPlayerAction(){
+	Function is promptPlayerAction(){
 		output:line("Would you like to (h)it or (s)tand?");
 		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
 		Input:prompt(handler: handler);
 	}
 
-	Function of null is startDealerTurn(){
+	Function is startDealerTurn(){
 		output:line("\n--- Starting Dealer's Turn ---");
 
 		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: self);
@@ -231,7 +231,7 @@ class Blackjack{
 		While:run(loop: dealerLoop, control: control);
 	}
 
-	Function of null is evaluateRoundOutcome(){
+	Function is evaluateRoundOutcome(){
 		local Int is playerScore: handValue(hand: playerHand);
 		local Int is dealerScore: handValue(hand: dealerHand);
 

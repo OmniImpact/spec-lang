@@ -28,7 +28,6 @@
       <item>Map</item>
       <item>Any</item>
       <item>Function</item>
-      <item>null</item>
     </list>
     <list name="constants">
       <item>true</item>

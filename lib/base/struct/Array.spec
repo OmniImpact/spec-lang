@@ -6,7 +6,7 @@ class Array{
 	replace Function of Any is get(Int is index){
 	}
 
-	replace Function of null is add(Any is item){
+	replace Function is add(Any is item){
 	}
 
 	replace Function of Any is pop(Any is default){
@@ -18,7 +18,7 @@ class Array{
 	replace Function of Array is slice(Int is start, Int is end){
 	}
 
-	replace Function of null is clear(){
+	replace Function is clear(){
 	}
 
 	replace Function of Int is indexOf(String is search, Int is default){

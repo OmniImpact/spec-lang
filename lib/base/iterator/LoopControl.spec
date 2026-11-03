@@ -5,7 +5,7 @@ class LoopControl{
 	init(Any is callback){
 	}
 
-	Function of null is stop(){
+	Function is stop(){
 	}
 
 }

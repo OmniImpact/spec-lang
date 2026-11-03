@@ -1,6 +1,6 @@
 class Output{
 
-	replace Function of null is line(String is text){
+	replace Function is line(String is text){
 	}
 
 }

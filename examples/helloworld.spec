@@ -9,7 +9,7 @@ class HelloWorld{
 		base:io:*
 	];
 
-	# Function return type defaults to null, or can be explicit: "Function of null is init(...)"
+	# Entrypoint init method using the Function type
 	replace local Function is init(Map of String to String is args){
 
 		# Local variable declaration matching "<Type> is <name>: <value>;"

@@ -1,6 +1,6 @@
 class Input{
 
-	replace Function of null is prompt(InputHandler is handler){
+	replace Function is prompt(InputHandler is handler){
 	}
 
 }
