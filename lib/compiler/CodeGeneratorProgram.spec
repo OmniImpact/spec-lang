@@ -211,41 +211,6 @@ Class is CodeGeneratorProgram{
 		});
 		out: out . ") {\n";
 
-		if (method:getName() != "init") {
-			local Int is paramCount: method:getParameters():length();
-			self:programClasses:each(action: local Function(ClassInfo is subCls){
-				if (subCls:getName() != classDef:getName() && self:isSubclassOf(subName: subCls:getName(), baseName: classDef:getName())) {
-					local MethodMemberLoop is trampMl: MethodMemberLoop:init(members: subCls:getMembers(), methodName: method:getName());
-					While:run(loop: trampMl);
-					local Boolean is isMergeOverride: false;
-					if (trampMl:found) {
-						isMergeOverride: trampMl:res:getModifiers():indexOf(search: "merge", default: -1) >= 0;
-					}
-					local String is implCls: "";
-					if (!isMergeOverride) {
-						implCls: self:findMethodImplementingClass(className: subCls:getName(), methodName: method:getName(), paramCount: paramCount);
-						if (implCls != "") {
-							# A merge implementation must never be entered via base-typed
-							# dispatch: its forward calls back into this base method.
-							local Member is implM: self:lookupMethodMember(className: implCls, methodName: method:getName());
-							if (implM:getName() != "" && implM:getModifiers():indexOf(search: "merge", default: -1) >= 0) {
-								implCls: "";
-							}
-						}
-					}
-					if (implCls != "" && implCls != classDef:getName()) {
-						out: out . "    if (self && self->_type_name && strcmp(self->_type_name, \"" . subCls:getName() . "\") == 0) {\n";
-						if (retType == "void") {
-							out: out . "        " . implCls . "_" . method:getName() . "((" . implCls . "*)self" . callArgs . ");\n        return;\n";
-						} else {
-							out: out . "        return " . implCls . "_" . method:getName() . "((" . implCls . "*)self" . callArgs . ");\n";
-						}
-						out: out . "    }\n";
-					}
-				}
-			});
-		}
-
 		method:getBody():each(action: local Function(Statement is stmt){
 			out: out . self:generateStatement(stmt: stmt);
 		});
@@ -377,9 +342,31 @@ Class is CodeGeneratorProgram{
 		self:declGen:setTaggedEnums(names: self:allTaggedEnums);
 		self:builtins:setEnumNames(names: self:allEnumNames);
 
+		# Virtual slot assignment: method-name slots in deterministic
+		# first-seen order; names declared by 2+ classes dispatch virtually.
+		self:methodSlots: Map:init();
+		self:overriddenMethods: Map:init();
+		self:methodSlotCount: 0;
+		flattenedClasses:each(action: local Function(ClassInfo is c){
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
+				c:getMembers():each(action: local Function(Member is m){
+					if (m:getKind() == "METHOD") {
+						if (self:methodSlots:has(key: m:getName())) {
+							self:overriddenMethods:set(key: m:getName(), value: "true");
+						} else {
+							self:methodSlots:set(key: m:getName(), value: "" . self:methodSlotCount);
+							self:slotNames:add(item: m:getName());
+							self:methodSlotCount: self:methodSlotCount + 1;
+						}
+					}
+				});
+			}
+		});
+
 		local String is enums: self:declGen:generateEnums(classes: flattenedClasses);
 		local String is decls: self:declGen:generateForwardDeclarations(classes: flattenedClasses);
 		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
+		local String is vt: self:generateVTables(classes: flattenedClasses);
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
 		local String is methods: "";
@@ -416,11 +403,57 @@ Class is CodeGeneratorProgram{
 		cSource: cSource . enums;
 		cSource: cSource . decls;
 		cSource: cSource . structs;
+		cSource: cSource . vt;
 		cSource: cSource . self:helperFunctions;
 		cSource: cSource . ctors;
 		cSource: cSource . methods;
 		cSource: cSource . mainFn;
 		return cSource;
+	}
+
+	## Emits per-class virtual method tables.
+	##
+	## One table per class with one slot per virtual method name; each entry is
+	## resolved by first-wins depth-first search (own concrete declaration
+	## wins, else nearest ancestor). Merge overrides occupy their slot: their
+	## forwards call the parent directly, so virtual entry cannot recurse.
+	## Abstract slots resolve to NULL (concrete classes are checker-enforced
+	## to implement them before instantiation).
+	##
+	## @param classes: Flattened [ClassInfo] list.
+	## @return: C source defining every class vtable.
+	replace local Function of String is generateVTables(Array of ClassInfo is classes){
+		local String is out: "/* Virtual Method Tables */\n";
+		if (self:methodSlotCount == 0) {
+			return out;
+		}
+		classes:each(action: local Function(ClassInfo is c){
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
+				out: out . "static void* " . c:getName() . "_vtable[" . self:methodSlotCount . "] = {\n";
+				local Int is slot: 0;
+				While:condition(
+					evaluate: local Function of Boolean(){
+						return slot < self:methodSlotCount;
+					},
+					iteration: local Function of Boolean(){
+						local String is mName: self:slotNames:get(index: slot);
+						local String is implCls: self:findMethodImplementingClass(className: c:getName(), methodName: mName, paramCount: -1);
+						if (slot > 0) {
+							out: out . ",\n";
+						}
+						if (implCls == "") {
+							out: out . "    (void*)0";
+						} else {
+							out: out . "    (void*)" . implCls . "_" . mName;
+						}
+						slot: slot + 1;
+						return true;
+					}
+				);
+				out: out . "\n};\n\n";
+			}
+		});
+		return out;
 	}
 
 }

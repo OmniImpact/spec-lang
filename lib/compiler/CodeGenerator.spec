@@ -44,6 +44,18 @@ Class is CodeGenerator{
 	## Name of the method currently being code-generated (for merge forwards).
 	local String is currentMethodName: "";
 
+	## Virtual method slot assignment: method name -> decimal slot index.
+	local Map of String to String is methodSlots: Map:init();
+
+	## Method names declared by more than one class (candidate overrides).
+	local Map of String to String is overriddenMethods: Map:init();
+
+	## Total number of virtual slots.
+	local Int is methodSlotCount: 0;
+
+	## Slot index -> method name (parallel to methodSlots).
+	local Array of String is slotNames: [];
+
 	## Local variables visible in current method scope (variable name -> type name).
 	local Map of String to String is localVars: Map:init();
 

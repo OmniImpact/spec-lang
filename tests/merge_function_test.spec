@@ -11,8 +11,8 @@
 ## - Statements may precede the forward in the merge method body.
 ## - Delegation chains compose (Child2 -> Child1 -> Base).
 ## - merge init chains parent constructors.
-## - Base-typed calls do not recurse (trampoline suppression); they run the
-##   parent body directly (documented static-dispatch limitation).
+## - Merge overrides dispatch virtually: base-typed and subclass-typed calls
+##   both reach the forward (unified semantics under vtable dispatch).
 ## - All checks print "[PASS]"; any "[FAIL]" is a regression.
 
 Class is LoggerBase{
@@ -101,13 +101,14 @@ Class is MergeFunctionTest{
 			output:line("[FAIL] inherited init: expected x, got " . cl:tag);
 		}
 
-		# Case 5: trampoline safety - base-typed call must not recurse or crash.
+		# Case 5: merge overrides are virtual - base-typed call applies the
+		# forward identically to the subclass-typed call (no recursion).
 		local LoggerBase is asBase: gl;
 		local Int is baseResult: asBase:add(a: 1, b: 2);
-		if (baseResult == 3) {
-			output:line("[PASS] base-typed call: add(1, 2) = 3 (parent body, no recursion)");
+		if (baseResult == 103) {
+			output:line("[PASS] base-typed call: add(1, 2) = 103 (virtual forward)");
 		} else {
-			output:line("[FAIL] base-typed call: expected 3, got " . baseResult);
+			output:line("[FAIL] base-typed call: expected 103, got " . baseResult);
 		}
 
 		# Case 6: subclass-typed call goes through the merge forward.

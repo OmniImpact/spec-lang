@@ -108,6 +108,10 @@ assert_compile_failure "merge-negative" \
 	"'merge' requires an Array field" \
 	"no parent declares a method with that name"
 
+assert_compile_failure "diamond-conflict-negative" \
+	"$ROOT/tests/negative/diamond_conflict_negative_test.spec" \
+	"inherits conflicting implementations of 'value' from 'DiamondA' and 'DiamondB'"
+
 assert_compile_failure "merge-function-negative" \
 	"$ROOT/tests/negative/merge_function_negative_test.spec" \
 	"requires the enclosing method to declare 'merge'" \

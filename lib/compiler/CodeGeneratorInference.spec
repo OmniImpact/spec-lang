@@ -250,6 +250,9 @@ Class is CodeGeneratorInference{
 				out: out . c:getName() . "* " . c:getName() . "_new(void) {\n";
 				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)calloc(1, sizeof(" . c:getName() . "));\n";
 				out: out . "    self->_type_name = \"" . c:getName() . "\";\n";
+				if (self:methodSlotCount > 0) {
+					out: out . "    self->_vtable = " . c:getName() . "_vtable;\n";
+				}
 				allFields:each(action: local Function(Member is m){
 					if (m:hasInit) {
 						out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . self:generateExpression(expr: m:initExpr) . ";\n";

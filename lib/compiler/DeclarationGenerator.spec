@@ -103,16 +103,8 @@ Class is DeclarationGenerator{
 	}
 
 	replace local Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
-		c:getMembers():each(action: local Function(Member is m){
-			when (m:getMemberKind()) {
-				is FIELD: {
-					if (m:getName() != "using" && !self:hasFieldNamed(list: acc, name: m:getName())) {
-						acc:add(item: m);
-					}
-				}
-				else: {}
-			}
-		});
+		# Base fields first so that a base-typed pointer prefixes every
+		# descendant layout (ancestor casts stay field-offset correct).
 		c:getBaseClasses():each(action: local Function(String is baseName){
 			allClasses:each(action: local Function(ClassInfo is cand){
 				if (cand:getName() == baseName) {
@@ -120,6 +112,47 @@ Class is DeclarationGenerator{
 				}
 			});
 		});
+		c:getMembers():each(action: local Function(Member is m){
+			when (m:getMemberKind()) {
+				is FIELD: {
+					if (m:getName() != "using") {
+						# Most-derived declaration wins: when a child re-declares a
+						# base field (after a merge fold or a replace override), its
+						# initializer replaces the base's in place.
+						local Int is existing: self:fieldIndexNamed(list: acc, name: m:getName());
+						if (existing >= 0) {
+							acc:set(index: existing, item: m);
+						} else {
+							acc:add(item: m);
+						}
+					}
+				}
+				else: {}
+			}
+		});
+	}
+
+	## Returns the index of a field by name in an accumulator list, or -1.
+	##
+	## @param list: Accumulated field members.
+	## @param name: Field name to locate.
+	## @return: Zero-based index, or -1 when absent.
+	replace local Function of Int is fieldIndexNamed(Array of Member is list, String is name){
+		local Int is idx: 0;
+		local Int is res: -1;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < list:length() && res < 0;
+			},
+			iteration: local Function of Boolean(){
+				if (list:get(index: idx):getName() == name) {
+					res: idx;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		return res;
 	}
 
 	replace local Function of String is generateEnums(Array of ClassInfo is classes){
@@ -286,6 +319,7 @@ Class is DeclarationGenerator{
 				local Array of String is tps: c:getTypeParams();
 				out: out . "struct " . c:getName() . " {\n";
 				out: out . "    const char* _type_name;\n";
+				out: out . "    void** _vtable;\n";
 				local Array of Member is allFields: [];
 				self:collectStructFields(c: c, allClasses: classes, acc: allFields);
 				allFields:each(action: local Function(Member is m){

@@ -117,6 +117,15 @@ local Int is val: pair:getSecond();
 ```
 The compiler automatically substitutes generic type parameters across field storage and method return signatures.
 
+### Inheritance & Ambiguous Implementations
+Method dispatch is virtual: the most-derived override runs regardless of the
+static type of the reference. When two unrelated parents provide concrete
+implementations of the same method and the class does not declare it itself,
+this is a compile error — declare the method (`replace` or `merge`) to resolve
+the conflict. Abstract declarations never conflict: unimplemented methods and
+valueless fields compose into interface contracts. A shared base reached via
+multiple paths counts once (diamond sharing is not a conflict).
+
 ### Declaring Classes (`Class is Name`)
 Classes are declared with the same binder grammar as enums and variables — `Type is Name`:
 
@@ -181,9 +190,8 @@ Class is ChildLogger extends LoggerBase{
 - The parent must be concrete (an abstract parent method is a compile error).
 - Delegation chains compose: each `merge` forwards to the nearest parent implementation.
 - `merge` also chains constructors: `merge local Function is init(String is tag){ (tag); }`
-- Because a forward calls the parent directly, merge overrides are excluded from
-  base-typed virtual dispatch: calling through a base-typed reference runs the parent
-  body (documented static-dispatch semantics).
+- Merge overrides dispatch **virtually**: calling through a base-typed reference
+  reaches the forward exactly like a subclass-typed call.
 
 ```spec
 # Explicit return type

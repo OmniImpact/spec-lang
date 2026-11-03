@@ -1351,6 +1351,95 @@ Class is TypeChecker{
 		return res;
 	}
 
+	## Collects every ancestor class that declares a concrete implementation of
+	## a method, deduplicating shared bases by name.
+	##
+	## @param className: [ClassInfo] whose ancestors are searched.
+	## @param methodName: Method name to collect declarers of.
+	## @param seen: Dedup map of already-visited class names.
+	## @param acc: Output array of declaring class names.
+	replace local Function is collectConcreteDeclarers(String is className, String is methodName, Map of String to String is seen, Array of String is acc){
+		if (seen:has(key: className)) {
+			return;
+		}
+		seen:set(key: className, value: "true");
+		local ClassInfo is cls: self:findClass(name: className);
+		if (cls:getName() == "") {
+			return;
+		}
+		cls:getMembers():each(action: local Function(Member is m){
+			if (m:getKind() == "METHOD" && m:getName() == methodName && m:getBody():length() > 0) {
+				local Boolean is present: false;
+				acc:each(action: local Function(String is n){
+					if (!present && n == className) {
+						present: true;
+					}
+				});
+				if (!present) {
+					acc:add(item: className);
+				}
+			}
+		});
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			self:collectConcreteDeclarers(className: baseName, methodName: methodName, seen: seen, acc: acc);
+		});
+	}
+
+	## Rejects ambiguous inherited implementations: when two distinct ancestors
+	## provide a concrete body for the same method and the class does not
+	## declare it itself, first-wins resolution would silently pick one.
+	## Abstract declarations do not conflict (they compose into interface
+	## contracts); shared diamond bases are deduplicated by name.
+	##
+	## @param classDef: [ClassInfo] to validate.
+	replace local Function is checkMethodConflicts(ClassInfo is classDef){
+		local Map of String to String is seenMethods: Map:init();
+		classDef:getBaseClasses():each(action: local Function(String is baseName){
+			local ClassInfo is anc: self:findClass(name: baseName);
+			if (anc:getName() != "") {
+				anc:getMembers():each(action: local Function(Member is m){
+					if (m:getKind() == "METHOD") {
+						seenMethods:set(key: m:getName(), value: "true");
+					}
+				});
+			}
+		});
+		local Array of String is names: seenMethods:keys();
+		names:each(action: local Function(String is mName){
+			local Boolean is declaredLocally: false;
+			classDef:getMembers():each(action: local Function(Member is m){
+				if (m:getKind() == "METHOD" && m:getName() == mName) {
+					declaredLocally: true;
+				}
+			});
+			if (!declaredLocally) {
+				local Map of String to String is seen: Map:init();
+				local Array of String is declarers: [];
+				classDef:getBaseClasses():each(action: local Function(String is baseName){
+					self:collectConcreteDeclarers(className: baseName, methodName: mName, seen: seen, acc: declarers);
+				});
+				# Only maximal declarers compete: an ancestor's implementation is
+				# subsumed when a descendant among the declarers refines it.
+				local Array of String is maximal: [];
+				declarers:each(action: local Function(String is d){
+					local Boolean is isSubsumed: false;
+					declarers:each(action: local Function(String is other){
+						if (!isSubsumed && other != d && self:isSubclassOf(subName: other, baseName: d)) {
+							isSubsumed: true;
+						}
+					});
+					if (!isSubsumed) {
+						maximal:add(item: d);
+					}
+				});
+				if (maximal:length() >= 2) {
+					local String is msg: "ClassInfo '" . classDef:getName() . "' inherits conflicting implementations of '" . mName . "' from '" . maximal:get(index: 0) . "' and '" . maximal:get(index: 1) . "'; declare the method (replace or merge) to resolve the conflict.";
+					self:addError(line: classDef:getLine(), msg: msg);
+				}
+			}
+		});
+	}
+
 	replace local Function is checkInheritance(ClassInfo is classDef){
 		self:currentSourceFile: classDef:getSourceFile();
 		local Boolean is hasInit: false;
@@ -1442,6 +1531,7 @@ Class is TypeChecker{
 				});
 			}
 		});
+		self:checkMethodConflicts(classDef: classDef);
 	}
 
 	## Folds a `merge` field override into its parent's array literal.

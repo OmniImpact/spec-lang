@@ -317,13 +317,34 @@ Class is CodeGeneratorExpressions{
 					local Array of String is parts: objType:split(delimiter: ":");
 					objType: parts:get(index: 0);
 				}
-				local String is dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
-				local String is targetExprC: targetC;
-				if (dispatchCls != "" && dispatchCls != objType) {
-					objType: dispatchCls;
-					targetExprC: "((" . dispatchCls . "*)" . targetC . ")";
+				local String is argsC: self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs);
+				local String is callStr: "";
+				if (self:overriddenMethods:has(key: expr:methodName) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:isBuiltinClass(name: objType) && self:methodSlots:has(key: expr:methodName)) {
+					# Virtual dispatch through the receiver's vtable slot.
+					local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
+					if (vm:getKind() == "METHOD") {
+						local String is retT: self:resolveReturnType(t: vm:getType());
+						local String is sigC: objType . "*";
+						vm:getParameters():each(action: local Function(Parameter is p){
+							sigC: sigC . ", " . self:cTypeFor(typeName: p:getType():getName());
+						});
+						local String is slotC: self:methodSlots:getString(key: expr:methodName, default: "0");
+						if (targetC == "self") {
+							callStr: "(((" . retT . " (*)(" . sigC . "))self->_vtable[" . slotC . "]))((" . objType . "*)self" . argsC . ")";
+						} else {
+							callStr: "({ " . objType . "* _recv = (" . objType . "*)(" . targetC . "); (((" . retT . " (*)(" . sigC . "))_recv->_vtable[" . slotC . "]))((" . objType . "*)_recv" . argsC . "); })";
+						}
+					}
 				}
-				local String is callStr: objType . "_" . expr:methodName . "(" . targetExprC . self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs) . ")";
+				if (callStr == "") {
+					local String is dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
+					local String is targetExprC: targetC;
+					if (dispatchCls != "" && dispatchCls != objType) {
+						objType: dispatchCls;
+						targetExprC: "((" . dispatchCls . "*)" . targetC . ")";
+					}
+					callStr: objType . "_" . expr:methodName . "(" . targetExprC . argsC . ")";
+				}
 				local Member is targetM: self:lookupMethodMember(className: objType, methodName: expr:methodName);
 				local ClassInfo is targetCls: self:findClass(name: objType);
 				if (targetM:getKind() == "METHOD" && targetCls:getTypeParams():length() > 0) {
