@@ -55,6 +55,13 @@ Class is Driver{
 		if (lintMode) {
 			local Lexer is lexer: Lexer:init(source: source);
 			local Array of Token is tokens: lexer:tokenize();
+			if (lexer:hasErrors()) {
+				error:line("Lexical errors encountered during linting:");
+				lexer:getErrors():each(action: local Function(String is err){
+					error:line("  [" . inputPath . "] " . err);
+				});
+				Process:exit(status: 1);
+			}
 			local Parser is parser: Parser:init(tokens: tokens);
 			parser:setSourceFile(file: inputPath);
 			local ProgramNode is lintProgram: parser:parseProgram();

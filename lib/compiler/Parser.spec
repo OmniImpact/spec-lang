@@ -582,6 +582,107 @@ Class is Parser{
 		}
 	}
 
+	Class is ShiftLoop extends Loop{
+		local Parser is parser;
+		local Expression is currentExpr;
+
+		replace local Function is init(Parser is parser, Expression is expr){
+			self:parser: parser;
+			self:currentExpr: expr;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			local String is val: self:parser:peek():getValue();
+			return val == "<<" || val == ">>";
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			local String is op: self:parser:advance():getValue();
+			local Expression is right: self:parser:parseAdditive();
+			local Expression is binExpr: Expression:init(kind: "BINARY");
+			binExpr:binaryOp: op;
+			binExpr:leftExpr: self:currentExpr;
+			binExpr:rightExpr: right;
+			self:currentExpr: binExpr;
+			return true;
+		}
+	}
+
+	Class is BitAndLoop extends Loop{
+		local Parser is parser;
+		local Expression is currentExpr;
+
+		replace local Function is init(Parser is parser, Expression is expr){
+			self:parser: parser;
+			self:currentExpr: expr;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return self:parser:peek():getValue() == "&";
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			self:parser:advance();
+			local Expression is right: self:parser:parseEquality();
+			local Expression is binExpr: Expression:init(kind: "BINARY");
+			binExpr:binaryOp: "&";
+			binExpr:leftExpr: self:currentExpr;
+			binExpr:rightExpr: right;
+			self:currentExpr: binExpr;
+			return true;
+		}
+	}
+
+	Class is BitXorLoop extends Loop{
+		local Parser is parser;
+		local Expression is currentExpr;
+
+		replace local Function is init(Parser is parser, Expression is expr){
+			self:parser: parser;
+			self:currentExpr: expr;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return self:parser:peek():getValue() == "^";
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			self:parser:advance();
+			local Expression is right: self:parser:parseBitAnd();
+			local Expression is binExpr: Expression:init(kind: "BINARY");
+			binExpr:binaryOp: "^";
+			binExpr:leftExpr: self:currentExpr;
+			binExpr:rightExpr: right;
+			self:currentExpr: binExpr;
+			return true;
+		}
+	}
+
+	Class is BitOrLoop extends Loop{
+		local Parser is parser;
+		local Expression is currentExpr;
+
+		replace local Function is init(Parser is parser, Expression is expr){
+			self:parser: parser;
+			self:currentExpr: expr;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return self:parser:peek():getValue() == "|";
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			self:parser:advance();
+			local Expression is right: self:parser:parseBitXor();
+			local Expression is binExpr: Expression:init(kind: "BINARY");
+			binExpr:binaryOp: "|";
+			binExpr:leftExpr: self:currentExpr;
+			binExpr:rightExpr: right;
+			self:currentExpr: binExpr;
+			return true;
+		}
+	}
+
 	Class is EqualityLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
@@ -1325,7 +1426,43 @@ Class is Parser{
 		return postLoop:currentExpr;
 	}
 
+	## Parses a type cast: `value as Target` or `value as Target(width)`.
+	##
+	## Targets: class names, Int, Float, String, and the base pseudo-types
+	## Hex, Bin, Oct. Binding is tighter than every binary operator; chaining
+	## (`x as A as B`) is rejected.
+	replace local Function of Expression is parseAs(){
+		local Expression is left: self:parsePostfix();
+		if (self:check(kind: "KEYWORD", value: "as")) {
+			self:advance();
+			local Token is targetTok: self:advance();
+			local Array of Expression is args: [];
+			if (self:check(kind: "SYMBOL", value: "(")) {
+				self:advance();
+				if (!self:check(kind: "SYMBOL", value: ")")) {
+					args:add(item: self:parseExpression());
+				}
+				self:matchToken(kind: "SYMBOL", value: ")");
+			}
+			if (self:check(kind: "KEYWORD", value: "as")) {
+				self:addError(tok: self:peek(), message: "Chained 'as' casts are not supported; cast in separate steps.");
+			}
+			local Expression is c: Expression:init(kind: "CAST");
+			c:makeCast(inner: left, target: targetTok:getValue(), args: args);
+			return c;
+		}
+		return left;
+	}
+
 	replace local Function of Expression is parseUnary(){
+		if (self:check(kind: "SYMBOL", value: "~")) {
+			self:advance();
+			local Expression is expr: self:parseUnary();
+			local Expression is u: Expression:init(kind: "UNARY");
+			u:unaryOp: "~";
+			u:unaryExpr: expr;
+			return u;
+		}
 		if (self:check(kind: "SYMBOL", value: "-")) {
 			self:advance();
 			local Expression is expr: self:parseUnary();
@@ -1342,7 +1479,7 @@ Class is Parser{
 			u:unaryExpr: expr;
 			return u;
 		}
-		return self:parsePostfix();
+		return self:parseAs();
 	}
 
 	replace local Function of Expression is parseMultiplicative(){
@@ -1359,8 +1496,17 @@ Class is Parser{
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseConcat(){
+	## Parses shift expressions (`<<`, `>>`), binding looser than addition
+	## and tighter than concatenation (C precedence: `1 << 2 + 1` is 8).
+	replace local Function of Expression is parseShift(){
 		local Expression is left: self:parseAdditive();
+		local ShiftLoop is loopInst: ShiftLoop:init(parser: self, expr: left);
+		While:run(loop: loopInst);
+		return loopInst:currentExpr;
+	}
+
+	replace local Function of Expression is parseConcat(){
+		local Expression is left: self:parseShift();
 		local ConcatLoop is loopInst: ConcatLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
@@ -1381,8 +1527,32 @@ Class is Parser{
 	}
 
 	replace local Function of Expression is parseLogicalAnd(){
-		local Expression is left: self:parseEquality();
+		local Expression is left: self:parseBitOr();
 		local LogicalAndLoop is loopInst: LogicalAndLoop:init(parser: self, expr: left);
+		While:run(loop: loopInst);
+		return loopInst:currentExpr;
+	}
+
+	## Parses bitwise OR (`|`), between `&&` and `^` (C precedence).
+	replace local Function of Expression is parseBitOr(){
+		local Expression is left: self:parseBitXor();
+		local BitOrLoop is loopInst: BitOrLoop:init(parser: self, expr: left);
+		While:run(loop: loopInst);
+		return loopInst:currentExpr;
+	}
+
+	## Parses bitwise XOR (`^`), between `|` and `&`.
+	replace local Function of Expression is parseBitXor(){
+		local Expression is left: self:parseBitAnd();
+		local BitXorLoop is loopInst: BitXorLoop:init(parser: self, expr: left);
+		While:run(loop: loopInst);
+		return loopInst:currentExpr;
+	}
+
+	## Parses bitwise AND (`&`), between `^` and equality comparisons.
+	replace local Function of Expression is parseBitAnd(){
+		local Expression is left: self:parseEquality();
+		local BitAndLoop is loopInst: BitAndLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}

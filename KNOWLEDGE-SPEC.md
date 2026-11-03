@@ -119,6 +119,13 @@ Class is AppName{
 
 ---
 
+### Casts (`as`) & String Rendering
+`value as Target` unifies class up/downcasts, numeric casts, and base conversion:
+`as Int`/`as Float` for numerics, `as Hex`/`as Bin`/`as Oct` to format (Int -> String,
+optional width) or parse (String -> Int). Chaining is rejected; parse failures
+yield 0. Class instances render their class name in concatenation via a generated
+`toString()` (user `replace` overrides win); enums render their variant name.
+
 ## 5. Control Flow: `if`, `when`, and Loops
 
 ### Conditional Branching

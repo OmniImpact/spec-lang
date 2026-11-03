@@ -108,6 +108,26 @@ assert_compile_failure "merge-negative" \
 	"'merge' requires an Array field" \
 	"no parent declares a method with that name"
 
+assert_compile_failure "as-cast-negative" \
+	"$ROOT/tests/negative/as_cast_negative_test.spec" \
+	"Cannot cast 'Cat' to unrelated class 'Dog'" \
+	"Cannot cast to enum 'Color'" \
+	"Cast 'as Hex' requires an Int or String operand" \
+	"Unknown cast target 'Hexadecimal'"
+
+assert_compile_failure "as-chained-negative" \
+	"$ROOT/tests/negative/as_chained_negative_test.spec" \
+	"Chained 'as' casts are not supported"
+
+assert_compile_failure "invalid-literal-negative" \
+	"$ROOT/tests/negative/invalid_literal_negative_test.spec" \
+	"Invalid digit in base-16 number literal"
+
+assert_compile_failure "bitwise-negative" \
+	"$ROOT/tests/negative/bitwise_negative_test.spec" \
+	"Bitwise operator '&' requires Int operands" \
+	"Bitwise complement '~' requires an Int operand"
+
 assert_compile_failure "diamond-conflict-negative" \
 	"$ROOT/tests/negative/diamond_conflict_negative_test.spec" \
 	"inherits conflicting implementations of 'value' from 'DiamondA' and 'DiamondB'"

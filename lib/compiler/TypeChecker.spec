@@ -746,13 +746,85 @@ Class is TypeChecker{
 					is "+", "-", "*", "/", "%": {
 						res: if (leftT == "Float" || rightT == "Float") "Float" else "Int";
 					}
+					is "&", "|", "^", "<<", ">>": {
+						res: "Int";
+						if ((leftT != "" && leftT != "Any" && leftT != "Int" && leftT != "int") ||
+							(rightT != "" && rightT != "Any" && rightT != "Int" && rightT != "int")) {
+							local String is msg: "Bitwise operator '" . op . "' requires Int operands (got '" . leftT . "' and '" . rightT . "').";
+							self:addError(line: self:currentLine, msg: msg);
+						}
+					}
 					else: {
 						res: "Int";
 					}
 				}
 			}
+			is "CAST": {
+				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
+				local String is target: expr:stringValue;
+				local String is src: if (innerT != "") innerT else "Any";
+
+				when (target) {
+					is "Hex", "Bin", "Oct": {
+						local Int is widthArg: expr:castArgs:length();
+						if (widthArg > 1) {
+							self:addError(line: self:currentLine, msg: "Cast 'as " . target . "' accepts at most one width argument.");
+						}
+						if (src != "Int" && src != "int" && src != "String" && src != "string" && src != "Any") {
+							self:addError(line: self:currentLine, msg: "Cast 'as " . target . "' requires an Int or String operand (got '" . src . "').");
+						}
+						res: if (src == "String" || src == "string") "Int" else "String";
+					}
+					is "Int", "int": {
+						if (expr:castArgs:length() > 0) {
+							self:addError(line: self:currentLine, msg: "Cast 'as Int' takes no arguments.");
+						}
+						if (src != "Int" && src != "int" && src != "Float" && src != "float" && src != "String" && src != "string" && src != "Any") {
+							self:addError(line: self:currentLine, msg: "Cannot cast '" . src . "' to 'Int'.");
+						}
+						res: "Int";
+					}
+					is "Float", "float": {
+						if (expr:castArgs:length() > 0) {
+							self:addError(line: self:currentLine, msg: "Cast 'as Float' takes no arguments.");
+						}
+						if (src != "Int" && src != "int" && src != "Float" && src != "float" && src != "Any") {
+							self:addError(line: self:currentLine, msg: "Cannot cast '" . src . "' to 'Float'.");
+						}
+						res: "Float";
+					}
+					is "String", "string": {
+						if (expr:castArgs:length() > 0) {
+							self:addError(line: self:currentLine, msg: "Cast 'as String' takes no arguments.");
+						}
+						res: "String";
+					}
+					else: {
+						if (self:allEnumNames:has(key: target)) {
+							self:addError(line: self:currentLine, msg: "Cannot cast to enum '" . target . "'; construct a variant instead.");
+							res: target;
+						} else if (self:registeredClasses:has(key: target)) {
+							if (expr:castArgs:length() > 0) {
+								self:addError(line: self:currentLine, msg: "Class casts take no arguments.");
+							}
+							local Boolean is related: src == "Any" || self:isSubclassOf(subName: src, baseName: target) || self:isSubclassOf(subName: target, baseName: src);
+							if (!related) {
+								self:addError(line: self:currentLine, msg: "Cannot cast '" . src . "' to unrelated class '" . target . "'.");
+							}
+							res: target;
+						} else {
+							self:addError(line: self:currentLine, msg: "Unknown cast target '" . target . "'.");
+							res: "Any";
+						}
+					}
+				}
+			}
 			is "UNARY": {
 				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
+					if (expr:unaryOp == "~" && innerT != "" && innerT != "Any" && innerT != "Int" && innerT != "int") {
+						local String is msg: "Bitwise complement '~' requires an Int operand (got '" . innerT . "').";
+						self:addError(line: self:currentLine, msg: msg);
+					}
 				if (expr:unaryOp == "!") {
 					res: "Boolean";
 				} else {
@@ -1006,13 +1078,13 @@ Class is TypeChecker{
 						res: classRet;
 					} else {
 						when (method) {
-							is "length", "ordinal", "indexOf", "count", "countLeading", "execute", "getInt", "getPid", "toInt": {
+							is "length", "ordinal", "indexOf", "count", "countLeading", "execute", "getInt", "getPid", "toInt", "parseInt": {
 								res: "Int";
 							}
 							is "isEmpty", "has", "any", "startsWith", "endsWith", "contains", "isDigit", "isAlpha", "isWhitespace", "exists", "write", "getBool", "remove": {
 								res: "Boolean";
 							}
-							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join", "fromCharCode": {
+							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join", "fromCharCode", "toBase": {
 								res: "String";
 							}
 							is "value": {

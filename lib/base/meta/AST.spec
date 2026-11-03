@@ -56,6 +56,9 @@ Class is Expression{
 	local Boolean is boolValue: false;
 	local Array of String is pathSegments;
 	local Array of Expression is arrayItems;
+
+	## Optional width argument of a cast (`x as Hex(8)`, kind "CAST").
+	local Array of Expression is castArgs;
 	local Array of Expression is mapKeys;
 	local Array of Expression is mapValues;
 	local Expression is methodTarget;
@@ -142,6 +145,18 @@ Class is Expression{
 	##
 	## @param keys: Array of key [Expression] nodes.
 	## @param values: Array of value [Expression] nodes.
+	## Configures this expression as a type cast (`value as Target`).
+	##
+	## @param inner: The cast operand.
+	## @param target: Target type or base name (Int, Float, String, Hex, Bin, Oct, or a class).
+	## @param args: Optional arguments (e.g. digit width for Hex/Bin/Oct).
+	replace local Function is makeCast(Expression is inner, String is target, Array of Expression is args){
+		self:kind: "CAST";
+		self:leftExpr: inner;
+		self:stringValue: target;
+		self:castArgs: args;
+	}
+
 	replace local Function is makeMap(Array of Expression is keys, Array of Expression is values){
 		self:kind: "MAP";
 		self:mapKeys: keys;
@@ -299,6 +314,7 @@ Class is Statement{
 
 	## Arguments of a merge-forward statement `(a, name: b)` (kind "FORWARD").
 	local Array of NamedArg is forwardArgs;
+
 
 	replace local Function is init(String is kind){
 		self:kind: kind;

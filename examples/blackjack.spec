@@ -23,37 +23,6 @@ Class is Blackjack{
 	local Boolean is roundActive: true;
 
 	# =========================================================================
-	# Internal ClassInfo: Deck Builder Loop
-	# Demonstrates the refined Iterator Loop lifecycle:
-	#   - evaluate(): called automatically before/after each step to check continuation
-	#   - iteration(control): does the work and returns true (success) or false (error)
-	# =========================================================================
-	Class is BuildDeckLoop extends Loop{
-		local Array of Int is targetDeck;
-		local Int is currentVal: 1;
-
-		replace local Function is init(Array of Int is targetDeck){
-			self:targetDeck: targetDeck;
-		}
-
-		# Automatically checked by the iterator engine after each iteration
-		replace local Function of Boolean is evaluate(){
-			return currentVal <= 10;
-		}
-
-		# Performs the step. Returns true if successful, false if an error occurred
-		replace local Function of Boolean is iteration(LoopControl is control){
-			targetDeck:add(item: currentVal);
-			targetDeck:add(item: currentVal);
-			targetDeck:add(item: currentVal);
-			targetDeck:add(item: currentVal);
-
-			currentVal: currentVal + 1;
-			return true;
-		}
-	}
-
-	# =========================================================================
 	# Internal ClassInfo: Dealer's Turn Loop
 	# Lifecycle:
 	#   - evaluate() checks if dealer score < 17
@@ -120,7 +89,8 @@ Class is Blackjack{
 				game:roundActive: false;
 				return;
 			}
-			if (action == "h" || action == "hit") {
+			when (action) {
+				is "h", "hit": {
 				local Int is card: game:drawCard();
 				game:playerHand:add(item: card);
 				output:line("You drew: " . card);
@@ -137,13 +107,16 @@ Class is Blackjack{
 				} else {
 					game:promptPlayerAction();
 				}
-			} else if (action == "s" || action == "stand") {
+			}
+			is "s", "stand": {
 				output:line("You stand with total: " . game:handValue(hand: game:playerHand));
 				game:startDealerTurn();
-			} else {
+			}
+			else: {
 				output:line("Invalid command. Please enter 'h' (hit) or 's' (stand).");
 				game:promptPlayerAction();
 			}
+		}
 		}
 	}
 
@@ -152,72 +125,37 @@ Class is Blackjack{
 	# =========================================================================
 	Function of Int is drawCard(){
 		local Float is roll: math:random(min: 1.0, max: 11.0);
-		return math:toInt(value: math:floor(value: roll));
+		return math:floor(value: roll) as Int;
 	}
 
+	## Computes the best blackjack value of a hand: aces count 11, downgraded
+	## to 1 as needed to stay at or under 21.
+	##
+	## @param hand: Card values (1 = ace, 2..10 = face value).
+	## @return: Best hand total.
 	Function of Int is handValue(Array of Int is hand){
-		Class is ScoreAccumulator{
-			local Int is total: 0;
-			local Int is aceCount: 0;
-		}
-		local ScoreAccumulator is acc: ScoreAccumulator:init();
-
-		# Loop 1: Tally hand cards
-		Class is ScoreLoop extends Loop{
-			local Array of Int is hand;
-			local ScoreAccumulator is acc;
-			local Int is idx: 0;
-
-			replace local Function is init(Array of Int is hand, ScoreAccumulator is acc){
-				self:hand: hand;
-				self:acc: acc;
+		local Int is total: hand:fold(
+			initial: 0,
+			accumulate: local Function of Int(Int is acc, Int is card){
+				return acc + if (card == 1) 11 else card;
 			}
-
-			replace local Function of Boolean is evaluate(){
-				return idx < hand:length();
+		);
+		local Int is aceCount: hand:count(
+			predicate: local Function of Boolean(Int is card){
+				return card == 1;
 			}
+		);
 
-			replace local Function of Boolean is iteration(LoopControl is control){
-				local Int is card: hand[idx];
-				if (card == 1) {
-					acc:aceCount: acc:aceCount + 1;
-					acc:total: acc:total + 11;
-				} else {
-					acc:total: acc:total + card;
-				}
-				idx: idx + 1;
-				return true;
+		# Each ace can absorb 10 points of excess; compute how many must downgrade.
+		local Int is excess: total - 21;
+		local Int is downgrades: 0;
+		if (excess > 0) {
+			downgrades: (excess + 9) / 10;
+			if (downgrades > aceCount) {
+				downgrades: aceCount;
 			}
 		}
-
-		local ScoreLoop is scoreLoop: ScoreLoop:init(hand: hand, acc: acc);
-		local LoopControl is scoreControl: LoopControl:init();
-		While:run(loop: scoreLoop, control: scoreControl);
-
-		# Loop 2: Downgrade Aces from 11 to 1 if score > 21
-		Class is AceAdjustLoop extends Loop{
-			local ScoreAccumulator is acc;
-
-			replace local Function is init(ScoreAccumulator is acc){
-				self:acc: acc;
-			}
-
-			replace local Function of Boolean is evaluate(){
-				return acc:total > 21 && acc:aceCount > 0;
-			}
-
-			replace local Function of Boolean is iteration(LoopControl is control){
-				acc:total: acc:total - 10;
-				acc:aceCount: acc:aceCount - 1;
-				return true;
-			}
-		}
-
-		local AceAdjustLoop is aceLoop: AceAdjustLoop:init(acc: acc);
-		local LoopControl is aceControl: LoopControl:init();
-		While:run(loop: aceLoop, control: aceControl);
-
-		return acc:total;
+		return total - (downgrades * 10);
 	}
 
 	Function is promptPlayerAction(){
@@ -262,10 +200,22 @@ Class is Blackjack{
 		output:line("         Welcome to SpecJack          ");
 		output:line("======================================\n");
 
-		# 1. Build and populate card deck
-		local BuildDeckLoop is deckLoop: BuildDeckLoop:init(targetDeck: deck);
-		local LoopControl is deckControl: LoopControl:init();
-		While:run(loop: deckLoop, control: deckControl);
+		# 1. Build the deck: four suits of each value 1..10.
+		local Int is value: 1;
+		While:condition(
+			evaluate: local Function of Boolean(){ return value <= 10; },
+			iteration: local Function(){
+				local Int is suit: 0;
+				While:condition(
+					evaluate: local Function of Boolean(){ return suit < 4; },
+					iteration: local Function(){
+						deck:add(item: value);
+						suit: suit + 1;
+					}
+				);
+				value: value + 1;
+			}
+		);
 
 		# 2. Initial deal
 		playerHand:add(item: drawCard());

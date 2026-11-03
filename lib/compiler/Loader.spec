@@ -165,6 +165,11 @@ Class is Loader{
 		local String is src: File:read(path: filePath, default: "");
 		local Lexer is lexer: Lexer:init(source: src);
 		local Array of Token is tokens: lexer:tokenize();
+		if (lexer:hasErrors()) {
+			lexer:getErrors():each(action: local Function(String is err){
+				self:parseErrors:add(item: "  [LexError] [" . filePath . "] " . err);
+			});
+		}
 		local Parser is parser: Parser:init(tokens: tokens);
 		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();

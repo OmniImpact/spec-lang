@@ -145,7 +145,7 @@ Class is CodeGeneratorExpressions{
 						}
 						return "((" . leftC . ") != (" . rightC . "))";
 					}
-					is "<", "<=", ">", ">=", "+", "-", "*", "/", "%", "&&", "||": {
+					is "<", "<=", ">", ">=", "+", "-", "*", "/", "%", "&&", "||", "&", "|", "^", "<<", ">>": {
 						local String is leftC: self:generateExpression(expr: expr:leftExpr);
 						local String is rightC: self:generateExpression(expr: expr:rightExpr);
 						return "((" . leftC . ") " . op . " (" . rightC . "))";
@@ -192,6 +192,56 @@ Class is CodeGeneratorExpressions{
 					return "((" . elemCType . ")(intptr_t)spec_array_get(" . targetC . ", (size_t)(" . indexC . ")))";
 				}
 				return "((long long)(intptr_t)spec_array_get(" . targetC . ", (size_t)(" . indexC . ")))";
+			}
+			is "CAST": {
+				local String is innerC: self:generateExpression(expr: expr:leftExpr);
+				local String is target: expr:stringValue;
+				local String is srcT: self:inferTargetType(expr: expr:leftExpr);
+				local String is digitsC: "0";
+				if (expr:castArgs:length() > 0) {
+					digitsC: self:generateExpression(expr: expr:castArgs:get(index: 0));
+				}
+				when (target) {
+					is "Hex": {
+						if (srcT == "String" || srcT == "string") {
+							return "spec_parse_base(" . innerC . ", 16, 0)";
+						}
+						return "spec_int_to_base(" . innerC . ", 16, " . digitsC . ")";
+					}
+					is "Bin": {
+						if (srcT == "String" || srcT == "string") {
+							return "spec_parse_base(" . innerC . ", 2, 0)";
+						}
+						return "spec_int_to_base(" . innerC . ", 2, " . digitsC . ")";
+					}
+					is "Oct": {
+						if (srcT == "String" || srcT == "string") {
+							return "spec_parse_base(" . innerC . ", 8, 0)";
+						}
+						return "spec_int_to_base(" . innerC . ", 8, " . digitsC . ")";
+					}
+					is "Int", "int": {
+						if (srcT == "String" || srcT == "string") {
+							return "spec_parse_base(" . innerC . ", 10, 0)";
+						}
+						if (srcT == "Float" || srcT == "float") {
+							return "((long long)(" . innerC . "))";
+						}
+						return innerC;
+					}
+					is "Float", "float": {
+						return "((double)(" . innerC . "))";
+					}
+					is "String", "string": {
+						return self:wrapToString(expr: expr:leftExpr, exprC: innerC);
+					}
+					else: {
+						if (self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:isBuiltinClass(name: target)) {
+							return "((" . target . "*)(" . innerC . "))";
+						}
+						return innerC;
+					}
+				}
 			}
 			is "UNARY": {
 				local String is innerC: self:generateExpression(expr: expr:unaryExpr);

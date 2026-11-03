@@ -41,6 +41,26 @@ Class is BuiltinCallGenerator{
 			return "spec_error_line(" . errStrC . ")";
 		}
 
+		# Integer base conversion
+		if (expr:methodName == "toBase" && (targetType == "Int" || targetType == "int")) {
+			local String is baseC: "10";
+			local String is digitsC: "0";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "base") { baseC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == "digits") { digitsC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_int_to_base(" . targetC . ", " . baseC . ", " . digitsC . ")";
+		}
+		if (expr:methodName == "parseInt" && (targetType == "String" || targetType == "string")) {
+			local String is baseC: "10";
+			local String is defC: "0";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "base") { baseC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == "default") { defC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_parse_base(" . targetC . ", " . baseC . ", " . defC . ")";
+		}
+
 		# Ansi terminal metrics (runtime ioctls; Ansi is otherwise pure Spec)
 		if (targetC == "Ansi" && expr:methodName == "terminalWidth") {
 			return "spec_term_width()";

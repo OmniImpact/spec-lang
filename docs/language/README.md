@@ -417,6 +417,30 @@ local String is formatted: "Line 1\tTabbed\nLine 2";
 local String is rawPath: 'C:\Windows\System32';
 ```
 
+### Numeric Base Literals
+Integer literals accept `0x` (hex), `0b` (binary), and `0o` (octal) prefixes, with
+underscore separators in any base. A bare leading zero stays **decimal** (Spec has
+no C-style octal footgun); all literals normalize to decimal before code generation.
+
+```spec
+local Int is mask: 0xFF00;
+local Int is flags: 0b1010_0011;
+local Int is perm: 0o755;
+local Int is big: 1_000_000;
+```
+
+### Base Conversion
+- `n:toBase(base: Int, digits: Int) -> String` — formats an Int in base 2..36
+  (lowercase digits), zero-padded to `digits` width when provided.
+- `s:parseInt(base: Int, default: Int) -> Int` — parses digits in the given base
+  (default 10); a `0x`/`0b`/`0o` prefix overrides the base; underscores are
+  tolerated; invalid input yields `default:`.
+
+```spec
+local String is hex: 65516:toBase(base: 16);
+local Int is port: "1F90":parseInt(base: 16, default: 0);
+```
+
 ### Generic Collections & Map Literals
 Spec provides dynamic array collections and hash map collections with first-class literal initializers:
 - `Array of <ElementType>`: Initialized via `[elem1, elem2, ...]`. Empty array: `[]`.
@@ -477,6 +501,43 @@ Spec eliminates null reference bugs by making `null` nonexistent as a runtime va
 ---
 
 ## Operators & Expressions
+
+### Type Casts (`as`)
+The `as` operator treats a value as another type — classes, numerics, and the base
+pseudo-types `Hex`, `Bin`, and `Oct` share one syntax. It binds tighter than every
+binary operator; chaining (`x as A as B`) is a syntax error.
+
+```spec
+local Animal is a: dog as Animal;       # class upcast (virtual dispatch preserved)
+local Dog is d: a as Dog;               # downcast (unchecked, C semantics)
+local Int is n: 3.9 as Int;             # numeric truncation (== math:toInt)
+local Float is f: 7 as Float;           # widening (== math:toFloat)
+local String is h: 65516 as Hex;        # format: "ffec" (Bin, Oct too; width: `as Bin(8)`)
+local Int is back: "ffec" as Hex;       # parse: 65516 (invalid input yields 0)
+```
+
+`as Int` on a String parses base 10 (fallback 0); `parseInt(default:)` remains the
+explicit form for fallible parsing. Casting between unrelated classes is a compile
+error; casting to an enum is rejected (construct a variant instead).
+
+### String Rendering
+Concatenation and `as String` render every value type: primitives via their
+canonical text, enum variants by name, and class instances through a generated
+`toString()` that returns the class name (a user-defined `toString` method
+overrides it and requires `replace`).
+
+### Bitwise Operators
+Bitwise operations follow C precedence: `~` (complement), `<<` / `>>` (shifts, looser
+than `+`/`-`), `&`, `^`, `|` (tightest to loosest, all between equality and `&&`).
+All require `Int` operands and yield `Int`; non-Int operands are compile errors.
+
+```spec
+local Int is flags: 0b0000_0100 | 0b0000_0011;
+local Int is cleared: flags & ~(0b0000_0011);
+local Int is byte: (value >> 8) & 0xFF;
+```
+
+Shifts are arithmetic on signed 64-bit integers.
 
 ### Arithmetic Operators
 `+`, `-`, `*`, `/`, `%` with standard precedence and parentheses grouping:

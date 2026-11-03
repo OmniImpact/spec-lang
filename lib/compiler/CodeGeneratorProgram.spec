@@ -393,6 +393,22 @@ Class is CodeGeneratorProgram{
 				if (!hasInit && c:getBaseClass() != "Enum") {
 					methods: methods . "void " . c:getName() . "_init(" . c:getName() . "* self) {\n    /* default initializer */\n}\n\n";
 				}
+
+				# Default toString for classes without a user definition, so that
+				# concatenation and String casts render the class name, not a pointer.
+				local Boolean is hasToString: false;
+				c:getMembers():each(action: local Function(Member is m){
+					if (m:getName() == "toString") {
+						hasToString: true;
+					}
+				});
+				if (!hasToString && c:getBaseClass() != "Enum") {
+					local String is cn: c:getName();
+					methods: methods . "const char* " . cn . "_toString(" . cn . "* self);\n";
+					methods: methods . "const char* " . cn . "_toString(" . cn . "* self) {\n";
+					methods: methods . "    if (!self) { return \"\"; }\n";
+					methods: methods . "    return \"" . cn . "\";\n}\n\n";
+				}
 			}
 		});
 

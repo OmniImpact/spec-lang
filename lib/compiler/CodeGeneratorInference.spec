@@ -159,7 +159,14 @@ Class is CodeGeneratorInference{
 			is "String", "string": {
 				return exprC;
 			}
-			else: {}
+			else: {
+				if (self:allEnumNames:has(key: resolved)) {
+					return resolved . "_name(" . exprC . ")";
+				}
+				if (self:allClassNames:has(key: resolved) && !self:isBuiltinClass(name: resolved)) {
+					return resolved . "_toString(" . exprC . ")";
+				}
+			}
 		}
 
 		local String is kind: expr:getKind();
@@ -175,7 +182,7 @@ Class is CodeGeneratorInference{
 			}
 			is "BINARY": {
 				local String is op: expr:binaryOp;
-				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%") {
+				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>") {
 					return "spec_to_string_int(" . exprC . ")";
 				}
 				if (op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||") {

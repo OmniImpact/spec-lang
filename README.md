@@ -128,7 +128,7 @@ Spec includes modern, expressive language capabilities designed for type safety 
 
 ### Running the Linter
 ```bash
-./spec --lint examples/blackjack_shorthand.spec
+./spec --lint examples/blackjack.spec
 ```
 
 ---

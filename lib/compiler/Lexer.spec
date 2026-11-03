@@ -18,6 +18,7 @@ Class is Lexer{
 	local Int is pos: 0;
 	local Int is line: 1;
 	local Int is col: 1;
+	local Array of String is errors: [];
 
 	# Internal Loop Classes
 	Class is SkipWhitespaceLoop extends Loop{
@@ -83,6 +84,51 @@ Class is Lexer{
 		}
 	}
 
+	## Scans the digits of a base-prefixed literal (2, 8, or 16), accumulating
+	## the decimal value. Underscore separators are skipped; an alphanumeric
+	## character that is not a valid digit for the base flags an error and is
+	## consumed so scanning can continue.
+	Class is BaseDigitsLoop extends Loop{
+		local Lexer is lexer;
+		local Int is base: 16;
+		local Int is value: 0;
+		local Int is digitCount: 0;
+		local Boolean is hadInvalid: false;
+
+		replace local Function is init(Lexer is lexer, Int is base){
+			self:lexer: lexer;
+			self:base: base;
+			self:value: 0;
+			self:digitCount: 0;
+			self:hadInvalid: false;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return self:lexer:pos < self:lexer:length;
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: "");
+			if (ch == "_") {
+				self:lexer:advance();
+				return true;
+			}
+			local Int is d: self:lexer:digitValue(ch: ch);
+			if (d >= 0 && d < self:base) {
+				self:value: (self:value * self:base) + d;
+				self:digitCount: self:digitCount + 1;
+				self:lexer:advance();
+				return true;
+			}
+			if (ch:isAlpha() || ch:isDigit()) {
+				self:hadInvalid: true;
+				self:lexer:advance();
+				return true;
+			}
+			return false;
+		}
+	}
+
 	Class is NumberScanLoop extends Loop{
 		local Lexer is lexer;
 		local Boolean is isFloat: false;
@@ -98,6 +144,14 @@ Class is Lexer{
 
 		replace local Function of Boolean is iteration(LoopControl is control){
 			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
+			if (ch == "_") {
+				local String is nextCh: lexer:source:charAt(index: lexer:pos + 1, default: "");
+				if (nextCh:isDigit()) {
+					lexer:advance();
+					return true;
+				}
+				return false;
+			}
 			if (ch:isDigit()) {
 				lexer:advance();
 				return true;
@@ -206,6 +260,42 @@ Class is Lexer{
 		self:pos: 0;
 		self:line: 1;
 		self:col: 1;
+		self:errors: [];
+	}
+
+	## Records a lexical error at the current line.
+	##
+	## @param msg: Error description.
+	replace local Function is addError(String is msg){
+		self:errors:add(item: "Line " . self:line . ": " . msg);
+	}
+
+	## Returns whether any lexical errors were recorded.
+	replace local Function of Boolean is hasErrors(){
+		return self:errors:length() > 0;
+	}
+
+	## Returns all recorded lexical error messages.
+	replace local Function of Array of String is getErrors(){
+		return self:errors;
+	}
+
+	## Maps a hexadecimal digit character to its value (0..15), or -1.
+	##
+	## @param ch: Digit character.
+	## @return: Digit value, or -1 when not a hex digit.
+	replace local Function of Int is digitValue(String is ch){
+		local String is lower: "0123456789abcdef";
+		local Int is d: lower:indexOf(needle: ch, default: -1);
+		if (d >= 0) {
+			return d;
+		}
+		local String is upper: "ABCDEF";
+		local Int is u: upper:indexOf(needle: ch, default: -1);
+		if (u >= 0) {
+			return u + 10;
+		}
+		return -1;
 	}
 
 	replace local Function of Boolean is isAtEnd(){
@@ -238,7 +328,7 @@ Class is Lexer{
 
 	replace local Function of Boolean is isKeyword(String is text){
 		return when (text) {
-			is "extends", "local", "replace", "merge", "is", "of", "to", "return", "if", "else", "when": true;
+			is "extends", "local", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
 			else: false;
 		};
 	}
@@ -261,13 +351,74 @@ Class is Lexer{
 	replace local Function of Token is readNumber(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
-		local Int is startPos: self:pos;
 
+		# Base-prefixed integers (0x / 0b / 0o), normalized to a decimal value so
+		# the generated C stays portable C11. A bare leading zero stays decimal.
+		local String is ch: self:source:charAt(index: self:pos, default: "");
+		local String is nextCh: self:source:charAt(index: self:pos + 1, default: "");
+		if (ch == "0" && nextCh != "" && nextCh != "." && nextCh:isDigit() == false) {
+			if (nextCh == "x" || nextCh == "X" || nextCh == "b" || nextCh == "B" || nextCh == "o" || nextCh == "O") {
+				local Int is base: 16;
+				if (nextCh == "b" || nextCh == "B") {
+					base: 2;
+				}
+				if (nextCh == "o" || nextCh == "O") {
+					base: 8;
+				}
+				self:advance();
+				self:advance();
+				local BaseDigitsLoop is digitLoop: BaseDigitsLoop:init(lexer: self, base: base);
+				While:run(loop: digitLoop);
+				if (digitLoop:hadInvalid) {
+					self:addError(msg: "Invalid digit in base-" . base . " number literal");
+				}
+				if (digitLoop:digitCount == 0) {
+					self:addError(msg: "Missing digits after base prefix");
+				}
+				return Token:init(kind: TokenKind:INT, value: "" . digitLoop:value, line: startLine, col: startCol);
+			}
+		}
+
+		local Int is startPos: self:pos;
 		local NumberScanLoop is numLoop: NumberScanLoop:init(lexer: self);
 		While:run(loop: numLoop);
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
+		if (text:contains(needle: "_")) {
+			# Strip separators: underscore digit groups are not valid C11.
+			local String is stripped: "";
+			local Int is ti: 0;
+			While:condition(
+				evaluate: local Function of Boolean(){
+					return ti < text:length();
+				},
+				iteration: local Function of Boolean(){
+					local String is tc: text:charAt(index: ti, default: "");
+					if (tc != "_") {
+						stripped: stripped . tc;
+					}
+					ti: ti + 1;
+					return true;
+				}
+			);
+			text: stripped;
+		}
 		local TokenKind is kind: if (numLoop:isFloat) TokenKind:FLOAT else TokenKind:INT;
+		if (kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: "") == "0") {
+			# A bare leading zero stays decimal in Spec; strip it so C does not
+			# reinterpret the emitted literal as octal.
+			local Int is z: 0;
+			While:condition(
+				evaluate: local Function of Boolean(){
+					return text:length() > 1 && text:charAt(index: 0, default: "") == "0";
+				},
+				iteration: local Function of Boolean(){
+					text: text:substring(start: 1, end: text:length());
+					z: z + 1;
+					return true;
+				}
+			);
+		}
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
@@ -314,6 +465,14 @@ Class is Lexer{
 		if (ch == "|" && nextCh == "|") {
 			self:advance();
 			return Token:init(kind: TokenKind:SYMBOL, value: "||", line: startLine, col: startCol);
+		}
+		if (ch == "<" && nextCh == "<") {
+			self:advance();
+			return Token:init(kind: TokenKind:SYMBOL, value: "<<", line: startLine, col: startCol);
+		}
+		if (ch == ">" && nextCh == ">") {
+			self:advance();
+			return Token:init(kind: TokenKind:SYMBOL, value: ">>", line: startLine, col: startCol);
 		}
 		if (ch == ":" && nextCh == ":") {
 			self:advance();
