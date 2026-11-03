@@ -41,6 +41,14 @@ Class is BuiltinCallGenerator{
 			return "spec_error_line(" . errStrC . ")";
 		}
 
+		# Ansi terminal metrics (runtime ioctls; Ansi is otherwise pure Spec)
+		if (targetC == "Ansi" && expr:methodName == "terminalWidth") {
+			return "spec_term_width()";
+		}
+		if (targetC == "Ansi" && expr:methodName == "terminalHeight") {
+			return "spec_term_height()";
+		}
+
 		# Output:line and Output:print / Output:write
 		if ((targetC == "output" || targetC == "Output") && expr:methodName == "line" && expr:methodArgs:length() > 0) {
 			local NamedArg is firstArg: expr:methodArgs:get(index: 0);
@@ -150,6 +158,15 @@ Class is BuiltinCallGenerator{
 			}
 			if (expr:methodName == "getPid") {
 				return "spec_process_get_pid()";
+			}
+			if (expr:methodName == "clockMs") {
+				return "spec_clock_ms()";
+			}
+			if (expr:methodName == "peakMemoryKb") {
+				return "spec_mem_peak_kb()";
+			}
+			if (expr:methodName == "threadCount") {
+				return "spec_thread_count()";
 			}
 			if (expr:methodName == "exit") {
 				local String is codeC: "0";

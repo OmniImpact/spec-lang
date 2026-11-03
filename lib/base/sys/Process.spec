@@ -48,4 +48,24 @@ Class is Process{
 	replace Function is sleep(Int is milliseconds){
 	}
 
+	## Returns monotonic wall-clock milliseconds since an arbitrary epoch.
+	##
+	## Suitable for measuring elapsed time (differences of two calls).
+	##
+	## @return: Monotonic clock reading in milliseconds.
+	replace Function of Int is clockMs(){
+	}
+
+	## Returns the peak resident set size of the current process.
+	##
+	## @return: Peak memory usage in kilobytes, or 0 when unavailable.
+	replace Function of Int is peakMemoryKb(){
+	}
+
+	## Returns the number of OS threads currently owned by the process.
+	##
+	## @return: Live thread count, or 1 when unavailable.
+	replace Function of Int is threadCount(){
+	}
+
 }

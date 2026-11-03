@@ -11,6 +11,14 @@ Class is Ansi{
 		return "\e";
 	}
 
+	## Returns the console width in columns, or 0 when stdout is not a terminal.
+	replace local Function of Int is terminalWidth(){
+	}
+
+	## Returns the console height in rows, or 0 when stdout is not a terminal.
+	replace local Function of Int is terminalHeight(){
+	}
+
 	## Returns the ANSI sequence to reset all terminal colors and attributes (`\e[0m`).
 	##
 	## @return: ANSI reset sequence string.

@@ -10,8 +10,12 @@ Class is Mandelbrot{
 		base:struct:Map,
 		base:iterator:*,
 		base:math:*,
-		base:io:*
+		base:io:*,
+		base:sys:Process
 	];
+
+	## Total number of complex-plane points sampled across all render modes.
+	local Int is pointsRendered: 0;
 
 	## Computes the smooth (fractional) escape iteration count for complex point `(cr, ci)`.
 	##
@@ -23,6 +27,8 @@ Class is Mandelbrot{
 	## @param maxIter: Maximum iteration threshold.
 	## @return: Smooth iteration value in `[0.0, maxIter]`, or `-1.0` if inside the Mandelbrot set.
 	replace local Function of Float is smoothEscape(Float is cr, Float is ci, Int is maxIter){
+		self:pointsRendered: self:pointsRendered + 1;
+
 		# Cardioid and period-2 bulb quick rejection test
 		local Float is q: ((cr - 0.25) * (cr - 0.25)) + (ci * ci);
 		if ((q * (q + (cr - 0.25))) <= (0.25 * ci * ci)) {
@@ -110,17 +116,103 @@ Class is Mandelbrot{
 		return v;
 	}
 
+	## Prints the render statistics block: points sampled, elapsed time, peak memory.
+	##
+	## @param width: Rendered width in characters.
+	## @param height: Rendered height in rows.
+	## @param maxIter: Escape iteration threshold used.
+	## @param elapsedMs: Total wall-clock render time in milliseconds.
+	replace local Function is printStats(Int is width, Int is height, Int is maxIter, Int is elapsedMs){
+		local Int is peakKb: Process:peakMemoryKb();
+		local Int is peakMb: peakKb / 1024;
+		local Int is elapsedSec: elapsedMs / 1000;
+		local String is bar: self:repeatBar(count: width);
+
+		output:line("");
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔═ Statistics " . self:repeatBar(count: width - 14) . "╗"));
+		output:line(Ansi:color256(code: 51, text: "║ Resolution: " . width . " x " . height . ", maxIter " . maxIter));
+		output:line(Ansi:color256(code: 51, text: "║ Points sampled: " . self:pointsRendered));
+		output:line(Ansi:color256(code: 51, text: "║ Render time: " . elapsedMs . " ms (" . elapsedSec . " s)"));
+		output:line(Ansi:color256(code: 51, text: "║ Peak memory: " . peakKb . " KB (" . peakMb . " MB)"));
+		output:line(Ansi:color256(code: 51, text: "║ Threads used: " . Process:threadCount()));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚" . bar . "╝"));
+	}
+
+	## Builds a horizontal box bar of the given length.
+	##
+	## @param count: Number of `═` segments.
+	## @return: Bar string.
+	replace local Function of String is repeatBar(Int is count){
+		local String is bar: "";
+		local Int is i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return i < count; },
+			iteration: local Function(){
+				bar: bar . "═";
+				i: i + 1;
+			}
+		);
+		return bar;
+	}
+
+	## Centers a title inside a `║ ... ║` border of the given total width.
+	##
+	## @param title: Title text.
+	## @param width: Total rendered width including borders.
+	## @return: Centered, bordered title line.
+	replace local Function of String is centerTitle(String is title, Int is width){
+		local String is line: "║";
+		local Int is pad: width - 2 - title:length();
+		if (pad < 1) {
+			pad: 1;
+		}
+		local Int is left: pad / 2;
+		local Int is right: pad - left;
+		local Int is i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return i < left; },
+			iteration: local Function(){ line: line . " "; i: i + 1; }
+		);
+		line: line . title;
+		i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return i < right; },
+			iteration: local Function(){ line: line . " "; i: i + 1; }
+		);
+		return line . "║";
+	}
+
 	## Entry point rendering both a sub-pixel half-block (`▀`) 256-color Mandelbrot view
 	## and a textured multi-shade (`█▓▒░`) zoom into the Seahorse Valley.
 	replace local Function is init(Map of String to String is args){
-		local Int is width: args:getInt(key: "width", default: 78);
-		local Int is height: args:getInt(key: "height", default: 28);
+		# Width/height default to the console size; explicit args win.
+		local Int is width: args:getInt(key: "width", default: 0);
+		local Int is height: args:getInt(key: "height", default: 0);
 		local Int is maxIter: args:getInt(key: "iter", default: 80);
 		local String is mode: args:getString(key: "mode", default: "both");
+		local Int is startedAtMs: Process:clockMs();
 
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔══════════════════════════════════════════════════════════════════════════════╗"));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "║     Spec 256-Color Mandelbrot Set Renderer (Smooth Escape + UTF-8 Blocks)    ║"));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚══════════════════════════════════════════════════════════════════════════════╝"));
+		if (width <= 0) {
+			width: Ansi:terminalWidth();
+			if (width <= 0) {
+				width: 78;
+			}
+			width: width - 1;
+		}
+		if (height <= 0) {
+			height: Ansi:terminalHeight();
+			if (height <= 0) {
+				height: 28;
+			}
+			height: height - 8;
+			if (height < 12) {
+				height: 12;
+			}
+		}
+
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔" . self:repeatBar(count: width) . "╗"));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: "Spec 256-Color Mandelbrot Set Renderer", width: width)));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚" . self:repeatBar(count: width) . "╝"));
 
 		if (mode == "both" || mode == "shaded") {
 			output:line(Ansi:color256(code: 220, text: "▸ Mode 1: Multi-Glyph Shaded ('█▓▒░') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]"));
@@ -148,6 +240,8 @@ Class is Mandelbrot{
 				maxIm: 0.17
 			);
 		}
+
+		self:printStats(width: width, height: height, maxIter: maxIter, elapsedMs: Process:clockMs() - startedAtMs);
 	}
 
 	## Renders two vertical complex-plane samples per terminal row using the upper half-block `▀`

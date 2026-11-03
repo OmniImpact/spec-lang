@@ -93,6 +93,12 @@ Available via `base:io:File` (`lib/base/io/File.spec`):
 
 ---
 
+### `Ansi:terminalWidth` / `Ansi:terminalHeight`
+- `Ansi:terminalWidth() -> Int` — console width in columns; `0` when stdout is not a terminal.
+- `Ansi:terminalHeight() -> Int` — console height in rows; `0` when stdout is not a terminal.
+
+Detection order: `ioctl(TIOCGWINSZ)`, then the `COLUMNS`/`LINES` environment variables, then built-in defaults (78/24). The zero-when-piped contract lets programs fall back to explicit defaults under redirection and in CI.
+
 ## 2. `base:math`
 
 Importing:
@@ -432,6 +438,11 @@ Represents a call frame in a runtime call stack or debugging trace:
 - `frame:toString() -> String` (e.g. `"Player:takeDamage (Player.spec:42:15)"`)
 
 ---
+
+### Process Introspection
+- `Process:clockMs() -> Int` — monotonic wall-clock milliseconds (measure elapsed time as a difference of two calls).
+- `Process:peakMemoryKb() -> Int` — peak resident set size in kilobytes (`getrusage`), `0` when unavailable.
+- `Process:threadCount() -> Int` — live OS thread count for the current process (`/proc/self/status`), `1` when unavailable.
 
 ## 6. `base:reflect`
 
