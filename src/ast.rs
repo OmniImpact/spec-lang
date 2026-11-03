@@ -66,6 +66,36 @@ pub enum Expression {
         params: Vec<Parameter>,
         body: Vec<Statement>,
     },
+    IfElse {
+        condition: Box<Expression>,
+        then_expr: Box<Expression>,
+        else_expr: Box<Expression>,
+    },
+    When {
+        subject: Box<Expression>,
+        arms: Vec<WhenArm>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhenArm {
+    pub conditions: Vec<Expression>,
+    pub is_else: bool,
+    pub body: Vec<Statement>,
+    pub expr: Option<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumVariant {
+    pub name: String,
+    pub value: Option<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumDef {
+    pub name: String,
+    pub backing_type: Option<Type>,
+    pub variants: Vec<EnumVariant>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -92,8 +122,13 @@ pub enum Statement {
         then_branch: Vec<Statement>,
         else_branch: Option<Vec<Statement>>,
     },
+    When {
+        subject: Expression,
+        arms: Vec<WhenArm>,
+    },
     Return(Option<Expression>),
     Class(ClassDef),
+    Enum(EnumDef),
     Expression(Expression),
 }
 
@@ -113,6 +148,7 @@ pub enum Member {
         body: Vec<Statement>,
     },
     Class(ClassDef),
+    Enum(EnumDef),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -125,4 +161,5 @@ pub struct ClassDef {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub classes: Vec<ClassDef>,
+    pub enums: Vec<EnumDef>,
 }

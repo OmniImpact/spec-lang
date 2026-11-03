@@ -7,6 +7,7 @@ pub struct CodeGenerator {
     field_types: HashMap<String, Type>,
     local_var_types: HashMap<String, Type>,
     all_classes: HashMap<String, ClassDef>,
+    all_enums: HashMap<String, EnumDef>,
     anon_fn_counter: usize,
 }
 
@@ -18,6 +19,7 @@ impl CodeGenerator {
             field_types: HashMap::new(),
             local_var_types: HashMap::new(),
             all_classes: HashMap::new(),
+            all_enums: HashMap::new(),
             anon_fn_counter: 0,
         }
     }
@@ -47,6 +49,21 @@ impl CodeGenerator {
         for class_def in &flattened_classes {
             self.all_classes
                 .insert(class_def.name.clone(), class_def.clone());
+        }
+
+        // Collect enums
+        for e in &program.enums {
+            self.all_enums.insert(e.name.clone(), e.clone());
+        }
+        for class_def in &flattened_classes {
+            self.collect_enums_from_class(class_def);
+        }
+
+        // Emit enum definitions
+        let mut sorted_enums: Vec<_> = self.all_enums.values().cloned().collect();
+        sorted_enums.sort_by(|a, b| a.name.cmp(&b.name));
+        for enum_def in &sorted_enums {
+            out.push_str(&self.generate_enum_def(enum_def)?);
         }
 
         // 2. Forward declare structs
@@ -125,6 +142,153 @@ impl CodeGenerator {
             base_class: class_def.base_class.clone(),
             members: cleaned_members,
         });
+    }
+
+    fn collect_enums_from_class(&mut self, class_def: &ClassDef) {
+        for m in &class_def.members {
+            match m {
+                Member::Enum(edef) => {
+                    self.all_enums.insert(edef.name.clone(), edef.clone());
+                }
+                Member::Class(nested) => {
+                    self.collect_enums_from_class(nested);
+                }
+                Member::Method { body, .. } => {
+                    for stmt in body {
+                        self.collect_enums_from_statement(stmt);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn collect_enums_from_statement(&mut self, stmt: &Statement) {
+        match stmt {
+            Statement::Enum(edef) => {
+                self.all_enums.insert(edef.name.clone(), edef.clone());
+            }
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                for s in then_branch {
+                    self.collect_enums_from_statement(s);
+                }
+                if let Some(eb) = else_branch {
+                    for s in eb {
+                        self.collect_enums_from_statement(s);
+                    }
+                }
+            }
+            Statement::When { arms, .. } => {
+                for a in arms {
+                    for s in &a.body {
+                        self.collect_enums_from_statement(s);
+                    }
+                }
+            }
+            Statement::Class(nested) => {
+                self.collect_enums_from_class(nested);
+            }
+            _ => {}
+        }
+    }
+
+    fn generate_enum_def(&self, enum_def: &EnumDef) -> Result<String, String> {
+        let mut out = String::new();
+        let name = &enum_def.name;
+
+        // 1. typedef enum
+        out.push_str(&format!("typedef enum {{\n"));
+        for (i, v) in enum_def.variants.iter().enumerate() {
+            if let Some(ref val_expr) = v.value {
+                let val_c = match val_expr {
+                    Expression::NumberLiteral(n) => format!("{}", n),
+                    _ => format!("{}", i),
+                };
+                out.push_str(&format!("    {}_{} = {},\n", name, v.name, val_c));
+            } else {
+                out.push_str(&format!("    {}_{} = {},\n", name, v.name, i));
+            }
+        }
+        out.push_str(&format!("}} {};\n\n", name));
+
+        // 2. Names array
+        out.push_str(&format!("static const char* {}_names[] = {{\n", name));
+        for v in &enum_def.variants {
+            out.push_str(&format!("    \"{}\",\n", v.name));
+        }
+        out.push_str("};\n\n");
+
+        // 3. Values array
+        out.push_str(&format!("static const {} {}_all_values[] = {{\n", name, name));
+        for v in &enum_def.variants {
+            out.push_str(&format!("    {}_{},\n", name, v.name));
+        }
+        out.push_str("};\n\n");
+
+        // 4. Backing values if string
+        let is_string_backed = matches!(&enum_def.backing_type, Some(Type::Simple(s)) if s == "String");
+        if is_string_backed {
+            out.push_str(&format!("static const char* {}_backing_values[] = {{\n", name));
+            for v in &enum_def.variants {
+                if let Some(Expression::StringLiteral(ref s)) = v.value {
+                    out.push_str(&format!("    \"{}\",\n", s));
+                } else {
+                    out.push_str(&format!("    \"{}\",\n", v.name));
+                }
+            }
+            out.push_str("};\n\n");
+        }
+
+        // 5. name() method
+        out.push_str(&format!("static inline const char* {}_name({} self) {{\n", name, name));
+        out.push_str("    switch (self) {\n");
+        for v in &enum_def.variants {
+            out.push_str(&format!("        case {}_{}: return \"{}\";\n", name, v.name, v.name));
+        }
+        out.push_str("        default: return \"UNKNOWN\";\n");
+        out.push_str("    }\n}\n\n");
+
+        // 6. value() method
+        if is_string_backed {
+            out.push_str(&format!("static inline const char* {}_value({} self) {{\n", name, name));
+            out.push_str("    switch (self) {\n");
+            for v in &enum_def.variants {
+                let val_str = if let Some(Expression::StringLiteral(ref s)) = v.value {
+                    s.clone()
+                } else {
+                    v.name.clone()
+                };
+                out.push_str(&format!("        case {}_{}: return \"{}\";\n", name, v.name, val_str));
+            }
+            out.push_str("        default: return \"\";\n");
+            out.push_str("    }\n}\n\n");
+        } else {
+            out.push_str(&format!("static inline long long {}_value({} self) {{\n", name, name));
+            out.push_str("    return (long long)self;\n}\n\n");
+        }
+
+        // 7. ordinal() method
+        out.push_str(&format!("static inline long long {}_ordinal({} self) {{\n", name, name));
+        out.push_str("    switch (self) {\n");
+        for (i, v) in enum_def.variants.iter().enumerate() {
+            out.push_str(&format!("        case {}_{}: return {};\n", name, v.name, i));
+        }
+        out.push_str("        default: return -1;\n");
+        out.push_str("    }\n}\n\n");
+
+        // 8. values() static method
+        let count = enum_def.variants.len();
+        out.push_str(&format!("static inline SpecArray* {}_values(void) {{\n", name));
+        out.push_str("    SpecArray* arr = spec_array_new();\n");
+        out.push_str(&format!("    for (size_t i = 0; i < {}; i++) {{\n", count));
+        out.push_str(&format!("        spec_array_add(arr, (void*)(intptr_t){}_all_values[i]);\n", name));
+        out.push_str("    }\n    return arr;\n}\n\n");
+
+        Ok(out)
     }
 
     fn runtime_prelude(&self) -> String {
@@ -611,7 +775,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         .to_string()
     }
 
-    fn c_type_for(t: &Type) -> String {
+    fn c_type_for(&self, t: &Type) -> String {
         match t {
             Type::Simple(name) => match name.as_str() {
                 "Int" | "int" => "long long".to_string(),
@@ -625,6 +789,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 "LoopControl" => "SpecLoopControl*".to_string(),
                 "null" => "void".to_string(),
                 "void" => "void".to_string(),
+                custom if self.all_enums.contains_key(custom) => custom.to_string(),
                 custom if custom == "Array" => "SpecArray*".to_string(),
                 custom if custom == "Map" => "SpecMap*".to_string(),
                 custom if custom == "LoopControl" => "SpecLoopControl*".to_string(),
@@ -638,18 +803,18 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         }
     }
 
-    fn method_return_type(method_name: &str, return_type: &Option<Type>) -> String {
+    fn method_return_type(&self, method_name: &str, return_type: &Option<Type>) -> String {
         if let Some(t) = return_type {
             match t {
                 Type::Simple(name) if name == "Function" || name == "null" => return "void".to_string(),
                 Type::Generic(name, params) if name == "Function" => {
                     if let Some(ret) = params.first() {
-                        return Self::c_type_for(ret);
+                        return self.c_type_for(ret);
                     } else {
                         return "void".to_string();
                     }
                 }
-                _ => return Self::c_type_for(t),
+                _ => return self.c_type_for(t),
             }
         }
         match method_name {
@@ -669,7 +834,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 if name != "using" {
                     out.push_str(&format!(
                         "    {} {};\n",
-                        Self::c_type_for(field_type),
+                        self.c_type_for(field_type),
                         name
                     ));
                 }
@@ -775,7 +940,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 if Self::is_builtin_empty_method(&class_def.name, name, body) {
                     continue;
                 }
-                let ret = Self::method_return_type(name, return_type);
+                let ret = self.method_return_type(name, return_type);
                 let self_type = Self::c_self_type(&class_def.name);
                 out.push_str(&format!(
                     "{} {}_{}({}* self",
@@ -785,13 +950,13 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     let c_type = param
                         .param_type
                         .as_ref()
-                        .map(Self::c_type_for)
+                        .map(|pt| self.c_type_for(pt))
                         .unwrap_or_else(|| {
                             if let Some(field_ty) = class_def.members.iter().find_map(|m| match m {
                                 Member::Field { name, field_type, .. } if name == &param.name => Some(field_type),
                                 _ => None,
                             }) {
-                                Self::c_type_for(field_ty)
+                                self.c_type_for(field_ty)
                             } else {
                                 "void*".to_string()
                             }
@@ -905,7 +1070,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
         self.local_var_types.clear();
 
         let self_type = Self::c_self_type(class_name);
-        let ret = Self::method_return_type(method_name, return_type);
+        let ret = self.method_return_type(method_name, return_type);
         out.push_str(&format!(
             "{} {}_{}({}* self",
             ret, class_name, method_name, self_type
@@ -913,9 +1078,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
 
         for param in params {
             let (c_type, t) = if let Some(pt) = &param.param_type {
-                (Self::c_type_for(pt), pt.clone())
+                (self.c_type_for(pt), pt.clone())
             } else if let Some(ft) = self.field_types.get(&param.name) {
-                (Self::c_type_for(ft), ft.clone())
+                (self.c_type_for(ft), ft.clone())
             } else {
                 ("void*".to_string(), Type::Simple("void*".to_string()))
             };
@@ -952,7 +1117,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 ..
             } => {
                 self.local_var_types.insert(name.clone(), var_type.clone());
-                let c_type = Self::c_type_for(var_type);
+                let c_type = self.c_type_for(var_type);
                 if let Some(init_expr) = init {
                     let init_c = self.generate_expression(init_expr)?;
                     out.push_str(&format!("    {} {} = {};\n", c_type, Self::c_ident(name), init_c));
@@ -961,6 +1126,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         Type::Simple(n) if n == "Int" || n == "int" => "0",
                         Type::Simple(n) if n == "Float" || n == "float" => "0.0",
                         Type::Simple(n) if n == "Boolean" || n == "bool" => "false",
+                        Type::Simple(n) if self.all_enums.contains_key(n) => "0",
                         _ => "NULL",
                     };
                     out.push_str(&format!("    {} {} = {};\n", c_type, Self::c_ident(name), default_init));
@@ -1004,6 +1170,85 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 }
                 out.push_str("    }\n");
             }
+            Statement::When { subject, arms } => {
+                let opt_enum = self.infer_target_enum(subject);
+                if let Some(ref edef) = opt_enum {
+                    let has_else = arms.iter().any(|a| a.is_else);
+                    if !has_else {
+                        let covered_variants: HashSet<String> = arms
+                            .iter()
+                            .flat_map(|a| {
+                                a.conditions.iter().filter_map(|c| match c {
+                                    Expression::Identifier(id) => Some(id.clone()),
+                                    Expression::Path(segs) if segs.len() == 2 => Some(segs[1].clone()),
+                                    _ => None,
+                                })
+                            })
+                            .collect();
+                        let missing: Vec<&str> = edef
+                            .variants
+                            .iter()
+                            .filter(|v| !covered_variants.contains(&v.name))
+                            .map(|v| v.name.as_str())
+                            .collect();
+                        if !missing.is_empty() {
+                            return Err(format!(
+                                "Non-exhaustive 'when' on Enum '{}'. Missing variant(s): {}. Provide explicit branches or an 'else:' fallback.",
+                                edef.name,
+                                missing.join(", ")
+                            ));
+                        }
+                    }
+                }
+
+                let is_str = self.is_string_expr(subject);
+                let subj_c = self.generate_expression(subject)?;
+
+                if !is_str {
+                    out.push_str(&format!("    switch ({}) {{\n", subj_c));
+                    for arm in arms {
+                        if arm.is_else {
+                            out.push_str("    default: {\n");
+                        } else {
+                            for cond in &arm.conditions {
+                                let cond_c = self.resolve_enum_cond(cond, opt_enum.as_ref())?;
+                                out.push_str(&format!("    case {}:\n", cond_c));
+                            }
+                            out.push_str("    {\n");
+                        }
+                        for stmt in &arm.body {
+                            out.push_str(&self.generate_statement(stmt)?);
+                        }
+                        out.push_str("        break;\n    }\n");
+                    }
+                    out.push_str("    }\n");
+                } else {
+                    let mut first = true;
+                    for arm in arms {
+                        if arm.is_else {
+                            out.push_str(" else {\n");
+                        } else {
+                            let mut cond_exprs = Vec::new();
+                            for c in &arm.conditions {
+                                let c_val = self.generate_expression(c)?;
+                                cond_exprs.push(format!("(strcmp({}, {}) == 0)", subj_c, c_val));
+                            }
+                            let joined = cond_exprs.join(" || ");
+                            if first {
+                                out.push_str(&format!("    if ({}) {{\n", joined));
+                                first = false;
+                            } else {
+                                out.push_str(&format!(" else if ({}) {{\n", joined));
+                            }
+                        }
+                        for stmt in &arm.body {
+                            out.push_str(&self.generate_statement(stmt)?);
+                        }
+                        out.push_str("    }");
+                    }
+                    out.push_str("\n");
+                }
+            }
             Statement::Return(opt_expr) => {
                 if let Some(expr) = opt_expr {
                     let val_c = self.generate_expression(expr)?;
@@ -1014,6 +1259,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
             }
             Statement::Class(_) => {
                 // Nested classes are collected upfront into flattened_classes
+            }
+            Statement::Enum(_) => {
+                // Enums are collected upfront and emitted
             }
             Statement::Expression(expr) => {
                 let expr_c = self.generate_expression(expr)?;
@@ -1026,6 +1274,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
     fn generate_path(&self, segments: &[String]) -> String {
         if segments.is_empty() {
             return String::new();
+        }
+        if segments.len() == 2 && self.all_enums.contains_key(&segments[0]) {
+            return format!("{}_{}", segments[0], segments[1]);
         }
         let first = if segments[0] == "self" {
             "self".to_string()
@@ -1095,8 +1346,17 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         return format!("spec_to_string_bool({})", expr_c);
                     }
                 }
-                if method == "indexOf" || method == "execute" || method == "count" || method == "countLeading" {
+                if method == "indexOf" || method == "execute" || method == "count" || method == "countLeading" || method == "ordinal" {
                     return format!("spec_to_string_int({})", expr_c);
+                }
+                if method == "value" {
+                    if let Some(edef) = self.infer_target_enum(target) {
+                        if !matches!(&edef.backing_type, Some(Type::Simple(s)) if s == "String") {
+                            return format!("spec_to_string_int({})", expr_c);
+                        }
+                    } else {
+                        return format!("spec_to_string_int({})", expr_c);
+                    }
                 }
                 if method == "isDigit"
                     || method == "isAlpha"
@@ -1117,7 +1377,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         for m in &cdef.members {
                             if let Member::Method { name, return_type, .. } = m {
                                 if name == method {
-                                    let ret_c = Self::method_return_type(name, return_type);
+                                    let ret_c = self.method_return_type(name, return_type);
                                     if ret_c == "long long" {
                                         return format!("spec_to_string_int({})", expr_c);
                                     } else if ret_c == "double" {
@@ -1176,6 +1436,16 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     expr_c
                 } else {
                     format!("spec_to_string_int({})", expr_c)
+                }
+            }
+            Expression::IfElse { then_expr, .. } => {
+                self.wrap_to_string(then_expr, expr_c)
+            }
+            Expression::When { arms, .. } => {
+                if let Some(first) = arms.iter().find_map(|a| a.expr.as_ref()) {
+                    self.wrap_to_string(first, expr_c)
+                } else {
+                    expr_c
                 }
             }
             _ => expr_c,
@@ -1336,6 +1606,9 @@ long long spec_process_execute(const char* command, SpecArray* args) {
             } => {
                 // Check if target is a Class identifier calling `:init(...)`
                 if let Expression::Identifier(target_name) = target.as_ref() {
+                    if self.all_enums.contains_key(target_name) && method == "values" {
+                        return Ok(format!("{}_values()", target_name));
+                    }
                     if method == "init" {
                         if target_name == "Map" {
                             return Ok("spec_map_new()".to_string());
@@ -1770,6 +2043,24 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     return Ok(format!("((void* (*)(void*))({}))({})", fn_c, joined));
                 }
 
+                // Method call on enum instance
+                if let Some(edef) = self.infer_target_enum(target) {
+                    let target_c = self.generate_expression(target)?;
+                    match method.as_str() {
+                        "name" => return Ok(format!("{}_name({})", edef.name, target_c)),
+                        "value" => return Ok(format!("{}_value({})", edef.name, target_c)),
+                        "ordinal" => return Ok(format!("{}_ordinal({})", edef.name, target_c)),
+                        "toString" => {
+                            if matches!(&edef.backing_type, Some(Type::Simple(s)) if s == "String") {
+                                return Ok(format!("{}_value({})", edef.name, target_c));
+                            } else {
+                                return Ok(format!("{}_name({})", edef.name, target_c));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
                 // Method call on self or other instance
                 let class_name = self.infer_target_class(target);
                 let target_c = if let Expression::Identifier(ref id) = **target {
@@ -1824,7 +2115,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 let old_locals = self.local_var_types.clone();
 
                 let ret_c = if let Some(t) = return_type {
-                    Self::c_type_for(t)
+                    self.c_type_for(t)
                 } else {
                     fn find_return(stmts: &[Statement]) -> Option<&Expression> {
                         for s in stmts {
@@ -1878,7 +2169,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     let c_t = p
                         .param_type
                         .as_ref()
-                        .map(Self::c_type_for)
+                        .map(|t| self.c_type_for(t))
                         .unwrap_or_else(|| "void*".to_string());
                     self.local_var_types.insert(p.name.clone(), pt);
                     param_c_list.push(format!("{} {}", c_t, Self::c_ident(&p.name)));
@@ -1899,6 +2190,210 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     "({{ {} {}({}) {{\n{} }}; {}; }})",
                     ret_c, fn_name, params_c, body_c, fn_name
                 ))
+            }
+            Expression::IfElse {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
+                let cond_c = self.generate_expression(condition)?;
+                let then_c = self.generate_expression(then_expr)?;
+                let else_c = self.generate_expression(else_expr)?;
+                Ok(format!("(({}) ? ({}) : ({}))", cond_c, then_c, else_c))
+            }
+            Expression::When { subject, arms } => {
+                let opt_enum = self.infer_target_enum(subject);
+                if let Some(ref edef) = opt_enum {
+                    let has_else = arms.iter().any(|a| a.is_else);
+                    if !has_else {
+                        let covered_variants: HashSet<String> = arms
+                            .iter()
+                            .flat_map(|a| {
+                                a.conditions.iter().filter_map(|c| match c {
+                                    Expression::Identifier(id) => Some(id.clone()),
+                                    Expression::Path(segs) if segs.len() == 2 => Some(segs[1].clone()),
+                                    _ => None,
+                                })
+                            })
+                            .collect();
+                        let missing: Vec<&str> = edef
+                            .variants
+                            .iter()
+                            .filter(|v| !covered_variants.contains(&v.name))
+                            .map(|v| v.name.as_str())
+                            .collect();
+                        if !missing.is_empty() {
+                            return Err(format!(
+                                "Non-exhaustive 'when' on Enum '{}'. Missing variant(s): {}. Provide explicit branches or an 'else:' fallback.",
+                                edef.name,
+                                missing.join(", ")
+                            ));
+                        }
+                    }
+                } else {
+                    let has_else = arms.iter().any(|a| a.is_else);
+                    if !has_else {
+                        return Err(
+                            "When expression on non-enum type must have an 'else:' fallback branch.".to_string(),
+                        );
+                    }
+                }
+
+                let ret_c = if arms.iter().any(|a| {
+                    if let Some(ref e) = a.expr {
+                        self.is_string_expr(e)
+                    } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                        self.is_string_expr(e)
+                    } else {
+                        false
+                    }
+                }) {
+                    "const char*"
+                } else if arms.iter().any(|a| {
+                    let check = |e: &Expression| matches!(e, Expression::BooleanLiteral(_));
+                    if let Some(ref e) = a.expr {
+                        check(e)
+                    } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                        check(e)
+                    } else {
+                        false
+                    }
+                }) {
+                    "bool"
+                } else if arms.iter().any(|a| {
+                    let check = |e: &Expression| matches!(e, Expression::FloatLiteral(_));
+                    if let Some(ref e) = a.expr {
+                        check(e)
+                    } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                        check(e)
+                    } else {
+                        false
+                    }
+                }) {
+                    "double"
+                } else if arms.iter().any(|a| {
+                    let check = |e: &Expression| matches!(e, Expression::NumberLiteral(_));
+                    if let Some(ref e) = a.expr {
+                        check(e)
+                    } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                        check(e)
+                    } else {
+                        false
+                    }
+                }) {
+                    "long long"
+                } else {
+                    let mut arm_enum = None;
+                    for a in arms {
+                        if let Some(ref e) = a.expr {
+                            if let Some(edef) = self.infer_target_enum(e) {
+                                arm_enum = Some(edef.name);
+                                break;
+                            }
+                        } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                            if let Some(edef) = self.infer_target_enum(e) {
+                                arm_enum = Some(edef.name);
+                                break;
+                            }
+                        }
+                    }
+                    if let Some(ename) = arm_enum {
+                        Box::leak(ename.into_boxed_str()) as &str
+                    } else {
+                        "void*"
+                    }
+                };
+
+                let default_val = match ret_c {
+                    "const char*" => "\"\"",
+                    "bool" => "false",
+                    "double" => "0.0",
+                    "void*" => "NULL",
+                    _ => "0",
+                };
+
+                let is_str = self.is_string_expr(subject);
+                let subj_c = self.generate_expression(subject)?;
+
+                let mut out = String::new();
+                out.push_str("({\n");
+                out.push_str(&format!("        {} _when_res = {};\n", ret_c, default_val));
+                if !is_str {
+                    out.push_str(&format!("        switch ({}) {{\n", subj_c));
+                    for arm in arms {
+                        if arm.is_else {
+                            out.push_str("        default: {\n");
+                        } else {
+                            for cond in &arm.conditions {
+                                let cond_c = self.resolve_enum_cond(cond, opt_enum.as_ref())?;
+                                out.push_str(&format!("        case {}:\n", cond_c));
+                            }
+                            out.push_str("        {\n");
+                        }
+                        if let Some(ref e) = arm.expr {
+                            let val_c = self.generate_expression(e)?;
+                            out.push_str(&format!("            _when_res = ({});\n", val_c));
+                        } else if !arm.body.is_empty() {
+                            let len = arm.body.len();
+                            for stmt in &arm.body[..len - 1] {
+                                out.push_str(&self.generate_statement(stmt)?);
+                            }
+                            match &arm.body[len - 1] {
+                                Statement::Return(Some(e)) | Statement::Expression(e) => {
+                                    let val_c = self.generate_expression(e)?;
+                                    out.push_str(&format!("            _when_res = ({});\n", val_c));
+                                }
+                                other => {
+                                    out.push_str(&self.generate_statement(other)?);
+                                }
+                            }
+                        }
+                        out.push_str("            break;\n        }\n");
+                    }
+                    out.push_str("        }\n");
+                } else {
+                    let mut first = true;
+                    for arm in arms {
+                        if arm.is_else {
+                            out.push_str(" else {\n");
+                        } else {
+                            let mut cond_exprs = Vec::new();
+                            for c in &arm.conditions {
+                                let c_val = self.generate_expression(c)?;
+                                cond_exprs.push(format!("(strcmp({}, {}) == 0)", subj_c, c_val));
+                            }
+                            let joined = cond_exprs.join(" || ");
+                            if first {
+                                out.push_str(&format!("        if ({}) {{\n", joined));
+                                first = false;
+                            } else {
+                                out.push_str(&format!(" else if ({}) {{\n", joined));
+                            }
+                        }
+                        if let Some(ref e) = arm.expr {
+                            let val_c = self.generate_expression(e)?;
+                            out.push_str(&format!("            _when_res = ({});\n", val_c));
+                        } else if !arm.body.is_empty() {
+                            let len = arm.body.len();
+                            for stmt in &arm.body[..len - 1] {
+                                out.push_str(&self.generate_statement(stmt)?);
+                            }
+                            match &arm.body[len - 1] {
+                                Statement::Return(Some(e)) | Statement::Expression(e) => {
+                                    let val_c = self.generate_expression(e)?;
+                                    out.push_str(&format!("            _when_res = ({});\n", val_c));
+                                }
+                                other => {
+                                    out.push_str(&self.generate_statement(other)?);
+                                }
+                            }
+                        }
+                        out.push_str("        }");
+                    }
+                    out.push_str("\n");
+                }
+                out.push_str("        _when_res;\n    })");
+                Ok(out)
             }
         }
     }
@@ -1943,7 +2438,15 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     false
                 }
             }
-            Expression::MethodCall { method, .. } => {
+            Expression::MethodCall { target, method, .. } => {
+                if method == "name" {
+                    return true;
+                }
+                if method == "value" {
+                    if let Some(edef) = self.infer_target_enum(target) {
+                        return matches!(&edef.backing_type, Some(Type::Simple(s)) if s == "String");
+                    }
+                }
                 matches!(
                     method.as_str(),
                     "charAt"
@@ -1956,6 +2459,18 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         | "advance"
                         | "trim"
                 )
+            }
+            Expression::IfElse { then_expr, .. } => self.is_string_expr(then_expr),
+            Expression::When { arms, .. } => {
+                arms.iter().any(|a| {
+                    if let Some(ref e) = a.expr {
+                        self.is_string_expr(e)
+                    } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                        self.is_string_expr(e)
+                    } else {
+                        false
+                    }
+                })
             }
             Expression::Binary {
                 op: BinaryOp::Concat,
@@ -2026,6 +2541,85 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 "Loop".to_string()
             }
             _ => "Loop".to_string(),
+        }
+    }
+
+    fn infer_target_enum(&self, expr: &Expression) -> Option<EnumDef> {
+        match expr {
+            Expression::Identifier(id) => {
+                if let Some(edef) = self.all_enums.get(id) {
+                    return Some(edef.clone());
+                }
+                let t = self
+                    .local_var_types
+                    .get(id)
+                    .or_else(|| self.field_types.get(id));
+                if let Some(Type::Simple(name)) = t {
+                    if let Some(edef) = self.all_enums.get(name) {
+                        return Some(edef.clone());
+                    }
+                }
+            }
+            Expression::Path(segments) => {
+                if segments.len() == 2 && self.all_enums.contains_key(&segments[0]) {
+                    return self.all_enums.get(&segments[0]).cloned();
+                }
+                if let Some(last) = segments.last() {
+                    let t = self
+                        .local_var_types
+                        .get(last)
+                        .or_else(|| self.field_types.get(last));
+                    if let Some(Type::Simple(name)) = t {
+                        if let Some(edef) = self.all_enums.get(name) {
+                            return Some(edef.clone());
+                        }
+                    }
+                }
+            }
+            Expression::IfElse { then_expr, .. } => {
+                return self.infer_target_enum(then_expr);
+            }
+            Expression::When { arms, .. } => {
+                for a in arms {
+                    if let Some(ref e) = a.expr {
+                        if let Some(edef) = self.infer_target_enum(e) {
+                            return Some(edef);
+                        }
+                    } else if let Some(Statement::Return(Some(e))) | Some(Statement::Expression(e)) = a.body.last() {
+                        if let Some(edef) = self.infer_target_enum(e) {
+                            return Some(edef);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        None
+    }
+
+    fn resolve_enum_cond(
+        &mut self,
+        cond: &Expression,
+        opt_enum: Option<&EnumDef>,
+    ) -> Result<String, String> {
+        match cond {
+            Expression::Identifier(id) => {
+                if let Some(edef) = opt_enum {
+                    if edef.variants.iter().any(|v| &v.name == id) {
+                        return Ok(format!("{}_{}", edef.name, id));
+                    }
+                }
+                for edef in self.all_enums.values() {
+                    if edef.variants.iter().any(|v| &v.name == id) {
+                        return Ok(format!("{}_{}", edef.name, id));
+                    }
+                }
+                self.generate_expression(cond)
+            }
+            Expression::Path(segs) if segs.len() == 2 && self.all_enums.contains_key(&segs[0]) => {
+                Ok(format!("{}_{}", segs[0], segs[1]))
+            }
+            _ => self.generate_expression(cond),
         }
     }
 

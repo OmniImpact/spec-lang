@@ -96,6 +96,20 @@ impl Linter {
                     }
                 }
             }
+            Statement::When { subject, arms } => {
+                Self::lint_expr(subject, issues);
+                for arm in arms {
+                    for cond in &arm.conditions {
+                        Self::lint_expr(cond, issues);
+                    }
+                    for s in &arm.body {
+                        Self::lint_statement(s, issues);
+                    }
+                    if let Some(e) = &arm.expr {
+                        Self::lint_expr(e, issues);
+                    }
+                }
+            }
             Statement::Return(opt_expr) => {
                 if let Some(expr) = opt_expr {
                     Self::lint_expr(expr, issues);
@@ -104,6 +118,7 @@ impl Linter {
             Statement::Class(nested) => {
                 Self::lint_class(nested, issues);
             }
+            Statement::Enum(_) => {}
             Statement::Expression(expr) => {
                 Self::lint_expr(expr, issues);
             }
@@ -162,6 +177,29 @@ impl Linter {
             Expression::AnonymousFunction { body, .. } => {
                 for s in body {
                     Self::lint_statement(s, issues);
+                }
+            }
+            Expression::IfElse {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
+                Self::lint_expr(condition, issues);
+                Self::lint_expr(then_expr, issues);
+                Self::lint_expr(else_expr, issues);
+            }
+            Expression::When { subject, arms } => {
+                Self::lint_expr(subject, issues);
+                for arm in arms {
+                    for cond in &arm.conditions {
+                        Self::lint_expr(cond, issues);
+                    }
+                    for s in &arm.body {
+                        Self::lint_statement(s, issues);
+                    }
+                    if let Some(e) = &arm.expr {
+                        Self::lint_expr(e, issues);
+                    }
                 }
             }
             _ => {}

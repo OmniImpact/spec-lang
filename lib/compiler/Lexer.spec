@@ -223,7 +223,7 @@ class Lexer{
 		if (text == "is" || text == "of" || text == "to" || text == "return") {
 			return true;
 		}
-		if (text == "if" || text == "else") {
+		if (text == "if" || text == "else" || text == "when") {
 			return true;
 		}
 		return false;

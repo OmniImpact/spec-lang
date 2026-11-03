@@ -14,6 +14,7 @@
       <item>return</item>
       <item>if</item>
       <item>else</item>
+      <item>when</item>
       <item>self</item>
       <item>using</item>
     </list>
@@ -26,6 +27,7 @@
       <item>Map</item>
       <item>Any</item>
       <item>Function</item>
+      <item>Enum</item>
     </list>
     <list name="constants">
       <item>true</item>

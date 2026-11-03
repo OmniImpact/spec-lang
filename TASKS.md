@@ -67,3 +67,9 @@ $ Implement `self:field` automatic constructor property initialization in parser
 $ Refactor Linter.spec using new higher-order methods and syntactic sugar
 $ Verify lint, tests, and documentation across repository
 $ Commit and tag release
+$ Implement inline `if/else` conditional expression in AST, parser, and codegen
+$ Implement `Enum` and `Enum of Type` in AST, lexer, parser, and codegen
+$ Implement `when` statement and expression in AST, lexer, parser, and codegen with exhaustiveness checking
+$ Create comprehensive test suite examples/enum_when_test.spec and verify execution
+$ Update documentation (docs/language/README.md, docs/packages/README.md)
+$ Verify lint, tests, commit and tag release

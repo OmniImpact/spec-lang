@@ -55,6 +55,13 @@ impl ModuleLoader {
 
         let mut all_classes = Vec::new();
         let mut seen_class_names = HashSet::new();
+        let mut all_enums = Vec::new();
+        let mut seen_enum_names = HashSet::new();
+
+        for e in &root_program.enums {
+            seen_enum_names.insert(e.name.clone());
+            all_enums.push(e.clone());
+        }
 
         // Root entry classes first
         for c in &root_program.classes {
@@ -94,11 +101,17 @@ impl ModuleLoader {
                         }
                         self.collect_imports(dep_c, &mut pending_imports);
                     }
+                    for dep_e in &dep_prog.enums {
+                        if seen_enum_names.insert(dep_e.name.clone()) {
+                            all_enums.push(dep_e.clone());
+                        }
+                    }
                 }
             }
         }
 
         root_program.classes = all_classes;
+        root_program.enums = all_enums;
         Ok(root_program)
     }
 

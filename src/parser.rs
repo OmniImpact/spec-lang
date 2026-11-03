@@ -66,10 +66,22 @@ impl Parser {
 
     pub fn parse_program(&mut self) -> Result<Program, String> {
         let mut classes = Vec::new();
+        let mut enums = Vec::new();
         while !self.check(&TokenKind::Eof) {
-            classes.push(self.parse_class()?);
+            if self.check(&TokenKind::Class) {
+                classes.push(self.parse_class()?);
+            } else if matches!(&self.peek_token().kind, TokenKind::Ident(id) if id == "Enum") {
+                enums.push(self.parse_enum()?);
+            } else {
+                return Err(format!(
+                    "Expected Class or Enum, found {:?} at line {}, col {}",
+                    self.peek_token().kind,
+                    self.peek_token().line,
+                    self.peek_token().col
+                ));
+            }
         }
-        Ok(Program { classes })
+        Ok(Program { classes, enums })
     }
 
     pub fn parse_class(&mut self) -> Result<ClassDef, String> {
@@ -117,6 +129,11 @@ impl Parser {
         if self.check(&TokenKind::Class) {
             let class_def = self.parse_class()?;
             return Ok(Member::Class(class_def));
+        }
+
+        if matches!(&self.peek_token().kind, TokenKind::Ident(id) if id == "Enum") {
+            let enum_def = self.parse_enum()?;
+            return Ok(Member::Enum(enum_def));
         }
 
         let mut modifiers = Vec::new();
@@ -320,10 +337,147 @@ impl Parser {
         }
     }
 
+    fn parse_enum(&mut self) -> Result<EnumDef, String> {
+        self.advance(); // consume 'Enum'
+        let backing_type = if self.check(&TokenKind::Of) {
+            self.advance(); // consume 'of'
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+        self.expect(&TokenKind::Is)?;
+        let name = match self.advance().kind {
+            TokenKind::Ident(n) => n,
+            other => return Err(format!("Expected Enum name, found {:?}", other)),
+        };
+        self.expect(&TokenKind::LBrace)?;
+        let mut variants = Vec::new();
+        while !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Eof) {
+            let v_name = match self.advance().kind {
+                TokenKind::Ident(n) => n,
+                other => return Err(format!("Expected enum variant name, found {:?}", other)),
+            };
+            let value = if self.check(&TokenKind::Colon) {
+                self.advance(); // consume ':'
+                Some(self.parse_expression()?)
+            } else {
+                None
+            };
+            variants.push(EnumVariant { name: v_name, value });
+            if self.check(&TokenKind::Comma) {
+                self.advance();
+            }
+        }
+        self.expect(&TokenKind::RBrace)?;
+        if self.check(&TokenKind::Semicolon) {
+            self.advance();
+        }
+        Ok(EnumDef {
+            name,
+            backing_type,
+            variants,
+        })
+    }
+
+    fn parse_when_arms(&mut self) -> Result<Vec<WhenArm>, String> {
+        self.expect(&TokenKind::LBrace)?;
+        let mut arms = Vec::new();
+        while !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Eof) {
+            if self.check(&TokenKind::Is) {
+                self.advance(); // consume 'is'
+                let mut conditions = Vec::new();
+                loop {
+                    conditions.push(self.parse_expression()?);
+                    if self.check(&TokenKind::Comma) {
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+                self.expect(&TokenKind::Colon)?;
+                if self.check(&TokenKind::LBrace) {
+                    self.advance(); // consume '{'
+                    let mut body = Vec::new();
+                    while !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Eof) {
+                        body.push(self.parse_statement()?);
+                    }
+                    self.expect(&TokenKind::RBrace)?;
+                    arms.push(WhenArm {
+                        conditions,
+                        is_else: false,
+                        body,
+                        expr: None,
+                    });
+                } else {
+                    let expr = self.parse_expression()?;
+                    if self.check(&TokenKind::Semicolon) {
+                        self.advance();
+                    }
+                    arms.push(WhenArm {
+                        conditions,
+                        is_else: false,
+                        body: vec![Statement::Expression(expr.clone())],
+                        expr: Some(expr),
+                    });
+                }
+            } else if self.check(&TokenKind::Else) {
+                self.advance(); // consume 'else'
+                self.expect(&TokenKind::Colon)?;
+                if self.check(&TokenKind::LBrace) {
+                    self.advance(); // consume '{'
+                    let mut body = Vec::new();
+                    while !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Eof) {
+                        body.push(self.parse_statement()?);
+                    }
+                    self.expect(&TokenKind::RBrace)?;
+                    arms.push(WhenArm {
+                        conditions: Vec::new(),
+                        is_else: true,
+                        body,
+                        expr: None,
+                    });
+                } else {
+                    let expr = self.parse_expression()?;
+                    if self.check(&TokenKind::Semicolon) {
+                        self.advance();
+                    }
+                    arms.push(WhenArm {
+                        conditions: Vec::new(),
+                        is_else: true,
+                        body: vec![Statement::Expression(expr.clone())],
+                        expr: Some(expr),
+                    });
+                }
+            } else {
+                return Err(format!(
+                    "Expected 'is' or 'else' in when block, found {:?} at line {}",
+                    self.peek_token().kind,
+                    self.peek_token().line
+                ));
+            }
+        }
+        self.expect(&TokenKind::RBrace)?;
+        Ok(arms)
+    }
+
     fn parse_statement(&mut self) -> Result<Statement, String> {
         if self.check(&TokenKind::Class) {
             let class_def = self.parse_class()?;
             return Ok(Statement::Class(class_def));
+        }
+
+        if matches!(&self.peek_token().kind, TokenKind::Ident(id) if id == "Enum") {
+            let enum_def = self.parse_enum()?;
+            return Ok(Statement::Enum(enum_def));
+        }
+
+        if self.check(&TokenKind::When) {
+            self.advance(); // consume 'when'
+            self.expect(&TokenKind::LParen)?;
+            let subject = self.parse_expression()?;
+            self.expect(&TokenKind::RParen)?;
+            let arms = self.parse_when_arms()?;
+            return Ok(Statement::When { subject, arms });
         }
 
         if self.check(&TokenKind::If) {
@@ -840,6 +994,33 @@ impl Parser {
                 return_type,
                 params,
                 body,
+            });
+        }
+
+        if self.check(&TokenKind::If) {
+            self.advance(); // consume 'if'
+            self.expect(&TokenKind::LParen)?;
+            let condition = self.parse_expression()?;
+            self.expect(&TokenKind::RParen)?;
+            let then_expr = self.parse_expression()?;
+            self.expect(&TokenKind::Else)?;
+            let else_expr = self.parse_expression()?;
+            return Ok(Expression::IfElse {
+                condition: Box::new(condition),
+                then_expr: Box::new(then_expr),
+                else_expr: Box::new(else_expr),
+            });
+        }
+
+        if self.check(&TokenKind::When) {
+            self.advance(); // consume 'when'
+            self.expect(&TokenKind::LParen)?;
+            let subject = self.parse_expression()?;
+            self.expect(&TokenKind::RParen)?;
+            let arms = self.parse_when_arms()?;
+            return Ok(Expression::When {
+                subject: Box::new(subject),
+                arms,
             });
         }
 

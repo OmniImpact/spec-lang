@@ -11,21 +11,25 @@
    - [Classes & Entry Point](#classes--entry-point)
    - [Variables & Declarations](#variables--declarations)
    - [Functions & Methods](#functions--methods)
+   - [First-Class Enums (`Enum` & `Enum of Type`)](#first-class-enums)
    - [Imports & `using`](#imports--using)
 2. [Types & Literals](#types--literals)
    - [Primitives](#primitives)
    - [String Literals](#string-literals)
    - [Generic Collections](#generic-collections)
    - [The `Function` Type](#the-function-type)
+   - [The `Enum` Type](#the-enum-type)
    - [The `Any` Type](#the-any-type)
 3. [The "Never Null" Standard](#the-never-null-standard)
 4. [Operators & Expressions](#operators--expressions)
    - [Arithmetic Operators](#arithmetic-operators)
    - [String Concatenation](#string-concatenation)
    - [Member Access & Method Calls](#member-access--method-calls)
+   - [Inline Conditional Expressions (`if` / `else`)](#inline-conditional-expressions)
    - [String Inspection Primitives](#string-inspection-primitives)
 5. [Control Flow & Branching](#control-flow--branching)
    - [Conditionals (`if` / `else`)](#conditionals)
+   - [Branching with `when` (`when` Statements & Expressions)](#branching-with-when)
 6. [Unlockable Concurrency & Iteration Model](#unlockable-concurrency--iteration-model)
    - [Pure Loop Decoupling (`Loop`, `While:run`)](#pure-loop-decoupling)
    - [Terminating Iterations (No `break` Keyword)](#terminating-iterations-no-break-keyword)
@@ -109,6 +113,45 @@ local Boolean is hasMatch: words:any(predicate: local Function of Boolean(String
 	return word is "target";
 });
 ```
+
+### First-Class Enums
+Enums in Spec are defined using the `Enum` type, modeled directly after `Function`. Enums can be discrete (unbacked) or explicitly backed by a primitive type like `Int` or `String`:
+
+#### Discrete Enum
+```spec
+Enum is TokenKind {
+	KEYWORD,
+	IDENTIFIER,
+	NUMBER,
+	STRING,
+	EOF
+}
+```
+
+#### Backed Enum (`Enum of Type is Name`)
+```spec
+Enum of Int is HttpStatus {
+	OK: 200,
+	CREATED: 201,
+	NOT_FOUND: 404,
+	SERVER_ERROR: 500
+}
+
+Enum of String is LogLevel {
+	DEBUG: "DBG",
+	INFO: "INF",
+	WARN: "WRN",
+	ERROR: "ERR"
+}
+```
+
+#### Enum Reflection & Methods
+Every enum type provides built-in reflection and inspection methods:
+- `Enum:values() -> Array`: Returns an array containing all variants of the enum.
+- `instance:name() -> String`: Returns the identifier name of the variant (e.g. `"NOT_FOUND"`).
+- `instance:value() -> Value`: Returns the backing value (or ordinal integer if unbacked).
+- `instance:ordinal() -> Int`: Returns the 0-indexed discrete ordinal position.
+- `instance:toString() -> String`: Formats the enum variant for display.
 
 ### Imports & `using`
 Packages are imported via the class `using` property:
@@ -211,6 +254,14 @@ output:line("Log text");
 local Float is r: math:round(value: 3.7);
 ```
 
+### Inline Conditional Expressions
+Spec provides inline `if (...) expr else expr` conditionals without punctuation ambiguity (`?:`). Both branches are required to uphold Spec's "Never Null" standard:
+
+```spec
+local String is status: if (isReady) "Ready" else "Pending";
+local String is grade: if (score >= 90) "A" else if (score >= 80) "B" else "C";
+```
+
 ### String Inspection Primitives
 - `str:length() -> Int`
 - `str:charAt(index: Int, default: String) -> String`
@@ -240,6 +291,39 @@ if (score is 21) {
 	output:line("Continue play");
 }
 ```
+
+### Branching with `when`
+The `when` keyword provides isolated branch matching for both statements and expressions without fallthrough (no `break` required). Branches match using the `is` operator, can match multiple candidates via comma separation (`is A, B:`), and conclude with an optional or required `else:` fallback.
+
+#### `when` Statement
+```spec
+when (status) {
+	is OK, CREATED: {
+		output:line("Success");
+	}
+	is NOT_FOUND: {
+		output:line("Resource not found");
+	}
+	else: {
+		output:line("Other error");
+	}
+}
+```
+
+#### `when` Expression
+When used as an expression, `when` returns a value. For `Enum` subjects, the compiler verifies full exhaustiveness at compile time—if all variants are covered, `else:` may be omitted:
+
+```spec
+local String is description: when (tok) {
+	is KEYWORD: "Reserved Keyword";
+	is IDENTIFIER: "Type or Variable Name";
+	is NUMBER: "Numeric Literal";
+	is STRING: "String Constant";
+	is EOF: "End of Input";
+};
+```
+
+If an enum variant is missing, the compiler enforces an explicit `else:` fallback or raises a compile-time exhaustiveness error. For open types (such as `Int` or `String`), `else:` is strictly required.
 
 ---
 
