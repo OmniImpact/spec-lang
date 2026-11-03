@@ -123,8 +123,8 @@ This copies `utilities/spec-kate.xml` to KDE syntax definition directories:
 ### XML Definition Rules
 The syntax definition provides:
 - **File Matching**: Automatically activates for all `*.spec` files.
-- **Keywords**: Highlights `class`, `replace`, `local`, `is`, `using`, `while`, `break`, `if`, `else`.
-- **Types**: Highlights primitive and object types (`Int`, `Float`, `String`, `Boolean`, `Any`, `Array`, `Map`).
+- **Keywords**: Highlights `class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`.
+- **Types**: Highlights primitive and object types (`Int`, `Float`, `String`, `Boolean`, `Function`, `Any`, `Array`, `Map`).
 - **Packages**: Context-aware coloring for package paths (`base:io`, `base:math`, `base:struct`, `base:iterator`, `base:sys`).
 - **Comments**: Highlights single-line `#` comments.
 - **String Literals**: Supports double-quoted escape sequences and single-quoted raw expressions.
