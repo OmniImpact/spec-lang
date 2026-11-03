@@ -2,7 +2,9 @@ class SyntacticSugarTest{
 
 	replace local Array of String is using: [
 		base:io:*,
-		base:struct:Array
+		base:struct:Array,
+		base:struct:Map,
+		base:iterator:While
 	];
 
 	replace local Function is init(Map of String to String is args){
@@ -76,6 +78,32 @@ class SyntacticSugarTest{
 		aWords:each(action: local Function(item){
 			output:line("Filtered item: " . item);
 		});
+
+		# 5. Test String:contains, String:endsWith, String:replaceAll, String:split, Array:join
+		local String is pathStr: "/usr/local/bin/spec";
+		output:line("contains 'local': " . pathStr:contains(needle: "local"));
+		output:line("endsWith 'spec': " . pathStr:endsWith(suffix: "spec"));
+		local String is replacedStr: pathStr:replaceAll(search: "/", replacement: "::");
+		output:line("replaceAll: " . replacedStr);
+		local Array of String is parts: "alpha,beta,gamma":split(delimiter: ",");
+		output:line("split & join: " . parts:join(separator: " | "));
+
+		# 6. Test Generic Map of String to Object & Int
+		local Map of String to Issue is issueMap: Map:init();
+		issueMap:set(key: "first", value: issue);
+		local Issue is fetchedIssue: issueMap:get(key: "first", default: issue);
+		output:line("Generic Map Issue line: " . fetchedIssue:getLine());
+
+		# 7. Test While:condition inline loop
+		local Int is counter: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return counter < 3; },
+			iteration: local Function of Boolean(){
+				counter: counter + 1;
+				return true;
+			}
+		);
+		output:line("While:condition counter: " . counter);
 
 		output:line("=== Syntactic Sugar Test Completed Successfully ===");
 	}

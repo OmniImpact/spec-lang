@@ -4,6 +4,10 @@
 ## Dispatches external system commands and manages operating system subprocesses.
 class Process{
 
+	replace local Array of String is using: [
+		base:struct:Array
+	];
+
 	## Spawns a child process executing [command] with [args], waiting for completion.
 	##
 	## @param command: System binary or executable name to invoke.
@@ -24,6 +28,12 @@ class Process{
 	## Process:sleep(milliseconds: 100);
 	## ```
 	replace Function is sleep(Int is milliseconds){
+	}
+
+	## Returns the operating system process identifier (PID) of the current process.
+	##
+	## @return: Current process ID integer.
+	replace Function of Int is getPid(){
 	}
 
 }

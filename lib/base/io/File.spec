@@ -50,4 +50,11 @@ class File{
 	replace Function of Boolean is exists(String is path){
 	}
 
+	## Deletes a file at the specified filesystem path.
+	##
+	## @param path: Path of the file to remove.
+	## @return: `true` if removed successfully, `false` otherwise.
+	replace Function of Boolean is remove(String is path){
+	}
+
 }

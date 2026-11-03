@@ -96,7 +96,7 @@ class CBackendUtils{
 	replace local Function of Boolean is isBuiltinClass(String is name){
 		return name == "Array" || name == "Map" || name == "File" || name == "LoopControl" ||
 			name == "Process" || name == "Output" || name == "Input" || name == "Math" ||
-			name == "While" || name == "Loop";
+			name == "While" || name == "Loop" || name == "LoopCallback" || name == "InputHandler";
 	}
 
 	## Resolves the C return type of a method signature descriptor.

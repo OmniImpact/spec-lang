@@ -59,6 +59,20 @@ class BuiltinCallGenerator{
 			return "({ void* _lp = (void*)(" . loopC . "); SpecLoopControl* _ctrl = (SpecLoopControl*)(" . ctrlC . "); while (" . loopClass . "_evaluate((void*)_lp)) { if (!" . loopClass . "_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } })";
 		}
 
+		# Lightweight predicate loop: While:condition(evaluate, iteration)
+		if (targetC == "While" && expr:methodName == "condition" && expr:methodArgs:length() >= 2) {
+			local NamedArg is a0: expr:methodArgs:get(index: 0);
+			local NamedArg is a1: expr:methodArgs:get(index: 1);
+			local Expression is evalExpr: a0:getValue();
+			local Expression is iterExpr: a1:getValue();
+			if (evalExpr:getKind() == "ANON_FN" && iterExpr:getKind() == "ANON_FN") {
+				return cg:generateInlineWhileCondition(evalExpr: evalExpr, iterExpr: iterExpr);
+			}
+			local String is evalC: cg:generateExpression(expr: evalExpr);
+			local String is iterC: cg:generateExpression(expr: iterExpr);
+			return "({ bool (*_ev)(void) = (bool (*)(void))(" . evalC . "); void (*_it)(void) = (void (*)(void))(" . iterC . "); while (_ev && _ev()) { if (_it) _it(); } })";
+		}
+
 		# Input static methods
 		if (targetC == "Input" && expr:methodName == "prompt" && expr:methodArgs:length() > 0) {
 			local NamedArg is promptArg: expr:methodArgs:get(index: 0);
@@ -109,6 +123,9 @@ class BuiltinCallGenerator{
 				});
 				return "spec_process_sleep(" . msC . ")";
 			}
+			if (expr:methodName == "getPid") {
+				return "spec_process_get_pid()";
+			}
 		}
 
 		# File static methods
@@ -119,6 +136,13 @@ class BuiltinCallGenerator{
 					if (arg:getName() == "path") { pathC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return "spec_file_exists(" . pathC . ")";
+			}
+			if (expr:methodName == "remove") {
+				local String is pathC: "\"\"";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "path") { pathC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_file_remove(" . pathC . ")";
 			}
 			if (expr:methodName == "read") {
 				local String is pathC: "\"\"";
@@ -216,18 +240,28 @@ class BuiltinCallGenerator{
 		}
 
 		# Map methods
-		if (targetC == "Map" || expr:methodName == "set" || expr:methodName == "getString" || expr:methodName == "has" || expr:methodName == "keys") {
+		if (targetC == "Map" || targetType == "Map" || targetType:startsWith(prefix: "Map:") ||
+			expr:methodName == "set" || expr:methodName == "getString" || expr:methodName == "getInt" ||
+			expr:methodName == "getFloat" || expr:methodName == "getBool" || expr:methodName == "has" || expr:methodName == "keys") {
 			if (expr:methodName == "init") {
 				return "spec_map_new()";
 			}
 			if (expr:methodName == "set") {
 				local String is keyC: "\"\"";
 				local String is valC: "\"\"";
+				local Boolean is valIsStr: true;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "key") { keyC: cg:generateExpression(expr: arg:getValue()); }
-					if (arg:getName() == "value") { valC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "value") {
+						local Expression is valExpr: arg:getValue();
+						valC: cg:generateExpression(expr: valExpr);
+						valIsStr: cg:isStringExpr(expr: valExpr);
+					}
 				});
-				return "spec_map_set(" . targetC . ", " . keyC . ", " . valC . ")";
+				if (valIsStr) {
+					return "spec_map_set(" . targetC . ", " . keyC . ", " . valC . ")";
+				}
+				return "spec_map_set_any(" . targetC . ", " . keyC . ", (void*)(intptr_t)(" . valC . "))";
 			}
 			if (expr:methodName == "getString") {
 				local String is keyC: "\"\"";
@@ -267,10 +301,12 @@ class BuiltinCallGenerator{
 			}
 			if (expr:methodName == "get") {
 				local String is keyC: "\"\"";
+				local String is defC: "NULL";
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "key") { keyC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "default") { defC: cg:generateExpression(expr: arg:getValue()); }
 				});
-				return "spec_map_get(" . targetC . ", " . keyC . ")";
+				return "spec_map_get(" . targetC . ", " . keyC . ", (void*)(intptr_t)(" . defC . "))";
 			}
 			if (expr:methodName == "has") {
 				local String is keyC: "\"\"";
@@ -297,9 +333,9 @@ class BuiltinCallGenerator{
 		# Array methods
 		local Boolean is isArr: targetC == "Array" || targetType == "Array" || targetType:startsWith(prefix: "Array") ||
 			expr:methodName == "get" || expr:methodName == "add" || expr:methodName == "pop" ||
-			expr:methodName == "removeAt" || expr:methodName == "slice" || expr:methodName == "clear" ||
+			expr:methodName == "removeAt" || expr:methodName == "slice" || expr:methodName == "clear" || expr:methodName == "join" ||
 			expr:methodName == "each" || expr:methodName == "filter" || expr:methodName == "count" || expr:methodName == "any" ||
-			(expr:methodName == "length" && targetType != "String" && targetType != "string" && targetC != "Map" && targetType != "Map");
+			(expr:methodName == "length" && targetType != "String" && targetType != "string" && targetC != "Map" && targetType != "Map" && !targetType:startsWith(prefix: "Map:"));
 
 		if (isArr) {
 			if (expr:methodName == "get") {
@@ -356,6 +392,13 @@ class BuiltinCallGenerator{
 				return "spec_array_index_of_str(" . targetC . ", " . searchC . ", " . defC . ")";
 			}
 			if (expr:methodName == "each") {
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local Expression is fnExpr: a0:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineArrayOp(mode: "each", targetC: targetC, fnExpr: fnExpr);
+					}
+				}
 				local String is fnC: "NULL";
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "action") { fnC: cg:generateExpression(expr: arg:getValue()); }
@@ -363,6 +406,13 @@ class BuiltinCallGenerator{
 				return "spec_array_each(" . targetC . ", (void (*)(void*))(" . fnC . "))";
 			}
 			if (expr:methodName == "filter") {
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local Expression is fnExpr: a0:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineArrayOp(mode: "filter", targetC: targetC, fnExpr: fnExpr);
+					}
+				}
 				local String is fnC: "NULL";
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "predicate") { fnC: cg:generateExpression(expr: arg:getValue()); }
@@ -370,6 +420,13 @@ class BuiltinCallGenerator{
 				return "spec_array_filter(" . targetC . ", (bool (*)(void*))(" . fnC . "))";
 			}
 			if (expr:methodName == "count") {
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local Expression is fnExpr: a0:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineArrayOp(mode: "count", targetC: targetC, fnExpr: fnExpr);
+					}
+				}
 				local String is fnC: "NULL";
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "predicate") { fnC: cg:generateExpression(expr: arg:getValue()); }
@@ -377,11 +434,25 @@ class BuiltinCallGenerator{
 				return "spec_array_count(" . targetC . ", (bool (*)(void*))(" . fnC . "))";
 			}
 			if (expr:methodName == "any") {
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					local Expression is fnExpr: a0:getValue();
+					if (fnExpr:getKind() == "ANON_FN") {
+						return cg:generateInlineArrayOp(mode: "any", targetC: targetC, fnExpr: fnExpr);
+					}
+				}
 				local String is fnC: "NULL";
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "predicate") { fnC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return "spec_array_any(" . targetC . ", (bool (*)(void*))(" . fnC . "))";
+			}
+			if (expr:methodName == "join") {
+				local String is sepC: "\"\"";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "separator" || sepC == "\"\"") { sepC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_array_join(" . targetC . ", " . sepC . ")";
 			}
 		}
 
@@ -410,9 +481,39 @@ class BuiltinCallGenerator{
 		if (expr:methodName == "startsWith") {
 			local String is pfxC: "\"\"";
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == "prefix") { pfxC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == "prefix" || pfxC == "\"\"") { pfxC: cg:generateExpression(expr: arg:getValue()); }
 			});
 			return "spec_str_starts_with(" . targetC . ", " . pfxC . ")";
+		}
+		if (expr:methodName == "endsWith") {
+			local String is sfxC: "\"\"";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "suffix" || sfxC == "\"\"") { sfxC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_str_ends_with(" . targetC . ", " . sfxC . ")";
+		}
+		if (expr:methodName == "contains") {
+			local String is needleC: "\"\"";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "needle" || arg:getName() == "search" || needleC == "\"\"") { needleC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_str_contains(" . targetC . ", " . needleC . ")";
+		}
+		if (expr:methodName == "replaceAll") {
+			local String is searchC: "\"\"";
+			local String is replC: "\"\"";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "search") { searchC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == "replacement") { replC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_str_replace_all(" . targetC . ", " . searchC . ", " . replC . ")";
+		}
+		if (expr:methodName == "split") {
+			local String is delimC: "\"\"";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "delimiter" || delimC == "\"\"") { delimC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_str_split(" . targetC . ", " . delimC . ")";
 		}
 		if (expr:methodName == "trim") {
 			return "spec_str_trim(" . targetC . ")";

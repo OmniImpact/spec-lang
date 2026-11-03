@@ -304,13 +304,21 @@ class Parser{
 		}
 
 		replace local Function of Boolean is iteration(LoopControl is control){
+			if (self:parser:peek():getValue() == "self" && self:parser:peekAhead(offset: 1):getValue() == ":") {
+				self:parser:advance();
+				self:parser:advance();
+				local Token is fTok: self:parser:advance();
+				self:params:add(item: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: "SELF_FIELD")));
+				if (self:parser:check(kind: "SYMBOL", value: ",")) {
+					self:parser:advance();
+					return true;
+				}
+				return false;
+			}
 			if (self:parser:peekAhead(offset: 1):getValue() == "," || self:parser:peekAhead(offset: 1):getValue() == ")") {
 				local Token is pTok: self:parser:advance();
 				local String is pName: pTok:getValue();
-				local String is pTypeName: "Any";
-				if (pName == "control") { pTypeName: "LoopControl"; }
-				if (pName == "action") { pTypeName: "String"; }
-				self:params:add(item: Parameter:init(name: pName, paramType: Type:init(name: pTypeName)));
+				self:params:add(item: Parameter:init(name: pName, paramType: Type:init(name: "Any")));
 				if (self:parser:check(kind: "SYMBOL", value: ",")) {
 					self:parser:advance();
 					return true;
@@ -755,12 +763,14 @@ class Parser{
 	}
 
 	replace local Function of Member is parseMember(){
+		local Int is startLine: self:peek():getLine();
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
 		if (self:check(kind: "KEYWORD", value: "class")) {
 			local Class is nested: self:parseClass();
 			local Member is m: Member:init(kind: "CLASS");
+			m:setLine(line: startLine);
 			m:nestedClass: nested;
 			return m;
 		}
@@ -768,6 +778,7 @@ class Parser{
 		if (self:check(kind: "IDENTIFIER", value: "Enum") || self:check(kind: "KEYWORD", value: "Enum")) {
 			local Class is edef: self:parseEnum();
 			local Member is m: Member:init(kind: "CLASS");
+			m:setLine(line: startLine);
 			m:nestedClass: edef;
 			return m;
 		}
@@ -783,10 +794,22 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: "{");
 
 			local Array of Statement is body: [];
+			params:each(action: local Function(Parameter is p){
+				if (p:getType():getName() == "SELF_FIELD") {
+					local Expression is lhs: Expression:init(kind: "PATH");
+					lhs:makePath(segments: ["self", p:getName()]);
+					local Expression is rhs: Expression:init(kind: "IDENT");
+					rhs:makeIdent(name: p:getName());
+					local Statement is assignS: Statement:init(kind: "ASSIGN");
+					assignS:assign(target: lhs, value: rhs);
+					body:add(item: assignS);
+				}
+			});
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
 			self:matchToken(kind: "SYMBOL", value: "}");
 
 			local Member is m: Member:init(kind: "METHOD");
+			m:setLine(line: nameTok:getLine());
 			m:modifiers: modifiers;
 			m:memberType: Type:init(name: "void");
 			m:name: name;
@@ -808,10 +831,22 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: "{");
 
 			local Array of Statement is body: [];
+			params:each(action: local Function(Parameter is p){
+				if (p:getType():getName() == "SELF_FIELD") {
+					local Expression is lhs: Expression:init(kind: "PATH");
+					lhs:makePath(segments: ["self", p:getName()]);
+					local Expression is rhs: Expression:init(kind: "IDENT");
+					rhs:makeIdent(name: p:getName());
+					local Statement is assignS: Statement:init(kind: "ASSIGN");
+					assignS:assign(target: lhs, value: rhs);
+					body:add(item: assignS);
+				}
+			});
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
 			self:matchToken(kind: "SYMBOL", value: "}");
 
 			local Member is m: Member:init(kind: "METHOD");
+			m:setLine(line: nameTok:getLine());
 			m:modifiers: modifiers;
 			m:memberType: mType;
 			m:name: name;
@@ -831,6 +866,7 @@ class Parser{
 		self:matchToken(kind: "SYMBOL", value: ";");
 
 		local Member is m: Member:init(kind: "FIELD");
+		m:setLine(line: nameTok:getLine());
 		m:modifiers: modifiers;
 		m:memberType: mType;
 		m:name: name;
@@ -840,9 +876,11 @@ class Parser{
 	}
 
 	replace local Function of Statement is parseStatement(){
+		local Int is startLine: self:peek():getLine();
 		if (self:check(kind: "KEYWORD", value: "class")) {
 			local Class is cls: self:parseClass();
 			local Statement is s: Statement:init(kind: "CLASS");
+			s:setLine(line: startLine);
 			s:nestedClass: cls;
 			return s;
 		}
@@ -850,6 +888,7 @@ class Parser{
 		if (self:check(kind: "IDENTIFIER", value: "Enum") || self:check(kind: "KEYWORD", value: "Enum")) {
 			local Class is edef: self:parseEnum();
 			local Statement is s: Statement:init(kind: "CLASS");
+			s:setLine(line: startLine);
 			s:nestedClass: edef;
 			return s;
 		}
@@ -866,6 +905,7 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: "}");
 
 			local Statement is s: Statement:init(kind: "WHEN");
+			s:setLine(line: startLine);
 			s:whenStmt(subject: subject, arms: arms);
 			return s;
 		}
@@ -896,6 +936,7 @@ class Parser{
 			}
 
 			local Statement is s: Statement:init(kind: "IF");
+			s:setLine(line: startLine);
 			s:ifCondition: cond;
 			s:thenBranch: thenBranch;
 			s:elseBranch: elseBranch;
@@ -914,6 +955,7 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: ";");
 
 			local Statement is s: Statement:init(kind: "RETURN");
+			s:setLine(line: startLine);
 			s:returnExpr: retExpr;
 			s:hasReturnExpr: hasExpr;
 			return s;
@@ -937,6 +979,7 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: ";");
 
 			local Statement is s: Statement:init(kind: "VAR_DECL");
+			s:setLine(line: startLine);
 			s:modifiers: modifiers;
 			s:varType: vType;
 			s:varName: name;
@@ -954,6 +997,7 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: ";");
 
 			local Statement is s: Statement:init(kind: "ASSIGN");
+			s:setLine(line: startLine);
 			s:assignTarget: expr;
 			s:assignValue: val;
 			return s;
@@ -961,6 +1005,7 @@ class Parser{
 
 		self:matchToken(kind: "SYMBOL", value: ";");
 		local Statement is s: Statement:init(kind: "EXPR");
+		s:setLine(line: startLine);
 		s:exprStmt: expr;
 		return s;
 	}
@@ -990,6 +1035,17 @@ class Parser{
 			self:matchToken(kind: "SYMBOL", value: ")");
 			self:matchToken(kind: "SYMBOL", value: "{");
 			local Array of Statement is body: [];
+			params:each(action: local Function(Parameter is p){
+				if (p:getType():getName() == "SELF_FIELD") {
+					local Expression is lhs: Expression:init(kind: "PATH");
+					lhs:makePath(segments: ["self", p:getName()]);
+					local Expression is rhs: Expression:init(kind: "IDENT");
+					rhs:makeIdent(name: p:getName());
+					local Statement is assignS: Statement:init(kind: "ASSIGN");
+					assignS:assign(target: lhs, value: rhs);
+					body:add(item: assignS);
+				}
+			});
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
 			self:matchToken(kind: "SYMBOL", value: "}");
 
@@ -1186,6 +1242,7 @@ class Parser{
 		self:matchToken(kind: "SYMBOL", value: "}");
 
 		local Class is c: Class:init(name: name, baseClass: "", members: members);
+		c:setLine(line: nameTok:getLine());
 		c:withBaseClasses(name: name, baseClasses: baseClasses, members: members);
 		return c;
 	}

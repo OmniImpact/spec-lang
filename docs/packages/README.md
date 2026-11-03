@@ -85,6 +85,11 @@ Available via `base:io:File` (`lib/base/io/File.spec`):
   ```spec
   local Boolean is exists: File:exists(path: "main.spec");
   ```
+- **`File:remove(path: String) -> Boolean`**:
+  Deletes the file at `path` from disk. Returns `true` on success, `false` otherwise.
+  ```spec
+  local Boolean is removed: File:remove(path: "/tmp/temp.c");
+  ```
 
 ---
 
@@ -250,10 +255,16 @@ local Array of Int is primes: [2, 3, 5, 7];
   });
   ```
 
+- **`join(String is separator) -> String`**:
+  Joins all string elements in the array using `separator`.
+  ```spec
+  local String is csv: fruits:join(separator: ", ");
+  ```
+
 ---
 
 ### `base:struct:Map`
-A key-value hash table container used for CLI arguments and dictionaries (`lib/base/struct/Map.spec`).
+A thread-safe, 64-bucket FNV-1a key-value hash table container supporting `String`, `Int`, `Float`, `Boolean`, and arbitrary object value types (`lib/base/struct/Map.spec`).
 
 #### Methods
 
@@ -263,10 +274,23 @@ A key-value hash table container used for CLI arguments and dictionaries (`lib/b
   local String is username: args:getString(key: "user", default: "Guest");
   ```
 
-- **`set(String is key, String is value)`**:
+- **`getInt(String is key, Int is default) -> Int`**:
+  Looks up a key and returns its `Int` value, or `default` if absent.
+
+- **`getFloat(String is key, Float is default) -> Float`**:
+  Looks up a key and returns its `Float` value, or `default` if absent.
+
+- **`getBool(String is key, Boolean is default) -> Boolean`**:
+  Looks up a key and returns its `Boolean` value, or `default` if absent.
+
+- **`get(String is key, Any is default) -> Any`**:
+  Looks up a key and returns its typed object or primitive value, or `default` if absent.
+
+- **`set(String is key, Any is value)`**:
   Sets or updates the value associated with `key`.
   ```spec
   symbolTable:set(key: "count", value: "10");
+  classRegistry:set(key: "User", value: userClass);
   ```
 
 - **`has(String is key) -> Boolean`**:
@@ -317,6 +341,7 @@ Controls loop continuation and completion triggers:
 
 ### `base:iterator:While` (`lib/base/iterator/While.spec`)
 - **`While:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
+- **`While:condition(Function of Boolean is evaluate, Function of Boolean is iteration)`**: Executes an inline loop using `evaluate` and `iteration` closures without requiring a separate `Loop` subclass.
 
 ---
 
@@ -337,6 +362,8 @@ Provides external process execution and operating system invocation:
   ```spec
   local Int is code: Process:execute(command: "gcc", args: ["--version"]);
   ```
+- **`Process:getPid() -> Int`**:
+  Returns the operating system process identifier (PID) of the current running process.
 
 ### `base:sys:SourceLocation` (`lib/base/sys/SourceLocation.spec`)
 Encapsulates source file provenance, line numbers, and column offsets:
@@ -415,6 +442,10 @@ Strings in Spec provide built-in methods for lexical scanning, text transformati
 - **`str:isWhitespace() -> Boolean`**: Returns `true` if the string is non-empty and contains only whitespace characters (` `, `\t`, `\n`, `\r`).
 - **`str:lines() -> Array of String`**: Splits the string on newline boundaries (`\n`, `\r\n`), returning an array of lines.
 - **`str:startsWith(prefix: String) -> Boolean`**: Returns `true` if the string begins with `prefix`.
+- **`str:endsWith(suffix: String) -> Boolean`**: Returns `true` if the string ends with `suffix`.
+- **`str:contains(needle: String) -> Boolean`**: Returns `true` if `needle` appears anywhere within the string.
+- **`str:replaceAll(search: String, replacement: String) -> String`**: Returns a new string with all occurrences of `search` replaced by `replacement`.
+- **`str:split(delimiter: String) -> Array of String`**: Splits the string on `delimiter` into an `Array of String`.
 - **`str:countLeading(search: String) -> Int`**: Counts consecutive occurrences of `search` at the start of the string (e.g. leading spaces or tabs).
 - **`str:trim() -> String`**: Strips leading and trailing whitespace characters (` `, `\t`, `\n`, `\r`).
 

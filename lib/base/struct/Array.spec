@@ -93,6 +93,13 @@ class Array{
 	replace Function of Array is filter(Function is predicate){
 	}
 
+	## Joins all string elements of the array into a single string separated by [separator].
+	##
+	## @param separator: Delimiter string inserted between adjacent items.
+	## @return: Joined string.
+	replace Function of String is join(String is separator){
+	}
+
 	## Returns whether the array contains zero elements.
 	##
 	## @return: `true` if empty, `false` otherwise.

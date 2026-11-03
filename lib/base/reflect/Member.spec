@@ -22,6 +22,9 @@ class Member{
 	## Member kind tag: "METHOD", "FIELD", or "CLASS".
 	local String is kind: "";
 
+	## Source line coordinate where this member was declared.
+	local Int is line: 0;
+
 	## Modifiers attached to this member (e.g. `["replace", "local"]`).
 	local Array of String is modifiers: [];
 
@@ -166,6 +169,14 @@ class Member{
 	## @return: [Class] descriptor.
 	replace local Function of Class is getNestedClass(){
 		return self:nestedClass;
+	}
+
+	replace local Function is setLine(Int is line){
+		self:line: line;
+	}
+
+	replace local Function of Int is getLine(){
+		return self:line;
 	}
 
 }

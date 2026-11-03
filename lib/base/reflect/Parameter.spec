@@ -37,4 +37,8 @@ class Parameter{
 		return self:paramType;
 	}
 
+	replace local Function is setType(Type is t){
+		self:paramType: t;
+	}
+
 }

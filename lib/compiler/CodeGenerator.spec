@@ -40,6 +40,9 @@ class CodeGenerator{
 	## Struct fields visible in current class scope (field name -> type name).
 	local Map of String to String is fieldTypes: Map:init();
 
+	## Flattened list of all classes in the program for symbol lookups.
+	local Array of Class is programClasses: [];
+
 	## Registry of all class names defined in the program.
 	local Map of String to String is allClassNames: Map:init();
 
@@ -58,6 +61,12 @@ class CodeGenerator{
 	## Counter for assigning unique names to anonymous functions.
 	local Int is anonCounter: 0;
 
+	## Active inline return variable name when expanding an inline closure body.
+	local String is inlineReturnVar: "";
+
+	## Active inline return label name when expanding an inline closure body.
+	local String is inlineReturnLabel: "";
+
 	replace local Function is init(){
 		self:utils: CBackendUtils:init();
 		self:prelude: RuntimePrelude:init();
@@ -65,12 +74,15 @@ class CodeGenerator{
 		self:builtins: BuiltinCallGenerator:init();
 		self:localVars: Map:init();
 		self:fieldTypes: Map:init();
+		self:programClasses: [];
 		self:allClassNames: Map:init();
 		self:allEnumNames: Map:init();
 		self:allEnumVariants: Map:init();
 		self:allStringBackedEnums: Map:init();
 		self:helperFunctions: "";
 		self:anonCounter: 0;
+		self:inlineReturnVar: "";
+		self:inlineReturnLabel: "";
 	}
 
 	replace local Function of String is cTypeFor(String is typeName){
@@ -92,6 +104,27 @@ class CodeGenerator{
 		return self:utils:isBuiltinClass(name: name);
 	}
 
+	replace local Function of String is formatTypeString(Type is t){
+		local String is baseName: t:getName();
+		if (baseName == "Array" && t:getParams():length() > 0) {
+			local Type is elemType: t:getParams():get(index: 0);
+			return "Array:" . elemType:getName();
+		}
+		if (baseName == "Map" && t:getParams():length() >= 2) {
+			local Type is kType: t:getParams():get(index: 0);
+			local Type is vType: t:getParams():get(index: 1);
+			return "Map:" . kType:getName() . ":" . vType:getName();
+		}
+		if (baseName == "Function") {
+			if (t:getParams():length() > 0) {
+				local Type is ret: t:getParams():get(index: 0);
+				return self:formatTypeString(t: ret);
+			}
+			return "void";
+		}
+		return baseName;
+	}
+
 	replace local Function of String is resolveReturnType(Type is t){
 		if (t:getName() == "Function") {
 			if (t:getParams():length() > 0) {
@@ -107,12 +140,288 @@ class CodeGenerator{
 		return self:prelude:emitRuntime();
 	}
 
+	class ClassSearchLoop extends Loop{
+		local Array of Class is list;
+		local String is target;
+		local Int is idx: 0;
+		local Class is res;
+		local Boolean is found: false;
+
+		replace local Function is init(Array of Class is list, String is target){
+			self:list: list;
+			self:target: target;
+			self:idx: 0;
+			self:found: false;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return !self:found && self:idx < self:list:length();
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is c){
+			local Class is cand: self:list:get(index: self:idx);
+			self:idx: self:idx + 1;
+			if (cand:getName() == self:target) {
+				self:res: cand;
+				self:found: true;
+				return false;
+			}
+			return true;
+		}
+	}
+
+	replace local Function of Class is findClass(String is name){
+		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
+		While:run(loop: s);
+		if (s:found) {
+			return s:res;
+		}
+		return Class:init(name: "", baseClass: "", members: []);
+	}
+
+	class FieldMemberLoop extends Loop{
+		local Array of Member is members;
+		local String is fieldName;
+		local Int is idx: 0;
+		local Member is res;
+		local Boolean is found: false;
+
+		replace local Function is init(Array of Member is members, String is fieldName){
+			self:members: members;
+			self:fieldName: fieldName;
+			self:idx: 0;
+			self:found: false;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return !self:found && self:idx < self:members:length();
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is c){
+			local Member is m: self:members:get(index: self:idx);
+			self:idx: self:idx + 1;
+			if (m:getKind() == "FIELD" && m:getName() == self:fieldName) {
+				self:res: m;
+				self:found: true;
+				return false;
+			}
+			return true;
+		}
+	}
+
+	replace local Function of String is lookupFieldType(String is className, String is fieldName){
+		if (className == "" || className == "Any") {
+			return "";
+		}
+		local Class is cls: self:findClass(name: className);
+		if (cls:getName() == "") {
+			return "";
+		}
+		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:getMembers(), fieldName: fieldName);
+		While:run(loop: fl);
+		if (fl:found) {
+			local Member is foundM: fl:res;
+			return self:formatTypeString(t: foundM:getType());
+		}
+		local String is inherited: "";
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (inherited == "") {
+				inherited: self:lookupFieldType(className: baseName, fieldName: fieldName);
+			}
+		});
+		return inherited;
+	}
+
+	class MethodMemberLoop extends Loop{
+		local Array of Member is members;
+		local String is methodName;
+		local Int is idx: 0;
+		local Member is res;
+		local Boolean is found: false;
+
+		replace local Function is init(Array of Member is members, String is methodName){
+			self:members: members;
+			self:methodName: methodName;
+			self:idx: 0;
+			self:found: false;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return !self:found && self:idx < self:members:length();
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is c){
+			local Member is m: self:members:get(index: self:idx);
+			self:idx: self:idx + 1;
+			if (m:getKind() == "METHOD" && m:getName() == self:methodName) {
+				self:res: m;
+				self:found: true;
+				return false;
+			}
+			return true;
+		}
+	}
+
+	replace local Function of String is lookupMethodReturnType(String is className, String is methodName){
+		if (className == "" || className == "Any") {
+			return "";
+		}
+		if (methodName == "init" && self:allClassNames:has(key: className) && !self:allEnumNames:has(key: className)) {
+			return className;
+		}
+		local Class is cls: self:findClass(name: className);
+		if (cls:getName() == "") {
+			return "";
+		}
+		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:getMembers(), methodName: methodName);
+		While:run(loop: ml);
+		if (ml:found) {
+			local Member is foundM: ml:res;
+			return self:formatTypeString(t: foundM:getType());
+		}
+		local String is inherited: "";
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (inherited == "") {
+				inherited: self:lookupMethodReturnType(className: baseName, methodName: methodName);
+			}
+		});
+		return inherited;
+	}
+
+	class PathTypeResolveLoop extends Loop{
+		local CodeGenerator is cg;
+		local Array of String is segs;
+		local Int is idx: 1;
+		local String is currType: "";
+
+		replace local Function is init(CodeGenerator is cg, Array of String is segs, String is rootType){
+			self:cg: cg;
+			self:segs: segs;
+			self:currType: rootType;
+			self:idx: 1;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return self:currType != "" && self:idx < self:segs:length();
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is c){
+			local String is seg: self:segs:get(index: self:idx);
+			self:idx: self:idx + 1;
+			if (self:cg:allEnumNames:has(key: self:currType)) {
+				return true;
+			}
+			self:currType: self:cg:lookupFieldType(className: self:currType, fieldName: seg);
+			return true;
+		}
+	}
+
+	## Infers the target type of an expression for method dispatch and type conversion.
+	replace local Function of String is inferTargetType(Expression is expr){
+		local String is resolved: expr:getResolvedType();
+		if (resolved != "" && resolved != "Any") {
+			return resolved;
+		}
+
+		local String is kind: expr:getKind();
+		if (kind == "STRING") { return "String"; }
+		if (kind == "NUMBER") { return "Int"; }
+		if (kind == "FLOAT") { return "Float"; }
+		if (kind == "BOOL") { return "Boolean"; }
+
+		if (kind == "IDENT") {
+			local String is name: expr:stringValue;
+			if (name == "self") { return self:currentClassName; }
+			if (self:localVars:has(key: name)) {
+				return self:localVars:getString(key: name, default: "");
+			}
+			if (self:fieldTypes:has(key: name)) {
+				return self:fieldTypes:getString(key: name, default: "");
+			}
+			if (self:allEnumVariants:has(key: name)) {
+				return self:allEnumVariants:getString(key: name, default: "");
+			}
+			if (self:allClassNames:has(key: name)) {
+				return name;
+			}
+			return "";
+		}
+		if (kind == "PATH") {
+			local Array of String is segs: expr:pathSegments;
+			if (segs:length() > 0) {
+				local String is root: segs:get(index: 0);
+				local String is rootType: "";
+				if (root == "self") {
+					rootType: self:currentClassName;
+				} else if (self:localVars:has(key: root)) {
+					rootType: self:localVars:getString(key: root, default: "");
+				} else if (self:fieldTypes:has(key: root)) {
+					rootType: self:fieldTypes:getString(key: root, default: "");
+				} else if (self:allEnumNames:has(key: root) || self:allClassNames:has(key: root)) {
+					rootType: root;
+				}
+				local PathTypeResolveLoop is pLoop: PathTypeResolveLoop:init(cg: self, segs: segs, rootType: rootType);
+				While:run(loop: pLoop);
+				return pLoop:currType;
+			}
+			return "";
+		}
+		if (kind == "CALL") {
+			local String is tgtType: self:inferTargetType(expr: expr:methodTarget);
+			if (tgtType == "" || tgtType == "self") {
+				tgtType: self:currentClassName;
+			}
+			local String is m: expr:methodName;
+			if (tgtType:startsWith(prefix: "Array:") && (m == "get" || m == "pop" || m == "removeAt")) {
+				return tgtType:substring(start: 6, end: tgtType:length());
+			}
+			if (self:allEnumNames:has(key: tgtType)) {
+				if (m == "name") { return "String"; }
+				if (m == "ordinal") { return "Int"; }
+				if (m == "values") { return "Array:" . tgtType; }
+				if (m == "value") {
+					return if (self:allStringBackedEnums:has(key: tgtType)) "String" else "Int";
+				}
+			}
+			local String is methodRet: self:lookupMethodReturnType(className: tgtType, methodName: m);
+			if (methodRet != "" && methodRet != "void") {
+				return methodRet;
+			}
+			return "";
+		}
+		if (kind == "INDEX") {
+			local String is leftT: self:inferTargetType(expr: expr:leftExpr);
+			if (leftT:startsWith(prefix: "Array:") && leftT:length() > 6) {
+				return leftT:substring(start: 6, end: leftT:length());
+			}
+			return "";
+		}
+		return "";
+	}
+
 	## Wraps non-string expressions with runtime string conversion helpers.
 	##
 	## @param expr: AST [Expression] node.
 	## @param exprC: Generated C expression string.
 	## @return: Wrapped C expression string.
 	replace local Function of String is wrapToString(Expression is expr, String is exprC){
+		local String is resolved: self:inferTargetType(expr: expr);
+		when (resolved) {
+			is "Int", "int": {
+				return "spec_to_string_int(" . exprC . ")";
+			}
+			is "Float", "float": {
+				return "spec_to_string_float(" . exprC . ")";
+			}
+			is "Boolean", "bool": {
+				return "spec_to_string_bool(" . exprC . ")";
+			}
+			is "String", "string": {
+				return exprC;
+			}
+			else: {}
+		}
+
 		local String is kind: expr:getKind();
 		when (kind) {
 			is "NUMBER": {
@@ -124,62 +433,6 @@ class CodeGenerator{
 			is "BOOL": {
 				return "spec_to_string_bool(" . exprC . ")";
 			}
-			is "IDENT": {
-				local String is name: expr:stringValue;
-				local String is t: self:localVars:getString(key: name, default: "");
-				if (t == "") {
-					t: self:fieldTypes:getString(key: name, default: "");
-				}
-				when (t) {
-					is "Int", "int": { return "spec_to_string_int(" . exprC . ")"; }
-					is "Float", "float": { return "spec_to_string_float(" . exprC . ")"; }
-					is "Boolean", "bool": { return "spec_to_string_bool(" . exprC . ")"; }
-					else: { return exprC; }
-				}
-			}
-			is "PATH": {
-				local Array of String is segs: expr:pathSegments;
-				local String is last: if (segs:length() > 0) segs:get(index: segs:length() - 1) else "";
-				if (last == "floatValue") {
-					return "spec_to_string_float(" . exprC . ")";
-				}
-				if (last == "pos" || last == "idx" || last == "length" || last == "count" || last == "line" || last == "col") {
-					return "spec_to_string_int(" . exprC . ")";
-				}
-				if (last == "found" || last == "isWarning" || last == "isError" || last == "hasInit" || last == "hasElse" || last == "hasReturnExpr") {
-					return "spec_to_string_bool(" . exprC . ")";
-				}
-				if (segs:length() == 2 && segs:get(index: 0) == "self") {
-					local String is t: self:fieldTypes:getString(key: last, default: "");
-					when (t) {
-						is "Int", "int": { return "spec_to_string_int(" . exprC . ")"; }
-						is "Float", "float": { return "spec_to_string_float(" . exprC . ")"; }
-						is "Boolean", "bool": { return "spec_to_string_bool(" . exprC . ")"; }
-						else: { return exprC; }
-					}
-				}
-				return exprC;
-			}
-			is "CALL": {
-				local String is m: expr:methodName;
-				if (m == "length" || m == "count" || m == "indexOf" || m == "round" || m == "ordinal" || m == "handValue" || m == "drawCard") {
-					return "spec_to_string_int(" . exprC . ")";
-				}
-				if (m == "value") {
-					local String is tType: self:inferTargetType(expr: expr:methodTarget);
-					if (self:allStringBackedEnums:has(key: tType)) {
-						return exprC;
-					}
-					return "spec_to_string_int(" . exprC . ")";
-				}
-				if (m == "floor" || m == "ceil" || m == "ceiling") {
-					return "spec_to_string_float(" . exprC . ")";
-				}
-				if (m == "has" || m == "exists" || m == "any" || m == "startsWith") {
-					return "spec_to_string_bool(" . exprC . ")";
-				}
-				return exprC;
-			}
 			is "BINARY": {
 				local String is op: expr:binaryOp;
 				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%") {
@@ -189,13 +442,6 @@ class CodeGenerator{
 					return "spec_to_string_bool(" . exprC . ")";
 				}
 				return exprC;
-			}
-			is "INDEX": {
-				local String is targetType: self:inferTargetType(expr: expr:leftExpr);
-				if (targetType == "Array:String" || targetType == "Array of String") {
-					return exprC;
-				}
-				return "spec_to_string_int(" . exprC . ")";
 			}
 			is "UNARY": {
 				if (expr:unaryOp == "!") {
@@ -211,98 +457,37 @@ class CodeGenerator{
 
 	## Determines whether an expression produces a string value.
 	replace local Function of Boolean is isStringExpr(Expression is expr){
-		local String is kind: expr:getKind();
-		when (kind) {
-			is "STRING": { return true; }
-			is "IDENT": {
-				local String is name: expr:stringValue;
-				local String is t: self:localVars:getString(key: name, default: "");
-				if (t == "") { t: self:fieldTypes:getString(key: name, default: ""); }
-				return t == "String" || t == "string";
-			}
-			is "PATH": {
-				local Array of String is segs: expr:pathSegments;
-				if (segs:length() == 2 && segs:get(index: 0) == "self") {
-					local String is t: self:fieldTypes:getString(key: segs:get(index: 1), default: "");
-					return t == "String" || t == "string";
-				}
-				return false;
-			}
-			is "CALL": {
-				local String is m: expr:methodName;
-				return m == "getString" || m == "substring" || m == "charAt" || m == "trim" || m == "describe" || m == "getTag" || m == "getName";
-			}
-			is "BINARY": {
-				return expr:binaryOp == ".";
-			}
-			else: { return false; }
+		local String is resolved: self:inferTargetType(expr: expr);
+		if (resolved == "String" || resolved == "string") {
+			return true;
 		}
+		local String is kind: expr:getKind();
+		if (kind == "STRING") {
+			return true;
+		}
+		if (kind == "BINARY" && expr:binaryOp == ".") {
+			return true;
+		}
+		return false;
 	}
 
-	## Infers the target type of an expression for method dispatch.
-	replace local Function of String is inferTargetType(Expression is expr){
-		local String is kind: expr:getKind();
-		if (kind == "IDENT") {
-			local String is name: expr:stringValue;
-			if (self:localVars:has(key: name)) {
-				return self:localVars:getString(key: name, default: "");
-			}
-			if (self:fieldTypes:has(key: name)) {
-				return self:fieldTypes:getString(key: name, default: "");
-			}
-			if (name == "m" || name == "member") { return "Member"; }
-			if (name == "p" || name == "param") { return "Parameter"; }
-			if (name == "c" || name == "cls") { return "Class"; }
-			if (name == "tok") { return "Token"; }
-			if (name == "s" || name == "stmt") { return "Statement"; }
-			if (name == "e" || name == "expr") { return "Expression"; }
-			if (name == "issue") { return "LintIssue"; }
-			if (name == "err") { return "TypeError"; }
-			if (name == "arg" || name == "firstArg" || name == "loopArg" || name == "promptArg" || name == "cbArg" || name == "ctrlArg") { return "NamedArg"; }
-			if (name == "program" || name == "lintProgram") { return "ProgramNode"; }
-			if (name == "lexer") { return "Lexer"; }
-			if (name == "parser") { return "Parser"; }
-			if (name == "linter") { return "Linter"; }
-			if (name == "tc") { return "TypeChecker"; }
-			if (name == "cg") { return "CodeGenerator"; }
-			if (name == "loader") { return "Loader"; }
-			if (name == "tokens" || name == "issues" || name == "typeErrors" || name == "flattenedClasses") { return "Array"; }
-			if (name == "self") { return self:currentClassName; }
-			return "";
+	replace local Function of Boolean is isSubclassOf(String is subName, String is baseName){
+		if (subName == "" || baseName == "" || subName == baseName) {
+			return false;
 		}
-		if (kind == "CALL") {
-			local String is m: expr:methodName;
-			if (m == "getType" || m == "getAnonReturnType" || m == "getVarType") { return "Type"; }
-			if (m == "getNestedClass" || m == "parseClass") { return "Class"; }
-			if (m == "getMembers" || m == "getParameters" || m == "getBody" || m == "getClasses" || m == "getModifiers" || m == "tokenize") { return "Array"; }
-			if (m == "getName" || m == "getKind" || m == "getMemberKind" || m == "toString" || m == "getMessage" || m == "generatePrelude" || m == "generateProgram" || m == "compile") { return "String"; }
-			if (m == "peek" || m == "peekAhead" || m == "advance" || m == "consume" || m == "current") { return "Token"; }
-			if (m == "parseExpression" || m == "parsePrimary" || m == "parseUnary" || m == "parseBinary" || m == "parsePostfix") { return "Expression"; }
-			if (m == "parseStatement") { return "Statement"; }
-			if (m == "parseProgram" || m == "loadProgram") { return "ProgramNode"; }
-			if (m == "getValue") {
-				local String is tgtType: self:inferTargetType(expr: expr:methodTarget);
-				if (tgtType == "NamedArg" || tgtType == "arg") { return "Expression"; }
-				return "String";
-			}
-			if (m == "getIsWarning") { return "Boolean"; }
-			return "";
+		local Class is subCls: self:findClass(name: subName);
+		if (subCls:getName() == "") {
+			return false;
 		}
-		if (kind == "PATH") {
-			local Array of String is segs: expr:pathSegments;
-			if (segs:length() > 0) {
-				local String is last: segs:get(index: segs:length() - 1);
-				if (last == "anonReturnType" || last == "varType" || last == "paramType" || last == "memberType" || last == "mType" || last == "vType") { return "Type"; }
-				if (last == "nestedClass" || last == "classDef") { return "Class"; }
-				if (last == "methodArgs" || last == "pathSegments" || last == "arrayItems" || last == "whenArms" || last == "conditions" || last == "body" || last == "classes" || last == "members" || last == "params" || last == "modifiers") { return "Array"; }
-				if (last == "methodTarget" || last == "initExpr" || last == "condExpr" || last == "thenExpr" || last == "elseExpr" || last == "leftExpr" || last == "rightExpr" || last == "unaryExpr" || last == "assignValue" || last == "assignTarget" || last == "ifCondition" || last == "whenSubject") { return "Expression"; }
-				if (last == "stringValue" || last == "varName" || last == "name" || last == "methodName" || last == "binaryOp" || last == "unaryOp" || last == "message" || last == "src" || last == "res" || last == "converted") { return "String"; }
-				if (last == "boolValue" || last == "isWarning" || last == "isElse" || last == "hasInit" || last == "hasElse" || last == "hasReturnExpr") { return "Boolean"; }
-				if (last == "floatValue") { return "Float"; }
-				if (last == "pos" || last == "idx" || last == "count" || last == "line" || last == "col") { return "Int"; }
+		local Boolean is matched: false;
+		subCls:getBaseClasses():each(action: local Function(String is parent){
+			if (parent == baseName) {
+				matched: true;
+			} else if (!matched && self:isSubclassOf(subName: parent, baseName: baseName)) {
+				matched: true;
 			}
-		}
-		return "";
+		});
+		return matched;
 	}
 
 	## Emits constructor factory functions for all classes.
@@ -319,20 +504,119 @@ class CodeGenerator{
 				local Array of Member is allFields: [];
 				self:declGen:collectStructFields(c: c, allClasses: classes, acc: allFields);
 				allFields:each(action: local Function(Member is f){
-					self:fieldTypes:set(key: f:getName(), value: f:getType():getName());
+					self:fieldTypes:set(key: f:getName(), value: self:formatTypeString(t: f:getType()));
 				});
 
 				out: out . c:getName() . "* " . c:getName() . "_new(void) {\n";
 				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)calloc(1, sizeof(" . c:getName() . "));\n";
+				out: out . "    self->_type_name = \"" . c:getName() . "\";\n";
 				allFields:each(action: local Function(Member is m){
 					if (m:hasInit) {
 						out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . self:generateExpression(expr: m:initExpr) . ";\n";
+					} else {
+						local String is ft: m:getType():getName();
+						if (ft == "String" || ft == "string") {
+							out: out . "    self->" . self:cIdent(name: m:getName()) . " = \"\";\n";
+						} else if (ft == "Array") {
+							out: out . "    self->" . self:cIdent(name: m:getName()) . " = spec_array_new();\n";
+						} else if (ft == "Map") {
+							out: out . "    self->" . self:cIdent(name: m:getName()) . " = spec_map_new();\n";
+						}
 					}
 				});
 				out: out . "    return self;\n";
 				out: out . "}\n\n";
 			}
 		});
+		return out;
+	}
+
+	replace local Function of String is generateInlineArrayOp(String is mode, String is targetC, Expression is fnExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+		self:inlineReturnLabel: "_loop_next_" . id;
+		if (mode == "each") {
+			self:inlineReturnVar: "";
+		} else {
+			self:inlineReturnVar: "_pred_" . id;
+		}
+
+		local String is paramDecl: "";
+		if (fnExpr:anonParams:length() > 0) {
+			local Parameter is p: fnExpr:anonParams:get(index: 0);
+			self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
+			local String is pCType: self:cTypeFor(typeName: p:getType():getName());
+			paramDecl: "        " . pCType . " " . self:cIdent(name: p:getName()) . " = (" . pCType . ")(intptr_t)_a_" . id . "->items[_i_" . id . "];\n";
+		}
+
+		local String is bodyC: "";
+		fnExpr:anonBody:each(action: local Function(Statement is s){
+			bodyC: bodyC . self:generateStatement(stmt: s);
+		});
+
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+
+		local String is arrVar: "_a_" . id;
+		local String is idxVar: "_i_" . id;
+		local String is predVar: "_pred_" . id;
+		local String is nextLbl: "_loop_next_" . id;
+
+		if (mode == "each") {
+			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+			out: out . paramDecl . bodyC . "        " . nextLbl . ": ;\n    } } })";
+			return out;
+		}
+		if (mode == "filter") {
+			local String is outVar: "_out_" . id;
+			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = spec_array_new(); if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+			out: out . paramDecl . "        bool " . predVar . " = false;\n" . bodyC . "        " . nextLbl . ": ;\n        if (" . predVar . ") spec_array_add(" . outVar . ", " . arrVar . "->items[" . idxVar . "]);\n    } } " . outVar . "; })";
+			return out;
+		}
+		if (mode == "count") {
+			local String is cntVar: "_cnt_" . id;
+			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; long long " . cntVar . " = 0; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+			out: out . paramDecl . "        bool " . predVar . " = false;\n" . bodyC . "        " . nextLbl . ": ;\n        if (" . predVar . ") " . cntVar . "++;\n    } } " . cntVar . "; })";
+			return out;
+		}
+		if (mode == "any") {
+			local String is fndVar: "_fnd_" . id;
+			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; bool " . fndVar . " = false; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+			out: out . paramDecl . "        bool " . predVar . " = false;\n" . bodyC . "        " . nextLbl . ": ;\n        if (" . predVar . ") { " . fndVar . " = true; break; }\n    } } " . fndVar . "; })";
+			return out;
+		}
+		return "0";
+	}
+
+	replace local Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local String is evVar: "_ev_" . id;
+		local String is evLbl: "_ev_done_" . id;
+		self:inlineReturnVar: evVar;
+		self:inlineReturnLabel: evLbl;
+		local String is evalBodyC: "";
+		evalExpr:anonBody:each(action: local Function(Statement is s){
+			evalBodyC: evalBodyC . self:generateStatement(stmt: s);
+		});
+
+		local String is itLbl: "_it_done_" . id;
+		self:inlineReturnVar: "";
+		self:inlineReturnLabel: itLbl;
+		local String is iterBodyC: "";
+		iterExpr:anonBody:each(action: local Function(Statement is s){
+			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
+		});
+
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+
+		local String is out: "({ while (1) {\n        bool " . evVar . " = false;\n" . evalBodyC . "        " . evLbl . ": ;\n        if (!" . evVar . ") break;\n" . iterBodyC . "        " . itLbl . ": ;\n    } })";
 		return out;
 	}
 
@@ -404,12 +688,6 @@ class CodeGenerator{
 					local String is enumName: self:allEnumVariants:getString(key: name, default: "");
 					return enumName . "_" . self:cIdent(name: name);
 				}
-				if (name == "FIELD" || name == "METHOD" || name == "CLASS") {
-					return "MemberKind_" . name;
-				}
-				if (name == "KEYWORD" || name == "IDENTIFIER" || name == "SYMBOL" || name == "INT" || name == "FLOAT" || name == "STRING" || name == "BOOL" || name == "EOF") {
-					return "TokenKind_" . self:cIdent(name: name);
-				}
 				if (self:localVars:has(key: name)) {
 					return self:cIdent(name: name);
 				}
@@ -425,7 +703,7 @@ class CodeGenerator{
 				}
 				if (segs:length() >= 2) {
 					local String is root: segs:get(index: 0);
-					if (self:allEnumNames:has(key: root) || root == "MemberKind" || root == "TokenKind" || root == "HttpStatus" || root == "LogLevel") {
+					if (self:allEnumNames:has(key: root)) {
 						return root . "_" . self:cIdent(name: segs:get(index: 1));
 					}
 					local String is rootC: self:cIdent(name: root);
@@ -527,6 +805,12 @@ class CodeGenerator{
 				if (objType == "" || objType == "Any" || targetC == "self") {
 					objType: self:currentClassName;
 				}
+				if (objType:startsWith(prefix: "Array:")) {
+					objType: "Array";
+				}
+				if (objType:startsWith(prefix: "Map:")) {
+					objType: "Map";
+				}
 				local String is callStr: objType . "_" . expr:methodName . "(" . targetC;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					callStr: callStr . ", " . self:generateExpression(expr: arg:getValue());
@@ -578,17 +862,24 @@ class CodeGenerator{
 				local String is paramsC: "";
 				local Boolean is firstP: true;
 				expr:anonParams:each(action: local Function(Parameter is p){
-					self:localVars:set(key: p:getName(), value: p:getType():getName());
+					self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
 					if (!firstP) { paramsC: paramsC . ", "; }
 					paramsC: paramsC . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
 					firstP: false;
 				});
 				if (firstP) { paramsC: "void"; }
+				local String is savedRetVar: self:inlineReturnVar;
+				local String is savedRetLbl: self:inlineReturnLabel;
+				self:inlineReturnVar: "";
+				self:inlineReturnLabel: "";
 				local String is bodyC: "";
 				expr:anonBody:each(action: local Function(Statement is s){
 					bodyC: bodyC . self:generateStatement(stmt: s);
 				});
-				return "({ " . retC . " " . fnName . "(" . paramsC . ") {\n" . bodyC . "}; " . fnName . "; })";
+				self:inlineReturnVar: savedRetVar;
+				self:inlineReturnLabel: savedRetLbl;
+				self:helperFunctions: self:helperFunctions . "static " . retC . " " . fnName . "(" . paramsC . ") {\n" . bodyC . "}\n\n";
+				return fnName;
 			}
 			else: {
 				return "0";
@@ -605,12 +896,25 @@ class CodeGenerator{
 
 		when (kind) {
 			is "VAR_DECL": {
-				self:localVars:set(key: stmt:varName, value: stmt:varType:getName());
-				local String is cType: self:cTypeFor(typeName: stmt:varType:getName());
+				self:localVars:set(key: stmt:varName, value: self:formatTypeString(t: stmt:varType));
+				local String is vTypeName: stmt:varType:getName();
+				local String is cType: self:cTypeFor(typeName: vTypeName);
 				local String is varName: self:cIdent(name: stmt:varName);
 				if (stmt:hasInit) {
 					local String is initC: self:generateExpression(expr: stmt:initExpr);
+					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == "*" && cType != "const char*" && cType != "SpecArray*" && cType != "SpecMap*") {
+						initC: "(" . cType . ")(" . initC . ")";
+					}
 					return "    " . cType . " " . varName . " = " . initC . ";\n";
+				}
+				if (vTypeName == "String" || vTypeName == "string") {
+					return "    " . cType . " " . varName . " = \"\";\n";
+				}
+				if (vTypeName == "Array") {
+					return "    " . cType . " " . varName . " = spec_array_new();\n";
+				}
+				if (vTypeName == "Map") {
+					return "    " . cType . " " . varName . " = spec_map_new();\n";
 				}
 				return "    " . cType . " " . varName . " = 0;\n";
 			}
@@ -635,6 +939,13 @@ class CodeGenerator{
 				return out;
 			}
 			is "RETURN": {
+				if (self:inlineReturnLabel != "") {
+					if (stmt:hasReturnExpr && self:inlineReturnVar != "") {
+						local String is retC: self:generateExpression(expr: stmt:returnExpr);
+						return "    " . self:inlineReturnVar . " = " . retC . "; goto " . self:inlineReturnLabel . ";\n";
+					}
+					return "    goto " . self:inlineReturnLabel . ";\n";
+				}
 				if (stmt:hasReturnExpr) {
 					local String is retC: self:generateExpression(expr: stmt:returnExpr);
 					return "    return " . retC . ";\n";
@@ -702,25 +1013,54 @@ class CodeGenerator{
 			if (method:getName() == "evaluate" || method:getName() == "iteration") {
 				retType: "bool";
 			}
-			if (method:getName() == "drawCard" || method:getName() == "handValue") {
-				retType: "long long";
-			}
 		}
 
 		self:localVars: Map:init();
 		method:getParameters():each(action: local Function(Parameter is p){
-			self:localVars:set(key: p:getName(), value: p:getType():getName());
+			self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
 		});
 
 		local String is out: retType . " " . classDef:getName() . "_" . method:getName() . "(" . classDef:getName() . "* self";
+		local String is callArgs: "";
 		method:getParameters():each(action: local Function(Parameter is p){
 			out: out . ", " . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
+			callArgs: callArgs . ", " . self:cIdent(name: p:getName());
 		});
 		out: out . ") {\n";
+
+		if (method:getName() != "init") {
+			local Int is paramCount: method:getParameters():length();
+			self:programClasses:each(action: local Function(Class is subCls){
+				if (self:isSubclassOf(subName: subCls:getName(), baseName: classDef:getName())) {
+					local MethodMemberLoop is ml: MethodMemberLoop:init(members: subCls:getMembers(), methodName: method:getName());
+					While:run(loop: ml);
+					if (ml:found) {
+						local Member is subM: ml:res;
+						if (subM:getBody():length() > 0 && subM:getParameters():length() == paramCount) {
+							out: out . "    if (self && self->_type_name && strcmp(self->_type_name, \"" . subCls:getName() . "\") == 0) {\n";
+							if (retType == "void") {
+								out: out . "        " . subCls:getName() . "_" . method:getName() . "((" . subCls:getName() . "*)self" . callArgs . ");\n        return;\n";
+							} else {
+								out: out . "        return " . subCls:getName() . "_" . method:getName() . "((" . subCls:getName() . "*)self" . callArgs . ");\n";
+							}
+							out: out . "    }\n";
+						}
+					}
+				}
+			});
+		}
 
 		method:getBody():each(action: local Function(Statement is stmt){
 			out: out . self:generateStatement(stmt: stmt);
 		});
+
+		if (method:getBody():length() == 0 && retType != "void") {
+			if (retType == "const char*") {
+				out: out . "    return \"\";\n";
+			} else {
+				out: out . "    return 0;\n";
+			}
+		}
 
 		out: out . "}\n\n";
 		return out;
@@ -813,6 +1153,7 @@ class CodeGenerator{
 		program:getClasses():each(action: local Function(Class is c){
 			self:collectClasses(c: c, acc: flattenedClasses);
 		});
+		self:programClasses: flattenedClasses;
 
 		self:allClassNames: Map:init();
 		self:allEnumNames: Map:init();
@@ -844,13 +1185,10 @@ class CodeGenerator{
 			if (!self:isBuiltinClass(name: c:getName())) {
 				self:currentClassName: c:getName();
 				self:fieldTypes: Map:init();
-				c:getMembers():each(action: local Function(Member is m){
-					when (m:getMemberKind()) {
-						is FIELD: {
-							self:fieldTypes:set(key: m:getName(), value: m:getType():getName());
-						}
-						else: {}
-					}
+				local Array of Member is allFields: [];
+				self:declGen:collectStructFields(c: c, allClasses: flattenedClasses, acc: allFields);
+				allFields:each(action: local Function(Member is m){
+					self:fieldTypes:set(key: m:getName(), value: self:formatTypeString(t: m:getType()));
 				});
 
 				local Boolean is hasInit: false;
@@ -858,9 +1196,7 @@ class CodeGenerator{
 					when (m:getMemberKind()) {
 						is METHOD: {
 							if (m:getName() == "init") { hasInit: true; }
-							if (m:getBody():length() > 0 || m:getName() == "init") {
-								methods: methods . self:generateMethod(classDef: c, method: m);
-							}
+							methods: methods . self:generateMethod(classDef: c, method: m);
 						}
 						else: {}
 					}
@@ -877,8 +1213,8 @@ class CodeGenerator{
 		cSource: cSource . self:generatePrelude();
 		cSource: cSource . enums;
 		cSource: cSource . decls;
-		cSource: cSource . self:helperFunctions;
 		cSource: cSource . structs;
+		cSource: cSource . self:helperFunctions;
 		cSource: cSource . ctors;
 		cSource: cSource . methods;
 		cSource: cSource . mainFn;

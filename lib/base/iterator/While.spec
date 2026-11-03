@@ -11,4 +11,11 @@ class While{
 	replace Function is run(Loop is loop, LoopControl is control){
 	}
 
+	## Repeatedly executes [iteration] while [evaluate] returns `true`.
+	##
+	## @param evaluate: Predicate closure returning `true` to continue.
+	## @param iteration: Body closure executed on each step.
+	replace Function is condition(Function is evaluate, Function is iteration){
+	}
+
 }

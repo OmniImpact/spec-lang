@@ -118,7 +118,14 @@ class Driver{
 		local CodeGenerator is cg: CodeGenerator:init();
 		local String is cCode: cg:generateProgram(program: program, entryClass: entryName);
 
-		local String is tempCPath: "/tmp/_spec_stage_temp.c";
+		local String is emitCPath: args:getString(key: "c", default: "");
+		if (emitCPath == "") {
+			emitCPath: args:getString(key: "emit-c", default: "");
+		}
+		local String is tempCPath: emitCPath;
+		if (tempCPath == "") {
+			tempCPath: "/tmp/_spec_stage_" . Process:getPid() . ".c";
+		}
 		local Boolean is written: File:write(path: tempCPath, content: cCode);
 		if (!written) {
 			output:line("Error: Failed to write intermediate C code to " . tempCPath);
@@ -128,6 +135,9 @@ class Driver{
 		# 7. GCC C Compilation
 		local Array of String is gccArgs: ["-O2", tempCPath, "-o", outputPath, "-pthread", "-lm"];
 		local Int is gccStatus: Process:execute(command: "gcc", args: gccArgs);
+		if (emitCPath == "") {
+			File:remove(path: tempCPath);
+		}
 		if (gccStatus != 0) {
 			output:line("Error: Backend C compiler (gcc) failed with exit status " . gccStatus);
 			return;

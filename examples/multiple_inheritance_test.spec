@@ -63,6 +63,20 @@ class ServiceAccount extends NamedContract, IdentifiableContract{
 			output:line("[FAIL] Method implementation mismatch\n");
 		}
 
+		output:line("3. Testing polymorphic dispatch through interface references...");
+		local NamedContract is namedRef: self;
+		local IdentifiableContract is idRef: self;
+		local String is polyDesc: namedRef:describe();
+		local String is polyTag: idRef:getTag();
+		output:line("Polymorphic NamedContract:describe() -> " . polyDesc);
+		output:line("Polymorphic IdentifiableContract:getTag() -> " . polyTag);
+
+		if (polyDesc == "AdminService (ID: 9001)" && polyTag == "[AdminService]") {
+			output:line("[PASS] Successfully dispatched polymorphically on interface types\n");
+		} else {
+			output:line("[FAIL] Polymorphic dispatch mismatch\n");
+		}
+
 		output:line("Multiple inheritance and abstraction test completed successfully!");
 	}
 

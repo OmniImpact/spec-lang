@@ -85,11 +85,13 @@ class Loader{
 			is "base:io:*": [
 				"lib/base/io/File.spec",
 				"lib/base/io/Input.spec",
+				"lib/base/io/InputHandler.spec",
 				"lib/base/io/Output.spec"
 			];
 			is "base:iterator:*": [
 				"lib/base/iterator/Loop.spec",
 				"lib/base/iterator/LoopControl.spec",
+				"lib/base/iterator/LoopCallback.spec",
 				"lib/base/iterator/While.spec"
 			];
 			is "base:meta:*": [
@@ -119,6 +121,10 @@ class Loader{
 				"lib/compiler/Parser.spec",
 				"lib/compiler/Linter.spec",
 				"lib/compiler/TypeChecker.spec",
+				"lib/compiler/CBackendUtils.spec",
+				"lib/compiler/RuntimePrelude.spec",
+				"lib/compiler/DeclarationGenerator.spec",
+				"lib/compiler/BuiltinCallGenerator.spec",
 				"lib/compiler/CodeGenerator.spec",
 				"lib/compiler/Loader.spec",
 				"lib/compiler/Driver.spec"

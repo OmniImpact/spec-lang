@@ -13,11 +13,27 @@ class Map{
 	replace Function of String is getString(String is key, String is default){
 	}
 
+	## Looks up an integer value by key, returning [default] if not found.
+	replace Function of Int is getInt(String is key, Int is default){
+	}
+
+	## Looks up a float value by key, returning [default] if not found.
+	replace Function of Float is getFloat(String is key, Float is default){
+	}
+
+	## Looks up a boolean value by key, returning [default] if not found.
+	replace Function of Boolean is getBool(String is key, Boolean is default){
+	}
+
+	## Looks up a generic value by key, returning [default] if not found.
+	replace Function of Any is get(String is key, Any is default){
+	}
+
 	## Inserts or updates an entry in the map.
 	##
 	## @param key: Entry key string.
-	## @param value: Entry value string.
-	replace Function is set(String is key, String is value){
+	## @param value: Entry value.
+	replace Function is set(String is key, Any is value){
 	}
 
 	## Determines whether an entry exists for the specified key.

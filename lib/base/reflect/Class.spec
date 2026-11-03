@@ -12,6 +12,9 @@ class Class{
 	## Class identifier name.
 	local String is name: "";
 
+	## Source line coordinate where this class was declared.
+	local Int is line: 0;
+
 	## Base class name if inheritance is specified, or empty string.
 	local String is baseClass: "";
 
@@ -71,6 +74,14 @@ class Class{
 	## @return: Array of [Member] descriptors.
 	replace local Function of Array of Member is getMembers(){
 		return self:members;
+	}
+
+	replace local Function is setLine(Int is line){
+		self:line: line;
+	}
+
+	replace local Function of Int is getLine(){
+		return self:line;
 	}
 
 }

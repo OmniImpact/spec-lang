@@ -212,22 +212,17 @@ class DeclarationGenerator{
 				c:getMembers():each(action: local Function(Member is m){
 					when (m:getMemberKind()) {
 						is METHOD: {
-							if (m:getBody():length() > 0 || m:getName() == "init") {
-								local String is retType: self:resolveReturnType(t: m:getType());
-								if (retType == "void") {
-									if (m:getName() == "evaluate" || m:getName() == "iteration") {
-										retType: "bool";
-									}
-									if (m:getName() == "drawCard" || m:getName() == "handValue") {
-										retType: "long long";
-									}
+							local String is retType: self:resolveReturnType(t: m:getType());
+							if (retType == "void") {
+								if (m:getName() == "evaluate" || m:getName() == "iteration") {
+									retType: "bool";
 								}
-								out: out . retType . " " . c:getName() . "_" . m:getName() . "(" . c:getName() . "* self";
-								m:getParameters():each(action: local Function(Parameter is p){
-									out: out . ", " . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
-								});
-								out: out . ");\n";
 							}
+							out: out . retType . " " . c:getName() . "_" . m:getName() . "(" . c:getName() . "* self";
+							m:getParameters():each(action: local Function(Parameter is p){
+								out: out . ", " . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
+							});
+							out: out . ");\n";
 						}
 						else: {}
 					}
@@ -244,6 +239,7 @@ class DeclarationGenerator{
 		classes:each(action: local Function(Class is c){
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				out: out . "struct " . c:getName() . " {\n";
+				out: out . "    const char* _type_name;\n";
 				local Array of Member is allFields: [];
 				self:collectStructFields(c: c, allClasses: classes, acc: allFields);
 				allFields:each(action: local Function(Member is m){

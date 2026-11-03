@@ -94,13 +94,11 @@ replace local Array of String is using: [
 ## Getting Started
 
 ### Prerequisites
-- **Rust & Cargo** (for building the Stage 0 compiler)
-- **GCC** (C99 compiler for linking binaries)
+- **GCC or Clang** (C11 compiler with standard POSIX threads)
 
-### Building the Compiler
+### Bootstrapping the Compiler
 ```bash
-cargo build --release
-ln -sf target/release/spec ./spec
+./bootstrap.sh
 ```
 
 ### Compiling and Running a Program
@@ -123,13 +121,13 @@ ln -sf target/release/spec ./spec
 
 | Package | Key Types & Functions | Description |
 |---|---|---|
-| **`base:io`** | `output:line`, `Input:prompt`, `File:read`, `File:write`, `File:exists` | Terminal and filesystem I/O. |
+| **`base:io`** | `output:line`, `Input:prompt`, `File:read`, `File:write`, `File:readAsync`, `File:writeAsync`, `File:exists`, `File:remove`, `InputHandler` | Terminal and synchronous/asynchronous filesystem I/O. |
 | **`base:math`** | `round`, `floor`, `ceil`, `random`, `abs`, `min`, `max`, `clamp` | Math primitives and pure Spec algorithms. |
-| **`base:struct`** | `Array` (`length`, `get`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `isEmpty`), `Map` (`getString`, `set`, `has`, `remove`, `keys`, `length`) | Dynamic array and dictionary collections. |
-| **`base:iterator`** | `Loop`, `LoopControl`, `While:run` | Decoupled loop execution engine. |
-| **`base:sys`** | `Process:execute`, `SourceLocation`, `StackFrame` | Subprocess execution, source coordinates, and execution frames. |
+| **`base:struct`** | `Array` (`length`, `get`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `each`, `filter`, `count`, `any`, `isEmpty`), `Map` (`getString`, `getInt`, `getFloat`, `getBool`, `get`, `set`, `has`, `remove`, `keys`, `length`) | Thread-safe dynamic array and 64-bucket FNV-1a hash map collections. |
+| **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop execution engine and inline closure-based iteration. |
+| **`base:sys`** | `Process:execute`, `Process:getPid`, `SourceLocation`, `StackFrame` | Subprocess execution, process inspection, source coordinates, and execution frames. |
 | **`base:reflect`** | `Type`, `Parameter`, `Member`, `Class` | Runtime type information, signature inspection, and reflection metadata. |
-| **`base:meta`** | `Expression`, `Statement`, `NamedArg`, `ProgramNode` | Syntax trees, AST transformations, and meta-programming representations. |
+| **`base:meta`** | `Expression`, `Statement`, `NamedArg`, `WhenArm`, `ProgramNode` | Syntax trees, resolved type annotations, and meta-programming representations. |
 
 ---
 

@@ -38,6 +38,8 @@ class Expression{
 
 	local String is kind: "";
 	local Type is inferredType;
+	local String is resolvedType: "";
+	local Int is line: 0;
 	local String is stringValue: "";
 	local Int is intValue: 0;
 	local Float is floatValue: 0.0;
@@ -152,6 +154,22 @@ class Expression{
 		return self:inferredType;
 	}
 
+	replace local Function is setResolvedType(String is t){
+		self:resolvedType: t;
+	}
+
+	replace local Function of String is getResolvedType(){
+		return self:resolvedType;
+	}
+
+	replace local Function is setLine(Int is line){
+		self:line: line;
+	}
+
+	replace local Function of Int is getLine(){
+		return self:line;
+	}
+
 }
 
 ## Represents a statement node in the Spec syntax tree.
@@ -165,6 +183,7 @@ class Statement{
 	];
 
 	local String is kind: "";
+	local Int is line: 0;
 	local Array of String is modifiers: [];
 	local Type is varType;
 	local String is varName: "";
@@ -234,6 +253,14 @@ class Statement{
 
 	replace local Function of String is getKind(){
 		return self:kind;
+	}
+
+	replace local Function is setLine(Int is line){
+		self:line: line;
+	}
+
+	replace local Function of Int is getLine(){
+		return self:line;
 	}
 
 }
