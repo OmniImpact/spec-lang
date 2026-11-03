@@ -16,6 +16,7 @@
    - [Primitives](#primitives)
    - [String Literals](#string-literals)
    - [Generic Collections](#generic-collections)
+   - [The `Function` Type](#the-function-type)
    - [The `Any` Type](#the-any-type)
 3. [The "Never Null" Standard](#the-never-null-standard)
 4. [Operators & Expressions](#operators--expressions)
@@ -62,8 +63,9 @@ local String is greeting: "Welcome";
 ```
 
 ### Functions & Methods
-Functions declare return types with `Function of <ReturnType> is <name>(<Params>)`:
-- If return type is omitted, it defaults to `null` (representing void return).
+Methods and functions declare their signatures using the `Function` type:
+- **Void / Default return**: `Function is <name>(<Params>)` (e.g. `replace local Function is init(...)`).
+- **Typed return**: `Function of <ReturnType> is <name>(<Params>)` (e.g. `Function of Int is add(...)`).
 - Modifiers include `local` (scoped to class) and `replace` (overriding an inherited member).
 
 ```spec
@@ -73,7 +75,7 @@ Function of Int is add(Int is a, Int is b){
 }
 
 # Void return type
-Function of null is logMessage(String is msg){
+Function is logMessage(String is msg){
 	output:line(msg);
 }
 ```
@@ -118,6 +120,22 @@ local String is rawPath: 'C:\Windows\System32';
 ```spec
 local Array of String is fruits: ["Apple", "Banana", "Cherry"];
 local Map of String to Int is scores: Map:init();
+```
+
+### The `Function` Type
+`Function` is a first-class type in Spec. It is used both for declaring method signatures and for storing and passing callables, event handlers, and callbacks as parameters or variables:
+- `Function`: Represents a void or generic callable.
+- `Function of ReturnType`: Callable returning a value of type `ReturnType`.
+- `Function of ParamType to ReturnType`: Callable accepting `ParamType` and returning `ReturnType`.
+
+```spec
+# Storing a callback or predicate in a variable
+local Function of String to Boolean is validator;
+
+# Passing a function as a parameter
+replace local Function is execute(Function is callback){
+	output:line("Executing callback...");
+}
 ```
 
 ### The `Any` Type

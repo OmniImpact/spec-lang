@@ -509,6 +509,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 "Boolean" | "bool" => "bool".to_string(),
                 "String" => "const char*".to_string(),
                 "Any" | "any" => "void*".to_string(),
+                "Function" => "void*".to_string(),
                 "Array" => "SpecArray*".to_string(),
                 "Map" => "SpecMap*".to_string(),
                 "LoopControl" => "SpecLoopControl*".to_string(),
