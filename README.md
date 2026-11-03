@@ -56,6 +56,15 @@ replace local Array of String is using: [
 
 ---
 
+## Documentation
+
+- 📚 **[Documentation Portal](docs/README.md)**: Main documentation index.
+- 📖 **[Language Guide](docs/language/README.md)**: Syntax, typing system, Never Null standard, operators, and control flow.
+- 📦 **[Standard Library Packages](docs/packages/README.md)**: Full API reference for `base:io`, `base:math`, `base:struct`, `base:iterator`, `base:sys`, and string inspection primitives.
+- 🛠️ **[Tooling & Compiler Guide](docs/tooling/README.md)**: Compiler CLI, module loader, tab linter, and Kate editor integration.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -100,7 +109,7 @@ ln -sf target/release/spec ./spec
 
 Install syntax highlighting definitions for the KDE Kate editor:
 ```bash
-./install-kate-syntax.sh
+./utilities/install-kate-syntax.sh
 ```
 *Installs `spec.xml` to `~/.local/share/org.kde.syntax-highlighting/syntax/` with priority association for `*.spec`.*
 
@@ -126,8 +135,15 @@ spec-lang/
 │       ├── math/            # Math
 │       ├── struct/          # Array, Map
 │       └── sys/             # Process
-├── docs/                    # Language documentation
+├── docs/                    # Nested documentation portal
+│   ├── README.md            # Documentation portal index
+│   ├── language/            # Language guide & syntax reference
+│   ├── packages/            # Standard library package reference
+│   └── tooling/             # Compiler, linter, and editor guide
 ├── examples/                # Example programs & test suites
+├── utilities/               # Helper scripts & editor syntax configurations
+│   ├── install-kate-syntax.sh
+│   └── spec-kate.xml
 ├── MAINTENANCE.md           # Developer feature addition checklist
 └── TASKS.md                 # Project roadmap tracking
 ```

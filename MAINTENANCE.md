@@ -41,20 +41,22 @@ cargo build --release
 
 ### 3. Kate Syntax Highlighting
 Whenever keywords, types, or standard packages are introduced:
-1. **Update `spec-kate.xml`**:
+1. **Update `utilities/spec-kate.xml`**:
    - Add new keywords to `<list name="keywords">`.
    - Add new types to `<list name="types">`.
    - Add new packages/builtins to `<list name="std_packages">`.
    - Add new operators or delimiters to the respective `<AnyChar>` rules.
 2. **Reinstall syntax definitions**:
    ```bash
-   ./install-kate-syntax.sh
+   ./utilities/install-kate-syntax.sh
    ```
    *Deploys to `~/.local/share/org.kde.syntax-highlighting/syntax/spec.xml` and `~/.local/share/katepart5/syntax/spec.xml`.*
 
 ---
 
 ### 4. Documentation Updates
-- [ ] **[docs/README.md](docs/README.md)**: Document new language grammar, operators, and syntax examples (contrasting full vs. shorthand).
-- [ ] **[docs/packages.md](docs/packages.md)**: Document new packages, classes, methods, signatures, and runtime behavior.
+- [ ] **[docs/README.md](docs/README.md)**: Main portal update if new documentation categories are added.
+- [ ] **[docs/language/README.md](docs/language/README.md)**: Document new language grammar, operators, and syntax examples.
+- [ ] **[docs/packages/README.md](docs/packages/README.md)**: Document new packages, classes, methods, signatures, and runtime behavior.
+- [ ] **[docs/tooling/README.md](docs/tooling/README.md)**: Document compiler flags, linter checks, and tooling changes.
 - [ ] **[TASKS.md](TASKS.md)**: Update task status (`$` for completed items).
