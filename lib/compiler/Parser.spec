@@ -4,7 +4,8 @@ class Parser{
 		base:struct:Array,
 		base:iterator:*,
 		compiler:Token,
-		compiler:AST
+		base:reflect:*,
+		base:meta:*
 	];
 
 	local Array of Token is tokens: [];
@@ -14,9 +15,9 @@ class Parser{
 	# Internal Loop Classes
 	class ProgramParseLoop extends Loop{
 		local Parser is parser;
-		local Array of ClassDef is classes;
+		local Array of Class is classes;
 
-		replace local Function is init(Parser is parser, Array of ClassDef is classes){
+		replace local Function is init(Parser is parser, Array of Class is classes){
 			self:parser: parser;
 			self:classes: classes;
 		}
@@ -126,7 +127,7 @@ class Parser{
 		}
 
 		replace local Function of Boolean is iteration(LoopControl is control){
-			local TypeNode is pType: parser:parseType();
+			local Type is pType: parser:parseType();
 			parser:matchToken(kind: "KEYWORD", value: "is");
 			local Token is pTok: parser:advance();
 			params:add(item: Parameter:init(name: pTok:getValue(), paramType: pType));
@@ -287,13 +288,13 @@ class Parser{
 		return false;
 	}
 
-	replace local Function of TypeNode is parseType(){
+	replace local Function of Type is parseType(){
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
 		if (self:check(kind: "KEYWORD", value: "of")) {
 			self:advance();
-			local Array of TypeNode is params: [];
+			local Array of Type is params: [];
 			params:add(item: self:parseType());
 
 			if (self:check(kind: "KEYWORD", value: "to")) {
@@ -301,12 +302,12 @@ class Parser{
 				params:add(item: self:parseType());
 			}
 
-			local TypeNode is node: TypeNode:init(name: typeName);
+			local Type is node: Type:init(name: typeName);
 			node:params: params;
 			return node;
 		}
 
-		return TypeNode:init(name: typeName);
+		return Type:init(name: typeName);
 	}
 
 	replace local Function of Member is parseMember(){
@@ -314,13 +315,13 @@ class Parser{
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
 		if (self:check(kind: "KEYWORD", value: "class")) {
-			local ClassDef is nested: self:parseClass();
+			local Class is nested: self:parseClass();
 			local Member is m: Member:init(kind: "CLASS");
 			m:nestedClass: nested;
 			return m;
 		}
 
-		local TypeNode is mType: self:parseType();
+		local Type is mType: self:parseType();
 		self:matchToken(kind: "KEYWORD", value: "is");
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
@@ -417,7 +418,7 @@ class Parser{
 		if (self:check(kind: "KEYWORD", value: "local")) {
 			self:advance();
 			local Array of String is modifiers: ["local"];
-			local TypeNode is vType: self:parseType();
+			local Type is vType: self:parseType();
 			self:matchToken(kind: "KEYWORD", value: "is");
 			local Token is nameTok: self:advance();
 			local String is name: nameTok:getValue();
@@ -534,7 +535,7 @@ class Parser{
 		return binLoop:currentExpr;
 	}
 
-	replace local Function of ClassDef is parseClass(){
+	replace local Function of Class is parseClass(){
 		self:matchToken(kind: "KEYWORD", value: "class");
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
@@ -551,11 +552,11 @@ class Parser{
 		While:run(loop: ClassMembersLoop:init(parser: self, members: members));
 		self:matchToken(kind: "SYMBOL", value: "}");
 
-		return ClassDef:init(name: name, baseClass: baseClass, members: members);
+		return Class:init(name: name, baseClass: baseClass, members: members);
 	}
 
 	replace local Function of ProgramNode is parseProgram(){
-		local Array of ClassDef is classes: [];
+		local Array of Class is classes: [];
 		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
 		return ProgramNode:init(classes: classes);
 	}

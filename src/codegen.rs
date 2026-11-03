@@ -1452,15 +1452,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     if is_map {
                         return Ok(format!("spec_map_length({})", target_c));
                     }
-                    let is_str = matches!(target.as_ref(), Expression::StringLiteral(_))
-                        || if let Expression::Identifier(ref id) = **target {
-                            matches!(
-                                self.local_var_types.get(id).or_else(|| self.field_types.get(id)),
-                                Some(Type::Simple(n)) if n == "String" || n == "string"
-                            )
-                        } else {
-                            false
-                        };
+                    let is_str = self.is_string_expr(target);
                     if is_str {
                         return Ok(format!("spec_str_length({})", target_c));
                     } else {
@@ -1626,6 +1618,36 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     .get(id)
                     .or_else(|| self.field_types.get(id));
                 matches!(t, Some(Type::Simple(name)) if name == "String" || name == "string")
+            }
+            Expression::Path(segments) => {
+                if let Some(last) = segments.last() {
+                    let mut t = self
+                        .local_var_types
+                        .get(last)
+                        .or_else(|| self.field_types.get(last));
+                    if t.is_none() && segments.len() >= 2 {
+                        let root_id = &segments[0];
+                        let root_type = self
+                            .local_var_types
+                            .get(root_id)
+                            .or_else(|| self.field_types.get(root_id));
+                        if let Some(Type::Simple(cname)) = root_type {
+                            if let Some(cdef) = self.all_classes.get(cname) {
+                                for m in &cdef.members {
+                                    if let Member::Field { name, field_type, .. } = m {
+                                        if name == last {
+                                            t = Some(field_type);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    matches!(t, Some(Type::Simple(name)) if name == "String" || name == "string")
+                } else {
+                    false
+                }
             }
             Expression::MethodCall { method, .. } => {
                 matches!(

@@ -46,3 +46,9 @@ $ Add .gitattributes mapping *.spec files to Spec on GitHub
 $ Phase 4: Implement AST models in Spec (lib/compiler/AST.spec)
 $ Phase 4: Implement recursive-descent Parser in Spec (lib/compiler/Parser.spec)
 $ Phase 4: Create Phase 4 Parser test suite in examples/phase4_parser_test.spec and verify
+$ Implement base:sys:SourceLocation and base:sys:StackFrame for source provenance and execution frames
+$ Implement base:reflect:Type, Parameter, Member, and Class for runtime type information and reflection
+$ Implement base:meta:AST (Expression, Statement, NamedArg, ProgramNode) for AST meta-programming
+$ Update compiler:Token, Lexer, Parser, and phase4_parser_test to use base:sys, base:reflect, and base:meta
+$ Verify lint, phase4 test, and full test suite with new standard library packages
+$ Update documentation and commit standard library refactoring

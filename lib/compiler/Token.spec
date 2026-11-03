@@ -1,15 +1,23 @@
 class Token{
 
+	replace local Array of String is using: [
+		base:sys:SourceLocation
+	];
+
 	local String is kind: "";
 	local String is value: "";
-	local Int is line: 1;
-	local Int is col: 1;
+	local SourceLocation is location;
 
 	replace local Function is init(String is kind, String is value, Int is line, Int is col){
 		self:kind: kind;
 		self:value: value;
-		self:line: line;
-		self:col: col;
+		self:location: SourceLocation:init(file: "", line: line, col: col);
+	}
+
+	replace local Function is withLocation(String is kind, String is value, SourceLocation is location){
+		self:kind: kind;
+		self:value: value;
+		self:location: location;
 	}
 
 	replace local Function of String is getKind(){
@@ -21,11 +29,15 @@ class Token{
 	}
 
 	replace local Function of Int is getLine(){
-		return self:line;
+		return self:location:getLine();
 	}
 
 	replace local Function of Int is getCol(){
-		return self:col;
+		return self:location:getCol();
+	}
+
+	replace local Function of SourceLocation is getLocation(){
+		return self:location;
 	}
 
 }

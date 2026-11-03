@@ -6,8 +6,9 @@ class Phase4ParserTest{
 		base:iterator:*,
 		compiler:Token,
 		compiler:Lexer,
-		compiler:AST,
-		compiler:Parser
+		compiler:Parser,
+		base:reflect:*,
+		base:meta:*
 	];
 
 	replace local Function is init(Map of String to String is args){
@@ -28,10 +29,10 @@ class Phase4ParserTest{
 		local Parser is parser: Parser:init(tokens: tokens);
 		local ProgramNode is prog: parser:parseProgram();
 
-		local Array of ClassDef is classes: prog:getClasses();
+		local Array of Class is classes: prog:getClasses();
 		output:line("Classes parsed: " . classes:length());
 
-		local ClassDef is playerClass: classes:get(index: 0);
+		local Class is playerClass: classes:get(index: 0);
 		output:line("Class name: " . playerClass:getName());
 		output:line("Class base: " . playerClass:getBaseClass());
 

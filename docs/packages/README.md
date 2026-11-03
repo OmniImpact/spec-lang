@@ -24,7 +24,16 @@ This document details the standard library packages available in the Spec runtim
    - [`base:iterator:While`](#baseiteratorwhile)
 5. [`base:sys`](#5-basesys)
    - [`base:sys:Process`](#basesysprocess)
-6. [String Inspection Primitives](#6-string-inspection-primitives)
+   - [`base:sys:SourceLocation`](#basesyssourcelocation-libbasesyssourcelocationspec)
+   - [`base:sys:StackFrame`](#basesysstackframe-libbasesysstackframespec)
+6. [`base:reflect`](#6-basereflect)
+   - [`base:reflect:Type`](#6-basereflect)
+   - [`base:reflect:Parameter`](#6-basereflect)
+   - [`base:reflect:Member`](#6-basereflect)
+   - [`base:reflect:Class`](#6-basereflect)
+7. [`base:meta`](#7-basemeta)
+   - [AST Models (`Expression`, `Statement`, `NamedArg`, `ProgramNode`)](#7-basemeta)
+8. [String Inspection Primitives](#8-string-inspection-primitives)
 
 ---
 
@@ -297,9 +306,71 @@ Provides external process execution and operating system invocation:
   local Int is code: Process:execute(command: "gcc", args: ["--version"]);
   ```
 
+### `base:sys:SourceLocation` (`lib/base/sys/SourceLocation.spec`)
+Encapsulates source file provenance, line numbers, and column offsets:
+- `SourceLocation:init(file: String, line: Int, col: Int)`
+- `loc:getFile() -> String`
+- `loc:getLine() -> Int`
+- `loc:getCol() -> Int`
+- `loc:toString() -> String` (e.g. `"Player.spec:42:15"`)
+
+### `base:sys:StackFrame` (`lib/base/sys/StackFrame.spec`)
+Represents a call frame in a runtime call stack or debugging trace:
+- `StackFrame:init(location: SourceLocation, className: String, methodName: String)`
+- `frame:getLocation() -> SourceLocation`
+- `frame:getClassName() -> String`
+- `frame:getMethodName() -> String`
+- `frame:toString() -> String` (e.g. `"Player:takeDamage (Player.spec:42:15)"`)
+
 ---
 
-## 6. String Inspection Primitives
+## 6. `base:reflect`
+
+Importing:
+```spec
+replace local Array of String is using: [
+	base:reflect:*
+];
+```
+
+Provides runtime type descriptors and object model reflection:
+
+- **`base:reflect:Type` (`lib/base/reflect/Type.spec`)**:
+  Represents primitive and parameterized types (e.g. `Int`, `Function of String`, `Map of String to Int`).
+  - `Type:init(name: String)`
+  - `Type:withParams(name: String, params: Array of Type)`
+  - `type:getName() -> String`
+  - `type:getParams() -> Array of Type`
+  - `type:isGeneric() -> Boolean`
+  - `type:toString() -> String`
+- **`base:reflect:Parameter` (`lib/base/reflect/Parameter.spec`)**:
+  Represents method parameter definitions: `name: String`, `paramType: Type`.
+- **`base:reflect:Member` (`lib/base/reflect/Member.spec`)**:
+  Represents field, method, or nested class members on a type.
+- **`base:reflect:Class` (`lib/base/reflect/Class.spec`)**:
+  Represents class definitions and metadata: `name: String`, `baseClass: String`, `members: Array of Member`.
+
+---
+
+## 7. `base:meta`
+
+Importing:
+```spec
+replace local Array of String is using: [
+	base:meta:*
+];
+```
+
+Provides concrete Abstract Syntax Tree models for code generation, desugaring, macros, and tooling:
+
+- **`base:meta:NamedArg`**: Named arguments in method calls.
+- **`base:meta:Expression`**: Expressions (`STRING`, `NUMBER`, `FLOAT`, `BOOL`, `IDENT`, `PATH`, `ARRAY`, `CALL`, `BINARY`, `UNARY`).
+- **`base:meta:Statement`**: Statements (`VAR_DECL`, `ASSIGN`, `IF`, `RETURN`, `CLASS`, `EXPR`).
+- **`base:meta:ProgramNode`**: Program root node containing an array of `Class` definitions.
+
+---
+
+## 8. String Inspection Primitives
 
 Strings in Spec provide built-in methods for lexical scanning, text transformation, and parsing:
 

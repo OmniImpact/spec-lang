@@ -73,7 +73,9 @@ replace local Array of String is using: [
 	base:math:*,
 	base:io:*,
 	base:sys:*,
-	base:iterator:*
+	base:iterator:*,
+	base:reflect:*,
+	base:meta:*
 ];
 ```
 
@@ -124,7 +126,9 @@ ln -sf target/release/spec ./spec
 | **`base:math`** | `round`, `floor`, `ceil`, `random`, `abs`, `min`, `max`, `clamp` | Math primitives and pure Spec algorithms. |
 | **`base:struct`** | `Array` (`length`, `get`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `isEmpty`), `Map` (`getString`, `set`, `has`, `remove`, `keys`, `length`) | Dynamic array and dictionary collections. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `While:run` | Decoupled loop execution engine. |
-| **`base:sys`** | `Process:execute` | Subprocess execution and system command dispatch. |
+| **`base:sys`** | `Process:execute`, `SourceLocation`, `StackFrame` | Subprocess execution, source coordinates, and execution frames. |
+| **`base:reflect`** | `Type`, `Parameter`, `Member`, `Class` | Runtime type information, signature inspection, and reflection metadata. |
+| **`base:meta`** | `Expression`, `Statement`, `NamedArg`, `ProgramNode` | Syntax trees, AST transformations, and meta-programming representations. |
 
 ---
 
