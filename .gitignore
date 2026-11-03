@@ -8,5 +8,6 @@
 /helloworld
 *.spec.c
 *.c
+!bootstrap/spec.c
 /spec-stage*
 TASKS.md

@@ -13,8 +13,11 @@ class LintIssue{
 	## Informational description of the issue.
 	local String is message: "";
 
-	## Initializes a lint issue using property initializer shorthand.
-	replace local Function is init(self:line, self:isWarning, self:message){
+	## Initializes a lint issue.
+	replace local Function is init(Int is line, Boolean is isWarning, String is message){
+		self:line: line;
+		self:isWarning: isWarning;
+		self:message: message;
 	}
 
 	## Returns the line number.

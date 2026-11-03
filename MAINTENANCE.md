@@ -6,16 +6,24 @@ This document succinctly outlines the required steps and checklist whenever a ne
 
 ## Feature Addition Checklist
 
-### 1. Compiler Implementation
-- [ ] **AST (`src/ast.rs`)**: Define any new syntax tree nodes, expressions, types, or operators.
-- [ ] **Lexer (`src/lexer.rs`)**: Add new keywords, symbols, escape sequences, or literal tokenizers.
-- [ ] **Parser (`src/parser.rs`)**: Implement parsing rules, operator precedence, and support for both explicit and shorthand variants.
-- [ ] **Code Generator & Runtime (`src/codegen.rs`)**:
-  - Add C runtime structures/functions to `runtime_prelude()`.
-  - Transpile AST nodes to clean C99 code.
-- [ ] **Linter (`src/linter.rs`)**:
-  - Ensure the feature respects the **tab-based indentation standard**.
-  - Track optional/shorthand parameter rules and warnings.
+### 1. Pure-Spec Compiler Implementation
+Spec is now self-hosted. Feature additions must be made directly in the pure-Spec compiler files under `lib/compiler/`:
+- [ ] **AST (`lib/compiler/AST.spec`)**: Define new AST node classes, expression kinds, and statement representations.
+- [ ] **Token & Lexer (`lib/compiler/Token.spec`, `lib/compiler/Lexer.spec`)**: Add token kinds, keywords, escape characters, or symbols.
+- [ ] **Parser (`lib/compiler/Parser.spec`)**: Implement recursive-descent grammar rules and shorthand forms.
+- [ ] **Type Checker (`lib/compiler/TypeChecker.spec`)**: Semantic validation, interface contracts, and type resolution.
+- [ ] **Code Generation & Runtime**:
+  - `lib/compiler/DeclarationGenerator.spec`: Struct layout, enum definitions, and forward declarations.
+  - `lib/compiler/BuiltinCallGenerator.spec`: Standard library and runtime builtin call emitter.
+  - `lib/compiler/CodeGenerator.spec`: Expression, statement, method, and translation unit emission.
+  - `lib/compiler/RuntimePrelude.spec`: Thread-safe C11 runtime structures, helper functions, and recursive mutex locks.
+- [ ] **Linter (`lib/compiler/Linter.spec`)**: Update tab indentation checks, optional parameter analysis, and coding style rules.
+- [ ] **Bootstrap C Update**: Rebuild `bootstrap/spec.c` using the self-hosted compiler:
+  ```bash
+  ./spec -i lib/compiler/Driver.spec -o ./spec
+  cp /tmp/_spec_stage_temp.c bootstrap/spec.c
+  ./bootstrap.sh
+  ```
 
 ---
 
@@ -26,13 +34,10 @@ Every new feature must have tests demonstrating both styles:
 
 Verification commands:
 ```bash
-# Build the release compiler
-cargo build --release
-
-# Run the linter on test files (must report 0 warnings for standard tab files)
+# Run the pure-Spec linter (must report 0 warnings for standard tab files)
 ./spec --lint examples/my_feature.spec
 
-# Compile and run binary
+# Compile and run binary with self-hosted compiler
 ./spec -i examples/my_feature.spec -o my_feature_bin
 ./my_feature_bin
 ```

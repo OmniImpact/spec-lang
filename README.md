@@ -143,29 +143,54 @@ Install syntax highlighting definitions for the KDE Kate editor:
 
 ---
 
+## Building and Bootstrapping
+
+Spec is **100% self-hosted**. You do not need Rust or Cargo to build Spec; only a C compiler (`gcc` or `clang`) with standard POSIX threads:
+
+```bash
+# Bootstrap the official Spec compiler directly from canonical C source:
+./bootstrap.sh
+
+# Compile any Spec program:
+./spec -i examples/helloworld.spec -o helloworld
+./helloworld --name "Spec Developer"
+
+# Run the strict whitespace and style linter:
+./spec --lint lib/compiler/Driver.spec
+```
+
+---
+
 ## Project Structure
 
 ```
 spec-lang/
-├── Cargo.toml               # Stage 0 compiler manifest
-├── src/                     # Compiler source code (Rust)
-│   ├── ast.rs               # AST definitions
-│   ├── lexer.rs             # Tokenizer
-│   ├── parser.rs            # Recursive-descent parser
-│   ├── loader.rs            # Multi-file module loader
-│   ├── codegen.rs           # C99 code generator and runtime prelude
-│   ├── linter.rs            # Code standards and optional parameter linter
-│   └── main.rs              # CLI driver
-├── lib/                     # Spec Standard Library (written in Spec)
+├── bootstrap.sh             # Canonical C bootstrap script (no Rust required)
+├── bootstrap/
+│   └── spec.c               # Canonical converged C11 source of self-hosted compiler
+├── Cargo.toml               # Stage 0 bootstrap compiler manifest (retired)
+├── src/                     # Legacy Stage 0 Rust bootstrap compiler
+├── lib/                     # Spec Standard Library & Self-Hosted Compiler (written in Spec)
 │   ├── base/
 │   │   ├── io/              # File, Input, Output
 │   │   ├── iterator/        # Loop, LoopControl, While
 │   │   ├── math/            # Math
 │   │   ├── struct/          # Array, Map
-│   │   └── sys/             # Process
-│   └── compiler/            # Self-hosting compiler components
+│   │   └── sys/             # Process, SourceLocation, StackFrame
+│   └── compiler/            # Pure Spec Self-Hosted Compiler
 │       ├── Token.spec       # Token model
-│       └── Lexer.spec       # Pure Spec Lexer
+│       ├── Lexer.spec       # Pure Spec Lexer & tokenizer
+│       ├── Parser.spec      # Pure Spec recursive-descent Parser
+│       ├── AST.spec         # AST definitions
+│       ├── TypeChecker.spec # Semantic analyzer & interface contract enforcement
+│       ├── Loader.spec      # Transitive multi-file package loader
+│       ├── CodeGenerator.spec # C11 translation unit coordinator
+│       ├── DeclarationGenerator.spec # Enums, forward decls, and struct layouts
+│       ├── BuiltinCallGenerator.spec # Standard library runtime builtin dispatcher
+│       ├── CBackendUtils.spec # C type mapping and identifier sanitization
+│       ├── RuntimePrelude.spec # Thread-safe C runtime with recursive mutexes
+│       ├── Linter.spec      # Pure Spec style and optional parameter linter
+│       └── Driver.spec      # Compiler CLI coordinator
 ├── docs/                    # Nested documentation portal
 │   ├── README.md            # Documentation portal index
 │   ├── language/            # Language guide & syntax reference
@@ -188,8 +213,8 @@ spec-lang/
 - [x] **Phase 2**: Rich collections (`Array:pop`, `removeAt`, `slice`, `clear`, `indexOf`; `Map:set`, `has`, `remove`, `keys`, `length`).
 - [x] **Phase 3**: Implement lexer in Spec (`compiler:Lexer.spec`, `compiler:Token.spec`).
 - [x] **Phase 4**: Implement parser and AST in Spec (`compiler:Parser.spec`, `compiler:AST.spec`).
-- [ ] **Phase 5**: Implement code generator in Spec (`compiler:CodeGen.spec`).
-- [ ] **Phase 6**: Stage 1 & Stage 2 bootstrap verification.
+- [x] **Phase 5**: Implement pure Spec type checker and modular code generator (`TypeChecker.spec`, `CodeGenerator.spec`, `DeclarationGenerator.spec`, `BuiltinCallGenerator.spec`).
+- [x] **Phase 6**: Stage 1, Stage 2, and Stage 3 self-hosting bootstrap verification with 100% bit-for-bit fixed-point convergence. Single-file C bootstrap (`bootstrap/spec.c`, `bootstrap.sh`) established and Rust compiler retired.
 
 ---
 

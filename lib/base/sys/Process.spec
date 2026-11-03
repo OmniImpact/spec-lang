@@ -16,4 +16,14 @@ class Process{
 	replace Function of Int is execute(String is command, Array of String is args){
 	}
 
+	## Suspends execution of the current process for the specified duration.
+	##
+	## @param milliseconds: Duration to sleep in milliseconds.
+	## @example:
+	## ```spec
+	## Process:sleep(milliseconds: 100);
+	## ```
+	replace Function is sleep(Int is milliseconds){
+	}
+
 }

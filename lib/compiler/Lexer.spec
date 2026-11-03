@@ -117,29 +117,48 @@ class Lexer{
 	class StringScanLoop extends Loop{
 		local Lexer is lexer;
 		local String is quote: "";
+		local String is res: "";
 
 		replace local Function is init(Lexer is lexer, String is quote){
 			self:lexer: lexer;
 			self:quote: quote;
+			self:res: "";
 		}
 
 		replace local Function of Boolean is evaluate(){
-			return lexer:pos < lexer:length;
+			return self:lexer:pos < self:lexer:length;
 		}
 
 		replace local Function of Boolean is iteration(LoopControl is control){
-			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
+			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: "");
+			if (ch == self:quote) {
+				return false;
+			}
 			if (ch == "\\") {
-				lexer:advance();
-				if (lexer:pos < lexer:length) {
-					lexer:advance();
+				self:lexer:advance();
+				if (self:lexer:pos < self:lexer:length) {
+					local String is nextCh: self:lexer:advance();
+					if (self:quote == "\"") {
+						when (nextCh) {
+							is "n": { self:res: self:res . "\n"; }
+							is "t": { self:res: self:res . "\t"; }
+							is "r": { self:res: self:res . "\r"; }
+							is "\"": { self:res: self:res . "\""; }
+							is "\\": { self:res: self:res . "\\"; }
+							else: { self:res: self:res . nextCh; }
+						}
+					} else {
+						if (nextCh == "'" || nextCh == "\\") {
+							self:res: self:res . nextCh;
+						} else {
+							self:res: self:res . "\\" . nextCh;
+						}
+					}
 				}
 				return true;
 			}
-			if (ch == quote) {
-				return false;
-			}
-			lexer:advance();
+			self:res: self:res . ch;
+			self:lexer:advance();
 			return true;
 		}
 	}
@@ -255,15 +274,14 @@ class Lexer{
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		self:advance();
-		local Int is startPos: self:pos;
 
-		While:run(loop: StringScanLoop:init(lexer: self, quote: quote));
+		local StringScanLoop is loop: StringScanLoop:init(lexer: self, quote: quote);
+		While:run(loop: loop);
 
-		local String is val: self:source:substring(start: startPos, end: self:pos);
 		if (self:pos < self:length) {
 			self:advance();
 		}
-		return Token:init(kind: TokenKind:STRING, value: val, line: startLine, col: startCol);
+		return Token:init(kind: TokenKind:STRING, value: loop:res, line: startLine, col: startCol);
 	}
 
 	replace local Function of Token is readSymbol(){

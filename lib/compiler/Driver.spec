@@ -16,6 +16,10 @@ class Driver{
 		compiler:Parser,
 		compiler:Linter,
 		compiler:TypeChecker,
+		compiler:CBackendUtils,
+		compiler:RuntimePrelude,
+		compiler:DeclarationGenerator,
+		compiler:BuiltinCallGenerator,
 		compiler:CodeGenerator,
 		compiler:Loader
 	];
@@ -35,7 +39,7 @@ class Driver{
 		local Boolean is lintMode: args:has(key: "lint");
 
 		if (inputPath == "") {
-			output:line("Spec Compiler v0.000.012 (Pure Spec)");
+			output:line("Spec Compiler v0.000.014 (Pure Spec - Self-Hosted)");
 			output:line("Usage: spec -i <input.spec> -o <output_binary> [--lint]");
 			return;
 		}
@@ -54,25 +58,9 @@ class Driver{
 			local Parser is parser: Parser:init(tokens: tokens);
 			local ProgramNode is lintProgram: parser:parseProgram();
 
-			output:line("Checking '" . inputPath . "' for Spec code standards...");
 			local Linter is linter: Linter:init();
 			local Array of LintIssue is issues: linter:lint(source: source, program: lintProgram);
-
-			local Int is warnings: 0;
-			local Int is notices: 0;
-			issues:each(action: local Function(LintIssue is issue){
-				output:line(issue:toString());
-				if (issue:getIsWarning()) {
-					warnings: warnings + 1;
-				} else {
-					notices: notices + 1;
-				}
-			});
-
-			output:line("\nLint summary for " . inputPath . ": " . warnings . " warning(s), " . notices . " notice(s).");
-			if (warnings == 0) {
-				output:line("All standard checks passed successfully.");
-			}
+			linter:report(filePath: inputPath, issues: issues);
 			return;
 		}
 
@@ -103,8 +91,28 @@ class Driver{
 			return;
 		}
 
-		local Class is entryClass: program:getClasses():get(index: 0);
-		local String is entryName: entryClass:getName();
+		local String is entryName: "";
+		program:getClasses():each(action: local Function(Class is c){
+			c:getMembers():each(action: local Function(Member is m){
+				if (m:getName() == "init" && m:getParameters():length() == 1) {
+					local Parameter is p: m:getParameters():get(index: 0);
+					if (p:getType():getName() == "Map") {
+						entryName: c:getName();
+					}
+				}
+			});
+		});
+		if (entryName == "") {
+			program:getClasses():each(action: local Function(Class is c){
+				if (entryName == "" && c:getBaseClass() != "Enum") {
+					entryName: c:getName();
+				}
+			});
+		}
+		if (entryName == "") {
+			local Class is firstClass: program:getClasses():get(index: 0);
+			entryName: firstClass:getName();
+		}
 
 		# 6. C11 Code Generation
 		local CodeGenerator is cg: CodeGenerator:init();

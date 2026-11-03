@@ -33,6 +33,18 @@ class Class{
 		self:members: members;
 	}
 
+	## Initializes a class metadata definition with multiple inheritance parents.
+	##
+	## @param name: Class identifier name.
+	## @param baseClasses: Array of parent class identifier strings.
+	## @param members: Array of class [Member] descriptors.
+	replace local Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
+		self:name: name;
+		self:baseClasses: baseClasses;
+		self:baseClass: if (baseClasses:length() > 0) baseClasses:get(index: 0) else "";
+		self:members: members;
+	}
+
 	## Returns the class name.
 	##
 	## @return: Name string.

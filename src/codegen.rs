@@ -2752,6 +2752,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                         | "substring"
                         | "getString"
                         | "toString"
+                        | "getName"
                         | "getKind"
                         | "getValue"
                         | "read"

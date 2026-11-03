@@ -171,6 +171,7 @@ fn main() {
     // 5. Compile with GCC
     let status = Command::new("gcc")
         .arg("-O2")
+        .arg("-g")
         .arg(&c_path)
         .arg("-o")
         .arg(&output_path)

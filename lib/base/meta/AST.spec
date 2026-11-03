@@ -32,6 +32,7 @@ class Expression{
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:reflect:Type,
+		base:reflect:Parameter,
 		base:meta:AST
 	];
 
@@ -56,6 +57,9 @@ class Expression{
 	local Expression is elseExpr;
 	local Expression is whenSubject;
 	local Array of WhenArm is whenArms: [];
+	local Type is anonReturnType;
+	local Array of Parameter is anonParams: [];
+	local Array of Statement is anonBody: [];
 
 	replace local Function is init(String is kind){
 		self:kind: kind;
@@ -127,6 +131,13 @@ class Expression{
 		self:kind: "WHEN";
 		self:whenSubject: subject;
 		self:whenArms: arms;
+	}
+
+	replace local Function is makeAnonymousFunction(Type is returnType, Array of Parameter is params, Array of Statement is body){
+		self:kind: "ANON_FN";
+		self:anonReturnType: returnType;
+		self:anonParams: params;
+		self:anonBody: body;
 	}
 
 	replace local Function of String is getKind(){

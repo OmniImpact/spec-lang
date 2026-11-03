@@ -32,7 +32,7 @@ class EnumWhenTest{
 		base:io:Output
 	];
 
-	init(Map of String to String is args){
+	replace init(Map of String to String is args){
 		output:line("=== Testing Enum, When, and Inline If/Else ===");
 
 		self:testInlineIfElse();

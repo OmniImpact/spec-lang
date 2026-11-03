@@ -27,38 +27,38 @@ class Loader{
 		self:seenClassNames: Map:init();
 	}
 
+	class PathConvLoop extends Loop{
+		local String is src;
+		local Int is pos: 0;
+		local String is res: "";
+
+		replace local Function is init(String is src){
+			self:src: src;
+			self:pos: 0;
+			self:res: "";
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return self:pos < self:src:length();
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			local String is ch: self:src:charAt(index: self:pos, default: "");
+			self:pos: self:pos + 1;
+			if (ch == ":") {
+				self:res: self:res . "/";
+			} else {
+				self:res: self:res . ch;
+			}
+			return true;
+		}
+	}
+
 	## Converts a Spec package identifier path (e.g. "base:struct:Array") into a filesystem path.
 	##
 	## @param rawPath: Colon-separated package identifier.
 	## @return: Resolved filesystem path string, or empty string if not found.
 	replace local Function of String is resolvePath(String is rawPath){
-		class PathConvLoop extends Loop{
-			local String is src;
-			local Int is pos: 0;
-			local String is res: "";
-
-			replace local Function is init(String is src){
-				self:src: src;
-				self:pos: 0;
-				self:res: "";
-			}
-
-			replace local Function of Boolean is evaluate(){
-				return pos < src:length();
-			}
-
-			replace local Function of Boolean is iteration(LoopControl is control){
-				local String is ch: src:charAt(index: pos, default: "");
-				pos: pos + 1;
-				if (ch == ":") {
-					res: res . "/";
-				} else {
-					res: res . ch;
-				}
-				return true;
-			}
-		}
-
 		local PathConvLoop is loop: PathConvLoop:init(src: rawPath);
 		While:run(loop: loop);
 		local String is converted: loop:res;
