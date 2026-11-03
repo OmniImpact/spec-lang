@@ -156,6 +156,7 @@ Spec eliminates null reference bugs by making `null` nonexistent as a runtime va
    local String is char: text:charAt(index: 5, default: " ");
    local String is fileText: File:read(path: "config.cfg", default: "{}");
    ```
+5. **No Null Return Keyword or Type**: Void methods are declared simply as `Function is <name>(...)` without any `of null` clause.
 
 ---
 

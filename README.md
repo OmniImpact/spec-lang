@@ -22,26 +22,49 @@ class HelloWorld{
 
 ## Key Language Philosophies
 
-### 1. Unlockable & Concurrency-First Iteration
-Rather than hardcoding loop locks, iteration in Spec is fully decoupled into lifecycle objects:
+### 1. Minimal Core & Maximum Standard Library
+Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
+- **Ultra-Lean Compiler**: The compiler core knows only **12 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`, `while`, `break`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`).
+- **Userland Implementation**: Rich language features live in the standard library (`lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
+- **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
+
+### 2. `Function` as a First-Class Type (Uniform Declarations)
+In Spec, `Function` is a **type**, not a keyword. This establishes two vital design characteristics:
+- **Capitalization Discipline**: Keywords are lowercase (`class`, `local`, `replace`, `is`), while types are PascalCase (`Int`, `String`, `Boolean`, `Function`).
+- **Symmetrical Declaration Grammar**: Variable declarations and method definitions share the exact same structural pattern:
+  - Variable: `<Modifiers> <Type> is <name>: <value>;`
+    ```spec
+    local Int is score: 100;
+    local Function of String to Boolean is validator;
+    ```
+  - Method: `<Modifiers> <Type> is <name>(<parameters>) { <body> }`
+    ```spec
+    replace local Function is init(Map of String to String is args){ ... }
+    replace local Function of Boolean is evaluate(){ ... }
+    ```
+- **First-Class Callables**: Because `Function` is a type, functions and closures can be stored in variables, passed to higher-order functions, and typed generically (`Function of Param to Return`).
+
+### 3. The "Never Null" Safety Standard
+In Spec, `null` does not exist as a runtime value, pointer, or type:
+- **No Null Keywords or Types**: Functions returning nothing are declared simply as `Function is action()` (no `of null` needed).
+- **Concrete Values Required**: Variables and fields cannot be null. If something would be null, the program will not compile.
+- **Empty Collections**: Collections like `Array` and `Map` can be empty (`[]`, length 0).
+- **Deferred Initialization**: Class fields may be declared without inline values provided they are assigned in `init(...)` before use.
+- **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
+
+### 4. Unlockable & Concurrency-First Iteration
+Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects:
 - **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`.
 - **`base:iterator:LoopControl`**: Supports non-blocking halts (`stop()`) and asynchronous completion triggers (`onComplete`).
 - **`While:run(loop, control)`**: Drives the iterator lifecycle without blocking threads.
 
-### 2. The "Never Null" Safety Standard
-In Spec, `null` does not exist as a runtime value:
-- **Concrete Values Required**: Variables and fields cannot be null.
-- **Empty Collections**: Collections like `Array` and `Map` can be empty (`[]`).
-- **Deferred Initialization**: Class fields may be declared without inline values provided they are assigned in `init(...)` before use.
-- **Default Fallbacks**: Any operation reading from a source that could be empty requires a default argument (e.g., `getString(key, default)`, `pop(default)`, `removeAt(index, default)`).
-
-### 3. Tab-Based Indentation Standard
+### 5. Tab-Based Indentation Standard
 Spec establishes a standard indentation convention using **tabs**. A built-in linter detects space-based indentation and optional parameter patterns:
 ```bash
 ./spec --lint path/to/program.spec
 ```
 
-### 4. Multi-File Module Resolution
+### 6. Multi-File Module Resolution
 Dependencies declared in `using: [...]` automatically resolve against the standard library in `lib/` and local project files:
 ```spec
 replace local Array of String is using: [
