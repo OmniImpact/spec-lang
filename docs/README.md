@@ -43,7 +43,7 @@ Official code style conventions, architectural idioms, and documentation standar
 ---
 
 ### 5. [Roadmap to Self-Hosting](language/README.md#roadmap-to-self-hosting)
-Tracks the evolution of the Spec compiler from the current Stage 0 Rust transpiler to full self-hosting in Spec.
+Tracks the evolution of the Spec compiler from the Stage 0 bootstrap transpiler to full self-hosting in Spec.
 
 ---
 

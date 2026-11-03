@@ -514,9 +514,9 @@ scores["charlie"]: 100; # Insert new key
 scores["alice"]: 98;   # Update existing key
 
 # Array indexing and assignment
-local Array of String is languages: ["C", "Rust", "Spec"];
+local Array of String is languages: ["C", "Java", "Spec"];
 local String is first: languages[0]; # "C"
-languages[1]: "Spec C11"; # Replaces "Rust"
+languages[1]: "Spec C11"; # Replaces "Java"
 ```
 
 ### Inline Conditional Expressions

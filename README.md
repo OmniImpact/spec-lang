@@ -137,12 +137,12 @@ Spec includes modern, expressive language capabilities designed for type safety 
 
 | Package | Key Types & Functions | Description |
 |---|---|---|
-| **`base:io`** | `output:line`, `Input:prompt`, `File:read`, `File:write`, `File:readAsync`, `File:writeAsync`, `File:exists`, `File:remove`, `InputHandler` | Terminal and synchronous/asynchronous filesystem I/O. |
-| **`base:math`** | `round`, `floor`, `ceil`, `random`, `abs`, `min`, `max`, `clamp` | Math primitives and pure Spec algorithms. |
+| **`base:io`** | `output:line`, `error:line`, `Input:prompt`, `InputHandler`, `File:read`, `File:write`, `File:readAsync`, `File:writeAsync`, `File:exists`, `File:remove`, `Ansi` (256-color, RGB, cursor control) | Terminal I/O, stderr diagnostics, synchronous/asynchronous filesystem access, and ANSI escape sequences. |
+| **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
 | **`base:struct`** | `Array` (`length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `each`, `map`, `fold`, `filter`, `count`, `any`, `isEmpty`, bracket indexing `arr[i]`), `Map` (`getString`, `getInt`, `getFloat`, `getBool`, `get`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals `["k": v]`, `[:]`, bracket indexing `map[k]`) | Thread-safe dynamic array and 64-bucket FNV-1a hash map collections with functional combinators. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop execution engine and inline closure-based iteration. |
-| **`base:sys`** | `Process:execute`, `Process:getPid`, `SourceLocation`, `StackFrame` | Subprocess execution, process inspection, source coordinates, and execution frames. |
-| **`base:reflect`** | `Type`, `Parameter`, `Member`, `Class` | Runtime type information, signature inspection, and reflection metadata. |
+| **`base:sys`** | `Process:execute`, `Process:getPid`, `Process:exit`, `Process:sleep`, `SourceLocation`, `StackFrame` | Subprocess execution, process control, source coordinates, and execution frames. |
+| **`base:reflect`** | `Type`, `Parameter`, `Member`, `ClassInfo` | Runtime type information, signature inspection, and reflection metadata. |
 | **`base:meta`** | `Expression`, `Statement`, `NamedArg`, `WhenArm`, `ProgramNode` | Syntax trees, resolved type annotations, and meta-programming representations. |
 
 ---
@@ -159,7 +159,7 @@ Install syntax highlighting definitions for the KDE Kate editor:
 
 ## Building and Bootstrapping
 
-Spec is **100% self-hosted**. You do not need Rust or Cargo to build Spec; only a C compiler (`gcc` or `clang`) with standard POSIX threads:
+Spec is **100% self-hosted**. Building it requires only a C compiler (`gcc` or `clang`) with standard POSIX threads:
 
 ```bash
 # Bootstrap the official Spec compiler directly from canonical C source:
@@ -200,18 +200,6 @@ Spec's distinguishing ground: the override discipline (`replace`/`merge`), never
 defaults, enforced exhaustiveness, and a verified self-hosting fixed point. It is a
 young language — its standard library and tooling are minimal next to the others —
 but its compile-time guarantees are already stricter than C++ in the areas it covers.
-
-## Roadmap to Self-Hosting
-
-- [x] **Stage 0 Compiler (Rust)**: C99 transpilation, tab linter, multi-file module loader.
-- [x] **Phase 1**: File I/O (`File:read`, `File:write`), process execution (`Process:execute`), and string inspection primitives (`charAt`, `substring`, `indexOf`, `isDigit`, `isAlpha`, `isWhitespace`).
-- [x] **Phase 2**: Rich collections (`Array:pop`, `removeAt`, `slice`, `clear`, `indexOf`; `Map:set`, `has`, `remove`, `keys`, `length`).
-- [x] **Phase 3**: Implement lexer in Spec (`compiler:Lexer.spec`, `compiler:Token.spec`).
-- [x] **Phase 4**: Implement parser and AST in Spec (`compiler:Parser.spec`, `compiler:AST.spec`).
-- [x] **Phase 5**: Implement pure Spec type checker and modular code generator (`TypeChecker.spec`, `CodeGenerator.spec`, `DeclarationGenerator.spec`, `BuiltinCallGenerator.spec`).
-- [x] **Phase 6**: Stage 1, Stage 2, and Stage 3 self-hosting bootstrap verification with 100% bit-for-bit fixed-point convergence. Single-file C bootstrap (`bootstrap/spec.c`, `bootstrap.sh`) established and Rust compiler retired.
-
----
 
 ## License
 

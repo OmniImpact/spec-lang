@@ -36,4 +36,16 @@ Class is Process{
 	replace Function of Int is getPid(){
 	}
 
+	## Terminates the current process with the given exit status.
+	##
+	## @param status: Process exit code (0 = success).
+	replace Function is exit(Int is status){
+	}
+
+	## Suspends the calling thread for the given duration.
+	##
+	## @param milliseconds: Sleep duration in milliseconds.
+	replace Function is sleep(Int is milliseconds){
+	}
+
 }

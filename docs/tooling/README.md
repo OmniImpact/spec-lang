@@ -27,7 +27,7 @@ This guide covers building, running, linting, and configuring editor support for
 The Spec compiler (`spec`) is **100% self-hosted in pure Spec** (`lib/compiler/`). It compiles Spec source files down to portable C11 and links them into native executable binaries using the system C compiler (`gcc`).
 
 ### Bootstrapping & Building the Compiler
-You do not need Rust or Cargo to build Spec; only `gcc` (or `clang`) with standard POSIX threads is required:
+Building Spec requires only `gcc` (or `clang`) with standard POSIX threads:
 
 ```bash
 ./bootstrap.sh
