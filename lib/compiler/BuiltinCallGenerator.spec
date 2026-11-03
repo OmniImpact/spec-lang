@@ -33,12 +33,33 @@ class BuiltinCallGenerator{
 	## @param cg: Reference to parent [CodeGenerator].
 	## @return: C code string if builtin call, or empty string if not a builtin.
 	replace local Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		# Output:line
-		if (expr:methodName == "line" && expr:methodArgs:length() > 0) {
+		# error:line - diagnostics written to stderr
+		if ((targetC == "error" || targetC == "Error") && expr:methodName == "line" && expr:methodArgs:length() > 0) {
+			local NamedArg is errArg: expr:methodArgs:get(index: 0);
+			local String is errValC: cg:generateExpression(expr: errArg:getValue());
+			local String is errStrC: cg:wrapToString(expr: errArg:getValue(), exprC: errValC);
+			return "spec_error_line(" . errStrC . ")";
+		}
+
+		# Output:line and Output:print / Output:write
+		if ((targetC == "output" || targetC == "Output") && expr:methodName == "line" && expr:methodArgs:length() > 0) {
 			local NamedArg is firstArg: expr:methodArgs:get(index: 0);
 			local String is valC: cg:generateExpression(expr: firstArg:getValue());
 			local String is strC: cg:wrapToString(expr: firstArg:getValue(), exprC: valC);
 			return "printf(\"%s\\n\", " . strC . ")";
+		}
+		if ((targetC == "output" || targetC == "Output") && (expr:methodName == "print" || expr:methodName == "write") && expr:methodArgs:length() > 0) {
+			local NamedArg is firstArg: expr:methodArgs:get(index: 0);
+			local String is valC: cg:generateExpression(expr: firstArg:getValue());
+			local String is strC: cg:wrapToString(expr: firstArg:getValue(), exprC: valC);
+			return "({ printf(\"%s\", " . strC . "); fflush(stdout); })";
+		}
+
+		# String:fromCharCode
+		if (targetC == "String" && expr:methodName == "fromCharCode" && expr:methodArgs:length() > 0) {
+			local NamedArg is codeArg: expr:methodArgs:get(index: 0);
+			local String is codeC: cg:generateExpression(expr: codeArg:getValue());
+			return "spec_str_from_char_code(" . codeC . ")";
 		}
 
 		# Intrinsic loop runner: While:run(loop, control)
@@ -87,7 +108,7 @@ class BuiltinCallGenerator{
 				local Expression is mt: promptVal:methodTarget;
 				handlerClass: cg:generateExpression(expr: mt);
 			}
-			return "({ char _buf[256]; char* _res = \"s\"; if (fgets(_buf, sizeof(_buf), stdin)) { size_t _len = strlen(_buf); if (_len > 0 && _buf[_len - 1] == '\\n') _buf[_len - 1] = '\\0'; _res = strdup(_buf); } " . handlerClass . "_onInput((void*)(" . handlerC . "), _res); })";
+			return "({ char* _line = NULL; size_t _line_cap = 0; char* _res = \"\"; ssize_t _n = getline(&_line, &_line_cap, stdin); if (_n >= 0) { if (_n > 0 && _line[_n - 1] == '\\n') _line[_n - 1] = '\\0'; _res = strdup(_line); } free(_line); " . handlerClass . "_onInput((void*)(" . handlerC . "), _res); })";
 		}
 
 		# LoopControl methods
@@ -129,6 +150,14 @@ class BuiltinCallGenerator{
 			}
 			if (expr:methodName == "getPid") {
 				return "spec_process_get_pid()";
+			}
+			if (expr:methodName == "exit") {
+				local String is codeC: "0";
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is codeArg: expr:methodArgs:get(index: 0);
+					codeC: cg:generateExpression(expr: codeArg:getValue());
+				}
+				return "exit((int)(" . codeC . "))";
 			}
 		}
 
@@ -228,6 +257,51 @@ class BuiltinCallGenerator{
 				}
 				return "spec_math_ceil(" . valC . ")";
 			}
+			if (expr:methodName == "abs") {
+				local String is valC: "0.0";
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					valC: cg:generateExpression(expr: a0:getValue());
+				}
+				return "spec_math_abs(" . valC . ")";
+			}
+			if (expr:methodName == "min") {
+				local String is aC: "0.0";
+				local String is bC: "0.0";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "a") { aC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "b") { bC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_math_min(" . aC . ", " . bC . ")";
+			}
+			if (expr:methodName == "max") {
+				local String is aC: "0.0";
+				local String is bC: "0.0";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "a") { aC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "b") { bC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_math_max(" . aC . ", " . bC . ")";
+			}
+			if (expr:methodName == "clamp") {
+				local String is vC: "0.0";
+				local String is loC: "0.0";
+				local String is hiC: "1.0";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "value") { vC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "min" || arg:getName() == "lo") { loC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "max" || arg:getName() == "hi") { hiC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_math_clamp(" . vC . ", " . loC . ", " . hiC . ")";
+			}
+			if (expr:methodName == "toInt") {
+				local String is valC: "0";
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					valC: cg:generateExpression(expr: a0:getValue());
+				}
+				return "((long long)(" . valC . "))";
+			}
 			if (expr:methodName == "random") {
 				local String is minC: "0.0";
 				local String is maxC: "1.0";
@@ -240,6 +314,30 @@ class BuiltinCallGenerator{
 					maxC: cg:generateExpression(expr: a1:getValue());
 				}
 				return "spec_math_random(" . minC . ", " . maxC . ")";
+			}
+			if (expr:methodName == "sqrt" || expr:methodName == "sin" || expr:methodName == "cos" || expr:methodName == "tan" || expr:methodName == "log" || expr:methodName == "log2" || expr:methodName == "toFloat") {
+				local String is valC: "0.0";
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					valC: cg:generateExpression(expr: a0:getValue());
+				}
+				if (expr:methodName == "toFloat") {
+					return "spec_math_to_float(" . valC . ")";
+				}
+				return "spec_math_" . expr:methodName . "(" . valC . ")";
+			}
+			if (expr:methodName == "pow" || expr:methodName == "atan2") {
+				local String is aC: "0.0";
+				local String is bC: "0.0";
+				if (expr:methodArgs:length() > 0) {
+					local NamedArg is a0: expr:methodArgs:get(index: 0);
+					aC: cg:generateExpression(expr: a0:getValue());
+				}
+				if (expr:methodArgs:length() > 1) {
+					local NamedArg is a1: expr:methodArgs:get(index: 1);
+					bC: cg:generateExpression(expr: a1:getValue());
+				}
+				return "spec_math_" . expr:methodName . "(" . aC . ", " . bC . ")";
 			}
 		}
 
@@ -390,14 +488,30 @@ class BuiltinCallGenerator{
 				return "spec_array_length(" . targetC . ")";
 			}
 			if (expr:methodName == "pop") {
-				return "spec_array_pop(" . targetC . ", NULL)";
+				local String is defC: "NULL";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "default") {
+						local String is rawDefC: cg:generateExpression(expr: arg:getValue());
+						if (targetType:startsWith(prefix: "Array:String")) {
+							defC: rawDefC;
+						} else {
+							defC: "(void*)(intptr_t)(" . rawDefC . ")";
+						}
+					}
+				});
+				return "spec_array_pop(" . targetC . ", " . defC . ")";
 			}
 			if (expr:methodName == "removeAt") {
 				local String is idxC: "0";
+				local String is defC: "NULL";
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "index") { idxC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "default") { defC: "(void*)(intptr_t)(" . cg:generateExpression(expr: arg:getValue()) . ")"; }
 				});
-				return "spec_array_remove_at(" . targetC . ", " . idxC . ")";
+				return "spec_array_remove_at(" . targetC . ", " . idxC . ", " . defC . ")";
+			}
+			if (expr:methodName == "isEmpty") {
+				return "(long long)(spec_array_length(" . targetC . ") == 0)";
 			}
 			if (expr:methodName == "slice") {
 				local String is startC: "0";

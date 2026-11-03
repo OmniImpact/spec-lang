@@ -508,6 +508,9 @@ class CodeGenerator{
 		if (ml:found) {
 			local Member is foundM: ml:res;
 			local String is rawT: self:formatTypeString(t: foundM:getType());
+			if (rawT == "" || rawT == "void" || rawT == "Void") {
+				return className;
+			}
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
 		local String is inherited: "";
@@ -612,6 +615,15 @@ class CodeGenerator{
 				if (m == "values") { return "Array:" . tgtType; }
 				if (m == "value") {
 					return if (self:allStringBackedEnums:has(key: tgtType)) "String" else "Int";
+				}
+			}
+			if (tgtType == "String" && m == "fromCharCode") {
+				return "String";
+			}
+			if (tgtType == "Math" || tgtType == "math") {
+				if (m == "toInt") { return "Int"; }
+				if (m == "round" || m == "floor" || m == "ceil" || m == "ceiling" || m == "random" || m == "abs" || m == "min" || m == "max" || m == "clamp" || m == "sqrt" || m == "sin" || m == "cos" || m == "tan" || m == "atan2" || m == "log" || m == "log2" || m == "pow" || m == "toFloat") {
+					return "Float";
 				}
 			}
 			local String is methodRet: self:lookupMethodReturnType(className: tgtType, methodName: m);
@@ -1252,9 +1264,19 @@ class CodeGenerator{
 					}
 				}
 
-				# Class constructor invocation: ClassName:init(...)
+				# Class constructor or static method invocation: ClassName:init(...) or ClassName:method(...)
 				if (self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC)) {
 					local String is argsJoined: self:formatCallArguments(className: targetC, methodName: expr:methodName, args: expr:methodArgs);
+					if (expr:methodName == "init") {
+						return "({ " . targetC . "* _inst = " . targetC . "_new(); " . targetC . "_init(_inst" . argsJoined . "); _inst; })";
+					}
+					local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
+					if (mDef:getKind() == "METHOD") {
+						local String is mRetType: mDef:getType():getName();
+						if (mRetType != "" && mRetType != "Void" && mRetType != "void") {
+							return targetC . "_" . expr:methodName . "(NULL" . argsJoined . ")";
+						}
+					}
 					return "({ " . targetC . "* _inst = " . targetC . "_new(); " . targetC . "_" . expr:methodName . "(_inst" . argsJoined . "); _inst; })";
 				}
 
@@ -1473,6 +1495,9 @@ class CodeGenerator{
 					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == "*" && cType != "const char*" && cType != "SpecArray*" && cType != "SpecMap*") {
 						initC: "(" . cType . ")(" . initC . ")";
 					}
+					if (cType == "const char*") {
+						initC: "spec_str_clone_if_buffered(" . initC . ")";
+					}
 					return "    " . cType . " " . varName . " = " . initC . ";\n";
 				}
 				if (vTypeName == "String" || vTypeName == "string") {
@@ -1510,6 +1535,8 @@ class CodeGenerator{
 				local Class is curCls: self:findClass(name: self:currentClassName);
 				if (curCls:getTypeParams():indexOf(search: lhsType, default: -1) >= 0) {
 					valC: "(void*)(intptr_t)(" . valC . ")";
+				} else if (lhsType == "String" || lhsType == "string") {
+					valC: "spec_str_clone_if_buffered(" . valC . ")";
 				}
 				return "    " . targetC . " = " . valC . ";\n";
 			}

@@ -17,7 +17,7 @@
 ## - Lambdas do not reference-capture unused locals such as args.
 ## - All five checks print "[PASS]"; any "[FAIL]" or compile error is a regression.
 ##
-## Current known status: COMPILE FAILURE in init (capture type bug).
+## Status: PASSING (regression resolved; guarded by this file).
 class RegressionClosureCaptureTest{
 
 	replace local Array of String is using: [

@@ -41,10 +41,11 @@ class Phase6LoaderTest{
 		}
 
 		# 3. Test Wildcard Import Expansion
+		# base:io:* currently expands to: Ansi, File, Input, InputHandler, Output
 		output:line("3. Testing wildcard expansion on 'base:io:*'...");
 		local Array of String is wildcardFiles: loader:expandWildcard(rawPath: "base:io:*");
 		output:line("Wildcard files count: " . wildcardFiles:length());
-		if (wildcardFiles:length() == 3) {
+		if (wildcardFiles:length() == 5) {
 			output:line("[PASS] Correctly expanded base:io:* to constituent files\n");
 		} else {
 			output:line("[FAIL] Wildcard count mismatch: " . wildcardFiles:length() . "\n");

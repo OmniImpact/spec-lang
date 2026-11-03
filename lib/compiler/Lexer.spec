@@ -143,6 +143,7 @@ class Lexer{
 							is "n": { self:res: self:res . "\n"; }
 							is "t": { self:res: self:res . "\t"; }
 							is "r": { self:res: self:res . "\r"; }
+							is "e": { self:res: self:res . String:fromCharCode(code: 27); }
 							is "\"": { self:res: self:res . "\""; }
 							is "\\": { self:res: self:res . "\\"; }
 							else: { self:res: self:res . nextCh; }

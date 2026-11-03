@@ -82,7 +82,13 @@ class CBackendUtils{
 				is "\r": { self:res: self:res . "\\r"; }
 				is "\"": { self:res: self:res . "\\\""; }
 				is "\\": { self:res: self:res . "\\\\"; }
-				else: { self:res: self:res . ch; }
+				else: {
+					if (ch == String:fromCharCode(code: 27)) {
+						self:res: self:res . "\\033";
+					} else {
+						self:res: self:res . ch;
+					}
+				}
 			}
 			return true;
 		}

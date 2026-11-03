@@ -147,7 +147,7 @@ class Blackjack{
 	# =========================================================================
 	Function of Int is drawCard(){
 		local Float is roll: math:random(min: 1.0, max: 11.0);
-		return math:floor(value: roll);
+		return math:toInt(value: math:floor(value: roll));
 	}
 
 	Function of Int is handValue(Array of Int is hand){

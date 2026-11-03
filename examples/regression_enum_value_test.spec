@@ -15,7 +15,7 @@
 ## - value() on an Enum of Int returns the declared backing value.
 ## - Cases 1 and 2 print "[PASS]"; control cases 3-5 must keep printing "[PASS]".
 ##
-## Current known status: RUNS BUT PRINTS [FAIL] (value() returns ordinals 0 and 1).
+## Status: PASSING (regression resolved; guarded by this file).
 Enum of Int is HttpStatus {
 	OK: 200,
 	NOT_FOUND: 404

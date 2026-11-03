@@ -131,6 +131,172 @@ class TypeChecker{
 		return Member:init(kind: "UNKNOWN");
 	}
 
+	## Finds a member (method or field) by name on a class or any of its base classes.
+	##
+	## @param className: Class whose members are searched.
+	## @param methodName: Member name to locate.
+	## @return: The resolved [Member], or an UNKNOWN member when absent.
+	replace local Function of Member is lookupAnyMember(String is className, String is methodName){
+		if (className == "" || className == "Any") {
+			return Member:init(kind: "");
+		}
+		local Array of String is parts: className:split(delimiter: ":");
+		local String is baseClassName: parts:get(index: 0);
+		local Class is cls: self:findClass(name: baseClassName);
+		if (cls:getName() == "") {
+			return Member:init(kind: "");
+		}
+		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:getMembers(), methodName: methodName);
+		While:run(loop: ml);
+		if (ml:found) {
+			return ml:res;
+		}
+		local Member is inherited: Member:init(kind: "");
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (inherited:getKind() == "") {
+				inherited: self:lookupAnyMember(className: baseName, methodName: methodName);
+			}
+		});
+		return inherited;
+	}
+
+	## Validates call-site argument types against the resolved member signature.
+	##
+	## Named arguments are matched by parameter name; unmatched named arguments
+	## fall back to positional matching. Parameters of type Any, empty, or
+	## SELF_FIELD are skipped, as are Any-typed arguments.
+	##
+	## @param callExpr: CALL expression whose arguments are checked.
+	replace local Function is checkCallArguments(Expression is callExpr){
+		local String is targetType: callExpr:methodTarget:getResolvedType();
+		if (targetType == "self" || targetType == "") {
+			targetType: self:currentClassName;
+		}
+		if (targetType == "" || targetType == "Any" || self:allEnumNames:has(key: targetType)) {
+			return;
+		}
+		local Array of String is parts: targetType:split(delimiter: ":");
+		local String is baseClassName: parts:get(index: 0);
+		if (baseClassName == "" || baseClassName == "Any") {
+			return;
+		}
+		local Member is m: self:lookupAnyMember(className: baseClassName, methodName: callExpr:methodName);
+		if (m:getKind() != "METHOD") {
+			return;
+		}
+		local Array of Parameter is params: m:getParameters();
+		if (params:length() == 0) {
+			return;
+		}
+		local Class is recvCls: self:findClass(name: baseClassName);
+		local Array of String is recvTypeParams: recvCls:getTypeParams();
+		local Int is pIdx: 0;
+		params:each(action: local Function(Parameter is p){
+			local String is pName: p:getName();
+			local String is pT: p:getType():getName();
+			if (pT != "SELF_FIELD" && pT != "Any" && pT != "" && recvTypeParams:indexOf(search: pT, default: -1) < 0) {
+				local Expression is matchedValue: Expression:init(kind: "UNKNOWN");
+				local Boolean is found: false;
+				local Int is posIdx: 0;
+				callExpr:methodArgs:each(action: local Function(NamedArg is a){
+					if (!found && pName != "" && a:getName() == pName) {
+						matchedValue: a:getValue();
+						found: true;
+					}
+				});
+				if (!found) {
+					callExpr:methodArgs:each(action: local Function(NamedArg is a){
+						if (!found && a:getName() == "" && posIdx == pIdx) {
+							matchedValue: a:getValue();
+							found: true;
+						}
+						posIdx: posIdx + 1;
+					});
+				}
+				if (found) {
+					local String is argT: matchedValue:getResolvedType();
+					if (argT != "" && argT != "Any" && !self:isAssignable(target: pT, source: argT)) {
+						local String is label: if (pName != "") pName else "position " . (pIdx + 1);
+						local String is msg: "Argument '" . label . "' for '" . baseClassName . "." . callExpr:methodName . "': cannot assign '" . argT . "' to '" . pT . "'.";
+						self:addError(line: self:currentLine, msg: msg);
+					}
+				} else if (!p:getHasDefault() && !self:isBuiltinClassName(name: baseClassName)) {
+					local String is msg: "Missing argument '" . pName . "' for '" . baseClassName . "." . callExpr:methodName . "'.";
+					self:addError(line: self:currentLine, msg: msg);
+				}
+			}
+			pIdx: pIdx + 1;
+		});
+	}
+
+	## Reports whether a type name refers to a compiler-builtin runtime class.
+	##
+	## Builtin classes (Array, Map, File, Process, Math, While, Input,
+	## LoopControl, Output, error) are implemented as compiler intrinsics whose
+	## stub signatures may legitimately diverge from runtime call shapes, so
+	## signature-based diagnostics skip them.
+	##
+	## @param name: Candidate type name.
+	## @return: true when the name is a builtin class.
+	replace local Function of Boolean is isBuiltinClassName(String is name){
+		if (name == "Array" || name == "Map" || name == "File" || name == "Process" || name == "Math" || name == "math") {
+			return true;
+		}
+		if (name == "While" || name == "Input" || name == "LoopControl" || name == "Output" || name == "output" || name == "error" || name == "Error") {
+			return true;
+		}
+		return false;
+	}
+
+	## Enforces compile-time exhaustiveness of 'when' over an enum subject.
+	##
+	## Conditions may reference variants as bare identifiers (is OK), calls with
+	## payloads (is Value:Num(n)), or qualified paths (is Enum:Variant). When any
+	## variant is uncovered and no else arm is present, a compile error is raised.
+	##
+	## @param subjectType: Static type name of the when subject.
+	## @param arms: The when arms to inspect.
+	## @param line: Source line used for diagnostics.
+	replace local Function is checkWhenExhaustive(String is subjectType, Array of WhenArm is arms, Int is line){
+		if (subjectType == "" || !self:allEnumNames:has(key: subjectType)) {
+			return;
+		}
+		local Map of String to String is covered: Map:init();
+		local Boolean is hasElse: false;
+		arms:each(action: local Function(WhenArm is arm){
+			if (arm:isElse) {
+				hasElse: true;
+			}
+			arm:conditions:each(action: local Function(Expression is c){
+				local String is variantName: "";
+				if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: "") == subjectType) {
+					variantName: c:methodName;
+				} else if (c:getKind() == "IDENT" && self:allEnumVariants:has(key: c:stringValue) && self:allEnumVariants:getString(key: c:stringValue, default: "") == subjectType) {
+					variantName: c:stringValue;
+				} else if (c:getKind() == "PATH" && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1))) {
+					variantName: c:pathSegments:get(index: 1);
+				}
+				if (variantName != "") {
+					covered:set(key: variantName, value: "true");
+				}
+			});
+		});
+		if (hasElse) {
+			return;
+		}
+		local Class is enumCls: self:findClass(name: subjectType);
+		local Array of String is missing: [];
+		enumCls:getMembers():each(action: local Function(Member is m){
+			if (!covered:has(key: m:getName())) {
+				missing:add(item: m:getName());
+			}
+		});
+		if (missing:length() > 0) {
+			local String is msg: "Non-exhaustive 'when': enum '" . subjectType . "' variant(s) not covered (e.g. '" . missing:get(index: 0) . "'). Add matching arm(s) or an 'else:' fallback.";
+			self:addError(line: line, msg: msg);
+		}
+	}
+
 	replace local Function is bindWhenPatternVars(WhenArm is arm){
 		arm:conditions:each(action: local Function(Expression is c){
 			if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
@@ -516,7 +682,7 @@ class TypeChecker{
 					res: self:allEnumVariants:getString(key: name, default: "Any");
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
-				} else if (name == "File" || name == "Process" || name == "Math" || name == "math" || name == "Map" || name == "Array" || name == "While" || name == "Input" || name == "LoopControl" || name == "output" || name == "Output" || name == "String" || name == "Int" || name == "Float" || name == "Boolean" || name == "Function" || name == "Any") {
+				} else if (name == "File" || name == "Process" || name == "Math" || name == "math" || name == "Map" || name == "Array" || name == "While" || name == "Input" || name == "LoopControl" || name == "output" || name == "Output" || name == "error" || name == "Error" || name == "String" || name == "Int" || name == "Float" || name == "Boolean" || name == "Function" || name == "Any") {
 					res: name;
 				} else if (name != "") {
 					self:addError(line: self:currentLine, msg: "Undefined identifier '" . name . "'.");
@@ -642,7 +808,7 @@ class TypeChecker{
 				res: if (thenT != "" && thenT != "Any") thenT else elseT;
 			}
 			is "WHEN": {
-				self:inferExpressionType(expr: expr:whenSubject);
+				local String is subjectType: self:inferExpressionType(expr: expr:whenSubject);
 				local String is armType: "Any";
 				expr:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
@@ -656,6 +822,7 @@ class TypeChecker{
 						self:checkStatement(stmt: s);
 					});
 				});
+				self:checkWhenExhaustive(subjectType: subjectType, arms: expr:whenArms, line: self:currentLine);
 				res: armType;
 			}
 			is "ANON_FN": {
@@ -766,6 +933,13 @@ class TypeChecker{
 					res: self:allEnumVariants:getString(key: method, default: "Any");
 				} else if (method == "init" && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 					res: targetType;
+				} else if (self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
+					local String is cRet: self:lookupMethodReturnType(className: targetType, methodName: method);
+					if (cRet == "" || cRet == "void" || cRet == "Void") {
+						res: targetType;
+					} else {
+						res: cRet;
+					}
 				} else if (targetType:startsWith(prefix: "Array") && (method == "get" || method == "pop" || method == "removeAt")) {
 					if (targetType:startsWith(prefix: "Array:") && targetType:length() > 6) {
 						res: targetType:substring(start: 6, end: targetType:length());
@@ -818,19 +992,19 @@ class TypeChecker{
 						res: classRet;
 					} else {
 						when (method) {
-							is "length", "ordinal", "indexOf", "count", "countLeading", "execute", "getInt", "getPid": {
+							is "length", "ordinal", "indexOf", "count", "countLeading", "execute", "getInt", "getPid", "toInt": {
 								res: "Int";
 							}
 							is "isEmpty", "has", "any", "startsWith", "endsWith", "contains", "isDigit", "isAlpha", "isWhitespace", "exists", "write", "getBool", "remove": {
 								res: "Boolean";
 							}
-							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join": {
+							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join", "fromCharCode": {
 								res: "String";
 							}
 							is "value": {
 								res: "Int";
 							}
-							is "round", "floor", "ceil", "ceiling", "random", "getFloat": {
+							is "round", "floor", "ceil", "ceiling", "random", "getFloat", "abs", "min", "max", "clamp", "sqrt", "sin", "cos", "tan", "atan2", "log", "log2", "pow", "toFloat": {
 								res: "Float";
 							}
 							is "lines", "keys", "split": {
@@ -849,6 +1023,10 @@ class TypeChecker{
 			else: {
 				res: "Any";
 			}
+		}
+
+		if (kind == "CALL") {
+			self:checkCallArguments(callExpr: expr);
 		}
 
 		expr:setResolvedType(t: res);
@@ -910,7 +1088,7 @@ class TypeChecker{
 				}
 			}
 			is "WHEN": {
-				self:inferExpressionType(expr: stmt:whenSubject);
+				local String is stmtSubjectType: self:inferExpressionType(expr: stmt:whenSubject);
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
 					if (arm:hasValueExpr) {
@@ -920,6 +1098,7 @@ class TypeChecker{
 						self:checkStatement(stmt: s);
 					});
 				});
+				self:checkWhenExhaustive(subjectType: stmtSubjectType, arms: stmt:whenArms, line: stmt:getLine());
 			}
 			is "RETURN": {
 				if (stmt:hasReturnExpr) {

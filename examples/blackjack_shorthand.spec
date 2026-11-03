@@ -137,7 +137,7 @@ class Blackjack{
 	Function of Int is drawCard(){
 		# Positional argument shorthand for math functions
 		local Float is roll: math:random(1.0, 11.0);
-		return math:floor(roll);
+		return math:toInt(math:floor(roll));
 	}
 
 	Function of Int is handValue(Array of Int is hand){

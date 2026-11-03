@@ -15,7 +15,7 @@
 ##    undeclared C identifier with no Spec-level file:line diagnostic.
 ##
 ## Required outcome (once fixed): compilation must abort during type checking
-## with a file:line diagnostic for each of the five violations below, and the
+## with a file:line diagnostic for each of the eight violations below, and the
 ## backend C compiler must never be invoked.
 ##
 ## Required diagnostics (one per class):
@@ -25,13 +25,19 @@
 ## - UndefinedIdentifier:     'untrackedTotal' is not a declared variable or field.
 ## - NonBooleanConditionControl: if condition must be a Boolean.
 ## - UnassignedFieldRead:     field 'label' is read before being definitely assigned.
+## - CallArgumentMismatch:    String argument passed to an Int parameter.
+## - IncompleteWhenBranches:  'when' over an enum missing a variant with no else arm.
 ##
 ## The fifth class is a positive control: its diagnostic ALREADY fires today.
-## Today's known status: ONLY the control error is reported; violations 1-4
-## compile silently. A check run is green only when all six errors appear.
+## A check run is green only when all eight errors appear.
 ##
 ## NOTE FOR RUNNERS: assert that this file fails to compile AND that the
-## compiler output contains all six diagnostics above.
+## compiler output contains all eight diagnostics above.
+
+Enum is TransportMode {
+	CAR,
+	BIKE
+}
 
 class NarrowFloatField{
 	## Violation 1: Float literal silently narrowed into an Int field.
@@ -76,5 +82,28 @@ class UnassignedFieldRead{
 
 	replace local Function is init(Map of String to String is args){
 		output:line(self:label);
+	}
+}
+
+class CallArgumentMismatch{
+	## Violation 7: call-site argument types were not checked, so a String
+	## argument silently reached an Int parameter and was truncated at the
+	## C level with no diagnostic.
+	replace local Function of Int is double(Int is n){
+		return n * 2;
+	}
+
+	replace local Function is init(Map of String to String is args){
+		local Int is result: self:double(n: "not-a-number");
+	}
+}
+
+class IncompleteWhenBranches{
+	## Violation 8: 'when' over enum TransportMode covers only CAR and omits
+	## BIKE with no else arm. Exhaustiveness must be enforced at compile time.
+	replace local Function of String is describe(TransportMode is mode){
+		return when (mode) {
+			is CAR: "drives";
+		};
 	}
 }

@@ -40,13 +40,13 @@ class Driver{
 
 		if (inputPath == "") {
 			output:line("Spec Compiler v0.000.014 (Pure Spec - Self-Hosted)");
-			output:line("Usage: spec -i <input.spec> -o <output_binary> [--lint]");
-			return;
+			error:line("Usage: spec -i <input.spec> -o <output_binary> [--lint]");
+			Process:exit(status: 2);
 		}
 
 		if (!File:exists(path: inputPath)) {
-			output:line("Error: Source file not found: " . inputPath);
-			return;
+			error:line("Error: Source file not found: " . inputPath);
+			Process:exit(status: 1);
 		}
 
 		local String is source: File:read(path: inputPath, default: "");
@@ -59,10 +59,11 @@ class Driver{
 			parser:setSourceFile(file: inputPath);
 			local ProgramNode is lintProgram: parser:parseProgram();
 			if (parser:hasErrors()) {
-				output:line("Syntax errors encountered during linting:");
+				error:line("Syntax errors encountered during linting:");
 				parser:getErrors():each(action: local Function(String is err){
-					output:line(err);
+					error:line(err);
 				});
+				Process:exit(status: 1);
 			}
 
 			local Linter is linter: Linter:init();
@@ -77,38 +78,38 @@ class Driver{
 		}
 
 		if (outputPath == "" && emitCPath == "") {
-			output:line("Error: Missing output binary path (-o <output_binary>)");
-			return;
+			error:line("Error: Missing output binary path (-o <output_binary>)");
+			Process:exit(status: 2);
 		}
 
 		# 2. Multi-File Module Loading & Dependency Resolution
 		local Loader is loader: Loader:init();
 		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
 		if (loader:getParseErrors():length() > 0) {
-			output:line("Syntax errors encountered during compilation:");
+			error:line("Compilation errors encountered during loading:");
 			loader:getParseErrors():each(action: local Function(String is err){
-				output:line(err);
+				error:line(err);
 			});
-			output:line("Compilation aborted due to syntax errors.");
-			return;
+			error:line("Compilation aborted due to syntax or load errors.");
+			Process:exit(status: 1);
 		}
 
 		# 4. Semantic Static Type Checking
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is typeErrors: tc:checkProgram(program: program);
 		if (typeErrors:length() > 0) {
-			output:line("Type errors encountered during compilation:");
+			error:line("Type errors encountered during compilation:");
 			typeErrors:each(action: local Function(TypeError is err){
-				output:line(err:toString());
+				error:line(err:toString());
 			});
-			output:line("Compilation aborted due to type errors.");
-			return;
+			error:line("Compilation aborted due to type errors.");
+			Process:exit(status: 1);
 		}
 
 		# 5. Determine Entry Class
 		if (program:getClasses():length() == 0) {
-			output:line("Error: No class definitions found in source file.");
-			return;
+			error:line("Error: No class definitions found in source file.");
+			Process:exit(status: 1);
 		}
 
 		local String is entryName: "";
@@ -144,8 +145,8 @@ class Driver{
 		}
 		local Boolean is written: File:write(path: tempCPath, content: cCode);
 		if (!written) {
-			output:line("Error: Failed to write intermediate C code to " . tempCPath);
-			return;
+			error:line("Error: Failed to write intermediate C code to " . tempCPath);
+			Process:exit(status: 1);
 		}
 
 		if (outputPath == "") {
@@ -160,8 +161,8 @@ class Driver{
 			File:remove(path: tempCPath);
 		}
 		if (gccStatus != 0) {
-			output:line("Error: Backend C compiler (gcc) failed with exit status " . gccStatus);
-			return;
+			error:line("Error: Backend C compiler (gcc) failed with exit status " . gccStatus);
+			Process:exit(status: 1);
 		}
 
 		output:line("Compiled " . inputPath . " -> " . outputPath . " successfully!");

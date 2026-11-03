@@ -15,7 +15,7 @@
 ## - This file compiles cleanly; the user methods are invoked.
 ## - All three checks print "[PASS]"; any "[FAIL]" or compile error is a regression.
 ##
-## Current known status: COMPILE FAILURE (spec_array_get hijack on UserRecord:get).
+## Status: PASSING (regression resolved; guarded by this file).
 class RegressionMethodResolutionTest{
 
 	replace local Array of String is using: [

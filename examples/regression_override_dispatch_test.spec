@@ -17,7 +17,7 @@
 ## - speak() through a base-typed reference resolves to the most-derived
 ##   implementation in the chain (Puppy answers "woof", not Animal's "...").
 ##
-## Current known status: RUNS BUT PRINTS [FAIL] (Puppy case returns "...").
+## Status: PASSING (regression resolved; guarded by this file).
 class RegressionOverrideDispatchTest{
 
 	replace local Array of String is using: [

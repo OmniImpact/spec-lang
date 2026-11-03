@@ -10,4 +10,16 @@ class Output{
 	replace Function is line(String is text){
 	}
 
+	## Writes a string representation to standard output without a trailing newline and flushes stdout.
+	##
+	## @param text: Text string to print inline.
+	replace Function is print(String is text){
+	}
+
+	## Alias for [print]; writes a string representation to standard output without a trailing newline.
+	##
+	## @param text: Text string to write inline.
+	replace Function is write(String is text){
+	}
+
 }

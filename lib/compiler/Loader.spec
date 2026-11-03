@@ -92,7 +92,8 @@ class Loader{
 				"lib/base/io/File.spec",
 				"lib/base/io/Input.spec",
 				"lib/base/io/InputHandler.spec",
-				"lib/base/io/Output.spec"
+				"lib/base/io/Output.spec",
+				"lib/base/io/Ansi.spec"
 			];
 			is "base:iterator:*": [
 				"lib/base/iterator/Loop.spec",
@@ -149,6 +150,7 @@ class Loader{
 		self:loadedFiles:set(key: filePath, value: "true");
 
 		if (!File:exists(path: filePath)) {
+			self:parseErrors:add(item: "  [LoadError] Module file not found: " . filePath);
 			return;
 		}
 
@@ -192,6 +194,8 @@ class Loader{
 							local String is resolved: self:resolvePath(rawPath: importStr);
 							if (resolved != "") {
 								self:loadFile(filePath: resolved);
+							} else {
+								self:parseErrors:add(item: "  [LoadError] Cannot resolve import '" . importStr . "' declared in class '" . c:getName() . "'.");
 							}
 						}
 					});
