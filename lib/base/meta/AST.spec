@@ -219,4 +219,12 @@ class ProgramNode{
 		return self:classes;
 	}
 
+	replace local Function is addClass(Class is c){
+		self:classes:add(item: c);
+	}
+
+	replace local Function is setClasses(Array of Class is classes){
+		self:classes: classes;
+	}
+
 }

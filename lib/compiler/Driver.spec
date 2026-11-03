@@ -16,13 +16,17 @@ class Driver{
 		compiler:Parser,
 		compiler:Linter,
 		compiler:TypeChecker,
-		compiler:CodeGenerator
+		compiler:CodeGenerator,
+		compiler:Loader
 	];
 
 	init(Map of String to String is args){
 		local String is inputPath: args:getString(key: "i", default: "");
 		if (inputPath == "") {
 			inputPath: args:getString(key: "input", default: "");
+		}
+		if (inputPath == "") {
+			inputPath: args:getString(key: "lint", default: "");
 		}
 		local String is outputPath: args:getString(key: "o", default: "");
 		if (outputPath == "") {
@@ -43,19 +47,16 @@ class Driver{
 
 		local String is source: File:read(path: inputPath, default: "");
 
-		# 1. Lexical Analysis
-		local Lexer is lexer: Lexer:init(source: source);
-		local Array of Token is tokens: lexer:tokenize();
-
-		# 2. Syntactic Parsing
-		local Parser is parser: Parser:init(tokens: tokens);
-		local ProgramNode is program: parser:parseProgram();
-
-		# 3. Linter Mode Check
+		# 1. Linter Mode Check
 		if (lintMode) {
+			local Lexer is lexer: Lexer:init(source: source);
+			local Array of Token is tokens: lexer:tokenize();
+			local Parser is parser: Parser:init(tokens: tokens);
+			local ProgramNode is lintProgram: parser:parseProgram();
+
 			output:line("Checking '" . inputPath . "' for Spec code standards...");
 			local Linter is linter: Linter:init();
-			local Array of LintIssue is issues: linter:lint(source: source, program: program);
+			local Array of LintIssue is issues: linter:lint(source: source, program: lintProgram);
 
 			local Int is warnings: 0;
 			local Int is notices: 0;
@@ -79,6 +80,10 @@ class Driver{
 			output:line("Error: Missing output binary path (-o <output_binary>)");
 			return;
 		}
+
+		# 2. Multi-File Module Loading & Dependency Resolution
+		local Loader is loader: Loader:init();
+		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
 
 		# 4. Semantic Static Type Checking
 		local TypeChecker is tc: TypeChecker:init();
