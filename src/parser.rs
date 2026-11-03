@@ -873,6 +873,9 @@ impl Parser {
 
         loop {
             if self.check(&TokenKind::Colon) {
+                if self.has_whitespace_after(self.pos) {
+                    break;
+                }
                 if self.peek_next() == &TokenKind::Star {
                     self.advance(); // consume ':'
                     self.advance(); // consume '*'

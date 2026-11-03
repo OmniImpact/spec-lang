@@ -1,3 +1,10 @@
+Enum is RoundOutcome {
+	PLAYER_WINS,
+	DEALER_WINS,
+	DEALER_BUSTS,
+	PUSH
+}
+
 class Blackjack{
 
 	replace local Array of String is using: [
@@ -93,29 +100,33 @@ class Blackjack{
 		}
 
 		onInput(action){
-			if (action == "h" || action == "hit") {
-				local Int is card: game:drawCard();
-				game:playerHand:add(card);
-				output:line("You drew: " . card);
+			when (action) {
+				is "h", "hit": {
+					local Int is card: game:drawCard();
+					game:playerHand:add(card);
+					output:line("You drew: " . card);
 
-				local Int is score: game:handValue(game:playerHand);
-				output:line("Your total is now: " . score);
+					local Int is score: game:handValue(game:playerHand);
+					output:line("Your total is now: " . score);
 
-				if (score > 21) {
-					output:line("Bust! You lose.");
-					game:roundActive: false;
-				} else if (score == 21) {
-					output:line("21! Standing automatically.");
+					if (score > 21) {
+						output:line("Bust! You lose.");
+						game:roundActive: false;
+					} else if (score == 21) {
+						output:line("21! Standing automatically.");
+						game:startDealerTurn();
+					} else {
+						game:promptPlayerAction();
+					}
+				}
+				is "s", "stand": {
+					output:line("You stand with total: " . game:handValue(game:playerHand));
 					game:startDealerTurn();
-				} else {
+				}
+				else: {
+					output:line("Invalid command. Please enter 'h' (hit) or 's' (stand).");
 					game:promptPlayerAction();
 				}
-			} else if (action == "s" || action == "stand") {
-				output:line("You stand with total: " . game:handValue(game:playerHand));
-				game:startDealerTurn();
-			} else {
-				output:line("Invalid command. Please enter 'h' (hit) or 's' (stand).");
-				game:promptPlayerAction();
 			}
 		}
 	}
@@ -206,14 +217,20 @@ class Blackjack{
 		output:line("\n=== Final Results ===");
 		output:line("Player: " . playerScore . " | Dealer: " . dealerScore);
 
-		if (dealerScore > 21) {
-			output:line("Dealer busts! You win!");
-		} else if (playerScore > dealerScore) {
-			output:line("You beat the dealer! You win!");
-		} else if (dealerScore > playerScore) {
-			output:line("Dealer wins!");
-		} else {
-			output:line("Push (Tie)!");
+		local RoundOutcome is outcome: if (dealerScore > 21)
+			RoundOutcome:DEALER_BUSTS
+		else if (playerScore > dealerScore)
+			RoundOutcome:PLAYER_WINS
+		else if (dealerScore > playerScore)
+			RoundOutcome:DEALER_WINS
+		else
+			RoundOutcome:PUSH;
+
+		when (outcome) {
+			is DEALER_BUSTS: { output:line("Dealer busts! You win!"); }
+			is PLAYER_WINS: { output:line("You beat the dealer! You win!"); }
+			is DEALER_WINS: { output:line("Dealer wins!"); }
+			is PUSH: { output:line("Push (Tie)!"); }
 		}
 	}
 

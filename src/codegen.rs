@@ -1201,7 +1201,10 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     }
                 }
 
-                let is_str = self.is_string_expr(subject);
+                let is_str = self.is_string_expr(subject)
+                    || arms
+                        .iter()
+                        .any(|a| a.conditions.iter().any(|c| matches!(c, Expression::StringLiteral(_))));
                 let subj_c = self.generate_expression(subject)?;
 
                 if !is_str {
@@ -2312,7 +2315,10 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                     _ => "0",
                 };
 
-                let is_str = self.is_string_expr(subject);
+                let is_str = self.is_string_expr(subject)
+                    || arms
+                        .iter()
+                        .any(|a| a.conditions.iter().any(|c| matches!(c, Expression::StringLiteral(_))));
                 let subj_c = self.generate_expression(subject)?;
 
                 let mut out = String::new();

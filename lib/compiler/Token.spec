@@ -1,6 +1,17 @@
 #! Package compiler
 #! Pure Spec compiler implementation: Lexer, Parser, AST, and Linter.
 
+Enum of String is TokenKind {
+	KEYWORD: "KEYWORD",
+	IDENTIFIER: "IDENTIFIER",
+	SYMBOL: "SYMBOL",
+	INT: "INT",
+	FLOAT: "FLOAT",
+	STRING: "STRING",
+	BOOL: "BOOL",
+	EOF: "EOF"
+}
+
 ## Represents a lexical token emitted by the compiler [Lexer].
 class Token{
 
@@ -8,8 +19,8 @@ class Token{
 		base:sys:SourceLocation
 	];
 
-	## Lexical token category ("KEYWORD", "IDENTIFIER", "SYMBOL", "INT", "FLOAT", "STRING", "BOOL", "EOF").
-	local String is kind: "";
+	## Lexical token category kind.
+	local TokenKind is kind: TokenKind:EOF;
 
 	## Raw lexeme string value.
 	local String is value: "";
@@ -19,11 +30,11 @@ class Token{
 
 	## Initializes a token with raw line and column coordinates.
 	##
-	## @param kind: Lexical token category tag.
+	## @param kind: Lexical token category kind.
 	## @param value: Token string value.
 	## @param line: One-based line coordinate.
 	## @param col: One-based column coordinate.
-	replace local Function is init(String is kind, String is value, Int is line, Int is col){
+	replace local Function is init(TokenKind is kind, String is value, Int is line, Int is col){
 		self:kind: kind;
 		self:value: value;
 		self:location: SourceLocation:init(file: "", line: line, col: col);
@@ -31,20 +42,27 @@ class Token{
 
 	## Initializes a token with a pre-constructed [SourceLocation].
 	##
-	## @param kind: Lexical token category tag.
+	## @param kind: Lexical token category kind.
 	## @param value: Token string value.
 	## @param location: [SourceLocation] provenance.
-	replace local Function is withLocation(String is kind, String is value, SourceLocation is location){
+	replace local Function is withLocation(TokenKind is kind, String is value, SourceLocation is location){
 		self:kind: kind;
 		self:value: value;
 		self:location: location;
 	}
 
-	## Returns the token category kind.
+	## Returns the token category enum kind.
+	##
+	## @return: [TokenKind] enum variant.
+	replace local Function of TokenKind is getTokenKind(){
+		return self:kind;
+	}
+
+	## Returns the token category kind string value.
 	##
 	## @return: Kind string tag.
 	replace local Function of String is getKind(){
-		return self:kind;
+		return self:kind:value();
 	}
 
 	## Returns the raw lexeme string value.

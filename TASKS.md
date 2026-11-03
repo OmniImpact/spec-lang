@@ -73,3 +73,8 @@ $ Implement `when` statement and expression in AST, lexer, parser, and codegen w
 $ Create comprehensive test suite examples/enum_when_test.spec and verify execution
 $ Update documentation (docs/language/README.md, docs/packages/README.md)
 $ Verify lint, tests, commit and tag release
+$ Refactor `lib/compiler/Linter.spec` using `when` and inline `if/else`
+$ Refactor `lib/compiler/Lexer.spec` using `when` and inline `if/else`
+$ Refactor `lib/compiler/Parser.spec` using `when` in `parsePrimary`
+$ Refactor `examples/blackjack_shorthand.spec` using `when` and inline `if/else`
+$ Verify lint, tests, commit and tag release

@@ -257,7 +257,7 @@ class Parser{
 		if (self:pos < self:length) {
 			return self:tokens:get(index: self:pos);
 		}
-		return Token:init(kind: "EOF", value: "", line: 0, col: 0);
+		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
 	}
 
 	replace local Function of Token is peekAhead(Int is offset){
@@ -265,7 +265,7 @@ class Parser{
 		if (idx < self:length) {
 			return self:tokens:get(index: idx);
 		}
-		return Token:init(kind: "EOF", value: "", line: 0, col: 0);
+		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
 	}
 
 	replace local Function of Token is advance(){
@@ -471,61 +471,60 @@ class Parser{
 	replace local Function of Expression is parsePrimary(){
 		local Token is tok: self:peek();
 
-		if (tok:getKind() == "STRING") {
-			self:advance();
-			local Expression is e: Expression:init(kind: "STRING");
-			e:stringValue: tok:getValue();
-			return e;
-		}
+		when (tok:getTokenKind()) {
+			is STRING: {
+				self:advance();
+				local Expression is e: Expression:init(kind: "STRING");
+				e:stringValue: tok:getValue();
+				return e;
+			}
+			is INT: {
+				self:advance();
+				local Expression is e: Expression:init(kind: "NUMBER");
+				e:stringValue: tok:getValue();
+				return e;
+			}
+			is FLOAT: {
+				self:advance();
+				local Expression is e: Expression:init(kind: "FLOAT");
+				e:stringValue: tok:getValue();
+				return e;
+			}
+			is BOOL: {
+				self:advance();
+				local Expression is e: Expression:init(kind: "BOOL");
+				e:boolValue: tok:getValue() == "true";
+				e:stringValue: tok:getValue();
+				return e;
+			}
+			is IDENTIFIER, KEYWORD: {
+				self:advance();
+				local Expression is e: Expression:init(kind: "IDENT");
+				e:stringValue: tok:getValue();
+				return e;
+			}
+			else: {
+				if (self:check(kind: "SYMBOL", value: "(")) {
+					self:advance();
+					local Expression is inner: self:parseExpression();
+					self:matchToken(kind: "SYMBOL", value: ")");
+					return inner;
+				}
 
-		if (tok:getKind() == "INT") {
-			self:advance();
-			local Expression is e: Expression:init(kind: "NUMBER");
-			e:stringValue: tok:getValue();
-			return e;
-		}
+				if (self:check(kind: "SYMBOL", value: "[")) {
+					self:advance();
+					local Array of Expression is items: [];
+					While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
+					self:matchToken(kind: "SYMBOL", value: "]");
+					local Expression is e: Expression:init(kind: "ARRAY");
+					e:arrayItems: items;
+					return e;
+				}
 
-		if (tok:getKind() == "FLOAT") {
-			self:advance();
-			local Expression is e: Expression:init(kind: "FLOAT");
-			e:stringValue: tok:getValue();
-			return e;
+				self:advance();
+				return Expression:init(kind: "UNKNOWN");
+			}
 		}
-
-		if (tok:getKind() == "BOOL") {
-			self:advance();
-			local Expression is e: Expression:init(kind: "BOOL");
-			e:boolValue: tok:getValue() == "true";
-			e:stringValue: tok:getValue();
-			return e;
-		}
-
-		if (tok:getKind() == "IDENTIFIER" || tok:getKind() == "KEYWORD") {
-			self:advance();
-			local Expression is e: Expression:init(kind: "IDENT");
-			e:stringValue: tok:getValue();
-			return e;
-		}
-
-		if (self:check(kind: "SYMBOL", value: "(")) {
-			self:advance();
-			local Expression is inner: self:parseExpression();
-			self:matchToken(kind: "SYMBOL", value: ")");
-			return inner;
-		}
-
-		if (self:check(kind: "SYMBOL", value: "[")) {
-			self:advance();
-			local Array of Expression is items: [];
-			While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
-			self:matchToken(kind: "SYMBOL", value: "]");
-			local Expression is e: Expression:init(kind: "ARRAY");
-			e:arrayItems: items;
-			return e;
-		}
-
-		self:advance();
-		return Expression:init(kind: "UNKNOWN");
 	}
 
 	replace local Function of Expression is parsePostfix(){

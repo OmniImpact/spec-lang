@@ -1,6 +1,13 @@
 #! Package base:reflect
 #! Provides runtime type information and structural reflection.
 
+Enum is MemberKind {
+	METHOD,
+	FIELD,
+	CLASS,
+	ENUM
+}
+
 ## Represents a field, method, or nested class member definition on a [Class].
 class Member{
 
@@ -91,6 +98,18 @@ class Member{
 	## @return: Kind tag string.
 	replace local Function of String is getKind(){
 		return self:kind;
+	}
+
+	## Returns the member kind enum variant.
+	##
+	## @return: [MemberKind] variant.
+	replace local Function of MemberKind is getMemberKind(){
+		return when (self:kind) {
+			is "METHOD": MemberKind:METHOD;
+			is "CLASS": MemberKind:CLASS;
+			is "ENUM": MemberKind:ENUM;
+			else: MemberKind:FIELD;
+		};
 	}
 
 	## Returns the member name.

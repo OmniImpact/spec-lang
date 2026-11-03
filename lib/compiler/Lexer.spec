@@ -217,16 +217,10 @@ class Lexer{
 	}
 
 	replace local Function of Boolean is isKeyword(String is text){
-		if (text == "class" || text == "extends" || text == "local" || text == "replace") {
-			return true;
-		}
-		if (text == "is" || text == "of" || text == "to" || text == "return") {
-			return true;
-		}
-		if (text == "if" || text == "else" || text == "when") {
-			return true;
-		}
-		return false;
+		return when (text) {
+			is "class", "extends", "local", "replace", "is", "of", "to", "return", "if", "else", "when": true;
+			else: false;
+		};
 	}
 
 	replace local Function of Token is readIdentifierOrKeyword(){
@@ -237,13 +231,11 @@ class Lexer{
 		While:run(loop: IdentScanLoop:init(lexer: self));
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
-		if (text == "true" || text == "false") {
-			return Token:init(kind: "BOOL", value: text, line: startLine, col: startCol);
-		}
-		if (self:isKeyword(text: text)) {
-			return Token:init(kind: "KEYWORD", value: text, line: startLine, col: startCol);
-		}
-		return Token:init(kind: "IDENTIFIER", value: text, line: startLine, col: startCol);
+		local TokenKind is kind: when (text) {
+			is "true", "false": TokenKind:BOOL;
+			else: if (self:isKeyword(text: text)) TokenKind:KEYWORD else TokenKind:IDENTIFIER;
+		};
+		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
 	replace local Function of Token is readNumber(){
@@ -255,10 +247,8 @@ class Lexer{
 		While:run(loop: numLoop);
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
-		if (numLoop:isFloat) {
-			return Token:init(kind: "FLOAT", value: text, line: startLine, col: startCol);
-		}
-		return Token:init(kind: "INT", value: text, line: startLine, col: startCol);
+		local TokenKind is kind: if (numLoop:isFloat) TokenKind:FLOAT else TokenKind:INT;
+		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
 	replace local Function of Token is readString(String is quote){
@@ -273,7 +263,7 @@ class Lexer{
 		if (self:pos < self:length) {
 			self:advance();
 		}
-		return Token:init(kind: "STRING", value: val, line: startLine, col: startCol);
+		return Token:init(kind: TokenKind:STRING, value: val, line: startLine, col: startCol);
 	}
 
 	replace local Function of Token is readSymbol(){
@@ -284,34 +274,34 @@ class Lexer{
 
 		if (ch == "=" && nextCh == "=") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: "==", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: "==", line: startLine, col: startCol);
 		}
 		if (ch == "!" && nextCh == "=") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: "!=", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: "!=", line: startLine, col: startCol);
 		}
 		if (ch == "<" && nextCh == "=") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: "<=", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: "<=", line: startLine, col: startCol);
 		}
 		if (ch == ">" && nextCh == "=") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: ">=", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: ">=", line: startLine, col: startCol);
 		}
 		if (ch == "&" && nextCh == "&") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: "&&", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: "&&", line: startLine, col: startCol);
 		}
 		if (ch == "|" && nextCh == "|") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: "||", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: "||", line: startLine, col: startCol);
 		}
 		if (ch == ":" && nextCh == ":") {
 			self:advance();
-			return Token:init(kind: "SYMBOL", value: "::", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: "::", line: startLine, col: startCol);
 		}
 
-		return Token:init(kind: "SYMBOL", value: ch, line: startLine, col: startCol);
+		return Token:init(kind: TokenKind:SYMBOL, value: ch, line: startLine, col: startCol);
 	}
 
 	## Tokenizes the entire source string, returning an array of scanned tokens ending with EOF.
@@ -320,7 +310,7 @@ class Lexer{
 	replace local Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
 		While:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
-		tokens:add(item: Token:init(kind: "EOF", value: "", line: self:line, col: self:col));
+		tokens:add(item: Token:init(kind: TokenKind:EOF, value: "", line: self:line, col: self:col));
 		return tokens;
 	}
 
