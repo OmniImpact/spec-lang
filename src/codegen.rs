@@ -873,17 +873,6 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 }
                 out.push_str("    }\n");
             }
-            Statement::While { condition, body } => {
-                let cond_c = self.generate_expression(condition)?;
-                out.push_str(&format!("    while ({}) {{\n", cond_c));
-                for s in body {
-                    out.push_str(&self.generate_statement(s)?);
-                }
-                out.push_str("    }\n");
-            }
-            Statement::Break => {
-                out.push_str("    break;\n");
-            }
             Statement::Return(opt_expr) => {
                 if let Some(expr) = opt_expr {
                     let val_c = self.generate_expression(expr)?;
@@ -1014,10 +1003,31 @@ long long spec_process_execute(const char* command, SpecArray* args) {
             }
             Expression::Path(segments) => {
                 if let Some(last) = segments.last() {
-                    let t = self
+                    let mut t = self
                         .local_var_types
                         .get(last)
                         .or_else(|| self.field_types.get(last));
+
+                    if t.is_none() && segments.len() >= 2 {
+                        let root_id = &segments[0];
+                        let root_type = self
+                            .local_var_types
+                            .get(root_id)
+                            .or_else(|| self.field_types.get(root_id));
+                        if let Some(Type::Simple(cname)) = root_type {
+                            if let Some(cdef) = self.all_classes.get(cname) {
+                                for m in &cdef.members {
+                                    if let Member::Field { name, field_type, .. } = m {
+                                        if name == last {
+                                            t = Some(field_type);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if let Some(Type::Simple(name)) = t {
                         match name.as_str() {
                             "Int" | "int" => return format!("spec_to_string_int({})", expr_c),

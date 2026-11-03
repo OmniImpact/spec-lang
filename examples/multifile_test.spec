@@ -12,6 +12,27 @@ class MultiFileTest{
 	local String is title;
 	local Int is counter: 0;
 
+	class StepCounterLoop extends Loop{
+		local MultiFileTest is app;
+
+		replace local Function is init(MultiFileTest is app){
+			self:app: app;
+		}
+
+		replace local Function of Boolean is evaluate(){
+			return app:counter < 10;
+		}
+
+		replace local Function of Boolean is iteration(LoopControl is control){
+			app:counter: app:counter + 1;
+			if (app:counter == 5) {
+				output:line("Stop reached at counter = " . app:counter);
+				return false;
+			}
+			return true;
+		}
+	}
+
 	replace local Function is init(Map of String to String is args){
 		self:title: "=== Multi-File & Pure Spec Library Test ===";
 		output:line(self:title);
@@ -31,15 +52,9 @@ class MultiFileTest{
 		emptyList:add(item: "First Item");
 		output:line("After add, emptyList:isEmpty() = " . emptyList:isEmpty());
 
-		# 3. Primitive while loop and break
-		output:line("\n--- Primitive While Loop & Break ---");
-		while (self:counter < 10) {
-			self:counter: self:counter + 1;
-			if (self:counter == 5) {
-				output:line("Break reached at counter = " . self:counter);
-				break;
-			}
-		}
+		# 3. Decoupled Loop and Control
+		output:line("\n--- Decoupled Iterator Loop ---");
+		While:run(loop: StepCounterLoop:init(app: self));
 		output:line("Final counter value = " . self:counter);
 
 		output:line("\nAll multi-file and pure Spec tests completed successfully.");

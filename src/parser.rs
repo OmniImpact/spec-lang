@@ -294,16 +294,6 @@ impl Parser {
             return self.parse_if();
         }
 
-        if self.check(&TokenKind::While) {
-            return self.parse_while();
-        }
-
-        if self.check(&TokenKind::Break) {
-            self.advance();
-            self.expect(&TokenKind::Semicolon)?;
-            return Ok(Statement::Break);
-        }
-
         if self.check(&TokenKind::Return) {
             return self.parse_return();
         }
@@ -453,20 +443,6 @@ impl Parser {
             then_branch,
             else_branch,
         })
-    }
-
-    fn parse_while(&mut self) -> Result<Statement, String> {
-        self.expect(&TokenKind::While)?;
-        self.expect(&TokenKind::LParen)?;
-        let condition = self.parse_expression()?;
-        self.expect(&TokenKind::RParen)?;
-        self.expect(&TokenKind::LBrace)?;
-        let mut body = Vec::new();
-        while !self.check(&TokenKind::RBrace) && !self.check(&TokenKind::Eof) {
-            body.push(self.parse_statement()?);
-        }
-        self.expect(&TokenKind::RBrace)?;
-        Ok(Statement::While { condition, body })
     }
 
     fn parse_return(&mut self) -> Result<Statement, String> {

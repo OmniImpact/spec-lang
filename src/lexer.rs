@@ -13,8 +13,6 @@ pub enum TokenKind {
     Return,
     True,
     False,
-    While,
-    Break,
 
     // Literals and Identifiers
     Ident(String),
@@ -414,8 +412,6 @@ impl<'a> Lexer<'a> {
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
             "return" => TokenKind::Return,
-            "while" => TokenKind::While,
-            "break" => TokenKind::Break,
             "true" => TokenKind::True,
             "false" => TokenKind::False,
             _ => TokenKind::Ident(s),

@@ -24,11 +24,11 @@
    - [String Concatenation](#string-concatenation)
    - [Member Access & Method Calls](#member-access--method-calls)
    - [String Inspection Primitives](#string-inspection-primitives)
-5. [Control Flow](#control-flow)
+5. [Control Flow & Branching](#control-flow--branching)
    - [Conditionals (`if` / `else`)](#conditionals)
-   - [Primitive While Loops & `break`](#primitive-while-loops--break)
-6. [Unlockable Concurrency Model](#unlockable-concurrency-model)
-   - [Loop Decoupling](#loop-decoupling)
+6. [Unlockable Concurrency & Iteration Model](#unlockable-concurrency--iteration-model)
+   - [Pure Loop Decoupling (`Loop`, `While:run`)](#pure-loop-decoupling)
+   - [Terminating Iterations (No `break` Keyword)](#terminating-iterations-no-break-keyword)
    - [Event-Driven Non-Blocking Input](#event-driven-non-blocking-input)
 
 ---
@@ -192,7 +192,7 @@ local Float is r: math:round(value: 3.7);
 
 ---
 
-## Control Flow
+## Control Flow & Branching
 
 ### Conditionals
 Standard `if`, `else if`, and `else` blocks with boolean comparisons (`==`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`):
@@ -207,21 +207,13 @@ if (score > 21) {
 }
 ```
 
-### Primitive While Loops & `break`
-```spec
-while (count < 10) {
-	count: count + 1;
-	if (count == 5) {
-		break;
-	}
-}
-```
-
 ---
 
-## Unlockable Concurrency Model
+## Unlockable Concurrency & Iteration Model
 
-### Loop Decoupling
+Spec does not include primitive `while` or `break` keywords in its grammar. Instead, all looping is decoupled into explicit state-machine lifecycle contracts driven by the standard library (`base:iterator:*`).
+
+### Pure Loop Decoupling
 Loops in Spec are non-blocking, decoupled state machines:
 ```spec
 class CounterLoop extends Loop{
@@ -238,7 +230,22 @@ class CounterLoop extends Loop{
 	}
 }
 
-While:run(CounterLoop:init(), LoopControl:init());
+While:run(loop: CounterLoop:init(), control: LoopControl:init());
+```
+
+### Terminating Iterations (No `break` Keyword)
+Because loops are evaluated explicitly per iteration:
+- **Returning `false`**: Immediately terminates the loop without needing a `break` keyword.
+- **`control:stop()`**: Halts iteration from within a callback or helper.
+
+```spec
+replace Function of Boolean is iteration(LoopControl is control){
+	count: count + 1;
+	if (count == 5) {
+		return false; # Halts loop execution cleanly
+	}
+	return true;
+}
 ```
 
 ### Event-Driven Non-Blocking Input

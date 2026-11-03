@@ -96,13 +96,6 @@ impl Linter {
                     }
                 }
             }
-            Statement::While { condition, body } => {
-                Self::lint_expr(condition, issues);
-                for s in body {
-                    Self::lint_statement(s, issues);
-                }
-            }
-            Statement::Break => {}
             Statement::Return(opt_expr) => {
                 if let Some(expr) = opt_expr {
                     Self::lint_expr(expr, issues);

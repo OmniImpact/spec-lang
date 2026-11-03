@@ -86,11 +86,6 @@ pub enum Statement {
         then_branch: Vec<Statement>,
         else_branch: Option<Vec<Statement>>,
     },
-    While {
-        condition: Expression,
-        body: Vec<Statement>,
-    },
-    Break,
     Return(Option<Expression>),
     Class(ClassDef),
     Expression(Expression),

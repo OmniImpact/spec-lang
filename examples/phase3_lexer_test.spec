@@ -3,6 +3,7 @@ class Phase3LexerTest{
 	replace local Array of String is using: [
 		base:io:*,
 		base:struct:Array,
+		base:iterator:*,
 		compiler:Token,
 		compiler:Lexer
 	];
@@ -21,12 +22,27 @@ class Phase3LexerTest{
 
 		output:line("Total tokens emitted: " . tokens:length());
 
-		local Int is idx: 0;
-		while (idx < tokens:length()) {
-			local Token is tok: tokens:get(index: idx);
-			output:line("Token[" . idx . "]: " . tok:getKind() . " -> '" . tok:getValue() . "' (line " . tok:getLine() . ", col " . tok:getCol() . ")");
-			idx: idx + 1;
+		class PrintTokensLoop extends Loop{
+			local Array of Token is tokens;
+			local Int is idx: 0;
+
+			replace local Function is init(Array of Token is tokens){
+				self:tokens: tokens;
+				self:idx: 0;
+			}
+
+			replace local Function of Boolean is evaluate(){
+				return idx < tokens:length();
+			}
+
+			replace local Function of Boolean is iteration(LoopControl is control){
+				local Token is tok: tokens:get(index: idx);
+				output:line("Token[" . idx . "]: " . tok:getKind() . " -> '" . tok:getValue() . "' (line " . tok:getLine() . ", col " . tok:getCol() . ")");
+				self:idx: idx + 1;
+				return true;
+			}
 		}
+		While:run(loop: PrintTokensLoop:init(tokens: tokens));
 
 		# Assertions
 		local Token is firstTok: tokens:get(index: 0);

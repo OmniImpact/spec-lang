@@ -24,7 +24,7 @@ class HelloWorld{
 
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
-- **Ultra-Lean Compiler**: The compiler core knows only **12 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`, `while`, `break`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`).
+- **Ultra-Lean Compiler**: The compiler core knows only **10 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`).
 - **Userland Implementation**: Rich language features live in the standard library (`lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 
@@ -53,8 +53,8 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 - **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
 
 ### 4. Unlockable & Concurrency-First Iteration
-Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects:
-- **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`.
+Spec has eliminated primitive loop keywords (`while`, `break`) entirely from the language grammar. Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects:
+- **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`. Returning `false` from `iteration` or `evaluate` cleanly terminates the loop.
 - **`base:iterator:LoopControl`**: Supports non-blocking halts (`stop()`) and asynchronous completion triggers (`onComplete`).
 - **`While:run(loop, control)`**: Drives the iterator lifecycle without blocking threads.
 
