@@ -376,15 +376,20 @@ impl Parser {
         }
 
         let semi_idx = semi_pos?;
-        // If statement ends in `);`, it is a method call statement (not an assignment)
-        if semi_idx > 0 && self.tokens[semi_idx - 1].kind == TokenKind::RParen {
-            return None;
+
+        // Check for receiver:field : value; (e.g. self:length: source:length();)
+        if self.pos + 3 < semi_idx
+            && self.tokens[self.pos + 1].kind == TokenKind::Colon
+            && self.tokens[self.pos + 3].kind == TokenKind::Colon
+        {
+            return Some(self.pos + 3);
         }
 
-        if self.pos + 1 < self.tokens.len() && self.tokens[self.pos + 1].kind == TokenKind::Colon {
-            if self.pos + 3 < self.tokens.len() && self.tokens[self.pos + 3].kind == TokenKind::Colon {
-                return Some(self.pos + 3);
-            } else {
+        // Check for target : value; (e.g. length: source:length(); or idx: idx + 1;)
+        if self.pos + 1 < semi_idx && self.tokens[self.pos + 1].kind == TokenKind::Colon {
+            let is_method_call = self.pos + 3 < self.tokens.len()
+                && self.tokens[self.pos + 3].kind == TokenKind::LParen;
+            if !is_method_call {
                 return Some(self.pos + 1);
             }
         }

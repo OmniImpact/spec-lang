@@ -992,6 +992,24 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 if method == "handValue" || method == "drawCard" {
                     return format!("spec_to_string_int({})", expr_c);
                 }
+                if let Some(cname) = self.infer_target_class(target) {
+                    if let Some(cdef) = self.all_classes.get(&cname) {
+                        for m in &cdef.members {
+                            if let Member::Method { name, return_type, .. } = m {
+                                if name == method {
+                                    let ret_c = Self::method_return_type(name, return_type);
+                                    if ret_c == "long long" {
+                                        return format!("spec_to_string_int({})", expr_c);
+                                    } else if ret_c == "double" {
+                                        return format!("spec_to_string_float({})", expr_c);
+                                    } else if ret_c == "bool" {
+                                        return format!("spec_to_string_bool({})", expr_c);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 expr_c
             }
             Expression::Path(segments) => {
@@ -1108,9 +1126,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 BinaryOp::Equal => {
                     let left_c = self.generate_expression(left)?;
                     let right_c = self.generate_expression(right)?;
-                    if matches!(left.as_ref(), Expression::StringLiteral(_))
-                        || matches!(right.as_ref(), Expression::StringLiteral(_))
-                    {
+                    if self.is_string_expr(left) || self.is_string_expr(right) {
                         Ok(format!("(strcmp({}, {}) == 0)", left_c, right_c))
                     } else {
                         Ok(format!("({} == {})", left_c, right_c))
@@ -1119,9 +1135,7 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 BinaryOp::NotEqual => {
                     let left_c = self.generate_expression(left)?;
                     let right_c = self.generate_expression(right)?;
-                    if matches!(left.as_ref(), Expression::StringLiteral(_))
-                        || matches!(right.as_ref(), Expression::StringLiteral(_))
-                    {
+                    if self.is_string_expr(left) || self.is_string_expr(right) {
                         Ok(format!("(strcmp({}, {}) != 0)", left_c, right_c))
                     } else {
                         Ok(format!("({} != {})", left_c, right_c))
@@ -1573,6 +1587,37 @@ long long spec_process_execute(const char* command, SpecArray* args) {
                 out.push_str("_arr; })");
                 Ok(out)
             }
+        }
+    }
+
+    fn is_string_expr(&self, expr: &Expression) -> bool {
+        match expr {
+            Expression::StringLiteral(_) => true,
+            Expression::Identifier(id) => {
+                let t = self
+                    .local_var_types
+                    .get(id)
+                    .or_else(|| self.field_types.get(id));
+                matches!(t, Some(Type::Simple(name)) if name == "String" || name == "string")
+            }
+            Expression::MethodCall { method, .. } => {
+                matches!(
+                    method.as_str(),
+                    "charAt"
+                        | "substring"
+                        | "getString"
+                        | "toString"
+                        | "getKind"
+                        | "getValue"
+                        | "read"
+                        | "advance"
+                )
+            }
+            Expression::Binary {
+                op: BinaryOp::Concat,
+                ..
+            } => true,
+            _ => false,
         }
     }
 

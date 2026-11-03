@@ -36,3 +36,8 @@ $ Implement extended Array methods in C runtime and lib/base/struct/Array.spec (
 $ Implement extended Map methods in C runtime and lib/base/struct/Map.spec (set, has, remove, keys, length)
 $ Create comprehensive Phase 2 test suite in examples/phase2_test.spec and verify
 $ Update documentation and commit Phase 2 as v0.000.004
+$ Formalize Function as a first-class type and purge null across the codebase
+$ Implement Token class in Spec (lib/compiler/Token.spec)
+$ Implement pure-Spec Lexer (lib/compiler/Lexer.spec) with keyword, number, string, and symbol scanning
+$ Create Phase 3 Lexer test suite in examples/phase3_lexer_test.spec and verify
+$ Update documentation and commit Phase 3 as v0.000.005

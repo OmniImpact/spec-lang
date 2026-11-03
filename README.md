@@ -129,12 +129,15 @@ spec-lang/
 │   ├── linter.rs            # Code standards and optional parameter linter
 │   └── main.rs              # CLI driver
 ├── lib/                     # Spec Standard Library (written in Spec)
-│   └── base/
-│       ├── io/              # File, Input, Output
-│       ├── iterator/        # Loop, LoopControl, While
-│       ├── math/            # Math
-│       ├── struct/          # Array, Map
-│       └── sys/             # Process
+│   ├── base/
+│   │   ├── io/              # File, Input, Output
+│   │   ├── iterator/        # Loop, LoopControl, While
+│   │   ├── math/            # Math
+│   │   ├── struct/          # Array, Map
+│   │   └── sys/             # Process
+│   └── compiler/            # Self-hosting compiler components
+│       ├── Token.spec       # Token model
+│       └── Lexer.spec       # Pure Spec Lexer
 ├── docs/                    # Nested documentation portal
 │   ├── README.md            # Documentation portal index
 │   ├── language/            # Language guide & syntax reference
@@ -155,7 +158,7 @@ spec-lang/
 - [x] **Stage 0 Compiler (Rust)**: C99 transpilation, tab linter, multi-file module loader.
 - [x] **Phase 1**: File I/O (`File:read`, `File:write`), process execution (`Process:execute`), and string inspection primitives (`charAt`, `substring`, `indexOf`, `isDigit`, `isAlpha`, `isWhitespace`).
 - [x] **Phase 2**: Rich collections (`Array:pop`, `removeAt`, `slice`, `clear`, `indexOf`; `Map:set`, `has`, `remove`, `keys`, `length`).
-- [ ] **Phase 3**: Implement lexer in Spec (`compiler:Lexer.spec`).
+- [x] **Phase 3**: Implement lexer in Spec (`compiler:Lexer.spec`, `compiler:Token.spec`).
 - [ ] **Phase 4**: Implement parser and AST in Spec (`compiler:Parser.spec`).
 - [ ] **Phase 5**: Implement code generator in Spec (`compiler:CodeGen.spec`).
 - [ ] **Phase 6**: Stage 1 & Stage 2 bootstrap verification.
