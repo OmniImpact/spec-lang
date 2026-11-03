@@ -168,8 +168,6 @@ spec-lang/
 ├── bootstrap.sh             # Canonical C bootstrap script (no Rust required)
 ├── bootstrap/
 │   └── spec.c               # Canonical converged C11 source of self-hosted compiler
-├── Cargo.toml               # Stage 0 bootstrap compiler manifest (retired)
-├── src/                     # Legacy Stage 0 Rust bootstrap compiler
 ├── lib/                     # Spec Standard Library & Self-Hosted Compiler (written in Spec)
 │   ├── base/
 │   │   ├── io/              # File, Input, Output
