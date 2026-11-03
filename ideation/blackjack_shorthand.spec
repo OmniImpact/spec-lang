@@ -1,0 +1,246 @@
+class Blackjack{
+
+	replace local Array of String is using: [
+		base:struct:Array,
+		base:struct:Map,
+		base:iterator:Loop,
+		base:iterator:LoopControl,
+		base:iterator:LoopCallback,
+		base:iterator:While,
+		base:io:Output,
+		base:io:Input,
+		base:io:InputHandler,
+		base:math:*
+	];
+
+	# Game State Fields
+	local Array of Int is deck: [];
+	local Array of Int is playerHand: [];
+	local Array of Int is dealerHand: [];
+	local Boolean is roundActive: true;
+
+	# =========================================================================
+	# Deck Builder Loop (Shorthand Syntax: Batch Add Array & Positional Init)
+	# =========================================================================
+	class BuildDeckLoop extends Loop{
+		local Array of Int is targetDeck;
+		local Int is currentVal: 1;
+
+		init(Array of Int is targetDeck){
+			self:targetDeck: targetDeck;
+		}
+
+		evaluate(){
+			return currentVal <= 10;
+		}
+
+		iteration(control){
+			# Batch add 4 cards at once using array parameter shorthand
+			targetDeck:add([currentVal, currentVal, currentVal, currentVal]);
+			currentVal: currentVal + 1;
+			return true;
+		}
+	}
+
+	# =========================================================================
+	# Dealer's Turn Loop (Shorthand: Positional Args & Automated Lifecycle)
+	# =========================================================================
+	class DealerTurnLoop extends Loop{
+		local Blackjack is game;
+
+		init(Blackjack is game){
+			self:game: game;
+		}
+
+		evaluate(){
+			return game:handValue(game:dealerHand) < 17;
+		}
+
+		iteration(control){
+			local Int is card: game:drawCard();
+			game:dealerHand:add(card);
+
+			local Int is newScore: game:handValue(game:dealerHand);
+			output:line("Dealer draws: " . card . " (Total: " . newScore . ")");
+			return true;
+		}
+	}
+
+	# =========================================================================
+	# Dealer Turn Completion Callback
+	# =========================================================================
+	class DealerTurnCompleteCallback extends LoopCallback{
+		local Blackjack is game;
+
+		init(Blackjack is game){
+			self:game: game;
+		}
+
+		onComplete(control){
+			output:line("\nDealer stands or busts.");
+			game:evaluateRoundOutcome();
+		}
+	}
+
+	# =========================================================================
+	# Interactive Input Handler
+	# =========================================================================
+	class PlayerTurnHandler extends InputHandler{
+		local Blackjack is game;
+
+		init(Blackjack is game){
+			self:game: game;
+		}
+
+		onInput(action){
+			if (action == "h" || action == "hit") {
+				local Int is card: game:drawCard();
+				game:playerHand:add(card);
+				output:line("You drew: " . card);
+
+				local Int is score: game:handValue(game:playerHand);
+				output:line("Your total is now: " . score);
+
+				if (score > 21) {
+					output:line("Bust! You lose.");
+					game:roundActive: false;
+				} else if (score == 21) {
+					output:line("21! Standing automatically.");
+					game:startDealerTurn();
+				} else {
+					game:promptPlayerAction();
+				}
+			} else if (action == "s" || action == "stand") {
+				output:line("You stand with total: " . game:handValue(game:playerHand));
+				game:startDealerTurn();
+			} else {
+				output:line("Invalid command. Please enter 'h' (hit) or 's' (stand).");
+				game:promptPlayerAction();
+			}
+		}
+	}
+
+	# =========================================================================
+	# Helpers (Using Positional Calls and Batch Add)
+	# =========================================================================
+	Function of Int is drawCard(){
+		# Positional argument shorthand for math functions
+		local Float is roll: math:random(1.0, 11.0);
+		return math:floor(roll);
+	}
+
+	Function of Int is handValue(Array of Int is hand){
+		class ScoreAccumulator{
+			local Int is total: 0;
+			local Int is aceCount: 0;
+		}
+		local ScoreAccumulator is acc: ScoreAccumulator:init();
+
+		# Tally hand cards
+		class ScoreLoop extends Loop{
+			local Array of Int is hand;
+			local ScoreAccumulator is acc;
+			local Int is idx: 0;
+
+			init(Array of Int is hand, ScoreAccumulator is acc){
+				self:hand: hand;
+				self:acc: acc;
+			}
+
+			evaluate(){
+				return idx < hand:length();
+			}
+
+			iteration(control){
+				local Int is card: hand[idx];
+				if (card == 1) {
+					acc:aceCount: acc:aceCount + 1;
+					acc:total: acc:total + 11;
+				} else {
+					acc:total: acc:total + card;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		}
+		While:run(ScoreLoop:init(hand, acc), LoopControl:init());
+
+		# Adjust Aces if total exceeds 21
+		class AceAdjustLoop extends Loop{
+			local ScoreAccumulator is acc;
+
+			init(ScoreAccumulator is acc){
+				self:acc: acc;
+			}
+
+			evaluate(){
+				return acc:total > 21 && acc:aceCount > 0;
+			}
+
+			iteration(control){
+				acc:total: acc:total - 10;
+				acc:aceCount: acc:aceCount - 1;
+				return true;
+			}
+		}
+		While:run(AceAdjustLoop:init(acc), LoopControl:init());
+
+		return acc:total;
+	}
+
+	Function of null is promptPlayerAction(){
+		output:line("Would you like to (h)it or (s)tand?");
+		Input:prompt(PlayerTurnHandler:init(self));
+	}
+
+	Function of null is startDealerTurn(){
+		output:line("\n--- Starting Dealer's Turn ---");
+		local LoopControl is control: LoopControl:init(DealerTurnCompleteCallback:init(self));
+		While:run(DealerTurnLoop:init(self), control);
+	}
+
+	Function of null is evaluateRoundOutcome(){
+		local Int is playerScore: handValue(playerHand);
+		local Int is dealerScore: handValue(dealerHand);
+
+		output:line("\n=== Final Results ===");
+		output:line("Player: " . playerScore . " | Dealer: " . dealerScore);
+
+		if (dealerScore > 21) {
+			output:line("Dealer busts! You win!");
+		} else if (playerScore > dealerScore) {
+			output:line("You beat the dealer! You win!");
+		} else if (dealerScore > playerScore) {
+			output:line("Dealer wins!");
+		} else {
+			output:line("Push (Tie)!");
+		}
+	}
+
+	# =========================================================================
+	# Application Entry Point
+	# =========================================================================
+	init(Map of String to String is args){
+		output:line("======================================");
+		output:line("      Welcome to SpecJack (Clean)     ");
+		output:line("======================================\n");
+
+		# 1. Populate card deck via loop runner
+		While:run(BuildDeckLoop:init(deck), LoopControl:init());
+
+		# 2. Initial deal using batch array append shorthand
+		playerHand:add([drawCard(), drawCard()]);
+		dealerHand:add([drawCard(), drawCard()]);
+
+		output:line("Your hand: " . playerHand[0] . ", " . playerHand[1] . " (Total: " . handValue(playerHand) . ")");
+		output:line("Dealer's up card: " . dealerHand[0] . " [Hidden Card]\n");
+
+		if (handValue(playerHand) == 21) {
+			output:line("Natural Blackjack! You win!");
+			return;
+		}
+
+		promptPlayerAction();
+	}
+
+}

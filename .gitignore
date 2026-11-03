@@ -1,0 +1,10 @@
+/target
+/spec
+/helloworldspec
+/featurestest
+/blackjack
+/blackjack_shorthand
+/features_test
+/helloworld
+*.spec.c
+*.c
