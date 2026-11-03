@@ -18,10 +18,13 @@ Spec is now self-hosted. Feature additions must be made directly in the pure-Spe
   - `lib/compiler/CodeGenerator.spec`: Expression, statement, method, and translation unit emission.
   - `lib/compiler/RuntimePrelude.spec`: Thread-safe C11 runtime structures, helper functions, and recursive mutex locks.
 - [ ] **Linter (`lib/compiler/Linter.spec`)**: Update tab indentation checks, optional parameter analysis, and coding style rules.
-- [ ] **Bootstrap C Update**: Rebuild `bootstrap/spec.c` using the self-hosted compiler:
+- [ ] **Bootstrap C Update**: Converge across 3 self-hosting stages and update `bootstrap/spec.c`:
   ```bash
-  ./spec -i lib/compiler/Driver.spec -o ./spec
-  cp /tmp/_spec_stage_temp.c bootstrap/spec.c
+  ./spec -i lib/compiler/Driver.spec -o spec-stage1
+  ./spec-stage1 -i lib/compiler/Driver.spec -o spec-stage2 --emit-c /tmp/stage2.c
+  ./spec-stage2 -i lib/compiler/Driver.spec -o spec-stage3 --emit-c /tmp/stage3.c
+  diff -s /tmp/stage2.c /tmp/stage3.c
+  cp spec-stage3 spec && cp /tmp/stage3.c bootstrap/spec.c
   ./bootstrap.sh
   ```
 

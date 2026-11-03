@@ -1,6 +1,6 @@
 # Spec Programming Language
 
-**Spec** is an elegant, concurrent-first, unlockable programming language that compiles directly to optimized C99.
+**Spec** is an elegant, concurrent-first, unlockable programming language that compiles directly to optimized C11.
 
 ```spec
 class HelloWorld{
@@ -90,6 +90,8 @@ Spec includes modern, expressive language capabilities designed for type safety 
 - **Functional Collection Combinators**: Transform and reduce collections fluently using `Array:map`, `Array:fold`, and `Map:each`.
 - **Parser Error Recovery & Source Provenance**: Syntax errors report precise source coordinates `[SyntaxError] [file:line:col]` and halt cleanly, while type errors retain multi-file provenance.
 
+- **High-Efficiency C11 Runtime & Memory Model**: Amortized $O(1)$ growable string buffers (`spec_str_append`), zero-allocation character table lookups, cached $O(1)$ string length queries, lazy `SpecArray` buffer allocation, and automatic deallocation of transient `Loop` instances.
+
 ---
 
 ## Documentation
@@ -119,6 +121,9 @@ Spec includes modern, expressive language capabilities designed for type safety 
 
 # Run with CLI arguments
 ./helloworld --name Daniel
+
+# Emit generated C11 source code (optional)
+./spec -i examples/helloworld.spec --emit-c helloworld.c
 ```
 
 ### Running the Linter

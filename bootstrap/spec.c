@@ -13,6 +13,65 @@
 #include <pthread.h>
 
 /* Spec Runtime String Utilities */
+static const char* _spec_last_str = NULL;
+static size_t _spec_last_len = 0;
+
+long long spec_str_length(const char* s) {
+    if (!s) return 0;
+    if (s == _spec_last_str) return (long long)_spec_last_len;
+    size_t len = strlen(s);
+    _spec_last_str = s;
+    _spec_last_len = len;
+    return (long long)len;
+}
+
+typedef struct {
+    char* ptr;
+    size_t len;
+    size_t cap;
+} SpecStrBuf;
+static SpecStrBuf _spec_str_bufs[512];
+static size_t _spec_str_buf_next = 0;
+
+char* spec_str_append(const char* a, const char* b) {
+    if (!a) a = "";
+    if (!b || !*b) return (char*)a;
+    size_t lb = strlen(b);
+    for (size_t i = 0; i < 512; i++) {
+        if (_spec_str_bufs[i].ptr == a && a != NULL && *a != '\0') {
+            size_t la = _spec_str_bufs[i].len;
+            if (la + lb + 1 > _spec_str_bufs[i].cap) {
+                size_t new_cap = _spec_str_bufs[i].cap * 2;
+                if (new_cap < la + lb + 1) new_cap = (la + lb + 1) * 2;
+                char* new_ptr = (char*)realloc(_spec_str_bufs[i].ptr, new_cap);
+                _spec_str_bufs[i].ptr = new_ptr;
+                _spec_str_bufs[i].cap = new_cap;
+            }
+            memcpy(_spec_str_bufs[i].ptr + la, b, lb);
+            _spec_str_bufs[i].ptr[la + lb] = '\0';
+            _spec_str_bufs[i].len = la + lb;
+            _spec_last_str = _spec_str_bufs[i].ptr;
+            _spec_last_len = la + lb;
+            return _spec_str_bufs[i].ptr;
+        }
+    }
+    size_t la = strlen(a);
+    size_t cap = (la + lb + 1) * 2;
+    if (cap < 64) cap = 64;
+    char* res = (char*)malloc(cap);
+    memcpy(res, a, la);
+    memcpy(res + la, b, lb);
+    res[la + lb] = '\0';
+    size_t slot = _spec_str_buf_next;
+    _spec_str_buf_next = (slot + 1) & 511;
+    _spec_str_bufs[slot].ptr = res;
+    _spec_str_bufs[slot].len = la + lb;
+    _spec_str_bufs[slot].cap = cap;
+    _spec_last_str = res;
+    _spec_last_len = la + lb;
+    return res;
+}
+
 bool spec_str_equals(const char* a, const char* b) {
     if (a == b) return true;
     if (!a || !b) return false;
@@ -31,7 +90,16 @@ char* spec_str_concat(const char* a, const char* b) {
     return res;
 }
 
+static char _spec_small_ints[258][8];
+static bool _spec_small_ints_init = false;
 char* spec_to_string_int(long long v) {
+    if (v >= -1 && v <= 256) {
+        if (!_spec_small_ints_init) {
+            for (int i = -1; i <= 256; i++) snprintf(_spec_small_ints[i + 1], 8, "%d", i);
+            _spec_small_ints_init = true;
+        }
+        return _spec_small_ints[v + 1];
+    }
     char buf[64];
     snprintf(buf, sizeof(buf), "%lld", v);
     return strdup(buf);
@@ -47,12 +115,19 @@ char* spec_to_string_bool(bool v) {
     return v ? "true" : "false";
 }
 
+static char _spec_char_table[256][2];
+static bool _spec_char_table_init = false;
 const char* spec_str_char_at(const char* s, long long idx, const char* def) {
-    if (!s || idx < 0 || (size_t)idx >= strlen(s)) return def ? def : "";
-    char* buf = (char*)malloc(2);
-    buf[0] = s[idx];
-    buf[1] = '\0';
-    return buf;
+    if (!s || idx < 0) return def ? def : "";
+    size_t len = (s == _spec_last_str) ? _spec_last_len : strlen(s);
+    _spec_last_str = s;
+    _spec_last_len = len;
+    if ((size_t)idx >= len) return def ? def : "";
+    if (!_spec_char_table_init) {
+        for (int i = 0; i < 256; i++) { _spec_char_table[i][0] = (char)i; _spec_char_table[i][1] = '\0'; }
+        _spec_char_table_init = true;
+    }
+    return _spec_char_table[(unsigned char)s[idx]];
 }
 
 const char* spec_str_substring(const char* s, long long start, long long end) {
@@ -172,9 +247,9 @@ typedef struct {
 
 SpecArray* spec_array_new(void) {
     SpecArray* a = (SpecArray*)malloc(sizeof(SpecArray));
-    a->items = (void**)malloc(sizeof(void*) * 8);
+    a->items = NULL;
     a->length = 0;
-    a->capacity = 8;
+    a->capacity = 0;
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -187,7 +262,7 @@ void spec_array_add(SpecArray* a, void* item) {
     if (!a) return;
     pthread_mutex_lock(&a->lock);
     if (a->length >= a->capacity) {
-        a->capacity *= 2;
+        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;
         a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);
     }
     a->items[a->length++] = item;
@@ -1472,6 +1547,8 @@ const char* CodeGenerator_generateInlineArrayFold(CodeGenerator* self, const cha
 const char* CodeGenerator_generateInlineMapEach(CodeGenerator* self, const char* targetC, Expression* fnExpr);
 const char* CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expression* evalExpr, Expression* iterExpr);
 const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* expr);
+const char* CodeGenerator_tryGenerateTargetOnly(CodeGenerator* self, Expression* expr);
+const char* CodeGenerator_tryGenerateAppendChain(CodeGenerator* self, Expression* expr, const char* targetC);
 const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt);
 const char* CodeGenerator_generateMethod(CodeGenerator* self, Class* classDef, Member* method);
 const char* CodeGenerator_generateMain(CodeGenerator* self, const char* entryClass);
@@ -2072,17 +2149,17 @@ Expression* Expression_new(void) {
     self->intValue = 0;
     self->floatValue = 0.0;
     self->boolValue = false;
-    self->pathSegments = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    self->arrayItems = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    self->mapKeys = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    self->mapValues = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->pathSegments = spec_array_new();
+    self->arrayItems = spec_array_new();
+    self->mapKeys = spec_array_new();
+    self->mapValues = spec_array_new();
     self->methodName = "";
-    self->methodArgs = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->methodArgs = spec_array_new();
     self->binaryOp = "";
     self->unaryOp = "";
-    self->whenArms = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    self->anonParams = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    self->anonBody = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->whenArms = spec_array_new();
+    self->anonParams = spec_array_new();
+    self->anonBody = spec_array_new();
     return self;
 }
 
@@ -2091,14 +2168,14 @@ Statement* Statement_new(void) {
     self->_type_name = "Statement";
     self->kind = "";
     self->line = 0;
-    self->modifiers = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->modifiers = spec_array_new();
     self->varName = "";
     self->hasInit = false;
-    self->thenBranch = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    self->elseBranch = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->thenBranch = spec_array_new();
+    self->elseBranch = spec_array_new();
     self->hasElse = false;
     self->hasReturnExpr = false;
-    self->whenArms = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->whenArms = spec_array_new();
     return self;
 }
 
@@ -2599,7 +2676,11 @@ void Driver_init(Driver* self, SpecMap* args) {
         Linter_report(linter, inputPath, issues);
         return;
     }
-    if (spec_str_equals(outputPath, "")) {
+    const char* emitCPath = spec_map_get_string(args, "c", "");
+    if (spec_str_equals(emitCPath, "")) {
+        emitCPath = spec_map_get_string(args, "emit-c", "");
+    }
+    if (((spec_str_equals(outputPath, "")) && (spec_str_equals(emitCPath, "")))) {
         printf("%s\n", "Error: Missing output binary path (-o <output_binary>)");
         return;
     }
@@ -2661,10 +2742,6 @@ void Driver_init(Driver* self, SpecMap* args) {
     }
     CodeGenerator* cg = (CodeGenerator*)(({ CodeGenerator* _inst = CodeGenerator_new(); CodeGenerator_init(_inst); _inst; }));
     const char* cCode = CodeGenerator_generateProgram(cg, program, entryName);
-    const char* emitCPath = spec_map_get_string(args, "c", "");
-    if (spec_str_equals(emitCPath, "")) {
-        emitCPath = spec_map_get_string(args, "emit-c", "");
-    }
     const char* tempCPath = emitCPath;
     if (spec_str_equals(tempCPath, "")) {
         tempCPath = spec_str_concat(spec_str_concat("/tmp/_spec_stage_", spec_to_string_int(spec_process_get_pid())), ".c");
@@ -2672,6 +2749,10 @@ void Driver_init(Driver* self, SpecMap* args) {
     bool written = spec_file_write(tempCPath, cCode, (void (*)(long long))(NULL), (void (*)(const char*))(NULL));
     if ((!(written))) {
         printf("%s\n", spec_str_concat("Error: Failed to write intermediate C code to ", tempCPath));
+        return;
+    }
+    if (spec_str_equals(outputPath, "")) {
+        printf("%s\n", spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Emitted C code for ", inputPath), " -> "), emitCPath), " successfully!"));
         return;
     }
     SpecArray* gccArgs = ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("-O2")); spec_array_add(_arr, (void*)(tempCPath)); spec_array_add(_arr, (void*)("-o")); spec_array_add(_arr, (void*)(outputPath)); spec_array_add(_arr, (void*)("-pthread")); spec_array_add(_arr, (void*)("-lm")); _arr; });
@@ -3166,7 +3247,7 @@ long long SourceLocation_getCol(SourceLocation* self) {
 }
 
 const char* SourceLocation_toString(SourceLocation* self) {
-    if ((((long long)strlen(self->file)) > (0))) {
+    if (((spec_str_length(self->file)) > (0))) {
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(self->file, ":"), spec_to_string_int(self->line)), ":"), spec_to_string_int(self->col));
     }
     return spec_str_concat(spec_str_concat(spec_to_string_int(self->line), ":"), spec_to_string_int(self->col));
@@ -3174,7 +3255,7 @@ const char* SourceLocation_toString(SourceLocation* self) {
 
 void Lexer_init(Lexer* self, const char* source) {
     self->source = source;
-    self->length = (long long)strlen(source);
+    self->length = spec_str_length(source);
     self->pos = 0;
     self->line = 1;
     self->col = 1;
@@ -3197,7 +3278,7 @@ const char* Lexer_advance(Lexer* self) {
 }
 
 void Lexer_skipWhitespaceAndComments(Lexer* self) {
-    ({ void* _lp = (void*)(({ SkipWhitespaceLoop* _inst = SkipWhitespaceLoop_new(); SkipWhitespaceLoop_init(_inst, self); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (SkipWhitespaceLoop_evaluate((void*)_lp)) { if (!SkipWhitespaceLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ SkipWhitespaceLoop* _inst = SkipWhitespaceLoop_new(); SkipWhitespaceLoop_init(_inst, self); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (SkipWhitespaceLoop_evaluate((void*)_lp)) { if (!SkipWhitespaceLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
 }
 
 bool Lexer_isIdentifierStart(Lexer* self, const char* ch) {
@@ -3216,7 +3297,7 @@ Token* Lexer_readIdentifierOrKeyword(Lexer* self) {
     long long startLine = self->line;
     long long startCol = self->col;
     long long startPos = self->pos;
-    ({ void* _lp = (void*)(({ IdentScanLoop* _inst = IdentScanLoop_new(); IdentScanLoop_init(_inst, self); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (IdentScanLoop_evaluate((void*)_lp)) { if (!IdentScanLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ IdentScanLoop* _inst = IdentScanLoop_new(); IdentScanLoop_init(_inst, self); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (IdentScanLoop_evaluate((void*)_lp)) { if (!IdentScanLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     const char* text = spec_str_substring(self->source, startPos, self->pos);
     TokenKind kind = ((spec_str_equals(text, "true") || spec_str_equals(text, "false")) ? (TokenKind_BOOL) : (((Lexer_isKeyword(self, text)) ? (TokenKind_KEYWORD) : (TokenKind_IDENTIFIER))));
     return ({ Token* _inst = Token_new(); Token_init(_inst, kind, text, startLine, startCol); _inst; });
@@ -3283,7 +3364,7 @@ Token* Lexer_readSymbol(Lexer* self) {
 
 SpecArray* Lexer_tokenize(Lexer* self) {
     SpecArray* tokens = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ void* _lp = (void*)(({ TokenizeLoop* _inst = TokenizeLoop_new(); TokenizeLoop_init(_inst, self, tokens); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (TokenizeLoop_evaluate((void*)_lp)) { if (!TokenizeLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ TokenizeLoop* _inst = TokenizeLoop_new(); TokenizeLoop_init(_inst, self, tokens); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (TokenizeLoop_evaluate((void*)_lp)) { if (!TokenizeLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     spec_array_add(tokens, (void*)(({ Token* _inst = Token_new(); Token_init(_inst, TokenKind__EOF, "", self->line, self->col); _inst; })));
     return tokens;
 }
@@ -3303,7 +3384,7 @@ bool SkipWhitespaceLoop_iteration(SkipWhitespaceLoop* self, SpecLoopControl* con
         return true;
     }
     if (spec_str_equals(ch, "#")) {
-        ({ void* _lp = (void*)(({ SkipCommentLoop* _inst = SkipCommentLoop_new(); SkipCommentLoop_init(_inst, self->lexer); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (SkipCommentLoop_evaluate((void*)_lp)) { if (!SkipCommentLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ SkipCommentLoop* _inst = SkipCommentLoop_new(); SkipCommentLoop_init(_inst, self->lexer); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (SkipCommentLoop_evaluate((void*)_lp)) { if (!SkipCommentLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         return true;
     }
     return false;
@@ -3386,29 +3467,29 @@ bool StringScanLoop_iteration(StringScanLoop* self, SpecLoopControl* control) {
         const char* nextCh = Lexer_advance(self->lexer);
         if (spec_str_equals(self->quote, "\"")) {
         if (spec_str_equals(nextCh, "n")) {
-        self->res = spec_str_concat(self->res, "\n");
+        self->res = spec_str_append(self->res, "\n");
     } else if (spec_str_equals(nextCh, "t")) {
-        self->res = spec_str_concat(self->res, "\t");
+        self->res = spec_str_append(self->res, "\t");
     } else if (spec_str_equals(nextCh, "r")) {
-        self->res = spec_str_concat(self->res, "\r");
+        self->res = spec_str_append(self->res, "\r");
     } else if (spec_str_equals(nextCh, "\"")) {
-        self->res = spec_str_concat(self->res, "\"");
+        self->res = spec_str_append(self->res, "\"");
     } else if (spec_str_equals(nextCh, "\\")) {
-        self->res = spec_str_concat(self->res, "\\");
+        self->res = spec_str_append(self->res, "\\");
     } else {
-        self->res = spec_str_concat(self->res, nextCh);
+        self->res = spec_str_append(self->res, nextCh);
     }
     } else {
         if (((spec_str_equals(nextCh, "'")) || (spec_str_equals(nextCh, "\\")))) {
-        self->res = spec_str_concat(self->res, nextCh);
+        self->res = spec_str_append(self->res, nextCh);
     } else {
-        self->res = spec_str_concat(spec_str_concat(self->res, "\\"), nextCh);
+        self->res = spec_str_append(spec_str_append(self->res, "\\"), nextCh);
     }
     }
     }
         return true;
     }
-    self->res = spec_str_concat(self->res, ch);
+    self->res = spec_str_append(self->res, ch);
     Lexer_advance(self->lexer);
     return true;
 }
@@ -3521,7 +3602,7 @@ bool Parser_hasWhitespaceAfter(Parser* self, long long offset) {
     if (((Token_getTokenKind(nxt)) == (TokenKind__EOF))) {
         return true;
     }
-    return ((((Token_getLine(nxt)) > (Token_getLine(cur)))) || (((Token_getCol(nxt)) > (((Token_getCol(cur)) + ((long long)strlen(Token_getValue(cur))))))));
+    return ((((Token_getLine(nxt)) > (Token_getLine(cur)))) || (((Token_getCol(nxt)) > (((Token_getCol(cur)) + (spec_str_length(Token_getValue(cur))))))));
 }
 
 bool Parser_check(Parser* self, const char* kind, const char* value) {
@@ -3567,7 +3648,7 @@ Type* Parser_parseType(Parser* self) {
 Member* Parser_parseMember(Parser* self) {
     long long startLine = Token_getLine(Parser_peek(self));
     SpecArray* modifiers = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ void* _lp = (void*)(({ ModifierLoop* _inst = ModifierLoop_new(); ModifierLoop_init(_inst, self, modifiers); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ModifierLoop_evaluate((void*)_lp)) { if (!ModifierLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ ModifierLoop* _inst = ModifierLoop_new(); ModifierLoop_init(_inst, self, modifiers); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ModifierLoop_evaluate((void*)_lp)) { if (!ModifierLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     if (Parser_check(self, "KEYWORD", "class")) {
         Class* nested = (Class*)(Parser_parseClass(self));
         Member* m = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, "CLASS"); _inst; }));
@@ -3587,7 +3668,7 @@ Member* Parser_parseMember(Parser* self) {
         const char* name = Token_getValue(nameTok);
         Parser_advance(self);
         SpecArray* params = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", ")");
         Parser_matchToken(self, "SYMBOL", "{");
         SpecArray* body = ({ SpecArray* _arr = spec_array_new(); _arr; });
@@ -3604,7 +3685,7 @@ Member* Parser_parseMember(Parser* self) {
     }
         _loop_next_8: ;
     } } });
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
         Member* m = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, "METHOD"); _inst; }));
         Member_setLine(m, Token_getLine(nameTok));
@@ -3622,7 +3703,7 @@ Member* Parser_parseMember(Parser* self) {
     if (Parser_check(self, "SYMBOL", "(")) {
         Parser_advance(self);
         SpecArray* params = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", ")");
         Parser_matchToken(self, "SYMBOL", "{");
         SpecArray* body = ({ SpecArray* _arr = spec_array_new(); _arr; });
@@ -3639,7 +3720,7 @@ Member* Parser_parseMember(Parser* self) {
     }
         _loop_next_9: ;
     } } });
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
         Member* m = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, "METHOD"); _inst; }));
         Member_setLine(m, Token_getLine(nameTok));
@@ -3691,7 +3772,7 @@ Statement* Parser_parseStatement(Parser* self) {
         Parser_matchToken(self, "SYMBOL", ")");
         Parser_matchToken(self, "SYMBOL", "{");
         SpecArray* arms = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ WhenArmsLoop* _inst = WhenArmsLoop_new(); WhenArmsLoop_init(_inst, self, arms); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenArmsLoop_evaluate((void*)_lp)) { if (!WhenArmsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ WhenArmsLoop* _inst = WhenArmsLoop_new(); WhenArmsLoop_init(_inst, self, arms); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenArmsLoop_evaluate((void*)_lp)) { if (!WhenArmsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
         Statement* s = (Statement*)(({ Statement* _inst = Statement_new(); Statement_init(_inst, "WHEN"); _inst; }));
         Statement_setLine(s, startLine);
@@ -3705,7 +3786,7 @@ Statement* Parser_parseStatement(Parser* self) {
         Parser_matchToken(self, "SYMBOL", ")");
         Parser_matchToken(self, "SYMBOL", "{");
         SpecArray* thenBranch = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, thenBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, thenBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
         SpecArray* elseBranch = ({ SpecArray* _arr = spec_array_new(); _arr; });
         bool hasElse = false;
@@ -3716,7 +3797,7 @@ Statement* Parser_parseStatement(Parser* self) {
         spec_array_add(elseBranch, (void*)(Parser_parseStatement(self)));
     } else {
         Parser_matchToken(self, "SYMBOL", "{");
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, elseBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, elseBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
     }
     }
@@ -3805,7 +3886,7 @@ Expression* Parser_parsePrimary(Parser* self) {
     }
         Parser_matchToken(self, "SYMBOL", "(");
         SpecArray* params = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", ")");
         Parser_matchToken(self, "SYMBOL", "{");
         SpecArray* body = ({ SpecArray* _arr = spec_array_new(); _arr; });
@@ -3822,7 +3903,7 @@ Expression* Parser_parsePrimary(Parser* self) {
     }
         _loop_next_10: ;
     } } });
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
         Expression* e = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "ANON_FN"); _inst; }));
         e->anonReturnType = returnType;
@@ -3837,7 +3918,7 @@ Expression* Parser_parsePrimary(Parser* self) {
         Parser_matchToken(self, "SYMBOL", ")");
         Parser_matchToken(self, "SYMBOL", "{");
         SpecArray* arms = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ WhenArmsLoop* _inst = WhenArmsLoop_new(); WhenArmsLoop_init(_inst, self, arms); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenArmsLoop_evaluate((void*)_lp)) { if (!WhenArmsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ WhenArmsLoop* _inst = WhenArmsLoop_new(); WhenArmsLoop_init(_inst, self, arms); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenArmsLoop_evaluate((void*)_lp)) { if (!WhenArmsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self, "SYMBOL", "}");
         Expression* e = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "WHEN"); _inst; }));
         Expression_makeWhen(e, subject, arms);
@@ -3914,7 +3995,7 @@ Expression* Parser_parsePrimary(Parser* self) {
         SpecArray* mVals = ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)(firstVal)); _arr; });
         if (Parser_check(self, "SYMBOL", ",")) {
         Parser_advance(self);
-        ({ void* _lp = (void*)(({ MapItemsLoop* _inst = MapItemsLoop_new(); MapItemsLoop_init(_inst, self, mKeys, mVals); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (MapItemsLoop_evaluate((void*)_lp)) { if (!MapItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ MapItemsLoop* _inst = MapItemsLoop_new(); MapItemsLoop_init(_inst, self, mKeys, mVals); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (MapItemsLoop_evaluate((void*)_lp)) { if (!MapItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     }
         Parser_matchToken(self, "SYMBOL", "]");
         Expression* e = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "MAP"); _inst; }));
@@ -3924,7 +4005,7 @@ Expression* Parser_parsePrimary(Parser* self) {
         SpecArray* items = ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)(firstItem)); _arr; });
         if (Parser_check(self, "SYMBOL", ",")) {
         Parser_advance(self);
-        ({ void* _lp = (void*)(({ ArrayItemsLoop* _inst = ArrayItemsLoop_new(); ArrayItemsLoop_init(_inst, self, items); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArrayItemsLoop_evaluate((void*)_lp)) { if (!ArrayItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ArrayItemsLoop* _inst = ArrayItemsLoop_new(); ArrayItemsLoop_init(_inst, self, items); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArrayItemsLoop_evaluate((void*)_lp)) { if (!ArrayItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     }
         Parser_matchToken(self, "SYMBOL", "]");
         Expression* e = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "ARRAY"); _inst; }));
@@ -4035,11 +4116,11 @@ Class* Parser_parseClass(Parser* self) {
     SpecArray* baseClasses = ({ SpecArray* _arr = spec_array_new(); _arr; });
     if (Parser_check(self, "KEYWORD", "extends")) {
         Parser_advance(self);
-        ({ void* _lp = (void*)(({ BaseClassesLoop* _inst = BaseClassesLoop_new(); BaseClassesLoop_init(_inst, self, baseClasses); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BaseClassesLoop_evaluate((void*)_lp)) { if (!BaseClassesLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BaseClassesLoop* _inst = BaseClassesLoop_new(); BaseClassesLoop_init(_inst, self, baseClasses); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BaseClassesLoop_evaluate((void*)_lp)) { if (!BaseClassesLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     }
     Parser_matchToken(self, "SYMBOL", "{");
     SpecArray* members = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ void* _lp = (void*)(({ ClassMembersLoop* _inst = ClassMembersLoop_new(); ClassMembersLoop_init(_inst, self, members); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ClassMembersLoop_evaluate((void*)_lp)) { if (!ClassMembersLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ ClassMembersLoop* _inst = ClassMembersLoop_new(); ClassMembersLoop_init(_inst, self, members); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ClassMembersLoop_evaluate((void*)_lp)) { if (!ClassMembersLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     Parser_matchToken(self, "SYMBOL", "}");
     Class* c = (Class*)(({ Class* _inst = Class_new(); Class_init(_inst, name, "", members); _inst; }));
     Class_setLine(c, Token_getLine(nameTok));
@@ -4062,7 +4143,7 @@ Class* Parser_parseEnum(Parser* self) {
     const char* name = Token_getValue(nameTok);
     Parser_matchToken(self, "SYMBOL", "{");
     SpecArray* members = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ void* _lp = (void*)(({ EnumVariantsLoop* _inst = EnumVariantsLoop_new(); EnumVariantsLoop_init(_inst, self, members, backingType); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (EnumVariantsLoop_evaluate((void*)_lp)) { if (!EnumVariantsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ EnumVariantsLoop* _inst = EnumVariantsLoop_new(); EnumVariantsLoop_init(_inst, self, members, backingType); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (EnumVariantsLoop_evaluate((void*)_lp)) { if (!EnumVariantsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     Parser_matchToken(self, "SYMBOL", "}");
     if (Parser_check(self, "SYMBOL", ";")) {
         Parser_advance(self);
@@ -4076,7 +4157,7 @@ Class* Parser_parseEnum(Parser* self) {
 
 ProgramNode* Parser_parseProgram(Parser* self) {
     SpecArray* classes = ({ SpecArray* _arr = spec_array_new(); _arr; });
-    ({ void* _lp = (void*)(({ ProgramParseLoop* _inst = ProgramParseLoop_new(); ProgramParseLoop_init(_inst, self, classes); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ProgramParseLoop_evaluate((void*)_lp)) { if (!ProgramParseLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    ({ void* _lp = (void*)(({ ProgramParseLoop* _inst = ProgramParseLoop_new(); ProgramParseLoop_init(_inst, self, classes); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ProgramParseLoop_evaluate((void*)_lp)) { if (!ProgramParseLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
     return ({ ProgramNode* _inst = ProgramNode_new(); ProgramNode_init(_inst, classes); _inst; });
 }
 
@@ -4097,7 +4178,7 @@ bool EnumVariantsLoop_iteration(EnumVariantsLoop* self, SpecLoopControl* control
     SpecArray* vParams = ({ SpecArray* _arr = spec_array_new(); _arr; });
     if (Parser_check(self->parser, "SYMBOL", "(")) {
         Parser_advance(self->parser);
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self->parser, vParams); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self->parser, vParams); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self->parser, "SYMBOL", ")");
     }
     Expression* valExpr = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "NUMBER"); _inst; }));
@@ -4224,12 +4305,12 @@ bool WhenArmsLoop_iteration(WhenArmsLoop* self, SpecLoopControl* control) {
     if (Parser_check(self->parser, "KEYWORD", "is")) {
         Parser_advance(self->parser);
         SpecArray* conds = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ WhenConditionsLoop* _inst = WhenConditionsLoop_new(); WhenConditionsLoop_init(_inst, self->parser, conds); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenConditionsLoop_evaluate((void*)_lp)) { if (!WhenConditionsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ WhenConditionsLoop* _inst = WhenConditionsLoop_new(); WhenConditionsLoop_init(_inst, self->parser, conds); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenConditionsLoop_evaluate((void*)_lp)) { if (!WhenConditionsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self->parser, "SYMBOL", ":");
         if (Parser_check(self->parser, "SYMBOL", "{")) {
         Parser_advance(self->parser);
         SpecArray* body = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self->parser, "SYMBOL", "}");
         WhenArm* arm = (WhenArm*)(({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; }));
         WhenArm_arm(arm, conds, body);
@@ -4251,7 +4332,7 @@ bool WhenArmsLoop_iteration(WhenArmsLoop* self, SpecLoopControl* control) {
         if (Parser_check(self->parser, "SYMBOL", "{")) {
         Parser_advance(self->parser);
         SpecArray* body = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self->parser, "SYMBOL", "}");
         WhenArm* arm = (WhenArm*)(({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; }));
         WhenArm_elseArm(arm, body);
@@ -4447,7 +4528,7 @@ bool PostfixLoop_iteration(PostfixLoop* self, SpecLoopControl* control) {
     if (Parser_check(self->parser, "SYMBOL", "(")) {
         Parser_advance(self->parser);
         SpecArray* args = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ ArgLoop* _inst = ArgLoop_new(); ArgLoop_init(_inst, self->parser, args); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArgLoop_evaluate((void*)_lp)) { if (!ArgLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ArgLoop* _inst = ArgLoop_new(); ArgLoop_init(_inst, self->parser, args); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArgLoop_evaluate((void*)_lp)) { if (!ArgLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self->parser, "SYMBOL", ")");
         Expression* callExpr = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "CALL"); _inst; }));
         if (spec_str_equals(Expression_getKind(self->currentExpr), "IDENT")) {
@@ -4480,7 +4561,7 @@ bool PostfixLoop_iteration(PostfixLoop* self, SpecLoopControl* control) {
         if (Parser_check(self->parser, "SYMBOL", "(")) {
         Parser_advance(self->parser);
         SpecArray* args = ({ SpecArray* _arr = spec_array_new(); _arr; });
-        ({ void* _lp = (void*)(({ ArgLoop* _inst = ArgLoop_new(); ArgLoop_init(_inst, self->parser, args); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArgLoop_evaluate((void*)_lp)) { if (!ArgLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+        ({ void* _lp = (void*)(({ ArgLoop* _inst = ArgLoop_new(); ArgLoop_init(_inst, self->parser, args); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArgLoop_evaluate((void*)_lp)) { if (!ArgLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } free(_lp); });
         Parser_matchToken(self->parser, "SYMBOL", ")");
         Expression* callExpr = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "CALL"); _inst; }));
         callExpr->methodTarget = self->currentExpr;
@@ -4702,7 +4783,7 @@ void Linter_lintIndentation(Linter* self, const char* source, SpecArray* issues)
         const char* line = (const char*)(intptr_t)_a_12->items[_i_12];
     lineNum = ((lineNum) + (1));
     long long tabs = spec_str_count_leading(line, "\t");
-    const char* rest = spec_str_substring(line, tabs, (long long)strlen(line));
+    const char* rest = spec_str_substring(line, tabs, spec_str_length(line));
     long long spaces = spec_str_count_leading(rest, " ");
     if (((spaces) > (0))) {
         const char* msg = spec_str_concat(spec_str_concat("Space-based indentation detected (", spec_to_string_int(spaces)), " space(s)). Spec standard requires tabs.");
@@ -4966,8 +5047,8 @@ const char* TypeChecker_substituteTypeParam(TypeChecker* self, const char* rawTy
     if (((((idx) >= (0))) && (((idx) < (spec_array_length(typeArgs)))))) {
         return spec_array_get(typeArgs, idx);
     }
-    if (((spec_str_starts_with(rawType, "Array:")) && ((((long long)strlen(rawType)) > (6))))) {
-        const char* elem = spec_str_substring(rawType, 6, (long long)strlen(rawType));
+    if (((spec_str_starts_with(rawType, "Array:")) && (((spec_str_length(rawType)) > (6))))) {
+        const char* elem = spec_str_substring(rawType, 6, spec_str_length(rawType));
         long long eIdx = spec_array_index_of_str(tps, elem, (-(1)));
         if (((((eIdx) >= (0))) && (((eIdx) < (spec_array_length(typeArgs)))))) {
         return spec_str_concat("Array:", spec_array_get(typeArgs, eIdx));
@@ -5284,14 +5365,14 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     } else if (spec_str_equals(kind, "INDEX")) {
         const char* leftT = TypeChecker_inferExpressionType(self, expr->leftExpr);
         TypeChecker_inferExpressionType(self, expr->rightExpr);
-        if (((spec_str_starts_with(leftT, "Array:")) && ((((long long)strlen(leftT)) > (6))))) {
-        res = spec_str_substring(leftT, 6, (long long)strlen(leftT));
+        if (((spec_str_starts_with(leftT, "Array:")) && (((spec_str_length(leftT)) > (6))))) {
+        res = spec_str_substring(leftT, 6, spec_str_length(leftT));
     } else {
-        if (((spec_str_starts_with(leftT, "Map:")) && ((((long long)strlen(leftT)) > (4))))) {
-        const char* afterMap = spec_str_substring(leftT, 4, (long long)strlen(leftT));
+        if (((spec_str_starts_with(leftT, "Map:")) && (((spec_str_length(leftT)) > (4))))) {
+        const char* afterMap = spec_str_substring(leftT, 4, spec_str_length(leftT));
         long long colonIdx = spec_str_index_of(afterMap, ":", (-(1)));
-        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < ((long long)strlen(afterMap)))))) {
-        res = spec_str_substring(afterMap, ((colonIdx) + (1)), (long long)strlen(afterMap));
+        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (spec_str_length(afterMap)))))) {
+        res = spec_str_substring(afterMap, ((colonIdx) + (1)), spec_str_length(afterMap));
     } else {
         res = "String";
     }
@@ -5359,8 +5440,8 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     } else if (spec_str_equals(kind, "CALL")) {
         const char* targetType = TypeChecker_inferExpressionType(self, expr->methodTarget);
         const char* method = expr->methodName;
-        if (((spec_str_starts_with(targetType, "Array:")) && ((((long long)strlen(targetType)) > (6))))) {
-        const char* elemTypeName = spec_str_substring(targetType, 6, (long long)strlen(targetType));
+        if (((spec_str_starts_with(targetType, "Array:")) && (((spec_str_length(targetType)) > (6))))) {
+        const char* elemTypeName = spec_str_substring(targetType, 6, spec_str_length(targetType));
         if (((spec_str_equals(method, "fold")) && (((spec_array_length(expr->methodArgs)) >= (2))))) {
         NamedArg* a0 = (NamedArg*)(spec_array_get(expr->methodArgs, 0));
         const char* initType = TypeChecker_inferExpressionType(self, NamedArg_getValue(a0));
@@ -5398,11 +5479,11 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     }
     } else {
         if (((spec_str_starts_with(targetType, "Map:")) && (spec_str_equals(method, "each")))) {
-        const char* afterMap = spec_str_substring(targetType, 4, (long long)strlen(targetType));
+        const char* afterMap = spec_str_substring(targetType, 4, spec_str_length(targetType));
         long long colonIdx = spec_str_index_of(afterMap, ":", (-(1)));
         const char* valTypeName = "String";
-        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < ((long long)strlen(afterMap)))))) {
-        valTypeName = spec_str_substring(afterMap, ((colonIdx) + (1)), (long long)strlen(afterMap));
+        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (spec_str_length(afterMap)))))) {
+        valTypeName = spec_str_substring(afterMap, ((colonIdx) + (1)), spec_str_length(afterMap));
     }
         ({ SpecArray* _a_40 = expr->methodArgs; if (_a_40) { for (size_t _i_40 = 0; _i_40 < _a_40->length; _i_40++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_40->items[_i_40];
@@ -5438,8 +5519,8 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         fnVarT = spec_map_get_string(self->localVars, method, spec_map_get_string(self->fieldTypes, method, ""));
     }
         if (spec_str_starts_with(fnVarT, "Function")) {
-        if (((spec_str_starts_with(fnVarT, "Function:")) && ((((long long)strlen(fnVarT)) > (9))))) {
-        res = spec_str_substring(fnVarT, 9, (long long)strlen(fnVarT));
+        if (((spec_str_starts_with(fnVarT, "Function:")) && (((spec_str_length(fnVarT)) > (9))))) {
+        res = spec_str_substring(fnVarT, 9, spec_str_length(fnVarT));
     } else {
         res = "Any";
     }
@@ -5451,8 +5532,8 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         res = targetType;
     } else {
         if (((spec_str_starts_with(targetType, "Array")) && (((((spec_str_equals(method, "get")) || (spec_str_equals(method, "pop")))) || (spec_str_equals(method, "removeAt")))))) {
-        if (((spec_str_starts_with(targetType, "Array:")) && ((((long long)strlen(targetType)) > (6))))) {
-        res = spec_str_substring(targetType, 6, (long long)strlen(targetType));
+        if (((spec_str_starts_with(targetType, "Array:")) && (((spec_str_length(targetType)) > (6))))) {
+        res = spec_str_substring(targetType, 6, spec_str_length(targetType));
     } else {
         res = "Any";
     }
@@ -5483,10 +5564,10 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
     }
     } else {
         if (((spec_str_starts_with(targetType, "Map:")) && (spec_str_equals(method, "get")))) {
-        const char* afterMap = spec_str_substring(targetType, 4, (long long)strlen(targetType));
+        const char* afterMap = spec_str_substring(targetType, 4, spec_str_length(targetType));
         long long colonIdx = spec_str_index_of(afterMap, ":", (-(1)));
-        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < ((long long)strlen(afterMap)))))) {
-        res = spec_str_substring(afterMap, ((colonIdx) + (1)), (long long)strlen(afterMap));
+        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (spec_str_length(afterMap)))))) {
+        res = spec_str_substring(afterMap, ((colonIdx) + (1)), spec_str_length(afterMap));
     } else {
         res = "Any";
     }
@@ -6114,24 +6195,24 @@ void EscapeLoop_init(EscapeLoop* self, const char* src) {
 }
 
 bool EscapeLoop_evaluate(EscapeLoop* self) {
-    return ((self->pos) < ((long long)strlen(self->src)));
+    return ((self->pos) < (spec_str_length(self->src)));
 }
 
 bool EscapeLoop_iteration(EscapeLoop* self, SpecLoopControl* control) {
     const char* ch = spec_str_char_at(self->src, self->pos, "");
     self->pos = ((self->pos) + (1));
     if (spec_str_equals(ch, "\n")) {
-        self->res = spec_str_concat(self->res, "\\n");
+        self->res = spec_str_append(self->res, "\\n");
     } else if (spec_str_equals(ch, "\t")) {
-        self->res = spec_str_concat(self->res, "\\t");
+        self->res = spec_str_append(self->res, "\\t");
     } else if (spec_str_equals(ch, "\r")) {
-        self->res = spec_str_concat(self->res, "\\r");
+        self->res = spec_str_append(self->res, "\\r");
     } else if (spec_str_equals(ch, "\"")) {
-        self->res = spec_str_concat(self->res, "\\\"");
+        self->res = spec_str_append(self->res, "\\\"");
     } else if (spec_str_equals(ch, "\\")) {
-        self->res = spec_str_concat(self->res, "\\\\");
+        self->res = spec_str_append(self->res, "\\\\");
     } else {
-        self->res = spec_str_concat(self->res, ch);
+        self->res = spec_str_append(self->res, ch);
     }
     return true;
 }
@@ -6142,401 +6223,472 @@ void RuntimePrelude_init(RuntimePrelude* self) {
 const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     const char* p = "";
     p = spec_str_concat(p, "/* Generated by Pure-Spec Compiler */\n");
-    p = spec_str_concat(p, "#define _POSIX_C_SOURCE 200809L\n");
-    p = spec_str_concat(p, "#include <stdio.h>\n");
-    p = spec_str_concat(p, "#include <stdlib.h>\n");
-    p = spec_str_concat(p, "#include <string.h>\n");
-    p = spec_str_concat(p, "#include <stdbool.h>\n");
-    p = spec_str_concat(p, "#include <stdint.h>\n");
+    p = spec_str_append(p, "#define _POSIX_C_SOURCE 200809L\n");
+    p = spec_str_append(p, "#include <stdio.h>\n");
+    p = spec_str_append(p, "#include <stdlib.h>\n");
+    p = spec_str_append(p, "#include <string.h>\n");
+    p = spec_str_append(p, "#include <stdbool.h>\n");
+    p = spec_str_append(p, "#include <stdint.h>\n");
     p = spec_str_concat(p, "#include <ctype.h>\n");
-    p = spec_str_concat(p, "#include <time.h>\n");
-    p = spec_str_concat(p, "#include <errno.h>\n");
-    p = spec_str_concat(p, "#include <math.h>\n");
-    p = spec_str_concat(p, "#include <unistd.h>\n");
+    p = spec_str_append(p, "#include <time.h>\n");
+    p = spec_str_append(p, "#include <errno.h>\n");
+    p = spec_str_append(p, "#include <math.h>\n");
+    p = spec_str_append(p, "#include <unistd.h>\n");
     p = spec_str_concat(p, "#include <pthread.h>\n\n");
     p = spec_str_concat(p, "/* Spec Runtime String Utilities */\n");
-    p = spec_str_concat(p, "bool spec_str_equals(const char* a, const char* b) {\n");
-    p = spec_str_concat(p, "    if (a == b) return true;\n");
-    p = spec_str_concat(p, "    if (!a || !b) return false;\n");
-    p = spec_str_concat(p, "    return strcmp(a, b) == 0;\n");
-    p = spec_str_concat(p, "}\n\n");
-    p = spec_str_concat(p, "char* spec_str_concat(const char* a, const char* b) {\n");
-    p = spec_str_concat(p, "    if (!a) a = \"\";\n");
-    p = spec_str_concat(p, "    if (!b) b = \"\";\n");
-    p = spec_str_concat(p, "    size_t la = strlen(a);\n");
-    p = spec_str_concat(p, "    size_t lb = strlen(b);\n");
-    p = spec_str_concat(p, "    char* res = (char*)malloc(la + lb + 1);\n");
+    p = spec_str_concat(p, "static const char* _spec_last_str = NULL;\n");
+    p = spec_str_concat(p, "static size_t _spec_last_len = 0;\n\n");
+    p = spec_str_concat(p, "long long spec_str_length(const char* s) {\n");
+    p = spec_str_append(p, "    if (!s) return 0;\n");
+    p = spec_str_concat(p, "    if (s == _spec_last_str) return (long long)_spec_last_len;\n");
+    p = spec_str_append(p, "    size_t len = strlen(s);\n");
+    p = spec_str_concat(p, "    _spec_last_str = s;\n");
+    p = spec_str_concat(p, "    _spec_last_len = len;\n");
+    p = spec_str_append(p, "    return (long long)len;\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_concat(p, "typedef struct {\n");
+    p = spec_str_concat(p, "    char* ptr;\n");
+    p = spec_str_append(p, "    size_t len;\n");
+    p = spec_str_concat(p, "    size_t cap;\n");
+    p = spec_str_concat(p, "} SpecStrBuf;\n");
+    p = spec_str_concat(p, "static SpecStrBuf _spec_str_bufs[512];\n");
+    p = spec_str_concat(p, "static size_t _spec_str_buf_next = 0;\n\n");
+    p = spec_str_concat(p, "char* spec_str_append(const char* a, const char* b) {\n");
+    p = spec_str_append(p, "    if (!a) a = \"\";\n");
+    p = spec_str_append(p, "    if (!b || !*b) return (char*)a;\n");
+    p = spec_str_append(p, "    size_t lb = strlen(b);\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < 512; i++) {\n");
+    p = spec_str_concat(p, "        if (_spec_str_bufs[i].ptr == a && a != NULL && *a != '\\0') {\n");
+    p = spec_str_concat(p, "            size_t la = _spec_str_bufs[i].len;\n");
+    p = spec_str_concat(p, "            if (la + lb + 1 > _spec_str_bufs[i].cap) {\n");
+    p = spec_str_concat(p, "                size_t new_cap = _spec_str_bufs[i].cap * 2;\n");
+    p = spec_str_concat(p, "                if (new_cap < la + lb + 1) new_cap = (la + lb + 1) * 2;\n");
+    p = spec_str_concat(p, "                char* new_ptr = (char*)realloc(_spec_str_bufs[i].ptr, new_cap);\n");
+    p = spec_str_concat(p, "                _spec_str_bufs[i].ptr = new_ptr;\n");
+    p = spec_str_concat(p, "                _spec_str_bufs[i].cap = new_cap;\n");
+    p = spec_str_append(p, "            }\n");
+    p = spec_str_concat(p, "            memcpy(_spec_str_bufs[i].ptr + la, b, lb);\n");
+    p = spec_str_concat(p, "            _spec_str_bufs[i].ptr[la + lb] = '\\0';\n");
+    p = spec_str_concat(p, "            _spec_str_bufs[i].len = la + lb;\n");
+    p = spec_str_concat(p, "            _spec_last_str = _spec_str_bufs[i].ptr;\n");
+    p = spec_str_concat(p, "            _spec_last_len = la + lb;\n");
+    p = spec_str_concat(p, "            return _spec_str_bufs[i].ptr;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    size_t la = strlen(a);\n");
+    p = spec_str_concat(p, "    size_t cap = (la + lb + 1) * 2;\n");
+    p = spec_str_concat(p, "    if (cap < 64) cap = 64;\n");
+    p = spec_str_concat(p, "    char* res = (char*)malloc(cap);\n");
     p = spec_str_concat(p, "    memcpy(res, a, la);\n");
     p = spec_str_concat(p, "    memcpy(res + la, b, lb);\n");
-    p = spec_str_concat(p, "    res[la + lb] = '\\0';\n");
-    p = spec_str_concat(p, "    return res;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    res[la + lb] = '\\0';\n");
+    p = spec_str_concat(p, "    size_t slot = _spec_str_buf_next;\n");
+    p = spec_str_concat(p, "    _spec_str_buf_next = (slot + 1) & 511;\n");
+    p = spec_str_concat(p, "    _spec_str_bufs[slot].ptr = res;\n");
+    p = spec_str_concat(p, "    _spec_str_bufs[slot].len = la + lb;\n");
+    p = spec_str_concat(p, "    _spec_str_bufs[slot].cap = cap;\n");
+    p = spec_str_concat(p, "    _spec_last_str = res;\n");
+    p = spec_str_concat(p, "    _spec_last_len = la + lb;\n");
+    p = spec_str_append(p, "    return res;\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_concat(p, "bool spec_str_equals(const char* a, const char* b) {\n");
+    p = spec_str_append(p, "    if (a == b) return true;\n");
+    p = spec_str_append(p, "    if (!a || !b) return false;\n");
+    p = spec_str_concat(p, "    return strcmp(a, b) == 0;\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_concat(p, "char* spec_str_concat(const char* a, const char* b) {\n");
+    p = spec_str_append(p, "    if (!a) a = \"\";\n");
+    p = spec_str_append(p, "    if (!b) b = \"\";\n");
+    p = spec_str_append(p, "    size_t la = strlen(a);\n");
+    p = spec_str_append(p, "    size_t lb = strlen(b);\n");
+    p = spec_str_append(p, "    char* res = (char*)malloc(la + lb + 1);\n");
+    p = spec_str_concat(p, "    memcpy(res, a, la);\n");
+    p = spec_str_concat(p, "    memcpy(res + la, b, lb);\n");
+    p = spec_str_append(p, "    res[la + lb] = '\\0';\n");
+    p = spec_str_append(p, "    return res;\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_concat(p, "static char _spec_small_ints[258][8];\n");
+    p = spec_str_concat(p, "static bool _spec_small_ints_init = false;\n");
     p = spec_str_concat(p, "char* spec_to_string_int(long long v) {\n");
-    p = spec_str_concat(p, "    char buf[64];\n");
+    p = spec_str_append(p, "    if (v >= -1 && v <= 256) {\n");
+    p = spec_str_concat(p, "        if (!_spec_small_ints_init) {\n");
+    p = spec_str_concat(p, "            for (int i = -1; i <= 256; i++) snprintf(_spec_small_ints[i + 1], 8, \"%d\", i);\n");
+    p = spec_str_concat(p, "            _spec_small_ints_init = true;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_concat(p, "        return _spec_small_ints[v + 1];\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    char buf[64];\n");
     p = spec_str_concat(p, "    snprintf(buf, sizeof(buf), \"%lld\", v);\n");
     p = spec_str_concat(p, "    return strdup(buf);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "char* spec_to_string_float(double v) {\n");
-    p = spec_str_concat(p, "    char buf[64];\n");
+    p = spec_str_append(p, "    char buf[64];\n");
     p = spec_str_concat(p, "    snprintf(buf, sizeof(buf), \"%g\", v);\n");
     p = spec_str_concat(p, "    return strdup(buf);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "char* spec_to_string_bool(bool v) {\n");
-    p = spec_str_concat(p, "    return v ? \"true\" : \"false\";\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return v ? \"true\" : \"false\";\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_concat(p, "static char _spec_char_table[256][2];\n");
+    p = spec_str_concat(p, "static bool _spec_char_table_init = false;\n");
     p = spec_str_concat(p, "const char* spec_str_char_at(const char* s, long long idx, const char* def) {\n");
-    p = spec_str_concat(p, "    if (!s || idx < 0 || (size_t)idx >= strlen(s)) return def ? def : \"\";\n");
-    p = spec_str_concat(p, "    char* buf = (char*)malloc(2);\n");
-    p = spec_str_concat(p, "    buf[0] = s[idx];\n");
-    p = spec_str_concat(p, "    buf[1] = '\\0';\n");
-    p = spec_str_concat(p, "    return buf;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (!s || idx < 0) return def ? def : \"\";\n");
+    p = spec_str_concat(p, "    size_t len = (s == _spec_last_str) ? _spec_last_len : strlen(s);\n");
+    p = spec_str_concat(p, "    _spec_last_str = s;\n");
+    p = spec_str_concat(p, "    _spec_last_len = len;\n");
+    p = spec_str_append(p, "    if ((size_t)idx >= len) return def ? def : \"\";\n");
+    p = spec_str_concat(p, "    if (!_spec_char_table_init) {\n");
+    p = spec_str_concat(p, "        for (int i = 0; i < 256; i++) { _spec_char_table[i][0] = (char)i; _spec_char_table[i][1] = '\\0'; }\n");
+    p = spec_str_concat(p, "        _spec_char_table_init = true;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_concat(p, "    return _spec_char_table[(unsigned char)s[idx]];\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "const char* spec_str_substring(const char* s, long long start, long long end) {\n");
-    p = spec_str_concat(p, "    if (!s) return \"\";\n");
-    p = spec_str_concat(p, "    size_t len = strlen(s);\n");
-    p = spec_str_concat(p, "    if (start < 0) start = 0;\n");
-    p = spec_str_concat(p, "    if (end > (long long)len) end = (long long)len;\n");
-    p = spec_str_concat(p, "    if (start >= end) return \"\";\n");
-    p = spec_str_concat(p, "    size_t sub_len = (size_t)(end - start);\n");
-    p = spec_str_concat(p, "    char* buf = (char*)malloc(sub_len + 1);\n");
+    p = spec_str_append(p, "    if (!s) return \"\";\n");
+    p = spec_str_append(p, "    size_t len = strlen(s);\n");
+    p = spec_str_append(p, "    if (start < 0) start = 0;\n");
+    p = spec_str_append(p, "    if (end > (long long)len) end = (long long)len;\n");
+    p = spec_str_append(p, "    if (start >= end) return \"\";\n");
+    p = spec_str_append(p, "    size_t sub_len = (size_t)(end - start);\n");
+    p = spec_str_append(p, "    char* buf = (char*)malloc(sub_len + 1);\n");
     p = spec_str_concat(p, "    memcpy(buf, s + start, sub_len);\n");
-    p = spec_str_concat(p, "    buf[sub_len] = '\\0';\n");
-    p = spec_str_concat(p, "    return buf;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    buf[sub_len] = '\\0';\n");
+    p = spec_str_append(p, "    return buf;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_str_starts_with(const char* s, const char* prefix) {\n");
     p = spec_str_concat(p, "    if (!s || !prefix) return false;\n");
-    p = spec_str_concat(p, "    size_t slen = strlen(s);\n");
+    p = spec_str_append(p, "    size_t slen = strlen(s);\n");
     p = spec_str_concat(p, "    size_t plen = strlen(prefix);\n");
     p = spec_str_concat(p, "    if (plen > slen) return false;\n");
     p = spec_str_concat(p, "    return strncmp(s, prefix, plen) == 0;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_str_ends_with(const char* s, const char* suffix) {\n");
-    p = spec_str_concat(p, "    if (!s || !suffix) return false;\n");
-    p = spec_str_concat(p, "    size_t slen = strlen(s);\n");
-    p = spec_str_concat(p, "    size_t xlen = strlen(suffix);\n");
-    p = spec_str_concat(p, "    if (xlen > slen) return false;\n");
+    p = spec_str_append(p, "    if (!s || !suffix) return false;\n");
+    p = spec_str_append(p, "    size_t slen = strlen(s);\n");
+    p = spec_str_append(p, "    size_t xlen = strlen(suffix);\n");
+    p = spec_str_append(p, "    if (xlen > slen) return false;\n");
     p = spec_str_concat(p, "    return strcmp(s + slen - xlen, suffix) == 0;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_str_contains(const char* s, const char* needle) {\n");
-    p = spec_str_concat(p, "    if (!s || !needle) return false;\n");
-    p = spec_str_concat(p, "    return strstr(s, needle) != NULL;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (!s || !needle) return false;\n");
+    p = spec_str_append(p, "    return strstr(s, needle) != NULL;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "const char* spec_str_replace_all(const char* s, const char* search, const char* replacement) {\n");
-    p = spec_str_concat(p, "    if (!s) return \"\";\n");
+    p = spec_str_append(p, "    if (!s) return \"\";\n");
     p = spec_str_concat(p, "    if (!search || !*search) return strdup(s);\n");
     p = spec_str_concat(p, "    if (!replacement) replacement = \"\";\n");
-    p = spec_str_concat(p, "    size_t slen = strlen(search);\n");
+    p = spec_str_append(p, "    size_t slen = strlen(search);\n");
     p = spec_str_concat(p, "    size_t rlen = strlen(replacement);\n");
-    p = spec_str_concat(p, "    size_t count = 0;\n");
+    p = spec_str_append(p, "    size_t count = 0;\n");
     p = spec_str_concat(p, "    const char* p = s;\n");
     p = spec_str_concat(p, "    while ((p = strstr(p, search)) != NULL) { count++; p += slen; }\n");
     p = spec_str_concat(p, "    if (count == 0) return strdup(s);\n");
-    p = spec_str_concat(p, "    size_t out_len = strlen(s) + count * rlen - count * slen;\n");
-    p = spec_str_concat(p, "    char* out = (char*)malloc(out_len + 1);\n");
-    p = spec_str_concat(p, "    char* dst = out;\n");
+    p = spec_str_append(p, "    size_t out_len = strlen(s) + count * rlen - count * slen;\n");
+    p = spec_str_append(p, "    char* out = (char*)malloc(out_len + 1);\n");
+    p = spec_str_append(p, "    char* dst = out;\n");
     p = spec_str_concat(p, "    p = s;\n");
-    p = spec_str_concat(p, "    const char* match;\n");
+    p = spec_str_append(p, "    const char* match;\n");
     p = spec_str_concat(p, "    while ((match = strstr(p, search)) != NULL) {\n");
     p = spec_str_concat(p, "        size_t chunk = (size_t)(match - p);\n");
     p = spec_str_concat(p, "        memcpy(dst, p, chunk);\n");
-    p = spec_str_concat(p, "        dst += chunk;\n");
+    p = spec_str_append(p, "        dst += chunk;\n");
     p = spec_str_concat(p, "        memcpy(dst, replacement, rlen);\n");
-    p = spec_str_concat(p, "        dst += rlen;\n");
+    p = spec_str_append(p, "        dst += rlen;\n");
     p = spec_str_concat(p, "        p = match + slen;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    strcpy(dst, p);\n");
-    p = spec_str_concat(p, "    return out;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return out;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "const char* spec_str_trim(const char* s) {\n");
-    p = spec_str_concat(p, "    if (!s) return \"\";\n");
-    p = spec_str_concat(p, "    while (*s == ' ' || *s == '\\t' || *s == '\\n' || *s == '\\r') s++;\n");
-    p = spec_str_concat(p, "    if (*s == 0) return \"\";\n");
-    p = spec_str_concat(p, "    const char* end = s + strlen(s) - 1;\n");
-    p = spec_str_concat(p, "    while (end > s && (*end == ' ' || *end == '\\t' || *end == '\\n' || *end == '\\r')) end--;\n");
-    p = spec_str_concat(p, "    size_t len = (size_t)(end - s + 1);\n");
-    p = spec_str_concat(p, "    char* buf = (char*)malloc(len + 1);\n");
+    p = spec_str_append(p, "    if (!s) return \"\";\n");
+    p = spec_str_append(p, "    while (*s == ' ' || *s == '\\t' || *s == '\\n' || *s == '\\r') s++;\n");
+    p = spec_str_append(p, "    if (*s == 0) return \"\";\n");
+    p = spec_str_append(p, "    const char* end = s + strlen(s) - 1;\n");
+    p = spec_str_append(p, "    while (end > s && (*end == ' ' || *end == '\\t' || *end == '\\n' || *end == '\\r')) end--;\n");
+    p = spec_str_append(p, "    size_t len = (size_t)(end - s + 1);\n");
+    p = spec_str_append(p, "    char* buf = (char*)malloc(len + 1);\n");
     p = spec_str_concat(p, "    memcpy(buf, s, len);\n");
-    p = spec_str_concat(p, "    buf[len] = '\\0';\n");
-    p = spec_str_concat(p, "    return buf;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    buf[len] = '\\0';\n");
+    p = spec_str_append(p, "    return buf;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_str_is_digit(const char* s) {\n");
-    p = spec_str_concat(p, "    if (!s || !*s) return false;\n");
+    p = spec_str_append(p, "    if (!s || !*s) return false;\n");
     p = spec_str_concat(p, "    for (const char* p = s; *p; p++) { if (!isdigit((unsigned char)*p)) return false; }\n");
-    p = spec_str_concat(p, "    return true;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return true;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_str_is_alpha(const char* s) {\n");
-    p = spec_str_concat(p, "    if (!s || !*s) return false;\n");
+    p = spec_str_append(p, "    if (!s || !*s) return false;\n");
     p = spec_str_concat(p, "    for (const char* p = s; *p; p++) { if (!isalpha((unsigned char)*p)) return false; }\n");
-    p = spec_str_concat(p, "    return true;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return true;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_str_is_whitespace(const char* s) {\n");
-    p = spec_str_concat(p, "    if (!s || !*s) return false;\n");
+    p = spec_str_append(p, "    if (!s || !*s) return false;\n");
     p = spec_str_concat(p, "    for (const char* p = s; *p; p++) { if (!isspace((unsigned char)*p)) return false; }\n");
-    p = spec_str_concat(p, "    return true;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return true;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_str_index_of(const char* s, const char* needle, long long def) {\n");
-    p = spec_str_concat(p, "    if (!s || !needle) return def;\n");
+    p = spec_str_append(p, "    if (!s || !needle) return def;\n");
     p = spec_str_concat(p, "    const char* p = strstr(s, needle);\n");
     p = spec_str_concat(p, "    if (!p) return def;\n");
     p = spec_str_concat(p, "    return (long long)(p - s);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_str_count_leading(const char* s, const char* search) {\n");
-    p = spec_str_concat(p, "    if (!s || !search || !*search) return 0;\n");
-    p = spec_str_concat(p, "    size_t slen = strlen(search);\n");
-    p = spec_str_concat(p, "    long long count = 0;\n");
+    p = spec_str_append(p, "    if (!s || !search || !*search) return 0;\n");
+    p = spec_str_append(p, "    size_t slen = strlen(search);\n");
+    p = spec_str_append(p, "    long long count = 0;\n");
     p = spec_str_concat(p, "    while (strncmp(s, search, slen) == 0) { count++; s += slen; }\n");
-    p = spec_str_concat(p, "    return count;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return count;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "/* Thread-Safe Spec Dynamic Array */\n");
     p = spec_str_concat(p, "typedef struct {\n");
-    p = spec_str_concat(p, "    void** items;\n");
-    p = spec_str_concat(p, "    size_t length;\n");
+    p = spec_str_append(p, "    void** items;\n");
+    p = spec_str_append(p, "    size_t length;\n");
     p = spec_str_concat(p, "    size_t capacity;\n");
     p = spec_str_concat(p, "    pthread_mutex_t lock;\n");
     p = spec_str_concat(p, "} SpecArray;\n\n");
     p = spec_str_concat(p, "SpecArray* spec_array_new(void) {\n");
     p = spec_str_concat(p, "    SpecArray* a = (SpecArray*)malloc(sizeof(SpecArray));\n");
-    p = spec_str_concat(p, "    a->items = (void**)malloc(sizeof(void*) * 8);\n");
-    p = spec_str_concat(p, "    a->length = 0;\n");
-    p = spec_str_concat(p, "    a->capacity = 8;\n");
+    p = spec_str_append(p, "    a->items = NULL;\n");
+    p = spec_str_append(p, "    a->length = 0;\n");
+    p = spec_str_concat(p, "    a->capacity = 0;\n");
     p = spec_str_concat(p, "    pthread_mutexattr_t attr;\n");
     p = spec_str_concat(p, "    pthread_mutexattr_init(&attr);\n");
     p = spec_str_concat(p, "    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);\n");
     p = spec_str_concat(p, "    pthread_mutex_init(&a->lock, &attr);\n");
     p = spec_str_concat(p, "    pthread_mutexattr_destroy(&attr);\n");
-    p = spec_str_concat(p, "    return a;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return a;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_array_add(SpecArray* a, void* item) {\n");
-    p = spec_str_concat(p, "    if (!a) return;\n");
+    p = spec_str_append(p, "    if (!a) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
     p = spec_str_concat(p, "    if (a->length >= a->capacity) {\n");
-    p = spec_str_concat(p, "        a->capacity *= 2;\n");
+    p = spec_str_concat(p, "        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;\n");
     p = spec_str_concat(p, "        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    a->items[a->length++] = item;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    a->items[a->length++] = item;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_array_add_array(SpecArray* a, SpecArray* other) {\n");
-    p = spec_str_concat(p, "    if (!a || !other) return;\n");
+    p = spec_str_append(p, "    if (!a || !other) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&other->lock);\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < other->length; i++) {\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < other->length; i++) {\n");
     p = spec_str_concat(p, "        spec_array_add(a, other->items[i]);\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&other->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_array_length(SpecArray* a) {\n");
-    p = spec_str_concat(p, "    if (!a) return 0;\n");
+    p = spec_str_append(p, "    if (!a) return 0;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    long long len = (long long)a->length;\n");
+    p = spec_str_append(p, "    long long len = (long long)a->length;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return len;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return len;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void* spec_array_get(SpecArray* a, long long idx) {\n");
-    p = spec_str_concat(p, "    if (!a || idx < 0) return NULL;\n");
+    p = spec_str_append(p, "    if (!a || idx < 0) return NULL;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    void* val = ((size_t)idx < a->length) ? a->items[idx] : NULL;\n");
+    p = spec_str_append(p, "    void* val = ((size_t)idx < a->length) ? a->items[idx] : NULL;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return val;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return val;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_array_set(SpecArray* a, long long idx, void* item) {\n");
-    p = spec_str_concat(p, "    if (!a || idx < 0) return;\n");
+    p = spec_str_append(p, "    if (!a || idx < 0) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    if ((size_t)idx < a->length) {\n");
-    p = spec_str_concat(p, "        a->items[idx] = item;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    if ((size_t)idx < a->length) {\n");
+    p = spec_str_append(p, "        a->items[idx] = item;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void* spec_array_pop(SpecArray* a, void* def) {\n");
-    p = spec_str_concat(p, "    if (!a) return def;\n");
+    p = spec_str_append(p, "    if (!a) return def;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    void* val = def;\n");
-    p = spec_str_concat(p, "    if (a->length > 0) val = a->items[--a->length];\n");
+    p = spec_str_append(p, "    void* val = def;\n");
+    p = spec_str_append(p, "    if (a->length > 0) val = a->items[--a->length];\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return val;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return val;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_array_remove_at(SpecArray* a, long long idx) {\n");
-    p = spec_str_concat(p, "    if (!a || idx < 0) return;\n");
+    p = spec_str_append(p, "    if (!a || idx < 0) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    if ((size_t)idx < a->length) {\n");
-    p = spec_str_concat(p, "        for (size_t i = (size_t)idx; i + 1 < a->length; i++) {\n");
-    p = spec_str_concat(p, "            a->items[i] = a->items[i + 1];\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        a->length--;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    if ((size_t)idx < a->length) {\n");
+    p = spec_str_append(p, "        for (size_t i = (size_t)idx; i + 1 < a->length; i++) {\n");
+    p = spec_str_append(p, "            a->items[i] = a->items[i + 1];\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        a->length--;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "SpecArray* spec_array_slice(SpecArray* a, long long start, long long end) {\n");
     p = spec_str_concat(p, "    SpecArray* res = spec_array_new();\n");
-    p = spec_str_concat(p, "    if (!a) return res;\n");
+    p = spec_str_append(p, "    if (!a) return res;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    if (start < 0) start = 0;\n");
-    p = spec_str_concat(p, "    if (end > (long long)a->length) end = (long long)a->length;\n");
-    p = spec_str_concat(p, "    for (long long i = start; i < end; i++) {\n");
+    p = spec_str_append(p, "    if (start < 0) start = 0;\n");
+    p = spec_str_append(p, "    if (end > (long long)a->length) end = (long long)a->length;\n");
+    p = spec_str_append(p, "    for (long long i = start; i < end; i++) {\n");
     p = spec_str_concat(p, "        spec_array_add(res, a->items[i]);\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return res;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return res;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_array_clear(SpecArray* a) {\n");
-    p = spec_str_concat(p, "    if (!a) return;\n");
+    p = spec_str_append(p, "    if (!a) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    a->length = 0;\n");
+    p = spec_str_append(p, "    a->length = 0;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_array_index_of_str(SpecArray* a, const char* search, long long def) {\n");
-    p = spec_str_concat(p, "    if (!a || !search) return def;\n");
+    p = spec_str_append(p, "    if (!a || !search) return def;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
     p = spec_str_concat(p, "        if (a->items[i] && strcmp((const char*)a->items[i], search) == 0) {\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "            return (long long)i;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return (long long)i;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return def;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return def;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_array_each(SpecArray* a, void (*fn)(void*)) {\n");
-    p = spec_str_concat(p, "    if (!a || !fn) return;\n");
+    p = spec_str_append(p, "    if (!a || !fn) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_concat(p, "        fn(a->items[i]);\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "        fn(a->items[i]);\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "typedef struct { void* fn; void* env; } SpecClosure;\n");
     p = spec_str_concat(p, "static inline SpecClosure* spec_closure_new(void* fn, void* env) {\n");
     p = spec_str_concat(p, "    SpecClosure* c = (SpecClosure*)malloc(sizeof(SpecClosure));\n");
-    p = spec_str_concat(p, "    c->fn = fn;\n");
-    p = spec_str_concat(p, "    c->env = env;\n");
-    p = spec_str_concat(p, "    return c;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    c->fn = fn;\n");
+    p = spec_str_append(p, "    c->env = env;\n");
+    p = spec_str_append(p, "    return c;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "SpecArray* spec_array_filter(SpecArray* a, bool (*fn)(void*)) {\n");
     p = spec_str_concat(p, "    SpecArray* res = spec_array_new();\n");
-    p = spec_str_concat(p, "    if (!a || !fn) return res;\n");
+    p = spec_str_append(p, "    if (!a || !fn) return res;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
     p = spec_str_concat(p, "        if (fn(a->items[i])) spec_array_add(res, a->items[i]);\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return res;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return res;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_array_count(SpecArray* a, bool (*fn)(void*)) {\n");
-    p = spec_str_concat(p, "    if (!a || !fn) return 0;\n");
+    p = spec_str_append(p, "    if (!a || !fn) return 0;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    long long cnt = 0;\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_concat(p, "        if (fn(a->items[i])) cnt++;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    long long cnt = 0;\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "        if (fn(a->items[i])) cnt++;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return cnt;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return cnt;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_array_any(SpecArray* a, bool (*fn)(void*)) {\n");
-    p = spec_str_concat(p, "    if (!a || !fn) return false;\n");
+    p = spec_str_append(p, "    if (!a || !fn) return false;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_concat(p, "        if (fn(a->items[i])) {\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "        if (fn(a->items[i])) {\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "            return true;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return true;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return false;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return false;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "SpecArray* spec_str_lines(const char* s) {\n");
     p = spec_str_concat(p, "    SpecArray* res = spec_array_new();\n");
-    p = spec_str_concat(p, "    if (!s) return res;\n");
-    p = spec_str_concat(p, "    const char* start = s;\n");
+    p = spec_str_append(p, "    if (!s) return res;\n");
+    p = spec_str_append(p, "    const char* start = s;\n");
     p = spec_str_concat(p, "    const char* p = s;\n");
     p = spec_str_concat(p, "    while (*p) {\n");
     p = spec_str_concat(p, "        if (*p == '\\n') {\n");
     p = spec_str_concat(p, "            size_t len = (size_t)(p - start);\n");
     p = spec_str_concat(p, "            if (len > 0 && *(p - 1) == '\\r') len--;\n");
-    p = spec_str_concat(p, "            char* line = (char*)malloc(len + 1);\n");
+    p = spec_str_append(p, "            char* line = (char*)malloc(len + 1);\n");
     p = spec_str_concat(p, "            memcpy(line, start, len);\n");
-    p = spec_str_concat(p, "            line[len] = '\\0';\n");
+    p = spec_str_append(p, "            line[len] = '\\0';\n");
     p = spec_str_concat(p, "            spec_array_add(res, line);\n");
     p = spec_str_concat(p, "            start = p + 1;\n");
-    p = spec_str_concat(p, "        }\n");
+    p = spec_str_append(p, "        }\n");
     p = spec_str_concat(p, "        p++;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    if (p >= start && *start) {\n");
     p = spec_str_concat(p, "        size_t len = (size_t)(p - start);\n");
     p = spec_str_concat(p, "        if (len > 0 && *(p - 1) == '\\r') len--;\n");
-    p = spec_str_concat(p, "        char* line = (char*)malloc(len + 1);\n");
+    p = spec_str_append(p, "        char* line = (char*)malloc(len + 1);\n");
     p = spec_str_concat(p, "        memcpy(line, start, len);\n");
-    p = spec_str_concat(p, "        line[len] = '\\0';\n");
+    p = spec_str_append(p, "        line[len] = '\\0';\n");
     p = spec_str_concat(p, "        spec_array_add(res, line);\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    return res;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    return res;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "SpecArray* spec_str_split(const char* s, const char* delim) {\n");
     p = spec_str_concat(p, "    SpecArray* res = spec_array_new();\n");
-    p = spec_str_concat(p, "    if (!s) return res;\n");
-    p = spec_str_concat(p, "    if (!delim || !*delim) {\n");
-    p = spec_str_concat(p, "        for (size_t i = 0; s[i]; i++) {\n");
-    p = spec_str_concat(p, "            char* ch = (char*)malloc(2);\n");
-    p = spec_str_concat(p, "            ch[0] = s[i]; ch[1] = '\\0';\n");
+    p = spec_str_append(p, "    if (!s) return res;\n");
+    p = spec_str_append(p, "    if (!delim || !*delim) {\n");
+    p = spec_str_append(p, "        for (size_t i = 0; s[i]; i++) {\n");
+    p = spec_str_append(p, "            char* ch = (char*)malloc(2);\n");
+    p = spec_str_append(p, "            ch[0] = s[i]; ch[1] = '\\0';\n");
     p = spec_str_concat(p, "            spec_array_add(res, ch);\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        return res;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    size_t dlen = strlen(delim);\n");
-    p = spec_str_concat(p, "    const char* start = s;\n");
-    p = spec_str_concat(p, "    const char* match;\n");
-    p = spec_str_concat(p, "    while ((match = strstr(start, delim)) != NULL) {\n");
-    p = spec_str_concat(p, "        size_t len = (size_t)(match - start);\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        return res;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    size_t dlen = strlen(delim);\n");
+    p = spec_str_append(p, "    const char* start = s;\n");
+    p = spec_str_append(p, "    const char* match;\n");
+    p = spec_str_append(p, "    while ((match = strstr(start, delim)) != NULL) {\n");
+    p = spec_str_append(p, "        size_t len = (size_t)(match - start);\n");
     p = spec_str_concat(p, "        char* part = (char*)malloc(len + 1);\n");
     p = spec_str_concat(p, "        memcpy(part, start, len);\n");
     p = spec_str_concat(p, "        part[len] = '\\0';\n");
     p = spec_str_concat(p, "        spec_array_add(res, part);\n");
-    p = spec_str_concat(p, "        start = match + dlen;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "        start = match + dlen;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    spec_array_add(res, strdup(start));\n");
-    p = spec_str_concat(p, "    return res;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return res;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "const char* spec_array_join(SpecArray* a, const char* sep) {\n");
-    p = spec_str_concat(p, "    if (!a || a->length == 0) return \"\";\n");
+    p = spec_str_append(p, "    if (!a || a->length == 0) return \"\";\n");
     p = spec_str_concat(p, "    if (!sep) sep = \"\";\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n");
     p = spec_str_concat(p, "    size_t slen = strlen(sep);\n");
-    p = spec_str_concat(p, "    size_t total = 0;\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_concat(p, "        const char* item = (const char*)a->items[i];\n");
-    p = spec_str_concat(p, "        if (item) total += strlen(item);\n");
-    p = spec_str_concat(p, "        if (i + 1 < a->length) total += slen;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    char* out = (char*)malloc(total + 1);\n");
-    p = spec_str_concat(p, "    char* dst = out;\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_concat(p, "        const char* item = (const char*)a->items[i];\n");
+    p = spec_str_append(p, "    size_t total = 0;\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "        const char* item = (const char*)a->items[i];\n");
+    p = spec_str_append(p, "        if (item) total += strlen(item);\n");
+    p = spec_str_append(p, "        if (i + 1 < a->length) total += slen;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    char* out = (char*)malloc(total + 1);\n");
+    p = spec_str_append(p, "    char* dst = out;\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "        const char* item = (const char*)a->items[i];\n");
     p = spec_str_concat(p, "        if (item) { size_t ilen = strlen(item); memcpy(dst, item, ilen); dst += ilen; }\n");
     p = spec_str_concat(p, "        if (i + 1 < a->length) { memcpy(dst, sep, slen); dst += slen; }\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    *dst = '\\0';\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    *dst = '\\0';\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n");
-    p = spec_str_concat(p, "    return out;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return out;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "/* Thread-Safe Spec Hash Map (64-Bucket FNV-1a Hash Table) */\n");
-    p = spec_str_concat(p, "#define SPEC_MAP_BUCKETS 64\n");
+    p = spec_str_append(p, "#define SPEC_MAP_BUCKETS 64\n");
     p = spec_str_concat(p, "typedef struct SpecMapEntry {\n");
-    p = spec_str_concat(p, "    char* key;\n");
-    p = spec_str_concat(p, "    void* value;\n");
-    p = spec_str_concat(p, "    bool is_str;\n");
+    p = spec_str_append(p, "    char* key;\n");
+    p = spec_str_append(p, "    void* value;\n");
+    p = spec_str_append(p, "    bool is_str;\n");
     p = spec_str_concat(p, "    struct SpecMapEntry* next;\n");
     p = spec_str_concat(p, "} SpecMapEntry;\n\n");
     p = spec_str_concat(p, "typedef struct {\n");
     p = spec_str_concat(p, "    SpecMapEntry* buckets[SPEC_MAP_BUCKETS];\n");
-    p = spec_str_concat(p, "    size_t length;\n");
+    p = spec_str_append(p, "    size_t length;\n");
     p = spec_str_concat(p, "    pthread_mutex_t lock;\n");
     p = spec_str_concat(p, "} SpecMap;\n\n");
     p = spec_str_concat(p, "static inline size_t spec_hash_key(const char* key) {\n");
-    p = spec_str_concat(p, "    size_t h = 1469598103934665603ULL;\n");
-    p = spec_str_concat(p, "    while (*key) {\n");
-    p = spec_str_concat(p, "        h ^= (unsigned char)(*key++);\n");
-    p = spec_str_concat(p, "        h *= 1099511628211ULL;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    return h & (SPEC_MAP_BUCKETS - 1);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    size_t h = 1469598103934665603ULL;\n");
+    p = spec_str_append(p, "    while (*key) {\n");
+    p = spec_str_append(p, "        h ^= (unsigned char)(*key++);\n");
+    p = spec_str_append(p, "        h *= 1099511628211ULL;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    return h & (SPEC_MAP_BUCKETS - 1);\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "SpecMap* spec_map_new(void) {\n");
     p = spec_str_concat(p, "    SpecMap* m = (SpecMap*)calloc(1, sizeof(SpecMap));\n");
     p = spec_str_concat(p, "    pthread_mutexattr_t attr;\n");
@@ -6544,217 +6696,217 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_concat(p, "    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);\n");
     p = spec_str_concat(p, "    pthread_mutex_init(&m->lock, &attr);\n");
     p = spec_str_concat(p, "    pthread_mutexattr_destroy(&attr);\n");
-    p = spec_str_concat(p, "    return m;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return m;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_map_set(SpecMap* m, const char* key, const char* val) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return;\n");
+    p = spec_str_append(p, "    if (!m || !key) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
-    p = spec_str_concat(p, "            if (curr->is_str && curr->value) free(curr->value);\n");
+    p = spec_str_append(p, "            if (curr->is_str && curr->value) free(curr->value);\n");
     p = spec_str_concat(p, "            curr->value = (void*)strdup(val ? val : \"\");\n");
-    p = spec_str_concat(p, "            curr->is_str = true;\n");
+    p = spec_str_append(p, "            curr->is_str = true;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n");
     p = spec_str_concat(p, "    e->key = strdup(key);\n");
     p = spec_str_concat(p, "    e->value = (void*)strdup(val ? val : \"\");\n");
-    p = spec_str_concat(p, "    e->is_str = true;\n");
-    p = spec_str_concat(p, "    e->next = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    m->buckets[idx] = e;\n");
-    p = spec_str_concat(p, "    m->length++;\n");
+    p = spec_str_append(p, "    e->is_str = true;\n");
+    p = spec_str_append(p, "    e->next = m->buckets[idx];\n");
+    p = spec_str_append(p, "    m->buckets[idx] = e;\n");
+    p = spec_str_append(p, "    m->length++;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_map_set_any(SpecMap* m, const char* key, void* val) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return;\n");
+    p = spec_str_append(p, "    if (!m || !key) return;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
-    p = spec_str_concat(p, "            if (curr->is_str && curr->value) free(curr->value);\n");
-    p = spec_str_concat(p, "            curr->value = val;\n");
-    p = spec_str_concat(p, "            curr->is_str = false;\n");
+    p = spec_str_append(p, "            if (curr->is_str && curr->value) free(curr->value);\n");
+    p = spec_str_append(p, "            curr->value = val;\n");
+    p = spec_str_append(p, "            curr->is_str = false;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n");
     p = spec_str_concat(p, "    e->key = strdup(key);\n");
-    p = spec_str_concat(p, "    e->value = val;\n");
-    p = spec_str_concat(p, "    e->is_str = false;\n");
-    p = spec_str_concat(p, "    e->next = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    m->buckets[idx] = e;\n");
-    p = spec_str_concat(p, "    m->length++;\n");
+    p = spec_str_append(p, "    e->value = val;\n");
+    p = spec_str_append(p, "    e->is_str = false;\n");
+    p = spec_str_append(p, "    e->next = m->buckets[idx];\n");
+    p = spec_str_append(p, "    m->buckets[idx] = e;\n");
+    p = spec_str_append(p, "    m->length++;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "const char* spec_map_getString(SpecMap* m, const char* key, const char* _default) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return _default ? _default : \"\";\n");
+    p = spec_str_append(p, "    if (!m || !key) return _default ? _default : \"\";\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
-    p = spec_str_concat(p, "            const char* res = (const char*)curr->value;\n");
+    p = spec_str_append(p, "            const char* res = (const char*)curr->value;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return res ? res : \"\";\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return res ? res : \"\";\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return _default ? _default : \"\";\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return _default ? _default : \"\";\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "const char* spec_map_get_string(SpecMap* m, const char* key, const char* _default) {\n");
     p = spec_str_concat(p, "    return spec_map_getString(m, key, _default);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void* spec_map_get(SpecMap* m, const char* key, void* _default) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return _default;\n");
+    p = spec_str_append(p, "    if (!m || !key) return _default;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
-    p = spec_str_concat(p, "            void* res = curr->value;\n");
+    p = spec_str_append(p, "            void* res = curr->value;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return res;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return res;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return _default;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return _default;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_map_get_int(SpecMap* m, const char* key, long long _default) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return _default;\n");
+    p = spec_str_append(p, "    if (!m || !key) return _default;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
     p = spec_str_concat(p, "            long long res = curr->is_str ? atoll((const char*)curr->value) : (long long)(intptr_t)curr->value;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return res;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return res;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return _default;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return _default;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "double spec_map_get_float(SpecMap* m, const char* key, double _default) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return _default;\n");
+    p = spec_str_append(p, "    if (!m || !key) return _default;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
-    p = spec_str_concat(p, "            double res = curr->is_str ? atof((const char*)curr->value) : _default;\n");
+    p = spec_str_append(p, "            double res = curr->is_str ? atof((const char*)curr->value) : _default;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return res;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return res;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return _default;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return _default;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_map_get_bool(SpecMap* m, const char* key, bool _default) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return _default;\n");
+    p = spec_str_append(p, "    if (!m || !key) return _default;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
     p = spec_str_concat(p, "            bool res = curr->is_str ? (strcmp((const char*)curr->value, \"true\") == 0) : (bool)(intptr_t)curr->value;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return res;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return res;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return _default;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return _default;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_map_has(SpecMap* m, const char* key) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return false;\n");
+    p = spec_str_append(p, "    if (!m || !key) return false;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return true;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            return true;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return false;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return false;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_map_remove(SpecMap* m, const char* key) {\n");
-    p = spec_str_concat(p, "    if (!m || !key) return false;\n");
+    p = spec_str_append(p, "    if (!m || !key) return false;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
     p = spec_str_concat(p, "    size_t idx = spec_hash_key(key);\n");
     p = spec_str_concat(p, "    SpecMapEntry* curr = m->buckets[idx];\n");
     p = spec_str_concat(p, "    SpecMapEntry* prev = NULL;\n");
-    p = spec_str_concat(p, "    while (curr) {\n");
+    p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n");
     p = spec_str_concat(p, "            if (prev) prev->next = curr->next;\n");
-    p = spec_str_concat(p, "            else m->buckets[idx] = curr->next;\n");
-    p = spec_str_concat(p, "            free(curr->key);\n");
-    p = spec_str_concat(p, "            if (curr->is_str && curr->value) free(curr->value);\n");
-    p = spec_str_concat(p, "            free(curr);\n");
-    p = spec_str_concat(p, "            m->length--;\n");
+    p = spec_str_append(p, "            else m->buckets[idx] = curr->next;\n");
+    p = spec_str_append(p, "            free(curr->key);\n");
+    p = spec_str_append(p, "            if (curr->is_str && curr->value) free(curr->value);\n");
+    p = spec_str_append(p, "            free(curr);\n");
+    p = spec_str_append(p, "            m->length--;\n");
     p = spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "            return true;\n");
-    p = spec_str_concat(p, "        }\n");
+    p = spec_str_append(p, "            return true;\n");
+    p = spec_str_append(p, "        }\n");
     p = spec_str_concat(p, "        prev = curr;\n");
-    p = spec_str_concat(p, "        curr = curr->next;\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "        curr = curr->next;\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return false;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return false;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_map_length(SpecMap* m) {\n");
-    p = spec_str_concat(p, "    if (!m) return 0;\n");
+    p = spec_str_append(p, "    if (!m) return 0;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
-    p = spec_str_concat(p, "    long long cnt = (long long)m->length;\n");
+    p = spec_str_append(p, "    long long cnt = (long long)m->length;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return cnt;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return cnt;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "SpecArray* spec_map_keys(SpecMap* m) {\n");
     p = spec_str_concat(p, "    SpecArray* a = spec_array_new();\n");
-    p = spec_str_concat(p, "    if (!m) return a;\n");
+    p = spec_str_append(p, "    if (!m) return a;\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n");
-    p = spec_str_concat(p, "    for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n");
     p = spec_str_concat(p, "        SpecMapEntry* curr = m->buckets[i];\n");
-    p = spec_str_concat(p, "        while (curr) {\n");
+    p = spec_str_append(p, "        while (curr) {\n");
     p = spec_str_concat(p, "            spec_array_add(a, (void*)strdup(curr->key));\n");
-    p = spec_str_concat(p, "            curr = curr->next;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "            curr = curr->next;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&m->lock);\n");
-    p = spec_str_concat(p, "    return a;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return a;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "/* Spec Loop Control Intrinsic */\n");
     p = spec_str_concat(p, "typedef struct SpecLoopControl {\n");
     p = spec_str_concat(p, "    bool stopped;\n");
-    p = spec_str_concat(p, "    void* callback;\n");
+    p = spec_str_append(p, "    void* callback;\n");
     p = spec_str_concat(p, "    void (*on_complete)(void* callback, struct SpecLoopControl* control);\n");
     p = spec_str_concat(p, "} SpecLoopControl;\n\n");
     p = spec_str_concat(p, "typedef struct SpecLoopControl LoopControl;\n\n");
     p = spec_str_concat(p, "SpecLoopControl* LoopControl_new(void) {\n");
     p = spec_str_concat(p, "    SpecLoopControl* c = (SpecLoopControl*)malloc(sizeof(SpecLoopControl));\n");
-    p = spec_str_concat(p, "    if (c) {\n");
+    p = spec_str_append(p, "    if (c) {\n");
     p = spec_str_concat(p, "        c->stopped = false;\n");
-    p = spec_str_concat(p, "        c->callback = NULL;\n");
+    p = spec_str_append(p, "        c->callback = NULL;\n");
     p = spec_str_concat(p, "        c->on_complete = NULL;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    return c;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    return c;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void LoopControl_stop(SpecLoopControl* c) {\n");
     p = spec_str_concat(p, "    if (c) c->stopped = true;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "/* Spec Async Task Manager */\n");
     p = spec_str_concat(p, "static int spec_in_flight_tasks = 0;\n");
     p = spec_str_concat(p, "static pthread_mutex_t spec_task_mutex = PTHREAD_MUTEX_INITIALIZER;\n");
@@ -6763,179 +6915,179 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_concat(p, "    pthread_mutex_lock(&spec_task_mutex);\n");
     p = spec_str_concat(p, "    spec_in_flight_tasks++;\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&spec_task_mutex);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_async_task_finished(void) {\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&spec_task_mutex);\n");
     p = spec_str_concat(p, "    spec_in_flight_tasks--;\n");
     p = spec_str_concat(p, "    if (spec_in_flight_tasks <= 0) {\n");
     p = spec_str_concat(p, "        spec_in_flight_tasks = 0;\n");
     p = spec_str_concat(p, "        pthread_cond_broadcast(&spec_task_cond);\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&spec_task_mutex);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_drain_async_tasks(void) {\n");
     p = spec_str_concat(p, "    pthread_mutex_lock(&spec_task_mutex);\n");
     p = spec_str_concat(p, "    while (spec_in_flight_tasks > 0) {\n");
     p = spec_str_concat(p, "        pthread_cond_wait(&spec_task_cond, &spec_task_mutex);\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    pthread_mutex_unlock(&spec_task_mutex);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "/* File Package Primitives with Callbacks and Async Worker Support */\n");
     p = spec_str_concat(p, "typedef struct {\n");
     p = spec_str_concat(p, "    char* path;\n");
-    p = spec_str_concat(p, "    char* content;\n");
-    p = spec_str_concat(p, "    char* def;\n");
-    p = spec_str_concat(p, "    void (*on_success_read)(const char*);\n");
-    p = spec_str_concat(p, "    void (*on_success_write)(long long);\n");
-    p = spec_str_concat(p, "    void (*on_error)(const char*);\n");
+    p = spec_str_append(p, "    char* content;\n");
+    p = spec_str_append(p, "    char* def;\n");
+    p = spec_str_append(p, "    void (*on_success_read)(const char*);\n");
+    p = spec_str_append(p, "    void (*on_success_write)(long long);\n");
+    p = spec_str_append(p, "    void (*on_error)(const char*);\n");
     p = spec_str_concat(p, "} SpecFileTask;\n\n");
     p = spec_str_concat(p, "const char* spec_file_read(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {\n");
     p = spec_str_concat(p, "    if (!path || strlen(path) == 0) {\n");
     p = spec_str_concat(p, "        if (on_error) on_error(\"File error: Empty or invalid file path provided\");\n");
-    p = spec_str_concat(p, "        return def ? def : \"\";\n");
-    p = spec_str_concat(p, "    }\n");
+    p = spec_str_append(p, "        return def ? def : \"\";\n");
+    p = spec_str_append(p, "    }\n");
     p = spec_str_concat(p, "    FILE* f = fopen(path, \"rb\");\n");
-    p = spec_str_concat(p, "    if (!f) {\n");
-    p = spec_str_concat(p, "        if (on_error) on_error(strerror(errno));\n");
-    p = spec_str_concat(p, "        return def ? def : \"\";\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    if (fseek(f, 0, SEEK_END) != 0) {\n");
-    p = spec_str_concat(p, "        fclose(f);\n");
-    p = spec_str_concat(p, "        if (on_error) on_error(strerror(errno));\n");
-    p = spec_str_concat(p, "        return def ? def : \"\";\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    long size = ftell(f);\n");
-    p = spec_str_concat(p, "    if (size < 0) {\n");
-    p = spec_str_concat(p, "        fclose(f);\n");
-    p = spec_str_concat(p, "        if (on_error) on_error(strerror(errno));\n");
-    p = spec_str_concat(p, "        return def ? def : \"\";\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    fseek(f, 0, SEEK_SET);\n");
-    p = spec_str_concat(p, "    char* buf = (char*)malloc(size + 1);\n");
-    p = spec_str_concat(p, "    if (!buf) {\n");
-    p = spec_str_concat(p, "        fclose(f);\n");
-    p = spec_str_concat(p, "        if (on_error) on_error(\"File error: Memory allocation failed during read\");\n");
-    p = spec_str_concat(p, "        return def ? def : \"\";\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    size_t read_bytes = fread(buf, 1, size, f);\n");
-    p = spec_str_concat(p, "    buf[read_bytes] = '\\0';\n");
-    p = spec_str_concat(p, "    fclose(f);\n");
-    p = spec_str_concat(p, "    if (on_success) on_success(buf);\n");
-    p = spec_str_concat(p, "    return buf;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (!f) {\n");
+    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_append(p, "        return def ? def : \"\";\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    if (fseek(f, 0, SEEK_END) != 0) {\n");
+    p = spec_str_append(p, "        fclose(f);\n");
+    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_append(p, "        return def ? def : \"\";\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    long size = ftell(f);\n");
+    p = spec_str_append(p, "    if (size < 0) {\n");
+    p = spec_str_append(p, "        fclose(f);\n");
+    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_append(p, "        return def ? def : \"\";\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    fseek(f, 0, SEEK_SET);\n");
+    p = spec_str_append(p, "    char* buf = (char*)malloc(size + 1);\n");
+    p = spec_str_append(p, "    if (!buf) {\n");
+    p = spec_str_append(p, "        fclose(f);\n");
+    p = spec_str_append(p, "        if (on_error) on_error(\"File error: Memory allocation failed during read\");\n");
+    p = spec_str_append(p, "        return def ? def : \"\";\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    size_t read_bytes = fread(buf, 1, size, f);\n");
+    p = spec_str_append(p, "    buf[read_bytes] = '\\0';\n");
+    p = spec_str_append(p, "    fclose(f);\n");
+    p = spec_str_append(p, "    if (on_success) on_success(buf);\n");
+    p = spec_str_append(p, "    return buf;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_file_write(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {\n");
     p = spec_str_concat(p, "    if (!path || strlen(path) == 0) {\n");
     p = spec_str_concat(p, "        if (on_error) on_error(\"File error: Empty or invalid file path provided\");\n");
-    p = spec_str_concat(p, "        return false;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    if (!content) content = \"\";\n");
+    p = spec_str_append(p, "        return false;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    if (!content) content = \"\";\n");
     p = spec_str_concat(p, "    FILE* f = fopen(path, \"wb\");\n");
-    p = spec_str_concat(p, "    if (!f) {\n");
-    p = spec_str_concat(p, "        if (on_error) on_error(strerror(errno));\n");
-    p = spec_str_concat(p, "        return false;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    size_t len = strlen(content);\n");
-    p = spec_str_concat(p, "    size_t written = fwrite(content, 1, len, f);\n");
-    p = spec_str_concat(p, "    fclose(f);\n");
-    p = spec_str_concat(p, "    if (written != len) {\n");
-    p = spec_str_concat(p, "        if (on_error) on_error(strerror(errno));\n");
-    p = spec_str_concat(p, "        return false;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    if (on_success) on_success((long long)written);\n");
-    p = spec_str_concat(p, "    return true;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (!f) {\n");
+    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_append(p, "        return false;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    size_t len = strlen(content);\n");
+    p = spec_str_append(p, "    size_t written = fwrite(content, 1, len, f);\n");
+    p = spec_str_append(p, "    fclose(f);\n");
+    p = spec_str_append(p, "    if (written != len) {\n");
+    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_append(p, "        return false;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    if (on_success) on_success((long long)written);\n");
+    p = spec_str_append(p, "    return true;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "static void* spec_file_read_worker(void* arg) {\n");
     p = spec_str_concat(p, "    SpecFileTask* task = (SpecFileTask*)arg;\n");
     p = spec_str_concat(p, "    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);\n");
     p = spec_str_concat(p, "    if (task->path) free(task->path);\n");
-    p = spec_str_concat(p, "    if (task->def) free(task->def);\n");
-    p = spec_str_concat(p, "    free(task);\n");
+    p = spec_str_append(p, "    if (task->def) free(task->def);\n");
+    p = spec_str_append(p, "    free(task);\n");
     p = spec_str_concat(p, "    spec_async_task_finished();\n");
-    p = spec_str_concat(p, "    return NULL;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return NULL;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_file_read_async(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {\n");
     p = spec_str_concat(p, "    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n");
     p = spec_str_concat(p, "    task->path = path ? strdup(path) : NULL;\n");
     p = spec_str_concat(p, "    task->def = def ? strdup(def) : NULL;\n");
-    p = spec_str_concat(p, "    task->on_success_read = on_success;\n");
-    p = spec_str_concat(p, "    task->on_error = on_error;\n");
+    p = spec_str_append(p, "    task->on_success_read = on_success;\n");
+    p = spec_str_append(p, "    task->on_error = on_error;\n");
     p = spec_str_concat(p, "    spec_async_task_started();\n");
     p = spec_str_concat(p, "    pthread_t tid;\n");
     p = spec_str_concat(p, "    pthread_create(&tid, NULL, spec_file_read_worker, task);\n");
     p = spec_str_concat(p, "    pthread_detach(tid);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "static void* spec_file_write_worker(void* arg) {\n");
     p = spec_str_concat(p, "    SpecFileTask* task = (SpecFileTask*)arg;\n");
     p = spec_str_concat(p, "    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);\n");
     p = spec_str_concat(p, "    if (task->path) free(task->path);\n");
-    p = spec_str_concat(p, "    if (task->content) free(task->content);\n");
-    p = spec_str_concat(p, "    free(task);\n");
+    p = spec_str_append(p, "    if (task->content) free(task->content);\n");
+    p = spec_str_append(p, "    free(task);\n");
     p = spec_str_concat(p, "    spec_async_task_finished();\n");
-    p = spec_str_concat(p, "    return NULL;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    return NULL;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_file_write_async(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {\n");
     p = spec_str_concat(p, "    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n");
     p = spec_str_concat(p, "    task->path = path ? strdup(path) : NULL;\n");
     p = spec_str_concat(p, "    task->content = content ? strdup(content) : NULL;\n");
-    p = spec_str_concat(p, "    task->on_success_write = on_success;\n");
-    p = spec_str_concat(p, "    task->on_error = on_error;\n");
+    p = spec_str_append(p, "    task->on_success_write = on_success;\n");
+    p = spec_str_append(p, "    task->on_error = on_error;\n");
     p = spec_str_concat(p, "    spec_async_task_started();\n");
     p = spec_str_concat(p, "    pthread_t tid;\n");
     p = spec_str_concat(p, "    pthread_create(&tid, NULL, spec_file_write_worker, task);\n");
     p = spec_str_concat(p, "    pthread_detach(tid);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_file_exists(const char* path) {\n");
     p = spec_str_concat(p, "    if (!path) return false;\n");
     p = spec_str_concat(p, "    FILE* f = fopen(path, \"r\");\n");
-    p = spec_str_concat(p, "    if (f) {\n");
-    p = spec_str_concat(p, "        fclose(f);\n");
-    p = spec_str_concat(p, "        return true;\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    return false;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (f) {\n");
+    p = spec_str_append(p, "        fclose(f);\n");
+    p = spec_str_append(p, "        return true;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    return false;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "bool spec_file_remove(const char* path) {\n");
     p = spec_str_concat(p, "    if (!path || !*path) return false;\n");
     p = spec_str_concat(p, "    return remove(path) == 0;\n");
-    p = spec_str_concat(p, "}\n\n");
-    p = spec_str_concat(p, "/* Process Package Primitives */\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_append(p, "/* Process Package Primitives */\n");
     p = spec_str_concat(p, "long long spec_process_execute(const char* command, SpecArray* args) {\n");
-    p = spec_str_concat(p, "    if (!command) return -1;\n");
-    p = spec_str_concat(p, "    size_t total_len = strlen(command) + 1;\n");
-    p = spec_str_concat(p, "    if (args) {\n");
-    p = spec_str_concat(p, "        for (size_t i = 0; i < args->length; i++) {\n");
-    p = spec_str_concat(p, "            total_len += strlen((const char*)args->items[i]) + 4;\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    char* cmd_line = (char*)malloc(total_len + 16);\n");
+    p = spec_str_append(p, "    if (!command) return -1;\n");
+    p = spec_str_append(p, "    size_t total_len = strlen(command) + 1;\n");
+    p = spec_str_append(p, "    if (args) {\n");
+    p = spec_str_append(p, "        for (size_t i = 0; i < args->length; i++) {\n");
+    p = spec_str_append(p, "            total_len += strlen((const char*)args->items[i]) + 4;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    char* cmd_line = (char*)malloc(total_len + 16);\n");
     p = spec_str_concat(p, "    strcpy(cmd_line, command);\n");
-    p = spec_str_concat(p, "    if (args) {\n");
-    p = spec_str_concat(p, "        for (size_t i = 0; i < args->length; i++) {\n");
-    p = spec_str_concat(p, "            strcat(cmd_line, \" \");\n");
-    p = spec_str_concat(p, "            strcat(cmd_line, (const char*)args->items[i]);\n");
-    p = spec_str_concat(p, "        }\n");
-    p = spec_str_concat(p, "    }\n");
-    p = spec_str_concat(p, "    int status = system(cmd_line);\n");
-    p = spec_str_concat(p, "    free(cmd_line);\n");
-    p = spec_str_concat(p, "    return (long long)status;\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (args) {\n");
+    p = spec_str_append(p, "        for (size_t i = 0; i < args->length; i++) {\n");
+    p = spec_str_append(p, "            strcat(cmd_line, \" \");\n");
+    p = spec_str_append(p, "            strcat(cmd_line, (const char*)args->items[i]);\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    int status = system(cmd_line);\n");
+    p = spec_str_append(p, "    free(cmd_line);\n");
+    p = spec_str_append(p, "    return (long long)status;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "void spec_process_sleep(long long ms) {\n");
-    p = spec_str_concat(p, "    if (ms <= 0) return;\n");
+    p = spec_str_append(p, "    if (ms <= 0) return;\n");
     p = spec_str_concat(p, "    struct timespec ts;\n");
-    p = spec_str_concat(p, "    ts.tv_sec = ms / 1000;\n");
-    p = spec_str_concat(p, "    ts.tv_nsec = (ms % 1000) * 1000000L;\n");
+    p = spec_str_append(p, "    ts.tv_sec = ms / 1000;\n");
+    p = spec_str_append(p, "    ts.tv_nsec = (ms % 1000) * 1000000L;\n");
     p = spec_str_concat(p, "    nanosleep(&ts, NULL);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_concat(p, "long long spec_process_get_pid(void) {\n");
     p = spec_str_concat(p, "    return (long long)getpid();\n");
-    p = spec_str_concat(p, "}\n\n");
-    p = spec_str_concat(p, "/* Math Package Primitives */\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_append(p, "/* Math Package Primitives */\n");
     p = spec_str_concat(p, "double spec_math_round(double v) { return round(v); }\n");
     p = spec_str_concat(p, "double spec_math_floor(double v) { return floor(v); }\n");
     p = spec_str_concat(p, "double spec_math_ceil(double v) { return ceil(v); }\n");
     p = spec_str_concat(p, "double spec_math_random(double min, double max) {\n");
-    p = spec_str_concat(p, "    if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));\n");
-    p = spec_str_concat(p, "    return min + ((double)rand() / ((double)RAND_MAX + 1.0)) * (max - min);\n");
-    p = spec_str_concat(p, "}\n\n");
+    p = spec_str_append(p, "    if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));\n");
+    p = spec_str_append(p, "    return min + ((double)rand() / ((double)RAND_MAX + 1.0)) * (max - min);\n");
+    p = spec_str_append(p, "}\n\n");
     return p;
 }
 
@@ -7026,51 +7178,51 @@ const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecA
     if (spec_str_equals(Class_getBaseClass(c), "Enum")) {
         const char* name = Class_getName(c);
         if (spec_map_has(self->allTaggedEnums, name)) {
-        out = spec_str_concat(out, "typedef enum {\n");
+        out = spec_str_append(out, "typedef enum {\n");
         long long tIdx = 0;
         ({ SpecArray* _a_81 = Class_getMembers(c); if (_a_81) { for (size_t _i_81 = 0; _i_81 < _a_81->length; _i_81++) {
         Member* m = (Member*)(intptr_t)_a_81->items[_i_81];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_TAG_"), vName), " = "), spec_to_string_int(tIdx)), ",\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), name), "_TAG_"), vName), " = "), spec_to_string_int(tIdx)), ",\n");
     tIdx = ((tIdx) + (1));
         _loop_next_81: ;
     } } });
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "} "), name), "_Tag;\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "typedef struct "), name), " "), name), ";\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "} "), name), "_Tag;\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "typedef struct "), name), " "), name), ";\n\n");
     } else {
-        out = spec_str_concat(out, "typedef enum {\n");
+        out = spec_str_append(out, "typedef enum {\n");
         long long idx = 0;
         ({ SpecArray* _a_82 = Class_getMembers(c); if (_a_82) { for (size_t _i_82 = 0; _i_82 < _a_82->length; _i_82++) {
         Member* m = (Member*)(intptr_t)_a_82->items[_i_82];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_"), vName), " = "), spec_to_string_int(idx)), ",\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), name), "_"), vName), " = "), spec_to_string_int(idx)), ",\n");
     idx = ((idx) + (1));
         _loop_next_82: ;
     } } });
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "} "), name), ";\n\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "static const char* "), name), "_names[] = {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "} "), name), ";\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "static const char* "), name), "_names[] = {\n");
         ({ SpecArray* _a_83 = Class_getMembers(c); if (_a_83) { for (size_t _i_83 = 0; _i_83 < _a_83->length; _i_83++) {
         Member* m = (Member*)(intptr_t)_a_83->items[_i_83];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    \""), Member_getName(m)), "\",\n");
+    out = spec_str_append(spec_str_append(spec_str_append(out, "    \""), Member_getName(m)), "\",\n");
         _loop_next_83: ;
     } } });
-        out = spec_str_concat(out, "};\n\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static const "), name), " "), name), "_all_values[] = {\n");
+        out = spec_str_append(out, "};\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static const "), name), " "), name), "_all_values[] = {\n");
         ({ SpecArray* _a_84 = Class_getMembers(c); if (_a_84) { for (size_t _i_84 = 0; _i_84 < _a_84->length; _i_84++) {
         Member* m = (Member*)(intptr_t)_a_84->items[_i_84];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ",\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ",\n");
         _loop_next_84: ;
     } } });
-        out = spec_str_concat(out, "};\n\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline const char* "), name), "_name("), name), " self) {\n");
-        out = spec_str_concat(out, "    switch (self) {\n");
+        out = spec_str_append(out, "};\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline const char* "), name), "_name("), name), " self) {\n");
+        out = spec_str_append(out, "    switch (self) {\n");
         ({ SpecArray* _a_85 = Class_getMembers(c); if (_a_85) { for (size_t _i_85 = 0; _i_85 < _a_85->length; _i_85++) {
         Member* m = (Member*)(intptr_t)_a_85->items[_i_85];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return \""), Member_getName(m)), "\";\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return \""), Member_getName(m)), "\";\n");
         _loop_next_85: ;
     } } });
-        out = spec_str_concat(out, "        default: return \"UNKNOWN\";\n");
-        out = spec_str_concat(out, "    }\n}\n\n");
+        out = spec_str_append(out, "        default: return \"UNKNOWN\";\n");
+        out = spec_str_append(out, "    }\n}\n\n");
         bool isStrBacked = false;
         ({ SpecArray* _a_86 = Class_getMembers(c); if (_a_86) { for (size_t _i_86 = 0; _i_86 < _a_86->length; _i_86++) {
         Member* m = (Member*)(intptr_t)_a_86->items[_i_86];
@@ -7080,8 +7232,8 @@ const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecA
         _loop_next_86: ;
     } } });
         if (isStrBacked) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline const char* "), name), "_value("), name), " self) {\n");
-        out = spec_str_concat(out, "    switch (self) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline const char* "), name), "_value("), name), " self) {\n");
+        out = spec_str_append(out, "    switch (self) {\n");
         ({ SpecArray* _a_87 = Class_getMembers(c); if (_a_87) { for (size_t _i_87 = 0; _i_87 < _a_87->length; _i_87++) {
         Member* m = (Member*)(intptr_t)_a_87->items[_i_87];
     const char* valStr = Member_getName(m);
@@ -7091,14 +7243,14 @@ const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecA
         valStr = initE->stringValue;
     }
     }
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return \""), valStr), "\";\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return \""), valStr), "\";\n");
         _loop_next_87: ;
     } } });
-        out = spec_str_concat(out, "        default: return \"\";\n");
-        out = spec_str_concat(out, "    }\n}\n\n");
+        out = spec_str_append(out, "        default: return \"\";\n");
+        out = spec_str_append(out, "    }\n}\n\n");
     } else {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline long long "), name), "_value("), name), " self) {\n");
-        out = spec_str_concat(out, "    switch (self) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline long long "), name), "_value("), name), " self) {\n");
+        out = spec_str_append(out, "    switch (self) {\n");
         long long vIdx = 0;
         ({ SpecArray* _a_88 = Class_getMembers(c); if (_a_88) { for (size_t _i_88 = 0; _i_88 < _a_88->length; _i_88++) {
         Member* m = (Member*)(intptr_t)_a_88->items[_i_88];
@@ -7113,29 +7265,29 @@ const char* DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecA
     }
     }
     }
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return "), valNum), "LL;\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return "), valNum), "LL;\n");
     vIdx = ((vIdx) + (1));
         _loop_next_88: ;
     } } });
-        out = spec_str_concat(out, "        default: return 0LL;\n");
-        out = spec_str_concat(out, "    }\n}\n\n");
+        out = spec_str_append(out, "        default: return 0LL;\n");
+        out = spec_str_append(out, "    }\n}\n\n");
     }
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline long long "), name), "_ordinal("), name), " self) {\n");
-        out = spec_str_concat(out, "    switch (self) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline long long "), name), "_ordinal("), name), " self) {\n");
+        out = spec_str_append(out, "    switch (self) {\n");
         long long ordIdx = 0;
         ({ SpecArray* _a_89 = Class_getMembers(c); if (_a_89) { for (size_t _i_89 = 0; _i_89 < _a_89->length; _i_89++) {
         Member* m = (Member*)(intptr_t)_a_89->items[_i_89];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return "), spec_to_string_int(ordIdx)), ";\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "        case "), name), "_"), DeclarationGenerator_cIdent(self, Member_getName(m))), ": return "), spec_to_string_int(ordIdx)), ";\n");
     ordIdx = ((ordIdx) + (1));
         _loop_next_89: ;
     } } });
-        out = spec_str_concat(out, "        default: return -1;\n");
-        out = spec_str_concat(out, "    }\n}\n\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline SpecArray* "), name), "_values(void) {\n");
-        out = spec_str_concat(out, "    SpecArray* arr = spec_array_new();\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    for (size_t i = 0; i < "), spec_to_string_int(idx)), "; i++) {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "        spec_array_add(arr, (void*)(intptr_t)"), name), "_all_values[i]);\n");
-        out = spec_str_concat(out, "    }\n    return arr;\n}\n\n");
+        out = spec_str_append(out, "        default: return -1;\n");
+        out = spec_str_append(out, "    }\n}\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "static inline SpecArray* "), name), "_values(void) {\n");
+        out = spec_str_append(out, "    SpecArray* arr = spec_array_new();\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    for (size_t i = 0; i < "), spec_to_string_int(idx)), "; i++) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "        spec_array_add(arr, (void*)(intptr_t)"), name), "_all_values[i]);\n");
+        out = spec_str_append(out, "    }\n    return arr;\n}\n\n");
     }
     }
         _loop_next_80: ;
@@ -7148,8 +7300,8 @@ const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerato
     ({ SpecArray* _a_90 = classes; if (_a_90) { for (size_t _i_90 = 0; _i_90 < _a_90->length; _i_90++) {
         Class* c = (Class*)(intptr_t)_a_90->items[_i_90];
     if ((((!(DeclarationGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "typedef struct "), Class_getName(c)), " "), Class_getName(c)), ";\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, Class_getName(c)), "* "), Class_getName(c)), "_new(void);\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "typedef struct "), Class_getName(c)), " "), Class_getName(c)), ";\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, Class_getName(c)), "* "), Class_getName(c)), "_new(void);\n");
         bool hasInit = false;
         ({ SpecArray* _a_91 = Class_getMembers(c); if (_a_91) { for (size_t _i_91 = 0; _i_91 < _a_91->length; _i_91++) {
         Member* m = (Member*)(intptr_t)_a_91->items[_i_91];
@@ -7159,12 +7311,12 @@ const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerato
         _loop_next_91: ;
     } } });
         if ((!(hasInit))) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "void "), Class_getName(c)), "_init("), Class_getName(c)), "* self);\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "void "), Class_getName(c)), "_init("), Class_getName(c)), "* self);\n");
     }
     }
         _loop_next_90: ;
     } } });
-    out = spec_str_concat(out, "\n");
+    out = spec_str_append(out, "\n");
     ({ SpecArray* _a_92 = classes; if (_a_92) { for (size_t _i_92 = 0; _i_92 < _a_92->length; _i_92++) {
         Class* c = (Class*)(intptr_t)_a_92->items[_i_92];
     if ((((!(DeclarationGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
@@ -7178,13 +7330,13 @@ const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerato
         retType = "bool";
     }
     }
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, retType), " "), Class_getName(c)), "_"), Member_getName(m)), "("), Class_getName(c)), "* self");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, retType), " "), Class_getName(c)), "_"), Member_getName(m)), "("), Class_getName(c)), "* self");
         ({ SpecArray* _a_94 = Member_getParameters(m); if (_a_94) { for (size_t _i_94 = 0; _i_94 < _a_94->length; _i_94++) {
         Parameter* p = (Parameter*)(intptr_t)_a_94->items[_i_94];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, ", "), DeclarationGenerator_cTypeForClass(self, Type_getName(Parameter_getType(p)), tps)), " "), DeclarationGenerator_cIdent(self, Parameter_getName(p)));
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, ", "), DeclarationGenerator_cTypeForClass(self, Type_getName(Parameter_getType(p)), tps)), " "), DeclarationGenerator_cIdent(self, Parameter_getName(p)));
         _loop_next_94: ;
     } } });
-        out = spec_str_concat(out, ");\n");
+        out = spec_str_append(out, ");\n");
     } else {
     }
         _loop_next_93: ;
@@ -7192,7 +7344,7 @@ const char* DeclarationGenerator_generateForwardDeclarations(DeclarationGenerato
     }
         _loop_next_92: ;
     } } });
-    out = spec_str_concat(out, "\n");
+    out = spec_str_append(out, "\n");
     return out;
 }
 
@@ -7202,71 +7354,71 @@ const char* DeclarationGenerator_generateStructs(DeclarationGenerator* self, Spe
         Class* c = (Class*)(intptr_t)_a_95->items[_i_95];
     if ((((!(DeclarationGenerator_isBuiltinClass(self, Class_getName(c))))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
         SpecArray* tps = Class_getTypeParams(c);
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "struct "), Class_getName(c)), " {\n");
-        out = spec_str_concat(out, "    const char* _type_name;\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "struct "), Class_getName(c)), " {\n");
+        out = spec_str_append(out, "    const char* _type_name;\n");
         SpecArray* allFields = ({ SpecArray* _arr = spec_array_new(); _arr; });
         DeclarationGenerator_collectStructFields(self, c, classes, allFields);
         ({ SpecArray* _a_96 = allFields; if (_a_96) { for (size_t _i_96 = 0; _i_96 < _a_96->length; _i_96++) {
         Member* m = (Member*)(intptr_t)_a_96->items[_i_96];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), DeclarationGenerator_cTypeForClass(self, Type_getName(Member_getType(m)), tps)), " "), DeclarationGenerator_cIdent(self, Member_getName(m))), ";\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), DeclarationGenerator_cTypeForClass(self, Type_getName(Member_getType(m)), tps)), " "), DeclarationGenerator_cIdent(self, Member_getName(m))), ";\n");
         _loop_next_96: ;
     } } });
-        out = spec_str_concat(out, "};\n\n");
+        out = spec_str_append(out, "};\n\n");
     } else {
         if (((spec_str_equals(Class_getBaseClass(c), "Enum")) && (spec_map_has(self->allTaggedEnums, Class_getName(c))))) {
         const char* name = Class_getName(c);
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "struct "), name), " {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "_Tag _tag;\n");
-        out = spec_str_concat(out, "    const char* _variant_name;\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "struct "), name), " {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    "), name), "_Tag _tag;\n");
+        out = spec_str_append(out, "    const char* _variant_name;\n");
         ({ SpecArray* _a_97 = Class_getMembers(c); if (_a_97) { for (size_t _i_97 = 0; _i_97 < _a_97->length; _i_97++) {
         Member* m = (Member*)(intptr_t)_a_97->items[_i_97];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
     ({ SpecArray* _a_98 = Member_getParameters(m); if (_a_98) { for (size_t _i_98 = 0; _i_98 < _a_98->length; _i_98++) {
         Parameter* p = (Parameter*)(intptr_t)_a_98->items[_i_98];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), DeclarationGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), vName), "_"), DeclarationGenerator_cIdent(self, Parameter_getName(p))), ";\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), DeclarationGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), vName), "_"), DeclarationGenerator_cIdent(self, Parameter_getName(p))), ";\n");
         _loop_next_98: ;
     } } });
         _loop_next_97: ;
     } } });
-        out = spec_str_concat(out, "};\n\n");
+        out = spec_str_append(out, "};\n\n");
         ({ SpecArray* _a_99 = Class_getMembers(c); if (_a_99) { for (size_t _i_99 = 0; _i_99 < _a_99->length; _i_99++) {
         Member* m = (Member*)(intptr_t)_a_99->items[_i_99];
     const char* vName = DeclarationGenerator_cIdent(self, Member_getName(m));
     if (((spec_array_length(Member_getParameters(m))) == (0))) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline "), name), "* "), name), "_"), vName), "_ctor(void) {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "* _e = ("), name), "*)calloc(1, sizeof("), name), "));\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->_tag = "), name), "_TAG_"), vName), ";\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->_variant_name = \""), Member_getName(m)), "\";\n");
-        out = spec_str_concat(out, "    return _e;\n}\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline "), name), "* "), name), "_"), vName), "_ctor(void) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), name), "* _e = ("), name), "*)calloc(1, sizeof("), name), "));\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    _e->_tag = "), name), "_TAG_"), vName), ";\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    _e->_variant_name = \""), Member_getName(m)), "\";\n");
+        out = spec_str_append(out, "    return _e;\n}\n\n");
     } else {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline "), name), "* "), name), "_"), vName), "(");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline "), name), "* "), name), "_"), vName), "(");
         bool firstP = true;
         ({ SpecArray* _a_100 = Member_getParameters(m); if (_a_100) { for (size_t _i_100 = 0; _i_100 < _a_100->length; _i_100++) {
         Parameter* p = (Parameter*)(intptr_t)_a_100->items[_i_100];
     if ((!(firstP))) {
-        out = spec_str_concat(out, ", ");
+        out = spec_str_append(out, ", ");
     }
-    out = spec_str_concat(spec_str_concat(spec_str_concat(out, DeclarationGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), DeclarationGenerator_cIdent(self, Parameter_getName(p)));
+    out = spec_str_append(spec_str_append(spec_str_append(out, DeclarationGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), DeclarationGenerator_cIdent(self, Parameter_getName(p)));
     firstP = false;
         _loop_next_100: ;
     } } });
-        out = spec_str_concat(out, ") {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), name), "* _e = ("), name), "*)calloc(1, sizeof("), name), "));\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->_tag = "), name), "_TAG_"), vName), ";\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->_variant_name = \""), Member_getName(m)), "\";\n");
+        out = spec_str_append(out, ") {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), name), "* _e = ("), name), "*)calloc(1, sizeof("), name), "));\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    _e->_tag = "), name), "_TAG_"), vName), ";\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    _e->_variant_name = \""), Member_getName(m)), "\";\n");
         ({ SpecArray* _a_101 = Member_getParameters(m); if (_a_101) { for (size_t _i_101 = 0; _i_101 < _a_101->length; _i_101++) {
         Parameter* p = (Parameter*)(intptr_t)_a_101->items[_i_101];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    _e->"), vName), "_"), DeclarationGenerator_cIdent(self, Parameter_getName(p))), " = "), DeclarationGenerator_cIdent(self, Parameter_getName(p))), ";\n");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    _e->"), vName), "_"), DeclarationGenerator_cIdent(self, Parameter_getName(p))), " = "), DeclarationGenerator_cIdent(self, Parameter_getName(p))), ";\n");
         _loop_next_101: ;
     } } });
-        out = spec_str_concat(out, "    return _e;\n}\n\n");
+        out = spec_str_append(out, "    return _e;\n}\n\n");
     }
         _loop_next_99: ;
     } } });
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline const char* "), name), "_name("), name), "* self) {\n");
-        out = spec_str_concat(out, "    return self ? self->_variant_name : \"UNKNOWN\";\n}\n\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "static inline long long "), name), "_ordinal("), name), "* self) {\n");
-        out = spec_str_concat(out, "    return self ? (long long)self->_tag : -1;\n}\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline const char* "), name), "_name("), name), "* self) {\n");
+        out = spec_str_append(out, "    return self ? self->_variant_name : \"UNKNOWN\";\n}\n\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static inline long long "), name), "_ordinal("), name), "* self) {\n");
+        out = spec_str_append(out, "    return self ? (long long)self->_tag : -1;\n}\n\n");
     }
     }
         _loop_next_95: ;
@@ -7324,7 +7476,11 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
         NamedArg* ctrlArg = (NamedArg*)(spec_array_get(expr->methodArgs, 1));
         ctrlC = CodeGenerator_generateExpression(cg, NamedArg_getValue(ctrlArg));
     }
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ void* _lp = (void*)(", loopC), "); SpecLoopControl* _ctrl = (SpecLoopControl*)("), ctrlC), "); while ("), loopClass), "_evaluate((void*)_lp)) { if (!"), loopClass), "_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } })");
+        const char* freeLoopC = "";
+        if (((spec_str_equals(Expression_getKind(loopVal), "CALL")) && (spec_str_equals(loopVal->methodName, "init")))) {
+        freeLoopC = " free(_lp);";
+    }
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ void* _lp = (void*)(", loopC), "); SpecLoopControl* _ctrl = (SpecLoopControl*)("), ctrlC), "); while ("), loopClass), "_evaluate((void*)_lp)) { if (!"), loopClass), "_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }"), freeLoopC), " })");
     }
     if (((((spec_str_equals(targetC, "While")) && (spec_str_equals(expr->methodName, "condition")))) && (((spec_array_length(expr->methodArgs)) >= (2))))) {
         NamedArg* a0 = (NamedArg*)(spec_array_get(expr->methodArgs, 0));
@@ -7885,7 +8041,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
     }
     if (((spec_str_equals(expr->methodName, "length")) && (((spec_str_equals(targetType, "String")) || (spec_str_equals(targetType, "string")))))) {
-        return spec_str_concat(spec_str_concat("(long long)strlen(", targetC), ")");
+        return spec_str_concat(spec_str_concat("spec_str_length(", targetC), ")");
     }
     if (spec_str_equals(expr->methodName, "charAt")) {
         const char* idxC = "0";
@@ -8134,8 +8290,8 @@ const char* CodeGenerator_substituteTypeParam(CodeGenerator* self, const char* r
     if (((((idx) >= (0))) && (((idx) < (spec_array_length(typeArgs)))))) {
         return spec_array_get(typeArgs, idx);
     }
-    if (((spec_str_starts_with(rawType, "Array:")) && ((((long long)strlen(rawType)) > (6))))) {
-        const char* elem = spec_str_substring(rawType, 6, (long long)strlen(rawType));
+    if (((spec_str_starts_with(rawType, "Array:")) && (((spec_str_length(rawType)) > (6))))) {
+        const char* elem = spec_str_substring(rawType, 6, spec_str_length(rawType));
         long long eIdx = spec_array_index_of_str(tps, elem, (-(1)));
         if (((((eIdx) >= (0))) && (((eIdx) < (spec_array_length(typeArgs)))))) {
         return spec_str_concat("Array:", spec_array_get(typeArgs, eIdx));
@@ -8251,7 +8407,7 @@ const char* CodeGenerator_generateWhenBindings(CodeGenerator* self, const char* 
         const char* bindName = av->stringValue;
         spec_map_set(self->localVars, bindName, CodeGenerator_formatVarTypeString(self, Parameter_getType(pDef)));
         const char* pCType = CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(pDef)));
-        binds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(binds, "        "), pCType), " "), CodeGenerator_cIdent(self, bindName)), " = ("), subjC), ")->"), vNameC), "_"), CodeGenerator_cIdent(self, Parameter_getName(pDef))), ";\n");
+        binds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(binds, "        "), pCType), " "), CodeGenerator_cIdent(self, bindName)), " = ("), subjC), ")->"), vNameC), "_"), CodeGenerator_cIdent(self, Parameter_getName(pDef))), ";\n");
     }
     }
     idx = ((idx) + (1));
@@ -8357,7 +8513,7 @@ const char* CodeGenerator_formatCallArguments(CodeGenerator* self, const char* c
     if (((spec_array_index_of_str(tps, Type_getName(Parameter_getType(p)), (-(1)))) >= (0))) {
         argC = spec_str_concat(spec_str_concat("(void*)(intptr_t)(", argC), ")");
     }
-    joined = spec_str_concat(spec_str_concat(joined, ", "), argC);
+    joined = spec_str_append(spec_str_append(joined, ", "), argC);
     pIdx = ((pIdx) + (1));
         _loop_next_142: ;
     } } });
@@ -8367,7 +8523,7 @@ const char* CodeGenerator_formatCallArguments(CodeGenerator* self, const char* c
     const char* fallbackJoined = "";
     ({ SpecArray* _a_144 = args; if (_a_144) { for (size_t _i_144 = 0; _i_144 < _a_144->length; _i_144++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_144->items[_i_144];
-    fallbackJoined = spec_str_concat(spec_str_concat(fallbackJoined, ", "), CodeGenerator_generateExpression(self, NamedArg_getValue(arg)));
+    fallbackJoined = spec_str_append(spec_str_append(fallbackJoined, ", "), CodeGenerator_generateExpression(self, NamedArg_getValue(arg)));
         _loop_next_144: ;
     } } });
     return fallbackJoined;
@@ -8475,7 +8631,7 @@ const char* CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr)
     }
         const char* m = expr->methodName;
         if (((spec_str_starts_with(tgtType, "Array:")) && (((((spec_str_equals(m, "get")) || (spec_str_equals(m, "pop")))) || (spec_str_equals(m, "removeAt")))))) {
-        return spec_str_substring(tgtType, 6, (long long)strlen(tgtType));
+        return spec_str_substring(tgtType, 6, spec_str_length(tgtType));
     }
         if (spec_map_has(self->allEnumNames, tgtType)) {
         if (spec_str_equals(m, "name")) {
@@ -8499,8 +8655,8 @@ const char* CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr)
     }
     if (spec_str_equals(kind, "INDEX")) {
         const char* leftT = CodeGenerator_inferTargetType(self, expr->leftExpr);
-        if (((spec_str_starts_with(leftT, "Array:")) && ((((long long)strlen(leftT)) > (6))))) {
-        return spec_str_substring(leftT, 6, (long long)strlen(leftT));
+        if (((spec_str_starts_with(leftT, "Array:")) && (((spec_str_length(leftT)) > (6))))) {
+        return spec_str_substring(leftT, 6, spec_str_length(leftT));
     }
         return "";
     }
@@ -8597,31 +8753,31 @@ const char* CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* c
     spec_map_set(self->fieldTypes, Member_getName(f), CodeGenerator_formatTypeString(self, Member_getType(f)));
         _loop_next_148: ;
     } } });
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, Class_getName(c)), "* "), Class_getName(c)), "_new(void) {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    "), Class_getName(c)), "* self = ("), Class_getName(c)), "*)calloc(1, sizeof("), Class_getName(c)), "));\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->_type_name = \""), Class_getName(c)), "\";\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, Class_getName(c)), "* "), Class_getName(c)), "_new(void) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    "), Class_getName(c)), "* self = ("), Class_getName(c)), "*)calloc(1, sizeof("), Class_getName(c)), "));\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    self->_type_name = \""), Class_getName(c)), "\";\n");
         ({ SpecArray* _a_149 = allFields; if (_a_149) { for (size_t _i_149 = 0; _i_149 < _a_149->length; _i_149++) {
         Member* m = (Member*)(intptr_t)_a_149->items[_i_149];
     if (m->hasInit) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = "), CodeGenerator_generateExpression(self, m->initExpr)), ";\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = "), CodeGenerator_generateExpression(self, m->initExpr)), ";\n");
     } else {
         const char* ft = Type_getName(Member_getType(m));
         if (((spec_str_equals(ft, "String")) || (spec_str_equals(ft, "string")))) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = \"\";\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = \"\";\n");
     } else {
         if (spec_str_equals(ft, "Array")) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = spec_array_new();\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = spec_array_new();\n");
     } else {
         if (spec_str_equals(ft, "Map")) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = spec_map_new();\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    self->"), CodeGenerator_cIdent(self, Member_getName(m))), " = spec_map_new();\n");
     }
     }
     }
     }
         _loop_next_149: ;
     } } });
-        out = spec_str_concat(out, "    return self;\n");
-        out = spec_str_concat(out, "}\n\n");
+        out = spec_str_append(out, "    return self;\n");
+        out = spec_str_append(out, "}\n\n");
     }
         _loop_next_147: ;
     } } });
@@ -8656,7 +8812,7 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
     const char* bodyC = "";
     ({ SpecArray* _a_151 = fnExpr->anonBody; if (_a_151) { for (size_t _i_151 = 0; _i_151 < _a_151->length; _i_151++) {
         Statement* s = (Statement*)(intptr_t)_a_151->items[_i_151];
-    bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
+    bodyC = spec_str_append(bodyC, CodeGenerator_generateStatement(self, s));
         _loop_next_151: ;
     } } });
     self->localVars = savedVars;
@@ -8668,7 +8824,7 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
     const char* nextLbl = spec_str_concat("_loop_next_", spec_to_string_int(id));
     if (spec_str_equals(mode, "each")) {
         const char* out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecArray* ", arrVar), " = "), targetC), "; if ("), arrVar), ") { for (size_t "), idxVar), " = 0; "), idxVar), " < "), arrVar), "->length; "), idxVar), "++) {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, paramDecl), bodyC), "        "), nextLbl), ": ;\n    } } })");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, paramDecl), bodyC), "        "), nextLbl), ": ;\n    } } })");
         return out;
     }
     if (spec_str_equals(mode, "filter")) {
@@ -8680,13 +8836,13 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
     if (spec_str_equals(mode, "count")) {
         const char* cntVar = spec_str_concat("_cnt_", spec_to_string_int(id));
         const char* out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecArray* ", arrVar), " = "), targetC), "; long long "), cntVar), " = 0; if ("), arrVar), ") { for (size_t "), idxVar), " = 0; "), idxVar), " < "), arrVar), "->length; "), idxVar), "++) {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, paramDecl), "        bool "), predVar), " = false;\n"), bodyC), "        "), nextLbl), ": ;\n        if ("), predVar), ") "), cntVar), "++;\n    } } "), cntVar), "; })");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, paramDecl), "        bool "), predVar), " = false;\n"), bodyC), "        "), nextLbl), ": ;\n        if ("), predVar), ") "), cntVar), "++;\n    } } "), cntVar), "; })");
         return out;
     }
     if (spec_str_equals(mode, "any")) {
         const char* fndVar = spec_str_concat("_fnd_", spec_to_string_int(id));
         const char* out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecArray* ", arrVar), " = "), targetC), "; bool "), fndVar), " = false; if ("), arrVar), ") { for (size_t "), idxVar), " = 0; "), idxVar), " < "), arrVar), "->length; "), idxVar), "++) {\n");
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, paramDecl), "        bool "), predVar), " = false;\n"), bodyC), "        "), nextLbl), ": ;\n        if ("), predVar), ") { "), fndVar), " = true; break; }\n    } } "), fndVar), "; })");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, paramDecl), "        bool "), predVar), " = false;\n"), bodyC), "        "), nextLbl), ": ;\n        if ("), predVar), ") { "), fndVar), " = true; break; }\n    } } "), fndVar), "; })");
         return out;
     }
     if (spec_str_equals(mode, "map")) {
@@ -8733,25 +8889,25 @@ const char* CodeGenerator_generateInlineArrayFold(CodeGenerator* self, const cha
     if (((spec_array_length(fnExpr->anonParams)) >= (1))) {
         Parameter* p0 = (Parameter*)(spec_array_get(fnExpr->anonParams, 0));
         spec_map_set(self->localVars, Parameter_getName(p0), accTypeName);
-        paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(paramDecl, "        "), accCType), " "), CodeGenerator_cIdent(self, Parameter_getName(p0))), " = "), accVar), ";\n");
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "        "), accCType), " "), CodeGenerator_cIdent(self, Parameter_getName(p0))), " = "), accVar), ";\n");
     }
     if (((spec_array_length(fnExpr->anonParams)) >= (2))) {
         Parameter* p1 = (Parameter*)(spec_array_get(fnExpr->anonParams, 1));
         spec_map_set(self->localVars, Parameter_getName(p1), CodeGenerator_formatTypeString(self, Parameter_getType(p1)));
         const char* p1CType = CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p1)));
-        paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(paramDecl, "        "), p1CType), " "), CodeGenerator_cIdent(self, Parameter_getName(p1))), " = ("), p1CType), ")(intptr_t)"), arrVar), "->items["), idxVar), "];\n");
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "        "), p1CType), " "), CodeGenerator_cIdent(self, Parameter_getName(p1))), " = ("), p1CType), ")(intptr_t)"), arrVar), "->items["), idxVar), "];\n");
     }
     const char* bodyC = "";
     ({ SpecArray* _a_153 = fnExpr->anonBody; if (_a_153) { for (size_t _i_153 = 0; _i_153 < _a_153->length; _i_153++) {
         Statement* s = (Statement*)(intptr_t)_a_153->items[_i_153];
-    bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
+    bodyC = spec_str_append(bodyC, CodeGenerator_generateStatement(self, s));
         _loop_next_153: ;
     } } });
     self->localVars = savedVars;
     self->inlineReturnVar = savedRetVar;
     self->inlineReturnLabel = savedRetLbl;
     const char* out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecArray* ", arrVar), " = "), targetC), "; "), accCType), " "), accVar), " = "), initC), "; if ("), arrVar), ") { for (size_t "), idxVar), " = 0; "), idxVar), " < "), arrVar), "->length; "), idxVar), "++) {\n");
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, paramDecl), bodyC), "        "), nextLbl), ": ;\n    } } "), accVar), "; })");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, paramDecl), bodyC), "        "), nextLbl), ": ;\n    } } "), accVar), "; })");
     return out;
 }
 
@@ -8777,25 +8933,25 @@ const char* CodeGenerator_generateInlineMapEach(CodeGenerator* self, const char*
     if (((spec_array_length(fnExpr->anonParams)) >= (1))) {
         Parameter* p0 = (Parameter*)(spec_array_get(fnExpr->anonParams, 0));
         spec_map_set(self->localVars, Parameter_getName(p0), "String");
-        paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(paramDecl, "            const char* "), CodeGenerator_cIdent(self, Parameter_getName(p0))), " = "), eVar), "->key;\n");
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "            const char* "), CodeGenerator_cIdent(self, Parameter_getName(p0))), " = "), eVar), "->key;\n");
     }
     if (((spec_array_length(fnExpr->anonParams)) >= (2))) {
         Parameter* p1 = (Parameter*)(spec_array_get(fnExpr->anonParams, 1));
         spec_map_set(self->localVars, Parameter_getName(p1), CodeGenerator_formatTypeString(self, Parameter_getType(p1)));
         const char* p1CType = CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p1)));
-        paramDecl = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(paramDecl, "            "), p1CType), " "), CodeGenerator_cIdent(self, Parameter_getName(p1))), " = ("), p1CType), ")(intptr_t)"), eVar), "->value;\n");
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "            "), p1CType), " "), CodeGenerator_cIdent(self, Parameter_getName(p1))), " = ("), p1CType), ")(intptr_t)"), eVar), "->value;\n");
     }
     const char* bodyC = "";
     ({ SpecArray* _a_155 = fnExpr->anonBody; if (_a_155) { for (size_t _i_155 = 0; _i_155 < _a_155->length; _i_155++) {
         Statement* s = (Statement*)(intptr_t)_a_155->items[_i_155];
-    bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
+    bodyC = spec_str_append(bodyC, CodeGenerator_generateStatement(self, s));
         _loop_next_155: ;
     } } });
     self->localVars = savedVars;
     self->inlineReturnVar = savedRetVar;
     self->inlineReturnLabel = savedRetLbl;
     const char* out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecMap* ", mapVar), " = "), targetC), "; if ("), mapVar), ") { for (size_t "), bVar), " = 0; "), bVar), " < SPEC_MAP_BUCKETS; "), bVar), "++) { for (SpecMapEntry* "), eVar), " = "), mapVar), "->buckets["), bVar), "]; "), eVar), "; "), eVar), " = "), eVar), "->next) {\n");
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, paramDecl), bodyC), "            "), nextLbl), ": ;\n        } } } })");
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, paramDecl), bodyC), "            "), nextLbl), ": ;\n        } } } })");
     return out;
 }
 
@@ -8811,7 +8967,7 @@ const char* CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expr
     const char* evalBodyC = "";
     ({ SpecArray* _a_156 = evalExpr->anonBody; if (_a_156) { for (size_t _i_156 = 0; _i_156 < _a_156->length; _i_156++) {
         Statement* s = (Statement*)(intptr_t)_a_156->items[_i_156];
-    evalBodyC = spec_str_concat(evalBodyC, CodeGenerator_generateStatement(self, s));
+    evalBodyC = spec_str_append(evalBodyC, CodeGenerator_generateStatement(self, s));
         _loop_next_156: ;
     } } });
     const char* itLbl = spec_str_concat("_it_done_", spec_to_string_int(id));
@@ -8820,7 +8976,7 @@ const char* CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expr
     const char* iterBodyC = "";
     ({ SpecArray* _a_157 = iterExpr->anonBody; if (_a_157) { for (size_t _i_157 = 0; _i_157 < _a_157->length; _i_157++) {
         Statement* s = (Statement*)(intptr_t)_a_157->items[_i_157];
-    iterBodyC = spec_str_concat(iterBodyC, CodeGenerator_generateStatement(self, s));
+    iterBodyC = spec_str_append(iterBodyC, CodeGenerator_generateStatement(self, s));
         _loop_next_157: ;
     } } });
     self->inlineReturnVar = savedRetVar;
@@ -8836,10 +8992,10 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         ({ SpecArray* _a_158 = expr->arrayItems; if (_a_158) { for (size_t _i_158 = 0; _i_158 < _a_158->length; _i_158++) {
         Expression* item = (Expression*)(intptr_t)_a_158->items[_i_158];
     const char* itemC = CodeGenerator_generateExpression(self, item);
-    res = spec_str_concat(spec_str_concat(spec_str_concat(res, " spec_array_add(_arr, (void*)("), itemC), "));");
+    res = spec_str_append(spec_str_append(spec_str_append(res, " spec_array_add(_arr, (void*)("), itemC), "));");
         _loop_next_158: ;
     } } });
-        res = spec_str_concat(res, " _arr; })");
+        res = spec_str_append(res, " _arr; })");
         return res;
     } else if (spec_str_equals(kind, "MAP")) {
         const char* res = "({ SpecMap* _map = spec_map_new();";
@@ -8850,14 +9006,14 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     const char* kC = CodeGenerator_generateExpression(self, kExpr);
     const char* vC = CodeGenerator_generateExpression(self, vExpr);
     if (CodeGenerator_isStringExpr(self, vExpr)) {
-        res = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(res, " spec_map_set(_map, "), kC), ", "), vC), ");");
+        res = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(res, " spec_map_set(_map, "), kC), ", "), vC), ");");
     } else {
-        res = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(res, " spec_map_set_any(_map, "), kC), ", (void*)(intptr_t)("), vC), "));");
+        res = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(res, " spec_map_set_any(_map, "), kC), ", (void*)(intptr_t)("), vC), "));");
     }
     idx = ((idx) + (1));
         _loop_next_159: ;
     } } });
-        res = spec_str_concat(res, " _map; })");
+        res = spec_str_append(res, " _map; })");
         return res;
     } else if (spec_str_equals(kind, "STRING")) {
         return spec_str_concat(spec_str_concat("\"", CodeGenerator_escapeString(self, expr->stringValue)), "\"");
@@ -8959,10 +9115,10 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         if (((spec_str_starts_with(targetType, "Map:")) || (spec_str_equals(targetType, "Map")))) {
         const char* valType = "String";
         if (spec_str_starts_with(targetType, "Map:")) {
-        const char* afterMap = spec_str_substring(targetType, 4, (long long)strlen(targetType));
+        const char* afterMap = spec_str_substring(targetType, 4, spec_str_length(targetType));
         long long colonIdx = spec_str_index_of(afterMap, ":", (-(1)));
-        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < ((long long)strlen(afterMap)))))) {
-        valType = spec_str_substring(afterMap, ((colonIdx) + (1)), (long long)strlen(afterMap));
+        if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (spec_str_length(afterMap)))))) {
+        valType = spec_str_substring(afterMap, ((colonIdx) + (1)), spec_str_length(afterMap));
     }
     }
         if (((spec_str_equals(valType, "String")) || (spec_str_equals(valType, "string")))) {
@@ -8983,8 +9139,8 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         if (((spec_str_equals(targetType, "Array:String")) || (spec_str_equals(targetType, "Array of String")))) {
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((const char*)spec_array_get(", targetC), ", (size_t)("), indexC), ")))");
     }
-        if (((spec_str_starts_with(targetType, "Array:")) && ((((long long)strlen(targetType)) > (6))))) {
-        const char* elemT = spec_str_substring(targetType, 6, (long long)strlen(targetType));
+        if (((spec_str_starts_with(targetType, "Array:")) && (((spec_str_length(targetType)) > (6))))) {
+        const char* elemT = spec_str_substring(targetType, 6, spec_str_length(targetType));
         const char* elemCType = CodeGenerator_cTypeFor(self, elemT);
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((", elemCType), ")(intptr_t)spec_array_get("), targetC), ", (size_t)("), indexC), ")))");
     }
@@ -8997,7 +9153,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* targetType = CodeGenerator_inferTargetType(self, expr->methodTarget);
         const char* fieldKey = targetC;
         if (spec_str_starts_with(targetC, "self->")) {
-        fieldKey = spec_str_substring(targetC, 6, (long long)strlen(targetC));
+        fieldKey = spec_str_substring(targetC, 6, spec_str_length(targetC));
     }
         if (spec_str_equals(targetType, "")) {
         targetType = spec_map_get_string(self->localVars, fieldKey, "");
@@ -9013,7 +9169,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* fnVarT = spec_map_get_string(self->localVars, expr->methodName, spec_map_get_string(self->fieldTypes, expr->methodName, ""));
         if (spec_str_starts_with(fnVarT, "Function")) {
         const char* fnPtrC = ((spec_map_has(self->localVars, expr->methodName)) ? (CodeGenerator_cIdent(self, expr->methodName)) : (spec_str_concat("self->", CodeGenerator_cIdent(self, expr->methodName))));
-        const char* retTName = ((((spec_str_starts_with(fnVarT, "Function:")) && ((((long long)strlen(fnVarT)) > (9))))) ? (spec_str_substring(fnVarT, 9, (long long)strlen(fnVarT))) : ("Void"));
+        const char* retTName = ((((spec_str_starts_with(fnVarT, "Function:")) && (((spec_str_length(fnVarT)) > (9))))) ? (spec_str_substring(fnVarT, 9, spec_str_length(fnVarT))) : ("Void"));
         const char* retCType = CodeGenerator_cTypeFor(self, retTName);
         const char* pTypesC = "";
         const char* cArgsC = "";
@@ -9021,14 +9177,14 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         ({ SpecArray* _a_160 = expr->methodArgs; if (_a_160) { for (size_t _i_160 = 0; _i_160 < _a_160->length; _i_160++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_160->items[_i_160];
     if ((!(firstA))) {
-        pTypesC = spec_str_concat(pTypesC, ", ");
-        cArgsC = spec_str_concat(cArgsC, ", ");
+        pTypesC = spec_str_append(pTypesC, ", ");
+        cArgsC = spec_str_append(cArgsC, ", ");
     }
     const char* aValC = CodeGenerator_generateExpression(self, NamedArg_getValue(arg));
     const char* aT = CodeGenerator_inferTargetType(self, NamedArg_getValue(arg));
     const char* aCType = CodeGenerator_cTypeFor(self, aT);
-    pTypesC = spec_str_concat(pTypesC, aCType);
-    cArgsC = spec_str_concat(cArgsC, aValC);
+    pTypesC = spec_str_append(pTypesC, aCType);
+    cArgsC = spec_str_append(cArgsC, aValC);
     firstA = false;
         _loop_next_160: ;
     } } });
@@ -9048,7 +9204,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         ({ SpecArray* _a_161 = vParams; if (_a_161) { for (size_t _i_161 = 0; _i_161 < _a_161->length; _i_161++) {
         Parameter* p = (Parameter*)(intptr_t)_a_161->items[_i_161];
     if (((pIdx) > (0))) {
-        vArgsC = spec_str_concat(vArgsC, ", ");
+        vArgsC = spec_str_append(vArgsC, ", ");
     }
     const char* pName = Parameter_getName(p);
     bool matched = false;
@@ -9066,7 +9222,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         argC = CodeGenerator_generateExpression(self, NamedArg_getValue(posArg));
         matched = true;
     }
-    vArgsC = spec_str_concat(vArgsC, argC);
+    vArgsC = spec_str_append(vArgsC, argC);
     pIdx = ((pIdx) + (1));
         _loop_next_161: ;
     } } });
@@ -9150,7 +9306,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     if (spec_str_equals(condOr, "")) {
         condOr = cmp;
     } else {
-        condOr = spec_str_concat(spec_str_concat(condOr, " || "), cmp);
+        condOr = spec_str_append(spec_str_append(condOr, " || "), cmp);
     }
         _loop_next_165: ;
     } } });
@@ -9179,9 +9335,9 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     spec_array_add(paramNames, (void*)(Parameter_getName(p)));
     spec_map_set(self->localVars, Parameter_getName(p), CodeGenerator_formatVarTypeString(self, Parameter_getType(p)));
     if ((!(firstP))) {
-        paramsC = spec_str_concat(paramsC, ", ");
+        paramsC = spec_str_append(paramsC, ", ");
     }
-    paramsC = spec_str_concat(spec_str_concat(spec_str_concat(paramsC, CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), CodeGenerator_cIdent(self, Parameter_getName(p)));
+    paramsC = spec_str_append(spec_str_append(spec_str_append(paramsC, CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), CodeGenerator_cIdent(self, Parameter_getName(p)));
     firstP = false;
         _loop_next_167: ;
     } } });
@@ -9195,7 +9351,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* bodyC = "";
         ({ SpecArray* _a_168 = expr->anonBody; if (_a_168) { for (size_t _i_168 = 0; _i_168 < _a_168->length; _i_168++) {
         Statement* s = (Statement*)(intptr_t)_a_168->items[_i_168];
-    bodyC = spec_str_concat(bodyC, CodeGenerator_generateStatement(self, s));
+    bodyC = spec_str_append(bodyC, CodeGenerator_generateStatement(self, s));
         _loop_next_168: ;
     } } });
         self->inlineReturnVar = savedRetVar;
@@ -9205,9 +9361,9 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* capBinds = "";
         const char* capAssigns = "";
         if (((((((((self->inMethod) && ((!spec_str_equals(self->currentClassName, ""))))) && ((!(CodeGenerator_isBuiltinClass(self, self->currentClassName)))))) && ((!(spec_map_has(self->allEnumNames, self->currentClassName)))))) && (spec_str_contains(bodyC, "self")))) {
-        capDecls = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capDecls, "static "), self->currentClassName), "* _cap_"), spec_to_string_int(id)), "_self = NULL;\n");
-        capBinds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capBinds, "    "), self->currentClassName), "* self = _cap_"), spec_to_string_int(id)), "_self;\n    (void)self;\n");
-        capAssigns = spec_str_concat(spec_str_concat(spec_str_concat(capAssigns, " _cap_"), spec_to_string_int(id)), "_self = self;");
+        capDecls = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capDecls, "static "), self->currentClassName), "* _cap_"), spec_to_string_int(id)), "_self = NULL;\n");
+        capBinds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capBinds, "    "), self->currentClassName), "* self = _cap_"), spec_to_string_int(id)), "_self;\n    (void)self;\n");
+        capAssigns = spec_str_append(spec_str_append(spec_str_append(capAssigns, " _cap_"), spec_to_string_int(id)), "_self = self;");
     }
         ({ SpecArray* _a_169 = outerKeys; if (_a_169) { for (size_t _i_169 = 0; _i_169 < _a_169->length; _i_169++) {
         const char* k = (const char*)(intptr_t)_a_169->items[_i_169];
@@ -9217,15 +9373,15 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* vType = spec_map_get_string(savedVars, k, "");
         const char* vCType = CodeGenerator_cTypeFor(self, vType);
         if ((((!spec_str_equals(vCType, "void"))) && ((!spec_str_equals(vCType, ""))))) {
-        capDecls = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capDecls, "static "), vCType), " _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n");
-        capBinds = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capBinds, "    "), vCType), " "), cVar), " = _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n    (void)"), cVar), ";\n");
-        capAssigns = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(capAssigns, " _cap_"), spec_to_string_int(id)), "_"), cVar), " = "), cVar), ";");
+        capDecls = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capDecls, "static "), vCType), " _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n");
+        capBinds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capBinds, "    "), vCType), " "), cVar), " = _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n    (void)"), cVar), ";\n");
+        capAssigns = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capAssigns, " _cap_"), spec_to_string_int(id)), "_"), cVar), " = "), cVar), ";");
     }
     }
     }
         _loop_next_169: ;
     } } });
-        self->helperFunctions = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(self->helperFunctions, capDecls), "static "), retC), " "), fnName), "("), paramsC), ") {\n"), capBinds), bodyC), "}\n\n");
+        self->helperFunctions = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(self->helperFunctions, capDecls), "static "), retC), " "), fnName), "("), paramsC), ") {\n"), capBinds), bodyC), "}\n\n");
         if ((!spec_str_equals(capAssigns, ""))) {
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({", capAssigns), " "), fnName), "; })");
     }
@@ -9233,6 +9389,47 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     } else {
         return "0";
     }
+}
+
+const char* CodeGenerator_tryGenerateTargetOnly(CodeGenerator* self, Expression* expr) {
+    if (spec_str_equals(Expression_getKind(expr), "IDENT")) {
+        if (spec_map_has(self->localVars, expr->stringValue)) {
+        return CodeGenerator_cIdent(self, expr->stringValue);
+    }
+        if (((self->inMethod) && (spec_map_has(self->fieldTypes, expr->stringValue)))) {
+        return spec_str_concat("self->", CodeGenerator_cIdent(self, expr->stringValue));
+    }
+        return CodeGenerator_cIdent(self, expr->stringValue);
+    }
+    if (((((spec_str_equals(Expression_getKind(expr), "PATH")) && (((spec_array_length(expr->pathSegments)) == (2))))) && (spec_str_equals(spec_array_get(expr->pathSegments, 0), "self")))) {
+        return spec_str_concat("self->", CodeGenerator_cIdent(self, spec_array_get(expr->pathSegments, 1)));
+    }
+    return "";
+}
+
+const char* CodeGenerator_tryGenerateAppendChain(CodeGenerator* self, Expression* expr, const char* targetC) {
+    if (spec_str_equals(targetC, "")) {
+        return "";
+    }
+    if (((spec_str_equals(Expression_getKind(expr), "BINARY")) && (spec_str_equals(expr->binaryOp, ".")))) {
+        const char* leftTarget = CodeGenerator_tryGenerateTargetOnly(self, expr->leftExpr);
+        if (spec_str_equals(leftTarget, targetC)) {
+        const char* rhsC = CodeGenerator_wrapToString(self, expr->rightExpr, CodeGenerator_generateExpression(self, expr->rightExpr));
+        if (spec_str_contains(rhsC, targetC)) {
+        return "";
+    }
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_append(", targetC), ", "), rhsC), ")");
+    }
+        const char* innerChain = CodeGenerator_tryGenerateAppendChain(self, expr->leftExpr, targetC);
+        if ((!spec_str_equals(innerChain, ""))) {
+        const char* rhsC = CodeGenerator_wrapToString(self, expr->rightExpr, CodeGenerator_generateExpression(self, expr->rightExpr));
+        if (spec_str_contains(rhsC, targetC)) {
+        return "";
+    }
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_append(", innerChain), ", "), rhsC), ")");
+    }
+    }
+    return "";
 }
 
 const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
@@ -9244,7 +9441,7 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         const char* varName = CodeGenerator_cIdent(self, stmt->varName);
         if (stmt->hasInit) {
         const char* initC = CodeGenerator_generateExpression(self, stmt->initExpr);
-        if ((((((((((((long long)strlen(cType)) > (0))) && (spec_str_equals(spec_str_char_at(cType, (((long long)strlen(cType)) - (1)), ""), "*")))) && ((!spec_str_equals(cType, "const char*"))))) && ((!spec_str_equals(cType, "SpecArray*"))))) && ((!spec_str_equals(cType, "SpecMap*"))))) {
+        if (((((((((((spec_str_length(cType)) > (0))) && (spec_str_equals(spec_str_char_at(cType, ((spec_str_length(cType)) - (1)), ""), "*")))) && ((!spec_str_equals(cType, "const char*"))))) && ((!spec_str_equals(cType, "SpecArray*"))))) && ((!spec_str_equals(cType, "SpecMap*"))))) {
         initC = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("(", cType), ")("), initC), ")");
     }
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("    ", cType), " "), varName), " = "), initC), ";\n");
@@ -9274,6 +9471,10 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("    spec_array_set(", containerC), ", "), idxC), ", (void*)(intptr_t)("), valC), "));\n");
     }
         const char* targetC = CodeGenerator_generateExpression(self, stmt->assignTarget);
+        const char* appendC = CodeGenerator_tryGenerateAppendChain(self, stmt->assignValue, targetC);
+        if ((!spec_str_equals(appendC, ""))) {
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("    ", targetC), " = "), appendC), ";\n");
+    }
         const char* valC = CodeGenerator_generateExpression(self, stmt->assignValue);
         const char* lhsType = CodeGenerator_inferTargetType(self, stmt->assignTarget);
         Class* curCls = (Class*)(CodeGenerator_findClass(self, self->currentClassName));
@@ -9286,18 +9487,18 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         const char* out = spec_str_concat(spec_str_concat("    if (", condC), ") {\n");
         ({ SpecArray* _a_170 = stmt->thenBranch; if (_a_170) { for (size_t _i_170 = 0; _i_170 < _a_170->length; _i_170++) {
         Statement* s = (Statement*)(intptr_t)_a_170->items[_i_170];
-    out = spec_str_concat(spec_str_concat(out, "    "), CodeGenerator_generateStatement(self, s));
+    out = spec_str_append(spec_str_append(out, "    "), CodeGenerator_generateStatement(self, s));
         _loop_next_170: ;
     } } });
         if (stmt->hasElse) {
-        out = spec_str_concat(out, "    } else {\n");
+        out = spec_str_append(out, "    } else {\n");
         ({ SpecArray* _a_171 = stmt->elseBranch; if (_a_171) { for (size_t _i_171 = 0; _i_171 < _a_171->length; _i_171++) {
         Statement* s = (Statement*)(intptr_t)_a_171->items[_i_171];
-    out = spec_str_concat(spec_str_concat(out, "    "), CodeGenerator_generateStatement(self, s));
+    out = spec_str_append(spec_str_append(out, "    "), CodeGenerator_generateStatement(self, s));
         _loop_next_171: ;
     } } });
     }
-        out = spec_str_concat(out, "    }\n");
+        out = spec_str_append(out, "    }\n");
         return out;
     } else if (spec_str_equals(kind, "RETURN")) {
         if ((!spec_str_equals(self->inlineReturnLabel, ""))) {
@@ -9324,7 +9525,7 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         WhenArm* arm = (WhenArm*)(intptr_t)_a_172->items[_i_172];
     const char* bindsC = "";
     if (arm->isElse) {
-        out = spec_str_concat(out, "    } else {\n");
+        out = spec_str_append(out, "    } else {\n");
     } else {
         const char* condOr = "";
         ({ SpecArray* _a_173 = arm->conditions; if (_a_173) { for (size_t _i_173 = 0; _i_173 < _a_173->length; _i_173++) {
@@ -9333,27 +9534,27 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
     if (spec_str_equals(condOr, "")) {
         condOr = cmp;
     } else {
-        condOr = spec_str_concat(spec_str_concat(condOr, " || "), cmp);
+        condOr = spec_str_append(spec_str_append(condOr, " || "), cmp);
     }
         _loop_next_173: ;
     } } });
         bindsC = CodeGenerator_generateWhenBindings(self, subjC, arm);
         if (first) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    if ("), condOr), ") {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    if ("), condOr), ") {\n");
         first = false;
     } else {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    } else if ("), condOr), ") {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    } else if ("), condOr), ") {\n");
     }
-        out = spec_str_concat(out, bindsC);
+        out = spec_str_append(out, bindsC);
     }
     ({ SpecArray* _a_174 = arm->body; if (_a_174) { for (size_t _i_174 = 0; _i_174 < _a_174->length; _i_174++) {
         Statement* s = (Statement*)(intptr_t)_a_174->items[_i_174];
-    out = spec_str_concat(spec_str_concat(out, "    "), CodeGenerator_generateStatement(self, s));
+    out = spec_str_append(spec_str_append(out, "    "), CodeGenerator_generateStatement(self, s));
         _loop_next_174: ;
     } } });
         _loop_next_172: ;
     } } });
-        out = spec_str_concat(out, "    }\n");
+        out = spec_str_append(out, "    }\n");
         return out;
     } else if (spec_str_equals(kind, "EXPR")) {
         const char* exprC = CodeGenerator_generateExpression(self, stmt->exprStmt);
@@ -9384,11 +9585,11 @@ const char* CodeGenerator_generateMethod(CodeGenerator* self, Class* classDef, M
     const char* callArgs = "";
     ({ SpecArray* _a_176 = Member_getParameters(method); if (_a_176) { for (size_t _i_176 = 0; _i_176 < _a_176->length; _i_176++) {
         Parameter* p = (Parameter*)(intptr_t)_a_176->items[_i_176];
-    out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, ", "), CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), CodeGenerator_cIdent(self, Parameter_getName(p)));
-    callArgs = spec_str_concat(spec_str_concat(callArgs, ", "), CodeGenerator_cIdent(self, Parameter_getName(p)));
+    out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, ", "), CodeGenerator_cTypeFor(self, Type_getName(Parameter_getType(p)))), " "), CodeGenerator_cIdent(self, Parameter_getName(p)));
+    callArgs = spec_str_append(spec_str_append(callArgs, ", "), CodeGenerator_cIdent(self, Parameter_getName(p)));
         _loop_next_176: ;
     } } });
-    out = spec_str_concat(out, ") {\n");
+    out = spec_str_append(out, ") {\n");
     if ((!spec_str_equals(Member_getName(method), "init"))) {
         long long paramCount = spec_array_length(Member_getParameters(method));
         ({ SpecArray* _a_177 = self->programClasses; if (_a_177) { for (size_t _i_177 = 0; _i_177 < _a_177->length; _i_177++) {
@@ -9396,13 +9597,13 @@ const char* CodeGenerator_generateMethod(CodeGenerator* self, Class* classDef, M
     if ((((!spec_str_equals(Class_getName(subCls), Class_getName(classDef)))) && (CodeGenerator_isSubclassOf(self, Class_getName(subCls), Class_getName(classDef))))) {
         const char* implCls = CodeGenerator_findMethodImplementingClass(self, Class_getName(subCls), Member_getName(method), paramCount);
         if ((((!spec_str_equals(implCls, ""))) && ((!spec_str_equals(implCls, Class_getName(classDef)))))) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(out, "    if (self && self->_type_name && strcmp(self->_type_name, \""), Class_getName(subCls)), "\") == 0) {\n");
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    if (self && self->_type_name && strcmp(self->_type_name, \""), Class_getName(subCls)), "\") == 0) {\n");
         if (spec_str_equals(retType, "void")) {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        "), implCls), "_"), Member_getName(method)), "(("), implCls), "*)self"), callArgs), ");\n        return;\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "        "), implCls), "_"), Member_getName(method)), "(("), implCls), "*)self"), callArgs), ");\n        return;\n");
     } else {
-        out = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, "        return "), implCls), "_"), Member_getName(method)), "(("), implCls), "*)self"), callArgs), ");\n");
+        out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "        return "), implCls), "_"), Member_getName(method)), "(("), implCls), "*)self"), callArgs), ");\n");
     }
-        out = spec_str_concat(out, "    }\n");
+        out = spec_str_append(out, "    }\n");
     }
     }
         _loop_next_177: ;
@@ -9410,17 +9611,17 @@ const char* CodeGenerator_generateMethod(CodeGenerator* self, Class* classDef, M
     }
     ({ SpecArray* _a_178 = Member_getBody(method); if (_a_178) { for (size_t _i_178 = 0; _i_178 < _a_178->length; _i_178++) {
         Statement* stmt = (Statement*)(intptr_t)_a_178->items[_i_178];
-    out = spec_str_concat(out, CodeGenerator_generateStatement(self, stmt));
+    out = spec_str_append(out, CodeGenerator_generateStatement(self, stmt));
         _loop_next_178: ;
     } } });
     if (((((spec_array_length(Member_getBody(method))) == (0))) && ((!spec_str_equals(retType, "void"))))) {
         if (spec_str_equals(retType, "const char*")) {
-        out = spec_str_concat(out, "    return \"\";\n");
+        out = spec_str_append(out, "    return \"\";\n");
     } else {
-        out = spec_str_concat(out, "    return 0;\n");
+        out = spec_str_append(out, "    return 0;\n");
     }
     }
-    out = spec_str_concat(out, "}\n\n");
+    out = spec_str_append(out, "}\n\n");
     self->inMethod = false;
     return out;
 }
@@ -9430,28 +9631,28 @@ const char* CodeGenerator_generateMain(CodeGenerator* self, const char* entryCla
     m = spec_str_concat(m, "int main(int argc, char** argv) {\n");
     m = spec_str_concat(m, "    srand((unsigned int)time(NULL));\n");
     m = spec_str_concat(m, "    SpecMap* args = spec_map_new();\n");
-    m = spec_str_concat(m, "    for (int i = 1; i < argc; i++) {\n");
+    m = spec_str_append(m, "    for (int i = 1; i < argc; i++) {\n");
     m = spec_str_concat(m, "        if (strncmp(argv[i], \"--\", 2) == 0) {\n");
-    m = spec_str_concat(m, "            const char* key = argv[i] + 2;\n");
-    m = spec_str_concat(m, "            const char* val = \"true\";\n");
-    m = spec_str_concat(m, "            if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
-    m = spec_str_concat(m, "                val = argv[++i];\n");
-    m = spec_str_concat(m, "            }\n");
+    m = spec_str_append(m, "            const char* key = argv[i] + 2;\n");
+    m = spec_str_append(m, "            const char* val = \"true\";\n");
+    m = spec_str_append(m, "            if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
+    m = spec_str_append(m, "                val = argv[++i];\n");
+    m = spec_str_append(m, "            }\n");
     m = spec_str_concat(m, "            spec_map_set(args, key, val);\n");
-    m = spec_str_concat(m, "        } else if (argv[i][0] == '-' && argv[i][1] != '\\0') {\n");
-    m = spec_str_concat(m, "            const char* key = argv[i] + 1;\n");
-    m = spec_str_concat(m, "            const char* val = \"true\";\n");
-    m = spec_str_concat(m, "            if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
-    m = spec_str_concat(m, "                val = argv[++i];\n");
-    m = spec_str_concat(m, "            }\n");
+    m = spec_str_append(m, "        } else if (argv[i][0] == '-' && argv[i][1] != '\\0') {\n");
+    m = spec_str_append(m, "            const char* key = argv[i] + 1;\n");
+    m = spec_str_append(m, "            const char* val = \"true\";\n");
+    m = spec_str_append(m, "            if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
+    m = spec_str_append(m, "                val = argv[++i];\n");
+    m = spec_str_append(m, "            }\n");
     m = spec_str_concat(m, "            spec_map_set(args, key, val);\n");
-    m = spec_str_concat(m, "        }\n");
-    m = spec_str_concat(m, "    }\n");
-    m = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(m, "    "), entryClass), "* app = "), entryClass), "_new();\n");
-    m = spec_str_concat(spec_str_concat(spec_str_concat(m, "    "), entryClass), "_init(app, args);\n");
-    m = spec_str_concat(m, "    spec_drain_async_tasks();\n");
-    m = spec_str_concat(m, "    return 0;\n");
-    m = spec_str_concat(m, "}\n");
+    m = spec_str_append(m, "        }\n");
+    m = spec_str_append(m, "    }\n");
+    m = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(m, "    "), entryClass), "* app = "), entryClass), "_new();\n");
+    m = spec_str_append(spec_str_append(spec_str_append(m, "    "), entryClass), "_init(app, args);\n");
+    m = spec_str_append(m, "    spec_drain_async_tasks();\n");
+    m = spec_str_append(m, "    return 0;\n");
+    m = spec_str_append(m, "}\n");
     return m;
 }
 
@@ -9562,27 +9763,27 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
         if (spec_str_equals(Member_getName(m), "init")) {
         hasInit = true;
     }
-        methods = spec_str_concat(methods, CodeGenerator_generateMethod(self, c, m));
+        methods = spec_str_append(methods, CodeGenerator_generateMethod(self, c, m));
     } else {
     }
         _loop_next_190: ;
     } } });
         if ((((!(hasInit))) && ((!spec_str_equals(Class_getBaseClass(c), "Enum"))))) {
-        methods = spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(methods, "void "), Class_getName(c)), "_init("), Class_getName(c)), "* self) {\n    /* default initializer */\n}\n\n");
+        methods = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(methods, "void "), Class_getName(c)), "_init("), Class_getName(c)), "* self) {\n    /* default initializer */\n}\n\n");
     }
     }
         _loop_next_188: ;
     } } });
     const char* mainFn = CodeGenerator_generateMain(self, entryClass);
     const char* cSource = "";
-    cSource = spec_str_concat(cSource, CodeGenerator_generatePrelude(self));
-    cSource = spec_str_concat(cSource, enums);
-    cSource = spec_str_concat(cSource, decls);
-    cSource = spec_str_concat(cSource, structs);
-    cSource = spec_str_concat(cSource, self->helperFunctions);
-    cSource = spec_str_concat(cSource, ctors);
-    cSource = spec_str_concat(cSource, methods);
-    cSource = spec_str_concat(cSource, mainFn);
+    cSource = spec_str_append(cSource, CodeGenerator_generatePrelude(self));
+    cSource = spec_str_append(cSource, enums);
+    cSource = spec_str_append(cSource, decls);
+    cSource = spec_str_append(cSource, structs);
+    cSource = spec_str_append(cSource, self->helperFunctions);
+    cSource = spec_str_append(cSource, ctors);
+    cSource = spec_str_append(cSource, methods);
+    cSource = spec_str_append(cSource, mainFn);
     return cSource;
 }
 
@@ -9685,7 +9886,7 @@ bool PathChainLoop_evaluate(PathChainLoop* self) {
 }
 
 bool PathChainLoop_iteration(PathChainLoop* self, SpecLoopControl* c) {
-    self->res = spec_str_concat(spec_str_concat(self->res, "->"), CBackendUtils_cIdent(self->utils, spec_array_get(self->segs, self->idx)));
+    self->res = spec_str_append(spec_str_append(self->res, "->"), CBackendUtils_cIdent(self->utils, spec_array_get(self->segs, self->idx)));
     self->idx = ((self->idx) + (1));
     return true;
 }
@@ -9798,16 +9999,16 @@ void PathConvLoop_init(PathConvLoop* self, const char* src) {
 }
 
 bool PathConvLoop_evaluate(PathConvLoop* self) {
-    return ((self->pos) < ((long long)strlen(self->src)));
+    return ((self->pos) < (spec_str_length(self->src)));
 }
 
 bool PathConvLoop_iteration(PathConvLoop* self, SpecLoopControl* control) {
     const char* ch = spec_str_char_at(self->src, self->pos, "");
     self->pos = ((self->pos) + (1));
     if (spec_str_equals(ch, ":")) {
-        self->res = spec_str_concat(self->res, "/");
+        self->res = spec_str_append(self->res, "/");
     } else {
-        self->res = spec_str_concat(self->res, ch);
+        self->res = spec_str_append(self->res, ch);
     }
     return true;
 }

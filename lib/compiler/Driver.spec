@@ -71,7 +71,12 @@ class Driver{
 			return;
 		}
 
-		if (outputPath == "") {
+		local String is emitCPath: args:getString(key: "c", default: "");
+		if (emitCPath == "") {
+			emitCPath: args:getString(key: "emit-c", default: "");
+		}
+
+		if (outputPath == "" && emitCPath == "") {
 			output:line("Error: Missing output binary path (-o <output_binary>)");
 			return;
 		}
@@ -133,10 +138,6 @@ class Driver{
 		local CodeGenerator is cg: CodeGenerator:init();
 		local String is cCode: cg:generateProgram(program: program, entryClass: entryName);
 
-		local String is emitCPath: args:getString(key: "c", default: "");
-		if (emitCPath == "") {
-			emitCPath: args:getString(key: "emit-c", default: "");
-		}
 		local String is tempCPath: emitCPath;
 		if (tempCPath == "") {
 			tempCPath: "/tmp/_spec_stage_" . Process:getPid() . ".c";
@@ -144,6 +145,11 @@ class Driver{
 		local Boolean is written: File:write(path: tempCPath, content: cCode);
 		if (!written) {
 			output:line("Error: Failed to write intermediate C code to " . tempCPath);
+			return;
+		}
+
+		if (outputPath == "") {
+			output:line("Emitted C code for " . inputPath . " -> " . emitCPath . " successfully!");
 			return;
 		}
 

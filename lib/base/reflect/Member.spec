@@ -171,10 +171,16 @@ class Member{
 		return self:nestedClass;
 	}
 
+	## Sets the one-based source line number where this member was declared.
+	##
+	## @param line: One-based source line number.
 	replace local Function is setLine(Int is line){
 		self:line: line;
 	}
 
+	## Returns the one-based source line number where this member was declared.
+	##
+	## @return: Source line number.
 	replace local Function of Int is getLine(){
 		return self:line;
 	}

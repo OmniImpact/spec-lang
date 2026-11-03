@@ -56,7 +56,11 @@ class BuiltinCallGenerator{
 				local NamedArg is ctrlArg: expr:methodArgs:get(index: 1);
 				ctrlC: cg:generateExpression(expr: ctrlArg:getValue());
 			}
-			return "({ void* _lp = (void*)(" . loopC . "); SpecLoopControl* _ctrl = (SpecLoopControl*)(" . ctrlC . "); while (" . loopClass . "_evaluate((void*)_lp)) { if (!" . loopClass . "_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } })";
+			local String is freeLoopC: "";
+			if (loopVal:getKind() == "CALL" && loopVal:methodName == "init") {
+				freeLoopC: " free(_lp);";
+			}
+			return "({ void* _lp = (void*)(" . loopC . "); SpecLoopControl* _ctrl = (SpecLoopControl*)(" . ctrlC . "); while (" . loopClass . "_evaluate((void*)_lp)) { if (!" . loopClass . "_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }" . freeLoopC . " })";
 		}
 
 		# Lightweight predicate loop: While:condition(evaluate, iteration)
@@ -502,7 +506,7 @@ class BuiltinCallGenerator{
 
 		# String methods
 		if (expr:methodName == "length" && (targetType == "String" || targetType == "string")) {
-			return "(long long)strlen(" . targetC . ")";
+			return "spec_str_length(" . targetC . ")";
 		}
 		if (expr:methodName == "charAt") {
 			local String is idxC: "0";

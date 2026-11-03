@@ -1405,6 +1405,56 @@ class CodeGenerator{
 		}
 	}
 
+	## Resolves a simple local variable or `self` field expression to its C identifier without side effects.
+	##
+	## @param expr: Target [Expression] node.
+	## @return: C lvalue string if simple variable/field, or empty string otherwise.
+	replace local Function of String is tryGenerateTargetOnly(Expression is expr){
+		if (expr:getKind() == "IDENT") {
+			if (self:localVars:has(key: expr:stringValue)) {
+				return self:cIdent(name: expr:stringValue);
+			}
+			if (self:inMethod && self:fieldTypes:has(key: expr:stringValue)) {
+				return "self->" . self:cIdent(name: expr:stringValue);
+			}
+			return self:cIdent(name: expr:stringValue);
+		}
+		if (expr:getKind() == "PATH" && expr:pathSegments:length() == 2 && expr:pathSegments:get(index: 0) == "self") {
+			return "self->" . self:cIdent(name: expr:pathSegments:get(index: 1));
+		}
+		return "";
+	}
+
+	## Optimizes left-recursive string concatenation chains (`s: s . a . b`) into amortized O(1) `spec_str_append` calls.
+	##
+	## @param expr: Right-hand side assignment [Expression].
+	## @param targetC: Generated C lvalue of the assignment target.
+	## @return: `spec_str_append` call chain string if optimizable, or empty string otherwise.
+	replace local Function of String is tryGenerateAppendChain(Expression is expr, String is targetC){
+		if (targetC == "") {
+			return "";
+		}
+		if (expr:getKind() == "BINARY" && expr:binaryOp == ".") {
+			local String is leftTarget: self:tryGenerateTargetOnly(expr: expr:leftExpr);
+			if (leftTarget == targetC) {
+				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
+				if (rhsC:contains(needle: targetC)) {
+					return "";
+				}
+				return "spec_str_append(" . targetC . ", " . rhsC . ")";
+			}
+			local String is innerChain: self:tryGenerateAppendChain(expr: expr:leftExpr, targetC: targetC);
+			if (innerChain != "") {
+				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
+				if (rhsC:contains(needle: targetC)) {
+					return "";
+				}
+				return "spec_str_append(" . innerChain . ", " . rhsC . ")";
+			}
+		}
+		return "";
+	}
+
 	## Generates C code for a statement node.
 	##
 	## @param stmt: [Statement] AST node.
@@ -1451,6 +1501,10 @@ class CodeGenerator{
 					return "    spec_array_set(" . containerC . ", " . idxC . ", (void*)(intptr_t)(" . valC . "));\n";
 				}
 				local String is targetC: self:generateExpression(expr: stmt:assignTarget);
+				local String is appendC: self:tryGenerateAppendChain(expr: stmt:assignValue, targetC: targetC);
+				if (appendC != "") {
+					return "    " . targetC . " = " . appendC . ";\n";
+				}
 				local String is valC: self:generateExpression(expr: stmt:assignValue);
 				local String is lhsType: self:inferTargetType(expr: stmt:assignTarget);
 				local Class is curCls: self:findClass(name: self:currentClassName);

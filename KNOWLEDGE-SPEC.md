@@ -46,14 +46,26 @@ class AppName{
 
 ---
 
-## 3. Types, Variables & Modifiers
-- **Primitives**: `Int` (64-bit signed), `Float` (64-bit double), `Boolean` (`true`/`false`), `String`.
-- **Containers**: `Array of <Type>`, `Map of <KeyType> to <ValueType>`.
+## 3. Types, Variables, Generics & Modifiers
+- **Primitives**: `Int` (64-bit signed), `Float` (64-bit double), `Boolean` (`true`/`false`), `String`, `Function`, `Any`.
+- **Containers & Literals**:
+  - `Array of <Type>`: `["a", "b"]`, empty `[]`, bracket indexing `arr[0]`, bracket assignment `arr[0]: "x";`.
+  - `Map of <KeyType> to <ValueType>`: `["alice": 95, "bob": 88]`, empty `[:]`, bracket indexing `scores["alice"]`, bracket assignment `scores["charlie"]: 100;`.
+- **User-Defined Generic Classes**:
+  ```spec
+  class Box of T{
+  	local T is val;
+  	replace local Function is init(T is val){ self:val: val; }
+  	replace local Function of T is get(){ return self:val; }
+  }
+  local Box of String is b: Box:init(val: "Hello");
+  ```
 - **Declarations**:
   ```spec
   local Int is count: 10;
   local String is msg: "Loading...";
   local Array of String is items: ["a", "b", "c"];
+  local Map of String to Int is scores: ["alice": 95];
   ```
 - **Modifiers & Strict Overriding**:
   - `local`: Enforces lexical scope / instance scope.
@@ -79,11 +91,26 @@ class AppName{
   	return param1;
   }
   ```
-- **Anonymous Lambdas**:
+- **Default Parameters & Named-Argument Reordering**:
+  ```spec
+  replace local Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
+  	return prefix . ", " . name . suffix;
+  }
+  local String is s: self:greet(suffix: ".", name: "World"); # "Hello, World."
+  ```
+- **First-Class Capturing Closures & Direct Invocation**:
+  ```spec
+  local Int is factor: 10;
+  local Function of Int is scale: local Function of Int(Int is x){ return x * factor; };
+  local Int is res: scale(x: 4); # 40
+  ```
+- **Anonymous Lambdas & Collection Combinators**:
   ```spec
   items:each(action: local Function(String is item){
   	output:line(item);
   });
+  local Array of Int is doubled: nums:map(transform: local Function of Int(Int is x){ return x * 2; });
+  local Int is sum: nums:fold(initial: 0, reducer: local Function of Int(Int is acc, Int is x){ return acc + x; });
   ```
 
 ---
@@ -120,16 +147,25 @@ local Int is points: when (rank) {
 };
 ```
 
-### Enums
+### Enums & Tagged Unions (Algebraic Data Types)
 ```spec
 Enum is Status { ACTIVE, INACTIVE, PENDING }
 Enum of Int is StatusCode { OK: 200, NOT_FOUND: 404 }
+Enum is Result { Ok(String is data), Err(Int is code, String is msg), Pending }
 
 # Access & Methods:
 local Status is s: Status:ACTIVE;
-local String is name: s:name();     # "ACTIVE"
-local Int is code: StatusCode:OK:value(); # 200
-local Int is idx: s:ordinal();      # 0
+local String is name: s:name();            # "ACTIVE"
+local Int is code: StatusCode:OK:value();  # 200
+local Int is idx: s:ordinal();             # 0
+
+# Destructuring Tagged Unions in when:
+local Result is r: Result:Ok(data: "Ready");
+when (r) {
+	is Result:Ok(data): { output:line(data); }
+	is Result:Err(code, msg): { output:line(code . ": " . msg); }
+	else: {}
+}
 ```
 
 ### Iteration (No `while` or `for` keywords)

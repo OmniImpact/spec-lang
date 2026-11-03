@@ -24,29 +24,45 @@ This guide covers building, running, linting, and configuring editor support for
 
 ## Compiler CLI (`spec`)
 
-The Spec compiler (`spec`) compiles Spec source files down to portable C99 and links them into native executable binaries using the system C compiler (`gcc`).
+The Spec compiler (`spec`) is **100% self-hosted in pure Spec** (`lib/compiler/`). It compiles Spec source files down to portable C11 and links them into native executable binaries using the system C compiler (`gcc`).
 
-### Building the Compiler
-The Stage 0 compiler is implemented in Rust:
+### Bootstrapping & Building the Compiler
+You do not need Rust or Cargo to build Spec; only `gcc` (or `clang`) with standard POSIX threads is required:
 
 ```bash
-cargo build --release
+./bootstrap.sh
 ```
 
-The resulting binary is created at `target/release/spec`. A symbolic link `spec` is maintained at the project root for convenience.
+This compiles the canonical converged C11 source at `bootstrap/spec.c` into the `./spec` executable at the project root.
+
+To perform a full 3-stage self-hosting convergence build after modifying compiler files under `lib/compiler/`:
+```bash
+./spec -i lib/compiler/Driver.spec -o spec-stage1
+./spec-stage1 -i lib/compiler/Driver.spec -o spec-stage2 --emit-c /tmp/stage2.c
+./spec-stage2 -i lib/compiler/Driver.spec -o spec-stage3 --emit-c /tmp/stage3.c
+diff -s /tmp/stage2.c /tmp/stage3.c
+cp spec-stage3 spec && cp /tmp/stage3.c bootstrap/spec.c
+```
 
 ### Compiling a Spec Program
-To compile a Spec program with an entrypoint `init` method into a native executable:
+To compile a Spec program into a native executable:
 
 ```bash
 ./spec -i <input.spec> -o <output_binary>
 ```
 
+To emit the generated C11 source code (either standalone or alongside `-o`):
+
+```bash
+./spec -i <input.spec> --emit-c <output.c>
+./spec -i <input.spec> -o <output_binary> --emit-c <output.c>
+```
+
 #### Example
 ```bash
 ./spec -i examples/helloworld.spec -o hello
-./hello
-# Output: Hello User
+./hello --name Daniel
+# Output: Hello, Daniel!
 ```
 
 ### Multi-File Module Resolution
@@ -59,18 +75,19 @@ replace local Array of String is using: [
 ];
 ```
 
-The module loader searches for matching files in:
+The module loader (`lib/compiler/Loader.spec`) searches for matching files in:
 1. Relative directory paths from the compiling file.
-2. The standard library directory (`lib/base/...`).
+2. The standard library directory (`lib/`).
 
-All resolved classes are merged into an AST before code generation, allowing seamless multi-file compilation without manual linker flags.
+All resolved classes are merged into an AST with per-file source provenance before type checking and code generation, allowing seamless multi-file compilation without manual linker flags.
 
-### Compilation Pipeline
-1. **Lexical Analysis (`lexer.rs`)**: Tokenizes the input source files and identifies keywords, types, identifiers, and literals.
-2. **Multi-File Loader (`loader.rs`)**: Recursively discovers and parses dependent modules specified in `using` blocks.
-3. **Syntactic Parsing (`parser.rs`)**: Constructs the abstract syntax tree (`ast.rs`).
-4. **C99 Transpilation (`codegen.rs`)**: Emits clean C99 code, linking runtime structures and handling garbage-free memory management.
-5. **Native GCC Compilation**: GCC optimizes the generated C code (`-O2`) and links the math runtime (`-lm`), producing a standalone native executable. Intermediate `.c` files are automatically removed upon success.
+### Compilation Pipeline & Memory Model
+1. **Lexical Analysis (`lib/compiler/Lexer.spec`)**: Tokenizes input source files (`Token.spec`) using $O(1)$ cached string length lookups and a static 256-entry character table with zero per-character heap allocations.
+2. **Multi-File Loader (`lib/compiler/Loader.spec`)**: Recursively discovers and parses dependent modules specified in `using` blocks.
+3. **Syntactic Parsing (`lib/compiler/Parser.spec`)**: Constructs the abstract syntax tree (`lib/base/meta/AST.spec`) with statement-boundary error recovery and `[file:line:col]` diagnostics.
+4. **Static Type Checking (`lib/compiler/TypeChecker.spec`)**: Validates types, generic class substitutions, definite field assignment, interface contracts, and `replace` override rules.
+5. **C11 Code Generation (`lib/compiler/CodeGenerator.spec`, `DeclarationGenerator.spec`, `BuiltinCallGenerator.spec`, `RuntimePrelude.spec`)**: Emits clean C11 code featuring amortized $O(1)$ growable string buffers (`spec_str_append`), lazy `SpecArray` allocation, static small-integer formatting, and automatic deallocation of transient `Loop` objects.
+6. **Native GCC Compilation**: GCC optimizes the generated C11 code (`-O2 -pthread -lm`), producing a standalone native executable. Intermediate `.c` files are automatically removed upon success unless `--emit-c` is specified.
 
 ---
 

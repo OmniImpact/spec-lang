@@ -82,26 +82,44 @@ class Class{
 		return self:members;
 	}
 
+	## Sets the one-based source line number where this class was declared.
+	##
+	## @param line: One-based source line number.
 	replace local Function is setLine(Int is line){
 		self:line: line;
 	}
 
+	## Returns the one-based source line number where this class was declared.
+	##
+	## @return: Source line number.
 	replace local Function of Int is getLine(){
 		return self:line;
 	}
 
+	## Sets the source file path where this class was declared.
+	##
+	## @param file: Source file path string.
 	replace local Function is setSourceFile(String is file){
 		self:sourceFile: file;
 	}
 
+	## Returns the source file path where this class was declared.
+	##
+	## @return: Source file path string.
 	replace local Function of String is getSourceFile(){
 		return self:sourceFile;
 	}
 
+	## Sets the generic type parameter names declared on this class.
+	##
+	## @param params: Array of generic type parameter identifiers.
 	replace local Function is setTypeParams(Array of String is params){
 		self:typeParams: params;
 	}
 
+	## Returns the generic type parameter names declared on this class.
+	##
+	## @return: Array of generic type parameter identifiers.
 	replace local Function of Array of String is getTypeParams(){
 		return self:typeParams;
 	}
