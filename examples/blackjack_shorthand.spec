@@ -100,6 +100,11 @@ class Blackjack{
 		}
 
 		replace onInput(action){
+			if (action == "") {
+				output:line("\nInput closed. Thanks for playing!");
+				game:roundActive: false;
+				return;
+			}
 			when (action) {
 				is "h", "hit": {
 					local Int is card: game:drawCard();

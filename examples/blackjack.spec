@@ -115,6 +115,11 @@ class Blackjack{
 		}
 
 		replace local Function is onInput(String is action){
+			if (action == "") {
+				output:line("\nInput closed. Thanks for playing!");
+				game:roundActive: false;
+				return;
+			}
 			if (action == "h" || action == "hit") {
 				local Int is card: game:drawCard();
 				game:playerHand:add(item: card);

@@ -25,6 +25,10 @@ class Member{
 	## Source line coordinate where this member was declared.
 	local Int is line: 0;
 
+	## Source file path where this member was declared (set by the Loader;
+	## preserved per-fragment when grouped classes are merged).
+	local String is sourceFile: "";
+
 	## Modifiers attached to this member (e.g. `["replace", "local"]`).
 	local Array of String is modifiers: [];
 
@@ -183,6 +187,20 @@ class Member{
 	## @return: Source line number.
 	replace local Function of Int is getLine(){
 		return self:line;
+	}
+
+	## Sets the source file path where this member was declared.
+	##
+	## @param file: Source file path.
+	replace local Function is setSourceFile(String is file){
+		self:sourceFile: file;
+	}
+
+	## Returns the source file path where this member was declared.
+	##
+	## @return: Source file path (empty when unknown).
+	replace local Function of String is getSourceFile(){
+		return self:sourceFile;
 	}
 
 }

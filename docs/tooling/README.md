@@ -44,6 +44,16 @@ diff -s /tmp/stage2.c /tmp/stage3.c
 cp spec-stage3 spec && cp /tmp/stage3.c bootstrap/spec.c
 ```
 
+### Compiler Exit Codes & Diagnostics
+- **`0`** — success.
+- **`1`** — compile failure: syntax errors, load errors (`[LoadError]`: missing module files, unresolvable imports, invalid class grouping), type errors, or backend `gcc` failure.
+- **`2`** — usage error (missing input or output path).
+
+All compiler diagnostics are written to **stderr** (via the `error:line` builtin); programs write normal output to stdout via `output:line`. A program can terminate itself with an explicit status via `Process:exit(status: N)`. This makes the compiler safe to drive from scripts and CI:
+```bash
+./spec -i app.spec -o app 2>compile.log || exit 1
+```
+
 ### Compiling a Spec Program
 To compile a Spec program into a native executable:
 

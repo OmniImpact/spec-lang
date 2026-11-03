@@ -1323,6 +1323,8 @@ bool Member_getHasInit(Member* self);
 Class* Member_getNestedClass(Member* self);
 void Member_setLine(Member* self, long long line);
 long long Member_getLine(Member* self);
+void Member_setSourceFile(Member* self, const char* file);
+const char* Member_getSourceFile(Member* self);
 void Type_init(Type* self, const char* name);
 void Type_withParams(Type* self, const char* name, SpecArray* params);
 const char* Type_getName(Type* self);
@@ -1660,6 +1662,13 @@ const char* Loader_resolvePath(Loader* self, const char* rawPath);
 SpecArray* Loader_expandWildcard(Loader* self, const char* rawPath);
 void Loader_loadFile(Loader* self, const char* filePath);
 void Loader_collectImportsFromClass(Loader* self, Class* c);
+const char* Loader_groupTargetOf(Loader* self, Class* c);
+Class* Loader_findLoadedClass(Loader* self, const char* name);
+Member* Loader_findMemberNamed(Loader* self, Class* target, const char* name);
+void Loader_mergeFragmentInto(Loader* self, Class* target, Class* frag);
+void Loader_stripMemberNamed(Loader* self, Class* target, const char* name);
+void Loader_removeClassFromLoaded(Loader* self, Class* c);
+void Loader_mergeGroups(Loader* self);
 ProgramNode* Loader_loadProgram(Loader* self, const char* rootPath);
 void PathConvLoop_init(PathConvLoop* self, const char* src);
 bool PathConvLoop_evaluate(PathConvLoop* self);
@@ -1689,6 +1698,7 @@ struct Member {
     const char* _type_name;
     const char* kind;
     long long line;
+    const char* sourceFile;
     SpecArray* modifiers;
     Type* memberType;
     const char* name;
@@ -2162,6 +2172,8 @@ struct Loader {
     SpecArray* loadedClasses;
     SpecMap* seenClassNames;
     SpecArray* parseErrors;
+    SpecArray* groupTargets;
+    SpecArray* groupFragments;
 };
 
 struct PathConvLoop {
@@ -2202,6 +2214,7 @@ Member* Member_new(void) {
     self->_type_name = "Member";
     self->kind = "";
     self->line = 0;
+    self->sourceFile = "";
     self->modifiers = ({ SpecArray* _arr = spec_array_new(); _arr; });
     self->name = "";
     self->params = ({ SpecArray* _arr = spec_array_new(); _arr; });
@@ -2716,6 +2729,8 @@ Loader* Loader_new(void) {
     self->loadedClasses = ({ SpecArray* _arr = spec_array_new(); _arr; });
     self->seenClassNames = spec_map_new();
     self->parseErrors = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->groupTargets = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->groupFragments = ({ SpecArray* _arr = spec_array_new(); _arr; });
     return self;
 }
 
@@ -3057,6 +3072,14 @@ void Member_setLine(Member* self, long long line) {
 
 long long Member_getLine(Member* self) {
     return self->line;
+}
+
+void Member_setSourceFile(Member* self, const char* file) {
+    self->sourceFile = spec_str_clone_if_buffered(file);
+}
+
+const char* Member_getSourceFile(Member* self) {
+    return self->sourceFile;
 }
 
 void Type_init(Type* self, const char* name) {
@@ -6081,6 +6104,9 @@ void TypeChecker_checkMethod(TypeChecker* self, Member* method) {
     if (((Member_getLine(method)) > (0))) {
         self->currentLine = Member_getLine(method);
     }
+    if ((!spec_str_equals(Member_getSourceFile(method), ""))) {
+        self->currentSourceFile = spec_str_clone_if_buffered(Member_getSourceFile(method));
+    }
     ({ SpecArray* _a_56 = Member_getParameters(method); if (_a_56) { for (size_t _i_56 = 0; _i_56 < _a_56->length; _i_56++) {
         Parameter* p = (Parameter*)(intptr_t)_a_56->items[_i_56];
     if (spec_str_equals(Type_getName(Parameter_getType(p)), "SELF_FIELD")) {
@@ -6225,6 +6251,9 @@ void TypeChecker_checkClass(TypeChecker* self, Class* classDef) {
         Member* m = (Member*)(intptr_t)_a_68->items[_i_68];
     if (((Member_getMemberKind(m)) == (MemberKind_FIELD))) {
         self->currentLine = Member_getLine(m);
+        if ((!spec_str_equals(Member_getSourceFile(m), ""))) {
+        self->currentSourceFile = spec_str_clone_if_buffered(Member_getSourceFile(m));
+    }
         const char* declaredType = spec_str_clone_if_buffered(TypeChecker_formatVarTypeString(self, Member_getType(m)));
         if (m->hasInit) {
         const char* initType = spec_str_clone_if_buffered(TypeChecker_inferExpressionType(self, m->initExpr));
@@ -9779,7 +9808,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     }
         Member* mDef = (Member*)(CodeGenerator_lookupMethodMember(self, targetC, expr->methodName));
         if (spec_str_equals(Member_getKind(mDef), "METHOD")) {
-        const char* mRetType = spec_str_clone_if_buffered(Type_getName(Member_getType(mDef)));
+        const char* mRetType = spec_str_clone_if_buffered(CodeGenerator_resolveReturnType(self, Member_getType(mDef)));
         if ((((((!spec_str_equals(mRetType, ""))) && ((!spec_str_equals(mRetType, "Void"))))) && ((!spec_str_equals(mRetType, "void"))))) {
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(targetC, "_"), expr->methodName), "(NULL"), argsJoined), ")");
     }
@@ -10456,6 +10485,8 @@ void Loader_init(Loader* self) {
     self->loadedClasses = ({ SpecArray* _arr = spec_array_new(); _arr; });
     self->seenClassNames = spec_map_new();
     self->parseErrors = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->groupTargets = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->groupFragments = ({ SpecArray* _arr = spec_array_new(); _arr; });
 }
 
 SpecArray* Loader_getParseErrors(Loader* self) {
@@ -10505,9 +10536,26 @@ void Loader_loadFile(Loader* self, const char* filePath) {
     }
     ({ SpecArray* _a_203 = ProgramNode_getClasses(prog); if (_a_203) { for (size_t _i_203 = 0; _i_203 < _a_203->length; _i_203++) {
         Class* c = (Class*)(intptr_t)_a_203->items[_i_203];
+    ({ SpecArray* _a_204 = Class_getMembers(c); if (_a_204) { for (size_t _i_204 = 0; _i_204 < _a_204->length; _i_204++) {
+        Member* m = (Member*)(intptr_t)_a_204->items[_i_204];
+    Member_setSourceFile(m, filePath);
+        _loop_next_204: ;
+    } } });
+    const char* gName = spec_str_clone_if_buffered(Loader_groupTargetOf(self, c));
     if ((!(spec_map_has(self->seenClassNames, Class_getName(c))))) {
         spec_map_set(self->seenClassNames, Class_getName(c), "true");
         spec_array_add(self->loadedClasses, (void*)(c));
+        if ((((!spec_str_equals(gName, ""))) && ((!spec_str_equals(gName, Class_getName(c)))))) {
+        spec_array_add(self->groupTargets, (void*)(gName));
+        spec_array_add(self->groupFragments, (void*)(c));
+    }
+    } else {
+        if (spec_str_equals(gName, Class_getName(c))) {
+        Class* existing = (Class*)(Loader_findLoadedClass(self, Class_getName(c)));
+        if ((!spec_str_equals(Class_getName(existing), ""))) {
+        Loader_mergeFragmentInto(self, existing, c);
+    }
+    }
     }
     Loader_collectImportsFromClass(self, c);
         _loop_next_203: ;
@@ -10515,20 +10563,20 @@ void Loader_loadFile(Loader* self, const char* filePath) {
 }
 
 void Loader_collectImportsFromClass(Loader* self, Class* c) {
-    ({ SpecArray* _a_204 = Class_getMembers(c); if (_a_204) { for (size_t _i_204 = 0; _i_204 < _a_204->length; _i_204++) {
-        Member* m = (Member*)(intptr_t)_a_204->items[_i_204];
+    ({ SpecArray* _a_205 = Class_getMembers(c); if (_a_205) { for (size_t _i_205 = 0; _i_205 < _a_205->length; _i_205++) {
+        Member* m = (Member*)(intptr_t)_a_205->items[_i_205];
     if (((spec_str_equals(Member_getName(m), "using")) && (Member_getHasInit(m)))) {
         Expression* initExpr = (Expression*)(Member_getInitExpr(m));
         if (spec_str_equals(Expression_getKind(initExpr), "ARRAY")) {
-        ({ SpecArray* _a_205 = initExpr->arrayItems; if (_a_205) { for (size_t _i_205 = 0; _i_205 < _a_205->length; _i_205++) {
-        Expression* item = (Expression*)(intptr_t)_a_205->items[_i_205];
+        ({ SpecArray* _a_206 = initExpr->arrayItems; if (_a_206) { for (size_t _i_206 = 0; _i_206 < _a_206->length; _i_206++) {
+        Expression* item = (Expression*)(intptr_t)_a_206->items[_i_206];
     const char* importStr = spec_str_clone_if_buffered(item->stringValue);
     SpecArray* wildcards = Loader_expandWildcard(self, importStr);
     if (((spec_array_length(wildcards)) > (0))) {
-        ({ SpecArray* _a_206 = wildcards; if (_a_206) { for (size_t _i_206 = 0; _i_206 < _a_206->length; _i_206++) {
-        const char* f = (const char*)(intptr_t)_a_206->items[_i_206];
+        ({ SpecArray* _a_207 = wildcards; if (_a_207) { for (size_t _i_207 = 0; _i_207 < _a_207->length; _i_207++) {
+        const char* f = (const char*)(intptr_t)_a_207->items[_i_207];
     Loader_loadFile(self, f);
-        _loop_next_206: ;
+        _loop_next_207: ;
     } } });
     } else {
         const char* resolved = spec_str_clone_if_buffered(Loader_resolvePath(self, importStr));
@@ -10538,12 +10586,223 @@ void Loader_collectImportsFromClass(Loader* self, Class* c) {
         spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("  [LoadError] Cannot resolve import '", importStr), "' declared in class '"), Class_getName(c)), "'.")));
     }
     }
+        _loop_next_206: ;
+    } } });
+    }
+    }
         _loop_next_205: ;
     } } });
+}
+
+const char* Loader_groupTargetOf(Loader* self, Class* c) {
+    SpecArray* members = Class_getMembers(c);
+    long long idx = 0;
+    const char* target = spec_str_clone_if_buffered("");
+    ({ while (1) {
+        bool _ev_208 = false;
+    _ev_208 = ((idx) < (spec_array_length(members))); goto _ev_done_208;
+        _ev_done_208: ;
+        if (!_ev_208) break;
+    Member* m = (Member*)(spec_array_get(members, idx));
+    if (((spec_str_equals(Member_getName(m), "group")) && (Member_getHasInit(m)))) {
+        Expression* initExpr = (Expression*)(Member_getInitExpr(m));
+        if (spec_str_equals(Expression_getKind(initExpr), "ARRAY")) {
+        if (((spec_array_length(initExpr->arrayItems)) != (1))) {
+        spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("  [LoadError] Class '", Class_getName(c)), "' declares a group with "), spec_to_string_int(spec_array_length(initExpr->arrayItems))), " entries; exactly one target is required.")));
+    } else {
+        Expression* firstItem = (Expression*)(spec_array_get(initExpr->arrayItems, 0));
+        target = spec_str_clone_if_buffered(firstItem->stringValue);
     }
     }
-        _loop_next_204: ;
+    }
+    idx = ((idx) + (1));
+    goto _it_done_208;
+        _it_done_208: ;
+    } });
+    if ((((!spec_str_equals(target, ""))) && ((!spec_str_equals(Class_getBaseClass(c), ""))))) {
+        spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat("  [LoadError] Group fragment '", Class_getName(c)), "' must not declare extends.")));
+        target = spec_str_clone_if_buffered("");
+    }
+    return target;
+}
+
+Class* Loader_findLoadedClass(Loader* self, const char* name) {
+    long long idx = 0;
+    Class* res = (Class*)(({ Class* _inst = Class_new(); Class_init(_inst, "", "", ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; }));
+    ({ while (1) {
+        bool _ev_209 = false;
+    _ev_209 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_str_equals(Class_getName(res), ""))); goto _ev_done_209;
+        _ev_done_209: ;
+        if (!_ev_209) break;
+    Class* c = (Class*)(spec_array_get(self->loadedClasses, idx));
+    if (spec_str_equals(Class_getName(c), name)) {
+        res = c;
+    }
+    idx = ((idx) + (1));
+    goto _it_done_209;
+        _it_done_209: ;
+    } });
+    return res;
+}
+
+Member* Loader_findMemberNamed(Loader* self, Class* target, const char* name) {
+    if (spec_str_equals(name, "")) {
+        return ({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; });
+    }
+    SpecArray* members = Class_getMembers(target);
+    long long idx = 0;
+    Member* res = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
+    ({ while (1) {
+        bool _ev_210 = false;
+    _ev_210 = ((((idx) < (spec_array_length(members)))) && (spec_str_equals(Member_getName(res), ""))); goto _ev_done_210;
+        _ev_done_210: ;
+        if (!_ev_210) break;
+    Member* m = (Member*)(spec_array_get(members, idx));
+    if (spec_str_equals(Member_getName(m), name)) {
+        res = m;
+    }
+    idx = ((idx) + (1));
+    goto _it_done_210;
+        _it_done_210: ;
+    } });
+    return res;
+}
+
+void Loader_mergeFragmentInto(Loader* self, Class* target, Class* frag) {
+    if (spec_str_equals(Class_getBaseClass(target), "Enum")) {
+        spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat("  [LoadError] Group target '", Class_getName(target)), "' is an Enum; grouping is only supported for classes.")));
+        return;
+    }
+    SpecArray* fragMembers = Class_getMembers(frag);
+    long long idx = 0;
+    ({ while (1) {
+        bool _ev_211 = false;
+    _ev_211 = ((idx) < (spec_array_length(fragMembers))); goto _ev_done_211;
+        _ev_done_211: ;
+        if (!_ev_211) break;
+    Member* m = (Member*)(spec_array_get(fragMembers, idx));
+    const char* mName = spec_str_clone_if_buffered(Member_getName(m));
+    if ((((!spec_str_equals(mName, "using"))) && ((!spec_str_equals(mName, "group"))))) {
+        Member* dup = (Member*)(Loader_findMemberNamed(self, target, mName));
+        if ((!spec_str_equals(Member_getName(dup), ""))) {
+        spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("  [LoadError] Duplicate member '", mName), "' in class '"), Class_getName(target)), "' ("), Member_getSourceFile(m)), " conflicts with declaration in "), Member_getSourceFile(dup)), ").")));
+    } else {
+        spec_array_add(Class_getMembers(target), (void*)(m));
+    }
+    }
+    idx = ((idx) + (1));
+    goto _it_done_211;
+        _it_done_211: ;
+    } });
+    Member* fragUsing = (Member*)(Loader_findMemberNamed(self, frag, "using"));
+    if (spec_str_equals(Member_getName(fragUsing), "using")) {
+        Member* targetUsing = (Member*)(Loader_findMemberNamed(self, target, "using"));
+        if (spec_str_equals(Member_getName(targetUsing), "using")) {
+        Expression* fragItems = (Expression*)(Member_getInitExpr(fragUsing));
+        Expression* targetItems = (Expression*)(Member_getInitExpr(targetUsing));
+        if (((spec_str_equals(Expression_getKind(fragItems), "ARRAY")) && (spec_str_equals(Expression_getKind(targetItems), "ARRAY")))) {
+        ({ SpecArray* _a_212 = fragItems->arrayItems; if (_a_212) { for (size_t _i_212 = 0; _i_212 < _a_212->length; _i_212++) {
+        Expression* item = (Expression*)(intptr_t)_a_212->items[_i_212];
+    bool present = false;
+    ({ SpecArray* _a_213 = targetItems->arrayItems; if (_a_213) { for (size_t _i_213 = 0; _i_213 < _a_213->length; _i_213++) {
+        Expression* existing = (Expression*)(intptr_t)_a_213->items[_i_213];
+    if ((((!(present))) && (spec_str_equals(existing->stringValue, item->stringValue)))) {
+        present = true;
+    }
+        _loop_next_213: ;
     } } });
+    if ((!(present))) {
+        spec_array_add(targetItems->arrayItems, (void*)(item));
+    }
+        _loop_next_212: ;
+    } } });
+    }
+    } else {
+        spec_array_add(Class_getMembers(target), (void*)(fragUsing));
+    }
+    }
+    Loader_stripMemberNamed(self, target, "group");
+    long long initCount = 0;
+    const char* initFile = spec_str_clone_if_buffered("");
+    SpecArray* mergedMembers = Class_getMembers(target);
+    long long scan = 0;
+    ({ while (1) {
+        bool _ev_214 = false;
+    _ev_214 = ((scan) < (spec_array_length(mergedMembers))); goto _ev_done_214;
+        _ev_done_214: ;
+        if (!_ev_214) break;
+    Member* m = (Member*)(spec_array_get(mergedMembers, scan));
+    if (spec_str_equals(Member_getName(m), "init")) {
+        initCount = ((initCount) + (1));
+        initFile = spec_str_clone_if_buffered(Member_getSourceFile(m));
+    }
+    scan = ((scan) + (1));
+    goto _it_done_214;
+        _it_done_214: ;
+    } });
+    if (((initCount) > (1))) {
+        spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("  [LoadError] Multiple init methods in class '", Class_getName(target)), "' (last declared in "), initFile), "); a grouped class may declare at most one.")));
+    }
+}
+
+void Loader_stripMemberNamed(Loader* self, Class* target, const char* name) {
+    SpecArray* members = Class_getMembers(target);
+    long long idx = ((spec_array_length(members)) - (1));
+    ({ while (1) {
+        bool _ev_215 = false;
+    _ev_215 = ((idx) >= (0)); goto _ev_done_215;
+        _ev_done_215: ;
+        if (!_ev_215) break;
+    Member* m = (Member*)(spec_array_get(members, idx));
+    if (spec_str_equals(Member_getName(m), name)) {
+        spec_array_remove_at(members, idx, (void*)(intptr_t)(m));
+    }
+    idx = ((idx) - (1));
+    goto _it_done_215;
+        _it_done_215: ;
+    } });
+}
+
+void Loader_removeClassFromLoaded(Loader* self, Class* c) {
+    long long idx = 0;
+    ({ while (1) {
+        bool _ev_216 = false;
+    _ev_216 = ((idx) < (spec_array_length(self->loadedClasses))); goto _ev_done_216;
+        _ev_done_216: ;
+        if (!_ev_216) break;
+    Class* cur = (Class*)(spec_array_get(self->loadedClasses, idx));
+    if (((cur) == (c))) {
+        spec_array_remove_at(self->loadedClasses, idx, (void*)(intptr_t)(c));
+        goto _it_done_216;
+    }
+    idx = ((idx) + (1));
+    goto _it_done_216;
+        _it_done_216: ;
+    } });
+}
+
+void Loader_mergeGroups(Loader* self) {
+    long long idx = 0;
+    ({ while (1) {
+        bool _ev_217 = false;
+    _ev_217 = ((idx) < (spec_array_length(self->groupTargets))); goto _ev_done_217;
+        _ev_done_217: ;
+        if (!_ev_217) break;
+    const char* gName = spec_str_clone_if_buffered(spec_array_get(self->groupTargets, idx));
+    Class* frag = (Class*)(spec_array_get(self->groupFragments, idx));
+    Class* target = (Class*)(Loader_findLoadedClass(self, gName));
+    if (spec_str_equals(Class_getName(target), "")) {
+        target = ({ Class* _inst = Class_new(); Class_init(_inst, gName, "", ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; });
+        spec_array_add(self->loadedClasses, (void*)(target));
+    }
+    if (((target) != (frag))) {
+        Loader_mergeFragmentInto(self, target, frag);
+        Loader_removeClassFromLoaded(self, frag);
+    }
+    idx = ((idx) + (1));
+    goto _it_done_217;
+        _it_done_217: ;
+    } });
 }
 
 ProgramNode* Loader_loadProgram(Loader* self, const char* rootPath) {
@@ -10551,7 +10810,10 @@ ProgramNode* Loader_loadProgram(Loader* self, const char* rootPath) {
     self->loadedClasses = ({ SpecArray* _arr = spec_array_new(); _arr; });
     self->seenClassNames = spec_map_new();
     self->parseErrors = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->groupTargets = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    self->groupFragments = ({ SpecArray* _arr = spec_array_new(); _arr; });
     Loader_loadFile(self, rootPath);
+    Loader_mergeGroups(self);
     return ({ ProgramNode* _inst = ProgramNode_new(); ProgramNode_init(_inst, self->loadedClasses); _inst; });
 }
 

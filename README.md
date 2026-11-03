@@ -24,7 +24,7 @@ class HelloWorld{
 
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
-- **Ultra-Lean Compiler**: The compiler core knows only **10 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`).
+- **Ultra-Lean Compiler**: The compiler core knows only **11 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`, `when`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
 - **Userland Implementation**: Rich language features live in the standard library (`lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 

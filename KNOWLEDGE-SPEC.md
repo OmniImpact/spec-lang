@@ -224,6 +224,19 @@ While:run(loop: CountLoop:init(max: 5));
 ---
 
 ## 8. Compiler Commands
+
+### Exit Codes & Diagnostics
+- `0` success, `1` compile failure (syntax, load, or type errors; backend gcc failure), `2` usage error.
+- All diagnostics are written to **stderr** via `error:line(...)`; program output uses `output:line(...)`.
+- Programs terminate explicitly with `Process:exit(status: N)`.
+- Missing module files and unresolvable `using:` imports are hard load errors (`[LoadError]`).
+
+### Class Grouping (Partials)
+A fragment class declares `replace local Array of String is group: [Target];`. The Loader merges
+fragments into the target class (unioning `using` arrays, stripping `group`). Duplicate members
+across fragments are load errors; at most one `init` per merged class; fragments must not
+declare `extends`. See the [Class Grouping guide](docs/language/README.md#class-grouping-partial-classes).
+
 ```bash
 # Compile Spec source to native binary
 ./spec -i examples/helloworld.spec -o ./helloworld

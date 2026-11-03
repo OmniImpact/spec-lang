@@ -1163,6 +1163,9 @@ class TypeChecker{
 		if (method:getLine() > 0) {
 			self:currentLine: method:getLine();
 		}
+		if (method:getSourceFile() != "") {
+			self:currentSourceFile: method:getSourceFile();
+		}
 		method:getParameters():each(action: local Function(Parameter is p){
 			if (p:getType():getName() == "SELF_FIELD") {
 				local String is ft: self:fieldTypes:getString(key: p:getName(), default: "Any");
@@ -1335,6 +1338,9 @@ class TypeChecker{
 			when (m:getMemberKind()) {
 				is FIELD: {
 					self:currentLine: m:getLine();
+					if (m:getSourceFile() != "") {
+						self:currentSourceFile: m:getSourceFile();
+					}
 					local String is declaredType: self:formatVarTypeString(t: m:getType());
 					if (m:hasInit) {
 						local String is initType: self:inferExpressionType(expr: m:initExpr);

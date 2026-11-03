@@ -309,6 +309,33 @@ replace local Array of String is using: [
 ```
 Imports map directly to `.spec` files in the standard library (`lib/`) or project directory.
 
+### Class Grouping (Partial Classes)
+
+A large class can be split across multiple files using the `group` pseudo-field (a
+Loader-recognized sibling of `using`). Every fragment declares the class it belongs
+to; at load time the Loader merges all fragments into a single class:
+
+```spec
+## lib/compiler/CodeGenerator_Expr.spec
+class CodeGeneratorExpressions{
+
+	replace local Array of String is group: [CodeGenerator];
+
+	replace local Function of String is generateExpression(Expression is expr){
+		...
+	}
+}
+```
+
+Rules enforced by the Loader:
+- Fragments never exist as types; the merged class carries the group's name.
+- A group with no primary file is created from the union of its fragments.
+- Duplicate member names across fragments are a load error naming both source files.
+- At most one `init` per merged class; fragments must not declare `extends`.
+- `using` arrays are combined (deduplicated, order preserved).
+- A class whose name equals its own group target is an opt-in same-name partial:
+  duplicate same-named declarations merge instead of being dropped.
+
 ---
 
 ## Types & Literals

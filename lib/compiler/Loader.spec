@@ -22,11 +22,19 @@ class Loader{
 	local Map of String to String is seenClassNames: Map:init();
 	local Array of String is parseErrors: [];
 
+	## Group targets declared by fragments via the `group` pseudo-field (load order).
+	local Array of String is groupTargets: [];
+
+	## Group fragments corresponding to [groupTargets] (load order).
+	local Array of Class is groupFragments: [];
+
 	replace local Function is init(){
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
 		self:parseErrors: [];
+		self:groupTargets: [];
+		self:groupFragments: [];
 	}
 
 	replace local Function of Array of String is getParseErrors(){
@@ -167,9 +175,24 @@ class Loader{
 		}
 
 		prog:getClasses():each(action: local Function(Class is c){
+			c:getMembers():each(action: local Function(Member is m){
+				m:setSourceFile(file: filePath);
+			});
+			local String is gName: self:groupTargetOf(c: c);
 			if (!self:seenClassNames:has(key: c:getName())) {
 				self:seenClassNames:set(key: c:getName(), value: "true");
 				self:loadedClasses:add(item: c);
+				if (gName != "" && gName != c:getName()) {
+					self:groupTargets:add(item: gName);
+					self:groupFragments:add(item: c);
+				}
+			} else {
+				if (gName == c:getName()) {
+					local Class is existing: self:findLoadedClass(name: c:getName());
+					if (existing:getName() != "") {
+						self:mergeFragmentInto(target: existing, frag: c);
+					}
+				}
 			}
 			self:collectImportsFromClass(c: c);
 		});
@@ -204,6 +227,259 @@ class Loader{
 		});
 	}
 
+	## Extracts the load-time group target declared via the `group` pseudo-field.
+	##
+	## The field is optional; when present it must be a single-entry string array
+	## naming the class this fragment merges into. Fragments must not declare
+	## `extends` (enums included). An empty string means "not a fragment".
+	##
+	## @param c: Candidate [Class] definition.
+	## @return: Group target class name, or empty string when not a fragment.
+	replace local Function of String is groupTargetOf(Class is c){
+		local Array of Member is members: c:getMembers();
+		local Int is idx: 0;
+		local String is target: "";
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < members:length();
+			},
+			iteration: local Function of Boolean(){
+				local Member is m: members:get(index: idx);
+				if (m:getName() == "group" && m:getHasInit()) {
+					local Expression is initExpr: m:getInitExpr();
+					if (initExpr:getKind() == "ARRAY") {
+						if (initExpr:arrayItems:length() != 1) {
+							self:parseErrors:add(item: "  [LoadError] Class '" . c:getName() . "' declares a group with " . initExpr:arrayItems:length() . " entries; exactly one target is required.");
+						} else {
+							local Expression is firstItem: initExpr:arrayItems:get(index: 0);
+							target: firstItem:stringValue;
+						}
+					}
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		if (target != "" && c:getBaseClass() != "") {
+			self:parseErrors:add(item: "  [LoadError] Group fragment '" . c:getName() . "' must not declare extends.");
+			target: "";
+		}
+		return target;
+	}
+
+	## Finds an already-loaded class by name.
+	##
+	## @param name: Class name to locate.
+	## @return: The loaded [Class], or an empty-named Class when absent.
+	replace local Function of Class is findLoadedClass(String is name){
+		local Int is idx: 0;
+		local Class is res: Class:init(name: "", baseClass: "", members: []);
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < self:loadedClasses:length() && res:getName() == "";
+			},
+			iteration: local Function of Boolean(){
+				local Class is c: self:loadedClasses:get(index: idx);
+				if (c:getName() == name) {
+					res: c;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		return res;
+	}
+
+	## Finds a named member on a class (empty-named members such as nested
+	## classes are ignored).
+	##
+	## @param target: [Class] whose members are searched.
+	## @param name: Member name to locate.
+	## @return: The existing [Member], or an empty-named Member when absent.
+	replace local Function of Member is findMemberNamed(Class is target, String is name){
+		if (name == "") {
+			return Member:init(kind: "");
+		}
+		local Array of Member is members: target:getMembers();
+		local Int is idx: 0;
+		local Member is res: Member:init(kind: "");
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < members:length() && res:getName() == "";
+			},
+			iteration: local Function of Boolean(){
+				local Member is m: members:get(index: idx);
+				if (m:getName() == name) {
+					res: m;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		return res;
+	}
+
+	## Merges a group fragment's members into its target class.
+	##
+	## Appends members in fragment order, rejecting duplicate member names with
+	## both source files named. Unions the fragment's `using` entries into the
+	## target's `using` array (or transplants the member when the target has
+	## none), strips `group` declarations, and enforces the single-`init` rule.
+	##
+	## @param target: Merge destination [Class].
+	## @param frag: Group fragment [Class] to merge in.
+	replace local Function is mergeFragmentInto(Class is target, Class is frag){
+		if (target:getBaseClass() == "Enum") {
+			self:parseErrors:add(item: "  [LoadError] Group target '" . target:getName() . "' is an Enum; grouping is only supported for classes.");
+			return;
+		}
+		local Array of Member is fragMembers: frag:getMembers();
+		local Int is idx: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < fragMembers:length();
+			},
+			iteration: local Function of Boolean(){
+				local Member is m: fragMembers:get(index: idx);
+				local String is mName: m:getName();
+				if (mName != "using" && mName != "group") {
+					local Member is dup: self:findMemberNamed(target: target, name: mName);
+					if (dup:getName() != "") {
+						self:parseErrors:add(item: "  [LoadError] Duplicate member '" . mName . "' in class '" . target:getName() . "' (" . m:getSourceFile() . " conflicts with declaration in " . dup:getSourceFile() . ").");
+					} else {
+						target:getMembers():add(item: m);
+					}
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+
+		# Union the fragment's `using` entries into the target's `using` array.
+		local Member is fragUsing: self:findMemberNamed(target: frag, name: "using");
+		if (fragUsing:getName() == "using") {
+			local Member is targetUsing: self:findMemberNamed(target: target, name: "using");
+			if (targetUsing:getName() == "using") {
+				local Expression is fragItems: fragUsing:getInitExpr();
+				local Expression is targetItems: targetUsing:getInitExpr();
+				if (fragItems:getKind() == "ARRAY" && targetItems:getKind() == "ARRAY") {
+					fragItems:arrayItems:each(action: local Function(Expression is item){
+						local Boolean is present: false;
+						targetItems:arrayItems:each(action: local Function(Expression is existing){
+							if (!present && existing:stringValue == item:stringValue) {
+								present: true;
+							}
+						});
+						if (!present) {
+							targetItems:arrayItems:add(item: item);
+						}
+					});
+				}
+			} else {
+				target:getMembers():add(item: fragUsing);
+			}
+		}
+
+		# Strip the `group` declaration from the merged class.
+		self:stripMemberNamed(target: target, name: "group");
+
+		# Enforce the single-init rule across the merged class.
+		local Int is initCount: 0;
+		local String is initFile: "";
+		local Array of Member is mergedMembers: target:getMembers();
+		local Int is scan: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return scan < mergedMembers:length();
+			},
+			iteration: local Function of Boolean(){
+				local Member is m: mergedMembers:get(index: scan);
+				if (m:getName() == "init") {
+					initCount: initCount + 1;
+					initFile: m:getSourceFile();
+				}
+				scan: scan + 1;
+				return true;
+			}
+		);
+		if (initCount > 1) {
+			self:parseErrors:add(item: "  [LoadError] Multiple init methods in class '" . target:getName() . "' (last declared in " . initFile . "); a grouped class may declare at most one.");
+		}
+	}
+
+	## Removes members with the given name from a class.
+	##
+	## @param target: [Class] to modify.
+	## @param name: Member name to strip.
+	replace local Function is stripMemberNamed(Class is target, String is name){
+		local Array of Member is members: target:getMembers();
+		local Int is idx: members:length() - 1;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx >= 0;
+			},
+			iteration: local Function of Boolean(){
+				local Member is m: members:get(index: idx);
+				if (m:getName() == name) {
+					members:removeAt(index: idx, default: m);
+				}
+				idx: idx - 1;
+				return true;
+			}
+		);
+	}
+
+	## Removes a class from the loaded registry (used to dissolve fragments).
+	##
+	## @param c: [Class] to remove.
+	replace local Function is removeClassFromLoaded(Class is c){
+		local Int is idx: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < self:loadedClasses:length();
+			},
+			iteration: local Function of Boolean(){
+				local Class is cur: self:loadedClasses:get(index: idx);
+				if (cur == c) {
+					self:loadedClasses:removeAt(index: idx, default: c);
+					return false;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+	}
+
+	## Merges every declared group fragment into its target class.
+	##
+	## Runs once after all files are loaded. Fragments whose target class does
+	## not exist yet contribute to a freshly created class named after the
+	## group (a class may live entirely across fragments). Fragments are then
+	## dissolved from the loaded registry.
+	replace local Function is mergeGroups(){
+		local Int is idx: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < self:groupTargets:length();
+			},
+			iteration: local Function of Boolean(){
+				local String is gName: self:groupTargets:get(index: idx);
+				local Class is frag: self:groupFragments:get(index: idx);
+				local Class is target: self:findLoadedClass(name: gName);
+				if (target:getName() == "") {
+					target: Class:init(name: gName, baseClass: "", members: []);
+					self:loadedClasses:add(item: target);
+				}
+				if (target != frag) {
+					self:mergeFragmentInto(target: target, frag: frag);
+					self:removeClassFromLoaded(c: frag);
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+	}
+
 	## Coordinates root file loading and dependency traversal to produce a unified [ProgramNode].
 	##
 	## @param rootPath: Filesystem path to the application entry file.
@@ -213,8 +489,11 @@ class Loader{
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
 		self:parseErrors: [];
+		self:groupTargets: [];
+		self:groupFragments: [];
 
 		self:loadFile(filePath: rootPath);
+		self:mergeGroups();
 
 		return ProgramNode:init(classes: self:loadedClasses);
 	}
