@@ -24,7 +24,7 @@ Enum of String is LogLevel {
 	ERROR: "ERR"
 }
 
-class EnumWhenTest{
+Class is EnumWhenTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,

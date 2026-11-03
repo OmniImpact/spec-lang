@@ -58,7 +58,7 @@ output:line("Result: " . (10 + 20));
 Provides non-blocking, event-driven user input prompts via `InputHandler`:
 
 ```spec
-class InputExample{
+Class is InputExample{
 	replace local Function is init(Map of String to String is args){
 		Input:prompt("Enter your name: ", local Function(String is response){
 			output:line("Hello, " . response . "!");
@@ -509,6 +509,7 @@ Strings in Spec provide built-in methods for lexical scanning, text transformati
 | 📚 **Documentation Portal** | Docs index | [docs/README.md](../README.md) |
 | 📖 **Language Guide** | Syntax, types, and control flow | [docs/language/README.md](../language/README.md) |
 | 🛠️ **Tooling Guide** | Compiler CLI, linter, editor plugins | [docs/tooling/README.md](../tooling/README.md) |
-| 📂 **Examples** | Code samples and tests | [examples/](../../examples) |
+| 📂 **Examples** | Demo programs | [examples/](../../examples) |
+| 🧪 **Tests** | Positive and negative test suites | [tests/](../../tests) |
 | 📋 **Task Tracking** | Active development status | [TASKS.md](../../TASKS.md) |
 

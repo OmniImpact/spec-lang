@@ -1,4 +1,4 @@
-class Phase4ParserTest{
+Class is Phase4ParserTest{
 
 	replace local Array of String is using: [
 		base:io:*,
@@ -7,7 +7,10 @@ class Phase4ParserTest{
 		compiler:Token,
 		compiler:Lexer,
 		compiler:Parser,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
@@ -29,17 +32,17 @@ class Phase4ParserTest{
 		local Parser is parser: Parser:init(tokens: tokens);
 		local ProgramNode is prog: parser:parseProgram();
 
-		local Array of Class is classes: prog:getClasses();
+		local Array of ClassInfo is classes: prog:getClasses();
 		output:line("Classes parsed: " . classes:length());
 
-		local Class is playerClass: classes:get(index: 0);
-		output:line("Class name: " . playerClass:getName());
-		output:line("Class base: " . playerClass:getBaseClass());
+		local ClassInfo is playerClass: classes:get(index: 0);
+		output:line("ClassInfo name: " . playerClass:getName());
+		output:line("ClassInfo base: " . playerClass:getBaseClass());
 
 		local Array of Member is members: playerClass:getMembers();
 		output:line("Total members: " . members:length());
 
-		class MemberInspectLoop extends Loop{
+		Class is MemberInspectLoop extends Loop{
 			local Array of Member is members;
 			local Int is idx: 0;
 
@@ -63,7 +66,7 @@ class Phase4ParserTest{
 
 		# Assertions
 		if (playerClass:getName() == "Player") {
-			output:line("\n[PASS] Class name is Player");
+			output:line("\n[PASS] ClassInfo name is Player");
 		}
 		if (playerClass:getBaseClass() == "Entity") {
 			output:line("[PASS] Base class is Entity");

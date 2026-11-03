@@ -2,7 +2,7 @@
 #! C11 standard runtime prelude for Pure-Spec generated binaries.
 
 ## Emits standard C11 runtime definitions including string, array, map, file, and task primitives.
-class RuntimePrelude{
+Class is RuntimePrelude{
 
 	replace local Array of String is using: [
 		base:struct:Array,

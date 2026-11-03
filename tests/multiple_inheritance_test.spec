@@ -9,21 +9,21 @@
 # =============================================================================
 
 ## Abstract contract providing a name field and description method.
-class NamedContract{
+Class is NamedContract{
 	local String is name;
 
 	replace Function of String is describe(){}
 }
 
 ## Abstract contract providing an identifier field and tag getter.
-class IdentifiableContract{
+Class is IdentifiableContract{
 	local Int is id;
 
 	replace Function of String is getTag(){}
 }
 
 ## Concrete class extending multiple parent contracts.
-class ServiceAccount extends NamedContract, IdentifiableContract{
+Class is ServiceAccount extends NamedContract, IdentifiableContract{
 
 	replace local String is name: "AdminService";
 	replace local Int is id: 9001;

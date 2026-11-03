@@ -2,7 +2,7 @@
 #! C11 backend utilities: identifier sanitization, string escaping, type mapping, and builtin filtering.
 
 ## Utilities for generating C11 compatible code from Spec types and identifiers.
-class CBackendUtils{
+Class is CBackendUtils{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -58,7 +58,7 @@ class CBackendUtils{
 		};
 	}
 
-	class EscapeLoop extends Loop{
+	Class is EscapeLoop extends Loop{
 		local String is src;
 		local Int is pos: 0;
 		local String is res: "";
@@ -106,7 +106,7 @@ class CBackendUtils{
 
 	## Checks if a class name corresponds to an internal/builtin runtime type.
 	##
-	## @param name: Class identifier name.
+	## @param name: ClassInfo identifier name.
 	## @return: `true` if builtin runtime class, `false` otherwise.
 	replace local Function of Boolean is isBuiltinClass(String is name){
 		return name == "Array" || name == "Map" || name == "File" || name == "LoopControl" ||

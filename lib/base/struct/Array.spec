@@ -5,7 +5,7 @@
 ##
 ## In accordance with the "Never Null" standard, out-of-bounds queries,
 ## popping empty arrays, or failed searches return a caller-supplied default.
-class Array{
+Class is Array{
 
 	## Returns the number of elements contained in the array.
 	##

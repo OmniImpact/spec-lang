@@ -4,10 +4,10 @@
 <language name="Spec" version="2" kateversion="5.0" section="Sources" extensions="*.spec;*.SPEC" mimetype="text/x-spec" priority="10" author="Spec Language Team" license="MIT">
   <highlighting>
     <list name="keywords">
-      <item>class</item>
       <item>extends</item>
       <item>local</item>
       <item>replace</item>
+      <item>merge</item>
       <item>is</item>
       <item>of</item>
       <item>to</item>
@@ -28,6 +28,7 @@
       <item>Any</item>
       <item>Function</item>
       <item>Enum</item>
+      <item>Class</item>
     </list>
     <list name="constants">
       <item>true</item>

@@ -2,7 +2,7 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, and Linter.
 
 ## Represents an issue or diagnostic notice detected by the Spec linter.
-class LintIssue{
+Class is LintIssue{
 
 	## One-based line number where the issue was found (0 if general).
 	local Int is line: 0;
@@ -53,13 +53,16 @@ class LintIssue{
 }
 
 ## Pure-Spec code linter enforcing tab-based indentation, formatting, and AST idioms.
-class Linter{
+Class is Linter{
 
 	replace local Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:iterator:*,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
@@ -181,9 +184,9 @@ class Linter{
 
 	## Inspects all members of a class definition.
 	##
-	## @param classDef: [Class] definition.
+	## @param classDef: [ClassInfo] definition.
 	## @param issues: Destination issues array.
-	replace local Function is lintClass(Class is classDef, Array of LintIssue is issues){
+	replace local Function is lintClass(ClassInfo is classDef, Array of LintIssue is issues){
 		classDef:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is METHOD: {
@@ -211,7 +214,7 @@ class Linter{
 		self:lintIndentation(source: source, issues: issues);
 
 		# 2. AST Checks
-		program:getClasses():each(action: local Function(Class is c){
+		program:getClasses():each(action: local Function(ClassInfo is c){
 			self:lintClass(classDef: c, issues: issues);
 		});
 

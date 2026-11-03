@@ -114,7 +114,7 @@ Run the linter using the `--lint` (or `-l`) flag:
 
 To run the linter across all project examples and standard library files:
 ```bash
-for f in examples/*.spec lib/**/*.spec; do
+for f in examples/*.spec tests/*.spec lib/**/*.spec; do
 	./spec --lint "$f"
 done
 ```
@@ -166,5 +166,6 @@ The syntax definition provides:
 | 📚 **Documentation Portal** | Docs index | [docs/README.md](../README.md) |
 | 📖 **Language Guide** | Syntax, types, and control flow | [docs/language/README.md](../language/README.md) |
 | 📦 **Standard Packages** | Standard library API reference | [docs/packages/README.md](../packages/README.md) |
-| 📂 **Examples** | Code samples and tests | [examples/](../../examples) |
+| 📂 **Examples** | Demo programs | [examples/](../../examples) |
+| 🧪 **Tests** | Positive test suites (`tests/`) and must-fail suites (`tests/negative/`) | [tests/](../../tests) |
 | 📋 **Task Tracking** | Active development status | [TASKS.md](../../TASKS.md) |

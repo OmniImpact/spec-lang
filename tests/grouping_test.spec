@@ -11,9 +11,9 @@
 ##   duplicate declarations instead of being silently dropped.
 ## - All three checks print "[PASS]"; any "[FAIL]" is a regression.
 ##
-## Class Calc never appears as a declaration: it is created from the union
+## ClassInfo Calc never appears as a declaration: it is created from the union
 ## of CalcArithmetic and CalcText below.
-class CalcArithmetic{
+Class is CalcArithmetic{
 
 	replace local Array of String is group: [Calc];
 
@@ -22,7 +22,7 @@ class CalcArithmetic{
 	}
 }
 
-class CalcText{
+Class is CalcText{
 
 	replace local Array of String is group: [Calc];
 
@@ -32,7 +32,7 @@ class CalcText{
 }
 
 ## Same-name opt-in partial: the two Accumulator declarations merge.
-class Accumulator{
+Class is Accumulator{
 
 	replace local Array of String is group: [Accumulator];
 
@@ -43,7 +43,7 @@ class Accumulator{
 	}
 }
 
-class Accumulator{
+Class is Accumulator{
 
 	replace local Array of String is group: [Accumulator];
 
@@ -52,14 +52,14 @@ class Accumulator{
 	}
 }
 
-class GroupingTest{
+Class is GroupingTest{
 
 	replace local Array of String is using: [
 		base:io:Output
 	];
 
 	replace local Function is init(Map of String to String is args){
-		output:line("=== Regression: Class Grouping ===");
+		output:line("=== Regression: ClassInfo Grouping ===");
 
 		# Case 1: no-primary group - Calc exists only as a merged union.
 		local Calc is calc: Calc:init();
@@ -87,7 +87,7 @@ class GroupingTest{
 			output:line("[FAIL] same-name partial: expected 101, got " . acc:total);
 		}
 
-		output:line("=== End Class Grouping Regression ===");
+		output:line("=== End ClassInfo Grouping Regression ===");
 	}
 
 }

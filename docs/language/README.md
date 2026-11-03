@@ -49,7 +49,7 @@
 Every program is organized into classes. The runtime instantiates the class containing an `init` function as the application entry point:
 
 ```spec
-class HelloWorld{
+Class is HelloWorld{
 
 	replace local Array of String is using: [
 		base:struct:Map,
@@ -67,7 +67,7 @@ class HelloWorld{
 Classes can declare one or more generic type parameters using the `of <Type>` or `of <Type1> to <Type2>` clauses:
 
 ```spec
-class Box of T{
+Class is Box of T{
 	local T is val;
 
 	replace local Function is init(T is val){
@@ -83,7 +83,7 @@ class Box of T{
 	}
 }
 
-class Pair of A to B{
+Class is Pair of A to B{
 	local A is first;
 	local B is second;
 
@@ -117,6 +117,24 @@ local Int is val: pair:getSecond();
 ```
 The compiler automatically substitutes generic type parameters across field storage and method return signatures.
 
+### Declaring Classes (`Class is Name`)
+Classes are declared with the same binder grammar as enums and variables — `Type is Name`:
+
+```spec
+Class is Greeter{
+	...
+}
+```
+
+Inheritance and generic parameters follow the declaration name:
+
+```spec
+Class is EnglishGreeter extends Greeter { ... }
+Class of T is Box { ... }
+```
+
+Because declarations are type-level constructs, the reflection descriptor type was renamed `base:reflect:Class` → `base:reflect:ClassInfo`; the lowercase `class` keyword has been retired and files using it receive a pointed syntax error.
+
 ### Variables & Declarations
 Variables are declared using `<Modifiers> <Type> is <name>: <initial_value>;`:
 
@@ -130,7 +148,42 @@ local String is greeting: "Welcome";
 Methods and functions declare their signatures using the `Function` type:
 - **Void / Default return**: `Function is <name>(<Params>)` (e.g. `replace local Function is init(...)`).
 - **Typed return**: `Function of <ReturnType> is <name>(<Params>)` (e.g. `Function of Int is add(...)`).
-- Modifiers include `local` (scoped to class) and `replace` (overriding an inherited member).
+- Modifiers include `local` (scoped to class), `replace` (overriding an inherited member), and `merge` (data-structure-aware override for fields).
+- **`merge`** is the data-structure-aware counterpart of `replace`: valid on fields whose type supports merging (currently `Array`), it folds the ancestor's constant array literal and the child's into one — parent items first, then child items — satisfying the override requirement without `replace`:
+
+```spec
+Class is MergeChild extends MergeBase{
+	merge local Array of String is using: [base:struct:Array];
+	merge local Array of String is tags: ["extended"];
+}
+```
+
+`merge` is folded during type checking (the merge ceases to exist before code generation); it is rejected on non-mergeable types.
+
+#### Function Merge (Delegation)
+
+`merge` on a method composes with the parent's *behavior*: the method must contain a
+**forward statement** — a bare argument list — that delegates to the nearest parent
+implementation. Arguments may be constants or derived from the method's parameters:
+
+```spec
+Class is ChildLogger extends LoggerBase{
+	merge local Function of Int is add(Int is a, Int is b){
+		local Int is bumped: a + 100;
+		(bumped, b);
+	}
+}
+```
+
+- The forward's value is returned implicitly for value-returning parents.
+- **Partial forwards** (fewer arguments than the parent's parameters) must name each
+  argument; omitted parameters fall back to their declared defaults: `(n: n);`
+- The parent must be concrete (an abstract parent method is a compile error).
+- Delegation chains compose: each `merge` forwards to the nearest parent implementation.
+- `merge` also chains constructors: `merge local Function is init(String is tag){ (tag); }`
+- Because a forward calls the parent directly, merge overrides are excluded from
+  base-typed virtual dispatch: calling through a base-typed reference runs the parent
+  body (documented static-dispatch semantics).
 
 ```spec
 # Explicit return type
@@ -148,7 +201,7 @@ Function is logMessage(String is msg){
 Constructors can initialize instance fields directly from parameter lists using the `self:field` parameter shorthand:
 
 ```spec
-class Issue{
+Class is Issue{
 	Int is line;
 	Boolean is isWarning;
 	String is message;
@@ -317,7 +370,7 @@ to; at load time the Loader merges all fragments into a single class:
 
 ```spec
 ## lib/compiler/CodeGenerator_Expr.spec
-class CodeGeneratorExpressions{
+Class is CodeGeneratorExpressions{
 
 	replace local Array of String is group: [CodeGenerator];
 
@@ -582,7 +635,7 @@ Spec does not include primitive `while` or `break` keywords in its grammar. Inst
 ### Pure Loop Decoupling
 Loops in Spec are non-blocking, decoupled state machines:
 ```spec
-class CounterLoop extends Loop{
+Class is CounterLoop extends Loop{
 	local Int is count: 0;
 
 	replace Function of Boolean is evaluate(){
@@ -617,7 +670,7 @@ replace Function of Boolean is iteration(LoopControl is control){
 ### Event-Driven Non-Blocking Input
 Interactive console I/O delegates to event handlers rather than freezing thread execution:
 ```spec
-class ActionHandler extends InputHandler{
+Class is ActionHandler extends InputHandler{
 	replace Function is onInput(String is action){
 		output:line("User chose: " . action);
 	}
@@ -636,6 +689,7 @@ Input:prompt(ActionHandler:init());
 | 📚 **Documentation Portal** | Docs index | [docs/README.md](../README.md) |
 | 📦 **Standard Packages** | Standard library API reference | [docs/packages/README.md](../packages/README.md) |
 | 🛠️ **Tooling Guide** | Compiler CLI, linter, editor plugins | [docs/tooling/README.md](../tooling/README.md) |
-| 📂 **Examples** | Code samples and tests | [examples/](../../examples) |
+| 📂 **Examples** | Demo programs | [examples/](../../examples) |
+| 🧪 **Tests** | Positive and negative test suites | [tests/](../../tests) |
 | 📋 **Task Tracking** | Active development status | [TASKS.md](../../TASKS.md) |
 

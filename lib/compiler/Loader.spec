@@ -2,14 +2,14 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, Linter, TypeChecker, CodeGenerator, Driver, and Loader.
 
 ## Resolves and loads multi-file package imports across the Spec project and standard library.
-class Loader{
+Class is Loader{
 
 	replace local Array of String is using: [
 		base:io:File,
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:reflect:Member,
 		compiler:Token,
 		compiler:Lexer,
@@ -18,7 +18,7 @@ class Loader{
 	];
 
 	local Map of String to String is loadedFiles: Map:init();
-	local Array of Class is loadedClasses: [];
+	local Array of ClassInfo is loadedClasses: [];
 	local Map of String to String is seenClassNames: Map:init();
 	local Array of String is parseErrors: [];
 
@@ -26,7 +26,7 @@ class Loader{
 	local Array of String is groupTargets: [];
 
 	## Group fragments corresponding to [groupTargets] (load order).
-	local Array of Class is groupFragments: [];
+	local Array of ClassInfo is groupFragments: [];
 
 	replace local Function is init(){
 		self:loadedFiles: Map:init();
@@ -41,7 +41,7 @@ class Loader{
 		return self:parseErrors;
 	}
 
-	class PathConvLoop extends Loop{
+	Class is PathConvLoop extends Loop{
 		local String is src;
 		local Int is pos: 0;
 		local String is res: "";
@@ -116,7 +116,7 @@ class Loader{
 				"lib/base/reflect/Type.spec",
 				"lib/base/reflect/Parameter.spec",
 				"lib/base/reflect/Member.spec",
-				"lib/base/reflect/Class.spec"
+				"lib/base/reflect/ClassInfo.spec"
 			];
 			is "base:struct:*": [
 				"lib/base/struct/Array.spec",
@@ -174,7 +174,7 @@ class Loader{
 			});
 		}
 
-		prog:getClasses():each(action: local Function(Class is c){
+		prog:getClasses():each(action: local Function(ClassInfo is c){
 			c:getMembers():each(action: local Function(Member is m){
 				m:setSourceFile(file: filePath);
 			});
@@ -188,7 +188,7 @@ class Loader{
 				}
 			} else {
 				if (gName == c:getName()) {
-					local Class is existing: self:findLoadedClass(name: c:getName());
+					local ClassInfo is existing: self:findLoadedClass(name: c:getName());
 					if (existing:getName() != "") {
 						self:mergeFragmentInto(target: existing, frag: c);
 					}
@@ -200,8 +200,8 @@ class Loader{
 
 	## Gathers and loads all `using` imports declared in a class definition.
 	##
-	## @param c: Target [Class] definition.
-	replace local Function is collectImportsFromClass(Class is c){
+	## @param c: Target [ClassInfo] definition.
+	replace local Function is collectImportsFromClass(ClassInfo is c){
 		c:getMembers():each(action: local Function(Member is m){
 			if (m:getName() == "using" && m:getHasInit()) {
 				local Expression is initExpr: m:getInitExpr();
@@ -233,9 +233,9 @@ class Loader{
 	## naming the class this fragment merges into. Fragments must not declare
 	## `extends` (enums included). An empty string means "not a fragment".
 	##
-	## @param c: Candidate [Class] definition.
+	## @param c: Candidate [ClassInfo] definition.
 	## @return: Group target class name, or empty string when not a fragment.
-	replace local Function of String is groupTargetOf(Class is c){
+	replace local Function of String is groupTargetOf(ClassInfo is c){
 		local Array of Member is members: c:getMembers();
 		local Int is idx: 0;
 		local String is target: "";
@@ -249,7 +249,7 @@ class Loader{
 					local Expression is initExpr: m:getInitExpr();
 					if (initExpr:getKind() == "ARRAY") {
 						if (initExpr:arrayItems:length() != 1) {
-							self:parseErrors:add(item: "  [LoadError] Class '" . c:getName() . "' declares a group with " . initExpr:arrayItems:length() . " entries; exactly one target is required.");
+							self:parseErrors:add(item: "  [LoadError] ClassInfo '" . c:getName() . "' declares a group with " . initExpr:arrayItems:length() . " entries; exactly one target is required.");
 						} else {
 							local Expression is firstItem: initExpr:arrayItems:get(index: 0);
 							target: firstItem:stringValue;
@@ -269,17 +269,17 @@ class Loader{
 
 	## Finds an already-loaded class by name.
 	##
-	## @param name: Class name to locate.
-	## @return: The loaded [Class], or an empty-named Class when absent.
-	replace local Function of Class is findLoadedClass(String is name){
+	## @param name: ClassInfo name to locate.
+	## @return: The loaded [ClassInfo], or an empty-named ClassInfo when absent.
+	replace local Function of ClassInfo is findLoadedClass(String is name){
 		local Int is idx: 0;
-		local Class is res: Class:init(name: "", baseClass: "", members: []);
+		local ClassInfo is res: ClassInfo:init(name: "", baseClass: "", members: []);
 		While:condition(
 			evaluate: local Function of Boolean(){
 				return idx < self:loadedClasses:length() && res:getName() == "";
 			},
 			iteration: local Function of Boolean(){
-				local Class is c: self:loadedClasses:get(index: idx);
+				local ClassInfo is c: self:loadedClasses:get(index: idx);
 				if (c:getName() == name) {
 					res: c;
 				}
@@ -293,10 +293,10 @@ class Loader{
 	## Finds a named member on a class (empty-named members such as nested
 	## classes are ignored).
 	##
-	## @param target: [Class] whose members are searched.
+	## @param target: [ClassInfo] whose members are searched.
 	## @param name: Member name to locate.
 	## @return: The existing [Member], or an empty-named Member when absent.
-	replace local Function of Member is findMemberNamed(Class is target, String is name){
+	replace local Function of Member is findMemberNamed(ClassInfo is target, String is name){
 		if (name == "") {
 			return Member:init(kind: "");
 		}
@@ -326,9 +326,9 @@ class Loader{
 	## target's `using` array (or transplants the member when the target has
 	## none), strips `group` declarations, and enforces the single-`init` rule.
 	##
-	## @param target: Merge destination [Class].
-	## @param frag: Group fragment [Class] to merge in.
-	replace local Function is mergeFragmentInto(Class is target, Class is frag){
+	## @param target: Merge destination [ClassInfo].
+	## @param frag: Group fragment [ClassInfo] to merge in.
+	replace local Function is mergeFragmentInto(ClassInfo is target, ClassInfo is frag){
 		if (target:getBaseClass() == "Enum") {
 			self:parseErrors:add(item: "  [LoadError] Group target '" . target:getName() . "' is an Enum; grouping is only supported for classes.");
 			return;
@@ -409,9 +409,9 @@ class Loader{
 
 	## Removes members with the given name from a class.
 	##
-	## @param target: [Class] to modify.
+	## @param target: [ClassInfo] to modify.
 	## @param name: Member name to strip.
-	replace local Function is stripMemberNamed(Class is target, String is name){
+	replace local Function is stripMemberNamed(ClassInfo is target, String is name){
 		local Array of Member is members: target:getMembers();
 		local Int is idx: members:length() - 1;
 		While:condition(
@@ -431,15 +431,15 @@ class Loader{
 
 	## Removes a class from the loaded registry (used to dissolve fragments).
 	##
-	## @param c: [Class] to remove.
-	replace local Function is removeClassFromLoaded(Class is c){
+	## @param c: [ClassInfo] to remove.
+	replace local Function is removeClassFromLoaded(ClassInfo is c){
 		local Int is idx: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){
 				return idx < self:loadedClasses:length();
 			},
 			iteration: local Function of Boolean(){
-				local Class is cur: self:loadedClasses:get(index: idx);
+				local ClassInfo is cur: self:loadedClasses:get(index: idx);
 				if (cur == c) {
 					self:loadedClasses:removeAt(index: idx, default: c);
 					return false;
@@ -464,10 +464,10 @@ class Loader{
 			},
 			iteration: local Function of Boolean(){
 				local String is gName: self:groupTargets:get(index: idx);
-				local Class is frag: self:groupFragments:get(index: idx);
-				local Class is target: self:findLoadedClass(name: gName);
+				local ClassInfo is frag: self:groupFragments:get(index: idx);
+				local ClassInfo is target: self:findLoadedClass(name: gName);
 				if (target:getName() == "") {
-					target: Class:init(name: gName, baseClass: "", members: []);
+					target: ClassInfo:init(name: gName, baseClass: "", members: []);
 					self:loadedClasses:add(item: target);
 				}
 				if (target != frag) {

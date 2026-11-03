@@ -2,7 +2,7 @@
 # Phase 6 Pure Spec Code Generator Test Suite
 ##
 
-class Phase6CodegenTest{
+Class is Phase6CodegenTest{
 
 	replace local Array of String is using: [
 		base:io:*,

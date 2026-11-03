@@ -1,4 +1,4 @@
-class FileAsyncTest{
+Class is FileAsyncTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,

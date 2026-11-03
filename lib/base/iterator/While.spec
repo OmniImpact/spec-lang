@@ -2,7 +2,7 @@
 #! Provides decoupled, stateful iterator abstractions and execution runners.
 
 ## Standard iteration runner that executes a [Loop] instance to completion.
-class While{
+Class is While{
 
 	## Repeatedly evaluates and steps [loop] until termination or halt.
 	##

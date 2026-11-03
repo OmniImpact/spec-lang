@@ -2,7 +2,7 @@
 #! Demonstrates ANSI 256-color helpers, TrueColor gradients, inline Output:print, and UTF-8 block characters.
 
 ## Verification suite for ANSI 256-color and special character console output.
-class AnsiColorTest{
+Class is AnsiColorTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,

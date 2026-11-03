@@ -1,4 +1,4 @@
-class Phase2Test{
+Class is Phase2Test{
 
 	replace local Array of String is using: [
 		base:struct:Array,

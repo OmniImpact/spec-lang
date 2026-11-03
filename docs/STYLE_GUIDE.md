@@ -49,7 +49,7 @@ This document establishes the official code style conventions, architectural idi
 
 ```spec
 # Correct (Tabs)
-class Player{
+Class is Player{
 	local Int is health: 100;
 
 	replace local Function of Boolean is isAlive(){
@@ -62,7 +62,7 @@ class Player{
 Spec follows the **One True Brace Style (OTBS)**:
 * Opening braces `{` sit on the **same line** as the declaration, following the class name, method signature, or control structure:
   ```spec
-  class Player{
+  Class is Player{
   replace local Function is takeDamage(Int is amount){
   if (amount > 0) {
   ```
@@ -129,7 +129,7 @@ local String is content: File:read(path: "save.dat", default: "");
 ### Decoupled Iteration
 Loop logic is packaged inside dedicated loop classes extending `base:iterator:Loop`:
 ```spec
-class CountLoop extends Loop{
+Class is CountLoop extends Loop{
 	local Int is count: 0;
 	local Int is limit: 10;
 
@@ -151,7 +151,7 @@ While:run(loop: CountLoop:init());
 ### Imports & Package Structure
 * Declare `using` at the top of the primary class definition:
   ```spec
-  class MyModule{
+  Class is MyModule{
 
   	replace local Array of String is using: [
   		base:io:*,
@@ -214,7 +214,7 @@ Enclosing an identifier in square brackets automatically generates cross-referen
 ## Encapsulates source file provenance, line numbers, and column offsets.
 ##
 ## Used across compiler diagnostics, tokens, and runtime stack frames.
-class SourceLocation{
+Class is SourceLocation{
 
 	## File path or module identifier.
 	local String is file: "";

@@ -2,7 +2,7 @@
 #! Provides terminal console output, interactive prompts, and file operations.
 
 ## Manages standard output console stream printing.
-class Output{
+Class is Output{
 
 	## Writes a string representation to standard output followed by a newline.
 	##

@@ -2,7 +2,7 @@
 #! Provides ANSI terminal escape sequences, 16/256/TrueColor helpers, and cursor controls.
 
 ## Provides ANSI escape sequences for 16-color, 256-color, 24-bit TrueColor, and terminal cursor control.
-class Ansi{
+Class is Ansi{
 
 	## Returns the raw ASCII ESC character (`0x1B` / `\e`).
 	##

@@ -2,14 +2,14 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, and Linter.
 
 ## Recursive-descent AST parser converting token streams into [base:meta:ProgramNode] trees.
-class Parser{
+Class is Parser{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
 		base:reflect:Type,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:reflect:Member,
 		base:reflect:Parameter,
 		compiler:Token,
@@ -22,7 +22,7 @@ class Parser{
 	local String is sourceFile: "";
 	local Array of String is errors: [];
 
-	class EnumVariantsLoop extends Loop{
+	Class is EnumVariantsLoop extends Loop{
 		local Parser is parser;
 		local Array of Member is members;
 		local String is backingType;
@@ -79,11 +79,11 @@ class Parser{
 		}
 	}
 
-	class ProgramParseLoop extends Loop{
+	Class is ProgramParseLoop extends Loop{
 		local Parser is parser;
-		local Array of Class is classes;
+		local Array of ClassInfo is classes;
 
-		replace local Function is init(Parser is parser, Array of Class is classes){
+		replace local Function is init(Parser is parser, Array of ClassInfo is classes){
 			self:parser: parser;
 			self:classes: classes;
 		}
@@ -102,7 +102,7 @@ class Parser{
 		}
 	}
 
-	class ClassMembersLoop extends Loop{
+	Class is ClassMembersLoop extends Loop{
 		local Parser is parser;
 		local Array of Member is members;
 
@@ -121,7 +121,7 @@ class Parser{
 		}
 	}
 
-	class BaseClassesLoop extends Loop{
+	Class is BaseClassesLoop extends Loop{
 		local Parser is parser;
 		local Array of String is bases;
 
@@ -145,7 +145,7 @@ class Parser{
 		}
 	}
 
-	class BlockStatementsLoop extends Loop{
+	Class is BlockStatementsLoop extends Loop{
 		local Parser is parser;
 		local Array of Statement is stmts;
 
@@ -164,7 +164,7 @@ class Parser{
 		}
 	}
 
-	class WhenConditionsLoop extends Loop{
+	Class is WhenConditionsLoop extends Loop{
 		local Parser is parser;
 		local Array of Expression is conditions;
 
@@ -187,7 +187,7 @@ class Parser{
 		}
 	}
 
-	class WhenArmsLoop extends Loop{
+	Class is WhenArmsLoop extends Loop{
 		local Parser is parser;
 		local Array of WhenArm is arms;
 
@@ -256,7 +256,7 @@ class Parser{
 		}
 	}
 
-	class ArrayItemsLoop extends Loop{
+	Class is ArrayItemsLoop extends Loop{
 		local Parser is parser;
 		local Array of Expression is items;
 
@@ -279,7 +279,7 @@ class Parser{
 		}
 	}
 
-	class MapItemsLoop extends Loop{
+	Class is MapItemsLoop extends Loop{
 		local Parser is parser;
 		local Array of Expression is keys;
 		local Array of Expression is values;
@@ -308,7 +308,7 @@ class Parser{
 		}
 	}
 
-	class ModifierLoop extends Loop{
+	Class is ModifierLoop extends Loop{
 		local Parser is parser;
 		local Array of String is mods;
 
@@ -318,7 +318,7 @@ class Parser{
 		}
 
 		replace local Function of Boolean is evaluate(){
-			return parser:check(kind: "KEYWORD", value: "local") || parser:check(kind: "KEYWORD", value: "replace");
+			return parser:check(kind: "KEYWORD", value: "local") || parser:check(kind: "KEYWORD", value: "replace") || parser:check(kind: "KEYWORD", value: "merge");
 		}
 
 		replace local Function of Boolean is iteration(LoopControl is control){
@@ -328,7 +328,7 @@ class Parser{
 		}
 	}
 
-	class ParamLoop extends Loop{
+	Class is ParamLoop extends Loop{
 		local Parser is parser;
 		local Array of Parameter is params;
 
@@ -385,7 +385,7 @@ class Parser{
 		}
 	}
 
-	class ArgLoop extends Loop{
+	Class is ArgLoop extends Loop{
 		local Parser is parser;
 		local Array of NamedArg is args;
 
@@ -431,7 +431,7 @@ class Parser{
 		}
 	}
 
-	class PostfixLoop extends Loop{
+	Class is PostfixLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -528,7 +528,7 @@ class Parser{
 		}
 	}
 
-	class LogicalOrLoop extends Loop{
+	Class is LogicalOrLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -555,7 +555,7 @@ class Parser{
 		}
 	}
 
-	class LogicalAndLoop extends Loop{
+	Class is LogicalAndLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -582,7 +582,7 @@ class Parser{
 		}
 	}
 
-	class EqualityLoop extends Loop{
+	Class is EqualityLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -614,7 +614,7 @@ class Parser{
 		}
 	}
 
-	class RelationalLoop extends Loop{
+	Class is RelationalLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -643,7 +643,7 @@ class Parser{
 		}
 	}
 
-	class ConcatLoop extends Loop{
+	Class is ConcatLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -670,7 +670,7 @@ class Parser{
 		}
 	}
 
-	class AdditiveLoop extends Loop{
+	Class is AdditiveLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -699,7 +699,7 @@ class Parser{
 		}
 	}
 
-	class MultiplicativeLoop extends Loop{
+	Class is MultiplicativeLoop extends Loop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -860,8 +860,8 @@ class Parser{
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
-		if (self:check(kind: "KEYWORD", value: "class")) {
-			local Class is nested: self:parseClass();
+		if (self:check(kind: "IDENTIFIER", value: "Class")) {
+			local ClassInfo is nested: self:parseClass();
 			local Member is m: Member:init(kind: "CLASS");
 			m:setLine(line: startLine);
 			m:nestedClass: nested;
@@ -869,7 +869,7 @@ class Parser{
 		}
 
 		if (self:check(kind: "IDENTIFIER", value: "Enum") || self:check(kind: "KEYWORD", value: "Enum")) {
-			local Class is edef: self:parseEnum();
+			local ClassInfo is edef: self:parseEnum();
 			local Member is m: Member:init(kind: "CLASS");
 			m:setLine(line: startLine);
 			m:nestedClass: edef;
@@ -968,10 +968,58 @@ class Parser{
 		return m;
 	}
 
+	## Parses a merge-forward statement: `(arg, name: arg, ...)`.
+	##
+	## An argument beginning with `identifier :` is a named forward argument;
+	## all others are positional. Valid only inside `merge` methods (enforced
+	## by the TypeChecker).
+	##
+	## @param startLine: Source line of the opening parenthesis.
+	## @return: A "FORWARD" [Statement].
+	replace local Function of Statement is parseForwardStatement(Int is startLine){
+		self:advance();
+		local Array of NamedArg is args: [];
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return !self:check(kind: "SYMBOL", value: ")") && !self:check(kind: "EOF", value: "");
+			},
+			iteration: local Function of Boolean(){
+				local String is argName: "";
+				local Token is tok0: self:peekAhead(offset: 0);
+				if (tok0:getKind() == "IDENTIFIER" && self:peekAhead(offset: 1):getValue() == ":") {
+					argName: tok0:getValue();
+					self:advance();
+					self:advance();
+				}
+				local Expression is val: self:parseExpression();
+				args:add(item: NamedArg:init(name: argName, value: val));
+				if (self:check(kind: "SYMBOL", value: ",")) {
+					self:advance();
+					return true;
+				}
+				return false;
+			}
+		);
+		self:matchToken(kind: "SYMBOL", value: ")");
+		if (self:check(kind: "SYMBOL", value: ";")) {
+			self:advance();
+		}
+		local Statement is s: Statement:init(kind: "FORWARD");
+		s:setLine(line: startLine);
+		s:forwardArgs: args;
+		return s;
+	}
+
 	replace local Function of Statement is parseStatement(){
 		local Int is startLine: self:peek():getLine();
-		if (self:check(kind: "KEYWORD", value: "class")) {
-			local Class is cls: self:parseClass();
+
+		# Merge-forward statement: `(arg, name: arg, ...)`.
+		if (self:check(kind: "SYMBOL", value: "(")) {
+			return self:parseForwardStatement(startLine: startLine);
+		}
+
+		if (self:check(kind: "IDENTIFIER", value: "Class")) {
+			local ClassInfo is cls: self:parseClass();
 			local Statement is s: Statement:init(kind: "CLASS");
 			s:setLine(line: startLine);
 			s:nestedClass: cls;
@@ -979,7 +1027,7 @@ class Parser{
 		}
 
 		if (self:check(kind: "IDENTIFIER", value: "Enum") || self:check(kind: "KEYWORD", value: "Enum")) {
-			local Class is edef: self:parseEnum();
+			local ClassInfo is edef: self:parseEnum();
 			local Statement is s: Statement:init(kind: "CLASS");
 			s:setLine(line: startLine);
 			s:nestedClass: edef;
@@ -1350,8 +1398,13 @@ class Parser{
 		return self:parseLogicalOr();
 	}
 
-	replace local Function of Class is parseClass(){
-		self:matchToken(kind: "KEYWORD", value: "class");
+	replace local Function of ClassInfo is parseClass(){
+		# Canonical declaration: `Class is Name`.
+		if (self:check(kind: "IDENTIFIER", value: "class")) {
+			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class is Name'.");
+		}
+		self:advance();
+		self:matchToken(kind: "KEYWORD", value: "is");
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
 
@@ -1378,7 +1431,7 @@ class Parser{
 		While:run(loop: ClassMembersLoop:init(parser: self, members: members));
 		self:matchToken(kind: "SYMBOL", value: "}");
 
-		local Class is c: Class:init(name: name, baseClass: "", members: members);
+		local ClassInfo is c: ClassInfo:init(name: name, baseClass: "", members: members);
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: self:sourceFile);
 		c:setTypeParams(params: typeParams);
@@ -1386,7 +1439,7 @@ class Parser{
 		return c;
 	}
 
-	replace local Function of Class is parseEnum(){
+	replace local Function of ClassInfo is parseEnum(){
 		self:advance();
 		local String is backingType: "Int";
 		if (self:check(kind: "KEYWORD", value: "of")) {
@@ -1406,7 +1459,7 @@ class Parser{
 			self:advance();
 		}
 
-		local Class is c: Class:init(name: name, baseClass: "Enum", members: members);
+		local ClassInfo is c: ClassInfo:init(name: name, baseClass: "Enum", members: members);
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: self:sourceFile);
 		c:withBaseClasses(name: name, baseClasses: ["Enum"], members: members);
@@ -1417,7 +1470,7 @@ class Parser{
 	##
 	## @return: Root [ProgramNode] containing all parsed class definitions.
 	replace local Function of ProgramNode is parseProgram(){
-		local Array of Class is classes: [];
+		local Array of ClassInfo is classes: [];
 		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
 		return ProgramNode:init(classes: classes);
 	}

@@ -31,7 +31,7 @@ Enum is Priority {
 	HIGH
 }
 
-class RegressionEnumValueTest{
+Class is RegressionEnumValueTest{
 
 	replace local Array of String is using: [
 		base:io:Output

@@ -13,7 +13,7 @@ Enum of String is TokenKind {
 }
 
 ## Represents a lexical token emitted by the compiler [Lexer].
-class Token{
+Class is Token{
 
 	replace local Array of String is using: [
 		base:sys:SourceLocation

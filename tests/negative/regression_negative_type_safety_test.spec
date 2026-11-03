@@ -39,29 +39,29 @@ Enum is TransportMode {
 	BIKE
 }
 
-class NarrowFloatField{
+Class is NarrowFloatField{
 	## Violation 1: Float literal silently narrowed into an Int field.
 	local Int is samples: 3.7;
 }
 
-class ArrayElementMismatch{
+Class is ArrayElementMismatch{
 	## Violation 2: String elements silently accepted by an Array of Int field.
 	local Array of Int is flags: ["on", "off"];
 }
 
-class MapValueMismatch{
+Class is MapValueMismatch{
 	## Violation 3: String values silently accepted by a Map of String to Int field.
 	local Map of String to Int is ages: ["ana": "ten"];
 }
 
-class UndefinedIdentifier{
+Class is UndefinedIdentifier{
 	## Violation 4: typoed identifier silently inferred as Any.
 	replace local Function is init(Map of String to String is args){
 		local Int is total: untrackedTotal + 1;
 	}
 }
 
-class NonBooleanConditionControl{
+Class is NonBooleanConditionControl{
 	## Control (already caught today): condition must be a Boolean.
 	replace local Function is init(Map of String to String is args){
 		if (1) {
@@ -70,7 +70,7 @@ class NonBooleanConditionControl{
 	}
 }
 
-class UnassignedFieldRead{
+Class is UnassignedFieldRead{
 	replace local Array of String is using: [
 		base:io:Output
 	];
@@ -85,7 +85,7 @@ class UnassignedFieldRead{
 	}
 }
 
-class CallArgumentMismatch{
+Class is CallArgumentMismatch{
 	## Violation 7: call-site argument types were not checked, so a String
 	## argument silently reached an Int parameter and was truncated at the
 	## C level with no diagnostic.
@@ -98,7 +98,7 @@ class CallArgumentMismatch{
 	}
 }
 
-class IncompleteWhenBranches{
+Class is IncompleteWhenBranches{
 	## Violation 8: 'when' over enum TransportMode covers only CAR and omits
 	## BIKE with no else arm. Exhaustiveness must be enforced at compile time.
 	replace local Function of String is describe(TransportMode is mode){

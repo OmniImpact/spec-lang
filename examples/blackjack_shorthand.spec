@@ -5,7 +5,7 @@ Enum is RoundOutcome {
 	PUSH
 }
 
-class Blackjack{
+Class is Blackjack{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -29,7 +29,7 @@ class Blackjack{
 	# =========================================================================
 	# Deck Builder Loop (Shorthand Syntax: Batch Add Array & Positional Init)
 	# =========================================================================
-	class BuildDeckLoop extends Loop{
+	Class is BuildDeckLoop extends Loop{
 		local Array of Int is targetDeck;
 		local Int is currentVal: 1;
 
@@ -52,7 +52,7 @@ class Blackjack{
 	# =========================================================================
 	# Dealer's Turn Loop (Shorthand: Positional Args & Automated Lifecycle)
 	# =========================================================================
-	class DealerTurnLoop extends Loop{
+	Class is DealerTurnLoop extends Loop{
 		local Blackjack is game;
 
 		replace init(Blackjack is game){
@@ -76,7 +76,7 @@ class Blackjack{
 	# =========================================================================
 	# Dealer Turn Completion Callback
 	# =========================================================================
-	class DealerTurnCompleteCallback extends LoopCallback{
+	Class is DealerTurnCompleteCallback extends LoopCallback{
 		local Blackjack is game;
 
 		replace init(Blackjack is game){
@@ -92,7 +92,7 @@ class Blackjack{
 	# =========================================================================
 	# Interactive Input Handler
 	# =========================================================================
-	class PlayerTurnHandler extends InputHandler{
+	Class is PlayerTurnHandler extends InputHandler{
 		local Blackjack is game;
 
 		replace init(Blackjack is game){
@@ -146,14 +146,14 @@ class Blackjack{
 	}
 
 	Function of Int is handValue(Array of Int is hand){
-		class ScoreAccumulator{
+		Class is ScoreAccumulator{
 			local Int is total: 0;
 			local Int is aceCount: 0;
 		}
 		local ScoreAccumulator is acc: ScoreAccumulator:init();
 
 		# Tally hand cards
-		class ScoreLoop extends Loop{
+		Class is ScoreLoop extends Loop{
 			local Array of Int is hand;
 			local ScoreAccumulator is acc;
 			local Int is idx: 0;
@@ -182,7 +182,7 @@ class Blackjack{
 		While:run(ScoreLoop:init(hand, acc), LoopControl:init());
 
 		# Adjust Aces if total exceeds 21
-		class AceAdjustLoop extends Loop{
+		Class is AceAdjustLoop extends Loop{
 			local ScoreAccumulator is acc;
 
 			replace init(ScoreAccumulator is acc){

@@ -5,7 +5,7 @@
 ##
 ## Encapsulates the continuation condition in [evaluate] and loop body execution
 ## in [iteration]. Terminated when [evaluate] returns `false` or [control:stop] is called.
-class Loop{
+Class is Loop{
 
 	## Evaluates whether another loop iteration should proceed.
 	##

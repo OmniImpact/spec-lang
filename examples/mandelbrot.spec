@@ -3,7 +3,7 @@
 #! trigonometric cube palettes, and Unicode block / half-block characters.
 
 ## Renders the Mandelbrot set to the console using 256-color ANSI sequences and Unicode blocks.
-class Mandelbrot{
+Class is Mandelbrot{
 
 	replace local Array of String is using: [
 		base:struct:Array,

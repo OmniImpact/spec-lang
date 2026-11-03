@@ -2,7 +2,7 @@
 #! Provides decoupled, stateful iterator abstractions and execution runners.
 
 ## Callback interface invoked when a [Loop] finishes execution via [LoopControl].
-class LoopCallback{
+Class is LoopCallback{
 
 	replace local Array of String is using: [
 		base:iterator:LoopControl

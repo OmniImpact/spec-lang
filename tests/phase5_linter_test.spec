@@ -1,10 +1,13 @@
-class Phase5LinterTest{
+Class is Phase5LinterTest{
 
 	replace local Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:iterator:*,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*,
 		compiler:Token,
 		compiler:Lexer,

@@ -2,7 +2,7 @@
 #! Provides runtime type information and structural reflection.
 
 ## Represents a primitive or parameterized type descriptor in the Spec type system.
-class Type{
+Class is Type{
 
 	replace local Array of String is using: [
 		base:struct:Array

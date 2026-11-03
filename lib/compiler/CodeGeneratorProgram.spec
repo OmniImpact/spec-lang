@@ -3,7 +3,7 @@
 #! Group fragment merged into CodeGenerator at load time (see Loader).
 
 ## Statement, method, entry-point, and whole-program C generation.
-class CodeGeneratorProgram{
+Class is CodeGeneratorProgram{
 
 	## Load-time grouping: members merge into CodeGenerator.
 	replace local Array of String is group: [CodeGenerator];
@@ -12,7 +12,10 @@ class CodeGeneratorProgram{
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
@@ -67,7 +70,7 @@ class CodeGeneratorProgram{
 				}
 				local String is valC: self:generateExpression(expr: stmt:assignValue);
 				local String is lhsType: self:inferTargetType(expr: stmt:assignTarget);
-				local Class is curCls: self:findClass(name: self:currentClassName);
+				local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 				if (curCls:getTypeParams():indexOf(search: lhsType, default: -1) >= 0) {
 					valC: "(void*)(intptr_t)(" . valC . ")";
 				} else if (lhsType == "String" || lhsType == "string") {
@@ -90,6 +93,30 @@ class CodeGeneratorProgram{
 				out: out . "    }\n";
 				return out;
 			}
+			is "FORWARD": {
+				# Merge-forward: delegate to the nearest parent implementation.
+				local ClassInfo is fwdCls: self:findClass(name: self:currentClassName);
+				local String is dispatchCls: "";
+				fwdCls:getBaseClasses():each(action: local Function(String is baseName){
+					if (dispatchCls == "") {
+						local String is implCls: self:findMethodImplementingClass(className: baseName, methodName: self:currentMethodName, paramCount: -1);
+						if (implCls != "") {
+							dispatchCls: implCls;
+						}
+					}
+				});
+				if (dispatchCls == "") {
+					return "";
+				}
+				local Member is superM: self:lookupMethodMember(className: dispatchCls, methodName: self:currentMethodName);
+				local String is argsC: self:formatCallArguments(className: dispatchCls, methodName: self:currentMethodName, args: stmt:getForwardArgs());
+				local String is callC: dispatchCls . "_" . self:currentMethodName . "((" . dispatchCls . "*)self" . argsC . ")";
+				local String is superRet: self:resolveReturnType(t: superM:getType());
+				if (superRet != "void") {
+					return "    return " . callC . ";\n";
+				}
+				return "    " . callC . ";\n";
+			}
 			is "RETURN": {
 				if (self:inlineReturnLabel != "") {
 					if (stmt:hasReturnExpr && self:inlineReturnVar != "") {
@@ -100,7 +127,7 @@ class CodeGeneratorProgram{
 				}
 				if (stmt:hasReturnExpr) {
 					local String is retC: self:generateExpression(expr: stmt:returnExpr);
-					local Class is curCls: self:findClass(name: self:currentClassName);
+					local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
 						retC: "(void*)(intptr_t)(" . retC . ")";
 					}
@@ -157,11 +184,12 @@ class CodeGeneratorProgram{
 
 	## Generates C code for a method definition.
 	##
-	## @param classDef: Enclosing [Class] definition.
+	## @param classDef: Enclosing [ClassInfo] definition.
 	## @param method: Method [Member] descriptor.
 	## @return: C method implementation string.
-	replace local Function of String is generateMethod(Class is classDef, Member is method){
+	replace local Function of String is generateMethod(ClassInfo is classDef, Member is method){
 		self:inMethod: true;
+		self:currentMethodName: method:getName();
 		self:currentMethodReturnType: self:formatTypeString(t: method:getType());
 		local String is retType: self:resolveReturnType(t: method:getType());
 		if (retType == "void") {
@@ -185,9 +213,26 @@ class CodeGeneratorProgram{
 
 		if (method:getName() != "init") {
 			local Int is paramCount: method:getParameters():length();
-			self:programClasses:each(action: local Function(Class is subCls){
+			self:programClasses:each(action: local Function(ClassInfo is subCls){
 				if (subCls:getName() != classDef:getName() && self:isSubclassOf(subName: subCls:getName(), baseName: classDef:getName())) {
-					local String is implCls: self:findMethodImplementingClass(className: subCls:getName(), methodName: method:getName(), paramCount: paramCount);
+					local MethodMemberLoop is trampMl: MethodMemberLoop:init(members: subCls:getMembers(), methodName: method:getName());
+					While:run(loop: trampMl);
+					local Boolean is isMergeOverride: false;
+					if (trampMl:found) {
+						isMergeOverride: trampMl:res:getModifiers():indexOf(search: "merge", default: -1) >= 0;
+					}
+					local String is implCls: "";
+					if (!isMergeOverride) {
+						implCls: self:findMethodImplementingClass(className: subCls:getName(), methodName: method:getName(), paramCount: paramCount);
+						if (implCls != "") {
+							# A merge implementation must never be entered via base-typed
+							# dispatch: its forward calls back into this base method.
+							local Member is implM: self:lookupMethodMember(className: implCls, methodName: method:getName());
+							if (implM:getName() != "" && implM:getModifiers():indexOf(search: "merge", default: -1) >= 0) {
+								implCls: "";
+							}
+						}
+					}
 					if (implCls != "" && implCls != classDef:getName()) {
 						out: out . "    if (self && self->_type_name && strcmp(self->_type_name, \"" . subCls:getName() . "\") == 0) {\n";
 						if (retType == "void") {
@@ -252,7 +297,7 @@ class CodeGeneratorProgram{
 		return m;
 	}
 
-	replace local Function is collectClassesFromStatement(Statement is stmt, Array of Class is acc){
+	replace local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
 		when (stmt:getKind()) {
 			is "CLASS": {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
@@ -278,7 +323,7 @@ class CodeGeneratorProgram{
 		}
 	}
 
-	replace local Function is collectClasses(Class is c, Array of Class is acc){
+	replace local Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
@@ -301,8 +346,8 @@ class CodeGeneratorProgram{
 	## @param entryClass: Application entry point class name.
 	## @return: Complete C11 source code string.
 	replace local Function of String is generateProgram(ProgramNode is program, String is entryClass){
-		local Array of Class is flattenedClasses: [];
-		program:getClasses():each(action: local Function(Class is c){
+		local Array of ClassInfo is flattenedClasses: [];
+		program:getClasses():each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattenedClasses);
 		});
 		self:programClasses: flattenedClasses;
@@ -312,7 +357,7 @@ class CodeGeneratorProgram{
 		self:allEnumVariants: Map:init();
 		self:allStringBackedEnums: Map:init();
 		self:allTaggedEnums: Map:init();
-		flattenedClasses:each(action: local Function(Class is c){
+		flattenedClasses:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:getName(), value: "true");
 			if (c:getBaseClass() == "Enum") {
 				self:allEnumNames:set(key: c:getName(), value: "true");
@@ -338,7 +383,7 @@ class CodeGeneratorProgram{
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
 		local String is methods: "";
-		flattenedClasses:each(action: local Function(Class is c){
+		flattenedClasses:each(action: local Function(ClassInfo is c){
 			if (!self:isBuiltinClass(name: c:getName())) {
 				self:currentClassName: c:getName();
 				self:fieldTypes: Map:init();

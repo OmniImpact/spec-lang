@@ -1,15 +1,15 @@
 #! Package compiler
 #! Pure Spec compiler implementation: DeclarationGenerator for C11 enums, structs, and forward declarations.
 
-## Emits C11 enum definitions, forward declarations, and struct layouts from AST Class descriptors.
-class DeclarationGenerator{
+## Emits C11 enum definitions, forward declarations, and struct layouts from AST ClassInfo descriptors.
+Class is DeclarationGenerator{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
 		base:reflect:Type,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:reflect:Member,
 		base:reflect:Parameter,
 		compiler:CBackendUtils
@@ -69,7 +69,7 @@ class DeclarationGenerator{
 		return self:cTypeForClass(typeName: t:getName(), typeParams: typeParams);
 	}
 
-	class HasFieldLoop extends Loop{
+	Class is HasFieldLoop extends Loop{
 		local Array of Member is list;
 		local String is name: "";
 		local Int is idx: 0;
@@ -102,7 +102,7 @@ class DeclarationGenerator{
 		return loopInst:found;
 	}
 
-	replace local Function is collectStructFields(Class is c, Array of Class is allClasses, Array of Member is acc){
+	replace local Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is FIELD: {
@@ -114,7 +114,7 @@ class DeclarationGenerator{
 			}
 		});
 		c:getBaseClasses():each(action: local Function(String is baseName){
-			allClasses:each(action: local Function(Class is cand){
+			allClasses:each(action: local Function(ClassInfo is cand){
 				if (cand:getName() == baseName) {
 					self:collectStructFields(c: cand, allClasses: allClasses, acc: acc);
 				}
@@ -122,10 +122,10 @@ class DeclarationGenerator{
 		});
 	}
 
-	replace local Function of String is generateEnums(Array of Class is classes){
+	replace local Function of String is generateEnums(Array of ClassInfo is classes){
 		local String is out: "/* Enum Definitions */\n";
 
-		classes:each(action: local Function(Class is c){
+		classes:each(action: local Function(ClassInfo is c){
 			if (c:getBaseClass() == "Enum") {
 				local String is name: c:getName();
 				if (self:allTaggedEnums:has(key: name)) {
@@ -233,10 +233,10 @@ class DeclarationGenerator{
 		return out;
 	}
 
-	replace local Function of String is generateForwardDeclarations(Array of Class is classes){
+	replace local Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
 		local String is out: "/* Forward Declarations */\n";
 
-		classes:each(action: local Function(Class is c){
+		classes:each(action: local Function(ClassInfo is c){
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				out: out . "typedef struct " . c:getName() . " " . c:getName() . ";\n";
 				out: out . c:getName() . "* " . c:getName() . "_new(void);\n";
@@ -251,7 +251,7 @@ class DeclarationGenerator{
 		});
 		out: out . "\n";
 
-		classes:each(action: local Function(Class is c){
+		classes:each(action: local Function(ClassInfo is c){
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				local Array of String is tps: c:getTypeParams();
 				c:getMembers():each(action: local Function(Member is m){
@@ -278,10 +278,10 @@ class DeclarationGenerator{
 		return out;
 	}
 
-	replace local Function of String is generateStructs(Array of Class is classes){
+	replace local Function of String is generateStructs(Array of ClassInfo is classes){
 		local String is out: "/* Struct Layouts */\n";
 
-		classes:each(action: local Function(Class is c){
+		classes:each(action: local Function(ClassInfo is c){
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				local Array of String is tps: c:getTypeParams();
 				out: out . "struct " . c:getName() . " {\n";

@@ -15,7 +15,7 @@ Enum is Option {
 }
 
 ## Generic single-value container class demonstrating user-defined generic type parameters.
-class Box of T{
+Class is Box of T{
 
 	## Stored value of generic type T.
 	local T is val;
@@ -44,7 +44,7 @@ class Box of T{
 }
 
 ## Generic pair container class demonstrating multi-parameter user-defined generics.
-class Pair of A to B{
+Class is Pair of A to B{
 
 	## First item in pair.
 	local A is first;
@@ -78,7 +78,7 @@ class Pair of A to B{
 }
 
 ## Main test suite validating next-generation language features.
-class NextGenFeaturesTest{
+Class is NextGenFeaturesTest{
 
 	replace local Array of String is using: [
 		base:io:*,
@@ -222,9 +222,9 @@ class NextGenFeaturesTest{
 		output:line("Status code: " . statusPair:getFirst() . ", text: " . statusPair:getSecond());
 	}
 
-	## Verifies Feature 6: First-Class Capturing Closures and Direct Function Invocation.
+	## Verifies Feature 6: First-ClassInfo Capturing Closures and Direct Function Invocation.
 	replace local Function is testClosuresAndDirectInvocation(){
-		output:line("--- Feature 6: First-Class Capturing Closures & Direct Invocation ---");
+		output:line("--- Feature 6: First-ClassInfo Capturing Closures & Direct Invocation ---");
 
 		local Int is factor: 10;
 		local Int is baseline: 5;

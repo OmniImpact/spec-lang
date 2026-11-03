@@ -1,4 +1,4 @@
-class Blackjack{
+Class is Blackjack{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -23,12 +23,12 @@ class Blackjack{
 	local Boolean is roundActive: true;
 
 	# =========================================================================
-	# Internal Class: Deck Builder Loop
+	# Internal ClassInfo: Deck Builder Loop
 	# Demonstrates the refined Iterator Loop lifecycle:
 	#   - evaluate(): called automatically before/after each step to check continuation
 	#   - iteration(control): does the work and returns true (success) or false (error)
 	# =========================================================================
-	class BuildDeckLoop extends Loop{
+	Class is BuildDeckLoop extends Loop{
 		local Array of Int is targetDeck;
 		local Int is currentVal: 1;
 
@@ -54,14 +54,14 @@ class Blackjack{
 	}
 
 	# =========================================================================
-	# Internal Class: Dealer's Turn Loop
+	# Internal ClassInfo: Dealer's Turn Loop
 	# Lifecycle:
 	#   - evaluate() checks if dealer score < 17
 	#   - iteration() draws card and returns true
 	#   - When evaluate() becomes false (dealer >= 17), iterator stops automatically
 	#     and fires the onComplete callback attached to LoopControl
 	# =========================================================================
-	class DealerTurnLoop extends Loop{
+	Class is DealerTurnLoop extends Loop{
 		local Blackjack is game;
 
 		replace local Function is init(Blackjack is game){
@@ -87,10 +87,10 @@ class Blackjack{
 	}
 
 	# =========================================================================
-	# Internal Class: Dealer Turn Completion Callback
+	# Internal ClassInfo: Dealer Turn Completion Callback
 	# Triggered automatically when evaluate() returns false or control is stopped
 	# =========================================================================
-	class DealerTurnCompleteCallback extends LoopCallback{
+	Class is DealerTurnCompleteCallback extends LoopCallback{
 		local Blackjack is game;
 
 		replace local Function is init(Blackjack is game){
@@ -104,10 +104,10 @@ class Blackjack{
 	}
 
 	# =========================================================================
-	# Internal Class: Interactive Input Handler
+	# Internal ClassInfo: Interactive Input Handler
 	# Dispatched asynchronously on user input
 	# =========================================================================
-	class PlayerTurnHandler extends InputHandler{
+	Class is PlayerTurnHandler extends InputHandler{
 		local Blackjack is game;
 
 		replace local Function is init(Blackjack is game){
@@ -156,14 +156,14 @@ class Blackjack{
 	}
 
 	Function of Int is handValue(Array of Int is hand){
-		class ScoreAccumulator{
+		Class is ScoreAccumulator{
 			local Int is total: 0;
 			local Int is aceCount: 0;
 		}
 		local ScoreAccumulator is acc: ScoreAccumulator:init();
 
 		# Loop 1: Tally hand cards
-		class ScoreLoop extends Loop{
+		Class is ScoreLoop extends Loop{
 			local Array of Int is hand;
 			local ScoreAccumulator is acc;
 			local Int is idx: 0;
@@ -195,7 +195,7 @@ class Blackjack{
 		While:run(loop: scoreLoop, control: scoreControl);
 
 		# Loop 2: Downgrade Aces from 11 to 1 if score > 21
-		class AceAdjustLoop extends Loop{
+		Class is AceAdjustLoop extends Loop{
 			local ScoreAccumulator is acc;
 
 			replace local Function is init(ScoreAccumulator is acc){

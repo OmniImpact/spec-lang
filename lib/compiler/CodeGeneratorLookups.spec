@@ -3,7 +3,7 @@
 #! Group fragment merged into CodeGenerator at load time (see Loader).
 
 ## Prelude emission, class/field/method lookup helpers, and when-condition C generation.
-class CodeGeneratorLookups{
+Class is CodeGeneratorLookups{
 
 	## Load-time grouping: members merge into CodeGenerator.
 	replace local Array of String is group: [CodeGenerator];
@@ -12,7 +12,10 @@ class CodeGeneratorLookups{
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
@@ -20,14 +23,14 @@ class CodeGeneratorLookups{
 		return self:prelude:emitRuntime();
 	}
 
-	class ClassSearchLoop extends Loop{
-		local Array of Class is list;
+	Class is ClassSearchLoop extends Loop{
+		local Array of ClassInfo is list;
 		local String is target;
 		local Int is idx: 0;
-		local Class is res;
+		local ClassInfo is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Class is list, String is target){
+		replace local Function is init(Array of ClassInfo is list, String is target){
 			self:list: list;
 			self:target: target;
 			self:idx: 0;
@@ -39,7 +42,7 @@ class CodeGeneratorLookups{
 		}
 
 		replace local Function of Boolean is iteration(LoopControl is c){
-			local Class is cand: self:list:get(index: self:idx);
+			local ClassInfo is cand: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (cand:getName() == self:target) {
 				self:res: cand;
@@ -50,16 +53,16 @@ class CodeGeneratorLookups{
 		}
 	}
 
-	replace local Function of Class is findClass(String is name){
+	replace local Function of ClassInfo is findClass(String is name){
 		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
 		While:run(loop: s);
 		if (s:found) {
 			return s:res;
 		}
-		return Class:init(name: "", baseClass: "", members: []);
+		return ClassInfo:init(name: "", baseClass: "", members: []);
 	}
 
-	class FieldMemberLoop extends Loop{
+	Class is FieldMemberLoop extends Loop{
 		local Array of Member is members;
 		local String is fieldName;
 		local Int is idx: 0;
@@ -96,7 +99,7 @@ class CodeGeneratorLookups{
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}
@@ -116,7 +119,7 @@ class CodeGeneratorLookups{
 		return inherited;
 	}
 
-	class MethodMemberLoop extends Loop{
+	Class is MethodMemberLoop extends Loop{
 		local Array of Member is members;
 		local String is methodName;
 		local Int is idx: 0;
@@ -147,7 +150,7 @@ class CodeGeneratorLookups{
 	}
 
 	replace local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
-		local Class is cls: self:findClass(name: enumName);
+		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:getMembers(), fieldName: variantName);
 		While:run(loop: fl);
 		if (fl:found) {
@@ -215,7 +218,7 @@ class CodeGeneratorLookups{
 		}
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}
@@ -242,7 +245,7 @@ class CodeGeneratorLookups{
 		}
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return Member:init(kind: "");
 		}
@@ -264,7 +267,7 @@ class CodeGeneratorLookups{
 		local Member is m: self:lookupMethodMember(className: className, methodName: methodName);
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		local Array of String is tps: cls:getTypeParams();
 		if (m:getKind() == "METHOD") {
 			local Array of Parameter is params: m:getParameters();
@@ -318,7 +321,7 @@ class CodeGeneratorLookups{
 		if (methodName == "init" && self:allClassNames:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
 		}
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}

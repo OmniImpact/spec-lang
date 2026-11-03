@@ -1,4 +1,4 @@
-class FileManagementTest{
+Class is FileManagementTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,

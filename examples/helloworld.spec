@@ -1,9 +1,9 @@
-class HelloWorld{
+Class is HelloWorld{
 
 	# Scope, Type, "is" binds identifier, ":" is assignment/access, lines end in ;
 	local String is greeting: 'Hello';
 
-	# Imports: "using" is a native Class array property overridden using "replace"
+	# Imports: "using" is a native ClassInfo array property overridden using "replace"
 	replace local Array of String is using: [
 		base:struct:Map,
 		base:io:*

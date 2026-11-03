@@ -1,10 +1,10 @@
-class Phase6LoaderTest{
+Class is Phase6LoaderTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		compiler:Token,
 		compiler:Lexer,
 		compiler:Parser,

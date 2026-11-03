@@ -2,7 +2,7 @@
 #! Concrete Abstract Syntax Tree models for code generation, desugaring, and tooling.
 
 ## Represents a named argument pair in method calls (e.g. `index: 0`).
-class NamedArg{
+Class is NamedArg{
 
 	replace local Array of String is using: [
 		base:meta:AST
@@ -37,7 +37,7 @@ class NamedArg{
 }
 
 ## Represents an expression node in the Spec syntax tree.
-class Expression{
+Class is Expression{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -268,12 +268,12 @@ class Expression{
 }
 
 ## Represents a statement node in the Spec syntax tree.
-class Statement{
+Class is Statement{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:reflect:Type,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:meta:AST
 	];
 
@@ -292,10 +292,13 @@ class Statement{
 	local Boolean is hasElse: false;
 	local Expression is returnExpr;
 	local Boolean is hasReturnExpr: false;
-	local Class is nestedClass;
+	local ClassInfo is nestedClass;
 	local Expression is exprStmt;
 	local Expression is whenSubject;
 	local Array of WhenArm is whenArms;
+
+	## Arguments of a merge-forward statement `(a, name: b)` (kind "FORWARD").
+	local Array of NamedArg is forwardArgs;
 
 	replace local Function is init(String is kind){
 		self:kind: kind;
@@ -330,7 +333,7 @@ class Statement{
 		self:hasReturnExpr: hasExpr;
 	}
 
-	replace local Function is classStmt(Class is nestedClass){
+	replace local Function is classStmt(ClassInfo is nestedClass){
 		self:kind: "CLASS";
 		self:nestedClass: nestedClass;
 	}
@@ -344,6 +347,24 @@ class Statement{
 		self:kind: "WHEN";
 		self:whenSubject: subject;
 		self:whenArms: arms;
+	}
+
+	## Configures this statement as a merge-forward delegation `(args...)`.
+	##
+	## Valid only inside a method carrying the `merge` modifier; delegates to
+	## the parent implementation with the supplied arguments.
+	##
+	## @param args: Forward arguments (positional when name is empty).
+	replace local Function is forwardStmt(Array of NamedArg is args){
+		self:kind: "FORWARD";
+		self:forwardArgs: args;
+	}
+
+	## Returns the forward arguments of a "FORWARD" statement.
+	##
+	## @return: Array of [NamedArg] forward arguments.
+	replace local Function of Array of NamedArg is getForwardArgs(){
+		return self:forwardArgs;
 	}
 
 	replace local Function of String is getKind(){
@@ -360,36 +381,36 @@ class Statement{
 
 }
 
-## Represents the root program node containing all parsed [base:reflect:Class] definitions.
-class ProgramNode{
+## Represents the root program node containing all parsed [base:reflect:ClassInfo] definitions.
+Class is ProgramNode{
 
 	replace local Array of String is using: [
 		base:struct:Array,
-		base:reflect:Class
+		base:reflect:ClassInfo
 	];
 
-	local Array of Class is classes: [];
+	local Array of ClassInfo is classes: [];
 
-	replace local Function is init(Array of Class is classes){
+	replace local Function is init(Array of ClassInfo is classes){
 		self:classes: classes;
 	}
 
-	replace local Function of Array of Class is getClasses(){
+	replace local Function of Array of ClassInfo is getClasses(){
 		return self:classes;
 	}
 
-	replace local Function is addClass(Class is c){
+	replace local Function is addClass(ClassInfo is c){
 		self:classes:add(item: c);
 	}
 
-	replace local Function is setClasses(Array of Class is classes){
+	replace local Function is setClasses(Array of ClassInfo is classes){
 		self:classes: classes;
 	}
 
 }
 
 ## Represents a pattern matching branch in a `when` statement or expression.
-class WhenArm{
+Class is WhenArm{
 
 	replace local Array of String is using: [
 		base:struct:Array,

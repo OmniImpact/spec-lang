@@ -3,7 +3,7 @@
 #! Group fragment merged into CodeGenerator at load time (see Loader).
 
 ## Target type inference, string wrapping, subclass checks, constructor generation, and inlined higher-order collection operations.
-class CodeGeneratorInference{
+Class is CodeGeneratorInference{
 
 	## Load-time grouping: members merge into CodeGenerator.
 	replace local Array of String is group: [CodeGenerator];
@@ -12,11 +12,14 @@ class CodeGeneratorInference{
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
-	class PathTypeResolveLoop extends Loop{
+	Class is PathTypeResolveLoop extends Loop{
 		local CodeGenerator is cg;
 		local Array of String is segs;
 		local Int is idx: 1;
@@ -212,7 +215,7 @@ class CodeGeneratorInference{
 		if (subName == "" || baseName == "" || subName == baseName) {
 			return false;
 		}
-		local Class is subCls: self:findClass(name: subName);
+		local ClassInfo is subCls: self:findClass(name: subName);
 		if (subCls:getName() == "") {
 			return false;
 		}
@@ -229,12 +232,12 @@ class CodeGeneratorInference{
 
 	## Emits constructor factory functions for all classes.
 	##
-	## @param classes: Array of [Class] definitions.
+	## @param classes: Array of [ClassInfo] definitions.
 	## @return: C constructor functions text.
-	replace local Function of String is generateConstructors(Array of Class is classes){
+	replace local Function of String is generateConstructors(Array of ClassInfo is classes){
 		local String is out: "/* Constructor Implementations */\n";
 
-		classes:each(action: local Function(Class is c){
+		classes:each(action: local Function(ClassInfo is c){
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				self:currentClassName: c:getName();
 				self:fieldTypes: Map:init();
@@ -474,7 +477,7 @@ class CodeGeneratorInference{
 		return out;
 	}
 
-	class PathChainLoop extends Loop{
+	Class is PathChainLoop extends Loop{
 		local Array of String is segs;
 		local CBackendUtils is utils;
 		local Int is idx: 1;

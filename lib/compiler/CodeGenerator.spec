@@ -2,14 +2,14 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, Linter, TypeChecker, and CodeGenerator.
 
 ## Pure Spec C code generator translating [ProgramNode] AST to C11 code.
-class CodeGenerator{
+Class is CodeGenerator{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
 		base:reflect:Type,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:reflect:Member,
 		base:reflect:Parameter,
 		base:meta:*,
@@ -41,6 +41,9 @@ class CodeGenerator{
 	## Return type of the method currently being code-generated.
 	local String is currentMethodReturnType: "";
 
+	## Name of the method currently being code-generated (for merge forwards).
+	local String is currentMethodName: "";
+
 	## Local variables visible in current method scope (variable name -> type name).
 	local Map of String to String is localVars: Map:init();
 
@@ -48,7 +51,7 @@ class CodeGenerator{
 	local Map of String to String is fieldTypes: Map:init();
 
 	## Flattened list of all classes in the program for symbol lookups.
-	local Array of Class is programClasses: [];
+	local Array of ClassInfo is programClasses: [];
 
 	## Registry of all class names defined in the program.
 	local Map of String to String is allClassNames: Map:init();
@@ -101,7 +104,7 @@ class CodeGenerator{
 	}
 
 	replace local Function of String is cTypeFor(String is typeName){
-		local Class is curCls: self:findClass(name: self:currentClassName);
+		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {
 			return "void*";
 		}
@@ -171,7 +174,7 @@ class CodeGenerator{
 		return baseName;
 	}
 
-	replace local Function of String is substituteTypeParam(String is rawType, Class is cls, Array of String is typeArgs){
+	replace local Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
 		local Array of String is tps: cls:getTypeParams();
 		if (tps:length() == 0 || typeArgs:length() == 0) {
 			return rawType;

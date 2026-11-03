@@ -2,7 +2,7 @@
 #! Provides runtime type information and structural reflection.
 
 ## Describes a named, typed parameter of a method or function signature.
-class Parameter{
+Class is Parameter{
 
 	replace local Array of String is using: [
 		base:reflect:Type,

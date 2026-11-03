@@ -2,7 +2,7 @@
 #! Provides decoupled, stateful iterator abstractions and execution runners.
 
 ## Manages loop flow control, early termination halts, and completion callbacks.
-class LoopControl{
+Class is LoopControl{
 
 	## Flag indicating whether a halt was requested.
 	local Boolean is stopped: false;

@@ -4,7 +4,7 @@
 ## Encapsulates source file provenance, line numbers, and column offsets.
 ##
 ## Used across compiler diagnostics, tokens, and runtime stack frames.
-class SourceLocation{
+Class is SourceLocation{
 
 	## File path or URI of the source file.
 	local String is file: "";

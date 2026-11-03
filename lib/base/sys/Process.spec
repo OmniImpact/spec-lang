@@ -2,7 +2,7 @@
 #! Provides system interaction, process execution, and execution frames.
 
 ## Dispatches external system commands and manages operating system subprocesses.
-class Process{
+Class is Process{
 
 	replace local Array of String is using: [
 		base:struct:Array

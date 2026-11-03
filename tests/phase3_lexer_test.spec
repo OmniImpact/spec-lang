@@ -1,4 +1,4 @@
-class Phase3LexerTest{
+Class is Phase3LexerTest{
 
 	replace local Array of String is using: [
 		base:io:*,
@@ -22,7 +22,7 @@ class Phase3LexerTest{
 
 		output:line("Total tokens emitted: " . tokens:length());
 
-		class PrintTokensLoop extends Loop{
+		Class is PrintTokensLoop extends Loop{
 			local Array of Token is tokens;
 			local Int is idx: 0;
 

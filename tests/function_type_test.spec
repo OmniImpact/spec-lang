@@ -1,4 +1,4 @@
-class FunctionTypeTest{
+Class is FunctionTypeTest{
 
 	replace local Array of String is using: [
 		base:io:*

@@ -2,7 +2,7 @@
 #! Provides mathematical constants, floating point operations, and algorithms.
 
 ## Mathematical functions and algorithmic primitives.
-class Math{
+Class is Math{
 
 	## Rounds a floating point number to the nearest whole integer.
 	##

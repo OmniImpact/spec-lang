@@ -3,7 +3,7 @@
 **Spec** is an elegant, concurrent-first, unlockable programming language that compiles directly to optimized C11.
 
 ```spec
-class HelloWorld{
+Class is HelloWorld{
 
 	replace local Array of String is using: [
 		base:struct:Map,
@@ -24,7 +24,7 @@ class HelloWorld{
 
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
-- **Ultra-Lean Compiler**: The compiler core knows only **11 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`, `when`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
+- **Ultra-Lean Compiler**: The compiler core knows only **11 keywords** (`extends`, `local`, `replace`, `merge`, `is`, `of`, `to`, `if`, `else`, `return`, `when`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). Classes are declared `Class is Name { ... }` — symmetric with `Enum is Name { ... }` — where `Class` is a compiler-known root type, not a keyword. Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
 - **Userland Implementation**: Rich language features live in the standard library (`lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 
@@ -208,7 +208,9 @@ spec-lang/
 │   ├── language/            # Language guide & syntax reference
 │   ├── packages/            # Standard library package reference
 │   └── tooling/             # Compiler, linter, and editor guide
-├── examples/                # Example programs & test suites
+├── examples/                # Demo programs (hello world, blackjack, fractals)
+├── tests/                   # Positive test suites (phases, features, regressions)
+│   └── negative/            # Must-fail suites asserting compiler diagnostics
 ├── utilities/               # Helper scripts & editor syntax configurations
 │   ├── install-kate-syntax.sh
 │   └── spec-kate.xml

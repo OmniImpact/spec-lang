@@ -2,7 +2,7 @@
 #! Pure Spec compiler implementation: BuiltinCallGenerator for standard library and runtime intrinsic calls.
 
 ## Translates standard library and runtime builtin method calls into C11 runtime functions.
-class BuiltinCallGenerator{
+Class is BuiltinCallGenerator{
 
 	replace local Array of String is using: [
 		base:struct:Array,

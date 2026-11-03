@@ -2,7 +2,7 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, Linter, TypeChecker, CodeGenerator, and Driver.
 
 ## Main compiler driver coordinating file loading, lexing, parsing, type checking, and code generation.
-class Driver{
+Class is Driver{
 
 	replace local Array of String is using: [
 		base:io:*,
@@ -10,7 +10,7 @@ class Driver{
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		compiler:Token,
 		compiler:Lexer,
 		compiler:Parser,
@@ -106,32 +106,34 @@ class Driver{
 			Process:exit(status: 1);
 		}
 
-		# 5. Determine Entry Class
+		# 5. Determine Entry ClassInfo
 		if (program:getClasses():length() == 0) {
 			error:line("Error: No class definitions found in source file.");
 			Process:exit(status: 1);
 		}
 
 		local String is entryName: "";
-		program:getClasses():each(action: local Function(Class is c){
-			c:getMembers():each(action: local Function(Member is m){
-				if (m:getName() == "init" && m:getParameters():length() == 1) {
-					local Parameter is p: m:getParameters():get(index: 0);
-					if (p:getType():getName() == "Map") {
-						entryName: c:getName();
+		program:getClasses():each(action: local Function(ClassInfo is c){
+			if (entryName == "") {
+				c:getMembers():each(action: local Function(Member is m){
+					if (entryName == "" && m:getName() == "init" && m:getParameters():length() == 1) {
+						local Parameter is p: m:getParameters():get(index: 0);
+						if (p:getType():getName() == "Map") {
+							entryName: c:getName();
+						}
 					}
-				}
-			});
+				});
+			}
 		});
 		if (entryName == "") {
-			program:getClasses():each(action: local Function(Class is c){
+			program:getClasses():each(action: local Function(ClassInfo is c){
 				if (entryName == "" && c:getBaseClass() != "Enum") {
 					entryName: c:getName();
 				}
 			});
 		}
 		if (entryName == "") {
-			local Class is firstClass: program:getClasses():get(index: 0);
+			local ClassInfo is firstClass: program:getClasses():get(index: 0);
 			entryName: firstClass:getName();
 		}
 

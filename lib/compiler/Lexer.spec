@@ -5,7 +5,7 @@
 ##
 ## Employs decoupled iterator loops for skipping whitespace, comments, identifiers,
 ## numbers, and string literals.
-class Lexer{
+Class is Lexer{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -20,7 +20,7 @@ class Lexer{
 	local Int is col: 1;
 
 	# Internal Loop Classes
-	class SkipWhitespaceLoop extends Loop{
+	Class is SkipWhitespaceLoop extends Loop{
 		local Lexer is lexer;
 
 		replace local Function is init(Lexer is lexer){
@@ -45,7 +45,7 @@ class Lexer{
 		}
 	}
 
-	class SkipCommentLoop extends Loop{
+	Class is SkipCommentLoop extends Loop{
 		local Lexer is lexer;
 
 		replace local Function is init(Lexer is lexer){
@@ -62,7 +62,7 @@ class Lexer{
 		}
 	}
 
-	class IdentScanLoop extends Loop{
+	Class is IdentScanLoop extends Loop{
 		local Lexer is lexer;
 
 		replace local Function is init(Lexer is lexer){
@@ -83,7 +83,7 @@ class Lexer{
 		}
 	}
 
-	class NumberScanLoop extends Loop{
+	Class is NumberScanLoop extends Loop{
 		local Lexer is lexer;
 		local Boolean is isFloat: false;
 
@@ -114,7 +114,7 @@ class Lexer{
 		}
 	}
 
-	class StringScanLoop extends Loop{
+	Class is StringScanLoop extends Loop{
 		local Lexer is lexer;
 		local String is quote: "";
 		local String is res: "";
@@ -164,7 +164,7 @@ class Lexer{
 		}
 	}
 
-	class TokenizeLoop extends Loop{
+	Class is TokenizeLoop extends Loop{
 		local Lexer is lexer;
 		local Array of Token is tokens;
 
@@ -238,7 +238,7 @@ class Lexer{
 
 	replace local Function of Boolean is isKeyword(String is text){
 		return when (text) {
-			is "class", "extends", "local", "replace", "is", "of", "to", "return", "if", "else", "when": true;
+			is "extends", "local", "replace", "merge", "is", "of", "to", "return", "if", "else", "when": true;
 			else: false;
 		};
 	}

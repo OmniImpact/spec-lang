@@ -8,14 +8,14 @@ Enum is MemberKind {
 	ENUM
 }
 
-## Represents a field, method, or nested class member definition on a [Class].
-class Member{
+## Represents a field, method, or nested class member definition on a [ClassInfo].
+Class is Member{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:reflect:Type,
 		base:reflect:Parameter,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:meta:AST
 	];
 
@@ -51,7 +51,7 @@ class Member{
 	local Boolean is hasInit: false;
 
 	## Nested class descriptor if member kind is "CLASS".
-	local Class is nestedClass;
+	local ClassInfo is nestedClass;
 
 	## Initializes a member descriptor with a kind tag.
 	##
@@ -94,8 +94,8 @@ class Member{
 
 	## Configures this member as a nested class.
 	##
-	## @param nestedClass: Nested [Class] descriptor.
-	replace local Function is classMember(Class is nestedClass){
+	## @param nestedClass: Nested [ClassInfo] descriptor.
+	replace local Function is classMember(ClassInfo is nestedClass){
 		self:kind: "CLASS";
 		self:nestedClass: nestedClass;
 	}
@@ -170,8 +170,8 @@ class Member{
 
 	## Returns the nested class definition if kind is "CLASS".
 	##
-	## @return: [Class] descriptor.
-	replace local Function of Class is getNestedClass(){
+	## @return: [ClassInfo] descriptor.
+	replace local Function of ClassInfo is getNestedClass(){
 		return self:nestedClass;
 	}
 

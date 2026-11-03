@@ -1,4 +1,4 @@
-class GenericFunctionTest{
+Class is GenericFunctionTest{
 
 	replace local Array of String is using: [
 		base:io:*

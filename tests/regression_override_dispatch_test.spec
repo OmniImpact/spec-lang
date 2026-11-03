@@ -18,7 +18,7 @@
 ##   implementation in the chain (Puppy answers "woof", not Animal's "...").
 ##
 ## Status: PASSING (regression resolved; guarded by this file).
-class RegressionOverrideDispatchTest{
+Class is RegressionOverrideDispatchTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -74,25 +74,25 @@ class RegressionOverrideDispatchTest{
 }
 
 ## Base class declaring the polymorphic contract.
-class Animal{
+Class is Animal{
 	replace local Function of String is speak(){
 		return "...";
 	}
 }
 
 ## Mid-chain class whose override must remain visible to subclasses.
-class Dog extends Animal{
+Class is Dog extends Animal{
 	replace local Function of String is speak(){
 		return "woof";
 	}
 }
 
 ## Leaf class that does NOT re-declare speak; must inherit Dog's override.
-class Puppy extends Dog{
+Class is Puppy extends Dog{
 	local Boolean is isYoung: true;
 }
 
 ## Deeper leaf class that does NOT re-declare speak.
-class Lab extends Dog{
+Class is Lab extends Dog{
 	local String is breed: "labrador";
 }

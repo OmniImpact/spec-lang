@@ -16,7 +16,7 @@
 ## - All three checks print "[PASS]"; any "[FAIL]" or compile error is a regression.
 ##
 ## Status: PASSING (regression resolved; guarded by this file).
-class RegressionMethodResolutionTest{
+Class is RegressionMethodResolutionTest{
 
 	replace local Array of String is using: [
 		base:io:Output
@@ -60,7 +60,7 @@ class RegressionMethodResolutionTest{
 }
 
 ## User class intentionally declaring a method named like an Array builtin.
-class UserRecord{
+Class is UserRecord{
 	local Int is identifier: 42;
 
 	## Returns the record identifier. Must NOT be lowered to spec_array_get.
@@ -75,7 +75,7 @@ class UserRecord{
 }
 
 ## User class intentionally declaring a method named like an Array builtin.
-class LogStore{
+Class is LogStore{
 	local Int is maxEntries: 7;
 
 	## Returns the configured capacity. Must NOT be lowered to spec_array_length.

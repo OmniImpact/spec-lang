@@ -2,7 +2,7 @@
 # Phase 6 Semantic Type Checker Test Suite
 ##
 
-class Phase6TypeCheckerTest{
+Class is Phase6TypeCheckerTest{
 
 	replace local Array of String is using: [
 		base:io:*,

@@ -1,4 +1,4 @@
-class FeaturesTest{
+Class is FeaturesTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,

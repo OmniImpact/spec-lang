@@ -1,11 +1,14 @@
-class StdlibReflectionTest{
+Class is StdlibReflectionTest{
 
 	replace local Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:sys:SourceLocation,
 		base:sys:StackFrame,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
@@ -52,8 +55,8 @@ class StdlibReflectionTest{
 			output:line("[PASS] Int is not generic");
 		}
 
-		# 3. Test Parameter, Member, and Class
-		output:line("\n--- 3. Class & Member Reflection ---");
+		# 3. Test Parameter, Member, and ClassInfo
+		output:line("\n--- 3. ClassInfo & Member Reflection ---");
 		local Parameter is param1: Parameter:init(name: "amount", paramType: intType);
 		local Array of Parameter is params: [];
 		params:add(item: param1);
@@ -65,13 +68,13 @@ class StdlibReflectionTest{
 		local Array of Member is members: [];
 		members:add(item: methodMem);
 
-		local Class is cls: Class:init(name: "Healer", baseClass: "Entity", members: members);
-		output:line("Class: " . cls:getName() . " extends " . cls:getBaseClass());
+		local ClassInfo is cls: ClassInfo:init(name: "Healer", baseClass: "Entity", members: members);
+		output:line("ClassInfo: " . cls:getName() . " extends " . cls:getBaseClass());
 		output:line("Members count: " . cls:getMembers():length());
 		output:line("Method: " . methodMem:getName() . " with " . methodMem:getParameters():length() . " parameter(s)");
 
 		if (cls:getName() == "Healer") {
-			output:line("[PASS] Class name is Healer");
+			output:line("[PASS] ClassInfo name is Healer");
 		}
 		if (methodMem:getName() == "heal") {
 			output:line("[PASS] Method name is heal");

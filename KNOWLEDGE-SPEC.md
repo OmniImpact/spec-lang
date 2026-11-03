@@ -21,8 +21,12 @@ Spec is an expressive, strictly typed, indentation-sensitive, compiled systems l
 
 ## 2. Program Structure
 
+Classes are declared `Class is Name { ... }`.
+`extends A, B` follows the declaration name; generic parameters use `Class of T is Box`.
+The `merge` modifier overrides a parent Array field by concatenating parent items then child items. On methods, `merge` requires a forward statement `(args...)` that delegates to the nearest parent implementation (partial forwards must name their arguments); merge init chains parent constructors.
+
 ```spec
-class AppName{
+Class is AppName{
 
 	# Class fields
 	local String is title: 'Spec App';
@@ -53,7 +57,7 @@ class AppName{
   - `Map of <KeyType> to <ValueType>`: `["alice": 95, "bob": 88]`, empty `[:]`, bracket indexing `scores["alice"]`, bracket assignment `scores["charlie"]: 100;`.
 - **User-Defined Generic Classes**:
   ```spec
-  class Box of T{
+  Class is Box of T{
   	local T is val;
   	replace local Function is init(T is val){ self:val: val; }
   	replace local Function of T is get(){ return self:val; }
@@ -171,7 +175,7 @@ when (r) {
 ### Iteration (No `while` or `for` keywords)
 Loops use the decoupled iterator runner `While:run` with a subclass of `Loop`:
 ```spec
-class CountLoop extends Loop{
+Class is CountLoop extends Loop{
 	local Int is current: 0;
 	local Int is max: 10;
 

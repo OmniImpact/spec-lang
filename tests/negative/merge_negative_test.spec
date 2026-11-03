@@ -1,0 +1,52 @@
+#! Package examples:regression
+#! Tracks the `merge` modifier: data-structure-aware field overriding.
+
+## NEGATIVE test: this file MUST FAIL TO COMPILE. That is its correct behavior.
+##
+## Guarded behavior:
+## - A `merge` method with a body but no forward statement is rejected.
+## - `merge` on a non-mergeable field type (Int) is rejected.
+## - `merge` on a method with no parent implementation is rejected.
+##
+## Required diagnostics:
+## - Merge method 'signal' ... must contain a forward statement.
+## - 'merge' requires an Array field; 'Int' is not mergeable.
+## - Method 'orphan' declares 'merge' but no parent declares a method with that name.
+##
+## NOTE FOR RUNNERS: assert that this file fails to compile AND that the
+## compiler output contains all three diagnostics.
+
+Class is MergeBadBase{
+
+	replace local Function of Int is signal(){
+		return 1;
+	}
+
+	local Int is count: 1;
+}
+
+Class is MergeBadChild extends MergeBadBase{
+
+	# No forward statement: merge methods must delegate explicitly.
+	merge local Function of Int is signal(){
+		return 2;
+	}
+
+	merge local Int is count: 2;
+
+	# No parent declares this method.
+	merge local Function is orphan(){
+		();
+	}
+}
+
+Class is MergeNegativeTest{
+
+	replace local Array of String is using: [
+		base:io:Output
+	];
+
+	replace local Function is init(Map of String to String is args){
+		output:line("unreachable");
+	}
+}

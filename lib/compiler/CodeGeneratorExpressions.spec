@@ -3,7 +3,7 @@
 #! Group fragment merged into CodeGenerator at load time (see Loader).
 
 ## Expression-level C generation: literals, calls, closures, tagged-enum constructors, and generic casts.
-class CodeGeneratorExpressions{
+Class is CodeGeneratorExpressions{
 
 	## Load-time grouping: members merge into CodeGenerator.
 	replace local Array of String is group: [CodeGenerator];
@@ -12,7 +12,10 @@ class CodeGeneratorExpressions{
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:*,
+		base:reflect:Type,
+		base:reflect:Parameter,
+		base:reflect:Member,
+		base:reflect:ClassInfo,
 		base:meta:*
 	];
 
@@ -272,11 +275,17 @@ class CodeGeneratorExpressions{
 					}
 				}
 
-				# Class constructor or static method invocation: ClassName:init(...) or ClassName:method(...)
+				# ClassInfo constructor or static method invocation: ClassName:init(...) or ClassName:method(...)
 				if (self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC)) {
 					local String is argsJoined: self:formatCallArguments(className: targetC, methodName: expr:methodName, args: expr:methodArgs);
 					if (expr:methodName == "init") {
-						return "({ " . targetC . "* _inst = " . targetC . "_new(); " . targetC . "_init(_inst" . argsJoined . "); _inst; })";
+						# The declaring class may be an ancestor; dispatch to it.
+						local String is initCls: self:findMethodImplementingClass(className: targetC, methodName: "init", paramCount: -1);
+						if (initCls == "" || initCls == targetC) {
+							return "({ " . targetC . "* _inst = " . targetC . "_new(); " . targetC . "_init(_inst" . argsJoined . "); _inst; })";
+						}
+						local String is initArgs: self:formatCallArguments(className: initCls, methodName: "init", args: expr:methodArgs);
+						return "({ " . targetC . "* _inst = " . targetC . "_new(); " . initCls . "_init((" . initCls . "*)_inst" . initArgs . "); _inst; })";
 					}
 					local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
 					if (mDef:getKind() == "METHOD") {
@@ -316,7 +325,7 @@ class CodeGeneratorExpressions{
 				}
 				local String is callStr: objType . "_" . expr:methodName . "(" . targetExprC . self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs) . ")";
 				local Member is targetM: self:lookupMethodMember(className: objType, methodName: expr:methodName);
-				local Class is targetCls: self:findClass(name: objType);
+				local ClassInfo is targetCls: self:findClass(name: objType);
 				if (targetM:getKind() == "METHOD" && targetCls:getTypeParams():length() > 0) {
 					local String is rawRet: self:formatTypeString(t: targetM:getType());
 					if (targetCls:getTypeParams():indexOf(search: rawRet, default: -1) >= 0) {

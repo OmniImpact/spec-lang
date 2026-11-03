@@ -13,7 +13,7 @@
 ## NOTE FOR RUNNERS: assert that this file fails to compile AND that the
 ## compiler output contains the duplicate-member LoadError.
 
-class DupSource{
+Class is DupSource{
 
 	replace local Array of String is group: [Merged];
 
@@ -22,7 +22,7 @@ class DupSource{
 	}
 }
 
-class DupConflict{
+Class is DupConflict{
 
 	replace local Array of String is group: [Merged];
 
@@ -31,6 +31,6 @@ class DupConflict{
 	}
 }
 
-class Merged{
+Class is Merged{
 
 }

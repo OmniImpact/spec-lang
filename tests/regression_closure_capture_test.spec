@@ -18,7 +18,7 @@
 ## - All five checks print "[PASS]"; any "[FAIL]" or compile error is a regression.
 ##
 ## Status: PASSING (regression resolved; guarded by this file).
-class RegressionClosureCaptureTest{
+Class is RegressionClosureCaptureTest{
 
 	replace local Array of String is using: [
 		base:io:Output

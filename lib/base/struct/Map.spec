@@ -2,7 +2,7 @@
 #! Provides contiguous dynamic collections and associative hash maps.
 
 ## An associative key-value map supporting string keys and values.
-class Map{
+Class is Map{
 
 	## Looks up a string value by key, returning [default] if not found.
 	##

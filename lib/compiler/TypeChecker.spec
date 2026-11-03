@@ -2,7 +2,7 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, Linter, and TypeChecker.
 
 ## Represents a compile-time static type error detected by [TypeChecker].
-class TypeError{
+Class is TypeError{
 
 	## Line number coordinate where the error occurred (0 if general).
 	local Int is line: 0;
@@ -35,14 +35,14 @@ class TypeError{
 }
 
 ## Semantic analysis and static type checker for Spec programs.
-class TypeChecker{
+Class is TypeChecker{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
 		base:reflect:Type,
-		base:reflect:Class,
+		base:reflect:ClassInfo,
 		base:reflect:Member,
 		base:reflect:Parameter,
 		base:meta:*
@@ -72,6 +72,18 @@ class TypeChecker{
 	## Current source line number for expression-level diagnostics.
 	local Int is currentLine: 0;
 
+	## Whether the method currently being checked carries the `merge` modifier.
+	local Boolean is currentMethodIsMerge: false;
+
+	## Name of the method currently being checked (for forward resolution).
+	local String is currentMethodName: "";
+
+	## Whether a forward statement has been seen in the current method.
+	local Boolean is forwardSeen: false;
+
+	## Anonymous-function nesting depth (forwards are top-level only).
+	local Int is anonDepth: 0;
+
 	## Currently analyzed class name.
 	local String is currentClassName: "";
 
@@ -85,7 +97,7 @@ class TypeChecker{
 	local Array of TypeError is errors: [];
 
 	## All class definitions in program (including nested classes) for hierarchy resolution.
-	local Array of Class is programClasses: [];
+	local Array of ClassInfo is programClasses: [];
 
 	replace local Function is init(){
 		self:programClasses: [];
@@ -122,7 +134,7 @@ class TypeChecker{
 	}
 
 	replace local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
-		local Class is cls: self:findClass(name: enumName);
+		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:getMembers(), fieldName: variantName);
 		While:run(loop: fl);
 		if (fl:found) {
@@ -133,7 +145,7 @@ class TypeChecker{
 
 	## Finds a member (method or field) by name on a class or any of its base classes.
 	##
-	## @param className: Class whose members are searched.
+	## @param className: ClassInfo whose members are searched.
 	## @param methodName: Member name to locate.
 	## @return: The resolved [Member], or an UNKNOWN member when absent.
 	replace local Function of Member is lookupAnyMember(String is className, String is methodName){
@@ -142,7 +154,7 @@ class TypeChecker{
 		}
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return Member:init(kind: "");
 		}
@@ -188,7 +200,7 @@ class TypeChecker{
 		if (params:length() == 0) {
 			return;
 		}
-		local Class is recvCls: self:findClass(name: baseClassName);
+		local ClassInfo is recvCls: self:findClass(name: baseClassName);
 		local Array of String is recvTypeParams: recvCls:getTypeParams();
 		local Int is pIdx: 0;
 		params:each(action: local Function(Parameter is p){
@@ -284,7 +296,7 @@ class TypeChecker{
 		if (hasElse) {
 			return;
 		}
-		local Class is enumCls: self:findClass(name: subjectType);
+		local ClassInfo is enumCls: self:findClass(name: subjectType);
 		local Array of String is missing: [];
 		enumCls:getMembers():each(action: local Function(Member is m){
 			if (!covered:has(key: m:getName())) {
@@ -340,7 +352,7 @@ class TypeChecker{
 		return baseName;
 	}
 
-	replace local Function of String is substituteTypeParam(String is rawType, Class is cls, Array of String is typeArgs){
+	replace local Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
 		local Array of String is tps: cls:getTypeParams();
 		if (tps:length() == 0 || typeArgs:length() == 0) {
 			return rawType;
@@ -359,14 +371,14 @@ class TypeChecker{
 		return rawType;
 	}
 
-	class SearchLoop extends Loop{
-		local Array of Class is list;
+	Class is SearchLoop extends Loop{
+		local Array of ClassInfo is list;
 		local String is target;
 		local Int is idx: 0;
-		local Class is res;
+		local ClassInfo is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Class is list, String is target){
+		replace local Function is init(Array of ClassInfo is list, String is target){
 			self:list: list;
 			self:target: target;
 			self:idx: 0;
@@ -378,7 +390,7 @@ class TypeChecker{
 		}
 
 		replace local Function of Boolean is iteration(LoopControl is c){
-			local Class is cand: self:list:get(index: self:idx);
+			local ClassInfo is cand: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (cand:getName() == self:target) {
 				self:res: cand;
@@ -392,14 +404,14 @@ class TypeChecker{
 	## Finds a class definition by name across the program.
 	##
 	## @param name: Target class name.
-	## @return: Matching [Class] descriptor.
-	replace local Function of Class is findClass(String is name){
+	## @return: Matching [ClassInfo] descriptor.
+	replace local Function of ClassInfo is findClass(String is name){
 		local SearchLoop is s: SearchLoop:init(list: self:programClasses, target: name);
 		While:run(loop: s);
 		if (s:found) {
 			return s:res;
 		}
-		return Class:init(name: "", baseClass: "", members: []);
+		return ClassInfo:init(name: "", baseClass: "", members: []);
 	}
 
 	## Checks if `subName` inherits from or implements `baseName`.
@@ -410,7 +422,7 @@ class TypeChecker{
 		if (subName == baseName) {
 			return true;
 		}
-		local Class is subCls: self:findClass(name: subName);
+		local ClassInfo is subCls: self:findClass(name: subName);
 		if (subCls:getName() == "") {
 			return false;
 		}
@@ -459,7 +471,7 @@ class TypeChecker{
 		if (target:startsWith(prefix: "Function") && source:startsWith(prefix: "Function")) {
 			return true;
 		}
-		local Class is curCls: self:findClass(name: self:currentClassName);
+		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: target, default: -1) >= 0 || curCls:getTypeParams():indexOf(search: source, default: -1) >= 0) {
 			return true;
 		}
@@ -497,7 +509,7 @@ class TypeChecker{
 		return false;
 	}
 
-	class FieldSearchLoop extends Loop{
+	Class is FieldSearchLoop extends Loop{
 		local Array of Member is members;
 		local String is fieldName;
 		local Int is idx: 0;
@@ -535,7 +547,7 @@ class TypeChecker{
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}
@@ -555,7 +567,7 @@ class TypeChecker{
 		return inherited;
 	}
 
-	class MethodSearchLoop extends Loop{
+	Class is MethodSearchLoop extends Loop{
 		local Array of Member is members;
 		local String is methodName;
 		local Int is idx: 0;
@@ -596,7 +608,7 @@ class TypeChecker{
 		if (methodName == "init" && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
 		}
-		local Class is cls: self:findClass(name: baseClassName);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:getName() == "") {
 			return "";
 		}
@@ -616,7 +628,7 @@ class TypeChecker{
 		return inherited;
 	}
 
-	class PathResolveLoop extends Loop{
+	Class is PathResolveLoop extends Loop{
 		local TypeChecker is tc;
 		local Array of String is segs;
 		local Int is idx: 1;
@@ -838,7 +850,9 @@ class TypeChecker{
 					self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
 				});
 				expr:anonBody:each(action: local Function(Statement is s){
+					self:anonDepth: self:anonDepth + 1;
 					self:checkStatement(stmt: s);
+					self:anonDepth: self:anonDepth - 1;
 				});
 
 				self:localVars: savedVars;
@@ -1100,6 +1114,77 @@ class TypeChecker{
 				});
 				self:checkWhenExhaustive(subjectType: stmtSubjectType, arms: stmt:whenArms, line: stmt:getLine());
 			}
+			is "FORWARD": {
+				if (!self:currentMethodIsMerge) {
+					self:addError(line: stmt:getLine(), msg: "Forward statement `(args...)` requires the enclosing method to declare 'merge'.");
+					return;
+				}
+				if (self:anonDepth > 0) {
+					self:addError(line: stmt:getLine(), msg: "Forward statement is not allowed inside a nested function.");
+					return;
+				}
+				if (self:forwardSeen) {
+					self:addError(line: stmt:getLine(), msg: "Multiple forward statements in method '" . self:currentMethodName . "'; at most one is allowed.");
+					return;
+				}
+				self:forwardSeen: true;
+
+				local Member is superM: self:findFirstSuperMethod(className: self:currentClassName, methodName: self:currentMethodName);
+				if (superM:getName() == "") {
+					self:addError(line: stmt:getLine(), msg: "Forward statement in '" . self:currentMethodName . "': no parent method to delegate to.");
+					return;
+				}
+				local Array of Parameter is params: superM:getParameters();
+				local Array of NamedArg is args: stmt:getForwardArgs();
+
+				# Arity: exact count may be positional; fewer requires named args.
+				if (args:length() > params:length()) {
+					self:addError(line: stmt:getLine(), msg: "Forward statement passes " . args:length() . " arguments but parent '" . superM:getName() . "' accepts " . params:length() . ".");
+					return;
+				}
+				if (args:length() < params:length()) {
+					local Int is nIdx: 0;
+					args:each(action: local Function(NamedArg is a){
+						if (a:getName() == "") {
+							self:addError(line: stmt:getLine(), msg: "Partial forward requires named arguments; argument " . (nIdx + 1) . " of '" . self:currentMethodName . "' is unnamed.");
+						}
+						nIdx: nIdx + 1;
+					});
+				}
+
+				# Match each argument to a parent parameter and type-check it.
+				local Int is pIdx: 0;
+				params:each(action: local Function(Parameter is p){
+					local Expression is matchedValue: Expression:init(kind: "UNKNOWN");
+					local Boolean is found: false;
+					args:each(action: local Function(NamedArg is a){
+						if (!found && a:getName() != "" && a:getName() == p:getName()) {
+							matchedValue: a:getValue();
+							found: true;
+						}
+					});
+					if (!found && pIdx < args:length()) {
+						local NamedArg is posArg: args:get(index: pIdx);
+						if (posArg:getName() == "") {
+							matchedValue: posArg:getValue();
+							found: true;
+						}
+					}
+					if (found) {
+						local String is argT: self:inferExpressionType(expr: matchedValue);
+						local String is pT: p:getType():getName();
+						if (pT != "Any" && pT != "" && argT != "" && argT != "Any" && !self:isAssignable(target: pT, source: argT)) {
+							local String is label: if (p:getName() != "") p:getName() else "position " . (pIdx + 1);
+							local String is msg: "Forward argument '" . label . "' of '" . self:currentMethodName . "': cannot assign '" . argT . "' to '" . pT . "'.";
+							self:addError(line: stmt:getLine(), msg: msg);
+						}
+					} else if (!p:getHasDefault()) {
+						local String is msg: "Forward statement omits '" . p:getName() . "' of '" . self:currentMethodName . "' which has no default value.";
+						self:addError(line: stmt:getLine(), msg: msg);
+					}
+					pIdx: pIdx + 1;
+				});
+			}
 			is "RETURN": {
 				if (stmt:hasReturnExpr) {
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr);
@@ -1166,6 +1251,13 @@ class TypeChecker{
 		if (method:getSourceFile() != "") {
 			self:currentSourceFile: method:getSourceFile();
 		}
+		self:currentMethodName: method:getName();
+		self:forwardSeen: false;
+		self:anonDepth: 0;
+		self:currentMethodIsMerge: method:getModifiers():indexOf(search: "merge", default: -1) >= 0;
+		if (self:currentMethodIsMerge && self:findFirstSuperMethod(className: self:currentClassName, methodName: method:getName()):getName() == "") {
+			self:addError(line: method:getLine(), msg: "Method '" . method:getName() . "' in class '" . self:currentClassName . "' declares 'merge' but no parent declares a method with that name.");
+		}
 		method:getParameters():each(action: local Function(Parameter is p){
 			if (p:getType():getName() == "SELF_FIELD") {
 				local String is ft: self:fieldTypes:getString(key: p:getName(), default: "Any");
@@ -1189,9 +1281,15 @@ class TypeChecker{
 		method:getBody():each(action: local Function(Statement is stmt){
 			self:checkStatement(stmt: stmt);
 		});
+
+		if (self:currentMethodIsMerge && !self:forwardSeen && method:getBody():length() > 0) {
+			self:addError(line: method:getLine(), msg: "Merge method '" . method:getName() . "' in class '" . self:currentClassName . "' must contain a forward statement `(args...)`.");
+		}
+		self:currentMethodIsMerge: false;
+		self:currentMethodName: "";
 	}
 
-	class MemberImplementLoop extends Loop{
+	Class is MemberImplementLoop extends Loop{
 		local Array of Member is members;
 		local Member is target;
 		local Int is idx: 0;
@@ -1227,8 +1325,33 @@ class TypeChecker{
 
 	## Validates inheritance, interface contracts, and override signatures.
 	##
-	## @param classDef: [Class] definition to inspect.
-	replace local Function is checkInheritance(Class is classDef){
+	## @param classDef: [ClassInfo] definition to inspect.
+	## Finds the nearest parent implementation of a method (merge target).
+	##
+	## Walks the base classes in declaration order (depth-first), returning the
+	## first method member with the given name.
+	##
+	## @param className: Child [ClassInfo] whose parents are searched.
+	## @param methodName: Method name to locate.
+	## @return: The parent [Member], or an empty-named Member when absent.
+	replace local Function of Member is findFirstSuperMethod(String is className, String is methodName){
+		local ClassInfo is cls: self:findClass(name: className);
+		if (cls:getName() == "") {
+			return Member:init(kind: "");
+		}
+		local Member is res: Member:init(kind: "");
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (res:getName() == "") {
+				local Member is m: self:lookupAnyMember(className: baseName, methodName: methodName);
+				if (m:getKind() == "METHOD") {
+					res: m;
+				}
+			}
+		});
+		return res;
+	}
+
+	replace local Function is checkInheritance(ClassInfo is classDef){
 		self:currentSourceFile: classDef:getSourceFile();
 		local Boolean is hasInit: false;
 		classDef:getMembers():each(action: local Function(Member is m){
@@ -1242,8 +1365,8 @@ class TypeChecker{
 			when (m:getName()) {
 				is "init", "evaluate", "iteration", "using", "toString": {
 					local Array of String is mods: m:getModifiers();
-					if (mods:indexOf(search: "replace", default: -1) < 0) {
-						local String is msg: "Built-in lifecycle method '" . m:getName() . "' in class '" . classDef:getName() . "' requires 'replace' modifier.";
+					if (mods:indexOf(search: "replace", default: -1) < 0 && mods:indexOf(search: "merge", default: -1) < 0) {
+						local String is msg: "Built-in lifecycle method '" . m:getName() . "' in class '" . classDef:getName() . "' requires 'replace' (or 'merge') modifier.";
 						self:addError(line: m:getLine(), msg: msg);
 					}
 				}
@@ -1252,7 +1375,7 @@ class TypeChecker{
 		});
 
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
-			local Class is parent: self:findClass(name: baseName);
+			local ClassInfo is parent: self:findClass(name: baseName);
 			if (parent:getName() == baseName) {
 				# 1. Enforce abstract member implementation on concrete classes with init
 				if (hasInit) {
@@ -1263,7 +1386,7 @@ class TypeChecker{
 							local MemberImplementLoop is chk: MemberImplementLoop:init(members: classDef:getMembers(), target: parentM);
 							While:run(loop: chk);
 							if (!chk:implemented) {
-								local String is msg: "Class '" . classDef:getName() . "' does not implement abstract member '" . parentM:getName() . "' required by parent '" . baseName . "'.";
+								local String is msg: "ClassInfo '" . classDef:getName() . "' does not implement abstract member '" . parentM:getName() . "' required by parent '" . baseName . "'.";
 								self:addError(line: classDef:getLine(), msg: msg);
 							}
 						}
@@ -1275,7 +1398,18 @@ class TypeChecker{
 					parent:getMembers():each(action: local Function(Member is parentM){
 						if (subM:getName() == parentM:getName()) {
 							local Array of String is subMods: subM:getModifiers();
-							if (subMods:indexOf(search: "replace", default: -1) < 0) {
+							local Boolean is hasReplace: subMods:indexOf(search: "replace", default: -1) >= 0;
+							local Boolean is hasMerge: subMods:indexOf(search: "merge", default: -1) >= 0;
+							if (hasMerge) {
+								if (subM:getKind() == "METHOD") {
+									if (parentM:getKind() == "METHOD" && parentM:getBody():length() == 0) {
+										local String is msg: "Cannot merge method '" . subM:getName() . "' in class '" . classDef:getName() . "' with abstract method from '" . baseName . "'.";
+										self:addError(line: subM:getLine(), msg: msg);
+									}
+								} else {
+									self:applyMerge(classDef: classDef, subM: subM, parentM: parentM, baseName: baseName);
+								}
+							} else if (!hasReplace) {
 								local String is msg: "Member '" . subM:getName() . "' in class '" . classDef:getName() . "' overrides ancestor member from '" . baseName . "', but is missing 'replace' modifier.";
 								self:addError(line: subM:getLine(), msg: msg);
 							}
@@ -1310,10 +1444,60 @@ class TypeChecker{
 		});
 	}
 
+	## Folds a `merge` field override into its parent's array literal.
+	##
+	## `merge` is the data-structure-aware counterpart of `replace`: valid only
+	## on fields whose declared type supports merging (currently `Array`), and
+	## only for constant array literals on both sides. The child's initializer
+	## is rewritten to parent items followed by child items, so the merge
+	## ceases to exist before code generation. Merging with no parent value is
+	## a no-op (the child initializer stands alone).
+	##
+	## @param classDef: Declaring [ClassInfo].
+	## @param subM: Child field member carrying the `merge` modifier.
+	## @param parentM: Ancestor member being merged with.
+	## @param baseName: Ancestor class name for diagnostics.
+	replace local Function is applyMerge(ClassInfo is classDef, Member is subM, Member is parentM, String is baseName){
+		if (subM:getKind() != "FIELD") {
+			self:addError(line: subM:getLine(), msg: "'merge' is only valid on fields; member '" . subM:getName() . "' in class '" . classDef:getName() . "' is not a field.");
+			return;
+		}
+		local String is typeName: subM:getType():getName();
+		if (!typeName:startsWith(prefix: "Array")) {
+			self:addError(line: subM:getLine(), msg: "'merge' requires an Array field; '" . typeName . "' is not mergeable.");
+			return;
+		}
+		if (!parentM:getHasInit()) {
+			return;
+		}
+		local Expression is parentInit: parentM:getInitExpr();
+		if (parentInit:getKind() != "ARRAY") {
+			self:addError(line: subM:getLine(), msg: "'merge' requires a constant array literal in parent '" . baseName . "." . parentM:getName() . "'.");
+			return;
+		}
+		if (!subM:getHasInit()) {
+			return;
+		}
+		local Expression is childInit: subM:getInitExpr();
+		if (childInit:getKind() != "ARRAY") {
+			self:addError(line: subM:getLine(), msg: "'merge' requires a constant array literal initializer on '" . classDef:getName() . "." . subM:getName() . "'.");
+			return;
+		}
+		local Array of Expression is combined: [];
+		parentInit:arrayItems:each(action: local Function(Expression is item){
+			combined:add(item: item);
+		});
+		childInit:arrayItems:each(action: local Function(Expression is item){
+			combined:add(item: item);
+		});
+		local Expression is folded: subM:getInitExpr();
+		folded:arrayItems: combined;
+	}
+
 	## Populates `self:fieldTypes` for a class including inherited fields.
-	replace local Function is collectClassFieldTypes(Class is classDef){
+	replace local Function is collectClassFieldTypes(ClassInfo is classDef){
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
-			local Class is parent: self:findClass(name: baseName);
+			local ClassInfo is parent: self:findClass(name: baseName);
 			if (parent:getName() != "") {
 				self:collectClassFieldTypes(classDef: parent);
 			}
@@ -1327,8 +1511,8 @@ class TypeChecker{
 
 	## Validates all members of a class definition.
 	##
-	## @param classDef: [Class] definition.
-	replace local Function is checkClass(Class is classDef){
+	## @param classDef: [ClassInfo] definition.
+	replace local Function is checkClass(ClassInfo is classDef){
 		self:currentClassName: classDef:getName();
 		self:currentSourceFile: classDef:getSourceFile();
 		self:fieldTypes: Map:init();
@@ -1392,7 +1576,7 @@ class TypeChecker{
 		});
 	}
 
-	replace local Function is collectClassesFromStatement(Statement is stmt, Array of Class is acc){
+	replace local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
 		when (stmt:getKind()) {
 			is "CLASS": {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
@@ -1418,7 +1602,7 @@ class TypeChecker{
 		}
 	}
 
-	replace local Function is collectClasses(Class is c, Array of Class is acc){
+	replace local Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
@@ -1441,8 +1625,8 @@ class TypeChecker{
 	## @return: [Array] of [TypeError] diagnostics.
 	replace local Function of Array of TypeError is checkProgram(ProgramNode is program){
 		self:errors: [];
-		local Array of Class is flattened: [];
-		program:getClasses():each(action: local Function(Class is c){
+		local Array of ClassInfo is flattened: [];
+		program:getClasses():each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattened);
 		});
 		self:programClasses: flattened;
@@ -1452,7 +1636,7 @@ class TypeChecker{
 		self:allEnumVariants: Map:init();
 		self:allStringBackedEnums: Map:init();
 
-		flattened:each(action: local Function(Class is c){
+		flattened:each(action: local Function(ClassInfo is c){
 			self:registeredClasses:set(key: c:getName(), value: c:getName());
 			if (c:getBaseClass() == "Enum") {
 				self:allEnumNames:set(key: c:getName(), value: "true");
@@ -1466,12 +1650,12 @@ class TypeChecker{
 		});
 
 		# Pass 1: Inheritance contract validation & return/parameter type propagation
-		flattened:each(action: local Function(Class is c){
+		flattened:each(action: local Function(ClassInfo is c){
 			self:checkInheritance(classDef: c);
 		});
 
 		# Pass 2: Full expression type inference & AST annotation
-		program:getClasses():each(action: local Function(Class is c){
+		program:getClasses():each(action: local Function(ClassInfo is c){
 			self:checkClass(classDef: c);
 		});
 

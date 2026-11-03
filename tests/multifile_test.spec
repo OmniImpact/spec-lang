@@ -1,4 +1,4 @@
-class MultiFileTest{
+Class is MultiFileTest{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -12,7 +12,7 @@ class MultiFileTest{
 	local String is title;
 	local Int is counter: 0;
 
-	class StepCounterLoop extends Loop{
+	Class is StepCounterLoop extends Loop{
 		local MultiFileTest is app;
 
 		replace local Function is init(MultiFileTest is app){

@@ -2,7 +2,7 @@
 #! Provides system interaction, process execution, and execution frames.
 
 ## Represents an execution frame within a runtime call stack or error trace.
-class StackFrame{
+Class is StackFrame{
 
 	replace local Array of String is using: [
 		base:sys:SourceLocation
@@ -37,7 +37,7 @@ class StackFrame{
 
 	## Returns the enclosing class name.
 	##
-	## @return: Class name string.
+	## @return: ClassInfo name string.
 	replace local Function of String is getClassName(){
 		return self:className;
 	}
@@ -51,7 +51,7 @@ class StackFrame{
 
 	## Formats the frame as a standardized stack trace line.
 	##
-	## @return: Formatted string in "Class:method (file:line:col)" format.
+	## @return: Formatted string in "ClassInfo:method (file:line:col)" format.
 	replace local Function of String is toString(){
 		local String is locStr: "";
 		if (self:location:getLine() > 0) {

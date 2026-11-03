@@ -2,14 +2,14 @@
 #! Provides runtime type information and structural reflection.
 
 ## Represents a class definition and its member metadata in the Spec object model.
-class Class{
+Class is ClassInfo{
 
 	replace local Array of String is using: [
 		base:struct:Array,
 		base:reflect:Member
 	];
 
-	## Class identifier name.
+	## ClassInfo identifier name.
 	local String is name: "";
 
 	## Source line coordinate where this class was declared.
@@ -32,7 +32,7 @@ class Class{
 
 	## Initializes a class metadata definition.
 	##
-	## @param name: Class identifier name.
+	## @param name: ClassInfo identifier name.
 	## @param baseClass: Superclass name, or empty string if no inheritance.
 	## @param members: Array of class [Member] descriptors.
 	replace local Function is init(String is name, String is baseClass, Array of Member is members){
@@ -44,7 +44,7 @@ class Class{
 
 	## Initializes a class metadata definition with multiple inheritance parents.
 	##
-	## @param name: Class identifier name.
+	## @param name: ClassInfo identifier name.
 	## @param baseClasses: Array of parent class identifier strings.
 	## @param members: Array of class [Member] descriptors.
 	replace local Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){

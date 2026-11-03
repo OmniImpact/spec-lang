@@ -1,4 +1,4 @@
-class SyntacticSugarTest{
+Class is SyntacticSugarTest{
 
 	replace local Array of String is using: [
 		base:io:*,
@@ -110,7 +110,7 @@ class SyntacticSugarTest{
 
 }
 
-class Issue{
+Class is Issue{
 	Int is line;
 	String is message;
 	Boolean is isWarning;

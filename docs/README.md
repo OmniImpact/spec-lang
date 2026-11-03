@@ -56,6 +56,8 @@ Tracks the evolution of the Spec compiler from the current Stage 0 Rust transpil
 | 📦 **Standard Packages** | Standard library API reference | [docs/packages/README.md](packages/README.md) |
 | 🛠️ **Tooling Guide** | Compiler, linter, editor plugins | [docs/tooling/README.md](tooling/README.md) |
 | 📜 **Code Style & SpecDoc** | Style guide and SpecDoc documentation standard | [docs/STYLE_GUIDE.md](STYLE_GUIDE.md) |
-| 📂 **Examples** | Code samples and test programs | [examples/](../examples) |
+| 📂 **Examples** | Demo programs | [examples/](../examples) |
+| 🧪 **Tests** | Positive test suites | [tests/](../tests) |
+| 🚫 **Negative tests** | Must-fail suites asserting diagnostics | [tests/negative/](../tests/negative) |
 | 📋 **Task Tracking** | Active development status | [TASKS.md](../TASKS.md) |
 | 🔧 **Maintenance Guide** | Feature addition checklist | [MAINTENANCE.md](../MAINTENANCE.md) |

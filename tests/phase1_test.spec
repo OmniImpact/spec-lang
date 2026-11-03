@@ -1,4 +1,4 @@
-class Phase1Test{
+Class is Phase1Test{
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -38,7 +38,7 @@ class Phase1Test{
 
 		# 2. File I/O
 		output:line("\n--- 2. File I/O Primitives ---");
-		local String is testFilePath: "test_phase1_output.tmp";
+		local String is testFilePath: "/tmp/spec_phase1_output.tmp";
 		local String is fileData: "Self-Hosting Spec Stage 1 Bootstrap Data\nLine 2";
 
 		local Boolean is writeOk: File:write(path: testFilePath, content: fileData);

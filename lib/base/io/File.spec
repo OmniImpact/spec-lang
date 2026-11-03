@@ -2,7 +2,7 @@
 #! Provides terminal console output, interactive prompts, and file operations.
 
 ## Provides filesystem read, write, and existence inspection operations with synchronous and asynchronous callback execution.
-class File{
+Class is File{
 
 	## Reads the entire contents of a file with optional success and error callback handlers.
 	##
