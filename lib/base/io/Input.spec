@@ -7,7 +7,7 @@ Class is Input{
 	## Registers an input handler callback to process interactive user console entries.
 	##
 	## @param handler: An [InputHandler] subclass responding to user input events.
-	replace Function is prompt(InputHandler is handler){
+	Function is prompt(InputHandler is handler){
 	}
 
 }

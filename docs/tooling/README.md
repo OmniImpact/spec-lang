@@ -124,6 +124,8 @@ done
 #### 1. Tab-Based Indentation Standard
 - **Rule**: All Spec source code must be indented using tab characters (`\t`).
 - **Violation**: Any leading spaces used for indentation trigger a warning and cause the linter to fail (exit code 1).
+- **Violation**: Trailing whitespace at the end of any line.
+- **Violation**: A closing brace whose indentation does not match the current nesting depth (one tab per open brace). String literals and comments are masked before brace counting, so brace characters inside them are ignored.
 - **Rationale**: Ensures deterministic, customizable visual alignment across editors while preventing indentation drift.
 
 #### 2. Optional Parameter Consistency

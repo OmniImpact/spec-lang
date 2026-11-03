@@ -97,14 +97,14 @@ Class is RegressionClosureCaptureTest{
 	## @param fn: Single-argument Int transform.
 	## @param v: Value to transform.
 	## @return: Result of invoking fn with v.
-	replace local Function of Int is apply(Function of Int to Int is fn, Int is v){
+	local Function of Int is apply(Function of Int to Int is fn, Int is v){
 		return fn(v);
 	}
 
 	## Control case: closure in a scope containing only primitive locals.
 	##
 	## @return: (6 * 4) + 100.
-	replace local Function of Int is computeWithLocal(){
+	local Function of Int is computeWithLocal(){
 		local Int is factor: 4;
 		local Int is base: 100;
 		local Function of Int to Int is step: local Function of Int(Int is x){

@@ -25,15 +25,15 @@ Class is DeclarationGenerator{
 		self:allTaggedEnums: Map:init();
 	}
 
-	replace local Function is setEnumNames(Map of String to String is names){
+	local Function is setEnumNames(Map of String to String is names){
 		self:allEnumNames: names;
 	}
 
-	replace local Function is setTaggedEnums(Map of String to String is names){
+	local Function is setTaggedEnums(Map of String to String is names){
 		self:allTaggedEnums: names;
 	}
 
-	replace local Function of String is cTypeFor(String is typeName){
+	local Function of String is cTypeFor(String is typeName){
 		if (self:allTaggedEnums:has(key: typeName)) {
 			return typeName . "*";
 		}
@@ -43,22 +43,22 @@ Class is DeclarationGenerator{
 		return self:utils:cTypeFor(typeName: typeName);
 	}
 
-	replace local Function of String is cIdent(String is name){
+	local Function of String is cIdent(String is name){
 		return self:utils:cIdent(name: name);
 	}
 
-	replace local Function of Boolean is isBuiltinClass(String is name){
+	local Function of Boolean is isBuiltinClass(String is name){
 		return self:utils:isBuiltinClass(name: name);
 	}
 
-	replace local Function of String is cTypeForClass(String is typeName, Array of String is typeParams){
+	local Function of String is cTypeForClass(String is typeName, Array of String is typeParams){
 		if (typeParams:indexOf(search: typeName, default: -1) >= 0) {
 			return "void*";
 		}
 		return self:cTypeFor(typeName: typeName);
 	}
 
-	replace local Function of String is resolveReturnTypeForClass(Type is t, Array of String is typeParams){
+	local Function of String is resolveReturnTypeForClass(Type is t, Array of String is typeParams){
 		if (t:getName() == "Function") {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
@@ -96,13 +96,13 @@ Class is DeclarationGenerator{
 		}
 	}
 
-	replace local Function of Boolean is hasFieldNamed(Array of Member is list, String is name){
+	local Function of Boolean is hasFieldNamed(Array of Member is list, String is name){
 		local HasFieldLoop is loopInst: HasFieldLoop:init(list: list, name: name);
 		While:run(loop: loopInst);
 		return loopInst:found;
 	}
 
-	replace local Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
+	local Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
 		# Base fields first so that a base-typed pointer prefixes every
 		# descendant layout (ancestor casts stay field-offset correct).
 		c:getBaseClasses():each(action: local Function(String is baseName){
@@ -137,7 +137,7 @@ Class is DeclarationGenerator{
 	## @param list: Accumulated field members.
 	## @param name: Field name to locate.
 	## @return: Zero-based index, or -1 when absent.
-	replace local Function of Int is fieldIndexNamed(Array of Member is list, String is name){
+	local Function of Int is fieldIndexNamed(Array of Member is list, String is name){
 		local Int is idx: 0;
 		local Int is res: -1;
 		While:condition(
@@ -155,7 +155,7 @@ Class is DeclarationGenerator{
 		return res;
 	}
 
-	replace local Function of String is generateEnums(Array of ClassInfo is classes){
+	local Function of String is generateEnums(Array of ClassInfo is classes){
 		local String is out: "/* Enum Definitions */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
@@ -266,7 +266,7 @@ Class is DeclarationGenerator{
 		return out;
 	}
 
-	replace local Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
+	local Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
 		local String is out: "/* Forward Declarations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
@@ -311,7 +311,7 @@ Class is DeclarationGenerator{
 		return out;
 	}
 
-	replace local Function of String is generateStructs(Array of ClassInfo is classes){
+	local Function of String is generateStructs(Array of ClassInfo is classes){
 		local String is out: "/* Struct Layouts */\n";
 
 		classes:each(action: local Function(ClassInfo is c){

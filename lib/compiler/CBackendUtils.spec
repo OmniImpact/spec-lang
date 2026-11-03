@@ -18,7 +18,7 @@ Class is CBackendUtils{
 	##
 	## @param typeName: Spec type name.
 	## @return: C11 type signature string.
-	replace local Function of String is cTypeFor(String is typeName){
+	local Function of String is cTypeFor(String is typeName){
 		if (typeName:startsWith(prefix: "Array")) {
 			return "SpecArray*";
 		}
@@ -48,7 +48,7 @@ Class is CBackendUtils{
 	##
 	## @param name: Identifier name.
 	## @return: Sanitized C-compatible identifier name.
-	replace local Function of String is cIdent(String is name){
+	local Function of String is cIdent(String is name){
 		return when (name) {
 			is "EOF": "_EOF";
 			is "default", "case", "switch", "struct", "union", "enum", "register",
@@ -98,7 +98,7 @@ Class is CBackendUtils{
 	##
 	## @param s: Raw string text.
 	## @return: C-escaped string.
-	replace local Function of String is escapeString(String is s){
+	local Function of String is escapeString(String is s){
 		local EscapeLoop is escLoop: EscapeLoop:init(src: s);
 		While:run(loop: escLoop);
 		return escLoop:res;
@@ -108,7 +108,7 @@ Class is CBackendUtils{
 	##
 	## @param name: ClassInfo identifier name.
 	## @return: `true` if builtin runtime class, `false` otherwise.
-	replace local Function of Boolean is isBuiltinClass(String is name){
+	local Function of Boolean is isBuiltinClass(String is name){
 		return name == "Array" || name == "Map" || name == "File" || name == "LoopControl" ||
 			name == "Process" || name == "Output" || name == "Input" || name == "Math" ||
 			name == "While" || name == "Loop" || name == "LoopCallback" || name == "InputHandler";
@@ -118,7 +118,7 @@ Class is CBackendUtils{
 	##
 	## @param t: Declared [Type] descriptor.
 	## @return: C return type string.
-	replace local Function of String is resolveReturnType(Type is t){
+	local Function of String is resolveReturnType(Type is t){
 		if (t:getName() == "Function") {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);

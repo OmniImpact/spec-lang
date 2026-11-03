@@ -31,21 +31,21 @@ Class is StackFrame{
 	## Returns the source coordinate of this frame.
 	##
 	## @return: [SourceLocation] instance.
-	replace local Function of SourceLocation is getLocation(){
+	local Function of SourceLocation is getLocation(){
 		return self:location;
 	}
 
 	## Returns the enclosing class name.
 	##
 	## @return: ClassInfo name string.
-	replace local Function of String is getClassName(){
+	local Function of String is getClassName(){
 		return self:className;
 	}
 
 	## Returns the method name.
 	##
 	## @return: Method name string.
-	replace local Function of String is getMethodName(){
+	local Function of String is getMethodName(){
 		return self:methodName;
 	}
 

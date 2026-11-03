@@ -115,7 +115,7 @@ Class is CodeGenerator{
 		self:inlineReturnLabel: "";
 	}
 
-	replace local Function of String is cTypeFor(String is typeName){
+	local Function of String is cTypeFor(String is typeName){
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {
 			return "void*";
@@ -142,7 +142,7 @@ Class is CodeGenerator{
 		return self:utils:cTypeFor(typeName: typeName);
 	}
 
-	replace local Function of String is formatVarTypeString(Type is t){
+	local Function of String is formatVarTypeString(Type is t){
 		if (t:getName() == "Function") {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
@@ -153,19 +153,19 @@ Class is CodeGenerator{
 		return self:formatTypeString(t: t);
 	}
 
-	replace local Function of String is cIdent(String is name){
+	local Function of String is cIdent(String is name){
 		return self:utils:cIdent(name: name);
 	}
 
-	replace local Function of String is escapeString(String is s){
+	local Function of String is escapeString(String is s){
 		return self:utils:escapeString(s: s);
 	}
 
-	replace local Function of Boolean is isBuiltinClass(String is name){
+	local Function of Boolean is isBuiltinClass(String is name){
 		return self:utils:isBuiltinClass(name: name);
 	}
 
-	replace local Function of String is formatTypeString(Type is t){
+	local Function of String is formatTypeString(Type is t){
 		local String is baseName: t:getName();
 		if (baseName == "Function") {
 			if (t:getParams():length() > 0) {
@@ -186,7 +186,7 @@ Class is CodeGenerator{
 		return baseName;
 	}
 
-	replace local Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
+	local Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
 		local Array of String is tps: cls:getTypeParams();
 		if (tps:length() == 0 || typeArgs:length() == 0) {
 			return rawType;
@@ -205,7 +205,7 @@ Class is CodeGenerator{
 		return rawType;
 	}
 
-	replace local Function of String is resolveReturnType(Type is t){
+	local Function of String is resolveReturnType(Type is t){
 		if (t:getName() == "Function") {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);

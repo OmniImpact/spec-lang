@@ -6,7 +6,7 @@
 Class is CodeGeneratorInference{
 
 	## Load-time grouping: members merge into CodeGenerator.
-	replace local Array of String is group: [CodeGenerator];
+	local Array of String is group: [CodeGenerator];
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -48,7 +48,7 @@ Class is CodeGeneratorInference{
 	}
 
 	## Infers the target type of an expression for method dispatch and type conversion.
-	replace local Function of String is inferTargetType(Expression is expr){
+	local Function of String is inferTargetType(Expression is expr){
 		local String is resolved: expr:getResolvedType();
 		if (resolved != "" && resolved != "Any") {
 			return resolved;
@@ -144,7 +144,7 @@ Class is CodeGeneratorInference{
 	## @param expr: AST [Expression] node.
 	## @param exprC: Generated C expression string.
 	## @return: Wrapped C expression string.
-	replace local Function of String is wrapToString(Expression is expr, String is exprC){
+	local Function of String is wrapToString(Expression is expr, String is exprC){
 		local String is resolved: self:inferTargetType(expr: expr);
 		when (resolved) {
 			is "Int", "int": {
@@ -203,7 +203,7 @@ Class is CodeGeneratorInference{
 	}
 
 	## Determines whether an expression produces a string value.
-	replace local Function of Boolean is isStringExpr(Expression is expr){
+	local Function of Boolean is isStringExpr(Expression is expr){
 		local String is resolved: self:inferTargetType(expr: expr);
 		if (resolved == "String" || resolved == "string") {
 			return true;
@@ -218,7 +218,7 @@ Class is CodeGeneratorInference{
 		return false;
 	}
 
-	replace local Function of Boolean is isSubclassOf(String is subName, String is baseName){
+	local Function of Boolean is isSubclassOf(String is subName, String is baseName){
 		if (subName == "" || baseName == "" || subName == baseName) {
 			return false;
 		}
@@ -241,7 +241,7 @@ Class is CodeGeneratorInference{
 	##
 	## @param classes: Array of [ClassInfo] definitions.
 	## @return: C constructor functions text.
-	replace local Function of String is generateConstructors(Array of ClassInfo is classes){
+	local Function of String is generateConstructors(Array of ClassInfo is classes){
 		local String is out: "/* Constructor Implementations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
@@ -281,7 +281,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	replace local Function of String is generateInlineArrayOp(String is mode, String is targetC, Expression is fnExpr){
+	local Function of String is generateInlineArrayOp(String is mode, String is targetC, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -355,7 +355,7 @@ Class is CodeGeneratorInference{
 		return "0";
 	}
 
-	replace local Function of String is generateInlineArrayFold(String is targetC, Expression is initExpr, Expression is fnExpr){
+	local Function of String is generateInlineArrayFold(String is targetC, Expression is initExpr, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -410,7 +410,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	replace local Function of String is generateInlineMapEach(String is targetC, Expression is fnExpr){
+	local Function of String is generateInlineMapEach(String is targetC, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -457,7 +457,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	replace local Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
+	local Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;

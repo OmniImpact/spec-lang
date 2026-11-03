@@ -4,7 +4,7 @@ Class is FunctionTypeTest{
 		base:io:*
 	];
 
-	replace local Function is executeCallback(Function is callback){
+	local Function is executeCallback(Function is callback){
 		output:line("Executing callback...");
 	}
 

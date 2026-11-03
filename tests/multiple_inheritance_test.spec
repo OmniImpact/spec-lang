@@ -12,14 +12,14 @@
 Class is NamedContract{
 	local String is name;
 
-	replace Function of String is describe(){}
+	Function of String is describe(){}
 }
 
 ## Abstract contract providing an identifier field and tag getter.
 Class is IdentifiableContract{
 	local Int is id;
 
-	replace Function of String is getTag(){}
+	Function of String is getTag(){}
 }
 
 ## Concrete class extending multiple parent contracts.

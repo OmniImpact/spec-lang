@@ -29,21 +29,21 @@ Class is SourceLocation{
 	## Returns the source file path.
 	##
 	## @return: File path string.
-	replace local Function of String is getFile(){
+	local Function of String is getFile(){
 		return self:file;
 	}
 
 	## Returns the one-based line number.
 	##
 	## @return: Line number integer.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
 	## Returns the one-based column number.
 	##
 	## @return: Column number integer.
-	replace local Function of Int is getCol(){
+	local Function of Int is getCol(){
 		return self:col;
 	}
 

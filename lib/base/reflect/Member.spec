@@ -67,7 +67,7 @@ Class is Member{
 	## @param name: Method name.
 	## @param params: Method parameter definitions.
 	## @param body: Array of [Statement] AST nodes.
-	replace local Function is method(Array of String is modifiers, Type is retType, String is name, Array of Parameter is params, Array of Statement is body){
+	local Function is method(Array of String is modifiers, Type is retType, String is name, Array of Parameter is params, Array of Statement is body){
 		self:kind: "METHOD";
 		self:modifiers: modifiers;
 		self:memberType: retType;
@@ -83,7 +83,7 @@ Class is Member{
 	## @param name: Field identifier name.
 	## @param initExpr: Optional initializer [Expression].
 	## @param hasInit: `true` if an initializer was provided.
-	replace local Function is field(Array of String is modifiers, Type is fieldType, String is name, Expression is initExpr, Boolean is hasInit){
+	local Function is field(Array of String is modifiers, Type is fieldType, String is name, Expression is initExpr, Boolean is hasInit){
 		self:kind: "FIELD";
 		self:modifiers: modifiers;
 		self:memberType: fieldType;
@@ -95,7 +95,7 @@ Class is Member{
 	## Configures this member as a nested class.
 	##
 	## @param nestedClass: Nested [ClassInfo] descriptor.
-	replace local Function is classMember(ClassInfo is nestedClass){
+	local Function is classMember(ClassInfo is nestedClass){
 		self:kind: "CLASS";
 		self:nestedClass: nestedClass;
 	}
@@ -103,14 +103,14 @@ Class is Member{
 	## Returns the member kind ("METHOD", "FIELD", or "CLASS").
 	##
 	## @return: Kind tag string.
-	replace local Function of String is getKind(){
+	local Function of String is getKind(){
 		return self:kind;
 	}
 
 	## Returns the member kind enum variant.
 	##
 	## @return: [MemberKind] variant.
-	replace local Function of MemberKind is getMemberKind(){
+	local Function of MemberKind is getMemberKind(){
 		return when (self:kind) {
 			is "METHOD": MemberKind:METHOD;
 			is "CLASS": MemberKind:CLASS;
@@ -122,84 +122,84 @@ Class is Member{
 	## Returns the member name.
 	##
 	## @return: Member name string.
-	replace local Function of String is getName(){
+	local Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns the type descriptor (return type for methods, value type for fields).
 	##
 	## @return: [Type] instance.
-	replace local Function of Type is getType(){
+	local Function of Type is getType(){
 		return self:memberType;
 	}
 
 	## Returns the list of modifiers.
 	##
 	## @return: Array of modifier strings.
-	replace local Function of Array of String is getModifiers(){
+	local Function of Array of String is getModifiers(){
 		return self:modifiers;
 	}
 
 	## Returns the parameter definitions for methods.
 	##
 	## @return: Array of [Parameter] descriptors.
-	replace local Function of Array of Parameter is getParameters(){
+	local Function of Array of Parameter is getParameters(){
 		return self:params;
 	}
 
 	## Returns the implementation body statements for methods.
 	##
 	## @return: Array of [Statement] AST nodes.
-	replace local Function of Array of Statement is getBody(){
+	local Function of Array of Statement is getBody(){
 		return self:body;
 	}
 
 	## Returns the field initializer expression if present.
 	##
 	## @return: Initializer [Expression] instance.
-	replace local Function of Expression is getInitExpr(){
+	local Function of Expression is getInitExpr(){
 		return self:initExpr;
 	}
 
 	## Indicates whether this field has an explicit initializer.
 	##
 	## @return: `true` if initialized, `false` otherwise.
-	replace local Function of Boolean is getHasInit(){
+	local Function of Boolean is getHasInit(){
 		return self:hasInit;
 	}
 
 	## Returns the nested class definition if kind is "CLASS".
 	##
 	## @return: [ClassInfo] descriptor.
-	replace local Function of ClassInfo is getNestedClass(){
+	local Function of ClassInfo is getNestedClass(){
 		return self:nestedClass;
 	}
 
 	## Sets the one-based source line number where this member was declared.
 	##
 	## @param line: One-based source line number.
-	replace local Function is setLine(Int is line){
+	local Function is setLine(Int is line){
 		self:line: line;
 	}
 
 	## Returns the one-based source line number where this member was declared.
 	##
 	## @return: Source line number.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
 	## Sets the source file path where this member was declared.
 	##
 	## @param file: Source file path.
-	replace local Function is setSourceFile(String is file){
+	local Function is setSourceFile(String is file){
 		self:sourceFile: file;
 	}
 
 	## Returns the source file path where this member was declared.
 	##
 	## @return: Source file path (empty when unknown).
-	replace local Function of String is getSourceFile(){
+	local Function of String is getSourceFile(){
 		return self:sourceFile;
 	}
 

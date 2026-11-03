@@ -22,11 +22,11 @@ Class is LoggerBase{
 		self:tag: tag;
 	}
 
-	replace local Function of Int is add(Int is a, Int is b){
+	local Function of Int is add(Int is a, Int is b){
 		return a + b;
 	}
 
-	replace local Function of Int is scale(Int is n, Int is factor: 2){
+	local Function of Int is scale(Int is n, Int is factor: 2){
 		return n * factor;
 	}
 }

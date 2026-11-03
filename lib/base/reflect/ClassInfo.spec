@@ -47,7 +47,7 @@ Class is ClassInfo{
 	## @param name: ClassInfo identifier name.
 	## @param baseClasses: Array of parent class identifier strings.
 	## @param members: Array of class [Member] descriptors.
-	replace local Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
+	local Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
 		self:baseClasses: baseClasses;
 		self:baseClass: if (baseClasses:length() > 0) baseClasses:get(index: 0) else "";
@@ -57,70 +57,70 @@ Class is ClassInfo{
 	## Returns the class name.
 	##
 	## @return: Name string.
-	replace local Function of String is getName(){
+	local Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns the base class name, or empty string if none.
 	##
 	## @return: Base class name string.
-	replace local Function of String is getBaseClass(){
+	local Function of String is getBaseClass(){
 		return self:baseClass;
 	}
 
 	## Returns the list of superclass names for multiple inheritance.
 	##
 	## @return: Array of base class identifier strings.
-	replace local Function of Array of String is getBaseClasses(){
+	local Function of Array of String is getBaseClasses(){
 		return self:baseClasses;
 	}
 
 	## Returns the array of member definitions.
 	##
 	## @return: Array of [Member] descriptors.
-	replace local Function of Array of Member is getMembers(){
+	local Function of Array of Member is getMembers(){
 		return self:members;
 	}
 
 	## Sets the one-based source line number where this class was declared.
 	##
 	## @param line: One-based source line number.
-	replace local Function is setLine(Int is line){
+	local Function is setLine(Int is line){
 		self:line: line;
 	}
 
 	## Returns the one-based source line number where this class was declared.
 	##
 	## @return: Source line number.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
 	## Sets the source file path where this class was declared.
 	##
 	## @param file: Source file path string.
-	replace local Function is setSourceFile(String is file){
+	local Function is setSourceFile(String is file){
 		self:sourceFile: file;
 	}
 
 	## Returns the source file path where this class was declared.
 	##
 	## @return: Source file path string.
-	replace local Function of String is getSourceFile(){
+	local Function of String is getSourceFile(){
 		return self:sourceFile;
 	}
 
 	## Sets the generic type parameter names declared on this class.
 	##
 	## @param params: Array of generic type parameter identifiers.
-	replace local Function is setTypeParams(Array of String is params){
+	local Function is setTypeParams(Array of String is params){
 		self:typeParams: params;
 	}
 
 	## Returns the generic type parameter names declared on this class.
 	##
 	## @return: Array of generic type parameter identifiers.
-	replace local Function of Array of String is getTypeParams(){
+	local Function of Array of String is getTypeParams(){
 		return self:typeParams;
 	}
 

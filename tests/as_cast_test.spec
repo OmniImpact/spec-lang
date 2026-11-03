@@ -18,7 +18,7 @@ Enum is Color {
 }
 
 Class is Animal{
-	replace local Function of String is speak(){
+	local Function of String is speak(){
 		return "...";
 	}
 }
@@ -28,7 +28,7 @@ Class is Dog extends Animal{
 		return "woof";
 	}
 
-	replace local Function of String is fetch(){
+	local Function of String is fetch(){
 		return "ball";
 	}
 }

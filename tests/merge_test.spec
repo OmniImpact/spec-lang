@@ -16,7 +16,7 @@ Class is MergeBase{
 
 	local Array of String is tags: ["core"];
 
-	replace local Function of Int is baseValue(){
+	local Function of Int is baseValue(){
 		return 10;
 	}
 }

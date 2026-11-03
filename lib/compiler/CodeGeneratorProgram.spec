@@ -6,7 +6,7 @@
 Class is CodeGeneratorProgram{
 
 	## Load-time grouping: members merge into CodeGenerator.
-	replace local Array of String is group: [CodeGenerator];
+	local Array of String is group: [CodeGenerator];
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -19,7 +19,7 @@ Class is CodeGeneratorProgram{
 		base:meta:*
 	];
 
-	replace local Function of String is generateStatement(Statement is stmt){
+	local Function of String is generateStatement(Statement is stmt){
 		local String is kind: stmt:getKind();
 
 		when (kind) {
@@ -187,7 +187,7 @@ Class is CodeGeneratorProgram{
 	## @param classDef: Enclosing [ClassInfo] definition.
 	## @param method: Method [Member] descriptor.
 	## @return: C method implementation string.
-	replace local Function of String is generateMethod(ClassInfo is classDef, Member is method){
+	local Function of String is generateMethod(ClassInfo is classDef, Member is method){
 		self:inMethod: true;
 		self:currentMethodName: method:getName();
 		self:currentMethodReturnType: self:formatTypeString(t: method:getType());
@@ -232,7 +232,7 @@ Class is CodeGeneratorProgram{
 	##
 	## @param entryClass: Application entry point class name.
 	## @return: C main function text.
-	replace local Function of String is generateMain(String is entryClass){
+	local Function of String is generateMain(String is entryClass){
 		local String is m: "/* Application Entry Point */\n";
 		m: m . "int main(int argc, char** argv) {\n";
 		m: m . "    srand((unsigned int)time(NULL));\n";
@@ -262,7 +262,7 @@ Class is CodeGeneratorProgram{
 		return m;
 	}
 
-	replace local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
+	local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
 		when (stmt:getKind()) {
 			is "CLASS": {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
@@ -288,7 +288,7 @@ Class is CodeGeneratorProgram{
 		}
 	}
 
-	replace local Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
+	local Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
@@ -310,7 +310,7 @@ Class is CodeGeneratorProgram{
 	## @param program: Parsed [ProgramNode] AST.
 	## @param entryClass: Application entry point class name.
 	## @return: Complete C11 source code string.
-	replace local Function of String is generateProgram(ProgramNode is program, String is entryClass){
+	local Function of String is generateProgram(ProgramNode is program, String is entryClass){
 		local Array of ClassInfo is flattenedClasses: [];
 		program:getClasses():each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattenedClasses);
@@ -438,7 +438,7 @@ Class is CodeGeneratorProgram{
 	##
 	## @param classes: Flattened [ClassInfo] list.
 	## @return: C source defining every class vtable.
-	replace local Function of String is generateVTables(Array of ClassInfo is classes){
+	local Function of String is generateVTables(Array of ClassInfo is classes){
 		local String is out: "/* Virtual Method Tables */\n";
 		if (self:methodSlotCount == 0) {
 			return out;

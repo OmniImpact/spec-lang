@@ -21,7 +21,7 @@ Class is BuiltinCallGenerator{
 		self:allEnumNames: Map:init();
 	}
 
-	replace local Function is setEnumNames(Map of String to String is names){
+	local Function is setEnumNames(Map of String to String is names){
 		self:allEnumNames: names;
 	}
 
@@ -32,7 +32,7 @@ Class is BuiltinCallGenerator{
 	## @param targetType: Inferred type name of method target.
 	## @param cg: Reference to parent [CodeGenerator].
 	## @return: C code string if builtin call, or empty string if not a builtin.
-	replace local Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
+	local Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
 		# error:line - diagnostics written to stderr
 		if ((targetC == "error" || targetC == "Error") && expr:methodName == "line" && expr:methodArgs:length() > 0) {
 			local NamedArg is errArg: expr:methodArgs:get(index: 0);
@@ -59,6 +59,19 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == "default") { defC: cg:generateExpression(expr: arg:getValue()); }
 			});
 			return "spec_parse_base(" . targetC . ", " . baseC . ", " . defC . ")";
+		}
+
+		# Parallel fan-out execution
+		if (targetC == "Parallel" && expr:methodName == "run" && expr:methodArgs:length() >= 3) {
+			local String is threadsC: "1";
+			local String is iterC: "0";
+			local String is workerC: "NULL";
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:getName() == "threads") { threadsC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == "iterations") { iterC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == "worker") { workerC: cg:generateExpression(expr: arg:getValue()); }
+			});
+			return "spec_parallel_run(" . threadsC . ", " . iterC . ", (void*)(long long (*)(long long, long long))(" . workerC . "))";
 		}
 
 		# Ansi terminal metrics (runtime ioctls; Ansi is otherwise pure Spec)
@@ -187,6 +200,31 @@ Class is BuiltinCallGenerator{
 			}
 			if (expr:methodName == "threadCount") {
 				return "spec_thread_count()";
+			}
+			if (expr:methodName == "atomicAdd") {
+				local String is slotC: "0";
+				local String is valC: "0";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "slot") { slotC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "value") { valC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_atomic_add(" . slotC . ", " . valC . ")";
+			}
+			if (expr:methodName == "atomicPut") {
+				local String is slotC: "0";
+				local String is valC: "0";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "slot") { slotC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == "value") { valC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_atomic_put(" . slotC . ", " . valC . ")";
+			}
+			if (expr:methodName == "atomicGet") {
+				local String is slotC: "0";
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == "slot") { slotC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return "spec_atomic_get(" . slotC . ")";
 			}
 			if (expr:methodName == "exit") {
 				local String is codeC: "0";
@@ -330,6 +368,9 @@ Class is BuiltinCallGenerator{
 					if (arg:getName() == "max" || arg:getName() == "hi") { hiC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return "spec_math_clamp(" . vC . ", " . loC . ", " . hiC . ")";
+			}
+			if (expr:methodName == "fastRandom") {
+				return "spec_fast_random()";
 			}
 			if (expr:methodName == "toInt") {
 				local String is valC: "0";

@@ -17,7 +17,7 @@ Class is CalcArithmetic{
 
 	replace local Array of String is group: [Calc];
 
-	replace local Function of Int is add(Int is a, Int is b){
+	local Function of Int is add(Int is a, Int is b){
 		return a + b;
 	}
 }
@@ -26,7 +26,7 @@ Class is CalcText{
 
 	replace local Array of String is group: [Calc];
 
-	replace local Function of String is shout(String is msg){
+	local Function of String is shout(String is msg){
 		return msg . "!";
 	}
 }
@@ -47,7 +47,7 @@ Class is Accumulator{
 
 	replace local Array of String is group: [Accumulator];
 
-	replace local Function is bump(Int is by){
+	local Function is bump(Int is by){
 		self:total: self:total + by;
 	}
 }

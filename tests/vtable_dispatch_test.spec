@@ -14,11 +14,11 @@
 Class is LayoutBase{
 	local Int is baseField: 11;
 
-	replace local Function of Int is describeBase(){
+	local Function of Int is describeBase(){
 		return self:baseField;
 	}
 
-	replace local Function of Int is poly(){
+	local Function of Int is poly(){
 		return 1;
 	}
 }
@@ -40,13 +40,13 @@ Class is LayoutLeaf extends LayoutMid{
 }
 
 Class is MiaFeature{
-	replace local Function of String is label(){
+	local Function of String is label(){
 		return "mia";
 	}
 }
 
 Class is MibFeature{
-	replace local Function of String is tag(){
+	local Function of String is tag(){
 		return "mib";
 	}
 }

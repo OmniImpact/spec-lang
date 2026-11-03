@@ -6,7 +6,7 @@
 Class is CodeGeneratorLookups{
 
 	## Load-time grouping: members merge into CodeGenerator.
-	replace local Array of String is group: [CodeGenerator];
+	local Array of String is group: [CodeGenerator];
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -19,7 +19,7 @@ Class is CodeGeneratorLookups{
 		base:meta:*
 	];
 
-	replace local Function of String is generatePrelude(){
+	local Function of String is generatePrelude(){
 		return self:prelude:emitRuntime();
 	}
 
@@ -53,7 +53,7 @@ Class is CodeGeneratorLookups{
 		}
 	}
 
-	replace local Function of ClassInfo is findClass(String is name){
+	local Function of ClassInfo is findClass(String is name){
 		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
 		While:run(loop: s);
 		if (s:found) {
@@ -92,7 +92,7 @@ Class is CodeGeneratorLookups{
 		}
 	}
 
-	replace local Function of String is lookupFieldType(String is className, String is fieldName){
+	local Function of String is lookupFieldType(String is className, String is fieldName){
 		if (className == "" || className == "Any") {
 			return "";
 		}
@@ -149,7 +149,7 @@ Class is CodeGeneratorLookups{
 		}
 	}
 
-	replace local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
+	local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:getMembers(), fieldName: variantName);
 		While:run(loop: fl);
@@ -159,7 +159,7 @@ Class is CodeGeneratorLookups{
 		return Member:init(kind: "");
 	}
 
-	replace local Function of String is generateWhenCondition(Expression is subjExpr, String is subjC, Expression is c){
+	local Function of String is generateWhenCondition(Expression is subjExpr, String is subjC, Expression is c){
 		if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
 			local String is eName: self:allEnumVariants:getString(key: c:methodName, default: "");
 			if (self:allTaggedEnums:has(key: eName)) {
@@ -184,7 +184,7 @@ Class is CodeGeneratorLookups{
 		return "((" . subjC . ") == (" . cVal . "))";
 	}
 
-	replace local Function of String is generateWhenBindings(String is subjC, WhenArm is arm){
+	local Function of String is generateWhenBindings(String is subjC, WhenArm is arm){
 		local String is binds: "";
 		arm:conditions:each(action: local Function(Expression is c){
 			if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
@@ -212,7 +212,7 @@ Class is CodeGeneratorLookups{
 		return binds;
 	}
 
-	replace local Function of String is findMethodImplementingClass(String is className, String is methodName, Int is paramCount){
+	local Function of String is findMethodImplementingClass(String is className, String is methodName, Int is paramCount){
 		if (className == "" || className == "Any") {
 			return "";
 		}
@@ -239,7 +239,7 @@ Class is CodeGeneratorLookups{
 		return inherited;
 	}
 
-	replace local Function of Member is lookupMethodMember(String is className, String is methodName){
+	local Function of Member is lookupMethodMember(String is className, String is methodName){
 		if (className == "" || className == "Any") {
 			return Member:init(kind: "");
 		}
@@ -263,7 +263,7 @@ Class is CodeGeneratorLookups{
 		return inherited;
 	}
 
-	replace local Function of String is formatCallArguments(String is className, String is methodName, Array of NamedArg is args){
+	local Function of String is formatCallArguments(String is className, String is methodName, Array of NamedArg is args){
 		local Member is m: self:lookupMethodMember(className: className, methodName: methodName);
 		local Array of String is parts: className:split(delimiter: ":");
 		local String is baseClassName: parts:get(index: 0);
@@ -311,7 +311,7 @@ Class is CodeGeneratorLookups{
 		return fallbackJoined;
 	}
 
-	replace local Function of String is lookupMethodReturnType(String is className, String is methodName){
+	local Function of String is lookupMethodReturnType(String is className, String is methodName){
 		if (className == "" || className == "Any") {
 			return "";
 		}

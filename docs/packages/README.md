@@ -6,6 +6,20 @@ This document details the standard library packages available in the Spec runtim
 
 ---
 
+## Package Summary
+
+| Package | Key Types & Functions | Description |
+|---|---|---|
+| **`base:io`** | `output:line`, `error:line`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
+| **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
+| **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` | Thread-safe collections with functional combinators. |
+| **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop engine and inline closure iteration. |
+| **`base:sys`** | `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | Processes, timing, memory/thread introspection, atomics, parallel fan-out. |
+| **`base:reflect`** | `Type`, `Parameter`, `Member`, `ClassInfo` | Runtime type information and reflection metadata. |
+| **`base:meta`** | `Expression`, `Statement`, `NamedArg`, `WhenArm`, `ProgramNode` | Syntax trees and meta-programming models. |
+
+Full API reference by package below.
+
 ## Table of Contents
 1. [`base:io`](#1-baseio)
    - [Console Output (`output:line`)](#outputline)

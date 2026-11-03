@@ -23,21 +23,21 @@ Class is LintIssue{
 	## Returns the line number.
 	##
 	## @return: Line number integer.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
 	## Returns whether this issue is a warning.
 	##
 	## @return: `true` if warning, `false` if notice.
-	replace local Function of Boolean is getIsWarning(){
+	local Function of Boolean is getIsWarning(){
 		return self:isWarning;
 	}
 
 	## Returns the diagnostic message.
 	##
 	## @return: Message string.
-	replace local Function of String is getMessage(){
+	local Function of String is getMessage(){
 		return self:message;
 	}
 
@@ -71,10 +71,15 @@ Class is Linter{
 
 	## Inspects indentation whitespace line-by-line using String and Array higher-order methods.
 	##
+	## Checks: leading spaces after tabs, trailing whitespace, and closing-brace
+	## alignment against the current nesting depth (string literals and
+	## comments are masked so brace characters inside them are ignored).
+	##
 	## @param source: Raw source code string.
 	## @param issues: Destination issues array.
-	replace local Function is lintIndentation(String is source, Array of LintIssue is issues){
+	local Function is lintIndentation(String is source, Array of LintIssue is issues){
 		local Int is lineNum: 0;
+		local Int is depth: 0;
 		source:lines():each(action: local Function(String is line){
 			lineNum: lineNum + 1;
 			local Int is tabs: line:countLeading(search: "\t");
@@ -84,14 +89,93 @@ Class is Linter{
 				local String is msg: "Space-based indentation detected (" . spaces . " space(s)). Spec standard requires tabs.";
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 			}
+			if (line:length() > 0 && (line:charAt(index: line:length() - 1, default: " ") == " " || line:charAt(index: line:length() - 1, default: " ") == "\t")) {
+				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: "Trailing whitespace detected."));
+			}
+
+			# Mask strings and comments, then validate brace alignment.
+			local String is masked: self:maskLine(line: line);
+			local String is body: masked;
+			local Boolean is trimming: true;
+			While:condition(
+				evaluate: local Function of Boolean(){ return trimming && body:length() > 0; },
+				iteration: local Function(){
+					local String is last: body:charAt(index: body:length() - 1, default: "");
+					if (last == " " || last == "\t") {
+						body: body:substring(start: 0, end: body:length() - 1);
+					} else {
+						trimming: false;
+					}
+				}
+			);
+			if (body:length() > 0 && body:charAt(index: 0, default: "") == "}") {
+				local Int is expectedTabs: depth - 1;
+				if (expectedTabs < 0) {
+					expectedTabs: 0;
+				}
+				if (tabs != expectedTabs) {
+					local String is msg: "Closing brace indented at " . tabs . " tab(s); nesting depth expects " . expectedTabs . ".";
+					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
+				}
+			}
+			local Int is ci: 0;
+			While:condition(
+				evaluate: local Function of Boolean(){ return ci < masked:length(); },
+				iteration: local Function(){
+					local String is ch: masked:charAt(index: ci, default: "");
+					if (ch == "{") {
+						depth: depth + 1;
+					} else if (ch == "}") {
+						depth: depth - 1;
+					}
+					ci: ci + 1;
+				}
+			);
 		});
+	}
+
+	## Returns a line with string contents and comments replaced by spaces so
+	## that brace counting only sees structural characters.
+	##
+	## @param line: Raw source line.
+	## @return: Masked line of identical length.
+	local Function of String is maskLine(String is line){
+		local String is out: "";
+		local String is quote: "";
+		local Int is i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return i < line:length(); },
+			iteration: local Function(){
+				local String is ch: line:charAt(index: i, default: "");
+				if (quote != "") {
+					if (ch == "\\") {
+						out: out . "  ";
+						i: i + 1;
+					} else if (ch == quote) {
+						quote: "";
+						out: out . " ";
+					} else {
+						out: out . " ";
+					}
+				} else if (ch == "\"" || ch == "'") {
+					quote: ch;
+					out: out . " ";
+				} else if (ch == "#") {
+					i: line:length();
+				} else {
+					out: out . ch;
+				}
+				i: i + 1;
+			}
+		);
+		return out;
 	}
 
 	## Inspects an expression node for optional arguments and idioms.
 	##
 	## @param expr: [Expression] AST node.
 	## @param issues: Destination issues array.
-	replace local Function is lintExpression(Expression is expr, Array of LintIssue is issues){
+	local Function is lintExpression(Expression is expr, Array of LintIssue is issues){
 		local String is kind: expr:getKind();
 
 		when (kind) {
@@ -143,7 +227,7 @@ Class is Linter{
 	##
 	## @param stmt: [Statement] AST node.
 	## @param issues: Destination issues array.
-	replace local Function is lintStatement(Statement is stmt, Array of LintIssue is issues){
+	local Function is lintStatement(Statement is stmt, Array of LintIssue is issues){
 		local String is kind: stmt:getKind();
 
 		when (kind) {
@@ -186,7 +270,7 @@ Class is Linter{
 	##
 	## @param classDef: [ClassInfo] definition.
 	## @param issues: Destination issues array.
-	replace local Function is lintClass(ClassInfo is classDef, Array of LintIssue is issues){
+	local Function is lintClass(ClassInfo is classDef, Array of LintIssue is issues){
 		classDef:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is METHOD: {
@@ -207,7 +291,7 @@ Class is Linter{
 	## @param source: Raw source code string.
 	## @param program: Parsed [ProgramNode] AST.
 	## @return: [Array] of [LintIssue] items.
-	replace local Function of Array of LintIssue is lint(String is source, ProgramNode is program){
+	local Function of Array of LintIssue is lint(String is source, ProgramNode is program){
 		local Array of LintIssue is issues: [];
 
 		# 1. Indentation Check
@@ -225,7 +309,7 @@ Class is Linter{
 	##
 	## @param issues: Issues array.
 	## @return: Count of warnings.
-	replace local Function of Int is countWarnings(Array of LintIssue is issues){
+	local Function of Int is countWarnings(Array of LintIssue is issues){
 		return issues:count(predicate: local Function of Boolean(LintIssue is issue){
 			return issue:getIsWarning();
 		});
@@ -235,7 +319,7 @@ Class is Linter{
 	##
 	## @param issues: Issues array.
 	## @return: Count of notices.
-	replace local Function of Int is countNotices(Array of LintIssue is issues){
+	local Function of Int is countNotices(Array of LintIssue is issues){
 		return issues:count(predicate: local Function of Boolean(LintIssue is issue){
 			return !issue:getIsWarning();
 		});
@@ -245,7 +329,7 @@ Class is Linter{
 	##
 	## @param filePath: Source file path.
 	## @param issues: Array of detected [LintIssue] items.
-	replace local Function is report(String is filePath, Array of LintIssue is issues){
+	local Function is report(String is filePath, Array of LintIssue is issues){
 		output:line("Checking '" . filePath . "' for Spec code standards...");
 		issues:each(action: local Function(LintIssue is issue){
 			output:line(issue:toString());

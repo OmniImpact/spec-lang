@@ -26,7 +26,7 @@ Class is Type{
 	##
 	## @param name: Base type name.
 	## @param params: Generic type arguments.
-	replace local Function is withParams(String is name, Array of Type is params){
+	local Function is withParams(String is name, Array of Type is params){
 		self:name: name;
 		self:params: params;
 	}
@@ -34,21 +34,21 @@ Class is Type{
 	## Returns the base type name.
 	##
 	## @return: Name string.
-	replace local Function of String is getName(){
+	local Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns generic parameter types.
 	##
 	## @return: Array of parameter [Type] descriptors.
-	replace local Function of Array of Type is getParams(){
+	local Function of Array of Type is getParams(){
 		return self:params;
 	}
 
 	## Indicates whether this type has generic parameters.
 	##
 	## @return: `true` if parameterized, `false` otherwise.
-	replace local Function of Boolean is isGeneric(){
+	local Function of Boolean is isGeneric(){
 		return self:params:length() > 0;
 	}
 

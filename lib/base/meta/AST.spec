@@ -23,14 +23,14 @@ Class is NamedArg{
 	## Returns the argument name.
 	##
 	## @return: Argument key string.
-	replace local Function of String is getName(){
+	local Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns the argument value expression.
 	##
 	## @return: [Expression] instance.
-	replace local Function of Expression is getValue(){
+	local Function of Expression is getValue(){
 		return self:value;
 	}
 
@@ -88,7 +88,7 @@ Class is Expression{
 	## Configures this node as a string literal expression.
 	##
 	## @param val: String literal value.
-	replace local Function is makeString(String is val){
+	local Function is makeString(String is val){
 		self:kind: "STRING";
 		self:stringValue: val;
 	}
@@ -96,7 +96,7 @@ Class is Expression{
 	## Configures this node as an integer literal expression.
 	##
 	## @param val: Integer literal value.
-	replace local Function is makeNumber(Int is val){
+	local Function is makeNumber(Int is val){
 		self:kind: "NUMBER";
 		self:intValue: val;
 	}
@@ -104,7 +104,7 @@ Class is Expression{
 	## Configures this node as a floating-point literal expression.
 	##
 	## @param val: Float literal value.
-	replace local Function is makeFloat(Float is val){
+	local Function is makeFloat(Float is val){
 		self:kind: "FLOAT";
 		self:floatValue: val;
 	}
@@ -112,7 +112,7 @@ Class is Expression{
 	## Configures this node as a boolean literal expression.
 	##
 	## @param val: Boolean literal value.
-	replace local Function is makeBool(Boolean is val){
+	local Function is makeBool(Boolean is val){
 		self:kind: "BOOL";
 		self:boolValue: val;
 	}
@@ -120,7 +120,7 @@ Class is Expression{
 	## Configures this node as an identifier reference expression.
 	##
 	## @param name: Identifier name.
-	replace local Function is makeIdent(String is name){
+	local Function is makeIdent(String is name){
 		self:kind: "IDENT";
 		self:stringValue: name;
 	}
@@ -128,7 +128,7 @@ Class is Expression{
 	## Configures this node as a colon-delimited path expression.
 	##
 	## @param segments: Array of path segment identifiers.
-	replace local Function is makePath(Array of String is segments){
+	local Function is makePath(Array of String is segments){
 		self:kind: "PATH";
 		self:pathSegments: segments;
 	}
@@ -136,7 +136,7 @@ Class is Expression{
 	## Configures this node as an array literal expression.
 	##
 	## @param items: Array of element [Expression] nodes.
-	replace local Function is makeArray(Array of Expression is items){
+	local Function is makeArray(Array of Expression is items){
 		self:kind: "ARRAY";
 		self:arrayItems: items;
 	}
@@ -150,14 +150,14 @@ Class is Expression{
 	## @param inner: The cast operand.
 	## @param target: Target type or base name (Int, Float, String, Hex, Bin, Oct, or a class).
 	## @param args: Optional arguments (e.g. digit width for Hex/Bin/Oct).
-	replace local Function is makeCast(Expression is inner, String is target, Array of Expression is args){
+	local Function is makeCast(Expression is inner, String is target, Array of Expression is args){
 		self:kind: "CAST";
 		self:leftExpr: inner;
 		self:stringValue: target;
 		self:castArgs: args;
 	}
 
-	replace local Function is makeMap(Array of Expression is keys, Array of Expression is values){
+	local Function is makeMap(Array of Expression is keys, Array of Expression is values){
 		self:kind: "MAP";
 		self:mapKeys: keys;
 		self:mapValues: values;
@@ -168,7 +168,7 @@ Class is Expression{
 	## @param target: Receiver target [Expression].
 	## @param method: Method name string.
 	## @param args: Array of [NamedArg] call arguments.
-	replace local Function is makeCall(Expression is target, String is method, Array of NamedArg is args){
+	local Function is makeCall(Expression is target, String is method, Array of NamedArg is args){
 		self:kind: "CALL";
 		self:methodTarget: target;
 		self:methodName: method;
@@ -180,7 +180,7 @@ Class is Expression{
 	## @param op: Binary operator symbol.
 	## @param left: Left-hand operand [Expression].
 	## @param right: Right-hand operand [Expression].
-	replace local Function is makeBinary(String is op, Expression is left, Expression is right){
+	local Function is makeBinary(String is op, Expression is left, Expression is right){
 		self:kind: "BINARY";
 		self:binaryOp: op;
 		self:leftExpr: left;
@@ -191,7 +191,7 @@ Class is Expression{
 	##
 	## @param op: Unary operator symbol.
 	## @param expr: Inner operand [Expression].
-	replace local Function is makeUnary(String is op, Expression is expr){
+	local Function is makeUnary(String is op, Expression is expr){
 		self:kind: "UNARY";
 		self:unaryOp: op;
 		self:unaryExpr: expr;
@@ -202,7 +202,7 @@ Class is Expression{
 	## @param condition: Boolean condition [Expression].
 	## @param thenExpr: True-branch [Expression].
 	## @param elseExpr: False-branch [Expression].
-	replace local Function is makeIfElse(Expression is condition, Expression is thenExpr, Expression is elseExpr){
+	local Function is makeIfElse(Expression is condition, Expression is thenExpr, Expression is elseExpr){
 		self:kind: "IF_ELSE";
 		self:condExpr: condition;
 		self:thenExpr: thenExpr;
@@ -213,7 +213,7 @@ Class is Expression{
 	##
 	## @param subject: Subject [Expression] being matched.
 	## @param arms: Array of [WhenArm] branches.
-	replace local Function is makeWhen(Expression is subject, Array of WhenArm is arms){
+	local Function is makeWhen(Expression is subject, Array of WhenArm is arms){
 		self:kind: "WHEN";
 		self:whenSubject: subject;
 		self:whenArms: arms;
@@ -224,7 +224,7 @@ Class is Expression{
 	## @param returnType: Return [Type] descriptor.
 	## @param params: Array of formal [Parameter] descriptors.
 	## @param body: Array of implementation [Statement] nodes.
-	replace local Function is makeAnonymousFunction(Type is returnType, Array of Parameter is params, Array of Statement is body){
+	local Function is makeAnonymousFunction(Type is returnType, Array of Parameter is params, Array of Statement is body){
 		self:kind: "ANON_FN";
 		self:anonReturnType: returnType;
 		self:anonParams: params;
@@ -234,49 +234,49 @@ Class is Expression{
 	## Returns the expression kind tag.
 	##
 	## @return: Kind tag string.
-	replace local Function of String is getKind(){
+	local Function of String is getKind(){
 		return self:kind;
 	}
 
 	## Sets the inferred [Type] descriptor for this expression.
 	##
 	## @param t: Inferred [Type].
-	replace local Function is setInferredType(Type is t){
+	local Function is setInferredType(Type is t){
 		self:inferredType: t;
 	}
 
 	## Returns the inferred [Type] descriptor for this expression.
 	##
 	## @return: Inferred [Type] instance.
-	replace local Function of Type is getInferredType(){
+	local Function of Type is getInferredType(){
 		return self:inferredType;
 	}
 
 	## Sets the resolved type name string populated during semantic analysis.
 	##
 	## @param t: Resolved type name string.
-	replace local Function is setResolvedType(String is t){
+	local Function is setResolvedType(String is t){
 		self:resolvedType: t;
 	}
 
 	## Returns the resolved type name string populated during semantic analysis.
 	##
 	## @return: Resolved type name string.
-	replace local Function of String is getResolvedType(){
+	local Function of String is getResolvedType(){
 		return self:resolvedType;
 	}
 
 	## Sets the one-based source line number for this expression.
 	##
 	## @param line: One-based line coordinate.
-	replace local Function is setLine(Int is line){
+	local Function is setLine(Int is line){
 		self:line: line;
 	}
 
 	## Returns the one-based source line number for this expression.
 	##
 	## @return: Source line coordinate.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
@@ -320,7 +320,7 @@ Class is Statement{
 		self:kind: kind;
 	}
 
-	replace local Function is varDecl(Array of String is modifiers, Type is varType, String is name, Expression is initExpr, Boolean is hasInit){
+	local Function is varDecl(Array of String is modifiers, Type is varType, String is name, Expression is initExpr, Boolean is hasInit){
 		self:kind: "VAR_DECL";
 		self:modifiers: modifiers;
 		self:varType: varType;
@@ -329,13 +329,13 @@ Class is Statement{
 		self:hasInit: hasInit;
 	}
 
-	replace local Function is assign(Expression is target, Expression is value){
+	local Function is assign(Expression is target, Expression is value){
 		self:kind: "ASSIGN";
 		self:assignTarget: target;
 		self:assignValue: value;
 	}
 
-	replace local Function is ifStmt(Expression is condition, Array of Statement is thenBranch, Array of Statement is elseBranch, Boolean is hasElse){
+	local Function is ifStmt(Expression is condition, Array of Statement is thenBranch, Array of Statement is elseBranch, Boolean is hasElse){
 		self:kind: "IF";
 		self:ifCondition: condition;
 		self:thenBranch: thenBranch;
@@ -343,23 +343,23 @@ Class is Statement{
 		self:hasElse: hasElse;
 	}
 
-	replace local Function is returnStmt(Expression is expr, Boolean is hasExpr){
+	local Function is returnStmt(Expression is expr, Boolean is hasExpr){
 		self:kind: "RETURN";
 		self:returnExpr: expr;
 		self:hasReturnExpr: hasExpr;
 	}
 
-	replace local Function is classStmt(ClassInfo is nestedClass){
+	local Function is classStmt(ClassInfo is nestedClass){
 		self:kind: "CLASS";
 		self:nestedClass: nestedClass;
 	}
 
-	replace local Function is expression(Expression is expr){
+	local Function is expression(Expression is expr){
 		self:kind: "EXPR";
 		self:exprStmt: expr;
 	}
 
-	replace local Function is whenStmt(Expression is subject, Array of WhenArm is arms){
+	local Function is whenStmt(Expression is subject, Array of WhenArm is arms){
 		self:kind: "WHEN";
 		self:whenSubject: subject;
 		self:whenArms: arms;
@@ -371,7 +371,7 @@ Class is Statement{
 	## the parent implementation with the supplied arguments.
 	##
 	## @param args: Forward arguments (positional when name is empty).
-	replace local Function is forwardStmt(Array of NamedArg is args){
+	local Function is forwardStmt(Array of NamedArg is args){
 		self:kind: "FORWARD";
 		self:forwardArgs: args;
 	}
@@ -379,19 +379,19 @@ Class is Statement{
 	## Returns the forward arguments of a "FORWARD" statement.
 	##
 	## @return: Array of [NamedArg] forward arguments.
-	replace local Function of Array of NamedArg is getForwardArgs(){
+	local Function of Array of NamedArg is getForwardArgs(){
 		return self:forwardArgs;
 	}
 
-	replace local Function of String is getKind(){
+	local Function of String is getKind(){
 		return self:kind;
 	}
 
-	replace local Function is setLine(Int is line){
+	local Function is setLine(Int is line){
 		self:line: line;
 	}
 
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
@@ -411,15 +411,15 @@ Class is ProgramNode{
 		self:classes: classes;
 	}
 
-	replace local Function of Array of ClassInfo is getClasses(){
+	local Function of Array of ClassInfo is getClasses(){
 		return self:classes;
 	}
 
-	replace local Function is addClass(ClassInfo is c){
+	local Function is addClass(ClassInfo is c){
 		self:classes:add(item: c);
 	}
 
-	replace local Function is setClasses(Array of ClassInfo is classes){
+	local Function is setClasses(Array of ClassInfo is classes){
 		self:classes: classes;
 	}
 
@@ -442,25 +442,25 @@ Class is WhenArm{
 	replace local Function is init(){
 	}
 
-	replace local Function is arm(Array of Expression is conditions, Array of Statement is body){
+	local Function is arm(Array of Expression is conditions, Array of Statement is body){
 		self:conditions: conditions;
 		self:isElse: false;
 		self:body: body;
 	}
 
-	replace local Function is elseArm(Array of Statement is body){
+	local Function is elseArm(Array of Statement is body){
 		self:isElse: true;
 		self:body: body;
 	}
 
-	replace local Function is exprArm(Array of Expression is conditions, Expression is value){
+	local Function is exprArm(Array of Expression is conditions, Expression is value){
 		self:conditions: conditions;
 		self:isElse: false;
 		self:valueExpr: value;
 		self:hasValueExpr: true;
 	}
 
-	replace local Function is elseExprArm(Expression is value){
+	local Function is elseExprArm(Expression is value){
 		self:isElse: true;
 		self:valueExpr: value;
 		self:hasValueExpr: true;

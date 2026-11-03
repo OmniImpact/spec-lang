@@ -45,7 +45,7 @@ Class is Token{
 	## @param kind: Lexical token category kind.
 	## @param value: Token string value.
 	## @param location: [SourceLocation] provenance.
-	replace local Function is withLocation(TokenKind is kind, String is value, SourceLocation is location){
+	local Function is withLocation(TokenKind is kind, String is value, SourceLocation is location){
 		self:kind: kind;
 		self:value: value;
 		self:location: location;
@@ -54,42 +54,42 @@ Class is Token{
 	## Returns the token category enum kind.
 	##
 	## @return: [TokenKind] enum variant.
-	replace local Function of TokenKind is getTokenKind(){
+	local Function of TokenKind is getTokenKind(){
 		return self:kind;
 	}
 
 	## Returns the token category kind string value.
 	##
 	## @return: Kind string tag.
-	replace local Function of String is getKind(){
+	local Function of String is getKind(){
 		return self:kind:value();
 	}
 
 	## Returns the raw lexeme string value.
 	##
 	## @return: Value string.
-	replace local Function of String is getValue(){
+	local Function of String is getValue(){
 		return self:value;
 	}
 
 	## Returns the one-based line number.
 	##
 	## @return: Line number integer.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:location:getLine();
 	}
 
 	## Returns the one-based column number.
 	##
 	## @return: Column number integer.
-	replace local Function of Int is getCol(){
+	local Function of Int is getCol(){
 		return self:location:getCol();
 	}
 
 	## Returns the [SourceLocation] of this token.
 	##
 	## @return: [SourceLocation] coordinate instance.
-	replace local Function of SourceLocation is getLocation(){
+	local Function of SourceLocation is getLocation(){
 		return self:location;
 	}
 

@@ -17,12 +17,12 @@ Class is TypeError{
 	}
 
 	## Returns the line coordinate.
-	replace local Function of Int is getLine(){
+	local Function of Int is getLine(){
 		return self:line;
 	}
 
 	## Returns the diagnostic message.
-	replace local Function of String is getMessage(){
+	local Function of String is getMessage(){
 		return self:message;
 	}
 
@@ -116,13 +116,13 @@ Class is TypeChecker{
 	##
 	## @param line: Source line number.
 	## @param msg: Diagnostic error message.
-	replace local Function is addError(Int is line, String is msg){
+	local Function is addError(Int is line, String is msg){
 		local String is fullMsg: if (self:currentSourceFile != "") "[" . self:currentSourceFile . "] " . msg else msg;
 		self:errors:add(item: TypeError:init(line: line, message: fullMsg));
 	}
 
 	## Formats a [Type] descriptor for a variable or field (preserving "Function:RetType").
-	replace local Function of String is formatVarTypeString(Type is t){
+	local Function of String is formatVarTypeString(Type is t){
 		if (t:getName() == "Function") {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
@@ -133,7 +133,7 @@ Class is TypeChecker{
 		return self:formatTypeString(t: t);
 	}
 
-	replace local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
+	local Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:getMembers(), fieldName: variantName);
 		While:run(loop: fl);
@@ -148,7 +148,7 @@ Class is TypeChecker{
 	## @param className: ClassInfo whose members are searched.
 	## @param methodName: Member name to locate.
 	## @return: The resolved [Member], or an UNKNOWN member when absent.
-	replace local Function of Member is lookupAnyMember(String is className, String is methodName){
+	local Function of Member is lookupAnyMember(String is className, String is methodName){
 		if (className == "" || className == "Any") {
 			return Member:init(kind: "");
 		}
@@ -179,7 +179,7 @@ Class is TypeChecker{
 	## SELF_FIELD are skipped, as are Any-typed arguments.
 	##
 	## @param callExpr: CALL expression whose arguments are checked.
-	replace local Function is checkCallArguments(Expression is callExpr){
+	local Function is checkCallArguments(Expression is callExpr){
 		local String is targetType: callExpr:methodTarget:getResolvedType();
 		if (targetType == "self" || targetType == "") {
 			targetType: self:currentClassName;
@@ -250,7 +250,7 @@ Class is TypeChecker{
 	##
 	## @param name: Candidate type name.
 	## @return: true when the name is a builtin class.
-	replace local Function of Boolean is isBuiltinClassName(String is name){
+	local Function of Boolean is isBuiltinClassName(String is name){
 		if (name == "Array" || name == "Map" || name == "File" || name == "Process" || name == "Math" || name == "math") {
 			return true;
 		}
@@ -269,7 +269,7 @@ Class is TypeChecker{
 	## @param subjectType: Static type name of the when subject.
 	## @param arms: The when arms to inspect.
 	## @param line: Source line used for diagnostics.
-	replace local Function is checkWhenExhaustive(String is subjectType, Array of WhenArm is arms, Int is line){
+	local Function is checkWhenExhaustive(String is subjectType, Array of WhenArm is arms, Int is line){
 		if (subjectType == "" || !self:allEnumNames:has(key: subjectType)) {
 			return;
 		}
@@ -309,7 +309,7 @@ Class is TypeChecker{
 		}
 	}
 
-	replace local Function is bindWhenPatternVars(WhenArm is arm){
+	local Function is bindWhenPatternVars(WhenArm is arm){
 		arm:conditions:each(action: local Function(Expression is c){
 			if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
 				local String is enumName: self:allEnumVariants:getString(key: c:methodName, default: "");
@@ -331,7 +331,7 @@ Class is TypeChecker{
 			}
 		});
 	}
-	replace local Function of String is formatTypeString(Type is t){
+	local Function of String is formatTypeString(Type is t){
 		local String is baseName: t:getName();
 		if (baseName == "Function") {
 			if (t:getParams():length() > 0) {
@@ -352,7 +352,7 @@ Class is TypeChecker{
 		return baseName;
 	}
 
-	replace local Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
+	local Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
 		local Array of String is tps: cls:getTypeParams();
 		if (tps:length() == 0 || typeArgs:length() == 0) {
 			return rawType;
@@ -405,7 +405,7 @@ Class is TypeChecker{
 	##
 	## @param name: Target class name.
 	## @return: Matching [ClassInfo] descriptor.
-	replace local Function of ClassInfo is findClass(String is name){
+	local Function of ClassInfo is findClass(String is name){
 		local SearchLoop is s: SearchLoop:init(list: self:programClasses, target: name);
 		While:run(loop: s);
 		if (s:found) {
@@ -415,7 +415,7 @@ Class is TypeChecker{
 	}
 
 	## Checks if `subName` inherits from or implements `baseName`.
-	replace local Function of Boolean is isSubclassOf(String is subName, String is baseName){
+	local Function of Boolean is isSubclassOf(String is subName, String is baseName){
 		if (subName == "" || baseName == "") {
 			return false;
 		}
@@ -440,7 +440,7 @@ Class is TypeChecker{
 	## @param target: Target type name.
 	## @param source: Source type name.
 	## @return: `true` if compatible, `false` otherwise.
-	replace local Function of Boolean is isAssignable(String is target, String is source){
+	local Function of Boolean is isAssignable(String is target, String is source){
 		if (target == source || target == "Any" || source == "Any" || target == "" || source == "") {
 			return true;
 		}
@@ -540,7 +540,7 @@ Class is TypeChecker{
 	}
 
 	## Looks up a field's static type string on a class and its ancestors.
-	replace local Function of String is lookupFieldType(String is className, String is fieldName){
+	local Function of String is lookupFieldType(String is className, String is fieldName){
 		if (className == "" || className == "Any") {
 			return "";
 		}
@@ -598,7 +598,7 @@ Class is TypeChecker{
 	}
 
 	## Looks up a method's return type string on a class and its ancestors.
-	replace local Function of String is lookupMethodReturnType(String is className, String is methodName){
+	local Function of String is lookupMethodReturnType(String is className, String is methodName){
 		if (className == "" || className == "Any") {
 			return "";
 		}
@@ -660,7 +660,7 @@ Class is TypeChecker{
 	##
 	## @param expr: [Expression] AST node.
 	## @return: Resolved type name string.
-	replace local Function of String is inferExpressionType(Expression is expr){
+	local Function of String is inferExpressionType(Expression is expr){
 		local String is kind: expr:getKind();
 		local String is res: "Any";
 
@@ -1122,7 +1122,7 @@ Class is TypeChecker{
 	## Validates type safety of a statement node.
 	##
 	## @param stmt: [Statement] AST node.
-	replace local Function is checkStatement(Statement is stmt){
+	local Function is checkStatement(Statement is stmt){
 		if (stmt:getLine() > 0) {
 			self:currentLine: stmt:getLine();
 		}
@@ -1309,14 +1309,14 @@ Class is TypeChecker{
 	##
 	## @param t: Declared [Type] descriptor.
 	## @return: Return type name string.
-	replace local Function of String is resolveReturnType(Type is t){
+	local Function of String is resolveReturnType(Type is t){
 		return self:formatTypeString(t: t);
 	}
 
 	## Validates a method member definition.
 	##
 	## @param method: Method [Member] descriptor.
-	replace local Function is checkMethod(Member is method){
+	local Function is checkMethod(Member is method){
 		if (method:getLine() > 0) {
 			self:currentLine: method:getLine();
 		}
@@ -1406,7 +1406,7 @@ Class is TypeChecker{
 	## @param className: Child [ClassInfo] whose parents are searched.
 	## @param methodName: Method name to locate.
 	## @return: The parent [Member], or an empty-named Member when absent.
-	replace local Function of Member is findFirstSuperMethod(String is className, String is methodName){
+	local Function of Member is findFirstSuperMethod(String is className, String is methodName){
 		local ClassInfo is cls: self:findClass(name: className);
 		if (cls:getName() == "") {
 			return Member:init(kind: "");
@@ -1430,7 +1430,7 @@ Class is TypeChecker{
 	## @param methodName: Method name to collect declarers of.
 	## @param seen: Dedup map of already-visited class names.
 	## @param acc: Output array of declaring class names.
-	replace local Function is collectConcreteDeclarers(String is className, String is methodName, Map of String to String is seen, Array of String is acc){
+	local Function is collectConcreteDeclarers(String is className, String is methodName, Map of String to String is seen, Array of String is acc){
 		if (seen:has(key: className)) {
 			return;
 		}
@@ -1464,7 +1464,73 @@ Class is TypeChecker{
 	## contracts); shared diamond bases are deduplicated by name.
 	##
 	## @param classDef: [ClassInfo] to validate.
-	replace local Function is checkMethodConflicts(ClassInfo is classDef){
+	## Finds a member of any kind with the given name across all ancestors.
+	##
+	## @param className: Starting [ClassInfo] whose bases are searched.
+	## @param memberName: Member name to locate.
+	## @return: The ancestor [Member], or an empty-named Member when absent.
+	local Function of Member is findAncestorMember(String is className, String is memberName){
+		local ClassInfo is cls: self:findClass(name: className);
+		if (cls:getName() == "") {
+			return Member:init(kind: "");
+		}
+		local Member is res: Member:init(kind: "");
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (res:getName() == "") {
+				local ClassInfo is anc: self:findClass(name: baseName);
+				if (anc:getName() != "") {
+					anc:getMembers():each(action: local Function(Member is m){
+						if (res:getName() == "" && m:getName() == memberName) {
+							res: m;
+						}
+					});
+				}
+			}
+		});
+		if (res:getName() == "") {
+			cls:getBaseClasses():each(action: local Function(String is baseName){
+				if (res:getName() == "") {
+					res: self:findAncestorMember(className: baseName, memberName: memberName);
+				}
+			});
+		}
+		return res;
+	}
+
+	## Validates that `replace` and `merge` members actually target an ancestor
+	## declaration. A `replace` with no ancestor member of that name - or one of
+	## a different kind - replaces nothing; a `merge` field with no ancestor
+	## field has nothing to merge with. Both are compile errors.
+	##
+	## Root-contract members (`init`, `using`, `toString`) are exempt: they
+	## override the implicit root `Class` declaration.
+	##
+	## @param classDef: [ClassInfo] to validate.
+	local Function is checkShadowTargets(ClassInfo is classDef){
+		classDef:getMembers():each(action: local Function(Member is m){
+			local Array of String is mods: m:getModifiers();
+			local Boolean is hasReplace: mods:indexOf(search: "replace", default: -1) >= 0;
+			local Boolean is hasMerge: mods:indexOf(search: "merge", default: -1) >= 0;
+			if (!hasReplace && !hasMerge) {
+				return;
+			}
+			local String is name: m:getName();
+			if (name == "init" || name == "using" || name == "toString") {
+				return;
+			}
+			local Member is anc: self:findAncestorMember(className: classDef:getName(), memberName: name);
+			if (anc:getName() == "") {
+				local String is what: if (hasMerge) "merge" else "replace";
+				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' declares '" . what . "' but no ancestor declares a member with that name.";
+				self:addError(line: m:getLine(), msg: msg);
+			} else if (anc:getKind() != m:getKind()) {
+				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' is a " . m:getKind() . " but the ancestor member it targets is a " . anc:getKind() . ".";
+				self:addError(line: m:getLine(), msg: msg);
+			}
+		});
+	}
+
+	local Function is checkMethodConflicts(ClassInfo is classDef){
 		local Map of String to String is seenMethods: Map:init();
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
 			local ClassInfo is anc: self:findClass(name: baseName);
@@ -1512,7 +1578,7 @@ Class is TypeChecker{
 		});
 	}
 
-	replace local Function is checkInheritance(ClassInfo is classDef){
+	local Function is checkInheritance(ClassInfo is classDef){
 		self:currentSourceFile: classDef:getSourceFile();
 		local Boolean is hasInit: false;
 		classDef:getMembers():each(action: local Function(Member is m){
@@ -1524,10 +1590,10 @@ Class is TypeChecker{
 		# Built-in lifecycle methods strictly require replace
 		classDef:getMembers():each(action: local Function(Member is m){
 			when (m:getName()) {
-				is "init", "evaluate", "iteration", "using", "toString": {
+				is "init", "using", "toString": {
 					local Array of String is mods: m:getModifiers();
 					if (mods:indexOf(search: "replace", default: -1) < 0 && mods:indexOf(search: "merge", default: -1) < 0) {
-						local String is msg: "Built-in lifecycle method '" . m:getName() . "' in class '" . classDef:getName() . "' requires 'replace' (or 'merge') modifier.";
+						local String is msg: "Root-contract method '" . m:getName() . "' in class '" . classDef:getName() . "' requires 'replace' (or 'merge') modifier.";
 						self:addError(line: m:getLine(), msg: msg);
 					}
 				}
@@ -1604,6 +1670,7 @@ Class is TypeChecker{
 			}
 		});
 		self:checkMethodConflicts(classDef: classDef);
+		self:checkShadowTargets(classDef: classDef);
 	}
 
 	## Folds a `merge` field override into its parent's array literal.
@@ -1619,7 +1686,7 @@ Class is TypeChecker{
 	## @param subM: Child field member carrying the `merge` modifier.
 	## @param parentM: Ancestor member being merged with.
 	## @param baseName: Ancestor class name for diagnostics.
-	replace local Function is applyMerge(ClassInfo is classDef, Member is subM, Member is parentM, String is baseName){
+	local Function is applyMerge(ClassInfo is classDef, Member is subM, Member is parentM, String is baseName){
 		if (subM:getKind() != "FIELD") {
 			self:addError(line: subM:getLine(), msg: "'merge' is only valid on fields; member '" . subM:getName() . "' in class '" . classDef:getName() . "' is not a field.");
 			return;
@@ -1657,7 +1724,7 @@ Class is TypeChecker{
 	}
 
 	## Populates `self:fieldTypes` for a class including inherited fields.
-	replace local Function is collectClassFieldTypes(ClassInfo is classDef){
+	local Function is collectClassFieldTypes(ClassInfo is classDef){
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
 			local ClassInfo is parent: self:findClass(name: baseName);
 			if (parent:getName() != "") {
@@ -1674,7 +1741,7 @@ Class is TypeChecker{
 	## Validates all members of a class definition.
 	##
 	## @param classDef: [ClassInfo] definition.
-	replace local Function is checkClass(ClassInfo is classDef){
+	local Function is checkClass(ClassInfo is classDef){
 		self:currentClassName: classDef:getName();
 		self:currentSourceFile: classDef:getSourceFile();
 		self:fieldTypes: Map:init();
@@ -1738,7 +1805,7 @@ Class is TypeChecker{
 		});
 	}
 
-	replace local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
+	local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
 		when (stmt:getKind()) {
 			is "CLASS": {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
@@ -1764,7 +1831,7 @@ Class is TypeChecker{
 		}
 	}
 
-	replace local Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
+	local Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
@@ -1785,7 +1852,7 @@ Class is TypeChecker{
 	##
 	## @param program: Parsed [ProgramNode] AST.
 	## @return: [Array] of [TypeError] diagnostics.
-	replace local Function of Array of TypeError is checkProgram(ProgramNode is program){
+	local Function of Array of TypeError is checkProgram(ProgramNode is program){
 		self:errors: [];
 		local Array of ClassInfo is flattened: [];
 		program:getClasses():each(action: local Function(ClassInfo is c){

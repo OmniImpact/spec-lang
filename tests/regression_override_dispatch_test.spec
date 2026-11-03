@@ -75,7 +75,7 @@ Class is RegressionOverrideDispatchTest{
 
 ## Base class declaring the polymorphic contract.
 Class is Animal{
-	replace local Function of String is speak(){
+	local Function of String is speak(){
 		return "...";
 	}
 }

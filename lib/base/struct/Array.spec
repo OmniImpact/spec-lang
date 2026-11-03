@@ -10,7 +10,7 @@ Class is Array{
 	## Returns the number of elements contained in the array.
 	##
 	## @return: Element count integer.
-	replace Function of Int is length(){
+	Function of Int is length(){
 	}
 
 	## Retrieves an element at the specified zero-based index.
@@ -19,20 +19,20 @@ Class is Array{
 	## @param default: Fallback value returned if [index] is out of bounds.
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
-	replace Function of Any is get(Int is index, Any is default){
+	Function of Any is get(Int is index, Any is default){
 	}
 
 	## Appends an element or merges another array into this array.
 	##
 	## @param item: Value or [Array] to append.
-	replace Function is add(Any is item){
+	Function is add(Any is item){
 	}
 
 	## Replaces the element at the specified zero-based [index] with [item].
 	##
 	## @param index: Zero-based position.
 	## @param item: Replacement element value.
-	replace Function is set(Int is index, Any is item){
+	Function is set(Int is index, Any is item){
 	}
 
 	## Removes and returns the last element in the array.
@@ -40,7 +40,7 @@ Class is Array{
 	## @param default: Fallback value returned if the array is empty.
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
-	replace Function of Any is pop(Any is default){
+	Function of Any is pop(Any is default){
 	}
 
 	## Removes and returns the element at the specified index, shifting trailing elements.
@@ -49,7 +49,7 @@ Class is Array{
 	## @param default: Fallback value returned if [index] is out of bounds.
 	## @return: The removed element, or [default].
 	## @fallback: Returns [default] when index is out of bounds.
-	replace Function of Any is removeAt(Int is index, Any is default){
+	Function of Any is removeAt(Int is index, Any is default){
 	}
 
 	## Returns a shallow sub-array slice from [start] (inclusive) to [end] (exclusive).
@@ -57,11 +57,11 @@ Class is Array{
 	## @param start: Inclusive start index.
 	## @param end: Exclusive end index.
 	## @return: New sliced [Array].
-	replace Function of Array is slice(Int is start, Int is end){
+	Function of Array is slice(Int is start, Int is end){
 	}
 
 	## Empties the array, resetting its length to zero.
-	replace Function is clear(){
+	Function is clear(){
 	}
 
 	## Searches for the first occurrence of [search], returning its zero-based index.
@@ -70,41 +70,41 @@ Class is Array{
 	## @param default: Fallback index returned if not found.
 	## @return: Matching index, or [default].
 	## @fallback: Returns [default] (conventionally -1) if item is absent.
-	replace Function of Int is indexOf(String is search, Int is default){
+	Function of Int is indexOf(String is search, Int is default){
 	}
 
 	## Iterates through each element in the array, invoking [action] with the element.
 	##
 	## @param action: Function invoked for each item.
-	replace Function is each(Function is action){
+	Function is each(Function is action){
 	}
 
 	## Evaluates whether any element in the array satisfies the [predicate].
 	##
 	## @param predicate: Function returning `true` for a match.
 	## @return: `true` if any element matches, `false` otherwise.
-	replace Function of Boolean is any(Function is predicate){
+	Function of Boolean is any(Function is predicate){
 	}
 
 	## Counts how many elements in the array satisfy the [predicate].
 	##
 	## @param predicate: Function returning `true` for elements to count.
 	## @return: Count of matching elements.
-	replace Function of Int is count(Function is predicate){
+	Function of Int is count(Function is predicate){
 	}
 
 	## Returns a new array containing all elements that satisfy the [predicate].
 	##
 	## @param predicate: Function returning `true` for elements to retain.
 	## @return: Filtered [Array].
-	replace Function of Array is filter(Function is predicate){
+	Function of Array is filter(Function is predicate){
 	}
 
 	## Transforms each element in the array using [transform], returning a new [Array].
 	##
 	## @param transform: Function mapping each item to a transformed value.
 	## @return: Mapped [Array].
-	replace Function of Array is map(Function is transform){
+	Function of Array is map(Function is transform){
 	}
 
 	## Reduces the array to a single accumulated value starting from [initial].
@@ -112,14 +112,14 @@ Class is Array{
 	## @param initial: Initial accumulator value.
 	## @param accumulate: Function combining (accumulator, item) into the next accumulator.
 	## @return: Final accumulated value.
-	replace Function of Any is fold(Any is initial, Function is accumulate){
+	Function of Any is fold(Any is initial, Function is accumulate){
 	}
 
 	## Joins all string elements of the array into a single string separated by [separator].
 	##
 	## @param separator: Delimiter string inserted between adjacent items.
 	## @return: Joined string.
-	replace Function of String is join(String is separator){
+	Function of String is join(String is separator){
 	}
 
 	## Returns whether the array contains zero elements.

@@ -30,14 +30,14 @@ Class is Box of T{
 	## Retrieves the stored value.
 	##
 	## @return: Stored value of type T.
-	replace local Function of T is get(){
+	local Function of T is get(){
 		return self:val;
 	}
 
 	## Updates the stored value.
 	##
 	## @param newVal: New value to store.
-	replace local Function is set(T is newVal){
+	local Function is set(T is newVal){
 		self:val: newVal;
 	}
 
@@ -64,14 +64,14 @@ Class is Pair of A to B{
 	## Retrieves the first value.
 	##
 	## @return: Value of type A.
-	replace local Function of A is getFirst(){
+	local Function of A is getFirst(){
 		return self:first;
 	}
 
 	## Retrieves the second value.
 	##
 	## @return: Value of type B.
-	replace local Function of B is getSecond(){
+	local Function of B is getSecond(){
 		return self:second;
 	}
 
@@ -92,7 +92,7 @@ Class is NextGenFeaturesTest{
 	## @param prefix: Salutation prefix with default.
 	## @param suffix: Punctuation suffix with default.
 	## @return: Formatted greeting.
-	replace local Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
+	local Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
 		return prefix . ", " . name . suffix;
 	}
 
@@ -102,12 +102,12 @@ Class is NextGenFeaturesTest{
 	## @param b: Intermediate factor with default.
 	## @param c: Offset with default.
 	## @return: Calculated integer result.
-	replace local Function of Int is calculate(Int is a, Int is b: 10, Int is c: 100){
+	local Function of Int is calculate(Int is a, Int is b: 10, Int is c: 100){
 		return (a * b) + c;
 	}
 
 	## Verifies Feature 2: Functional Collection Combinators (Array:map, Array:fold, Map:each).
-	replace local Function is testCombinators(){
+	local Function is testCombinators(){
 		output:line("--- Feature 2: Functional Collection Combinators ---");
 
 		# 1. Array:map transforming integers
@@ -139,7 +139,7 @@ Class is NextGenFeaturesTest{
 	}
 
 	## Verifies Feature 3: Default Parameter Values and Call-Site Named-Argument Reordering.
-	replace local Function is testDefaultsAndReordering(){
+	local Function is testDefaultsAndReordering(){
 		output:line("--- Feature 3: Default Parameter Values & Named Argument Reordering ---");
 
 		# All defaults used except required name
@@ -164,7 +164,7 @@ Class is NextGenFeaturesTest{
 	}
 
 	## Verifies Feature 4: Map Literals and Index Assignment.
-	replace local Function is testMapLiteralsAndIndexAssignment(){
+	local Function is testMapLiteralsAndIndexAssignment(){
 		output:line("--- Feature 4: Map Literals & Index Assignment ---");
 
 		# Initial map literal
@@ -198,7 +198,7 @@ Class is NextGenFeaturesTest{
 	}
 
 	## Verifies Feature 5: User-Defined Generic Classes.
-	replace local Function is testGenericClasses(){
+	local Function is testGenericClasses(){
 		output:line("--- Feature 5: User-Defined Generic Classes ---");
 
 		# Single-parameter generic with String
@@ -223,7 +223,7 @@ Class is NextGenFeaturesTest{
 	}
 
 	## Verifies Feature 6: First-ClassInfo Capturing Closures and Direct Function Invocation.
-	replace local Function is testClosuresAndDirectInvocation(){
+	local Function is testClosuresAndDirectInvocation(){
 		output:line("--- Feature 6: First-ClassInfo Capturing Closures & Direct Invocation ---");
 
 		local Int is factor: 10;
@@ -250,7 +250,7 @@ Class is NextGenFeaturesTest{
 	}
 
 	## Verifies Feature 7: Tagged Union Enums and Destructuring when.
-	replace local Function is testTaggedUnionEnums(){
+	local Function is testTaggedUnionEnums(){
 		output:line("--- Feature 7: Tagged Union Enums & Destructuring When ---");
 
 		local Result is resOk: Result:Ok(data: "Payload verified");
@@ -305,7 +305,7 @@ Class is NextGenFeaturesTest{
 	## Helper method to pattern match a Result variant in a when statement.
 	##
 	## @param res: Target Result instance to inspect.
-	replace local Function is inspectResult(Result is res){
+	local Function is inspectResult(Result is res){
 		when (res) {
 			is Ok(d): {
 				output:line("  [when stmt] Result:Ok with data: " . d);

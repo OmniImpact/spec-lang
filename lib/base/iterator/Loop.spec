@@ -10,7 +10,7 @@ Class is Loop{
 	## Evaluates whether another loop iteration should proceed.
 	##
 	## @return: `true` to continue running, `false` to terminate the loop.
-	replace Function of Boolean is evaluate(){
+	Function of Boolean is evaluate(){
 		return false;
 	}
 
@@ -18,7 +18,7 @@ Class is Loop{
 	##
 	## @param control: The [LoopControl] coordinator managing halts and callbacks.
 	## @return: `true` to continue, `false` to break.
-	replace Function of Boolean is iteration(LoopControl is control){
+	Function of Boolean is iteration(LoopControl is control){
 		return false;
 	}
 

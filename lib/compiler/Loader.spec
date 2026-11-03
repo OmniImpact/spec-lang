@@ -37,7 +37,7 @@ Class is Loader{
 		self:groupFragments: [];
 	}
 
-	replace local Function of Array of String is getParseErrors(){
+	local Function of Array of String is getParseErrors(){
 		return self:parseErrors;
 	}
 
@@ -72,7 +72,7 @@ Class is Loader{
 	##
 	## @param rawPath: Colon-separated package identifier.
 	## @return: Resolved filesystem path string, or empty string if not found.
-	replace local Function of String is resolvePath(String is rawPath){
+	local Function of String is resolvePath(String is rawPath){
 		local PathConvLoop is loop: PathConvLoop:init(src: rawPath);
 		While:run(loop: loop);
 		local String is converted: loop:res;
@@ -94,7 +94,7 @@ Class is Loader{
 	##
 	## @param rawPath: Wildcard package identifier (e.g. "base:io:*").
 	## @return: Array of constituent file paths.
-	replace local Function of Array of String is expandWildcard(String is rawPath){
+	local Function of Array of String is expandWildcard(String is rawPath){
 		return when (rawPath) {
 			is "base:io:*": [
 				"lib/base/io/File.spec",
@@ -123,6 +123,7 @@ Class is Loader{
 				"lib/base/struct/Map.spec"
 			];
 			is "base:sys:*": [
+				"lib/base/sys/Parallel.spec",
 				"lib/base/sys/Process.spec",
 				"lib/base/sys/SourceLocation.spec",
 				"lib/base/sys/StackFrame.spec"
@@ -151,7 +152,7 @@ Class is Loader{
 	## Recursively reads, tokenizes, and parses a source file and its transitive dependencies.
 	##
 	## @param filePath: Path to target `.spec` file.
-	replace local Function is loadFile(String is filePath){
+	local Function is loadFile(String is filePath){
 		if (self:loadedFiles:has(key: filePath)) {
 			return;
 		}
@@ -206,7 +207,7 @@ Class is Loader{
 	## Gathers and loads all `using` imports declared in a class definition.
 	##
 	## @param c: Target [ClassInfo] definition.
-	replace local Function is collectImportsFromClass(ClassInfo is c){
+	local Function is collectImportsFromClass(ClassInfo is c){
 		c:getMembers():each(action: local Function(Member is m){
 			if (m:getName() == "using" && m:getHasInit()) {
 				local Expression is initExpr: m:getInitExpr();
@@ -240,7 +241,7 @@ Class is Loader{
 	##
 	## @param c: Candidate [ClassInfo] definition.
 	## @return: Group target class name, or empty string when not a fragment.
-	replace local Function of String is groupTargetOf(ClassInfo is c){
+	local Function of String is groupTargetOf(ClassInfo is c){
 		local Array of Member is members: c:getMembers();
 		local Int is idx: 0;
 		local String is target: "";
@@ -276,7 +277,7 @@ Class is Loader{
 	##
 	## @param name: ClassInfo name to locate.
 	## @return: The loaded [ClassInfo], or an empty-named ClassInfo when absent.
-	replace local Function of ClassInfo is findLoadedClass(String is name){
+	local Function of ClassInfo is findLoadedClass(String is name){
 		local Int is idx: 0;
 		local ClassInfo is res: ClassInfo:init(name: "", baseClass: "", members: []);
 		While:condition(
@@ -301,7 +302,7 @@ Class is Loader{
 	## @param target: [ClassInfo] whose members are searched.
 	## @param name: Member name to locate.
 	## @return: The existing [Member], or an empty-named Member when absent.
-	replace local Function of Member is findMemberNamed(ClassInfo is target, String is name){
+	local Function of Member is findMemberNamed(ClassInfo is target, String is name){
 		if (name == "") {
 			return Member:init(kind: "");
 		}
@@ -333,7 +334,7 @@ Class is Loader{
 	##
 	## @param target: Merge destination [ClassInfo].
 	## @param frag: Group fragment [ClassInfo] to merge in.
-	replace local Function is mergeFragmentInto(ClassInfo is target, ClassInfo is frag){
+	local Function is mergeFragmentInto(ClassInfo is target, ClassInfo is frag){
 		if (target:getBaseClass() == "Enum") {
 			self:parseErrors:add(item: "  [LoadError] Group target '" . target:getName() . "' is an Enum; grouping is only supported for classes.");
 			return;
@@ -416,7 +417,7 @@ Class is Loader{
 	##
 	## @param target: [ClassInfo] to modify.
 	## @param name: Member name to strip.
-	replace local Function is stripMemberNamed(ClassInfo is target, String is name){
+	local Function is stripMemberNamed(ClassInfo is target, String is name){
 		local Array of Member is members: target:getMembers();
 		local Int is idx: members:length() - 1;
 		While:condition(
@@ -437,7 +438,7 @@ Class is Loader{
 	## Removes a class from the loaded registry (used to dissolve fragments).
 	##
 	## @param c: [ClassInfo] to remove.
-	replace local Function is removeClassFromLoaded(ClassInfo is c){
+	local Function is removeClassFromLoaded(ClassInfo is c){
 		local Int is idx: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){
@@ -461,7 +462,7 @@ Class is Loader{
 	## not exist yet contribute to a freshly created class named after the
 	## group (a class may live entirely across fragments). Fragments are then
 	## dissolved from the loaded registry.
-	replace local Function is mergeGroups(){
+	local Function is mergeGroups(){
 		local Int is idx: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){
@@ -489,7 +490,7 @@ Class is Loader{
 	##
 	## @param rootPath: Filesystem path to the application entry file.
 	## @return: Merged [ProgramNode] AST containing root and imported classes.
-	replace local Function of ProgramNode is loadProgram(String is rootPath){
+	local Function of ProgramNode is loadProgram(String is rootPath){
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();

@@ -266,17 +266,17 @@ Class is Lexer{
 	## Records a lexical error at the current line.
 	##
 	## @param msg: Error description.
-	replace local Function is addError(String is msg){
+	local Function is addError(String is msg){
 		self:errors:add(item: "Line " . self:line . ": " . msg);
 	}
 
 	## Returns whether any lexical errors were recorded.
-	replace local Function of Boolean is hasErrors(){
+	local Function of Boolean is hasErrors(){
 		return self:errors:length() > 0;
 	}
 
 	## Returns all recorded lexical error messages.
-	replace local Function of Array of String is getErrors(){
+	local Function of Array of String is getErrors(){
 		return self:errors;
 	}
 
@@ -284,7 +284,7 @@ Class is Lexer{
 	##
 	## @param ch: Digit character.
 	## @return: Digit value, or -1 when not a hex digit.
-	replace local Function of Int is digitValue(String is ch){
+	local Function of Int is digitValue(String is ch){
 		local String is lower: "0123456789abcdef";
 		local Int is d: lower:indexOf(needle: ch, default: -1);
 		if (d >= 0) {
@@ -298,11 +298,11 @@ Class is Lexer{
 		return -1;
 	}
 
-	replace local Function of Boolean is isAtEnd(){
+	local Function of Boolean is isAtEnd(){
 		return self:pos >= self:length;
 	}
 
-	replace local Function of String is advance(){
+	local Function of String is advance(){
 		local String is ch: self:source:charAt(index: self:pos, default: "");
 		self:pos: self:pos + 1;
 		if (ch == "\n") {
@@ -314,26 +314,26 @@ Class is Lexer{
 		return ch;
 	}
 
-	replace local Function is skipWhitespaceAndComments(){
+	local Function is skipWhitespaceAndComments(){
 		While:run(loop: SkipWhitespaceLoop:init(lexer: self));
 	}
 
-	replace local Function of Boolean is isIdentifierStart(String is ch){
+	local Function of Boolean is isIdentifierStart(String is ch){
 		return ch:isAlpha() || ch == "_";
 	}
 
-	replace local Function of Boolean is isIdentifierContinue(String is ch){
+	local Function of Boolean is isIdentifierContinue(String is ch){
 		return ch:isAlpha() || ch:isDigit() || ch == "_";
 	}
 
-	replace local Function of Boolean is isKeyword(String is text){
+	local Function of Boolean is isKeyword(String is text){
 		return when (text) {
 			is "extends", "local", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
 			else: false;
 		};
 	}
 
-	replace local Function of Token is readIdentifierOrKeyword(){
+	local Function of Token is readIdentifierOrKeyword(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		local Int is startPos: self:pos;
@@ -348,7 +348,7 @@ Class is Lexer{
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
-	replace local Function of Token is readNumber(){
+	local Function of Token is readNumber(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 
@@ -422,7 +422,7 @@ Class is Lexer{
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
-	replace local Function of Token is readString(String is quote){
+	local Function of Token is readString(String is quote){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		self:advance();
@@ -436,7 +436,7 @@ Class is Lexer{
 		return Token:init(kind: TokenKind:STRING, value: loop:res, line: startLine, col: startCol);
 	}
 
-	replace local Function of Token is readSymbol(){
+	local Function of Token is readSymbol(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		local String is ch: self:advance();
@@ -485,7 +485,7 @@ Class is Lexer{
 	## Tokenizes the entire source string, returning an array of scanned tokens ending with EOF.
 	##
 	## @return: [Array] of [Token] items.
-	replace local Function of Array of Token is tokenize(){
+	local Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
 		While:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
 		tokens:add(item: Token:init(kind: TokenKind:EOF, value: "", line: self:line, col: self:col));

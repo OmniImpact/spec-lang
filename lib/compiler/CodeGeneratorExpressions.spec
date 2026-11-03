@@ -6,7 +6,7 @@
 Class is CodeGeneratorExpressions{
 
 	## Load-time grouping: members merge into CodeGenerator.
-	replace local Array of String is group: [CodeGenerator];
+	local Array of String is group: [CodeGenerator];
 
 	replace local Array of String is using: [
 		base:struct:Array,
@@ -19,7 +19,7 @@ Class is CodeGeneratorExpressions{
 		base:meta:*
 	];
 
-	replace local Function of String is generateExpression(Expression is expr){
+	local Function of String is generateExpression(Expression is expr){
 		local String is kind: expr:getKind();
 
 		when (kind) {
@@ -519,7 +519,7 @@ Class is CodeGeneratorExpressions{
 	##
 	## @param expr: Target [Expression] node.
 	## @return: C lvalue string if simple variable/field, or empty string otherwise.
-	replace local Function of String is tryGenerateTargetOnly(Expression is expr){
+	local Function of String is tryGenerateTargetOnly(Expression is expr){
 		if (expr:getKind() == "IDENT") {
 			if (self:localVars:has(key: expr:stringValue)) {
 				return self:cIdent(name: expr:stringValue);
@@ -540,7 +540,7 @@ Class is CodeGeneratorExpressions{
 	## @param expr: Right-hand side assignment [Expression].
 	## @param targetC: Generated C lvalue of the assignment target.
 	## @return: `spec_str_append` call chain string if optimizable, or empty string otherwise.
-	replace local Function of String is tryGenerateAppendChain(Expression is expr, String is targetC){
+	local Function of String is tryGenerateAppendChain(Expression is expr, String is targetC){
 		if (targetC == "") {
 			return "";
 		}

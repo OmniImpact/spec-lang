@@ -26,7 +26,7 @@ Class is Mandelbrot{
 	## @param ci: Imaginary part of complex coordinate $c$.
 	## @param maxIter: Maximum iteration threshold.
 	## @return: Smooth iteration value in `[0.0, maxIter]`, or `-1.0` if inside the Mandelbrot set.
-	replace local Function of Float is smoothEscape(Float is cr, Float is ci, Int is maxIter){
+	local Function of Float is smoothEscape(Float is cr, Float is ci, Int is maxIter){
 		self:pointsRendered: self:pointsRendered + 1;
 
 		# Cardioid and period-2 bulb quick rejection test
@@ -77,7 +77,7 @@ Class is Mandelbrot{
 	##
 	## @param mu: Smooth iteration count (`< 0.0` if inside the set).
 	## @return: 256-color palette code (16..231).
-	replace local Function of Int is palette256(Float is mu){
+	local Function of Int is palette256(Float is mu){
 		if (mu < 0.0) {
 			return 16;
 		}
@@ -96,7 +96,7 @@ Class is Mandelbrot{
 	##
 	## @param mu: Smooth iteration count (`< 0.0` if inside the set).
 	## @return: Single Unicode shade block character (` `, `░`, `▒`, `▓`, `█`).
-	replace local Function of String is shadeGlyph(Float is mu){
+	local Function of String is shadeGlyph(Float is mu){
 		if (mu < 0.0) {
 			return " ";
 		}
@@ -110,7 +110,7 @@ Class is Mandelbrot{
 	}
 
 	## Clamps a float `v` into `[lo, hi]`.
-	replace local Function of Float is clampFloat(Float is v, Float is lo, Float is hi){
+	local Function of Float is clampFloat(Float is v, Float is lo, Float is hi){
 		if (v < lo) { return lo; }
 		if (v > hi) { return hi; }
 		return v;
@@ -122,7 +122,7 @@ Class is Mandelbrot{
 	## @param height: Rendered height in rows.
 	## @param maxIter: Escape iteration threshold used.
 	## @param elapsedMs: Total wall-clock render time in milliseconds.
-	replace local Function is printStats(Int is width, Int is height, Int is maxIter, Int is elapsedMs){
+	local Function is printStats(Int is width, Int is height, Int is maxIter, Int is elapsedMs){
 		local Int is peakKb: Process:peakMemoryKb();
 		local Int is peakMb: peakKb / 1024;
 		local Int is elapsedSec: elapsedMs / 1000;
@@ -142,7 +142,7 @@ Class is Mandelbrot{
 	##
 	## @param count: Number of `═` segments.
 	## @return: Bar string.
-	replace local Function of String is repeatBar(Int is count){
+	local Function of String is repeatBar(Int is count){
 		local String is bar: "";
 		local Int is i: 0;
 		While:condition(
@@ -160,7 +160,7 @@ Class is Mandelbrot{
 	## @param title: Title text.
 	## @param width: Total rendered width including borders.
 	## @return: Centered, bordered title line.
-	replace local Function of String is centerTitle(String is title, Int is width){
+	local Function of String is centerTitle(String is title, Int is width){
 		local String is line: "║";
 		local Int is pad: width - 2 - title:length();
 		if (pad < 1) {
@@ -246,7 +246,7 @@ Class is Mandelbrot{
 
 	## Renders two vertical complex-plane samples per terminal row using the upper half-block `▀`
 	## with 256-color foreground (top sample) and 256-color background (bottom sample).
-	replace local Function is renderHalfBlock(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
+	local Function is renderHalfBlock(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
 		local Int is pixelHeight: rows * 2;
 		local Float is wFloat: math:toFloat(value: width - 1);
 		local Float is hFloat: math:toFloat(value: pixelHeight - 1);
@@ -283,7 +283,7 @@ Class is Mandelbrot{
 	}
 
 	## Renders the complex plane using textured shade glyphs (`█`, `▓`, `▒`, `░`, ` `) and 256-color foregrounds.
-	replace local Function is renderShaded(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
+	local Function is renderShaded(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
 		local Float is wFloat: math:toFloat(value: width - 1);
 		local Float is hFloat: math:toFloat(value: rows - 1);
 		local Int is row: 0;

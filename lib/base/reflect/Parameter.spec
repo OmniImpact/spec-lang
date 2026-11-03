@@ -34,28 +34,28 @@ Class is Parameter{
 	## Returns the parameter identifier name.
 	##
 	## @return: Name string.
-	replace local Function of String is getName(){
+	local Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns the type descriptor of this parameter.
 	##
 	## @return: [Type] instance.
-	replace local Function of Type is getType(){
+	local Function of Type is getType(){
 		return self:paramType;
 	}
 
 	## Updates the type descriptor of this parameter.
 	##
 	## @param t: New [Type] descriptor.
-	replace local Function is setType(Type is t){
+	local Function is setType(Type is t){
 		self:paramType: t;
 	}
 
 	## Attaches a default value expression to this parameter.
 	##
 	## @param expr: Default value [Expression] node.
-	replace local Function is setDefault(Expression is expr){
+	local Function is setDefault(Expression is expr){
 		self:defaultExpr: expr;
 		self:hasDefault: true;
 	}
@@ -63,14 +63,14 @@ Class is Parameter{
 	## Returns the default value expression for this parameter.
 	##
 	## @return: Default value [Expression] node.
-	replace local Function of Expression is getDefaultExpr(){
+	local Function of Expression is getDefaultExpr(){
 		return self:defaultExpr;
 	}
 
 	## Returns whether this parameter declares a default value expression.
 	##
 	## @return: `true` if a default value is present, `false` otherwise.
-	replace local Function of Boolean is getHasDefault(){
+	local Function of Boolean is getHasDefault(){
 		return self:hasDefault;
 	}
 

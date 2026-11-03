@@ -840,25 +840,25 @@ Class is Parser{
 		self:errors: [];
 	}
 
-	replace local Function is setSourceFile(String is file){
+	local Function is setSourceFile(String is file){
 		self:sourceFile: file;
 	}
 
-	replace local Function of Array of String is getErrors(){
+	local Function of Array of String is getErrors(){
 		return self:errors;
 	}
 
-	replace local Function of Boolean is hasErrors(){
+	local Function of Boolean is hasErrors(){
 		return self:errors:length() > 0;
 	}
 
-	replace local Function is addError(Token is tok, String is message){
+	local Function is addError(Token is tok, String is message){
 		local String is prefix: if (self:sourceFile != "") self:sourceFile . ":" else "Line ";
 		local String is errStr: "  [SyntaxError] [" . prefix . tok:getLine() . ":" . tok:getCol() . "] " . message;
 		self:errors:add(item: errStr);
 	}
 
-	replace local Function is synchronize(){
+	local Function is synchronize(){
 		While:condition(
 			evaluate: local Function of Boolean(){
 				local Token is t: self:peek();
@@ -880,14 +880,14 @@ Class is Parser{
 		}
 	}
 
-	replace local Function of Token is peek(){
+	local Function of Token is peek(){
 		if (self:pos < self:length) {
 			return self:tokens:get(index: self:pos);
 		}
 		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
 	}
 
-	replace local Function of Token is peekAhead(Int is offset){
+	local Function of Token is peekAhead(Int is offset){
 		local Int is idx: self:pos + offset;
 		if (idx < self:length) {
 			return self:tokens:get(index: idx);
@@ -895,7 +895,7 @@ Class is Parser{
 		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
 	}
 
-	replace local Function of Token is advance(){
+	local Function of Token is advance(){
 		local Token is tok: self:peek();
 		if (self:pos < self:length) {
 			self:pos: self:pos + 1;
@@ -903,7 +903,7 @@ Class is Parser{
 		return tok;
 	}
 
-	replace local Function of Boolean is hasWhitespaceAfter(Int is offset){
+	local Function of Boolean is hasWhitespaceAfter(Int is offset){
 		local Token is cur: self:peekAhead(offset: offset);
 		local Token is nxt: self:peekAhead(offset: offset + 1);
 		if (nxt:getTokenKind() == TokenKind:EOF) {
@@ -912,7 +912,7 @@ Class is Parser{
 		return nxt:getLine() > cur:getLine() || nxt:getCol() > (cur:getCol() + cur:getValue():length());
 	}
 
-	replace local Function of Boolean is check(String is kind, String is value){
+	local Function of Boolean is check(String is kind, String is value){
 		local Token is tok: self:peek();
 		if (kind != "" && tok:getKind() != kind) {
 			return false;
@@ -923,7 +923,7 @@ Class is Parser{
 		return true;
 	}
 
-	replace local Function of Boolean is matchToken(String is kind, String is value){
+	local Function of Boolean is matchToken(String is kind, String is value){
 		if (self:check(kind: kind, value: value)) {
 			self:advance();
 			return true;
@@ -934,7 +934,7 @@ Class is Parser{
 		return false;
 	}
 
-	replace local Function of Type is parseType(){
+	local Function of Type is parseType(){
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
@@ -956,7 +956,7 @@ Class is Parser{
 		return Type:init(name: typeName);
 	}
 
-	replace local Function of Member is parseMember(){
+	local Function of Member is parseMember(){
 		local Int is startLine: self:peek():getLine();
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
@@ -1077,7 +1077,7 @@ Class is Parser{
 	##
 	## @param startLine: Source line of the opening parenthesis.
 	## @return: A "FORWARD" [Statement].
-	replace local Function of Statement is parseForwardStatement(Int is startLine){
+	local Function of Statement is parseForwardStatement(Int is startLine){
 		self:advance();
 		local Array of NamedArg is args: [];
 		While:condition(
@@ -1111,7 +1111,7 @@ Class is Parser{
 		return s;
 	}
 
-	replace local Function of Statement is parseStatement(){
+	local Function of Statement is parseStatement(){
 		local Int is startLine: self:peek():getLine();
 
 		# Merge-forward statement: `(arg, name: arg, ...)`.
@@ -1252,7 +1252,7 @@ Class is Parser{
 		return s;
 	}
 
-	replace local Function of Expression is parsePrimary(){
+	local Function of Expression is parsePrimary(){
 		local Boolean is isAnonFn: false;
 		if (self:check(kind: "KEYWORD", value: "local") && self:peekAhead(offset: 1):getValue() == "Function") {
 			isAnonFn: true;
@@ -1419,7 +1419,7 @@ Class is Parser{
 		}
 	}
 
-	replace local Function of Expression is parsePostfix(){
+	local Function of Expression is parsePostfix(){
 		local Expression is expr: self:parsePrimary();
 		local PostfixLoop is postLoop: PostfixLoop:init(parser: self, expr: expr);
 		While:run(loop: postLoop);
@@ -1431,7 +1431,7 @@ Class is Parser{
 	## Targets: class names, Int, Float, String, and the base pseudo-types
 	## Hex, Bin, Oct. Binding is tighter than every binary operator; chaining
 	## (`x as A as B`) is rejected.
-	replace local Function of Expression is parseAs(){
+	local Function of Expression is parseAs(){
 		local Expression is left: self:parsePostfix();
 		if (self:check(kind: "KEYWORD", value: "as")) {
 			self:advance();
@@ -1454,7 +1454,7 @@ Class is Parser{
 		return left;
 	}
 
-	replace local Function of Expression is parseUnary(){
+	local Function of Expression is parseUnary(){
 		if (self:check(kind: "SYMBOL", value: "~")) {
 			self:advance();
 			local Expression is expr: self:parseUnary();
@@ -1482,14 +1482,14 @@ Class is Parser{
 		return self:parseAs();
 	}
 
-	replace local Function of Expression is parseMultiplicative(){
+	local Function of Expression is parseMultiplicative(){
 		local Expression is left: self:parseUnary();
 		local MultiplicativeLoop is loopInst: MultiplicativeLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseAdditive(){
+	local Function of Expression is parseAdditive(){
 		local Expression is left: self:parseMultiplicative();
 		local AdditiveLoop is loopInst: AdditiveLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1498,35 +1498,35 @@ Class is Parser{
 
 	## Parses shift expressions (`<<`, `>>`), binding looser than addition
 	## and tighter than concatenation (C precedence: `1 << 2 + 1` is 8).
-	replace local Function of Expression is parseShift(){
+	local Function of Expression is parseShift(){
 		local Expression is left: self:parseAdditive();
 		local ShiftLoop is loopInst: ShiftLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseConcat(){
+	local Function of Expression is parseConcat(){
 		local Expression is left: self:parseShift();
 		local ConcatLoop is loopInst: ConcatLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseRelational(){
+	local Function of Expression is parseRelational(){
 		local Expression is left: self:parseConcat();
 		local RelationalLoop is loopInst: RelationalLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseEquality(){
+	local Function of Expression is parseEquality(){
 		local Expression is left: self:parseRelational();
 		local EqualityLoop is loopInst: EqualityLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseLogicalAnd(){
+	local Function of Expression is parseLogicalAnd(){
 		local Expression is left: self:parseBitOr();
 		local LogicalAndLoop is loopInst: LogicalAndLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1534,7 +1534,7 @@ Class is Parser{
 	}
 
 	## Parses bitwise OR (`|`), between `&&` and `^` (C precedence).
-	replace local Function of Expression is parseBitOr(){
+	local Function of Expression is parseBitOr(){
 		local Expression is left: self:parseBitXor();
 		local BitOrLoop is loopInst: BitOrLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1542,7 +1542,7 @@ Class is Parser{
 	}
 
 	## Parses bitwise XOR (`^`), between `|` and `&`.
-	replace local Function of Expression is parseBitXor(){
+	local Function of Expression is parseBitXor(){
 		local Expression is left: self:parseBitAnd();
 		local BitXorLoop is loopInst: BitXorLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1550,25 +1550,25 @@ Class is Parser{
 	}
 
 	## Parses bitwise AND (`&`), between `^` and equality comparisons.
-	replace local Function of Expression is parseBitAnd(){
+	local Function of Expression is parseBitAnd(){
 		local Expression is left: self:parseEquality();
 		local BitAndLoop is loopInst: BitAndLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseLogicalOr(){
+	local Function of Expression is parseLogicalOr(){
 		local Expression is left: self:parseLogicalAnd();
 		local LogicalOrLoop is loopInst: LogicalOrLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	replace local Function of Expression is parseExpression(){
+	local Function of Expression is parseExpression(){
 		return self:parseLogicalOr();
 	}
 
-	replace local Function of ClassInfo is parseClass(){
+	local Function of ClassInfo is parseClass(){
 		# Canonical declaration: `Class is Name`.
 		if (self:check(kind: "IDENTIFIER", value: "class")) {
 			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class is Name'.");
@@ -1609,7 +1609,7 @@ Class is Parser{
 		return c;
 	}
 
-	replace local Function of ClassInfo is parseEnum(){
+	local Function of ClassInfo is parseEnum(){
 		self:advance();
 		local String is backingType: "Int";
 		if (self:check(kind: "KEYWORD", value: "of")) {
@@ -1639,7 +1639,7 @@ Class is Parser{
 	## Parses the token stream into a root [base:meta:ProgramNode] AST.
 	##
 	## @return: Root [ProgramNode] containing all parsed class definitions.
-	replace local Function of ProgramNode is parseProgram(){
+	local Function of ProgramNode is parseProgram(){
 		local Array of ClassInfo is classes: [];
 		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
 		return ProgramNode:init(classes: classes);
