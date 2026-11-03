@@ -34,7 +34,14 @@ Guide for building, running, linting, and editing Spec code:
 
 ---
 
-### 4. [Roadmap to Self-Hosting](language/README.md#roadmap-to-self-hosting)
+### 4. [Code Style & SpecDoc Guide](STYLE_GUIDE.md)
+Official code style conventions, architectural idioms, and documentation standard:
+- **[Formatting Rules](STYLE_GUIDE.md#2-code-formatting--layout)**: Hard tabs, OTBS braces, whitespace rules, and naming conventions.
+- **[SpecDoc Standard](STYLE_GUIDE.md#5-specdoc-documentation-standard)**: Doc comments (`##`, `#!`), standard tags (`@param`, `@return`, `@fallback`, `@example`), and cross-referencing.
+
+---
+
+### 5. [Roadmap to Self-Hosting](language/README.md#roadmap-to-self-hosting)
 Tracks the evolution of the Spec compiler from the current Stage 0 Rust transpiler to full self-hosting in Spec.
 
 ---
@@ -47,6 +54,7 @@ Tracks the evolution of the Spec compiler from the current Stage 0 Rust transpil
 | 📖 **Language Guide** | Syntax, types, control flow | [docs/language/README.md](language/README.md) |
 | 📦 **Standard Packages** | Standard library API reference | [docs/packages/README.md](packages/README.md) |
 | 🛠️ **Tooling Guide** | Compiler, linter, editor plugins | [docs/tooling/README.md](tooling/README.md) |
+| 📜 **Code Style & SpecDoc** | Style guide and SpecDoc documentation standard | [docs/STYLE_GUIDE.md](STYLE_GUIDE.md) |
 | 📂 **Examples** | Code samples and test programs | [examples/](../examples) |
 | 📋 **Task Tracking** | Active development status | [TASKS.md](../TASKS.md) |
 | 🔧 **Maintenance Guide** | Feature addition checklist | [MAINTENANCE.md](../MAINTENANCE.md) |

@@ -380,11 +380,15 @@ impl Parser {
         }
 
         // Check for target : value; (e.g. length: source:length(); or idx: idx + 1;)
+        // Note: "self" alone can never be an assignment target (self: value; is invalid).
         if self.pos + 1 < semi_idx && self.tokens[self.pos + 1].kind == TokenKind::Colon {
-            let is_method_call = self.pos + 3 < self.tokens.len()
-                && self.tokens[self.pos + 3].kind == TokenKind::LParen;
-            if !is_method_call {
-                return Some(self.pos + 1);
+            let is_self = matches!(&self.tokens[self.pos].kind, TokenKind::Ident(id) if id == "self");
+            if !is_self {
+                let is_method_call = self.pos + 3 < self.tokens.len()
+                    && self.tokens[self.pos + 3].kind == TokenKind::LParen;
+                if !is_method_call {
+                    return Some(self.pos + 1);
+                }
             }
         }
 

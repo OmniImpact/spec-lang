@@ -1,3 +1,7 @@
+#! Package base:meta
+#! Concrete Abstract Syntax Tree models for code generation, desugaring, and tooling.
+
+## Represents a named argument pair in method calls (e.g. `index: 0`).
 class NamedArg{
 
 	replace local Array of String is using: [
@@ -22,6 +26,7 @@ class NamedArg{
 
 }
 
+## Represents an expression node in the Spec syntax tree.
 class Expression{
 
 	replace local Array of String is using: [
@@ -110,6 +115,7 @@ class Expression{
 
 }
 
+## Represents a statement node in the Spec syntax tree.
 class Statement{
 
 	replace local Array of String is using: [
@@ -185,6 +191,7 @@ class Statement{
 
 }
 
+## Represents the root program node containing all parsed [base:reflect:Class] definitions.
 class ProgramNode{
 
 	replace local Array of String is using: [

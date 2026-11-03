@@ -1,3 +1,7 @@
+#! Package compiler
+#! Pure Spec compiler implementation: Lexer, Parser, AST, and Linter.
+
+## Recursive-descent parser translating token sequences into [base:meta:ProgramNode] ASTs.
 class Parser{
 
 	replace local Array of String is using: [
@@ -240,6 +244,9 @@ class Parser{
 		}
 	}
 
+	## Initializes a parser with a token array emitted by [Lexer].
+	##
+	## @param tokens: Array of [Token] items.
 	replace local Function is init(Array of Token is tokens){
 		self:tokens: tokens;
 		self:length: tokens:length();
@@ -555,6 +562,9 @@ class Parser{
 		return Class:init(name: name, baseClass: baseClass, members: members);
 	}
 
+	## Parses the token stream into a root [base:meta:ProgramNode] AST.
+	##
+	## @return: Root [ProgramNode] containing all parsed class definitions.
 	replace local Function of ProgramNode is parseProgram(){
 		local Array of Class is classes: [];
 		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));

@@ -1,20 +1,48 @@
+#! Package base:struct
+#! Provides contiguous dynamic collections and associative hash maps.
+
+## An associative key-value map supporting string keys and values.
 class Map{
 
+	## Looks up a string value by key, returning [default] if not found.
+	##
+	## @param key: Lookup key string.
+	## @param default: Fallback string returned if key is absent.
+	## @return: Mapped value, or [default].
+	## @fallback: Returns [default] when [key] does not exist in the map.
 	replace Function of String is getString(String is key, String is default){
 	}
 
+	## Inserts or updates an entry in the map.
+	##
+	## @param key: Entry key string.
+	## @param value: Entry value string.
 	replace Function is set(String is key, String is value){
 	}
 
+	## Determines whether an entry exists for the specified key.
+	##
+	## @param key: Key to test.
+	## @return: `true` if key is present, `false` otherwise.
 	replace Function of Boolean is has(String is key){
 	}
 
+	## Removes the entry associated with [key].
+	##
+	## @param key: Key to remove.
+	## @return: `true` if removed, `false` if key was not present.
 	replace Function of Boolean is remove(String is key){
 	}
 
+	## Returns an array containing all keys currently present in the map.
+	##
+	## @return: [Array] of key strings.
 	replace Function of Array of String is keys(){
 	}
 
+	## Returns the total number of entries in the map.
+	##
+	## @return: Entry count integer.
 	replace Function of Int is length(){
 	}
 

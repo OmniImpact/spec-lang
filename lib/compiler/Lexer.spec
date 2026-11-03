@@ -1,3 +1,10 @@
+#! Package compiler
+#! Pure Spec compiler implementation: Lexer, Parser, AST, and Linter.
+
+## Lexical scanner converting Spec source code strings into a stream of [Token] items.
+##
+## Employs decoupled iterator loops for skipping whitespace, comments, identifiers,
+## numbers, and string literals.
 class Lexer{
 
 	replace local Array of String is using: [
@@ -170,6 +177,9 @@ class Lexer{
 		}
 	}
 
+	## Initializes a lexer instance for the given source string.
+	##
+	## @param source: Spec source code string to tokenize.
 	replace local Function is init(String is source){
 		self:source: source;
 		self:length: source:length();
@@ -304,6 +314,9 @@ class Lexer{
 		return Token:init(kind: "SYMBOL", value: ch, line: startLine, col: startCol);
 	}
 
+	## Tokenizes the entire source string, returning an array of scanned tokens ending with EOF.
+	##
+	## @return: [Array] of [Token] items.
 	replace local Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
 		While:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));

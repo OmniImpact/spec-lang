@@ -54,6 +54,8 @@
         <DetectSpaces/>
 
         <!-- Comments -->
+        <Detect2Chars attribute="SpecDoc" context="SpecDocComment" char="#" char1="#"/>
+        <Detect2Chars attribute="SpecDoc" context="SpecDocComment" char="#" char1="!"/>
         <DetectChar attribute="Comment" context="Comment" char="#"/>
 
         <!-- Strings -->
@@ -73,6 +75,12 @@
         <!-- Operators and Delimiters -->
         <AnyChar attribute="Operator" context="#stay" String=":=+*/%&lt;&gt;!-."/>
         <AnyChar attribute="Delimiter" context="#stay" String="{}()[],;"/>
+      </context>
+
+      <!-- SpecDoc comment -->
+      <context name="SpecDocComment" attribute="SpecDoc" lineEndContext="#pop">
+        <DetectSpaces/>
+        <IncludeRules context="##Comments"/>
       </context>
 
       <!-- Single line comment -->
@@ -108,6 +116,7 @@
       <itemData name="String" defStyleNum="dsString"/>
       <itemData name="String Char" defStyleNum="dsSpecialChar"/>
       <itemData name="Comment" defStyleNum="dsComment" italic="1"/>
+      <itemData name="SpecDoc" defStyleNum="dsDocumentation" italic="1"/>
       <itemData name="Operator" defStyleNum="dsOperator"/>
       <itemData name="Delimiter" defStyleNum="dsDelimiter"/>
     </itemDatas>

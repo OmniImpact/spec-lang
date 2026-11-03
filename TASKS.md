@@ -52,3 +52,10 @@ $ Implement base:meta:AST (Expression, Statement, NamedArg, ProgramNode) for AST
 $ Update compiler:Token, Lexer, Parser, and phase4_parser_test to use base:sys, base:reflect, and base:meta
 $ Verify lint, phase4 test, and full test suite with new standard library packages
 $ Update documentation and commit standard library refactoring
+$ Create docs/STYLE_GUIDE.md detailing code conventions and the SpecDoc documentation standard
+$ Link STYLE_GUIDE.md in docs/README.md and README.md
+$ Ensure compiler lexer and linter recognize and support ## and #! SpecDoc comments
+$ Add SpecDoc comments across standard library classes (lib/base/) and compiler classes (lib/compiler/)
+$ Port compiler linter to pure Spec (lib/compiler/Linter.spec) and verify with test suite
+$ Verify lint and test suites across the repository
+$ Commit and tag code style guide, SpecDoc documentation, and pure Spec linter
