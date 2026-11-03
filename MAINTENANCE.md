@@ -30,10 +30,10 @@ Verification commands:
 cargo build --release
 
 # Run the linter on test files (must report 0 warnings for standard tab files)
-./spec --lint ideation/my_feature.spec
+./spec --lint examples/my_feature.spec
 
 # Compile and run binary
-./spec -i ideation/my_feature.spec -o my_feature_bin
+./spec -i examples/my_feature.spec -o my_feature_bin
 ./my_feature_bin
 ```
 

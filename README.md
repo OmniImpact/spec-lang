@@ -71,7 +71,7 @@ ln -sf target/release/spec ./spec
 ### Compiling and Running a Program
 ```bash
 # Compile
-./spec -i ideation/helloworld.spec -o helloworld
+./spec -i examples/helloworld.spec -o helloworld
 
 # Run with CLI arguments
 ./helloworld --name Daniel
@@ -79,7 +79,7 @@ ln -sf target/release/spec ./spec
 
 ### Running the Linter
 ```bash
-./spec --lint ideation/blackjack_shorthand.spec
+./spec --lint examples/blackjack_shorthand.spec
 ```
 
 ---
@@ -127,7 +127,7 @@ spec-lang/
 │       ├── struct/          # Array, Map
 │       └── sys/             # Process
 ├── docs/                    # Language documentation
-├── ideation/                # Test suites & language feature showcases
+├── examples/                # Example programs & test suites
 ├── MAINTENANCE.md           # Developer feature addition checklist
 └── TASKS.md                 # Project roadmap tracking
 ```
