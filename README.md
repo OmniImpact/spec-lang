@@ -175,50 +175,31 @@ Spec is **100% self-hosted**. You do not need Rust or Cargo to build Spec; only 
 
 ---
 
-## Project Structure
+## How Spec Compares
 
-```
-spec-lang/
-├── bootstrap.sh             # Canonical C bootstrap script (no Rust required)
-├── bootstrap/
-│   └── spec.c               # Canonical converged C11 source of self-hosted compiler
-├── lib/                     # Spec Standard Library & Self-Hosted Compiler (written in Spec)
-│   ├── base/
-│   │   ├── io/              # File, Input, Output
-│   │   ├── iterator/        # Loop, LoopControl, While
-│   │   ├── math/            # Math
-│   │   ├── struct/          # Array, Map
-│   │   └── sys/             # Process, SourceLocation, StackFrame
-│   └── compiler/            # Pure Spec Self-Hosted Compiler
-│       ├── Token.spec       # Token model
-│       ├── Lexer.spec       # Pure Spec Lexer & tokenizer
-│       ├── Parser.spec      # Pure Spec recursive-descent Parser
-│       ├── AST.spec         # AST definitions
-│       ├── TypeChecker.spec # Semantic analyzer & interface contract enforcement
-│       ├── Loader.spec      # Transitive multi-file package loader
-│       ├── CodeGenerator.spec # C11 translation unit coordinator
-│       ├── DeclarationGenerator.spec # Enums, forward decls, and struct layouts
-│       ├── BuiltinCallGenerator.spec # Standard library runtime builtin dispatcher
-│       ├── CBackendUtils.spec # C type mapping and identifier sanitization
-│       ├── RuntimePrelude.spec # Thread-safe C runtime with recursive mutexes
-│       ├── Linter.spec      # Pure Spec style and optional parameter linter
-│       └── Driver.spec      # Compiler CLI coordinator
-├── docs/                    # Nested documentation portal
-│   ├── README.md            # Documentation portal index
-│   ├── language/            # Language guide & syntax reference
-│   ├── packages/            # Standard library package reference
-│   └── tooling/             # Compiler, linter, and editor guide
-├── examples/                # Demo programs (hello world, blackjack, fractals)
-├── tests/                   # Positive test suites (phases, features, regressions)
-│   └── negative/            # Must-fail suites asserting compiler diagnostics
-├── utilities/               # Helper scripts & editor syntax configurations
-│   ├── install-kate-syntax.sh
-│   └── spec-kate.xml
-├── MAINTENANCE.md           # Developer feature addition checklist
-└── TASKS.md                 # Project roadmap tracking
-```
+Spec is a statically typed, class-based language that transpiles to C and is fully
+self-hosted: the compiler is written in Spec and rebuilds itself from a single
+canonical C file. Where it sits relative to the systems languages it draws on:
 
----
+| Dimension | **Spec** | **C++** | **Java** | **Rust** |
+|---|---|---|---|---|
+| **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness) | Static, with permissive escape hatches (casts, implicit conversions) | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
+| **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `nullptr` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
+| **Memory** | Amortized string buffers + scoped frees; no general collector yet | RAII, manual control | Tracing GC | Ownership, compile-time frees |
+| **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces | Classes, multiple inheritance (virtual bases) | Single inheritance + interfaces | Traits + composition |
+| **Dispatch** | Virtual tables (vtables), most-derived wins | `virtual` functions, vtables | All methods virtual by default | Static by default; `dyn` trait objects |
+| **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition | `override` optional (advisory) | `@Override` optional (advisory) | `default`/`fn` — no override concept (no inheritance) |
+| **Enums & matching** | Algebraic enums with payloads; `when` with compile-time exhaustiveness | `enum class`, no exhaustiveness checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
+| **Generics** | `Class of T`, erased with cast insertion | Templates (duck-typed, monomorphized) | Erasure with bounds | Monomorphized, bounds-checked |
+| **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes / exceptions | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
+| **Concurrency** | pthreads; mutex-protected collections; async file I/O | std::thread, no memory-model guarantees by default | Memory model + `java.util.concurrent` | Data races are compile errors |
+| **Build model** | Transpiles to one C translation unit; `gcc` links; bit-for-bit self-hosting bootstrap | Native compilers, headers/modules | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
+| **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
+
+Spec's distinguishing ground: the override discipline (`replace`/`merge`), never-null
+defaults, enforced exhaustiveness, and a verified self-hosting fixed point. It is a
+young language — its standard library and tooling are minimal next to the others —
+but its compile-time guarantees are already stricter than C++ in the areas it covers.
 
 ## Roadmap to Self-Hosting
 
