@@ -26,7 +26,7 @@ Class is CBackendUtils{
 			return "SpecMap*";
 		}
 		if (typeName:startsWith(prefix: "Function")) {
-			return "void*";
+			return "SpecClosure*";
 		}
 		return when (typeName) {
 			is "Int", "int": "long long";
@@ -36,7 +36,7 @@ Class is CBackendUtils{
 			is "void", "Void", "": "void";
 			is "Array": "SpecArray*";
 			is "Map": "SpecMap*";
-			is "Function": "void*";
+			is "Function": "SpecClosure*";
 			is "InputHandler": "void*";
 			is "LoopControl": "SpecLoopControl*";
 			is "File", "Process", "Output", "Input", "Math", "While": "void*";

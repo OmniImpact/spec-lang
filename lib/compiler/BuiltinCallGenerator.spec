@@ -76,7 +76,7 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == "iterations") { iterC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == "worker") { workerC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return "spec_parallel_run(" . threadsC . ", " . iterC . ", (void*)(long long (*)(long long, long long))(" . workerC . "))";
+			return "spec_parallel_run(" . threadsC . ", " . iterC . ", (void*)(" . workerC . "))";
 		}
 
 		# Ansi terminal metrics (runtime ioctls; Ansi is otherwise pure Spec)
@@ -268,7 +268,7 @@ Class is BuiltinCallGenerator{
 					if (arg:getName() == "onSuccess") { onSuccC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == "onError") { onErrC: cg:generateExpression(expr: arg:getValue()); }
 				});
-				return "spec_file_read(" . pathC . ", " . defC . ", (void (*)(const char*))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+				return "spec_file_read(" . pathC . ", " . defC . ", (SpecClosure*)(" . onSuccC . "), (SpecClosure*)(" . onErrC . "))";
 			}
 			if (expr:methodName == "readAsync") {
 				local String is pathC: "\"\"";
@@ -281,7 +281,7 @@ Class is BuiltinCallGenerator{
 					if (arg:getName() == "onSuccess") { onSuccC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == "onError") { onErrC: cg:generateExpression(expr: arg:getValue()); }
 				});
-				return "spec_file_read_async(" . pathC . ", " . defC . ", (void (*)(const char*))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+				return "spec_file_read_async(" . pathC . ", " . defC . ", (SpecClosure*)(" . onSuccC . "), (SpecClosure*)(" . onErrC . "))";
 			}
 			if (expr:methodName == "write") {
 				local String is pathC: "\"\"";
@@ -294,7 +294,7 @@ Class is BuiltinCallGenerator{
 					if (arg:getName() == "onSuccess") { onSuccC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == "onError") { onErrC: cg:generateExpression(expr: arg:getValue()); }
 				});
-				return "spec_file_write(" . pathC . ", " . contentC . ", (void (*)(long long))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+				return "spec_file_write(" . pathC . ", " . contentC . ", (SpecClosure*)(" . onSuccC . "), (SpecClosure*)(" . onErrC . "))";
 			}
 			if (expr:methodName == "writeAsync") {
 				local String is pathC: "\"\"";
@@ -307,7 +307,7 @@ Class is BuiltinCallGenerator{
 					if (arg:getName() == "onSuccess") { onSuccC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == "onError") { onErrC: cg:generateExpression(expr: arg:getValue()); }
 				});
-				return "spec_file_write_async(" . pathC . ", " . contentC . ", (void (*)(long long))(" . onSuccC . "), (void (*)(const char*))(" . onErrC . "))";
+				return "spec_file_write_async(" . pathC . ", " . contentC . ", (SpecClosure*)(" . onSuccC . "), (SpecClosure*)(" . onErrC . "))";
 			}
 		}
 

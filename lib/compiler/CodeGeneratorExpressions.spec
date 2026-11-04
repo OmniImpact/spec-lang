@@ -289,23 +289,16 @@ Class is CodeGeneratorExpressions{
 						local String is fnPtrC: if (self:localVars:has(key: expr:methodName)) self:cIdent(name: expr:methodName) else "self->" . self:cIdent(name: expr:methodName);
 						local String is retTName: if (fnVarT:startsWith(prefix: "Function:") && fnVarT:length() > 9) fnVarT:substring(start: 9, end: fnVarT:length()) else "Void";
 						local String is retCType: self:cTypeFor(typeName: retTName);
-						local String is pTypesC: "";
-						local String is cArgsC: "";
-						local Boolean is firstA: true;
+						local String is pTypesC: "void*";
+						local String is cArgsC: "_cls->env";
 						expr:methodArgs:each(action: local Function(NamedArg is arg){
-							if (!firstA) {
-								pTypesC: pTypesC . ", ";
-								cArgsC: cArgsC . ", ";
-							}
 							local String is aValC: self:generateExpression(expr: arg:getValue());
 							local String is aT: self:inferTargetType(expr: arg:getValue());
 							local String is aCType: self:cTypeFor(typeName: aT);
-							pTypesC: pTypesC . aCType;
-							cArgsC: cArgsC . aValC;
-							firstA: false;
+							pTypesC: pTypesC . ", " . aCType;
+							cArgsC: cArgsC . ", " . aValC;
 						});
-						if (firstA) { pTypesC: "void"; }
-						return "((" . retCType . " (*)(" . pTypesC . "))(" . fnPtrC . "))(" . cArgsC . ")";
+						return "({ SpecClosure* _cls = (SpecClosure*)(" . fnPtrC . "); if (!_cls || !_cls->fn) spec_panic(\"Invocation of null Function\"); ((" . retCType . " (*)(" . pTypesC . "))_cls->fn)(" . cArgsC . "); })";
 					}
 				}
 
@@ -491,17 +484,13 @@ Class is CodeGeneratorExpressions{
 					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
 				});
 
-				local String is paramsC: "";
-				local Boolean is firstP: true;
+				local String is paramsC: "void* _env_ptr";
 				local Array of String is paramNames: [];
 				expr:anonParams:each(action: local Function(Parameter is p){
 					paramNames:add(item: p:getName());
 					self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
-					if (!firstP) { paramsC: paramsC . ", "; }
-					paramsC: paramsC . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
-					firstP: false;
+					paramsC: paramsC . ", " . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
 				});
-				if (firstP) { paramsC: "void"; }
 
 				local String is savedRetVar: self:inlineReturnVar;
 				local String is savedRetLbl: self:inlineReturnLabel;
@@ -515,14 +504,23 @@ Class is CodeGeneratorExpressions{
 				self:inlineReturnLabel: savedRetLbl;
 				self:localVars: savedVars;
 
-				local String is capDecls: "";
-				local String is capBinds: "";
+				local String is envName: "_Env_anon_" . id;
+				local String is destroyEnvName: "_destroy_env_anon_" . id;
+
+				local String is capFieldDecls: "";
+				local String is capFieldBinds: "";
 				local String is capAssigns: "";
+				local String is capReleases: "";
+				local Boolean is hasCaptures: false;
+
 				if (self:inMethod && self:currentClassName != "" && !self:isBuiltinClass(name: self:currentClassName) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: "self")) {
-					capDecls: capDecls . "static " . self:currentClassName . "* _cap_" . id . "_self = NULL;\n";
-					capBinds: capBinds . "    " . self:currentClassName . "* self = _cap_" . id . "_self;\n    (void)self;\n";
-					capAssigns: capAssigns . " _cap_" . id . "_self = self;";
+					hasCaptures: true;
+					capFieldDecls: capFieldDecls . "    " . self:currentClassName . "* self;\n";
+					capFieldBinds: capFieldBinds . "    " . self:currentClassName . "* self = _env->self;\n    (void)self;\n";
+					capAssigns: capAssigns . "    _env->self = (" . self:currentClassName . "*)spec_retain((void*)self);\n";
+					capReleases: capReleases . "    if (_env->self) spec_release((void*)_env->self);\n";
 				}
+
 				outerKeys:each(action: local Function(String is k){
 					if (paramNames:indexOf(search: k, default: -1) < 0) {
 						local String is cVar: self:cIdent(name: k);
@@ -530,19 +528,33 @@ Class is CodeGeneratorExpressions{
 							local String is vType: savedVars:getString(key: k, default: "");
 							local String is vCType: self:cTypeFor(typeName: vType);
 							if (vCType != "void" && vCType != "") {
-								capDecls: capDecls . "static " . vCType . " _cap_" . id . "_" . cVar . ";\n";
-								capBinds: capBinds . "    " . vCType . " " . cVar . " = _cap_" . id . "_" . cVar . ";\n    (void)" . cVar . ";\n";
-								capAssigns: capAssigns . " _cap_" . id . "_" . cVar . " = " . cVar . ";";
+								hasCaptures: true;
+								capFieldDecls: capFieldDecls . "    " . vCType . " " . cVar . ";\n";
+								capFieldBinds: capFieldBinds . "    " . vCType . " " . cVar . " = _env->" . cVar . ";\n    (void)" . cVar . ";\n";
+								local Boolean is isArcVar: (self:allClassNames:has(key: vType) && !self:allEnumNames:has(key: vType)) || self:allTaggedEnums:has(key: vType) || vType:startsWith(prefix: "Array") || vType:startsWith(prefix: "Map") || vType:startsWith(prefix: "Function") || vType == "LoopControl";
+								if (isArcVar) {
+									capAssigns: capAssigns . "    _env->" . cVar . " = (" . vCType . ")spec_retain((void*)" . cVar . ");\n";
+									capReleases: capReleases . "    if (_env->" . cVar . ") spec_release((void*)_env->" . cVar . ");\n";
+								} else if (vType == "String" || vType == "string") {
+									capAssigns: capAssigns . "    _env->" . cVar . " = spec_str_clone_if_buffered(" . cVar . ");\n";
+								} else {
+									capAssigns: capAssigns . "    _env->" . cVar . " = " . cVar . ";\n";
+								}
 							}
 						}
 					}
 				});
 
-				self:helperFunctions: self:helperFunctions . capDecls . "static " . retC . " " . fnName . "(" . paramsC . ") {\n" . capBinds . bodyC . "}\n\n";
-				if (capAssigns != "") {
-					return "({" . capAssigns . " " . fnName . "; })";
+				if (hasCaptures) {
+					local String is envStruct: "typedef struct {\n" . capFieldDecls . "} " . envName . ";\n\n";
+					local String is destroyEnv: "static void " . destroyEnvName . "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    " . envName . "* _env = (" . envName . "*)_env_ptr;\n" . capReleases . "    free(_env);\n}\n\n";
+					local String is bindsC: "    " . envName . "* _env = (" . envName . "*)_env_ptr;\n" . capFieldBinds;
+					self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . "static " . retC . " " . fnName . "(" . paramsC . ") {\n" . bindsC . bodyC . "}\n\n";
+					return "({ " . envName . "* _env = (" . envName . "*)calloc(1, sizeof(" . envName . "));\n" . capAssigns . "    spec_closure_new((void*)" . fnName . ", (void*)_env, " . destroyEnvName . "); })";
+				} else {
+					self:helperFunctions: self:helperFunctions . "static " . retC . " " . fnName . "(" . paramsC . ") {\n    (void)_env_ptr;\n" . bodyC . "}\n\n";
+					return "spec_closure_new((void*)" . fnName . ", NULL, NULL)";
 				}
-				return fnName;
 			}
 			else: {
 				return "0";

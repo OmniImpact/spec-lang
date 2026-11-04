@@ -95,6 +95,31 @@ static inline void spec_scope_cleanup(void* pptr) {
 
 #define SPEC_AUTO __attribute__((cleanup(spec_scope_cleanup)))
 
+/* Spec First-Class Closure Representation */
+typedef struct {
+    void* fn;
+    void* env;
+    void (*destroy_env)(void*);
+} SpecClosure;
+
+static inline void spec_closure_destroy(void* self) {
+    SpecClosure* c = (SpecClosure*)self;
+    if (c) {
+        if (c->env && c->destroy_env) {
+            c->destroy_env(c->env);
+            c->env = NULL;
+        }
+    }
+}
+
+static inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_env)(void*)) {
+    SpecClosure* c = (SpecClosure*)spec_alloc(sizeof(SpecClosure), spec_closure_destroy);
+    c->fn = fn;
+    c->env = env;
+    c->destroy_env = destroy_env;
+    return c;
+}
+
 /* Spec Runtime String Utilities */
 static const char* _spec_last_str = NULL;
 static size_t _spec_last_len = 0;
@@ -498,14 +523,6 @@ void spec_array_each(SpecArray* a, void (*fn)(void*)) {
         fn(a->items[i]);
     }
     pthread_mutex_unlock(&a->lock);
-}
-
-typedef struct { void* fn; void* env; } SpecClosure;
-static inline SpecClosure* spec_closure_new(void* fn, void* env) {
-    SpecClosure* c = (SpecClosure*)malloc(sizeof(SpecClosure));
-    c->fn = fn;
-    c->env = env;
-    return c;
 }
 
 SpecArray* spec_array_filter(SpecArray* a, bool (*fn)(void*)) {
@@ -926,69 +943,76 @@ void spec_drain_async_tasks(void) {
 }
 
 /* File Package Primitives with Callbacks and Async Worker Support */
+static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
+    if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
+}
+static inline void spec_call_closure_str(SpecClosure* cls, const char* arg1) {
+    if (cls && cls->fn) { ((void (*)(void*, const char*))cls->fn)(cls->env, arg1); }
+}
+
 typedef struct {
     char* path;
     char* content;
     char* def;
-    void (*on_success_read)(const char*);
-    void (*on_success_write)(long long);
-    void (*on_error)(const char*);
+    SpecClosure* on_success_read;
+    SpecClosure* on_success_write;
+    SpecClosure* on_error;
 } SpecFileTask;
 
-const char* spec_file_read(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {
+const char* spec_file_read(const char* path, const char* def, SpecClosure* on_success, SpecClosure* on_error) {
     if (!path || strlen(path) == 0) {
-        if (on_error) on_error("File error: Empty or invalid file path provided");
+        if (on_error) spec_call_closure_str(on_error, "File error: Empty or invalid file path provided");
         return def ? def : "";
     }
     FILE* f = fopen(path, "rb");
     if (!f) {
-        if (on_error) on_error(strerror(errno));
+        if (on_error) spec_call_closure_str(on_error, strerror(errno));
         return def ? def : "";
     }
     if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
-        if (on_error) on_error(strerror(errno));
+        if (on_error) spec_call_closure_str(on_error, strerror(errno));
         return def ? def : "";
     }
     long size = ftell(f);
     if (size < 0) {
         fclose(f);
-        if (on_error) on_error(strerror(errno));
+        if (on_error) spec_call_closure_str(on_error, strerror(errno));
         return def ? def : "";
     }
     fseek(f, 0, SEEK_SET);
     char* buf = (char*)malloc(size + 1);
     if (!buf) {
         fclose(f);
-        if (on_error) on_error("File error: Memory allocation failed during read");
+        if (on_error) spec_call_closure_str(on_error, "File error: Memory allocation failed during read");
         return def ? def : "";
     }
     size_t read_bytes = fread(buf, 1, size, f);
     buf[read_bytes] = '\0';
     fclose(f);
-    if (on_success) on_success(buf);
+    if (on_success) spec_call_closure_str(on_success, buf);
     return buf;
 }
 
-bool spec_file_write(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {
+bool spec_file_write(const char* path, const char* content, SpecClosure* on_success, SpecClosure* on_error) {
     if (!path || strlen(path) == 0) {
-        if (on_error) on_error("File error: Empty or invalid file path provided");
+        if (on_error) spec_call_closure_str(on_error, "File error: Empty or invalid file path provided");
         return false;
     }
     if (!content) content = "";
     FILE* f = fopen(path, "wb");
     if (!f) {
-        if (on_error) on_error(strerror(errno));
+        if (on_error) spec_call_closure_str(on_error, strerror(errno));
         return false;
     }
     size_t len = strlen(content);
     size_t written = fwrite(content, 1, len, f);
     fclose(f);
     if (written != len) {
-        if (on_error) on_error(strerror(errno));
+        if (on_error) spec_call_closure_str(on_error, strerror(errno));
         return false;
     }
-    if (on_success) on_success((long long)written);
+    if (on_success) spec_call_closure_int(on_success, (long long)written);
     return true;
 }
 
@@ -997,17 +1021,19 @@ static void* spec_file_read_worker(void* arg) {
     spec_file_read(task->path, task->def, task->on_success_read, task->on_error);
     if (task->path) free(task->path);
     if (task->def) free(task->def);
+    if (task->on_success_read) spec_release(task->on_success_read);
+    if (task->on_error) spec_release(task->on_error);
     free(task);
     spec_async_task_finished();
     return NULL;
 }
 
-void spec_file_read_async(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {
+void spec_file_read_async(const char* path, const char* def, SpecClosure* on_success, SpecClosure* on_error) {
     SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));
     task->path = path ? strdup(path) : NULL;
     task->def = def ? strdup(def) : NULL;
-    task->on_success_read = on_success;
-    task->on_error = on_error;
+    task->on_success_read = (SpecClosure*)spec_retain(on_success);
+    task->on_error = (SpecClosure*)spec_retain(on_error);
     spec_async_task_started();
     pthread_t tid;
     pthread_create(&tid, NULL, spec_file_read_worker, task);
@@ -1019,17 +1045,19 @@ static void* spec_file_write_worker(void* arg) {
     spec_file_write(task->path, task->content, task->on_success_write, task->on_error);
     if (task->path) free(task->path);
     if (task->content) free(task->content);
+    if (task->on_success_write) spec_release(task->on_success_write);
+    if (task->on_error) spec_release(task->on_error);
     free(task);
     spec_async_task_finished();
     return NULL;
 }
 
-void spec_file_write_async(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {
+void spec_file_write_async(const char* path, const char* content, SpecClosure* on_success, SpecClosure* on_error) {
     SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));
     task->path = path ? strdup(path) : NULL;
     task->content = content ? strdup(content) : NULL;
-    task->on_success_write = on_success;
-    task->on_error = on_error;
+    task->on_success_write = (SpecClosure*)spec_retain(on_success);
+    task->on_error = (SpecClosure*)spec_retain(on_error);
     spec_async_task_started();
     pthread_t tid;
     pthread_create(&tid, NULL, spec_file_write_worker, task);
@@ -1223,27 +1251,30 @@ double spec_fast_random(void) {
 }
 
 /* Parallel Fan-Out */
-typedef long long (*SpecWorkerFn)(long long, long long);
-typedef struct { SpecWorkerFn fn; long long idx; long long count; } SpecParallelTask;
+typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);
+typedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;
 
 static void* spec_parallel_worker(void* arg) {
     SpecParallelTask* t = (SpecParallelTask*)arg;
     spec_fast_random_seed(t->idx);
-    long long r = t->fn(t->idx, t->count);
+    long long r = t->fn(t->env, t->idx, t->count);
     free(t);
     return (void*)(intptr_t)r;
 }
 
-long long spec_parallel_run(long long threads, long long iterations, void* fn) {
+long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {
     if (threads < 1) threads = 1;
     if (threads > 64) threads = 64;
+    SpecClosure* cls = (SpecClosure*)worker_closure;
+    if (!cls || !cls->fn) spec_panic("Parallel:run received null worker Function");
     pthread_t tids[64];
     long long total = 0;
     long long base = iterations / threads;
     long long rem = iterations % threads;
     for (long long i = 0; i < threads; i++) {
         SpecParallelTask* t = (SpecParallelTask*)malloc(sizeof(SpecParallelTask));
-        t->fn = (SpecWorkerFn)fn;
+        t->fn = (SpecWorkerFn)cls->fn;
+        t->env = cls->env;
         t->idx = i;
         t->count = base + (i < rem ? 1 : 0);
         if (pthread_create(&tids[i], NULL, spec_parallel_worker, t) != 0) {
@@ -21030,7 +21061,7 @@ void Driver_init(Driver* self, SpecMap* args) {
         spec_error_line(spec_str_concat("Error: Source file not found: ", inputPath));
         exit((int)(1));
     }
-    const char* source = spec_str_clone_if_buffered(spec_file_read(inputPath, "", (void (*)(const char*))(NULL), (void (*)(const char*))(NULL)));
+    const char* source = spec_str_clone_if_buffered(spec_file_read(inputPath, "", (SpecClosure*)(NULL), (SpecClosure*)(NULL)));
     if (lintMode) {
         Lexer* lexer = (Lexer*)(({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, source); _inst; }));
         SpecArray* tokens = Lexer_tokenize(lexer) /* inst:Lexer:tokenize */;
@@ -21132,7 +21163,7 @@ void Driver_init(Driver* self, SpecMap* args) {
     if (spec_str_equals(tempCPath, "")) {
         tempCPath = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat("/tmp/_spec_stage_", spec_to_string_int(spec_process_get_pid())), ".c"));
     }
-    bool written = spec_file_write(tempCPath, cCode, (void (*)(long long))(NULL), (void (*)(const char*))(NULL));
+    bool written = spec_file_write(tempCPath, cCode, (SpecClosure*)(NULL), (SpecClosure*)(NULL));
     if ((!(written))) {
         spec_error_line(spec_str_concat("Error: Failed to write intermediate C code to ", tempCPath));
         exit((int)(1));
@@ -26033,9 +26064,9 @@ const char* CBackendUtils_cTypeFor(CBackendUtils* self, const char* typeName) {
         return "SpecMap*";
     }
     if (spec_str_starts_with(typeName, "Function")) {
-        return "void*";
+        return "SpecClosure*";
     }
-    return ((spec_str_equals(typeName, "File") || spec_str_equals(typeName, "Process") || spec_str_equals(typeName, "Output") || spec_str_equals(typeName, "Input") || spec_str_equals(typeName, "Math") || spec_str_equals(typeName, "While")) ? ("void*") : (((spec_str_equals(typeName, "LoopControl")) ? ("SpecLoopControl*") : (((spec_str_equals(typeName, "InputHandler")) ? ("void*") : (((spec_str_equals(typeName, "Function")) ? ("void*") : (((spec_str_equals(typeName, "Map")) ? ("SpecMap*") : (((spec_str_equals(typeName, "Array")) ? ("SpecArray*") : (((spec_str_equals(typeName, "void") || spec_str_equals(typeName, "Void") || spec_str_equals(typeName, "")) ? ("void") : (((spec_str_equals(typeName, "String") || spec_str_equals(typeName, "string")) ? ("const char*") : (((spec_str_equals(typeName, "Boolean") || spec_str_equals(typeName, "bool")) ? ("bool") : (((spec_str_equals(typeName, "Float") || spec_str_equals(typeName, "float")) ? ("double") : (((spec_str_equals(typeName, "Int") || spec_str_equals(typeName, "int")) ? ("long long") : (spec_str_concat(typeName, "*")))))))))))))))))))))));
+    return ((spec_str_equals(typeName, "File") || spec_str_equals(typeName, "Process") || spec_str_equals(typeName, "Output") || spec_str_equals(typeName, "Input") || spec_str_equals(typeName, "Math") || spec_str_equals(typeName, "While")) ? ("void*") : (((spec_str_equals(typeName, "LoopControl")) ? ("SpecLoopControl*") : (((spec_str_equals(typeName, "InputHandler")) ? ("void*") : (((spec_str_equals(typeName, "Function")) ? ("SpecClosure*") : (((spec_str_equals(typeName, "Map")) ? ("SpecMap*") : (((spec_str_equals(typeName, "Array")) ? ("SpecArray*") : (((spec_str_equals(typeName, "void") || spec_str_equals(typeName, "Void") || spec_str_equals(typeName, "")) ? ("void") : (((spec_str_equals(typeName, "String") || spec_str_equals(typeName, "string")) ? ("const char*") : (((spec_str_equals(typeName, "Boolean") || spec_str_equals(typeName, "bool")) ? ("bool") : (((spec_str_equals(typeName, "Float") || spec_str_equals(typeName, "float")) ? ("double") : (((spec_str_equals(typeName, "Int") || spec_str_equals(typeName, "int")) ? ("long long") : (spec_str_concat(typeName, "*")))))))))))))))))))))));
 }
 
 const char* CBackendUtils_cIdent(CBackendUtils* self, const char* name) {
@@ -26195,6 +26226,28 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (obj) spec_release(obj);\n"));
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "#define SPEC_AUTO __attribute__((cleanup(spec_scope_cleanup)))\n\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "/* Spec First-Class Closure Representation */\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef struct {\n"));
+    p = spec_str_append(p, "    void* fn;\n");
+    p = spec_str_append(p, "    void* env;\n");
+    p = spec_str_append(p, "    void (*destroy_env)(void*);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "} SpecClosure;\n\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline void spec_closure_destroy(void* self) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* c = (SpecClosure*)self;\n"));
+    p = spec_str_append(p, "    if (c) {\n");
+    p = spec_str_append(p, "        if (c->env && c->destroy_env) {\n");
+    p = spec_str_append(p, "            c->destroy_env(c->env);\n");
+    p = spec_str_append(p, "            c->env = NULL;\n");
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_env)(void*)) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* c = (SpecClosure*)spec_alloc(sizeof(SpecClosure), spec_closure_destroy);\n"));
+    p = spec_str_append(p, "    c->fn = fn;\n");
+    p = spec_str_append(p, "    c->env = env;\n");
+    p = spec_str_append(p, "    c->destroy_env = destroy_env;\n");
+    p = spec_str_append(p, "    return c;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "/* Spec Runtime String Utilities */\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static const char* _spec_last_str = NULL;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static size_t _spec_last_len = 0;\n\n"));
@@ -26561,13 +26614,6 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "        fn(a->items[i]);\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
-    p = spec_str_append(p, "}\n\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef struct { void* fn; void* env; } SpecClosure;\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline SpecClosure* spec_closure_new(void* fn, void* env) {\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* c = (SpecClosure*)malloc(sizeof(SpecClosure));\n"));
-    p = spec_str_append(p, "    c->fn = fn;\n");
-    p = spec_str_append(p, "    c->env = env;\n");
-    p = spec_str_append(p, "    return c;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "SpecArray* spec_array_filter(SpecArray* a, bool (*fn)(void*)) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* res = spec_array_new();\n"));
@@ -26956,67 +27002,73 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&spec_task_mutex);\n"));
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "/* File Package Primitives with Callbacks and Async Worker Support */\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {\n"));
+    p = spec_str_append(p, "    if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }\n");
+    p = spec_str_append(p, "}\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline void spec_call_closure_str(SpecClosure* cls, const char* arg1) {\n"));
+    p = spec_str_append(p, "    if (cls && cls->fn) { ((void (*)(void*, const char*))cls->fn)(cls->env, arg1); }\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef struct {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    char* path;\n"));
     p = spec_str_append(p, "    char* content;\n");
     p = spec_str_append(p, "    char* def;\n");
-    p = spec_str_append(p, "    void (*on_success_read)(const char*);\n");
-    p = spec_str_append(p, "    void (*on_success_write)(long long);\n");
-    p = spec_str_append(p, "    void (*on_error)(const char*);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* on_success_read;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* on_success_write;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* on_error;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "} SpecFileTask;\n\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "const char* spec_file_read(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "const char* spec_file_read(const char* path, const char* def, SpecClosure* on_success, SpecClosure* on_error) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (!path || strlen(path) == 0) {\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) on_error(\"File error: Empty or invalid file path provided\");\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, \"File error: Empty or invalid file path provided\");\n"));
     p = spec_str_append(p, "        return def ? def : \"\";\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    FILE* f = fopen(path, \"rb\");\n"));
     p = spec_str_append(p, "    if (!f) {\n");
-    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, strerror(errno));\n"));
     p = spec_str_append(p, "        return def ? def : \"\";\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    if (fseek(f, 0, SEEK_END) != 0) {\n");
     p = spec_str_append(p, "        fclose(f);\n");
-    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, strerror(errno));\n"));
     p = spec_str_append(p, "        return def ? def : \"\";\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    long size = ftell(f);\n");
     p = spec_str_append(p, "    if (size < 0) {\n");
     p = spec_str_append(p, "        fclose(f);\n");
-    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, strerror(errno));\n"));
     p = spec_str_append(p, "        return def ? def : \"\";\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    fseek(f, 0, SEEK_SET);\n");
     p = spec_str_append(p, "    char* buf = (char*)malloc(size + 1);\n");
     p = spec_str_append(p, "    if (!buf) {\n");
     p = spec_str_append(p, "        fclose(f);\n");
-    p = spec_str_append(p, "        if (on_error) on_error(\"File error: Memory allocation failed during read\");\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, \"File error: Memory allocation failed during read\");\n"));
     p = spec_str_append(p, "        return def ? def : \"\";\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    size_t read_bytes = fread(buf, 1, size, f);\n");
     p = spec_str_append(p, "    buf[read_bytes] = '\\0';\n");
     p = spec_str_append(p, "    fclose(f);\n");
-    p = spec_str_append(p, "    if (on_success) on_success(buf);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (on_success) spec_call_closure_str(on_success, buf);\n"));
     p = spec_str_append(p, "    return buf;\n");
     p = spec_str_append(p, "}\n\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "bool spec_file_write(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "bool spec_file_write(const char* path, const char* content, SpecClosure* on_success, SpecClosure* on_error) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (!path || strlen(path) == 0) {\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) on_error(\"File error: Empty or invalid file path provided\");\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, \"File error: Empty or invalid file path provided\");\n"));
     p = spec_str_append(p, "        return false;\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    if (!content) content = \"\";\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    FILE* f = fopen(path, \"wb\");\n"));
     p = spec_str_append(p, "    if (!f) {\n");
-    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, strerror(errno));\n"));
     p = spec_str_append(p, "        return false;\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    size_t len = strlen(content);\n");
     p = spec_str_append(p, "    size_t written = fwrite(content, 1, len, f);\n");
     p = spec_str_append(p, "    fclose(f);\n");
     p = spec_str_append(p, "    if (written != len) {\n");
-    p = spec_str_append(p, "        if (on_error) on_error(strerror(errno));\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (on_error) spec_call_closure_str(on_error, strerror(errno));\n"));
     p = spec_str_append(p, "        return false;\n");
     p = spec_str_append(p, "    }\n");
-    p = spec_str_append(p, "    if (on_success) on_success((long long)written);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (on_success) spec_call_closure_int(on_success, (long long)written);\n"));
     p = spec_str_append(p, "    return true;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static void* spec_file_read_worker(void* arg) {\n"));
@@ -27024,16 +27076,18 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (task->path) free(task->path);\n"));
     p = spec_str_append(p, "    if (task->def) free(task->def);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (task->on_success_read) spec_release(task->on_success_read);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (task->on_error) spec_release(task->on_error);\n"));
     p = spec_str_append(p, "    free(task);\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_async_task_finished();\n"));
     p = spec_str_append(p, "    return NULL;\n");
     p = spec_str_append(p, "}\n\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_file_read_async(const char* path, const char* def, void (*on_success)(const char*), void (*on_error)(const char*)) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_file_read_async(const char* path, const char* def, SpecClosure* on_success, SpecClosure* on_error) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->path = path ? strdup(path) : NULL;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->def = def ? strdup(def) : NULL;\n"));
-    p = spec_str_append(p, "    task->on_success_read = on_success;\n");
-    p = spec_str_append(p, "    task->on_error = on_error;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->on_success_read = (SpecClosure*)spec_retain(on_success);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->on_error = (SpecClosure*)spec_retain(on_error);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_async_task_started();\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_t tid;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_create(&tid, NULL, spec_file_read_worker, task);\n"));
@@ -27044,16 +27098,18 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (task->path) free(task->path);\n"));
     p = spec_str_append(p, "    if (task->content) free(task->content);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (task->on_success_write) spec_release(task->on_success_write);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (task->on_error) spec_release(task->on_error);\n"));
     p = spec_str_append(p, "    free(task);\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_async_task_finished();\n"));
     p = spec_str_append(p, "    return NULL;\n");
     p = spec_str_append(p, "}\n\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_file_write_async(const char* path, const char* content, void (*on_success)(long long), void (*on_error)(const char*)) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_file_write_async(const char* path, const char* content, SpecClosure* on_success, SpecClosure* on_error) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->path = path ? strdup(path) : NULL;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->content = content ? strdup(content) : NULL;\n"));
-    p = spec_str_append(p, "    task->on_success_write = on_success;\n");
-    p = spec_str_append(p, "    task->on_error = on_error;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->on_success_write = (SpecClosure*)spec_retain(on_success);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    task->on_error = (SpecClosure*)spec_retain(on_error);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_async_task_started();\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_t tid;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_create(&tid, NULL, spec_file_write_worker, task);\n"));
@@ -27227,25 +27283,28 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);\n"));
     p = spec_str_append(p, "}\n\n");
     p = spec_str_append(p, "/* Parallel Fan-Out */\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef long long (*SpecWorkerFn)(long long, long long);\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef struct { SpecWorkerFn fn; long long idx; long long count; } SpecParallelTask;\n\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;\n\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static void* spec_parallel_worker(void* arg) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecParallelTask* t = (SpecParallelTask*)arg;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_fast_random_seed(t->idx);\n"));
-    p = spec_str_append(p, "    long long r = t->fn(t->idx, t->count);\n");
+    p = spec_str_append(p, "    long long r = t->fn(t->env, t->idx, t->count);\n");
     p = spec_str_append(p, "    free(t);\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    return (void*)(intptr_t)r;\n"));
     p = spec_str_append(p, "}\n\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "long long spec_parallel_run(long long threads, long long iterations, void* fn) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {\n"));
     p = spec_str_append(p, "    if (threads < 1) threads = 1;\n");
     p = spec_str_append(p, "    if (threads > 64) threads = 64;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecClosure* cls = (SpecClosure*)worker_closure;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (!cls || !cls->fn) spec_panic(\"Parallel:run received null worker Function\");\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_t tids[64];\n"));
     p = spec_str_append(p, "    long long total = 0;\n");
     p = spec_str_append(p, "    long long base = iterations / threads;\n");
     p = spec_str_append(p, "    long long rem = iterations % threads;\n");
     p = spec_str_append(p, "    for (long long i = 0; i < threads; i++) {\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        SpecParallelTask* t = (SpecParallelTask*)malloc(sizeof(SpecParallelTask));\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "        t->fn = (SpecWorkerFn)fn;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        t->fn = (SpecWorkerFn)cls->fn;\n"));
+    p = spec_str_append(p, "        t->env = cls->env;\n");
     p = spec_str_append(p, "        t->idx = i;\n");
     p = spec_str_append(p, "        t->count = base + (i < rem ? 1 : 0);\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (pthread_create(&tids[i], NULL, spec_parallel_worker, t) != 0) {\n"));
@@ -27759,7 +27818,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         _loop_next_142: ;
     } } });
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_parallel_run(", threadsC), ", "), iterC), ", (void*)(long long (*)(long long, long long))("), workerC), "))");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_parallel_run(", threadsC), ", "), iterC), ", (void*)("), workerC), "))");
     }
     if (((spec_str_equals(targetC, "Ansi")) && (spec_str_equals(expr->methodName, "terminalWidth")))) {
         return "spec_term_width()";
@@ -27977,7 +28036,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         _loop_next_150: ;
     } } });
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_read(", pathC), ", "), defC), ", (void (*)(const char*))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_read(", pathC), ", "), defC), ", (SpecClosure*)("), onSuccC), "), (SpecClosure*)("), onErrC), "))");
     }
         if (spec_str_equals(expr->methodName, "readAsync")) {
         const char* pathC = spec_str_clone_if_buffered("\"\"");
@@ -28000,7 +28059,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         _loop_next_151: ;
     } } });
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_read_async(", pathC), ", "), defC), ", (void (*)(const char*))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_read_async(", pathC), ", "), defC), ", (SpecClosure*)("), onSuccC), "), (SpecClosure*)("), onErrC), "))");
     }
         if (spec_str_equals(expr->methodName, "write")) {
         const char* pathC = spec_str_clone_if_buffered("\"\"");
@@ -28023,7 +28082,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         _loop_next_152: ;
     } } });
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_write(", pathC), ", "), contentC), ", (void (*)(long long))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_write(", pathC), ", "), contentC), ", (SpecClosure*)("), onSuccC), "), (SpecClosure*)("), onErrC), "))");
     }
         if (spec_str_equals(expr->methodName, "writeAsync")) {
         const char* pathC = spec_str_clone_if_buffered("\"\"");
@@ -28046,7 +28105,7 @@ const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self,
     }
         _loop_next_153: ;
     } } });
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_write_async(", pathC), ", "), contentC), ", (void (*)(long long))("), onSuccC), "), (void (*)(const char*))("), onErrC), "))");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_file_write_async(", pathC), ", "), contentC), ", (SpecClosure*)("), onSuccC), "), (SpecClosure*)("), onErrC), "))");
     }
     }
     if (((spec_str_equals(targetC, "Math")) || (spec_str_equals(targetC, "math")))) {
@@ -28721,7 +28780,7 @@ const char* CodeGenerator_cTypeFor(CodeGenerator* self, const char* typeName) {
         return "SpecMap*";
     }
     if (spec_str_starts_with(typeName, "Function")) {
-        return "void*";
+        return "SpecClosure*";
     }
     if (spec_str_contains(typeName, ":")) {
         SpecArray* parts = spec_str_split(typeName, ":");
@@ -29760,27 +29819,18 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* fnPtrC = spec_str_clone_if_buffered(((spec_map_has(self->localVars, expr->methodName)) ? ((((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, expr->methodName)) : (spec_str_concat("self->", (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, expr->methodName)))));
         const char* retTName = spec_str_clone_if_buffered(((((spec_str_starts_with(fnVarT, "Function:")) && (((spec_str_length(fnVarT)) > (9))))) ? (spec_str_substring(fnVarT, 9, spec_str_length(fnVarT))) : ("Void")));
         const char* retCType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, retTName));
-        const char* pTypesC = spec_str_clone_if_buffered("");
-        const char* cArgsC = spec_str_clone_if_buffered("");
-        bool firstA = true;
+        const char* pTypesC = spec_str_clone_if_buffered("void*");
+        const char* cArgsC = spec_str_clone_if_buffered("_cls->env");
         ({ SpecArray* _a_209 = expr->methodArgs; if (_a_209) { for (size_t _i_209 = 0; _i_209 < _a_209->length; _i_209++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_209->items[_i_209];
-    if ((!(firstA))) {
-        pTypesC = spec_str_append(pTypesC, ", ");
-        cArgsC = spec_str_append(cArgsC, ", ");
-    }
     const char* aValC = spec_str_clone_if_buffered(CodeGenerator_generateExpression(self, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */);
     const char* aT = spec_str_clone_if_buffered(CodeGenerator_inferTargetType(self, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:inferTargetType */);
     const char* aCType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, aT));
-    pTypesC = spec_str_append(pTypesC, aCType);
-    cArgsC = spec_str_append(cArgsC, aValC);
-    firstA = false;
+    pTypesC = spec_str_append(spec_str_append(pTypesC, ", "), aCType);
+    cArgsC = spec_str_append(spec_str_append(cArgsC, ", "), aValC);
         _loop_next_209: ;
     } } });
-        if (firstA) {
-        pTypesC = spec_str_clone_if_buffered("void");
-    }
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((", retCType), " (*)("), pTypesC), "))("), fnPtrC), "))("), cArgsC), ")");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecClosure* _cls = (SpecClosure*)(", fnPtrC), "); if (!_cls || !_cls->fn) spec_panic(\"Invocation of null Function\"); (("), retCType), " (*)("), pTypesC), "))_cls->fn)("), cArgsC), "); })");
     }
     }
         if (((spec_map_has(self->allEnumVariants, expr->methodName)) && (((spec_map_has(self->allTaggedEnums, targetC)) || (spec_str_equals(targetC, "self")))))) {
@@ -29970,23 +30020,15 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         _loop_next_217: ;
     } } });
-        const char* paramsC = spec_str_clone_if_buffered("");
-        bool firstP = true;
+        const char* paramsC = spec_str_clone_if_buffered("void* _env_ptr");
         SpecArray* paramNames = ({ SpecArray* _arr = spec_array_new(); _arr; });
         ({ SpecArray* _a_218 = expr->anonParams; if (_a_218) { for (size_t _i_218 = 0; _i_218 < _a_218->length; _i_218++) {
         Parameter* p = (Parameter*)(intptr_t)_a_218->items[_i_218];
     spec_array_add(paramNames, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
     spec_map_set(self->localVars, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }), (((const char* (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })));
-    if ((!(firstP))) {
-        paramsC = spec_str_append(paramsC, ", ");
-    }
-    paramsC = spec_str_append(spec_str_append(spec_str_append(paramsC, (((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }))), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
-    firstP = false;
+    paramsC = spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramsC, ", "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }))), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
         _loop_next_218: ;
     } } });
-        if (firstP) {
-        paramsC = spec_str_clone_if_buffered("void");
-    }
         const char* savedRetVar = spec_str_clone_if_buffered(self->inlineReturnVar);
         const char* savedRetLbl = spec_str_clone_if_buffered(self->inlineReturnLabel);
         self->inlineReturnVar = spec_str_clone_if_buffered("");
@@ -30000,13 +30042,19 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         self->inlineReturnVar = spec_str_clone_if_buffered(savedRetVar);
         self->inlineReturnLabel = spec_str_clone_if_buffered(savedRetLbl);
         spec_assign((void**)&self->localVars, (void*)(savedVars));
-        const char* capDecls = spec_str_clone_if_buffered("");
-        const char* capBinds = spec_str_clone_if_buffered("");
+        const char* envName = spec_str_clone_if_buffered(spec_str_concat("_Env_anon_", spec_to_string_int(id)));
+        const char* destroyEnvName = spec_str_clone_if_buffered(spec_str_concat("_destroy_env_anon_", spec_to_string_int(id)));
+        const char* capFieldDecls = spec_str_clone_if_buffered("");
+        const char* capFieldBinds = spec_str_clone_if_buffered("");
         const char* capAssigns = spec_str_clone_if_buffered("");
+        const char* capReleases = spec_str_clone_if_buffered("");
+        bool hasCaptures = false;
         if (((((((((self->inMethod) && ((!spec_str_equals(self->currentClassName, ""))))) && ((!((((bool (*)(CodeGenerator*, const char*))self->_vtable[183]))((CodeGenerator*)self, self->currentClassName)))))) && ((!(spec_map_has(self->allEnumNames, self->currentClassName)))))) && (spec_str_contains(bodyC, "self")))) {
-        capDecls = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capDecls, "static "), self->currentClassName), "* _cap_"), spec_to_string_int(id)), "_self = NULL;\n");
-        capBinds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capBinds, "    "), self->currentClassName), "* self = _cap_"), spec_to_string_int(id)), "_self;\n    (void)self;\n");
-        capAssigns = spec_str_append(spec_str_append(spec_str_append(capAssigns, " _cap_"), spec_to_string_int(id)), "_self = self;");
+        hasCaptures = true;
+        capFieldDecls = spec_str_append(spec_str_append(spec_str_append(capFieldDecls, "    "), self->currentClassName), "* self;\n");
+        capFieldBinds = spec_str_append(spec_str_append(spec_str_append(capFieldBinds, "    "), self->currentClassName), "* self = _env->self;\n    (void)self;\n");
+        capAssigns = spec_str_append(spec_str_append(spec_str_append(capAssigns, "    _env->self = ("), self->currentClassName), "*)spec_retain((void*)self);\n");
+        capReleases = spec_str_append(capReleases, "    if (_env->self) spec_release((void*)_env->self);\n");
     }
         ({ SpecArray* _a_220 = outerKeys; if (_a_220) { for (size_t _i_220 = 0; _i_220 < _a_220->length; _i_220++) {
         const char* k = (const char*)(intptr_t)_a_220->items[_i_220];
@@ -30016,19 +30064,35 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* vType = spec_str_clone_if_buffered(spec_map_get_string(savedVars, k, ""));
         const char* vCType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, vType));
         if ((((!spec_str_equals(vCType, "void"))) && ((!spec_str_equals(vCType, ""))))) {
-        capDecls = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capDecls, "static "), vCType), " _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n");
-        capBinds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capBinds, "    "), vCType), " "), cVar), " = _cap_"), spec_to_string_int(id)), "_"), cVar), ";\n    (void)"), cVar), ";\n");
-        capAssigns = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capAssigns, " _cap_"), spec_to_string_int(id)), "_"), cVar), " = "), cVar), ";");
+        hasCaptures = true;
+        capFieldDecls = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capFieldDecls, "    "), vCType), " "), cVar), ";\n");
+        capFieldBinds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capFieldBinds, "    "), vCType), " "), cVar), " = _env->"), cVar), ";\n    (void)"), cVar), ";\n");
+        bool isArcVar = ((((((((((((spec_map_has(self->allClassNames, vType)) && ((!(spec_map_has(self->allEnumNames, vType)))))) || (spec_map_has(self->allTaggedEnums, vType)))) || (spec_str_starts_with(vType, "Array")))) || (spec_str_starts_with(vType, "Map")))) || (spec_str_starts_with(vType, "Function")))) || (spec_str_equals(vType, "LoopControl")));
+        if (isArcVar) {
+        capAssigns = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capAssigns, "    _env->"), cVar), " = ("), vCType), ")spec_retain((void*)"), cVar), ");\n");
+        capReleases = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capReleases, "    if (_env->"), cVar), ") spec_release((void*)_env->"), cVar), ");\n");
+    } else {
+        if (((spec_str_equals(vType, "String")) || (spec_str_equals(vType, "string")))) {
+        capAssigns = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capAssigns, "    _env->"), cVar), " = spec_str_clone_if_buffered("), cVar), ");\n");
+    } else {
+        capAssigns = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(capAssigns, "    _env->"), cVar), " = "), cVar), ";\n");
+    }
+    }
     }
     }
     }
         _loop_next_220: ;
     } } });
-        self->helperFunctions = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(self->helperFunctions, capDecls), "static "), retC), " "), fnName), "("), paramsC), ") {\n"), capBinds), bodyC), "}\n\n");
-        if ((!spec_str_equals(capAssigns, ""))) {
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({", capAssigns), " "), fnName), "; })");
+        if (hasCaptures) {
+        const char* envStruct = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("typedef struct {\n", capFieldDecls), "} "), envName), ";\n\n"));
+        const char* destroyEnv = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("static void ", destroyEnvName), "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    "), envName), "* _env = ("), envName), "*)_env_ptr;\n"), capReleases), "    free(_env);\n}\n\n"));
+        const char* bindsC = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("    ", envName), "* _env = ("), envName), "*)_env_ptr;\n"), capFieldBinds));
+        self->helperFunctions = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(self->helperFunctions, envStruct), destroyEnv), "static "), retC), " "), fnName), "("), paramsC), ") {\n"), bindsC), bodyC), "}\n\n");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ ", envName), "* _env = ("), envName), "*)calloc(1, sizeof("), envName), "));\n"), capAssigns), "    spec_closure_new((void*)"), fnName), ", (void*)_env, "), destroyEnvName), "); })");
+    } else {
+        self->helperFunctions = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(self->helperFunctions, "static "), retC), " "), fnName), "("), paramsC), ") {\n    (void)_env_ptr;\n"), bodyC), "}\n\n");
+        return spec_str_concat(spec_str_concat("spec_closure_new((void*)", fnName), ", NULL, NULL)");
     }
-        return fnName;
     } else {
         return "0";
     }
@@ -30764,7 +30828,7 @@ void Loader_loadFile(Loader* self, const char* filePath) {
         spec_array_add(self->parseErrors, (void*)(spec_str_concat("  [LoadError] Module file not found: ", filePath)));
         return;
     }
-    const char* src = spec_str_clone_if_buffered(spec_file_read(filePath, "", (void (*)(const char*))(NULL), (void (*)(const char*))(NULL)));
+    const char* src = spec_str_clone_if_buffered(spec_file_read(filePath, "", (SpecClosure*)(NULL), (SpecClosure*)(NULL)));
     Lexer* lexer = (Lexer*)(({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, src); _inst; }));
     SpecArray* tokens = Lexer_tokenize(lexer) /* inst:Lexer:tokenize */;
     if (({ Lexer* _recv = (Lexer*)(lexer); (((bool (*)(Lexer*))_recv->_vtable[92]))((Lexer*)_recv); })) {

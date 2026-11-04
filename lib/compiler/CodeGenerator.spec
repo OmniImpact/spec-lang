@@ -131,7 +131,7 @@ Class is CodeGenerator{
 			return "SpecMap*";
 		}
 		if (typeName:startsWith(prefix: "Function")) {
-			return "void*";
+			return "SpecClosure*";
 		}
 		if (typeName:contains(needle: ":")) {
 			local Array of String is parts: typeName:split(delimiter: ":");
