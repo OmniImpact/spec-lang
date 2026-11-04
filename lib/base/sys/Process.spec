@@ -4,7 +4,7 @@
 ## Dispatches external system commands and manages operating system subprocesses.
 Class is Process{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array
 	];
 

@@ -18,7 +18,7 @@
 
 Class is MergeBadBase{
 
-	replace local Function of Int is signal(){
+	replace Function of Int is signal(){
 		return 1;
 	}
 
@@ -28,25 +28,25 @@ Class is MergeBadBase{
 Class is MergeBadChild extends MergeBadBase{
 
 	# No forward statement: merge methods must delegate explicitly.
-	merge local Function of Int is signal(){
+	merge Function of Int is signal(){
 		return 2;
 	}
 
-	merge local Int is count: 2;
+	merge Int is count: 2;
 
 	# No parent declares this method.
-	merge local Function is orphan(){
+	merge Function is orphan(){
 		();
 	}
 }
 
 Class is MergeNegativeTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("unreachable");
 	}
 }

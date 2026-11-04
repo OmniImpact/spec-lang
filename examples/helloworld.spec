@@ -4,13 +4,13 @@ Class is HelloWorld{
 	local String is greeting: 'Hello';
 
 	# Imports: "using" is a native ClassInfo array property overridden using "replace"
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Map,
 		base:io:*
 	];
 
 	# Entrypoint init method using the Function type
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 
 		# Local variable declaration matching "<Type> is <name>: <value>;"
 		local String is name: args:getString(key:'name', default:'User');

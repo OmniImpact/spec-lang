@@ -1,13 +1,13 @@
 Class is SyntacticSugarTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:While
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Testing Syntactic Sugar & Standard Library Additions ===");
 
 		# 1. Test self:field constructor shorthand
@@ -116,7 +116,7 @@ Class is Issue{
 	Boolean is isWarning;
 
 	## Constructor using self:field initialization shorthand
-	replace local Function is init(self:line, self:isWarning, self:message){
+	replace Function is init(self:line, self:isWarning, self:message){
 	}
 
 	Function of Int is getLine(){

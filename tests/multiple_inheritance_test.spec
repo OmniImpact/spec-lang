@@ -10,14 +10,14 @@
 
 ## Abstract contract providing a name field and description method.
 Class is NamedContract{
-	local String is name;
+	String is name;
 
 	Function of String is describe(){}
 }
 
 ## Abstract contract providing an identifier field and tag getter.
 Class is IdentifiableContract{
-	local Int is id;
+	Int is id;
 
 	Function of String is getTag(){}
 }
@@ -25,18 +25,18 @@ Class is IdentifiableContract{
 ## Concrete class extending multiple parent contracts.
 Class is ServiceAccount extends NamedContract, IdentifiableContract{
 
-	replace local String is name: "AdminService";
-	replace local Int is id: 9001;
+	replace String is name: "AdminService";
+	replace Int is id: 9001;
 
-	replace local Function of String is describe(){
+	replace Function of String is describe(){
 		return self:name . " (ID: " . self:id . ")";
 	}
 
-	replace local Function of String is getTag(){
+	replace Function of String is getTag(){
 		return "[" . self:name . "]";
 	}
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line(" Spec Multiple Inheritance & Abstraction ");
 		output:line("======================================\n");

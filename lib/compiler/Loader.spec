@@ -4,7 +4,7 @@
 ## Resolves and loads multi-file package imports across the Spec project and standard library.
 Class is Loader{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:File,
 		base:struct:Array,
 		base:struct:Map,
@@ -28,7 +28,7 @@ Class is Loader{
 	## Group fragments corresponding to [groupTargets] (load order).
 	local Array of ClassInfo is groupFragments: [];
 
-	replace local Function is init(){
+	replace Function is init(){
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
@@ -37,7 +37,7 @@ Class is Loader{
 		self:groupFragments: [];
 	}
 
-	local Function of Array of String is getParseErrors(){
+	Function of Array of String is getParseErrors(){
 		return self:parseErrors;
 	}
 
@@ -46,17 +46,17 @@ Class is Loader{
 		local Int is pos: 0;
 		local String is res: "";
 
-		replace local Function is init(String is src){
+		replace Function is init(String is src){
 			self:src: src;
 			self:pos: 0;
 			self:res: "";
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:pos < self:src:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:src:charAt(index: self:pos, default: "");
 			self:pos: self:pos + 1;
 			if (ch == ":") {
@@ -72,7 +72,7 @@ Class is Loader{
 	##
 	## @param rawPath: Colon-separated package identifier.
 	## @return: Resolved filesystem path string, or empty string if not found.
-	local Function of String is resolvePath(String is rawPath){
+	Function of String is resolvePath(String is rawPath){
 		local PathConvLoop is loop: PathConvLoop:init(src: rawPath);
 		While:run(loop: loop);
 		local String is converted: loop:res;
@@ -94,7 +94,7 @@ Class is Loader{
 	##
 	## @param rawPath: Wildcard package identifier (e.g. "base:io:*").
 	## @return: Array of constituent file paths.
-	local Function of Array of String is expandWildcard(String is rawPath){
+	Function of Array of String is expandWildcard(String is rawPath){
 		return when (rawPath) {
 			is "base:io:*": [
 				"lib/base/io/File.spec",
@@ -490,7 +490,7 @@ Class is Loader{
 	##
 	## @param rootPath: Filesystem path to the application entry file.
 	## @return: Merged [ProgramNode] AST containing root and imported classes.
-	local Function of ProgramNode is loadProgram(String is rootPath){
+	Function of ProgramNode is loadProgram(String is rootPath){
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();

@@ -14,7 +14,7 @@ Class is LintIssue{
 	local String is message: "";
 
 	## Initializes a lint issue.
-	replace local Function is init(Int is line, Boolean is isWarning, String is message){
+	replace Function is init(Int is line, Boolean is isWarning, String is message){
 		self:line: line;
 		self:isWarning: isWarning;
 		self:message: message;
@@ -30,7 +30,7 @@ Class is LintIssue{
 	## Returns whether this issue is a warning.
 	##
 	## @return: `true` if warning, `false` if notice.
-	local Function of Boolean is getIsWarning(){
+	Function of Boolean is getIsWarning(){
 		return self:isWarning;
 	}
 
@@ -44,7 +44,7 @@ Class is LintIssue{
 	## Formats the issue for terminal display.
 	##
 	## @return: Formatted display string.
-	replace local Function of String is toString(){
+	replace Function of String is toString(){
 		local String is tag: if (self:isWarning) "[Warning]" else "[Notice] ";
 		local String is loc: if (self:line > 0) "Line " . self:line . ": " else "";
 		return "  " . tag . " " . loc . self:message;
@@ -55,7 +55,7 @@ Class is LintIssue{
 ## Pure-Spec code linter enforcing tab-based indentation, formatting, and AST idioms.
 Class is Linter{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:iterator:*,
@@ -66,7 +66,7 @@ Class is Linter{
 		base:meta:*
 	];
 
-	replace local Function is init(){
+	replace Function is init(){
 	}
 
 	## Inspects indentation whitespace line-by-line using String and Array higher-order methods.
@@ -291,7 +291,7 @@ Class is Linter{
 	## @param source: Raw source code string.
 	## @param program: Parsed [ProgramNode] AST.
 	## @return: [Array] of [LintIssue] items.
-	local Function of Array of LintIssue is lint(String is source, ProgramNode is program){
+	Function of Array of LintIssue is lint(String is source, ProgramNode is program){
 		local Array of LintIssue is issues: [];
 
 		# 1. Indentation Check
@@ -309,7 +309,7 @@ Class is Linter{
 	##
 	## @param issues: Issues array.
 	## @return: Count of warnings.
-	local Function of Int is countWarnings(Array of LintIssue is issues){
+	Function of Int is countWarnings(Array of LintIssue is issues){
 		return issues:count(predicate: local Function of Boolean(LintIssue is issue){
 			return issue:getIsWarning();
 		});
@@ -319,7 +319,7 @@ Class is Linter{
 	##
 	## @param issues: Issues array.
 	## @return: Count of notices.
-	local Function of Int is countNotices(Array of LintIssue is issues){
+	Function of Int is countNotices(Array of LintIssue is issues){
 		return issues:count(predicate: local Function of Boolean(LintIssue is issue){
 			return !issue:getIsWarning();
 		});
@@ -329,7 +329,7 @@ Class is Linter{
 	##
 	## @param filePath: Source file path.
 	## @param issues: Array of detected [LintIssue] items.
-	local Function is report(String is filePath, Array of LintIssue is issues){
+	Function is report(String is filePath, Array of LintIssue is issues){
 		output:line("Checking '" . filePath . "' for Spec code standards...");
 		issues:each(action: local Function(LintIssue is issue){
 			output:line(issue:toString());

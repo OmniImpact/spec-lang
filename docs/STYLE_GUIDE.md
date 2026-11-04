@@ -52,7 +52,7 @@ This document establishes the official code style conventions, architectural idi
 Class is Player{
 	local Int is health: 100;
 
-	replace local Function of Boolean is isAlive(){
+	replace Function of Boolean is isAlive(){
 		return health > 0;
 	}
 }
@@ -63,7 +63,7 @@ Spec follows the **One True Brace Style (OTBS)**:
 * Opening braces `{` sit on the **same line** as the declaration, following the class name, method signature, or control structure:
   ```spec
   Class is Player{
-  replace local Function is takeDamage(Int is amount){
+  replace Function is takeDamage(Int is amount){
   if (amount > 0) {
   ```
 * Closing braces `}` sit on their **own line**, aligned with the indentation of the enclosing construct.
@@ -101,12 +101,12 @@ Spec follows the **One True Brace Style (OTBS)**:
 * Modifiers precede the type signature:
   ```spec
   # Void method (procedure)
-  replace local Function is init(String is name){
+  replace Function is init(String is name){
   	self:name: name;
   }
 
   # Typed return method
-  replace local Function of String is getName(){
+  replace Function of String is getName(){
   	return self:name;
   }
   ```
@@ -133,11 +133,11 @@ Class is CountLoop extends Loop{
 	local Int is count: 0;
 	local Int is limit: 10;
 
-	replace local Function of Boolean is evaluate(){
+	replace Function of Boolean is evaluate(){
 		return count < limit;
 	}
 
-	replace local Function of Boolean is iteration(LoopControl is control){
+	replace Function of Boolean is iteration(LoopControl is control){
 		output:line("Count: " . count);
 		self:count: count + 1;
 		return true;
@@ -153,7 +153,7 @@ While:run(loop: CountLoop:init());
   ```spec
   Class is MyModule{
 
-  	replace local Array of String is using: [
+  	replace Array of String is using: [
   		base:io:*,
   		base:struct:Array,
   		base:reflect:Type
@@ -230,7 +230,7 @@ Class is SourceLocation{
 	## @param file: The file path or URI of the source.
 	## @param line: One-based line coordinate.
 	## @param col: One-based column coordinate.
-	replace local Function is init(String is file, Int is line, Int is col){
+	replace Function is init(String is file, Int is line, Int is col){
 		self:file: file;
 		self:line: line;
 		self:col: col;
@@ -243,7 +243,7 @@ Class is SourceLocation{
 	## ```spec
 	## local String is s: loc:toString(); # Returns "Player.spec:42:15"
 	## ```
-	replace local Function of String is toString(){
+	replace Function of String is toString(){
 		if (self:file:length() > 0) {
 			return self:file . ":" . self:line . ":" . self:col;
 		}

@@ -14,12 +14,12 @@
 
 Class is NumericBasesTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Numeric Bases ===");
 
 		# Case 1: literal values.

@@ -1,6 +1,6 @@
 Class is GenericFunctionTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*
 	];
 
@@ -9,7 +9,7 @@ Class is GenericFunctionTest{
 		return true;
 	}
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Function of String to Boolean is myPred;
 		local Boolean is result: self:testPredicate(predicate: myPred, input: "test");
 		if (result) {

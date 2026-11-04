@@ -79,7 +79,7 @@ To emit the generated C11 source code (either standalone or alongside `-o`):
 Spec automatically resolves imports specified in the class's `using` header:
 
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:struct:Array,
 	base:io:File
 ];

@@ -1,13 +1,13 @@
 Class is FeaturesTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:math:*,
 		base:io:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		# 1. Double quote strings with escaped whitespace characters and single quote raw strings
 		output:line("=== Strings ===");
 		output:line("Double-quoted with tab:\t[TAB] and newline:\n[NEXT LINE]");

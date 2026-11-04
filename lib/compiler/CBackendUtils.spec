@@ -4,21 +4,21 @@
 ## Utilities for generating C11 compatible code from Spec types and identifiers.
 Class is CBackendUtils{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
 		base:reflect:Type
 	];
 
-	replace local Function is init(){
+	replace Function is init(){
 	}
 
 	## Maps a Spec type name to its corresponding C11 type signature.
 	##
 	## @param typeName: Spec type name.
 	## @return: C11 type signature string.
-	local Function of String is cTypeFor(String is typeName){
+	Function of String is cTypeFor(String is typeName){
 		if (typeName:startsWith(prefix: "Array")) {
 			return "SpecArray*";
 		}
@@ -48,7 +48,7 @@ Class is CBackendUtils{
 	##
 	## @param name: Identifier name.
 	## @return: Sanitized C-compatible identifier name.
-	local Function of String is cIdent(String is name){
+	Function of String is cIdent(String is name){
 		return when (name) {
 			is "EOF": "_EOF";
 			is "default", "case", "switch", "struct", "union", "enum", "register",
@@ -63,17 +63,17 @@ Class is CBackendUtils{
 		local Int is pos: 0;
 		local String is res: "";
 
-		replace local Function is init(String is src){
+		replace Function is init(String is src){
 			self:src: src;
 			self:pos: 0;
 			self:res: "";
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:pos < self:src:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:src:charAt(index: self:pos, default: "");
 			self:pos: self:pos + 1;
 			when (ch) {
@@ -98,7 +98,7 @@ Class is CBackendUtils{
 	##
 	## @param s: Raw string text.
 	## @return: C-escaped string.
-	local Function of String is escapeString(String is s){
+	Function of String is escapeString(String is s){
 		local EscapeLoop is escLoop: EscapeLoop:init(src: s);
 		While:run(loop: escLoop);
 		return escLoop:res;
@@ -108,7 +108,7 @@ Class is CBackendUtils{
 	##
 	## @param name: ClassInfo identifier name.
 	## @return: `true` if builtin runtime class, `false` otherwise.
-	local Function of Boolean is isBuiltinClass(String is name){
+	Function of Boolean is isBuiltinClass(String is name){
 		return name == "Array" || name == "Map" || name == "File" || name == "LoopControl" ||
 			name == "Process" || name == "Output" || name == "Input" || name == "Math" ||
 			name == "While" || name == "Loop" || name == "LoopCallback" || name == "InputHandler";

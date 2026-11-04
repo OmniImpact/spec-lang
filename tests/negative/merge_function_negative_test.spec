@@ -23,52 +23,52 @@
 ## compiler output contains all six diagnostics.
 
 Class is FwdBase{
-	replace local Function of Int is double(Int is n){
+	replace Function of Int is double(Int is n){
 		return n * 2;
 	}
 
-	replace local Function of Int is twoOf(Int is a, Int is b){
+	replace Function of Int is twoOf(Int is a, Int is b){
 		return a;
 	}
 
-	replace local Function of Int is partial(Int is a, Int is b){
+	replace Function of Int is partial(Int is a, Int is b){
 		return a;
 	}
 
-	replace local Function of Int is absWrap(Int is n){
+	replace Function of Int is absWrap(Int is n){
 	}
 }
 
 Class is FwdChild extends FwdBase{
 
-	replace local Function is plainCall(){
+	replace Function is plainCall(){
 		("unexpected");
 	}
 
-	merge local Function of Int is absWrap(Int is n){
+	merge Function of Int is absWrap(Int is n){
 		(n);
 	}
 
-	merge local Function of Int is double(Int is n){
+	merge Function of Int is double(Int is n){
 		(n: "not-a-number");
 	}
 
-	merge local Function of Int is twoOf(Int is a, Int is b){
+	merge Function of Int is twoOf(Int is a, Int is b){
 		(1, 2, 3);
 	}
 
-	merge local Function of Int is partial(Int is a, Int is b){
+	merge Function of Int is partial(Int is a, Int is b){
 		(1);
 	}
 }
 
 Class is FwdNegativeTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("unreachable");
 	}
 }

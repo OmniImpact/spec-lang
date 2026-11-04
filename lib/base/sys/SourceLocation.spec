@@ -20,7 +20,7 @@ Class is SourceLocation{
 	## @param file: The file path or URI of the source.
 	## @param line: One-based line coordinate.
 	## @param col: One-based column coordinate.
-	replace local Function is init(String is file, Int is line, Int is col){
+	replace Function is init(String is file, Int is line, Int is col){
 		self:file: file;
 		self:line: line;
 		self:col: col;
@@ -36,14 +36,14 @@ Class is SourceLocation{
 	## Returns the one-based line number.
 	##
 	## @return: Line number integer.
-	local Function of Int is getLine(){
+	Function of Int is getLine(){
 		return self:line;
 	}
 
 	## Returns the one-based column number.
 	##
 	## @return: Column number integer.
-	local Function of Int is getCol(){
+	Function of Int is getCol(){
 		return self:col;
 	}
 
@@ -54,7 +54,7 @@ Class is SourceLocation{
 	## ```spec
 	## local String is s: loc:toString();
 	## ```
-	replace local Function of String is toString(){
+	replace Function of String is toString(){
 		if (self:file:length() > 0) {
 			return self:file . ":" . self:line . ":" . self:col;
 		}

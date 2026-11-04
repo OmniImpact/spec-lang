@@ -33,14 +33,14 @@ Class is AppName{
 	local Int is count: 0;
 
 	# Package imports
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:io:*
 	];
 
 	# Entrypoint init method (called by runtime with CLI arguments)
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
 		output:line(self:title . ': Hello ' . name);
 	}
@@ -59,8 +59,8 @@ Class is AppName{
   ```spec
   Class is Box of T{
   	local T is val;
-  	replace local Function is init(T is val){ self:val: val; }
-  	replace local Function of T is get(){ return self:val; }
+  	replace Function is init(T is val){ self:val: val; }
+  	replace Function of T is get(){ return self:val; }
   }
   local Box of String is b: Box:init(val: "Hello");
   ```
@@ -85,7 +85,7 @@ Class is AppName{
 ## 4. Methods & Functions
 - **Standard Syntax**:
   ```spec
-  replace local Function of ReturnType is methodName(ParamType is param1, ParamType is param2){
+  replace Function of ReturnType is methodName(ParamType is param1, ParamType is param2){
   	return param1 + param2;
   }
   ```
@@ -97,7 +97,7 @@ Class is AppName{
   ```
 - **Default Parameters & Named-Argument Reordering**:
   ```spec
-  replace local Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
+  replace Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
   	return prefix . ", " . name . suffix;
   }
   local String is s: self:greet(suffix: ".", name: "World"); # "Hello, World."
@@ -243,7 +243,7 @@ While:run(loop: CountLoop:init(max: 5));
 - Missing module files and unresolvable `using:` imports are hard load errors (`[LoadError]`).
 
 ### Class Grouping (Partials)
-A fragment class declares `replace local Array of String is group: [Target];`. The Loader merges
+A fragment class declares `replace Array of String is group: [Target];`. The Loader merges
 fragments into the target class (unioning `using` arrays, stripping `group`). Duplicate members
 across fragments are load errors; at most one `init` per merged class; fragments must not
 declare `extends`. See the [Class Grouping guide](docs/language/README.md#class-grouping-partial-classes).

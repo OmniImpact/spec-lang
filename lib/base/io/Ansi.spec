@@ -7,29 +7,29 @@ Class is Ansi{
 	## Returns the raw ASCII ESC character (`0x1B` / `\e`).
 	##
 	## @return: Single-character ESC string.
-	local Function of String is esc(){
+	Function of String is esc(){
 		return "\e";
 	}
 
 	## Returns the console width in columns, or 0 when stdout is not a terminal.
-	local Function of Int is terminalWidth(){
+	Function of Int is terminalWidth(){
 	}
 
 	## Returns the console height in rows, or 0 when stdout is not a terminal.
-	local Function of Int is terminalHeight(){
+	Function of Int is terminalHeight(){
 	}
 
 	## Returns the ANSI sequence to reset all terminal colors and attributes (`\e[0m`).
 	##
 	## @return: ANSI reset sequence string.
-	local Function of String is reset(){
+	Function of String is reset(){
 		return "\e[0m";
 	}
 
 	## Returns the ANSI sequence for bold text (`\e[1m`).
 	##
 	## @return: ANSI bold sequence string.
-	local Function of String is bold(){
+	Function of String is bold(){
 		return "\e[1m";
 	}
 
@@ -44,7 +44,7 @@ Class is Ansi{
 	##
 	## @param code: 256-color palette index (0..255).
 	## @return: ANSI foreground sequence (`\e[38;5;<code>m`).
-	local Function of String is fg256(Int is code){
+	Function of String is fg256(Int is code){
 		return "\e[38;5;" . code . "m";
 	}
 
@@ -52,7 +52,7 @@ Class is Ansi{
 	##
 	## @param code: 256-color palette index (0..255).
 	## @return: ANSI background sequence (`\e[48;5;<code>m`).
-	local Function of String is bg256(Int is code){
+	Function of String is bg256(Int is code){
 		return "\e[48;5;" . code . "m";
 	}
 
@@ -61,7 +61,7 @@ Class is Ansi{
 	## @param code: 256-color palette index (0..255).
 	## @param text: String content to colorize.
 	## @return: Colorized string with trailing reset.
-	local Function of String is color256(Int is code, String is text){
+	Function of String is color256(Int is code, String is text){
 		return "\e[38;5;" . code . "m" . text . "\e[0m";
 	}
 
@@ -71,7 +71,7 @@ Class is Ansi{
 	## @param bg: Background 256-color palette index (0..255).
 	## @param text: String content to colorize.
 	## @return: Colorized string with trailing reset.
-	local Function of String is paint256(Int is fg, Int is bg, String is text){
+	Function of String is paint256(Int is fg, Int is bg, String is text){
 		return "\e[38;5;" . fg . ";48;5;" . bg . "m" . text . "\e[0m";
 	}
 
@@ -81,7 +81,7 @@ Class is Ansi{
 	## @param g: Green cube level (0..5).
 	## @param b: Blue cube level (0..5).
 	## @return: Palette index in range 16..231.
-	local Function of Int is cubeIndex(Int is r, Int is g, Int is b){
+	Function of Int is cubeIndex(Int is r, Int is g, Int is b){
 		return 16 + (36 * r) + (6 * g) + b;
 	}
 
@@ -89,7 +89,7 @@ Class is Ansi{
 	##
 	## @param level: Grayscale level (0..23).
 	## @return: Palette index in range 232..255.
-	local Function of Int is grayIndex(Int is level){
+	Function of Int is grayIndex(Int is level){
 		return 232 + level;
 	}
 
@@ -99,7 +99,7 @@ Class is Ansi{
 	## @param g: Green channel (0..255).
 	## @param b: Blue channel (0..255).
 	## @return: ANSI TrueColor foreground sequence (`\e[38;2;<r>;<g>;<b>m`).
-	local Function of String is fgRgb(Int is r, Int is g, Int is b){
+	Function of String is fgRgb(Int is r, Int is g, Int is b){
 		return "\e[38;2;" . r . ";" . g . ";" . b . "m";
 	}
 
@@ -116,7 +116,7 @@ Class is Ansi{
 	## Returns the ANSI sequence to clear the entire screen and move cursor to home (`1,1`).
 	##
 	## @return: ANSI clear screen sequence.
-	local Function of String is clearScreen(){
+	Function of String is clearScreen(){
 		return "\e[2J\e[H";
 	}
 
@@ -125,21 +125,21 @@ Class is Ansi{
 	## @param row: 1-based terminal row.
 	## @param col: 1-based terminal column.
 	## @return: ANSI cursor position sequence.
-	local Function of String is moveTo(Int is row, Int is col){
+	Function of String is moveTo(Int is row, Int is col){
 		return "\e[" . row . ";" . col . "H";
 	}
 
 	## Returns the ANSI sequence to hide the terminal cursor.
 	##
 	## @return: ANSI hide cursor sequence.
-	local Function of String is hideCursor(){
+	Function of String is hideCursor(){
 		return "\e[?25l";
 	}
 
 	## Returns the ANSI sequence to show the terminal cursor.
 	##
 	## @return: ANSI show cursor sequence.
-	local Function of String is showCursor(){
+	Function of String is showCursor(){
 		return "\e[?25h";
 	}
 

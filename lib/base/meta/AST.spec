@@ -4,7 +4,7 @@
 ## Represents a named argument pair in method calls (e.g. `index: 0`).
 Class is NamedArg{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:meta:AST
 	];
 
@@ -15,7 +15,7 @@ Class is NamedArg{
 	##
 	## @param name: Argument key identifier (empty string if positional).
 	## @param value: Argument [Expression] node.
-	replace local Function is init(String is name, Expression is value){
+	replace Function is init(String is name, Expression is value){
 		self:name: name;
 		self:value: value;
 	}
@@ -23,14 +23,14 @@ Class is NamedArg{
 	## Returns the argument name.
 	##
 	## @return: Argument key string.
-	local Function of String is getName(){
+	Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns the argument value expression.
 	##
 	## @return: [Expression] instance.
-	local Function of Expression is getValue(){
+	Function of Expression is getValue(){
 		return self:value;
 	}
 
@@ -39,7 +39,7 @@ Class is NamedArg{
 ## Represents an expression node in the Spec syntax tree.
 Class is Expression{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:reflect:Type,
 		base:reflect:Parameter,
@@ -81,7 +81,7 @@ Class is Expression{
 	## Initializes an expression node with the given kind tag.
 	##
 	## @param kind: Expression kind identifier (e.g. `"STRING"`, `"CALL"`, `"BINARY"`).
-	replace local Function is init(String is kind){
+	replace Function is init(String is kind){
 		self:kind: kind;
 	}
 
@@ -96,7 +96,7 @@ Class is Expression{
 	## Configures this node as an integer literal expression.
 	##
 	## @param val: Integer literal value.
-	local Function is makeNumber(Int is val){
+	Function is makeNumber(Int is val){
 		self:kind: "NUMBER";
 		self:intValue: val;
 	}
@@ -120,7 +120,7 @@ Class is Expression{
 	## Configures this node as an identifier reference expression.
 	##
 	## @param name: Identifier name.
-	local Function is makeIdent(String is name){
+	Function is makeIdent(String is name){
 		self:kind: "IDENT";
 		self:stringValue: name;
 	}
@@ -128,7 +128,7 @@ Class is Expression{
 	## Configures this node as a colon-delimited path expression.
 	##
 	## @param segments: Array of path segment identifiers.
-	local Function is makePath(Array of String is segments){
+	Function is makePath(Array of String is segments){
 		self:kind: "PATH";
 		self:pathSegments: segments;
 	}
@@ -150,14 +150,14 @@ Class is Expression{
 	## @param inner: The cast operand.
 	## @param target: Target type or base name (Int, Float, String, Hex, Bin, Oct, or a class).
 	## @param args: Optional arguments (e.g. digit width for Hex/Bin/Oct).
-	local Function is makeCast(Expression is inner, String is target, Array of Expression is args){
+	Function is makeCast(Expression is inner, String is target, Array of Expression is args){
 		self:kind: "CAST";
 		self:leftExpr: inner;
 		self:stringValue: target;
 		self:castArgs: args;
 	}
 
-	local Function is makeMap(Array of Expression is keys, Array of Expression is values){
+	Function is makeMap(Array of Expression is keys, Array of Expression is values){
 		self:kind: "MAP";
 		self:mapKeys: keys;
 		self:mapValues: values;
@@ -213,7 +213,7 @@ Class is Expression{
 	##
 	## @param subject: Subject [Expression] being matched.
 	## @param arms: Array of [WhenArm] branches.
-	local Function is makeWhen(Expression is subject, Array of WhenArm is arms){
+	Function is makeWhen(Expression is subject, Array of WhenArm is arms){
 		self:kind: "WHEN";
 		self:whenSubject: subject;
 		self:whenArms: arms;
@@ -234,7 +234,7 @@ Class is Expression{
 	## Returns the expression kind tag.
 	##
 	## @return: Kind tag string.
-	local Function of String is getKind(){
+	Function of String is getKind(){
 		return self:kind;
 	}
 
@@ -255,14 +255,14 @@ Class is Expression{
 	## Sets the resolved type name string populated during semantic analysis.
 	##
 	## @param t: Resolved type name string.
-	local Function is setResolvedType(String is t){
+	Function is setResolvedType(String is t){
 		self:resolvedType: t;
 	}
 
 	## Returns the resolved type name string populated during semantic analysis.
 	##
 	## @return: Resolved type name string.
-	local Function of String is getResolvedType(){
+	Function of String is getResolvedType(){
 		return self:resolvedType;
 	}
 
@@ -285,7 +285,7 @@ Class is Expression{
 ## Represents a statement node in the Spec syntax tree.
 Class is Statement{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:reflect:Type,
 		base:reflect:ClassInfo,
@@ -316,7 +316,7 @@ Class is Statement{
 	local Array of NamedArg is forwardArgs;
 
 
-	replace local Function is init(String is kind){
+	replace Function is init(String is kind){
 		self:kind: kind;
 	}
 
@@ -329,7 +329,7 @@ Class is Statement{
 		self:hasInit: hasInit;
 	}
 
-	local Function is assign(Expression is target, Expression is value){
+	Function is assign(Expression is target, Expression is value){
 		self:kind: "ASSIGN";
 		self:assignTarget: target;
 		self:assignValue: value;
@@ -359,7 +359,7 @@ Class is Statement{
 		self:exprStmt: expr;
 	}
 
-	local Function is whenStmt(Expression is subject, Array of WhenArm is arms){
+	Function is whenStmt(Expression is subject, Array of WhenArm is arms){
 		self:kind: "WHEN";
 		self:whenSubject: subject;
 		self:whenArms: arms;
@@ -379,19 +379,19 @@ Class is Statement{
 	## Returns the forward arguments of a "FORWARD" statement.
 	##
 	## @return: Array of [NamedArg] forward arguments.
-	local Function of Array of NamedArg is getForwardArgs(){
+	Function of Array of NamedArg is getForwardArgs(){
 		return self:forwardArgs;
 	}
 
-	local Function of String is getKind(){
+	Function of String is getKind(){
 		return self:kind;
 	}
 
-	local Function is setLine(Int is line){
+	Function is setLine(Int is line){
 		self:line: line;
 	}
 
-	local Function of Int is getLine(){
+	Function of Int is getLine(){
 		return self:line;
 	}
 
@@ -400,18 +400,18 @@ Class is Statement{
 ## Represents the root program node containing all parsed [base:reflect:ClassInfo] definitions.
 Class is ProgramNode{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:reflect:ClassInfo
 	];
 
 	local Array of ClassInfo is classes: [];
 
-	replace local Function is init(Array of ClassInfo is classes){
+	replace Function is init(Array of ClassInfo is classes){
 		self:classes: classes;
 	}
 
-	local Function of Array of ClassInfo is getClasses(){
+	Function of Array of ClassInfo is getClasses(){
 		return self:classes;
 	}
 
@@ -428,7 +428,7 @@ Class is ProgramNode{
 ## Represents a pattern matching branch in a `when` statement or expression.
 Class is WhenArm{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:meta:AST
 	];
@@ -439,28 +439,28 @@ Class is WhenArm{
 	local Expression is valueExpr;
 	local Boolean is hasValueExpr: false;
 
-	replace local Function is init(){
+	replace Function is init(){
 	}
 
-	local Function is arm(Array of Expression is conditions, Array of Statement is body){
+	Function is arm(Array of Expression is conditions, Array of Statement is body){
 		self:conditions: conditions;
 		self:isElse: false;
 		self:body: body;
 	}
 
-	local Function is elseArm(Array of Statement is body){
+	Function is elseArm(Array of Statement is body){
 		self:isElse: true;
 		self:body: body;
 	}
 
-	local Function is exprArm(Array of Expression is conditions, Expression is value){
+	Function is exprArm(Array of Expression is conditions, Expression is value){
 		self:conditions: conditions;
 		self:isElse: false;
 		self:valueExpr: value;
 		self:hasValueExpr: true;
 	}
 
-	local Function is elseExprArm(Expression is value){
+	Function is elseExprArm(Expression is value){
 		self:isElse: true;
 		self:valueExpr: value;
 		self:hasValueExpr: true;

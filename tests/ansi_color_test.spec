@@ -4,14 +4,14 @@
 ## Verification suite for ANSI 256-color and special character console output.
 Class is AnsiColorTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
 		base:io:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Spec ANSI 256-Color & Special Character Test ===");
 
 		# 1. Basic 16-color + 256-color blocks using Output:print

@@ -4,7 +4,7 @@
 ## Recursive-descent AST parser converting token streams into [base:meta:ProgramNode] trees.
 Class is Parser{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -28,18 +28,18 @@ Class is Parser{
 		local String is backingType;
 		local Int is count: 0;
 
-		replace local Function is init(Parser is parser, Array of Member is members, String is backingType){
+		replace Function is init(Parser is parser, Array of Member is members, String is backingType){
 			self:parser: parser;
 			self:members: members;
 			self:backingType: backingType;
 			self:count: 0;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:parser:check(kind: "SYMBOL", value: "}") && !self:parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is vTok: self:parser:advance();
 			local String is vName: vTok:getValue();
 			local Array of Parameter is vParams: [];
@@ -83,16 +83,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of ClassInfo is classes;
 
-		replace local Function is init(Parser is parser, Array of ClassInfo is classes){
+		replace Function is init(Parser is parser, Array of ClassInfo is classes){
 			self:parser: parser;
 			self:classes: classes;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			if (self:parser:check(kind: "KEYWORD", value: "Enum") || self:parser:peek():getValue() == "Enum") {
 				self:classes:add(item: self:parser:parseEnum());
 			} else {
@@ -106,16 +106,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of Member is members;
 
-		replace local Function is init(Parser is parser, Array of Member is members){
+		replace Function is init(Parser is parser, Array of Member is members){
 			self:parser: parser;
 			self:members: members;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "SYMBOL", value: "}") && !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			members:add(item: parser:parseMember());
 			return true;
 		}
@@ -125,16 +125,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of String is bases;
 
-		replace local Function is init(Parser is parser, Array of String is bases){
+		replace Function is init(Parser is parser, Array of String is bases){
 			self:parser: parser;
 			self:bases: bases;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "SYMBOL", value: "{") && !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is tok: parser:advance();
 			bases:add(item: tok:getValue());
 			if (parser:check(kind: "SYMBOL", value: ",")) {
@@ -149,16 +149,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of Statement is stmts;
 
-		replace local Function is init(Parser is parser, Array of Statement is stmts){
+		replace Function is init(Parser is parser, Array of Statement is stmts){
 			self:parser: parser;
 			self:stmts: stmts;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "SYMBOL", value: "}") && !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			stmts:add(item: parser:parseStatement());
 			return true;
 		}
@@ -168,16 +168,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of Expression is conditions;
 
-		replace local Function is init(Parser is parser, Array of Expression is conditions){
+		replace Function is init(Parser is parser, Array of Expression is conditions){
 			self:parser: parser;
 			self:conditions: conditions;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:parser:check(kind: "SYMBOL", value: ":") && !self:parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:conditions:add(item: self:parser:parseExpression());
 			if (self:parser:check(kind: "SYMBOL", value: ",")) {
 				self:parser:advance();
@@ -191,16 +191,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of WhenArm is arms;
 
-		replace local Function is init(Parser is parser, Array of WhenArm is arms){
+		replace Function is init(Parser is parser, Array of WhenArm is arms){
 			self:parser: parser;
 			self:arms: arms;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:parser:check(kind: "SYMBOL", value: "}") && !self:parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			if (self:parser:check(kind: "KEYWORD", value: "is")) {
 				self:parser:advance();
 				local Array of Expression is conds: [];
@@ -260,16 +260,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of Expression is items;
 
-		replace local Function is init(Parser is parser, Array of Expression is items){
+		replace Function is init(Parser is parser, Array of Expression is items){
 			self:parser: parser;
 			self:items: items;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "SYMBOL", value: "]") && !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			items:add(item: parser:parseExpression());
 			if (parser:check(kind: "SYMBOL", value: ",")) {
 				parser:advance();
@@ -284,17 +284,17 @@ Class is Parser{
 		local Array of Expression is keys;
 		local Array of Expression is values;
 
-		replace local Function is init(Parser is parser, Array of Expression is keys, Array of Expression is values){
+		replace Function is init(Parser is parser, Array of Expression is keys, Array of Expression is values){
 			self:parser: parser;
 			self:keys: keys;
 			self:values: values;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:parser:check(kind: "SYMBOL", value: "]") && !self:parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Expression is k: self:parser:parseExpression();
 			self:parser:matchToken(kind: "SYMBOL", value: ":");
 			local Expression is v: self:parser:parseExpression();
@@ -312,16 +312,17 @@ Class is Parser{
 		local Parser is parser;
 		local Array of String is mods;
 
-		replace local Function is init(Parser is parser, Array of String is mods){
+		replace Function is init(Parser is parser, Array of String is mods){
 			self:parser: parser;
 			self:mods: mods;
 		}
 
-		replace local Function of Boolean is evaluate(){
-			return parser:check(kind: "KEYWORD", value: "local") || parser:check(kind: "KEYWORD", value: "replace") || parser:check(kind: "KEYWORD", value: "merge");
+		replace Function of Boolean is evaluate(){
+			return parser:check(kind: "KEYWORD", value: "local") || parser:check(kind: "KEYWORD", value: "contained") ||
+				parser:check(kind: "KEYWORD", value: "replace") || parser:check(kind: "KEYWORD", value: "merge");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is tok: parser:advance();
 			mods:add(item: tok:getValue());
 			return true;
@@ -332,16 +333,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of Parameter is params;
 
-		replace local Function is init(Parser is parser, Array of Parameter is params){
+		replace Function is init(Parser is parser, Array of Parameter is params){
 			self:parser: parser;
 			self:params: params;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "SYMBOL", value: ")") && !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			if (self:parser:peek():getValue() == "self" && self:parser:peekAhead(offset: 1):getValue() == ":") {
 				self:parser:advance();
 				self:parser:advance();
@@ -389,16 +390,16 @@ Class is Parser{
 		local Parser is parser;
 		local Array of NamedArg is args;
 
-		replace local Function is init(Parser is parser, Array of NamedArg is args){
+		replace Function is init(Parser is parser, Array of NamedArg is args){
 			self:parser: parser;
 			self:args: args;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !parser:check(kind: "SYMBOL", value: ")") && !parser:check(kind: "EOF", value: "");
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is argName: "";
 			local Token is tok0: self:parser:peekAhead(offset: 0);
 			if (tok0:getKind() == "IDENTIFIER" && self:parser:peekAhead(offset: 1):getValue() == ":") {
@@ -435,12 +436,12 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			if (self:parser:check(kind: "SYMBOL", value: "(")) {
 				return true;
 			}
@@ -458,7 +459,7 @@ Class is Parser{
 			return false;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			if (self:parser:check(kind: "SYMBOL", value: "(")) {
 				self:parser:advance();
 				local Array of NamedArg is args: [];
@@ -532,17 +533,17 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			return tok:getValue() == "||";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseLogicalAnd();
 
@@ -559,17 +560,17 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			return tok:getValue() == "&&";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseEquality();
 
@@ -586,17 +587,17 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local String is val: self:parser:peek():getValue();
 			return val == "<<" || val == ">>";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is op: self:parser:advance():getValue();
 			local Expression is right: self:parser:parseAdditive();
 			local Expression is binExpr: Expression:init(kind: "BINARY");
@@ -612,16 +613,16 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:parser:peek():getValue() == "&";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseEquality();
 			local Expression is binExpr: Expression:init(kind: "BINARY");
@@ -637,16 +638,16 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:parser:peek():getValue() == "^";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseBitAnd();
 			local Expression is binExpr: Expression:init(kind: "BINARY");
@@ -662,16 +663,16 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:parser:peek():getValue() == "|";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseBitXor();
 			local Expression is binExpr: Expression:init(kind: "BINARY");
@@ -687,18 +688,18 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
 			return val == "==" || val == "!=" || val == "is";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is opTok: self:parser:advance();
 			local String is op: opTok:getValue();
 			if (op == "is") {
@@ -719,18 +720,18 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
 			return val == "<" || val == "<=" || val == ">" || val == ">=";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is opTok: self:parser:advance();
 			local String is op: opTok:getValue();
 			local Expression is right: self:parser:parseConcat();
@@ -748,17 +749,17 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			return tok:getValue() == ".";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseAdditive();
 
@@ -775,18 +776,18 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
 			return val == "+" || val == "-";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is opTok: self:parser:advance();
 			local String is op: opTok:getValue();
 			local Expression is right: self:parser:parseMultiplicative();
@@ -804,18 +805,18 @@ Class is Parser{
 		local Parser is parser;
 		local Expression is currentExpr;
 
-		replace local Function is init(Parser is parser, Expression is expr){
+		replace Function is init(Parser is parser, Expression is expr){
 			self:parser: parser;
 			self:currentExpr: expr;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
 			return val == "*" || val == "/" || val == "%";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is opTok: self:parser:advance();
 			local String is op: opTok:getValue();
 			local Expression is right: self:parser:parseUnary();
@@ -832,7 +833,7 @@ Class is Parser{
 	## Initializes a parser with a token array emitted by [Lexer].
 	##
 	## @param tokens: Array of [Token] items.
-	replace local Function is init(Array of Token is tokens){
+	replace Function is init(Array of Token is tokens){
 		self:tokens: tokens;
 		self:length: tokens:length();
 		self:pos: 0;
@@ -840,15 +841,15 @@ Class is Parser{
 		self:errors: [];
 	}
 
-	local Function is setSourceFile(String is file){
+	Function is setSourceFile(String is file){
 		self:sourceFile: file;
 	}
 
-	local Function of Array of String is getErrors(){
+	Function of Array of String is getErrors(){
 		return self:errors;
 	}
 
-	local Function of Boolean is hasErrors(){
+	Function of Boolean is hasErrors(){
 		return self:errors:length() > 0;
 	}
 
@@ -880,14 +881,14 @@ Class is Parser{
 		}
 	}
 
-	local Function of Token is peek(){
+	Function of Token is peek(){
 		if (self:pos < self:length) {
 			return self:tokens:get(index: self:pos);
 		}
 		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
 	}
 
-	local Function of Token is peekAhead(Int is offset){
+	Function of Token is peekAhead(Int is offset){
 		local Int is idx: self:pos + offset;
 		if (idx < self:length) {
 			return self:tokens:get(index: idx);
@@ -895,7 +896,7 @@ Class is Parser{
 		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
 	}
 
-	local Function of Token is advance(){
+	Function of Token is advance(){
 		local Token is tok: self:peek();
 		if (self:pos < self:length) {
 			self:pos: self:pos + 1;
@@ -903,7 +904,7 @@ Class is Parser{
 		return tok;
 	}
 
-	local Function of Boolean is hasWhitespaceAfter(Int is offset){
+	Function of Boolean is hasWhitespaceAfter(Int is offset){
 		local Token is cur: self:peekAhead(offset: offset);
 		local Token is nxt: self:peekAhead(offset: offset + 1);
 		if (nxt:getTokenKind() == TokenKind:EOF) {
@@ -912,7 +913,7 @@ Class is Parser{
 		return nxt:getLine() > cur:getLine() || nxt:getCol() > (cur:getCol() + cur:getValue():length());
 	}
 
-	local Function of Boolean is check(String is kind, String is value){
+	Function of Boolean is check(String is kind, String is value){
 		local Token is tok: self:peek();
 		if (kind != "" && tok:getKind() != kind) {
 			return false;
@@ -923,7 +924,7 @@ Class is Parser{
 		return true;
 	}
 
-	local Function of Boolean is matchToken(String is kind, String is value){
+	Function of Boolean is matchToken(String is kind, String is value){
 		if (self:check(kind: kind, value: value)) {
 			self:advance();
 			return true;
@@ -934,7 +935,7 @@ Class is Parser{
 		return false;
 	}
 
-	local Function of Type is parseType(){
+	Function of Type is parseType(){
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
@@ -956,7 +957,7 @@ Class is Parser{
 		return Type:init(name: typeName);
 	}
 
-	local Function of Member is parseMember(){
+	Function of Member is parseMember(){
 		local Int is startLine: self:peek():getLine();
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
@@ -1111,7 +1112,7 @@ Class is Parser{
 		return s;
 	}
 
-	local Function of Statement is parseStatement(){
+	Function of Statement is parseStatement(){
 		local Int is startLine: self:peek():getLine();
 
 		# Merge-forward statement: `(arg, name: arg, ...)`.
@@ -1454,7 +1455,7 @@ Class is Parser{
 		return left;
 	}
 
-	local Function of Expression is parseUnary(){
+	Function of Expression is parseUnary(){
 		if (self:check(kind: "SYMBOL", value: "~")) {
 			self:advance();
 			local Expression is expr: self:parseUnary();
@@ -1482,14 +1483,14 @@ Class is Parser{
 		return self:parseAs();
 	}
 
-	local Function of Expression is parseMultiplicative(){
+	Function of Expression is parseMultiplicative(){
 		local Expression is left: self:parseUnary();
 		local MultiplicativeLoop is loopInst: MultiplicativeLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	local Function of Expression is parseAdditive(){
+	Function of Expression is parseAdditive(){
 		local Expression is left: self:parseMultiplicative();
 		local AdditiveLoop is loopInst: AdditiveLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1505,28 +1506,28 @@ Class is Parser{
 		return loopInst:currentExpr;
 	}
 
-	local Function of Expression is parseConcat(){
+	Function of Expression is parseConcat(){
 		local Expression is left: self:parseShift();
 		local ConcatLoop is loopInst: ConcatLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	local Function of Expression is parseRelational(){
+	Function of Expression is parseRelational(){
 		local Expression is left: self:parseConcat();
 		local RelationalLoop is loopInst: RelationalLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	local Function of Expression is parseEquality(){
+	Function of Expression is parseEquality(){
 		local Expression is left: self:parseRelational();
 		local EqualityLoop is loopInst: EqualityLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
 		return loopInst:currentExpr;
 	}
 
-	local Function of Expression is parseLogicalAnd(){
+	Function of Expression is parseLogicalAnd(){
 		local Expression is left: self:parseBitOr();
 		local LogicalAndLoop is loopInst: LogicalAndLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1542,7 +1543,7 @@ Class is Parser{
 	}
 
 	## Parses bitwise XOR (`^`), between `|` and `&`.
-	local Function of Expression is parseBitXor(){
+	Function of Expression is parseBitXor(){
 		local Expression is left: self:parseBitAnd();
 		local BitXorLoop is loopInst: BitXorLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1550,7 +1551,7 @@ Class is Parser{
 	}
 
 	## Parses bitwise AND (`&`), between `^` and equality comparisons.
-	local Function of Expression is parseBitAnd(){
+	Function of Expression is parseBitAnd(){
 		local Expression is left: self:parseEquality();
 		local BitAndLoop is loopInst: BitAndLoop:init(parser: self, expr: left);
 		While:run(loop: loopInst);
@@ -1564,11 +1565,11 @@ Class is Parser{
 		return loopInst:currentExpr;
 	}
 
-	local Function of Expression is parseExpression(){
+	Function of Expression is parseExpression(){
 		return self:parseLogicalOr();
 	}
 
-	local Function of ClassInfo is parseClass(){
+	Function of ClassInfo is parseClass(){
 		# Canonical declaration: `Class is Name`.
 		if (self:check(kind: "IDENTIFIER", value: "class")) {
 			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class is Name'.");
@@ -1609,7 +1610,7 @@ Class is Parser{
 		return c;
 	}
 
-	local Function of ClassInfo is parseEnum(){
+	Function of ClassInfo is parseEnum(){
 		self:advance();
 		local String is backingType: "Int";
 		if (self:check(kind: "KEYWORD", value: "of")) {
@@ -1639,7 +1640,7 @@ Class is Parser{
 	## Parses the token stream into a root [base:meta:ProgramNode] AST.
 	##
 	## @return: Root [ProgramNode] containing all parsed class definitions.
-	local Function of ProgramNode is parseProgram(){
+	Function of ProgramNode is parseProgram(){
 		local Array of ClassInfo is classes: [];
 		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
 		return ProgramNode:init(classes: classes);

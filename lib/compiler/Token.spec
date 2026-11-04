@@ -15,7 +15,7 @@ Enum of String is TokenKind {
 ## Represents a lexical token emitted by the compiler [Lexer].
 Class is Token{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:sys:SourceLocation
 	];
 
@@ -34,7 +34,7 @@ Class is Token{
 	## @param value: Token string value.
 	## @param line: One-based line coordinate.
 	## @param col: One-based column coordinate.
-	replace local Function is init(TokenKind is kind, String is value, Int is line, Int is col){
+	replace Function is init(TokenKind is kind, String is value, Int is line, Int is col){
 		self:kind: kind;
 		self:value: value;
 		self:location: SourceLocation:init(file: "", line: line, col: col);
@@ -54,35 +54,35 @@ Class is Token{
 	## Returns the token category enum kind.
 	##
 	## @return: [TokenKind] enum variant.
-	local Function of TokenKind is getTokenKind(){
+	Function of TokenKind is getTokenKind(){
 		return self:kind;
 	}
 
 	## Returns the token category kind string value.
 	##
 	## @return: Kind string tag.
-	local Function of String is getKind(){
+	Function of String is getKind(){
 		return self:kind:value();
 	}
 
 	## Returns the raw lexeme string value.
 	##
 	## @return: Value string.
-	local Function of String is getValue(){
+	Function of String is getValue(){
 		return self:value;
 	}
 
 	## Returns the one-based line number.
 	##
 	## @return: Line number integer.
-	local Function of Int is getLine(){
+	Function of Int is getLine(){
 		return self:location:getLine();
 	}
 
 	## Returns the one-based column number.
 	##
 	## @return: Column number integer.
-	local Function of Int is getCol(){
+	Function of Int is getCol(){
 		return self:location:getCol();
 	}
 

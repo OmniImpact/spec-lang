@@ -5,12 +5,12 @@
 ```spec
 Class is HelloWorld{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Map,
 		base:io:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: "name", default: "World");
 		output:line("Hello, " . name . "!");
 	}
@@ -24,12 +24,14 @@ Class is HelloWorld{
 
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
-- **Ultra-Lean Compiler**: The entire grammar is the table below — 12 keywords and 6 primitive types. Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
+- **Ultra-Lean Compiler**: The entire grammar is the table below — 13 keywords and 6 primitive types. Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
 
 | Keyword | Role |
 |---|---|
 | `extends` | Inherit from one or more parent classes |
-| `local` | Scope a member to its class or instance |
+| `local` | Private: invisible to children — cannot be replaced, merged, or accessed outside the declaring class |
+| `contained` | Protected and final: visible to subclasses, but cannot be replaced, merged, or accessed externally |
+| `public` (default) | No modifier needed: overridable via `replace`/`merge`, callable from anywhere |
 | `replace` | Override an ancestor member (mandatory; checked) |
 | `merge` | Compose with the ancestor member (array fold, or function delegation via `(args...)`) |
 | `is` | Bind a name to a declaration or value; also reads as equality in comparisons |
@@ -63,8 +65,8 @@ In Spec, `Function` is a **type**, not a keyword. This establishes two vital des
     ```
   - Method: `<Modifiers> <Type> is <name>(<parameters>) { <body> }`
     ```spec
-    replace local Function is init(Map of String to String is args){ ... }
-    replace local Function of Boolean is evaluate(){ ... }
+    replace Function is init(Map of String to String is args){ ... }
+    replace Function of Boolean is evaluate(){ ... }
     ```
 - **First-Class Callables**: Because `Function` is a type, functions and closures can be stored in variables, passed to higher-order functions, and typed generically (`Function of Param to Return`).
 
@@ -91,7 +93,7 @@ Spec establishes a standard indentation convention using **tabs**. A built-in li
 ### 6. Multi-File Module Resolution
 Dependencies declared in `using: [...]` automatically resolve against the standard library in `lib/` and local project files:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:struct:Array,
 	base:struct:Map,
 	base:math:*,

@@ -20,12 +20,12 @@
 ## Status: PASSING (regression resolved; guarded by this file).
 Class is RegressionOverrideDispatchTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Multi-Level Override Dispatch ===");
 
 		# Case 1 (control): one-level override through a base-typed reference.
@@ -75,14 +75,14 @@ Class is RegressionOverrideDispatchTest{
 
 ## Base class declaring the polymorphic contract.
 Class is Animal{
-	local Function of String is speak(){
+	Function of String is speak(){
 		return "...";
 	}
 }
 
 ## Mid-chain class whose override must remain visible to subclasses.
 Class is Dog extends Animal{
-	replace local Function of String is speak(){
+	replace Function of String is speak(){
 		return "woof";
 	}
 }

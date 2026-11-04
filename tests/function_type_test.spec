@@ -1,6 +1,6 @@
 Class is FunctionTypeTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*
 	];
 
@@ -8,7 +8,7 @@ Class is FunctionTypeTest{
 		output:line("Executing callback...");
 	}
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Function is myFunc;
 		self:executeCallback(callback: myFunc);
 		output:line("Function type test passed!");

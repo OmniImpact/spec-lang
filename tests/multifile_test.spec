@@ -1,6 +1,6 @@
 Class is MultiFileTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:math:*,
@@ -15,15 +15,15 @@ Class is MultiFileTest{
 	Class is StepCounterLoop extends Loop{
 		local MultiFileTest is app;
 
-		replace local Function is init(MultiFileTest is app){
+		replace Function is init(MultiFileTest is app){
 			self:app: app;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return app:counter < 10;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			app:counter: app:counter + 1;
 			if (app:counter == 5) {
 				output:line("Stop reached at counter = " . app:counter);
@@ -33,7 +33,7 @@ Class is MultiFileTest{
 		}
 	}
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		self:title: "=== Multi-File & Pure Spec Library Test ===";
 		output:line(self:title);
 

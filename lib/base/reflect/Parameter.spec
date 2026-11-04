@@ -4,7 +4,7 @@
 ## Describes a named, typed parameter of a method or function signature.
 Class is Parameter{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:reflect:Type,
 		base:meta:AST
 	];
@@ -25,7 +25,7 @@ Class is Parameter{
 	##
 	## @param name: Parameter identifier name.
 	## @param paramType: [Type] descriptor of the parameter.
-	replace local Function is init(String is name, Type is paramType){
+	replace Function is init(String is name, Type is paramType){
 		self:name: name;
 		self:paramType: paramType;
 		self:hasDefault: false;
@@ -34,28 +34,28 @@ Class is Parameter{
 	## Returns the parameter identifier name.
 	##
 	## @return: Name string.
-	local Function of String is getName(){
+	Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns the type descriptor of this parameter.
 	##
 	## @return: [Type] instance.
-	local Function of Type is getType(){
+	Function of Type is getType(){
 		return self:paramType;
 	}
 
 	## Updates the type descriptor of this parameter.
 	##
 	## @param t: New [Type] descriptor.
-	local Function is setType(Type is t){
+	Function is setType(Type is t){
 		self:paramType: t;
 	}
 
 	## Attaches a default value expression to this parameter.
 	##
 	## @param expr: Default value [Expression] node.
-	local Function is setDefault(Expression is expr){
+	Function is setDefault(Expression is expr){
 		self:defaultExpr: expr;
 		self:hasDefault: true;
 	}
@@ -63,14 +63,14 @@ Class is Parameter{
 	## Returns the default value expression for this parameter.
 	##
 	## @return: Default value [Expression] node.
-	local Function of Expression is getDefaultExpr(){
+	Function of Expression is getDefaultExpr(){
 		return self:defaultExpr;
 	}
 
 	## Returns whether this parameter declares a default value expression.
 	##
 	## @return: `true` if a default value is present, `false` otherwise.
-	local Function of Boolean is getHasDefault(){
+	Function of Boolean is getHasDefault(){
 		return self:hasDefault;
 	}
 

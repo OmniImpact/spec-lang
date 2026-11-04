@@ -4,7 +4,7 @@
 ## Translates standard library and runtime builtin method calls into C11 runtime functions.
 Class is BuiltinCallGenerator{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -16,12 +16,12 @@ Class is BuiltinCallGenerator{
 	local CBackendUtils is utils;
 	local Map of String to String is allEnumNames: Map:init();
 
-	replace local Function is init(){
+	replace Function is init(){
 		self:utils: CBackendUtils:init();
 		self:allEnumNames: Map:init();
 	}
 
-	local Function is setEnumNames(Map of String to String is names){
+	Function is setEnumNames(Map of String to String is names){
 		self:allEnumNames: names;
 	}
 
@@ -32,7 +32,7 @@ Class is BuiltinCallGenerator{
 	## @param targetType: Inferred type name of method target.
 	## @param cg: Reference to parent [CodeGenerator].
 	## @return: C code string if builtin call, or empty string if not a builtin.
-	local Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
+	Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
 		# error:line - diagnostics written to stderr
 		if ((targetC == "error" || targetC == "Error") && expr:methodName == "line" && expr:methodArgs:length() > 0) {
 			local NamedArg is errArg: expr:methodArgs:get(index: 0);

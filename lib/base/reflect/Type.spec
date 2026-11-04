@@ -4,7 +4,7 @@
 ## Represents a primitive or parameterized type descriptor in the Spec type system.
 Class is Type{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array
 	];
 
@@ -17,7 +17,7 @@ Class is Type{
 	## Initializes a simple type descriptor without generic parameters.
 	##
 	## @param name: Base type name.
-	replace local Function is init(String is name){
+	replace Function is init(String is name){
 		self:name: name;
 		self:params: [];
 	}
@@ -26,7 +26,7 @@ Class is Type{
 	##
 	## @param name: Base type name.
 	## @param params: Generic type arguments.
-	local Function is withParams(String is name, Array of Type is params){
+	Function is withParams(String is name, Array of Type is params){
 		self:name: name;
 		self:params: params;
 	}
@@ -34,28 +34,28 @@ Class is Type{
 	## Returns the base type name.
 	##
 	## @return: Name string.
-	local Function of String is getName(){
+	Function of String is getName(){
 		return self:name;
 	}
 
 	## Returns generic parameter types.
 	##
 	## @return: Array of parameter [Type] descriptors.
-	local Function of Array of Type is getParams(){
+	Function of Array of Type is getParams(){
 		return self:params;
 	}
 
 	## Indicates whether this type has generic parameters.
 	##
 	## @return: `true` if parameterized, `false` otherwise.
-	local Function of Boolean is isGeneric(){
+	Function of Boolean is isGeneric(){
 		return self:params:length() > 0;
 	}
 
 	## Formats the type into canonical Spec syntax (e.g. "Array of String", "Map of String to Int").
 	##
 	## @return: Canonical type string.
-	replace local Function of String is toString(){
+	replace Function of String is toString(){
 		if (self:params:length() == 0) {
 			return self:name;
 		}

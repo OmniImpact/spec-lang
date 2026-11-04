@@ -1,6 +1,6 @@
 Class is Phase3LexerTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:iterator:*,
@@ -8,7 +8,7 @@ Class is Phase3LexerTest{
 		compiler:Lexer
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("        Phase 3 Pure-Spec Lexer       ");
 		output:line("======================================\n");
@@ -26,16 +26,16 @@ Class is Phase3LexerTest{
 			local Array of Token is tokens;
 			local Int is idx: 0;
 
-			replace local Function is init(Array of Token is tokens){
+			replace Function is init(Array of Token is tokens){
 				self:tokens: tokens;
 				self:idx: 0;
 			}
 
-			replace local Function of Boolean is evaluate(){
+			replace Function of Boolean is evaluate(){
 				return idx < tokens:length();
 			}
 
-			replace local Function of Boolean is iteration(LoopControl is control){
+			replace Function of Boolean is iteration(LoopControl is control){
 				local Token is tok: tokens:get(index: idx);
 				output:line("Token[" . idx . "]: " . tok:getKind() . " -> '" . tok:getValue() . "' (line " . tok:getLine() . ", col " . tok:getCol() . ")");
 				self:idx: idx + 1;

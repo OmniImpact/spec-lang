@@ -4,7 +4,7 @@
 ## Main compiler driver coordinating file loading, lexing, parsing, type checking, and code generation.
 Class is Driver{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:sys:Process,
 		base:struct:Array,
@@ -24,7 +24,7 @@ Class is Driver{
 		compiler:Loader
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local String is inputPath: args:getString(key: "i", default: "");
 		if (inputPath == "") {
 			inputPath: args:getString(key: "input", default: "");

@@ -4,7 +4,7 @@
 
 Class is Phase6CodegenTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:sys:Process,
 		base:struct:Array,
@@ -16,7 +16,7 @@ Class is Phase6CodegenTest{
 		compiler:CodeGenerator
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("     Phase 6 Pure-Spec Code Generator ");
 		output:line("======================================\n");

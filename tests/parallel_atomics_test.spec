@@ -12,14 +12,14 @@
 
 Class is ParallelAtomicsTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output,
 		base:sys:Process,
 		base:sys:Parallel,
 		base:math:Math
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Parallel & Atomics ===");
 
 		# Case 1: exact sum - each worker returns its count, total == iterations.

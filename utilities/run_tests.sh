@@ -108,6 +108,14 @@ assert_compile_failure "merge-negative" \
 	"'merge' requires an Array field" \
 	"no parent declares a method with that name"
 
+assert_compile_failure "visibility-negative" \
+	"$ROOT/tests/negative/visibility_negative_test.spec" \
+	"Member 'secret' is local to class 'VisBase'" \
+	"Member 'helper' is contained in class 'VisBase'" \
+	"Member 'secret' is local in ancestor 'VisBase' and cannot be replaced or merged" \
+	"Member 'counter' is local in ancestor 'ShadowedLocal' and cannot be replaced or merged" \
+	"combines 'replace'/'merge' with a visibility modifier"
+
 assert_compile_failure "as-cast-negative" \
 	"$ROOT/tests/negative/as_cast_negative_test.spec" \
 	"Cannot cast 'Cat' to unrelated class 'Dog'" \
@@ -147,8 +155,8 @@ assert_compile_failure "merge-function-negative" \
 echo "== Exit codes =="
 cat > "$WORK/valid.spec" <<'EOF'
 Class is ValidApp{
-	replace local Array of String is using: [base:io:Output];
-	replace local Function is init(Map of String to String is args){
+	replace Array of String is using: [base:io:Output];
+	replace Function is init(Map of String to String is args){
 		output:line("valid");
 	}
 }
@@ -176,6 +184,26 @@ if echo "$legacy_out" | grep -q "no longer valid"; then
 	ok "legacy 'class' rejected with pointed diagnostic"
 else
 	bad "legacy 'class' not rejected with pointed diagnostic"
+fi
+
+# -----------------------------------------------------------------------------
+# 4. Bootstrap fixed-point freshness: the committed spec.c must equal the
+#    compiler's own emitted output, proving the checked-in seed is current.
+# -----------------------------------------------------------------------------
+echo "== Bootstrap fixed point =="
+if [ -f "$ROOT/bootstrap/spec.c" ]; then
+	SELF_C="$WORK/self_hosted.c"
+	if "$SPEC" -i "$ROOT/lib/compiler/Driver.spec" --emit-c "$SELF_C" >/dev/null 2>&1; then
+		if cmp -s "$SELF_C" "$ROOT/bootstrap/spec.c"; then
+			ok "bootstrap/spec.c is the current fixed point"
+		else
+			bad "bootstrap/spec.c is STALE: re-baseline with 'cp <emitted> bootstrap/spec.c && ./bootstrap.sh'"
+		fi
+	else
+		bad "fixed-point check: self-compilation failed"
+	fi
+else
+	bad "bootstrap/spec.c not found"
 fi
 
 # -----------------------------------------------------------------------------

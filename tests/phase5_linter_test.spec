@@ -1,6 +1,6 @@
 Class is Phase5LinterTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:iterator:*,
@@ -15,7 +15,7 @@ Class is Phase5LinterTest{
 		compiler:Linter
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("        Phase 5 Pure-Spec Linter      ");
 		output:line("======================================\n");

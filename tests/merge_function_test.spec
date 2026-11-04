@@ -18,15 +18,15 @@
 Class is LoggerBase{
 	local String is tag;
 
-	replace local Function is init(String is tag){
+	replace Function is init(String is tag){
 		self:tag: tag;
 	}
 
-	local Function of Int is add(Int is a, Int is b){
+	Function of Int is add(Int is a, Int is b){
 		return a + b;
 	}
 
-	local Function of Int is scale(Int is n, Int is factor: 2){
+	Function of Int is scale(Int is n, Int is factor: 2){
 		return n * factor;
 	}
 }
@@ -34,13 +34,13 @@ Class is LoggerBase{
 Class is ChildLogger extends LoggerBase{
 
 	# Adapted forward: derive arguments before delegating.
-	merge local Function of Int is add(Int is a, Int is b){
+	merge Function of Int is add(Int is a, Int is b){
 		local Int is bumped: a + 100;
 		(bumped, b);
 	}
 
 	# Partial named forward: parent default supplies factor.
-	merge local Function of Int is scale(Int is n, Int is factor: 2){
+	merge Function of Int is scale(Int is n, Int is factor: 2){
 		(n: n);
 	}
 }
@@ -48,23 +48,23 @@ Class is ChildLogger extends LoggerBase{
 Class is GrandLogger extends ChildLogger{
 
 	# Chained forward: delegates to ChildLogger, which delegates to LoggerBase.
-	merge local Function of Int is add(Int is a, Int is b){
+	merge Function of Int is add(Int is a, Int is b){
 		(a, b);
 	}
 
 	# merge init: chains the parent constructor.
-	merge local Function is init(String is tag){
+	merge Function is init(String is tag){
 		(tag);
 	}
 }
 
 Class is MergeFunctionTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Function Merge ===");
 
 		local GrandLogger is gl: GrandLogger:init(tag: "grand");

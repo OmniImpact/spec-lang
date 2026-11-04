@@ -18,11 +18,11 @@
 ## Status: PASSING (regression resolved; guarded by this file).
 Class is RegressionMethodResolutionTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Method Resolution vs Builtins ===");
 
 		# Case 1: user class with its own get() method (hard compile error today).
@@ -64,12 +64,12 @@ Class is UserRecord{
 	local Int is identifier: 42;
 
 	## Returns the record identifier. Must NOT be lowered to spec_array_get.
-	local Function of Int is get(){
+	Function of Int is get(){
 		return self:identifier;
 	}
 
 	## Control accessor with a non-colliding name.
-	local Function of Int is fetchIdentifier(){
+	Function of Int is fetchIdentifier(){
 		return self:identifier;
 	}
 }
@@ -79,7 +79,7 @@ Class is LogStore{
 	local Int is maxEntries: 7;
 
 	## Returns the configured capacity. Must NOT be lowered to spec_array_length.
-	local Function of Int is length(){
+	Function of Int is length(){
 		return self:maxEntries;
 	}
 }

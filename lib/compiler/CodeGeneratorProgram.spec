@@ -8,7 +8,7 @@ Class is CodeGeneratorProgram{
 	## Load-time grouping: members merge into CodeGenerator.
 	local Array of String is group: [CodeGenerator];
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -310,7 +310,7 @@ Class is CodeGeneratorProgram{
 	## @param program: Parsed [ProgramNode] AST.
 	## @param entryClass: Application entry point class name.
 	## @return: Complete C11 source code string.
-	local Function of String is generateProgram(ProgramNode is program, String is entryClass){
+	Function of String is generateProgram(ProgramNode is program, String is entryClass){
 		local Array of ClassInfo is flattenedClasses: [];
 		program:getClasses():each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattenedClasses);

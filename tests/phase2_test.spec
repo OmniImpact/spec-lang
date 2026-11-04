@@ -1,12 +1,12 @@
 Class is Phase2Test{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:io:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("          Phase 2 Feature Test        ");
 		output:line("======================================\n");

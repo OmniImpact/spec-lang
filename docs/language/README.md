@@ -51,12 +51,12 @@ Every program is organized into classes. The runtime instantiates the class cont
 ```spec
 Class is HelloWorld{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Map,
 		base:io:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("Hello, World!");
 	}
 
@@ -70,15 +70,15 @@ Classes can declare one or more generic type parameters using the `of <Type>` or
 Class is Box of T{
 	local T is val;
 
-	replace local Function is init(T is val){
+	replace Function is init(T is val){
 		self:val: val;
 	}
 
-	replace local Function of T is get(){
+	replace Function of T is get(){
 		return self:val;
 	}
 
-	replace local Function is set(T is newVal){
+	replace Function is set(T is newVal){
 		self:val: newVal;
 	}
 }
@@ -87,16 +87,16 @@ Class is Pair of A to B{
 	local A is first;
 	local B is second;
 
-	replace local Function is init(A is first, B is second){
+	replace Function is init(A is first, B is second){
 		self:first: first;
 		self:second: second;
 	}
 
-	replace local Function of A is getFirst(){
+	replace Function of A is getFirst(){
 		return self:first;
 	}
 
-	replace local Function of B is getSecond(){
+	replace Function of B is getSecond(){
 		return self:second;
 	}
 }
@@ -125,6 +125,19 @@ this is a compile error — declare the method (`replace` or `merge`) to resolve
 the conflict. Abstract declarations never conflict: unimplemented methods and
 valueless fields compose into interface contracts. A shared base reached via
 multiple paths counts once (diamond sharing is not a conflict).
+
+### Member Visibility
+Members are **public by default** — overridable and callable from anywhere.
+
+| Modifier | Overridable | Accessible from |
+|---|---|---|
+| *(none)* — public | yes (`replace`/`merge`) | everywhere |
+| `local` | no | the declaring class only |
+| `contained` | no | the declaring class and its subclasses |
+
+Declaring a member with the same name as a `local` or `contained` ancestor member
+is a compile error: private members cannot be shadowed — rename, or make the
+ancestor public and use `replace`/`merge`.
 
 ### Declaring Classes (`Class is Name`)
 Classes are declared with the same binder grammar as enums and variables — `Type is Name`:
@@ -155,7 +168,7 @@ local String is greeting: "Welcome";
 
 ### Functions & Methods
 Methods and functions declare their signatures using the `Function` type:
-- **Void / Default return**: `Function is <name>(<Params>)` (e.g. `replace local Function is init(...)`).
+- **Void / Default return**: `Function is <name>(<Params>)` (e.g. `replace Function is init(...)`).
 - **Typed return**: `Function of <ReturnType> is <name>(<Params>)` (e.g. `Function of Int is add(...)`).
 - Modifiers include `local` (scoped to class), `replace` (overriding an inherited member), and `merge` (data-structure-aware override for fields).
 - **`merge`** is the data-structure-aware counterpart of `replace`: valid on fields whose type supports merging (currently `Array`), it folds the ancestor's constant array literal and the child's into one — parent items first, then child items — satisfying the override requirement without `replace`:
@@ -215,7 +228,7 @@ Class is Issue{
 	String is message;
 
 	## Constructor auto-assigns fields without manual assignment statements
-	replace local Function is init(self:line, self:isWarning, self:message){
+	replace Function is init(self:line, self:isWarning, self:message){
 	}
 }
 ```
@@ -239,11 +252,11 @@ local Boolean is hasMatch: words:any(predicate: local Function of Boolean(String
 Method and function parameters can declare default fallback values using `: <default_expr>` syntax:
 
 ```spec
-replace local Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
+replace Function of String is greet(String is name, String is prefix: "Hello", String is suffix: "!"){
 	return prefix . ", " . name . suffix;
 }
 
-replace local Function of Int is calculate(Int is a, Int is b: 10, Int is c: 100){
+replace Function of Int is calculate(Int is a, Int is b: 10, Int is c: 100){
 	return (a * b) + c;
 }
 ```
@@ -360,7 +373,7 @@ Payload variants are matched and destructured using Spec's `when` syntax (see [P
 ### Imports & `using`
 Packages are imported via the class `using` property:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:struct:Array,
 	base:math:*,
 	base:io:*,
@@ -380,9 +393,9 @@ to; at load time the Loader merges all fragments into a single class:
 ## lib/compiler/CodeGenerator_Expr.spec
 Class is CodeGeneratorExpressions{
 
-	replace local Array of String is group: [CodeGenerator];
+	replace Array of String is group: [CodeGenerator];
 
-	replace local Function of String is generateExpression(Expression is expr){
+	replace Function of String is generateExpression(Expression is expr){
 		...
 	}
 }
@@ -473,7 +486,7 @@ local Map of String to Int is emptyMap: [:];
 local Function of String to Boolean is validator;
 
 # Passing a function as a parameter
-replace local Function is execute(Function is callback){
+replace Function is execute(Function is callback){
 	output:line("Executing callback...");
 }
 ```

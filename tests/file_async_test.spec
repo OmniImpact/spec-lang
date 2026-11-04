@@ -1,13 +1,13 @@
 Class is FileAsyncTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:io:File,
 		base:sys:Process
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("    Spec Async File Operations Test   ");
 		output:line("======================================\n");

@@ -4,7 +4,7 @@
 ## Pure Spec C code generator translating [ProgramNode] AST to C11 code.
 Class is CodeGenerator{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -95,7 +95,7 @@ Class is CodeGenerator{
 	## Active inline return label name when expanding an inline closure body.
 	local String is inlineReturnLabel: "";
 
-	replace local Function is init(){
+	replace Function is init(){
 		self:utils: CBackendUtils:init();
 		self:prelude: RuntimePrelude:init();
 		self:declGen: DeclarationGenerator:init();

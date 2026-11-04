@@ -30,7 +30,7 @@ Class is Cat{
 
 Class is AsNegativeTest{
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Cat is cat: Cat:init();
 		local Dog is dog: cat as Dog;
 		local Color is c: dog as Color;

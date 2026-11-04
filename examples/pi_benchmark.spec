@@ -11,7 +11,7 @@
 ## worker thread) shows every thread's current sample as a colored marker.
 Class is PiBenchmark{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:math:*,
 		base:io:*,
@@ -32,7 +32,7 @@ Class is PiBenchmark{
 	## final statistics.
 	##
 	## @param args: CLI map; keys: threads, points, refresh.
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Int is threads: args:getInt(key: "threads", default: 4);
 		local Int is points: args:getInt(key: "points", default: 1_000_000_000);
 		local Int is refreshMs: args:getInt(key: "refresh", default: 40);

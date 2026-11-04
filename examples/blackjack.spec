@@ -1,6 +1,6 @@
 Class is Blackjack{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:Loop,
@@ -33,18 +33,18 @@ Class is Blackjack{
 	Class is DealerTurnLoop extends Loop{
 		local Blackjack is game;
 
-		replace local Function is init(Blackjack is game){
+		replace Function is init(Blackjack is game){
 			self:game: game;
 		}
 
 		# Automatically re-evaluated after each draw
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			local Int is currentScore: game:handValue(hand: game:dealerHand);
 			return currentScore < 17;
 		}
 
 		# Step logic: draw one card
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local Int is card: game:drawCard();
 			game:dealerHand:add(item: card);
 
@@ -62,11 +62,11 @@ Class is Blackjack{
 	Class is DealerTurnCompleteCallback extends LoopCallback{
 		local Blackjack is game;
 
-		replace local Function is init(Blackjack is game){
+		replace Function is init(Blackjack is game){
 			self:game: game;
 		}
 
-		replace local Function is onComplete(LoopControl is control){
+		replace Function is onComplete(LoopControl is control){
 			output:line("\nDealer stands or busts.");
 			game:evaluateRoundOutcome();
 		}
@@ -79,11 +79,11 @@ Class is Blackjack{
 	Class is PlayerTurnHandler extends InputHandler{
 		local Blackjack is game;
 
-		replace local Function is init(Blackjack is game){
+		replace Function is init(Blackjack is game){
 			self:game: game;
 		}
 
-		replace local Function is onInput(String is action){
+		replace Function is onInput(String is action){
 			if (action == "") {
 				output:line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
@@ -195,7 +195,7 @@ Class is Blackjack{
 	# =========================================================================
 	# Application Entry Point
 	# =========================================================================
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("         Welcome to SpecJack          ");
 		output:line("======================================\n");

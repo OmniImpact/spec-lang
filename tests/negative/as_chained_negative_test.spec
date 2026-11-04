@@ -14,7 +14,7 @@
 
 Class is AsChainedNegativeTest{
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Float is chained: 4 as Int as Float;
 	}
 }

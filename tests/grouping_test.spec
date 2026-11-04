@@ -15,18 +15,18 @@
 ## of CalcArithmetic and CalcText below.
 Class is CalcArithmetic{
 
-	replace local Array of String is group: [Calc];
+	replace Array of String is group: [Calc];
 
-	local Function of Int is add(Int is a, Int is b){
+	Function of Int is add(Int is a, Int is b){
 		return a + b;
 	}
 }
 
 Class is CalcText{
 
-	replace local Array of String is group: [Calc];
+	replace Array of String is group: [Calc];
 
-	local Function of String is shout(String is msg){
+	Function of String is shout(String is msg){
 		return msg . "!";
 	}
 }
@@ -34,31 +34,31 @@ Class is CalcText{
 ## Same-name opt-in partial: the two Accumulator declarations merge.
 Class is Accumulator{
 
-	replace local Array of String is group: [Accumulator];
+	replace Array of String is group: [Accumulator];
 
 	local Int is total: 0;
 
-	replace local Function is init(Int is start){
+	replace Function is init(Int is start){
 		self:total: start;
 	}
 }
 
 Class is Accumulator{
 
-	replace local Array of String is group: [Accumulator];
+	replace Array of String is group: [Accumulator];
 
-	local Function is bump(Int is by){
+	Function is bump(Int is by){
 		self:total: self:total + by;
 	}
 }
 
 Class is GroupingTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: ClassInfo Grouping ===");
 
 		# Case 1: no-primary group - Calc exists only as a merged union.

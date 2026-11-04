@@ -5,7 +5,7 @@
 ## Renders the Mandelbrot set to the console using 256-color ANSI sequences and Unicode blocks.
 Class is Mandelbrot{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -184,7 +184,7 @@ Class is Mandelbrot{
 
 	## Entry point rendering both a sub-pixel half-block (`▀`) 256-color Mandelbrot view
 	## and a textured multi-shade (`█▓▒░`) zoom into the Seahorse Valley.
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		# Width/height default to the console size; explicit args win.
 		local Int is width: args:getInt(key: "width", default: 0);
 		local Int is height: args:getInt(key: "height", default: 0);

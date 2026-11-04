@@ -56,14 +56,14 @@ Class is MapValueMismatch{
 
 Class is UndefinedIdentifier{
 	## Violation 4: typoed identifier silently inferred as Any.
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Int is total: untrackedTotal + 1;
 	}
 }
 
 Class is NonBooleanConditionControl{
 	## Control (already caught today): condition must be a Boolean.
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		if (1) {
 			local Int is unused: 0;
 		}
@@ -71,7 +71,7 @@ Class is NonBooleanConditionControl{
 }
 
 Class is UnassignedFieldRead{
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
@@ -80,7 +80,7 @@ Class is UnassignedFieldRead{
 	## silently produces "(null)" (or a crash) at runtime.
 	local String is label;
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line(self:label);
 	}
 }
@@ -89,11 +89,11 @@ Class is CallArgumentMismatch{
 	## Violation 7: call-site argument types were not checked, so a String
 	## argument silently reached an Int parameter and was truncated at the
 	## C level with no diagnostic.
-	replace local Function of Int is double(Int is n){
+	replace Function of Int is double(Int is n){
 		return n * 2;
 	}
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		local Int is result: self:double(n: "not-a-number");
 	}
 }
@@ -101,7 +101,7 @@ Class is CallArgumentMismatch{
 Class is IncompleteWhenBranches{
 	## Violation 8: 'when' over enum TransportMode covers only CAR and omits
 	## BIKE with no else arm. Exhaustiveness must be enforced at compile time.
-	replace local Function of String is describe(TransportMode is mode){
+	replace Function of String is describe(TransportMode is mode){
 		return when (mode) {
 			is CAR: "drives";
 		};

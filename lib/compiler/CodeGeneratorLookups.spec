@@ -8,7 +8,7 @@ Class is CodeGeneratorLookups{
 	## Load-time grouping: members merge into CodeGenerator.
 	local Array of String is group: [CodeGenerator];
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -30,18 +30,18 @@ Class is CodeGeneratorLookups{
 		local ClassInfo is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of ClassInfo is list, String is target){
+		replace Function is init(Array of ClassInfo is list, String is target){
 			self:list: list;
 			self:target: target;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:list:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local ClassInfo is cand: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (cand:getName() == self:target) {
@@ -69,18 +69,18 @@ Class is CodeGeneratorLookups{
 		local Member is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Member is members, String is fieldName){
+		replace Function is init(Array of Member is members, String is fieldName){
 			self:members: members;
 			self:fieldName: fieldName;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:members:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (m:getKind() == "FIELD" && m:getName() == self:fieldName) {
@@ -92,7 +92,7 @@ Class is CodeGeneratorLookups{
 		}
 	}
 
-	local Function of String is lookupFieldType(String is className, String is fieldName){
+	Function of String is lookupFieldType(String is className, String is fieldName){
 		if (className == "" || className == "Any") {
 			return "";
 		}
@@ -126,18 +126,18 @@ Class is CodeGeneratorLookups{
 		local Member is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Member is members, String is methodName){
+		replace Function is init(Array of Member is members, String is methodName){
 			self:members: members;
 			self:methodName: methodName;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:members:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (m:getKind() == "METHOD" && m:getName() == self:methodName) {

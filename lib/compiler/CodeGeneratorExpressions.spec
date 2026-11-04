@@ -8,7 +8,7 @@ Class is CodeGeneratorExpressions{
 	## Load-time grouping: members merge into CodeGenerator.
 	local Array of String is group: [CodeGenerator];
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -19,7 +19,7 @@ Class is CodeGeneratorExpressions{
 		base:meta:*
 	];
 
-	local Function of String is generateExpression(Expression is expr){
+	Function of String is generateExpression(Expression is expr){
 		local String is kind: expr:getKind();
 
 		when (kind) {

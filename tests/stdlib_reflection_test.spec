@@ -1,6 +1,6 @@
 Class is StdlibReflectionTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:sys:SourceLocation,
@@ -12,7 +12,7 @@ Class is StdlibReflectionTest{
 		base:meta:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("  Standard Library Refactoring Test   ");
 		output:line("======================================\n");

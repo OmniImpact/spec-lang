@@ -23,21 +23,21 @@ Class is Box of T{
 	## Initializes the box with a value.
 	##
 	## @param val: Initial value.
-	replace local Function is init(T is val){
+	replace Function is init(T is val){
 		self:val: val;
 	}
 
 	## Retrieves the stored value.
 	##
 	## @return: Stored value of type T.
-	local Function of T is get(){
+	Function of T is get(){
 		return self:val;
 	}
 
 	## Updates the stored value.
 	##
 	## @param newVal: New value to store.
-	local Function is set(T is newVal){
+	Function is set(T is newVal){
 		self:val: newVal;
 	}
 
@@ -56,7 +56,7 @@ Class is Pair of A to B{
 	##
 	## @param first: First value of type A.
 	## @param second: Second value of type B.
-	replace local Function is init(A is first, B is second){
+	replace Function is init(A is first, B is second){
 		self:first: first;
 		self:second: second;
 	}
@@ -64,14 +64,14 @@ Class is Pair of A to B{
 	## Retrieves the first value.
 	##
 	## @return: Value of type A.
-	local Function of A is getFirst(){
+	Function of A is getFirst(){
 		return self:first;
 	}
 
 	## Retrieves the second value.
 	##
 	## @return: Value of type B.
-	local Function of B is getSecond(){
+	Function of B is getSecond(){
 		return self:second;
 	}
 
@@ -80,7 +80,7 @@ Class is Pair of A to B{
 ## Main test suite validating next-generation language features.
 Class is NextGenFeaturesTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:struct:Map
@@ -322,7 +322,7 @@ Class is NextGenFeaturesTest{
 	## Entry point executing all verification tests.
 	##
 	## @param args: Command line arguments map.
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("==================================================");
 		output:line(" Spec Next-Generation Language Features Test Suite");
 		output:line("==================================================");

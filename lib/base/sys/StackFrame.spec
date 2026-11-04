@@ -4,7 +4,7 @@
 ## Represents an execution frame within a runtime call stack or error trace.
 Class is StackFrame{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:sys:SourceLocation
 	];
 
@@ -22,7 +22,7 @@ Class is StackFrame{
 	## @param location: The source location where invocation occurred.
 	## @param className: Name of the enclosing class.
 	## @param methodName: Name of the executed method.
-	replace local Function is init(SourceLocation is location, String is className, String is methodName){
+	replace Function is init(SourceLocation is location, String is className, String is methodName){
 		self:location: location;
 		self:className: className;
 		self:methodName: methodName;
@@ -38,21 +38,21 @@ Class is StackFrame{
 	## Returns the enclosing class name.
 	##
 	## @return: ClassInfo name string.
-	local Function of String is getClassName(){
+	Function of String is getClassName(){
 		return self:className;
 	}
 
 	## Returns the method name.
 	##
 	## @return: Method name string.
-	local Function of String is getMethodName(){
+	Function of String is getMethodName(){
 		return self:methodName;
 	}
 
 	## Formats the frame as a standardized stack trace line.
 	##
 	## @return: Formatted string in "ClassInfo:method (file:line:col)" format.
-	replace local Function of String is toString(){
+	replace Function of String is toString(){
 		local String is locStr: "";
 		if (self:location:getLine() > 0) {
 			locStr: " (" . self:location:toString() . ")";

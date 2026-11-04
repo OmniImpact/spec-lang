@@ -15,18 +15,18 @@
 
 Class is DupSource{
 
-	replace local Array of String is group: [Merged];
+	replace Array of String is group: [Merged];
 
-	replace local Function of Int is value(){
+	replace Function of Int is value(){
 		return 1;
 	}
 }
 
 Class is DupConflict{
 
-	replace local Array of String is group: [Merged];
+	replace Array of String is group: [Merged];
 
-	replace local Function of Int is value(){
+	replace Function of Int is value(){
 		return 2;
 	}
 }

@@ -14,11 +14,11 @@
 Class is LayoutBase{
 	local Int is baseField: 11;
 
-	local Function of Int is describeBase(){
+	Function of Int is describeBase(){
 		return self:baseField;
 	}
 
-	local Function of Int is poly(){
+	Function of Int is poly(){
 		return 1;
 	}
 }
@@ -26,7 +26,7 @@ Class is LayoutBase{
 Class is LayoutMid extends LayoutBase{
 	local Int is midField: 22;
 
-	replace local Function of Int is poly(){
+	replace Function of Int is poly(){
 		return 2;
 	}
 }
@@ -34,36 +34,36 @@ Class is LayoutMid extends LayoutBase{
 Class is LayoutLeaf extends LayoutMid{
 	local Int is leafField: 33;
 
-	replace local Function of Int is poly(){
+	replace Function of Int is poly(){
 		return 3;
 	}
 }
 
 Class is MiaFeature{
-	local Function of String is label(){
+	Function of String is label(){
 		return "mia";
 	}
 }
 
 Class is MibFeature{
-	local Function of String is tag(){
+	Function of String is tag(){
 		return "mib";
 	}
 }
 
 Class is MiChild extends MiaFeature, MibFeature{
-	replace local Function of String is label(){
+	replace Function of String is label(){
 		return "child-mia";
 	}
 }
 
 Class is VtableDispatchTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Vtable Dispatch & Layout ===");
 
 		local LayoutLeaf is leaf: LayoutLeaf:init();

@@ -12,11 +12,11 @@
 Class is MergeBase{
 
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
-	merge local Array of String is using: [base:io:Output];
+	merge Array of String is using: [base:io:Output];
 
-	local Array of String is tags: ["core"];
+	Array of String is tags: ["core"];
 
-	local Function of Int is baseValue(){
+	Function of Int is baseValue(){
 		return 10;
 	}
 }
@@ -24,19 +24,19 @@ Class is MergeBase{
 Class is MergeChild extends MergeBase{
 
 	## Folds onto MergeBase's using: Output + Array both load.
-	merge local Array of String is using: [base:struct:Array];
+	merge Array of String is using: [base:struct:Array];
 
 	## Folds onto ["core"]: result is ["core", "extended"].
-	merge local Array of String is tags: ["extended"];
+	merge Array of String is tags: ["extended"];
 
-	replace local Function of Int is baseValue(){
+	replace Function of Int is baseValue(){
 		return 20;
 	}
 }
 
 Class is MergeTest{
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Merge Modifier ===");
 
 		local MergeChild is child: MergeChild:init();

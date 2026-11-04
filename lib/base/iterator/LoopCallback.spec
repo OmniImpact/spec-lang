@@ -4,7 +4,7 @@
 ## Callback interface invoked when a [Loop] finishes execution via [LoopControl].
 Class is LoopCallback{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:iterator:LoopControl
 	];
 

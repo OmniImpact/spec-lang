@@ -55,7 +55,7 @@ Full API reference by package below.
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:io:*
 ];
 ```
@@ -73,7 +73,7 @@ Provides non-blocking, event-driven user input prompts via `InputHandler`:
 
 ```spec
 Class is InputExample{
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		Input:prompt("Enter your name: ", local Function(String is response){
 			output:line("Hello, " . response . "!");
 		});
@@ -117,7 +117,7 @@ Detection order: `ioctl(TIOCGWINSZ)`, then the `COLUMNS`/`LINES` environment var
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:math:*
 ];
 ```
@@ -170,7 +170,7 @@ Implemented in pure Spec (`lib/base/math/Math.spec`):
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:struct:Array,
 	base:struct:Map
 ];
@@ -393,7 +393,7 @@ scores["alice"]: 98;   # Updates existing entry
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:iterator:*
 ];
 ```
@@ -419,7 +419,7 @@ Controls loop continuation and completion triggers:
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:sys:*
 ];
 ```
@@ -462,7 +462,7 @@ Represents a call frame in a runtime call stack or debugging trace:
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:reflect:*
 ];
 ```
@@ -490,7 +490,7 @@ Provides runtime type descriptors and object model reflection:
 
 Importing:
 ```spec
-replace local Array of String is using: [
+replace Array of String is using: [
 	base:meta:*
 ];
 ```

@@ -4,7 +4,7 @@
 ## Emits C11 enum definitions, forward declarations, and struct layouts from AST ClassInfo descriptors.
 Class is DeclarationGenerator{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -19,17 +19,17 @@ Class is DeclarationGenerator{
 	local Map of String to String is allEnumNames: Map:init();
 	local Map of String to String is allTaggedEnums: Map:init();
 
-	replace local Function is init(){
+	replace Function is init(){
 		self:utils: CBackendUtils:init();
 		self:allEnumNames: Map:init();
 		self:allTaggedEnums: Map:init();
 	}
 
-	local Function is setEnumNames(Map of String to String is names){
+	Function is setEnumNames(Map of String to String is names){
 		self:allEnumNames: names;
 	}
 
-	local Function is setTaggedEnums(Map of String to String is names){
+	Function is setTaggedEnums(Map of String to String is names){
 		self:allTaggedEnums: names;
 	}
 
@@ -75,18 +75,18 @@ Class is DeclarationGenerator{
 		local Int is idx: 0;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Member is list, String is name){
+		replace Function is init(Array of Member is list, String is name){
 			self:list: list;
 			self:name: name;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:list:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is item: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (item:getName() == self:name) {
@@ -102,7 +102,7 @@ Class is DeclarationGenerator{
 		return loopInst:found;
 	}
 
-	local Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
+	Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
 		# Base fields first so that a base-typed pointer prefixes every
 		# descendant layout (ancestor casts stay field-offset correct).
 		c:getBaseClasses():each(action: local Function(String is baseName){
@@ -155,7 +155,7 @@ Class is DeclarationGenerator{
 		return res;
 	}
 
-	local Function of String is generateEnums(Array of ClassInfo is classes){
+	Function of String is generateEnums(Array of ClassInfo is classes){
 		local String is out: "/* Enum Definitions */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
@@ -266,7 +266,7 @@ Class is DeclarationGenerator{
 		return out;
 	}
 
-	local Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
+	Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
 		local String is out: "/* Forward Declarations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
@@ -311,7 +311,7 @@ Class is DeclarationGenerator{
 		return out;
 	}
 
-	local Function of String is generateStructs(Array of ClassInfo is classes){
+	Function of String is generateStructs(Array of ClassInfo is classes){
 		local String is out: "/* Struct Layouts */\n";
 
 		classes:each(action: local Function(ClassInfo is c){

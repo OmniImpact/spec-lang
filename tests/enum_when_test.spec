@@ -26,7 +26,7 @@ Enum of String is LogLevel {
 
 Class is EnumWhenTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:io:Output

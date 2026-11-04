@@ -7,7 +7,7 @@
 ## numbers, and string literals.
 Class is Lexer{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:iterator:*,
 		compiler:Token
@@ -24,15 +24,15 @@ Class is Lexer{
 	Class is SkipWhitespaceLoop extends Loop{
 		local Lexer is lexer;
 
-		replace local Function is init(Lexer is lexer){
+		replace Function is init(Lexer is lexer){
 			self:lexer: lexer;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return lexer:pos < lexer:length;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
 			if (ch:isWhitespace()) {
 				lexer:advance();
@@ -49,15 +49,15 @@ Class is Lexer{
 	Class is SkipCommentLoop extends Loop{
 		local Lexer is lexer;
 
-		replace local Function is init(Lexer is lexer){
+		replace Function is init(Lexer is lexer){
 			self:lexer: lexer;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return lexer:pos < lexer:length && lexer:source:charAt(index: lexer:pos, default: "") != "\n";
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			lexer:advance();
 			return true;
 		}
@@ -66,15 +66,15 @@ Class is Lexer{
 	Class is IdentScanLoop extends Loop{
 		local Lexer is lexer;
 
-		replace local Function is init(Lexer is lexer){
+		replace Function is init(Lexer is lexer){
 			self:lexer: lexer;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return lexer:pos < lexer:length;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
 			if (lexer:isIdentifierContinue(ch: ch)) {
 				lexer:advance();
@@ -95,7 +95,7 @@ Class is Lexer{
 		local Int is digitCount: 0;
 		local Boolean is hadInvalid: false;
 
-		replace local Function is init(Lexer is lexer, Int is base){
+		replace Function is init(Lexer is lexer, Int is base){
 			self:lexer: lexer;
 			self:base: base;
 			self:value: 0;
@@ -103,11 +103,11 @@ Class is Lexer{
 			self:hadInvalid: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:lexer:pos < self:lexer:length;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: "");
 			if (ch == "_") {
 				self:lexer:advance();
@@ -133,16 +133,16 @@ Class is Lexer{
 		local Lexer is lexer;
 		local Boolean is isFloat: false;
 
-		replace local Function is init(Lexer is lexer){
+		replace Function is init(Lexer is lexer){
 			self:lexer: lexer;
 			self:isFloat: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return lexer:pos < lexer:length;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
 			if (ch == "_") {
 				local String is nextCh: lexer:source:charAt(index: lexer:pos + 1, default: "");
@@ -173,17 +173,17 @@ Class is Lexer{
 		local String is quote: "";
 		local String is res: "";
 
-		replace local Function is init(Lexer is lexer, String is quote){
+		replace Function is init(Lexer is lexer, String is quote){
 			self:lexer: lexer;
 			self:quote: quote;
 			self:res: "";
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:lexer:pos < self:lexer:length;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: "");
 			if (ch == self:quote) {
 				return false;
@@ -222,16 +222,16 @@ Class is Lexer{
 		local Lexer is lexer;
 		local Array of Token is tokens;
 
-		replace local Function is init(Lexer is lexer, Array of Token is tokens){
+		replace Function is init(Lexer is lexer, Array of Token is tokens){
 			self:lexer: lexer;
 			self:tokens: tokens;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return lexer:pos < lexer:length;
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is control){
+		replace Function of Boolean is iteration(LoopControl is control){
 			lexer:skipWhitespaceAndComments();
 			if (lexer:pos >= lexer:length) {
 				return false;
@@ -254,7 +254,7 @@ Class is Lexer{
 	## Initializes a lexer instance for the given source string.
 	##
 	## @param source: Spec source code string to tokenize.
-	replace local Function is init(String is source){
+	replace Function is init(String is source){
 		self:source: source;
 		self:length: source:length();
 		self:pos: 0;
@@ -271,12 +271,12 @@ Class is Lexer{
 	}
 
 	## Returns whether any lexical errors were recorded.
-	local Function of Boolean is hasErrors(){
+	Function of Boolean is hasErrors(){
 		return self:errors:length() > 0;
 	}
 
 	## Returns all recorded lexical error messages.
-	local Function of Array of String is getErrors(){
+	Function of Array of String is getErrors(){
 		return self:errors;
 	}
 
@@ -284,7 +284,7 @@ Class is Lexer{
 	##
 	## @param ch: Digit character.
 	## @return: Digit value, or -1 when not a hex digit.
-	local Function of Int is digitValue(String is ch){
+	Function of Int is digitValue(String is ch){
 		local String is lower: "0123456789abcdef";
 		local Int is d: lower:indexOf(needle: ch, default: -1);
 		if (d >= 0) {
@@ -302,7 +302,7 @@ Class is Lexer{
 		return self:pos >= self:length;
 	}
 
-	local Function of String is advance(){
+	Function of String is advance(){
 		local String is ch: self:source:charAt(index: self:pos, default: "");
 		self:pos: self:pos + 1;
 		if (ch == "\n") {
@@ -314,26 +314,26 @@ Class is Lexer{
 		return ch;
 	}
 
-	local Function is skipWhitespaceAndComments(){
+	Function is skipWhitespaceAndComments(){
 		While:run(loop: SkipWhitespaceLoop:init(lexer: self));
 	}
 
-	local Function of Boolean is isIdentifierStart(String is ch){
+	Function of Boolean is isIdentifierStart(String is ch){
 		return ch:isAlpha() || ch == "_";
 	}
 
-	local Function of Boolean is isIdentifierContinue(String is ch){
+	Function of Boolean is isIdentifierContinue(String is ch){
 		return ch:isAlpha() || ch:isDigit() || ch == "_";
 	}
 
 	local Function of Boolean is isKeyword(String is text){
 		return when (text) {
-			is "extends", "local", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
+			is "extends", "local", "contained", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
 			else: false;
 		};
 	}
 
-	local Function of Token is readIdentifierOrKeyword(){
+	Function of Token is readIdentifierOrKeyword(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		local Int is startPos: self:pos;
@@ -348,7 +348,7 @@ Class is Lexer{
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
-	local Function of Token is readNumber(){
+	Function of Token is readNumber(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 
@@ -422,7 +422,7 @@ Class is Lexer{
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}
 
-	local Function of Token is readString(String is quote){
+	Function of Token is readString(String is quote){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		self:advance();
@@ -436,7 +436,7 @@ Class is Lexer{
 		return Token:init(kind: TokenKind:STRING, value: loop:res, line: startLine, col: startCol);
 	}
 
-	local Function of Token is readSymbol(){
+	Function of Token is readSymbol(){
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		local String is ch: self:advance();
@@ -485,7 +485,7 @@ Class is Lexer{
 	## Tokenizes the entire source string, returning an array of scanned tokens ending with EOF.
 	##
 	## @return: [Array] of [Token] items.
-	local Function of Array of Token is tokenize(){
+	Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
 		While:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
 		tokens:add(item: Token:init(kind: TokenKind:EOF, value: "", line: self:line, col: self:col));

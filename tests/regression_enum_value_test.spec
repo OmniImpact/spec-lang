@@ -33,11 +33,11 @@ Enum is Priority {
 
 Class is RegressionEnumValueTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: Backed Enum Values ===");
 
 		# Case 1 (the regression): explicit Int backing value must survive codegen.

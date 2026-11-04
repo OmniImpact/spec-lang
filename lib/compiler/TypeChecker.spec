@@ -11,7 +11,7 @@ Class is TypeError{
 	local String is message: "";
 
 	## Initializes a type error descriptor.
-	replace local Function is init(Int is line, String is message){
+	replace Function is init(Int is line, String is message){
 		self:line: line;
 		self:message: message;
 	}
@@ -27,7 +27,7 @@ Class is TypeError{
 	}
 
 	## Formats the type error for display.
-	replace local Function of String is toString(){
+	replace Function of String is toString(){
 		local String is loc: if (self:line > 0) "Line " . self:line . ": " else "";
 		return "  [TypeError] " . loc . self:message;
 	}
@@ -37,7 +37,7 @@ Class is TypeError{
 ## Semantic analysis and static type checker for Spec programs.
 Class is TypeChecker{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -99,7 +99,7 @@ Class is TypeChecker{
 	## All class definitions in program (including nested classes) for hierarchy resolution.
 	local Array of ClassInfo is programClasses: [];
 
-	replace local Function is init(){
+	replace Function is init(){
 		self:programClasses: [];
 		self:registeredClasses: Map:init();
 		self:allEnumNames: Map:init();
@@ -378,18 +378,18 @@ Class is TypeChecker{
 		local ClassInfo is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of ClassInfo is list, String is target){
+		replace Function is init(Array of ClassInfo is list, String is target){
 			self:list: list;
 			self:target: target;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:list:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local ClassInfo is cand: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (cand:getName() == self:target) {
@@ -516,18 +516,18 @@ Class is TypeChecker{
 		local Member is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Member is members, String is fieldName){
+		replace Function is init(Array of Member is members, String is fieldName){
 			self:members: members;
 			self:fieldName: fieldName;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:members:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (m:getKind() == "FIELD" && m:getName() == self:fieldName) {
@@ -540,7 +540,7 @@ Class is TypeChecker{
 	}
 
 	## Looks up a field's static type string on a class and its ancestors.
-	local Function of String is lookupFieldType(String is className, String is fieldName){
+	Function of String is lookupFieldType(String is className, String is fieldName){
 		if (className == "" || className == "Any") {
 			return "";
 		}
@@ -574,18 +574,18 @@ Class is TypeChecker{
 		local Member is res;
 		local Boolean is found: false;
 
-		replace local Function is init(Array of Member is members, String is methodName){
+		replace Function is init(Array of Member is members, String is methodName){
 			self:members: members;
 			self:methodName: methodName;
 			self:idx: 0;
 			self:found: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:found && self:idx < self:members:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (m:getKind() == "METHOD" && m:getName() == self:methodName) {
@@ -634,18 +634,18 @@ Class is TypeChecker{
 		local Int is idx: 1;
 		local String is currType: "";
 
-		replace local Function is init(TypeChecker is tc, Array of String is segs, String is rootType){
+		replace Function is init(TypeChecker is tc, Array of String is segs, String is rootType){
 			self:tc: tc;
 			self:segs: segs;
 			self:currType: rootType;
 			self:idx: 1;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:currType != "" && self:idx < self:segs:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local String is seg: self:segs:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (self:tc:allEnumNames:has(key: self:currType)) {
@@ -689,6 +689,10 @@ Class is TypeChecker{
 					if (self:unassignedFields:has(key: name)) {
 						self:addError(line: self:currentLine, msg: "Field '" . name . "' in class '" . self:currentClassName . "' is read before being initialized.");
 					}
+					local String is owner: self:findMemberOwnerClass(className: self:currentClassName, memberName: name);
+					if (owner != "") {
+						self:checkMemberVisibility(ownerClass: owner, member: self:findAncestorMember(className: self:currentClassName, memberName: name), memberName: name);
+					}
 					res: self:fieldTypes:getString(key: name, default: "Any");
 				} else if (self:allEnumVariants:has(key: name)) {
 					res: self:allEnumVariants:getString(key: name, default: "Any");
@@ -709,6 +713,13 @@ Class is TypeChecker{
 						rootType: self:currentClassName;
 						if (segs:length() >= 2 && self:unassignedFields:has(key: segs:get(index: 1))) {
 							self:addError(line: self:currentLine, msg: "Field '" . segs:get(index: 1) . "' in class '" . self:currentClassName . "' is read before being initialized.");
+						}
+						if (segs:length() >= 2) {
+							local String is fName: segs:get(index: 1);
+							local String is fOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: fName);
+							if (fOwner != "") {
+								self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: self:currentClassName, memberName: fName), memberName: fName);
+							}
 						}
 					} else if (self:localVars:has(key: root)) {
 						rootType: self:localVars:getString(key: root, default: "");
@@ -1003,6 +1014,15 @@ Class is TypeChecker{
 
 				if (targetType == "self" || targetType == "") {
 					targetType: self:currentClassName;
+				}
+
+				if (!self:allEnumNames:has(key: targetType) && !self:isBuiltinClassName(name: targetType) && targetType != "" && targetType != "Any") {
+					local Array of String is cParts: targetType:split(delimiter: ":");
+					local String is cBase: cParts:get(index: 0);
+					local String is mOwner: self:findMemberOwnerClass(className: cBase, memberName: method);
+					if (mOwner != "") {
+						self:checkMemberVisibility(ownerClass: mOwner, member: self:lookupAnyMember(className: cBase, methodName: method), memberName: method);
+					}
 				}
 
 				local String is fnVarT: "";
@@ -1367,18 +1387,18 @@ Class is TypeChecker{
 		local Int is idx: 0;
 		local Boolean is implemented: false;
 
-		replace local Function is init(Array of Member is members, Member is target){
+		replace Function is init(Array of Member is members, Member is target){
 			self:members: members;
 			self:target: target;
 			self:idx: 0;
 			self:implemented: false;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return !self:implemented && self:idx < self:members:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is subM: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (subM:getName() == self:target:getName()) {
@@ -1506,11 +1526,70 @@ Class is TypeChecker{
 	## override the implicit root `Class` declaration.
 	##
 	## @param classDef: [ClassInfo] to validate.
+	## Finds the nearest ancestor class that declares a member with the given name.
+	##
+	## @param className: Starting [ClassInfo] whose bases are searched.
+	## @param memberName: Member name to locate.
+	## @return: The declaring ancestor's name, or empty string when absent.
+	local Function of String is findMemberOwnerClass(String is className, String is memberName){
+		local ClassInfo is cls: self:findClass(name: className);
+		if (cls:getName() == "") {
+			return "";
+		}
+		local String is owner: "";
+		cls:getMembers():each(action: local Function(Member is m){
+			if (owner == "" && m:getName() == memberName) {
+				owner: cls:getName();
+			}
+		});
+		if (owner != "") {
+			return owner;
+		}
+		cls:getBaseClasses():each(action: local Function(String is baseName){
+			if (owner == "") {
+				owner: self:findMemberOwnerClass(className: baseName, memberName: memberName);
+			}
+		});
+		return owner;
+	}
+
+	## Validates that the current class may access a member with the given
+	## visibility: `local` restricts access to the declaring class, `contained`
+	## to the declaring class and its subclasses. Public members are open.
+	##
+	## @param ownerClass: Class declaring the member (empty = none, allowed).
+	## @param member: The resolved [Member].
+	## @param memberName: Member name for diagnostics.
+	local Function is checkMemberVisibility(String is ownerClass, Member is member, String is memberName){
+		if (ownerClass == "" || memberName == "init" || memberName == "using" || memberName == "toString") {
+			return;
+		}
+		local Array of String is mods: member:getModifiers();
+		if (mods:indexOf(search: "local", default: -1) >= 0) {
+			if (self:currentClassName != ownerClass) {
+				local String is msg: "Member '" . memberName . "' is local to class '" . ownerClass . "' and cannot be accessed from '" . self:currentClassName . "'.";
+				self:addError(line: self:currentLine, msg: msg);
+			}
+		} else if (mods:indexOf(search: "contained", default: -1) >= 0) {
+			if (!self:isSubclassOf(subName: self:currentClassName, baseName: ownerClass)) {
+				local String is msg: "Member '" . memberName . "' is contained in class '" . ownerClass . "' and cannot be accessed from unrelated class '" . self:currentClassName . "'.";
+				self:addError(line: self:currentLine, msg: msg);
+			}
+		}
+	}
+
 	local Function is checkShadowTargets(ClassInfo is classDef){
 		classDef:getMembers():each(action: local Function(Member is m){
 			local Array of String is mods: m:getModifiers();
 			local Boolean is hasReplace: mods:indexOf(search: "replace", default: -1) >= 0;
 			local Boolean is hasMerge: mods:indexOf(search: "merge", default: -1) >= 0;
+			if (hasReplace || hasMerge) {
+				if (mods:indexOf(search: "local", default: -1) >= 0 || mods:indexOf(search: "contained", default: -1) >= 0) {
+					local String is msg: "Member '" . m:getName() . "' in class '" . classDef:getName() . "' combines 'replace'/'merge' with a visibility modifier; replace and merge members are public by definition.";
+					self:addError(line: m:getLine(), msg: msg);
+					return;
+				}
+			}
 			if (!hasReplace && !hasMerge) {
 				return;
 			}
@@ -1522,6 +1601,10 @@ Class is TypeChecker{
 			if (anc:getName() == "") {
 				local String is what: if (hasMerge) "merge" else "replace";
 				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' declares '" . what . "' but no ancestor declares a member with that name.";
+				self:addError(line: m:getLine(), msg: msg);
+			} else if (anc:getModifiers():indexOf(search: "local", default: -1) >= 0 || anc:getModifiers():indexOf(search: "contained", default: -1) >= 0) {
+				local String is vis: if (anc:getModifiers():indexOf(search: "local", default: -1) >= 0) "local" else "contained";
+				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' targets a " . vis . " ancestor member; " . vis . " members cannot be replaced or merged.";
 				self:addError(line: m:getLine(), msg: msg);
 			} else if (anc:getKind() != m:getKind()) {
 				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' is a " . m:getKind() . " but the ancestor member it targets is a " . anc:getKind() . ".";
@@ -1624,6 +1707,12 @@ Class is TypeChecker{
 				classDef:getMembers():each(action: local Function(Member is subM){
 					parent:getMembers():each(action: local Function(Member is parentM){
 						if (subM:getName() == parentM:getName()) {
+							local Array of String is parentMods: parentM:getModifiers();
+							if (parentMods:indexOf(search: "local", default: -1) >= 0 || parentMods:indexOf(search: "contained", default: -1) >= 0) {
+								local String is vis: if (parentMods:indexOf(search: "local", default: -1) >= 0) "local" else "contained";
+								local String is msg: "Member '" . subM:getName() . "' is " . vis . " in ancestor '" . baseName . "' and cannot be replaced or merged.";
+								self:addError(line: subM:getLine(), msg: msg);
+							}
 							local Array of String is subMods: subM:getModifiers();
 							local Boolean is hasReplace: subMods:indexOf(search: "replace", default: -1) >= 0;
 							local Boolean is hasMerge: subMods:indexOf(search: "merge", default: -1) >= 0;
@@ -1852,7 +1941,7 @@ Class is TypeChecker{
 	##
 	## @param program: Parsed [ProgramNode] AST.
 	## @return: [Array] of [TypeError] diagnostics.
-	local Function of Array of TypeError is checkProgram(ProgramNode is program){
+	Function of Array of TypeError is checkProgram(ProgramNode is program){
 		self:errors: [];
 		local Array of ClassInfo is flattened: [];
 		program:getClasses():each(action: local Function(ClassInfo is c){

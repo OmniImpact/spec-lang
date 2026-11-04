@@ -1,6 +1,6 @@
 Class is Phase6LoaderTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -12,7 +12,7 @@ Class is Phase6LoaderTest{
 		base:meta:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("     Phase 6 Module Loader Test       ");
 		output:line("======================================\n");

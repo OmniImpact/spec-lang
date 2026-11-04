@@ -8,7 +8,7 @@ Class is CodeGeneratorInference{
 	## Load-time grouping: members merge into CodeGenerator.
 	local Array of String is group: [CodeGenerator];
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -25,18 +25,18 @@ Class is CodeGeneratorInference{
 		local Int is idx: 1;
 		local String is currType: "";
 
-		replace local Function is init(CodeGenerator is cg, Array of String is segs, String is rootType){
+		replace Function is init(CodeGenerator is cg, Array of String is segs, String is rootType){
 			self:cg: cg;
 			self:segs: segs;
 			self:currType: rootType;
 			self:idx: 1;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:currType != "" && self:idx < self:segs:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			local String is seg: self:segs:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (self:cg:allEnumNames:has(key: self:currType)) {
@@ -48,7 +48,7 @@ Class is CodeGeneratorInference{
 	}
 
 	## Infers the target type of an expression for method dispatch and type conversion.
-	local Function of String is inferTargetType(Expression is expr){
+	Function of String is inferTargetType(Expression is expr){
 		local String is resolved: expr:getResolvedType();
 		if (resolved != "" && resolved != "Any") {
 			return resolved;
@@ -144,7 +144,7 @@ Class is CodeGeneratorInference{
 	## @param expr: AST [Expression] node.
 	## @param exprC: Generated C expression string.
 	## @return: Wrapped C expression string.
-	local Function of String is wrapToString(Expression is expr, String is exprC){
+	Function of String is wrapToString(Expression is expr, String is exprC){
 		local String is resolved: self:inferTargetType(expr: expr);
 		when (resolved) {
 			is "Int", "int": {
@@ -203,7 +203,7 @@ Class is CodeGeneratorInference{
 	}
 
 	## Determines whether an expression produces a string value.
-	local Function of Boolean is isStringExpr(Expression is expr){
+	Function of Boolean is isStringExpr(Expression is expr){
 		local String is resolved: self:inferTargetType(expr: expr);
 		if (resolved == "String" || resolved == "string") {
 			return true;
@@ -281,7 +281,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	local Function of String is generateInlineArrayOp(String is mode, String is targetC, Expression is fnExpr){
+	Function of String is generateInlineArrayOp(String is mode, String is targetC, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -355,7 +355,7 @@ Class is CodeGeneratorInference{
 		return "0";
 	}
 
-	local Function of String is generateInlineArrayFold(String is targetC, Expression is initExpr, Expression is fnExpr){
+	Function of String is generateInlineArrayFold(String is targetC, Expression is initExpr, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -410,7 +410,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	local Function of String is generateInlineMapEach(String is targetC, Expression is fnExpr){
+	Function of String is generateInlineMapEach(String is targetC, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -457,7 +457,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	local Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
+	Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -493,18 +493,18 @@ Class is CodeGeneratorInference{
 		local Int is idx: 1;
 		local String is res: "";
 
-		replace local Function is init(Array of String is segs, String is rootC, CBackendUtils is utils){
+		replace Function is init(Array of String is segs, String is rootC, CBackendUtils is utils){
 			self:segs: segs;
 			self:res: rootC;
 			self:utils: utils;
 			self:idx: 1;
 		}
 
-		replace local Function of Boolean is evaluate(){
+		replace Function of Boolean is evaluate(){
 			return self:idx < self:segs:length();
 		}
 
-		replace local Function of Boolean is iteration(LoopControl is c){
+		replace Function of Boolean is iteration(LoopControl is c){
 			self:res: self:res . "->" . self:utils:cIdent(name: self:segs:get(index: self:idx));
 			self:idx: self:idx + 1;
 			return true;

@@ -20,25 +20,25 @@
 ## compiler output contains the conflicting-implementations diagnostic.
 
 Class is DiamondA{
-	replace local Function of Int is value(){
+	replace Function of Int is value(){
 		return 1;
 	}
 }
 
 Class is DiamondB{
-	replace local Function of Int is value(){
+	replace Function of Int is value(){
 		return 2;
 	}
 }
 
 Class is DiamondBadChild extends DiamondA, DiamondB{
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("unreachable");
 	}
 }
 
 Class is SharedBase{
-	replace local Function of Int is shared(){
+	replace Function of Int is shared(){
 		return 7;
 	}
 }
@@ -50,7 +50,7 @@ Class is SharedRight extends SharedBase{
 }
 
 Class is DiamondSharedChild extends SharedLeft, SharedRight{
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("shared ok");
 	}
 }

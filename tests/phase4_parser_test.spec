@@ -1,6 +1,6 @@
 Class is Phase4ParserTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:*,
 		base:struct:Array,
 		base:iterator:*,
@@ -14,7 +14,7 @@ Class is Phase4ParserTest{
 		base:meta:*
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("======================================");
 		output:line("        Phase 4 Pure-Spec Parser      ");
 		output:line("======================================\n");
@@ -46,16 +46,16 @@ Class is Phase4ParserTest{
 			local Array of Member is members;
 			local Int is idx: 0;
 
-			replace local Function is init(Array of Member is members){
+			replace Function is init(Array of Member is members){
 				self:members: members;
 				self:idx: 0;
 			}
 
-			replace local Function of Boolean is evaluate(){
+			replace Function of Boolean is evaluate(){
 				return idx < members:length();
 			}
 
-			replace local Function of Boolean is iteration(LoopControl is control){
+			replace Function of Boolean is iteration(LoopControl is control){
 				local Member is m: members:get(index: idx);
 				output:line("Member[" . idx . "]: " . m:getKind() . " -> '" . m:getName() . "'");
 				self:idx: idx + 1;

@@ -18,28 +18,28 @@ Enum is Color {
 }
 
 Class is Animal{
-	local Function of String is speak(){
+	Function of String is speak(){
 		return "...";
 	}
 }
 
 Class is Dog extends Animal{
-	replace local Function of String is speak(){
+	replace Function of String is speak(){
 		return "woof";
 	}
 
-	local Function of String is fetch(){
+	Function of String is fetch(){
 		return "ball";
 	}
 }
 
 Class is AsCastTest{
 
-	replace local Array of String is using: [
+	replace Array of String is using: [
 		base:io:Output
 	];
 
-	replace local Function is init(Map of String to String is args){
+	replace Function is init(Map of String to String is args){
 		output:line("=== Regression: As Casts ===");
 
 		# Case 1: upcast - dog passed and stored as Animal, dispatch stays virtual.
