@@ -10,4 +10,5 @@
 *.c
 !bootstrap/spec.c
 /spec-stage*
+/spec-asan
 TASKS.md

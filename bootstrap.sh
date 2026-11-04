@@ -15,8 +15,9 @@ if [ ! -f "bootstrap/spec.c" ]; then
 	exit 1
 fi
 
-echo "Compiling bootstrap/spec.c -> ./spec via gcc..."
-gcc -O2 bootstrap/spec.c -o spec -pthread -lm
+CC_BIN="${CC:-gcc}"
+echo "Compiling bootstrap/spec.c -> ./spec via ${CC_BIN}..."
+"${CC_BIN}" -O2 bootstrap/spec.c -o spec -pthread -lm
 
 echo "Spec compiler bootstrapped successfully!"
 ./spec --help || true

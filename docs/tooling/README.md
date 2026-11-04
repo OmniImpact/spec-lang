@@ -27,7 +27,7 @@ This guide covers building, running, linting, and configuring editor support for
 The Spec compiler (`spec`) is **100% self-hosted in pure Spec** (`lib/compiler/`). It compiles Spec source files down to portable C11 and links them into native executable binaries using the system C compiler (`gcc`).
 
 ### Bootstrapping & Building the Compiler
-Building Spec requires only `gcc` (or `clang`) with standard POSIX threads:
+Building Spec requires only `gcc` (or `clang` via `CC=clang ./bootstrap.sh`) with standard POSIX threads:
 
 ```bash
 ./bootstrap.sh
@@ -43,6 +43,15 @@ To perform a full 3-stage self-hosting convergence build after modifying compile
 diff -s /tmp/stage2.c /tmp/stage3.c
 cp spec-stage3 spec && cp /tmp/stage3.c bootstrap/spec.c
 ```
+
+### Continuous Integration & Sanitized Builds
+Every push to `main` and every pull request runs the regression suite on GitHub Actions (`.github/workflows/ci.yml`) in three jobs: a `gcc` bootstrap, a `CC=clang` bootstrap, and an ASan/UBSan-instrumented run. The bootstrap script honors a `$CC` override; `run_tests.sh` accepts a `SPEC=` override to test any compiler binary against the full suite.
+
+To validate compiler crash-freedom (use-after-free, out-of-bounds, undefined behavior) locally, build an instrumented compiler and run the suite under it:
+```bash
+./utilities/run_sanitized.sh
+```
+Leak detection is off by default because the compiler retains its working set until process exit; opt in with `ASAN_OPTIONS=detect_leaks=1 ./utilities/run_sanitized.sh`.
 
 ### Compiler Exit Codes & Diagnostics
 - **`0`** — success.

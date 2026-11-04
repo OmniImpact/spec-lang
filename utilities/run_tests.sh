@@ -13,10 +13,12 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SPEC="$ROOT/spec"
+# Compiler under test; override to test an alternate binary, e.g.:
+#   SPEC="$ROOT/spec-asan" bash utilities/run_tests.sh
+SPEC="${SPEC:-$ROOT/spec}"
 
 if [ ! -x "$SPEC" ]; then
-	echo "FAIL: compiler binary not found at $SPEC (run ./bootstrap.sh first)" >&2
+	echo "FAIL: compiler binary not found at $SPEC (run ./bootstrap.sh first, or set SPEC=)" >&2
 	exit 1
 fi
 
