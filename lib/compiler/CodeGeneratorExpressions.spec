@@ -26,14 +26,19 @@ Class is CodeGeneratorExpressions{
 			is "ARRAY": {
 				local String is newCall: "spec_array_new()";
 				if (self:containerHint != "") {
-					if (self:containerElemIsArc(containerType: self:containerHint)) {
+					local String is hintKind: self:containerElemKind(containerType: self:containerHint);
+					if (hintKind == "object") {
 						newCall: "spec_array_new_object()";
+					} else if (hintKind == "string") {
+						newCall: "spec_array_new_string()";
 					}
 					self:containerHint: "";
 				} else if (expr:arrayItems:length() > 0) {
 					local String is elemT: self:inferTargetType(expr: expr:arrayItems:get(index: 0));
 					if (self:isArcType(typeName: elemT)) {
 						newCall: "spec_array_new_object()";
+					} else if (elemT == "String" || elemT == "string") {
+						newCall: "spec_array_new_string()";
 					}
 				}
 				local String is res: "({ SpecArray* _arr = " . newCall . ";";
@@ -517,10 +522,17 @@ Class is CodeGeneratorExpressions{
 
 				local String is paramsC: "void* _env_ptr";
 				local Array of String is paramNames: [];
+				local String is paramBinds: "";
 				expr:anonParams:each(action: local Function(Parameter is p){
 					paramNames:add(item: p:getName());
 					self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
-					paramsC: paramsC . ", " . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
+					local String is pCType: self:cTypeFor(typeName: p:getType():getName());
+					if (p:getType():getName() == "String") {
+						paramsC: paramsC . ", " . pCType . " _p_" . self:cIdent(name: p:getName());
+						paramBinds: paramBinds . "    " . pCType . " " . self:cIdent(name: p:getName()) . " = spec_str_ring_copy(_p_" . self:cIdent(name: p:getName()) . ");\n";
+					} else {
+						paramsC: paramsC . ", " . pCType . " " . self:cIdent(name: p:getName());
+					}
 				});
 
 				local String is savedRetVar: self:inlineReturnVar;
@@ -531,6 +543,7 @@ Class is CodeGeneratorExpressions{
 				expr:anonBody:each(action: local Function(Statement is s){
 					bodyC: bodyC . self:generateStatement(stmt: s);
 				});
+				bodyC: paramBinds . bodyC;
 				self:inlineReturnVar: savedRetVar;
 				self:inlineReturnLabel: savedRetLbl;
 				self:localVars: savedVars;

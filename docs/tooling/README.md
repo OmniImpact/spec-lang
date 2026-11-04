@@ -51,7 +51,7 @@ To validate compiler crash-freedom (use-after-free, out-of-bounds, undefined beh
 ```bash
 ./utilities/run_sanitized.sh
 ```
-Leak detection is off by default because the compiler retains its working set until process exit; opt in with `ASAN_OPTIONS=detect_leaks=1 ./utilities/run_sanitized.sh`.
+Leak detection is off by default: the ARC engine reclaims the compiler's object graph and an `atexit` shutdown reclaims the string ring, but string-lifetime churn (~0.5 MB per self-compile) remains until string ownership lands; opt in with `ASAN_OPTIONS=detect_leaks=1 ./utilities/run_sanitized.sh`.
 
 ### Compiler Exit Codes & Diagnostics
 - **`0`** — success.

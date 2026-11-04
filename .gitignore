@@ -12,3 +12,5 @@
 /spec-stage*
 /spec-asan
 TASKS.md
+/mandelbrot
+/pi

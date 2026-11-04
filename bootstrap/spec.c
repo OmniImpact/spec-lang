@@ -142,6 +142,22 @@ static SpecStrBuf _spec_str_bufs[512];
 static size_t _spec_str_buf_next = 0;
 static pthread_mutex_t _spec_str_buf_lock = PTHREAD_MUTEX_INITIALIZER;
 
+static void spec_runtime_shutdown(void) {
+    for (size_t i = 0; i < 512; i++) {
+        if (_spec_str_bufs[i].ptr) {
+            free(_spec_str_bufs[i].ptr);
+            _spec_str_bufs[i].ptr = NULL;
+        }
+    }
+    _spec_str_buf_next = 0;
+    _spec_last_str = NULL;
+    _spec_last_len = 0;
+}
+
+__attribute__((constructor)) static void _spec_runtime_autoinit(void) {
+    atexit(spec_runtime_shutdown);
+}
+
 bool spec_str_is_buffered(const char* s) {
     if (!s || *s == '\0') return false;
     for (size_t i = 0; i < 512; i++) {
@@ -157,6 +173,11 @@ char* spec_str_clone_if_buffered(const char* s) {
     pthread_mutex_unlock(&_spec_str_buf_lock);
     if (buffered) return strdup(s);
     return (char*)s;
+}
+
+char* spec_str_append(const char* a, const char* b);
+char* spec_str_ring_copy(const char* s) {
+    return spec_str_append("", s);
 }
 
 char* spec_str_append(const char* a, const char* b) {
@@ -378,6 +399,7 @@ long long spec_str_count_leading(const char* s, const char* search) {
 /* Thread-Safe Spec Dynamic Array */
 #define SPEC_ELEM_NONE 0
 #define SPEC_ELEM_OBJECT 1
+#define SPEC_ELEM_STRING 2
 typedef struct {
     void** items;
     size_t length;
@@ -389,9 +411,11 @@ typedef struct {
 void spec_array_destroy(void* self) {
     SpecArray* a = (SpecArray*)self;
     if (a) {
-        if (a->elem_kind == SPEC_ELEM_OBJECT && a->items) {
+        if (a->items) {
             for (size_t i = 0; i < a->length; i++) {
-                if (a->items[i]) spec_release(a->items[i]);
+                if (!a->items[i]) continue;
+                if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);
+                else if (a->elem_kind == SPEC_ELEM_STRING) free(a->items[i]);
             }
         }
         pthread_mutex_destroy(&a->lock);
@@ -421,6 +445,10 @@ SpecArray* spec_array_new_object(void) {
     return spec_array_new_kind(SPEC_ELEM_OBJECT);
 }
 
+SpecArray* spec_array_new_string(void) {
+    return spec_array_new_kind(SPEC_ELEM_STRING);
+}
+
 void spec_array_add(SpecArray* a, void* item) {
     if (!a) return;
     pthread_mutex_lock(&a->lock);
@@ -429,6 +457,18 @@ void spec_array_add(SpecArray* a, void* item) {
         a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);
     }
     if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
+    else if (a->elem_kind == SPEC_ELEM_STRING && item) item = (void*)strdup((const char*)item);
+    a->items[a->length++] = item;
+    pthread_mutex_unlock(&a->lock);
+}
+
+void spec_array_add_owned(SpecArray* a, void* item) {
+    if (!a) return;
+    pthread_mutex_lock(&a->lock);
+    if (a->length >= a->capacity) {
+        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;
+        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);
+    }
     a->items[a->length++] = item;
     pthread_mutex_unlock(&a->lock);
 }
@@ -460,6 +500,7 @@ void* spec_array_get(SpecArray* a, long long idx) {
         return NULL;
     }
     void* val = a->items[idx];
+    if (a->elem_kind == SPEC_ELEM_STRING) val = (void*)spec_str_ring_copy(val ? (const char*)val : "");
     pthread_mutex_unlock(&a->lock);
     return val;
 }
@@ -476,6 +517,9 @@ void spec_array_set(SpecArray* a, long long idx, void* item) {
     if (a->elem_kind == SPEC_ELEM_OBJECT) {
         if (item) spec_retain(item);
         if (a->items[idx]) spec_release(a->items[idx]);
+    } else if (a->elem_kind == SPEC_ELEM_STRING) {
+        if (a->items[idx]) free(a->items[idx]);
+        item = (void*)strdup(item ? (const char*)item : "");
     }
     a->items[idx] = item;
     pthread_mutex_unlock(&a->lock);
@@ -521,10 +565,10 @@ SpecArray* spec_array_slice(SpecArray* a, long long start, long long end) {
 void spec_array_clear(SpecArray* a) {
     if (!a) return;
     pthread_mutex_lock(&a->lock);
-    if (a->elem_kind == SPEC_ELEM_OBJECT) {
-        for (size_t i = 0; i < a->length; i++) {
-            if (a->items[i]) spec_release(a->items[i]);
-        }
+    for (size_t i = 0; i < a->length; i++) {
+        if (!a->items[i]) continue;
+        if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);
+        else if (a->elem_kind == SPEC_ELEM_STRING) free(a->items[i]);
     }
     a->length = 0;
     pthread_mutex_unlock(&a->lock);
@@ -588,7 +632,7 @@ bool spec_array_any(SpecArray* a, bool (*fn)(void*)) {
 }
 
 SpecArray* spec_str_lines(const char* s) {
-    SpecArray* res = spec_array_new();
+    SpecArray* res = spec_array_new_string();
     if (!s) return res;
     const char* start = s;
     const char* p = s;
@@ -616,13 +660,13 @@ SpecArray* spec_str_lines(const char* s) {
 }
 
 SpecArray* spec_str_split(const char* s, const char* delim) {
-    SpecArray* res = spec_array_new();
+    SpecArray* res = spec_array_new_string();
     if (!s) return res;
     if (!delim || !*delim) {
         for (size_t i = 0; s[i]; i++) {
             char* ch = (char*)malloc(2);
             ch[0] = s[i]; ch[1] = '\0';
-            spec_array_add(res, ch);
+            spec_array_add_owned(res, ch);
         }
         return res;
     }
@@ -634,10 +678,10 @@ SpecArray* spec_str_split(const char* s, const char* delim) {
         char* part = (char*)malloc(len + 1);
         memcpy(part, start, len);
         part[len] = '\0';
-        spec_array_add(res, part);
+        spec_array_add_owned(res, part);
         start = match + dlen;
     }
-    spec_array_add(res, strdup(start));
+    spec_array_add_owned(res, strdup(start));
     return res;
 }
 
@@ -788,7 +832,7 @@ const char* spec_map_getString(SpecMap* m, const char* key, const char* _default
         if (strcmp(curr->key, key) == 0) {
             const char* res = (const char*)curr->value;
             pthread_mutex_unlock(&m->lock);
-            return spec_str_concat(res ? res : "", "");
+            return spec_str_ring_copy(res ? res : "");
         }
         curr = curr->next;
     }
@@ -808,6 +852,7 @@ void* spec_map_get(SpecMap* m, const char* key, void* _default) {
     while (curr) {
         if (strcmp(curr->key, key) == 0) {
             void* res = curr->value;
+            if (curr->is_str) res = (void*)spec_str_ring_copy(res ? (const char*)res : "");
             pthread_mutex_unlock(&m->lock);
             return res;
         }
@@ -918,7 +963,7 @@ long long spec_map_length(SpecMap* m) {
 }
 
 SpecArray* spec_map_keys(SpecMap* m) {
-    SpecArray* a = spec_array_new();
+    SpecArray* a = spec_array_new_string();
     if (!m) return a;
     pthread_mutex_lock(&m->lock);
     for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {
@@ -2103,6 +2148,7 @@ void CodeGenerator_init(CodeGenerator* self);
 void CodeGenerator_setGcMode(CodeGenerator* self, const char* mode);
 void CodeGenerator_setContainerHint(CodeGenerator* self, const char* t);
 bool CodeGenerator_isArcType(CodeGenerator* self, const char* typeName);
+const char* CodeGenerator_containerElemKind(CodeGenerator* self, const char* containerType);
 bool CodeGenerator_containerElemIsArc(CodeGenerator* self, const char* containerType);
 bool CodeGenerator_isFreshAllocExpr(CodeGenerator* self, Expression* expr);
 const char* CodeGenerator_cTypeFor(CodeGenerator* self, const char* typeName);
@@ -2817,7 +2863,8 @@ struct PathConvLoop {
 };
 
 /* Virtual Method Tables */
-static void* Stringable_vtable[239] = {
+static void* Stringable_vtable[240] = {
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -3059,7 +3106,8 @@ static void* Stringable_vtable[239] = {
     (void*)0
 };
 
-static void* Any_vtable[239] = {
+static void* Any_vtable[240] = {
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -3301,7 +3349,7 @@ static void* Any_vtable[239] = {
     (void*)0
 };
 
-static void* Driver_vtable[239] = {
+static void* Driver_vtable[240] = {
     (void*)0,
     (void*)Driver_init,
     (void*)0,
@@ -3540,10 +3588,11 @@ static void* Driver_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Ansi_vtable[239] = {
+static void* Ansi_vtable[240] = {
     (void*)0,
     (void*)0,
     (void*)Ansi_esc,
@@ -3782,10 +3831,11 @@ static void* Ansi_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[239] = {
+static void* ClassInfo_vtable[240] = {
     (void*)0,
     (void*)ClassInfo_init,
     (void*)0,
@@ -4024,10 +4074,11 @@ static void* ClassInfo_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[239] = {
+static void* Member_vtable[240] = {
     (void*)0,
     (void*)Member_init,
     (void*)0,
@@ -4266,10 +4317,11 @@ static void* Member_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[239] = {
+static void* Type_vtable[240] = {
     (void*)Type_toString,
     (void*)Type_init,
     (void*)0,
@@ -4508,10 +4560,11 @@ static void* Type_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[239] = {
+static void* Parameter_vtable[240] = {
     (void*)0,
     (void*)Parameter_init,
     (void*)0,
@@ -4750,10 +4803,11 @@ static void* Parameter_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[239] = {
+static void* NamedArg_vtable[240] = {
     (void*)0,
     (void*)NamedArg_init,
     (void*)0,
@@ -4992,10 +5046,11 @@ static void* NamedArg_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[239] = {
+static void* Expression_vtable[240] = {
     (void*)0,
     (void*)Expression_init,
     (void*)0,
@@ -5234,10 +5289,11 @@ static void* Expression_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[239] = {
+static void* Statement_vtable[240] = {
     (void*)0,
     (void*)Statement_init,
     (void*)0,
@@ -5476,10 +5532,11 @@ static void* Statement_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[239] = {
+static void* ProgramNode_vtable[240] = {
     (void*)0,
     (void*)ProgramNode_init,
     (void*)0,
@@ -5718,10 +5775,11 @@ static void* ProgramNode_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArm_vtable[239] = {
+static void* WhenArm_vtable[240] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -5960,10 +6018,11 @@ static void* WhenArm_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[239] = {
+static void* Token_vtable[240] = {
     (void*)0,
     (void*)Token_init,
     (void*)0,
@@ -6202,10 +6261,11 @@ static void* Token_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[239] = {
+static void* SourceLocation_vtable[240] = {
     (void*)SourceLocation_toString,
     (void*)SourceLocation_init,
     (void*)0,
@@ -6444,10 +6504,11 @@ static void* SourceLocation_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[239] = {
+static void* Lexer_vtable[240] = {
     (void*)0,
     (void*)Lexer_init,
     (void*)0,
@@ -6686,10 +6747,11 @@ static void* Lexer_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipWhitespaceLoop_vtable[239] = {
+static void* SkipWhitespaceLoop_vtable[240] = {
     (void*)0,
     (void*)SkipWhitespaceLoop_init,
     (void*)0,
@@ -6928,10 +6990,11 @@ static void* SkipWhitespaceLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipCommentLoop_vtable[239] = {
+static void* SkipCommentLoop_vtable[240] = {
     (void*)0,
     (void*)SkipCommentLoop_init,
     (void*)0,
@@ -7170,10 +7233,11 @@ static void* SkipCommentLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* IdentScanLoop_vtable[239] = {
+static void* IdentScanLoop_vtable[240] = {
     (void*)0,
     (void*)IdentScanLoop_init,
     (void*)0,
@@ -7412,10 +7476,11 @@ static void* IdentScanLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseDigitsLoop_vtable[239] = {
+static void* BaseDigitsLoop_vtable[240] = {
     (void*)0,
     (void*)BaseDigitsLoop_init,
     (void*)0,
@@ -7654,10 +7719,11 @@ static void* BaseDigitsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NumberScanLoop_vtable[239] = {
+static void* NumberScanLoop_vtable[240] = {
     (void*)0,
     (void*)NumberScanLoop_init,
     (void*)0,
@@ -7896,10 +7962,11 @@ static void* NumberScanLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StringScanLoop_vtable[239] = {
+static void* StringScanLoop_vtable[240] = {
     (void*)0,
     (void*)StringScanLoop_init,
     (void*)0,
@@ -8138,10 +8205,11 @@ static void* StringScanLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenizeLoop_vtable[239] = {
+static void* TokenizeLoop_vtable[240] = {
     (void*)0,
     (void*)TokenizeLoop_init,
     (void*)0,
@@ -8380,10 +8448,11 @@ static void* TokenizeLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[239] = {
+static void* Parser_vtable[240] = {
     (void*)0,
     (void*)Parser_init,
     (void*)0,
@@ -8622,10 +8691,11 @@ static void* Parser_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumVariantsLoop_vtable[239] = {
+static void* EnumVariantsLoop_vtable[240] = {
     (void*)0,
     (void*)EnumVariantsLoop_init,
     (void*)0,
@@ -8864,10 +8934,11 @@ static void* EnumVariantsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramParseLoop_vtable[239] = {
+static void* ProgramParseLoop_vtable[240] = {
     (void*)0,
     (void*)ProgramParseLoop_init,
     (void*)0,
@@ -9106,10 +9177,11 @@ static void* ProgramParseLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassMembersLoop_vtable[239] = {
+static void* ClassMembersLoop_vtable[240] = {
     (void*)0,
     (void*)ClassMembersLoop_init,
     (void*)0,
@@ -9348,10 +9420,11 @@ static void* ClassMembersLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseClassesLoop_vtable[239] = {
+static void* BaseClassesLoop_vtable[240] = {
     (void*)0,
     (void*)BaseClassesLoop_init,
     (void*)0,
@@ -9590,10 +9663,11 @@ static void* BaseClassesLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BlockStatementsLoop_vtable[239] = {
+static void* BlockStatementsLoop_vtable[240] = {
     (void*)0,
     (void*)BlockStatementsLoop_init,
     (void*)0,
@@ -9832,10 +9906,11 @@ static void* BlockStatementsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenConditionsLoop_vtable[239] = {
+static void* WhenConditionsLoop_vtable[240] = {
     (void*)0,
     (void*)WhenConditionsLoop_init,
     (void*)0,
@@ -10074,10 +10149,11 @@ static void* WhenConditionsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArmsLoop_vtable[239] = {
+static void* WhenArmsLoop_vtable[240] = {
     (void*)0,
     (void*)WhenArmsLoop_init,
     (void*)0,
@@ -10316,10 +10392,11 @@ static void* WhenArmsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArrayItemsLoop_vtable[239] = {
+static void* ArrayItemsLoop_vtable[240] = {
     (void*)0,
     (void*)ArrayItemsLoop_init,
     (void*)0,
@@ -10558,10 +10635,11 @@ static void* ArrayItemsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MapItemsLoop_vtable[239] = {
+static void* MapItemsLoop_vtable[240] = {
     (void*)0,
     (void*)MapItemsLoop_init,
     (void*)0,
@@ -10800,10 +10878,11 @@ static void* MapItemsLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ModifierLoop_vtable[239] = {
+static void* ModifierLoop_vtable[240] = {
     (void*)0,
     (void*)ModifierLoop_init,
     (void*)0,
@@ -11042,10 +11121,11 @@ static void* ModifierLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ParamLoop_vtable[239] = {
+static void* ParamLoop_vtable[240] = {
     (void*)0,
     (void*)ParamLoop_init,
     (void*)0,
@@ -11284,10 +11364,11 @@ static void* ParamLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArgLoop_vtable[239] = {
+static void* ArgLoop_vtable[240] = {
     (void*)0,
     (void*)ArgLoop_init,
     (void*)0,
@@ -11526,10 +11607,11 @@ static void* ArgLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PostfixLoop_vtable[239] = {
+static void* PostfixLoop_vtable[240] = {
     (void*)0,
     (void*)PostfixLoop_init,
     (void*)0,
@@ -11768,10 +11850,11 @@ static void* PostfixLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalOrLoop_vtable[239] = {
+static void* LogicalOrLoop_vtable[240] = {
     (void*)0,
     (void*)LogicalOrLoop_init,
     (void*)0,
@@ -12010,10 +12093,11 @@ static void* LogicalOrLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalAndLoop_vtable[239] = {
+static void* LogicalAndLoop_vtable[240] = {
     (void*)0,
     (void*)LogicalAndLoop_init,
     (void*)0,
@@ -12252,10 +12336,11 @@ static void* LogicalAndLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ShiftLoop_vtable[239] = {
+static void* ShiftLoop_vtable[240] = {
     (void*)0,
     (void*)ShiftLoop_init,
     (void*)0,
@@ -12494,10 +12579,11 @@ static void* ShiftLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitAndLoop_vtable[239] = {
+static void* BitAndLoop_vtable[240] = {
     (void*)0,
     (void*)BitAndLoop_init,
     (void*)0,
@@ -12736,10 +12822,11 @@ static void* BitAndLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitXorLoop_vtable[239] = {
+static void* BitXorLoop_vtable[240] = {
     (void*)0,
     (void*)BitXorLoop_init,
     (void*)0,
@@ -12978,10 +13065,11 @@ static void* BitXorLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitOrLoop_vtable[239] = {
+static void* BitOrLoop_vtable[240] = {
     (void*)0,
     (void*)BitOrLoop_init,
     (void*)0,
@@ -13220,10 +13308,11 @@ static void* BitOrLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EqualityLoop_vtable[239] = {
+static void* EqualityLoop_vtable[240] = {
     (void*)0,
     (void*)EqualityLoop_init,
     (void*)0,
@@ -13462,10 +13551,11 @@ static void* EqualityLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RelationalLoop_vtable[239] = {
+static void* RelationalLoop_vtable[240] = {
     (void*)0,
     (void*)RelationalLoop_init,
     (void*)0,
@@ -13704,10 +13794,11 @@ static void* RelationalLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ConcatLoop_vtable[239] = {
+static void* ConcatLoop_vtable[240] = {
     (void*)0,
     (void*)ConcatLoop_init,
     (void*)0,
@@ -13946,10 +14037,11 @@ static void* ConcatLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* AdditiveLoop_vtable[239] = {
+static void* AdditiveLoop_vtable[240] = {
     (void*)0,
     (void*)AdditiveLoop_init,
     (void*)0,
@@ -14188,10 +14280,11 @@ static void* AdditiveLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MultiplicativeLoop_vtable[239] = {
+static void* MultiplicativeLoop_vtable[240] = {
     (void*)0,
     (void*)MultiplicativeLoop_init,
     (void*)0,
@@ -14430,10 +14523,11 @@ static void* MultiplicativeLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LintIssue_vtable[239] = {
+static void* LintIssue_vtable[240] = {
     (void*)LintIssue_toString,
     (void*)LintIssue_init,
     (void*)0,
@@ -14672,10 +14766,11 @@ static void* LintIssue_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Linter_vtable[239] = {
+static void* Linter_vtable[240] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -14914,10 +15009,11 @@ static void* Linter_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[239] = {
+static void* TypeError_vtable[240] = {
     (void*)TypeError_toString,
     (void*)TypeError_init,
     (void*)0,
@@ -15156,10 +15252,11 @@ static void* TypeError_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[239] = {
+static void* TypeChecker_vtable[240] = {
     (void*)0,
     (void*)TypeChecker_init,
     (void*)0,
@@ -15398,10 +15495,11 @@ static void* TypeChecker_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SearchLoop_vtable[239] = {
+static void* SearchLoop_vtable[240] = {
     (void*)0,
     (void*)SearchLoop_init,
     (void*)0,
@@ -15640,10 +15738,11 @@ static void* SearchLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldSearchLoop_vtable[239] = {
+static void* FieldSearchLoop_vtable[240] = {
     (void*)0,
     (void*)FieldSearchLoop_init,
     (void*)0,
@@ -15882,10 +15981,11 @@ static void* FieldSearchLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodSearchLoop_vtable[239] = {
+static void* MethodSearchLoop_vtable[240] = {
     (void*)0,
     (void*)MethodSearchLoop_init,
     (void*)0,
@@ -16124,10 +16224,11 @@ static void* MethodSearchLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathResolveLoop_vtable[239] = {
+static void* PathResolveLoop_vtable[240] = {
     (void*)0,
     (void*)PathResolveLoop_init,
     (void*)0,
@@ -16366,10 +16467,11 @@ static void* PathResolveLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberImplementLoop_vtable[239] = {
+static void* MemberImplementLoop_vtable[240] = {
     (void*)0,
     (void*)MemberImplementLoop_init,
     (void*)0,
@@ -16608,10 +16710,11 @@ static void* MemberImplementLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[239] = {
+static void* CBackendUtils_vtable[240] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -16850,10 +16953,11 @@ static void* CBackendUtils_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EscapeLoop_vtable[239] = {
+static void* EscapeLoop_vtable[240] = {
     (void*)0,
     (void*)EscapeLoop_init,
     (void*)0,
@@ -17092,10 +17196,11 @@ static void* EscapeLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[239] = {
+static void* RuntimePrelude_vtable[240] = {
     (void*)0,
     (void*)RuntimePrelude_init,
     (void*)0,
@@ -17334,10 +17439,11 @@ static void* RuntimePrelude_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[239] = {
+static void* DeclarationGenerator_vtable[240] = {
     (void*)0,
     (void*)DeclarationGenerator_init,
     (void*)0,
@@ -17576,10 +17682,11 @@ static void* DeclarationGenerator_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* HasFieldLoop_vtable[239] = {
+static void* HasFieldLoop_vtable[240] = {
     (void*)0,
     (void*)HasFieldLoop_init,
     (void*)0,
@@ -17818,10 +17925,11 @@ static void* HasFieldLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[239] = {
+static void* BuiltinCallGenerator_vtable[240] = {
     (void*)0,
     (void*)BuiltinCallGenerator_init,
     (void*)0,
@@ -18060,10 +18168,11 @@ static void* BuiltinCallGenerator_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CodeGenerator_vtable[239] = {
+static void* CodeGenerator_vtable[240] = {
     (void*)0,
     (void*)CodeGenerator_init,
     (void*)0,
@@ -18263,6 +18372,7 @@ static void* CodeGenerator_vtable[239] = {
     (void*)0,
     (void*)CodeGenerator_setContainerHint,
     (void*)CodeGenerator_isArcType,
+    (void*)CodeGenerator_containerElemKind,
     (void*)CodeGenerator_containerElemIsArc,
     (void*)CodeGenerator_isFreshAllocExpr,
     (void*)CodeGenerator_generatePrelude,
@@ -18305,7 +18415,7 @@ static void* CodeGenerator_vtable[239] = {
     (void*)0
 };
 
-static void* ClassSearchLoop_vtable[239] = {
+static void* ClassSearchLoop_vtable[240] = {
     (void*)0,
     (void*)ClassSearchLoop_init,
     (void*)0,
@@ -18544,10 +18654,11 @@ static void* ClassSearchLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldMemberLoop_vtable[239] = {
+static void* FieldMemberLoop_vtable[240] = {
     (void*)0,
     (void*)FieldMemberLoop_init,
     (void*)0,
@@ -18786,10 +18897,11 @@ static void* FieldMemberLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodMemberLoop_vtable[239] = {
+static void* MethodMemberLoop_vtable[240] = {
     (void*)0,
     (void*)MethodMemberLoop_init,
     (void*)0,
@@ -19028,10 +19140,11 @@ static void* MethodMemberLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathTypeResolveLoop_vtable[239] = {
+static void* PathTypeResolveLoop_vtable[240] = {
     (void*)0,
     (void*)PathTypeResolveLoop_init,
     (void*)0,
@@ -19270,10 +19383,11 @@ static void* PathTypeResolveLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathChainLoop_vtable[239] = {
+static void* PathChainLoop_vtable[240] = {
     (void*)0,
     (void*)PathChainLoop_init,
     (void*)0,
@@ -19512,12 +19626,14 @@ static void* PathChainLoop_vtable[239] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[239] = {
+static void* Loader_vtable[240] = {
     (void*)0,
     (void*)Loader_init,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -19757,7 +19873,7 @@ static void* Loader_vtable[239] = {
     (void*)Loader_appendImplicitAny
 };
 
-static void* PathConvLoop_vtable[239] = {
+static void* PathConvLoop_vtable[240] = {
     (void*)0,
     (void*)PathConvLoop_init,
     (void*)0,
@@ -19866,6 +19982,7 @@ static void* PathConvLoop_vtable[239] = {
     (void*)0,
     (void*)PathConvLoop_evaluate,
     (void*)PathConvLoop_iteration,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -20394,7 +20511,7 @@ Expression* Expression_new(void) {
     self->intValue = 0;
     self->floatValue = 0.0;
     self->boolValue = false;
-    self->pathSegments = spec_array_new();
+    self->pathSegments = spec_array_new_string();
     self->arrayItems = spec_array_new_object();
     self->castArgs = spec_array_new_object();
     self->mapKeys = spec_array_new_object();
@@ -20434,7 +20551,7 @@ Statement* Statement_new(void) {
     self->_vtable = Statement_vtable;
     self->kind = "";
     self->line = 0;
-    self->modifiers = spec_array_new();
+    self->modifiers = spec_array_new_string();
     self->varName = "";
     self->hasInit = false;
     self->thenBranch = spec_array_new_object();
@@ -20705,7 +20822,7 @@ BaseClassesLoop* BaseClassesLoop_new(void) {
     BaseClassesLoop* self = (BaseClassesLoop*)spec_alloc(sizeof(BaseClassesLoop), BaseClassesLoop_destroy);
     self->_type_name = "BaseClassesLoop";
     self->_vtable = BaseClassesLoop_vtable;
-    self->bases = spec_array_new();
+    self->bases = spec_array_new_string();
     return self;
 }
 
@@ -20797,7 +20914,7 @@ ModifierLoop* ModifierLoop_new(void) {
     ModifierLoop* self = (ModifierLoop*)spec_alloc(sizeof(ModifierLoop), ModifierLoop_destroy);
     self->_type_name = "ModifierLoop";
     self->_vtable = ModifierLoop_vtable;
-    self->mods = spec_array_new();
+    self->mods = spec_array_new_string();
     return self;
 }
 
@@ -21143,7 +21260,7 @@ PathResolveLoop* PathResolveLoop_new(void) {
     PathResolveLoop* self = (PathResolveLoop*)spec_alloc(sizeof(PathResolveLoop), PathResolveLoop_destroy);
     self->_type_name = "PathResolveLoop";
     self->_vtable = PathResolveLoop_vtable;
-    self->segs = spec_array_new();
+    self->segs = spec_array_new_string();
     self->idx = 1;
     self->currType = "";
     return self;
@@ -21373,7 +21490,7 @@ PathTypeResolveLoop* PathTypeResolveLoop_new(void) {
     PathTypeResolveLoop* self = (PathTypeResolveLoop*)spec_alloc(sizeof(PathTypeResolveLoop), PathTypeResolveLoop_destroy);
     self->_type_name = "PathTypeResolveLoop";
     self->_vtable = PathTypeResolveLoop_vtable;
-    self->segs = spec_array_new();
+    self->segs = spec_array_new_string();
     self->idx = 1;
     self->currType = "";
     return self;
@@ -21390,7 +21507,7 @@ PathChainLoop* PathChainLoop_new(void) {
     PathChainLoop* self = (PathChainLoop*)spec_alloc(sizeof(PathChainLoop), PathChainLoop_destroy);
     self->_type_name = "PathChainLoop";
     self->_vtable = PathChainLoop_vtable;
-    self->segs = spec_array_new();
+    self->segs = spec_array_new_string();
     self->idx = 1;
     self->res = "";
     return self;
@@ -21485,7 +21602,7 @@ void Driver_init(Driver* self, SpecMap* args) {
         if (({ Lexer* _recv = (Lexer*)(lexer); (((bool (*)(Lexer*))_recv->_vtable[92]))((Lexer*)_recv); })) {
         spec_error_line("Lexical errors encountered during linting:");
         ({ SpecArray* _a_1 = ({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[93]))((Lexer*)_recv); }); if (_a_1) { for (size_t _i_1 = 0; _i_1 < _a_1->length; _i_1++) {
-        const char* err = (const char*)(intptr_t)_a_1->items[_i_1];
+        const char* err = spec_str_ring_copy((const char*)(intptr_t)_a_1->items[_i_1]);
         do {
     spec_error_line(spec_str_concat(spec_str_concat(spec_str_concat("  [", inputPath), "] "), err));
         } while (0);
@@ -21498,7 +21615,7 @@ void Driver_init(Driver* self, SpecMap* args) {
         if (({ Parser* _recv = (Parser*)(parser); (((bool (*)(Parser*))_recv->_vtable[92]))((Parser*)_recv); })) {
         spec_error_line("Syntax errors encountered during linting:");
         ({ SpecArray* _a_2 = ({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[93]))((Parser*)_recv); }); if (_a_2) { for (size_t _i_2 = 0; _i_2 < _a_2->length; _i_2++) {
-        const char* err = (const char*)(intptr_t)_a_2->items[_i_2];
+        const char* err = spec_str_ring_copy((const char*)(intptr_t)_a_2->items[_i_2]);
         do {
     spec_error_line(err);
         } while (0);
@@ -21523,7 +21640,7 @@ void Driver_init(Driver* self, SpecMap* args) {
     if (((spec_array_length(Loader_getParseErrors(loader) /* inst:Loader:getParseErrors */)) > (0))) {
         spec_error_line("Compilation errors encountered during loading:");
         ({ SpecArray* _a_3 = Loader_getParseErrors(loader) /* inst:Loader:getParseErrors */; if (_a_3) { for (size_t _i_3 = 0; _i_3 < _a_3->length; _i_3++) {
-        const char* err = (const char*)(intptr_t)_a_3->items[_i_3];
+        const char* err = spec_str_ring_copy((const char*)(intptr_t)_a_3->items[_i_3]);
         do {
     spec_error_line(err);
         } while (0);
@@ -21599,7 +21716,7 @@ void Driver_init(Driver* self, SpecMap* args) {
         printf("%s\n", spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("Emitted C code for ", inputPath), " -> "), emitCPath), " successfully!"));
         return;
     }
-    SPEC_AUTO SpecArray* gccArgs = ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("-O2")); spec_array_add(_arr, (void*)(tempCPath)); spec_array_add(_arr, (void*)("-o")); spec_array_add(_arr, (void*)(outputPath)); spec_array_add(_arr, (void*)("-pthread")); spec_array_add(_arr, (void*)("-lm")); _arr; });
+    SPEC_AUTO SpecArray* gccArgs = ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("-O2")); spec_array_add(_arr, (void*)(tempCPath)); spec_array_add(_arr, (void*)("-o")); spec_array_add(_arr, (void*)(outputPath)); spec_array_add(_arr, (void*)("-pthread")); spec_array_add(_arr, (void*)("-lm")); _arr; });
     if (spec_str_equals(gcMode, "boehm")) {
         if (((spec_file_exists("/usr/lib/x86_64-linux-gnu/libgc.so.1")) || (spec_file_exists("/usr/lib/libgc.so.1")))) {
         spec_array_add(gccArgs, (void*)("-l:libgc.so.1"));
@@ -21709,7 +21826,7 @@ const char* Ansi_toString(Ansi* self) {
 void ClassInfo_init(ClassInfo* self, const char* name, const char* baseClass, SpecArray* members) {
     self->name = spec_str_clone_if_buffered(name);
     self->baseClass = spec_str_clone_if_buffered(baseClass);
-    spec_assign((void**)&self->baseClasses, (void*)((((!spec_str_equals(baseClass, ""))) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)(baseClass)); _arr; })) : (({ SpecArray* _arr = spec_array_new(); _arr; })))));
+    spec_assign((void**)&self->baseClasses, (void*)((((!spec_str_equals(baseClass, ""))) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)(baseClass)); _arr; })) : (({ SpecArray* _arr = spec_array_new(); _arr; })))));
     spec_assign((void**)&self->members, (void*)(members));
 }
 
@@ -22276,7 +22393,7 @@ void Lexer_init(Lexer* self, const char* source) {
     self->pos = 0;
     self->line = 1;
     self->col = 1;
-    spec_assign_transfer((void**)&self->errors, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    spec_assign_transfer((void**)&self->errors, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
 }
 
 void Lexer_addError(Lexer* self, const char* msg) {
@@ -22732,7 +22849,7 @@ void Parser_init(Parser* self, SpecArray* tokens) {
     self->length = spec_array_length(tokens);
     self->pos = 0;
     self->sourceFile = spec_str_clone_if_buffered("");
-    spec_assign_transfer((void**)&self->errors, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    spec_assign_transfer((void**)&self->errors, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
 }
 
 void Parser_setSourceFile(Parser* self, const char* file) {
@@ -22851,7 +22968,7 @@ Type* Parser_parseType(Parser* self) {
 
 Member* Parser_parseMember(Parser* self) {
     long long startLine = ({ Token* _recv = (Token*)(Parser_peek(self) /* inst:Parser:peek */); (((long long (*)(Token*))_recv->_vtable[26]))((Token*)_recv); });
-    SPEC_AUTO SpecArray* modifiers = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    SPEC_AUTO SpecArray* modifiers = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
     ({ void* _lp = (void*)(({ ModifierLoop* _inst = ModifierLoop_new(); ModifierLoop_init(_inst, self, modifiers); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ModifierLoop_evaluate((void*)_lp)) { if (!ModifierLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
     if (Parser_check(self, "IDENTIFIER", "Class") /* inst:Parser:check */) {
         SPEC_AUTO ClassInfo* nested = (ClassInfo*)spec_retain((void*)((ClassInfo*)(Parser_parseClass(self) /* inst:Parser:parseClass */)));
@@ -22881,7 +22998,7 @@ Member* Parser_parseMember(Parser* self) {
         do {
     if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "SELF_FIELD")) {
         SPEC_AUTO Expression* lhs = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "PATH"); _inst; }));
-        Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("self")); spec_array_add(_arr, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))); _arr; })) /* inst:Expression:makePath */;
+        Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("self")); spec_array_add(_arr, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))); _arr; })) /* inst:Expression:makePath */;
         SPEC_AUTO Expression* rhs = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "IDENT"); _inst; }));
         Expression_makeIdent(rhs, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })) /* inst:Expression:makeIdent */;
         SPEC_AUTO Statement* assignS = (Statement*)(({ Statement* _inst = Statement_new(); Statement_init(_inst, "ASSIGN"); _inst; }));
@@ -22917,7 +23034,7 @@ Member* Parser_parseMember(Parser* self) {
         do {
     if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "SELF_FIELD")) {
         SPEC_AUTO Expression* lhs = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "PATH"); _inst; }));
-        Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("self")); spec_array_add(_arr, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))); _arr; })) /* inst:Expression:makePath */;
+        Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("self")); spec_array_add(_arr, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))); _arr; })) /* inst:Expression:makePath */;
         SPEC_AUTO Expression* rhs = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "IDENT"); _inst; }));
         Expression_makeIdent(rhs, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })) /* inst:Expression:makeIdent */;
         SPEC_AUTO Statement* assignS = (Statement*)(({ Statement* _inst = Statement_new(); Statement_init(_inst, "ASSIGN"); _inst; }));
@@ -23071,7 +23188,7 @@ Statement* Parser_parseStatement(Parser* self) {
     }
     if (Parser_check(self, "KEYWORD", "local") /* inst:Parser:check */) {
         (((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self);
-        SPEC_AUTO SpecArray* modifiers = ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("local")); _arr; });
+        SPEC_AUTO SpecArray* modifiers = ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("local")); _arr; });
         SPEC_AUTO Type* vType = (Type*)spec_retain((void*)((Type*)(Parser_parseType(self) /* inst:Parser:parseType */)));
         Parser_matchToken(self, "KEYWORD", "is") /* inst:Parser:matchToken */;
         SPEC_AUTO Token* nameTok = (Token*)spec_retain((void*)((Token*)((((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self))));
@@ -23140,7 +23257,7 @@ Expression* Parser_parsePrimary(Parser* self) {
         do {
     if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "SELF_FIELD")) {
         SPEC_AUTO Expression* lhs = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "PATH"); _inst; }));
-        Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("self")); spec_array_add(_arr, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))); _arr; })) /* inst:Expression:makePath */;
+        Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("self")); spec_array_add(_arr, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))); _arr; })) /* inst:Expression:makePath */;
         SPEC_AUTO Expression* rhs = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, "IDENT"); _inst; }));
         Expression_makeIdent(rhs, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })) /* inst:Expression:makeIdent */;
         SPEC_AUTO Statement* assignS = (Statement*)(({ Statement* _inst = Statement_new(); Statement_init(_inst, "ASSIGN"); _inst; }));
@@ -23408,7 +23525,7 @@ ClassInfo* Parser_parseClass(Parser* self) {
         (((void (*)(Parser*, Token*, const char*))self->_vtable[91]))((Parser*)self, Parser_peek(self) /* inst:Parser:peek */, "The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'.");
     }
     (((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self);
-    SPEC_AUTO SpecArray* baseClasses = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    SPEC_AUTO SpecArray* baseClasses = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
     if (Parser_check(self, "KEYWORD", "of") /* inst:Parser:check */) {
         (((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self);
         ({ void* _lp = (void*)(({ BaseClassesLoop* _inst = BaseClassesLoop_new(); BaseClassesLoop_init(_inst, self, baseClasses); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BaseClassesLoop_evaluate((void*)_lp)) { if (!BaseClassesLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
@@ -23416,7 +23533,7 @@ ClassInfo* Parser_parseClass(Parser* self) {
     Parser_matchToken(self, "KEYWORD", "is") /* inst:Parser:matchToken */;
     SPEC_AUTO Token* nameTok = (Token*)spec_retain((void*)((Token*)((((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self))));
     const char* name = spec_str_clone_if_buffered(({ Token* _recv = (Token*)(nameTok); (((const char* (*)(Token*))_recv->_vtable[50]))((Token*)_recv); }));
-    SPEC_AUTO SpecArray* typeParams = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    SPEC_AUTO SpecArray* typeParams = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
     if (Parser_check(self, "KEYWORD", "of") /* inst:Parser:check */) {
         (((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self);
         SPEC_AUTO Token* tp1 = (Token*)spec_retain((void*)((Token*)((((Token* (*)(Parser*))self->_vtable[96]))((Parser*)self))));
@@ -23460,7 +23577,7 @@ ClassInfo* Parser_parseEnum(Parser* self) {
     SPEC_AUTO ClassInfo* c = (ClassInfo*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, name, "Enum", members); _inst; }));
     ({ ClassInfo* _recv = (ClassInfo*)(c); (((void (*)(ClassInfo*, long long))_recv->_vtable[25]))((ClassInfo*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[26]))((Token*)_recv); })); });
     ({ ClassInfo* _recv = (ClassInfo*)(c); (((void (*)(ClassInfo*, const char*))_recv->_vtable[27]))((ClassInfo*)_recv, self->sourceFile); });
-    ClassInfo_withBaseClasses(c, name, ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("Enum")); _arr; }), members) /* inst:ClassInfo:withBaseClasses */;
+    ClassInfo_withBaseClasses(c, name, ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("Enum")); _arr; }), members) /* inst:ClassInfo:withBaseClasses */;
     return (ClassInfo*)spec_retain((void*)(c));
 }
 
@@ -23510,7 +23627,7 @@ bool EnumVariantsLoop_iteration(EnumVariantsLoop* self, SpecLoopControl* control
     }
     self->count = ((self->count) + (1));
     SPEC_AUTO Member* m = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, "FIELD"); _inst; }));
-    spec_assign_transfer((void**)&m->modifiers, (void*)(({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("static")); spec_array_add(_arr, (void*)("local")); _arr; })));
+    spec_assign_transfer((void**)&m->modifiers, (void*)(({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("static")); spec_array_add(_arr, (void*)("local")); _arr; })));
     spec_assign_transfer((void**)&m->memberType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, self->backingType); _inst; })));
     m->name = spec_str_clone_if_buffered(vName);
     spec_assign((void**)&m->params, (void*)(vParams));
@@ -23957,10 +24074,10 @@ bool PostfixLoop_iteration(PostfixLoop* self, SpecLoopControl* control) {
         spec_assign((void**)&self->currentExpr, (void*)(callExpr));
         return true;
     }
-        SPEC_AUTO SpecArray* segs = ({ SpecArray* _arr = spec_array_new(); _arr; });
+        SPEC_AUTO SpecArray* segs = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
         if (spec_str_equals(({ Expression* _recv = (Expression*)(self->currentExpr); (((const char* (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); }), "PATH")) {
         ({ SpecArray* _a_15 = self->currentExpr->pathSegments; if (_a_15) { for (size_t _i_15 = 0; _i_15 < _a_15->length; _i_15++) {
-        const char* s = (const char*)(intptr_t)_a_15->items[_i_15];
+        const char* s = spec_str_ring_copy((const char*)(intptr_t)_a_15->items[_i_15]);
         do {
     spec_array_add(segs, (void*)(s));
         } while (0);
@@ -24322,7 +24439,7 @@ void Linter_lintIndentation(Linter* self, const char* source, SpecArray* issues)
     long long lineNum = 0;
     long long depth = 0;
     ({ SpecArray* _a_16 = spec_str_lines(source); if (_a_16) { for (size_t _i_16 = 0; _i_16 < _a_16->length; _i_16++) {
-        const char* line = (const char*)(intptr_t)_a_16->items[_i_16];
+        const char* line = spec_str_ring_copy((const char*)(intptr_t)_a_16->items[_i_16]);
         do {
     lineNum = ((lineNum) + (1));
     long long tabs = spec_str_count_leading(line, "\t");
@@ -24659,7 +24776,7 @@ Member* TypeChecker_lookupAnyMember(TypeChecker* self, const char* className, co
     }
     SPEC_AUTO Member* inherited = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
     ({ SpecArray* _a_31 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_31) { for (size_t _i_31 = 0; _i_31 < _a_31->length; _i_31++) {
-        const char* baseName = (const char*)(intptr_t)_a_31->items[_i_31];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_31->items[_i_31]);
         do {
     if (spec_str_equals(({ Member* _recv = (Member*)(inherited); (((const char* (*)(Member*))_recv->_vtable[34]))((Member*)_recv); }), "")) {
         spec_assign((void**)&inherited, (void*)(TypeChecker_lookupAnyMember(self, baseName, methodName) /* inst:TypeChecker:lookupAnyMember */));
@@ -24790,7 +24907,7 @@ void TypeChecker_checkWhenExhaustive(TypeChecker* self, const char* subjectType,
         return;
     }
     SPEC_AUTO ClassInfo* enumCls = (ClassInfo*)spec_retain((void*)((ClassInfo*)((((ClassInfo* (*)(TypeChecker*, const char*))self->_vtable[157]))((TypeChecker*)self, subjectType))));
-    SPEC_AUTO SpecArray* missing = ({ SpecArray* _arr = spec_array_new(); _arr; });
+    SPEC_AUTO SpecArray* missing = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
     ({ SpecArray* _a_37 = ClassInfo_getMembers(enumCls) /* inst:ClassInfo:getMembers */; if (_a_37) { for (size_t _i_37 = 0; _i_37 < _a_37->length; _i_37++) {
         Member* m = (Member*)(intptr_t)_a_37->items[_i_37];
         do {
@@ -24896,7 +25013,7 @@ bool TypeChecker_isSubclassOf(TypeChecker* self, const char* subName, const char
     }
     bool matched = false;
     ({ SpecArray* _a_40 = ClassInfo_getBaseClasses(subCls) /* inst:ClassInfo:getBaseClasses */; if (_a_40) { for (size_t _i_40 = 0; _i_40 < _a_40->length; _i_40++) {
-        const char* pName = (const char*)(intptr_t)_a_40->items[_i_40];
+        const char* pName = spec_str_ring_copy((const char*)(intptr_t)_a_40->items[_i_40]);
         do {
     if (((spec_str_equals(pName, baseName)) || ((((bool (*)(TypeChecker*, const char*, const char*))self->_vtable[158]))((TypeChecker*)self, pName, baseName)))) {
         matched = true;
@@ -24997,7 +25114,7 @@ const char* TypeChecker_lookupFieldType(TypeChecker* self, const char* className
     }
     const char* inherited = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_42 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_42) { for (size_t _i_42 = 0; _i_42 < _a_42->length; _i_42++) {
-        const char* baseName = (const char*)(intptr_t)_a_42->items[_i_42];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_42->items[_i_42]);
         do {
     if (spec_str_equals(inherited, "")) {
         inherited = spec_str_clone_if_buffered((((const char* (*)(TypeChecker*, const char*, const char*))self->_vtable[160]))((TypeChecker*)self, baseName, fieldName));
@@ -25030,7 +25147,7 @@ const char* TypeChecker_lookupMethodReturnType(TypeChecker* self, const char* cl
     }
     const char* inherited = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_43 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_43) { for (size_t _i_43 = 0; _i_43 < _a_43->length; _i_43++) {
-        const char* baseName = (const char*)(intptr_t)_a_43->items[_i_43];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_43->items[_i_43]);
         do {
     if (spec_str_equals(inherited, "")) {
         inherited = spec_str_clone_if_buffered((((const char* (*)(TypeChecker*, const char*, const char*))self->_vtable[161]))((TypeChecker*)self, baseName, methodName));
@@ -25321,7 +25438,7 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         SPEC_AUTO SpecMap* savedVars = spec_map_new();
         SPEC_AUTO SpecArray* existingKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localVars)));
         ({ SpecArray* _a_49 = existingKeys; if (_a_49) { for (size_t _i_49 = 0; _i_49 < _a_49->length; _i_49++) {
-        const char* k = (const char*)(intptr_t)_a_49->items[_i_49];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_49->items[_i_49]);
         do {
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         } while (0);
@@ -25762,7 +25879,7 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
         SPEC_AUTO SpecMap* savedVars = spec_map_new();
         SPEC_AUTO SpecArray* vKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localVars)));
         ({ SpecArray* _a_64 = vKeys; if (_a_64) { for (size_t _i_64 = 0; _i_64 < _a_64->length; _i_64++) {
-        const char* k = (const char*)(intptr_t)_a_64->items[_i_64];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_64->items[_i_64]);
         do {
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         } while (0);
@@ -25770,7 +25887,7 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
         SPEC_AUTO SpecMap* savedFields = spec_map_new();
         SPEC_AUTO SpecArray* fKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->fieldTypes)));
         ({ SpecArray* _a_65 = fKeys; if (_a_65) { for (size_t _i_65 = 0; _i_65 < _a_65->length; _i_65++) {
-        const char* k = (const char*)(intptr_t)_a_65->items[_i_65];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_65->items[_i_65]);
         do {
     spec_map_set(savedFields, k, spec_map_get_string(self->fieldTypes, k, ""));
         } while (0);
@@ -25778,7 +25895,7 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
         SPEC_AUTO SpecMap* savedUnassigned = spec_map_new();
         SPEC_AUTO SpecArray* uKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->unassignedFields)));
         ({ SpecArray* _a_66 = uKeys; if (_a_66) { for (size_t _i_66 = 0; _i_66 < _a_66->length; _i_66++) {
-        const char* k = (const char*)(intptr_t)_a_66->items[_i_66];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_66->items[_i_66]);
         do {
     spec_map_set(savedUnassigned, k, spec_map_get_string(self->unassignedFields, k, ""));
         } while (0);
@@ -25855,7 +25972,7 @@ Member* TypeChecker_findFirstSuperMethod(TypeChecker* self, const char* classNam
     }
     SPEC_AUTO Member* res = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
     ({ SpecArray* _a_70 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_70) { for (size_t _i_70 = 0; _i_70 < _a_70->length; _i_70++) {
-        const char* baseName = (const char*)(intptr_t)_a_70->items[_i_70];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_70->items[_i_70]);
         do {
     if (spec_str_equals(({ Member* _recv = (Member*)(res); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "")) {
         SPEC_AUTO Member* m = (Member*)spec_retain((void*)((Member*)(TypeChecker_lookupAnyMember(self, baseName, methodName) /* inst:TypeChecker:lookupAnyMember */)));
@@ -25883,7 +26000,7 @@ void TypeChecker_collectConcreteDeclarers(TypeChecker* self, const char* classNa
     if (((((spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[34]))((Member*)_recv); }), "METHOD")) && (spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), methodName)))) && (((spec_array_length(Member_getBody(m) /* inst:Member:getBody */)) > (0))))) {
         bool present = false;
         ({ SpecArray* _a_72 = acc; if (_a_72) { for (size_t _i_72 = 0; _i_72 < _a_72->length; _i_72++) {
-        const char* n = (const char*)(intptr_t)_a_72->items[_i_72];
+        const char* n = spec_str_ring_copy((const char*)(intptr_t)_a_72->items[_i_72]);
         do {
     if ((((!(present))) && (spec_str_equals(n, className)))) {
         present = true;
@@ -25897,7 +26014,7 @@ void TypeChecker_collectConcreteDeclarers(TypeChecker* self, const char* classNa
         } while (0);
     } } });
     ({ SpecArray* _a_73 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_73) { for (size_t _i_73 = 0; _i_73 < _a_73->length; _i_73++) {
-        const char* baseName = (const char*)(intptr_t)_a_73->items[_i_73];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_73->items[_i_73]);
         do {
     TypeChecker_collectConcreteDeclarers(self, baseName, methodName, seen, acc) /* inst:TypeChecker:collectConcreteDeclarers */;
         } while (0);
@@ -25911,7 +26028,7 @@ Member* TypeChecker_findAncestorMember(TypeChecker* self, const char* className,
     }
     SPEC_AUTO Member* res = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
     ({ SpecArray* _a_74 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_74) { for (size_t _i_74 = 0; _i_74 < _a_74->length; _i_74++) {
-        const char* baseName = (const char*)(intptr_t)_a_74->items[_i_74];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_74->items[_i_74]);
         do {
     if (spec_str_equals(({ Member* _recv = (Member*)(res); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "")) {
         SPEC_AUTO ClassInfo* anc = (ClassInfo*)spec_retain((void*)((ClassInfo*)((((ClassInfo* (*)(TypeChecker*, const char*))self->_vtable[157]))((TypeChecker*)self, baseName))));
@@ -25930,7 +26047,7 @@ Member* TypeChecker_findAncestorMember(TypeChecker* self, const char* className,
     } } });
     if (spec_str_equals(({ Member* _recv = (Member*)(res); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "")) {
         ({ SpecArray* _a_76 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_76) { for (size_t _i_76 = 0; _i_76 < _a_76->length; _i_76++) {
-        const char* baseName = (const char*)(intptr_t)_a_76->items[_i_76];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_76->items[_i_76]);
         do {
     if (spec_str_equals(({ Member* _recv = (Member*)(res); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "")) {
         spec_assign((void**)&res, (void*)(TypeChecker_findAncestorMember(self, baseName, memberName) /* inst:TypeChecker:findAncestorMember */));
@@ -25959,7 +26076,7 @@ const char* TypeChecker_findMemberOwnerClass(TypeChecker* self, const char* clas
         return owner;
     }
     ({ SpecArray* _a_78 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_78) { for (size_t _i_78 = 0; _i_78 < _a_78->length; _i_78++) {
-        const char* baseName = (const char*)(intptr_t)_a_78->items[_i_78];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_78->items[_i_78]);
         do {
     if (spec_str_equals(owner, "")) {
         owner = spec_str_clone_if_buffered(TypeChecker_findMemberOwnerClass(self, baseName, memberName) /* inst:TypeChecker:findMemberOwnerClass */);
@@ -26037,7 +26154,7 @@ void TypeChecker_checkShadowTargets(TypeChecker* self, ClassInfo* classDef) {
 void TypeChecker_checkMethodConflicts(TypeChecker* self, ClassInfo* classDef) {
     SPEC_AUTO SpecMap* seenMethods = spec_map_new();
     ({ SpecArray* _a_80 = ClassInfo_getBaseClasses(classDef) /* inst:ClassInfo:getBaseClasses */; if (_a_80) { for (size_t _i_80 = 0; _i_80 < _a_80->length; _i_80++) {
-        const char* baseName = (const char*)(intptr_t)_a_80->items[_i_80];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_80->items[_i_80]);
         do {
     SPEC_AUTO ClassInfo* anc = (ClassInfo*)spec_retain((void*)((ClassInfo*)((((ClassInfo* (*)(TypeChecker*, const char*))self->_vtable[157]))((TypeChecker*)self, baseName))));
     if ((!spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(anc); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ""))) {
@@ -26054,7 +26171,7 @@ void TypeChecker_checkMethodConflicts(TypeChecker* self, ClassInfo* classDef) {
     } } });
     SPEC_AUTO SpecArray* names = (SpecArray*)spec_retain((void*)(spec_map_keys(seenMethods)));
     ({ SpecArray* _a_82 = names; if (_a_82) { for (size_t _i_82 = 0; _i_82 < _a_82->length; _i_82++) {
-        const char* mName = (const char*)(intptr_t)_a_82->items[_i_82];
+        const char* mName = spec_str_ring_copy((const char*)(intptr_t)_a_82->items[_i_82]);
         do {
     bool declaredLocally = false;
     ({ SpecArray* _a_83 = ClassInfo_getMembers(classDef) /* inst:ClassInfo:getMembers */; if (_a_83) { for (size_t _i_83 = 0; _i_83 < _a_83->length; _i_83++) {
@@ -26067,20 +26184,20 @@ void TypeChecker_checkMethodConflicts(TypeChecker* self, ClassInfo* classDef) {
     } } });
     if ((!(declaredLocally))) {
         SPEC_AUTO SpecMap* seen = spec_map_new();
-        SPEC_AUTO SpecArray* declarers = ({ SpecArray* _arr = spec_array_new(); _arr; });
+        SPEC_AUTO SpecArray* declarers = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
         ({ SpecArray* _a_84 = ClassInfo_getBaseClasses(classDef) /* inst:ClassInfo:getBaseClasses */; if (_a_84) { for (size_t _i_84 = 0; _i_84 < _a_84->length; _i_84++) {
-        const char* baseName = (const char*)(intptr_t)_a_84->items[_i_84];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_84->items[_i_84]);
         do {
     TypeChecker_collectConcreteDeclarers(self, baseName, mName, seen, declarers) /* inst:TypeChecker:collectConcreteDeclarers */;
         } while (0);
     } } });
-        SPEC_AUTO SpecArray* maximal = ({ SpecArray* _arr = spec_array_new(); _arr; });
+        SPEC_AUTO SpecArray* maximal = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
         ({ SpecArray* _a_85 = declarers; if (_a_85) { for (size_t _i_85 = 0; _i_85 < _a_85->length; _i_85++) {
-        const char* d = (const char*)(intptr_t)_a_85->items[_i_85];
+        const char* d = spec_str_ring_copy((const char*)(intptr_t)_a_85->items[_i_85]);
         do {
     bool isSubsumed = false;
     ({ SpecArray* _a_86 = declarers; if (_a_86) { for (size_t _i_86 = 0; _i_86 < _a_86->length; _i_86++) {
-        const char* other = (const char*)(intptr_t)_a_86->items[_i_86];
+        const char* other = spec_str_ring_copy((const char*)(intptr_t)_a_86->items[_i_86]);
         do {
     if ((((((!(isSubsumed))) && ((!spec_str_equals(other, d))))) && ((((bool (*)(TypeChecker*, const char*, const char*))self->_vtable[158]))((TypeChecker*)self, other, d)))) {
         isSubsumed = true;
@@ -26118,7 +26235,7 @@ void TypeChecker_checkInheritance(TypeChecker* self, ClassInfo* classDef) {
         } while (0);
     } } });
     ({ SpecArray* _a_89 = ClassInfo_getBaseClasses(classDef) /* inst:ClassInfo:getBaseClasses */; if (_a_89) { for (size_t _i_89 = 0; _i_89 < _a_89->length; _i_89++) {
-        const char* baseName = (const char*)(intptr_t)_a_89->items[_i_89];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_89->items[_i_89]);
         do {
     SPEC_AUTO ClassInfo* parent = (ClassInfo*)spec_retain((void*)((ClassInfo*)((((ClassInfo* (*)(TypeChecker*, const char*))self->_vtable[157]))((TypeChecker*)self, baseName))));
     if (spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(parent); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), baseName)) {
@@ -26262,7 +26379,7 @@ void TypeChecker_applyMerge(TypeChecker* self, ClassInfo* classDef, Member* subM
 
 void TypeChecker_collectClassFieldTypes(TypeChecker* self, ClassInfo* classDef) {
     ({ SpecArray* _a_96 = ClassInfo_getBaseClasses(classDef) /* inst:ClassInfo:getBaseClasses */; if (_a_96) { for (size_t _i_96 = 0; _i_96 < _a_96->length; _i_96++) {
-        const char* baseName = (const char*)(intptr_t)_a_96->items[_i_96];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_96->items[_i_96]);
         do {
     SPEC_AUTO ClassInfo* parent = (ClassInfo*)spec_retain((void*)((ClassInfo*)((((ClassInfo* (*)(TypeChecker*, const char*))self->_vtable[157]))((TypeChecker*)self, baseName))));
     if ((!spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(parent); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ""))) {
@@ -26327,7 +26444,7 @@ void TypeChecker_checkClass(TypeChecker* self, ClassInfo* classDef) {
         SPEC_AUTO SpecMap* savedFields = spec_map_new();
         SPEC_AUTO SpecArray* fKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->fieldTypes)));
         ({ SpecArray* _a_101 = fKeys; if (_a_101) { for (size_t _i_101 = 0; _i_101 < _a_101->length; _i_101++) {
-        const char* k = (const char*)(intptr_t)_a_101->items[_i_101];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_101->items[_i_101]);
         do {
     spec_map_set(savedFields, k, spec_map_get_string(self->fieldTypes, k, ""));
         } while (0);
@@ -26335,7 +26452,7 @@ void TypeChecker_checkClass(TypeChecker* self, ClassInfo* classDef) {
         SPEC_AUTO SpecMap* savedUnassigned = spec_map_new();
         SPEC_AUTO SpecArray* uKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->unassignedFields)));
         ({ SpecArray* _a_102 = uKeys; if (_a_102) { for (size_t _i_102 = 0; _i_102 < _a_102->length; _i_102++) {
-        const char* k = (const char*)(intptr_t)_a_102->items[_i_102];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_102->items[_i_102]);
         do {
     spec_map_set(savedUnassigned, k, spec_map_get_string(self->unassignedFields, k, ""));
         } while (0);
@@ -26843,6 +26960,20 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static SpecStrBuf _spec_str_bufs[512];\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static size_t _spec_str_buf_next = 0;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static pthread_mutex_t _spec_str_buf_lock = PTHREAD_MUTEX_INITIALIZER;\n\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static void spec_runtime_shutdown(void) {\n"));
+    p = spec_str_append(p, "    for (size_t i = 0; i < 512; i++) {\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (_spec_str_bufs[i].ptr) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "            free(_spec_str_bufs[i].ptr);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "            _spec_str_bufs[i].ptr = NULL;\n"));
+    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    _spec_str_buf_next = 0;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    _spec_last_str = NULL;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    _spec_last_len = 0;\n"));
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "__attribute__((constructor)) static void _spec_runtime_autoinit(void) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    atexit(spec_runtime_shutdown);\n"));
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "bool spec_str_is_buffered(const char* s) {\n"));
     p = spec_str_append(p, "    if (!s || *s == '\\0') return false;\n");
     p = spec_str_append(p, "    for (size_t i = 0; i < 512; i++) {\n");
@@ -26857,6 +26988,10 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&_spec_str_buf_lock);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (buffered) return strdup(s);\n"));
     p = spec_str_append(p, "    return (char*)s;\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "char* spec_str_append(const char* a, const char* b);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "char* spec_str_ring_copy(const char* s) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    return spec_str_append(\"\", s);\n"));
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "char* spec_str_append(const char* a, const char* b) {\n"));
     p = spec_str_append(p, "    if (!a) a = \"\";\n");
@@ -27058,6 +27193,7 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "/* Thread-Safe Spec Dynamic Array */\n"));
     p = spec_str_append(p, "#define SPEC_ELEM_NONE 0\n");
     p = spec_str_append(p, "#define SPEC_ELEM_OBJECT 1\n");
+    p = spec_str_append(p, "#define SPEC_ELEM_STRING 2\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "typedef struct {\n"));
     p = spec_str_append(p, "    void** items;\n");
     p = spec_str_append(p, "    size_t length;\n");
@@ -27068,9 +27204,11 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_array_destroy(void* self) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* a = (SpecArray*)self;\n"));
     p = spec_str_append(p, "    if (a) {\n");
-    p = spec_str_append(p, "        if (a->elem_kind == SPEC_ELEM_OBJECT && a->items) {\n");
+    p = spec_str_append(p, "        if (a->items) {\n");
     p = spec_str_append(p, "            for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "                if (a->items[i]) spec_release(a->items[i]);\n"));
+    p = spec_str_append(p, "                if (!a->items[i]) continue;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "                if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);\n"));
+    p = spec_str_append(p, "                else if (a->elem_kind == SPEC_ELEM_STRING) free(a->items[i]);\n");
     p = spec_str_append(p, "            }\n");
     p = spec_str_append(p, "        }\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        pthread_mutex_destroy(&a->lock);\n"));
@@ -27096,6 +27234,9 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "SpecArray* spec_array_new_object(void) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    return spec_array_new_kind(SPEC_ELEM_OBJECT);\n"));
     p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "SpecArray* spec_array_new_string(void) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    return spec_array_new_kind(SPEC_ELEM_STRING);\n"));
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_array_add(SpecArray* a, void* item) {\n"));
     p = spec_str_append(p, "    if (!a) return;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n"));
@@ -27104,6 +27245,17 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n"));
     p = spec_str_append(p, "    }\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    else if (a->elem_kind == SPEC_ELEM_STRING && item) item = (void*)strdup((const char*)item);\n"));
+    p = spec_str_append(p, "    a->items[a->length++] = item;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_array_add_owned(SpecArray* a, void* item) {\n"));
+    p = spec_str_append(p, "    if (!a) return;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (a->length >= a->capacity) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n"));
+    p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    a->items[a->length++] = item;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
     p = spec_str_append(p, "}\n\n");
@@ -27132,6 +27284,7 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "        return NULL;\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    void* val = a->items[idx];\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (a->elem_kind == SPEC_ELEM_STRING) val = (void*)spec_str_ring_copy(val ? (const char*)val : \"\");\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
     p = spec_str_append(p, "    return val;\n");
     p = spec_str_append(p, "}\n\n");
@@ -27147,6 +27300,9 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "    if (a->elem_kind == SPEC_ELEM_OBJECT) {\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (item) spec_retain(item);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (a->items[idx]) spec_release(a->items[idx]);\n"));
+    p = spec_str_append(p, "    } else if (a->elem_kind == SPEC_ELEM_STRING) {\n");
+    p = spec_str_append(p, "        if (a->items[idx]) free(a->items[idx]);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        item = (void*)strdup(item ? (const char*)item : \"\");\n"));
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    a->items[idx] = item;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
@@ -27188,10 +27344,10 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_array_clear(SpecArray* a) {\n"));
     p = spec_str_append(p, "    if (!a) return;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n"));
-    p = spec_str_append(p, "    if (a->elem_kind == SPEC_ELEM_OBJECT) {\n");
-    p = spec_str_append(p, "        for (size_t i = 0; i < a->length; i++) {\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "            if (a->items[i]) spec_release(a->items[i]);\n"));
-    p = spec_str_append(p, "        }\n");
+    p = spec_str_append(p, "    for (size_t i = 0; i < a->length; i++) {\n");
+    p = spec_str_append(p, "        if (!a->items[i]) continue;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);\n"));
+    p = spec_str_append(p, "        else if (a->elem_kind == SPEC_ELEM_STRING) free(a->items[i]);\n");
     p = spec_str_append(p, "    }\n");
     p = spec_str_append(p, "    a->length = 0;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
@@ -27249,7 +27405,7 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "    return false;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "SpecArray* spec_str_lines(const char* s) {\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* res = spec_array_new();\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* res = spec_array_new_string();\n"));
     p = spec_str_append(p, "    if (!s) return res;\n");
     p = spec_str_append(p, "    const char* start = s;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    const char* p = s;\n"));
@@ -27276,13 +27432,13 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "    return res;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "SpecArray* spec_str_split(const char* s, const char* delim) {\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* res = spec_array_new();\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* res = spec_array_new_string();\n"));
     p = spec_str_append(p, "    if (!s) return res;\n");
     p = spec_str_append(p, "    if (!delim || !*delim) {\n");
     p = spec_str_append(p, "        for (size_t i = 0; s[i]; i++) {\n");
     p = spec_str_append(p, "            char* ch = (char*)malloc(2);\n");
     p = spec_str_append(p, "            ch[0] = s[i]; ch[1] = '\\0';\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "            spec_array_add(res, ch);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "            spec_array_add_owned(res, ch);\n"));
     p = spec_str_append(p, "        }\n");
     p = spec_str_append(p, "        return res;\n");
     p = spec_str_append(p, "    }\n");
@@ -27294,10 +27450,10 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        char* part = (char*)malloc(len + 1);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        memcpy(part, start, len);\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        part[len] = '\\0';\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "        spec_array_add(res, part);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        spec_array_add_owned(res, part);\n"));
     p = spec_str_append(p, "        start = match + dlen;\n");
     p = spec_str_append(p, "    }\n");
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_array_add(res, strdup(start));\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    spec_array_add_owned(res, strdup(start));\n"));
     p = spec_str_append(p, "    return res;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "const char* spec_array_join(SpecArray* a, const char* sep) {\n"));
@@ -27437,7 +27593,7 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n"));
     p = spec_str_append(p, "            const char* res = (const char*)curr->value;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "            return spec_str_concat(res ? res : \"\", \"\");\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "            return spec_str_ring_copy(res ? res : \"\");\n"));
     p = spec_str_append(p, "        }\n");
     p = spec_str_append(p, "        curr = curr->next;\n");
     p = spec_str_append(p, "    }\n");
@@ -27455,6 +27611,7 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "    while (curr) {\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "        if (strcmp(curr->key, key) == 0) {\n"));
     p = spec_str_append(p, "            void* res = curr->value;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "            if (curr->is_str) res = (void*)spec_str_ring_copy(res ? (const char*)res : \"\");\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "            pthread_mutex_unlock(&m->lock);\n"));
     p = spec_str_append(p, "            return res;\n");
     p = spec_str_append(p, "        }\n");
@@ -27558,7 +27715,7 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "    return cnt;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "SpecArray* spec_map_keys(SpecMap* m) {\n"));
-    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* a = spec_array_new();\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    SpecArray* a = spec_array_new_string();\n"));
     p = spec_str_append(p, "    if (!m) return a;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_lock(&m->lock);\n"));
     p = spec_str_append(p, "    for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n");
@@ -28032,7 +28189,7 @@ bool DeclarationGenerator_hasFieldNamed(DeclarationGenerator* self, SpecArray* l
 
 void DeclarationGenerator_collectStructFields(DeclarationGenerator* self, ClassInfo* c, SpecArray* allClasses, SpecArray* acc) {
     ({ SpecArray* _a_114 = ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */; if (_a_114) { for (size_t _i_114 = 0; _i_114 < _a_114->length; _i_114++) {
-        const char* baseName = (const char*)(intptr_t)_a_114->items[_i_114];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_114->items[_i_114]);
         do {
     ({ SpecArray* _a_115 = allClasses; if (_a_115) { for (size_t _i_115 = 0; _i_115 < _a_115->length; _i_115++) {
         ClassInfo* cand = (ClassInfo*)(intptr_t)_a_115->items[_i_115];
@@ -29494,7 +29651,7 @@ bool CodeGenerator_isArcType(CodeGenerator* self, const char* typeName) {
     return false;
 }
 
-bool CodeGenerator_containerElemIsArc(CodeGenerator* self, const char* containerType) {
+const char* CodeGenerator_containerElemKind(CodeGenerator* self, const char* containerType) {
     const char* elem = spec_str_clone_if_buffered("");
     if (spec_str_starts_with(containerType, "Array of ")) {
         elem = spec_str_clone_if_buffered(spec_str_substring(containerType, 9, spec_str_length(containerType)));
@@ -29516,15 +29673,25 @@ bool CodeGenerator_containerElemIsArc(CodeGenerator* self, const char* container
         elem = spec_str_clone_if_buffered(spec_str_substring(rest, ((colonIdx) + (1)), spec_str_length(rest)));
     }
     } else {
-        return false;
+        return "none";
     }
     }
     }
     }
     if (((spec_str_equals(elem, "")) || (spec_str_equals(elem, "Any")))) {
-        return false;
+        return "none";
     }
-    return CodeGenerator_isArcType(self, elem) /* inst:CodeGenerator:isArcType */;
+    if (((spec_str_equals(elem, "String")) || (spec_str_equals(elem, "string")))) {
+        return "string";
+    }
+    if (CodeGenerator_isArcType(self, elem) /* inst:CodeGenerator:isArcType */) {
+        return "object";
+    }
+    return "none";
+}
+
+bool CodeGenerator_containerElemIsArc(CodeGenerator* self, const char* containerType) {
+    return spec_str_equals(CodeGenerator_containerElemKind(self, containerType) /* inst:CodeGenerator:containerElemKind */, "object");
 }
 
 bool CodeGenerator_isFreshAllocExpr(CodeGenerator* self, Expression* expr) {
@@ -29686,7 +29853,7 @@ const char* CodeGenerator_lookupFieldType(CodeGenerator* self, const char* class
     }
     const char* inherited = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_185 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_185) { for (size_t _i_185 = 0; _i_185 < _a_185->length; _i_185++) {
-        const char* baseName = (const char*)(intptr_t)_a_185->items[_i_185];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_185->items[_i_185]);
         do {
     if (spec_str_equals(inherited, "")) {
         inherited = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*, const char*))self->_vtable[160]))((CodeGenerator*)self, baseName, fieldName));
@@ -29785,7 +29952,7 @@ const char* CodeGenerator_findMethodImplementingClass(CodeGenerator* self, const
     }
     const char* inherited = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_188 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_188) { for (size_t _i_188 = 0; _i_188 < _a_188->length; _i_188++) {
-        const char* baseName = (const char*)(intptr_t)_a_188->items[_i_188];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_188->items[_i_188]);
         do {
     if (spec_str_equals(inherited, "")) {
         inherited = spec_str_clone_if_buffered(CodeGenerator_findMethodImplementingClass(self, baseName, methodName, paramCount) /* inst:CodeGenerator:findMethodImplementingClass */);
@@ -29812,7 +29979,7 @@ Member* CodeGenerator_lookupMethodMember(CodeGenerator* self, const char* classN
     }
     SPEC_AUTO Member* inherited = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
     ({ SpecArray* _a_189 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_189) { for (size_t _i_189 = 0; _i_189 < _a_189->length; _i_189++) {
-        const char* baseName = (const char*)(intptr_t)_a_189->items[_i_189];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_189->items[_i_189]);
         do {
     if (spec_str_equals(({ Member* _recv = (Member*)(inherited); (((const char* (*)(Member*))_recv->_vtable[34]))((Member*)_recv); }), "")) {
         spec_assign((void**)&inherited, (void*)(CodeGenerator_lookupMethodMember(self, baseName, methodName) /* inst:CodeGenerator:lookupMethodMember */));
@@ -29905,7 +30072,7 @@ const char* CodeGenerator_lookupMethodReturnType(CodeGenerator* self, const char
     }
     const char* inherited = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_193 = ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */; if (_a_193) { for (size_t _i_193 = 0; _i_193 < _a_193->length; _i_193++) {
-        const char* baseName = (const char*)(intptr_t)_a_193->items[_i_193];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_193->items[_i_193]);
         do {
     if (spec_str_equals(inherited, "")) {
         inherited = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*, const char*))self->_vtable[161]))((CodeGenerator*)self, baseName, methodName));
@@ -30097,7 +30264,7 @@ bool CodeGenerator_isSubclassOf(CodeGenerator* self, const char* subName, const 
     }
     bool matched = false;
     ({ SpecArray* _a_194 = ClassInfo_getBaseClasses(subCls) /* inst:ClassInfo:getBaseClasses */; if (_a_194) { for (size_t _i_194 = 0; _i_194 < _a_194->length; _i_194++) {
-        const char* parent = (const char*)(intptr_t)_a_194->items[_i_194];
+        const char* parent = spec_str_ring_copy((const char*)(intptr_t)_a_194->items[_i_194]);
         do {
     if (spec_str_equals(parent, baseName)) {
         matched = true;
@@ -30157,9 +30324,14 @@ const char* CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* c
         out = spec_str_append(spec_str_append(spec_str_append(out, "    self->"), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }))), " = \"\";\n");
     } else {
         if (spec_str_equals(ft, "Array")) {
+        const char* elemKind = spec_str_clone_if_buffered(CodeGenerator_containerElemKind(self, (((const char* (*)(CodeGenerator*, Type*))self->_vtable[155]))((CodeGenerator*)self, ({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }))) /* inst:CodeGenerator:containerElemKind */);
         const char* newCall = spec_str_clone_if_buffered("spec_array_new()");
-        if (CodeGenerator_containerElemIsArc(self, (((const char* (*)(CodeGenerator*, Type*))self->_vtable[155]))((CodeGenerator*)self, ({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }))) /* inst:CodeGenerator:containerElemIsArc */) {
+        if (spec_str_equals(elemKind, "object")) {
         newCall = spec_str_clone_if_buffered("spec_array_new_object()");
+    } else {
+        if (spec_str_equals(elemKind, "string")) {
+        newCall = spec_str_clone_if_buffered("spec_array_new_string()");
+    }
     }
         out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    self->"), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }))), " = "), newCall), ";\n");
     } else {
@@ -30197,7 +30369,7 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
     SPEC_AUTO SpecMap* savedVars = spec_map_new();
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localVars)));
     ({ SpecArray* _a_199 = outerKeys; if (_a_199) { for (size_t _i_199 = 0; _i_199 < _a_199->length; _i_199++) {
-        const char* k = (const char*)(intptr_t)_a_199->items[_i_199];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_199->items[_i_199]);
         do {
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         } while (0);
@@ -30207,7 +30379,11 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
         SPEC_AUTO Parameter* p = (Parameter*)spec_retain((void*)((Parameter*)(spec_array_get(fnExpr->anonParams, 0))));
         spec_map_set(self->localVars, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }), (((const char* (*)(CodeGenerator*, Type*))self->_vtable[155]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })));
         const char* pCType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })));
-        paramDecl = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("        ", pCType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = ("), pCType), ")(intptr_t)_a_"), spec_to_string_int(id)), "->items[_i_"), spec_to_string_int(id)), "];\n"));
+        const char* pRaw = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("(", pCType), ")(intptr_t)_a_"), spec_to_string_int(id)), "->items[_i_"), spec_to_string_int(id)), "]"));
+        if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "String")) {
+        pRaw = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_ring_copy((const char*)(intptr_t)_a_", spec_to_string_int(id)), "->items[_i_"), spec_to_string_int(id)), "])"));
+    }
+        paramDecl = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("        ", pCType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = "), pRaw), ";\n"));
     }
     const char* bodyC = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_200 = fnExpr->anonBody; if (_a_200) { for (size_t _i_200 = 0; _i_200 < _a_200->length; _i_200++) {
@@ -30231,8 +30407,13 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
         const char* outVar = spec_str_clone_if_buffered(spec_str_concat("_out_", spec_to_string_int(id)));
         const char* outNewC = spec_str_clone_if_buffered("spec_array_new()");
         if (((spec_array_length(fnExpr->anonParams)) > (0))) {
-        if (CodeGenerator_isArcType(self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(spec_array_get(fnExpr->anonParams, 0)); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })) /* inst:CodeGenerator:isArcType */) {
+        const char* pName = spec_str_clone_if_buffered(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(spec_array_get(fnExpr->anonParams, 0)); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }));
+        if (CodeGenerator_isArcType(self, pName) /* inst:CodeGenerator:isArcType */) {
         outNewC = spec_str_clone_if_buffered("spec_array_new_object()");
+    } else {
+        if (spec_str_equals(pName, "String")) {
+        outNewC = spec_str_clone_if_buffered("spec_array_new_string()");
+    }
     }
     }
         const char* out = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecArray* ", arrVar), " = "), targetC), "; SpecArray* "), outVar), " = "), outNewC), "; if ("), arrVar), ") { for (size_t "), idxVar), " = 0; "), idxVar), " < "), arrVar), "->length; "), idxVar), "++) {\n"));
@@ -30260,6 +30441,10 @@ const char* CodeGenerator_generateInlineArrayOp(CodeGenerator* self, const char*
         const char* outNewC = spec_str_clone_if_buffered("spec_array_new()");
         if (CodeGenerator_isArcType(self, ({ Type* _recv = (Type*)(fnExpr->anonReturnType); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })) /* inst:CodeGenerator:isArcType */) {
         outNewC = spec_str_clone_if_buffered("spec_array_new_object()");
+    } else {
+        if (spec_str_equals(({ Type* _recv = (Type*)(fnExpr->anonReturnType); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "String")) {
+        outNewC = spec_str_clone_if_buffered("spec_array_new_string()");
+    }
     }
         const char* out = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("({ SpecArray* ", arrVar), " = "), targetC), "; SpecArray* "), outVar), " = "), outNewC), "; if ("), arrVar), ") { for (size_t "), idxVar), " = 0; "), idxVar), " < "), arrVar), "->length; "), idxVar), "++) {\n"));
         out = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(out, paramDecl), "        "), retCType), " "), predVar), " = 0;\n        do {\n"), bodyC), "        } while (0);\n        spec_array_add("), outVar), ", (void*)(intptr_t)("), predVar), "));\n    } } "), outVar), "; })"));
@@ -30276,7 +30461,7 @@ const char* CodeGenerator_generateInlineArrayFold(CodeGenerator* self, const cha
     SPEC_AUTO SpecMap* savedVars = spec_map_new();
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localVars)));
     ({ SpecArray* _a_201 = outerKeys; if (_a_201) { for (size_t _i_201 = 0; _i_201 < _a_201->length; _i_201++) {
-        const char* k = (const char*)(intptr_t)_a_201->items[_i_201];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_201->items[_i_201]);
         do {
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         } while (0);
@@ -30306,7 +30491,11 @@ const char* CodeGenerator_generateInlineArrayFold(CodeGenerator* self, const cha
         SPEC_AUTO Parameter* p1 = (Parameter*)spec_retain((void*)((Parameter*)(spec_array_get(fnExpr->anonParams, 1))));
         spec_map_set(self->localVars, ({ Parameter* _recv = (Parameter*)(p1); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }), (((const char* (*)(CodeGenerator*, Type*))self->_vtable[155]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p1); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })));
         const char* p1CType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p1); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })));
-        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "        "), p1CType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p1); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = ("), p1CType), ")(intptr_t)"), arrVar), "->items["), idxVar), "];\n");
+        const char* p1Raw = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("(", p1CType), ")(intptr_t)"), arrVar), "->items["), idxVar), "]"));
+        if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p1); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "String")) {
+        p1Raw = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("spec_str_ring_copy((const char*)(intptr_t)", arrVar), "->items["), idxVar), "])"));
+    }
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "        "), p1CType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p1); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = "), p1Raw), ";\n");
     }
     const char* bodyC = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_202 = fnExpr->anonBody; if (_a_202) { for (size_t _i_202 = 0; _i_202 < _a_202->length; _i_202++) {
@@ -30331,7 +30520,7 @@ const char* CodeGenerator_generateInlineMapEach(CodeGenerator* self, const char*
     SPEC_AUTO SpecMap* savedVars = spec_map_new();
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localVars)));
     ({ SpecArray* _a_203 = outerKeys; if (_a_203) { for (size_t _i_203 = 0; _i_203 < _a_203->length; _i_203++) {
-        const char* k = (const char*)(intptr_t)_a_203->items[_i_203];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_203->items[_i_203]);
         do {
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         } while (0);
@@ -30345,13 +30534,17 @@ const char* CodeGenerator_generateInlineMapEach(CodeGenerator* self, const char*
     if (((spec_array_length(fnExpr->anonParams)) >= (1))) {
         SPEC_AUTO Parameter* p0 = (Parameter*)spec_retain((void*)((Parameter*)(spec_array_get(fnExpr->anonParams, 0))));
         spec_map_set(self->localVars, ({ Parameter* _recv = (Parameter*)(p0); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }), "String");
-        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "            const char* "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p0); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = "), eVar), "->key;\n");
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "            const char* "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p0); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = spec_str_ring_copy("), eVar), "->key);\n");
     }
     if (((spec_array_length(fnExpr->anonParams)) >= (2))) {
         SPEC_AUTO Parameter* p1 = (Parameter*)spec_retain((void*)((Parameter*)(spec_array_get(fnExpr->anonParams, 1))));
         spec_map_set(self->localVars, ({ Parameter* _recv = (Parameter*)(p1); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }), (((const char* (*)(CodeGenerator*, Type*))self->_vtable[155]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p1); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })));
         const char* p1CType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p1); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })));
-        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "            "), p1CType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p1); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = ("), p1CType), ")(intptr_t)"), eVar), "->value;\n");
+        const char* p1Raw = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("(", p1CType), ")(intptr_t)"), eVar), "->value"));
+        if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p1); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "String")) {
+        p1Raw = spec_str_clone_if_buffered(spec_str_concat(spec_str_concat("spec_str_ring_copy((const char*)(intptr_t)", eVar), "->value)"));
+    }
+        paramDecl = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramDecl, "            "), p1CType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p1); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = "), p1Raw), ";\n");
     }
     const char* bodyC = spec_str_clone_if_buffered("");
     ({ SpecArray* _a_204 = fnExpr->anonBody; if (_a_204) { for (size_t _i_204 = 0; _i_204 < _a_204->length; _i_204++) {
@@ -30403,8 +30596,13 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     if (spec_str_equals(kind, "ARRAY")) {
         const char* newCall = spec_str_clone_if_buffered("spec_array_new()");
         if ((!spec_str_equals(self->containerHint, ""))) {
-        if (CodeGenerator_containerElemIsArc(self, self->containerHint) /* inst:CodeGenerator:containerElemIsArc */) {
+        const char* hintKind = spec_str_clone_if_buffered(CodeGenerator_containerElemKind(self, self->containerHint) /* inst:CodeGenerator:containerElemKind */);
+        if (spec_str_equals(hintKind, "object")) {
         newCall = spec_str_clone_if_buffered("spec_array_new_object()");
+    } else {
+        if (spec_str_equals(hintKind, "string")) {
+        newCall = spec_str_clone_if_buffered("spec_array_new_string()");
+    }
     }
         self->containerHint = spec_str_clone_if_buffered("");
     } else {
@@ -30412,6 +30610,10 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         const char* elemT = spec_str_clone_if_buffered(CodeGenerator_inferTargetType(self, spec_array_get(expr->arrayItems, 0)) /* inst:CodeGenerator:inferTargetType */);
         if (CodeGenerator_isArcType(self, elemT) /* inst:CodeGenerator:isArcType */) {
         newCall = spec_str_clone_if_buffered("spec_array_new_object()");
+    } else {
+        if (((spec_str_equals(elemT, "String")) || (spec_str_equals(elemT, "string")))) {
+        newCall = spec_str_clone_if_buffered("spec_array_new_string()");
+    }
     }
     }
     }
@@ -30874,7 +31076,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         SPEC_AUTO SpecMap* savedVars = spec_map_new();
         SPEC_AUTO SpecArray* outerKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localVars)));
         ({ SpecArray* _a_217 = outerKeys; if (_a_217) { for (size_t _i_217 = 0; _i_217 < _a_217->length; _i_217++) {
-        const char* k = (const char*)(intptr_t)_a_217->items[_i_217];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_217->items[_i_217]);
         do {
     spec_map_set(savedVars, k, spec_map_get_string(self->localVars, k, ""));
         } while (0);
@@ -30882,20 +31084,27 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         SPEC_AUTO SpecMap* savedScopeVars = spec_map_new();
         SPEC_AUTO SpecArray* outerScopeKeys = (SpecArray*)spec_retain((void*)(spec_map_keys(self->localScopeVars)));
         ({ SpecArray* _a_218 = outerScopeKeys; if (_a_218) { for (size_t _i_218 = 0; _i_218 < _a_218->length; _i_218++) {
-        const char* k = (const char*)(intptr_t)_a_218->items[_i_218];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_218->items[_i_218]);
         do {
     spec_map_set(savedScopeVars, k, spec_map_get_string(self->localScopeVars, k, ""));
         } while (0);
     } } });
         spec_assign_transfer((void**)&self->localScopeVars, (void*)(spec_map_new()));
         const char* paramsC = spec_str_clone_if_buffered("void* _env_ptr");
-        SPEC_AUTO SpecArray* paramNames = ({ SpecArray* _arr = spec_array_new(); _arr; });
+        SPEC_AUTO SpecArray* paramNames = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
+        const char* paramBinds = spec_str_clone_if_buffered("");
         ({ SpecArray* _a_219 = expr->anonParams; if (_a_219) { for (size_t _i_219 = 0; _i_219 < _a_219->length; _i_219++) {
         Parameter* p = (Parameter*)(intptr_t)_a_219->items[_i_219];
         do {
     spec_array_add(paramNames, (void*)(({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
     spec_map_set(self->localVars, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }), (((const char* (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })));
-    paramsC = spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramsC, ", "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }))), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
+    const char* pCType = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })));
+    if (spec_str_equals(({ Type* _recv = (Type*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })); (((const char* (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }), "String")) {
+        paramsC = spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramsC, ", "), pCType), " _p_"), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
+        paramBinds = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramBinds, "    "), pCType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), " = spec_str_ring_copy(_p_"), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))), ");\n");
+    } else {
+        paramsC = spec_str_append(spec_str_append(spec_str_append(spec_str_append(paramsC, ", "), pCType), " "), (((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, ({ Parameter* _recv = (Parameter*)(p); (((const char* (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })));
+    }
         } while (0);
     } } });
         const char* savedRetVar = spec_str_clone_if_buffered(self->inlineReturnVar);
@@ -30909,6 +31118,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
     bodyC = spec_str_append(bodyC, CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */);
         } while (0);
     } } });
+        bodyC = spec_str_clone_if_buffered(spec_str_concat(paramBinds, bodyC));
         self->inlineReturnVar = spec_str_clone_if_buffered(savedRetVar);
         self->inlineReturnLabel = spec_str_clone_if_buffered(savedRetLbl);
         spec_assign((void**)&self->localVars, (void*)(savedVars));
@@ -30928,7 +31138,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         capReleases = spec_str_append(capReleases, "    if (_env->self) spec_release((void*)_env->self);\n");
     }
         ({ SpecArray* _a_221 = outerKeys; if (_a_221) { for (size_t _i_221 = 0; _i_221 < _a_221->length; _i_221++) {
-        const char* k = (const char*)(intptr_t)_a_221->items[_i_221];
+        const char* k = spec_str_ring_copy((const char*)(intptr_t)_a_221->items[_i_221]);
         do {
     if (((spec_array_index_of_str(paramNames, k, (-(1)))) < (0))) {
         const char* cVar = spec_str_clone_if_buffered((((const char* (*)(CodeGenerator*, const char*))self->_vtable[181]))((CodeGenerator*)self, k));
@@ -31043,9 +31253,14 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("    ", cType), " "), varName), " = \"\";\n");
     }
         if (spec_str_equals(vTypeName, "Array")) {
+        const char* elemKind = spec_str_clone_if_buffered(CodeGenerator_containerElemKind(self, (((const char* (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, stmt->varType)) /* inst:CodeGenerator:containerElemKind */);
         const char* newCall = spec_str_clone_if_buffered("spec_array_new()");
-        if (CodeGenerator_containerElemIsArc(self, (((const char* (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, stmt->varType)) /* inst:CodeGenerator:containerElemIsArc */) {
+        if (spec_str_equals(elemKind, "object")) {
         newCall = spec_str_clone_if_buffered("spec_array_new_object()");
+    } else {
+        if (spec_str_equals(elemKind, "string")) {
+        newCall = spec_str_clone_if_buffered("spec_array_new_string()");
+    }
     }
         return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("    ", autoPrefix), cType), " "), varName), " = "), newCall), ";\n");
     }
@@ -31122,7 +31337,7 @@ const char* CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt
         SPEC_AUTO ClassInfo* fwdCls = (ClassInfo*)spec_retain((void*)((ClassInfo*)((((ClassInfo* (*)(CodeGenerator*, const char*))self->_vtable[157]))((CodeGenerator*)self, self->currentClassName))));
         const char* dispatchCls = spec_str_clone_if_buffered("");
         ({ SpecArray* _a_224 = ClassInfo_getBaseClasses(fwdCls) /* inst:ClassInfo:getBaseClasses */; if (_a_224) { for (size_t _i_224 = 0; _i_224 < _a_224->length; _i_224++) {
-        const char* baseName = (const char*)(intptr_t)_a_224->items[_i_224];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_224->items[_i_224]);
         do {
     if (spec_str_equals(dispatchCls, "")) {
         const char* implCls = spec_str_clone_if_buffered(CodeGenerator_findMethodImplementingClass(self, baseName, self->currentMethodName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */);
@@ -31425,7 +31640,7 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     spec_assign_transfer((void**)&self->overriddenMethods, (void*)(spec_map_new()));
     spec_assign_transfer((void**)&self->classesWithToString, (void*)(spec_map_new()));
     self->methodSlotCount = 0;
-    spec_assign_transfer((void**)&self->slotNames, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    spec_assign_transfer((void**)&self->slotNames, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
     ({ SpecArray* _a_241 = flattenedClasses; if (_a_241) { for (size_t _i_241 = 0; _i_241 < _a_241->length; _i_241++) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_241->items[_i_241];
         do {
@@ -31519,7 +31734,7 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
 
 void CodeGenerator_collectAncestors(CodeGenerator* self, ClassInfo* c, SpecArray* allClasses, SpecArray* acc) {
     ({ SpecArray* _a_247 = ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */; if (_a_247) { for (size_t _i_247 = 0; _i_247 < _a_247->length; _i_247++) {
-        const char* baseName = (const char*)(intptr_t)_a_247->items[_i_247];
+        const char* baseName = spec_str_ring_copy((const char*)(intptr_t)_a_247->items[_i_247]);
         do {
     if (((spec_array_index_of_str(acc, baseName, (-(1)))) < (0))) {
         spec_array_add(acc, (void*)(baseName));
@@ -31546,14 +31761,14 @@ const char* CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* 
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_249->items[_i_249];
         do {
     if ((((!((((bool (*)(CodeGenerator*, const char*))self->_vtable[183]))((CodeGenerator*)self, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))) && ((!spec_str_equals(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */, "Enum"))))) {
-        SPEC_AUTO SpecArray* ancestors = ({ SpecArray* _arr = spec_array_new(); _arr; });
+        SPEC_AUTO SpecArray* ancestors = ({ SpecArray* _arr = spec_array_new_string(); _arr; });
         CodeGenerator_collectAncestors(self, c, classes, ancestors) /* inst:CodeGenerator:collectAncestors */;
         if (((spec_array_length(ancestors)) > (0))) {
         out = spec_str_append(spec_str_append(spec_str_append(out, "    if (strcmp(actual, \""), ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })), "\") == 0) {\n");
         out = spec_str_append(out, "        return ");
         bool firstA = true;
         ({ SpecArray* _a_250 = ancestors; if (_a_250) { for (size_t _i_250 = 0; _i_250 < _a_250->length; _i_250++) {
-        const char* aName = (const char*)(intptr_t)_a_250->items[_i_250];
+        const char* aName = spec_str_ring_copy((const char*)(intptr_t)_a_250->items[_i_250]);
         do {
     if ((!(firstA))) {
         out = spec_str_append(out, " || ");
@@ -31755,8 +31970,8 @@ void Loader_init(Loader* self) {
     spec_assign_transfer((void**)&self->loadedFiles, (void*)(spec_map_new()));
     spec_assign_transfer((void**)&self->loadedClasses, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     spec_assign_transfer((void**)&self->seenClassNames, (void*)(spec_map_new()));
-    spec_assign_transfer((void**)&self->parseErrors, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    spec_assign_transfer((void**)&self->groupTargets, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    spec_assign_transfer((void**)&self->parseErrors, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
+    spec_assign_transfer((void**)&self->groupTargets, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
     spec_assign_transfer((void**)&self->groupFragments, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
 }
 
@@ -31780,7 +31995,7 @@ const char* Loader_resolvePath(Loader* self, const char* rawPath) {
 }
 
 SpecArray* Loader_expandWildcard(Loader* self, const char* rawPath) {
-    return (SpecArray*)spec_retain((void*)(((spec_str_equals(rawPath, "compiler:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/compiler/Token.spec")); spec_array_add(_arr, (void*)("lib/compiler/Lexer.spec")); spec_array_add(_arr, (void*)("lib/compiler/Parser.spec")); spec_array_add(_arr, (void*)("lib/compiler/Linter.spec")); spec_array_add(_arr, (void*)("lib/compiler/TypeChecker.spec")); spec_array_add(_arr, (void*)("lib/compiler/CBackendUtils.spec")); spec_array_add(_arr, (void*)("lib/compiler/RuntimePrelude.spec")); spec_array_add(_arr, (void*)("lib/compiler/DeclarationGenerator.spec")); spec_array_add(_arr, (void*)("lib/compiler/BuiltinCallGenerator.spec")); spec_array_add(_arr, (void*)("lib/compiler/CodeGenerator.spec")); spec_array_add(_arr, (void*)("lib/compiler/Loader.spec")); spec_array_add(_arr, (void*)("lib/compiler/Driver.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:math:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/math/Math.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:sys:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/sys/Parallel.spec")); spec_array_add(_arr, (void*)("lib/base/sys/Process.spec")); spec_array_add(_arr, (void*)("lib/base/sys/SourceLocation.spec")); spec_array_add(_arr, (void*)("lib/base/sys/StackFrame.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:core:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/core/Stringable.spec")); spec_array_add(_arr, (void*)("lib/base/core/Any.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:struct:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/struct/Array.spec")); spec_array_add(_arr, (void*)("lib/base/struct/Map.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:reflect:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/reflect/Type.spec")); spec_array_add(_arr, (void*)("lib/base/reflect/Parameter.spec")); spec_array_add(_arr, (void*)("lib/base/reflect/Member.spec")); spec_array_add(_arr, (void*)("lib/base/reflect/ClassInfo.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:meta:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/meta/AST.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:iterator:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/iterator/Loop.spec")); spec_array_add(_arr, (void*)("lib/base/iterator/LoopControl.spec")); spec_array_add(_arr, (void*)("lib/base/iterator/LoopCallback.spec")); spec_array_add(_arr, (void*)("lib/base/iterator/While.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:io:*")) ? (({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("lib/base/io/File.spec")); spec_array_add(_arr, (void*)("lib/base/io/Input.spec")); spec_array_add(_arr, (void*)("lib/base/io/InputHandler.spec")); spec_array_add(_arr, (void*)("lib/base/io/Output.spec")); spec_array_add(_arr, (void*)("lib/base/io/Ansi.spec")); _arr; })) : (({ SpecArray* _arr = spec_array_new(); _arr; })))))))))))))))))))));
+    return (SpecArray*)spec_retain((void*)(((spec_str_equals(rawPath, "compiler:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/compiler/Token.spec")); spec_array_add(_arr, (void*)("lib/compiler/Lexer.spec")); spec_array_add(_arr, (void*)("lib/compiler/Parser.spec")); spec_array_add(_arr, (void*)("lib/compiler/Linter.spec")); spec_array_add(_arr, (void*)("lib/compiler/TypeChecker.spec")); spec_array_add(_arr, (void*)("lib/compiler/CBackendUtils.spec")); spec_array_add(_arr, (void*)("lib/compiler/RuntimePrelude.spec")); spec_array_add(_arr, (void*)("lib/compiler/DeclarationGenerator.spec")); spec_array_add(_arr, (void*)("lib/compiler/BuiltinCallGenerator.spec")); spec_array_add(_arr, (void*)("lib/compiler/CodeGenerator.spec")); spec_array_add(_arr, (void*)("lib/compiler/Loader.spec")); spec_array_add(_arr, (void*)("lib/compiler/Driver.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:math:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/math/Math.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:sys:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/sys/Parallel.spec")); spec_array_add(_arr, (void*)("lib/base/sys/Process.spec")); spec_array_add(_arr, (void*)("lib/base/sys/SourceLocation.spec")); spec_array_add(_arr, (void*)("lib/base/sys/StackFrame.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:core:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/core/Stringable.spec")); spec_array_add(_arr, (void*)("lib/base/core/Any.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:struct:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/struct/Array.spec")); spec_array_add(_arr, (void*)("lib/base/struct/Map.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:reflect:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/reflect/Type.spec")); spec_array_add(_arr, (void*)("lib/base/reflect/Parameter.spec")); spec_array_add(_arr, (void*)("lib/base/reflect/Member.spec")); spec_array_add(_arr, (void*)("lib/base/reflect/ClassInfo.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:meta:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/meta/AST.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:iterator:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/iterator/Loop.spec")); spec_array_add(_arr, (void*)("lib/base/iterator/LoopControl.spec")); spec_array_add(_arr, (void*)("lib/base/iterator/LoopCallback.spec")); spec_array_add(_arr, (void*)("lib/base/iterator/While.spec")); _arr; })) : (((spec_str_equals(rawPath, "base:io:*")) ? (({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("lib/base/io/File.spec")); spec_array_add(_arr, (void*)("lib/base/io/Input.spec")); spec_array_add(_arr, (void*)("lib/base/io/InputHandler.spec")); spec_array_add(_arr, (void*)("lib/base/io/Output.spec")); spec_array_add(_arr, (void*)("lib/base/io/Ansi.spec")); _arr; })) : (({ SpecArray* _arr = spec_array_new(); _arr; })))))))))))))))))))));
 }
 
 void Loader_loadFile(Loader* self, const char* filePath) {
@@ -31797,7 +32012,7 @@ void Loader_loadFile(Loader* self, const char* filePath) {
     SPEC_AUTO SpecArray* tokens = (SpecArray*)spec_retain((void*)(Lexer_tokenize(lexer) /* inst:Lexer:tokenize */));
     if (({ Lexer* _recv = (Lexer*)(lexer); (((bool (*)(Lexer*))_recv->_vtable[92]))((Lexer*)_recv); })) {
         ({ SpecArray* _a_253 = ({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[93]))((Lexer*)_recv); }); if (_a_253) { for (size_t _i_253 = 0; _i_253 < _a_253->length; _i_253++) {
-        const char* err = (const char*)(intptr_t)_a_253->items[_i_253];
+        const char* err = spec_str_ring_copy((const char*)(intptr_t)_a_253->items[_i_253]);
         do {
     spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat("  [LexError] [", filePath), "] "), err)));
         } while (0);
@@ -31808,7 +32023,7 @@ void Loader_loadFile(Loader* self, const char* filePath) {
     SPEC_AUTO ProgramNode* prog = (ProgramNode*)spec_retain((void*)((ProgramNode*)(Parser_parseProgram(parser) /* inst:Parser:parseProgram */)));
     if (({ Parser* _recv = (Parser*)(parser); (((bool (*)(Parser*))_recv->_vtable[92]))((Parser*)_recv); })) {
         ({ SpecArray* _a_254 = ({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[93]))((Parser*)_recv); }); if (_a_254) { for (size_t _i_254 = 0; _i_254 < _a_254->length; _i_254++) {
-        const char* err = (const char*)(intptr_t)_a_254->items[_i_254];
+        const char* err = spec_str_ring_copy((const char*)(intptr_t)_a_254->items[_i_254]);
         do {
     spec_array_add(self->parseErrors, (void*)(err));
         } while (0);
@@ -31858,7 +32073,7 @@ void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
     SPEC_AUTO SpecArray* wildcards = (SpecArray*)spec_retain((void*)(Loader_expandWildcard(self, importStr) /* inst:Loader:expandWildcard */));
     if (((spec_array_length(wildcards)) > (0))) {
         ({ SpecArray* _a_259 = wildcards; if (_a_259) { for (size_t _i_259 = 0; _i_259 < _a_259->length; _i_259++) {
-        const char* f = (const char*)(intptr_t)_a_259->items[_i_259];
+        const char* f = spec_str_ring_copy((const char*)(intptr_t)_a_259->items[_i_259]);
         do {
     Loader_loadFile(self, f) /* inst:Loader:loadFile */;
         } while (0);
@@ -32112,8 +32327,8 @@ ProgramNode* Loader_loadProgram(Loader* self, const char* rootPath) {
     spec_assign_transfer((void**)&self->loadedFiles, (void*)(spec_map_new()));
     spec_assign_transfer((void**)&self->loadedClasses, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     spec_assign_transfer((void**)&self->seenClassNames, (void*)(spec_map_new()));
-    spec_assign_transfer((void**)&self->parseErrors, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    spec_assign_transfer((void**)&self->groupTargets, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    spec_assign_transfer((void**)&self->parseErrors, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
+    spec_assign_transfer((void**)&self->groupTargets, (void*)(({ SpecArray* _arr = spec_array_new_string(); _arr; })));
     spec_assign_transfer((void**)&self->groupFragments, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     Loader_loadFile(self, "lib/base/core/Stringable.spec") /* inst:Loader:loadFile */;
     Loader_loadFile(self, "lib/base/core/Any.spec") /* inst:Loader:loadFile */;
@@ -32128,7 +32343,7 @@ void Loader_appendImplicitAny(Loader* self) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_270->items[_i_270];
         do {
     if ((((((((!spec_str_equals(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */, "Enum"))) && (((spec_array_length(ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */)) == (0))))) && ((!spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), "Any"))))) && ((!spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), "Stringable"))))) {
-        ClassInfo_withBaseClasses(c, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("Any")); _arr; }), ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */) /* inst:ClassInfo:withBaseClasses */;
+        ClassInfo_withBaseClasses(c, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ({ SpecArray* _arr = spec_array_new_string(); spec_array_add(_arr, (void*)("Any")); _arr; }), ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */) /* inst:ClassInfo:withBaseClasses */;
     }
         } while (0);
     } } });

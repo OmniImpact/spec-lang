@@ -279,9 +279,12 @@ Class is CodeGeneratorInference{
 						if (ft == "String" || ft == "string") {
 							out: out . "    self->" . self:cIdent(name: m:getName()) . " = \"\";\n";
 						} else if (ft == "Array") {
+							local String is elemKind: self:containerElemKind(containerType: self:formatTypeString(t: m:getType()));
 							local String is newCall: "spec_array_new()";
-							if (self:containerElemIsArc(containerType: self:formatTypeString(t: m:getType()))) {
+							if (elemKind == "object") {
 								newCall: "spec_array_new_object()";
+							} else if (elemKind == "string") {
+								newCall: "spec_array_new_string()";
 							}
 							out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . newCall . ";\n";
 						} else if (ft == "Map") {
@@ -323,7 +326,11 @@ Class is CodeGeneratorInference{
 			local Parameter is p: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
 			local String is pCType: self:cTypeFor(typeName: p:getType():getName());
-			paramDecl: "        " . pCType . " " . self:cIdent(name: p:getName()) . " = (" . pCType . ")(intptr_t)_a_" . id . "->items[_i_" . id . "];\n";
+			local String is pRaw: "(" . pCType . ")(intptr_t)_a_" . id . "->items[_i_" . id . "]";
+			if (p:getType():getName() == "String") {
+				pRaw: "spec_str_ring_copy((const char*)(intptr_t)_a_" . id . "->items[_i_" . id . "])";
+			}
+			paramDecl: "        " . pCType . " " . self:cIdent(name: p:getName()) . " = " . pRaw . ";\n";
 		}
 
 		local String is bodyC: "";
@@ -348,8 +355,11 @@ Class is CodeGeneratorInference{
 			local String is outVar: "_out_" . id;
 			local String is outNewC: "spec_array_new()";
 			if (fnExpr:anonParams:length() > 0) {
-				if (self:isArcType(typeName: fnExpr:anonParams:get(index: 0):getType():getName())) {
+				local String is pName: fnExpr:anonParams:get(index: 0):getType():getName();
+				if (self:isArcType(typeName: pName)) {
 					outNewC: "spec_array_new_object()";
+				} else if (pName == "String") {
+					outNewC: "spec_array_new_string()";
 				}
 			}
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = " . outNewC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
@@ -375,6 +385,8 @@ Class is CodeGeneratorInference{
 			local String is outNewC: "spec_array_new()";
 			if (self:isArcType(typeName: fnExpr:anonReturnType:getName())) {
 				outNewC: "spec_array_new_object()";
+			} else if (fnExpr:anonReturnType:getName() == "String") {
+				outNewC: "spec_array_new_string()";
 			}
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = " . outNewC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
 			out: out . paramDecl . "        " . retCType . " " . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ", (void*)(intptr_t)(" . predVar . "));\n    } } " . outVar . "; })";
@@ -421,7 +433,11 @@ Class is CodeGeneratorInference{
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
 			self:localVars:set(key: p1:getName(), value: self:formatTypeString(t: p1:getType()));
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
-			paramDecl: paramDecl . "        " . p1CType . " " . self:cIdent(name: p1:getName()) . " = (" . p1CType . ")(intptr_t)" . arrVar . "->items[" . idxVar . "];\n";
+			local String is p1Raw: "(" . p1CType . ")(intptr_t)" . arrVar . "->items[" . idxVar . "]";
+			if (p1:getType():getName() == "String") {
+				p1Raw: "spec_str_ring_copy((const char*)(intptr_t)" . arrVar . "->items[" . idxVar . "])";
+			}
+			paramDecl: paramDecl . "        " . p1CType . " " . self:cIdent(name: p1:getName()) . " = " . p1Raw . ";\n";
 		}
 
 		local String is bodyC: "";
@@ -461,13 +477,17 @@ Class is CodeGeneratorInference{
 		if (fnExpr:anonParams:length() >= 1) {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p0:getName(), value: "String");
-			paramDecl: paramDecl . "            const char* " . self:cIdent(name: p0:getName()) . " = " . eVar . "->key;\n";
+			paramDecl: paramDecl . "            const char* " . self:cIdent(name: p0:getName()) . " = spec_str_ring_copy(" . eVar . "->key);\n";
 		}
 		if (fnExpr:anonParams:length() >= 2) {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
 			self:localVars:set(key: p1:getName(), value: self:formatTypeString(t: p1:getType()));
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
-			paramDecl: paramDecl . "            " . p1CType . " " . self:cIdent(name: p1:getName()) . " = (" . p1CType . ")(intptr_t)" . eVar . "->value;\n";
+			local String is p1Raw: "(" . p1CType . ")(intptr_t)" . eVar . "->value";
+			if (p1:getType():getName() == "String") {
+				p1Raw: "spec_str_ring_copy((const char*)(intptr_t)" . eVar . "->value)";
+			}
+			paramDecl: paramDecl . "            " . p1CType . " " . self:cIdent(name: p1:getName()) . " = " . p1Raw . ";\n";
 		}
 
 		local String is bodyC: "";

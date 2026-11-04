@@ -53,9 +53,12 @@ Class is CodeGeneratorProgram{
 					return "    " . cType . " " . varName . " = \"\";\n";
 				}
 				if (vTypeName == "Array") {
+					local String is elemKind: self:containerElemKind(containerType: self:formatVarTypeString(t: stmt:varType));
 					local String is newCall: "spec_array_new()";
-					if (self:containerElemIsArc(containerType: self:formatVarTypeString(t: stmt:varType))) {
+					if (elemKind == "object") {
 						newCall: "spec_array_new_object()";
+					} else if (elemKind == "string") {
+						newCall: "spec_array_new_string()";
 					}
 					return "    " . autoPrefix . cType . " " . varName . " = " . newCall . ";\n";
 				}

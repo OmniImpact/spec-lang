@@ -164,10 +164,11 @@ Class is CodeGenerator{
 		return false;
 	}
 
-	## Determines whether a container's element/value type is ARC-managed, from a
-	## canonical container type string ("Array of X", "Array:X", "Map of K to V",
-	## "Map:K:V"). Any-typed and unknown containers are never element-owned.
-	Function of Boolean is containerElemIsArc(String is containerType){
+	## Classifies a container's element/value ownership from a canonical container
+	## type string ("Array of X", "Array:X", "Map of K to V", "Map:K:V").
+	## Returns "object" (ARC-managed), "string" (container-owned copy), or
+	## "none" (primitives, Any-typed, or unknown — never element-owned).
+	Function of String is containerElemKind(String is containerType){
 		local String is elem: "";
 		if (containerType:startsWith(prefix: "Array of ")) {
 			elem: containerType:substring(start: 9, end: containerType:length());
@@ -186,12 +187,25 @@ Class is CodeGenerator{
 				elem: rest:substring(start: colonIdx + 1, end: rest:length());
 			}
 		} else {
-			return false;
+			return "none";
 		}
 		if (elem == "" || elem == "Any") {
-			return false;
+			return "none";
 		}
-		return self:isArcType(typeName: elem);
+		if (elem == "String" || elem == "string") {
+			return "string";
+		}
+		if (self:isArcType(typeName: elem)) {
+			return "object";
+		}
+		return "none";
+	}
+
+	## Determines whether a container's element/value type is ARC-managed, from a
+	## canonical container type string. Any-typed and unknown containers are
+	## never element-owned.
+	Function of Boolean is containerElemIsArc(String is containerType){
+		return self:containerElemKind(containerType: containerType) == "object";
 	}
 
 	Function of Boolean is isFreshAllocExpr(Expression is expr){

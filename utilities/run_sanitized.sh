@@ -32,9 +32,12 @@ echo "== Building ASan/UBSan-instrumented compiler =="
 	-fno-omit-frame-pointer \
 	"$ROOT/bootstrap/spec.c" -o "$ROOT/spec-asan" -pthread -lm
 
-# Leak detection is OFF by default: the compiler intentionally retains its
-# working set (AST, emitted C, module cache) until process exit, so LeakSanitizer
-# reports ~768 sites (~11 MB for a single compile) and every run would fail.
+# Leak detection is OFF by default. The ARC engine fully reclaims the compiler's
+# object graph (AST, tokens, class tree — zero spec_alloc leaks), and an atexit
+# shutdown reclaims the string ring buffer. What remains is string-lifetime
+# churn (~0.5 MB for a self-compile): strings are not refcounted, so locals,
+# temporaries, and clone chains are unreachable-but-never-freed at process exit.
+# Flipping this on requires string-lifetime ownership (planned follow-up).
 # The gate below covers the dangerous classes: use-after-free, out-of-bounds,
 # double-free, and fatal undefined behavior.
 # Opt back in for leak accounting with: ASAN_OPTIONS=detect_leaks=1 ./utilities/run_sanitized.sh
