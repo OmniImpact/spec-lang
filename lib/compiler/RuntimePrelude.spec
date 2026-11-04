@@ -10,7 +10,15 @@ Class is RuntimePrelude{
 		base:iterator:*
 	];
 
+	## Garbage collection mode: "" (default ARC) or "boehm"
+	local String is gcMode: "";
+
 	replace Function is init(){
+		self:gcMode: "";
+	}
+
+	Function is setGcMode(String is mode){
+		self:gcMode: mode;
 	}
 
 	## Emits the complete Spec C11 runtime prelude.
@@ -35,6 +43,30 @@ Class is RuntimePrelude{
 		p: p . "#include <sys/ioctl.h>\n";
 		p: p . "#include <sys/resource.h>\n";
 		p: p . "#include <stdatomic.h>\n\n";
+
+		if (self:gcMode == "boehm") {
+			p: p . "/* Boehm GC Integration */\n";
+			p: p . "#define SPEC_GC_BOEHM 1\n";
+			p: p . "extern void GC_init(void);\n";
+			p: p . "extern void* GC_malloc(size_t size);\n";
+			p: p . "extern void* GC_malloc_atomic(size_t size);\n";
+			p: p . "extern void* GC_realloc(void* ptr, size_t size);\n";
+			p: p . "extern void GC_free(void* ptr);\n";
+			p: p . "extern int GC_pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg);\n\n";
+			p: p . "static inline char* spec_gc_strdup(const char* s) {\n";
+			p: p . "    if (!s) return NULL;\n";
+			p: p . "    size_t len = strlen(s);\n";
+			p: p . "    char* copy = (char*)GC_malloc_atomic(len + 1);\n";
+			p: p . "    if (copy) memcpy(copy, s, len + 1);\n";
+			p: p . "    return copy;\n";
+			p: p . "}\n\n";
+			p: p . "#define malloc(sz) GC_malloc(sz)\n";
+			p: p . "#define calloc(n, sz) GC_malloc((n) * (sz))\n";
+			p: p . "#define realloc(ptr, sz) GC_realloc(ptr, sz)\n";
+			p: p . "#define strdup(s) spec_gc_strdup(s)\n";
+			p: p . "#define free(ptr) ((void)(ptr))\n";
+			p: p . "#define pthread_create(t, a, fn, arg) GC_pthread_create(t, a, fn, arg)\n\n";
+		}
 
 		p: p . "/* Spec Runtime Panic & Safety Utilities */\n";
 		p: p . "void spec_panic(const char* msg) {\n";

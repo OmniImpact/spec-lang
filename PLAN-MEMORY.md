@@ -171,7 +171,7 @@ Implement compiler-managed deterministic reference counting directly in the C11 
 - [x] **Task 5: Reference Counting Engine** — Implement `SpecHeader`, `spec_alloc`, `spec_retain`, `spec_release`, `spec_assign`, `spec_assign_transfer`, class and collection `_destroy()` generation in `CodeGeneratorInference.spec`, `DeclarationGenerator.spec`, and `RuntimePrelude.spec`.
 - [x] **Task 7: Thread-Safety Checks** — Enhance `TypeChecker.spec` with signature and argument validation for `Parallel:run` concurrency blocks.
 - [x] **Task 1: Safe Closures** — Update `lib/compiler/CodeGeneratorExpressions.spec` to use heap env structs instead of file-scope static variables.
-- [ ] **Task 4: Boehm GC Bridge** — Add `--gc` compiler option to `Driver.spec` and conditionally emit Boehm GC hooks in `RuntimePrelude.spec`.
+- [x] **Task 4: Boehm GC Bridge** — Add `--gc` compiler option to `Driver.spec` and conditionally emit Boehm GC hooks in `RuntimePrelude.spec`.
 - [x] **Task 6: Scope Cleanup Injection** — Emit `__attribute__((cleanup(...)))` in `CodeGeneratorProgram.spec` for local reference management.
 
 ### Verification Commands

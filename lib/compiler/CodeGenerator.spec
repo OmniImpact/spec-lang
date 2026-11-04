@@ -101,6 +101,9 @@ Class is CodeGenerator{
 	## Registry of local variables declared in the current function scope (for SPEC_AUTO injection).
 	local Map of String to String is localScopeVars: Map:init();
 
+	## Garbage collection mode: "" (default ARC) or "boehm"
+	local String is gcMode: "";
+
 	replace Function is init(){
 		self:utils: CBackendUtils:init();
 		self:prelude: RuntimePrelude:init();
@@ -121,6 +124,12 @@ Class is CodeGenerator{
 		self:inlineReturnVar: "";
 		self:inlineReturnLabel: "";
 		self:localScopeVars: Map:init();
+		self:gcMode: "";
+	}
+
+	Function is setGcMode(String is mode){
+		self:gcMode: mode;
+		self:prelude:setGcMode(mode: mode);
 	}
 
 	Function of Boolean is isArcType(String is typeName){

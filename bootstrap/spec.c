@@ -2035,6 +2035,7 @@ void EscapeLoop_init(EscapeLoop* self, const char* src);
 bool EscapeLoop_evaluate(EscapeLoop* self);
 bool EscapeLoop_iteration(EscapeLoop* self, SpecLoopControl* control);
 void RuntimePrelude_init(RuntimePrelude* self);
+void RuntimePrelude_setGcMode(RuntimePrelude* self, const char* mode);
 const char* RuntimePrelude_emitRuntime(RuntimePrelude* self);
 void DeclarationGenerator_init(DeclarationGenerator* self);
 void DeclarationGenerator_setEnumNames(DeclarationGenerator* self, SpecMap* names);
@@ -2057,6 +2058,7 @@ void BuiltinCallGenerator_init(BuiltinCallGenerator* self);
 void BuiltinCallGenerator_setEnumNames(BuiltinCallGenerator* self, SpecMap* names);
 const char* BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expression* expr, const char* targetC, const char* targetType, CodeGenerator* cg);
 void CodeGenerator_init(CodeGenerator* self);
+void CodeGenerator_setGcMode(CodeGenerator* self, const char* mode);
 bool CodeGenerator_isArcType(CodeGenerator* self, const char* typeName);
 bool CodeGenerator_isFreshAllocExpr(CodeGenerator* self, Expression* expr);
 const char* CodeGenerator_cTypeFor(CodeGenerator* self, const char* typeName);
@@ -2643,6 +2645,7 @@ struct EscapeLoop {
 struct RuntimePrelude {
     const char* _type_name;
     void** _vtable;
+    const char* gcMode;
 };
 
 struct DeclarationGenerator {
@@ -2698,6 +2701,7 @@ struct CodeGenerator {
     const char* inlineReturnVar;
     const char* inlineReturnLabel;
     SpecMap* localScopeVars;
+    const char* gcMode;
 };
 
 struct ClassSearchLoop {
@@ -2768,7 +2772,8 @@ struct PathConvLoop {
 };
 
 /* Virtual Method Tables */
-static void* Stringable_vtable[236] = {
+static void* Stringable_vtable[237] = {
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -3007,7 +3012,8 @@ static void* Stringable_vtable[236] = {
     (void*)0
 };
 
-static void* Any_vtable[236] = {
+static void* Any_vtable[237] = {
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -3246,7 +3252,7 @@ static void* Any_vtable[236] = {
     (void*)0
 };
 
-static void* Driver_vtable[236] = {
+static void* Driver_vtable[237] = {
     (void*)0,
     (void*)Driver_init,
     (void*)0,
@@ -3482,10 +3488,11 @@ static void* Driver_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Ansi_vtable[236] = {
+static void* Ansi_vtable[237] = {
     (void*)0,
     (void*)0,
     (void*)Ansi_esc,
@@ -3721,10 +3728,11 @@ static void* Ansi_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[236] = {
+static void* ClassInfo_vtable[237] = {
     (void*)0,
     (void*)ClassInfo_init,
     (void*)0,
@@ -3960,10 +3968,11 @@ static void* ClassInfo_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[236] = {
+static void* Member_vtable[237] = {
     (void*)0,
     (void*)Member_init,
     (void*)0,
@@ -4199,10 +4208,11 @@ static void* Member_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[236] = {
+static void* Type_vtable[237] = {
     (void*)Type_toString,
     (void*)Type_init,
     (void*)0,
@@ -4438,10 +4448,11 @@ static void* Type_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[236] = {
+static void* Parameter_vtable[237] = {
     (void*)0,
     (void*)Parameter_init,
     (void*)0,
@@ -4677,10 +4688,11 @@ static void* Parameter_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[236] = {
+static void* NamedArg_vtable[237] = {
     (void*)0,
     (void*)NamedArg_init,
     (void*)0,
@@ -4916,10 +4928,11 @@ static void* NamedArg_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[236] = {
+static void* Expression_vtable[237] = {
     (void*)0,
     (void*)Expression_init,
     (void*)0,
@@ -5155,10 +5168,11 @@ static void* Expression_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[236] = {
+static void* Statement_vtable[237] = {
     (void*)0,
     (void*)Statement_init,
     (void*)0,
@@ -5394,10 +5408,11 @@ static void* Statement_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[236] = {
+static void* ProgramNode_vtable[237] = {
     (void*)0,
     (void*)ProgramNode_init,
     (void*)0,
@@ -5633,10 +5648,11 @@ static void* ProgramNode_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArm_vtable[236] = {
+static void* WhenArm_vtable[237] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -5872,10 +5888,11 @@ static void* WhenArm_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[236] = {
+static void* Token_vtable[237] = {
     (void*)0,
     (void*)Token_init,
     (void*)0,
@@ -6111,10 +6128,11 @@ static void* Token_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[236] = {
+static void* SourceLocation_vtable[237] = {
     (void*)SourceLocation_toString,
     (void*)SourceLocation_init,
     (void*)0,
@@ -6350,10 +6368,11 @@ static void* SourceLocation_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[236] = {
+static void* Lexer_vtable[237] = {
     (void*)0,
     (void*)Lexer_init,
     (void*)0,
@@ -6589,10 +6608,11 @@ static void* Lexer_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipWhitespaceLoop_vtable[236] = {
+static void* SkipWhitespaceLoop_vtable[237] = {
     (void*)0,
     (void*)SkipWhitespaceLoop_init,
     (void*)0,
@@ -6828,10 +6848,11 @@ static void* SkipWhitespaceLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipCommentLoop_vtable[236] = {
+static void* SkipCommentLoop_vtable[237] = {
     (void*)0,
     (void*)SkipCommentLoop_init,
     (void*)0,
@@ -7067,10 +7088,11 @@ static void* SkipCommentLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* IdentScanLoop_vtable[236] = {
+static void* IdentScanLoop_vtable[237] = {
     (void*)0,
     (void*)IdentScanLoop_init,
     (void*)0,
@@ -7306,10 +7328,11 @@ static void* IdentScanLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseDigitsLoop_vtable[236] = {
+static void* BaseDigitsLoop_vtable[237] = {
     (void*)0,
     (void*)BaseDigitsLoop_init,
     (void*)0,
@@ -7545,10 +7568,11 @@ static void* BaseDigitsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NumberScanLoop_vtable[236] = {
+static void* NumberScanLoop_vtable[237] = {
     (void*)0,
     (void*)NumberScanLoop_init,
     (void*)0,
@@ -7784,10 +7808,11 @@ static void* NumberScanLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StringScanLoop_vtable[236] = {
+static void* StringScanLoop_vtable[237] = {
     (void*)0,
     (void*)StringScanLoop_init,
     (void*)0,
@@ -8023,10 +8048,11 @@ static void* StringScanLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenizeLoop_vtable[236] = {
+static void* TokenizeLoop_vtable[237] = {
     (void*)0,
     (void*)TokenizeLoop_init,
     (void*)0,
@@ -8262,10 +8288,11 @@ static void* TokenizeLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[236] = {
+static void* Parser_vtable[237] = {
     (void*)0,
     (void*)Parser_init,
     (void*)0,
@@ -8501,10 +8528,11 @@ static void* Parser_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumVariantsLoop_vtable[236] = {
+static void* EnumVariantsLoop_vtable[237] = {
     (void*)0,
     (void*)EnumVariantsLoop_init,
     (void*)0,
@@ -8740,10 +8768,11 @@ static void* EnumVariantsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramParseLoop_vtable[236] = {
+static void* ProgramParseLoop_vtable[237] = {
     (void*)0,
     (void*)ProgramParseLoop_init,
     (void*)0,
@@ -8979,10 +9008,11 @@ static void* ProgramParseLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassMembersLoop_vtable[236] = {
+static void* ClassMembersLoop_vtable[237] = {
     (void*)0,
     (void*)ClassMembersLoop_init,
     (void*)0,
@@ -9218,10 +9248,11 @@ static void* ClassMembersLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseClassesLoop_vtable[236] = {
+static void* BaseClassesLoop_vtable[237] = {
     (void*)0,
     (void*)BaseClassesLoop_init,
     (void*)0,
@@ -9457,10 +9488,11 @@ static void* BaseClassesLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BlockStatementsLoop_vtable[236] = {
+static void* BlockStatementsLoop_vtable[237] = {
     (void*)0,
     (void*)BlockStatementsLoop_init,
     (void*)0,
@@ -9696,10 +9728,11 @@ static void* BlockStatementsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenConditionsLoop_vtable[236] = {
+static void* WhenConditionsLoop_vtable[237] = {
     (void*)0,
     (void*)WhenConditionsLoop_init,
     (void*)0,
@@ -9935,10 +9968,11 @@ static void* WhenConditionsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArmsLoop_vtable[236] = {
+static void* WhenArmsLoop_vtable[237] = {
     (void*)0,
     (void*)WhenArmsLoop_init,
     (void*)0,
@@ -10174,10 +10208,11 @@ static void* WhenArmsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArrayItemsLoop_vtable[236] = {
+static void* ArrayItemsLoop_vtable[237] = {
     (void*)0,
     (void*)ArrayItemsLoop_init,
     (void*)0,
@@ -10413,10 +10448,11 @@ static void* ArrayItemsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MapItemsLoop_vtable[236] = {
+static void* MapItemsLoop_vtable[237] = {
     (void*)0,
     (void*)MapItemsLoop_init,
     (void*)0,
@@ -10652,10 +10688,11 @@ static void* MapItemsLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ModifierLoop_vtable[236] = {
+static void* ModifierLoop_vtable[237] = {
     (void*)0,
     (void*)ModifierLoop_init,
     (void*)0,
@@ -10891,10 +10928,11 @@ static void* ModifierLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ParamLoop_vtable[236] = {
+static void* ParamLoop_vtable[237] = {
     (void*)0,
     (void*)ParamLoop_init,
     (void*)0,
@@ -11130,10 +11168,11 @@ static void* ParamLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArgLoop_vtable[236] = {
+static void* ArgLoop_vtable[237] = {
     (void*)0,
     (void*)ArgLoop_init,
     (void*)0,
@@ -11369,10 +11408,11 @@ static void* ArgLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PostfixLoop_vtable[236] = {
+static void* PostfixLoop_vtable[237] = {
     (void*)0,
     (void*)PostfixLoop_init,
     (void*)0,
@@ -11608,10 +11648,11 @@ static void* PostfixLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalOrLoop_vtable[236] = {
+static void* LogicalOrLoop_vtable[237] = {
     (void*)0,
     (void*)LogicalOrLoop_init,
     (void*)0,
@@ -11847,10 +11888,11 @@ static void* LogicalOrLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalAndLoop_vtable[236] = {
+static void* LogicalAndLoop_vtable[237] = {
     (void*)0,
     (void*)LogicalAndLoop_init,
     (void*)0,
@@ -12086,10 +12128,11 @@ static void* LogicalAndLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ShiftLoop_vtable[236] = {
+static void* ShiftLoop_vtable[237] = {
     (void*)0,
     (void*)ShiftLoop_init,
     (void*)0,
@@ -12325,10 +12368,11 @@ static void* ShiftLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitAndLoop_vtable[236] = {
+static void* BitAndLoop_vtable[237] = {
     (void*)0,
     (void*)BitAndLoop_init,
     (void*)0,
@@ -12564,10 +12608,11 @@ static void* BitAndLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitXorLoop_vtable[236] = {
+static void* BitXorLoop_vtable[237] = {
     (void*)0,
     (void*)BitXorLoop_init,
     (void*)0,
@@ -12803,10 +12848,11 @@ static void* BitXorLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitOrLoop_vtable[236] = {
+static void* BitOrLoop_vtable[237] = {
     (void*)0,
     (void*)BitOrLoop_init,
     (void*)0,
@@ -13042,10 +13088,11 @@ static void* BitOrLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EqualityLoop_vtable[236] = {
+static void* EqualityLoop_vtable[237] = {
     (void*)0,
     (void*)EqualityLoop_init,
     (void*)0,
@@ -13281,10 +13328,11 @@ static void* EqualityLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RelationalLoop_vtable[236] = {
+static void* RelationalLoop_vtable[237] = {
     (void*)0,
     (void*)RelationalLoop_init,
     (void*)0,
@@ -13520,10 +13568,11 @@ static void* RelationalLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ConcatLoop_vtable[236] = {
+static void* ConcatLoop_vtable[237] = {
     (void*)0,
     (void*)ConcatLoop_init,
     (void*)0,
@@ -13759,10 +13808,11 @@ static void* ConcatLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* AdditiveLoop_vtable[236] = {
+static void* AdditiveLoop_vtable[237] = {
     (void*)0,
     (void*)AdditiveLoop_init,
     (void*)0,
@@ -13998,10 +14048,11 @@ static void* AdditiveLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MultiplicativeLoop_vtable[236] = {
+static void* MultiplicativeLoop_vtable[237] = {
     (void*)0,
     (void*)MultiplicativeLoop_init,
     (void*)0,
@@ -14237,10 +14288,11 @@ static void* MultiplicativeLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LintIssue_vtable[236] = {
+static void* LintIssue_vtable[237] = {
     (void*)LintIssue_toString,
     (void*)LintIssue_init,
     (void*)0,
@@ -14476,10 +14528,11 @@ static void* LintIssue_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Linter_vtable[236] = {
+static void* Linter_vtable[237] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -14715,10 +14768,11 @@ static void* Linter_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[236] = {
+static void* TypeError_vtable[237] = {
     (void*)TypeError_toString,
     (void*)TypeError_init,
     (void*)0,
@@ -14954,10 +15008,11 @@ static void* TypeError_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[236] = {
+static void* TypeChecker_vtable[237] = {
     (void*)0,
     (void*)TypeChecker_init,
     (void*)0,
@@ -15193,10 +15248,11 @@ static void* TypeChecker_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SearchLoop_vtable[236] = {
+static void* SearchLoop_vtable[237] = {
     (void*)0,
     (void*)SearchLoop_init,
     (void*)0,
@@ -15432,10 +15488,11 @@ static void* SearchLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldSearchLoop_vtable[236] = {
+static void* FieldSearchLoop_vtable[237] = {
     (void*)0,
     (void*)FieldSearchLoop_init,
     (void*)0,
@@ -15671,10 +15728,11 @@ static void* FieldSearchLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodSearchLoop_vtable[236] = {
+static void* MethodSearchLoop_vtable[237] = {
     (void*)0,
     (void*)MethodSearchLoop_init,
     (void*)0,
@@ -15910,10 +15968,11 @@ static void* MethodSearchLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathResolveLoop_vtable[236] = {
+static void* PathResolveLoop_vtable[237] = {
     (void*)0,
     (void*)PathResolveLoop_init,
     (void*)0,
@@ -16149,10 +16208,11 @@ static void* PathResolveLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberImplementLoop_vtable[236] = {
+static void* MemberImplementLoop_vtable[237] = {
     (void*)0,
     (void*)MemberImplementLoop_init,
     (void*)0,
@@ -16388,10 +16448,11 @@ static void* MemberImplementLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[236] = {
+static void* CBackendUtils_vtable[237] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -16627,10 +16688,11 @@ static void* CBackendUtils_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EscapeLoop_vtable[236] = {
+static void* EscapeLoop_vtable[237] = {
     (void*)0,
     (void*)EscapeLoop_init,
     (void*)0,
@@ -16866,11 +16928,13 @@ static void* EscapeLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[236] = {
+static void* RuntimePrelude_vtable[237] = {
     (void*)0,
+    (void*)RuntimePrelude_init,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -17053,7 +17117,7 @@ static void* RuntimePrelude_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
-    (void*)0,
+    (void*)RuntimePrelude_setGcMode,
     (void*)RuntimePrelude_emitRuntime,
     (void*)0,
     (void*)0,
@@ -17108,7 +17172,7 @@ static void* RuntimePrelude_vtable[236] = {
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[236] = {
+static void* DeclarationGenerator_vtable[237] = {
     (void*)0,
     (void*)DeclarationGenerator_init,
     (void*)0,
@@ -17294,6 +17358,7 @@ static void* DeclarationGenerator_vtable[236] = {
     (void*)0,
     (void*)DeclarationGenerator_isBuiltinClass,
     (void*)0,
+    (void*)0,
     (void*)DeclarationGenerator_setEnumNames,
     (void*)DeclarationGenerator_setTaggedEnums,
     (void*)DeclarationGenerator_cTypeForClass,
@@ -17347,7 +17412,7 @@ static void* DeclarationGenerator_vtable[236] = {
     (void*)0
 };
 
-static void* HasFieldLoop_vtable[236] = {
+static void* HasFieldLoop_vtable[237] = {
     (void*)0,
     (void*)HasFieldLoop_init,
     (void*)0,
@@ -17583,12 +17648,14 @@ static void* HasFieldLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[236] = {
+static void* BuiltinCallGenerator_vtable[237] = {
     (void*)0,
     (void*)BuiltinCallGenerator_init,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -17825,7 +17892,7 @@ static void* BuiltinCallGenerator_vtable[236] = {
     (void*)0
 };
 
-static void* CodeGenerator_vtable[236] = {
+static void* CodeGenerator_vtable[237] = {
     (void*)0,
     (void*)CodeGenerator_init,
     (void*)0,
@@ -18010,6 +18077,7 @@ static void* CodeGenerator_vtable[236] = {
     (void*)CodeGenerator_cIdent,
     (void*)CodeGenerator_escapeString,
     (void*)CodeGenerator_isBuiltinClass,
+    (void*)CodeGenerator_setGcMode,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -18064,7 +18132,7 @@ static void* CodeGenerator_vtable[236] = {
     (void*)0
 };
 
-static void* ClassSearchLoop_vtable[236] = {
+static void* ClassSearchLoop_vtable[237] = {
     (void*)0,
     (void*)ClassSearchLoop_init,
     (void*)0,
@@ -18300,10 +18368,11 @@ static void* ClassSearchLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldMemberLoop_vtable[236] = {
+static void* FieldMemberLoop_vtable[237] = {
     (void*)0,
     (void*)FieldMemberLoop_init,
     (void*)0,
@@ -18539,10 +18608,11 @@ static void* FieldMemberLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodMemberLoop_vtable[236] = {
+static void* MethodMemberLoop_vtable[237] = {
     (void*)0,
     (void*)MethodMemberLoop_init,
     (void*)0,
@@ -18778,10 +18848,11 @@ static void* MethodMemberLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathTypeResolveLoop_vtable[236] = {
+static void* PathTypeResolveLoop_vtable[237] = {
     (void*)0,
     (void*)PathTypeResolveLoop_init,
     (void*)0,
@@ -19017,10 +19088,11 @@ static void* PathTypeResolveLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathChainLoop_vtable[236] = {
+static void* PathChainLoop_vtable[237] = {
     (void*)0,
     (void*)PathChainLoop_init,
     (void*)0,
@@ -19256,12 +19328,14 @@ static void* PathChainLoop_vtable[236] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[236] = {
+static void* Loader_vtable[237] = {
     (void*)0,
     (void*)Loader_init,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -19498,7 +19572,7 @@ static void* Loader_vtable[236] = {
     (void*)Loader_appendImplicitAny
 };
 
-static void* PathConvLoop_vtable[236] = {
+static void* PathConvLoop_vtable[237] = {
     (void*)0,
     (void*)PathConvLoop_init,
     (void*)0,
@@ -19607,6 +19681,7 @@ static void* PathConvLoop_vtable[236] = {
     (void*)0,
     (void*)PathConvLoop_evaluate,
     (void*)PathConvLoop_iteration,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -20940,6 +21015,7 @@ RuntimePrelude* RuntimePrelude_new(void) {
     RuntimePrelude* self = (RuntimePrelude*)spec_alloc(sizeof(RuntimePrelude), RuntimePrelude_destroy);
     self->_type_name = "RuntimePrelude";
     self->_vtable = RuntimePrelude_vtable;
+    self->gcMode = "";
     return self;
 }
 
@@ -21040,6 +21116,7 @@ CodeGenerator* CodeGenerator_new(void) {
     self->inlineReturnVar = "";
     self->inlineReturnLabel = "";
     self->localScopeVars = spec_map_new();
+    self->gcMode = "";
     return self;
 }
 
@@ -21199,9 +21276,14 @@ void Driver_init(Driver* self, SpecMap* args) {
         outputPath = spec_str_clone_if_buffered(spec_map_get_string(args, "output", ""));
     }
     bool lintMode = spec_map_has(args, "lint");
+    const char* gcMode = spec_str_clone_if_buffered(spec_map_get_string(args, "gc", ""));
+    if ((((!spec_str_equals(gcMode, ""))) && ((!spec_str_equals(gcMode, "boehm"))))) {
+        spec_error_line(spec_str_concat(spec_str_concat("Error: Unsupported GC mode '", gcMode), "'. Supported modes: boehm"));
+        exit((int)(1));
+    }
     if (spec_str_equals(inputPath, "")) {
         printf("%s\n", "Spec Compiler v0.000.014 (Pure Spec - Self-Hosted)");
-        spec_error_line("Usage: spec -i <input.spec> -o <output_binary> [--lint]");
+        spec_error_line("Usage: spec -i <input.spec> -o <output_binary> [--lint] [--gc=boehm]");
         exit((int)(2));
     }
     if ((!(spec_file_exists(inputPath)))) {
@@ -21312,6 +21394,9 @@ void Driver_init(Driver* self, SpecMap* args) {
         entryName = spec_str_clone_if_buffered(({ ClassInfo* _recv = (ClassInfo*)(firstClass); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }));
     }
     SPEC_AUTO CodeGenerator* cg = (CodeGenerator*)(({ CodeGenerator* _inst = CodeGenerator_new(); CodeGenerator_init(_inst); _inst; }));
+    if ((!spec_str_equals(gcMode, ""))) {
+        ({ CodeGenerator* _recv = (CodeGenerator*)(cg); (((void (*)(CodeGenerator*, const char*))_recv->_vtable[184]))((CodeGenerator*)_recv, gcMode); });
+    }
     const char* cCode = spec_str_clone_if_buffered(CodeGenerator_generateProgram(cg, program, entryName) /* inst:CodeGenerator:generateProgram */);
     const char* tempCPath = spec_str_clone_if_buffered(emitCPath);
     if (spec_str_equals(tempCPath, "")) {
@@ -21327,6 +21412,13 @@ void Driver_init(Driver* self, SpecMap* args) {
         return;
     }
     SPEC_AUTO SpecArray* gccArgs = ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("-O2")); spec_array_add(_arr, (void*)(tempCPath)); spec_array_add(_arr, (void*)("-o")); spec_array_add(_arr, (void*)(outputPath)); spec_array_add(_arr, (void*)("-pthread")); spec_array_add(_arr, (void*)("-lm")); _arr; });
+    if (spec_str_equals(gcMode, "boehm")) {
+        if (((spec_file_exists("/usr/lib/x86_64-linux-gnu/libgc.so.1")) || (spec_file_exists("/usr/lib/libgc.so.1")))) {
+        spec_array_add(gccArgs, (void*)("-l:libgc.so.1"));
+    } else {
+        spec_array_add(gccArgs, (void*)("-lgc"));
+    }
+    }
     long long gccStatus = spec_process_execute("gcc", gccArgs);
     if (spec_str_equals(emitCPath, "")) {
         spec_file_remove(tempCPath);
@@ -26408,6 +26500,11 @@ const char* EscapeLoop_toString(EscapeLoop* self) {
 }
 
 void RuntimePrelude_init(RuntimePrelude* self) {
+    self->gcMode = spec_str_clone_if_buffered("");
+}
+
+void RuntimePrelude_setGcMode(RuntimePrelude* self, const char* mode) {
+    self->gcMode = spec_str_clone_if_buffered(mode);
 }
 
 const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
@@ -26429,6 +26526,29 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "#include <sys/ioctl.h>\n");
     p = spec_str_append(p, "#include <sys/resource.h>\n");
     p = spec_str_append(p, "#include <stdatomic.h>\n\n");
+    if (spec_str_equals(self->gcMode, "boehm")) {
+        p = spec_str_append(p, "/* Boehm GC Integration */\n");
+        p = spec_str_append(p, "#define SPEC_GC_BOEHM 1\n");
+        p = spec_str_append(p, "extern void GC_init(void);\n");
+        p = spec_str_append(p, "extern void* GC_malloc(size_t size);\n");
+        p = spec_str_append(p, "extern void* GC_malloc_atomic(size_t size);\n");
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "extern void* GC_realloc(void* ptr, size_t size);\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "extern void GC_free(void* ptr);\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "extern int GC_pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg);\n\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline char* spec_gc_strdup(const char* s) {\n"));
+        p = spec_str_append(p, "    if (!s) return NULL;\n");
+        p = spec_str_append(p, "    size_t len = strlen(s);\n");
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "    char* copy = (char*)GC_malloc_atomic(len + 1);\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (copy) memcpy(copy, s, len + 1);\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "    return copy;\n"));
+        p = spec_str_append(p, "}\n\n");
+        p = spec_str_append(p, "#define malloc(sz) GC_malloc(sz)\n");
+        p = spec_str_append(p, "#define calloc(n, sz) GC_malloc((n) * (sz))\n");
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "#define realloc(ptr, sz) GC_realloc(ptr, sz)\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "#define strdup(s) spec_gc_strdup(s)\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "#define free(ptr) ((void)(ptr))\n"));
+        p = spec_str_clone_if_buffered(spec_str_concat(p, "#define pthread_create(t, a, fn, arg) GC_pthread_create(t, a, fn, arg)\n\n"));
+    }
     p = spec_str_clone_if_buffered(spec_str_concat(p, "/* Spec Runtime Panic & Safety Utilities */\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_panic(const char* msg) {\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    fprintf(stderr, \"[Spec Runtime Panic] %s\\n\", msg ? msg : \"fatal error\");\n"));
@@ -29121,6 +29241,12 @@ void CodeGenerator_init(CodeGenerator* self) {
     self->inlineReturnVar = spec_str_clone_if_buffered("");
     self->inlineReturnLabel = spec_str_clone_if_buffered("");
     spec_assign_transfer((void**)&self->localScopeVars, (void*)(spec_map_new()));
+    self->gcMode = spec_str_clone_if_buffered("");
+}
+
+void CodeGenerator_setGcMode(CodeGenerator* self, const char* mode) {
+    self->gcMode = spec_str_clone_if_buffered(mode);
+    ({ RuntimePrelude* _recv = (RuntimePrelude*)(self->prelude); (((void (*)(RuntimePrelude*, const char*))_recv->_vtable[184]))((RuntimePrelude*)_recv, mode); });
 }
 
 bool CodeGenerator_isArcType(CodeGenerator* self, const char* typeName) {
@@ -30828,23 +30954,46 @@ const char* CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDe
 const char* CodeGenerator_generateMain(CodeGenerator* self, const char* entryClass) {
     const char* m = spec_str_clone_if_buffered("/* Application Entry Point */\n");
     m = spec_str_clone_if_buffered(spec_str_concat(m, "int main(int argc, char** argv) {\n"));
+    m = spec_str_append(m, "#if defined(SPEC_GC_BOEHM)\n");
+    m = spec_str_append(m, "    GC_init();\n");
+    m = spec_str_append(m, "#endif\n");
     m = spec_str_clone_if_buffered(spec_str_concat(m, "    srand((unsigned int)time(NULL));\n"));
     m = spec_str_clone_if_buffered(spec_str_concat(m, "    SPEC_AUTO SpecMap* args = spec_map_new();\n"));
     m = spec_str_append(m, "    for (int i = 1; i < argc; i++) {\n");
     m = spec_str_clone_if_buffered(spec_str_concat(m, "        if (strncmp(argv[i], \"--\", 2) == 0) {\n"));
-    m = spec_str_append(m, "            const char* key = argv[i] + 2;\n");
-    m = spec_str_append(m, "            const char* val = \"true\";\n");
-    m = spec_str_append(m, "            if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
-    m = spec_str_append(m, "                val = argv[++i];\n");
+    m = spec_str_append(m, "            const char* eq = strchr(argv[i] + 2, '=');\n");
+    m = spec_str_append(m, "            if (eq) {\n");
+    m = spec_str_append(m, "                int klen = (int)(eq - (argv[i] + 2));\n");
+    m = spec_str_append(m, "                char kbuf[128];\n");
+    m = spec_str_append(m, "                if (klen >= 128) klen = 127;\n");
+    m = spec_str_append(m, "                strncpy(kbuf, argv[i] + 2, klen);\n");
+    m = spec_str_append(m, "                kbuf[klen] = '\\0';\n");
+    m = spec_str_clone_if_buffered(spec_str_concat(m, "                spec_map_set(args, kbuf, eq + 1);\n"));
+    m = spec_str_append(m, "            } else {\n");
+    m = spec_str_append(m, "                const char* key = argv[i] + 2;\n");
+    m = spec_str_append(m, "                const char* val = \"true\";\n");
+    m = spec_str_append(m, "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
+    m = spec_str_append(m, "                    val = argv[++i];\n");
+    m = spec_str_append(m, "                }\n");
+    m = spec_str_clone_if_buffered(spec_str_concat(m, "                spec_map_set(args, key, val);\n"));
     m = spec_str_append(m, "            }\n");
-    m = spec_str_clone_if_buffered(spec_str_concat(m, "            spec_map_set(args, key, val);\n"));
     m = spec_str_append(m, "        } else if (argv[i][0] == '-' && argv[i][1] != '\\0') {\n");
-    m = spec_str_append(m, "            const char* key = argv[i] + 1;\n");
-    m = spec_str_append(m, "            const char* val = \"true\";\n");
-    m = spec_str_append(m, "            if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
-    m = spec_str_append(m, "                val = argv[++i];\n");
+    m = spec_str_append(m, "            const char* eq = strchr(argv[i] + 1, '=');\n");
+    m = spec_str_append(m, "            if (eq) {\n");
+    m = spec_str_append(m, "                int klen = (int)(eq - (argv[i] + 1));\n");
+    m = spec_str_append(m, "                char kbuf[128];\n");
+    m = spec_str_append(m, "                if (klen >= 128) klen = 127;\n");
+    m = spec_str_append(m, "                strncpy(kbuf, argv[i] + 1, klen);\n");
+    m = spec_str_append(m, "                kbuf[klen] = '\\0';\n");
+    m = spec_str_clone_if_buffered(spec_str_concat(m, "                spec_map_set(args, kbuf, eq + 1);\n"));
+    m = spec_str_append(m, "            } else {\n");
+    m = spec_str_append(m, "                const char* key = argv[i] + 1;\n");
+    m = spec_str_append(m, "                const char* val = \"true\";\n");
+    m = spec_str_append(m, "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n");
+    m = spec_str_append(m, "                    val = argv[++i];\n");
+    m = spec_str_append(m, "                }\n");
+    m = spec_str_clone_if_buffered(spec_str_concat(m, "                spec_map_set(args, key, val);\n"));
     m = spec_str_append(m, "            }\n");
-    m = spec_str_clone_if_buffered(spec_str_concat(m, "            spec_map_set(args, key, val);\n"));
     m = spec_str_append(m, "        }\n");
     m = spec_str_append(m, "    }\n");
     m = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(m, "    SPEC_AUTO "), entryClass), "* app = "), entryClass), "_new();\n");
@@ -30952,9 +31101,9 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     }
         } while (0);
     } } });
-    ({ DeclarationGenerator* _recv = (DeclarationGenerator*)(self->declGen); (((void (*)(DeclarationGenerator*, SpecMap*))_recv->_vtable[185]))((DeclarationGenerator*)_recv, self->allEnumNames); });
+    ({ DeclarationGenerator* _recv = (DeclarationGenerator*)(self->declGen); (((void (*)(DeclarationGenerator*, SpecMap*))_recv->_vtable[186]))((DeclarationGenerator*)_recv, self->allEnumNames); });
     DeclarationGenerator_setTaggedEnums(self->declGen, self->allTaggedEnums) /* inst:DeclarationGenerator:setTaggedEnums */;
-    ({ BuiltinCallGenerator* _recv = (BuiltinCallGenerator*)(self->builtins); (((void (*)(BuiltinCallGenerator*, SpecMap*))_recv->_vtable[185]))((BuiltinCallGenerator*)_recv, self->allEnumNames); });
+    ({ BuiltinCallGenerator* _recv = (BuiltinCallGenerator*)(self->builtins); (((void (*)(BuiltinCallGenerator*, SpecMap*))_recv->_vtable[186]))((BuiltinCallGenerator*)_recv, self->allEnumNames); });
     spec_assign_transfer((void**)&self->methodSlots, (void*)(spec_map_new()));
     spec_assign_transfer((void**)&self->overriddenMethods, (void*)(spec_map_new()));
     spec_assign_transfer((void**)&self->classesWithToString, (void*)(spec_map_new()));
@@ -31703,23 +31852,46 @@ const char* PathConvLoop_toString(PathConvLoop* self) {
 
 /* Application Entry Point */
 int main(int argc, char** argv) {
+#if defined(SPEC_GC_BOEHM)
+    GC_init();
+#endif
     srand((unsigned int)time(NULL));
     SPEC_AUTO SpecMap* args = spec_map_new();
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "--", 2) == 0) {
-            const char* key = argv[i] + 2;
-            const char* val = "true";
-            if (i + 1 < argc && argv[i + 1][0] != '-') {
-                val = argv[++i];
+            const char* eq = strchr(argv[i] + 2, '=');
+            if (eq) {
+                int klen = (int)(eq - (argv[i] + 2));
+                char kbuf[128];
+                if (klen >= 128) klen = 127;
+                strncpy(kbuf, argv[i] + 2, klen);
+                kbuf[klen] = '\0';
+                spec_map_set(args, kbuf, eq + 1);
+            } else {
+                const char* key = argv[i] + 2;
+                const char* val = "true";
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    val = argv[++i];
+                }
+                spec_map_set(args, key, val);
             }
-            spec_map_set(args, key, val);
         } else if (argv[i][0] == '-' && argv[i][1] != '\0') {
-            const char* key = argv[i] + 1;
-            const char* val = "true";
-            if (i + 1 < argc && argv[i + 1][0] != '-') {
-                val = argv[++i];
+            const char* eq = strchr(argv[i] + 1, '=');
+            if (eq) {
+                int klen = (int)(eq - (argv[i] + 1));
+                char kbuf[128];
+                if (klen >= 128) klen = 127;
+                strncpy(kbuf, argv[i] + 1, klen);
+                kbuf[klen] = '\0';
+                spec_map_set(args, kbuf, eq + 1);
+            } else {
+                const char* key = argv[i] + 1;
+                const char* val = "true";
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    val = argv[++i];
+                }
+                spec_map_set(args, key, val);
             }
-            spec_map_set(args, key, val);
         }
     }
     SPEC_AUTO Driver* app = Driver_new();

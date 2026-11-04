@@ -37,10 +37,15 @@ Class is Driver{
 			outputPath: args:getString(key: "output", default: "");
 		}
 		local Boolean is lintMode: args:has(key: "lint");
+		local String is gcMode: args:getString(key: "gc", default: "");
+		if (gcMode != "" && gcMode != "boehm") {
+			error:line("Error: Unsupported GC mode '" . gcMode . "'. Supported modes: boehm");
+			Process:exit(status: 1);
+		}
 
 		if (inputPath == "") {
 			output:line("Spec Compiler v0.000.014 (Pure Spec - Self-Hosted)");
-			error:line("Usage: spec -i <input.spec> -o <output_binary> [--lint]");
+			error:line("Usage: spec -i <input.spec> -o <output_binary> [--lint] [--gc=boehm]");
 			Process:exit(status: 2);
 		}
 
@@ -146,6 +151,9 @@ Class is Driver{
 
 		# 6. C11 Code Generation
 		local CodeGenerator is cg: CodeGenerator:init();
+		if (gcMode != "") {
+			cg:setGcMode(mode: gcMode);
+		}
 		local String is cCode: cg:generateProgram(program: program, entryClass: entryName);
 
 		local String is tempCPath: emitCPath;
@@ -165,6 +173,13 @@ Class is Driver{
 
 		# 7. GCC C Compilation
 		local Array of String is gccArgs: ["-O2", tempCPath, "-o", outputPath, "-pthread", "-lm"];
+		if (gcMode == "boehm") {
+			if (File:exists(path: "/usr/lib/x86_64-linux-gnu/libgc.so.1") || File:exists(path: "/usr/lib/libgc.so.1")) {
+				gccArgs:add(item: "-l:libgc.so.1");
+			} else {
+				gccArgs:add(item: "-lgc");
+			}
+		}
 		local Int is gccStatus: Process:execute(command: "gcc", args: gccArgs);
 		if (emitCPath == "") {
 			File:remove(path: tempCPath);
