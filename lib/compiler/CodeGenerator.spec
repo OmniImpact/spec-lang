@@ -36,13 +36,13 @@ Class is CodeGenerator{
 	local BuiltinCallGenerator is builtins;
 
 	## Name of the class currently being code-generated.
-	local String is currentClassName: "";
+	local String is currentClassName: '';
 
 	## Return type of the method currently being code-generated.
-	local String is currentMethodReturnType: "";
+	local String is currentMethodReturnType: '';
 
 	## Name of the method currently being code-generated (for merge forwards).
-	local String is currentMethodName: "";
+	local String is currentMethodName: '';
 
 	## Virtual method slot assignment: method name -> decimal slot index.
 	local Map of String to String is methodSlots: Map:init();
@@ -87,26 +87,26 @@ Class is CodeGenerator{
 	local Boolean is inMethod: false;
 
 	## Forward declaration buffer for generated anonymous static functions.
-	local String is helperFunctions: "";
+	local String is helperFunctions: '';
 
 	## Counter for assigning unique names to anonymous functions.
 	local Int is anonCounter: 0;
 
 	## Active inline return variable name when expanding an inline closure body.
-	local String is inlineReturnVar: "";
+	local String is inlineReturnVar: '';
 
 	## Active inline return label name when expanding an inline closure body.
-	local String is inlineReturnLabel: "";
+	local String is inlineReturnLabel: '';
 
 	## Registry of local variables declared in the current function scope (for SPEC_AUTO injection).
 	local Map of String to String is localScopeVars: Map:init();
 
 	## Garbage collection mode: "" (default ARC) or "boehm"
-	local String is gcMode: "";
+	local String is gcMode: '';
 
 	## Declared-type context for the container literal currently being generated
 	## (consumed by the ARRAY/MAP literal emitters; empty otherwise).
-	local String is containerHint: "";
+	local String is containerHint: '';
 
 	replace Function is init(){
 		self:utils: CBackendUtils:init();
@@ -123,13 +123,13 @@ Class is CodeGenerator{
 		self:allTaggedEnums: Map:init();
 		self:inMethod: false;
 		self:classesWithToString: Map:init();
-		self:helperFunctions: "";
+		self:helperFunctions: '';
 		self:anonCounter: 0;
-		self:inlineReturnVar: "";
-		self:inlineReturnLabel: "";
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: '';
 		self:localScopeVars: Map:init();
-		self:gcMode: "";
-		self:containerHint: "";
+		self:gcMode: '';
+		self:containerHint: '';
 	}
 
 	Function is setGcMode(String is mode){
@@ -142,11 +142,11 @@ Class is CodeGenerator{
 	}
 
 	Function of Boolean is isArcType(String is typeName){
-		if (typeName == "" || typeName == "Int" || typeName == "int" || typeName == "Real" || typeName == "Float" || typeName == "float" || typeName == "Bool" || typeName == "bool" || typeName == "Byte" || typeName == "byte" || typeName == "Nil" || typeName == "Void" || typeName == "void" || typeName == "String" || typeName == "string") {
+		if (typeName == '' || typeName == 'Int' || typeName == 'int' || typeName == 'Real' || typeName == 'Float' || typeName == 'float' || typeName == 'Bool' || typeName == 'bool' || typeName == 'Byte' || typeName == 'byte' || typeName == 'Nil' || typeName == 'Void' || typeName == 'void' || typeName == 'String' || typeName == 'string') {
 			return false;
 		}
-		if (typeName:contains(needle: ":")) {
-			local Array of String is parts: typeName:split(delimiter: ":");
+		if (typeName:contains(needle: ':')) {
+			local Array of String is parts: typeName:split(delimiter: ':');
 			typeName: parts:get(index: 0);
 		}
 		if (self:allEnumNames:has(key: typeName) && !self:allTaggedEnums:has(key: typeName)) {
@@ -155,7 +155,7 @@ Class is CodeGenerator{
 		if (self:allTaggedEnums:has(key: typeName)) {
 			return true;
 		}
-		if (typeName:startsWith(prefix: "Array") || typeName:startsWith(prefix: "Map") || typeName:startsWith(prefix: "Function") || typeName == "LoopControl") {
+		if (typeName:startsWith(prefix: 'Array') || typeName:startsWith(prefix: 'Map') || typeName:startsWith(prefix: 'Function') || typeName == 'LoopControl') {
 			return true;
 		}
 		if (self:allClassNames:has(key: typeName)) {
@@ -169,62 +169,62 @@ Class is CodeGenerator{
 	## Returns "object" (ARC-managed), "string" (container-owned copy), or
 	## "none" (primitives, Any-typed, or unknown — never element-owned).
 	Function of String is containerElemKind(String is containerType){
-		local String is elem: "";
-		if (containerType:startsWith(prefix: "Array of ")) {
+		local String is elem: '';
+		if (containerType:startsWith(prefix: 'Array of ')) {
 			elem: containerType:substring(start: 9, end: containerType:length());
-		} else if (containerType:startsWith(prefix: "Array:")) {
+		} else if (containerType:startsWith(prefix: 'Array:')) {
 			elem: containerType:substring(start: 6, end: containerType:length());
-		} else if (containerType:startsWith(prefix: "Map of ")) {
+		} else if (containerType:startsWith(prefix: 'Map of ')) {
 			local String is rest: containerType:substring(start: 7, end: containerType:length());
-			local Int is toIdx: rest:indexOf(needle: " to ", default: -1);
+			local Int is toIdx: rest:indexOf(needle: ' to ', default: -1);
 			if (toIdx >= 0) {
 				elem: rest:substring(start: toIdx + 4, end: rest:length());
 			}
-		} else if (containerType:startsWith(prefix: "Map:")) {
+		} else if (containerType:startsWith(prefix: 'Map:')) {
 			local String is rest: containerType:substring(start: 4, end: containerType:length());
-			local Int is colonIdx: rest:indexOf(needle: ":", default: -1);
+			local Int is colonIdx: rest:indexOf(needle: ':', default: -1);
 			if (colonIdx >= 0) {
 				elem: rest:substring(start: colonIdx + 1, end: rest:length());
 			}
 		} else {
-			return "none";
+			return 'none';
 		}
-		if (elem == "" || elem == "Any") {
-			return "none";
+		if (elem == '' || elem == 'Any') {
+			return 'none';
 		}
-		if (elem == "String" || elem == "string") {
-			return "string";
+		if (elem == 'String' || elem == 'string') {
+			return 'string';
 		}
 		if (self:isArcType(typeName: elem)) {
-			return "object";
+			return 'object';
 		}
-		return "none";
+		return 'none';
 	}
 
 	## Determines whether a container's element/value type is ARC-managed, from a
 	## canonical container type string. Any-typed and unknown containers are
 	## never element-owned.
 	Function of Boolean is containerElemIsArc(String is containerType){
-		return self:containerElemKind(containerType: containerType) == "object";
+		return self:containerElemKind(containerType: containerType) == 'object';
 	}
 
 	Function of Boolean is isFreshAllocExpr(Expression is expr){
 		local String is kind: expr:getKind();
-		if (kind == "ARRAY" || kind == "MAP" || kind == "ANON_FN") {
+		if (kind == 'ARRAY' || kind == 'MAP' || kind == 'ANON_FN') {
 			return true;
 		}
-		if (kind == "CALL") {
-			if (expr:methodName == "init") {
+		if (kind == 'CALL') {
+			if (expr:methodName == 'init') {
 				return true;
 			}
-			if (expr:methodName == "pop") {
+			if (expr:methodName == 'pop') {
 				return true;
 			}
-			if (expr:methodTarget:getKind() == "IDENT" && self:allClassNames:has(key: expr:methodTarget:stringValue) && !self:allEnumNames:has(key: expr:methodTarget:stringValue)) {
+			if (expr:methodTarget:getKind() == 'IDENT' && self:allClassNames:has(key: expr:methodTarget:stringValue) && !self:allEnumNames:has(key: expr:methodTarget:stringValue)) {
 				return true;
 			}
 			if (self:allEnumVariants:has(key: expr:methodName)) {
-				local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: "");
+				local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: '');
 				if (self:allTaggedEnums:has(key: eName)) {
 					return true;
 				}
@@ -236,23 +236,23 @@ Class is CodeGenerator{
 	local Function of String is cTypeFor(String is typeName){
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {
-			return "void*";
+			return 'void*';
 		}
-		if (typeName:startsWith(prefix: "Array")) {
-			return "SpecArray*";
+		if (typeName:startsWith(prefix: 'Array')) {
+			return 'SpecArray*';
 		}
-		if (typeName:startsWith(prefix: "Map")) {
-			return "SpecMap*";
+		if (typeName:startsWith(prefix: 'Map')) {
+			return 'SpecMap*';
 		}
-		if (typeName:startsWith(prefix: "Function")) {
-			return "SpecClosure*";
+		if (typeName:startsWith(prefix: 'Function')) {
+			return 'SpecClosure*';
 		}
-		if (typeName:contains(needle: ":")) {
-			local Array of String is parts: typeName:split(delimiter: ":");
+		if (typeName:contains(needle: ':')) {
+			local Array of String is parts: typeName:split(delimiter: ':');
 			typeName: parts:get(index: 0);
 		}
 		if (self:allTaggedEnums:has(key: typeName)) {
-			return typeName . "*";
+			return typeName . '*';
 		}
 		if (self:allEnumNames:has(key: typeName)) {
 			return typeName;
@@ -261,12 +261,12 @@ Class is CodeGenerator{
 	}
 
 	local Function of String is formatVarTypeString(Type is t){
-		if (t:getName() == "Function") {
+		if (t:getName() == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
-				return "Function:" . self:formatTypeString(t: ret);
+				return 'Function:' . self:formatTypeString(t: ret);
 			}
-			return "Function";
+			return 'Function';
 		}
 		return self:formatTypeString(t: t);
 	}
@@ -285,21 +285,21 @@ Class is CodeGenerator{
 
 	local Function of String is formatTypeString(Type is t){
 		local String is baseName: t:getName();
-		if (baseName == "Function") {
+		if (baseName == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
 				return self:formatTypeString(t: ret);
 			}
-			return "void";
+			return 'void';
 		}
 		if (t:getParams():length() == 1) {
 			local Type is p0: t:getParams():get(index: 0);
-			return baseName . ":" . p0:getName();
+			return baseName . ':' . p0:getName();
 		}
 		if (t:getParams():length() >= 2) {
 			local Type is p0: t:getParams():get(index: 0);
 			local Type is p1: t:getParams():get(index: 1);
-			return baseName . ":" . p0:getName() . ":" . p1:getName();
+			return baseName . ':' . p0:getName() . ':' . p1:getName();
 		}
 		return baseName;
 	}
@@ -313,23 +313,23 @@ Class is CodeGenerator{
 		if (idx >= 0 && idx < typeArgs:length()) {
 			return typeArgs:get(index: idx);
 		}
-		if (rawType:startsWith(prefix: "Array:") && rawType:length() > 6) {
+		if (rawType:startsWith(prefix: 'Array:') && rawType:length() > 6) {
 			local String is elem: rawType:substring(start: 6, end: rawType:length());
 			local Int is eIdx: tps:indexOf(search: elem, default: -1);
 			if (eIdx >= 0 && eIdx < typeArgs:length()) {
-				return "Array:" . typeArgs:get(index: eIdx);
+				return 'Array:' . typeArgs:get(index: eIdx);
 			}
 		}
 		return rawType;
 	}
 
 	local Function of String is resolveReturnType(Type is t){
-		if (t:getName() == "Function") {
+		if (t:getName() == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
 				return self:cTypeFor(typeName: ret:getName());
 			}
-			return "void";
+			return 'void';
 		}
 		return self:cTypeFor(typeName: t:getName());
 	}

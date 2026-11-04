@@ -27,7 +27,7 @@ Class is CalcText{
 	replace Array of String is group: [Calc];
 
 	Function of String is shout(String is msg){
-		return msg . "!";
+		return msg . '!';
 	}
 }
 
@@ -59,35 +59,35 @@ Class is GroupingTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("=== Regression: ClassInfo Grouping ===");
+		output:line('=== Regression: ClassInfo Grouping ===');
 
 		# Case 1: no-primary group - Calc exists only as a merged union.
 		local Calc is calc: Calc:init();
 		local Int is sum: calc:add(a: 2, b: 40);
 		if (sum == 42) {
-			output:line("[PASS] no-primary group: Calc.add(2, 40) = 42");
+			output:line('[PASS] no-primary group: Calc.add(2, 40) = 42');
 		} else {
-			output:line("[FAIL] no-primary group: expected 42, got " . sum);
+			output:line('[FAIL] no-primary group: expected 42, got ' . sum);
 		}
 
 		# Case 2: second fragment's members are reachable on the merged class.
-		local String is shouted: calc:shout(msg: "grouped");
-		if (shouted == "grouped!") {
-			output:line("[PASS] merged fragments: Calc.shout works");
+		local String is shouted: calc:shout(msg: 'grouped');
+		if (shouted == 'grouped!') {
+			output:line('[PASS] merged fragments: Calc.shout works');
 		} else {
-			output:line("[FAIL] merged fragments: expected 'grouped!', got " . shouted);
+			output:line('[FAIL] merged fragments: expected \'grouped!\', got ' . shouted);
 		}
 
 		# Case 3: same-name opt-in partial merge (field from part 1, method from part 2).
 		local Accumulator is acc: Accumulator:init(start: 100);
 		acc:bump(by: 1);
 		if (acc:total == 101) {
-			output:line("[PASS] same-name partial: Accumulator total = 101");
+			output:line('[PASS] same-name partial: Accumulator total = 101');
 		} else {
-			output:line("[FAIL] same-name partial: expected 101, got " . acc:total);
+			output:line('[FAIL] same-name partial: expected 101, got ' . acc:total);
 		}
 
-		output:line("=== End ClassInfo Grouping Regression ===");
+		output:line('=== End ClassInfo Grouping Regression ===');
 	}
 
 }

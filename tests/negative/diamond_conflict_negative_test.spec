@@ -33,7 +33,7 @@ Class is DiamondB{
 
 Class of DiamondA, DiamondB is DiamondBadChild{
 	replace Function is init(Map of String to String is args){
-		output:line("unreachable");
+		output:line('unreachable');
 	}
 }
 
@@ -51,6 +51,6 @@ Class of SharedBase is SharedRight{
 
 Class of SharedLeft, SharedRight is DiamondSharedChild{
 	replace Function is init(Map of String to String is args){
-		output:line("shared ok");
+		output:line('shared ok');
 	}
 }

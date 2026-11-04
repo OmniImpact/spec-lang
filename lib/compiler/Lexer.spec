@@ -13,7 +13,7 @@ Class is Lexer{
 		compiler:Token
 	];
 
-	local String is source: "";
+	local String is source: '';
 	local Int is length: 0;
 	local Int is pos: 0;
 	local Int is line: 1;
@@ -33,12 +33,12 @@ Class is Lexer{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
+			local String is ch: lexer:source:charAt(index: lexer:pos, default: '');
 			if (ch:isWhitespace()) {
 				lexer:advance();
 				return true;
 			}
-			if (ch == "#") {
+			if (ch == '#') {
 				While:run(loop: SkipCommentLoop:init(lexer: lexer));
 				return true;
 			}
@@ -54,7 +54,7 @@ Class is Lexer{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return lexer:pos < lexer:length && lexer:source:charAt(index: lexer:pos, default: "") != "\n";
+			return lexer:pos < lexer:length && lexer:source:charAt(index: lexer:pos, default: '') != "\n";
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -75,7 +75,7 @@ Class is Lexer{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
+			local String is ch: lexer:source:charAt(index: lexer:pos, default: '');
 			if (lexer:isIdentifierContinue(ch: ch)) {
 				lexer:advance();
 				return true;
@@ -108,8 +108,8 @@ Class is Lexer{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: "");
-			if (ch == "_") {
+			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
+			if (ch == '_') {
 				self:lexer:advance();
 				return true;
 			}
@@ -143,9 +143,9 @@ Class is Lexer{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
-			if (ch == "_") {
-				local String is nextCh: lexer:source:charAt(index: lexer:pos + 1, default: "");
+			local String is ch: lexer:source:charAt(index: lexer:pos, default: '');
+			if (ch == '_') {
+				local String is nextCh: lexer:source:charAt(index: lexer:pos + 1, default: '');
 				if (nextCh:isDigit()) {
 					lexer:advance();
 					return true;
@@ -156,8 +156,8 @@ Class is Lexer{
 				lexer:advance();
 				return true;
 			}
-			if (ch == "." && !isFloat) {
-				local String is nextCh: lexer:source:charAt(index: lexer:pos + 1, default: "");
+			if (ch == '.' && !isFloat) {
+				local String is nextCh: lexer:source:charAt(index: lexer:pos + 1, default: '');
 				if (nextCh:isDigit()) {
 					self:isFloat: true;
 					lexer:advance();
@@ -170,13 +170,13 @@ Class is Lexer{
 
 	Class of Loop is StringScanLoop{
 		local Lexer is lexer;
-		local String is quote: "";
-		local String is res: "";
+		local String is quote: '';
+		local String is res: '';
 
 		replace Function is init(Lexer is lexer, String is quote){
 			self:lexer: lexer;
 			self:quote: quote;
-			self:res: "";
+			self:res: '';
 		}
 
 		replace Function of Boolean is evaluate(){
@@ -184,7 +184,7 @@ Class is Lexer{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: "");
+			local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
 			if (ch == self:quote) {
 				return false;
 			}
@@ -192,18 +192,18 @@ Class is Lexer{
 				self:lexer:advance();
 				if (self:lexer:pos < self:lexer:length) {
 					local String is nextCh: self:lexer:advance();
-					if (self:quote == "\"") {
+					if (self:quote == '"') {
 						when (nextCh) {
-							is "n": { self:res: self:res . "\n"; }
-							is "t": { self:res: self:res . "\t"; }
-							is "r": { self:res: self:res . "\r"; }
-							is "e": { self:res: self:res . String:fromCharCode(code: 27); }
-							is "\"": { self:res: self:res . "\""; }
+							is 'n': { self:res: self:res . "\n"; }
+							is 't': { self:res: self:res . "\t"; }
+							is 'r': { self:res: self:res . "\r"; }
+							is 'e': { self:res: self:res . String:fromCharCode(code: 27); }
+							is '"': { self:res: self:res . '"'; }
 							is "\\": { self:res: self:res . "\\"; }
 							else: { self:res: self:res . nextCh; }
 						}
 					} else {
-						if (nextCh == "'" || nextCh == "\\") {
+						if (nextCh == '\'' || nextCh == "\\") {
 							self:res: self:res . nextCh;
 						} else {
 							self:res: self:res . "\\" . nextCh;
@@ -237,8 +237,8 @@ Class is Lexer{
 				return false;
 			}
 
-			local String is ch: lexer:source:charAt(index: lexer:pos, default: "");
-			if (ch == '"' || ch == "'") {
+			local String is ch: lexer:source:charAt(index: lexer:pos, default: '');
+			if (ch == '"' || ch == '\'') {
 				tokens:add(item: lexer:readString(quote: ch));
 			} else if (ch:isDigit()) {
 				tokens:add(item: lexer:readNumber());
@@ -267,7 +267,7 @@ Class is Lexer{
 	##
 	## @param msg: Error description.
 	local Function is addError(String is msg){
-		self:errors:add(item: "Line " . self:line . ": " . msg);
+		self:errors:add(item: 'Line ' . self:line . ': ' . msg);
 	}
 
 	## Returns whether any lexical errors were recorded.
@@ -285,12 +285,12 @@ Class is Lexer{
 	## @param ch: Digit character.
 	## @return: Digit value, or -1 when not a hex digit.
 	Function of Int is digitValue(String is ch){
-		local String is lower: "0123456789abcdef";
+		local String is lower: '0123456789abcdef';
 		local Int is d: lower:indexOf(needle: ch, default: -1);
 		if (d >= 0) {
 			return d;
 		}
-		local String is upper: "ABCDEF";
+		local String is upper: 'ABCDEF';
 		local Int is u: upper:indexOf(needle: ch, default: -1);
 		if (u >= 0) {
 			return u + 10;
@@ -303,7 +303,7 @@ Class is Lexer{
 	}
 
 	Function of String is advance(){
-		local String is ch: self:source:charAt(index: self:pos, default: "");
+		local String is ch: self:source:charAt(index: self:pos, default: '');
 		self:pos: self:pos + 1;
 		if (ch == "\n") {
 			self:line: self:line + 1;
@@ -319,16 +319,16 @@ Class is Lexer{
 	}
 
 	Function of Boolean is isIdentifierStart(String is ch){
-		return ch:isAlpha() || ch == "_";
+		return ch:isAlpha() || ch == '_';
 	}
 
 	Function of Boolean is isIdentifierContinue(String is ch){
-		return ch:isAlpha() || ch:isDigit() || ch == "_";
+		return ch:isAlpha() || ch:isDigit() || ch == '_';
 	}
 
 	local Function of Boolean is isKeyword(String is text){
 		return when (text) {
-			is "local", "contained", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
+			is 'local', 'contained', 'replace', 'merge', 'is', 'as', 'of', 'to', 'return', 'if', 'else', 'when': true;
 			else: false;
 		};
 	}
@@ -342,7 +342,7 @@ Class is Lexer{
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		local TokenKind is kind: when (text) {
-			is "true", "false": TokenKind:BOOL;
+			is 'true', 'false': TokenKind:BOOL;
 			else: if (self:isKeyword(text: text)) TokenKind:KEYWORD else TokenKind:IDENTIFIER;
 		};
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
@@ -354,15 +354,15 @@ Class is Lexer{
 
 		# Base-prefixed integers (0x / 0b / 0o), normalized to a decimal value so
 		# the generated C stays portable C11. A bare leading zero stays decimal.
-		local String is ch: self:source:charAt(index: self:pos, default: "");
-		local String is nextCh: self:source:charAt(index: self:pos + 1, default: "");
-		if (ch == "0" && nextCh != "" && nextCh != "." && nextCh:isDigit() == false) {
-			if (nextCh == "x" || nextCh == "X" || nextCh == "b" || nextCh == "B" || nextCh == "o" || nextCh == "O") {
+		local String is ch: self:source:charAt(index: self:pos, default: '');
+		local String is nextCh: self:source:charAt(index: self:pos + 1, default: '');
+		if (ch == '0' && nextCh != '' && nextCh != '.' && nextCh:isDigit() == false) {
+			if (nextCh == 'x' || nextCh == 'X' || nextCh == 'b' || nextCh == 'B' || nextCh == 'o' || nextCh == 'O') {
 				local Int is base: 16;
-				if (nextCh == "b" || nextCh == "B") {
+				if (nextCh == 'b' || nextCh == 'B') {
 					base: 2;
 				}
-				if (nextCh == "o" || nextCh == "O") {
+				if (nextCh == 'o' || nextCh == 'O') {
 					base: 8;
 				}
 				self:advance();
@@ -370,12 +370,12 @@ Class is Lexer{
 				local BaseDigitsLoop is digitLoop: BaseDigitsLoop:init(lexer: self, base: base);
 				While:run(loop: digitLoop);
 				if (digitLoop:hadInvalid) {
-					self:addError(msg: "Invalid digit in base-" . base . " number literal");
+					self:addError(msg: 'Invalid digit in base-' . base . ' number literal');
 				}
 				if (digitLoop:digitCount == 0) {
-					self:addError(msg: "Missing digits after base prefix");
+					self:addError(msg: 'Missing digits after base prefix');
 				}
-				return Token:init(kind: TokenKind:INT, value: "" . digitLoop:value, line: startLine, col: startCol);
+				return Token:init(kind: TokenKind:INT, value: '' . digitLoop:value, line: startLine, col: startCol);
 			}
 		}
 
@@ -384,17 +384,17 @@ Class is Lexer{
 		While:run(loop: numLoop);
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
-		if (text:contains(needle: "_")) {
+		if (text:contains(needle: '_')) {
 			# Strip separators: underscore digit groups are not valid C11.
-			local String is stripped: "";
+			local String is stripped: '';
 			local Int is ti: 0;
 			While:condition(
 				evaluate: local Function of Boolean(){
 					return ti < text:length();
 				},
 				iteration: local Function of Boolean(){
-					local String is tc: text:charAt(index: ti, default: "");
-					if (tc != "_") {
+					local String is tc: text:charAt(index: ti, default: '');
+					if (tc != '_') {
 						stripped: stripped . tc;
 					}
 					ti: ti + 1;
@@ -404,13 +404,13 @@ Class is Lexer{
 			text: stripped;
 		}
 		local TokenKind is kind: if (numLoop:isFloat) TokenKind:FLOAT else TokenKind:INT;
-		if (kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: "") == "0") {
+		if (kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0') {
 			# A bare leading zero stays decimal in Spec; strip it so C does not
 			# reinterpret the emitted literal as octal.
 			local Int is z: 0;
 			While:condition(
 				evaluate: local Function of Boolean(){
-					return text:length() > 1 && text:charAt(index: 0, default: "") == "0";
+					return text:length() > 1 && text:charAt(index: 0, default: '') == '0';
 				},
 				iteration: local Function of Boolean(){
 					text: text:substring(start: 1, end: text:length());
@@ -440,43 +440,43 @@ Class is Lexer{
 		local Int is startLine: self:line;
 		local Int is startCol: self:col;
 		local String is ch: self:advance();
-		local String is nextCh: self:source:charAt(index: self:pos, default: "");
+		local String is nextCh: self:source:charAt(index: self:pos, default: '');
 
-		if (ch == "=" && nextCh == "=") {
+		if (ch == '=' && nextCh == '=') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "==", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '==', line: startLine, col: startCol);
 		}
-		if (ch == "!" && nextCh == "=") {
+		if (ch == '!' && nextCh == '=') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "!=", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '!=', line: startLine, col: startCol);
 		}
-		if (ch == "<" && nextCh == "=") {
+		if (ch == '<' && nextCh == '=') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "<=", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '<=', line: startLine, col: startCol);
 		}
-		if (ch == ">" && nextCh == "=") {
+		if (ch == '>' && nextCh == '=') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: ">=", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '>=', line: startLine, col: startCol);
 		}
-		if (ch == "&" && nextCh == "&") {
+		if (ch == '&' && nextCh == '&') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "&&", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '&&', line: startLine, col: startCol);
 		}
-		if (ch == "|" && nextCh == "|") {
+		if (ch == '|' && nextCh == '|') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "||", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '||', line: startLine, col: startCol);
 		}
-		if (ch == "<" && nextCh == "<") {
+		if (ch == '<' && nextCh == '<') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "<<", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '<<', line: startLine, col: startCol);
 		}
-		if (ch == ">" && nextCh == ">") {
+		if (ch == '>' && nextCh == '>') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: ">>", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '>>', line: startLine, col: startCol);
 		}
-		if (ch == ":" && nextCh == ":") {
+		if (ch == ':' && nextCh == ':') {
 			self:advance();
-			return Token:init(kind: TokenKind:SYMBOL, value: "::", line: startLine, col: startCol);
+			return Token:init(kind: TokenKind:SYMBOL, value: '::', line: startLine, col: startCol);
 		}
 
 		return Token:init(kind: TokenKind:SYMBOL, value: ch, line: startLine, col: startCol);
@@ -488,7 +488,7 @@ Class is Lexer{
 	Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
 		While:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
-		tokens:add(item: Token:init(kind: TokenKind:EOF, value: "", line: self:line, col: self:col));
+		tokens:add(item: Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col));
 		return tokens;
 	}
 

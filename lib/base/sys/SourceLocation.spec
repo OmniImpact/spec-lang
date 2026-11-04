@@ -7,7 +7,7 @@
 Class is SourceLocation{
 
 	## File path or URI of the source file.
-	local String is file: "";
+	local String is file: '';
 
 	## One-based line number in source.
 	local Int is line: 1;
@@ -56,9 +56,9 @@ Class is SourceLocation{
 	## ```
 	replace Function of String is toString(){
 		if (self:file:length() > 0) {
-			return self:file . ":" . self:line . ":" . self:col;
+			return self:file . ':' . self:line . ':' . self:col;
 		}
-		return self:line . ":" . self:col;
+		return self:line . ':' . self:col;
 	}
 
 }

@@ -16,7 +16,7 @@
 
 Class is BitwiseTypeMismatch{
 	replace Function is init(Map of String to String is args){
-		local Int is bad: "oops" & 1;
+		local Int is bad: 'oops' & 1;
 		local Int is badComplement: ~2.5;
 	}
 }

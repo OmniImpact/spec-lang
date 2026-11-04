@@ -23,7 +23,7 @@ Class is CodeGeneratorInference{
 		local CodeGenerator is cg;
 		local Array of String is segs;
 		local Int is idx: 1;
-		local String is currType: "";
+		local String is currType: '';
 
 		replace Function is init(CodeGenerator is cg, Array of String is segs, String is rootType){
 			self:cg: cg;
@@ -33,7 +33,7 @@ Class is CodeGeneratorInference{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return self:currType != "" && self:idx < self:segs:length();
+			return self:currType != '' && self:idx < self:segs:length();
 		}
 
 		replace Function of Boolean is iteration(LoopControl is c){
@@ -50,44 +50,44 @@ Class is CodeGeneratorInference{
 	## Infers the target type of an expression for method dispatch and type conversion.
 	Function of String is inferTargetType(Expression is expr){
 		local String is resolved: expr:getResolvedType();
-		if (resolved != "" && resolved != "Any") {
+		if (resolved != '' && resolved != 'Any') {
 			return resolved;
 		}
 
 		local String is kind: expr:getKind();
-		if (kind == "STRING") { return "String"; }
-		if (kind == "NUMBER") { return "Int"; }
-		if (kind == "FLOAT") { return "Float"; }
-		if (kind == "BOOL") { return "Boolean"; }
+		if (kind == 'STRING') { return 'String'; }
+		if (kind == 'NUMBER') { return 'Int'; }
+		if (kind == 'FLOAT') { return 'Float'; }
+		if (kind == 'BOOL') { return 'Boolean'; }
 
-		if (kind == "IDENT") {
+		if (kind == 'IDENT') {
 			local String is name: expr:stringValue;
-			if (name == "self") { return self:currentClassName; }
+			if (name == 'self') { return self:currentClassName; }
 			if (self:localVars:has(key: name)) {
-				return self:localVars:getString(key: name, default: "");
+				return self:localVars:getString(key: name, default: '');
 			}
 			if (self:fieldTypes:has(key: name)) {
-				return self:fieldTypes:getString(key: name, default: "");
+				return self:fieldTypes:getString(key: name, default: '');
 			}
 			if (self:allEnumVariants:has(key: name)) {
-				return self:allEnumVariants:getString(key: name, default: "");
+				return self:allEnumVariants:getString(key: name, default: '');
 			}
 			if (self:allClassNames:has(key: name)) {
 				return name;
 			}
-			return "";
+			return '';
 		}
-		if (kind == "PATH") {
+		if (kind == 'PATH') {
 			local Array of String is segs: expr:pathSegments;
 			if (segs:length() > 0) {
 				local String is root: segs:get(index: 0);
-				local String is rootType: "";
-				if (root == "self") {
+				local String is rootType: '';
+				if (root == 'self') {
 					rootType: self:currentClassName;
 				} else if (self:localVars:has(key: root)) {
-					rootType: self:localVars:getString(key: root, default: "");
+					rootType: self:localVars:getString(key: root, default: '');
 				} else if (self:fieldTypes:has(key: root)) {
-					rootType: self:fieldTypes:getString(key: root, default: "");
+					rootType: self:fieldTypes:getString(key: root, default: '');
 				} else if (self:allEnumNames:has(key: root) || self:allClassNames:has(key: root)) {
 					rootType: root;
 				}
@@ -95,48 +95,48 @@ Class is CodeGeneratorInference{
 				While:run(loop: pLoop);
 				return pLoop:currType;
 			}
-			return "";
+			return '';
 		}
-		if (kind == "CALL") {
+		if (kind == 'CALL') {
 			local String is tgtType: self:inferTargetType(expr: expr:methodTarget);
-			if (tgtType == "" || tgtType == "self") {
+			if (tgtType == '' || tgtType == 'self') {
 				tgtType: self:currentClassName;
 			}
 			local String is m: expr:methodName;
-			if (tgtType:startsWith(prefix: "Array:") && (m == "get" || m == "pop" || m == "removeAt")) {
+			if (tgtType:startsWith(prefix: 'Array:') && (m == 'get' || m == 'pop' || m == 'removeAt')) {
 				return tgtType:substring(start: 6, end: tgtType:length());
 			}
 			if (self:allEnumNames:has(key: tgtType)) {
-				if (m == "name") { return "String"; }
-				if (m == "ordinal") { return "Int"; }
-				if (m == "values") { return "Array:" . tgtType; }
-				if (m == "value") {
-					return if (self:allStringBackedEnums:has(key: tgtType)) "String" else "Int";
+				if (m == 'name') { return 'String'; }
+				if (m == 'ordinal') { return 'Int'; }
+				if (m == 'values') { return 'Array:' . tgtType; }
+				if (m == 'value') {
+					return if (self:allStringBackedEnums:has(key: tgtType)) 'String' else 'Int';
 				}
 			}
-			if (tgtType == "String" && m == "fromCharCode") {
-				return "String";
+			if (tgtType == 'String' && m == 'fromCharCode') {
+				return 'String';
 			}
-			if (tgtType == "Math" || tgtType == "math") {
-				if (m == "toInt") { return "Int"; }
-				if (m == "round" || m == "floor" || m == "ceil" || m == "ceiling" || m == "random" || m == "abs" || m == "min" || m == "max" || m == "clamp" || m == "sqrt" || m == "sin" || m == "cos" || m == "tan" || m == "atan2" || m == "log" || m == "log2" || m == "pow" || m == "toFloat") {
-					return "Float";
+			if (tgtType == 'Math' || tgtType == 'math') {
+				if (m == 'toInt') { return 'Int'; }
+				if (m == 'round' || m == 'floor' || m == 'ceil' || m == 'ceiling' || m == 'random' || m == 'abs' || m == 'min' || m == 'max' || m == 'clamp' || m == 'sqrt' || m == 'sin' || m == 'cos' || m == 'tan' || m == 'atan2' || m == 'log' || m == 'log2' || m == 'pow' || m == 'toFloat') {
+					return 'Float';
 				}
 			}
 			local String is methodRet: self:lookupMethodReturnType(className: tgtType, methodName: m);
-			if (methodRet != "" && methodRet != "void") {
+			if (methodRet != '' && methodRet != 'void') {
 				return methodRet;
 			}
-			return "";
+			return '';
 		}
-		if (kind == "INDEX") {
+		if (kind == 'INDEX') {
 			local String is leftT: self:inferTargetType(expr: expr:leftExpr);
-			if (leftT:startsWith(prefix: "Array:") && leftT:length() > 6) {
+			if (leftT:startsWith(prefix: 'Array:') && leftT:length() > 6) {
 				return leftT:substring(start: 6, end: leftT:length());
 			}
-			return "";
+			return '';
 		}
-		return "";
+		return '';
 	}
 
 	## Wraps non-string expressions with runtime string conversion helpers.
@@ -147,54 +147,54 @@ Class is CodeGeneratorInference{
 	Function of String is wrapToString(Expression is expr, String is exprC){
 		local String is resolved: self:inferTargetType(expr: expr);
 		when (resolved) {
-			is "Int", "int": {
-				return "spec_to_string_int(" . exprC . ")";
+			is 'Int', 'int': {
+				return 'spec_to_string_int(' . exprC . ')';
 			}
-			is "Float", "float": {
-				return "spec_to_string_float(" . exprC . ")";
+			is 'Float', 'float': {
+				return 'spec_to_string_float(' . exprC . ')';
 			}
-			is "Boolean", "bool": {
-				return "spec_to_string_bool(" . exprC . ")";
+			is 'Boolean', 'bool': {
+				return 'spec_to_string_bool(' . exprC . ')';
 			}
-			is "String", "string": {
+			is 'String', 'string': {
 				return exprC;
 			}
 			else: {
 				if (self:allEnumNames:has(key: resolved)) {
-					return resolved . "_name(" . exprC . ")";
+					return resolved . '_name(' . exprC . ')';
 				}
 				if (self:allClassNames:has(key: resolved) && !self:isBuiltinClass(name: resolved)) {
-					return "spec_type_name(" . exprC . ") /* wrap:" . resolved . " */";
+					return 'spec_type_name(' . exprC . ') /* wrap:' . resolved . ' */';
 				}
 			}
 		}
 
 		local String is kind: expr:getKind();
 		when (kind) {
-			is "NUMBER": {
-				return "spec_to_string_int(" . exprC . ")";
+			is 'NUMBER': {
+				return 'spec_to_string_int(' . exprC . ')';
 			}
-			is "FLOAT": {
-				return "spec_to_string_float(" . exprC . ")";
+			is 'FLOAT': {
+				return 'spec_to_string_float(' . exprC . ')';
 			}
-			is "BOOL": {
-				return "spec_to_string_bool(" . exprC . ")";
+			is 'BOOL': {
+				return 'spec_to_string_bool(' . exprC . ')';
 			}
-			is "BINARY": {
+			is 'BINARY': {
 				local String is op: expr:binaryOp;
-				if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>") {
-					return "spec_to_string_int(" . exprC . ")";
+				if (op == '+' || op == '-' || op == '*' || op == '/' || op == '%' || op == '&' || op == '|' || op == '^' || op == '<<' || op == '>>') {
+					return 'spec_to_string_int(' . exprC . ')';
 				}
-				if (op == "==" || op == "!=" || op == "<" || op == "<=" || op == ">" || op == ">=" || op == "&&" || op == "||") {
-					return "spec_to_string_bool(" . exprC . ")";
+				if (op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' || op == '&&' || op == '||') {
+					return 'spec_to_string_bool(' . exprC . ')';
 				}
 				return exprC;
 			}
-			is "UNARY": {
-				if (expr:unaryOp == "!") {
-					return "spec_to_string_bool(" . exprC . ")";
+			is 'UNARY': {
+				if (expr:unaryOp == '!') {
+					return 'spec_to_string_bool(' . exprC . ')';
 				}
-				return "spec_to_string_int(" . exprC . ")";
+				return 'spec_to_string_int(' . exprC . ')';
 			}
 			else: {
 				return exprC;
@@ -205,25 +205,25 @@ Class is CodeGeneratorInference{
 	## Determines whether an expression produces a string value.
 	Function of Boolean is isStringExpr(Expression is expr){
 		local String is resolved: self:inferTargetType(expr: expr);
-		if (resolved == "String" || resolved == "string") {
+		if (resolved == 'String' || resolved == 'string') {
 			return true;
 		}
 		local String is kind: expr:getKind();
-		if (kind == "STRING") {
+		if (kind == 'STRING') {
 			return true;
 		}
-		if (kind == "BINARY" && expr:binaryOp == ".") {
+		if (kind == 'BINARY' && expr:binaryOp == '.') {
 			return true;
 		}
 		return false;
 	}
 
 	local Function of Boolean is isSubclassOf(String is subName, String is baseName){
-		if (subName == "" || baseName == "" || subName == baseName) {
+		if (subName == '' || baseName == '' || subName == baseName) {
 			return false;
 		}
 		local ClassInfo is subCls: self:findClass(name: subName);
-		if (subCls:getName() == "") {
+		if (subCls:getName() == '') {
 			return false;
 		}
 		local Boolean is matched: false;
@@ -245,7 +245,7 @@ Class is CodeGeneratorInference{
 		local String is out: "/* Constructor Implementations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != 'Enum') {
 				self:currentClassName: c:getName();
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
@@ -254,45 +254,45 @@ Class is CodeGeneratorInference{
 					self:fieldTypes:set(key: f:getName(), value: self:formatTypeString(t: f:getType()));
 				});
 
-				out: out . "void " . c:getName() . "_destroy(void* self_ptr) {\n";
-				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)self_ptr;\n";
+				out: out . 'void ' . c:getName() . "_destroy(void* self_ptr) {\n";
+				out: out . '    ' . c:getName() . '* self = (' . c:getName() . "*)self_ptr;\n";
 				out: out . "    if (!self) return;\n";
 				allFields:each(action: local Function(Member is m){
 					local String is ft: m:getType():getName();
-					if ((self:allClassNames:has(key: ft) && !self:allEnumNames:has(key: ft)) || self:allTaggedEnums:has(key: ft) || ft:startsWith(prefix: "Array") || ft:startsWith(prefix: "Map") || ft:startsWith(prefix: "Function") || ft == "LoopControl") {
-						out: out . "    if (self->" . self:cIdent(name: m:getName()) . ") { spec_release((void*)self->" . self:cIdent(name: m:getName()) . "); self->" . self:cIdent(name: m:getName()) . " = NULL; }\n";
+					if ((self:allClassNames:has(key: ft) && !self:allEnumNames:has(key: ft)) || self:allTaggedEnums:has(key: ft) || ft:startsWith(prefix: 'Array') || ft:startsWith(prefix: 'Map') || ft:startsWith(prefix: 'Function') || ft == 'LoopControl') {
+						out: out . '    if (self->' . self:cIdent(name: m:getName()) . ') { spec_release((void*)self->' . self:cIdent(name: m:getName()) . '); self->' . self:cIdent(name: m:getName()) . " = NULL; }\n";
 					}
 				});
 				out: out . "}\n\n";
 
-				out: out . c:getName() . "* " . c:getName() . "_new(void) {\n";
-				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)spec_alloc(sizeof(" . c:getName() . "), " . c:getName() . "_destroy);\n";
-				out: out . "    self->_type_name = \"" . c:getName() . "\";\n";
+				out: out . c:getName() . '* ' . c:getName() . "_new(void) {\n";
+				out: out . '    ' . c:getName() . '* self = (' . c:getName() . '*)spec_alloc(sizeof(' . c:getName() . '), ' . c:getName() . "_destroy);\n";
+				out: out . '    self->_type_name = "' . c:getName() . "\";\n";
 				if (self:methodSlotCount > 0) {
-					out: out . "    self->_vtable = " . c:getName() . "_vtable;\n";
+					out: out . '    self->_vtable = ' . c:getName() . "_vtable;\n";
 				}
 				allFields:each(action: local Function(Member is m){
 					if (m:hasInit) {
-						out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . self:generateExpression(expr: m:initExpr) . ";\n";
+						out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . self:generateExpression(expr: m:initExpr) . ";\n";
 					} else {
 						local String is ft: m:getType():getName();
-						if (ft == "String" || ft == "string") {
-							out: out . "    self->" . self:cIdent(name: m:getName()) . " = \"\";\n";
-						} else if (ft == "Array") {
+						if (ft == 'String' || ft == 'string') {
+							out: out . '    self->' . self:cIdent(name: m:getName()) . " = \"\";\n";
+						} else if (ft == 'Array') {
 							local String is elemKind: self:containerElemKind(containerType: self:formatTypeString(t: m:getType()));
-							local String is newCall: "spec_array_new()";
-							if (elemKind == "object") {
-								newCall: "spec_array_new_object()";
-							} else if (elemKind == "string") {
-								newCall: "spec_array_new_string()";
+							local String is newCall: 'spec_array_new()';
+							if (elemKind == 'object') {
+								newCall: 'spec_array_new_object()';
+							} else if (elemKind == 'string') {
+								newCall: 'spec_array_new_string()';
 							}
-							out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . newCall . ";\n";
-						} else if (ft == "Map") {
-							local String is newCall: "spec_map_new()";
+							out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . newCall . ";\n";
+						} else if (ft == 'Map') {
+							local String is newCall: 'spec_map_new()';
 							if (self:containerElemIsArc(containerType: self:formatTypeString(t: m:getType()))) {
-								newCall: "spec_map_new_object()";
+								newCall: 'spec_map_new_object()';
 							}
-							out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . newCall . ";\n";
+							out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . newCall . ";\n";
 						}
 					}
 				});
@@ -308,32 +308,32 @@ Class is CodeGeneratorInference{
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
 		local String is savedRetLbl: self:inlineReturnLabel;
-		self:inlineReturnLabel: "break";
-		if (mode == "each") {
-			self:inlineReturnVar: "";
+		self:inlineReturnLabel: 'break';
+		if (mode == 'each') {
+			self:inlineReturnVar: '';
 		} else {
-			self:inlineReturnVar: "_pred_" . id;
+			self:inlineReturnVar: '_pred_' . id;
 		}
 
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
 		outerKeys:each(action: local Function(String is k){
-			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 
-		local String is paramDecl: "";
+		local String is paramDecl: '';
 		if (fnExpr:anonParams:length() > 0) {
 			local Parameter is p: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
 			local String is pCType: self:cTypeFor(typeName: p:getType():getName());
-			local String is pRaw: "(" . pCType . ")(intptr_t)_a_" . id . "->items[_i_" . id . "]";
-			if (p:getType():getName() == "String") {
-				pRaw: "spec_str_ring_copy((const char*)(intptr_t)_a_" . id . "->items[_i_" . id . "])";
+			local String is pRaw: '(' . pCType . ')(intptr_t)_a_' . id . '->items[_i_' . id . ']';
+			if (p:getType():getName() == 'String') {
+				pRaw: 'spec_str_ring_copy((const char*)(intptr_t)_a_' . id . '->items[_i_' . id . '])';
 			}
-			paramDecl: "        " . pCType . " " . self:cIdent(name: p:getName()) . " = " . pRaw . ";\n";
+			paramDecl: '        ' . pCType . ' ' . self:cIdent(name: p:getName()) . ' = ' . pRaw . ";\n";
 		}
 
-		local String is bodyC: "";
+		local String is bodyC: '';
 		fnExpr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
@@ -342,57 +342,57 @@ Class is CodeGeneratorInference{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is arrVar: "_a_" . id;
-		local String is idxVar: "_i_" . id;
-		local String is predVar: "_pred_" . id;
+		local String is arrVar: '_a_' . id;
+		local String is idxVar: '_i_' . id;
+		local String is predVar: '_pred_' . id;
 
-		if (mode == "each") {
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+		if (mode == 'each') {
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
 			out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } })";
 			return out;
 		}
-		if (mode == "filter") {
-			local String is outVar: "_out_" . id;
-			local String is outNewC: "spec_array_new()";
+		if (mode == 'filter') {
+			local String is outVar: '_out_' . id;
+			local String is outNewC: 'spec_array_new()';
 			if (fnExpr:anonParams:length() > 0) {
 				local String is pName: fnExpr:anonParams:get(index: 0):getType():getName();
 				if (self:isArcType(typeName: pName)) {
-					outNewC: "spec_array_new_object()";
-				} else if (pName == "String") {
-					outNewC: "spec_array_new_string()";
+					outNewC: 'spec_array_new_object()';
+				} else if (pName == 'String') {
+					outNewC: 'spec_array_new_string()';
 				}
 			}
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = " . outNewC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") spec_array_add(" . outVar . ", " . arrVar . "->items[" . idxVar . "]);\n    } } " . outVar . "; })";
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') spec_array_add(' . outVar . ', ' . arrVar . '->items[' . idxVar . "]);\n    } } " . outVar . '; })';
 			return out;
 		}
-		if (mode == "count") {
-			local String is cntVar: "_cnt_" . id;
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; long long " . cntVar . " = 0; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") " . cntVar . "++;\n    } } " . cntVar . "; })";
+		if (mode == 'count') {
+			local String is cntVar: '_cnt_' . id;
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; long long ' . cntVar . ' = 0; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') ' . cntVar . "++;\n    } } " . cntVar . '; })';
 			return out;
 		}
-		if (mode == "any") {
-			local String is fndVar: "_fnd_" . id;
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; bool " . fndVar . " = false; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") { " . fndVar . " = true; break; }\n    } } " . fndVar . "; })";
+		if (mode == 'any') {
+			local String is fndVar: '_fnd_' . id;
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; bool ' . fndVar . ' = false; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') { ' . fndVar . " = true; break; }\n    } } " . fndVar . '; })';
 			return out;
 		}
-		if (mode == "map") {
-			local String is outVar: "_out_" . id;
+		if (mode == 'map') {
+			local String is outVar: '_out_' . id;
 			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:getName());
-			if (retCType == "void") { retCType: "void*"; }
-			local String is outNewC: "spec_array_new()";
+			if (retCType == 'void') { retCType: 'void*'; }
+			local String is outNewC: 'spec_array_new()';
 			if (self:isArcType(typeName: fnExpr:anonReturnType:getName())) {
-				outNewC: "spec_array_new_object()";
-			} else if (fnExpr:anonReturnType:getName() == "String") {
-				outNewC: "spec_array_new_string()";
+				outNewC: 'spec_array_new_object()';
+			} else if (fnExpr:anonReturnType:getName() == 'String') {
+				outNewC: 'spec_array_new_string()';
 			}
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = " . outNewC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        " . retCType . " " . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ", (void*)(intptr_t)(" . predVar . "));\n    } } " . outVar . "; })";
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        ' . retCType . ' ' . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ', (void*)(intptr_t)(' . predVar . "));\n    } } " . outVar . '; })';
 			return out;
 		}
-		return "0";
+		return '0';
 	}
 
 	Function of String is generateInlineArrayFold(String is targetC, Expression is initExpr, Expression is fnExpr){
@@ -404,43 +404,43 @@ Class is CodeGeneratorInference{
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
 		outerKeys:each(action: local Function(String is k){
-			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 
-		local String is accVar: "_acc_" . id;
-		local String is nextLbl: "_loop_next_" . id;
-		local String is arrVar: "_a_" . id;
-		local String is idxVar: "_i_" . id;
+		local String is accVar: '_acc_' . id;
+		local String is nextLbl: '_loop_next_' . id;
+		local String is arrVar: '_a_' . id;
+		local String is idxVar: '_i_' . id;
 
 		local String is initC: self:generateExpression(expr: initExpr);
 		local String is accTypeName: self:inferTargetType(expr: initExpr);
-		if (accTypeName == "" && fnExpr:anonReturnType:getName() != "Void" && fnExpr:anonReturnType:getName() != "void") {
+		if (accTypeName == '' && fnExpr:anonReturnType:getName() != 'Void' && fnExpr:anonReturnType:getName() != 'void') {
 			accTypeName: fnExpr:anonReturnType:getName();
 		}
 		local String is accCType: self:cTypeFor(typeName: accTypeName);
-		if (accCType == "void") { accCType: "long long"; }
+		if (accCType == 'void') { accCType: 'long long'; }
 
 		self:inlineReturnVar: accVar;
-		self:inlineReturnLabel: "break";
+		self:inlineReturnLabel: 'break';
 
-		local String is paramDecl: "";
+		local String is paramDecl: '';
 		if (fnExpr:anonParams:length() >= 1) {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p0:getName(), value: accTypeName);
-			paramDecl: paramDecl . "        " . accCType . " " . self:cIdent(name: p0:getName()) . " = " . accVar . ";\n";
+			paramDecl: paramDecl . '        ' . accCType . ' ' . self:cIdent(name: p0:getName()) . ' = ' . accVar . ";\n";
 		}
 		if (fnExpr:anonParams:length() >= 2) {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
 			self:localVars:set(key: p1:getName(), value: self:formatTypeString(t: p1:getType()));
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
-			local String is p1Raw: "(" . p1CType . ")(intptr_t)" . arrVar . "->items[" . idxVar . "]";
-			if (p1:getType():getName() == "String") {
-				p1Raw: "spec_str_ring_copy((const char*)(intptr_t)" . arrVar . "->items[" . idxVar . "])";
+			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . arrVar . '->items[' . idxVar . ']';
+			if (p1:getType():getName() == 'String') {
+				p1Raw: 'spec_str_ring_copy((const char*)(intptr_t)' . arrVar . '->items[' . idxVar . '])';
 			}
-			paramDecl: paramDecl . "        " . p1CType . " " . self:cIdent(name: p1:getName()) . " = " . p1Raw . ";\n";
+			paramDecl: paramDecl . '        ' . p1CType . ' ' . self:cIdent(name: p1:getName()) . ' = ' . p1Raw . ";\n";
 		}
 
-		local String is bodyC: "";
+		local String is bodyC: '';
 		fnExpr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
@@ -449,8 +449,8 @@ Class is CodeGeneratorInference{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; " . accCType . " " . accVar . " = " . initC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-		out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } " . accVar . "; })";
+		local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; ' . accCType . ' ' . accVar . ' = ' . initC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+		out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } " . accVar . '; })';
 		return out;
 	}
 
@@ -463,34 +463,34 @@ Class is CodeGeneratorInference{
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
 		outerKeys:each(action: local Function(String is k){
-			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 
-		local String is mapVar: "_m_" . id;
-		local String is bVar: "_b_" . id;
-		local String is eVar: "_e_" . id;
+		local String is mapVar: '_m_' . id;
+		local String is bVar: '_b_' . id;
+		local String is eVar: '_e_' . id;
 
-		self:inlineReturnVar: "";
-		self:inlineReturnLabel: "break";
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: 'break';
 
-		local String is paramDecl: "";
+		local String is paramDecl: '';
 		if (fnExpr:anonParams:length() >= 1) {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
-			self:localVars:set(key: p0:getName(), value: "String");
-			paramDecl: paramDecl . "            const char* " . self:cIdent(name: p0:getName()) . " = spec_str_ring_copy(" . eVar . "->key);\n";
+			self:localVars:set(key: p0:getName(), value: 'String');
+			paramDecl: paramDecl . '            const char* ' . self:cIdent(name: p0:getName()) . ' = spec_str_ring_copy(' . eVar . "->key);\n";
 		}
 		if (fnExpr:anonParams:length() >= 2) {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
 			self:localVars:set(key: p1:getName(), value: self:formatTypeString(t: p1:getType()));
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
-			local String is p1Raw: "(" . p1CType . ")(intptr_t)" . eVar . "->value";
-			if (p1:getType():getName() == "String") {
-				p1Raw: "spec_str_ring_copy((const char*)(intptr_t)" . eVar . "->value)";
+			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . eVar . '->value';
+			if (p1:getType():getName() == 'String') {
+				p1Raw: 'spec_str_ring_copy((const char*)(intptr_t)' . eVar . '->value)';
 			}
-			paramDecl: paramDecl . "            " . p1CType . " " . self:cIdent(name: p1:getName()) . " = " . p1Raw . ";\n";
+			paramDecl: paramDecl . '            ' . p1CType . ' ' . self:cIdent(name: p1:getName()) . ' = ' . p1Raw . ";\n";
 		}
 
-		local String is bodyC: "";
+		local String is bodyC: '';
 		fnExpr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
@@ -499,7 +499,7 @@ Class is CodeGeneratorInference{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ SpecMap* " . mapVar . " = " . targetC . "; if (" . mapVar . ") { for (size_t " . bVar . " = 0; " . bVar . " < SPEC_MAP_BUCKETS; " . bVar . "++) { for (SpecMapEntry* " . eVar . " = " . mapVar . "->buckets[" . bVar . "]; " . eVar . "; " . eVar . " = " . eVar . "->next) {\n";
+		local String is out: '({ SpecMap* ' . mapVar . ' = ' . targetC . '; if (' . mapVar . ') { for (size_t ' . bVar . ' = 0; ' . bVar . ' < SPEC_MAP_BUCKETS; ' . bVar . '++) { for (SpecMapEntry* ' . eVar . ' = ' . mapVar . '->buckets[' . bVar . ']; ' . eVar . '; ' . eVar . ' = ' . eVar . "->next) {\n";
 		out: out . paramDecl . "            do {\n" . bodyC . "            } while (0);\n        } } } })";
 		return out;
 	}
@@ -510,17 +510,17 @@ Class is CodeGeneratorInference{
 		local String is savedRetVar: self:inlineReturnVar;
 		local String is savedRetLbl: self:inlineReturnLabel;
 
-		local String is evVar: "_ev_" . id;
+		local String is evVar: '_ev_' . id;
 		self:inlineReturnVar: evVar;
-		self:inlineReturnLabel: "break";
-		local String is evalBodyC: "";
+		self:inlineReturnLabel: 'break';
+		local String is evalBodyC: '';
 		evalExpr:anonBody:each(action: local Function(Statement is s){
 			evalBodyC: evalBodyC . self:generateStatement(stmt: s);
 		});
 
-		self:inlineReturnVar: "";
-		self:inlineReturnLabel: "break";
-		local String is iterBodyC: "";
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: 'break';
+		local String is iterBodyC: '';
 		iterExpr:anonBody:each(action: local Function(Statement is s){
 			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
 		});
@@ -536,7 +536,7 @@ Class is CodeGeneratorInference{
 		local Array of String is segs;
 		local CBackendUtils is utils;
 		local Int is idx: 1;
-		local String is res: "";
+		local String is res: '';
 
 		replace Function is init(Array of String is segs, String is rootC, CBackendUtils is utils){
 			self:segs: segs;
@@ -550,7 +550,7 @@ Class is CodeGeneratorInference{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is c){
-			self:res: self:res . "->" . self:utils:cIdent(name: self:segs:get(index: self:idx));
+			self:res: self:res . '->' . self:utils:cIdent(name: self:segs:get(index: self:idx));
 			self:idx: self:idx + 1;
 			return true;
 		}

@@ -33,18 +33,18 @@ Class is PiBenchmark{
 	##
 	## @param args: CLI map; keys: threads, points, refresh.
 	replace Function is init(Map of String to String is args){
-		local Int is threads: args:getInt(key: "threads", default: 4);
-		local Int is points: args:getInt(key: "points", default: 1_000_000_000);
-		local Int is refreshMs: args:getInt(key: "refresh", default: 40);
+		local Int is threads: args:getInt(key: 'threads', default: 4);
+		local Int is points: args:getInt(key: 'points', default: 1_000_000_000);
+		local Int is refreshMs: args:getInt(key: 'refresh', default: 40);
 
 		if (threads < 1) { threads: 1; }
 		if (threads > 16) { threads: 16; }
 
 		output:line(Ansi:clearScreen() . Ansi:moveTo(row: 1, col: 1) . Ansi:hideCursor());
-		local String is title: "Monte Carlo Pi Benchmark";
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔═ " . title . " " . self:bar(width: 76 - title:length() - 5) . "╗"));
-		output:line(Ansi:color256(code: 51, text: self:boxed(inner: "Threads: " . threads . "   Points: " . points . "   Refresh: " . refreshMs . "ms", width: 76)));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚" . self:bar(width: 74) . "╝"));
+		local String is title: 'Monte Carlo Pi Benchmark';
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ ' . title . ' ' . self:bar(width: 76 - title:length() - 5) . '╗'));
+		output:line(Ansi:color256(code: 51, text: self:boxed(inner: 'Threads: ' . threads . '   Points: ' . points . '   Refresh: ' . refreshMs . 'ms', width: 76)));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:bar(width: 74) . '╝'));
 
 		self:drawDomain(threads: threads);
 
@@ -119,7 +119,7 @@ Class is PiBenchmark{
 				row: row + 1;
 			}
 		);
-		output:line("");
+		output:line('');
 	}
 
 	## Builds one domain row: circle interior/exterior shading plus any live
@@ -129,7 +129,7 @@ Class is PiBenchmark{
 	## @param threads: Thread count for marker lookup.
 	## @return: Rendered row string.
 	local Function of String is domainRow(Int is row, Int is threads){
-		local String is buf: "";
+		local String is buf: '';
 		local Int is col: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){ return col < self:gridW; },
@@ -140,11 +140,11 @@ Class is PiBenchmark{
 
 				local Int is marker: self:markerAt(col: col, row: row, threads: threads);
 				if (marker >= 0) {
-					buf: buf . Ansi:color256(code: self:threadColor(index: marker), text: "●");
+					buf: buf . Ansi:color256(code: self:threadColor(index: marker), text: '●');
 				} else if (dist <= 1.0) {
-					buf: buf . Ansi:color256(code: 236, text: "·");
+					buf: buf . Ansi:color256(code: 236, text: '·');
 				} else {
-					buf: buf . " ";
+					buf: buf . ' ';
 				}
 				col: col + 1;
 			}
@@ -191,7 +191,7 @@ Class is PiBenchmark{
 		if (samples > 0) {
 			pi: (4.0 * math:toFloat(value: hits)) / math:toFloat(value: samples);
 		}
-		output:line(Ansi:color256(code: 220, text: "  samples: " . samples . "  hits: " . hits . "  pi ≈ " . self:piText(value: pi) . "  threads: " . threads));
+		output:line(Ansi:color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . self:piText(value: pi) . '  threads: ' . threads));
 	}
 
 	## Prints the final statistics block.
@@ -208,12 +208,12 @@ Class is PiBenchmark{
 			perSec: (points * 1000) / elapsedMs;
 		}
 
-		output:line("");
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔═ Results " . self:bar(width: 64) . "╗"));
-		output:line(Ansi:color256(code: 51, text: "║ Pi ≈ " . self:piText(value: pi) . "  (error " . self:piText(value: err) . ")"));
-		output:line(Ansi:color256(code: 51, text: "║ Points: " . points . "  Hits: " . totalHits . "  Threads: " . threads));
-		output:line(Ansi:color256(code: 51, text: "║ Time: " . elapsedMs . " ms  Throughput: " . perSec . " points/sec"));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚" . self:bar(width: 74) . "╝"));
+		output:line('');
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Results ' . self:bar(width: 64) . '╗'));
+		output:line(Ansi:color256(code: 51, text: '║ Pi ≈ ' . self:piText(value: pi) . '  (error ' . self:piText(value: err) . ')'));
+		output:line(Ansi:color256(code: 51, text: '║ Points: ' . points . '  Hits: ' . totalHits . '  Threads: ' . threads));
+		output:line(Ansi:color256(code: 51, text: '║ Time: ' . elapsedMs . ' ms  Throughput: ' . perSec . ' points/sec'));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:bar(width: 74) . '╝'));
 	}
 
 	## Formats a float with three decimal places (fixed-width approximation).
@@ -224,13 +224,13 @@ Class is PiBenchmark{
 		local Int is thousandths: math:toInt(value: math:round(value: value * 1000.0));
 		local Int is whole: thousandths / 1000;
 		local Int is frac: thousandths % 1000;
-		local String is fracText: "" . frac;
+		local String is fracText: '' . frac;
 		if (frac < 10) {
-			fracText: "00" . fracText;
+			fracText: '00' . fracText;
 		} else if (frac < 100) {
-			fracText: "0" . fracText;
+			fracText: '0' . fracText;
 		}
-		return "" . whole . "." . fracText;
+		return '' . whole . '.' . fracText;
 	}
 
 	## Maps a thread index to a distinct 256-color code.
@@ -247,7 +247,7 @@ Class is PiBenchmark{
 	## @param width: Total rendered width including borders.
 	## @return: Padded, bordered row.
 	local Function of String is boxed(String is inner, Int is width){
-		local String is line: "║ " . inner;
+		local String is line: '║ ' . inner;
 		local Int is pad: width - 2 - inner:length();
 		if (pad < 1) {
 			pad: 1;
@@ -256,11 +256,11 @@ Class is PiBenchmark{
 		While:condition(
 			evaluate: local Function of Boolean(){ return i < pad; },
 			iteration: local Function(){
-				line: line . " ";
+				line: line . ' ';
 				i: i + 1;
 			}
 		);
-		return line . "║";
+		return line . '║';
 	}
 
 	## Builds a horizontal box bar of the given length.
@@ -268,12 +268,12 @@ Class is PiBenchmark{
 	## @param width: Number of `═` segments.
 	## @return: Bar string.
 	local Function of String is bar(Int is width){
-		local String is barText: "";
+		local String is barText: '';
 		local Int is i: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){ return i < width; },
 			iteration: local Function(){
-				barText: barText . "═";
+				barText: barText . '═';
 				i: i + 1;
 			}
 		);

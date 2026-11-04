@@ -49,7 +49,7 @@ Class is Blackjack{
 			game:dealerHand:add(item: card);
 
 			local Int is newScore: game:handValue(hand: game:dealerHand);
-			output:line("Dealer draws: " . card . " (Total: " . newScore . ")");
+			output:line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
 
 			return true; # Step completed normally; engine will call evaluate() next
 		}
@@ -84,36 +84,36 @@ Class is Blackjack{
 		}
 
 		replace Function is onInput(String is action){
-			if (action == "") {
+			if (action == '') {
 				output:line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
 				return;
 			}
 			when (action) {
-				is "h", "hit": {
+				is 'h', 'hit': {
 				local Int is card: game:drawCard();
 				game:playerHand:add(item: card);
-				output:line("You drew: " . card);
+				output:line('You drew: ' . card);
 
 				local Int is score: game:handValue(hand: game:playerHand);
-				output:line("Your total is now: " . score);
+				output:line('Your total is now: ' . score);
 
 				if (score > 21) {
-					output:line("Bust! You lose.");
+					output:line('Bust! You lose.');
 					game:roundActive: false;
 				} else if (score == 21) {
-					output:line("21! Standing automatically.");
+					output:line('21! Standing automatically.');
 					game:startDealerTurn();
 				} else {
 					game:promptPlayerAction();
 				}
 			}
-			is "s", "stand": {
-				output:line("You stand with total: " . game:handValue(hand: game:playerHand));
+			is 's', 'stand': {
+				output:line('You stand with total: ' . game:handValue(hand: game:playerHand));
 				game:startDealerTurn();
 			}
 			else: {
-				output:line("Invalid command. Please enter 'h' (hit) or 's' (stand).");
+				output:line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
 				game:promptPlayerAction();
 			}
 		}
@@ -159,7 +159,7 @@ Class is Blackjack{
 	}
 
 	Function is promptPlayerAction(){
-		output:line("Would you like to (h)it or (s)tand?");
+		output:line('Would you like to (h)it or (s)tand?');
 		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
 		Input:prompt(handler: handler);
 	}
@@ -179,16 +179,16 @@ Class is Blackjack{
 		local Int is dealerScore: handValue(hand: dealerHand);
 
 		output:line("\n=== Final Results ===");
-		output:line("Player: " . playerScore . " | Dealer: " . dealerScore);
+		output:line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
 
 		if (dealerScore > 21) {
-			output:line("Dealer busts! You win!");
+			output:line('Dealer busts! You win!');
 		} else if (playerScore > dealerScore) {
-			output:line("You beat the dealer! You win!");
+			output:line('You beat the dealer! You win!');
 		} else if (dealerScore > playerScore) {
-			output:line("Dealer wins!");
+			output:line('Dealer wins!');
 		} else {
-			output:line("Push (Tie)!");
+			output:line('Push (Tie)!');
 		}
 	}
 
@@ -196,8 +196,8 @@ Class is Blackjack{
 	# Application Entry Point
 	# =========================================================================
 	replace Function is init(Map of String to String is args){
-		output:line("======================================");
-		output:line("         Welcome to SpecJack          ");
+		output:line('======================================');
+		output:line('         Welcome to SpecJack          ');
 		output:line("======================================\n");
 
 		# 1. Build the deck: four suits of each value 1..10.
@@ -223,12 +223,12 @@ Class is Blackjack{
 		dealerHand:add(item: drawCard());
 		dealerHand:add(item: drawCard());
 
-		output:line("Your hand: " . playerHand[0] . ", " . playerHand[1] . " (Total: " . handValue(hand: playerHand) . ")");
-		output:line("Dealer's up card: " . dealerHand[0] . " [Hidden Card]\n");
+		output:line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
+		output:line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
 		# 3. Check natural 21
 		if (handValue(hand: playerHand) == 21) {
-			output:line("Natural Blackjack! You win!");
+			output:line('Natural Blackjack! You win!');
 			return;
 		}
 

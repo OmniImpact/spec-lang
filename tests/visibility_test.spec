@@ -58,40 +58,40 @@ Class is VisibilityTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("=== Regression: Visibility ===");
+		output:line('=== Regression: Visibility ===');
 
 		local VisBase is base: VisBase:init();
 		local VisChild is child: VisChild:init();
 
 		# Case 1: public members are callable externally and dispatch virtually.
 		if (base:openValue() == 10 && child:openValue() == 99) {
-			output:line("[PASS] public: external call + virtual override");
+			output:line('[PASS] public: external call + virtual override');
 		} else {
-			output:line("[FAIL] public: " . base:openValue() . ", " . child:openValue());
+			output:line('[FAIL] public: ' . base:openValue() . ', ' . child:openValue());
 		}
 
 		# Case 2: local members work inside the declaring class.
 		if (base:publicViaSecret() == 21) {
-			output:line("[PASS] local: internal use = 21");
+			output:line('[PASS] local: internal use = 21');
 		} else {
-			output:line("[FAIL] local: " . base:publicViaSecret());
+			output:line('[FAIL] local: ' . base:publicViaSecret());
 		}
 
 		# Case 3: contained members are visible to subclasses.
 		if (child:viaHelper() == 60) {
-			output:line("[PASS] contained: subclass access = 60");
+			output:line('[PASS] contained: subclass access = 60');
 		} else {
-			output:line("[FAIL] contained: " . child:viaHelper());
+			output:line('[FAIL] contained: ' . child:viaHelper());
 		}
 
 		# Case 4: contained access through a reference, from within a subclass.
 		if (child:viaHelperRef(ref: child as VisBase) == 30) {
-			output:line("[PASS] contained: reference access from subclass = 30");
+			output:line('[PASS] contained: reference access from subclass = 30');
 		} else {
-			output:line("[FAIL] contained: " . child:viaHelperRef(ref: child as VisBase));
+			output:line('[FAIL] contained: ' . child:viaHelperRef(ref: child as VisBase));
 		}
 
-		output:line("=== End Visibility ===");
+		output:line('=== End Visibility ===');
 	}
 
 }

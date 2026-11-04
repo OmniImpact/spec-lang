@@ -15,8 +15,8 @@ Class is Phase6TypeCheckerTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("======================================");
-		output:line("     Phase 6 Semantic Type Checker    ");
+		output:line('======================================');
+		output:line('     Phase 6 Semantic Type Checker    ');
 		output:line("======================================\n");
 
 		self:testCleanProgram();
@@ -26,7 +26,7 @@ Class is Phase6TypeCheckerTest{
 	}
 
 	testCleanProgram(){
-		output:line("--- 1. Testing Well-Typed Program ---");
+		output:line('--- 1. Testing Well-Typed Program ---');
 		local String is source: "class ValidProgram{\n\tlocal Int is count: 42;\n\tlocal String is name: \"Spec\";\n\tlocal Boolean is active: true;\n\treplace local Function of Int is add(Int is a, Int is b){\n\t\treturn a + b;\n\t}\n}";
 
 		local Lexer is lexer: Lexer:init(source: source);
@@ -37,9 +37,9 @@ Class is Phase6TypeCheckerTest{
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is errors: tc:checkProgram(program: prog);
 
-		output:line("Type errors detected: " . errors:length());
+		output:line('Type errors detected: ' . errors:length());
 		if (errors:length() == 0) {
-			output:line("[PASS] Zero type errors on clean program");
+			output:line('[PASS] Zero type errors on clean program');
 		}
 	}
 
@@ -53,10 +53,10 @@ Class is Phase6TypeCheckerTest{
 		local TypeChecker is tc1: TypeChecker:init();
 		local Array of TypeError is e1: tc1:checkProgram(program: p1:parseProgram());
 
-		output:line("Variable mismatch errors: " . e1:length());
+		output:line('Variable mismatch errors: ' . e1:length());
 		if (e1:length() > 0) {
 			local TypeError is err: e1:get(index: 0);
-			output:line("[PASS] Detected: " . err:toString());
+			output:line('[PASS] Detected: ' . err:toString());
 		}
 
 		# B. Return type mismatch: returning String from Function of Int
@@ -66,10 +66,10 @@ Class is Phase6TypeCheckerTest{
 		local TypeChecker is tc2: TypeChecker:init();
 		local Array of TypeError is e2: tc2:checkProgram(program: p2:parseProgram());
 
-		output:line("Return mismatch errors: " . e2:length());
+		output:line('Return mismatch errors: ' . e2:length());
 		if (e2:length() > 0) {
 			local TypeError is err: e2:get(index: 0);
-			output:line("[PASS] Detected: " . err:toString());
+			output:line('[PASS] Detected: ' . err:toString());
 		}
 
 		# C. If condition mismatch: using Int in if condition
@@ -79,10 +79,10 @@ Class is Phase6TypeCheckerTest{
 		local TypeChecker is tc3: TypeChecker:init();
 		local Array of TypeError is e3: tc3:checkProgram(program: p3:parseProgram());
 
-		output:line("If condition errors: " . e3:length());
+		output:line('If condition errors: ' . e3:length());
 		if (e3:length() > 0) {
 			local TypeError is err: e3:get(index: 0);
-			output:line("[PASS] Detected: " . err:toString());
+			output:line('[PASS] Detected: ' . err:toString());
 		}
 	}
 

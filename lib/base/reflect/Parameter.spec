@@ -10,7 +10,7 @@ Class is Parameter{
 	];
 
 	## Parameter identifier name.
-	local String is name: "";
+	local String is name: '';
 
 	## Type descriptor of the parameter.
 	local Type is paramType;

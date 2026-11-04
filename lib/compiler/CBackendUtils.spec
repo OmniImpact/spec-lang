@@ -19,28 +19,28 @@ Class is CBackendUtils{
 	## @param typeName: Spec type name.
 	## @return: C11 type signature string.
 	Function of String is cTypeFor(String is typeName){
-		if (typeName:startsWith(prefix: "Array")) {
-			return "SpecArray*";
+		if (typeName:startsWith(prefix: 'Array')) {
+			return 'SpecArray*';
 		}
-		if (typeName:startsWith(prefix: "Map")) {
-			return "SpecMap*";
+		if (typeName:startsWith(prefix: 'Map')) {
+			return 'SpecMap*';
 		}
-		if (typeName:startsWith(prefix: "Function")) {
-			return "SpecClosure*";
+		if (typeName:startsWith(prefix: 'Function')) {
+			return 'SpecClosure*';
 		}
 		return when (typeName) {
-			is "Int", "int": "long long";
-			is "Float", "float": "double";
-			is "Boolean", "bool": "bool";
-			is "String", "string": "const char*";
-			is "void", "Void", "": "void";
-			is "Array": "SpecArray*";
-			is "Map": "SpecMap*";
-			is "Function": "SpecClosure*";
-			is "InputHandler": "void*";
-			is "LoopControl": "SpecLoopControl*";
-			is "File", "Process", "Output", "Input", "Math", "While": "void*";
-			else: typeName . "*";
+			is 'Int', 'int': 'long long';
+			is 'Float', 'float': 'double';
+			is 'Boolean', 'bool': 'bool';
+			is 'String', 'string': 'const char*';
+			is 'void', 'Void', '': 'void';
+			is 'Array': 'SpecArray*';
+			is 'Map': 'SpecMap*';
+			is 'Function': 'SpecClosure*';
+			is 'InputHandler': 'void*';
+			is 'LoopControl': 'SpecLoopControl*';
+			is 'File', 'Process', 'Output', 'Input', 'Math', 'While': 'void*';
+			else: typeName . '*';
 		};
 	}
 
@@ -50,10 +50,10 @@ Class is CBackendUtils{
 	## @return: Sanitized C-compatible identifier name.
 	Function of String is cIdent(String is name){
 		return when (name) {
-			is "EOF": "_EOF";
-			is "default", "case", "switch", "struct", "union", "enum", "register",
-				"static", "extern", "inline", "const", "volatile", "auto", "signed",
-				"unsigned", "short", "long", "sizeof", "typedef": "_" . name;
+			is 'EOF': '_EOF';
+			is 'default', 'case', 'switch', 'struct', 'union', 'enum', 'register',
+				'static', 'extern', 'inline', 'const', 'volatile', 'auto', 'signed',
+				'unsigned', 'short', 'long', 'sizeof', 'typedef': '_' . name;
 			else: name;
 		};
 	}
@@ -61,12 +61,12 @@ Class is CBackendUtils{
 	Class of Loop is EscapeLoop{
 		local String is src;
 		local Int is pos: 0;
-		local String is res: "";
+		local String is res: '';
 
 		replace Function is init(String is src){
 			self:src: src;
 			self:pos: 0;
-			self:res: "";
+			self:res: '';
 		}
 
 		replace Function of Boolean is evaluate(){
@@ -74,13 +74,13 @@ Class is CBackendUtils{
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:src:charAt(index: self:pos, default: "");
+			local String is ch: self:src:charAt(index: self:pos, default: '');
 			self:pos: self:pos + 1;
 			when (ch) {
 				is "\n": { self:res: self:res . "\\n"; }
 				is "\t": { self:res: self:res . "\\t"; }
 				is "\r": { self:res: self:res . "\\r"; }
-				is "\"": { self:res: self:res . "\\\""; }
+				is '"': { self:res: self:res . "\\\""; }
 				is "\\": { self:res: self:res . "\\\\"; }
 				else: {
 					if (ch == String:fromCharCode(code: 27)) {
@@ -109,9 +109,9 @@ Class is CBackendUtils{
 	## @param name: ClassInfo identifier name.
 	## @return: `true` if builtin runtime class, `false` otherwise.
 	Function of Boolean is isBuiltinClass(String is name){
-		return name == "Array" || name == "Map" || name == "File" || name == "LoopControl" ||
-			name == "Process" || name == "Output" || name == "Input" || name == "Math" ||
-			name == "While" || name == "Loop" || name == "LoopCallback" || name == "InputHandler";
+		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
+			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
+			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler';
 	}
 
 	## Resolves the C return type of a method signature descriptor.
@@ -119,12 +119,12 @@ Class is CBackendUtils{
 	## @param t: Declared [Type] descriptor.
 	## @return: C return type string.
 	local Function of String is resolveReturnType(Type is t){
-		if (t:getName() == "Function") {
+		if (t:getName() == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
 				return self:cTypeFor(typeName: ret:getName());
 			}
-			return "void";
+			return 'void';
 		}
 		return self:cTypeFor(typeName: t:getName());
 	}

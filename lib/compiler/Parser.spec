@@ -19,7 +19,7 @@ Class is Parser{
 	local Array of Token is tokens: [];
 	local Int is pos: 0;
 	local Int is length: 0;
-	local String is sourceFile: "";
+	local String is sourceFile: '';
 	local Array of String is errors: [];
 
 	Class of Loop is EnumVariantsLoop{
@@ -36,34 +36,34 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !self:parser:check(kind: "SYMBOL", value: "}") && !self:parser:check(kind: "EOF", value: "");
+			return !self:parser:check(kind: 'SYMBOL', value: '}') && !self:parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is vTok: self:parser:advance();
 			local String is vName: vTok:getValue();
 			local Array of Parameter is vParams: [];
-			if (self:parser:check(kind: "SYMBOL", value: "(")) {
+			if (self:parser:check(kind: 'SYMBOL', value: '(')) {
 				self:parser:advance();
 				While:run(loop: ParamLoop:init(parser: self:parser, params: vParams));
-				self:parser:matchToken(kind: "SYMBOL", value: ")");
+				self:parser:matchToken(kind: 'SYMBOL', value: ')');
 			}
-			local Expression is valExpr: Expression:init(kind: "NUMBER");
+			local Expression is valExpr: Expression:init(kind: 'NUMBER');
 			local Boolean is hasInit: false;
-			if (self:parser:check(kind: "SYMBOL", value: ":")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ':')) {
 				self:parser:advance();
 				valExpr: self:parser:parseExpression();
 				hasInit: true;
 			} else {
-				valExpr: Expression:init(kind: "NUMBER");
-				valExpr:stringValue: "" . self:count;
+				valExpr: Expression:init(kind: 'NUMBER');
+				valExpr:stringValue: '' . self:count;
 				valExpr:intValue: self:count;
 				hasInit: true;
 			}
 			self:count: self:count + 1;
 
-			local Member is m: Member:init(kind: "FIELD");
-			m:modifiers: ["static", "local"];
+			local Member is m: Member:init(kind: 'FIELD');
+			m:modifiers: ['static', 'local'];
 			m:memberType: Type:init(name: self:backingType);
 			m:name: vName;
 			m:params: vParams;
@@ -71,7 +71,7 @@ Class is Parser{
 			m:hasInit: hasInit;
 			self:members:add(item: m);
 
-			if (self:parser:check(kind: "SYMBOL", value: ",")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 				self:parser:advance();
 				return true;
 			}
@@ -89,11 +89,11 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			if (self:parser:check(kind: "KEYWORD", value: "Enum") || self:parser:peek():getValue() == "Enum") {
+			if (self:parser:check(kind: 'KEYWORD', value: 'Enum') || self:parser:peek():getValue() == 'Enum') {
 				self:classes:add(item: self:parser:parseEnum());
 			} else {
 				self:classes:add(item: self:parser:parseClass());
@@ -112,7 +112,7 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "SYMBOL", value: "}") && !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'SYMBOL', value: '}') && !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -131,13 +131,13 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "SYMBOL", value: "{") && !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'SYMBOL', value: '{') && !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is tok: parser:advance();
 			bases:add(item: tok:getValue());
-			if (parser:check(kind: "SYMBOL", value: ",")) {
+			if (parser:check(kind: 'SYMBOL', value: ',')) {
 				parser:advance();
 				return true;
 			}
@@ -155,7 +155,7 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "SYMBOL", value: "}") && !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'SYMBOL', value: '}') && !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -174,12 +174,12 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !self:parser:check(kind: "SYMBOL", value: ":") && !self:parser:check(kind: "EOF", value: "");
+			return !self:parser:check(kind: 'SYMBOL', value: ':') && !self:parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:conditions:add(item: self:parser:parseExpression());
-			if (self:parser:check(kind: "SYMBOL", value: ",")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 				self:parser:advance();
 				return true;
 			}
@@ -197,27 +197,27 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !self:parser:check(kind: "SYMBOL", value: "}") && !self:parser:check(kind: "EOF", value: "");
+			return !self:parser:check(kind: 'SYMBOL', value: '}') && !self:parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			if (self:parser:check(kind: "KEYWORD", value: "is")) {
+			if (self:parser:check(kind: 'KEYWORD', value: 'is')) {
 				self:parser:advance();
 				local Array of Expression is conds: [];
 				While:run(loop: WhenConditionsLoop:init(parser: self:parser, conditions: conds));
-				self:parser:matchToken(kind: "SYMBOL", value: ":");
+				self:parser:matchToken(kind: 'SYMBOL', value: ':');
 
-				if (self:parser:check(kind: "SYMBOL", value: "{")) {
+				if (self:parser:check(kind: 'SYMBOL', value: '{')) {
 					self:parser:advance();
 					local Array of Statement is body: [];
 					While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
-					self:parser:matchToken(kind: "SYMBOL", value: "}");
+					self:parser:matchToken(kind: 'SYMBOL', value: '}');
 					local WhenArm is arm: WhenArm:init();
 					arm:arm(conditions: conds, body: body);
 					self:arms:add(item: arm);
 				} else {
 					local Expression is exprVal: self:parser:parseExpression();
-					if (self:parser:check(kind: "SYMBOL", value: ";")) {
+					if (self:parser:check(kind: 'SYMBOL', value: ';')) {
 						self:parser:advance();
 					}
 					local WhenArm is arm: WhenArm:init();
@@ -227,21 +227,21 @@ Class is Parser{
 				return true;
 			}
 
-			if (self:parser:check(kind: "KEYWORD", value: "else")) {
+			if (self:parser:check(kind: 'KEYWORD', value: 'else')) {
 				self:parser:advance();
-				self:parser:matchToken(kind: "SYMBOL", value: ":");
+				self:parser:matchToken(kind: 'SYMBOL', value: ':');
 
-				if (self:parser:check(kind: "SYMBOL", value: "{")) {
+				if (self:parser:check(kind: 'SYMBOL', value: '{')) {
 					self:parser:advance();
 					local Array of Statement is body: [];
 					While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
-					self:parser:matchToken(kind: "SYMBOL", value: "}");
+					self:parser:matchToken(kind: 'SYMBOL', value: '}');
 					local WhenArm is arm: WhenArm:init();
 					arm:elseArm(body: body);
 					self:arms:add(item: arm);
 				} else {
 					local Expression is exprVal: self:parser:parseExpression();
-					if (self:parser:check(kind: "SYMBOL", value: ";")) {
+					if (self:parser:check(kind: 'SYMBOL', value: ';')) {
 						self:parser:advance();
 					}
 					local WhenArm is arm: WhenArm:init();
@@ -266,12 +266,12 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "SYMBOL", value: "]") && !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'SYMBOL', value: ']') && !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			items:add(item: parser:parseExpression());
-			if (parser:check(kind: "SYMBOL", value: ",")) {
+			if (parser:check(kind: 'SYMBOL', value: ',')) {
 				parser:advance();
 				return true;
 			}
@@ -291,16 +291,16 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !self:parser:check(kind: "SYMBOL", value: "]") && !self:parser:check(kind: "EOF", value: "");
+			return !self:parser:check(kind: 'SYMBOL', value: ']') && !self:parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			local Expression is k: self:parser:parseExpression();
-			self:parser:matchToken(kind: "SYMBOL", value: ":");
+			self:parser:matchToken(kind: 'SYMBOL', value: ':');
 			local Expression is v: self:parser:parseExpression();
 			self:keys:add(item: k);
 			self:values:add(item: v);
-			if (self:parser:check(kind: "SYMBOL", value: ",")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 				self:parser:advance();
 				return true;
 			}
@@ -318,8 +318,8 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return parser:check(kind: "KEYWORD", value: "local") || parser:check(kind: "KEYWORD", value: "contained") ||
-				parser:check(kind: "KEYWORD", value: "replace") || parser:check(kind: "KEYWORD", value: "merge");
+			return parser:check(kind: 'KEYWORD', value: 'local') || parser:check(kind: 'KEYWORD', value: 'contained') ||
+				parser:check(kind: 'KEYWORD', value: 'replace') || parser:check(kind: 'KEYWORD', value: 'merge');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -339,46 +339,46 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "SYMBOL", value: ")") && !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'SYMBOL', value: ')') && !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			if (self:parser:peek():getValue() == "self" && self:parser:peekAhead(offset: 1):getValue() == ":") {
+			if (self:parser:peek():getValue() == 'self' && self:parser:peekAhead(offset: 1):getValue() == ':') {
 				self:parser:advance();
 				self:parser:advance();
 				local Token is fTok: self:parser:advance();
-				local Parameter is param: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: "SELF_FIELD"));
-				if (self:parser:check(kind: "SYMBOL", value: ":")) {
+				local Parameter is param: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: 'SELF_FIELD'));
+				if (self:parser:check(kind: 'SYMBOL', value: ':')) {
 					self:parser:advance();
 					param:setDefault(expr: self:parser:parseExpression());
 				}
 				self:params:add(item: param);
-				if (self:parser:check(kind: "SYMBOL", value: ",")) {
+				if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 					self:parser:advance();
 					return true;
 				}
 				return false;
 			}
-			if (self:parser:peekAhead(offset: 1):getValue() == "," || self:parser:peekAhead(offset: 1):getValue() == ")") {
+			if (self:parser:peekAhead(offset: 1):getValue() == ',' || self:parser:peekAhead(offset: 1):getValue() == ')') {
 				local Token is pTok: self:parser:advance();
 				local String is pName: pTok:getValue();
-				self:params:add(item: Parameter:init(name: pName, paramType: Type:init(name: "Any")));
-				if (self:parser:check(kind: "SYMBOL", value: ",")) {
+				self:params:add(item: Parameter:init(name: pName, paramType: Type:init(name: 'Any')));
+				if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 					self:parser:advance();
 					return true;
 				}
 				return false;
 			}
 			local Type is pType: self:parser:parseType();
-			self:parser:matchToken(kind: "KEYWORD", value: "is");
+			self:parser:matchToken(kind: 'KEYWORD', value: 'is');
 			local Token is pTok: self:parser:advance();
 			local Parameter is param: Parameter:init(name: pTok:getValue(), paramType: pType);
-			if (self:parser:check(kind: "SYMBOL", value: ":")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ':')) {
 				self:parser:advance();
 				param:setDefault(expr: self:parser:parseExpression());
 			}
 			self:params:add(item: param);
-			if (self:parser:check(kind: "SYMBOL", value: ",")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 				self:parser:advance();
 				return true;
 			}
@@ -396,21 +396,21 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !parser:check(kind: "SYMBOL", value: ")") && !parser:check(kind: "EOF", value: "");
+			return !parser:check(kind: 'SYMBOL', value: ')') && !parser:check(kind: 'EOF', value: '');
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			local String is argName: "";
+			local String is argName: '';
 			local Token is tok0: self:parser:peekAhead(offset: 0);
-			if (tok0:getKind() == "IDENTIFIER" && self:parser:peekAhead(offset: 1):getValue() == ":") {
+			if (tok0:getKind() == 'IDENTIFIER' && self:parser:peekAhead(offset: 1):getValue() == ':') {
 				local String is nameVal: tok0:getValue();
-				local String is firstChar: nameVal:charAt(index: 0, default: "");
-				local String is uppers: "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				local String is firstChar: nameVal:charAt(index: 0, default: '');
+				local String is uppers: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 				local Boolean is isUpper: uppers:indexOf(needle: firstChar, default: -1) != -1;
 				if (!isUpper) {
 					local Token is nextTok: self:parser:peekAhead(offset: 2);
 					local Boolean is isNamed: false;
-					if (nextTok:getKind() != "IDENTIFIER") {
+					if (nextTok:getKind() != 'IDENTIFIER') {
 						isNamed: true;
 					} else {
 						isNamed: self:parser:hasWhitespaceAfter(offset: 1);
@@ -424,7 +424,7 @@ Class is Parser{
 			}
 			local Expression is val: self:parser:parseExpression();
 			self:args:add(item: NamedArg:init(name: argName, value: val));
-			if (self:parser:check(kind: "SYMBOL", value: ",")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ',')) {
 				self:parser:advance();
 				return true;
 			}
@@ -442,67 +442,67 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			if (self:parser:check(kind: "SYMBOL", value: "(")) {
+			if (self:parser:check(kind: 'SYMBOL', value: '(')) {
 				return true;
 			}
-			if (self:parser:check(kind: "SYMBOL", value: "[")) {
+			if (self:parser:check(kind: 'SYMBOL', value: '[')) {
 				return true;
 			}
-			if (self:parser:check(kind: "SYMBOL", value: ":")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ':')) {
 				if (self:parser:hasWhitespaceAfter(offset: 0)) {
 					return false;
 				}
 				local Token is nextTok: self:parser:peekAhead(offset: 1);
 				local String is nKind: nextTok:getKind();
-				return nKind == "IDENTIFIER" || nKind == "KEYWORD" || nextTok:getValue() == "*";
+				return nKind == 'IDENTIFIER' || nKind == 'KEYWORD' || nextTok:getValue() == '*';
 			}
 			return false;
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
-			if (self:parser:check(kind: "SYMBOL", value: "(")) {
+			if (self:parser:check(kind: 'SYMBOL', value: '(')) {
 				self:parser:advance();
 				local Array of NamedArg is args: [];
 				While:run(loop: ArgLoop:init(parser: self:parser, args: args));
-				self:parser:matchToken(kind: "SYMBOL", value: ")");
+				self:parser:matchToken(kind: 'SYMBOL', value: ')');
 
-				local Expression is callExpr: Expression:init(kind: "CALL");
-				if (self:currentExpr:getKind() == "IDENT") {
-					local Expression is selfTarget: Expression:init(kind: "IDENT");
-					selfTarget:stringValue: "self";
+				local Expression is callExpr: Expression:init(kind: 'CALL');
+				if (self:currentExpr:getKind() == 'IDENT') {
+					local Expression is selfTarget: Expression:init(kind: 'IDENT');
+					selfTarget:stringValue: 'self';
 					callExpr:methodTarget: selfTarget;
 					callExpr:methodName: self:currentExpr:stringValue;
 				} else {
 					callExpr:methodTarget: self:currentExpr;
-					callExpr:methodName: "";
+					callExpr:methodName: '';
 				}
 				callExpr:methodArgs: args;
 				self:currentExpr: callExpr;
 				return true;
 			}
-			if (self:parser:check(kind: "SYMBOL", value: "[")) {
+			if (self:parser:check(kind: 'SYMBOL', value: '[')) {
 				self:parser:advance();
 				local Expression is idxExpr: self:parser:parseExpression();
-				self:parser:matchToken(kind: "SYMBOL", value: "]");
+				self:parser:matchToken(kind: 'SYMBOL', value: ']');
 
-				local Expression is indexNode: Expression:init(kind: "INDEX");
+				local Expression is indexNode: Expression:init(kind: 'INDEX');
 				indexNode:leftExpr: self:currentExpr;
 				indexNode:rightExpr: idxExpr;
 				self:currentExpr: indexNode;
 				return true;
 			}
-			if (self:parser:check(kind: "SYMBOL", value: ":")) {
+			if (self:parser:check(kind: 'SYMBOL', value: ':')) {
 				self:parser:advance();
 				local Token is mTok: self:parser:advance();
 				local String is method: mTok:getValue();
 
-				if (self:parser:check(kind: "SYMBOL", value: "(")) {
+				if (self:parser:check(kind: 'SYMBOL', value: '(')) {
 					self:parser:advance();
 					local Array of NamedArg is args: [];
 					While:run(loop: ArgLoop:init(parser: self:parser, args: args));
-					self:parser:matchToken(kind: "SYMBOL", value: ")");
+					self:parser:matchToken(kind: 'SYMBOL', value: ')');
 
-					local Expression is callExpr: Expression:init(kind: "CALL");
+					local Expression is callExpr: Expression:init(kind: 'CALL');
 					callExpr:methodTarget: self:currentExpr;
 					callExpr:methodName: method;
 					callExpr:methodArgs: args;
@@ -511,17 +511,17 @@ Class is Parser{
 				}
 
 				local Array of String is segs: [];
-				if (self:currentExpr:getKind() == "PATH") {
+				if (self:currentExpr:getKind() == 'PATH') {
 					self:currentExpr:pathSegments:each(action: local Function(String is s){
 						segs:add(item: s);
 					});
-				} else if (self:currentExpr:getKind() == "IDENT") {
+				} else if (self:currentExpr:getKind() == 'IDENT') {
 					segs:add(item: self:currentExpr:stringValue);
 				}
 				segs:add(item: method);
-				local Expression is pathExpr: Expression:init(kind: "PATH");
+				local Expression is pathExpr: Expression:init(kind: 'PATH');
 				pathExpr:pathSegments: segs;
-				pathExpr:stringValue: self:currentExpr:stringValue . ":" . method;
+				pathExpr:stringValue: self:currentExpr:stringValue . ':' . method;
 				self:currentExpr: pathExpr;
 				return true;
 			}
@@ -540,15 +540,15 @@ Class is Parser{
 
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
-			return tok:getValue() == "||";
+			return tok:getValue() == '||';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseLogicalAnd();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
-			binExpr:binaryOp: "||";
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
+			binExpr:binaryOp: '||';
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
 			self:currentExpr: binExpr;
@@ -567,15 +567,15 @@ Class is Parser{
 
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
-			return tok:getValue() == "&&";
+			return tok:getValue() == '&&';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseEquality();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
-			binExpr:binaryOp: "&&";
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
+			binExpr:binaryOp: '&&';
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
 			self:currentExpr: binExpr;
@@ -594,13 +594,13 @@ Class is Parser{
 
 		replace Function of Boolean is evaluate(){
 			local String is val: self:parser:peek():getValue();
-			return val == "<<" || val == ">>";
+			return val == '<<' || val == '>>';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			local String is op: self:parser:advance():getValue();
 			local Expression is right: self:parser:parseAdditive();
-			local Expression is binExpr: Expression:init(kind: "BINARY");
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
 			binExpr:binaryOp: op;
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
@@ -619,14 +619,14 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return self:parser:peek():getValue() == "&";
+			return self:parser:peek():getValue() == '&';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseEquality();
-			local Expression is binExpr: Expression:init(kind: "BINARY");
-			binExpr:binaryOp: "&";
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
+			binExpr:binaryOp: '&';
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
 			self:currentExpr: binExpr;
@@ -644,14 +644,14 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return self:parser:peek():getValue() == "^";
+			return self:parser:peek():getValue() == '^';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseBitAnd();
-			local Expression is binExpr: Expression:init(kind: "BINARY");
-			binExpr:binaryOp: "^";
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
+			binExpr:binaryOp: '^';
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
 			self:currentExpr: binExpr;
@@ -669,14 +669,14 @@ Class is Parser{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return self:parser:peek():getValue() == "|";
+			return self:parser:peek():getValue() == '|';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseBitXor();
-			local Expression is binExpr: Expression:init(kind: "BINARY");
-			binExpr:binaryOp: "|";
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
+			binExpr:binaryOp: '|';
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
 			self:currentExpr: binExpr;
@@ -696,18 +696,18 @@ Class is Parser{
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
-			return val == "==" || val == "!=" || val == "is";
+			return val == '==' || val == '!=' || val == 'is';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			local Token is opTok: self:parser:advance();
 			local String is op: opTok:getValue();
-			if (op == "is") {
-				op: "==";
+			if (op == 'is') {
+				op: '==';
 			}
 			local Expression is right: self:parser:parseRelational();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
 			binExpr:binaryOp: op;
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
@@ -728,7 +728,7 @@ Class is Parser{
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
-			return val == "<" || val == "<=" || val == ">" || val == ">=";
+			return val == '<' || val == '<=' || val == '>' || val == '>=';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -736,7 +736,7 @@ Class is Parser{
 			local String is op: opTok:getValue();
 			local Expression is right: self:parser:parseConcat();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
 			binExpr:binaryOp: op;
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
@@ -756,15 +756,15 @@ Class is Parser{
 
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
-			return tok:getValue() == ".";
+			return tok:getValue() == '.';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			self:parser:advance();
 			local Expression is right: self:parser:parseAdditive();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
-			binExpr:binaryOp: ".";
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
+			binExpr:binaryOp: '.';
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
 			self:currentExpr: binExpr;
@@ -784,7 +784,7 @@ Class is Parser{
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
-			return val == "+" || val == "-";
+			return val == '+' || val == '-';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -792,7 +792,7 @@ Class is Parser{
 			local String is op: opTok:getValue();
 			local Expression is right: self:parser:parseMultiplicative();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
 			binExpr:binaryOp: op;
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
@@ -813,7 +813,7 @@ Class is Parser{
 		replace Function of Boolean is evaluate(){
 			local Token is tok: self:parser:peek();
 			local String is val: tok:getValue();
-			return val == "*" || val == "/" || val == "%";
+			return val == '*' || val == '/' || val == '%';
 		}
 
 		replace Function of Boolean is iteration(LoopControl is control){
@@ -821,7 +821,7 @@ Class is Parser{
 			local String is op: opTok:getValue();
 			local Expression is right: self:parser:parseUnary();
 
-			local Expression is binExpr: Expression:init(kind: "BINARY");
+			local Expression is binExpr: Expression:init(kind: 'BINARY');
 			binExpr:binaryOp: op;
 			binExpr:leftExpr: self:currentExpr;
 			binExpr:rightExpr: right;
@@ -837,7 +837,7 @@ Class is Parser{
 		self:tokens: tokens;
 		self:length: tokens:length();
 		self:pos: 0;
-		self:sourceFile: "";
+		self:sourceFile: '';
 		self:errors: [];
 	}
 
@@ -854,8 +854,8 @@ Class is Parser{
 	}
 
 	local Function is addError(Token is tok, String is message){
-		local String is prefix: if (self:sourceFile != "") self:sourceFile . ":" else "Line ";
-		local String is errStr: "  [SyntaxError] [" . prefix . tok:getLine() . ":" . tok:getCol() . "] " . message;
+		local String is prefix: if (self:sourceFile != '') self:sourceFile . ':' else 'Line ';
+		local String is errStr: '  [SyntaxError] [' . prefix . tok:getLine() . ':' . tok:getCol() . '] ' . message;
 		self:errors:add(item: errStr);
 	}
 
@@ -866,7 +866,7 @@ Class is Parser{
 				if (t:getTokenKind() == TokenKind:EOF) {
 					return false;
 				}
-				if (t:getValue() == ";" || t:getValue() == "}") {
+				if (t:getValue() == ';' || t:getValue() == '}') {
 					return false;
 				}
 				return true;
@@ -876,7 +876,7 @@ Class is Parser{
 				return true;
 			}
 		);
-		if (self:peek():getValue() == ";") {
+		if (self:peek():getValue() == ';') {
 			self:advance();
 		}
 	}
@@ -885,7 +885,7 @@ Class is Parser{
 		if (self:pos < self:length) {
 			return self:tokens:get(index: self:pos);
 		}
-		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
+		return Token:init(kind: TokenKind:EOF, value: '', line: 0, col: 0);
 	}
 
 	Function of Token is peekAhead(Int is offset){
@@ -893,7 +893,7 @@ Class is Parser{
 		if (idx < self:length) {
 			return self:tokens:get(index: idx);
 		}
-		return Token:init(kind: TokenKind:EOF, value: "", line: 0, col: 0);
+		return Token:init(kind: TokenKind:EOF, value: '', line: 0, col: 0);
 	}
 
 	Function of Token is advance(){
@@ -915,10 +915,10 @@ Class is Parser{
 
 	Function of Boolean is check(String is kind, String is value){
 		local Token is tok: self:peek();
-		if (kind != "" && tok:getKind() != kind) {
+		if (kind != '' && tok:getKind() != kind) {
 			return false;
 		}
-		if (value != "" && tok:getValue() != value) {
+		if (value != '' && tok:getValue() != value) {
 			return false;
 		}
 		return true;
@@ -930,8 +930,8 @@ Class is Parser{
 			return true;
 		}
 		local Token is tok: self:peek();
-		local String is exp: if (value != "") "'" . value . "'" else kind;
-		self:addError(tok: tok, message: "Expected " . exp . ", found '" . tok:getValue() . "'");
+		local String is exp: if (value != '') '\'' . value . '\'' else kind;
+		self:addError(tok: tok, message: 'Expected ' . exp . ', found \'' . tok:getValue() . '\'');
 		return false;
 	}
 
@@ -939,12 +939,12 @@ Class is Parser{
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
-		if (self:check(kind: "KEYWORD", value: "of")) {
+		if (self:check(kind: 'KEYWORD', value: 'of')) {
 			self:advance();
 			local Array of Type is params: [];
 			params:add(item: self:parseType());
 
-			if (self:check(kind: "KEYWORD", value: "to")) {
+			if (self:check(kind: 'KEYWORD', value: 'to')) {
 				self:advance();
 				params:add(item: self:parseType());
 			}
@@ -962,51 +962,51 @@ Class is Parser{
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
-		if (self:check(kind: "IDENTIFIER", value: "Class")) {
+		if (self:check(kind: 'IDENTIFIER', value: 'Class')) {
 			local ClassInfo is nested: self:parseClass();
-			local Member is m: Member:init(kind: "CLASS");
+			local Member is m: Member:init(kind: 'CLASS');
 			m:setLine(line: startLine);
 			m:nestedClass: nested;
 			return m;
 		}
 
-		if (self:check(kind: "IDENTIFIER", value: "Enum") || self:check(kind: "KEYWORD", value: "Enum")) {
+		if (self:check(kind: 'IDENTIFIER', value: 'Enum') || self:check(kind: 'KEYWORD', value: 'Enum')) {
 			local ClassInfo is edef: self:parseEnum();
-			local Member is m: Member:init(kind: "CLASS");
+			local Member is m: Member:init(kind: 'CLASS');
 			m:setLine(line: startLine);
 			m:nestedClass: edef;
 			return m;
 		}
 
-		if (self:peek():getKind() == "IDENTIFIER" && self:peekAhead(offset: 1):getValue() == "(") {
+		if (self:peek():getKind() == 'IDENTIFIER' && self:peekAhead(offset: 1):getValue() == '(') {
 			local Token is nameTok: self:advance();
 			local String is name: nameTok:getValue();
 			self:advance();
 
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
-			self:matchToken(kind: "SYMBOL", value: ")");
-			self:matchToken(kind: "SYMBOL", value: "{");
+			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of Statement is body: [];
 			params:each(action: local Function(Parameter is p){
-				if (p:getType():getName() == "SELF_FIELD") {
-					local Expression is lhs: Expression:init(kind: "PATH");
-					lhs:makePath(segments: ["self", p:getName()]);
-					local Expression is rhs: Expression:init(kind: "IDENT");
+				if (p:getType():getName() == 'SELF_FIELD') {
+					local Expression is lhs: Expression:init(kind: 'PATH');
+					lhs:makePath(segments: ['self', p:getName()]);
+					local Expression is rhs: Expression:init(kind: 'IDENT');
 					rhs:makeIdent(name: p:getName());
-					local Statement is assignS: Statement:init(kind: "ASSIGN");
+					local Statement is assignS: Statement:init(kind: 'ASSIGN');
 					assignS:assign(target: lhs, value: rhs);
 					body:add(item: assignS);
 				}
 			});
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
-			self:matchToken(kind: "SYMBOL", value: "}");
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
-			local Member is m: Member:init(kind: "METHOD");
+			local Member is m: Member:init(kind: 'METHOD');
 			m:setLine(line: nameTok:getLine());
 			m:modifiers: modifiers;
-			m:memberType: Type:init(name: "void");
+			m:memberType: Type:init(name: 'void');
 			m:name: name;
 			m:params: params;
 			m:body: body;
@@ -1014,33 +1014,33 @@ Class is Parser{
 		}
 
 		local Type is mType: self:parseType();
-		self:matchToken(kind: "KEYWORD", value: "is");
+		self:matchToken(kind: 'KEYWORD', value: 'is');
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
 
-		if (self:check(kind: "SYMBOL", value: "(")) {
+		if (self:check(kind: 'SYMBOL', value: '(')) {
 			self:advance();
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
-			self:matchToken(kind: "SYMBOL", value: ")");
-			self:matchToken(kind: "SYMBOL", value: "{");
+			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of Statement is body: [];
 			params:each(action: local Function(Parameter is p){
-				if (p:getType():getName() == "SELF_FIELD") {
-					local Expression is lhs: Expression:init(kind: "PATH");
-					lhs:makePath(segments: ["self", p:getName()]);
-					local Expression is rhs: Expression:init(kind: "IDENT");
+				if (p:getType():getName() == 'SELF_FIELD') {
+					local Expression is lhs: Expression:init(kind: 'PATH');
+					lhs:makePath(segments: ['self', p:getName()]);
+					local Expression is rhs: Expression:init(kind: 'IDENT');
 					rhs:makeIdent(name: p:getName());
-					local Statement is assignS: Statement:init(kind: "ASSIGN");
+					local Statement is assignS: Statement:init(kind: 'ASSIGN');
 					assignS:assign(target: lhs, value: rhs);
 					body:add(item: assignS);
 				}
 			});
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
-			self:matchToken(kind: "SYMBOL", value: "}");
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
-			local Member is m: Member:init(kind: "METHOD");
+			local Member is m: Member:init(kind: 'METHOD');
 			m:setLine(line: nameTok:getLine());
 			m:modifiers: modifiers;
 			m:memberType: mType;
@@ -1053,14 +1053,14 @@ Class is Parser{
 		# Field
 		local Expression is initExpr;
 		local Boolean is hasInit: false;
-		if (self:check(kind: "SYMBOL", value: ":")) {
+		if (self:check(kind: 'SYMBOL', value: ':')) {
 			self:advance();
 			initExpr: self:parseExpression();
 			hasInit: true;
 		}
-		self:matchToken(kind: "SYMBOL", value: ";");
+		self:matchToken(kind: 'SYMBOL', value: ';');
 
-		local Member is m: Member:init(kind: "FIELD");
+		local Member is m: Member:init(kind: 'FIELD');
 		m:setLine(line: nameTok:getLine());
 		m:modifiers: modifiers;
 		m:memberType: mType;
@@ -1083,30 +1083,30 @@ Class is Parser{
 		local Array of NamedArg is args: [];
 		While:condition(
 			evaluate: local Function of Boolean(){
-				return !self:check(kind: "SYMBOL", value: ")") && !self:check(kind: "EOF", value: "");
+				return !self:check(kind: 'SYMBOL', value: ')') && !self:check(kind: 'EOF', value: '');
 			},
 			iteration: local Function of Boolean(){
-				local String is argName: "";
+				local String is argName: '';
 				local Token is tok0: self:peekAhead(offset: 0);
-				if (tok0:getKind() == "IDENTIFIER" && self:peekAhead(offset: 1):getValue() == ":") {
+				if (tok0:getKind() == 'IDENTIFIER' && self:peekAhead(offset: 1):getValue() == ':') {
 					argName: tok0:getValue();
 					self:advance();
 					self:advance();
 				}
 				local Expression is val: self:parseExpression();
 				args:add(item: NamedArg:init(name: argName, value: val));
-				if (self:check(kind: "SYMBOL", value: ",")) {
+				if (self:check(kind: 'SYMBOL', value: ',')) {
 					self:advance();
 					return true;
 				}
 				return false;
 			}
 		);
-		self:matchToken(kind: "SYMBOL", value: ")");
-		if (self:check(kind: "SYMBOL", value: ";")) {
+		self:matchToken(kind: 'SYMBOL', value: ')');
+		if (self:check(kind: 'SYMBOL', value: ';')) {
 			self:advance();
 		}
-		local Statement is s: Statement:init(kind: "FORWARD");
+		local Statement is s: Statement:init(kind: 'FORWARD');
 		s:setLine(line: startLine);
 		s:forwardArgs: args;
 		return s;
@@ -1116,69 +1116,69 @@ Class is Parser{
 		local Int is startLine: self:peek():getLine();
 
 		# Merge-forward statement: `(arg, name: arg, ...)`.
-		if (self:check(kind: "SYMBOL", value: "(")) {
+		if (self:check(kind: 'SYMBOL', value: '(')) {
 			return self:parseForwardStatement(startLine: startLine);
 		}
 
-		if (self:check(kind: "IDENTIFIER", value: "Class")) {
+		if (self:check(kind: 'IDENTIFIER', value: 'Class')) {
 			local ClassInfo is cls: self:parseClass();
-			local Statement is s: Statement:init(kind: "CLASS");
+			local Statement is s: Statement:init(kind: 'CLASS');
 			s:setLine(line: startLine);
 			s:nestedClass: cls;
 			return s;
 		}
 
-		if (self:check(kind: "IDENTIFIER", value: "Enum") || self:check(kind: "KEYWORD", value: "Enum")) {
+		if (self:check(kind: 'IDENTIFIER', value: 'Enum') || self:check(kind: 'KEYWORD', value: 'Enum')) {
 			local ClassInfo is edef: self:parseEnum();
-			local Statement is s: Statement:init(kind: "CLASS");
+			local Statement is s: Statement:init(kind: 'CLASS');
 			s:setLine(line: startLine);
 			s:nestedClass: edef;
 			return s;
 		}
 
-		if (self:check(kind: "KEYWORD", value: "when")) {
+		if (self:check(kind: 'KEYWORD', value: 'when')) {
 			self:advance();
-			self:matchToken(kind: "SYMBOL", value: "(");
+			self:matchToken(kind: 'SYMBOL', value: '(');
 			local Expression is subject: self:parseExpression();
-			self:matchToken(kind: "SYMBOL", value: ")");
-			self:matchToken(kind: "SYMBOL", value: "{");
+			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of WhenArm is arms: [];
 			While:run(loop: WhenArmsLoop:init(parser: self, arms: arms));
-			self:matchToken(kind: "SYMBOL", value: "}");
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
-			local Statement is s: Statement:init(kind: "WHEN");
+			local Statement is s: Statement:init(kind: 'WHEN');
 			s:setLine(line: startLine);
 			s:whenStmt(subject: subject, arms: arms);
 			return s;
 		}
 
-		if (self:check(kind: "KEYWORD", value: "if")) {
+		if (self:check(kind: 'KEYWORD', value: 'if')) {
 			self:advance();
-			self:matchToken(kind: "SYMBOL", value: "(");
+			self:matchToken(kind: 'SYMBOL', value: '(');
 			local Expression is cond: self:parseExpression();
-			self:matchToken(kind: "SYMBOL", value: ")");
-			self:matchToken(kind: "SYMBOL", value: "{");
+			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of Statement is thenBranch: [];
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: thenBranch));
-			self:matchToken(kind: "SYMBOL", value: "}");
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
 			local Array of Statement is elseBranch: [];
 			local Boolean is hasElse: false;
-			if (self:check(kind: "KEYWORD", value: "else")) {
+			if (self:check(kind: 'KEYWORD', value: 'else')) {
 				self:advance();
 				hasElse: true;
-				if (self:check(kind: "KEYWORD", value: "if")) {
+				if (self:check(kind: 'KEYWORD', value: 'if')) {
 					elseBranch:add(item: self:parseStatement());
 				} else {
-					self:matchToken(kind: "SYMBOL", value: "{");
+					self:matchToken(kind: 'SYMBOL', value: '{');
 					While:run(loop: BlockStatementsLoop:init(parser: self, stmts: elseBranch));
-					self:matchToken(kind: "SYMBOL", value: "}");
+					self:matchToken(kind: 'SYMBOL', value: '}');
 				}
 			}
 
-			local Statement is s: Statement:init(kind: "IF");
+			local Statement is s: Statement:init(kind: 'IF');
 			s:setLine(line: startLine);
 			s:ifCondition: cond;
 			s:thenBranch: thenBranch;
@@ -1187,41 +1187,41 @@ Class is Parser{
 			return s;
 		}
 
-		if (self:check(kind: "KEYWORD", value: "return")) {
+		if (self:check(kind: 'KEYWORD', value: 'return')) {
 			self:advance();
 			local Expression is retExpr;
 			local Boolean is hasExpr: false;
-			if (!self:check(kind: "SYMBOL", value: ";")) {
+			if (!self:check(kind: 'SYMBOL', value: ';')) {
 				retExpr: self:parseExpression();
 				hasExpr: true;
 			}
-			self:matchToken(kind: "SYMBOL", value: ";");
+			self:matchToken(kind: 'SYMBOL', value: ';');
 
-			local Statement is s: Statement:init(kind: "RETURN");
+			local Statement is s: Statement:init(kind: 'RETURN');
 			s:setLine(line: startLine);
 			s:returnExpr: retExpr;
 			s:hasReturnExpr: hasExpr;
 			return s;
 		}
 
-		if (self:check(kind: "KEYWORD", value: "local")) {
+		if (self:check(kind: 'KEYWORD', value: 'local')) {
 			self:advance();
-			local Array of String is modifiers: ["local"];
+			local Array of String is modifiers: ['local'];
 			local Type is vType: self:parseType();
-			self:matchToken(kind: "KEYWORD", value: "is");
+			self:matchToken(kind: 'KEYWORD', value: 'is');
 			local Token is nameTok: self:advance();
 			local String is name: nameTok:getValue();
 
 			local Expression is initExpr;
 			local Boolean is hasInit: false;
-			if (self:check(kind: "SYMBOL", value: ":")) {
+			if (self:check(kind: 'SYMBOL', value: ':')) {
 				self:advance();
 				initExpr: self:parseExpression();
 				hasInit: true;
 			}
-			self:matchToken(kind: "SYMBOL", value: ";");
+			self:matchToken(kind: 'SYMBOL', value: ';');
 
-			local Statement is s: Statement:init(kind: "VAR_DECL");
+			local Statement is s: Statement:init(kind: 'VAR_DECL');
 			s:setLine(line: startLine);
 			s:modifiers: modifiers;
 			s:varType: vType;
@@ -1234,20 +1234,20 @@ Class is Parser{
 		# Expression or Assignment
 		local Expression is expr: self:parseExpression();
 
-		if (self:check(kind: "SYMBOL", value: ":") && !self:check(kind: "SYMBOL", value: ";")) {
+		if (self:check(kind: 'SYMBOL', value: ':') && !self:check(kind: 'SYMBOL', value: ';')) {
 			self:advance();
 			local Expression is val: self:parseExpression();
-			self:matchToken(kind: "SYMBOL", value: ";");
+			self:matchToken(kind: 'SYMBOL', value: ';');
 
-			local Statement is s: Statement:init(kind: "ASSIGN");
+			local Statement is s: Statement:init(kind: 'ASSIGN');
 			s:setLine(line: startLine);
 			s:assignTarget: expr;
 			s:assignValue: val;
 			return s;
 		}
 
-		self:matchToken(kind: "SYMBOL", value: ";");
-		local Statement is s: Statement:init(kind: "EXPR");
+		self:matchToken(kind: 'SYMBOL', value: ';');
+		local Statement is s: Statement:init(kind: 'EXPR');
 		s:setLine(line: startLine);
 		s:exprStmt: expr;
 		return s;
@@ -1255,75 +1255,75 @@ Class is Parser{
 
 	local Function of Expression is parsePrimary(){
 		local Boolean is isAnonFn: false;
-		if (self:check(kind: "KEYWORD", value: "local") && self:peekAhead(offset: 1):getValue() == "Function") {
+		if (self:check(kind: 'KEYWORD', value: 'local') && self:peekAhead(offset: 1):getValue() == 'Function') {
 			isAnonFn: true;
 		}
-		if (self:peek():getValue() == "Function" && (self:peekAhead(offset: 1):getValue() == "(" || self:peekAhead(offset: 1):getValue() == "of")) {
+		if (self:peek():getValue() == 'Function' && (self:peekAhead(offset: 1):getValue() == '(' || self:peekAhead(offset: 1):getValue() == 'of')) {
 			isAnonFn: true;
 		}
 
 		if (isAnonFn) {
-			if (self:check(kind: "KEYWORD", value: "local")) {
+			if (self:check(kind: 'KEYWORD', value: 'local')) {
 				self:advance();
 			}
 			self:advance();
-			local Type is returnType: Type:init(name: "Void");
-			if (self:check(kind: "KEYWORD", value: "of")) {
+			local Type is returnType: Type:init(name: 'Void');
+			if (self:check(kind: 'KEYWORD', value: 'of')) {
 				self:advance();
 				returnType: self:parseType();
 			}
-			self:matchToken(kind: "SYMBOL", value: "(");
+			self:matchToken(kind: 'SYMBOL', value: '(');
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
-			self:matchToken(kind: "SYMBOL", value: ")");
-			self:matchToken(kind: "SYMBOL", value: "{");
+			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 			local Array of Statement is body: [];
 			params:each(action: local Function(Parameter is p){
-				if (p:getType():getName() == "SELF_FIELD") {
-					local Expression is lhs: Expression:init(kind: "PATH");
-					lhs:makePath(segments: ["self", p:getName()]);
-					local Expression is rhs: Expression:init(kind: "IDENT");
+				if (p:getType():getName() == 'SELF_FIELD') {
+					local Expression is lhs: Expression:init(kind: 'PATH');
+					lhs:makePath(segments: ['self', p:getName()]);
+					local Expression is rhs: Expression:init(kind: 'IDENT');
 					rhs:makeIdent(name: p:getName());
-					local Statement is assignS: Statement:init(kind: "ASSIGN");
+					local Statement is assignS: Statement:init(kind: 'ASSIGN');
 					assignS:assign(target: lhs, value: rhs);
 					body:add(item: assignS);
 				}
 			});
 			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
-			self:matchToken(kind: "SYMBOL", value: "}");
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
-			local Expression is e: Expression:init(kind: "ANON_FN");
+			local Expression is e: Expression:init(kind: 'ANON_FN');
 			e:anonReturnType: returnType;
 			e:anonParams: params;
 			e:anonBody: body;
 			return e;
 		}
 
-		if (self:check(kind: "KEYWORD", value: "when")) {
+		if (self:check(kind: 'KEYWORD', value: 'when')) {
 			self:advance();
-			self:matchToken(kind: "SYMBOL", value: "(");
+			self:matchToken(kind: 'SYMBOL', value: '(');
 			local Expression is subject: self:parseExpression();
-			self:matchToken(kind: "SYMBOL", value: ")");
-			self:matchToken(kind: "SYMBOL", value: "{");
+			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of WhenArm is arms: [];
 			While:run(loop: WhenArmsLoop:init(parser: self, arms: arms));
-			self:matchToken(kind: "SYMBOL", value: "}");
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
-			local Expression is e: Expression:init(kind: "WHEN");
+			local Expression is e: Expression:init(kind: 'WHEN');
 			e:makeWhen(subject: subject, arms: arms);
 			return e;
 		}
 
-		if (self:check(kind: "KEYWORD", value: "if")) {
+		if (self:check(kind: 'KEYWORD', value: 'if')) {
 			self:advance();
-			self:matchToken(kind: "SYMBOL", value: "(");
+			self:matchToken(kind: 'SYMBOL', value: '(');
 			local Expression is cond: self:parseExpression();
-			self:matchToken(kind: "SYMBOL", value: ")");
+			self:matchToken(kind: 'SYMBOL', value: ')');
 			local Expression is thenExpr: self:parseExpression();
-			self:matchToken(kind: "KEYWORD", value: "else");
+			self:matchToken(kind: 'KEYWORD', value: 'else');
 			local Expression is elseExpr: self:parseExpression();
-			local Expression is e: Expression:init(kind: "IF_ELSE");
+			local Expression is e: Expression:init(kind: 'IF_ELSE');
 			e:condExpr: cond;
 			e:thenExpr: thenExpr;
 			e:elseExpr: elseExpr;
@@ -1335,87 +1335,87 @@ Class is Parser{
 		when (tok:getTokenKind()) {
 			is STRING: {
 				self:advance();
-				local Expression is e: Expression:init(kind: "STRING");
+				local Expression is e: Expression:init(kind: 'STRING');
 				e:stringValue: tok:getValue();
 				return e;
 			}
 			is INT: {
 				self:advance();
-				local Expression is e: Expression:init(kind: "NUMBER");
+				local Expression is e: Expression:init(kind: 'NUMBER');
 				e:stringValue: tok:getValue();
 				return e;
 			}
 			is FLOAT: {
 				self:advance();
-				local Expression is e: Expression:init(kind: "FLOAT");
+				local Expression is e: Expression:init(kind: 'FLOAT');
 				e:stringValue: tok:getValue();
 				return e;
 			}
 			is BOOL: {
 				self:advance();
-				local Expression is e: Expression:init(kind: "BOOL");
-				e:boolValue: tok:getValue() == "true";
+				local Expression is e: Expression:init(kind: 'BOOL');
+				e:boolValue: tok:getValue() == 'true';
 				e:stringValue: tok:getValue();
 				return e;
 			}
 			is IDENTIFIER, KEYWORD: {
 				self:advance();
-				local Expression is e: Expression:init(kind: "IDENT");
+				local Expression is e: Expression:init(kind: 'IDENT');
 				e:stringValue: tok:getValue();
 				return e;
 			}
 			else: {
-				if (self:check(kind: "SYMBOL", value: "(")) {
+				if (self:check(kind: 'SYMBOL', value: '(')) {
 					self:advance();
 					local Expression is inner: self:parseExpression();
-					self:matchToken(kind: "SYMBOL", value: ")");
+					self:matchToken(kind: 'SYMBOL', value: ')');
 					return inner;
 				}
 
-				if (self:check(kind: "SYMBOL", value: "[")) {
+				if (self:check(kind: 'SYMBOL', value: '[')) {
 					self:advance();
-					if (self:check(kind: "SYMBOL", value: "]")) {
+					if (self:check(kind: 'SYMBOL', value: ']')) {
 						self:advance();
-						local Expression is e: Expression:init(kind: "ARRAY");
+						local Expression is e: Expression:init(kind: 'ARRAY');
 						e:arrayItems: [];
 						return e;
 					}
-					if (self:check(kind: "SYMBOL", value: ":")) {
+					if (self:check(kind: 'SYMBOL', value: ':')) {
 						self:advance();
-						self:matchToken(kind: "SYMBOL", value: "]");
-						local Expression is e: Expression:init(kind: "MAP");
+						self:matchToken(kind: 'SYMBOL', value: ']');
+						local Expression is e: Expression:init(kind: 'MAP');
 						e:makeMap(keys: [], values: []);
 						return e;
 					}
 					local Expression is firstItem: self:parseExpression();
-					if (self:check(kind: "SYMBOL", value: ":")) {
+					if (self:check(kind: 'SYMBOL', value: ':')) {
 						self:advance();
 						local Expression is firstVal: self:parseExpression();
 						local Array of Expression is mKeys: [firstItem];
 						local Array of Expression is mVals: [firstVal];
-						if (self:check(kind: "SYMBOL", value: ",")) {
+						if (self:check(kind: 'SYMBOL', value: ',')) {
 							self:advance();
 							While:run(loop: MapItemsLoop:init(parser: self, keys: mKeys, values: mVals));
 						}
-						self:matchToken(kind: "SYMBOL", value: "]");
-						local Expression is e: Expression:init(kind: "MAP");
+						self:matchToken(kind: 'SYMBOL', value: ']');
+						local Expression is e: Expression:init(kind: 'MAP');
 						e:makeMap(keys: mKeys, values: mVals);
 						return e;
 					}
 					local Array of Expression is items: [firstItem];
-					if (self:check(kind: "SYMBOL", value: ",")) {
+					if (self:check(kind: 'SYMBOL', value: ',')) {
 						self:advance();
 						While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
 					}
-					self:matchToken(kind: "SYMBOL", value: "]");
-					local Expression is e: Expression:init(kind: "ARRAY");
+					self:matchToken(kind: 'SYMBOL', value: ']');
+					local Expression is e: Expression:init(kind: 'ARRAY');
 					e:arrayItems: items;
 					return e;
 				}
 
-				self:addError(tok: tok, message: "Unexpected token '" . tok:getValue() . "' in expression");
+				self:addError(tok: tok, message: 'Unexpected token \'' . tok:getValue() . '\' in expression');
 				self:advance();
-				return Expression:init(kind: "UNKNOWN");
+				return Expression:init(kind: 'UNKNOWN');
 			}
 		}
 	}
@@ -1434,21 +1434,21 @@ Class is Parser{
 	## (`x as A as B`) is rejected.
 	local Function of Expression is parseAs(){
 		local Expression is left: self:parsePostfix();
-		if (self:check(kind: "KEYWORD", value: "as")) {
+		if (self:check(kind: 'KEYWORD', value: 'as')) {
 			self:advance();
 			local Token is targetTok: self:advance();
 			local Array of Expression is args: [];
-			if (self:check(kind: "SYMBOL", value: "(")) {
+			if (self:check(kind: 'SYMBOL', value: '(')) {
 				self:advance();
-				if (!self:check(kind: "SYMBOL", value: ")")) {
+				if (!self:check(kind: 'SYMBOL', value: ')')) {
 					args:add(item: self:parseExpression());
 				}
-				self:matchToken(kind: "SYMBOL", value: ")");
+				self:matchToken(kind: 'SYMBOL', value: ')');
 			}
-			if (self:check(kind: "KEYWORD", value: "as")) {
-				self:addError(tok: self:peek(), message: "Chained 'as' casts are not supported; cast in separate steps.");
+			if (self:check(kind: 'KEYWORD', value: 'as')) {
+				self:addError(tok: self:peek(), message: 'Chained \'as\' casts are not supported; cast in separate steps.');
 			}
-			local Expression is c: Expression:init(kind: "CAST");
+			local Expression is c: Expression:init(kind: 'CAST');
 			c:makeCast(inner: left, target: targetTok:getValue(), args: args);
 			return c;
 		}
@@ -1456,27 +1456,27 @@ Class is Parser{
 	}
 
 	Function of Expression is parseUnary(){
-		if (self:check(kind: "SYMBOL", value: "~")) {
+		if (self:check(kind: 'SYMBOL', value: '~')) {
 			self:advance();
 			local Expression is expr: self:parseUnary();
-			local Expression is u: Expression:init(kind: "UNARY");
-			u:unaryOp: "~";
+			local Expression is u: Expression:init(kind: 'UNARY');
+			u:unaryOp: '~';
 			u:unaryExpr: expr;
 			return u;
 		}
-		if (self:check(kind: "SYMBOL", value: "-")) {
+		if (self:check(kind: 'SYMBOL', value: '-')) {
 			self:advance();
 			local Expression is expr: self:parseUnary();
-			local Expression is u: Expression:init(kind: "UNARY");
-			u:unaryOp: "-";
+			local Expression is u: Expression:init(kind: 'UNARY');
+			u:unaryOp: '-';
 			u:unaryExpr: expr;
 			return u;
 		}
-		if (self:check(kind: "SYMBOL", value: "!")) {
+		if (self:check(kind: 'SYMBOL', value: '!')) {
 			self:advance();
 			local Expression is expr: self:parseUnary();
-			local Expression is u: Expression:init(kind: "UNARY");
-			u:unaryOp: "!";
+			local Expression is u: Expression:init(kind: 'UNARY');
+			u:unaryOp: '!';
 			u:unaryExpr: expr;
 			return u;
 		}
@@ -1572,41 +1572,41 @@ Class is Parser{
 	Function of ClassInfo is parseClass(){
 		# Canonical declaration: `Class of Parent is Name` (inheritance, mirroring
 		# `Enum of Int is Status`); generic parameters post-name (`Class is Box of T`).
-		if (self:check(kind: "IDENTIFIER", value: "class")) {
-			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'.");
+		if (self:check(kind: 'IDENTIFIER', value: 'class')) {
+			self:addError(tok: self:peek(), message: 'The \'class\' keyword is no longer valid; declare classes as \'Class of Parent is Name\'.');
 		}
 		self:advance();
 
 		# Pre-binder `of`: parent classes.
 		local Array of String is baseClasses: [];
-		if (self:check(kind: "KEYWORD", value: "of")) {
+		if (self:check(kind: 'KEYWORD', value: 'of')) {
 			self:advance();
 			While:run(loop: BaseClassesLoop:init(parser: self, bases: baseClasses));
 		}
 
-		self:matchToken(kind: "KEYWORD", value: "is");
+		self:matchToken(kind: 'KEYWORD', value: 'is');
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
 
 		# Post-name `of`: generic type parameters.
 		local Array of String is typeParams: [];
-		if (self:check(kind: "KEYWORD", value: "of")) {
+		if (self:check(kind: 'KEYWORD', value: 'of')) {
 			self:advance();
 			local Token is tp1: self:advance();
 			typeParams:add(item: tp1:getValue());
-			if (self:check(kind: "KEYWORD", value: "to")) {
+			if (self:check(kind: 'KEYWORD', value: 'to')) {
 				self:advance();
 				local Token is tp2: self:advance();
 				typeParams:add(item: tp2:getValue());
 			}
 		}
 
-		self:matchToken(kind: "SYMBOL", value: "{");
+		self:matchToken(kind: 'SYMBOL', value: '{');
 		local Array of Member is members: [];
 		While:run(loop: ClassMembersLoop:init(parser: self, members: members));
-		self:matchToken(kind: "SYMBOL", value: "}");
+		self:matchToken(kind: 'SYMBOL', value: '}');
 
-		local ClassInfo is c: ClassInfo:init(name: name, baseClass: "", members: members);
+		local ClassInfo is c: ClassInfo:init(name: name, baseClass: '', members: members);
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: self:sourceFile);
 		c:setTypeParams(params: typeParams);
@@ -1616,28 +1616,28 @@ Class is Parser{
 
 	Function of ClassInfo is parseEnum(){
 		self:advance();
-		local String is backingType: "Int";
-		if (self:check(kind: "KEYWORD", value: "of")) {
+		local String is backingType: 'Int';
+		if (self:check(kind: 'KEYWORD', value: 'of')) {
 			self:advance();
 			local Type is bt: self:parseType();
 			backingType: bt:getName();
 		}
-		self:matchToken(kind: "KEYWORD", value: "is");
+		self:matchToken(kind: 'KEYWORD', value: 'is');
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
-		self:matchToken(kind: "SYMBOL", value: "{");
+		self:matchToken(kind: 'SYMBOL', value: '{');
 
 		local Array of Member is members: [];
 		While:run(loop: EnumVariantsLoop:init(parser: self, members: members, backingType: backingType));
-		self:matchToken(kind: "SYMBOL", value: "}");
-		if (self:check(kind: "SYMBOL", value: ";")) {
+		self:matchToken(kind: 'SYMBOL', value: '}');
+		if (self:check(kind: 'SYMBOL', value: ';')) {
 			self:advance();
 		}
 
-		local ClassInfo is c: ClassInfo:init(name: name, baseClass: "Enum", members: members);
+		local ClassInfo is c: ClassInfo:init(name: name, baseClass: 'Enum', members: members);
 		c:setLine(line: nameTok:getLine());
 		c:setSourceFile(file: self:sourceFile);
-		c:withBaseClasses(name: name, baseClasses: ["Enum"], members: members);
+		c:withBaseClasses(name: name, baseClasses: ['Enum'], members: members);
 		return c;
 	}
 

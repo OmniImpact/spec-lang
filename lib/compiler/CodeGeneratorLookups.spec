@@ -59,7 +59,7 @@ Class is CodeGeneratorLookups{
 		if (s:found) {
 			return s:res;
 		}
-		return ClassInfo:init(name: "", baseClass: "", members: []);
+		return ClassInfo:init(name: '', baseClass: '', members: []);
 	}
 
 	Class of Loop is FieldMemberLoop{
@@ -83,7 +83,7 @@ Class is CodeGeneratorLookups{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			if (m:getKind() == "FIELD" && m:getName() == self:fieldName) {
+			if (m:getKind() == 'FIELD' && m:getName() == self:fieldName) {
 				self:res: m;
 				self:found: true;
 				return false;
@@ -93,15 +93,15 @@ Class is CodeGeneratorLookups{
 	}
 
 	Function of String is lookupFieldType(String is className, String is fieldName){
-		if (className == "" || className == "Any") {
-			return "";
+		if (className == '' || className == 'Any') {
+			return '';
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return "";
+		if (cls:getName() == '') {
+			return '';
 		}
 		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:getMembers(), fieldName: fieldName);
 		While:run(loop: fl);
@@ -110,9 +110,9 @@ Class is CodeGeneratorLookups{
 			local String is rawT: self:formatTypeString(t: foundM:getType());
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
-		local String is inherited: "";
+		local String is inherited: '';
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited == "") {
+			if (inherited == '') {
 				inherited: self:lookupFieldType(className: baseName, fieldName: fieldName);
 			}
 		});
@@ -140,7 +140,7 @@ Class is CodeGeneratorLookups{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			if (m:getKind() == "METHOD" && m:getName() == self:methodName) {
+			if (m:getKind() == 'METHOD' && m:getName() == self:methodName) {
 				self:res: m;
 				self:found: true;
 				return false;
@@ -156,39 +156,39 @@ Class is CodeGeneratorLookups{
 		if (fl:found) {
 			return fl:res;
 		}
-		return Member:init(kind: "");
+		return Member:init(kind: '');
 	}
 
 	local Function of String is generateWhenCondition(Expression is subjExpr, String is subjC, Expression is c){
-		if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
-			local String is eName: self:allEnumVariants:getString(key: c:methodName, default: "");
+		if (c:getKind() == 'CALL' && self:allEnumVariants:has(key: c:methodName)) {
+			local String is eName: self:allEnumVariants:getString(key: c:methodName, default: '');
 			if (self:allTaggedEnums:has(key: eName)) {
-				return "((" . subjC . ") && (" . subjC . ")->_tag == " . eName . "_TAG_" . self:cIdent(name: c:methodName) . ")";
+				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:cIdent(name: c:methodName) . ')';
 			}
 		}
-		if (c:getKind() == "IDENT" && self:allEnumVariants:has(key: c:stringValue)) {
-			local String is eName: self:allEnumVariants:getString(key: c:stringValue, default: "");
+		if (c:getKind() == 'IDENT' && self:allEnumVariants:has(key: c:stringValue)) {
+			local String is eName: self:allEnumVariants:getString(key: c:stringValue, default: '');
 			if (self:allTaggedEnums:has(key: eName)) {
-				return "((" . subjC . ") && (" . subjC . ")->_tag == " . eName . "_TAG_" . self:cIdent(name: c:stringValue) . ")";
+				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:cIdent(name: c:stringValue) . ')';
 			}
 		}
-		if (c:getKind() == "PATH" && c:pathSegments:length() >= 2 && self:allTaggedEnums:has(key: c:pathSegments:get(index: 0))) {
+		if (c:getKind() == 'PATH' && c:pathSegments:length() >= 2 && self:allTaggedEnums:has(key: c:pathSegments:get(index: 0))) {
 			local String is eName: c:pathSegments:get(index: 0);
 			local String is vName: c:pathSegments:get(index: 1);
-			return "((" . subjC . ") && (" . subjC . ")->_tag == " . eName . "_TAG_" . self:cIdent(name: vName) . ")";
+			return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:cIdent(name: vName) . ')';
 		}
 		local String is cVal: self:generateExpression(expr: c);
 		if (self:isStringExpr(expr: subjExpr)) {
-			return "spec_str_equals(" . subjC . ", " . cVal . ")";
+			return 'spec_str_equals(' . subjC . ', ' . cVal . ')';
 		}
-		return "((" . subjC . ") == (" . cVal . "))";
+		return '((' . subjC . ') == (' . cVal . '))';
 	}
 
 	local Function of String is generateWhenBindings(String is subjC, WhenArm is arm){
-		local String is binds: "";
+		local String is binds: '';
 		arm:conditions:each(action: local Function(Expression is c){
-			if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
-				local String is eName: self:allEnumVariants:getString(key: c:methodName, default: "");
+			if (c:getKind() == 'CALL' && self:allEnumVariants:has(key: c:methodName)) {
+				local String is eName: self:allEnumVariants:getString(key: c:methodName, default: '');
 				if (self:allTaggedEnums:has(key: eName)) {
 					local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: c:methodName);
 					local String is vNameC: self:cIdent(name: c:methodName);
@@ -196,12 +196,12 @@ Class is CodeGeneratorLookups{
 					c:methodArgs:each(action: local Function(NamedArg is arg){
 						if (idx < vMem:getParameters():length()) {
 							local Expression is av: arg:getValue();
-							if (av:getKind() == "IDENT") {
+							if (av:getKind() == 'IDENT') {
 								local Parameter is pDef: vMem:getParameters():get(index: idx);
 								local String is bindName: av:stringValue;
 								self:localVars:set(key: bindName, value: self:formatVarTypeString(t: pDef:getType()));
 								local String is pCType: self:cTypeFor(typeName: pDef:getType():getName());
-								binds: binds . "        " . pCType . " " . self:cIdent(name: bindName) . " = (" . subjC . ")->" . vNameC . "_" . self:cIdent(name: pDef:getName()) . ";\n";
+								binds: binds . '        ' . pCType . ' ' . self:cIdent(name: bindName) . ' = (' . subjC . ')->' . vNameC . '_' . self:cIdent(name: pDef:getName()) . ";\n";
 							}
 						}
 						idx: idx + 1;
@@ -213,14 +213,14 @@ Class is CodeGeneratorLookups{
 	}
 
 	local Function of String is findMethodImplementingClass(String is className, String is methodName, Int is paramCount){
-		if (className == "" || className == "Any") {
-			return "";
+		if (className == '' || className == 'Any') {
+			return '';
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return "";
+		if (cls:getName() == '') {
+			return '';
 		}
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:getMembers(), methodName: methodName);
 		While:run(loop: ml);
@@ -230,9 +230,9 @@ Class is CodeGeneratorLookups{
 				return baseClassName;
 			}
 		}
-		local String is inherited: "";
+		local String is inherited: '';
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited == "") {
+			if (inherited == '') {
 				inherited: self:findMethodImplementingClass(className: baseName, methodName: methodName, paramCount: paramCount);
 			}
 		});
@@ -240,23 +240,23 @@ Class is CodeGeneratorLookups{
 	}
 
 	local Function of Member is lookupMethodMember(String is className, String is methodName){
-		if (className == "" || className == "Any") {
-			return Member:init(kind: "");
+		if (className == '' || className == 'Any') {
+			return Member:init(kind: '');
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return Member:init(kind: "");
+		if (cls:getName() == '') {
+			return Member:init(kind: '');
 		}
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:getMembers(), methodName: methodName);
 		While:run(loop: ml);
 		if (ml:found) {
 			return ml:res;
 		}
-		local Member is inherited: Member:init(kind: "");
+		local Member is inherited: Member:init(kind: '');
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited:getKind() == "") {
+			if (inherited:getKind() == '') {
 				inherited: self:lookupMethodMember(className: baseName, methodName: methodName);
 			}
 		});
@@ -265,28 +265,28 @@ Class is CodeGeneratorLookups{
 
 	local Function of String is formatCallArguments(String is className, String is methodName, Array of NamedArg is args){
 		local Member is m: self:lookupMethodMember(className: className, methodName: methodName);
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		local Array of String is tps: cls:getTypeParams();
-		if (m:getKind() == "METHOD") {
+		if (m:getKind() == 'METHOD') {
 			local Array of Parameter is params: m:getParameters();
 			if (params:length() > 0) {
-				local String is joined: "";
+				local String is joined: '';
 				local Int is pIdx: 0;
 				params:each(action: local Function(Parameter is p){
 					local String is pName: p:getName();
 					local Boolean is matched: false;
-					local String is argC: "0";
+					local String is argC: '0';
 					args:each(action: local Function(NamedArg is a){
-						if (!matched && a:getName() == pName && pName != "") {
+						if (!matched && a:getName() == pName && pName != '') {
 							argC: self:generateExpression(expr: a:getValue());
 							matched: true;
 						}
 					});
 					if (!matched && pIdx < args:length()) {
 						local NamedArg is posArg: args:get(index: pIdx);
-						if (posArg:getName() == "") {
+						if (posArg:getName() == '') {
 							argC: self:generateExpression(expr: posArg:getValue());
 							matched: true;
 						}
@@ -296,48 +296,48 @@ Class is CodeGeneratorLookups{
 						matched: true;
 					}
 					if (tps:indexOf(search: p:getType():getName(), default: -1) >= 0) {
-						argC: "(void*)(intptr_t)(" . argC . ")";
+						argC: '(void*)(intptr_t)(' . argC . ')';
 					}
-					joined: joined . ", " . argC;
+					joined: joined . ', ' . argC;
 					pIdx: pIdx + 1;
 				});
 				return joined;
 			}
 		}
-		local String is fallbackJoined: "";
+		local String is fallbackJoined: '';
 		args:each(action: local Function(NamedArg is arg){
-			fallbackJoined: fallbackJoined . ", " . self:generateExpression(expr: arg:getValue());
+			fallbackJoined: fallbackJoined . ', ' . self:generateExpression(expr: arg:getValue());
 		});
 		return fallbackJoined;
 	}
 
 	local Function of String is lookupMethodReturnType(String is className, String is methodName){
-		if (className == "" || className == "Any") {
-			return "";
+		if (className == '' || className == 'Any') {
+			return '';
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
-		if (methodName == "init" && self:allClassNames:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
+		if (methodName == 'init' && self:allClassNames:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
 		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return "";
+		if (cls:getName() == '') {
+			return '';
 		}
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:getMembers(), methodName: methodName);
 		While:run(loop: ml);
 		if (ml:found) {
 			local Member is foundM: ml:res;
 			local String is rawT: self:formatTypeString(t: foundM:getType());
-			if (rawT == "" || rawT == "void" || rawT == "Void") {
+			if (rawT == '' || rawT == 'void' || rawT == 'Void') {
 				return className;
 			}
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
-		local String is inherited: "";
+		local String is inherited: '';
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited == "") {
+			if (inherited == '') {
 				inherited: self:lookupMethodReturnType(className: baseName, methodName: methodName);
 			}
 		});

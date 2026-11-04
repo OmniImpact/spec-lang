@@ -42,7 +42,7 @@ Class is FwdBase{
 Class of FwdBase is FwdChild{
 
 	replace Function is plainCall(){
-		("unexpected");
+		('unexpected');
 	}
 
 	merge Function of Int is absWrap(Int is n){
@@ -50,7 +50,7 @@ Class of FwdBase is FwdChild{
 	}
 
 	merge Function of Int is double(Int is n){
-		(n: "not-a-number");
+		(n: 'not-a-number');
 	}
 
 	merge Function of Int is twoOf(Int is a, Int is b){
@@ -69,6 +69,6 @@ Class is FwdNegativeTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("unreachable");
+		output:line('unreachable');
 	}
 }

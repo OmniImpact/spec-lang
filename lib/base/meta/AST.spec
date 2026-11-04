@@ -8,7 +8,7 @@ Class is NamedArg{
 		base:meta:AST
 	];
 
-	local String is name: "";
+	local String is name: '';
 	local Expression is value;
 
 	## Initializes a named argument pair.
@@ -46,11 +46,11 @@ Class is Expression{
 		base:meta:AST
 	];
 
-	local String is kind: "";
+	local String is kind: '';
 	local Type is inferredType;
-	local String is resolvedType: "";
+	local String is resolvedType: '';
 	local Int is line: 0;
-	local String is stringValue: "";
+	local String is stringValue: '';
 	local Int is intValue: 0;
 	local Float is floatValue: 0.0;
 	local Boolean is boolValue: false;
@@ -62,12 +62,12 @@ Class is Expression{
 	local Array of Expression is mapKeys;
 	local Array of Expression is mapValues;
 	local Expression is methodTarget;
-	local String is methodName: "";
+	local String is methodName: '';
 	local Array of NamedArg is methodArgs;
-	local String is binaryOp: "";
+	local String is binaryOp: '';
 	local Expression is leftExpr;
 	local Expression is rightExpr;
-	local String is unaryOp: "";
+	local String is unaryOp: '';
 	local Expression is unaryExpr;
 	local Expression is condExpr;
 	local Expression is thenExpr;
@@ -89,7 +89,7 @@ Class is Expression{
 	##
 	## @param val: String literal value.
 	local Function is makeString(String is val){
-		self:kind: "STRING";
+		self:kind: 'STRING';
 		self:stringValue: val;
 	}
 
@@ -97,7 +97,7 @@ Class is Expression{
 	##
 	## @param val: Integer literal value.
 	Function is makeNumber(Int is val){
-		self:kind: "NUMBER";
+		self:kind: 'NUMBER';
 		self:intValue: val;
 	}
 
@@ -105,7 +105,7 @@ Class is Expression{
 	##
 	## @param val: Float literal value.
 	local Function is makeFloat(Float is val){
-		self:kind: "FLOAT";
+		self:kind: 'FLOAT';
 		self:floatValue: val;
 	}
 
@@ -113,7 +113,7 @@ Class is Expression{
 	##
 	## @param val: Boolean literal value.
 	local Function is makeBool(Boolean is val){
-		self:kind: "BOOL";
+		self:kind: 'BOOL';
 		self:boolValue: val;
 	}
 
@@ -121,7 +121,7 @@ Class is Expression{
 	##
 	## @param name: Identifier name.
 	Function is makeIdent(String is name){
-		self:kind: "IDENT";
+		self:kind: 'IDENT';
 		self:stringValue: name;
 	}
 
@@ -129,7 +129,7 @@ Class is Expression{
 	##
 	## @param segments: Array of path segment identifiers.
 	Function is makePath(Array of String is segments){
-		self:kind: "PATH";
+		self:kind: 'PATH';
 		self:pathSegments: segments;
 	}
 
@@ -137,7 +137,7 @@ Class is Expression{
 	##
 	## @param items: Array of element [Expression] nodes.
 	local Function is makeArray(Array of Expression is items){
-		self:kind: "ARRAY";
+		self:kind: 'ARRAY';
 		self:arrayItems: items;
 	}
 
@@ -151,14 +151,14 @@ Class is Expression{
 	## @param target: Target type or base name (Int, Float, String, Hex, Bin, Oct, or a class).
 	## @param args: Optional arguments (e.g. digit width for Hex/Bin/Oct).
 	Function is makeCast(Expression is inner, String is target, Array of Expression is args){
-		self:kind: "CAST";
+		self:kind: 'CAST';
 		self:leftExpr: inner;
 		self:stringValue: target;
 		self:castArgs: args;
 	}
 
 	Function is makeMap(Array of Expression is keys, Array of Expression is values){
-		self:kind: "MAP";
+		self:kind: 'MAP';
 		self:mapKeys: keys;
 		self:mapValues: values;
 	}
@@ -169,7 +169,7 @@ Class is Expression{
 	## @param method: Method name string.
 	## @param args: Array of [NamedArg] call arguments.
 	local Function is makeCall(Expression is target, String is method, Array of NamedArg is args){
-		self:kind: "CALL";
+		self:kind: 'CALL';
 		self:methodTarget: target;
 		self:methodName: method;
 		self:methodArgs: args;
@@ -181,7 +181,7 @@ Class is Expression{
 	## @param left: Left-hand operand [Expression].
 	## @param right: Right-hand operand [Expression].
 	local Function is makeBinary(String is op, Expression is left, Expression is right){
-		self:kind: "BINARY";
+		self:kind: 'BINARY';
 		self:binaryOp: op;
 		self:leftExpr: left;
 		self:rightExpr: right;
@@ -192,7 +192,7 @@ Class is Expression{
 	## @param op: Unary operator symbol.
 	## @param expr: Inner operand [Expression].
 	local Function is makeUnary(String is op, Expression is expr){
-		self:kind: "UNARY";
+		self:kind: 'UNARY';
 		self:unaryOp: op;
 		self:unaryExpr: expr;
 	}
@@ -203,7 +203,7 @@ Class is Expression{
 	## @param thenExpr: True-branch [Expression].
 	## @param elseExpr: False-branch [Expression].
 	local Function is makeIfElse(Expression is condition, Expression is thenExpr, Expression is elseExpr){
-		self:kind: "IF_ELSE";
+		self:kind: 'IF_ELSE';
 		self:condExpr: condition;
 		self:thenExpr: thenExpr;
 		self:elseExpr: elseExpr;
@@ -214,7 +214,7 @@ Class is Expression{
 	## @param subject: Subject [Expression] being matched.
 	## @param arms: Array of [WhenArm] branches.
 	Function is makeWhen(Expression is subject, Array of WhenArm is arms){
-		self:kind: "WHEN";
+		self:kind: 'WHEN';
 		self:whenSubject: subject;
 		self:whenArms: arms;
 	}
@@ -225,7 +225,7 @@ Class is Expression{
 	## @param params: Array of formal [Parameter] descriptors.
 	## @param body: Array of implementation [Statement] nodes.
 	local Function is makeAnonymousFunction(Type is returnType, Array of Parameter is params, Array of Statement is body){
-		self:kind: "ANON_FN";
+		self:kind: 'ANON_FN';
 		self:anonReturnType: returnType;
 		self:anonParams: params;
 		self:anonBody: body;
@@ -292,11 +292,11 @@ Class is Statement{
 		base:meta:AST
 	];
 
-	local String is kind: "";
+	local String is kind: '';
 	local Int is line: 0;
 	local Array of String is modifiers;
 	local Type is varType;
-	local String is varName: "";
+	local String is varName: '';
 	local Expression is initExpr;
 	local Boolean is hasInit: false;
 	local Expression is assignTarget;
@@ -321,7 +321,7 @@ Class is Statement{
 	}
 
 	local Function is varDecl(Array of String is modifiers, Type is varType, String is name, Expression is initExpr, Boolean is hasInit){
-		self:kind: "VAR_DECL";
+		self:kind: 'VAR_DECL';
 		self:modifiers: modifiers;
 		self:varType: varType;
 		self:varName: name;
@@ -330,13 +330,13 @@ Class is Statement{
 	}
 
 	Function is assign(Expression is target, Expression is value){
-		self:kind: "ASSIGN";
+		self:kind: 'ASSIGN';
 		self:assignTarget: target;
 		self:assignValue: value;
 	}
 
 	local Function is ifStmt(Expression is condition, Array of Statement is thenBranch, Array of Statement is elseBranch, Boolean is hasElse){
-		self:kind: "IF";
+		self:kind: 'IF';
 		self:ifCondition: condition;
 		self:thenBranch: thenBranch;
 		self:elseBranch: elseBranch;
@@ -344,23 +344,23 @@ Class is Statement{
 	}
 
 	local Function is returnStmt(Expression is expr, Boolean is hasExpr){
-		self:kind: "RETURN";
+		self:kind: 'RETURN';
 		self:returnExpr: expr;
 		self:hasReturnExpr: hasExpr;
 	}
 
 	local Function is classStmt(ClassInfo is nestedClass){
-		self:kind: "CLASS";
+		self:kind: 'CLASS';
 		self:nestedClass: nestedClass;
 	}
 
 	local Function is expression(Expression is expr){
-		self:kind: "EXPR";
+		self:kind: 'EXPR';
 		self:exprStmt: expr;
 	}
 
 	Function is whenStmt(Expression is subject, Array of WhenArm is arms){
-		self:kind: "WHEN";
+		self:kind: 'WHEN';
 		self:whenSubject: subject;
 		self:whenArms: arms;
 	}
@@ -372,7 +372,7 @@ Class is Statement{
 	##
 	## @param args: Forward arguments (positional when name is empty).
 	local Function is forwardStmt(Array of NamedArg is args){
-		self:kind: "FORWARD";
+		self:kind: 'FORWARD';
 		self:forwardArgs: args;
 	}
 

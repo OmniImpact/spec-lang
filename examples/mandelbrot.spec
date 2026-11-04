@@ -98,14 +98,14 @@ Class is Mandelbrot{
 	## @return: Single Unicode shade block character (` `, `░`, `▒`, `▓`, `█`).
 	local Function of String is shadeGlyph(Float is mu){
 		if (mu < 0.0) {
-			return " ";
+			return ' ';
 		}
 		local Int is band: math:toInt(value: mu * 2.0) % 4;
 		return when (band) {
-			is 0: "░";
-			is 1: "▒";
-			is 2: "▓";
-			else: "█";
+			is 0: '░';
+			is 1: '▒';
+			is 2: '▓';
+			else: '█';
 		};
 	}
 
@@ -128,14 +128,14 @@ Class is Mandelbrot{
 		local Int is elapsedSec: elapsedMs / 1000;
 		local String is bar: self:repeatBar(count: width);
 
-		output:line("");
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔═ Statistics " . self:repeatBar(count: width - 14) . "╗"));
-		output:line(Ansi:color256(code: 51, text: "║ Resolution: " . width . " x " . height . ", maxIter " . maxIter));
-		output:line(Ansi:color256(code: 51, text: "║ Points sampled: " . self:pointsRendered));
-		output:line(Ansi:color256(code: 51, text: "║ Render time: " . elapsedMs . " ms (" . elapsedSec . " s)"));
-		output:line(Ansi:color256(code: 51, text: "║ Peak memory: " . peakKb . " KB (" . peakMb . " MB)"));
-		output:line(Ansi:color256(code: 51, text: "║ Threads used: " . Process:threadCount()));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚" . bar . "╝"));
+		output:line('');
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Statistics ' . self:repeatBar(count: width - 14) . '╗'));
+		output:line(Ansi:color256(code: 51, text: '║ Resolution: ' . width . ' x ' . height . ', maxIter ' . maxIter));
+		output:line(Ansi:color256(code: 51, text: '║ Points sampled: ' . self:pointsRendered));
+		output:line(Ansi:color256(code: 51, text: '║ Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)'));
+		output:line(Ansi:color256(code: 51, text: '║ Peak memory: ' . peakKb . ' KB (' . peakMb . ' MB)'));
+		output:line(Ansi:color256(code: 51, text: '║ Threads used: ' . Process:threadCount()));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . bar . '╝'));
 	}
 
 	## Builds a horizontal box bar of the given length.
@@ -143,12 +143,12 @@ Class is Mandelbrot{
 	## @param count: Number of `═` segments.
 	## @return: Bar string.
 	local Function of String is repeatBar(Int is count){
-		local String is bar: "";
+		local String is bar: '';
 		local Int is i: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){ return i < count; },
 			iteration: local Function(){
-				bar: bar . "═";
+				bar: bar . '═';
 				i: i + 1;
 			}
 		);
@@ -161,7 +161,7 @@ Class is Mandelbrot{
 	## @param width: Total rendered width including borders.
 	## @return: Centered, bordered title line.
 	local Function of String is centerTitle(String is title, Int is width){
-		local String is line: "║";
+		local String is line: '║';
 		local Int is pad: width - 2 - title:length();
 		if (pad < 1) {
 			pad: 1;
@@ -171,25 +171,25 @@ Class is Mandelbrot{
 		local Int is i: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){ return i < left; },
-			iteration: local Function(){ line: line . " "; i: i + 1; }
+			iteration: local Function(){ line: line . ' '; i: i + 1; }
 		);
 		line: line . title;
 		i: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){ return i < right; },
-			iteration: local Function(){ line: line . " "; i: i + 1; }
+			iteration: local Function(){ line: line . ' '; i: i + 1; }
 		);
-		return line . "║";
+		return line . '║';
 	}
 
 	## Entry point rendering both a sub-pixel half-block (`▀`) 256-color Mandelbrot view
 	## and a textured multi-shade (`█▓▒░`) zoom into the Seahorse Valley.
 	replace Function is init(Map of String to String is args){
 		# Width/height default to the console size; explicit args win.
-		local Int is width: args:getInt(key: "width", default: 0);
-		local Int is height: args:getInt(key: "height", default: 0);
-		local Int is maxIter: args:getInt(key: "iter", default: 80);
-		local String is mode: args:getString(key: "mode", default: "both");
+		local Int is width: args:getInt(key: 'width', default: 0);
+		local Int is height: args:getInt(key: 'height', default: 0);
+		local Int is maxIter: args:getInt(key: 'iter', default: 80);
+		local String is mode: args:getString(key: 'mode', default: 'both');
 		local Int is startedAtMs: Process:clockMs();
 
 		if (width <= 0) {
@@ -210,12 +210,12 @@ Class is Mandelbrot{
 			}
 		}
 
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╔" . self:repeatBar(count: width) . "╗"));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: "Spec 256-Color Mandelbrot Set Renderer", width: width)));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: "╚" . self:repeatBar(count: width) . "╝"));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔' . self:repeatBar(count: width) . '╗'));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
+		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:repeatBar(count: width) . '╝'));
 
-		if (mode == "both" || mode == "shaded") {
-			output:line(Ansi:color256(code: 220, text: "▸ Mode 1: Multi-Glyph Shaded ('█▓▒░') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]"));
+		if (mode == 'both' || mode == 'shaded') {
+			output:line(Ansi:color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
 			self:renderShaded(
 				width: width,
 				rows: height,
@@ -227,9 +227,9 @@ Class is Mandelbrot{
 			);
 		}
 
-		if (mode == "both" || mode == "halfblock") {
-			output:line("");
-			output:line(Ansi:color256(code: 213, text: "▸ Mode 2: Sub-Pixel Half-Block ('▀') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]"));
+		if (mode == 'both' || mode == 'halfblock') {
+			output:line('');
+			output:line(Ansi:color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
 			self:renderHalfBlock(
 				width: width,
 				rows: height / 2,
@@ -260,7 +260,7 @@ Class is Mandelbrot{
 				local Float is ciTop: maxIm - ((math:toFloat(value: yTop) / hFloat) * (maxIm - minIm));
 				local Float is ciBot: maxIm - ((math:toFloat(value: yBot) / hFloat) * (maxIm - minIm));
 
-				local String is lineBuf: "";
+				local String is lineBuf: '';
 				local Int is col: 0;
 				While:condition(
 					evaluate: local Function of Boolean(){ return col < width; },
@@ -272,7 +272,7 @@ Class is Mandelbrot{
 						local Int is fgCode: self:palette256(mu: muTop);
 						local Int is bgCode: self:palette256(mu: muBot);
 
-						lineBuf: lineBuf . Ansi:paint256(fg: fgCode, bg: bgCode, text: "▀");
+						lineBuf: lineBuf . Ansi:paint256(fg: fgCode, bg: bgCode, text: '▀');
 						col: col + 1;
 					}
 				);

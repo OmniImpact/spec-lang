@@ -41,19 +41,19 @@ Class of LayoutMid is LayoutLeaf{
 
 Class is MiaFeature{
 	Function of String is label(){
-		return "mia";
+		return 'mia';
 	}
 }
 
 Class is MibFeature{
 	Function of String is tag(){
-		return "mib";
+		return 'mib';
 	}
 }
 
 Class of MiaFeature, MibFeature is MiChild{
 	replace Function of String is label(){
-		return "child-mia";
+		return 'child-mia';
 	}
 }
 
@@ -64,68 +64,68 @@ Class is VtableDispatchTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("=== Regression: Vtable Dispatch & Layout ===");
+		output:line('=== Regression: Vtable Dispatch & Layout ===');
 
 		local LayoutLeaf is leaf: LayoutLeaf:init();
 
 		# Case 1: fields at every level round-trip (layout integrity).
 		if (leaf:baseField == 11 && leaf:midField == 22 && leaf:leafField == 33) {
-			output:line("[PASS] layout: all three field levels intact");
+			output:line('[PASS] layout: all three field levels intact');
 		} else {
-			output:line("[FAIL] layout: base=" . leaf:baseField . " mid=" . leaf:midField . " leaf=" . leaf:leafField);
+			output:line('[FAIL] layout: base=' . leaf:baseField . ' mid=' . leaf:midField . ' leaf=' . leaf:leafField);
 		}
 
 		# Case 2: base-declared method reading base field via leaf object.
 		local Int is desc: leaf:describeBase();
 		if (desc == 11) {
-			output:line("[PASS] inherited method reads base field: 11");
+			output:line('[PASS] inherited method reads base field: 11');
 		} else {
-			output:line("[FAIL] inherited method: expected 11, got " . desc);
+			output:line('[FAIL] inherited method: expected 11, got ' . desc);
 		}
 
 		# Case 3: base-typed reference dispatches to most-derived override.
 		local LayoutBase is asBase: leaf;
 		local Int is poly: asBase:poly();
 		if (poly == 3) {
-			output:line("[PASS] base-typed virtual dispatch: poly = 3");
+			output:line('[PASS] base-typed virtual dispatch: poly = 3');
 		} else {
-			output:line("[FAIL] base-typed virtual dispatch: expected 3, got " . poly);
+			output:line('[FAIL] base-typed virtual dispatch: expected 3, got ' . poly);
 		}
 
 		# Case 4: mid-typed reference also reaches the leaf override.
 		local LayoutMid is asMid: leaf;
 		if (asMid:poly() == 3) {
-			output:line("[PASS] mid-typed virtual dispatch: poly = 3");
+			output:line('[PASS] mid-typed virtual dispatch: poly = 3');
 		} else {
-			output:line("[FAIL] mid-typed virtual dispatch: expected 3");
+			output:line('[FAIL] mid-typed virtual dispatch: expected 3');
 		}
 
 		# Case 5: MI first-wins - child override wins over both parents.
 		local MiChild is mi: MiChild:init();
 		local String is lbl: mi:label();
-		if (lbl == "child-mia") {
-			output:line("[PASS] MI override: label = child-mia");
+		if (lbl == 'child-mia') {
+			output:line('[PASS] MI override: label = child-mia');
 		} else {
-			output:line("[FAIL] MI override: expected child-mia, got " . lbl);
+			output:line('[FAIL] MI override: expected child-mia, got ' . lbl);
 		}
 
 		# Case 6: MI first-wins - undeclared method resolves to first parent.
 		local String is tg: mi:tag();
-		if (tg == "mib") {
-			output:line("[PASS] MI first-wins: tag = mib");
+		if (tg == 'mib') {
+			output:line('[PASS] MI first-wins: tag = mib');
 		} else {
-			output:line("[FAIL] MI first-wins: expected mib, got " . tg);
+			output:line('[FAIL] MI first-wins: expected mib, got ' . tg);
 		}
 
 		# Case 7: base-typed MI reference dispatches virtually.
 		local MiaFeature is miAsBase: mi;
-		if (miAsBase:label() == "child-mia") {
-			output:line("[PASS] MI base-typed dispatch: label = child-mia");
+		if (miAsBase:label() == 'child-mia') {
+			output:line('[PASS] MI base-typed dispatch: label = child-mia');
 		} else {
-			output:line("[FAIL] MI base-typed dispatch: expected child-mia");
+			output:line('[FAIL] MI base-typed dispatch: expected child-mia');
 		}
 
-		output:line("=== End Vtable Dispatch & Layout ===");
+		output:line('=== End Vtable Dispatch & Layout ===');
 	}
 
 }

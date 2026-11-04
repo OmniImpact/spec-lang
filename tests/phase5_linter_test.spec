@@ -16,14 +16,14 @@ Class is Phase5LinterTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("======================================");
-		output:line("        Phase 5 Pure-Spec Linter      ");
+		output:line('======================================');
+		output:line('        Phase 5 Pure-Spec Linter      ');
 		output:line("======================================\n");
 
 		local Linter is linter: Linter:init();
 
 		# 1. Test clean code with tabs
-		output:line("--- 1. Clean Code (Tabs) ---");
+		output:line('--- 1. Clean Code (Tabs) ---');
 		local String is cleanCode: "class CleanPlayer{\n\tlocal Int is health: 100;\n\treplace local Function of Boolean is isAlive(){\n\t\treturn health > 0;\n\t}\n}";
 		local Lexer is lexer1: Lexer:init(source: cleanCode);
 		local Parser is parser1: Parser:init(tokens: lexer1:tokenize());
@@ -31,10 +31,10 @@ Class is Phase5LinterTest{
 
 		local Array of LintIssue is cleanIssues: linter:lint(source: cleanCode, program: prog1);
 		local Int is cleanWarnings: linter:countWarnings(issues: cleanIssues);
-		output:line("Clean code warnings: " . cleanWarnings);
+		output:line('Clean code warnings: ' . cleanWarnings);
 
 		if (cleanWarnings == 0) {
-			output:line("[PASS] Zero warnings on tab-indented code");
+			output:line('[PASS] Zero warnings on tab-indented code');
 		}
 
 		# 2. Test space-indented code
@@ -46,12 +46,12 @@ Class is Phase5LinterTest{
 
 		local Array of LintIssue is spaceIssues: linter:lint(source: spaceCode, program: prog2);
 		local Int is spaceWarnings: linter:countWarnings(issues: spaceIssues);
-		output:line("Space-indented code warnings: " . spaceWarnings);
+		output:line('Space-indented code warnings: ' . spaceWarnings);
 
 		if (spaceWarnings == 1) {
-			output:line("[PASS] Detected exactly 1 warning for space indentation");
+			output:line('[PASS] Detected exactly 1 warning for space indentation');
 			local LintIssue is issue: spaceIssues:get(index: 0);
-			output:line("Reported issue: " . issue:toString());
+			output:line('Reported issue: ' . issue:toString());
 		}
 
 		# 3. Test AST notices
@@ -63,12 +63,12 @@ Class is Phase5LinterTest{
 
 		local Array of LintIssue is noticeIssues: linter:lint(source: noticeCode, program: prog3);
 		local Int is noticeCount: linter:countNotices(issues: noticeIssues);
-		output:line("Detected notices count: " . noticeCount);
+		output:line('Detected notices count: ' . noticeCount);
 
 		if (noticeCount > 0) {
-			output:line("[PASS] Successfully detected AST optional parameter notices");
+			output:line('[PASS] Successfully detected AST optional parameter notices');
 			local LintIssue is nIssue: noticeIssues:get(index: 0);
-			output:line("Sample notice: " . nIssue:toString());
+			output:line('Sample notice: ' . nIssue:toString());
 		}
 
 		output:line("\nPhase 5 Pure-Spec Linter test completed successfully!");

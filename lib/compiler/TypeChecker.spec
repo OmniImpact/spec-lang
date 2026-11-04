@@ -8,7 +8,7 @@ Class is TypeError{
 	local Int is line: 0;
 
 	## Explanatory diagnostic message describing the type mismatch.
-	local String is message: "";
+	local String is message: '';
 
 	## Initializes a type error descriptor.
 	replace Function is init(Int is line, String is message){
@@ -28,8 +28,8 @@ Class is TypeError{
 
 	## Formats the type error for display.
 	replace Function of String is toString(){
-		local String is loc: if (self:line > 0) "Line " . self:line . ": " else "";
-		return "  [TypeError] " . loc . self:message;
+		local String is loc: if (self:line > 0) 'Line ' . self:line . ': ' else '';
+		return '  [TypeError] ' . loc . self:message;
 	}
 
 }
@@ -76,7 +76,7 @@ Class is TypeChecker{
 	local Boolean is currentMethodIsMerge: false;
 
 	## Name of the method currently being checked (for forward resolution).
-	local String is currentMethodName: "";
+	local String is currentMethodName: '';
 
 	## Whether a forward statement has been seen in the current method.
 	local Boolean is forwardSeen: false;
@@ -85,13 +85,13 @@ Class is TypeChecker{
 	local Int is anonDepth: 0;
 
 	## Currently analyzed class name.
-	local String is currentClassName: "";
+	local String is currentClassName: '';
 
 	## Source file path of the currently analyzed class.
-	local String is currentSourceFile: "";
+	local String is currentSourceFile: '';
 
 	## Currently analyzed method return type name.
-	local String is currentMethodReturnType: "";
+	local String is currentMethodReturnType: '';
 
 	## Accumulated list of type errors.
 	local Array of TypeError is errors: [];
@@ -109,7 +109,7 @@ Class is TypeChecker{
 		self:fieldTypes: Map:init();
 		self:unassignedFields: Map:init();
 		self:currentLine: 0;
-		self:currentSourceFile: "";
+		self:currentSourceFile: '';
 	}
 
 	## Records a type error with line coordinates.
@@ -117,18 +117,18 @@ Class is TypeChecker{
 	## @param line: Source line number.
 	## @param msg: Diagnostic error message.
 	local Function is addError(Int is line, String is msg){
-		local String is fullMsg: if (self:currentSourceFile != "") "[" . self:currentSourceFile . "] " . msg else msg;
+		local String is fullMsg: if (self:currentSourceFile != '') '[' . self:currentSourceFile . '] ' . msg else msg;
 		self:errors:add(item: TypeError:init(line: line, message: fullMsg));
 	}
 
 	## Formats a [Type] descriptor for a variable or field (preserving "Function:RetType").
 	local Function of String is formatVarTypeString(Type is t){
-		if (t:getName() == "Function") {
+		if (t:getName() == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
-				return "Function:" . self:formatTypeString(t: ret);
+				return 'Function:' . self:formatTypeString(t: ret);
 			}
-			return "Function";
+			return 'Function';
 		}
 		return self:formatTypeString(t: t);
 	}
@@ -140,7 +140,7 @@ Class is TypeChecker{
 		if (fl:found) {
 			return fl:res;
 		}
-		return Member:init(kind: "UNKNOWN");
+		return Member:init(kind: 'UNKNOWN');
 	}
 
 	## Finds a member (method or field) by name on a class or any of its base classes.
@@ -149,23 +149,23 @@ Class is TypeChecker{
 	## @param methodName: Member name to locate.
 	## @return: The resolved [Member], or an UNKNOWN member when absent.
 	local Function of Member is lookupAnyMember(String is className, String is methodName){
-		if (className == "" || className == "Any") {
-			return Member:init(kind: "");
+		if (className == '' || className == 'Any') {
+			return Member:init(kind: '');
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return Member:init(kind: "");
+		if (cls:getName() == '') {
+			return Member:init(kind: '');
 		}
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:getMembers(), methodName: methodName);
 		While:run(loop: ml);
 		if (ml:found) {
 			return ml:res;
 		}
-		local Member is inherited: Member:init(kind: "");
+		local Member is inherited: Member:init(kind: '');
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited:getKind() == "") {
+			if (inherited:getKind() == '') {
 				inherited: self:lookupAnyMember(className: baseName, methodName: methodName);
 			}
 		});
@@ -181,19 +181,19 @@ Class is TypeChecker{
 	## @param callExpr: CALL expression whose arguments are checked.
 	local Function is checkCallArguments(Expression is callExpr){
 		local String is targetType: callExpr:methodTarget:getResolvedType();
-		if (targetType == "self" || targetType == "") {
+		if (targetType == 'self' || targetType == '') {
 			targetType: self:currentClassName;
 		}
-		if (targetType == "" || targetType == "Any" || self:allEnumNames:has(key: targetType)) {
+		if (targetType == '' || targetType == 'Any' || self:allEnumNames:has(key: targetType)) {
 			return;
 		}
-		local Array of String is parts: targetType:split(delimiter: ":");
+		local Array of String is parts: targetType:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
-		if (baseClassName == "" || baseClassName == "Any") {
+		if (baseClassName == '' || baseClassName == 'Any') {
 			return;
 		}
 		local Member is m: self:lookupAnyMember(className: baseClassName, methodName: callExpr:methodName);
-		if (m:getKind() != "METHOD") {
+		if (m:getKind() != 'METHOD') {
 			return;
 		}
 		local Array of Parameter is params: m:getParameters();
@@ -206,19 +206,19 @@ Class is TypeChecker{
 		params:each(action: local Function(Parameter is p){
 			local String is pName: p:getName();
 			local String is pT: p:getType():getName();
-			if (pT != "SELF_FIELD" && pT != "Any" && pT != "" && recvTypeParams:indexOf(search: pT, default: -1) < 0) {
-				local Expression is matchedValue: Expression:init(kind: "UNKNOWN");
+			if (pT != 'SELF_FIELD' && pT != 'Any' && pT != '' && recvTypeParams:indexOf(search: pT, default: -1) < 0) {
+				local Expression is matchedValue: Expression:init(kind: 'UNKNOWN');
 				local Boolean is found: false;
 				local Int is posIdx: 0;
 				callExpr:methodArgs:each(action: local Function(NamedArg is a){
-					if (!found && pName != "" && a:getName() == pName) {
+					if (!found && pName != '' && a:getName() == pName) {
 						matchedValue: a:getValue();
 						found: true;
 					}
 				});
 				if (!found) {
 					callExpr:methodArgs:each(action: local Function(NamedArg is a){
-						if (!found && a:getName() == "" && posIdx == pIdx) {
+						if (!found && a:getName() == '' && posIdx == pIdx) {
 							matchedValue: a:getValue();
 							found: true;
 						}
@@ -227,13 +227,13 @@ Class is TypeChecker{
 				}
 				if (found) {
 					local String is argT: matchedValue:getResolvedType();
-					if (argT != "" && argT != "Any" && !self:isAssignable(target: pT, source: argT)) {
-						local String is label: if (pName != "") pName else "position " . (pIdx + 1);
-						local String is msg: "Argument '" . label . "' for '" . baseClassName . "." . callExpr:methodName . "': cannot assign '" . argT . "' to '" . pT . "'.";
+					if (argT != '' && argT != 'Any' && !self:isAssignable(target: pT, source: argT)) {
+						local String is label: if (pName != '') pName else 'position ' . (pIdx + 1);
+						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					}
 				} else if (!p:getHasDefault() && !self:isBuiltinClassName(name: baseClassName)) {
-					local String is msg: "Missing argument '" . pName . "' for '" . baseClassName . "." . callExpr:methodName . "'.";
+					local String is msg: 'Missing argument \'' . pName . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\'.';
 					self:addError(line: self:currentLine, msg: msg);
 				}
 			}
@@ -251,10 +251,10 @@ Class is TypeChecker{
 	## @param name: Candidate type name.
 	## @return: true when the name is a builtin class.
 	local Function of Boolean is isBuiltinClassName(String is name){
-		if (name == "Array" || name == "Map" || name == "File" || name == "Process" || name == "Math" || name == "math") {
+		if (name == 'Array' || name == 'Map' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math') {
 			return true;
 		}
-		if (name == "While" || name == "Input" || name == "LoopControl" || name == "Output" || name == "output" || name == "error" || name == "Error" || name == "Parallel" || name == "Ansi") {
+		if (name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'Output' || name == 'output' || name == 'error' || name == 'Error' || name == 'Parallel' || name == 'Ansi') {
 			return true;
 		}
 		return false;
@@ -270,7 +270,7 @@ Class is TypeChecker{
 	## @param arms: The when arms to inspect.
 	## @param line: Source line used for diagnostics.
 	local Function is checkWhenExhaustive(String is subjectType, Array of WhenArm is arms, Int is line){
-		if (subjectType == "" || !self:allEnumNames:has(key: subjectType)) {
+		if (subjectType == '' || !self:allEnumNames:has(key: subjectType)) {
 			return;
 		}
 		local Map of String to String is covered: Map:init();
@@ -280,16 +280,16 @@ Class is TypeChecker{
 				hasElse: true;
 			}
 			arm:conditions:each(action: local Function(Expression is c){
-				local String is variantName: "";
-				if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: "") == subjectType) {
+				local String is variantName: '';
+				if (c:getKind() == 'CALL' && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: '') == subjectType) {
 					variantName: c:methodName;
-				} else if (c:getKind() == "IDENT" && self:allEnumVariants:has(key: c:stringValue) && self:allEnumVariants:getString(key: c:stringValue, default: "") == subjectType) {
+				} else if (c:getKind() == 'IDENT' && self:allEnumVariants:has(key: c:stringValue) && self:allEnumVariants:getString(key: c:stringValue, default: '') == subjectType) {
 					variantName: c:stringValue;
-				} else if (c:getKind() == "PATH" && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1))) {
+				} else if (c:getKind() == 'PATH' && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1))) {
 					variantName: c:pathSegments:get(index: 1);
 				}
-				if (variantName != "") {
-					covered:set(key: variantName, value: "true");
+				if (variantName != '') {
+					covered:set(key: variantName, value: 'true');
 				}
 			});
 		});
@@ -304,21 +304,21 @@ Class is TypeChecker{
 			}
 		});
 		if (missing:length() > 0) {
-			local String is msg: "Non-exhaustive 'when': enum '" . subjectType . "' variant(s) not covered (e.g. '" . missing:get(index: 0) . "'). Add matching arm(s) or an 'else:' fallback.";
+			local String is msg: 'Non-exhaustive \'when\': enum \'' . subjectType . '\' variant(s) not covered (e.g. \'' . missing:get(index: 0) . '\'). Add matching arm(s) or an \'else:\' fallback.';
 			self:addError(line: line, msg: msg);
 		}
 	}
 
 	local Function is bindWhenPatternVars(WhenArm is arm){
 		arm:conditions:each(action: local Function(Expression is c){
-			if (c:getKind() == "CALL" && self:allEnumVariants:has(key: c:methodName)) {
-				local String is enumName: self:allEnumVariants:getString(key: c:methodName, default: "");
+			if (c:getKind() == 'CALL' && self:allEnumVariants:has(key: c:methodName)) {
+				local String is enumName: self:allEnumVariants:getString(key: c:methodName, default: '');
 				local Member is vMem: self:lookupEnumVariant(enumName: enumName, variantName: c:methodName);
 				local Int is idx: 0;
 				c:methodArgs:each(action: local Function(NamedArg is arg){
 					if (idx < vMem:getParameters():length()) {
 						local Expression is av: arg:getValue();
-						if (av:getKind() == "IDENT") {
+						if (av:getKind() == 'IDENT') {
 							local Parameter is pDef: vMem:getParameters():get(index: idx);
 							self:localVars:set(key: av:stringValue, value: self:formatVarTypeString(t: pDef:getType()));
 						}
@@ -333,21 +333,21 @@ Class is TypeChecker{
 	}
 	local Function of String is formatTypeString(Type is t){
 		local String is baseName: t:getName();
-		if (baseName == "Function") {
+		if (baseName == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
 				return self:formatTypeString(t: ret);
 			}
-			return "void";
+			return 'void';
 		}
 		if (t:getParams():length() == 1) {
 			local Type is p0: t:getParams():get(index: 0);
-			return baseName . ":" . p0:getName();
+			return baseName . ':' . p0:getName();
 		}
 		if (t:getParams():length() >= 2) {
 			local Type is p0: t:getParams():get(index: 0);
 			local Type is p1: t:getParams():get(index: 1);
-			return baseName . ":" . p0:getName() . ":" . p1:getName();
+			return baseName . ':' . p0:getName() . ':' . p1:getName();
 		}
 		return baseName;
 	}
@@ -361,11 +361,11 @@ Class is TypeChecker{
 		if (idx >= 0 && idx < typeArgs:length()) {
 			return typeArgs:get(index: idx);
 		}
-		if (rawType:startsWith(prefix: "Array:") && rawType:length() > 6) {
+		if (rawType:startsWith(prefix: 'Array:') && rawType:length() > 6) {
 			local String is elem: rawType:substring(start: 6, end: rawType:length());
 			local Int is eIdx: tps:indexOf(search: elem, default: -1);
 			if (eIdx >= 0 && eIdx < typeArgs:length()) {
-				return "Array:" . typeArgs:get(index: eIdx);
+				return 'Array:' . typeArgs:get(index: eIdx);
 			}
 		}
 		return rawType;
@@ -411,19 +411,19 @@ Class is TypeChecker{
 		if (s:found) {
 			return s:res;
 		}
-		return ClassInfo:init(name: "", baseClass: "", members: []);
+		return ClassInfo:init(name: '', baseClass: '', members: []);
 	}
 
 	## Checks if `subName` inherits from or implements `baseName`.
 	local Function of Boolean is isSubclassOf(String is subName, String is baseName){
-		if (subName == "" || baseName == "") {
+		if (subName == '' || baseName == '') {
 			return false;
 		}
 		if (subName == baseName) {
 			return true;
 		}
 		local ClassInfo is subCls: self:findClass(name: subName);
-		if (subCls:getName() == "") {
+		if (subCls:getName() == '') {
 			return false;
 		}
 		local Boolean is matched: false;
@@ -441,42 +441,42 @@ Class is TypeChecker{
 	## @param source: Source type name.
 	## @return: `true` if compatible, `false` otherwise.
 	local Function of Boolean is isAssignable(String is target, String is source){
-		if (target == source || target == "Any" || source == "Any" || target == "" || source == "") {
+		if (target == source || target == 'Any' || source == 'Any' || target == '' || source == '') {
 			return true;
 		}
-		if ((target == "Float" || target == "float") && (source == "Float" || source == "float" || source == "Int" || source == "int")) {
+		if ((target == 'Float' || target == 'float') && (source == 'Float' || source == 'float' || source == 'Int' || source == 'int')) {
 			return true;
 		}
-		if ((target == "Int" || target == "int") && (source == "Int" || source == "int")) {
+		if ((target == 'Int' || target == 'int') && (source == 'Int' || source == 'int')) {
 			return true;
 		}
-		if ((target == "Boolean" || target == "bool") && (source == "Boolean" || source == "bool")) {
+		if ((target == 'Boolean' || target == 'bool') && (source == 'Boolean' || source == 'bool')) {
 			return true;
 		}
-		if ((target == "String" || target == "string") && (source == "String" || source == "string")) {
+		if ((target == 'String' || target == 'string') && (source == 'String' || source == 'string')) {
 			return true;
 		}
-		if (target == "Array" && source:startsWith(prefix: "Array")) {
+		if (target == 'Array' && source:startsWith(prefix: 'Array')) {
 			return true;
 		}
-		if (source == "Array" && target:startsWith(prefix: "Array")) {
+		if (source == 'Array' && target:startsWith(prefix: 'Array')) {
 			return true;
 		}
-		if (target == "Map" && source:startsWith(prefix: "Map")) {
+		if (target == 'Map' && source:startsWith(prefix: 'Map')) {
 			return true;
 		}
-		if (source == "Map" && target:startsWith(prefix: "Map")) {
+		if (source == 'Map' && target:startsWith(prefix: 'Map')) {
 			return true;
 		}
-		if (target:startsWith(prefix: "Function") && source:startsWith(prefix: "Function")) {
+		if (target:startsWith(prefix: 'Function') && source:startsWith(prefix: 'Function')) {
 			return true;
 		}
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: target, default: -1) >= 0 || curCls:getTypeParams():indexOf(search: source, default: -1) >= 0) {
 			return true;
 		}
-		local Array of String is tParts: target:split(delimiter: ":");
-		local Array of String is sParts: source:split(delimiter: ":");
+		local Array of String is tParts: target:split(delimiter: ':');
+		local Array of String is sParts: source:split(delimiter: ':');
 		if (tParts:length() > 0 && sParts:length() > 0) {
 			local String is tBase: tParts:get(index: 0);
 			local String is sBase: sParts:get(index: 0);
@@ -530,7 +530,7 @@ Class is TypeChecker{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			if (m:getKind() == "FIELD" && m:getName() == self:fieldName) {
+			if (m:getKind() == 'FIELD' && m:getName() == self:fieldName) {
 				self:res: m;
 				self:found: true;
 				return false;
@@ -541,15 +541,15 @@ Class is TypeChecker{
 
 	## Looks up a field's static type string on a class and its ancestors.
 	Function of String is lookupFieldType(String is className, String is fieldName){
-		if (className == "" || className == "Any") {
-			return "";
+		if (className == '' || className == 'Any') {
+			return '';
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return "";
+		if (cls:getName() == '') {
+			return '';
 		}
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:getMembers(), fieldName: fieldName);
 		While:run(loop: fl);
@@ -558,9 +558,9 @@ Class is TypeChecker{
 			local String is rawT: self:formatTypeString(t: foundM:getType());
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
-		local String is inherited: "";
+		local String is inherited: '';
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited == "") {
+			if (inherited == '') {
 				inherited: self:lookupFieldType(className: baseName, fieldName: fieldName);
 			}
 		});
@@ -588,7 +588,7 @@ Class is TypeChecker{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			if (m:getKind() == "METHOD" && m:getName() == self:methodName) {
+			if (m:getKind() == 'METHOD' && m:getName() == self:methodName) {
 				self:res: m;
 				self:found: true;
 				return false;
@@ -599,18 +599,18 @@ Class is TypeChecker{
 
 	## Looks up a method's return type string on a class and its ancestors.
 	local Function of String is lookupMethodReturnType(String is className, String is methodName){
-		if (className == "" || className == "Any") {
-			return "";
+		if (className == '' || className == 'Any') {
+			return '';
 		}
-		local Array of String is parts: className:split(delimiter: ":");
+		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
-		if (methodName == "init" && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
+		if (methodName == 'init' && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
 		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		if (cls:getName() == "") {
-			return "";
+		if (cls:getName() == '') {
+			return '';
 		}
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:getMembers(), methodName: methodName);
 		While:run(loop: ml);
@@ -619,9 +619,9 @@ Class is TypeChecker{
 			local String is rawT: self:formatTypeString(t: foundM:getType());
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		}
-		local String is inherited: "";
+		local String is inherited: '';
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (inherited == "") {
+			if (inherited == '') {
 				inherited: self:lookupMethodReturnType(className: baseName, methodName: methodName);
 			}
 		});
@@ -632,7 +632,7 @@ Class is TypeChecker{
 		local TypeChecker is tc;
 		local Array of String is segs;
 		local Int is idx: 1;
-		local String is currType: "";
+		local String is currType: '';
 
 		replace Function is init(TypeChecker is tc, Array of String is segs, String is rootType){
 			self:tc: tc;
@@ -642,7 +642,7 @@ Class is TypeChecker{
 		}
 
 		replace Function of Boolean is evaluate(){
-			return self:currType != "" && self:idx < self:segs:length();
+			return self:currType != '' && self:idx < self:segs:length();
 		}
 
 		replace Function of Boolean is iteration(LoopControl is c){
@@ -662,72 +662,72 @@ Class is TypeChecker{
 	## @return: Resolved type name string.
 	local Function of String is inferExpressionType(Expression is expr){
 		local String is kind: expr:getKind();
-		local String is res: "Any";
+		local String is res: 'Any';
 
 		when (kind) {
-			is "STRING": {
-				res: "String";
+			is 'STRING': {
+				res: 'String';
 			}
-			is "NUMBER": {
-				res: "Int";
+			is 'NUMBER': {
+				res: 'Int';
 			}
-			is "FLOAT": {
-				res: "Float";
+			is 'FLOAT': {
+				res: 'Float';
 			}
-			is "BOOL": {
-				res: "Boolean";
+			is 'BOOL': {
+				res: 'Boolean';
 			}
-			is "IDENT": {
+			is 'IDENT': {
 				local String is name: expr:stringValue;
-				if (name == "self") {
+				if (name == 'self') {
 					res: self:currentClassName;
-				} else if (name == "true" || name == "false") {
-					res: "Boolean";
+				} else if (name == 'true' || name == 'false') {
+					res: 'Boolean';
 				} else if (self:localVars:has(key: name)) {
-					res: self:localVars:getString(key: name, default: "Any");
+					res: self:localVars:getString(key: name, default: 'Any');
 				} else if (self:fieldTypes:has(key: name)) {
 					if (self:unassignedFields:has(key: name)) {
-						self:addError(line: self:currentLine, msg: "Field '" . name . "' in class '" . self:currentClassName . "' is read before being initialized.");
+						self:addError(line: self:currentLine, msg: 'Field \'' . name . '\' in class \'' . self:currentClassName . '\' is read before being initialized.');
 					}
 					local String is owner: self:findMemberOwnerClass(className: self:currentClassName, memberName: name);
-					if (owner != "") {
+					if (owner != '') {
 						self:checkMemberVisibility(ownerClass: owner, member: self:findAncestorMember(className: self:currentClassName, memberName: name), memberName: name);
 					}
-					res: self:fieldTypes:getString(key: name, default: "Any");
+					res: self:fieldTypes:getString(key: name, default: 'Any');
 				} else if (self:allEnumVariants:has(key: name)) {
-					res: self:allEnumVariants:getString(key: name, default: "Any");
+					res: self:allEnumVariants:getString(key: name, default: 'Any');
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
-				} else if (name == "File" || name == "Process" || name == "Math" || name == "math" || name == "Map" || name == "Array" || name == "While" || name == "Input" || name == "LoopControl" || name == "output" || name == "Output" || name == "error" || name == "Error" || name == "String" || name == "Int" || name == "Float" || name == "Boolean" || name == "Function" || name == "Any") {
+				} else if (name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'Map' || name == 'Array' || name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'output' || name == 'Output' || name == 'error' || name == 'Error' || name == 'String' || name == 'Int' || name == 'Float' || name == 'Boolean' || name == 'Function' || name == 'Any') {
 					res: name;
-				} else if (name != "") {
-					self:addError(line: self:currentLine, msg: "Undefined identifier '" . name . "'.");
+				} else if (name != '') {
+					self:addError(line: self:currentLine, msg: 'Undefined identifier \'' . name . '\'.');
 				}
 			}
-			is "PATH": {
+			is 'PATH': {
 				local Array of String is segs: expr:pathSegments;
 				if (segs:length() > 0) {
 					local String is root: segs:get(index: 0);
-					local String is rootType: "";
-					if (root == "self") {
+					local String is rootType: '';
+					if (root == 'self') {
 						rootType: self:currentClassName;
 						if (segs:length() >= 2 && self:unassignedFields:has(key: segs:get(index: 1))) {
-							self:addError(line: self:currentLine, msg: "Field '" . segs:get(index: 1) . "' in class '" . self:currentClassName . "' is read before being initialized.");
+							self:addError(line: self:currentLine, msg: 'Field \'' . segs:get(index: 1) . '\' in class \'' . self:currentClassName . '\' is read before being initialized.');
 						}
 						if (segs:length() >= 2) {
 							local String is fName: segs:get(index: 1);
 							local String is fOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: fName);
-							if (fOwner != "") {
+							if (fOwner != '') {
 								self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: self:currentClassName, memberName: fName), memberName: fName);
 							}
 						}
 					} else if (self:localVars:has(key: root)) {
-						rootType: self:localVars:getString(key: root, default: "");
+						rootType: self:localVars:getString(key: root, default: '');
 					} else if (self:fieldTypes:has(key: root)) {
 						if (self:unassignedFields:has(key: root)) {
-							self:addError(line: self:currentLine, msg: "Field '" . root . "' in class '" . self:currentClassName . "' is read before being initialized.");
+							self:addError(line: self:currentLine, msg: 'Field \'' . root . '\' in class \'' . self:currentClassName . '\' is read before being initialized.');
 						}
-						rootType: self:fieldTypes:getString(key: root, default: "");
+						rootType: self:fieldTypes:getString(key: root, default: '');
 					} else if (self:allEnumNames:has(key: root)) {
 						rootType: root;
 					} else if (self:registeredClasses:has(key: root)) {
@@ -735,187 +735,187 @@ Class is TypeChecker{
 					}
 					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType);
 					While:run(loop: pLoop);
-					if (pLoop:currType != "") {
+					if (pLoop:currType != '') {
 						res: pLoop:currType;
 					}
 				}
 			}
-			is "BINARY": {
+			is 'BINARY': {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
 				local String is rightT: self:inferExpressionType(expr: expr:rightExpr);
 				local String is op: expr:binaryOp;
 				when (op) {
-					is ".": {
-						res: "String";
+					is '.': {
+						res: 'String';
 					}
-					is "==", "!=", "is", "<", "<=", ">", ">=": {
-						res: "Boolean";
+					is '==', '!=', 'is', '<', '<=', '>', '>=': {
+						res: 'Boolean';
 					}
-					is "&&", "||": {
-						res: "Boolean";
+					is '&&', '||': {
+						res: 'Boolean';
 					}
-					is "+", "-", "*", "/", "%": {
-						res: if (leftT == "Float" || rightT == "Float") "Float" else "Int";
+					is '+', '-', '*', '/', '%': {
+						res: if (leftT == 'Float' || rightT == 'Float') 'Float' else 'Int';
 					}
-					is "&", "|", "^", "<<", ">>": {
-						res: "Int";
-						if ((leftT != "" && leftT != "Any" && leftT != "Int" && leftT != "int") ||
-							(rightT != "" && rightT != "Any" && rightT != "Int" && rightT != "int")) {
-							local String is msg: "Bitwise operator '" . op . "' requires Int operands (got '" . leftT . "' and '" . rightT . "').";
+					is '&', '|', '^', '<<', '>>': {
+						res: 'Int';
+						if ((leftT != '' && leftT != 'Any' && leftT != 'Int' && leftT != 'int') ||
+							(rightT != '' && rightT != 'Any' && rightT != 'Int' && rightT != 'int')) {
+							local String is msg: 'Bitwise operator \'' . op . '\' requires Int operands (got \'' . leftT . '\' and \'' . rightT . '\').';
 							self:addError(line: self:currentLine, msg: msg);
 						}
 					}
 					else: {
-						res: "Int";
+						res: 'Int';
 					}
 				}
 			}
-			is "CAST": {
+			is 'CAST': {
 				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
 				local String is target: expr:stringValue;
-				local String is src: if (innerT != "") innerT else "Any";
+				local String is src: if (innerT != '') innerT else 'Any';
 
 				when (target) {
-					is "Hex", "Bin", "Oct": {
+					is 'Hex', 'Bin', 'Oct': {
 						local Int is widthArg: expr:castArgs:length();
 						if (widthArg > 1) {
-							self:addError(line: self:currentLine, msg: "Cast 'as " . target . "' accepts at most one width argument.");
+							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
 						}
-						if (src != "Int" && src != "int" && src != "String" && src != "string" && src != "Any") {
-							self:addError(line: self:currentLine, msg: "Cast 'as " . target . "' requires an Int or String operand (got '" . src . "').");
+						if (src != 'Int' && src != 'int' && src != 'String' && src != 'string' && src != 'Any') {
+							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
 						}
-						res: if (src == "String" || src == "string") "Int" else "String";
+						res: if (src == 'String' || src == 'string') 'Int' else 'String';
 					}
-					is "Int", "int": {
+					is 'Int', 'int': {
 						if (expr:castArgs:length() > 0) {
-							self:addError(line: self:currentLine, msg: "Cast 'as Int' takes no arguments.");
+							self:addError(line: self:currentLine, msg: 'Cast \'as Int\' takes no arguments.');
 						}
-						if (src != "Int" && src != "int" && src != "Float" && src != "float" && src != "String" && src != "string" && src != "Any") {
-							self:addError(line: self:currentLine, msg: "Cannot cast '" . src . "' to 'Int'.");
+						if (src != 'Int' && src != 'int' && src != 'Float' && src != 'float' && src != 'String' && src != 'string' && src != 'Any') {
+							self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'Int\'.');
 						}
-						res: "Int";
+						res: 'Int';
 					}
-					is "Float", "float": {
+					is 'Float', 'float': {
 						if (expr:castArgs:length() > 0) {
-							self:addError(line: self:currentLine, msg: "Cast 'as Float' takes no arguments.");
+							self:addError(line: self:currentLine, msg: 'Cast \'as Float\' takes no arguments.');
 						}
-						if (src != "Int" && src != "int" && src != "Float" && src != "float" && src != "Any") {
-							self:addError(line: self:currentLine, msg: "Cannot cast '" . src . "' to 'Float'.");
+						if (src != 'Int' && src != 'int' && src != 'Float' && src != 'float' && src != 'Any') {
+							self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'Float\'.');
 						}
-						res: "Float";
+						res: 'Float';
 					}
-					is "String", "string": {
+					is 'String', 'string': {
 						if (expr:castArgs:length() > 0) {
-							self:addError(line: self:currentLine, msg: "Cast 'as String' takes no arguments.");
+							self:addError(line: self:currentLine, msg: 'Cast \'as String\' takes no arguments.');
 						}
-						res: "String";
+						res: 'String';
 					}
-					is "Any": {
+					is 'Any': {
 						if (expr:castArgs:length() > 0) {
-							self:addError(line: self:currentLine, msg: "Cast 'as Any' takes no arguments.");
+							self:addError(line: self:currentLine, msg: 'Cast \'as Any\' takes no arguments.');
 						}
-						res: "Any";
+						res: 'Any';
 					}
 					else: {
 						if (self:allEnumNames:has(key: target)) {
-							self:addError(line: self:currentLine, msg: "Cannot cast to enum '" . target . "'; construct a variant instead.");
+							self:addError(line: self:currentLine, msg: 'Cannot cast to enum \'' . target . '\'; construct a variant instead.');
 							res: target;
 						} else if (self:registeredClasses:has(key: target)) {
 							if (expr:castArgs:length() > 0) {
-								self:addError(line: self:currentLine, msg: "Class casts take no arguments.");
+								self:addError(line: self:currentLine, msg: 'Class casts take no arguments.');
 							}
-							local Boolean is related: src == "Any" || self:isSubclassOf(subName: src, baseName: target) || self:isSubclassOf(subName: target, baseName: src);
+							local Boolean is related: src == 'Any' || self:isSubclassOf(subName: src, baseName: target) || self:isSubclassOf(subName: target, baseName: src);
 							if (!related) {
-								self:addError(line: self:currentLine, msg: "Cannot cast '" . src . "' to unrelated class '" . target . "'.");
+								self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to unrelated class \'' . target . '\'.');
 							}
 							res: target;
 						} else {
-							self:addError(line: self:currentLine, msg: "Unknown cast target '" . target . "'.");
-							res: "Any";
+							self:addError(line: self:currentLine, msg: 'Unknown cast target \'' . target . '\'.');
+							res: 'Any';
 						}
 					}
 				}
 			}
-			is "UNARY": {
+			is 'UNARY': {
 				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
-					if (expr:unaryOp == "~" && innerT != "" && innerT != "Any" && innerT != "Int" && innerT != "int") {
-						local String is msg: "Bitwise complement '~' requires an Int operand (got '" . innerT . "').";
+					if (expr:unaryOp == '~' && innerT != '' && innerT != 'Any' && innerT != 'Int' && innerT != 'int') {
+						local String is msg: 'Bitwise complement \'~\' requires an Int operand (got \'' . innerT . '\').';
 						self:addError(line: self:currentLine, msg: msg);
 					}
-				if (expr:unaryOp == "!") {
-					res: "Boolean";
+				if (expr:unaryOp == '!') {
+					res: 'Boolean';
 				} else {
 					res: innerT;
 				}
 			}
-			is "ARRAY": {
-				local String is firstElemType: "";
+			is 'ARRAY': {
+				local String is firstElemType: '';
 				expr:arrayItems:each(action: local Function(Expression is item){
 					local String is itemT: self:inferExpressionType(expr: item);
-					if (firstElemType == "" && itemT != "" && itemT != "Any") {
+					if (firstElemType == '' && itemT != '' && itemT != 'Any') {
 						firstElemType: itemT;
 					}
 				});
-				if (firstElemType != "") {
-					res: "Array:" . firstElemType;
+				if (firstElemType != '') {
+					res: 'Array:' . firstElemType;
 				} else {
-					res: "Array";
+					res: 'Array';
 				}
 			}
-			is "MAP": {
-				local String is firstKeyType: "";
-				local String is firstValType: "";
+			is 'MAP': {
+				local String is firstKeyType: '';
+				local String is firstValType: '';
 				expr:mapKeys:each(action: local Function(Expression is k){
 					local String is kt: self:inferExpressionType(expr: k);
-					if (firstKeyType == "" && kt != "" && kt != "Any") {
+					if (firstKeyType == '' && kt != '' && kt != 'Any') {
 						firstKeyType: kt;
 					}
 				});
 				expr:mapValues:each(action: local Function(Expression is v){
 					local String is vt: self:inferExpressionType(expr: v);
-					if (firstValType == "" && vt != "" && vt != "Any") {
+					if (firstValType == '' && vt != '' && vt != 'Any') {
 						firstValType: vt;
 					}
 				});
-				if (firstKeyType != "" && firstValType != "") {
-					res: "Map:" . firstKeyType . ":" . firstValType;
+				if (firstKeyType != '' && firstValType != '') {
+					res: 'Map:' . firstKeyType . ':' . firstValType;
 				} else {
-					res: "Map";
+					res: 'Map';
 				}
 			}
-			is "INDEX": {
+			is 'INDEX': {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
 				self:inferExpressionType(expr: expr:rightExpr);
-				if (leftT:startsWith(prefix: "Array:") && leftT:length() > 6) {
+				if (leftT:startsWith(prefix: 'Array:') && leftT:length() > 6) {
 					res: leftT:substring(start: 6, end: leftT:length());
-				} else if (leftT:startsWith(prefix: "Map:") && leftT:length() > 4) {
+				} else if (leftT:startsWith(prefix: 'Map:') && leftT:length() > 4) {
 					local String is afterMap: leftT:substring(start: 4, end: leftT:length());
-					local Int is colonIdx: afterMap:indexOf(needle: ":", default: -1);
+					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
 					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 						res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 					} else {
-						res: "String";
+						res: 'String';
 					}
-				} else if (leftT == "Map") {
-					res: "String";
+				} else if (leftT == 'Map') {
+					res: 'String';
 				} else {
-					res: "Any";
+					res: 'Any';
 				}
 			}
-			is "IF_ELSE": {
+			is 'IF_ELSE': {
 				self:inferExpressionType(expr: expr:condExpr);
 				local String is thenT: self:inferExpressionType(expr: expr:thenExpr);
 				local String is elseT: self:inferExpressionType(expr: expr:elseExpr);
-				res: if (thenT != "" && thenT != "Any") thenT else elseT;
+				res: if (thenT != '' && thenT != 'Any') thenT else elseT;
 			}
-			is "WHEN": {
+			is 'WHEN': {
 				local String is subjectType: self:inferExpressionType(expr: expr:whenSubject);
-				local String is armType: "Any";
+				local String is armType: 'Any';
 				expr:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
 					if (arm:hasValueExpr) {
 						local String is vt: self:inferExpressionType(expr: arm:valueExpr);
-						if (armType == "Any" && vt != "" && vt != "Any") {
+						if (armType == 'Any' && vt != '' && vt != 'Any') {
 							armType: vt;
 						}
 					}
@@ -926,11 +926,11 @@ Class is TypeChecker{
 				self:checkWhenExhaustive(subjectType: subjectType, arms: expr:whenArms, line: self:currentLine);
 				res: armType;
 			}
-			is "ANON_FN": {
+			is 'ANON_FN': {
 				local Map of String to String is savedVars: Map:init();
 				local Array of String is existingKeys: self:localVars:keys();
 				existingKeys:each(action: local Function(String is k){
-					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
+					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 				});
 				local String is savedRet: self:currentMethodReturnType;
 
@@ -947,32 +947,32 @@ Class is TypeChecker{
 				self:localVars: savedVars;
 				self:currentMethodReturnType: savedRet;
 				local String is anonRetName: expr:anonReturnType:getName();
-				if (anonRetName != "" && anonRetName != "void" && anonRetName != "Void") {
-					res: "Function:" . self:formatTypeString(t: expr:anonReturnType);
+				if (anonRetName != '' && anonRetName != 'void' && anonRetName != 'Void') {
+					res: 'Function:' . self:formatTypeString(t: expr:anonReturnType);
 				} else {
-					res: "Function";
+					res: 'Function';
 				}
 			}
-			is "CALL": {
+			is 'CALL': {
 				local String is targetType: self:inferExpressionType(expr: expr:methodTarget);
 				local String is method: expr:methodName;
-				if (targetType:startsWith(prefix: "Array:") && targetType:length() > 6) {
+				if (targetType:startsWith(prefix: 'Array:') && targetType:length() > 6) {
 					local String is elemTypeName: targetType:substring(start: 6, end: targetType:length());
-					if (method == "fold" && expr:methodArgs:length() >= 2) {
+					if (method == 'fold' && expr:methodArgs:length() >= 2) {
 						local NamedArg is a0: expr:methodArgs:get(index: 0);
 						local String is initType: self:inferExpressionType(expr: a0:getValue());
 						local NamedArg is a1: expr:methodArgs:get(index: 1);
 						local Expression is av: a1:getValue();
-						if (av:getKind() == "ANON_FN") {
+						if (av:getKind() == 'ANON_FN') {
 							if (av:anonParams:length() >= 1) {
 								local Parameter is p0: av:anonParams:get(index: 0);
-								if (p0:getType():getName() == "Any" || p0:getType():getName() == "") {
+								if (p0:getType():getName() == 'Any' || p0:getType():getName() == '') {
 									p0:setType(t: Type:init(name: initType));
 								}
 							}
 							if (av:anonParams:length() >= 2) {
 								local Parameter is p1: av:anonParams:get(index: 1);
-								if (p1:getType():getName() == "Any" || p1:getType():getName() == "") {
+								if (p1:getType():getName() == 'Any' || p1:getType():getName() == '') {
 									p1:setType(t: Type:init(name: elemTypeName));
 								}
 							}
@@ -980,34 +980,34 @@ Class is TypeChecker{
 					} else {
 						expr:methodArgs:each(action: local Function(NamedArg is arg){
 							local Expression is av: arg:getValue();
-							if (av:getKind() == "ANON_FN") {
+							if (av:getKind() == 'ANON_FN') {
 								av:anonParams:each(action: local Function(Parameter is p){
-									if (p:getType():getName() == "Any" || p:getType():getName() == "") {
+									if (p:getType():getName() == 'Any' || p:getType():getName() == '') {
 										p:setType(t: Type:init(name: elemTypeName));
 									}
 								});
 							}
 						});
 					}
-				} else if (targetType:startsWith(prefix: "Map:") && method == "each") {
+				} else if (targetType:startsWith(prefix: 'Map:') && method == 'each') {
 					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
-					local Int is colonIdx: afterMap:indexOf(needle: ":", default: -1);
-					local String is valTypeName: "String";
+					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
+					local String is valTypeName: 'String';
 					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 						valTypeName: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 					}
 					expr:methodArgs:each(action: local Function(NamedArg is arg){
 						local Expression is av: arg:getValue();
-						if (av:getKind() == "ANON_FN") {
+						if (av:getKind() == 'ANON_FN') {
 							if (av:anonParams:length() >= 1) {
 								local Parameter is p0: av:anonParams:get(index: 0);
-								if (p0:getType():getName() == "Any" || p0:getType():getName() == "") {
-									p0:setType(t: Type:init(name: "String"));
+								if (p0:getType():getName() == 'Any' || p0:getType():getName() == '') {
+									p0:setType(t: Type:init(name: 'String'));
 								}
 							}
 							if (av:anonParams:length() >= 2) {
 								local Parameter is p1: av:anonParams:get(index: 1);
-								if (p1:getType():getName() == "Any" || p1:getType():getName() == "") {
+								if (p1:getType():getName() == 'Any' || p1:getType():getName() == '') {
 									p1:setType(t: Type:init(name: valTypeName));
 								}
 							}
@@ -1018,151 +1018,151 @@ Class is TypeChecker{
 					self:inferExpressionType(expr: arg:getValue());
 				});
 
-				if (targetType == "self" || targetType == "") {
+				if (targetType == 'self' || targetType == '') {
 					targetType: self:currentClassName;
 				}
 
-				if (!self:allEnumNames:has(key: targetType) && !self:isBuiltinClassName(name: targetType) && targetType != "" && targetType != "Any") {
-					local Array of String is cParts: targetType:split(delimiter: ":");
+				if (!self:allEnumNames:has(key: targetType) && !self:isBuiltinClassName(name: targetType) && targetType != '' && targetType != 'Any') {
+					local Array of String is cParts: targetType:split(delimiter: ':');
 					local String is cBase: cParts:get(index: 0);
 					local String is mOwner: self:findMemberOwnerClass(className: cBase, memberName: method);
-					if (mOwner != "") {
+					if (mOwner != '') {
 						self:checkMemberVisibility(ownerClass: mOwner, member: self:lookupAnyMember(className: cBase, methodName: method), memberName: method);
 					}
 				}
-				if (targetType == "Any" && method != "toString" && method != "typeName" && method != "init") {
-					self:addError(line: self:currentLine, msg: "Member '" . method . "' is not part of the root contract; cast the Any-typed value to a concrete class before calling it (value as ClassName).");
+				if (targetType == 'Any' && method != 'toString' && method != 'typeName' && method != 'init') {
+					self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not part of the root contract; cast the Any-typed value to a concrete class before calling it (value as ClassName).');
 				}
 
-				local String is fnVarT: "";
-				if (expr:methodTarget:getKind() == "IDENT" && expr:methodTarget:stringValue == "self") {
-					fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ""));
+				local String is fnVarT: '';
+				if (expr:methodTarget:getKind() == 'IDENT' && expr:methodTarget:stringValue == 'self') {
+					fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ''));
 				}
-				if (targetType == "Parallel" && method == "run") {
+				if (targetType == 'Parallel' && method == 'run') {
 					local Boolean is hasWorker: false;
 					expr:methodArgs:each(action: local Function(NamedArg is arg){
 						local String is aName: arg:getName();
 						local String is aType: self:inferExpressionType(expr: arg:getValue());
-						if (aName == "threads" || aName == "iterations") {
-							if (aType != "Int" && aType != "int" && aType != "Any") {
-								self:addError(line: self:currentLine, msg: "Parallel:run '" . aName . "' argument must be Int, found '" . aType . "'.");
+						if (aName == 'threads' || aName == 'iterations') {
+							if (aType != 'Int' && aType != 'int' && aType != 'Any') {
+								self:addError(line: self:currentLine, msg: 'Parallel:run \'' . aName . '\' argument must be Int, found \'' . aType . '\'.');
 							}
-						} else if (aName == "worker") {
+						} else if (aName == 'worker') {
 							hasWorker: true;
-							if (!aType:startsWith(prefix: "Function") && aType != "Any") {
-								self:addError(line: self:currentLine, msg: "Parallel:run 'worker' argument must be a Function, found '" . aType . "'.");
+							if (!aType:startsWith(prefix: 'Function') && aType != 'Any') {
+								self:addError(line: self:currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
 							}
 						}
 					});
 					if (!hasWorker) {
-						self:addError(line: self:currentLine, msg: "Parallel:run requires 'worker' named argument.");
+						self:addError(line: self:currentLine, msg: 'Parallel:run requires \'worker\' named argument.');
 					}
-					res: "Int";
-				} else if (fnVarT:startsWith(prefix: "Function")) {
-					if (fnVarT:startsWith(prefix: "Function:") && fnVarT:length() > 9) {
+					res: 'Int';
+				} else if (fnVarT:startsWith(prefix: 'Function')) {
+					if (fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9) {
 						res: fnVarT:substring(start: 9, end: fnVarT:length());
 					} else {
-						res: "Any";
+						res: 'Any';
 					}
 				} else if (self:allEnumVariants:has(key: method) && (self:allEnumNames:has(key: targetType) || targetType == self:currentClassName)) {
-					res: self:allEnumVariants:getString(key: method, default: "Any");
-				} else if (method == "typeName" && self:registeredClasses:has(key: targetType)) {
-					res: "String";
-				} else if (method == "init" && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
+					res: self:allEnumVariants:getString(key: method, default: 'Any');
+				} else if (method == 'typeName' && self:registeredClasses:has(key: targetType)) {
+					res: 'String';
+				} else if (method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 					res: targetType;
 				} else if (self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 					local String is cRet: self:lookupMethodReturnType(className: targetType, methodName: method);
-					if (cRet == "" || cRet == "void" || cRet == "Void") {
+					if (cRet == '' || cRet == 'void' || cRet == 'Void') {
 						res: targetType;
 					} else {
 						res: cRet;
 					}
-				} else if (targetType:startsWith(prefix: "Array") && (method == "get" || method == "pop" || method == "removeAt")) {
-					if (targetType:startsWith(prefix: "Array:") && targetType:length() > 6) {
+				} else if (targetType:startsWith(prefix: 'Array') && (method == 'get' || method == 'pop' || method == 'removeAt')) {
+					if (targetType:startsWith(prefix: 'Array:') && targetType:length() > 6) {
 						res: targetType:substring(start: 6, end: targetType:length());
 					} else {
-						res: "Any";
+						res: 'Any';
 					}
-				} else if (targetType:startsWith(prefix: "Array") && (method == "filter" || method == "slice")) {
+				} else if (targetType:startsWith(prefix: 'Array') && (method == 'filter' || method == 'slice')) {
 					res: targetType;
-				} else if (targetType:startsWith(prefix: "Array") && method == "map") {
-					local String is mappedElem: "Any";
+				} else if (targetType:startsWith(prefix: 'Array') && method == 'map') {
+					local String is mappedElem: 'Any';
 					if (expr:methodArgs:length() > 0) {
 						local NamedArg is a0: expr:methodArgs:get(index: 0);
 						local Expression is fnExpr: a0:getValue();
-						if (fnExpr:getKind() == "ANON_FN") {
+						if (fnExpr:getKind() == 'ANON_FN') {
 							local String is fnRet: fnExpr:anonReturnType:getName();
-							if (fnRet != "" && fnRet != "Void" && fnRet != "void" && fnRet != "Any") {
+							if (fnRet != '' && fnRet != 'Void' && fnRet != 'void' && fnRet != 'Any') {
 								mappedElem: self:formatTypeString(t: fnExpr:anonReturnType);
 							}
 						}
 					}
-					res: if (mappedElem != "Any") "Array:" . mappedElem else "Array";
-				} else if (targetType:startsWith(prefix: "Array") && method == "fold") {
+					res: if (mappedElem != 'Any') 'Array:' . mappedElem else 'Array';
+				} else if (targetType:startsWith(prefix: 'Array') && method == 'fold') {
 					if (expr:methodArgs:length() > 0) {
 						local NamedArg is a0: expr:methodArgs:get(index: 0);
 						res: a0:getValue():getResolvedType();
 					} else {
-						res: "Any";
+						res: 'Any';
 					}
-				} else if (targetType:startsWith(prefix: "Map:") && method == "get") {
+				} else if (targetType:startsWith(prefix: 'Map:') && method == 'get') {
 					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
-					local Int is colonIdx: afterMap:indexOf(needle: ":", default: -1);
+					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
 					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 						res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 					} else {
-						res: "Any";
+						res: 'Any';
 					}
 				} else if (self:allEnumNames:has(key: targetType)) {
 					when (method) {
-						is "name": { res: "String"; }
-						is "ordinal": { res: "Int"; }
-						is "values": { res: "Array:" . targetType; }
-						is "value": {
-							res: if (self:allStringBackedEnums:has(key: targetType)) "String" else "Int";
+						is 'name': { res: 'String'; }
+						is 'ordinal': { res: 'Int'; }
+						is 'values': { res: 'Array:' . targetType; }
+						is 'value': {
+							res: if (self:allStringBackedEnums:has(key: targetType)) 'String' else 'Int';
 						}
-						else: { res: "Any"; }
+						else: { res: 'Any'; }
 					}
 				} else {
 					local String is classRet: self:lookupMethodReturnType(className: targetType, methodName: method);
-					if (classRet != "" && classRet != "void" && classRet != "Void" && classRet != "Any") {
+					if (classRet != '' && classRet != 'void' && classRet != 'Void' && classRet != 'Any') {
 						res: classRet;
 					} else {
 						when (method) {
-							is "length", "ordinal", "indexOf", "count", "countLeading", "execute", "getInt", "getPid", "toInt", "parseInt": {
-								res: "Int";
+							is 'length', 'ordinal', 'indexOf', 'count', 'countLeading', 'execute', 'getInt', 'getPid', 'toInt', 'parseInt': {
+								res: 'Int';
 							}
-							is "isEmpty", "has", "any", "startsWith", "endsWith", "contains", "isDigit", "isAlpha", "isWhitespace", "exists", "write", "getBool", "remove": {
-								res: "Boolean";
+							is 'isEmpty', 'has', 'any', 'startsWith', 'endsWith', 'contains', 'isDigit', 'isAlpha', 'isWhitespace', 'exists', 'write', 'getBool', 'remove': {
+								res: 'Boolean';
 							}
-							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join", "fromCharCode", "toBase", "typeName": {
-								res: "String";
+							is 'charAt', 'substring', 'getString', 'toString', 'name', 'read', 'trim', 'replaceAll', 'join', 'fromCharCode', 'toBase', 'typeName': {
+								res: 'String';
 							}
-							is "value": {
-								res: "Int";
+							is 'value': {
+								res: 'Int';
 							}
-							is "round", "floor", "ceil", "ceiling", "random", "getFloat", "abs", "min", "max", "clamp", "sqrt", "sin", "cos", "tan", "atan2", "log", "log2", "pow", "toFloat": {
-								res: "Float";
+							is 'round', 'floor', 'ceil', 'ceiling', 'random', 'getFloat', 'abs', 'min', 'max', 'clamp', 'sqrt', 'sin', 'cos', 'tan', 'atan2', 'log', 'log2', 'pow', 'toFloat': {
+								res: 'Float';
 							}
-							is "lines", "keys", "split": {
-								res: "Array:String";
+							is 'lines', 'keys', 'split': {
+								res: 'Array:String';
 							}
-							is "filter", "slice", "values": {
-								res: "Array";
+							is 'filter', 'slice', 'values': {
+								res: 'Array';
 							}
 							else: {
-								res: "Any";
+								res: 'Any';
 							}
 						}
 					}
 				}
 			}
 			else: {
-				res: "Any";
+				res: 'Any';
 			}
 		}
 
-		if (kind == "CALL") {
+		if (kind == 'CALL') {
 			self:checkCallArguments(callExpr: expr);
 		}
 
@@ -1180,7 +1180,7 @@ Class is TypeChecker{
 		local String is kind: stmt:getKind();
 
 		when (kind) {
-			is "VAR_DECL": {
+			is 'VAR_DECL': {
 				local String is varName: stmt:varName;
 				local String is fullType: self:formatVarTypeString(t: stmt:varType);
 				self:localVars:set(key: varName, value: fullType);
@@ -1188,31 +1188,31 @@ Class is TypeChecker{
 				if (stmt:hasInit) {
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr);
 					if (!self:isAssignable(target: fullType, source: initType)) {
-						local String is msg: "Type mismatch in variable declaration for '" . varName . "': cannot assign '" . initType . "' to '" . fullType . "'.";
+						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
 						self:addError(line: stmt:getLine(), msg: msg);
 					}
 				}
 			}
-			is "ASSIGN": {
+			is 'ASSIGN': {
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue);
-				if (stmt:assignTarget:getKind() == "PATH") {
+				if (stmt:assignTarget:getKind() == 'PATH') {
 					local Array of String is tSegs: stmt:assignTarget:pathSegments;
-					if (tSegs:length() == 2 && tSegs:get(index: 0) == "self") {
+					if (tSegs:length() == 2 && tSegs:get(index: 0) == 'self') {
 						self:unassignedFields:remove(key: tSegs:get(index: 1));
 					}
-				} else if (stmt:assignTarget:getKind() == "IDENT") {
+				} else if (stmt:assignTarget:getKind() == 'IDENT') {
 					self:unassignedFields:remove(key: stmt:assignTarget:stringValue);
 				}
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				if (!self:isAssignable(target: targetType, source: valType)) {
-					local String is msg: "Type mismatch in assignment: cannot assign '" . valType . "' to '" . targetType . "'.";
+					local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
 					self:addError(line: stmt:getLine(), msg: msg);
 				}
 			}
-			is "IF": {
+			is 'IF': {
 				local String is condType: self:inferExpressionType(expr: stmt:ifCondition);
-				if (condType != "Boolean" && condType != "bool" && condType != "Any") {
-					local String is msg: "Condition in 'if' must be Boolean, found '" . condType . "'.";
+				if (condType != 'Boolean' && condType != 'bool' && condType != 'Any') {
+					local String is msg: 'Condition in \'if\' must be Boolean, found \'' . condType . '\'.';
 					self:addError(line: stmt:getLine(), msg: msg);
 				}
 				stmt:thenBranch:each(action: local Function(Statement is s){
@@ -1224,7 +1224,7 @@ Class is TypeChecker{
 					});
 				}
 			}
-			is "WHEN": {
+			is 'WHEN': {
 				local String is stmtSubjectType: self:inferExpressionType(expr: stmt:whenSubject);
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
@@ -1237,24 +1237,24 @@ Class is TypeChecker{
 				});
 				self:checkWhenExhaustive(subjectType: stmtSubjectType, arms: stmt:whenArms, line: stmt:getLine());
 			}
-			is "FORWARD": {
+			is 'FORWARD': {
 				if (!self:currentMethodIsMerge) {
-					self:addError(line: stmt:getLine(), msg: "Forward statement `(args...)` requires the enclosing method to declare 'merge'.");
+					self:addError(line: stmt:getLine(), msg: 'Forward statement `(args...)` requires the enclosing method to declare \'merge\'.');
 					return;
 				}
 				if (self:anonDepth > 0) {
-					self:addError(line: stmt:getLine(), msg: "Forward statement is not allowed inside a nested function.");
+					self:addError(line: stmt:getLine(), msg: 'Forward statement is not allowed inside a nested function.');
 					return;
 				}
 				if (self:forwardSeen) {
-					self:addError(line: stmt:getLine(), msg: "Multiple forward statements in method '" . self:currentMethodName . "'; at most one is allowed.");
+					self:addError(line: stmt:getLine(), msg: 'Multiple forward statements in method \'' . self:currentMethodName . '\'; at most one is allowed.');
 					return;
 				}
 				self:forwardSeen: true;
 
 				local Member is superM: self:findFirstSuperMethod(className: self:currentClassName, methodName: self:currentMethodName);
-				if (superM:getName() == "") {
-					self:addError(line: stmt:getLine(), msg: "Forward statement in '" . self:currentMethodName . "': no parent method to delegate to.");
+				if (superM:getName() == '') {
+					self:addError(line: stmt:getLine(), msg: 'Forward statement in \'' . self:currentMethodName . '\': no parent method to delegate to.');
 					return;
 				}
 				local Array of Parameter is params: superM:getParameters();
@@ -1262,14 +1262,14 @@ Class is TypeChecker{
 
 				# Arity: exact count may be positional; fewer requires named args.
 				if (args:length() > params:length()) {
-					self:addError(line: stmt:getLine(), msg: "Forward statement passes " . args:length() . " arguments but parent '" . superM:getName() . "' accepts " . params:length() . ".");
+					self:addError(line: stmt:getLine(), msg: 'Forward statement passes ' . args:length() . ' arguments but parent \'' . superM:getName() . '\' accepts ' . params:length() . '.');
 					return;
 				}
 				if (args:length() < params:length()) {
 					local Int is nIdx: 0;
 					args:each(action: local Function(NamedArg is a){
-						if (a:getName() == "") {
-							self:addError(line: stmt:getLine(), msg: "Partial forward requires named arguments; argument " . (nIdx + 1) . " of '" . self:currentMethodName . "' is unnamed.");
+						if (a:getName() == '') {
+							self:addError(line: stmt:getLine(), msg: 'Partial forward requires named arguments; argument ' . (nIdx + 1) . ' of \'' . self:currentMethodName . '\' is unnamed.');
 						}
 						nIdx: nIdx + 1;
 					});
@@ -1278,17 +1278,17 @@ Class is TypeChecker{
 				# Match each argument to a parent parameter and type-check it.
 				local Int is pIdx: 0;
 				params:each(action: local Function(Parameter is p){
-					local Expression is matchedValue: Expression:init(kind: "UNKNOWN");
+					local Expression is matchedValue: Expression:init(kind: 'UNKNOWN');
 					local Boolean is found: false;
 					args:each(action: local Function(NamedArg is a){
-						if (!found && a:getName() != "" && a:getName() == p:getName()) {
+						if (!found && a:getName() != '' && a:getName() == p:getName()) {
 							matchedValue: a:getValue();
 							found: true;
 						}
 					});
 					if (!found && pIdx < args:length()) {
 						local NamedArg is posArg: args:get(index: pIdx);
-						if (posArg:getName() == "") {
+						if (posArg:getName() == '') {
 							matchedValue: posArg:getValue();
 							found: true;
 						}
@@ -1296,52 +1296,52 @@ Class is TypeChecker{
 					if (found) {
 						local String is argT: self:inferExpressionType(expr: matchedValue);
 						local String is pT: p:getType():getName();
-						if (pT != "Any" && pT != "" && argT != "" && argT != "Any" && !self:isAssignable(target: pT, source: argT)) {
-							local String is label: if (p:getName() != "") p:getName() else "position " . (pIdx + 1);
-							local String is msg: "Forward argument '" . label . "' of '" . self:currentMethodName . "': cannot assign '" . argT . "' to '" . pT . "'.";
+						if (pT != 'Any' && pT != '' && argT != '' && argT != 'Any' && !self:isAssignable(target: pT, source: argT)) {
+							local String is label: if (p:getName() != '') p:getName() else 'position ' . (pIdx + 1);
+							local String is msg: 'Forward argument \'' . label . '\' of \'' . self:currentMethodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 							self:addError(line: stmt:getLine(), msg: msg);
 						}
 					} else if (!p:getHasDefault()) {
-						local String is msg: "Forward statement omits '" . p:getName() . "' of '" . self:currentMethodName . "' which has no default value.";
+						local String is msg: 'Forward statement omits \'' . p:getName() . '\' of \'' . self:currentMethodName . '\' which has no default value.';
 						self:addError(line: stmt:getLine(), msg: msg);
 					}
 					pIdx: pIdx + 1;
 				});
 			}
-			is "RETURN": {
+			is 'RETURN': {
 				if (stmt:hasReturnExpr) {
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr);
 					if (!self:isAssignable(target: self:currentMethodReturnType, source: retType)) {
-						local String is msg: "Method declared return type '" . self:currentMethodReturnType . "', but returned '" . retType . "'.";
+						local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\'.';
 						self:addError(line: stmt:getLine(), msg: msg);
 					}
 				} else {
-					if (self:currentMethodReturnType != "void" && self:currentMethodReturnType != "Void" && self:currentMethodReturnType != "" && self:currentMethodReturnType != "Any") {
-						local String is msg: "Method expects return value of type '" . self:currentMethodReturnType . "', but found empty return.";
+					if (self:currentMethodReturnType != 'void' && self:currentMethodReturnType != 'Void' && self:currentMethodReturnType != '' && self:currentMethodReturnType != 'Any') {
+						local String is msg: 'Method expects return value of type \'' . self:currentMethodReturnType . '\', but found empty return.';
 						self:addError(line: stmt:getLine(), msg: msg);
 					}
 				}
 			}
-			is "EXPR": {
+			is 'EXPR': {
 				self:inferExpressionType(expr: stmt:exprStmt);
 			}
-			is "CLASS": {
+			is 'CLASS': {
 				local String is savedClass: self:currentClassName;
 				local String is savedRet: self:currentMethodReturnType;
 				local Map of String to String is savedVars: Map:init();
 				local Array of String is vKeys: self:localVars:keys();
 				vKeys:each(action: local Function(String is k){
-					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
+					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 				});
 				local Map of String to String is savedFields: Map:init();
 				local Array of String is fKeys: self:fieldTypes:keys();
 				fKeys:each(action: local Function(String is k){
-					savedFields:set(key: k, value: self:fieldTypes:getString(key: k, default: ""));
+					savedFields:set(key: k, value: self:fieldTypes:getString(key: k, default: ''));
 				});
 				local Map of String to String is savedUnassigned: Map:init();
 				local Array of String is uKeys: self:unassignedFields:keys();
 				uKeys:each(action: local Function(String is k){
-					savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ""));
+					savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ''));
 				});
 
 				self:checkClass(classDef: stmt:nestedClass);
@@ -1371,28 +1371,28 @@ Class is TypeChecker{
 		if (method:getLine() > 0) {
 			self:currentLine: method:getLine();
 		}
-		if (method:getSourceFile() != "") {
+		if (method:getSourceFile() != '') {
 			self:currentSourceFile: method:getSourceFile();
 		}
 		self:currentMethodName: method:getName();
 		self:forwardSeen: false;
 		self:anonDepth: 0;
-		self:currentMethodIsMerge: method:getModifiers():indexOf(search: "merge", default: -1) >= 0;
-		if (self:currentMethodIsMerge && self:findFirstSuperMethod(className: self:currentClassName, methodName: method:getName()):getName() == "") {
-			self:addError(line: method:getLine(), msg: "Method '" . method:getName() . "' in class '" . self:currentClassName . "' declares 'merge' but no parent declares a method with that name.");
+		self:currentMethodIsMerge: method:getModifiers():indexOf(search: 'merge', default: -1) >= 0;
+		if (self:currentMethodIsMerge && self:findFirstSuperMethod(className: self:currentClassName, methodName: method:getName()):getName() == '') {
+			self:addError(line: method:getLine(), msg: 'Method \'' . method:getName() . '\' in class \'' . self:currentClassName . '\' declares \'merge\' but no parent declares a method with that name.');
 		}
 		method:getParameters():each(action: local Function(Parameter is p){
-			if (p:getType():getName() == "SELF_FIELD") {
-				local String is ft: self:fieldTypes:getString(key: p:getName(), default: "Any");
+			if (p:getType():getName() == 'SELF_FIELD') {
+				local String is ft: self:fieldTypes:getString(key: p:getName(), default: 'Any');
 				p:setType(t: Type:init(name: ft));
 				self:unassignedFields:remove(key: p:getName());
 			}
 		});
 		self:currentMethodReturnType: self:resolveReturnType(t: method:getType());
-		if (self:currentMethodReturnType == "" || self:currentMethodReturnType == "void") {
-			if (method:getName() == "evaluate" || method:getName() == "iteration") {
-				self:currentMethodReturnType: "Boolean";
-				method:memberType: Type:init(name: "Boolean");
+		if (self:currentMethodReturnType == '' || self:currentMethodReturnType == 'void') {
+			if (method:getName() == 'evaluate' || method:getName() == 'iteration') {
+				self:currentMethodReturnType: 'Boolean';
+				method:memberType: Type:init(name: 'Boolean');
 			}
 		}
 		self:localVars: Map:init();
@@ -1406,10 +1406,10 @@ Class is TypeChecker{
 		});
 
 		if (self:currentMethodIsMerge && !self:forwardSeen && method:getBody():length() > 0) {
-			self:addError(line: method:getLine(), msg: "Merge method '" . method:getName() . "' in class '" . self:currentClassName . "' must contain a forward statement `(args...)`.");
+			self:addError(line: method:getLine(), msg: 'Merge method \'' . method:getName() . '\' in class \'' . self:currentClassName . '\' must contain a forward statement `(args...)`.');
 		}
 		self:currentMethodIsMerge: false;
-		self:currentMethodName: "";
+		self:currentMethodName: '';
 	}
 
 	Class of Loop is MemberImplementLoop{
@@ -1433,11 +1433,11 @@ Class is TypeChecker{
 			local Member is subM: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (subM:getName() == self:target:getName()) {
-				if (subM:getKind() == "METHOD" && subM:getBody():length() > 0) {
+				if (subM:getKind() == 'METHOD' && subM:getBody():length() > 0) {
 					self:implemented: true;
 					return false;
 				}
-				if (subM:getKind() == "FIELD" && subM:getHasInit()) {
+				if (subM:getKind() == 'FIELD' && subM:getHasInit()) {
 					self:implemented: true;
 					return false;
 				}
@@ -1459,14 +1459,14 @@ Class is TypeChecker{
 	## @return: The parent [Member], or an empty-named Member when absent.
 	local Function of Member is findFirstSuperMethod(String is className, String is methodName){
 		local ClassInfo is cls: self:findClass(name: className);
-		if (cls:getName() == "") {
-			return Member:init(kind: "");
+		if (cls:getName() == '') {
+			return Member:init(kind: '');
 		}
-		local Member is res: Member:init(kind: "");
+		local Member is res: Member:init(kind: '');
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (res:getName() == "") {
+			if (res:getName() == '') {
 				local Member is m: self:lookupAnyMember(className: baseName, methodName: methodName);
-				if (m:getKind() == "METHOD") {
+				if (m:getKind() == 'METHOD') {
 					res: m;
 				}
 			}
@@ -1485,13 +1485,13 @@ Class is TypeChecker{
 		if (seen:has(key: className)) {
 			return;
 		}
-		seen:set(key: className, value: "true");
+		seen:set(key: className, value: 'true');
 		local ClassInfo is cls: self:findClass(name: className);
-		if (cls:getName() == "") {
+		if (cls:getName() == '') {
 			return;
 		}
 		cls:getMembers():each(action: local Function(Member is m){
-			if (m:getKind() == "METHOD" && m:getName() == methodName && m:getBody():length() > 0) {
+			if (m:getKind() == 'METHOD' && m:getName() == methodName && m:getBody():length() > 0) {
 				local Boolean is present: false;
 				acc:each(action: local Function(String is n){
 					if (!present && n == className) {
@@ -1522,25 +1522,25 @@ Class is TypeChecker{
 	## @return: The ancestor [Member], or an empty-named Member when absent.
 	local Function of Member is findAncestorMember(String is className, String is memberName){
 		local ClassInfo is cls: self:findClass(name: className);
-		if (cls:getName() == "") {
-			return Member:init(kind: "");
+		if (cls:getName() == '') {
+			return Member:init(kind: '');
 		}
-		local Member is res: Member:init(kind: "");
+		local Member is res: Member:init(kind: '');
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (res:getName() == "") {
+			if (res:getName() == '') {
 				local ClassInfo is anc: self:findClass(name: baseName);
-				if (anc:getName() != "") {
+				if (anc:getName() != '') {
 					anc:getMembers():each(action: local Function(Member is m){
-						if (res:getName() == "" && m:getName() == memberName) {
+						if (res:getName() == '' && m:getName() == memberName) {
 							res: m;
 						}
 					});
 				}
 			}
 		});
-		if (res:getName() == "") {
+		if (res:getName() == '') {
 			cls:getBaseClasses():each(action: local Function(String is baseName){
-				if (res:getName() == "") {
+				if (res:getName() == '') {
 					res: self:findAncestorMember(className: baseName, memberName: memberName);
 				}
 			});
@@ -1564,20 +1564,20 @@ Class is TypeChecker{
 	## @return: The declaring ancestor's name, or empty string when absent.
 	local Function of String is findMemberOwnerClass(String is className, String is memberName){
 		local ClassInfo is cls: self:findClass(name: className);
-		if (cls:getName() == "") {
-			return "";
+		if (cls:getName() == '') {
+			return '';
 		}
-		local String is owner: "";
+		local String is owner: '';
 		cls:getMembers():each(action: local Function(Member is m){
-			if (owner == "" && m:getName() == memberName) {
+			if (owner == '' && m:getName() == memberName) {
 				owner: cls:getName();
 			}
 		});
-		if (owner != "") {
+		if (owner != '') {
 			return owner;
 		}
 		cls:getBaseClasses():each(action: local Function(String is baseName){
-			if (owner == "") {
+			if (owner == '') {
 				owner: self:findMemberOwnerClass(className: baseName, memberName: memberName);
 			}
 		});
@@ -1592,18 +1592,18 @@ Class is TypeChecker{
 	## @param member: The resolved [Member].
 	## @param memberName: Member name for diagnostics.
 	local Function is checkMemberVisibility(String is ownerClass, Member is member, String is memberName){
-		if (ownerClass == "" || ownerClass == "Any" || memberName == "init") {
+		if (ownerClass == '' || ownerClass == 'Any' || memberName == 'init') {
 			return;
 		}
 		local Array of String is mods: member:getModifiers();
-		if (mods:indexOf(search: "local", default: -1) >= 0) {
+		if (mods:indexOf(search: 'local', default: -1) >= 0) {
 			if (self:currentClassName != ownerClass) {
-				local String is msg: "Member '" . memberName . "' is local to class '" . ownerClass . "' and cannot be accessed from '" . self:currentClassName . "'.";
+				local String is msg: 'Member \'' . memberName . '\' is local to class \'' . ownerClass . '\' and cannot be accessed from \'' . self:currentClassName . '\'.';
 				self:addError(line: self:currentLine, msg: msg);
 			}
-		} else if (mods:indexOf(search: "contained", default: -1) >= 0) {
+		} else if (mods:indexOf(search: 'contained', default: -1) >= 0) {
 			if (!self:isSubclassOf(subName: self:currentClassName, baseName: ownerClass)) {
-				local String is msg: "Member '" . memberName . "' is contained in class '" . ownerClass . "' and cannot be accessed from unrelated class '" . self:currentClassName . "'.";
+				local String is msg: 'Member \'' . memberName . '\' is contained in class \'' . ownerClass . '\' and cannot be accessed from unrelated class \'' . self:currentClassName . '\'.';
 				self:addError(line: self:currentLine, msg: msg);
 			}
 		}
@@ -1612,11 +1612,11 @@ Class is TypeChecker{
 	local Function is checkShadowTargets(ClassInfo is classDef){
 		classDef:getMembers():each(action: local Function(Member is m){
 			local Array of String is mods: m:getModifiers();
-			local Boolean is hasReplace: mods:indexOf(search: "replace", default: -1) >= 0;
-			local Boolean is hasMerge: mods:indexOf(search: "merge", default: -1) >= 0;
+			local Boolean is hasReplace: mods:indexOf(search: 'replace', default: -1) >= 0;
+			local Boolean is hasMerge: mods:indexOf(search: 'merge', default: -1) >= 0;
 			if (hasReplace || hasMerge) {
-				if (mods:indexOf(search: "local", default: -1) >= 0 || mods:indexOf(search: "contained", default: -1) >= 0) {
-					local String is msg: "Member '" . m:getName() . "' in class '" . classDef:getName() . "' combines 'replace'/'merge' with a visibility modifier; replace and merge members are public by definition.";
+				if (mods:indexOf(search: 'local', default: -1) >= 0 || mods:indexOf(search: 'contained', default: -1) >= 0) {
+					local String is msg: 'Member \'' . m:getName() . '\' in class \'' . classDef:getName() . '\' combines \'replace\'/\'merge\' with a visibility modifier; replace and merge members are public by definition.';
 					self:addError(line: m:getLine(), msg: msg);
 					return;
 				}
@@ -1625,25 +1625,25 @@ Class is TypeChecker{
 				return;
 			}
 			local String is name: m:getName();
-			if (name == "init" || name == "using" || name == "toString") {
+			if (name == 'init' || name == 'using' || name == 'toString') {
 				return;
 			}
-			if (self:findMemberOwnerClass(className: classDef:getName(), memberName: name) == "Any") {
+			if (self:findMemberOwnerClass(className: classDef:getName(), memberName: name) == 'Any') {
 				# Root-contract member: Any declares it public, so overriding
 				# is always legitimate.
 				return;
 			}
 			local Member is anc: self:findAncestorMember(className: classDef:getName(), memberName: name);
-			if (anc:getName() == "") {
-				local String is what: if (hasMerge) "merge" else "replace";
-				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' declares '" . what . "' but no ancestor declares a member with that name.";
+			if (anc:getName() == '') {
+				local String is what: if (hasMerge) 'merge' else 'replace';
+				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:getName() . '\' declares \'' . what . '\' but no ancestor declares a member with that name.';
 				self:addError(line: m:getLine(), msg: msg);
-			} else if (anc:getModifiers():indexOf(search: "local", default: -1) >= 0 || anc:getModifiers():indexOf(search: "contained", default: -1) >= 0) {
-				local String is vis: if (anc:getModifiers():indexOf(search: "local", default: -1) >= 0) "local" else "contained";
-				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' targets a " . vis . " ancestor member; " . vis . " members cannot be replaced or merged.";
+			} else if (anc:getModifiers():indexOf(search: 'local', default: -1) >= 0 || anc:getModifiers():indexOf(search: 'contained', default: -1) >= 0) {
+				local String is vis: if (anc:getModifiers():indexOf(search: 'local', default: -1) >= 0) 'local' else 'contained';
+				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:getName() . '\' targets a ' . vis . ' ancestor member; ' . vis . ' members cannot be replaced or merged.';
 				self:addError(line: m:getLine(), msg: msg);
 			} else if (anc:getKind() != m:getKind()) {
-				local String is msg: "Member '" . name . "' in class '" . classDef:getName() . "' is a " . m:getKind() . " but the ancestor member it targets is a " . anc:getKind() . ".";
+				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:getName() . '\' is a ' . m:getKind() . ' but the ancestor member it targets is a ' . anc:getKind() . '.';
 				self:addError(line: m:getLine(), msg: msg);
 			}
 		});
@@ -1653,10 +1653,10 @@ Class is TypeChecker{
 		local Map of String to String is seenMethods: Map:init();
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
 			local ClassInfo is anc: self:findClass(name: baseName);
-			if (anc:getName() != "") {
+			if (anc:getName() != '') {
 				anc:getMembers():each(action: local Function(Member is m){
-					if (m:getKind() == "METHOD") {
-						seenMethods:set(key: m:getName(), value: "true");
+					if (m:getKind() == 'METHOD') {
+						seenMethods:set(key: m:getName(), value: 'true');
 					}
 				});
 			}
@@ -1665,7 +1665,7 @@ Class is TypeChecker{
 		names:each(action: local Function(String is mName){
 			local Boolean is declaredLocally: false;
 			classDef:getMembers():each(action: local Function(Member is m){
-				if (m:getKind() == "METHOD" && m:getName() == mName) {
+				if (m:getKind() == 'METHOD' && m:getName() == mName) {
 					declaredLocally: true;
 				}
 			});
@@ -1690,7 +1690,7 @@ Class is TypeChecker{
 					}
 				});
 				if (maximal:length() >= 2) {
-					local String is msg: "ClassInfo '" . classDef:getName() . "' inherits conflicting implementations of '" . mName . "' from '" . maximal:get(index: 0) . "' and '" . maximal:get(index: 1) . "'; declare the method (replace or merge) to resolve the conflict.";
+					local String is msg: 'ClassInfo \'' . classDef:getName() . '\' inherits conflicting implementations of \'' . mName . '\' from \'' . maximal:get(index: 0) . '\' and \'' . maximal:get(index: 1) . '\'; declare the method (replace or merge) to resolve the conflict.';
 					self:addError(line: classDef:getLine(), msg: msg);
 				}
 			}
@@ -1701,7 +1701,7 @@ Class is TypeChecker{
 		self:currentSourceFile: classDef:getSourceFile();
 		local Boolean is hasInit: false;
 		classDef:getMembers():each(action: local Function(Member is m){
-			if (m:getName() == "init") {
+			if (m:getName() == 'init') {
 				hasInit: true;
 			}
 		});
@@ -1718,15 +1718,15 @@ Class is TypeChecker{
 			if (parent:getName() == baseName) {
 				# 1. Enforce abstract member implementation on concrete classes with init.
 				# The implicit root Any is exempt: its members carry concrete defaults.
-				if (hasInit && baseName != "Any") {
+				if (hasInit && baseName != 'Any') {
 					parent:getMembers():each(action: local Function(Member is parentM){
-						local Boolean is isAbstract: (parentM:getKind() == "FIELD" && !parentM:getHasInit()) ||
-							(parentM:getKind() == "METHOD" && parentM:getBody():length() == 0);
+						local Boolean is isAbstract: (parentM:getKind() == 'FIELD' && !parentM:getHasInit()) ||
+							(parentM:getKind() == 'METHOD' && parentM:getBody():length() == 0);
 						if (isAbstract) {
 							local MemberImplementLoop is chk: MemberImplementLoop:init(members: classDef:getMembers(), target: parentM);
 							While:run(loop: chk);
 							if (!chk:implemented) {
-								local String is msg: "ClassInfo '" . classDef:getName() . "' does not implement abstract member '" . parentM:getName() . "' required by parent '" . baseName . "'.";
+								local String is msg: 'ClassInfo \'' . classDef:getName() . '\' does not implement abstract member \'' . parentM:getName() . '\' required by parent \'' . baseName . '\'.';
 								self:addError(line: classDef:getLine(), msg: msg);
 							}
 						}
@@ -1738,48 +1738,48 @@ Class is TypeChecker{
 					parent:getMembers():each(action: local Function(Member is parentM){
 						if (subM:getName() == parentM:getName()) {
 							local Array of String is parentMods: parentM:getModifiers();
-							if (parentMods:indexOf(search: "local", default: -1) >= 0 || parentMods:indexOf(search: "contained", default: -1) >= 0) {
-								local String is vis: if (parentMods:indexOf(search: "local", default: -1) >= 0) "local" else "contained";
-								local String is msg: "Member '" . subM:getName() . "' is " . vis . " in ancestor '" . baseName . "' and cannot be replaced or merged.";
+							if (parentMods:indexOf(search: 'local', default: -1) >= 0 || parentMods:indexOf(search: 'contained', default: -1) >= 0) {
+								local String is vis: if (parentMods:indexOf(search: 'local', default: -1) >= 0) 'local' else 'contained';
+								local String is msg: 'Member \'' . subM:getName() . '\' is ' . vis . ' in ancestor \'' . baseName . '\' and cannot be replaced or merged.';
 								self:addError(line: subM:getLine(), msg: msg);
 							}
 							local Array of String is subMods: subM:getModifiers();
-							local Boolean is hasReplace: subMods:indexOf(search: "replace", default: -1) >= 0;
-							local Boolean is hasMerge: subMods:indexOf(search: "merge", default: -1) >= 0;
+							local Boolean is hasReplace: subMods:indexOf(search: 'replace', default: -1) >= 0;
+							local Boolean is hasMerge: subMods:indexOf(search: 'merge', default: -1) >= 0;
 							if (hasMerge) {
-								if (subM:getKind() == "METHOD") {
-									if (parentM:getKind() == "METHOD" && parentM:getBody():length() == 0) {
-										local String is msg: "Cannot merge method '" . subM:getName() . "' in class '" . classDef:getName() . "' with abstract method from '" . baseName . "'.";
+								if (subM:getKind() == 'METHOD') {
+									if (parentM:getKind() == 'METHOD' && parentM:getBody():length() == 0) {
+										local String is msg: 'Cannot merge method \'' . subM:getName() . '\' in class \'' . classDef:getName() . '\' with abstract method from \'' . baseName . '\'.';
 										self:addError(line: subM:getLine(), msg: msg);
 									}
 								} else {
 									self:applyMerge(classDef: classDef, subM: subM, parentM: parentM, baseName: baseName);
 								}
 							} else if (!hasReplace) {
-								local String is msg: "Member '" . subM:getName() . "' in class '" . classDef:getName() . "' overrides ancestor member from '" . baseName . "', but is missing 'replace' modifier.";
+								local String is msg: 'Member \'' . subM:getName() . '\' in class \'' . classDef:getName() . '\' overrides ancestor member from \'' . baseName . '\', but is missing \'replace\' modifier.';
 								self:addError(line: subM:getLine(), msg: msg);
 							}
 
-							if (subM:getKind() == "METHOD" && parentM:getKind() == "METHOD") {
+							if (subM:getKind() == 'METHOD' && parentM:getKind() == 'METHOD') {
 								# Root-contract carve-out: init/using/toString declared
 								# in Any are name reservations; per-class signatures
 								# are legitimate. Override must still carry replace.
-								if (baseName == "Any") {
+								if (baseName == 'Any') {
 									local Array of String is subMods2: subM:getModifiers();
-									if (subMods2:indexOf(search: "replace", default: -1) < 0 && subMods2:indexOf(search: "merge", default: -1) < 0) {
-										local String is msg: "Member '" . subM:getName() . "' in class '" . classDef:getName() . "' overrides root-contract member from 'Any', but is missing 'replace' modifier.";
+									if (subMods2:indexOf(search: 'replace', default: -1) < 0 && subMods2:indexOf(search: 'merge', default: -1) < 0) {
+										local String is msg: 'Member \'' . subM:getName() . '\' in class \'' . classDef:getName() . '\' overrides root-contract member from \'Any\', but is missing \'replace\' modifier.';
 										self:addError(line: subM:getLine(), msg: msg);
 									}
 									return;
 								}
 								if (subM:getParameters():length() != parentM:getParameters():length()) {
-									local String is msg: "Method '" . subM:getName() . "' in class '" . classDef:getName() . "' parameter count mismatch with ancestor in '" . baseName . "'.";
+									local String is msg: 'Method \'' . subM:getName() . '\' in class \'' . classDef:getName() . '\' parameter count mismatch with ancestor in \'' . baseName . '\'.';
 									self:addError(line: subM:getLine(), msg: msg);
 								} else {
 									local Int is pIdx: 0;
 									subM:getParameters():each(action: local Function(Parameter is subP){
 										local Parameter is parentP: parentM:getParameters():get(index: pIdx);
-										if (subP:getType():getName() == "Any" || subP:getType():getName() == "") {
+										if (subP:getType():getName() == 'Any' || subP:getType():getName() == '') {
 											subP:setType(t: parentP:getType());
 										}
 										pIdx: pIdx + 1;
@@ -1787,10 +1787,10 @@ Class is TypeChecker{
 								}
 								local String is subRet: self:resolveReturnType(t: subM:getType());
 								local String is parentRet: self:resolveReturnType(t: parentM:getType());
-								if (subM:getType():getName() == "" || subM:getType():getName() == "void") {
+								if (subM:getType():getName() == '' || subM:getType():getName() == 'void') {
 									subM:memberType: parentM:getType();
 								} else if (!self:isAssignable(target: subRet, source: parentRet)) {
-									local String is msg: "Method '" . subM:getName() . "' in class '" . classDef:getName() . "' return type '" . subRet . "' does not match ancestor return type '" . parentRet . "'.";
+									local String is msg: 'Method \'' . subM:getName() . '\' in class \'' . classDef:getName() . '\' return type \'' . subRet . '\' does not match ancestor return type \'' . parentRet . '\'.';
 									self:addError(line: subM:getLine(), msg: msg);
 								}
 							}
@@ -1817,29 +1817,29 @@ Class is TypeChecker{
 	## @param parentM: Ancestor member being merged with.
 	## @param baseName: Ancestor class name for diagnostics.
 	local Function is applyMerge(ClassInfo is classDef, Member is subM, Member is parentM, String is baseName){
-		if (subM:getKind() != "FIELD") {
-			self:addError(line: subM:getLine(), msg: "'merge' is only valid on fields; member '" . subM:getName() . "' in class '" . classDef:getName() . "' is not a field.");
+		if (subM:getKind() != 'FIELD') {
+			self:addError(line: subM:getLine(), msg: '\'merge\' is only valid on fields; member \'' . subM:getName() . '\' in class \'' . classDef:getName() . '\' is not a field.');
 			return;
 		}
 		local String is typeName: subM:getType():getName();
-		if (!typeName:startsWith(prefix: "Array")) {
-			self:addError(line: subM:getLine(), msg: "'merge' requires an Array field; '" . typeName . "' is not mergeable.");
+		if (!typeName:startsWith(prefix: 'Array')) {
+			self:addError(line: subM:getLine(), msg: '\'merge\' requires an Array field; \'' . typeName . '\' is not mergeable.');
 			return;
 		}
 		if (!parentM:getHasInit()) {
 			return;
 		}
 		local Expression is parentInit: parentM:getInitExpr();
-		if (parentInit:getKind() != "ARRAY") {
-			self:addError(line: subM:getLine(), msg: "'merge' requires a constant array literal in parent '" . baseName . "." . parentM:getName() . "'.");
+		if (parentInit:getKind() != 'ARRAY') {
+			self:addError(line: subM:getLine(), msg: '\'merge\' requires a constant array literal in parent \'' . baseName . '.' . parentM:getName() . '\'.');
 			return;
 		}
 		if (!subM:getHasInit()) {
 			return;
 		}
 		local Expression is childInit: subM:getInitExpr();
-		if (childInit:getKind() != "ARRAY") {
-			self:addError(line: subM:getLine(), msg: "'merge' requires a constant array literal initializer on '" . classDef:getName() . "." . subM:getName() . "'.");
+		if (childInit:getKind() != 'ARRAY') {
+			self:addError(line: subM:getLine(), msg: '\'merge\' requires a constant array literal initializer on \'' . classDef:getName() . '.' . subM:getName() . '\'.');
 			return;
 		}
 		local Array of Expression is combined: [];
@@ -1857,12 +1857,12 @@ Class is TypeChecker{
 	local Function is collectClassFieldTypes(ClassInfo is classDef){
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
 			local ClassInfo is parent: self:findClass(name: baseName);
-			if (parent:getName() != "") {
+			if (parent:getName() != '') {
 				self:collectClassFieldTypes(classDef: parent);
 			}
 		});
 		classDef:getMembers():each(action: local Function(Member is m){
-			if (m:getKind() == "FIELD") {
+			if (m:getKind() == 'FIELD') {
 				self:fieldTypes:set(key: m:getName(), value: self:formatVarTypeString(t: m:getType()));
 			}
 		});
@@ -1881,14 +1881,14 @@ Class is TypeChecker{
 			when (m:getMemberKind()) {
 				is FIELD: {
 					self:currentLine: m:getLine();
-					if (m:getSourceFile() != "") {
+					if (m:getSourceFile() != '') {
 						self:currentSourceFile: m:getSourceFile();
 					}
 					local String is declaredType: self:formatVarTypeString(t: m:getType());
 					if (m:hasInit) {
 						local String is initType: self:inferExpressionType(expr: m:initExpr);
 						if (!self:isAssignable(target: declaredType, source: initType)) {
-							local String is msg: "Type mismatch in field '" . classDef:getName() . ":" . m:getName() . "': cannot assign '" . initType . "' to '" . declaredType . "'.";
+							local String is msg: 'Type mismatch in field \'' . classDef:getName() . ':' . m:getName() . '\': cannot assign \'' . initType . '\' to \'' . declaredType . '\'.';
 							self:addError(line: m:getLine(), msg: msg);
 						}
 					}
@@ -1901,10 +1901,10 @@ Class is TypeChecker{
 			when (m:getMemberKind()) {
 				is METHOD: {
 					self:unassignedFields: Map:init();
-					if (m:getName() == "init") {
+					if (m:getName() == 'init') {
 						classDef:getMembers():each(action: local Function(Member is fm){
-							if (fm:getKind() == "FIELD" && !fm:hasInit && fm:getName() != "using") {
-								self:unassignedFields:set(key: fm:getName(), value: "true");
+							if (fm:getKind() == 'FIELD' && !fm:hasInit && fm:getName() != 'using') {
+								self:unassignedFields:set(key: fm:getName(), value: 'true');
 							}
 						});
 					}
@@ -1916,12 +1916,12 @@ Class is TypeChecker{
 					local Map of String to String is savedFields: Map:init();
 					local Array of String is fKeys: self:fieldTypes:keys();
 					fKeys:each(action: local Function(String is k){
-						savedFields:set(key: k, value: self:fieldTypes:getString(key: k, default: ""));
+						savedFields:set(key: k, value: self:fieldTypes:getString(key: k, default: ''));
 					});
 					local Map of String to String is savedUnassigned: Map:init();
 					local Array of String is uKeys: self:unassignedFields:keys();
 					uKeys:each(action: local Function(String is k){
-						savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ""));
+						savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ''));
 					});
 
 					self:checkClass(classDef: m:getNestedClass());
@@ -1937,10 +1937,10 @@ Class is TypeChecker{
 
 	local Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
 		when (stmt:getKind()) {
-			is "CLASS": {
+			is 'CLASS': {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
 			}
-			is "IF": {
+			is 'IF': {
 				stmt:thenBranch:each(action: local Function(Statement is s){
 					self:collectClassesFromStatement(stmt: s, acc: acc);
 				});
@@ -1950,7 +1950,7 @@ Class is TypeChecker{
 					});
 				}
 			}
-			is "WHEN": {
+			is 'WHEN': {
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					arm:body:each(action: local Function(Statement is s){
 						self:collectClassesFromStatement(stmt: s, acc: acc);
@@ -1997,12 +1997,12 @@ Class is TypeChecker{
 
 		flattened:each(action: local Function(ClassInfo is c){
 			self:registeredClasses:set(key: c:getName(), value: c:getName());
-			if (c:getBaseClass() == "Enum") {
-				self:allEnumNames:set(key: c:getName(), value: "true");
+			if (c:getBaseClass() == 'Enum') {
+				self:allEnumNames:set(key: c:getName(), value: 'true');
 				c:getMembers():each(action: local Function(Member is m){
 					self:allEnumVariants:set(key: m:getName(), value: c:getName());
-					if (m:getType():getName() == "String" || m:getType():getName() == "string") {
-						self:allStringBackedEnums:set(key: c:getName(), value: "true");
+					if (m:getType():getName() == 'String' || m:getType():getName() == 'string') {
+						self:allStringBackedEnums:set(key: c:getName(), value: 'true');
 					}
 				});
 			}

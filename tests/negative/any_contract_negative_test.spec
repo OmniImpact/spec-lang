@@ -15,17 +15,17 @@
 
 Class is StrictAnimal{
 	Function of String is speak(){
-		return "...";
+		return '...';
 	}
 }
 
 Class of StrictAnimal is StrictDog{
 	replace Function of String is speak(){
-		return "woof";
+		return 'woof';
 	}
 
 	Function of String is fetch(){
-		return "ball";
+		return 'ball';
 	}
 }
 

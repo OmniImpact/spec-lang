@@ -45,7 +45,7 @@ Class is Ansi{
 	## @param code: 256-color palette index (0..255).
 	## @return: ANSI foreground sequence (`\e[38;5;<code>m`).
 	Function of String is fg256(Int is code){
-		return "\e[38;5;" . code . "m";
+		return "\e[38;5;" . code . 'm';
 	}
 
 	## Returns the ANSI 256-color background sequence for color index `code` (0..255).
@@ -53,7 +53,7 @@ Class is Ansi{
 	## @param code: 256-color palette index (0..255).
 	## @return: ANSI background sequence (`\e[48;5;<code>m`).
 	Function of String is bg256(Int is code){
-		return "\e[48;5;" . code . "m";
+		return "\e[48;5;" . code . 'm';
 	}
 
 	## Wraps `text` in a 256-color foreground sequence followed by a reset code.
@@ -62,7 +62,7 @@ Class is Ansi{
 	## @param text: String content to colorize.
 	## @return: Colorized string with trailing reset.
 	Function of String is color256(Int is code, String is text){
-		return "\e[38;5;" . code . "m" . text . "\e[0m";
+		return "\e[38;5;" . code . 'm' . text . "\e[0m";
 	}
 
 	## Wraps `text` in both 256-color foreground and background sequences followed by a reset code.
@@ -72,7 +72,7 @@ Class is Ansi{
 	## @param text: String content to colorize.
 	## @return: Colorized string with trailing reset.
 	Function of String is paint256(Int is fg, Int is bg, String is text){
-		return "\e[38;5;" . fg . ";48;5;" . bg . "m" . text . "\e[0m";
+		return "\e[38;5;" . fg . ';48;5;' . bg . 'm' . text . "\e[0m";
 	}
 
 	## Computes a 256-color 6x6x6 RGB cube index (16..231) from cube coordinates `r`, `g`, `b` in `0..5`.
@@ -100,7 +100,7 @@ Class is Ansi{
 	## @param b: Blue channel (0..255).
 	## @return: ANSI TrueColor foreground sequence (`\e[38;2;<r>;<g>;<b>m`).
 	Function of String is fgRgb(Int is r, Int is g, Int is b){
-		return "\e[38;2;" . r . ";" . g . ";" . b . "m";
+		return "\e[38;2;" . r . ';' . g . ';' . b . 'm';
 	}
 
 	## Returns the 24-bit TrueColor background sequence for `r`, `g`, `b` (0..255).
@@ -110,7 +110,7 @@ Class is Ansi{
 	## @param b: Blue channel (0..255).
 	## @return: ANSI TrueColor background sequence (`\e[48;2;<r>;<g>;<b>m`).
 	local Function of String is bgRgb(Int is r, Int is g, Int is b){
-		return "\e[48;2;" . r . ";" . g . ";" . b . "m";
+		return "\e[48;2;" . r . ';' . g . ';' . b . 'm';
 	}
 
 	## Returns the ANSI sequence to clear the entire screen and move cursor to home (`1,1`).
@@ -126,7 +126,7 @@ Class is Ansi{
 	## @param col: 1-based terminal column.
 	## @return: ANSI cursor position sequence.
 	Function of String is moveTo(Int is row, Int is col){
-		return "\e[" . row . ";" . col . "H";
+		return "\e[" . row . ';' . col . 'H';
 	}
 
 	## Returns the ANSI sequence to hide the terminal cursor.

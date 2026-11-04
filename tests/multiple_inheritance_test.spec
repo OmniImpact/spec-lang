@@ -25,59 +25,59 @@ Class is IdentifiableContract{
 ## Concrete class extending multiple parent contracts.
 Class of NamedContract, IdentifiableContract is ServiceAccount{
 
-	replace String is name: "AdminService";
+	replace String is name: 'AdminService';
 	replace Int is id: 9001;
 
 	replace Function of String is describe(){
-		return self:name . " (ID: " . self:id . ")";
+		return self:name . ' (ID: ' . self:id . ')';
 	}
 
 	replace Function of String is getTag(){
-		return "[" . self:name . "]";
+		return '[' . self:name . ']';
 	}
 
 	replace Function is init(Map of String to String is args){
-		output:line("======================================");
-		output:line(" Spec Multiple Inheritance & Abstraction ");
+		output:line('======================================');
+		output:line(' Spec Multiple Inheritance & Abstraction ');
 		output:line("======================================\n");
 
-		output:line("1. Testing multiple inheritance property access...");
-		output:line("Account Name: " . self:name);
-		output:line("Account ID:   " . self:id);
+		output:line('1. Testing multiple inheritance property access...');
+		output:line('Account Name: ' . self:name);
+		output:line('Account ID:   ' . self:id);
 
-		if (self:name == "AdminService" && self:id == 9001) {
+		if (self:name == 'AdminService' && self:id == 9001) {
 			output:line("[PASS] Successfully inherited fields from multiple contracts\n");
 		} else {
 			output:line("[FAIL] Property inheritance mismatch\n");
 		}
 
-		output:line("2. Testing implementation of abstract interface methods...");
+		output:line('2. Testing implementation of abstract interface methods...');
 		local String is desc: self:describe();
 		local String is tag: self:getTag();
-		output:line("Description: " . desc);
-		output:line("Tag:         " . tag);
+		output:line('Description: ' . desc);
+		output:line('Tag:         ' . tag);
 
-		if (desc == "AdminService (ID: 9001)" && tag == "[AdminService]") {
+		if (desc == 'AdminService (ID: 9001)' && tag == '[AdminService]') {
 			output:line("[PASS] Successfully implemented abstract interface methods\n");
 		} else {
 			output:line("[FAIL] Method implementation mismatch\n");
 		}
 
-		output:line("3. Testing polymorphic dispatch through interface references...");
+		output:line('3. Testing polymorphic dispatch through interface references...');
 		local NamedContract is namedRef: self;
 		local IdentifiableContract is idRef: self;
 		local String is polyDesc: namedRef:describe();
 		local String is polyTag: idRef:getTag();
-		output:line("Polymorphic NamedContract:describe() -> " . polyDesc);
-		output:line("Polymorphic IdentifiableContract:getTag() -> " . polyTag);
+		output:line('Polymorphic NamedContract:describe() -> ' . polyDesc);
+		output:line('Polymorphic IdentifiableContract:getTag() -> ' . polyTag);
 
-		if (polyDesc == "AdminService (ID: 9001)" && polyTag == "[AdminService]") {
+		if (polyDesc == 'AdminService (ID: 9001)' && polyTag == '[AdminService]') {
 			output:line("[PASS] Successfully dispatched polymorphically on interface types\n");
 		} else {
 			output:line("[FAIL] Polymorphic dispatch mismatch\n");
 		}
 
-		output:line("Multiple inheritance and abstraction test completed successfully!");
+		output:line('Multiple inheritance and abstraction test completed successfully!');
 	}
 
 }

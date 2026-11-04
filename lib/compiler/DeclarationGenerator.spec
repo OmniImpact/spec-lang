@@ -35,7 +35,7 @@ Class is DeclarationGenerator{
 
 	local Function of String is cTypeFor(String is typeName){
 		if (self:allTaggedEnums:has(key: typeName)) {
-			return typeName . "*";
+			return typeName . '*';
 		}
 		if (self:allEnumNames:has(key: typeName)) {
 			return typeName;
@@ -53,25 +53,25 @@ Class is DeclarationGenerator{
 
 	local Function of String is cTypeForClass(String is typeName, Array of String is typeParams){
 		if (typeParams:indexOf(search: typeName, default: -1) >= 0) {
-			return "void*";
+			return 'void*';
 		}
 		return self:cTypeFor(typeName: typeName);
 	}
 
 	local Function of String is resolveReturnTypeForClass(Type is t, Array of String is typeParams){
-		if (t:getName() == "Function") {
+		if (t:getName() == 'Function') {
 			if (t:getParams():length() > 0) {
 				local Type is ret: t:getParams():get(index: 0);
 				return self:cTypeForClass(typeName: ret:getName(), typeParams: typeParams);
 			}
-			return "void";
+			return 'void';
 		}
 		return self:cTypeForClass(typeName: t:getName(), typeParams: typeParams);
 	}
 
 	Class of Loop is HasFieldLoop{
 		local Array of Member is list;
-		local String is name: "";
+		local String is name: '';
 		local Int is idx: 0;
 		local Boolean is found: false;
 
@@ -115,7 +115,7 @@ Class is DeclarationGenerator{
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is FIELD: {
-					if (m:getName() != "using") {
+					if (m:getName() != 'using') {
 						# Most-derived declaration wins: when a child re-declares a
 						# base field (after a merge fold or a replace override), its
 						# initializer replaces the base's in place.
@@ -159,105 +159,105 @@ Class is DeclarationGenerator{
 		local String is out: "/* Enum Definitions */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (c:getBaseClass() == "Enum") {
+			if (c:getBaseClass() == 'Enum') {
 				local String is name: c:getName();
 				if (self:allTaggedEnums:has(key: name)) {
 					out: out . "typedef enum {\n";
 					local Int is tIdx: 0;
 					c:getMembers():each(action: local Function(Member is m){
 						local String is vName: self:cIdent(name: m:getName());
-						out: out . "    " . name . "_TAG_" . vName . " = " . tIdx . ",\n";
+						out: out . '    ' . name . '_TAG_' . vName . ' = ' . tIdx . ",\n";
 						tIdx: tIdx + 1;
 					});
-					out: out . "} " . name . "_Tag;\n";
-					out: out . "typedef struct " . name . " " . name . ";\n\n";
+					out: out . '} ' . name . "_Tag;\n";
+					out: out . 'typedef struct ' . name . ' ' . name . ";\n\n";
 				} else {
 					out: out . "typedef enum {\n";
 					local Int is idx: 0;
 					c:getMembers():each(action: local Function(Member is m){
 						local String is vName: self:cIdent(name: m:getName());
-						out: out . "    " . name . "_" . vName . " = " . idx . ",\n";
+						out: out . '    ' . name . '_' . vName . ' = ' . idx . ",\n";
 						idx: idx + 1;
 					});
-					out: out . "} " . name . ";\n\n";
+					out: out . '} ' . name . ";\n\n";
 
-					out: out . "static const char* " . name . "_names[] = {\n";
+					out: out . 'static const char* ' . name . "_names[] = {\n";
 					c:getMembers():each(action: local Function(Member is m){
-						out: out . "    \"" . m:getName() . "\",\n";
+						out: out . '    "' . m:getName() . "\",\n";
 					});
 					out: out . "};\n\n";
 
-					out: out . "static const " . name . " " . name . "_all_values[] = {\n";
+					out: out . 'static const ' . name . ' ' . name . "_all_values[] = {\n";
 					c:getMembers():each(action: local Function(Member is m){
-						out: out . "    " . name . "_" . self:cIdent(name: m:getName()) . ",\n";
+						out: out . '    ' . name . '_' . self:cIdent(name: m:getName()) . ",\n";
 					});
 					out: out . "};\n\n";
 
-					out: out . "static inline const char* " . name . "_name(" . name . " self) {\n";
+					out: out . 'static inline const char* ' . name . '_name(' . name . " self) {\n";
 					out: out . "    switch (self) {\n";
 					c:getMembers():each(action: local Function(Member is m){
-						out: out . "        case " . name . "_" . self:cIdent(name: m:getName()) . ": return \"" . m:getName() . "\";\n";
+						out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return "' . m:getName() . "\";\n";
 					});
 					out: out . "        default: return \"UNKNOWN\";\n";
 					out: out . "    }\n}\n\n";
 
 					local Boolean is isStrBacked: false;
 					c:getMembers():each(action: local Function(Member is m){
-						if (m:getType():getName() == "String" || m:getType():getName() == "string") {
+						if (m:getType():getName() == 'String' || m:getType():getName() == 'string') {
 							isStrBacked: true;
 						}
 					});
 
 					if (isStrBacked) {
-						out: out . "static inline const char* " . name . "_value(" . name . " self) {\n";
+						out: out . 'static inline const char* ' . name . '_value(' . name . " self) {\n";
 						out: out . "    switch (self) {\n";
 						c:getMembers():each(action: local Function(Member is m){
 							local String is valStr: m:getName();
 							if (m:hasInit) {
 								local Expression is initE: m:initExpr;
-								if (initE:getKind() == "STRING") {
+								if (initE:getKind() == 'STRING') {
 									valStr: initE:stringValue;
 								}
 							}
-							out: out . "        case " . name . "_" . self:cIdent(name: m:getName()) . ": return \"" . valStr . "\";\n";
+							out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return "' . valStr . "\";\n";
 						});
 						out: out . "        default: return \"\";\n";
 						out: out . "    }\n}\n\n";
 					} else {
-						out: out . "static inline long long " . name . "_value(" . name . " self) {\n";
+						out: out . 'static inline long long ' . name . '_value(' . name . " self) {\n";
 						out: out . "    switch (self) {\n";
 						local Int is vIdx: 0;
 						c:getMembers():each(action: local Function(Member is m){
-							local String is valNum: "" . vIdx;
+							local String is valNum: '' . vIdx;
 							if (m:hasInit) {
 								local Expression is initE: m:initExpr;
-								if (initE:getKind() == "NUMBER" && initE:stringValue != "") {
+								if (initE:getKind() == 'NUMBER' && initE:stringValue != '') {
 									valNum: initE:stringValue;
-								} else if (initE:getKind() == "UNARY" && initE:unaryOp == "-" && initE:unaryExpr:getKind() == "NUMBER") {
-									valNum: "-" . initE:unaryExpr:stringValue;
+								} else if (initE:getKind() == 'UNARY' && initE:unaryOp == '-' && initE:unaryExpr:getKind() == 'NUMBER') {
+									valNum: '-' . initE:unaryExpr:stringValue;
 								}
 							}
-							out: out . "        case " . name . "_" . self:cIdent(name: m:getName()) . ": return " . valNum . "LL;\n";
+							out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return ' . valNum . "LL;\n";
 							vIdx: vIdx + 1;
 						});
 						out: out . "        default: return 0LL;\n";
 						out: out . "    }\n}\n\n";
 					}
 
-					out: out . "static inline long long " . name . "_ordinal(" . name . " self) {\n";
+					out: out . 'static inline long long ' . name . '_ordinal(' . name . " self) {\n";
 					out: out . "    switch (self) {\n";
 					local Int is ordIdx: 0;
 					c:getMembers():each(action: local Function(Member is m){
-						out: out . "        case " . name . "_" . self:cIdent(name: m:getName()) . ": return " . ordIdx . ";\n";
+						out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return ' . ordIdx . ";\n";
 						ordIdx: ordIdx + 1;
 					});
 					out: out . "        default: return -1;\n";
 					out: out . "    }\n}\n\n";
 
-					out: out . "static inline SpecArray* " . name . "_values(void) {\n";
+					out: out . 'static inline SpecArray* ' . name . "_values(void) {\n";
 					out: out . "    SpecArray* arr = spec_array_new();\n";
-					out: out . "    for (size_t i = 0; i < " . idx . "; i++) {\n";
-					out: out . "        spec_array_add(arr, (void*)(intptr_t)" . name . "_all_values[i]);\n";
+					out: out . '    for (size_t i = 0; i < ' . idx . "; i++) {\n";
+					out: out . '        spec_array_add(arr, (void*)(intptr_t)' . name . "_all_values[i]);\n";
 					out: out . "    }\n    return arr;\n}\n\n";
 				}
 			}
@@ -270,36 +270,36 @@ Class is DeclarationGenerator{
 		local String is out: "/* Forward Declarations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
-				out: out . "typedef struct " . c:getName() . " " . c:getName() . ";\n";
-				out: out . c:getName() . "* " . c:getName() . "_new(void);\n";
-				out: out . "void " . c:getName() . "_destroy(void* self);\n";
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != 'Enum') {
+				out: out . 'typedef struct ' . c:getName() . ' ' . c:getName() . ";\n";
+				out: out . c:getName() . '* ' . c:getName() . "_new(void);\n";
+				out: out . 'void ' . c:getName() . "_destroy(void* self);\n";
 				local Boolean is hasInit: false;
 				c:getMembers():each(action: local Function(Member is m){
-					if (m:getName() == "init") { hasInit: true; }
+					if (m:getName() == 'init') { hasInit: true; }
 				});
 				if (!hasInit) {
-					out: out . "void " . c:getName() . "_init(" . c:getName() . "* self);\n";
+					out: out . 'void ' . c:getName() . '_init(' . c:getName() . "* self);\n";
 				}
 			}
 		});
 		out: out . "\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != 'Enum') {
 				local Array of String is tps: c:getTypeParams();
 				c:getMembers():each(action: local Function(Member is m){
 					when (m:getMemberKind()) {
 						is METHOD: {
 							local String is retType: self:resolveReturnTypeForClass(t: m:getType(), typeParams: tps);
-							if (retType == "void") {
-								if (m:getName() == "evaluate" || m:getName() == "iteration") {
-									retType: "bool";
+							if (retType == 'void') {
+								if (m:getName() == 'evaluate' || m:getName() == 'iteration') {
+									retType: 'bool';
 								}
 							}
-							out: out . retType . " " . c:getName() . "_" . m:getName() . "(" . c:getName() . "* self";
+							out: out . retType . ' ' . c:getName() . '_' . m:getName() . '(' . c:getName() . '* self';
 							m:getParameters():each(action: local Function(Parameter is p){
-								out: out . ", " . self:cTypeForClass(typeName: p:getType():getName(), typeParams: tps) . " " . self:cIdent(name: p:getName());
+								out: out . ', ' . self:cTypeForClass(typeName: p:getType():getName(), typeParams: tps) . ' ' . self:cIdent(name: p:getName());
 							});
 							out: out . ");\n";
 						}
@@ -316,26 +316,26 @@ Class is DeclarationGenerator{
 		local String is out: "/* Struct Layouts */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != 'Enum') {
 				local Array of String is tps: c:getTypeParams();
-				out: out . "struct " . c:getName() . " {\n";
+				out: out . 'struct ' . c:getName() . " {\n";
 				out: out . "    const char* _type_name;\n";
 				out: out . "    void** _vtable;\n";
 				local Array of Member is allFields: [];
 				self:collectStructFields(c: c, allClasses: classes, acc: allFields);
 				allFields:each(action: local Function(Member is m){
-					out: out . "    " . self:cTypeForClass(typeName: m:getType():getName(), typeParams: tps) . " " . self:cIdent(name: m:getName()) . ";\n";
+					out: out . '    ' . self:cTypeForClass(typeName: m:getType():getName(), typeParams: tps) . ' ' . self:cIdent(name: m:getName()) . ";\n";
 				});
 				out: out . "};\n\n";
-			} else if (c:getBaseClass() == "Enum" && self:allTaggedEnums:has(key: c:getName())) {
+			} else if (c:getBaseClass() == 'Enum' && self:allTaggedEnums:has(key: c:getName())) {
 				local String is name: c:getName();
-				out: out . "struct " . name . " {\n";
-				out: out . "    " . name . "_Tag _tag;\n";
+				out: out . 'struct ' . name . " {\n";
+				out: out . '    ' . name . "_Tag _tag;\n";
 				out: out . "    const char* _variant_name;\n";
 				c:getMembers():each(action: local Function(Member is m){
 					local String is vName: self:cIdent(name: m:getName());
 					m:getParameters():each(action: local Function(Parameter is p){
-						out: out . "    " . self:cTypeFor(typeName: p:getType():getName()) . " " . vName . "_" . self:cIdent(name: p:getName()) . ";\n";
+						out: out . '    ' . self:cTypeFor(typeName: p:getType():getName()) . ' ' . vName . '_' . self:cIdent(name: p:getName()) . ";\n";
 					});
 				});
 				out: out . "};\n\n";
@@ -343,33 +343,33 @@ Class is DeclarationGenerator{
 				c:getMembers():each(action: local Function(Member is m){
 					local String is vName: self:cIdent(name: m:getName());
 					if (m:getParameters():length() == 0) {
-						out: out . "static inline " . name . "* " . name . "_" . vName . "_ctor(void) {\n";
-						out: out . "    " . name . "* _e = (" . name . "*)spec_alloc(sizeof(" . name . "), NULL);\n";
-						out: out . "    _e->_tag = " . name . "_TAG_" . vName . ";\n";
-						out: out . "    _e->_variant_name = \"" . m:getName() . "\";\n";
+						out: out . 'static inline ' . name . '* ' . name . '_' . vName . "_ctor(void) {\n";
+						out: out . '    ' . name . '* _e = (' . name . '*)spec_alloc(sizeof(' . name . "), NULL);\n";
+						out: out . '    _e->_tag = ' . name . '_TAG_' . vName . ";\n";
+						out: out . '    _e->_variant_name = "' . m:getName() . "\";\n";
 						out: out . "    return _e;\n}\n\n";
 					} else {
-						out: out . "static inline " . name . "* " . name . "_" . vName . "(";
+						out: out . 'static inline ' . name . '* ' . name . '_' . vName . '(';
 						local Boolean is firstP: true;
 						m:getParameters():each(action: local Function(Parameter is p){
-							if (!firstP) { out: out . ", "; }
-							out: out . self:cTypeFor(typeName: p:getType():getName()) . " " . self:cIdent(name: p:getName());
+							if (!firstP) { out: out . ', '; }
+							out: out . self:cTypeFor(typeName: p:getType():getName()) . ' ' . self:cIdent(name: p:getName());
 							firstP: false;
 						});
 						out: out . ") {\n";
-						out: out . "    " . name . "* _e = (" . name . "*)spec_alloc(sizeof(" . name . "), NULL);\n";
-						out: out . "    _e->_tag = " . name . "_TAG_" . vName . ";\n";
-						out: out . "    _e->_variant_name = \"" . m:getName() . "\";\n";
+						out: out . '    ' . name . '* _e = (' . name . '*)spec_alloc(sizeof(' . name . "), NULL);\n";
+						out: out . '    _e->_tag = ' . name . '_TAG_' . vName . ";\n";
+						out: out . '    _e->_variant_name = "' . m:getName() . "\";\n";
 						m:getParameters():each(action: local Function(Parameter is p){
-							out: out . "    _e->" . vName . "_" . self:cIdent(name: p:getName()) . " = " . self:cIdent(name: p:getName()) . ";\n";
+							out: out . '    _e->' . vName . '_' . self:cIdent(name: p:getName()) . ' = ' . self:cIdent(name: p:getName()) . ";\n";
 						});
 						out: out . "    return _e;\n}\n\n";
 					}
 				});
 
-				out: out . "static inline const char* " . name . "_name(" . name . "* self) {\n";
+				out: out . 'static inline const char* ' . name . '_name(' . name . "* self) {\n";
 				out: out . "    return self ? self->_variant_name : \"UNKNOWN\";\n}\n\n";
-				out: out . "static inline long long " . name . "_ordinal(" . name . "* self) {\n";
+				out: out . 'static inline long long ' . name . '_ordinal(' . name . "* self) {\n";
 				out: out . "    return self ? (long long)self->_tag : -1;\n}\n\n";
 			}
 		});

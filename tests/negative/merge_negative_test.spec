@@ -47,6 +47,6 @@ Class is MergeNegativeTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("unreachable");
+		output:line('unreachable');
 	}
 }

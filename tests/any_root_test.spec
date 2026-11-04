@@ -26,53 +26,53 @@ Class is AnyRootTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("=== Regression: Any Root Class ===");
+		output:line('=== Regression: Any Root Class ===');
 
 		local RootProbe is probe: RootProbe:init(id: 5);
 
 		# Case 1: default toString via Any's Stringable composition.
-		local String is label: "probe: " . probe;
-		if (label == "probe: RootProbe") {
-			output:line("[PASS] default toString: renders class name");
+		local String is label: 'probe: ' . probe;
+		if (label == 'probe: RootProbe') {
+			output:line('[PASS] default toString: renders class name');
 		} else {
-			output:line("[FAIL] default toString: '" . label . "'");
+			output:line('[FAIL] default toString: \'' . label . '\'');
 		}
 
 		# Case 2: typeName builtin reports the runtime class.
 		local String is tn: probe:typeName();
-		if (tn == "RootProbe") {
-			output:line("[PASS] typeName: RootProbe");
+		if (tn == 'RootProbe') {
+			output:line('[PASS] typeName: RootProbe');
 		} else {
-			output:line("[FAIL] typeName: '" . tn . "'");
+			output:line('[FAIL] typeName: \'' . tn . '\'');
 		}
 
 		# Case 3: typeName through an Any-typed reference still resolves.
 		local Any is asAny: probe;
 		local String is tnAny: asAny:typeName();
-		if (tnAny == "RootProbe") {
-			output:line("[PASS] typeName via Any: RootProbe");
+		if (tnAny == 'RootProbe') {
+			output:line('[PASS] typeName via Any: RootProbe');
 		} else {
-			output:line("[FAIL] typeName via Any: '" . tnAny . "'");
+			output:line('[FAIL] typeName via Any: \'' . tnAny . '\'');
 		}
 
 		# Case 4: rendering through an Any-typed reference via cast.
 		local String is strAny: asAny as String;
-		if (strAny == "RootProbe") {
-			output:line("[PASS] toString via Any: RootProbe");
+		if (strAny == 'RootProbe') {
+			output:line('[PASS] toString via Any: RootProbe');
 		} else {
-			output:line("[FAIL] toString via Any: '" . strAny . "'");
+			output:line('[FAIL] toString via Any: \'' . strAny . '\'');
 		}
 
 		# Case 5: root upcast and implicit downcast round trip.
 		local Any is up: probe as Any;
 		local RootProbe is down: up as RootProbe;
 		if (down:id == 5) {
-			output:line("[PASS] as Any round trip: id = 5");
+			output:line('[PASS] as Any round trip: id = 5');
 		} else {
-			output:line("[FAIL] as Any round trip: " . down:id);
+			output:line('[FAIL] as Any round trip: ' . down:id);
 		}
 
-		output:line("=== End Any Root Class ===");
+		output:line('=== End Any Root Class ===');
 	}
 
 }

@@ -2,14 +2,14 @@
 #! Pure Spec compiler implementation: Lexer, Parser, AST, and Linter.
 
 Enum of String is TokenKind {
-	KEYWORD: "KEYWORD",
-	IDENTIFIER: "IDENTIFIER",
-	SYMBOL: "SYMBOL",
-	INT: "INT",
-	FLOAT: "FLOAT",
-	STRING: "STRING",
-	BOOL: "BOOL",
-	EOF: "EOF"
+	KEYWORD: 'KEYWORD',
+	IDENTIFIER: 'IDENTIFIER',
+	SYMBOL: 'SYMBOL',
+	INT: 'INT',
+	FLOAT: 'FLOAT',
+	STRING: 'STRING',
+	BOOL: 'BOOL',
+	EOF: 'EOF'
 }
 
 ## Represents a lexical token emitted by the compiler [Lexer].
@@ -23,7 +23,7 @@ Class is Token{
 	local TokenKind is kind: TokenKind:EOF;
 
 	## Raw lexeme string value.
-	local String is value: "";
+	local String is value: '';
 
 	## Source coordinate provenance where this token was scanned.
 	local SourceLocation is location;
@@ -37,7 +37,7 @@ Class is Token{
 	replace Function is init(TokenKind is kind, String is value, Int is line, Int is col){
 		self:kind: kind;
 		self:value: value;
-		self:location: SourceLocation:init(file: "", line: line, col: col);
+		self:location: SourceLocation:init(file: '', line: line, col: col);
 	}
 
 	## Initializes a token with a pre-constructed [SourceLocation].

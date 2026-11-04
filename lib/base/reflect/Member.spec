@@ -20,14 +20,14 @@ Class is Member{
 	];
 
 	## Member kind tag: "METHOD", "FIELD", or "CLASS".
-	local String is kind: "";
+	local String is kind: '';
 
 	## Source line coordinate where this member was declared.
 	local Int is line: 0;
 
 	## Source file path where this member was declared (set by the Loader;
 	## preserved per-fragment when grouped classes are merged).
-	local String is sourceFile: "";
+	local String is sourceFile: '';
 
 	## Modifiers attached to this member (e.g. `["replace", "local"]`).
 	local Array of String is modifiers: [];
@@ -36,7 +36,7 @@ Class is Member{
 	local Type is memberType;
 
 	## Identifier name of the member.
-	local String is name: "";
+	local String is name: '';
 
 	## Formal parameter list for methods.
 	local Array of Parameter is params: [];
@@ -68,7 +68,7 @@ Class is Member{
 	## @param params: Method parameter definitions.
 	## @param body: Array of [Statement] AST nodes.
 	Function is method(Array of String is modifiers, Type is retType, String is name, Array of Parameter is params, Array of Statement is body){
-		self:kind: "METHOD";
+		self:kind: 'METHOD';
 		self:modifiers: modifiers;
 		self:memberType: retType;
 		self:name: name;
@@ -84,7 +84,7 @@ Class is Member{
 	## @param initExpr: Optional initializer [Expression].
 	## @param hasInit: `true` if an initializer was provided.
 	local Function is field(Array of String is modifiers, Type is fieldType, String is name, Expression is initExpr, Boolean is hasInit){
-		self:kind: "FIELD";
+		self:kind: 'FIELD';
 		self:modifiers: modifiers;
 		self:memberType: fieldType;
 		self:name: name;
@@ -96,7 +96,7 @@ Class is Member{
 	##
 	## @param nestedClass: Nested [ClassInfo] descriptor.
 	local Function is classMember(ClassInfo is nestedClass){
-		self:kind: "CLASS";
+		self:kind: 'CLASS';
 		self:nestedClass: nestedClass;
 	}
 
@@ -112,9 +112,9 @@ Class is Member{
 	## @return: [MemberKind] variant.
 	Function of MemberKind is getMemberKind(){
 		return when (self:kind) {
-			is "METHOD": MemberKind:METHOD;
-			is "CLASS": MemberKind:CLASS;
-			is "ENUM": MemberKind:ENUM;
+			is 'METHOD': MemberKind:METHOD;
+			is 'CLASS': MemberKind:CLASS;
+			is 'ENUM': MemberKind:ENUM;
 			else: MemberKind:FIELD;
 		};
 	}

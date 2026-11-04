@@ -12,10 +12,10 @@ Class is StackFrame{
 	local SourceLocation is location;
 
 	## Enclosing class name (empty if standalone function).
-	local String is className: "";
+	local String is className: '';
 
 	## Method or function name of this frame.
-	local String is methodName: "";
+	local String is methodName: '';
 
 	## Initializes a stack frame.
 	##
@@ -53,12 +53,12 @@ Class is StackFrame{
 	##
 	## @return: Formatted string in "ClassInfo:method (file:line:col)" format.
 	replace Function of String is toString(){
-		local String is locStr: "";
+		local String is locStr: '';
 		if (self:location:getLine() > 0) {
-			locStr: " (" . self:location:toString() . ")";
+			locStr: ' (' . self:location:toString() . ')';
 		}
 		if (self:className:length() > 0) {
-			return self:className . ":" . self:methodName . locStr;
+			return self:className . ':' . self:methodName . locStr;
 		}
 		return self:methodName . locStr;
 	}

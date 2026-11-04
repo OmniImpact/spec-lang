@@ -10,16 +10,16 @@ Class is ClassInfo{
 	];
 
 	## ClassInfo identifier name.
-	local String is name: "";
+	local String is name: '';
 
 	## Source line coordinate where this class was declared.
 	local Int is line: 0;
 
 	## Source file path where this class was declared.
-	local String is sourceFile: "";
+	local String is sourceFile: '';
 
 	## Base class name if inheritance is specified, or empty string.
-	local String is baseClass: "";
+	local String is baseClass: '';
 
 	## List of parent classes for multiple inheritance.
 	local Array of String is baseClasses: [];
@@ -38,7 +38,7 @@ Class is ClassInfo{
 	replace Function is init(String is name, String is baseClass, Array of Member is members){
 		self:name: name;
 		self:baseClass: baseClass;
-		self:baseClasses: if (baseClass != "") [baseClass] else [];
+		self:baseClasses: if (baseClass != '') [baseClass] else [];
 		self:members: members;
 	}
 
@@ -50,7 +50,7 @@ Class is ClassInfo{
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
 		self:baseClasses: baseClasses;
-		self:baseClass: if (baseClasses:length() > 0) baseClasses:get(index: 0) else "";
+		self:baseClass: if (baseClasses:length() > 0) baseClasses:get(index: 0) else '';
 		self:members: members;
 	}
 

@@ -26,49 +26,49 @@ Class is RegressionOverrideDispatchTest{
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("=== Regression: Multi-Level Override Dispatch ===");
+		output:line('=== Regression: Multi-Level Override Dispatch ===');
 
 		# Case 1 (control): one-level override through a base-typed reference.
 		# This path already works today and must keep working.
 		local Animal is dogAsAnimal: Dog:init();
 		local String is dogSound: dogAsAnimal:speak();
-		if (dogSound == "woof") {
-			output:line("[PASS] one-level override: Dog speaks woof");
+		if (dogSound == 'woof') {
+			output:line('[PASS] one-level override: Dog speaks woof');
 		} else {
-			output:line("[FAIL] one-level override: expected woof, got " . dogSound);
+			output:line('[FAIL] one-level override: expected woof, got ' . dogSound);
 		}
 
 		# Case 2 (the regression): two-level override, no re-override in Puppy.
 		local Animal is puppyAsAnimal: Puppy:init();
 		local String is puppySound: puppyAsAnimal:speak();
-		if (puppySound == "woof") {
-			output:line("[PASS] two-level override: Puppy inherits Dog's woof");
+		if (puppySound == 'woof') {
+			output:line('[PASS] two-level override: Puppy inherits Dog\'s woof');
 		} else {
-			output:line("[FAIL] two-level override: expected woof, got '" . puppySound . "' (Base body leaked through)");
+			output:line('[FAIL] two-level override: expected woof, got \'' . puppySound . '\' (Base body leaked through)');
 		}
 
 		# Case 3 (the regression): three-level chain, override declared two levels up.
 		local Animal is labAsAnimal: Lab:init();
 		local String is labSound: labAsAnimal:speak();
-		if (labSound == "woof") {
-			output:line("[PASS] three-level override: Lab inherits Dog's woof");
+		if (labSound == 'woof') {
+			output:line('[PASS] three-level override: Lab inherits Dog\'s woof');
 		} else {
-			output:line("[FAIL] three-level override: expected woof, got '" . labSound . "'");
+			output:line('[FAIL] three-level override: expected woof, got \'' . labSound . '\'');
 		}
 
 		# Case 4: heterogeneous collection mixing all levels of the chain.
 		# Every resident must dispatch to Dog's override via Animal's trampoline.
 		local Array of Animal is kennel: [Dog:init(), Puppy:init(), Lab:init()];
 		local Int is woofCount: kennel:count(predicate: local Function of Boolean(Animal is resident){
-			return resident:speak() == "woof";
+			return resident:speak() == 'woof';
 		});
 		if (woofCount == 3) {
-			output:line("[PASS] heterogeneous dispatch: 3 of 3 kennel residents speak woof");
+			output:line('[PASS] heterogeneous dispatch: 3 of 3 kennel residents speak woof');
 		} else {
-			output:line("[FAIL] heterogeneous dispatch: expected 3 woofs, got " . woofCount);
+			output:line('[FAIL] heterogeneous dispatch: expected 3 woofs, got ' . woofCount);
 		}
 
-		output:line("=== End Override Dispatch Regression ===");
+		output:line('=== End Override Dispatch Regression ===');
 	}
 
 }
@@ -76,14 +76,14 @@ Class is RegressionOverrideDispatchTest{
 ## Base class declaring the polymorphic contract.
 Class is Animal{
 	Function of String is speak(){
-		return "...";
+		return '...';
 	}
 }
 
 ## Mid-chain class whose override must remain visible to subclasses.
 Class of Animal is Dog{
 	replace Function of String is speak(){
-		return "woof";
+		return 'woof';
 	}
 }
 
@@ -94,5 +94,5 @@ Class of Dog is Puppy{
 
 ## Deeper leaf class that does NOT re-declare speak.
 Class of Dog is Lab{
-	local String is breed: "labrador";
+	local String is breed: 'labrador';
 }

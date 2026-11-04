@@ -9,7 +9,7 @@ Class is Type{
 	];
 
 	## Base type identifier (e.g. "Int", "String", "Function", "Array").
-	local String is name: "";
+	local String is name: '';
 
 	## Generic type arguments (e.g. `[String]` in `Array of String`).
 	local Array of Type is params: [];
@@ -61,11 +61,11 @@ Class is Type{
 		}
 		if (self:params:length() == 1) {
 			local Type is p0: self:params:get(index: 0);
-			return self:name . " of " . p0:toString();
+			return self:name . ' of ' . p0:toString();
 		}
 		local Type is first: self:params:get(index: 0);
 		local Type is second: self:params:get(index: 1);
-		return self:name . " of " . first:toString() . " to " . second:toString();
+		return self:name . ' of ' . first:toString() . ' to ' . second:toString();
 	}
 
 }

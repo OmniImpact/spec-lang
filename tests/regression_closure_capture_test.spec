@@ -32,7 +32,7 @@ Class is RegressionClosureCaptureTest{
 	## This is the primary regression: init always has a Map-typed parameter
 	## (args) in scope, which today poisons the capture set.
 	replace Function is init(Map of String to String is args){
-		output:line("=== Regression: Closure Capture ===");
+		output:line('=== Regression: Closure Capture ===');
 
 		# Case 1: capture of an Int local inside init.
 		local Int is offset: 10;
@@ -41,9 +41,9 @@ Class is RegressionClosureCaptureTest{
 		};
 		local Int is sum: addOffset(5);
 		if (sum == 15) {
-			output:line("[PASS] init-scope Int capture: addOffset(5) = 15");
+			output:line('[PASS] init-scope Int capture: addOffset(5) = 15');
 		} else {
-			output:line("[FAIL] init-scope Int capture: expected 15, got " . sum);
+			output:line('[FAIL] init-scope Int capture: expected 15, got ' . sum);
 		}
 
 		# Case 2: capture of self (field access through the closure).
@@ -52,21 +52,21 @@ Class is RegressionClosureCaptureTest{
 		};
 		local Int is product: timesThree(7);
 		if (product == 21) {
-			output:line("[PASS] self capture: timesThree(7) = 21");
+			output:line('[PASS] self capture: timesThree(7) = 21');
 		} else {
-			output:line("[FAIL] self capture: expected 21, got " . product);
+			output:line('[FAIL] self capture: expected 21, got ' . product);
 		}
 
 		# Case 3: capture of a String local.
-		local String is prefix: "v";
+		local String is prefix: 'v';
 		local Function of String is tag: local Function of String(String is code){
 			return prefix . code;
 		};
-		local String is tagged: tag("9");
-		if (tagged == "v9") {
-			output:line("[PASS] String capture: tag(9) = v9");
+		local String is tagged: tag('9');
+		if (tagged == 'v9') {
+			output:line('[PASS] String capture: tag(9) = v9');
 		} else {
-			output:line("[FAIL] String capture: expected v9, got " . tagged);
+			output:line('[FAIL] String capture: expected v9, got ' . tagged);
 		}
 
 		# Case 4: higher-order use - Function value passed as a parameter.
@@ -75,21 +75,21 @@ Class is RegressionClosureCaptureTest{
 		};
 		local Int is applied: self:apply(fn: doubler, v: 5);
 		if (applied == 10) {
-			output:line("[PASS] higher-order call: apply(doubler, 5) = 10");
+			output:line('[PASS] higher-order call: apply(doubler, 5) = 10');
 		} else {
-			output:line("[FAIL] higher-order call: expected 10, got " . applied);
+			output:line('[FAIL] higher-order call: expected 10, got ' . applied);
 		}
 
 		# Case 5 (control): closure inside a helper method with no Map in scope.
 		# This path already works today and must keep working.
 		local Int is control: self:computeWithLocal();
 		if (control == 124) {
-			output:line("[PASS] control helper-method capture: computeWithLocal() = 124");
+			output:line('[PASS] control helper-method capture: computeWithLocal() = 124');
 		} else {
-			output:line("[FAIL] control helper-method capture: expected 124, got " . control);
+			output:line('[FAIL] control helper-method capture: expected 124, got ' . control);
 		}
 
-		output:line("=== End Closure Capture Regression ===");
+		output:line('=== End Closure Capture Regression ===');
 	}
 
 	## Higher-order helper: invokes a Function value with an argument.

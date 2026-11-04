@@ -11,7 +11,7 @@ Class is LintIssue{
 	local Boolean is isWarning: false;
 
 	## Informational description of the issue.
-	local String is message: "";
+	local String is message: '';
 
 	## Initializes a lint issue.
 	replace Function is init(Int is line, Boolean is isWarning, String is message){
@@ -45,9 +45,9 @@ Class is LintIssue{
 	##
 	## @return: Formatted display string.
 	replace Function of String is toString(){
-		local String is tag: if (self:isWarning) "[Warning]" else "[Notice] ";
-		local String is loc: if (self:line > 0) "Line " . self:line . ": " else "";
-		return "  " . tag . " " . loc . self:message;
+		local String is tag: if (self:isWarning) '[Warning]' else '[Notice] ';
+		local String is loc: if (self:line > 0) 'Line ' . self:line . ': ' else '';
+		return '  ' . tag . ' ' . loc . self:message;
 	}
 
 }
@@ -84,13 +84,13 @@ Class is Linter{
 			lineNum: lineNum + 1;
 			local Int is tabs: line:countLeading(search: "\t");
 			local String is rest: line:substring(start: tabs, end: line:length());
-			local Int is spaces: rest:countLeading(search: " ");
+			local Int is spaces: rest:countLeading(search: ' ');
 			if (spaces > 0) {
-				local String is msg: "Space-based indentation detected (" . spaces . " space(s)). Spec standard requires tabs.";
+				local String is msg: 'Space-based indentation detected (' . spaces . ' space(s)). Spec standard requires tabs.';
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 			}
-			if (line:length() > 0 && (line:charAt(index: line:length() - 1, default: " ") == " " || line:charAt(index: line:length() - 1, default: " ") == "\t")) {
-				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: "Trailing whitespace detected."));
+			if (line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t")) {
+				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
 			}
 
 			# Mask strings and comments, then validate brace alignment.
@@ -100,21 +100,21 @@ Class is Linter{
 			While:condition(
 				evaluate: local Function of Boolean(){ return trimming && body:length() > 0; },
 				iteration: local Function(){
-					local String is last: body:charAt(index: body:length() - 1, default: "");
-					if (last == " " || last == "\t") {
+					local String is last: body:charAt(index: body:length() - 1, default: '');
+					if (last == ' ' || last == "\t") {
 						body: body:substring(start: 0, end: body:length() - 1);
 					} else {
 						trimming: false;
 					}
 				}
 			);
-			if (body:length() > 0 && body:charAt(index: 0, default: "") == "}") {
+			if (body:length() > 0 && body:charAt(index: 0, default: '') == '}') {
 				local Int is expectedTabs: depth - 1;
 				if (expectedTabs < 0) {
 					expectedTabs: 0;
 				}
 				if (tabs != expectedTabs) {
-					local String is msg: "Closing brace indented at " . tabs . " tab(s); nesting depth expects " . expectedTabs . ".";
+					local String is msg: 'Closing brace indented at ' . tabs . ' tab(s); nesting depth expects ' . expectedTabs . '.';
 					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 				}
 			}
@@ -122,10 +122,10 @@ Class is Linter{
 			While:condition(
 				evaluate: local Function of Boolean(){ return ci < masked:length(); },
 				iteration: local Function(){
-					local String is ch: masked:charAt(index: ci, default: "");
-					if (ch == "{") {
+					local String is ch: masked:charAt(index: ci, default: '');
+					if (ch == '{') {
 						depth: depth + 1;
-					} else if (ch == "}") {
+					} else if (ch == '}') {
 						depth: depth - 1;
 					}
 					ci: ci + 1;
@@ -140,27 +140,27 @@ Class is Linter{
 	## @param line: Raw source line.
 	## @return: Masked line of identical length.
 	local Function of String is maskLine(String is line){
-		local String is out: "";
-		local String is quote: "";
+		local String is out: '';
+		local String is quote: '';
 		local Int is i: 0;
 		While:condition(
 			evaluate: local Function of Boolean(){ return i < line:length(); },
 			iteration: local Function(){
-				local String is ch: line:charAt(index: i, default: "");
-				if (quote != "") {
+				local String is ch: line:charAt(index: i, default: '');
+				if (quote != '') {
 					if (ch == "\\") {
-						out: out . "  ";
+						out: out . '  ';
 						i: i + 1;
 					} else if (ch == quote) {
-						quote: "";
-						out: out . " ";
+						quote: '';
+						out: out . ' ';
 					} else {
-						out: out . " ";
+						out: out . ' ';
 					}
-				} else if (ch == "\"" || ch == "'") {
+				} else if (ch == '"' || ch == '\'') {
 					quote: ch;
-					out: out . " ";
-				} else if (ch == "#") {
+					out: out . ' ';
+				} else if (ch == '#') {
 					i: line:length();
 				} else {
 					out: out . ch;
@@ -179,24 +179,24 @@ Class is Linter{
 		local String is kind: expr:getKind();
 
 		when (kind) {
-			is "CALL": {
+			is 'CALL': {
 				local String is method: expr:methodName;
 				local Array of NamedArg is args: expr:methodArgs;
 
 				when (method) {
-					is "getString": {
+					is 'getString': {
 						local Boolean is hasDefault: args:any(predicate: local Function of Boolean(NamedArg is arg){
-							return arg:getName() is "default";
+							return arg:getName() is 'default';
 						});
 						if (hasDefault) {
-							issues:add(item: LintIssue:init(line: 0, isWarning: false, message: "Method call 'getString' provides optional parameter 'default'."));
+							issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
 						}
 					}
-					is "random": {
+					is 'random': {
 						local String is msg: if (args:length() is 0)
-							"Method call 'math:random' omits optional min/max parameters (using default [0.0, 1.0))."
+							'Method call \'math:random\' omits optional min/max parameters (using default [0.0, 1.0)).'
 						else
-							"Method call 'math:random' provides optional min/max range parameters.";
+							'Method call \'math:random\' provides optional min/max range parameters.';
 						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 					}
 					else: {}
@@ -207,14 +207,14 @@ Class is Linter{
 					self:lintExpression(expr: arg:getValue(), issues: issues);
 				});
 			}
-			is "BINARY": {
+			is 'BINARY': {
 				self:lintExpression(expr: expr:leftExpr, issues: issues);
 				self:lintExpression(expr: expr:rightExpr, issues: issues);
 			}
-			is "UNARY": {
+			is 'UNARY': {
 				self:lintExpression(expr: expr:unaryExpr, issues: issues);
 			}
-			is "ARRAY": {
+			is 'ARRAY': {
 				expr:arrayItems:each(action: local Function(Expression is item){
 					self:lintExpression(expr: item, issues: issues);
 				});
@@ -231,16 +231,16 @@ Class is Linter{
 		local String is kind: stmt:getKind();
 
 		when (kind) {
-			is "VAR_DECL": {
+			is 'VAR_DECL': {
 				if (stmt:hasInit) {
 					self:lintExpression(expr: stmt:initExpr, issues: issues);
 				}
 			}
-			is "ASSIGN": {
+			is 'ASSIGN': {
 				self:lintExpression(expr: stmt:assignTarget, issues: issues);
 				self:lintExpression(expr: stmt:assignValue, issues: issues);
 			}
-			is "IF": {
+			is 'IF': {
 				self:lintExpression(expr: stmt:ifCondition, issues: issues);
 				stmt:thenBranch:each(action: local Function(Statement is s){
 					self:lintStatement(stmt: s, issues: issues);
@@ -251,15 +251,15 @@ Class is Linter{
 					});
 				}
 			}
-			is "RETURN": {
+			is 'RETURN': {
 				if (stmt:hasReturnExpr) {
 					self:lintExpression(expr: stmt:returnExpr, issues: issues);
 				}
 			}
-			is "CLASS": {
+			is 'CLASS': {
 				self:lintClass(classDef: stmt:nestedClass, issues: issues);
 			}
-			is "EXPR": {
+			is 'EXPR': {
 				self:lintExpression(expr: stmt:exprStmt, issues: issues);
 			}
 			else: {}
@@ -330,16 +330,16 @@ Class is Linter{
 	## @param filePath: Source file path.
 	## @param issues: Array of detected [LintIssue] items.
 	Function is report(String is filePath, Array of LintIssue is issues){
-		output:line("Checking '" . filePath . "' for Spec code standards...");
+		output:line('Checking \'' . filePath . '\' for Spec code standards...');
 		issues:each(action: local Function(LintIssue is issue){
 			output:line(issue:toString());
 		});
 
 		local Int is warnings: self:countWarnings(issues: issues);
 		local Int is notices: self:countNotices(issues: issues);
-		output:line("\nLint summary for " . filePath . ": " . warnings . " warning(s), " . notices . " notice(s).");
+		output:line("\nLint summary for " . filePath . ': ' . warnings . ' warning(s), ' . notices . ' notice(s).');
 		if (warnings is 0) {
-			output:line("All standard checks passed successfully.");
+			output:line('All standard checks passed successfully.');
 		}
 	}
 

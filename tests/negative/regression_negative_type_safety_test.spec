@@ -46,12 +46,12 @@ Class is NarrowFloatField{
 
 Class is ArrayElementMismatch{
 	## Violation 2: String elements silently accepted by an Array of Int field.
-	local Array of Int is flags: ["on", "off"];
+	local Array of Int is flags: ['on', 'off'];
 }
 
 Class is MapValueMismatch{
 	## Violation 3: String values silently accepted by a Map of String to Int field.
-	local Map of String to Int is ages: ["ana": "ten"];
+	local Map of String to Int is ages: ['ana': 'ten'];
 }
 
 Class is UndefinedIdentifier{
@@ -94,7 +94,7 @@ Class is CallArgumentMismatch{
 	}
 
 	replace Function is init(Map of String to String is args){
-		local Int is result: self:double(n: "not-a-number");
+		local Int is result: self:double(n: 'not-a-number');
 	}
 }
 
@@ -103,7 +103,7 @@ Class is IncompleteWhenBranches{
 	## BIKE with no else arm. Exhaustiveness must be enforced at compile time.
 	replace Function of String is describe(TransportMode is mode){
 		return when (mode) {
-			is CAR: "drives";
+			is CAR: 'drives';
 		};
 	}
 }
