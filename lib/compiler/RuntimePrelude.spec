@@ -95,6 +95,23 @@ Class is RuntimePrelude{
 		p: p . "    return (void*)obj;\n";
 		p: p . "}\n\n";
 
+		p: p . "/* Per-Type Constructors: invoked by : assignment for each type. */\n";
+		p: p . "char* spec_string_intern(const char* c);\n";
+		p: p . "char* spec_string_from_chars(const char* c);\n";
+		p: p . "/* Each constructor takes the source value and produces the type's\n";
+		p: p . "   canonical internal representation. For primitives this is a cast;\n";
+		p: p . "   for composite types it involves allocation and initialisation. */\n";
+		p: p . "static inline long long spec_construct_int(long long v) { return v; }\n";
+		p: p . "static inline unsigned char spec_construct_byte(long long v) {\n";
+		p: p . "    if (v < 0 || v > 255) spec_panic_byte_range(v);\n";
+		p: p . "    return (unsigned char)v;\n";
+		p: p . "}\n\n";
+		p: p . "static inline double spec_construct_float(double v) { return v; }\n\n";
+		p: p . "static inline bool spec_construct_bool(bool v) { return v; }\n\n";
+		p: p . "static inline char* spec_construct_string(const void* src) {\n";
+		p: p . "    if (!src) return spec_string_intern(\"\");\n";
+		p: p . "    return spec_string_from_chars((const char*)src);\n";
+		p: p . "}\n\n";
 		p: p . "/* Spec Automated Reference Counting (ARC) Primitives */\n";
 		p: p . "#define SPEC_S_IMMORTAL 1u\n";
 		p: p . "#define SPEC_S_HASLEN 2u\n";
@@ -362,15 +379,9 @@ Class is RuntimePrelude{
 		p: p . "}\n\n";
 
 		p: p . "/* Spec Runtime String Utilities */\n";
-		p: p . "static const char* _spec_last_str = NULL;\n";
-		p: p . "static size_t _spec_last_len = 0;\n\n";
 		p: p . "long long spec_str_length(const char* s) {\n";
 		p: p . "    if (!s) return 0;\n";
-		p: p . "    if (s == _spec_last_str) return (long long)_spec_last_len;\n";
-		p: p . "    size_t len = strlen(s);\n";
-		p: p . "    _spec_last_str = s;\n";
-		p: p . "    _spec_last_len = len;\n";
-		p: p . "    return (long long)len;\n";
+		p: p . "    return (long long)strlen(s);\n";
 		p: p . "}\n\n";
 		p: p . "static char _spec_small_ints[258][8];\n";
 		p: p . "static bool _spec_small_ints_init = false;\n";
@@ -389,9 +400,7 @@ Class is RuntimePrelude{
 		p: p . "}\n\n";
 		p: p . "const char* spec_str_char_at(const char* s, long long idx, const char* def) {\n";
 		p: p . "    if (!s || idx < 0) return def ? spec_string_from_chars(def) : spec_string_intern(\"\");\n";
-		p: p . "    size_t len = (s == _spec_last_str) ? _spec_last_len : strlen(s);\n";
-		p: p . "    _spec_last_str = s;\n";
-		p: p . "    _spec_last_len = len;\n";
+		p: p . "    size_t len = strlen(s);\n";
 		p: p . "    if ((size_t)idx >= len) return def ? spec_string_from_chars(def) : spec_string_intern(\"\");\n";
 		p: p . "    char one[2] = { s[idx], '\\0' };\n";
 		p: p . "    return spec_string_intern(one);\n";

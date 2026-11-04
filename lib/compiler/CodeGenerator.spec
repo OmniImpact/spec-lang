@@ -224,6 +224,62 @@ Class is CodeGenerator{
 		return 'none';
 	}
 
+	## Generates the per-type constructor call for a `:` assignment.
+	## Each type has a canonical construction path: primitives are casts,
+	## String wraps raw bytes into a managed value, containers allocate.
+	## The claim/retain logic is embedded in the constructor, replacing the
+	## ad-hoc per-site emission.
+	Function of String is generateTypedConstructor(String is typeName, String is valueC, Expression is expr, String is cType){
+		local Boolean is claims: self:yieldsClaim(expr: expr);
+		when (typeName) {
+			is 'String', 'string': {
+				if (claims) {
+					return valueC;
+				}
+				return 'spec_construct_string(' . valueC . ')';
+			}
+			is 'Byte', 'byte': {
+				return 'spec_construct_byte((long long)(' . valueC . '))';
+			}
+			is 'Int', 'int': {
+				return valueC;
+			}
+			is 'Float', 'float': {
+				return valueC;
+			}
+			is 'Boolean', 'bool': {
+				return valueC;
+			}
+			is 'Array': {
+				if (claims) {
+					return '(' . cType . ')((' . valueC . '))';
+				}
+				return '(' . cType . ')spec_retain((void*)(' . valueC . '))';
+			}
+			is 'List': {
+				if (claims) {
+					return '(' . cType . ')((' . valueC . '))';
+				}
+				return '(' . cType . ')spec_retain((void*)(' . valueC . '))';
+			}
+			is 'Map': {
+				if (claims) {
+					return '(' . cType . ')((' . valueC . '))';
+				}
+				return '(' . cType . ')spec_retain((void*)(' . valueC . '))';
+			}
+			else: {
+				if (self:isArcType(typeName: typeName)) {
+					if (claims) {
+						return '(' . cType . ')((' . valueC . '))';
+					}
+					return '(' . cType . ')spec_retain((void*)(' . valueC . '))';
+				}
+				return valueC;
+			}
+		}
+	}
+
 	## Determines whether a container's element/value type is ARC-managed, from a
 	## canonical container type string. Any-typed and unknown containers are
 	## never element-owned.

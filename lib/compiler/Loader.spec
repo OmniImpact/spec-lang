@@ -123,7 +123,7 @@ Class is Loader{
 				'lib/base/struct/Map.spec'
 			];
 			is 'base:core:*': [
-				'lib/base/core/Stringable.spec',
+								'lib/base/core/Stringable.spec',
 				'lib/base/core/Any.spec'
 			];
 			is 'base:sys:*': [
@@ -503,7 +503,7 @@ Class is Loader{
 		self:groupFragments: [];
 
 		# Root class lattice preloads, before any user code.
-		self:loadFile(filePath: 'lib/base/core/Stringable.spec');
+				self:loadFile(filePath: 'lib/base/core/Stringable.spec');
 		self:loadFile(filePath: 'lib/base/core/Any.spec');
 
 		self:loadFile(filePath: rootPath);

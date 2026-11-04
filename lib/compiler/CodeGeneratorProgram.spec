@@ -46,12 +46,7 @@ Class is CodeGeneratorProgram{
 					local String is initC: self:generateExpression(expr: stmt:initExpr);
 					self:argMode: savedArg;
 					self:setContainerHint(t: '');
-					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == '*' && cType != 'const char*' && cType != 'SpecArray*' && cType != 'SpecMap*') {
-						initC: '(' . cType . ')(' . initC . ')';
-					}
-					if (isArcVar) {
-					initC: '(' . cType . ')spec_retain((void*)(' . initC . '))';
-				}
+					initC: self:generateTypedConstructor(typeName: vTypeName, valueC: initC, expr: stmt:initExpr, cType: cType);
 					return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . initC . ";\n";
 				}
 				if (vTypeName == 'String' || vTypeName == 'string') {
