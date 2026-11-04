@@ -19,7 +19,7 @@ Class is CodeGeneratorInference{
 		base:meta:*
 	];
 
-	Class is PathTypeResolveLoop extends Loop{
+	Class of Loop is PathTypeResolveLoop{
 		local CodeGenerator is cg;
 		local Array of String is segs;
 		local Int is idx: 1;
@@ -164,7 +164,7 @@ Class is CodeGeneratorInference{
 					return resolved . "_name(" . exprC . ")";
 				}
 				if (self:allClassNames:has(key: resolved) && !self:isBuiltinClass(name: resolved)) {
-					return resolved . "_toString(" . exprC . ")";
+					return "spec_type_name(" . exprC . ") /* wrap:" . resolved . " */";
 				}
 			}
 		}
@@ -487,7 +487,7 @@ Class is CodeGeneratorInference{
 		return out;
 	}
 
-	Class is PathChainLoop extends Loop{
+	Class of Loop is PathChainLoop{
 		local Array of String is segs;
 		local CBackendUtils is utils;
 		local Int is idx: 1;

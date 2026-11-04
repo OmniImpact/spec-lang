@@ -22,7 +22,7 @@ Class is Phase3LexerTest{
 
 		output:line("Total tokens emitted: " . tokens:length());
 
-		Class is PrintTokensLoop extends Loop{
+		Class of Loop is PrintTokensLoop{
 			local Array of Token is tokens;
 			local Int is idx: 0;
 

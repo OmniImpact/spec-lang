@@ -39,7 +39,7 @@ Class is FwdBase{
 	}
 }
 
-Class is FwdChild extends FwdBase{
+Class of FwdBase is FwdChild{
 
 	replace Function is plainCall(){
 		("unexpected");

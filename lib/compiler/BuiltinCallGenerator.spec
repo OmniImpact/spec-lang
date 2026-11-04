@@ -41,6 +41,11 @@ Class is BuiltinCallGenerator{
 			return "spec_error_line(" . errStrC . ")";
 		}
 
+		# Type name introspection on class instances
+		if (expr:methodName == "typeName" && targetType != "" && !self:utils:isBuiltinClass(name: targetType) && !self:allEnumNames:has(key: targetType)) {
+			return "spec_type_name(" . targetC . ")";
+		}
+
 		# Integer base conversion
 		if (expr:methodName == "toBase" && (targetType == "Int" || targetType == "int")) {
 			local String is baseC: "10";

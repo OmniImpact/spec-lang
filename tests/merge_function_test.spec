@@ -31,7 +31,7 @@ Class is LoggerBase{
 	}
 }
 
-Class is ChildLogger extends LoggerBase{
+Class of LoggerBase is ChildLogger{
 
 	# Adapted forward: derive arguments before delegating.
 	merge Function of Int is add(Int is a, Int is b){
@@ -45,7 +45,7 @@ Class is ChildLogger extends LoggerBase{
 	}
 }
 
-Class is GrandLogger extends ChildLogger{
+Class of ChildLogger is GrandLogger{
 
 	# Chained forward: delegates to ChildLogger, which delegates to LoggerBase.
 	merge Function of Int is add(Int is a, Int is b){

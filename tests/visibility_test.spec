@@ -32,7 +32,7 @@ Class is VisBase{
 	}
 }
 
-Class is VisChild extends VisBase{
+Class of VisBase is VisChild{
 
 	replace Function is init(){
 	}

@@ -21,7 +21,7 @@ Class is MergeBase{
 	}
 }
 
-Class is MergeChild extends MergeBase{
+Class of MergeBase is MergeChild{
 
 	## Folds onto MergeBase's using: Output + Array both load.
 	merge Array of String is using: [base:struct:Array];

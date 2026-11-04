@@ -22,7 +22,7 @@ Class is Parser{
 	local String is sourceFile: "";
 	local Array of String is errors: [];
 
-	Class is EnumVariantsLoop extends Loop{
+	Class of Loop is EnumVariantsLoop{
 		local Parser is parser;
 		local Array of Member is members;
 		local String is backingType;
@@ -79,7 +79,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ProgramParseLoop extends Loop{
+	Class of Loop is ProgramParseLoop{
 		local Parser is parser;
 		local Array of ClassInfo is classes;
 
@@ -102,7 +102,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ClassMembersLoop extends Loop{
+	Class of Loop is ClassMembersLoop{
 		local Parser is parser;
 		local Array of Member is members;
 
@@ -121,7 +121,7 @@ Class is Parser{
 		}
 	}
 
-	Class is BaseClassesLoop extends Loop{
+	Class of Loop is BaseClassesLoop{
 		local Parser is parser;
 		local Array of String is bases;
 
@@ -145,7 +145,7 @@ Class is Parser{
 		}
 	}
 
-	Class is BlockStatementsLoop extends Loop{
+	Class of Loop is BlockStatementsLoop{
 		local Parser is parser;
 		local Array of Statement is stmts;
 
@@ -164,7 +164,7 @@ Class is Parser{
 		}
 	}
 
-	Class is WhenConditionsLoop extends Loop{
+	Class of Loop is WhenConditionsLoop{
 		local Parser is parser;
 		local Array of Expression is conditions;
 
@@ -187,7 +187,7 @@ Class is Parser{
 		}
 	}
 
-	Class is WhenArmsLoop extends Loop{
+	Class of Loop is WhenArmsLoop{
 		local Parser is parser;
 		local Array of WhenArm is arms;
 
@@ -256,7 +256,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ArrayItemsLoop extends Loop{
+	Class of Loop is ArrayItemsLoop{
 		local Parser is parser;
 		local Array of Expression is items;
 
@@ -279,7 +279,7 @@ Class is Parser{
 		}
 	}
 
-	Class is MapItemsLoop extends Loop{
+	Class of Loop is MapItemsLoop{
 		local Parser is parser;
 		local Array of Expression is keys;
 		local Array of Expression is values;
@@ -308,7 +308,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ModifierLoop extends Loop{
+	Class of Loop is ModifierLoop{
 		local Parser is parser;
 		local Array of String is mods;
 
@@ -329,7 +329,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ParamLoop extends Loop{
+	Class of Loop is ParamLoop{
 		local Parser is parser;
 		local Array of Parameter is params;
 
@@ -386,7 +386,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ArgLoop extends Loop{
+	Class of Loop is ArgLoop{
 		local Parser is parser;
 		local Array of NamedArg is args;
 
@@ -432,7 +432,7 @@ Class is Parser{
 		}
 	}
 
-	Class is PostfixLoop extends Loop{
+	Class of Loop is PostfixLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -529,7 +529,7 @@ Class is Parser{
 		}
 	}
 
-	Class is LogicalOrLoop extends Loop{
+	Class of Loop is LogicalOrLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -556,7 +556,7 @@ Class is Parser{
 		}
 	}
 
-	Class is LogicalAndLoop extends Loop{
+	Class of Loop is LogicalAndLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -583,7 +583,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ShiftLoop extends Loop{
+	Class of Loop is ShiftLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -609,7 +609,7 @@ Class is Parser{
 		}
 	}
 
-	Class is BitAndLoop extends Loop{
+	Class of Loop is BitAndLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -634,7 +634,7 @@ Class is Parser{
 		}
 	}
 
-	Class is BitXorLoop extends Loop{
+	Class of Loop is BitXorLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -659,7 +659,7 @@ Class is Parser{
 		}
 	}
 
-	Class is BitOrLoop extends Loop{
+	Class of Loop is BitOrLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -684,7 +684,7 @@ Class is Parser{
 		}
 	}
 
-	Class is EqualityLoop extends Loop{
+	Class of Loop is EqualityLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -716,7 +716,7 @@ Class is Parser{
 		}
 	}
 
-	Class is RelationalLoop extends Loop{
+	Class of Loop is RelationalLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -745,7 +745,7 @@ Class is Parser{
 		}
 	}
 
-	Class is ConcatLoop extends Loop{
+	Class of Loop is ConcatLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -772,7 +772,7 @@ Class is Parser{
 		}
 	}
 
-	Class is AdditiveLoop extends Loop{
+	Class of Loop is AdditiveLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -801,7 +801,7 @@ Class is Parser{
 		}
 	}
 
-	Class is MultiplicativeLoop extends Loop{
+	Class of Loop is MultiplicativeLoop{
 		local Parser is parser;
 		local Expression is currentExpr;
 
@@ -1570,15 +1570,25 @@ Class is Parser{
 	}
 
 	Function of ClassInfo is parseClass(){
-		# Canonical declaration: `Class is Name`.
+		# Canonical declaration: `Class of Parent is Name` (inheritance, mirroring
+		# `Enum of Int is Status`); generic parameters post-name (`Class is Box of T`).
 		if (self:check(kind: "IDENTIFIER", value: "class")) {
-			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class is Name'.");
+			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'.");
 		}
 		self:advance();
+
+		# Pre-binder `of`: parent classes.
+		local Array of String is baseClasses: [];
+		if (self:check(kind: "KEYWORD", value: "of")) {
+			self:advance();
+			While:run(loop: BaseClassesLoop:init(parser: self, bases: baseClasses));
+		}
+
 		self:matchToken(kind: "KEYWORD", value: "is");
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
 
+		# Post-name `of`: generic type parameters.
 		local Array of String is typeParams: [];
 		if (self:check(kind: "KEYWORD", value: "of")) {
 			self:advance();
@@ -1589,12 +1599,6 @@ Class is Parser{
 				local Token is tp2: self:advance();
 				typeParams:add(item: tp2:getValue());
 			}
-		}
-
-		local Array of String is baseClasses: [];
-		if (self:check(kind: "KEYWORD", value: "extends")) {
-			self:advance();
-			While:run(loop: BaseClassesLoop:init(parser: self, bases: baseClasses));
 		}
 
 		self:matchToken(kind: "SYMBOL", value: "{");

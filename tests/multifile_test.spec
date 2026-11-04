@@ -12,7 +12,7 @@ Class is MultiFileTest{
 	local String is title;
 	local Int is counter: 0;
 
-	Class is StepCounterLoop extends Loop{
+	Class of Loop is StepCounterLoop{
 		local MultiFileTest is app;
 
 		replace Function is init(MultiFileTest is app){

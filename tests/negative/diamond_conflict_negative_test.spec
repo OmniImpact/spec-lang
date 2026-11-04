@@ -31,7 +31,7 @@ Class is DiamondB{
 	}
 }
 
-Class is DiamondBadChild extends DiamondA, DiamondB{
+Class of DiamondA, DiamondB is DiamondBadChild{
 	replace Function is init(Map of String to String is args){
 		output:line("unreachable");
 	}
@@ -43,13 +43,13 @@ Class is SharedBase{
 	}
 }
 
-Class is SharedLeft extends SharedBase{
+Class of SharedBase is SharedLeft{
 }
 
-Class is SharedRight extends SharedBase{
+Class of SharedBase is SharedRight{
 }
 
-Class is DiamondSharedChild extends SharedLeft, SharedRight{
+Class of SharedLeft, SharedRight is DiamondSharedChild{
 	replace Function is init(Map of String to String is args){
 		output:line("shared ok");
 	}

@@ -44,7 +44,7 @@ Class is VisUnrelated{
 	}
 }
 
-Class is VisOverrideAttempt extends VisBase{
+Class of VisBase is VisOverrideAttempt{
 	replace Function of Int is secret(){
 		return 9;
 	}
@@ -54,7 +54,7 @@ Class is ShadowedLocal{
 	local Int is counter: 0;
 }
 
-Class is ShadowChild extends ShadowedLocal{
+Class of ShadowedLocal is ShadowChild{
 	local Int is counter: 1;
 }
 

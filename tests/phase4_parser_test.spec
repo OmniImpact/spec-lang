@@ -19,7 +19,7 @@ Class is Phase4ParserTest{
 		output:line("        Phase 4 Pure-Spec Parser      ");
 		output:line("======================================\n");
 
-		local String is snippet: "class Player extends Entity{\n\tlocal Int is health: 100;\n\tlocal String is name: \"Hero\";\n\treplace local Function of Boolean is isAlive(){\n\t\treturn health > 0;\n\t}\n}";
+		local String is snippet: "Class of Entity is Player{\n\tlocal Int is health: 100;\n\tlocal String is name: \"Hero\";\n\tlocal Function of Boolean is isAlive(){\n\t\treturn health > 0;\n\t}\n}";
 
 		output:line("Source to parse:\n" . snippet . "\n");
 
@@ -42,7 +42,7 @@ Class is Phase4ParserTest{
 		local Array of Member is members: playerClass:getMembers();
 		output:line("Total members: " . members:length());
 
-		Class is MemberInspectLoop extends Loop{
+		Class of Loop is MemberInspectLoop{
 			local Array of Member is members;
 			local Int is idx: 0;
 

@@ -23,7 +23,7 @@ Class is IdentifiableContract{
 }
 
 ## Concrete class extending multiple parent contracts.
-Class is ServiceAccount extends NamedContract, IdentifiableContract{
+Class of NamedContract, IdentifiableContract is ServiceAccount{
 
 	replace String is name: "AdminService";
 	replace Int is id: 9001;

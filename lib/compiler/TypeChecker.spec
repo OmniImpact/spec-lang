@@ -371,7 +371,7 @@ Class is TypeChecker{
 		return rawType;
 	}
 
-	Class is SearchLoop extends Loop{
+	Class of Loop is SearchLoop{
 		local Array of ClassInfo is list;
 		local String is target;
 		local Int is idx: 0;
@@ -509,7 +509,7 @@ Class is TypeChecker{
 		return false;
 	}
 
-	Class is FieldSearchLoop extends Loop{
+	Class of Loop is FieldSearchLoop{
 		local Array of Member is members;
 		local String is fieldName;
 		local Int is idx: 0;
@@ -567,7 +567,7 @@ Class is TypeChecker{
 		return inherited;
 	}
 
-	Class is MethodSearchLoop extends Loop{
+	Class of Loop is MethodSearchLoop{
 		local Array of Member is members;
 		local String is methodName;
 		local Int is idx: 0;
@@ -628,7 +628,7 @@ Class is TypeChecker{
 		return inherited;
 	}
 
-	Class is PathResolveLoop extends Loop{
+	Class of Loop is PathResolveLoop{
 		local TypeChecker is tc;
 		local Array of String is segs;
 		local Int is idx: 1;
@@ -809,6 +809,12 @@ Class is TypeChecker{
 							self:addError(line: self:currentLine, msg: "Cast 'as String' takes no arguments.");
 						}
 						res: "String";
+					}
+					is "Any": {
+						if (expr:castArgs:length() > 0) {
+							self:addError(line: self:currentLine, msg: "Cast 'as Any' takes no arguments.");
+						}
+						res: "Any";
 					}
 					else: {
 						if (self:allEnumNames:has(key: target)) {
@@ -1037,6 +1043,8 @@ Class is TypeChecker{
 					}
 				} else if (self:allEnumVariants:has(key: method) && (self:allEnumNames:has(key: targetType) || targetType == self:currentClassName)) {
 					res: self:allEnumVariants:getString(key: method, default: "Any");
+				} else if (method == "typeName" && self:registeredClasses:has(key: targetType)) {
+					res: "String";
 				} else if (method == "init" && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 					res: targetType;
 				} else if (self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
@@ -1104,7 +1112,7 @@ Class is TypeChecker{
 							is "isEmpty", "has", "any", "startsWith", "endsWith", "contains", "isDigit", "isAlpha", "isWhitespace", "exists", "write", "getBool", "remove": {
 								res: "Boolean";
 							}
-							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join", "fromCharCode", "toBase": {
+							is "charAt", "substring", "getString", "toString", "name", "read", "trim", "replaceAll", "join", "fromCharCode", "toBase", "typeName": {
 								res: "String";
 							}
 							is "value": {
@@ -1381,7 +1389,7 @@ Class is TypeChecker{
 		self:currentMethodName: "";
 	}
 
-	Class is MemberImplementLoop extends Loop{
+	Class of Loop is MemberImplementLoop{
 		local Array of Member is members;
 		local Member is target;
 		local Int is idx: 0;
@@ -1561,7 +1569,7 @@ Class is TypeChecker{
 	## @param member: The resolved [Member].
 	## @param memberName: Member name for diagnostics.
 	local Function is checkMemberVisibility(String is ownerClass, Member is member, String is memberName){
-		if (ownerClass == "" || memberName == "init" || memberName == "using" || memberName == "toString") {
+		if (ownerClass == "" || ownerClass == "Any" || memberName == "init") {
 			return;
 		}
 		local Array of String is mods: member:getModifiers();
@@ -1595,6 +1603,11 @@ Class is TypeChecker{
 			}
 			local String is name: m:getName();
 			if (name == "init" || name == "using" || name == "toString") {
+				return;
+			}
+			if (self:findMemberOwnerClass(className: classDef:getName(), memberName: name) == "Any") {
+				# Root-contract member: Any declares it public, so overriding
+				# is always legitimate.
 				return;
 			}
 			local Member is anc: self:findAncestorMember(className: classDef:getName(), memberName: name);
@@ -1672,23 +1685,17 @@ Class is TypeChecker{
 
 		# Built-in lifecycle methods strictly require replace
 		classDef:getMembers():each(action: local Function(Member is m){
-			when (m:getName()) {
-				is "init", "using", "toString": {
-					local Array of String is mods: m:getModifiers();
-					if (mods:indexOf(search: "replace", default: -1) < 0 && mods:indexOf(search: "merge", default: -1) < 0) {
-						local String is msg: "Root-contract method '" . m:getName() . "' in class '" . classDef:getName() . "' requires 'replace' (or 'merge') modifier.";
-						self:addError(line: m:getLine(), msg: msg);
-					}
-				}
-				else: {}
-			}
+			# Lifecycle members (init/using/toString) are declared public in the
+			# root class Any; the shadow rule below enforces override requirements
+			# generically. No name-based list needed.
 		});
 
 		classDef:getBaseClasses():each(action: local Function(String is baseName){
 			local ClassInfo is parent: self:findClass(name: baseName);
 			if (parent:getName() == baseName) {
-				# 1. Enforce abstract member implementation on concrete classes with init
-				if (hasInit) {
+				# 1. Enforce abstract member implementation on concrete classes with init.
+				# The implicit root Any is exempt: its members carry concrete defaults.
+				if (hasInit && baseName != "Any") {
 					parent:getMembers():each(action: local Function(Member is parentM){
 						local Boolean is isAbstract: (parentM:getKind() == "FIELD" && !parentM:getHasInit()) ||
 							(parentM:getKind() == "METHOD" && parentM:getBody():length() == 0);
@@ -1731,6 +1738,17 @@ Class is TypeChecker{
 							}
 
 							if (subM:getKind() == "METHOD" && parentM:getKind() == "METHOD") {
+								# Root-contract carve-out: init/using/toString declared
+								# in Any are name reservations; per-class signatures
+								# are legitimate. Override must still carry replace.
+								if (baseName == "Any") {
+									local Array of String is subMods2: subM:getModifiers();
+									if (subMods2:indexOf(search: "replace", default: -1) < 0 && subMods2:indexOf(search: "merge", default: -1) < 0) {
+										local String is msg: "Member '" . subM:getName() . "' in class '" . classDef:getName() . "' overrides root-contract member from 'Any', but is missing 'replace' modifier.";
+										self:addError(line: subM:getLine(), msg: msg);
+									}
+									return;
+								}
 								if (subM:getParameters():length() != parentM:getParameters():length()) {
 									local String is msg: "Method '" . subM:getName() . "' in class '" . classDef:getName() . "' parameter count mismatch with ancestor in '" . baseName . "'.";
 									self:addError(line: subM:getLine(), msg: msg);

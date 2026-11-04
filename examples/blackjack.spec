@@ -30,7 +30,7 @@ Class is Blackjack{
 	#   - When evaluate() becomes false (dealer >= 17), iterator stops automatically
 	#     and fires the onComplete callback attached to LoopControl
 	# =========================================================================
-	Class is DealerTurnLoop extends Loop{
+	Class of Loop is DealerTurnLoop{
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
@@ -59,7 +59,7 @@ Class is Blackjack{
 	# Internal ClassInfo: Dealer Turn Completion Callback
 	# Triggered automatically when evaluate() returns false or control is stopped
 	# =========================================================================
-	Class is DealerTurnCompleteCallback extends LoopCallback{
+	Class of LoopCallback is DealerTurnCompleteCallback{
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
@@ -76,7 +76,7 @@ Class is Blackjack{
 	# Internal ClassInfo: Interactive Input Handler
 	# Dispatched asynchronously on user input
 	# =========================================================================
-	Class is PlayerTurnHandler extends InputHandler{
+	Class of InputHandler is PlayerTurnHandler{
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){

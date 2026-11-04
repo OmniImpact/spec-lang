@@ -24,11 +24,10 @@ Class is HelloWorld{
 
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
-- **Ultra-Lean Compiler**: The entire grammar is the table below — 13 keywords and 6 primitive types. Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
+- **Ultra-Lean Compiler**: The entire grammar is the table below — 12 keywords and 6 primitive types. Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
 
 | Keyword | Role |
 |---|---|
-| `extends` | Inherit from one or more parent classes |
 | `local` | Private: invisible to children — cannot be replaced, merged, or accessed outside the declaring class |
 | `contained` | Protected and final: visible to subclasses, but cannot be replaced, merged, or accessed externally |
 | `public` (default) | No modifier needed: overridable via `replace`/`merge`, callable from anywhere |

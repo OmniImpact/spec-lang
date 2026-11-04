@@ -220,6 +220,9 @@ Class is CodeGeneratorExpressions{
 						}
 						return "spec_int_to_base(" . innerC . ", 8, " . digitsC . ")";
 					}
+					is "Any": {
+						return innerC;
+					}
 					is "Int", "int": {
 						if (srcT == "String" || srcT == "string") {
 							return "spec_parse_base(" . innerC . ", 10, 0)";
@@ -233,7 +236,19 @@ Class is CodeGeneratorExpressions{
 						return "((double)(" . innerC . "))";
 					}
 					is "String", "string": {
-						return self:wrapToString(expr: expr:leftExpr, exprC: innerC);
+						if (srcT == "Int" || srcT == "int") {
+							return "spec_to_string_int(" . innerC . ")";
+						}
+						if (srcT == "Float" || srcT == "float") {
+							return "spec_to_string_float(" . innerC . ")";
+						}
+						if (srcT == "Boolean" || srcT == "bool") {
+							return "spec_to_string_bool(" . innerC . ")";
+						}
+						if (self:allClassNames:has(key: srcT) && !self:allEnumNames:has(key: srcT) && !self:utils:isBuiltinClass(name: srcT)) {
+							return "spec_type_name(" . innerC . ")";
+						}
+						return innerC;
 					}
 					else: {
 						if (self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:isBuiltinClass(name: target)) {
@@ -359,6 +374,26 @@ Class is CodeGeneratorExpressions{
 					objType: self:currentClassName;
 				}
 				local String is fullObjType: objType;
+
+				# Dynamic dispatch on the root type: an Any-typed receiver invokes
+				# through its own vtable (root-contract members and any virtual
+				# method), instead of being retyped to the enclosing class.
+				if (objType == "Any" && self:methodSlots:has(key: expr:methodName)) {
+					local Member is anyM: self:lookupMethodMember(className: "Any", methodName: expr:methodName);
+					if (anyM:getKind() == "METHOD") {
+						local String is slotC: self:methodSlots:getString(key: expr:methodName, default: "0");
+						local String is retT: self:resolveReturnType(t: anyM:getType());
+						local String is argsC: "";
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							argsC: argsC . ", " . self:generateExpression(expr: arg:getValue());
+						});
+						if (retT == "void") {
+							return "((void (*)(Any*))((Any*)" . targetC . ")->_vtable[" . slotC . "])((Any*)" . targetC . argsC . ")";
+						}
+						return "((" . retT . " (*)(Any*))((Any*)" . targetC . ")->_vtable[" . slotC . "])((Any*)" . targetC . argsC . ")";
+					}
+				}
+
 				if (objType:startsWith(prefix: "Array:")) {
 					objType: "Array";
 				} else if (objType:startsWith(prefix: "Map:")) {
@@ -393,7 +428,7 @@ Class is CodeGeneratorExpressions{
 						objType: dispatchCls;
 						targetExprC: "((" . dispatchCls . "*)" . targetC . ")";
 					}
-					callStr: objType . "_" . expr:methodName . "(" . targetExprC . argsC . ")";
+					callStr: objType . "_" . expr:methodName . "(" . targetExprC . argsC . ") /* inst:" . objType . ":" . expr:methodName . " */";
 				}
 				local Member is targetM: self:lookupMethodMember(className: objType, methodName: expr:methodName);
 				local ClassInfo is targetCls: self:findClass(name: objType);

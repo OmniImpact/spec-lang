@@ -4,7 +4,6 @@
 <language name="Spec" version="2" kateversion="5.0" section="Sources" extensions="*.spec;*.SPEC" mimetype="text/x-spec" priority="10" author="Spec Language Team" license="MIT">
   <highlighting>
     <list name="keywords">
-      <item>extends</item>
       <item>local</item>
       <item>replace</item>
       <item>merge</item>

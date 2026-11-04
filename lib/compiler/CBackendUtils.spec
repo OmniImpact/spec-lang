@@ -58,7 +58,7 @@ Class is CBackendUtils{
 		};
 	}
 
-	Class is EscapeLoop extends Loop{
+	Class of Loop is EscapeLoop{
 		local String is src;
 		local Int is pos: 0;
 		local String is res: "";

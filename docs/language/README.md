@@ -126,6 +126,16 @@ the conflict. Abstract declarations never conflict: unimplemented methods and
 valueless fields compose into interface contracts. A shared base reached via
 multiple paths counts once (diamond sharing is not a conflict).
 
+### The Root Class (`Any`)
+Every class without explicit parents implicitly extends the root class `Any`
+(`Class of Stringable is Any`), which supplies:
+- `toString()` — default rendering via the declaring class name (override with `replace`)
+- `init()` — default no-op constructor
+- the `using` declaration slot
+
+`typeName()` on any instance reports its runtime class. Any-typed references
+dispatch `Any`-declared methods (like `toString`) through the receiver's vtable.
+
 ### Member Visibility
 Members are **public by default** — overridable and callable from anywhere.
 
@@ -151,7 +161,7 @@ Class is Greeter{
 Inheritance and generic parameters follow the declaration name:
 
 ```spec
-Class is EnglishGreeter extends Greeter { ... }
+of Greeter  is EnglishGreeter{ ... }
 Class of T is Box { ... }
 ```
 
@@ -174,7 +184,7 @@ Methods and functions declare their signatures using the `Function` type:
 - **`merge`** is the data-structure-aware counterpart of `replace`: valid on fields whose type supports merging (currently `Array`), it folds the ancestor's constant array literal and the child's into one — parent items first, then child items — satisfying the override requirement without `replace`:
 
 ```spec
-Class is MergeChild extends MergeBase{
+of MergeBase is MergeChild{
 	merge local Array of String is using: [base:struct:Array];
 	merge local Array of String is tags: ["extended"];
 }
@@ -189,7 +199,7 @@ Class is MergeChild extends MergeBase{
 implementation. Arguments may be constants or derived from the method's parameters:
 
 ```spec
-Class is ChildLogger extends LoggerBase{
+of LoggerBase is ChildLogger{
 	merge local Function of Int is add(Int is a, Int is b){
 		local Int is bumped: a + 100;
 		(bumped, b);
@@ -405,7 +415,7 @@ Rules enforced by the Loader:
 - Fragments never exist as types; the merged class carries the group's name.
 - A group with no primary file is created from the union of its fragments.
 - Duplicate member names across fragments are a load error naming both source files.
-- At most one `init` per merged class; fragments must not declare `extends`.
+- At most one `init` per merged class; fragments must not declare parent classes.
 - `using` arrays are combined (deduplicated, order preserved).
 - A class whose name equals its own group target is an opt-in same-name partial:
   duplicate same-named declarations merge instead of being dropped.
@@ -717,7 +727,7 @@ Spec does not include primitive `while` or `break` keywords in its grammar. Inst
 ### Pure Loop Decoupling
 Loops in Spec are non-blocking, decoupled state machines:
 ```spec
-Class is CounterLoop extends Loop{
+of Loop is CounterLoop{
 	local Int is count: 0;
 
 	replace Function of Boolean is evaluate(){
@@ -752,7 +762,7 @@ replace Function of Boolean is iteration(LoopControl is control){
 ### Event-Driven Non-Blocking Input
 Interactive console I/O delegates to event handlers rather than freezing thread execution:
 ```spec
-Class is ActionHandler extends InputHandler{
+of InputHandler is ActionHandler{
 	replace Function is onInput(String is action){
 		output:line("User chose: " . action);
 	}

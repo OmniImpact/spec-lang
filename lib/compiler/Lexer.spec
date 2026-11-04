@@ -21,7 +21,7 @@ Class is Lexer{
 	local Array of String is errors: [];
 
 	# Internal Loop Classes
-	Class is SkipWhitespaceLoop extends Loop{
+	Class of Loop is SkipWhitespaceLoop{
 		local Lexer is lexer;
 
 		replace Function is init(Lexer is lexer){
@@ -46,7 +46,7 @@ Class is Lexer{
 		}
 	}
 
-	Class is SkipCommentLoop extends Loop{
+	Class of Loop is SkipCommentLoop{
 		local Lexer is lexer;
 
 		replace Function is init(Lexer is lexer){
@@ -63,7 +63,7 @@ Class is Lexer{
 		}
 	}
 
-	Class is IdentScanLoop extends Loop{
+	Class of Loop is IdentScanLoop{
 		local Lexer is lexer;
 
 		replace Function is init(Lexer is lexer){
@@ -88,7 +88,7 @@ Class is Lexer{
 	## the decimal value. Underscore separators are skipped; an alphanumeric
 	## character that is not a valid digit for the base flags an error and is
 	## consumed so scanning can continue.
-	Class is BaseDigitsLoop extends Loop{
+	Class of Loop is BaseDigitsLoop{
 		local Lexer is lexer;
 		local Int is base: 16;
 		local Int is value: 0;
@@ -129,7 +129,7 @@ Class is Lexer{
 		}
 	}
 
-	Class is NumberScanLoop extends Loop{
+	Class of Loop is NumberScanLoop{
 		local Lexer is lexer;
 		local Boolean is isFloat: false;
 
@@ -168,7 +168,7 @@ Class is Lexer{
 		}
 	}
 
-	Class is StringScanLoop extends Loop{
+	Class of Loop is StringScanLoop{
 		local Lexer is lexer;
 		local String is quote: "";
 		local String is res: "";
@@ -218,7 +218,7 @@ Class is Lexer{
 		}
 	}
 
-	Class is TokenizeLoop extends Loop{
+	Class of Loop is TokenizeLoop{
 		local Lexer is lexer;
 		local Array of Token is tokens;
 
@@ -328,7 +328,7 @@ Class is Lexer{
 
 	local Function of Boolean is isKeyword(String is text){
 		return when (text) {
-			is "extends", "local", "contained", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
+			is "local", "contained", "replace", "merge", "is", "as", "of", "to", "return", "if", "else", "when": true;
 			else: false;
 		};
 	}

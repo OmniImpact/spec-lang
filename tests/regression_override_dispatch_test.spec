@@ -81,18 +81,18 @@ Class is Animal{
 }
 
 ## Mid-chain class whose override must remain visible to subclasses.
-Class is Dog extends Animal{
+Class of Animal is Dog{
 	replace Function of String is speak(){
 		return "woof";
 	}
 }
 
 ## Leaf class that does NOT re-declare speak; must inherit Dog's override.
-Class is Puppy extends Dog{
+Class of Dog is Puppy{
 	local Boolean is isYoung: true;
 }
 
 ## Deeper leaf class that does NOT re-declare speak.
-Class is Lab extends Dog{
+Class of Dog is Lab{
 	local String is breed: "labrador";
 }

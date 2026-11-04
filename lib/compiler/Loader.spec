@@ -41,7 +41,7 @@ Class is Loader{
 		return self:parseErrors;
 	}
 
-	Class is PathConvLoop extends Loop{
+	Class of Loop is PathConvLoop{
 		local String is src;
 		local Int is pos: 0;
 		local String is res: "";
@@ -121,6 +121,10 @@ Class is Loader{
 			is "base:struct:*": [
 				"lib/base/struct/Array.spec",
 				"lib/base/struct/Map.spec"
+			];
+			is "base:core:*": [
+				"lib/base/core/Stringable.spec",
+				"lib/base/core/Any.spec"
 			];
 			is "base:sys:*": [
 				"lib/base/sys/Parallel.spec",
@@ -267,7 +271,7 @@ Class is Loader{
 			}
 		);
 		if (target != "" && c:getBaseClass() != "") {
-			self:parseErrors:add(item: "  [LoadError] Group fragment '" . c:getName() . "' must not declare extends.");
+			self:parseErrors:add(item: "  [LoadError] Group fragment '" . c:getName() . "' must not declare parent classes.");
 			target: "";
 		}
 		return target;
@@ -498,10 +502,25 @@ Class is Loader{
 		self:groupTargets: [];
 		self:groupFragments: [];
 
+		# Root class lattice preloads, before any user code.
+		self:loadFile(filePath: "lib/base/core/Stringable.spec");
+		self:loadFile(filePath: "lib/base/core/Any.spec");
+
 		self:loadFile(filePath: rootPath);
+		self:appendImplicitAny();
 		self:mergeGroups();
 
 		return ProgramNode:init(classes: self:loadedClasses);
+	}
+
+	## Appends `Any` as the parent of every class without explicit parents
+	## (enums excluded).
+	Function is appendImplicitAny(){
+		self:loadedClasses:each(action: local Function(ClassInfo is c){
+			if (c:getBaseClass() != "Enum" && c:getBaseClasses():length() == 0 && c:getName() != "Any" && c:getName() != "Stringable") {
+				c:withBaseClasses(name: c:getName(), baseClasses: ["Any"], members: c:getMembers());
+			}
+		});
 	}
 
 }

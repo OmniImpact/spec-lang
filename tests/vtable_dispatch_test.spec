@@ -23,7 +23,7 @@ Class is LayoutBase{
 	}
 }
 
-Class is LayoutMid extends LayoutBase{
+Class of LayoutBase is LayoutMid{
 	local Int is midField: 22;
 
 	replace Function of Int is poly(){
@@ -31,7 +31,7 @@ Class is LayoutMid extends LayoutBase{
 	}
 }
 
-Class is LayoutLeaf extends LayoutMid{
+Class of LayoutMid is LayoutLeaf{
 	local Int is leafField: 33;
 
 	replace Function of Int is poly(){
@@ -51,7 +51,7 @@ Class is MibFeature{
 	}
 }
 
-Class is MiChild extends MiaFeature, MibFeature{
+Class of MiaFeature, MibFeature is MiChild{
 	replace Function of String is label(){
 		return "child-mia";
 	}

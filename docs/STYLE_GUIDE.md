@@ -33,7 +33,7 @@ This document establishes the official code style conventions, architectural idi
 
 ## 1. Core Design Principles
 
-1. **Minimalist Grammar**: Spec relies on only **10 keywords** (`class`, `extends`, `local`, `replace`, `is`, `of`, `to`, `if`, `else`, `return`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). All capabilities belong in the standard library.
+1. **Minimalist Grammar**: Spec relies on only **12 keywords** (`local`, `contained`, `replace`, `merge`, `is`, `as`, `of`, `to`, `if`, `else`, `return`, `when`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). All capabilities belong in the standard library.
 2. **Never Null**: Null does not exist in Spec grammar or runtime. Every potentially fallible lookup, query, or extraction accepts a caller-provided `default` fallback or returns an empty representation.
 3. **Decoupled Iteration**: Spec does not have primitive `while`, `for`, or `break` keywords. Iteration is encapsulated in reusable `Loop` subclasses evaluated by runners such as `While:run`.
 4. **Declarative & English-Like**: Code reads as explicit statements of intent: `local String is name: "Hero";`, `Function of Boolean is isAlive()`.
@@ -129,7 +129,7 @@ local String is content: File:read(path: "save.dat", default: "");
 ### Decoupled Iteration
 Loop logic is packaged inside dedicated loop classes extending `base:iterator:Loop`:
 ```spec
-Class is CountLoop extends Loop{
+of Loop is CountLoop{
 	local Int is count: 0;
 	local Int is limit: 10;
 

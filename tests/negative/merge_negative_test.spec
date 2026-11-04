@@ -25,7 +25,7 @@ Class is MergeBadBase{
 	local Int is count: 1;
 }
 
-Class is MergeBadChild extends MergeBadBase{
+Class of MergeBadBase is MergeBadChild{
 
 	# No forward statement: merge methods must delegate explicitly.
 	merge Function of Int is signal(){

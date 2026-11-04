@@ -23,7 +23,7 @@ Class is CodeGeneratorLookups{
 		return self:prelude:emitRuntime();
 	}
 
-	Class is ClassSearchLoop extends Loop{
+	Class of Loop is ClassSearchLoop{
 		local Array of ClassInfo is list;
 		local String is target;
 		local Int is idx: 0;
@@ -62,7 +62,7 @@ Class is CodeGeneratorLookups{
 		return ClassInfo:init(name: "", baseClass: "", members: []);
 	}
 
-	Class is FieldMemberLoop extends Loop{
+	Class of Loop is FieldMemberLoop{
 		local Array of Member is members;
 		local String is fieldName;
 		local Int is idx: 0;
@@ -119,7 +119,7 @@ Class is CodeGeneratorLookups{
 		return inherited;
 	}
 
-	Class is MethodMemberLoop extends Loop{
+	Class of Loop is MethodMemberLoop{
 		local Array of Member is members;
 		local String is methodName;
 		local Int is idx: 0;

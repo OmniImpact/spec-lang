@@ -324,6 +324,11 @@ Class is CodeGeneratorProgram{
 		self:allTaggedEnums: Map:init();
 		flattenedClasses:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:getName(), value: "true");
+			c:getMembers():each(action: local Function(Member is m){
+				if (m:getName() == "toString" && !self:classesWithToString:has(key: c:getName())) {
+					self:classesWithToString:set(key: c:getName(), value: "true");
+				}
+			});
 			if (c:getBaseClass() == "Enum") {
 				self:allEnumNames:set(key: c:getName(), value: "true");
 				c:getMembers():each(action: local Function(Member is m){
@@ -346,7 +351,9 @@ Class is CodeGeneratorProgram{
 		# first-seen order; names declared by 2+ classes dispatch virtually.
 		self:methodSlots: Map:init();
 		self:overriddenMethods: Map:init();
+		self:classesWithToString: Map:init();
 		self:methodSlotCount: 0;
+		self:slotNames: [];
 		flattenedClasses:each(action: local Function(ClassInfo is c){
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				c:getMembers():each(action: local Function(Member is m){

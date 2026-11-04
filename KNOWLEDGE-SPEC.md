@@ -21,8 +21,8 @@ Spec is an expressive, strictly typed, indentation-sensitive, compiled systems l
 
 ## 2. Program Structure
 
-Classes are declared `Class is Name { ... }`.
-`extends A, B` follows the declaration name; generic parameters use `Class of T is Box`.
+Classes are declared `Class of Parent is Name { ... }` — pre-binder `of` names parent classes, mirroring `Enum of Int is Status` (post-name `of` declares generic parameters).
+Parents precede the name: `Class of A, B is Child`; generic parameters use `Class of T is Box`.
 The `merge` modifier overrides a parent Array field by concatenating parent items then child items. On methods, `merge` requires a forward statement `(args...)` that delegates to the nearest parent implementation (partial forwards must name their arguments); merge init chains parent constructors.
 
 ```spec
@@ -77,7 +77,7 @@ Class is AppName{
 - **Multiple Inheritance & Abstraction Contracts**:
   - **Inherently Abstract**: Any field declared without an initial value (`local String is name;`) or method with an empty body (`describe() -> String{}`) is abstract.
   - **Interfaces as Abstract Classes**: A class composed of abstract members acts as an interface.
-  - **Multiple Inheritance**: Classes can extend multiple parents: `class Service extends Named, Identifiable { ... }`.
+  - **Multiple Inheritance**: Multiple inheritance: `Class of Named, Identifiable is Service { ... }`.
   - **Enforcement on `init`**: Concrete classes defining or calling `init(...)` must implement all abstract fields and methods inherited from all parents.
 
 ---
@@ -182,7 +182,7 @@ when (r) {
 ### Iteration (No `while` or `for` keywords)
 Loops use the decoupled iterator runner `While:run` with a subclass of `Loop`:
 ```spec
-Class is CountLoop extends Loop{
+of Loop is CountLoop{
 	local Int is current: 0;
 	local Int is max: 10;
 
@@ -246,7 +246,7 @@ While:run(loop: CountLoop:init(max: 5));
 A fragment class declares `replace Array of String is group: [Target];`. The Loader merges
 fragments into the target class (unioning `using` arrays, stripping `group`). Duplicate members
 across fragments are load errors; at most one `init` per merged class; fragments must not
-declare `extends`. See the [Class Grouping guide](docs/language/README.md#class-grouping-partial-classes).
+declare parent classes. See the [Class Grouping guide](docs/language/README.md#class-grouping-partial-classes).
 
 ```bash
 # Compile Spec source to native binary

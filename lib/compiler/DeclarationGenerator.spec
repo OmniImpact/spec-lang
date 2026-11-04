@@ -69,7 +69,7 @@ Class is DeclarationGenerator{
 		return self:cTypeForClass(typeName: t:getName(), typeParams: typeParams);
 	}
 
-	Class is HasFieldLoop extends Loop{
+	Class of Loop is HasFieldLoop{
 		local Array of Member is list;
 		local String is name: "";
 		local Int is idx: 0;

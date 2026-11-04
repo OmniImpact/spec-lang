@@ -1071,6 +1071,11 @@ Class is RuntimePrelude{
 		p: p . "    }\n";
 		p: p . "    return total;\n";
 		p: p . "}\n\n";
+		p: p . "/* Type Name Introspection */\n";
+		p: p . "const char* spec_type_name(const void* obj) {\n";
+		p: p . "    if (!obj) return \"\";\n";
+		p: p . "    return *((const char**)obj);\n";
+		p: p . "}\n\n";
 		p: p . "/* Clock & Memory Metrics */\n";
 		p: p . "long long spec_clock_ms(void) {\n";
 		p: p . "    struct timespec ts;\n";

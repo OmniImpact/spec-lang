@@ -23,7 +23,7 @@ Class is Animal{
 	}
 }
 
-Class is Dog extends Animal{
+Class of Animal is Dog{
 	replace Function of String is speak(){
 		return "woof";
 	}

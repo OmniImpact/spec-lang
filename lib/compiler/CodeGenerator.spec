@@ -56,6 +56,9 @@ Class is CodeGenerator{
 	## Slot index -> method name (parallel to methodSlots).
 	local Array of String is slotNames: [];
 
+	## Classes declaring an explicit toString (static call targets).
+	local Map of String to String is classesWithToString: Map:init();
+
 	## Local variables visible in current method scope (variable name -> type name).
 	local Map of String to String is localVars: Map:init();
 
@@ -109,6 +112,7 @@ Class is CodeGenerator{
 		self:allStringBackedEnums: Map:init();
 		self:allTaggedEnums: Map:init();
 		self:inMethod: false;
+		self:classesWithToString: Map:init();
 		self:helperFunctions: "";
 		self:anonCounter: 0;
 		self:inlineReturnVar: "";
