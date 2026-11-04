@@ -36,7 +36,7 @@
    - [Branching with `when` (`when` Statements & Expressions)](#branching-with-when)
    - [Pattern Destructuring with `when`](#pattern-destructuring-with-when)
 6. [Compiler Error Recovery & Multi-File Provenance](#compiler-error-recovery--multi-file-provenance)
-7. [Unlockable Concurrency & Iteration Model](#unlockable-concurrency--iteration-model)
+7. [Unblockable Concurrency & Iteration Model](#unblockable-concurrency--iteration-model)
    - [Pure Loop Decoupling (`Loop`, `While:run`)](#pure-loop-decoupling)
    - [Terminating Iterations (No `break` Keyword)](#terminating-iterations-no-break-keyword)
    - [Event-Driven Non-Blocking Input](#event-driven-non-blocking-input)
@@ -720,7 +720,7 @@ The Spec compiler coordinates multi-file compilation with precise diagnostics:
 
 ---
 
-## Unlockable Concurrency & Iteration Model
+## Unblockable Concurrency & Iteration Model
 
 Spec does not include primitive `while` or `break` keywords in its grammar. Instead, all looping is decoupled into explicit state-machine lifecycle contracts driven by the standard library (`base:iterator:*`).
 

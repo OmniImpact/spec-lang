@@ -1,6 +1,6 @@
 # Spec Programming Language
 
-**Spec** is an elegant, concurrent-first, unlockable programming language that compiles directly to optimized C11.
+**Spec** is an elegant, concurrent-first, unblockable programming language that compiles directly to optimized C11.
 
 ```spec
 Class is HelloWorld{
@@ -30,15 +30,18 @@ Spec is architected with a strict philosophy: **keep the compiler minimal, and b
 |---|---|
 | `local` | Private: invisible to children — cannot be replaced, merged, or accessed outside the declaring class |
 | `contained` | Protected and final: visible to subclasses, but cannot be replaced, merged, or accessed externally |
-| `public` (default) | No modifier needed: overridable via `replace`/`merge`, callable from anywhere |
-| `replace` | Override an ancestor member (mandatory; checked) |
+| `replace` | Override an ancestor member (mandatory and checked; root-contract overrides are always replace) |
 | `merge` | Compose with the ancestor member (array fold, or function delegation via `(args...)`) |
 | `is` | Bind a name to a declaration or value; also reads as equality in comparisons |
 | `as` | Cast: classes, numerics, and the `Hex`/`Bin`/`Oct` base conversions |
-| `of` / `to` | Generic parameters (`Array of T`, `Map of K to V`, `Class of T is Box`) |
+| `of` | Parent classes (pre-name: `Class of Greeter is EnglishGreeter`) or generic parameters (post-name or type-level: `Class of T is Box`, `Array of Int`) |
+| `to` | Second generic parameter (`Map of K to V`, `Function of A to B`) |
 | `if` / `else` | Conditionals — statement form and inline expression form |
 | `return` | Return from a method |
 | `when` | Pattern matching with compile-time exhaustiveness on enums |
+
+Members without a visibility modifier are **public by default**: overridable via
+`replace`/`merge` and callable from anywhere.
 
 | Primitive Type | Meaning |
 |---|---|
@@ -53,21 +56,32 @@ Spec is architected with a strict philosophy: **keep the compiler minimal, and b
 - **Userland Implementation**: Rich language features live in the standard library (`lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 
-### 2. `Function` as a First-Class Type (Uniform Declarations)
-In Spec, `Function` is a **type**, not a keyword. This establishes two vital design characteristics:
-- **Capitalization Discipline**: Keywords are lowercase (`class`, `local`, `replace`, `is`), while types are PascalCase (`Int`, `String`, `Boolean`, `Function`).
-- **Symmetrical Declaration Grammar**: Variable declarations and method definitions share the exact same structural pattern:
-  - Variable: `<Modifiers> <Type> is <name>: <value>;`
+### 2. Classes and Functions as First-Class Types (Uniform Declarations)
+
+In Spec, both `Class` and `Function` are **types**, not keywords. This establishes two vital design characteristics:
+
+- **Capitalization Discipline**: Keywords are lowercase (`local`, `contained`, `replace`, `merge`, `is`), while declaration types are PascalCase (`Class`, `Enum`, `Int`, `String`, `Function`). Structural conventions such as `using` and `group` are Loader-recognized pseudo-fields, not keywords.
+
+- **Symmetrical Declaration Grammar**: Classes, variables, and methods share the exact same structural pattern — `<modifiers> <Type> is <name>`:
+  - Class declaration: parents use the pre-name `of` slot (mirroring `Enum of Int is Status`)
+    ```spec
+    Class of Greeter is EnglishGreeter { ... }
+    Class of T is Box { ... }
+    ```
+  - Variable: `<modifiers> <Type> is <name>: <value>;`
     ```spec
     local Int is score: 100;
     local Function of String to Boolean is validator;
     ```
-  - Method: `<Modifiers> <Type> is <name>(<parameters>) { <body> }`
+  - Method: `<modifiers> <Type> is <name>(<parameters>) { <body> }`
     ```spec
     replace Function is init(Map of String to String is args){ ... }
     replace Function of Boolean is evaluate(){ ... }
     ```
+
 - **First-Class Callables**: Because `Function` is a type, functions and closures can be stored in variables, passed to higher-order functions, and typed generically (`Function of Param to Return`).
+
+- **The Root Class `Any`**: Every class without explicit parents implicitly extends the root class `Any` (`Class of Stringable is Any`), which supplies default `toString()`, a no-op `init()`, and the `using` slot. Any-typed references dispatch only root-contract members — cast to a concrete class for the rest.
 
 ### 3. The "Never Null" Safety Standard
 In Spec, `null` does not exist as a runtime value, pointer, or type:
@@ -77,7 +91,7 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 - **Deferred Initialization**: Class fields may be declared without inline values provided they are assigned in `init(...)` before use.
 - **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
 
-### 4. Unlockable & Concurrency-First Iteration
+### 4. Unblockable & Concurrency-First Iteration
 Spec has eliminated primitive loop keywords (`while`, `break`) entirely from the language grammar. Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects:
 - **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`. Returning `false` from `iteration` or `evaluate` cleanly terminates the loop.
 - **`base:iterator:LoopControl`**: Supports non-blocking halts (`stop()`) and asynchronous completion triggers (`onComplete`).
@@ -104,7 +118,7 @@ replace Array of String is using: [
 ];
 ```
 
-### 7. Next-Generation Language Features
+### 7. Language Features
 Spec includes modern, expressive language capabilities designed for type safety and clarity:
 - **User-Defined Generic Classes**: Express reusable parametric types such as `Class of T is Box` with automated type parameter substitution and casting.
 - **First-Class Capturing Closures & Direct Invocation**: Anonymous function expressions capture outer local variables and `self` automatically, and `Function` variables can be invoked directly (`scale(x: 4)`).
@@ -113,7 +127,11 @@ Spec includes modern, expressive language capabilities designed for type safety 
 - **Default Parameter Values & Call-Site Reordering**: Functions declare optional parameters with default values; call sites may omit defaults and pass named arguments in any order.
 - **Map Literals & Index Assignment**: First-class map literals (`["alice": 95]`, empty `[:]`), bracket indexing (`scores["alice"]`, `arr[0]`), and index assignment (`scores["charlie"]: 100;`, `arr[1]: "updated";`).
 - **Functional Collection Combinators**: Transform and reduce collections fluently using `Array:map`, `Array:fold`, and `Map:each`.
-- **Parser Error Recovery & Source Provenance**: Syntax errors report precise source coordinates `[SyntaxError] [file:line:col]` and halt cleanly, while type errors retain multi-file provenance.
+- **Parser Error Recovery & Source Provenance**: Syntax errors report precise source coordinates `[SyntaxError] [file:line:col]` with recovery, while type errors retain multi-file provenance and abort cleanly.
+- **Type Casts (`as`)**: `value as Target` unifies class up/downcasts, numeric casts, and base conversion (`as Hex`, `as Bin(width)`, `as Oct`).
+- **Class Grouping (Partials)**: Split a class across multiple files with `group: [Target]`; fragments merge at load time with duplicate detection.
+- **Visibility Model**: `local` (private), `contained` (protected + final), public by default — enforced by the checker, not by convention.
+- **Root Contract**: `Any`-typed references may only invoke root members (`toString`, `typeName`, `init`); everything else requires a cast.
 
 - **Bitwise Operators & Base Literals**: `&`, `|`, `^`, `<<`, `>>`, `~` with C precedence; `0x`/`0b`/`0o` literals with `_` separators; `toBase`/`parseInt` conversions.
 - **Parallel Execution**: `Parallel:run` fans a pure worker closure across pthreads with lock-free per-thread RNG; atomic slots coordinate shared state; virtual dispatch throughout.
@@ -208,9 +226,9 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness, root-contract calls) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
 | **Memory** | Amortized string buffers + scoped frees; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
-| **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces | None — hand-rolled with structs and function pointers | Single inheritance + interfaces | Traits + composition |
+| **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; three-tier visibility (public / `local` / `contained`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
-| **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
+| **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
 | **Enums & matching** | Algebraic enums with payloads; `when` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
