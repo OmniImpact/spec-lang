@@ -23848,6 +23848,9 @@ const char* TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr)
         TypeChecker_checkMemberVisibility(self, mOwner, TypeChecker_lookupAnyMember(self, cBase, method) /* inst:TypeChecker:lookupAnyMember */, method) /* inst:TypeChecker:checkMemberVisibility */;
     }
     }
+        if (((((((spec_str_equals(targetType, "Any")) && ((!spec_str_equals(method, "toString"))))) && ((!spec_str_equals(method, "typeName"))))) && ((!spec_str_equals(method, "init"))))) {
+        (((void (*)(TypeChecker*, long long, const char*))self->_vtable[91]))((TypeChecker*)self, self->currentLine, spec_str_concat(spec_str_concat("Member '", method), "' is not part of the root contract; cast the Any-typed value to a concrete class before calling it (value as ClassName)."));
+    }
         const char* fnVarT = spec_str_clone_if_buffered("");
         if (((spec_str_equals(({ Expression* _recv = (Expression*)(expr->methodTarget); (((const char* (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); }), "IDENT")) && (spec_str_equals(expr->methodTarget->stringValue, "self")))) {
         fnVarT = spec_str_clone_if_buffered(spec_map_get_string(self->localVars, method, spec_map_get_string(self->fieldTypes, method, "")));

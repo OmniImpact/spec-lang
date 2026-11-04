@@ -21,7 +21,7 @@ Spec is an expressive, strictly typed, indentation-sensitive, compiled systems l
 
 ## 2. Program Structure
 
-Classes are declared `Class of Parent is Name { ... }` — pre-binder `of` names parent classes, mirroring `Enum of Int is Status` (post-name `of` declares generic parameters).
+Classes are declared `Class of Parent is Name { ... }` — pre-binder `of` names parent classes, mirroring `Enum of Int is Status` (post-name `of` declares generic parameters). Every class without parents implicitly extends the root `Any`, which provides default `toString()`/`init()` and the `using` slot; Any-typed values only expose the root contract (`toString`, `typeName`, `init`) — cast to a concrete class for other members.
 Parents precede the name: `Class of A, B is Child`; generic parameters use `Class of T is Box`.
 The `merge` modifier overrides a parent Array field by concatenating parent items then child items. On methods, `merge` requires a forward statement `(args...)` that delegates to the nearest parent implementation (partial forwards must name their arguments); merge init chains parent constructors.
 

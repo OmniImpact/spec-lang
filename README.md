@@ -205,11 +205,11 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 
 | Dimension | **Spec** | **C** | **Java** | **Rust** |
 |---|---|---|---|---|
-| **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
+| **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness, root-contract calls) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
 | **Memory** | Amortized string buffers + scoped frees; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces | None — hand-rolled with structs and function pointers | Single inheritance + interfaces | Traits + composition |
-| **Dispatch** | Virtual tables (vtables), most-derived wins | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
+| **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
 | **Enums & matching** | Algebraic enums with payloads; `when` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
@@ -219,9 +219,11 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
 
 Spec's distinguishing ground: the override discipline (`replace`/`merge`), never-null
-defaults, enforced exhaustiveness, and a verified self-hosting fixed point. It is a
-young language — its standard library and tooling are minimal next to the others —
-but its compile-time guarantees are already stricter than C's in the areas it covers.
+defaults, enforced exhaustiveness, a strict root contract (`Any`-typed values may
+only call root members — cast for the rest), and a verified self-hosting fixed
+point. It is a young language — its standard library and tooling are minimal next
+to the others — but its compile-time guarantees are already stricter than C's in
+the areas it covers.
 
 ## License
 

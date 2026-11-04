@@ -127,6 +127,10 @@ assert_compile_failure "as-chained-negative" \
 	"$ROOT/tests/negative/as_chained_negative_test.spec" \
 	"Chained 'as' casts are not supported"
 
+assert_compile_failure "any-contract-negative" \
+	"$ROOT/tests/negative/any_contract_negative_test.spec" \
+	"Member 'fetch' is not part of the root contract"
+
 assert_compile_failure "invalid-literal-negative" \
 	"$ROOT/tests/negative/invalid_literal_negative_test.spec" \
 	"Invalid digit in base-16 number literal"

@@ -1030,6 +1030,9 @@ Class is TypeChecker{
 						self:checkMemberVisibility(ownerClass: mOwner, member: self:lookupAnyMember(className: cBase, methodName: method), memberName: method);
 					}
 				}
+				if (targetType == "Any" && method != "toString" && method != "typeName" && method != "init") {
+					self:addError(line: self:currentLine, msg: "Member '" . method . "' is not part of the root contract; cast the Any-typed value to a concrete class before calling it (value as ClassName).");
+				}
 
 				local String is fnVarT: "";
 				if (expr:methodTarget:getKind() == "IDENT" && expr:methodTarget:stringValue == "self") {
