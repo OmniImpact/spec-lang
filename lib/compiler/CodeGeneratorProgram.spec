@@ -65,13 +65,13 @@ Class is CodeGeneratorProgram{
 				if (vTypeName == 'List') {
 					local String is fullT: self:formatVarTypeString(t: stmt:varType);
 					local String is elemKind: self:containerElemKind(containerType: fullT);
-					local String is newCall: 'spec_buf_new(8, 0)';
+					local String is newCall: 'spec_vec_new()';
 					if (elemKind == 'byte') {
-						newCall: 'spec_buf_new(1, 0)';
+						newCall: 'spec_bytebuffer_new()';
 					} else if (elemKind == 'string') {
-						newCall: 'spec_buf_new(8, 2)';
+						newCall: 'spec_vec_new_string()';
 					} else if (elemKind == 'object') {
-						newCall: 'spec_buf_new(8, 1)';
+						newCall: 'spec_vec_new_object()';
 					}
 					return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
 				}

@@ -304,13 +304,13 @@ Class is CodeGeneratorInference{
 						} else if (ft == 'List') {
 							local String is fullT: self:formatTypeString(t: m:getType());
 							local String is elemKind: self:containerElemKind(containerType: fullT);
-							local String is newCall: 'spec_buf_new(8, 0)';
+							local String is newCall: 'spec_vec_new()';
 							if (elemKind == 'byte') {
-								newCall: 'spec_buf_new(1, 0)';
+								newCall: 'spec_bytebuffer_new()';
 							} else if (elemKind == 'string') {
-								newCall: 'spec_buf_new(8, 2)';
+								newCall: 'spec_vec_new_string()';
 							} else if (elemKind == 'object') {
-								newCall: 'spec_buf_new(8, 1)';
+								newCall: 'spec_vec_new_object()';
 							}
 							out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . newCall . ";\n";
 						}

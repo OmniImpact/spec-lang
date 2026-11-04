@@ -20,7 +20,10 @@ Class is CBackendUtils{
 	## @return: C11 type signature string.
 	Function of String is cTypeFor(String is typeName){
 		if (typeName:startsWith(prefix: 'List')) {
-			return 'SpecBuf*';
+			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
+				return 'SpecByteBuffer*';
+			}
+			return 'SpecVec*';
 		}
 		if (typeName:startsWith(prefix: 'Array')) {
 			return 'SpecArray*';

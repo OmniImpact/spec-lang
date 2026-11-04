@@ -996,24 +996,22 @@ Class is Parser{
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of Statement is body: [];
-			if (self:check(kind: 'SYMBOL', value: '{')) {
-				self:advance();
-				params:each(action: local Function(Parameter is p){
-					if (p:getType():getName() == 'SELF_FIELD') {
-						local Expression is lhs: Expression:init(kind: 'PATH');
-						lhs:makePath(segments: ['self', p:getName()]);
-						local Expression is rhs: Expression:init(kind: 'IDENT');
-						rhs:makeIdent(name: p:getName());
-						local Statement is assignS: Statement:init(kind: 'ASSIGN');
-						assignS:assign(target: lhs, value: rhs);
-						body:add(item: assignS);
-					}
-				});
-				While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
-				self:matchToken(kind: 'SYMBOL', value: '}');
-			}
+			params:each(action: local Function(Parameter is p){
+				if (p:getType():getName() == 'SELF_FIELD') {
+					local Expression is lhs: Expression:init(kind: 'PATH');
+					lhs:makePath(segments: ['self', p:getName()]);
+					local Expression is rhs: Expression:init(kind: 'IDENT');
+					rhs:makeIdent(name: p:getName());
+					local Statement is assignS: Statement:init(kind: 'ASSIGN');
+					assignS:assign(target: lhs, value: rhs);
+					body:add(item: assignS);
+				}
+			});
+			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
 			local Member is m: Member:init(kind: 'METHOD');
 			m:setLine(line: nameTok:getLine());
@@ -1035,24 +1033,22 @@ Class is Parser{
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchToken(kind: 'SYMBOL', value: ')');
+			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of Statement is body: [];
-			if (self:check(kind: 'SYMBOL', value: '{')) {
-				self:advance();
-				params:each(action: local Function(Parameter is p){
-					if (p:getType():getName() == 'SELF_FIELD') {
-						local Expression is lhs: Expression:init(kind: 'PATH');
-						lhs:makePath(segments: ['self', p:getName()]);
-						local Expression is rhs: Expression:init(kind: 'IDENT');
-						rhs:makeIdent(name: p:getName());
-						local Statement is assignS: Statement:init(kind: 'ASSIGN');
-						assignS:assign(target: lhs, value: rhs);
-						body:add(item: assignS);
-					}
-				});
-				While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
-				self:matchToken(kind: 'SYMBOL', value: '}');
-			}
+			params:each(action: local Function(Parameter is p){
+				if (p:getType():getName() == 'SELF_FIELD') {
+					local Expression is lhs: Expression:init(kind: 'PATH');
+					lhs:makePath(segments: ['self', p:getName()]);
+					local Expression is rhs: Expression:init(kind: 'IDENT');
+					rhs:makeIdent(name: p:getName());
+					local Statement is assignS: Statement:init(kind: 'ASSIGN');
+					assignS:assign(target: lhs, value: rhs);
+					body:add(item: assignS);
+				}
+			});
+			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
+			self:matchToken(kind: 'SYMBOL', value: '}');
 
 			local Member is m: Member:init(kind: 'METHOD');
 			m:setLine(line: nameTok:getLine());
