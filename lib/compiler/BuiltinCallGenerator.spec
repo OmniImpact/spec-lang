@@ -125,7 +125,7 @@ Class is BuiltinCallGenerator{
 			}
 			local String is freeLoopC: "";
 			if (loopVal:getKind() == "CALL" && loopVal:methodName == "init") {
-				freeLoopC: " free(_lp);";
+				freeLoopC: " spec_release(_lp);";
 			}
 			return "({ void* _lp = (void*)(" . loopC . "); SpecLoopControl* _ctrl = (SpecLoopControl*)(" . ctrlC . "); while (" . loopClass . "_evaluate((void*)_lp)) { if (!" . loopClass . "_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }" . freeLoopC . " })";
 		}

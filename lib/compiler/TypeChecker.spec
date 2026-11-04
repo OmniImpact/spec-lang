@@ -254,7 +254,7 @@ Class is TypeChecker{
 		if (name == "Array" || name == "Map" || name == "File" || name == "Process" || name == "Math" || name == "math") {
 			return true;
 		}
-		if (name == "While" || name == "Input" || name == "LoopControl" || name == "Output" || name == "output" || name == "error" || name == "Error") {
+		if (name == "While" || name == "Input" || name == "LoopControl" || name == "Output" || name == "output" || name == "error" || name == "Error" || name == "Parallel" || name == "Ansi") {
 			return true;
 		}
 		return false;
@@ -1038,7 +1038,27 @@ Class is TypeChecker{
 				if (expr:methodTarget:getKind() == "IDENT" && expr:methodTarget:stringValue == "self") {
 					fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ""));
 				}
-				if (fnVarT:startsWith(prefix: "Function")) {
+				if (targetType == "Parallel" && method == "run") {
+					local Boolean is hasWorker: false;
+					expr:methodArgs:each(action: local Function(NamedArg is arg){
+						local String is aName: arg:getName();
+						local String is aType: self:inferExpressionType(expr: arg:getValue());
+						if (aName == "threads" || aName == "iterations") {
+							if (aType != "Int" && aType != "int" && aType != "Any") {
+								self:addError(line: self:currentLine, msg: "Parallel:run '" . aName . "' argument must be Int, found '" . aType . "'.");
+							}
+						} else if (aName == "worker") {
+							hasWorker: true;
+							if (!aType:startsWith(prefix: "Function") && aType != "Any") {
+								self:addError(line: self:currentLine, msg: "Parallel:run 'worker' argument must be a Function, found '" . aType . "'.");
+							}
+						}
+					});
+					if (!hasWorker) {
+						self:addError(line: self:currentLine, msg: "Parallel:run requires 'worker' named argument.");
+					}
+					res: "Int";
+				} else if (fnVarT:startsWith(prefix: "Function")) {
 					if (fnVarT:startsWith(prefix: "Function:") && fnVarT:length() > 9) {
 						res: fnVarT:substring(start: 9, end: fnVarT:length());
 					} else {

@@ -168,11 +168,11 @@ Implement compiler-managed deterministic reference counting directly in the C11 
 ### Tasks
 - [x] **Task 2: Bounds Protection** — Implement `spec_panic_bounds` in `RuntimePrelude.spec` and hook into array indexing and assignments.
 - [x] **Task 3: Safe Downcasting** — Implement RTTI type checking (`spec_is_subclass_of`) and checked cast macro (`spec_cast_check`) in `CodeGeneratorExpressions.spec` and `CodeGeneratorProgram.spec`.
+- [x] **Task 5: Reference Counting Engine** — Implement `SpecHeader`, `spec_alloc`, `spec_retain`, `spec_release`, `spec_assign`, `spec_assign_transfer`, class and collection `_destroy()` generation in `CodeGeneratorInference.spec`, `DeclarationGenerator.spec`, and `RuntimePrelude.spec`.
+- [x] **Task 7: Thread-Safety Checks** — Enhance `TypeChecker.spec` with signature and argument validation for `Parallel:run` concurrency blocks.
 - [ ] **Task 1: Safe Closures** — Update `lib/compiler/CodeGeneratorExpressions.spec` to use heap env structs instead of file-scope static variables.
 - [ ] **Task 4: Boehm GC Bridge** — Add `--gc` compiler option to `Driver.spec` and conditionally emit Boehm GC hooks in `RuntimePrelude.spec`.
-- [ ] **Task 5: Reference Counting Engine** — Implement `SpecHeader`, `spec_retain`, `spec_release`, and class `_destroy()` generation in `DeclarationGenerator.spec`.
 - [ ] **Task 6: Scope Cleanup Injection** — Emit `__attribute__((cleanup(...)))` in `CodeGeneratorProgram.spec` for local reference management.
-- [ ] **Task 7: Thread-Safety Checks** — Enhance `TypeChecker.spec` with capture-safety validation for parallel blocks.
 
 ### Verification Commands
 ```bash

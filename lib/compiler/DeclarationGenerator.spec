@@ -273,6 +273,7 @@ Class is DeclarationGenerator{
 			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
 				out: out . "typedef struct " . c:getName() . " " . c:getName() . ";\n";
 				out: out . c:getName() . "* " . c:getName() . "_new(void);\n";
+				out: out . "void " . c:getName() . "_destroy(void* self);\n";
 				local Boolean is hasInit: false;
 				c:getMembers():each(action: local Function(Member is m){
 					if (m:getName() == "init") { hasInit: true; }
@@ -343,7 +344,7 @@ Class is DeclarationGenerator{
 					local String is vName: self:cIdent(name: m:getName());
 					if (m:getParameters():length() == 0) {
 						out: out . "static inline " . name . "* " . name . "_" . vName . "_ctor(void) {\n";
-						out: out . "    " . name . "* _e = (" . name . "*)calloc(1, sizeof(" . name . "));\n";
+						out: out . "    " . name . "* _e = (" . name . "*)spec_alloc(sizeof(" . name . "), NULL);\n";
 						out: out . "    _e->_tag = " . name . "_TAG_" . vName . ";\n";
 						out: out . "    _e->_variant_name = \"" . m:getName() . "\";\n";
 						out: out . "    return _e;\n}\n\n";
@@ -356,7 +357,7 @@ Class is DeclarationGenerator{
 							firstP: false;
 						});
 						out: out . ") {\n";
-						out: out . "    " . name . "* _e = (" . name . "*)calloc(1, sizeof(" . name . "));\n";
+						out: out . "    " . name . "* _e = (" . name . "*)spec_alloc(sizeof(" . name . "), NULL);\n";
 						out: out . "    _e->_tag = " . name . "_TAG_" . vName . ";\n";
 						out: out . "    _e->_variant_name = \"" . m:getName() . "\";\n";
 						m:getParameters():each(action: local Function(Parameter is p){

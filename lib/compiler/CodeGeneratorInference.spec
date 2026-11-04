@@ -254,8 +254,19 @@ Class is CodeGeneratorInference{
 					self:fieldTypes:set(key: f:getName(), value: self:formatTypeString(t: f:getType()));
 				});
 
+				out: out . "void " . c:getName() . "_destroy(void* self_ptr) {\n";
+				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)self_ptr;\n";
+				out: out . "    if (!self) return;\n";
+				allFields:each(action: local Function(Member is m){
+					local String is ft: m:getType():getName();
+					if ((self:allClassNames:has(key: ft) && !self:allEnumNames:has(key: ft)) || self:allTaggedEnums:has(key: ft) || ft:startsWith(prefix: "Array") || ft:startsWith(prefix: "Map") || ft:startsWith(prefix: "Function") || ft == "LoopControl") {
+						out: out . "    if (self->" . self:cIdent(name: m:getName()) . ") { spec_release((void*)self->" . self:cIdent(name: m:getName()) . "); self->" . self:cIdent(name: m:getName()) . " = NULL; }\n";
+					}
+				});
+				out: out . "}\n\n";
+
 				out: out . c:getName() . "* " . c:getName() . "_new(void) {\n";
-				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)calloc(1, sizeof(" . c:getName() . "));\n";
+				out: out . "    " . c:getName() . "* self = (" . c:getName() . "*)spec_alloc(sizeof(" . c:getName() . "), " . c:getName() . "_destroy);\n";
 				out: out . "    self->_type_name = \"" . c:getName() . "\";\n";
 				if (self:methodSlotCount > 0) {
 					out: out . "    self->_vtable = " . c:getName() . "_vtable;\n";

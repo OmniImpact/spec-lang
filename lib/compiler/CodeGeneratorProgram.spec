@@ -76,6 +76,10 @@ Class is CodeGeneratorProgram{
 				} else if (lhsType == "String" || lhsType == "string") {
 					valC: "spec_str_clone_if_buffered(" . valC . ")";
 				}
+				local Boolean is isArcLhs: (self:allClassNames:has(key: lhsType) && !self:allEnumNames:has(key: lhsType)) || self:allTaggedEnums:has(key: lhsType) || lhsType:startsWith(prefix: "Array") || lhsType:startsWith(prefix: "Map") || lhsType:startsWith(prefix: "Function") || lhsType == "LoopControl";
+				if (targetC:startsWith(prefix: "self->") && isArcLhs) {
+					return "    spec_assign((void**)&" . targetC . ", (void*)(" . valC . "));\n";
+				}
 				return "    " . targetC . " = " . valC . ";\n";
 			}
 			is "IF": {
