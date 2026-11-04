@@ -427,11 +427,53 @@ Class is CodeGeneratorProgram{
 		cSource: cSource . decls;
 		cSource: cSource . structs;
 		cSource: cSource . vt;
+		cSource: cSource . self:generateTypeHierarchy(classes: flattenedClasses);
 		cSource: cSource . self:helperFunctions;
 		cSource: cSource . ctors;
 		cSource: cSource . methods;
 		cSource: cSource . mainFn;
 		return cSource;
+	}
+
+	local Function is collectAncestors(ClassInfo is c, Array of ClassInfo is allClasses, Array of String is acc){
+		c:getBaseClasses():each(action: local Function(String is baseName){
+			if (acc:indexOf(search: baseName, default: -1) < 0) {
+				acc:add(item: baseName);
+				allClasses:each(action: local Function(ClassInfo is cand){
+					if (cand:getName() == baseName) {
+						self:collectAncestors(c: cand, allClasses: allClasses, acc: acc);
+					}
+				});
+			}
+		});
+	}
+
+	local Function of String is generateTypeHierarchy(Array of ClassInfo is classes){
+		local String is out: "/* RTTI Class Hierarchy */\n";
+		out: out . "static bool spec_is_subclass_of(const char* actual, const char* target) {\n";
+		out: out . "    if (!actual || !target) return false;\n";
+		out: out . "    if (strcmp(actual, target) == 0) return true;\n";
+		out: out . "    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n";
+		classes:each(action: local Function(ClassInfo is c){
+			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != "Enum") {
+				local Array of String is ancestors: [];
+				self:collectAncestors(c: c, allClasses: classes, acc: ancestors);
+				if (ancestors:length() > 0) {
+					out: out . "    if (strcmp(actual, \"" . c:getName() . "\") == 0) {\n";
+					out: out . "        return ";
+					local Boolean is firstA: true;
+					ancestors:each(action: local Function(String is aName){
+						if (!firstA) { out: out . " || "; }
+						out: out . "(strcmp(target, \"" . aName . "\") == 0)";
+						firstA: false;
+					});
+					out: out . ";\n    }\n";
+				}
+			}
+		});
+		out: out . "    return false;\n";
+		out: out . "}\n\n";
+		return out;
 	}
 
 	## Emits per-class virtual method tables.

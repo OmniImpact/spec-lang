@@ -16,6 +16,33 @@
 #include <sys/resource.h>
 #include <stdatomic.h>
 
+/* Spec Runtime Panic & Safety Utilities */
+void spec_panic(const char* msg) {
+    fprintf(stderr, "[Spec Runtime Panic] %s\n", msg ? msg : "fatal error");
+    exit(1);
+}
+
+void spec_panic_bounds(const char* coll, long long idx, size_t len) {
+    fprintf(stderr, "[Spec Runtime Panic] %s index out of bounds: index %lld for length %zu\n", coll ? coll : "Collection", idx, len);
+    exit(1);
+}
+
+void spec_panic_cast(const char* actual, const char* target) {
+    fprintf(stderr, "[Spec Runtime Panic] Invalid downcast: instance of '%s' cannot be cast to '%s'\n", actual ? actual : "Unknown", target ? target : "Unknown");
+    exit(1);
+}
+
+static bool spec_is_subclass_of(const char* actual, const char* target);
+
+static inline void* spec_cast_check(const void* obj, const char* target) {
+    if (!obj) return NULL;
+    const char* actual = *((const char**)obj);
+    if (!spec_is_subclass_of(actual, target)) {
+        spec_panic_cast(actual, target);
+    }
+    return (void*)obj;
+}
+
 /* Spec Runtime String Utilities */
 static const char* _spec_last_str = NULL;
 static size_t _spec_last_len = 0;
@@ -321,19 +348,29 @@ long long spec_array_length(SpecArray* a) {
 }
 
 void* spec_array_get(SpecArray* a, long long idx) {
-    if (!a || idx < 0) return NULL;
+    if (!a) spec_panic("Null pointer access on uninitialized Array");
     pthread_mutex_lock(&a->lock);
-    void* val = ((size_t)idx < a->length) ? a->items[idx] : NULL;
+    if (idx < 0 || (size_t)idx >= a->length) {
+        size_t len = a->length;
+        pthread_mutex_unlock(&a->lock);
+        spec_panic_bounds("Array", idx, len);
+        return NULL;
+    }
+    void* val = a->items[idx];
     pthread_mutex_unlock(&a->lock);
     return val;
 }
 
 void spec_array_set(SpecArray* a, long long idx, void* item) {
-    if (!a || idx < 0) return;
+    if (!a) spec_panic("Null pointer access on uninitialized Array");
     pthread_mutex_lock(&a->lock);
-    if ((size_t)idx < a->length) {
-        a->items[idx] = item;
+    if (idx < 0 || (size_t)idx >= a->length) {
+        size_t len = a->length;
+        pthread_mutex_unlock(&a->lock);
+        spec_panic_bounds("Array assignment", idx, len);
+        return;
     }
+    a->items[idx] = item;
     pthread_mutex_unlock(&a->lock);
 }
 
@@ -1877,6 +1914,8 @@ const char* CodeGenerator_generateMain(CodeGenerator* self, const char* entryCla
 void CodeGenerator_collectClassesFromStatement(CodeGenerator* self, Statement* stmt, SpecArray* acc);
 void CodeGenerator_collectClasses(CodeGenerator* self, ClassInfo* c, SpecArray* acc);
 const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, const char* entryClass);
+void CodeGenerator_collectAncestors(CodeGenerator* self, ClassInfo* c, SpecArray* allClasses, SpecArray* acc);
+const char* CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* classes);
 const char* CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes);
 void ClassSearchLoop_init(ClassSearchLoop* self, SpecArray* list, const char* target);
 bool ClassSearchLoop_evaluate(ClassSearchLoop* self);
@@ -2547,7 +2586,9 @@ struct PathConvLoop {
 };
 
 /* Virtual Method Tables */
-static void* Stringable_vtable[232] = {
+static void* Stringable_vtable[234] = {
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -2782,7 +2823,9 @@ static void* Stringable_vtable[232] = {
     (void*)0
 };
 
-static void* Any_vtable[232] = {
+static void* Any_vtable[234] = {
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -3017,7 +3060,7 @@ static void* Any_vtable[232] = {
     (void*)0
 };
 
-static void* Driver_vtable[232] = {
+static void* Driver_vtable[234] = {
     (void*)0,
     (void*)Driver_init,
     (void*)0,
@@ -3249,10 +3292,12 @@ static void* Driver_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Ansi_vtable[232] = {
+static void* Ansi_vtable[234] = {
     (void*)0,
     (void*)0,
     (void*)Ansi_esc,
@@ -3484,10 +3529,12 @@ static void* Ansi_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[232] = {
+static void* ClassInfo_vtable[234] = {
     (void*)0,
     (void*)ClassInfo_init,
     (void*)0,
@@ -3719,10 +3766,12 @@ static void* ClassInfo_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[232] = {
+static void* Member_vtable[234] = {
     (void*)0,
     (void*)Member_init,
     (void*)0,
@@ -3954,10 +4003,12 @@ static void* Member_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[232] = {
+static void* Type_vtable[234] = {
     (void*)Type_toString,
     (void*)Type_init,
     (void*)0,
@@ -4189,10 +4240,12 @@ static void* Type_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[232] = {
+static void* Parameter_vtable[234] = {
     (void*)0,
     (void*)Parameter_init,
     (void*)0,
@@ -4424,10 +4477,12 @@ static void* Parameter_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[232] = {
+static void* NamedArg_vtable[234] = {
     (void*)0,
     (void*)NamedArg_init,
     (void*)0,
@@ -4659,10 +4714,12 @@ static void* NamedArg_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[232] = {
+static void* Expression_vtable[234] = {
     (void*)0,
     (void*)Expression_init,
     (void*)0,
@@ -4894,10 +4951,12 @@ static void* Expression_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[232] = {
+static void* Statement_vtable[234] = {
     (void*)0,
     (void*)Statement_init,
     (void*)0,
@@ -5129,10 +5188,12 @@ static void* Statement_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[232] = {
+static void* ProgramNode_vtable[234] = {
     (void*)0,
     (void*)ProgramNode_init,
     (void*)0,
@@ -5364,10 +5425,12 @@ static void* ProgramNode_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArm_vtable[232] = {
+static void* WhenArm_vtable[234] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -5599,10 +5662,12 @@ static void* WhenArm_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[232] = {
+static void* Token_vtable[234] = {
     (void*)0,
     (void*)Token_init,
     (void*)0,
@@ -5834,10 +5899,12 @@ static void* Token_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[232] = {
+static void* SourceLocation_vtable[234] = {
     (void*)SourceLocation_toString,
     (void*)SourceLocation_init,
     (void*)0,
@@ -6069,10 +6136,12 @@ static void* SourceLocation_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[232] = {
+static void* Lexer_vtable[234] = {
     (void*)0,
     (void*)Lexer_init,
     (void*)0,
@@ -6304,10 +6373,12 @@ static void* Lexer_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipWhitespaceLoop_vtable[232] = {
+static void* SkipWhitespaceLoop_vtable[234] = {
     (void*)0,
     (void*)SkipWhitespaceLoop_init,
     (void*)0,
@@ -6539,10 +6610,12 @@ static void* SkipWhitespaceLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipCommentLoop_vtable[232] = {
+static void* SkipCommentLoop_vtable[234] = {
     (void*)0,
     (void*)SkipCommentLoop_init,
     (void*)0,
@@ -6774,10 +6847,12 @@ static void* SkipCommentLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* IdentScanLoop_vtable[232] = {
+static void* IdentScanLoop_vtable[234] = {
     (void*)0,
     (void*)IdentScanLoop_init,
     (void*)0,
@@ -7009,10 +7084,12 @@ static void* IdentScanLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseDigitsLoop_vtable[232] = {
+static void* BaseDigitsLoop_vtable[234] = {
     (void*)0,
     (void*)BaseDigitsLoop_init,
     (void*)0,
@@ -7244,10 +7321,12 @@ static void* BaseDigitsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NumberScanLoop_vtable[232] = {
+static void* NumberScanLoop_vtable[234] = {
     (void*)0,
     (void*)NumberScanLoop_init,
     (void*)0,
@@ -7479,10 +7558,12 @@ static void* NumberScanLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StringScanLoop_vtable[232] = {
+static void* StringScanLoop_vtable[234] = {
     (void*)0,
     (void*)StringScanLoop_init,
     (void*)0,
@@ -7714,10 +7795,12 @@ static void* StringScanLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenizeLoop_vtable[232] = {
+static void* TokenizeLoop_vtable[234] = {
     (void*)0,
     (void*)TokenizeLoop_init,
     (void*)0,
@@ -7949,10 +8032,12 @@ static void* TokenizeLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[232] = {
+static void* Parser_vtable[234] = {
     (void*)0,
     (void*)Parser_init,
     (void*)0,
@@ -8184,10 +8269,12 @@ static void* Parser_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumVariantsLoop_vtable[232] = {
+static void* EnumVariantsLoop_vtable[234] = {
     (void*)0,
     (void*)EnumVariantsLoop_init,
     (void*)0,
@@ -8419,10 +8506,12 @@ static void* EnumVariantsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramParseLoop_vtable[232] = {
+static void* ProgramParseLoop_vtable[234] = {
     (void*)0,
     (void*)ProgramParseLoop_init,
     (void*)0,
@@ -8654,10 +8743,12 @@ static void* ProgramParseLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassMembersLoop_vtable[232] = {
+static void* ClassMembersLoop_vtable[234] = {
     (void*)0,
     (void*)ClassMembersLoop_init,
     (void*)0,
@@ -8889,10 +8980,12 @@ static void* ClassMembersLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseClassesLoop_vtable[232] = {
+static void* BaseClassesLoop_vtable[234] = {
     (void*)0,
     (void*)BaseClassesLoop_init,
     (void*)0,
@@ -9124,10 +9217,12 @@ static void* BaseClassesLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BlockStatementsLoop_vtable[232] = {
+static void* BlockStatementsLoop_vtable[234] = {
     (void*)0,
     (void*)BlockStatementsLoop_init,
     (void*)0,
@@ -9359,10 +9454,12 @@ static void* BlockStatementsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenConditionsLoop_vtable[232] = {
+static void* WhenConditionsLoop_vtable[234] = {
     (void*)0,
     (void*)WhenConditionsLoop_init,
     (void*)0,
@@ -9594,10 +9691,12 @@ static void* WhenConditionsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArmsLoop_vtable[232] = {
+static void* WhenArmsLoop_vtable[234] = {
     (void*)0,
     (void*)WhenArmsLoop_init,
     (void*)0,
@@ -9829,10 +9928,12 @@ static void* WhenArmsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArrayItemsLoop_vtable[232] = {
+static void* ArrayItemsLoop_vtable[234] = {
     (void*)0,
     (void*)ArrayItemsLoop_init,
     (void*)0,
@@ -10064,10 +10165,12 @@ static void* ArrayItemsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MapItemsLoop_vtable[232] = {
+static void* MapItemsLoop_vtable[234] = {
     (void*)0,
     (void*)MapItemsLoop_init,
     (void*)0,
@@ -10299,10 +10402,12 @@ static void* MapItemsLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ModifierLoop_vtable[232] = {
+static void* ModifierLoop_vtable[234] = {
     (void*)0,
     (void*)ModifierLoop_init,
     (void*)0,
@@ -10534,10 +10639,12 @@ static void* ModifierLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ParamLoop_vtable[232] = {
+static void* ParamLoop_vtable[234] = {
     (void*)0,
     (void*)ParamLoop_init,
     (void*)0,
@@ -10769,10 +10876,12 @@ static void* ParamLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArgLoop_vtable[232] = {
+static void* ArgLoop_vtable[234] = {
     (void*)0,
     (void*)ArgLoop_init,
     (void*)0,
@@ -11004,10 +11113,12 @@ static void* ArgLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PostfixLoop_vtable[232] = {
+static void* PostfixLoop_vtable[234] = {
     (void*)0,
     (void*)PostfixLoop_init,
     (void*)0,
@@ -11239,10 +11350,12 @@ static void* PostfixLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalOrLoop_vtable[232] = {
+static void* LogicalOrLoop_vtable[234] = {
     (void*)0,
     (void*)LogicalOrLoop_init,
     (void*)0,
@@ -11474,10 +11587,12 @@ static void* LogicalOrLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalAndLoop_vtable[232] = {
+static void* LogicalAndLoop_vtable[234] = {
     (void*)0,
     (void*)LogicalAndLoop_init,
     (void*)0,
@@ -11709,10 +11824,12 @@ static void* LogicalAndLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ShiftLoop_vtable[232] = {
+static void* ShiftLoop_vtable[234] = {
     (void*)0,
     (void*)ShiftLoop_init,
     (void*)0,
@@ -11944,10 +12061,12 @@ static void* ShiftLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitAndLoop_vtable[232] = {
+static void* BitAndLoop_vtable[234] = {
     (void*)0,
     (void*)BitAndLoop_init,
     (void*)0,
@@ -12179,10 +12298,12 @@ static void* BitAndLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitXorLoop_vtable[232] = {
+static void* BitXorLoop_vtable[234] = {
     (void*)0,
     (void*)BitXorLoop_init,
     (void*)0,
@@ -12414,10 +12535,12 @@ static void* BitXorLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitOrLoop_vtable[232] = {
+static void* BitOrLoop_vtable[234] = {
     (void*)0,
     (void*)BitOrLoop_init,
     (void*)0,
@@ -12649,10 +12772,12 @@ static void* BitOrLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EqualityLoop_vtable[232] = {
+static void* EqualityLoop_vtable[234] = {
     (void*)0,
     (void*)EqualityLoop_init,
     (void*)0,
@@ -12884,10 +13009,12 @@ static void* EqualityLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RelationalLoop_vtable[232] = {
+static void* RelationalLoop_vtable[234] = {
     (void*)0,
     (void*)RelationalLoop_init,
     (void*)0,
@@ -13119,10 +13246,12 @@ static void* RelationalLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ConcatLoop_vtable[232] = {
+static void* ConcatLoop_vtable[234] = {
     (void*)0,
     (void*)ConcatLoop_init,
     (void*)0,
@@ -13354,10 +13483,12 @@ static void* ConcatLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* AdditiveLoop_vtable[232] = {
+static void* AdditiveLoop_vtable[234] = {
     (void*)0,
     (void*)AdditiveLoop_init,
     (void*)0,
@@ -13589,10 +13720,12 @@ static void* AdditiveLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MultiplicativeLoop_vtable[232] = {
+static void* MultiplicativeLoop_vtable[234] = {
     (void*)0,
     (void*)MultiplicativeLoop_init,
     (void*)0,
@@ -13824,10 +13957,12 @@ static void* MultiplicativeLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LintIssue_vtable[232] = {
+static void* LintIssue_vtable[234] = {
     (void*)LintIssue_toString,
     (void*)LintIssue_init,
     (void*)0,
@@ -14059,10 +14194,12 @@ static void* LintIssue_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Linter_vtable[232] = {
+static void* Linter_vtable[234] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -14294,10 +14431,12 @@ static void* Linter_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[232] = {
+static void* TypeError_vtable[234] = {
     (void*)TypeError_toString,
     (void*)TypeError_init,
     (void*)0,
@@ -14529,10 +14668,12 @@ static void* TypeError_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[232] = {
+static void* TypeChecker_vtable[234] = {
     (void*)0,
     (void*)TypeChecker_init,
     (void*)0,
@@ -14764,10 +14905,12 @@ static void* TypeChecker_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SearchLoop_vtable[232] = {
+static void* SearchLoop_vtable[234] = {
     (void*)0,
     (void*)SearchLoop_init,
     (void*)0,
@@ -14999,10 +15142,12 @@ static void* SearchLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldSearchLoop_vtable[232] = {
+static void* FieldSearchLoop_vtable[234] = {
     (void*)0,
     (void*)FieldSearchLoop_init,
     (void*)0,
@@ -15234,10 +15379,12 @@ static void* FieldSearchLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodSearchLoop_vtable[232] = {
+static void* MethodSearchLoop_vtable[234] = {
     (void*)0,
     (void*)MethodSearchLoop_init,
     (void*)0,
@@ -15469,10 +15616,12 @@ static void* MethodSearchLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathResolveLoop_vtable[232] = {
+static void* PathResolveLoop_vtable[234] = {
     (void*)0,
     (void*)PathResolveLoop_init,
     (void*)0,
@@ -15704,10 +15853,12 @@ static void* PathResolveLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberImplementLoop_vtable[232] = {
+static void* MemberImplementLoop_vtable[234] = {
     (void*)0,
     (void*)MemberImplementLoop_init,
     (void*)0,
@@ -15939,10 +16090,12 @@ static void* MemberImplementLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[232] = {
+static void* CBackendUtils_vtable[234] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -16174,10 +16327,12 @@ static void* CBackendUtils_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EscapeLoop_vtable[232] = {
+static void* EscapeLoop_vtable[234] = {
     (void*)0,
     (void*)EscapeLoop_init,
     (void*)0,
@@ -16409,10 +16564,12 @@ static void* EscapeLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[232] = {
+static void* RuntimePrelude_vtable[234] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -16644,10 +16801,12 @@ static void* RuntimePrelude_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[232] = {
+static void* DeclarationGenerator_vtable[234] = {
     (void*)0,
     (void*)DeclarationGenerator_init,
     (void*)0,
@@ -16879,10 +17038,12 @@ static void* DeclarationGenerator_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* HasFieldLoop_vtable[232] = {
+static void* HasFieldLoop_vtable[234] = {
     (void*)0,
     (void*)HasFieldLoop_init,
     (void*)0,
@@ -17114,10 +17275,12 @@ static void* HasFieldLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[232] = {
+static void* BuiltinCallGenerator_vtable[234] = {
     (void*)0,
     (void*)BuiltinCallGenerator_init,
     (void*)0,
@@ -17349,10 +17512,12 @@ static void* BuiltinCallGenerator_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CodeGenerator_vtable[232] = {
+static void* CodeGenerator_vtable[234] = {
     (void*)0,
     (void*)CodeGenerator_init,
     (void*)0,
@@ -17570,6 +17735,8 @@ static void* CodeGenerator_vtable[232] = {
     (void*)CodeGenerator_generateMethod,
     (void*)CodeGenerator_generateMain,
     (void*)CodeGenerator_generateProgram,
+    (void*)CodeGenerator_collectAncestors,
+    (void*)CodeGenerator_generateTypeHierarchy,
     (void*)CodeGenerator_generateVTables,
     (void*)0,
     (void*)0,
@@ -17587,7 +17754,7 @@ static void* CodeGenerator_vtable[232] = {
     (void*)0
 };
 
-static void* ClassSearchLoop_vtable[232] = {
+static void* ClassSearchLoop_vtable[234] = {
     (void*)0,
     (void*)ClassSearchLoop_init,
     (void*)0,
@@ -17819,10 +17986,12 @@ static void* ClassSearchLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldMemberLoop_vtable[232] = {
+static void* FieldMemberLoop_vtable[234] = {
     (void*)0,
     (void*)FieldMemberLoop_init,
     (void*)0,
@@ -18054,10 +18223,12 @@ static void* FieldMemberLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodMemberLoop_vtable[232] = {
+static void* MethodMemberLoop_vtable[234] = {
     (void*)0,
     (void*)MethodMemberLoop_init,
     (void*)0,
@@ -18289,10 +18460,12 @@ static void* MethodMemberLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathTypeResolveLoop_vtable[232] = {
+static void* PathTypeResolveLoop_vtable[234] = {
     (void*)0,
     (void*)PathTypeResolveLoop_init,
     (void*)0,
@@ -18524,10 +18697,12 @@ static void* PathTypeResolveLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathChainLoop_vtable[232] = {
+static void* PathChainLoop_vtable[234] = {
     (void*)0,
     (void*)PathChainLoop_init,
     (void*)0,
@@ -18759,12 +18934,16 @@ static void* PathChainLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[232] = {
+static void* Loader_vtable[234] = {
     (void*)0,
     (void*)Loader_init,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -18997,7 +19176,7 @@ static void* Loader_vtable[232] = {
     (void*)Loader_appendImplicitAny
 };
 
-static void* PathConvLoop_vtable[232] = {
+static void* PathConvLoop_vtable[234] = {
     (void*)0,
     (void*)PathConvLoop_init,
     (void*)0,
@@ -19229,8 +19408,228 @@ static void* PathConvLoop_vtable[232] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
+
+/* RTTI Class Hierarchy */
+static bool spec_is_subclass_of(const char* actual, const char* target) {
+    if (!actual || !target) return false;
+    if (strcmp(actual, target) == 0) return true;
+    if (strcmp(target, "Any") == 0 || strcmp(target, "Stringable") == 0) return true;
+    if (strcmp(actual, "Any") == 0) {
+        return (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Driver") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Ansi") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ClassInfo") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Member") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Type") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Parameter") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "NamedArg") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Expression") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Statement") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ProgramNode") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "WhenArm") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Token") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "SourceLocation") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Lexer") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "SkipWhitespaceLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "SkipCommentLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "IdentScanLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BaseDigitsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "NumberScanLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "StringScanLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "TokenizeLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Parser") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "EnumVariantsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ProgramParseLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ClassMembersLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BaseClassesLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BlockStatementsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "WhenConditionsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "WhenArmsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ArrayItemsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "MapItemsLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ModifierLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ParamLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ArgLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "PostfixLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "LogicalOrLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "LogicalAndLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ShiftLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BitAndLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BitXorLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BitOrLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "EqualityLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "RelationalLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ConcatLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "AdditiveLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "MultiplicativeLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "LintIssue") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Linter") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "TypeError") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "TypeChecker") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "SearchLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "FieldSearchLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "MethodSearchLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "PathResolveLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "MemberImplementLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "CBackendUtils") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "EscapeLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "RuntimePrelude") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "DeclarationGenerator") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "HasFieldLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "BuiltinCallGenerator") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "CodeGenerator") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "ClassSearchLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "FieldMemberLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "MethodMemberLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "PathTypeResolveLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "PathChainLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "Loader") == 0) {
+        return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "PathConvLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    return false;
+}
 
 /* Constructor Implementations */
 Stringable* Stringable_new(void) {
@@ -25034,6 +25433,28 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "#include <sys/ioctl.h>\n");
     p = spec_str_append(p, "#include <sys/resource.h>\n");
     p = spec_str_append(p, "#include <stdatomic.h>\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "/* Spec Runtime Panic & Safety Utilities */\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_panic(const char* msg) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    fprintf(stderr, \"[Spec Runtime Panic] %s\\n\", msg ? msg : \"fatal error\");\n"));
+    p = spec_str_append(p, "    exit(1);\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_panic_bounds(const char* coll, long long idx, size_t len) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    fprintf(stderr, \"[Spec Runtime Panic] %s index out of bounds: index %lld for length %zu\\n\", coll ? coll : \"Collection\", idx, len);\n"));
+    p = spec_str_append(p, "    exit(1);\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_panic_cast(const char* actual, const char* target) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    fprintf(stderr, \"[Spec Runtime Panic] Invalid downcast: instance of '%s' cannot be cast to '%s'\\n\", actual ? actual : \"Unknown\", target ? target : \"Unknown\");\n"));
+    p = spec_str_append(p, "    exit(1);\n");
+    p = spec_str_append(p, "}\n\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static bool spec_is_subclass_of(const char* actual, const char* target);\n\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "static inline void* spec_cast_check(const void* obj, const char* target) {\n"));
+    p = spec_str_append(p, "    if (!obj) return NULL;\n");
+    p = spec_str_append(p, "    const char* actual = *((const char**)obj);\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (!spec_is_subclass_of(actual, target)) {\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        spec_panic_cast(actual, target);\n"));
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    return (void*)obj;\n");
+    p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "/* Spec Runtime String Utilities */\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static const char* _spec_last_str = NULL;\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "static size_t _spec_last_len = 0;\n\n"));
@@ -25310,18 +25731,28 @@ const char* RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     p = spec_str_append(p, "    return len;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void* spec_array_get(SpecArray* a, long long idx) {\n"));
-    p = spec_str_append(p, "    if (!a || idx < 0) return NULL;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (!a) spec_panic(\"Null pointer access on uninitialized Array\");\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n"));
-    p = spec_str_append(p, "    void* val = ((size_t)idx < a->length) ? a->items[idx] : NULL;\n");
+    p = spec_str_append(p, "    if (idx < 0 || (size_t)idx >= a->length) {\n");
+    p = spec_str_append(p, "        size_t len = a->length;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        pthread_mutex_unlock(&a->lock);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        spec_panic_bounds(\"Array\", idx, len);\n"));
+    p = spec_str_append(p, "        return NULL;\n");
+    p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    void* val = a->items[idx];\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
     p = spec_str_append(p, "    return val;\n");
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void spec_array_set(SpecArray* a, long long idx, void* item) {\n"));
-    p = spec_str_append(p, "    if (!a || idx < 0) return;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "    if (!a) spec_panic(\"Null pointer access on uninitialized Array\");\n"));
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_lock(&a->lock);\n"));
-    p = spec_str_append(p, "    if ((size_t)idx < a->length) {\n");
-    p = spec_str_append(p, "        a->items[idx] = item;\n");
+    p = spec_str_append(p, "    if (idx < 0 || (size_t)idx >= a->length) {\n");
+    p = spec_str_append(p, "        size_t len = a->length;\n");
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        pthread_mutex_unlock(&a->lock);\n"));
+    p = spec_str_clone_if_buffered(spec_str_concat(p, "        spec_panic_bounds(\"Array assignment\", idx, len);\n"));
+    p = spec_str_append(p, "        return;\n");
     p = spec_str_append(p, "    }\n");
+    p = spec_str_append(p, "    a->items[idx] = item;\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "    pthread_mutex_unlock(&a->lock);\n"));
     p = spec_str_append(p, "}\n\n");
     p = spec_str_clone_if_buffered(spec_str_concat(p, "void* spec_array_pop(SpecArray* a, void* def) {\n"));
@@ -28523,7 +28954,7 @@ const char* CodeGenerator_generateExpression(CodeGenerator* self, Expression* ex
         return innerC;
     } else {
         if (((((spec_map_has(self->allClassNames, target)) && ((!(spec_map_has(self->allEnumNames, target)))))) && ((!((((bool (*)(CodeGenerator*, const char*))self->_vtable[183]))((CodeGenerator*)self, target)))))) {
-        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((", target), "*)("), innerC), "))");
+        return spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("((", target), "*)spec_cast_check("), innerC), ", \""), target), "\"))");
     }
         return innerC;
     }
@@ -29277,6 +29708,7 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     cSource = spec_str_append(cSource, decls);
     cSource = spec_str_append(cSource, structs);
     cSource = spec_str_append(cSource, vt);
+    cSource = spec_str_append(cSource, CodeGenerator_generateTypeHierarchy(self, flattenedClasses) /* inst:CodeGenerator:generateTypeHierarchy */);
     cSource = spec_str_append(cSource, self->helperFunctions);
     cSource = spec_str_append(cSource, ctors);
     cSource = spec_str_append(cSource, methods);
@@ -29284,21 +29716,72 @@ const char* CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* prog
     return cSource;
 }
 
+void CodeGenerator_collectAncestors(CodeGenerator* self, ClassInfo* c, SpecArray* allClasses, SpecArray* acc) {
+    ({ SpecArray* _a_244 = ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */; if (_a_244) { for (size_t _i_244 = 0; _i_244 < _a_244->length; _i_244++) {
+        const char* baseName = (const char*)(intptr_t)_a_244->items[_i_244];
+    if (((spec_array_index_of_str(acc, baseName, (-(1)))) < (0))) {
+        spec_array_add(acc, (void*)(baseName));
+        ({ SpecArray* _a_245 = allClasses; if (_a_245) { for (size_t _i_245 = 0; _i_245 < _a_245->length; _i_245++) {
+        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_245->items[_i_245];
+    if (spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(cand); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), baseName)) {
+        CodeGenerator_collectAncestors(self, cand, allClasses, acc) /* inst:CodeGenerator:collectAncestors */;
+    }
+        _loop_next_245: ;
+    } } });
+    }
+        _loop_next_244: ;
+    } } });
+}
+
+const char* CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* classes) {
+    const char* out = spec_str_clone_if_buffered("/* RTTI Class Hierarchy */\n");
+    out = spec_str_append(out, "static bool spec_is_subclass_of(const char* actual, const char* target) {\n");
+    out = spec_str_append(out, "    if (!actual || !target) return false;\n");
+    out = spec_str_append(out, "    if (strcmp(actual, target) == 0) return true;\n");
+    out = spec_str_append(out, "    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n");
+    ({ SpecArray* _a_246 = classes; if (_a_246) { for (size_t _i_246 = 0; _i_246 < _a_246->length; _i_246++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_246->items[_i_246];
+    if ((((!((((bool (*)(CodeGenerator*, const char*))self->_vtable[183]))((CodeGenerator*)self, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))) && ((!spec_str_equals(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */, "Enum"))))) {
+        SpecArray* ancestors = ({ SpecArray* _arr = spec_array_new(); _arr; });
+        CodeGenerator_collectAncestors(self, c, classes, ancestors) /* inst:CodeGenerator:collectAncestors */;
+        if (((spec_array_length(ancestors)) > (0))) {
+        out = spec_str_append(spec_str_append(spec_str_append(out, "    if (strcmp(actual, \""), ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })), "\") == 0) {\n");
+        out = spec_str_append(out, "        return ");
+        bool firstA = true;
+        ({ SpecArray* _a_247 = ancestors; if (_a_247) { for (size_t _i_247 = 0; _i_247 < _a_247->length; _i_247++) {
+        const char* aName = (const char*)(intptr_t)_a_247->items[_i_247];
+    if ((!(firstA))) {
+        out = spec_str_append(out, " || ");
+    }
+    out = spec_str_append(spec_str_append(spec_str_append(out, "(strcmp(target, \""), aName), "\") == 0)");
+    firstA = false;
+        _loop_next_247: ;
+    } } });
+        out = spec_str_append(out, ";\n    }\n");
+    }
+    }
+        _loop_next_246: ;
+    } } });
+    out = spec_str_append(out, "    return false;\n");
+    out = spec_str_append(out, "}\n\n");
+    return out;
+}
+
 const char* CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
     const char* out = spec_str_clone_if_buffered("/* Virtual Method Tables */\n");
     if (((self->methodSlotCount) == (0))) {
         return out;
     }
-    ({ SpecArray* _a_244 = classes; if (_a_244) { for (size_t _i_244 = 0; _i_244 < _a_244->length; _i_244++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_244->items[_i_244];
+    ({ SpecArray* _a_248 = classes; if (_a_248) { for (size_t _i_248 = 0; _i_248 < _a_248->length; _i_248++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_248->items[_i_248];
     if ((((!((((bool (*)(CodeGenerator*, const char*))self->_vtable[183]))((CodeGenerator*)self, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))) && ((!spec_str_equals(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */, "Enum"))))) {
         out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "static void* "), ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })), "_vtable["), spec_to_string_int(self->methodSlotCount)), "] = {\n");
         long long slot = 0;
         ({ while (1) {
-        bool _ev_245 = false;
-    _ev_245 = ((slot) < (self->methodSlotCount)); goto _ev_done_245;
-        _ev_done_245: ;
-        if (!_ev_245) break;
+        bool _ev_249 = false;
+    _ev_249 = ((slot) < (self->methodSlotCount)); goto _ev_done_249;
+        _ev_done_249: ;
+        if (!_ev_249) break;
     const char* mName = spec_str_clone_if_buffered(spec_array_get(self->slotNames, slot));
     const char* implCls = spec_str_clone_if_buffered(CodeGenerator_findMethodImplementingClass(self, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), mName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */);
     if (((slot) > (0))) {
@@ -29310,12 +29793,12 @@ const char* CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classe
         out = spec_str_append(spec_str_append(spec_str_append(spec_str_append(out, "    (void*)"), implCls), "_"), mName);
     }
     slot = ((slot) + (1));
-    goto _it_done_245;
-        _it_done_245: ;
+    goto _it_done_249;
+        _it_done_249: ;
     } });
         out = spec_str_append(out, "\n};\n\n");
     }
-        _loop_next_244: ;
+        _loop_next_248: ;
     } } });
     return out;
 }
@@ -29505,28 +29988,28 @@ void Loader_loadFile(Loader* self, const char* filePath) {
     Lexer* lexer = (Lexer*)(({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, src); _inst; }));
     SpecArray* tokens = Lexer_tokenize(lexer) /* inst:Lexer:tokenize */;
     if (({ Lexer* _recv = (Lexer*)(lexer); (((bool (*)(Lexer*))_recv->_vtable[92]))((Lexer*)_recv); })) {
-        ({ SpecArray* _a_246 = ({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[93]))((Lexer*)_recv); }); if (_a_246) { for (size_t _i_246 = 0; _i_246 < _a_246->length; _i_246++) {
-        const char* err = (const char*)(intptr_t)_a_246->items[_i_246];
+        ({ SpecArray* _a_250 = ({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[93]))((Lexer*)_recv); }); if (_a_250) { for (size_t _i_250 = 0; _i_250 < _a_250->length; _i_250++) {
+        const char* err = (const char*)(intptr_t)_a_250->items[_i_250];
     spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat("  [LexError] [", filePath), "] "), err)));
-        _loop_next_246: ;
+        _loop_next_250: ;
     } } });
     }
     Parser* parser = (Parser*)(({ Parser* _inst = Parser_new(); Parser_init(_inst, tokens); _inst; }));
     ({ Parser* _recv = (Parser*)(parser); (((void (*)(Parser*, const char*))_recv->_vtable[27]))((Parser*)_recv, filePath); });
     ProgramNode* prog = (ProgramNode*)(Parser_parseProgram(parser) /* inst:Parser:parseProgram */);
     if (({ Parser* _recv = (Parser*)(parser); (((bool (*)(Parser*))_recv->_vtable[92]))((Parser*)_recv); })) {
-        ({ SpecArray* _a_247 = ({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[93]))((Parser*)_recv); }); if (_a_247) { for (size_t _i_247 = 0; _i_247 < _a_247->length; _i_247++) {
-        const char* err = (const char*)(intptr_t)_a_247->items[_i_247];
+        ({ SpecArray* _a_251 = ({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[93]))((Parser*)_recv); }); if (_a_251) { for (size_t _i_251 = 0; _i_251 < _a_251->length; _i_251++) {
+        const char* err = (const char*)(intptr_t)_a_251->items[_i_251];
     spec_array_add(self->parseErrors, (void*)(err));
-        _loop_next_247: ;
+        _loop_next_251: ;
     } } });
     }
-    ({ SpecArray* _a_248 = ProgramNode_getClasses(prog) /* inst:ProgramNode:getClasses */; if (_a_248) { for (size_t _i_248 = 0; _i_248 < _a_248->length; _i_248++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_248->items[_i_248];
-    ({ SpecArray* _a_249 = ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */; if (_a_249) { for (size_t _i_249 = 0; _i_249 < _a_249->length; _i_249++) {
-        Member* m = (Member*)(intptr_t)_a_249->items[_i_249];
+    ({ SpecArray* _a_252 = ProgramNode_getClasses(prog) /* inst:ProgramNode:getClasses */; if (_a_252) { for (size_t _i_252 = 0; _i_252 < _a_252->length; _i_252++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_252->items[_i_252];
+    ({ SpecArray* _a_253 = ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */; if (_a_253) { for (size_t _i_253 = 0; _i_253 < _a_253->length; _i_253++) {
+        Member* m = (Member*)(intptr_t)_a_253->items[_i_253];
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, const char*))_recv->_vtable[27]))((Member*)_recv, filePath); });
-        _loop_next_249: ;
+        _loop_next_253: ;
     } } });
     const char* gName = spec_str_clone_if_buffered(Loader_groupTargetOf(self, c) /* inst:Loader:groupTargetOf */);
     if ((!(spec_map_has(self->seenClassNames, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))) {
@@ -29545,25 +30028,25 @@ void Loader_loadFile(Loader* self, const char* filePath) {
     }
     }
     Loader_collectImportsFromClass(self, c) /* inst:Loader:collectImportsFromClass */;
-        _loop_next_248: ;
+        _loop_next_252: ;
     } } });
 }
 
 void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
-    ({ SpecArray* _a_250 = ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */; if (_a_250) { for (size_t _i_250 = 0; _i_250 < _a_250->length; _i_250++) {
-        Member* m = (Member*)(intptr_t)_a_250->items[_i_250];
+    ({ SpecArray* _a_254 = ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */; if (_a_254) { for (size_t _i_254 = 0; _i_254 < _a_254->length; _i_254++) {
+        Member* m = (Member*)(intptr_t)_a_254->items[_i_254];
     if (((spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "using")) && (Member_getHasInit(m) /* inst:Member:getHasInit */))) {
         Expression* initExpr = (Expression*)(Member_getInitExpr(m) /* inst:Member:getInitExpr */);
         if (spec_str_equals(({ Expression* _recv = (Expression*)(initExpr); (((const char* (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); }), "ARRAY")) {
-        ({ SpecArray* _a_251 = initExpr->arrayItems; if (_a_251) { for (size_t _i_251 = 0; _i_251 < _a_251->length; _i_251++) {
-        Expression* item = (Expression*)(intptr_t)_a_251->items[_i_251];
+        ({ SpecArray* _a_255 = initExpr->arrayItems; if (_a_255) { for (size_t _i_255 = 0; _i_255 < _a_255->length; _i_255++) {
+        Expression* item = (Expression*)(intptr_t)_a_255->items[_i_255];
     const char* importStr = spec_str_clone_if_buffered(item->stringValue);
     SpecArray* wildcards = Loader_expandWildcard(self, importStr) /* inst:Loader:expandWildcard */;
     if (((spec_array_length(wildcards)) > (0))) {
-        ({ SpecArray* _a_252 = wildcards; if (_a_252) { for (size_t _i_252 = 0; _i_252 < _a_252->length; _i_252++) {
-        const char* f = (const char*)(intptr_t)_a_252->items[_i_252];
+        ({ SpecArray* _a_256 = wildcards; if (_a_256) { for (size_t _i_256 = 0; _i_256 < _a_256->length; _i_256++) {
+        const char* f = (const char*)(intptr_t)_a_256->items[_i_256];
     Loader_loadFile(self, f) /* inst:Loader:loadFile */;
-        _loop_next_252: ;
+        _loop_next_256: ;
     } } });
     } else {
         const char* resolved = spec_str_clone_if_buffered(Loader_resolvePath(self, importStr) /* inst:Loader:resolvePath */);
@@ -29573,11 +30056,11 @@ void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
         spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("  [LoadError] Cannot resolve import '", importStr), "' declared in class '"), ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })), "'.")));
     }
     }
-        _loop_next_251: ;
+        _loop_next_255: ;
     } } });
     }
     }
-        _loop_next_250: ;
+        _loop_next_254: ;
     } } });
 }
 
@@ -29586,10 +30069,10 @@ const char* Loader_groupTargetOf(Loader* self, ClassInfo* c) {
     long long idx = 0;
     const char* target = spec_str_clone_if_buffered("");
     ({ while (1) {
-        bool _ev_253 = false;
-    _ev_253 = ((idx) < (spec_array_length(members))); goto _ev_done_253;
-        _ev_done_253: ;
-        if (!_ev_253) break;
+        bool _ev_257 = false;
+    _ev_257 = ((idx) < (spec_array_length(members))); goto _ev_done_257;
+        _ev_done_257: ;
+        if (!_ev_257) break;
     Member* m = (Member*)(spec_array_get(members, idx));
     if (((spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "group")) && (Member_getHasInit(m) /* inst:Member:getHasInit */))) {
         Expression* initExpr = (Expression*)(Member_getInitExpr(m) /* inst:Member:getInitExpr */);
@@ -29603,8 +30086,8 @@ const char* Loader_groupTargetOf(Loader* self, ClassInfo* c) {
     }
     }
     idx = ((idx) + (1));
-    goto _it_done_253;
-        _it_done_253: ;
+    goto _it_done_257;
+        _it_done_257: ;
     } });
     if ((((!spec_str_equals(target, ""))) && ((!spec_str_equals(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */, ""))))) {
         spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat("  [LoadError] Group fragment '", ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })), "' must not declare parent classes.")));
@@ -29617,17 +30100,17 @@ ClassInfo* Loader_findLoadedClass(Loader* self, const char* name) {
     long long idx = 0;
     ClassInfo* res = (ClassInfo*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, "", "", ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; }));
     ({ while (1) {
-        bool _ev_254 = false;
-    _ev_254 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(res); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ""))); goto _ev_done_254;
-        _ev_done_254: ;
-        if (!_ev_254) break;
+        bool _ev_258 = false;
+    _ev_258 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(res); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ""))); goto _ev_done_258;
+        _ev_done_258: ;
+        if (!_ev_258) break;
     ClassInfo* c = (ClassInfo*)(spec_array_get(self->loadedClasses, idx));
     if (spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), name)) {
         res = c;
     }
     idx = ((idx) + (1));
-    goto _it_done_254;
-        _it_done_254: ;
+    goto _it_done_258;
+        _it_done_258: ;
     } });
     return res;
 }
@@ -29640,17 +30123,17 @@ Member* Loader_findMemberNamed(Loader* self, ClassInfo* target, const char* name
     long long idx = 0;
     Member* res = (Member*)(({ Member* _inst = Member_new(); Member_init(_inst, ""); _inst; }));
     ({ while (1) {
-        bool _ev_255 = false;
-    _ev_255 = ((((idx) < (spec_array_length(members)))) && (spec_str_equals(({ Member* _recv = (Member*)(res); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), ""))); goto _ev_done_255;
-        _ev_done_255: ;
-        if (!_ev_255) break;
+        bool _ev_259 = false;
+    _ev_259 = ((((idx) < (spec_array_length(members)))) && (spec_str_equals(({ Member* _recv = (Member*)(res); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), ""))); goto _ev_done_259;
+        _ev_done_259: ;
+        if (!_ev_259) break;
     Member* m = (Member*)(spec_array_get(members, idx));
     if (spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), name)) {
         res = m;
     }
     idx = ((idx) + (1));
-    goto _it_done_255;
-        _it_done_255: ;
+    goto _it_done_259;
+        _it_done_259: ;
     } });
     return res;
 }
@@ -29663,10 +30146,10 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SpecArray* fragMembers = ClassInfo_getMembers(frag) /* inst:ClassInfo:getMembers */;
     long long idx = 0;
     ({ while (1) {
-        bool _ev_256 = false;
-    _ev_256 = ((idx) < (spec_array_length(fragMembers))); goto _ev_done_256;
-        _ev_done_256: ;
-        if (!_ev_256) break;
+        bool _ev_260 = false;
+    _ev_260 = ((idx) < (spec_array_length(fragMembers))); goto _ev_done_260;
+        _ev_done_260: ;
+        if (!_ev_260) break;
     Member* m = (Member*)(spec_array_get(fragMembers, idx));
     const char* mName = spec_str_clone_if_buffered(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }));
     if ((((!spec_str_equals(mName, "using"))) && ((!spec_str_equals(mName, "group"))))) {
@@ -29678,8 +30161,8 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     }
     }
     idx = ((idx) + (1));
-    goto _it_done_256;
-        _it_done_256: ;
+    goto _it_done_260;
+        _it_done_260: ;
     } });
     Member* fragUsing = (Member*)(Loader_findMemberNamed(self, frag, "using") /* inst:Loader:findMemberNamed */);
     if (spec_str_equals(({ Member* _recv = (Member*)(fragUsing); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "using")) {
@@ -29688,20 +30171,20 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
         Expression* fragItems = (Expression*)(Member_getInitExpr(fragUsing) /* inst:Member:getInitExpr */);
         Expression* targetItems = (Expression*)(Member_getInitExpr(targetUsing) /* inst:Member:getInitExpr */);
         if (((spec_str_equals(({ Expression* _recv = (Expression*)(fragItems); (((const char* (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); }), "ARRAY")) && (spec_str_equals(({ Expression* _recv = (Expression*)(targetItems); (((const char* (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); }), "ARRAY")))) {
-        ({ SpecArray* _a_257 = fragItems->arrayItems; if (_a_257) { for (size_t _i_257 = 0; _i_257 < _a_257->length; _i_257++) {
-        Expression* item = (Expression*)(intptr_t)_a_257->items[_i_257];
+        ({ SpecArray* _a_261 = fragItems->arrayItems; if (_a_261) { for (size_t _i_261 = 0; _i_261 < _a_261->length; _i_261++) {
+        Expression* item = (Expression*)(intptr_t)_a_261->items[_i_261];
     bool present = false;
-    ({ SpecArray* _a_258 = targetItems->arrayItems; if (_a_258) { for (size_t _i_258 = 0; _i_258 < _a_258->length; _i_258++) {
-        Expression* existing = (Expression*)(intptr_t)_a_258->items[_i_258];
+    ({ SpecArray* _a_262 = targetItems->arrayItems; if (_a_262) { for (size_t _i_262 = 0; _i_262 < _a_262->length; _i_262++) {
+        Expression* existing = (Expression*)(intptr_t)_a_262->items[_i_262];
     if ((((!(present))) && (spec_str_equals(existing->stringValue, item->stringValue)))) {
         present = true;
     }
-        _loop_next_258: ;
+        _loop_next_262: ;
     } } });
     if ((!(present))) {
         spec_array_add(targetItems->arrayItems, (void*)(item));
     }
-        _loop_next_257: ;
+        _loop_next_261: ;
     } } });
     }
     } else {
@@ -29714,18 +30197,18 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SpecArray* mergedMembers = ClassInfo_getMembers(target) /* inst:ClassInfo:getMembers */;
     long long scan = 0;
     ({ while (1) {
-        bool _ev_259 = false;
-    _ev_259 = ((scan) < (spec_array_length(mergedMembers))); goto _ev_done_259;
-        _ev_done_259: ;
-        if (!_ev_259) break;
+        bool _ev_263 = false;
+    _ev_263 = ((scan) < (spec_array_length(mergedMembers))); goto _ev_done_263;
+        _ev_done_263: ;
+        if (!_ev_263) break;
     Member* m = (Member*)(spec_array_get(mergedMembers, scan));
     if (spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), "init")) {
         initCount = ((initCount) + (1));
         initFile = spec_str_clone_if_buffered(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[28]))((Member*)_recv); }));
     }
     scan = ((scan) + (1));
-    goto _it_done_259;
-        _it_done_259: ;
+    goto _it_done_263;
+        _it_done_263: ;
     } });
     if (((initCount) > (1))) {
         spec_array_add(self->parseErrors, (void*)(spec_str_concat(spec_str_concat(spec_str_concat(spec_str_concat("  [LoadError] Multiple init methods in class '", ({ ClassInfo* _recv = (ClassInfo*)(target); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })), "' (last declared in "), initFile), "); a grouped class may declare at most one.")));
@@ -29736,45 +30219,45 @@ void Loader_stripMemberNamed(Loader* self, ClassInfo* target, const char* name) 
     SpecArray* members = ClassInfo_getMembers(target) /* inst:ClassInfo:getMembers */;
     long long idx = ((spec_array_length(members)) - (1));
     ({ while (1) {
-        bool _ev_260 = false;
-    _ev_260 = ((idx) >= (0)); goto _ev_done_260;
-        _ev_done_260: ;
-        if (!_ev_260) break;
+        bool _ev_264 = false;
+    _ev_264 = ((idx) >= (0)); goto _ev_done_264;
+        _ev_done_264: ;
+        if (!_ev_264) break;
     Member* m = (Member*)(spec_array_get(members, idx));
     if (spec_str_equals(({ Member* _recv = (Member*)(m); (((const char* (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }), name)) {
         spec_array_remove_at(members, idx, (void*)(intptr_t)(m));
     }
     idx = ((idx) - (1));
-    goto _it_done_260;
-        _it_done_260: ;
+    goto _it_done_264;
+        _it_done_264: ;
     } });
 }
 
 void Loader_removeClassFromLoaded(Loader* self, ClassInfo* c) {
     long long idx = 0;
     ({ while (1) {
-        bool _ev_261 = false;
-    _ev_261 = ((idx) < (spec_array_length(self->loadedClasses))); goto _ev_done_261;
-        _ev_done_261: ;
-        if (!_ev_261) break;
+        bool _ev_265 = false;
+    _ev_265 = ((idx) < (spec_array_length(self->loadedClasses))); goto _ev_done_265;
+        _ev_done_265: ;
+        if (!_ev_265) break;
     ClassInfo* cur = (ClassInfo*)(spec_array_get(self->loadedClasses, idx));
     if (((cur) == (c))) {
         spec_array_remove_at(self->loadedClasses, idx, (void*)(intptr_t)(c));
-        goto _it_done_261;
+        goto _it_done_265;
     }
     idx = ((idx) + (1));
-    goto _it_done_261;
-        _it_done_261: ;
+    goto _it_done_265;
+        _it_done_265: ;
     } });
 }
 
 void Loader_mergeGroups(Loader* self) {
     long long idx = 0;
     ({ while (1) {
-        bool _ev_262 = false;
-    _ev_262 = ((idx) < (spec_array_length(self->groupTargets))); goto _ev_done_262;
-        _ev_done_262: ;
-        if (!_ev_262) break;
+        bool _ev_266 = false;
+    _ev_266 = ((idx) < (spec_array_length(self->groupTargets))); goto _ev_done_266;
+        _ev_done_266: ;
+        if (!_ev_266) break;
     const char* gName = spec_str_clone_if_buffered(spec_array_get(self->groupTargets, idx));
     ClassInfo* frag = (ClassInfo*)(spec_array_get(self->groupFragments, idx));
     ClassInfo* target = (ClassInfo*)(Loader_findLoadedClass(self, gName) /* inst:Loader:findLoadedClass */);
@@ -29787,8 +30270,8 @@ void Loader_mergeGroups(Loader* self) {
         Loader_removeClassFromLoaded(self, frag) /* inst:Loader:removeClassFromLoaded */;
     }
     idx = ((idx) + (1));
-    goto _it_done_262;
-        _it_done_262: ;
+    goto _it_done_266;
+        _it_done_266: ;
     } });
 }
 
@@ -29808,12 +30291,12 @@ ProgramNode* Loader_loadProgram(Loader* self, const char* rootPath) {
 }
 
 void Loader_appendImplicitAny(Loader* self) {
-    ({ SpecArray* _a_263 = self->loadedClasses; if (_a_263) { for (size_t _i_263 = 0; _i_263 < _a_263->length; _i_263++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_263->items[_i_263];
+    ({ SpecArray* _a_267 = self->loadedClasses; if (_a_267) { for (size_t _i_267 = 0; _i_267 < _a_267->length; _i_267++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_267->items[_i_267];
     if ((((((((!spec_str_equals(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */, "Enum"))) && (((spec_array_length(ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */)) == (0))))) && ((!spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), "Any"))))) && ((!spec_str_equals(({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), "Stringable"))))) {
         ClassInfo_withBaseClasses(c, ({ ClassInfo* _recv = (ClassInfo*)(c); (((const char* (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), ({ SpecArray* _arr = spec_array_new(); spec_array_add(_arr, (void*)("Any")); _arr; }), ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */) /* inst:ClassInfo:withBaseClasses */;
     }
-        _loop_next_263: ;
+        _loop_next_267: ;
     } } });
 }
 

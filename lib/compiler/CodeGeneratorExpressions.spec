@@ -252,7 +252,7 @@ Class is CodeGeneratorExpressions{
 					}
 					else: {
 						if (self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:isBuiltinClass(name: target)) {
-							return "((" . target . "*)(" . innerC . "))";
+							return "((" . target . "*)spec_cast_check(" . innerC . ", \"" . target . "\"))";
 						}
 						return innerC;
 					}

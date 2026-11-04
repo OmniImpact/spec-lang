@@ -111,6 +111,15 @@ Class is AsCastTest{
 			output:line("[FAIL] as String: '" . explicit . "'");
 		}
 
+		# Case 9: checked downcast from Any to Dog
+		local Any is anyDog: Dog:init();
+		local Dog is checkedDog: anyDog as Dog;
+		if (checkedDog:fetch() == "ball") {
+			output:line("[PASS] checked downcast from Any: fetch = ball");
+		} else {
+			output:line("[FAIL] checked downcast from Any: expected ball");
+		}
+
 		output:line("=== End As Casts ===");
 	}
 
