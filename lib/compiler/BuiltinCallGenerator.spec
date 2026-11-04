@@ -433,32 +433,25 @@ Class is BuiltinCallGenerator{
 
 		if (isMap) {
 			if (expr:methodName == "init") {
+				if (cg:containerElemIsArc(containerType: targetType)) {
+					return "spec_map_new_object()";
+				}
 				return "spec_map_new()";
 			}
 			if (expr:methodName == "set") {
 				local String is keyC: "\"\"";
 				local String is valC: "\"\"";
 				local Boolean is valIsStr: true;
-				local Expression is storedValExpr;
-				local Boolean is hasValExpr: false;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "key") { keyC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == "value") {
 						local Expression is valExpr: arg:getValue();
 						valC: cg:generateExpression(expr: valExpr);
 						valIsStr: cg:isStringExpr(expr: valExpr);
-						storedValExpr: valExpr;
-						hasValExpr: true;
 					}
 				});
 				if (targetType:contains(needle: "String:String") || targetType:contains(needle: "to String") || valIsStr) {
 					return "spec_map_set(" . targetC . ", " . keyC . ", " . valC . ")";
-				}
-				if (hasValExpr) {
-					local String is valType: cg:inferTargetType(expr: storedValExpr);
-					if (cg:isArcType(typeName: valType)) {
-						valC: "(void*)spec_retain((void*)(" . valC . "))";
-					}
 				}
 				return "spec_map_set_any(" . targetC . ", " . keyC . ", (void*)(intptr_t)(" . valC . "))";
 			}
@@ -570,14 +563,12 @@ Class is BuiltinCallGenerator{
 				if (expr:methodArgs:length() > 0) {
 					local NamedArg is firstArg: expr:methodArgs:get(index: 0);
 					local Expression is valExpr: firstArg:getValue();
-					itemC: cg:generateExpression(expr: valExpr);
 					if (valExpr:getKind() == "ARRAY") {
+						cg:setContainerHint(t: targetType);
+						itemC: cg:generateExpression(expr: valExpr);
 						return "spec_array_add_array(" . targetC . ", " . itemC . ")";
 					}
-					local String is itemType: cg:inferTargetType(expr: valExpr);
-					if (cg:isArcType(typeName: itemType)) {
-						itemC: "(void*)spec_retain((void*)(" . itemC . "))";
-					}
+					itemC: cg:generateExpression(expr: valExpr);
 				}
 				return "spec_array_add(" . targetC . ", (void*)(" . itemC . "))";
 			}

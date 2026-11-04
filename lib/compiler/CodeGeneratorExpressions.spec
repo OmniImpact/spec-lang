@@ -24,7 +24,19 @@ Class is CodeGeneratorExpressions{
 
 		when (kind) {
 			is "ARRAY": {
-				local String is res: "({ SpecArray* _arr = spec_array_new();";
+				local String is newCall: "spec_array_new()";
+				if (self:containerHint != "") {
+					if (self:containerElemIsArc(containerType: self:containerHint)) {
+						newCall: "spec_array_new_object()";
+					}
+					self:containerHint: "";
+				} else if (expr:arrayItems:length() > 0) {
+					local String is elemT: self:inferTargetType(expr: expr:arrayItems:get(index: 0));
+					if (self:isArcType(typeName: elemT)) {
+						newCall: "spec_array_new_object()";
+					}
+				}
+				local String is res: "({ SpecArray* _arr = " . newCall . ";";
 				expr:arrayItems:each(action: local Function(Expression is item){
 					local String is itemC: self:generateExpression(expr: item);
 					res: res . " spec_array_add(_arr, (void*)(" . itemC . "));";
@@ -33,7 +45,19 @@ Class is CodeGeneratorExpressions{
 				return res;
 			}
 			is "MAP": {
-				local String is res: "({ SpecMap* _map = spec_map_new();";
+				local String is newCall: "spec_map_new()";
+				if (self:containerHint != "") {
+					if (self:containerElemIsArc(containerType: self:containerHint)) {
+						newCall: "spec_map_new_object()";
+					}
+					self:containerHint: "";
+				} else if (expr:mapValues:length() > 0) {
+					local String is valT: self:inferTargetType(expr: expr:mapValues:get(index: 0));
+					if (self:isArcType(typeName: valT)) {
+						newCall: "spec_map_new_object()";
+					}
+				}
+				local String is res: "({ SpecMap* _map = " . newCall . ";";
 				local Int is idx: 0;
 				expr:mapKeys:each(action: local Function(Expression is kExpr){
 					local Expression is vExpr: expr:mapValues:get(index: idx);

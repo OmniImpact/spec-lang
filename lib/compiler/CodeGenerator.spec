@@ -104,6 +104,10 @@ Class is CodeGenerator{
 	## Garbage collection mode: "" (default ARC) or "boehm"
 	local String is gcMode: "";
 
+	## Declared-type context for the container literal currently being generated
+	## (consumed by the ARRAY/MAP literal emitters; empty otherwise).
+	local String is containerHint: "";
+
 	replace Function is init(){
 		self:utils: CBackendUtils:init();
 		self:prelude: RuntimePrelude:init();
@@ -125,11 +129,16 @@ Class is CodeGenerator{
 		self:inlineReturnLabel: "";
 		self:localScopeVars: Map:init();
 		self:gcMode: "";
+		self:containerHint: "";
 	}
 
 	Function is setGcMode(String is mode){
 		self:gcMode: mode;
 		self:prelude:setGcMode(mode: mode);
+	}
+
+	Function is setContainerHint(String is t){
+		self:containerHint: t;
 	}
 
 	Function of Boolean is isArcType(String is typeName){
@@ -155,6 +164,36 @@ Class is CodeGenerator{
 		return false;
 	}
 
+	## Determines whether a container's element/value type is ARC-managed, from a
+	## canonical container type string ("Array of X", "Array:X", "Map of K to V",
+	## "Map:K:V"). Any-typed and unknown containers are never element-owned.
+	Function of Boolean is containerElemIsArc(String is containerType){
+		local String is elem: "";
+		if (containerType:startsWith(prefix: "Array of ")) {
+			elem: containerType:substring(start: 9, end: containerType:length());
+		} else if (containerType:startsWith(prefix: "Array:")) {
+			elem: containerType:substring(start: 6, end: containerType:length());
+		} else if (containerType:startsWith(prefix: "Map of ")) {
+			local String is rest: containerType:substring(start: 7, end: containerType:length());
+			local Int is toIdx: rest:indexOf(needle: " to ", default: -1);
+			if (toIdx >= 0) {
+				elem: rest:substring(start: toIdx + 4, end: rest:length());
+			}
+		} else if (containerType:startsWith(prefix: "Map:")) {
+			local String is rest: containerType:substring(start: 4, end: containerType:length());
+			local Int is colonIdx: rest:indexOf(needle: ":", default: -1);
+			if (colonIdx >= 0) {
+				elem: rest:substring(start: colonIdx + 1, end: rest:length());
+			}
+		} else {
+			return false;
+		}
+		if (elem == "" || elem == "Any") {
+			return false;
+		}
+		return self:isArcType(typeName: elem);
+	}
+
 	Function of Boolean is isFreshAllocExpr(Expression is expr){
 		local String is kind: expr:getKind();
 		if (kind == "ARRAY" || kind == "MAP" || kind == "ANON_FN") {
@@ -162,6 +201,9 @@ Class is CodeGenerator{
 		}
 		if (kind == "CALL") {
 			if (expr:methodName == "init") {
+				return true;
+			}
+			if (expr:methodName == "pop") {
 				return true;
 			}
 			if (expr:methodTarget:getKind() == "IDENT" && self:allClassNames:has(key: expr:methodTarget:stringValue) && !self:allEnumNames:has(key: expr:methodTarget:stringValue)) {

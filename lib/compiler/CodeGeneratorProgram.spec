@@ -32,7 +32,12 @@ Class is CodeGeneratorProgram{
 				local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
 				local String is autoPrefix: if (isArcVar) "SPEC_AUTO " else "";
 				if (stmt:hasInit) {
+					local String is initKind: stmt:initExpr:getKind();
+					if (initKind == "ARRAY" || initKind == "MAP") {
+						self:setContainerHint(t: self:formatVarTypeString(t: stmt:varType));
+					}
 					local String is initC: self:generateExpression(expr: stmt:initExpr);
+					self:setContainerHint(t: "");
 					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == "*" && cType != "const char*" && cType != "SpecArray*" && cType != "SpecMap*") {
 						initC: "(" . cType . ")(" . initC . ")";
 					}
@@ -48,10 +53,18 @@ Class is CodeGeneratorProgram{
 					return "    " . cType . " " . varName . " = \"\";\n";
 				}
 				if (vTypeName == "Array") {
-					return "    " . autoPrefix . cType . " " . varName . " = spec_array_new();\n";
+					local String is newCall: "spec_array_new()";
+					if (self:containerElemIsArc(containerType: self:formatVarTypeString(t: stmt:varType))) {
+						newCall: "spec_array_new_object()";
+					}
+					return "    " . autoPrefix . cType . " " . varName . " = " . newCall . ";\n";
 				}
 				if (vTypeName == "Map") {
-					return "    " . autoPrefix . cType . " " . varName . " = spec_map_new();\n";
+					local String is newCall: "spec_map_new()";
+					if (self:containerElemIsArc(containerType: self:formatVarTypeString(t: stmt:varType))) {
+						newCall: "spec_map_new_object()";
+					}
+					return "    " . autoPrefix . cType . " " . varName . " = " . newCall . ";\n";
 				}
 				return "    " . autoPrefix . cType . " " . varName . " = 0;\n";
 			}
@@ -65,15 +78,7 @@ Class is CodeGeneratorProgram{
 						if (containerType:contains(needle: "String:String") || containerType:contains(needle: "to String") || self:isStringExpr(expr: stmt:assignValue)) {
 							return "    spec_map_set(" . containerC . ", " . idxC . ", " . valC . ");\n";
 						}
-						local String is mapValType: self:inferTargetType(expr: stmt:assignValue);
-						if (self:isArcType(typeName: mapValType)) {
-							valC: "(void*)spec_retain((void*)(" . valC . "))";
-						}
 						return "    spec_map_set_any(" . containerC . ", " . idxC . ", (void*)(intptr_t)(" . valC . "));\n";
-					}
-					local String is arrValType: self:inferTargetType(expr: stmt:assignValue);
-					if (self:isArcType(typeName: arrValType)) {
-						valC: "(void*)spec_retain((void*)(" . valC . "))";
 					}
 					return "    spec_array_set(" . containerC . ", " . idxC . ", (void*)(intptr_t)(" . valC . "));\n";
 				}
@@ -82,8 +87,12 @@ Class is CodeGeneratorProgram{
 				if (appendC != "") {
 					return "    " . targetC . " = " . appendC . ";\n";
 				}
-				local String is valC: self:generateExpression(expr: stmt:assignValue);
 				local String is lhsType: self:inferTargetType(expr: stmt:assignTarget);
+				local String is valKind: stmt:assignValue:getKind();
+				if ((valKind == "ARRAY" || valKind == "MAP") && (lhsType:startsWith(prefix: "Array") || lhsType:startsWith(prefix: "Map"))) {
+					self:setContainerHint(t: lhsType);
+				}
+				local String is valC: self:generateExpression(expr: stmt:assignValue);
 				local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 				if (curCls:getTypeParams():indexOf(search: lhsType, default: -1) >= 0) {
 					valC: "(void*)(intptr_t)(" . valC . ")";
@@ -147,6 +156,10 @@ Class is CodeGeneratorProgram{
 					return "    break;\n";
 				}
 				if (stmt:hasReturnExpr) {
+					local String is retKind: stmt:returnExpr:getKind();
+					if ((retKind == "ARRAY" || retKind == "MAP") && (self:currentMethodReturnType:startsWith(prefix: "Array") || self:currentMethodReturnType:startsWith(prefix: "Map"))) {
+						self:setContainerHint(t: self:currentMethodReturnType);
+					}
 					local String is retC: self:generateExpression(expr: stmt:returnExpr);
 					local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {

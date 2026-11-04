@@ -279,9 +279,17 @@ Class is CodeGeneratorInference{
 						if (ft == "String" || ft == "string") {
 							out: out . "    self->" . self:cIdent(name: m:getName()) . " = \"\";\n";
 						} else if (ft == "Array") {
-							out: out . "    self->" . self:cIdent(name: m:getName()) . " = spec_array_new();\n";
+							local String is newCall: "spec_array_new()";
+							if (self:containerElemIsArc(containerType: self:formatTypeString(t: m:getType()))) {
+								newCall: "spec_array_new_object()";
+							}
+							out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . newCall . ";\n";
 						} else if (ft == "Map") {
-							out: out . "    self->" . self:cIdent(name: m:getName()) . " = spec_map_new();\n";
+							local String is newCall: "spec_map_new()";
+							if (self:containerElemIsArc(containerType: self:formatTypeString(t: m:getType()))) {
+								newCall: "spec_map_new_object()";
+							}
+							out: out . "    self->" . self:cIdent(name: m:getName()) . " = " . newCall . ";\n";
 						}
 					}
 				});
@@ -338,7 +346,13 @@ Class is CodeGeneratorInference{
 		}
 		if (mode == "filter") {
 			local String is outVar: "_out_" . id;
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = spec_array_new(); if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+			local String is outNewC: "spec_array_new()";
+			if (fnExpr:anonParams:length() > 0) {
+				if (self:isArcType(typeName: fnExpr:anonParams:get(index: 0):getType():getName())) {
+					outNewC: "spec_array_new_object()";
+				}
+			}
+			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = " . outNewC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
 			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") spec_array_add(" . outVar . ", " . arrVar . "->items[" . idxVar . "]);\n    } } " . outVar . "; })";
 			return out;
 		}
@@ -358,7 +372,11 @@ Class is CodeGeneratorInference{
 			local String is outVar: "_out_" . id;
 			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:getName());
 			if (retCType == "void") { retCType: "void*"; }
-			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = spec_array_new(); if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
+			local String is outNewC: "spec_array_new()";
+			if (self:isArcType(typeName: fnExpr:anonReturnType:getName())) {
+				outNewC: "spec_array_new_object()";
+			}
+			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = " . outNewC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
 			out: out . paramDecl . "        " . retCType . " " . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ", (void*)(intptr_t)(" . predVar . "));\n    } } " . outVar . "; })";
 			return out;
 		}
