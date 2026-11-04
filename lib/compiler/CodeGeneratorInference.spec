@@ -297,7 +297,7 @@ Class is CodeGeneratorInference{
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
 		local String is savedRetLbl: self:inlineReturnLabel;
-		self:inlineReturnLabel: "_loop_next_" . id;
+		self:inlineReturnLabel: "break";
 		if (mode == "each") {
 			self:inlineReturnVar: "";
 		} else {
@@ -330,29 +330,28 @@ Class is CodeGeneratorInference{
 		local String is arrVar: "_a_" . id;
 		local String is idxVar: "_i_" . id;
 		local String is predVar: "_pred_" . id;
-		local String is nextLbl: "_loop_next_" . id;
 
 		if (mode == "each") {
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . bodyC . "        " . nextLbl . ": ;\n    } } })";
+			out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } })";
 			return out;
 		}
 		if (mode == "filter") {
 			local String is outVar: "_out_" . id;
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = spec_array_new(); if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        bool " . predVar . " = false;\n" . bodyC . "        " . nextLbl . ": ;\n        if (" . predVar . ") spec_array_add(" . outVar . ", " . arrVar . "->items[" . idxVar . "]);\n    } } " . outVar . "; })";
+			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") spec_array_add(" . outVar . ", " . arrVar . "->items[" . idxVar . "]);\n    } } " . outVar . "; })";
 			return out;
 		}
 		if (mode == "count") {
 			local String is cntVar: "_cnt_" . id;
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; long long " . cntVar . " = 0; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        bool " . predVar . " = false;\n" . bodyC . "        " . nextLbl . ": ;\n        if (" . predVar . ") " . cntVar . "++;\n    } } " . cntVar . "; })";
+			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") " . cntVar . "++;\n    } } " . cntVar . "; })";
 			return out;
 		}
 		if (mode == "any") {
 			local String is fndVar: "_fnd_" . id;
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; bool " . fndVar . " = false; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        bool " . predVar . " = false;\n" . bodyC . "        " . nextLbl . ": ;\n        if (" . predVar . ") { " . fndVar . " = true; break; }\n    } } " . fndVar . "; })";
+			out: out . paramDecl . "        bool " . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ") { " . fndVar . " = true; break; }\n    } } " . fndVar . "; })";
 			return out;
 		}
 		if (mode == "map") {
@@ -360,7 +359,7 @@ Class is CodeGeneratorInference{
 			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:getName());
 			if (retCType == "void") { retCType: "void*"; }
 			local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; SpecArray* " . outVar . " = spec_array_new(); if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-			out: out . paramDecl . "        " . retCType . " " . predVar . " = 0;\n" . bodyC . "        " . nextLbl . ": ;\n        spec_array_add(" . outVar . ", (void*)(intptr_t)(" . predVar . "));\n    } } " . outVar . "; })";
+			out: out . paramDecl . "        " . retCType . " " . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ", (void*)(intptr_t)(" . predVar . "));\n    } } " . outVar . "; })";
 			return out;
 		}
 		return "0";
@@ -392,7 +391,7 @@ Class is CodeGeneratorInference{
 		if (accCType == "void") { accCType: "long long"; }
 
 		self:inlineReturnVar: accVar;
-		self:inlineReturnLabel: nextLbl;
+		self:inlineReturnLabel: "break";
 
 		local String is paramDecl: "";
 		if (fnExpr:anonParams:length() >= 1) {
@@ -417,7 +416,7 @@ Class is CodeGeneratorInference{
 		self:inlineReturnLabel: savedRetLbl;
 
 		local String is out: "({ SpecArray* " . arrVar . " = " . targetC . "; " . accCType . " " . accVar . " = " . initC . "; if (" . arrVar . ") { for (size_t " . idxVar . " = 0; " . idxVar . " < " . arrVar . "->length; " . idxVar . "++) {\n";
-		out: out . paramDecl . bodyC . "        " . nextLbl . ": ;\n    } } " . accVar . "; })";
+		out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } " . accVar . "; })";
 		return out;
 	}
 
@@ -436,10 +435,9 @@ Class is CodeGeneratorInference{
 		local String is mapVar: "_m_" . id;
 		local String is bVar: "_b_" . id;
 		local String is eVar: "_e_" . id;
-		local String is nextLbl: "_map_next_" . id;
 
 		self:inlineReturnVar: "";
-		self:inlineReturnLabel: nextLbl;
+		self:inlineReturnLabel: "break";
 
 		local String is paramDecl: "";
 		if (fnExpr:anonParams:length() >= 1) {
@@ -464,7 +462,7 @@ Class is CodeGeneratorInference{
 		self:inlineReturnLabel: savedRetLbl;
 
 		local String is out: "({ SpecMap* " . mapVar . " = " . targetC . "; if (" . mapVar . ") { for (size_t " . bVar . " = 0; " . bVar . " < SPEC_MAP_BUCKETS; " . bVar . "++) { for (SpecMapEntry* " . eVar . " = " . mapVar . "->buckets[" . bVar . "]; " . eVar . "; " . eVar . " = " . eVar . "->next) {\n";
-		out: out . paramDecl . bodyC . "            " . nextLbl . ": ;\n        } } } })";
+		out: out . paramDecl . "            do {\n" . bodyC . "            } while (0);\n        } } } })";
 		return out;
 	}
 
@@ -475,17 +473,15 @@ Class is CodeGeneratorInference{
 		local String is savedRetLbl: self:inlineReturnLabel;
 
 		local String is evVar: "_ev_" . id;
-		local String is evLbl: "_ev_done_" . id;
 		self:inlineReturnVar: evVar;
-		self:inlineReturnLabel: evLbl;
+		self:inlineReturnLabel: "break";
 		local String is evalBodyC: "";
 		evalExpr:anonBody:each(action: local Function(Statement is s){
 			evalBodyC: evalBodyC . self:generateStatement(stmt: s);
 		});
 
-		local String is itLbl: "_it_done_" . id;
 		self:inlineReturnVar: "";
-		self:inlineReturnLabel: itLbl;
+		self:inlineReturnLabel: "break";
 		local String is iterBodyC: "";
 		iterExpr:anonBody:each(action: local Function(Statement is s){
 			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
@@ -494,7 +490,7 @@ Class is CodeGeneratorInference{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ while (1) {\n        bool " . evVar . " = false;\n" . evalBodyC . "        " . evLbl . ": ;\n        if (!" . evVar . ") break;\n" . iterBodyC . "        " . itLbl . ": ;\n    } })";
+		local String is out: "({ while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        do {\n" . iterBodyC . "        } while (0);\n    } })";
 		return out;
 	}
 

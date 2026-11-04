@@ -439,16 +439,26 @@ Class is BuiltinCallGenerator{
 				local String is keyC: "\"\"";
 				local String is valC: "\"\"";
 				local Boolean is valIsStr: true;
+				local Expression is storedValExpr;
+				local Boolean is hasValExpr: false;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == "key") { keyC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == "value") {
 						local Expression is valExpr: arg:getValue();
 						valC: cg:generateExpression(expr: valExpr);
 						valIsStr: cg:isStringExpr(expr: valExpr);
+						storedValExpr: valExpr;
+						hasValExpr: true;
 					}
 				});
-				if (valIsStr) {
+				if (targetType:contains(needle: "String:String") || targetType:contains(needle: "to String") || valIsStr) {
 					return "spec_map_set(" . targetC . ", " . keyC . ", " . valC . ")";
+				}
+				if (hasValExpr) {
+					local String is valType: cg:inferTargetType(expr: storedValExpr);
+					if (cg:isArcType(typeName: valType)) {
+						valC: "(void*)spec_retain((void*)(" . valC . "))";
+					}
 				}
 				return "spec_map_set_any(" . targetC . ", " . keyC . ", (void*)(intptr_t)(" . valC . "))";
 			}
@@ -563,6 +573,10 @@ Class is BuiltinCallGenerator{
 					itemC: cg:generateExpression(expr: valExpr);
 					if (valExpr:getKind() == "ARRAY") {
 						return "spec_array_add_array(" . targetC . ", " . itemC . ")";
+					}
+					local String is itemType: cg:inferTargetType(expr: valExpr);
+					if (cg:isArcType(typeName: itemType)) {
+						itemC: "(void*)spec_retain((void*)(" . itemC . "))";
 					}
 				}
 				return "spec_array_add(" . targetC . ", (void*)(" . itemC . "))";

@@ -98,6 +98,9 @@ Class is CodeGenerator{
 	## Active inline return label name when expanding an inline closure body.
 	local String is inlineReturnLabel: "";
 
+	## Registry of local variables declared in the current function scope (for SPEC_AUTO injection).
+	local Map of String to String is localScopeVars: Map:init();
+
 	replace Function is init(){
 		self:utils: CBackendUtils:init();
 		self:prelude: RuntimePrelude:init();
@@ -117,6 +120,52 @@ Class is CodeGenerator{
 		self:anonCounter: 0;
 		self:inlineReturnVar: "";
 		self:inlineReturnLabel: "";
+		self:localScopeVars: Map:init();
+	}
+
+	Function of Boolean is isArcType(String is typeName){
+		if (typeName == "" || typeName == "Int" || typeName == "int" || typeName == "Real" || typeName == "Float" || typeName == "float" || typeName == "Bool" || typeName == "bool" || typeName == "Byte" || typeName == "byte" || typeName == "Nil" || typeName == "Void" || typeName == "void" || typeName == "String" || typeName == "string") {
+			return false;
+		}
+		if (typeName:contains(needle: ":")) {
+			local Array of String is parts: typeName:split(delimiter: ":");
+			typeName: parts:get(index: 0);
+		}
+		if (self:allEnumNames:has(key: typeName) && !self:allTaggedEnums:has(key: typeName)) {
+			return false;
+		}
+		if (self:allTaggedEnums:has(key: typeName)) {
+			return true;
+		}
+		if (typeName:startsWith(prefix: "Array") || typeName:startsWith(prefix: "Map") || typeName:startsWith(prefix: "Function") || typeName == "LoopControl") {
+			return true;
+		}
+		if (self:allClassNames:has(key: typeName)) {
+			return true;
+		}
+		return false;
+	}
+
+	Function of Boolean is isFreshAllocExpr(Expression is expr){
+		local String is kind: expr:getKind();
+		if (kind == "ARRAY" || kind == "MAP" || kind == "ANON_FN") {
+			return true;
+		}
+		if (kind == "CALL") {
+			if (expr:methodName == "init") {
+				return true;
+			}
+			if (expr:methodTarget:getKind() == "IDENT" && self:allClassNames:has(key: expr:methodTarget:stringValue) && !self:allEnumNames:has(key: expr:methodTarget:stringValue)) {
+				return true;
+			}
+			if (self:allEnumVariants:has(key: expr:methodName)) {
+				local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: "");
+				if (self:allTaggedEnums:has(key: eName)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	local Function of String is cTypeFor(String is typeName){

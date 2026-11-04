@@ -484,6 +484,13 @@ Class is CodeGeneratorExpressions{
 					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ""));
 				});
 
+				local Map of String to String is savedScopeVars: Map:init();
+				local Array of String is outerScopeKeys: self:localScopeVars:keys();
+				outerScopeKeys:each(action: local Function(String is k){
+					savedScopeVars:set(key: k, value: self:localScopeVars:getString(key: k, default: ""));
+				});
+				self:localScopeVars: Map:init();
+
 				local String is paramsC: "void* _env_ptr";
 				local Array of String is paramNames: [];
 				expr:anonParams:each(action: local Function(Parameter is p){
@@ -503,6 +510,7 @@ Class is CodeGeneratorExpressions{
 				self:inlineReturnVar: savedRetVar;
 				self:inlineReturnLabel: savedRetLbl;
 				self:localVars: savedVars;
+				self:localScopeVars: savedScopeVars;
 
 				local String is envName: "_Env_anon_" . id;
 				local String is destroyEnvName: "_destroy_env_anon_" . id;

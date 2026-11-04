@@ -702,7 +702,7 @@ Class is RuntimePrelude{
 		p: p . "        if (strcmp(curr->key, key) == 0) {\n";
 		p: p . "            const char* res = (const char*)curr->value;\n";
 		p: p . "            pthread_mutex_unlock(&m->lock);\n";
-		p: p . "            return res ? res : \"\";\n";
+		p: p . "            return spec_str_concat(res ? res : \"\", \"\");\n";
 		p: p . "        }\n";
 		p: p . "        curr = curr->next;\n";
 		p: p . "    }\n";

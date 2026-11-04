@@ -25,9 +25,12 @@ Class is CodeGeneratorProgram{
 		when (kind) {
 			is "VAR_DECL": {
 				self:localVars:set(key: stmt:varName, value: self:formatVarTypeString(t: stmt:varType));
+				self:localScopeVars:set(key: stmt:varName, value: stmt:varType:getName());
 				local String is vTypeName: stmt:varType:getName();
 				local String is cType: self:cTypeFor(typeName: vTypeName);
 				local String is varName: self:cIdent(name: stmt:varName);
+				local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
+				local String is autoPrefix: if (isArcVar) "SPEC_AUTO " else "";
 				if (stmt:hasInit) {
 					local String is initC: self:generateExpression(expr: stmt:initExpr);
 					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == "*" && cType != "const char*" && cType != "SpecArray*" && cType != "SpecMap*") {
@@ -36,18 +39,21 @@ Class is CodeGeneratorProgram{
 					if (cType == "const char*") {
 						initC: "spec_str_clone_if_buffered(" . initC . ")";
 					}
-					return "    " . cType . " " . varName . " = " . initC . ";\n";
+					if (isArcVar && !self:isFreshAllocExpr(expr: stmt:initExpr)) {
+						initC: "(" . cType . ")spec_retain((void*)(" . initC . "))";
+					}
+					return "    " . autoPrefix . cType . " " . varName . " = " . initC . ";\n";
 				}
 				if (vTypeName == "String" || vTypeName == "string") {
 					return "    " . cType . " " . varName . " = \"\";\n";
 				}
 				if (vTypeName == "Array") {
-					return "    " . cType . " " . varName . " = spec_array_new();\n";
+					return "    " . autoPrefix . cType . " " . varName . " = spec_array_new();\n";
 				}
 				if (vTypeName == "Map") {
-					return "    " . cType . " " . varName . " = spec_map_new();\n";
+					return "    " . autoPrefix . cType . " " . varName . " = spec_map_new();\n";
 				}
-				return "    " . cType . " " . varName . " = 0;\n";
+				return "    " . autoPrefix . cType . " " . varName . " = 0;\n";
 			}
 			is "ASSIGN": {
 				if (stmt:assignTarget:getKind() == "INDEX") {
@@ -56,10 +62,18 @@ Class is CodeGeneratorProgram{
 					local String is valC: self:generateExpression(expr: stmt:assignValue);
 					local String is containerType: self:inferTargetType(expr: stmt:assignTarget:leftExpr);
 					if (containerType:startsWith(prefix: "Map:") || containerType == "Map") {
-						if (self:isStringExpr(expr: stmt:assignValue)) {
+						if (containerType:contains(needle: "String:String") || containerType:contains(needle: "to String") || self:isStringExpr(expr: stmt:assignValue)) {
 							return "    spec_map_set(" . containerC . ", " . idxC . ", " . valC . ");\n";
 						}
+						local String is mapValType: self:inferTargetType(expr: stmt:assignValue);
+						if (self:isArcType(typeName: mapValType)) {
+							valC: "(void*)spec_retain((void*)(" . valC . "))";
+						}
 						return "    spec_map_set_any(" . containerC . ", " . idxC . ", (void*)(intptr_t)(" . valC . "));\n";
+					}
+					local String is arrValType: self:inferTargetType(expr: stmt:assignValue);
+					if (self:isArcType(typeName: arrValType)) {
+						valC: "(void*)spec_retain((void*)(" . valC . "))";
 					}
 					return "    spec_array_set(" . containerC . ", " . idxC . ", (void*)(intptr_t)(" . valC . "));\n";
 				}
@@ -76,8 +90,11 @@ Class is CodeGeneratorProgram{
 				} else if (lhsType == "String" || lhsType == "string") {
 					valC: "spec_str_clone_if_buffered(" . valC . ")";
 				}
-				local Boolean is isArcLhs: (self:allClassNames:has(key: lhsType) && !self:allEnumNames:has(key: lhsType)) || self:allTaggedEnums:has(key: lhsType) || lhsType:startsWith(prefix: "Array") || lhsType:startsWith(prefix: "Map") || lhsType:startsWith(prefix: "Function") || lhsType == "LoopControl";
-				if (targetC:startsWith(prefix: "self->") && isArcLhs) {
+				local Boolean is isArcLhs: self:isArcType(typeName: lhsType);
+				if (isArcLhs) {
+					if (self:isFreshAllocExpr(expr: stmt:assignValue)) {
+						return "    spec_assign_transfer((void**)&" . targetC . ", (void*)(" . valC . "));\n";
+					}
 					return "    spec_assign((void**)&" . targetC . ", (void*)(" . valC . "));\n";
 				}
 				return "    " . targetC . " = " . valC . ";\n";
@@ -125,15 +142,19 @@ Class is CodeGeneratorProgram{
 				if (self:inlineReturnLabel != "") {
 					if (stmt:hasReturnExpr && self:inlineReturnVar != "") {
 						local String is retC: self:generateExpression(expr: stmt:returnExpr);
-						return "    " . self:inlineReturnVar . " = " . retC . "; goto " . self:inlineReturnLabel . ";\n";
+						return "    " . self:inlineReturnVar . " = " . retC . "; break;\n";
 					}
-					return "    goto " . self:inlineReturnLabel . ";\n";
+					return "    break;\n";
 				}
 				if (stmt:hasReturnExpr) {
 					local String is retC: self:generateExpression(expr: stmt:returnExpr);
 					local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
 						retC: "(void*)(intptr_t)(" . retC . ")";
+					} else if (self:isArcType(typeName: self:currentMethodReturnType)) {
+						if (!self:isFreshAllocExpr(expr: stmt:returnExpr)) {
+							retC: "(" . self:cTypeFor(typeName: self:currentMethodReturnType) . ")spec_retain((void*)(" . retC . "))";
+						}
 					}
 					return "    return " . retC . ";\n";
 				}
@@ -203,6 +224,7 @@ Class is CodeGeneratorProgram{
 		}
 
 		self:localVars: Map:init();
+		self:localScopeVars: Map:init();
 		method:getParameters():each(action: local Function(Parameter is p){
 			self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
 		});
@@ -240,7 +262,7 @@ Class is CodeGeneratorProgram{
 		local String is m: "/* Application Entry Point */\n";
 		m: m . "int main(int argc, char** argv) {\n";
 		m: m . "    srand((unsigned int)time(NULL));\n";
-		m: m . "    SpecMap* args = spec_map_new();\n";
+		m: m . "    SPEC_AUTO SpecMap* args = spec_map_new();\n";
 		m: m . "    for (int i = 1; i < argc; i++) {\n";
 		m: m . "        if (strncmp(argv[i], \"--\", 2) == 0) {\n";
 		m: m . "            const char* key = argv[i] + 2;\n";
@@ -258,7 +280,7 @@ Class is CodeGeneratorProgram{
 		m: m . "            spec_map_set(args, key, val);\n";
 		m: m . "        }\n";
 		m: m . "    }\n";
-		m: m . "    " . entryClass . "* app = " . entryClass . "_new();\n";
+		m: m . "    SPEC_AUTO " . entryClass . "* app = " . entryClass . "_new();\n";
 		m: m . "    " . entryClass . "_init(app, args);\n";
 		m: m . "    spec_drain_async_tasks();\n";
 		m: m . "    return 0;\n";
