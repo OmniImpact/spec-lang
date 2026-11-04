@@ -49,9 +49,9 @@ Class is CodeGeneratorProgram{
 					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == '*' && cType != 'const char*' && cType != 'SpecArray*' && cType != 'SpecMap*') {
 						initC: '(' . cType . ')(' . initC . ')';
 					}
-					if (isArcVar && !self:yieldsClaim(expr: stmt:initExpr)) {
-						initC: '(' . cType . ')spec_retain((void*)(' . initC . '))';
-					}
+					if (isArcVar) {
+					initC: '(' . cType . ')spec_retain((void*)(' . initC . '))';
+				}
 					return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . initC . ";\n";
 				}
 				if (vTypeName == 'String' || vTypeName == 'string') {
@@ -100,18 +100,9 @@ Class is CodeGeneratorProgram{
 					self:argMode: savedArgIx;
 					if (containerType:startsWith(prefix: 'Map:') || containerType == 'Map') {
 						if (containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:isStringExpr(expr: stmt:assignValue)) {
-							if (self:yieldsClaim(expr: stmt:assignValue)) {
-								return '    spec_map_set(' . containerC . ', ' . idxC . ', ((char*)spec_claim_pool((void*)(' . valC . '))));\n';
-							}
 							return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
 						}
-						if (self:yieldsClaim(expr: stmt:assignValue)) {
-							return '    spec_map_set_any_transfer(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
-						}
 						return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
-					}
-					if (self:yieldsClaim(expr: stmt:assignValue)) {
-						return '    spec_array_set_transfer(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 					}
 					return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 				}
@@ -135,9 +126,6 @@ Class is CodeGeneratorProgram{
 				}
 				local Boolean is isArcLhs: self:isArcType(typeName: lhsType);
 				if (isArcLhs) {
-					if (self:yieldsClaim(expr: stmt:assignValue)) {
-						return '    spec_assign_transfer((void**)&' . targetC . ', (void*)(' . valC . "));\n";
-					}
 					return '    spec_assign((void**)&' . targetC . ', (void*)(' . valC . "));\n";
 				}
 				return '    ' . targetC . ' = ' . valC . ";\n";
@@ -202,10 +190,8 @@ Class is CodeGeneratorProgram{
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
 						retC: '(void*)(intptr_t)(' . retC . ')';
 					} else if (self:isArcType(typeName: self:currentMethodReturnType)) {
-						if (!self:yieldsClaim(expr: stmt:returnExpr)) {
-							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
-						}
-					}
+					retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
+				}
 					return '    return ' . retC . ";\n";
 				}
 				return "    return;\n";

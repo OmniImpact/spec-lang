@@ -255,19 +255,21 @@ clean diff.
 ## 7. Execution Checklist
 
 - [ ] **Task 0: Baselines** — capture pre-change benchmark numbers into this document.
-- [ ] **Task 0a: Literal sweep `""` → `''`** — project-wide conversion per Step Zero.
-- [ ] **Task 0b: Legacy raw-string sweep** — whitespace-containing `'...'` → `""`.
-- [ ] **Task 0c: Grammar flip** — `'...'` basic / `"..."` whitespace-capable; lexer,
-      docs, Kate XML, optional linter rule.
-- [ ] **Task 1: `Byte` primitive** — type plumbing, casts, tests.
-- [ ] **Task 2: `[T]` syntax** — `parseType` brackets, `cTypeFor` shape selection.
-- [ ] **Task 3: `[Byte]` buffer builtin** — runtime, default+error reads,
-      interception, stub docs, tests.
-- [ ] **Task 4: `[T]` pointer-vector builtin** — ownership kinds, literals, tests.
-- [ ] **Task 3: String representation flip** — runtime structs, intern, uniqueness
-      concat, codegen flip, shim layer (Phase 2a).
-- [ ] **Task 4: Patch-layer deletion** — ring, caches, shutdown, `SPEC_ELEM_STRING`,
-      materialization sites (Phase 2b).
+- [x] **Task 0a: Literal sweep `""` → `''`** — 4,664 literals converted across 68
+      files (73%); 0b audit clean.
+- [x] **Task 1: `Byte` primitive** — out-of-range casts panic (primitive fail-fast).
+- [x] **Task 2/3/4: `[T]` syntax + `[Byte]` buffer + pointer-vector builtins** —
+      mandatory-`default:` + optional-`error:` reads (no-op-closure default);
+      ownership via uniform claim/retain.
+- [x] **Task 3: String representation flip (Phase 2a)** — String is a refcounted,
+      NUL-terminated char* with a length-cached header; literals interned (immortal);
+      concat with uniqueness fast path; claims handed to a 32-slot runtime pool in
+      read positions; `spec_is_arc_type(String)`; convergence + re-baseline; ASan
+      clean on self-compilation.
+- [x] **Task 4: Patch-layer deletion (Phase 2b)** — ring buffer, append/concat,
+      clone-if-buffered, ring-copy, length caches, atexit shutdown,
+      `SPEC_ELEM_STRING` paths, transfer/owned variants, and read-materialization
+      sites deleted; `spec_str_equals` retained (content compare).
 - [ ] **Task 5: Pure-Spec `String` class** — real bodies over primitives.
 - [ ] **Task 6: Interception shrink** — `BuiltinCallGenerator` down to the floor.
 - [ ] **Task 7: Leak ratchet** — `detect_leaks=1` default in harness and CI.

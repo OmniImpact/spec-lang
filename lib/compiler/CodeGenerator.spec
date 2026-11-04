@@ -152,12 +152,15 @@ Class is CodeGenerator{
 	}
 
 	Function is setArgMode(Boolean is m){
-		self:argMode: m;
+		self:argMode: true;
 	}
 
 	Function of Boolean is isArcType(String is typeName){
 		if (typeName == '' || typeName == 'Int' || typeName == 'int' || typeName == 'Real' || typeName == 'Float' || typeName == 'float' || typeName == 'Bool' || typeName == 'bool' || typeName == 'Byte' || typeName == 'byte' || typeName == 'Nil' || typeName == 'Void' || typeName == 'void') {
 			return false;
+		}
+		if (typeName == 'String' || typeName == 'string') {
+			return true;
 		}
 		if (typeName:contains(needle: ':')) {
 			local Array of String is parts: typeName:split(delimiter: ':');

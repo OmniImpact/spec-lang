@@ -112,10 +112,7 @@ Class is BuiltinCallGenerator{
 		if (targetC == 'While' && expr:methodName == 'run' && expr:methodArgs:length() > 0) {
 			local NamedArg is loopArg: expr:methodArgs:get(index: 0);
 			local Expression is loopVal: loopArg:getValue();
-			local Boolean is savedArgW: cg:argMode;
-			cg:setArgMode(m: false);
-			local String is loopC: cg:generateExpression(expr: loopVal);
-			cg:setArgMode(m: savedArgW);
+			local String is loopC: cg:generateExpressionInner(expr: loopVal);
 			local String is loopClass: cg:inferTargetType(expr: loopVal);
 			if (loopClass == '' && loopVal:getKind() == 'CALL') {
 				local Expression is mt: loopVal:methodTarget;
@@ -127,9 +124,9 @@ Class is BuiltinCallGenerator{
 				ctrlC: cg:generateExpression(expr: ctrlArg:getValue());
 			}
 			local String is freeLoopC: '';
-			if (loopVal:getKind() == 'CALL' && loopVal:methodName == 'init') {
-				freeLoopC: ' spec_release(_lp);';
-			}
+		if (loopVal:getKind() == 'CALL' && loopVal:methodName == 'init') {
+			freeLoopC: ' spec_release(_lp);';
+		}
 			return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
 		}
 
@@ -524,8 +521,7 @@ Class is BuiltinCallGenerator{
 					itemExpr: arg:getValue();
 				});
 				cg:setArgMode(m: savedArgV);
-				local String is pushFn: if (elemKind == 'object' && cg:yieldsClaim(expr: itemExpr)) 'spec_vec_push_owned' else 'spec_vec_push';
-				return pushFn . '(' . targetC . ', ' . itemPre . itemC . itemPost . ')';
+				return 'spec_vec_push(' . targetC . ', ' . itemPre . itemC . itemPost . ')';
 			}
 			if (expr:methodName == 'get') {
 				local String is idxC: '0';
@@ -550,8 +546,7 @@ Class is BuiltinCallGenerator{
 						itemExpr: arg:getValue();
 					}
 				});
-				local String is setFn: if (elemKind == 'object' && cg:yieldsClaim(expr: itemExpr)) 'spec_vec_set_transfer' else 'spec_vec_set';
-				return setFn . '(' . targetC . ', ' . idxC . ', ' . itemPre . itemC . itemPost . ', ' . errC . ')';
+				return 'spec_vec_set(' . targetC . ', ' . idxC . ', ' . itemPre . itemC . itemPost . ', ' . errC . ')';
 			}
 			if (expr:methodName == 'pop') {
 				local String is defC: '0';
@@ -599,13 +594,7 @@ Class is BuiltinCallGenerator{
 					}
 				});
 				if (targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String') || valIsStr) {
-					if (cg:yieldsClaim(expr: valExpr)) {
-						return 'spec_map_set(' . targetC . ', ' . keyC . ', ((char*)spec_claim_pool((void*)(' . valC . '))))';
-					}
 					return 'spec_map_set(' . targetC . ', ' . keyC . ', ' . valC . ')';
-				}
-				if (cg:yieldsClaim(expr: valExpr)) {
-					return 'spec_map_set_any_transfer(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 				}
 				return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 			}
@@ -729,9 +718,7 @@ Class is BuiltinCallGenerator{
 					cg:setArgMode(m: savedArgA);
 					itemExpr: valExpr;
 				}
-				local String is elemKind2: cg:containerElemKind(containerType: targetType);
-				local String is addFn2: if (elemKind2 == 'object' && cg:yieldsClaim(expr: itemExpr)) 'spec_array_add_owned' else 'spec_array_add';
-				return addFn2 . '(' . targetC . ', (void*)(' . itemC . '))';
+				return 'spec_array_add(' . targetC . ', (void*)(' . itemC . '))';
 			}
 			if (expr:methodName == 'length') {
 				return 'spec_array_length(' . targetC . ')';

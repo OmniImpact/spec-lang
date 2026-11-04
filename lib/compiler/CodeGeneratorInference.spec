@@ -278,7 +278,7 @@ Class is CodeGeneratorInference{
 						local String is fieldInitC: self:generateExpression(expr: m:initExpr);
 						self:argMode: savedArgFi;
 						local String is ftn: m:getType():getName();
-						if (self:isArcType(typeName: ftn) && !self:yieldsClaim(expr: m:initExpr)) {
+						if (self:isArcType(typeName: ftn)) {
 							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
 						}
 						out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . fieldInitC . ";\n";

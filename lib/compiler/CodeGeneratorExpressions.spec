@@ -84,12 +84,7 @@ Class is CodeGeneratorExpressions{
 				self:argMode: false;
 				expr:arrayItems:each(action: local Function(Expression is item){
 					local String is itemC: self:generateExpression(expr: item);
-					local String is itemAdd: addFn;
-					if (self:yieldsClaim(expr: item)) {
-						if (addFn == 'spec_array_add') { itemAdd: 'spec_array_add_owned'; }
-						if (addFn == 'spec_vec_push') { itemAdd: 'spec_vec_push_owned'; }
-					}
-					res: res . ' ' . itemAdd . '(_arr, (void*)(' . itemC . '));';
+					res: res . ' ' . addFn . '(_arr, (void*)(' . itemC . '));';
 				});
 				self:argMode: savedArg;
 				res: res . ' _arr; })';
@@ -604,12 +599,7 @@ Class is CodeGeneratorExpressions{
 					paramNames:add(item: p:getName());
 					self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
 					local String is pCType: self:cTypeFor(typeName: p:getType():getName());
-					if (p:getType():getName() == 'String') {
-						paramsC: paramsC . ', ' . pCType . ' _p_' . self:cIdent(name: p:getName());
-						paramBinds: paramBinds . '    ' . pCType . ' ' . self:cIdent(name: p:getName()) . ' = spec_str_ring_copy(_p_' . self:cIdent(name: p:getName()) . ");\n";
-					} else {
-						paramsC: paramsC . ', ' . pCType . ' ' . self:cIdent(name: p:getName());
-					}
+					paramsC: paramsC . ', ' . pCType . ' ' . self:cIdent(name: p:getName());
 				});
 
 				local String is savedRetVar: self:inlineReturnVar;
