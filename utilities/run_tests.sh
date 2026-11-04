@@ -155,6 +155,52 @@ assert_compile_failure "merge-function-negative" \
 	"omits 'b' of 'partial' which has no default value" \
 	"cannot assign 'String' to 'Int'"
 
+assert_compile_failure "byte-negative" \
+	"$ROOT/tests/negative/byte_negative_test.spec" \
+	"cannot assign 'Int' to 'Byte'" \
+	"Cannot cast 'String' to 'Byte'"
+
+assert_compile_failure "list-guard-negative" \
+	"$ROOT/tests/negative/list_guard_negative_test.spec" \
+	"Bare List type requires" \
+	"requires a 'default:' argument"
+
+# -----------------------------------------------------------------------------
+# 2b. Runtime panics: must compile, must exit non-zero with required diagnostics
+# -----------------------------------------------------------------------------
+echo "== Runtime panics =="
+assert_runtime_panic() {
+	local name="$1" src="$2"
+	shift 2
+	local required=("$@")
+	local out
+	if ! out="$("$SPEC" -i "$src" -o "$WORK/$name.bin" 2>&1)"; then
+		bad "$name: compilation failed: $(echo "$out" | head -1)"
+		return
+	fi
+	local run_out run_status
+	run_out="$(cd "$ROOT" && timeout 10 "$WORK/$name.bin" < /dev/null 2>&1)"
+	run_status=$?
+	if [ $run_status -eq 0 ]; then
+		bad "$name: exited 0 but must panic at runtime"
+		return
+	fi
+	local missing=0
+	local msg
+	for msg in "${required[@]}"; do
+		if ! echo "$run_out" | grep -q "$msg"; then
+			bad "$name: missing panic diagnostic: $msg"
+			missing=1
+		fi
+	done
+	[ $missing -eq 0 ] && ok "$name (runtime panic, all diagnostics present)"
+}
+
+assert_runtime_panic "byte-range-panic" \
+	"$ROOT/tests/negative/byte_range_panic_test.spec" \
+	"[Spec Runtime Panic]" \
+	"Byte cast out of range: 300"
+
 # -----------------------------------------------------------------------------
 # 3. Compiler exit-code semantics
 # -----------------------------------------------------------------------------

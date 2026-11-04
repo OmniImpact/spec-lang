@@ -112,7 +112,10 @@ Class is BuiltinCallGenerator{
 		if (targetC == 'While' && expr:methodName == 'run' && expr:methodArgs:length() > 0) {
 			local NamedArg is loopArg: expr:methodArgs:get(index: 0);
 			local Expression is loopVal: loopArg:getValue();
+			local Boolean is savedArgW: cg:argMode;
+			cg:setArgMode(m: false);
 			local String is loopC: cg:generateExpression(expr: loopVal);
+			cg:setArgMode(m: savedArgW);
 			local String is loopClass: cg:inferTargetType(expr: loopVal);
 			if (loopClass == '' && loopVal:getKind() == 'CALL') {
 				local Expression is mt: loopVal:methodTarget;
@@ -424,6 +427,147 @@ Class is BuiltinCallGenerator{
 			}
 		}
 
+		# List methods ([Byte] byte-buffer shape; other shapes below)
+		if (targetType == 'List:Byte' || targetType == 'List of Byte') {
+			local String is errC: 'spec_noop_closure()';
+			if (expr:methodName == 'get' || expr:methodName == 'pop' || expr:methodName == 'set') {
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'error') {
+						errC: cg:generateExpression(expr: arg:getValue());
+					}
+				});
+			}
+			if (expr:methodName == 'push') {
+				local String is itemC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					itemC: cg:generateExpression(expr: arg:getValue());
+				});
+				return 'spec_bytebuffer_push(' . targetC . ', (long long)(' . itemC . '))';
+			}
+			if (expr:methodName == 'appendString') {
+				local String is sC: '""';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					sC: cg:generateExpression(expr: arg:getValue());
+				});
+				return 'spec_bytebuffer_append_string(' . targetC . ', ' . sC . ')';
+			}
+			if (expr:methodName == 'get') {
+				local String is idxC: '0';
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == 'default') { defC: '(long long)(' . cg:generateExpression(expr: arg:getValue()) . ')'; }
+				});
+				return 'spec_bytebuffer_get(' . targetC . ', ' . idxC . ', ' . defC . ', ' . errC . ')';
+			}
+			if (expr:methodName == 'set') {
+				local String is idxC: '0';
+				local String is itemC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == 'item' || arg:getName() == 'value') { itemC: '(long long)(' . cg:generateExpression(expr: arg:getValue()) . ')'; }
+				});
+				return 'spec_bytebuffer_set(' . targetC . ', ' . idxC . ', ' . itemC . ', ' . errC . ')';
+			}
+			if (expr:methodName == 'pop') {
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'default') { defC: '(long long)(' . cg:generateExpression(expr: arg:getValue()) . ')'; }
+				});
+				return 'spec_bytebuffer_pop(' . targetC . ', ' . defC . ', ' . errC . ')';
+			}
+			if (expr:methodName == 'length') {
+				return 'spec_bytebuffer_length(' . targetC . ')';
+			}
+			if (expr:methodName == 'clear') {
+				return 'spec_bytebuffer_clear(' . targetC . ')';
+			}
+			if (expr:methodName == 'toString') {
+				return 'spec_bytebuffer_to_string(' . targetC . ')';
+			}
+		}
+
+		# List methods (pointer-vector shapes)
+		if (targetType:startsWith(prefix: 'List')) {
+			local String is listElem: '';
+			if (targetType:startsWith(prefix: 'List of ') && targetType:length() > 7) {
+				listElem: targetType:substring(start: 7, end: targetType:length());
+			} else if (targetType:startsWith(prefix: 'List:') && targetType:length() > 5) {
+				listElem: targetType:substring(start: 5, end: targetType:length());
+			}
+			local String is elemKind: cg:containerElemKind(containerType: targetType);
+			local String is itemPre: '(void*)(intptr_t)(';
+			local String is itemPost: ')';
+			local String is resCast: '(long long)(intptr_t)';
+			if (elemKind == 'string') {
+				itemPre: '(void*)(';
+				resCast: '(const char*)';
+			} else if (elemKind == 'object') {
+				itemPre: '(void*)(';
+				resCast: '(' . cg:cTypeFor(typeName: listElem) . ')(intptr_t)';
+			}
+			local String is errC: 'spec_noop_closure()';
+			if (expr:methodName == 'get' || expr:methodName == 'pop' || expr:methodName == 'set') {
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'error') {
+						errC: cg:generateExpression(expr: arg:getValue());
+					}
+				});
+			}
+			if (expr:methodName == 'push') {
+				local String is itemC: '0';
+				local Expression is itemExpr;
+				local Boolean is savedArgV: cg:argMode;
+				cg:setArgMode(m: false);
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					itemC: cg:generateExpression(expr: arg:getValue());
+					itemExpr: arg:getValue();
+				});
+				cg:setArgMode(m: savedArgV);
+				local String is pushFn: if (elemKind == 'object' && cg:yieldsClaim(expr: itemExpr)) 'spec_vec_push_owned' else 'spec_vec_push';
+				return pushFn . '(' . targetC . ', ' . itemPre . itemC . itemPost . ')';
+			}
+			if (expr:methodName == 'get') {
+				local String is idxC: '0';
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return resCast . 'spec_vec_get(' . targetC . ', ' . idxC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
+			}
+			if (expr:methodName == 'set') {
+				local String is idxC: '0';
+				local String is itemC: '0';
+				local Expression is itemExpr;
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == 'item' || arg:getName() == 'value') {
+						local Boolean is savedArgS: cg:argMode;
+						cg:setArgMode(m: false);
+						itemC: cg:generateExpression(expr: arg:getValue());
+						cg:setArgMode(m: savedArgS);
+						itemExpr: arg:getValue();
+					}
+				});
+				local String is setFn: if (elemKind == 'object' && cg:yieldsClaim(expr: itemExpr)) 'spec_vec_set_transfer' else 'spec_vec_set';
+				return setFn . '(' . targetC . ', ' . idxC . ', ' . itemPre . itemC . itemPost . ', ' . errC . ')';
+			}
+			if (expr:methodName == 'pop') {
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
+				});
+				return resCast . 'spec_vec_pop(' . targetC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
+			}
+			if (expr:methodName == 'length') {
+				return 'spec_vec_length(' . targetC . ')';
+			}
+			if (expr:methodName == 'clear') {
+				return 'spec_vec_clear(' . targetC . ')';
+			}
+		}
+
 		# Map methods
 		local Boolean is isMap: targetC == 'Map' || targetType == 'Map' || targetType:startsWith(prefix: 'Map:') ||
 			((targetType == '' || targetType == 'Any') && (
@@ -442,16 +586,26 @@ Class is BuiltinCallGenerator{
 				local String is keyC: '""';
 				local String is valC: '""';
 				local Boolean is valIsStr: true;
+				local Expression is valExpr;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == 'value') {
-						local Expression is valExpr: arg:getValue();
-						valC: cg:generateExpression(expr: valExpr);
-						valIsStr: cg:isStringExpr(expr: valExpr);
+						local Boolean is savedArgM: cg:argMode;
+						cg:setArgMode(m: false);
+						valC: cg:generateExpression(expr: arg:getValue());
+						cg:setArgMode(m: savedArgM);
+						valIsStr: cg:isStringExpr(expr: arg:getValue());
+						valExpr: arg:getValue();
 					}
 				});
 				if (targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String') || valIsStr) {
+					if (cg:yieldsClaim(expr: valExpr)) {
+						return 'spec_map_set(' . targetC . ', ' . keyC . ', ((char*)spec_claim_pool((void*)(' . valC . '))))';
+					}
 					return 'spec_map_set(' . targetC . ', ' . keyC . ', ' . valC . ')';
+				}
+				if (cg:yieldsClaim(expr: valExpr)) {
+					return 'spec_map_set_any_transfer(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 				}
 				return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 			}
@@ -560,6 +714,7 @@ Class is BuiltinCallGenerator{
 			}
 			if (expr:methodName == 'add') {
 				local String is itemC: 'NULL';
+				local Expression is itemExpr;
 				if (expr:methodArgs:length() > 0) {
 					local NamedArg is firstArg: expr:methodArgs:get(index: 0);
 					local Expression is valExpr: firstArg:getValue();
@@ -568,9 +723,15 @@ Class is BuiltinCallGenerator{
 						itemC: cg:generateExpression(expr: valExpr);
 						return 'spec_array_add_array(' . targetC . ', ' . itemC . ')';
 					}
+					local Boolean is savedArgA: cg:argMode;
+					cg:setArgMode(m: false);
 					itemC: cg:generateExpression(expr: valExpr);
+					cg:setArgMode(m: savedArgA);
+					itemExpr: valExpr;
 				}
-				return 'spec_array_add(' . targetC . ', (void*)(' . itemC . '))';
+				local String is elemKind2: cg:containerElemKind(containerType: targetType);
+				local String is addFn2: if (elemKind2 == 'object' && cg:yieldsClaim(expr: itemExpr)) 'spec_array_add_owned' else 'spec_array_add';
+				return addFn2 . '(' . targetC . ', (void*)(' . itemC . '))';
 			}
 			if (expr:methodName == 'length') {
 				return 'spec_array_length(' . targetC . ')';

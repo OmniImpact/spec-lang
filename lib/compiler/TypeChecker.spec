@@ -99,8 +99,13 @@ Class is TypeChecker{
 	## All class definitions in program (including nested classes) for hierarchy resolution.
 	local Array of ClassInfo is programClasses: [];
 
+	## Declared container type for the literal currently being type-checked
+	## (consumed by ARRAY/MAP inference; empty otherwise).
+	local String is containerHint: '';
+
 	replace Function is init(){
 		self:programClasses: [];
+		self:containerHint: '';
 		self:registeredClasses: Map:init();
 		self:allEnumNames: Map:init();
 		self:allEnumVariants: Map:init();
@@ -251,7 +256,7 @@ Class is TypeChecker{
 	## @param name: Candidate type name.
 	## @return: true when the name is a builtin class.
 	local Function of Boolean is isBuiltinClassName(String is name){
-		if (name == 'Array' || name == 'Map' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math') {
+		if (name == 'Array' || name == 'Map' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'List') {
 			return true;
 		}
 		if (name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'Output' || name == 'output' || name == 'error' || name == 'Error' || name == 'Parallel' || name == 'Ansi') {
@@ -342,12 +347,12 @@ Class is TypeChecker{
 		}
 		if (t:getParams():length() == 1) {
 			local Type is p0: t:getParams():get(index: 0);
-			return baseName . ':' . p0:getName();
+			return baseName . ':' . self:formatTypeString(t: p0);
 		}
 		if (t:getParams():length() >= 2) {
 			local Type is p0: t:getParams():get(index: 0);
 			local Type is p1: t:getParams():get(index: 1);
-			return baseName . ':' . p0:getName() . ':' . p1:getName();
+			return baseName . ':' . self:formatTypeString(t: p0) . ':' . self:formatTypeString(t: p1);
 		}
 		return baseName;
 	}
@@ -366,6 +371,13 @@ Class is TypeChecker{
 			local Int is eIdx: tps:indexOf(search: elem, default: -1);
 			if (eIdx >= 0 && eIdx < typeArgs:length()) {
 				return 'Array:' . typeArgs:get(index: eIdx);
+			}
+		}
+		if (rawType:startsWith(prefix: 'List:') && rawType:length() > 5) {
+			local String is elem: rawType:substring(start: 5, end: rawType:length());
+			local Int is eIdx: tps:indexOf(search: elem, default: -1);
+			if (eIdx >= 0 && eIdx < typeArgs:length()) {
+				return 'List:' . typeArgs:get(index: eIdx);
 			}
 		}
 		return rawType;
@@ -790,7 +802,7 @@ Class is TypeChecker{
 						if (expr:castArgs:length() > 0) {
 							self:addError(line: self:currentLine, msg: 'Cast \'as Int\' takes no arguments.');
 						}
-						if (src != 'Int' && src != 'int' && src != 'Float' && src != 'float' && src != 'String' && src != 'string' && src != 'Any') {
+						if (src != 'Int' && src != 'int' && src != 'Float' && src != 'float' && src != 'String' && src != 'string' && src != 'Byte' && src != 'byte' && src != 'Any') {
 							self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'Int\'.');
 						}
 						res: 'Int';
@@ -803,6 +815,15 @@ Class is TypeChecker{
 							self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'Float\'.');
 						}
 						res: 'Float';
+					}
+					is 'Byte', 'byte': {
+						if (expr:castArgs:length() > 0) {
+							self:addError(line: self:currentLine, msg: 'Cast \'as Byte\' takes no arguments.');
+						}
+						if (src != 'Int' && src != 'int' && src != 'Byte' && src != 'byte' && src != 'Any') {
+							self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'Byte\'.');
+						}
+						res: 'Byte';
 					}
 					is 'String', 'string': {
 						if (expr:castArgs:length() > 0) {
@@ -849,6 +870,11 @@ Class is TypeChecker{
 				}
 			}
 			is 'ARRAY': {
+				if (self:containerHint != '') {
+					res: self:containerHint;
+					self:containerHint: '';
+					return res;
+				}
 				local String is firstElemType: '';
 				expr:arrayItems:each(action: local Function(Expression is item){
 					local String is itemT: self:inferExpressionType(expr: item);
@@ -1105,6 +1131,42 @@ Class is TypeChecker{
 					} else {
 						res: 'Any';
 					}
+				} else if (targetType:startsWith(prefix: 'List')) {
+					local String is listElem: 'Any';
+					if (targetType:startsWith(prefix: 'List of ') && targetType:length() > 7) {
+						listElem: targetType:substring(start: 7, end: targetType:length());
+					} else if (targetType:startsWith(prefix: 'List:') && targetType:length() > 5) {
+						listElem: targetType:substring(start: 5, end: targetType:length());
+					}
+					when (method) {
+						is 'get': {
+							local Boolean is hasDefault: false;
+							expr:methodArgs:each(action: local Function(NamedArg is arg){
+								if (arg:getName() == 'default') { hasDefault: true; }
+							});
+							if (!hasDefault) {
+								self:addError(line: self:currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
+							}
+							res: listElem;
+						}
+						is 'pop': {
+							local Boolean is hasDefault: false;
+							expr:methodArgs:each(action: local Function(NamedArg is arg){
+								if (arg:getName() == 'default') { hasDefault: true; }
+							});
+							if (!hasDefault) {
+								self:addError(line: self:currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
+							}
+							res: listElem;
+						}
+						is 'length': { res: 'Int'; }
+						is 'toString': { res: 'String'; }
+						is 'push': { res: 'void'; }
+						is 'appendString': { res: 'void'; }
+						is 'set': { res: 'void'; }
+						is 'clear': { res: 'void'; }
+						else: { res: 'Any'; }
+					}
 				} else if (targetType:startsWith(prefix: 'Map:') && method == 'get') {
 					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
 					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
@@ -1185,8 +1247,18 @@ Class is TypeChecker{
 				local String is fullType: self:formatVarTypeString(t: stmt:varType);
 				self:localVars:set(key: varName, value: fullType);
 
+				if (fullType == 'List') {
+					local String is msg: 'Bare List type requires [T] element syntax.';
+					self:addError(line: stmt:getLine(), msg: msg);
+				}
+
 				if (stmt:hasInit) {
+					local String is initKind: stmt:initExpr:getKind();
+					if ((initKind == 'ARRAY' || initKind == 'MAP') && fullType:startsWith(prefix: 'List')) {
+						self:containerHint: fullType;
+					}
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr);
+					self:containerHint: '';
 					if (!self:isAssignable(target: fullType, source: initType)) {
 						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
 						self:addError(line: stmt:getLine(), msg: msg);
@@ -1194,7 +1266,6 @@ Class is TypeChecker{
 				}
 			}
 			is 'ASSIGN': {
-				local String is valType: self:inferExpressionType(expr: stmt:assignValue);
 				if (stmt:assignTarget:getKind() == 'PATH') {
 					local Array of String is tSegs: stmt:assignTarget:pathSegments;
 					if (tSegs:length() == 2 && tSegs:get(index: 0) == 'self') {
@@ -1204,6 +1275,12 @@ Class is TypeChecker{
 					self:unassignedFields:remove(key: stmt:assignTarget:stringValue);
 				}
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
+				local String is valKind: stmt:assignValue:getKind();
+				if ((valKind == 'ARRAY' || valKind == 'MAP') && targetType:startsWith(prefix: 'List')) {
+					self:containerHint: targetType;
+				}
+				local String is valType: self:inferExpressionType(expr: stmt:assignValue);
+				self:containerHint: '';
 				if (!self:isAssignable(target: targetType, source: valType)) {
 					local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
 					self:addError(line: stmt:getLine(), msg: msg);

@@ -20,6 +20,7 @@
     <list name="types">
       <item>String</item>
       <item>Int</item>
+      <item>Byte</item>
       <item>Float</item>
       <item>Boolean</item>
       <item>Array</item>

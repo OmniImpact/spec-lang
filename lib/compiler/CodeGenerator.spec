@@ -101,6 +101,16 @@ Class is CodeGenerator{
 	## Registry of local variables declared in the current function scope (for SPEC_AUTO injection).
 	local Map of String to String is localScopeVars: Map:init();
 
+	## True when the current inline-return target (fold accumulator, map result)
+	## holds an ARC value and reassignment must go through spec_assign.
+	local Boolean is inlineReturnArc: false;
+
+	## True while generating a read position (arguments, conditions, chain targets,
+	## operands): claim-yielding subexpressions are handed to the runtime claim
+	## pool. False in consumption positions (initializers, returns, container
+	## stores) where claims are adopted or borrows retained directly.
+	local Boolean is argMode: true;
+
 	## Garbage collection mode: "" (default ARC) or "boehm"
 	local String is gcMode: '';
 
@@ -141,8 +151,12 @@ Class is CodeGenerator{
 		self:containerHint: t;
 	}
 
+	Function is setArgMode(Boolean is m){
+		self:argMode: m;
+	}
+
 	Function of Boolean is isArcType(String is typeName){
-		if (typeName == '' || typeName == 'Int' || typeName == 'int' || typeName == 'Real' || typeName == 'Float' || typeName == 'float' || typeName == 'Bool' || typeName == 'bool' || typeName == 'Byte' || typeName == 'byte' || typeName == 'Nil' || typeName == 'Void' || typeName == 'void' || typeName == 'String' || typeName == 'string') {
+		if (typeName == '' || typeName == 'Int' || typeName == 'int' || typeName == 'Real' || typeName == 'Float' || typeName == 'float' || typeName == 'Bool' || typeName == 'bool' || typeName == 'Byte' || typeName == 'byte' || typeName == 'Nil' || typeName == 'Void' || typeName == 'void') {
 			return false;
 		}
 		if (typeName:contains(needle: ':')) {
@@ -155,7 +169,7 @@ Class is CodeGenerator{
 		if (self:allTaggedEnums:has(key: typeName)) {
 			return true;
 		}
-		if (typeName:startsWith(prefix: 'Array') || typeName:startsWith(prefix: 'Map') || typeName:startsWith(prefix: 'Function') || typeName == 'LoopControl') {
+		if (typeName:startsWith(prefix: 'Array') || typeName:startsWith(prefix: 'Map') || typeName:startsWith(prefix: 'List') || typeName:startsWith(prefix: 'Function') || typeName == 'LoopControl') {
 			return true;
 		}
 		if (self:allClassNames:has(key: typeName)) {
@@ -165,8 +179,10 @@ Class is CodeGenerator{
 	}
 
 	## Classifies a container's element/value ownership from a canonical container
-	## type string ("Array of X", "Array:X", "Map of K to V", "Map:K:V").
-	## Returns "object" (ARC-managed), "string" (container-owned copy), or
+	## type string ("Array of X", "Array:X", "Map of K to V", "Map:K:V",
+	## "List of X", "List:X").
+	## Returns "object" (ARC-managed), "string" (container-owned copy),
+	## "byte" (compact byte-buffer element), or
 	## "none" (primitives, Any-typed, or unknown — never element-owned).
 	Function of String is containerElemKind(String is containerType){
 		local String is elem: '';
@@ -174,6 +190,10 @@ Class is CodeGenerator{
 			elem: containerType:substring(start: 9, end: containerType:length());
 		} else if (containerType:startsWith(prefix: 'Array:')) {
 			elem: containerType:substring(start: 6, end: containerType:length());
+		} else if (containerType:startsWith(prefix: 'List of ')) {
+			elem: containerType:substring(start: 7, end: containerType:length());
+		} else if (containerType:startsWith(prefix: 'List:')) {
+			elem: containerType:substring(start: 5, end: containerType:length());
 		} else if (containerType:startsWith(prefix: 'Map of ')) {
 			local String is rest: containerType:substring(start: 7, end: containerType:length());
 			local Int is toIdx: rest:indexOf(needle: ' to ', default: -1);
@@ -192,8 +212,8 @@ Class is CodeGenerator{
 		if (elem == '' || elem == 'Any') {
 			return 'none';
 		}
-		if (elem == 'String' || elem == 'string') {
-			return 'string';
+		if (elem == 'Byte' || elem == 'byte') {
+			return 'byte';
 		}
 		if (self:isArcType(typeName: elem)) {
 			return 'object';
@@ -208,35 +228,67 @@ Class is CodeGenerator{
 		return self:containerElemKind(containerType: containerType) == 'object';
 	}
 
-	Function of Boolean is isFreshAllocExpr(Expression is expr){
+	## Determines whether evaluating [expr] yields a transferred ownership claim:
+	## constructors, user-class method calls, concat chains, ARC-typed literals,
+	## and fresh-returning builtin methods hand one claim to the caller. Borrowing
+	## expressions (locals, fields, container getters, primitives) do not.
+	Function of Boolean is yieldsClaim(Expression is expr){
 		local String is kind: expr:getKind();
-		if (kind == 'ARRAY' || kind == 'MAP' || kind == 'ANON_FN') {
+		if (kind == 'ARRAY' || kind == 'MAP') {
 			return true;
 		}
+		if (kind == 'BINARY') {
+			return expr:binaryOp == '.';
+		}
 		if (kind == 'CALL') {
-			if (expr:methodName == 'init') {
-				return true;
+			local String is resT: self:inferTargetType(expr: expr);
+			if (!self:isArcType(typeName: resT)) {
+				return false;
 			}
-			if (expr:methodName == 'pop') {
-				return true;
+			local String is targetT0: self:inferTargetType(expr: expr:methodTarget);
+			local String is targetT: targetT0;
+			if (targetT:contains(needle: ':')) {
+				local Array of String is parts0: targetT:split(delimiter: ':');
+				targetT: parts0:get(index: 0);
 			}
-			if (expr:methodTarget:getKind() == 'IDENT' && self:allClassNames:has(key: expr:methodTarget:stringValue) && !self:allEnumNames:has(key: expr:methodTarget:stringValue)) {
-				return true;
-			}
-			if (self:allEnumVariants:has(key: expr:methodName)) {
-				local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: '');
-				if (self:allTaggedEnums:has(key: eName)) {
-					return true;
+			if (self:allClassNames:has(key: targetT) && !self:allEnumNames:has(key: targetT)) {
+				local String is mRet: self:lookupMethodReturnType(className: targetT, methodName: expr:methodName);
+				if (mRet == '' || mRet == 'void' || mRet == 'Void') {
+					return false;
+				}
+				if (mRet == targetT && expr:methodName != 'init' && expr:methodName != targetT) {
+					return false;
 				}
 			}
+			if (self:isBuiltinClass(name: targetT) || targetT == 'List' || targetT == 'String') {
+				if (expr:methodName == 'get') {
+					return targetT:startsWith(prefix: 'Map');
+				}
+				when (expr:methodName) {
+					is 'pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
+					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt': {
+						return true;
+					}
+					else: {
+						return false;
+					}
+				}
+			}
+			return true;
 		}
 		return false;
 	}
 
-	local Function of String is cTypeFor(String is typeName){
+	Function of String is cTypeFor(String is typeName){
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {
 			return 'void*';
+		}
+		if (typeName:startsWith(prefix: 'List')) {
+			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
+				return 'SpecByteBuffer*';
+			}
+			return 'SpecVec*';
 		}
 		if (typeName:startsWith(prefix: 'Array')) {
 			return 'SpecArray*';
@@ -294,12 +346,12 @@ Class is CodeGenerator{
 		}
 		if (t:getParams():length() == 1) {
 			local Type is p0: t:getParams():get(index: 0);
-			return baseName . ':' . p0:getName();
+			return baseName . ':' . self:formatTypeString(t: p0);
 		}
 		if (t:getParams():length() >= 2) {
 			local Type is p0: t:getParams():get(index: 0);
 			local Type is p1: t:getParams():get(index: 1);
-			return baseName . ':' . p0:getName() . ':' . p1:getName();
+			return baseName . ':' . self:formatTypeString(t: p0) . ':' . self:formatTypeString(t: p1);
 		}
 		return baseName;
 	}

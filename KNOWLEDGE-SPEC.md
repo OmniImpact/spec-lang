@@ -4,7 +4,7 @@ Strictly typed, class-based, compiles to C11 via `gcc`. Self-hosted: the compile
 
 ## Grammar
 Keywords: `local` `contained` `replace` `merge` `is` `as` `of` `to` `if` `else` `return` `when`.
-Types: `Int` `Float` `Boolean` `String` `Function` `Any`.
+Types: `Int` `Byte` `Float` `Boolean` `String` `Function` `Any`.
 Declaration types (not keywords): `Class` `Enum`.
 Conversion targets of `as`: `Hex` `Bin` `Oct`.
 `using` and `group` are Loader-recognized pseudo-fields.

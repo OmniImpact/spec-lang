@@ -46,6 +46,7 @@ Members without a visibility modifier are **public by default**: overridable via
 | Primitive Type | Meaning |
 |---|---|
 | `Int` | 64-bit signed integer |
+| `Byte` | Unsigned 8-bit value (`Int`↔`Byte` via `as`) |
 | `Float` | 64-bit IEEE double |
 | `Boolean` | `true` / `false` |
 | `String` | UTF-8 text |

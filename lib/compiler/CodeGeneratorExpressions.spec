@@ -19,18 +19,55 @@ Class is CodeGeneratorExpressions{
 		base:meta:*
 	];
 
+	## Central expression wrapper: claim-yielding expressions (calls with ARC
+	## results, concat chains, ARC literals, string map reads) are wrapped in a
+	## statement-expression whose SPEC_AUTO temp releases the claim at statement
+	## end. Consumers that keep the value retain it themselves; passing arguments
+	## and chain targets borrow without leaking. Closure literals are excluded:
+	## they are borrowed, matching the storage conventions of callback builtins.
 	Function of String is generateExpression(Expression is expr){
+		local String is c: self:generateExpressionInner(expr: expr);
+		local String is kind: expr:getKind();
+		local Boolean is claim: false;
+		if (kind == 'CALL') {
+			claim: self:yieldsClaim(expr: expr);
+		} else if (kind == 'BINARY') {
+			claim: expr:binaryOp == '.';
+		} else if (kind == 'ARRAY' || kind == 'MAP') {
+			claim: true;
+		} else if (kind == 'INDEX') {
+			local String is tgt: self:inferTargetType(expr: expr:leftExpr);
+			claim: (tgt:startsWith(prefix: 'Map') && self:inferTargetType(expr: expr) == 'String');
+		}
+		if (claim) {
+			if (self:argMode) {
+				local String is resT: self:inferTargetType(expr: expr);
+				local String is resC: self:cTypeFor(typeName: resT);
+				return '((' . resC . ')spec_claim_pool((void*)(' . c . ')))';
+			}
+			return c;
+		}
+		return c;
+	}
+
+	Function of String is generateExpressionInner(Expression is expr){
 		local String is kind: expr:getKind();
 
 		when (kind) {
 			is 'ARRAY': {
+				local Boolean is listHint: self:containerHint:startsWith(prefix: 'List');
+				local String is addFn: if (listHint) 'spec_vec_push' else 'spec_array_add';
 				local String is newCall: 'spec_array_new()';
 				if (self:containerHint != '') {
 					local String is hintKind: self:containerElemKind(containerType: self:containerHint);
-					if (hintKind == 'object') {
-						newCall: 'spec_array_new_object()';
+					if (hintKind == 'byte') {
+						newCall: 'spec_bytebuffer_new()';
+					} else if (hintKind == 'object') {
+						newCall: if (listHint) 'spec_vec_new_object()' else 'spec_array_new_object()';
 					} else if (hintKind == 'string') {
-						newCall: 'spec_array_new_string()';
+						newCall: if (listHint) 'spec_vec_new_string()' else 'spec_array_new_string()';
+					} else if (listHint) {
+						newCall: 'spec_vec_new()';
 					}
 					self:containerHint: '';
 				} else if (expr:arrayItems:length() > 0) {
@@ -41,11 +78,20 @@ Class is CodeGeneratorExpressions{
 						newCall: 'spec_array_new_string()';
 					}
 				}
-				local String is res: '({ SpecArray* _arr = ' . newCall . ';';
+				local String is arrCType: if (listHint) 'SpecVec*' else 'SpecArray*';
+				local String is res: '({ ' . arrCType . ' _arr = ' . newCall . ';';
+				local Boolean is savedArg: self:argMode;
+				self:argMode: false;
 				expr:arrayItems:each(action: local Function(Expression is item){
 					local String is itemC: self:generateExpression(expr: item);
-					res: res . ' spec_array_add(_arr, (void*)(' . itemC . '));';
+					local String is itemAdd: addFn;
+					if (self:yieldsClaim(expr: item)) {
+						if (addFn == 'spec_array_add') { itemAdd: 'spec_array_add_owned'; }
+						if (addFn == 'spec_vec_push') { itemAdd: 'spec_vec_push_owned'; }
+					}
+					res: res . ' ' . itemAdd . '(_arr, (void*)(' . itemC . '));';
 				});
+				self:argMode: savedArg;
 				res: res . ' _arr; })';
 				return res;
 			}
@@ -64,6 +110,8 @@ Class is CodeGeneratorExpressions{
 				}
 				local String is res: '({ SpecMap* _map = ' . newCall . ';';
 				local Int is idx: 0;
+				local Boolean is savedArgM: self:argMode;
+				self:argMode: false;
 				expr:mapKeys:each(action: local Function(Expression is kExpr){
 					local Expression is vExpr: expr:mapValues:get(index: idx);
 					local String is kC: self:generateExpression(expr: kExpr);
@@ -71,15 +119,17 @@ Class is CodeGeneratorExpressions{
 					if (self:isStringExpr(expr: vExpr)) {
 						res: res . ' spec_map_set(_map, ' . kC . ', ' . vC . ');';
 					} else {
-						res: res . ' spec_map_set_any(_map, ' . kC . ', (void*)(intptr_t)(' . vC . '));';
+						local String is setFn: if (self:yieldsClaim(expr: vExpr)) 'spec_map_set_any_transfer' else 'spec_map_set_any';
+						res: res . ' ' . setFn . '(_map, ' . kC . ', (void*)(intptr_t)(' . vC . '));';
 					}
 					idx: idx + 1;
 				});
+				self:argMode: savedArgM;
 				res: res . ' _map; })';
 				return res;
 			}
 			is 'STRING': {
-				return '"' . self:escapeString(s: expr:stringValue) . '"';
+				return 'spec_string_intern("' . self:escapeString(s: expr:stringValue) . '")';
 			}
 			is 'NUMBER': {
 				if (expr:stringValue != '') {
@@ -152,11 +202,29 @@ Class is CodeGeneratorExpressions{
 				local String is op: expr:binaryOp;
 				when (op) {
 					is '.': {
-						local String is leftC: self:generateExpression(expr: expr:leftExpr);
+						local String is leftC: self:generateExpressionInner(expr: expr:leftExpr);
+						local String is leftKind: expr:leftExpr:getKind();
+						local String is leftT: self:inferTargetType(expr: expr:leftExpr);
+						local Boolean is leftPrim: leftT == 'Int' || leftT == 'int' || leftT == 'Byte' || leftT == 'byte' || leftT == 'Float' || leftT == 'float' || leftT == 'Boolean' || leftT == 'bool';
+						local Boolean is leftClaimKind: leftKind == 'CALL' || leftKind == 'BINARY' || leftKind == 'ARRAY' || leftKind == 'MAP';
+						local Boolean is leftArc: self:isArcType(typeName: leftT);
+						local String is leftClaim: leftC;
+						if (!leftPrim) {
+							if (leftClaimKind) {
+								leftClaim: leftC;
+							} else if (leftArc) {
+								leftClaim: '(char*)spec_retain((void*)(' . leftC . '))';
+							} else {
+								leftClaim: 'spec_string_from_chars(' . leftC . ')';
+							}
+						}
+						local String is leftWrap: if (leftPrim) self:wrapToString(expr: expr:leftExpr, exprC: leftClaim) else leftClaim;
+						local Boolean is savedArgR: self:argMode;
+						self:argMode: true;
 						local String is rightC: self:generateExpression(expr: expr:rightExpr);
-						local String is leftWrap: self:wrapToString(expr: expr:leftExpr, exprC: leftC);
+						self:argMode: savedArgR;
 						local String is rightWrap: self:wrapToString(expr: expr:rightExpr, exprC: rightC);
-						return 'spec_str_concat(' . leftWrap . ', ' . rightWrap . ')';
+						return 'spec_string_concat(' . leftWrap . ', ' . rightWrap . ')';
 					}
 					is 'is', '==': {
 						local String is leftC: self:generateExpression(expr: expr:leftExpr);
@@ -259,10 +327,19 @@ Class is CodeGeneratorExpressions{
 						if (srcT == 'Float' || srcT == 'float') {
 							return '((long long)(' . innerC . '))';
 						}
+						if (srcT == 'Byte' || srcT == 'byte') {
+							return '((long long)(' . innerC . '))';
+						}
 						return innerC;
 					}
 					is 'Float', 'float': {
 						return '((double)(' . innerC . '))';
+					}
+					is 'Byte', 'byte': {
+						if (srcT == 'Byte' || srcT == 'byte') {
+							return innerC;
+						}
+						return '({ long long _bv = (long long)(' . innerC . '); if (_bv < 0 || _bv > 255) { spec_panic_byte_range(_bv); } ((unsigned char)_bv); })';
 					}
 					is 'String', 'string': {
 						if (srcT == 'Int' || srcT == 'int') {
@@ -576,12 +653,10 @@ Class is CodeGeneratorExpressions{
 								hasCaptures: true;
 								capFieldDecls: capFieldDecls . '    ' . vCType . ' ' . cVar . ";\n";
 								capFieldBinds: capFieldBinds . '    ' . vCType . ' ' . cVar . ' = _env->' . cVar . ";\n    (void)" . cVar . ";\n";
-								local Boolean is isArcVar: (self:allClassNames:has(key: vType) && !self:allEnumNames:has(key: vType)) || self:allTaggedEnums:has(key: vType) || vType:startsWith(prefix: 'Array') || vType:startsWith(prefix: 'Map') || vType:startsWith(prefix: 'Function') || vType == 'LoopControl';
+								local Boolean is isArcVar: (self:allClassNames:has(key: vType) && !self:allEnumNames:has(key: vType)) || self:allTaggedEnums:has(key: vType) || vType:startsWith(prefix: 'Array') || vType:startsWith(prefix: 'Map') || vType:startsWith(prefix: 'List') || vType:startsWith(prefix: 'Function') || vType == 'LoopControl' || vType == 'String' || vType == 'string';
 								if (isArcVar) {
 									capAssigns: capAssigns . '    _env->' . cVar . ' = (' . vCType . ')spec_retain((void*)' . cVar . ");\n";
 									capReleases: capReleases . '    if (_env->' . cVar . ') spec_release((void*)_env->' . cVar . ");\n";
-								} else if (vType == 'String' || vType == 'string') {
-									capAssigns: capAssigns . '    _env->' . cVar . ' = spec_str_clone_if_buffered(' . cVar . ");\n";
 								} else {
 									capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
 								}
@@ -643,7 +718,7 @@ Class is CodeGeneratorExpressions{
 				if (rhsC:contains(needle: targetC)) {
 					return '';
 				}
-				return 'spec_str_append(' . targetC . ', ' . rhsC . ')';
+				return 'spec_string_concat(' . targetC . ', ' . rhsC . ')';
 			}
 			local String is innerChain: self:tryGenerateAppendChain(expr: expr:leftExpr, targetC: targetC);
 			if (innerChain != '') {
@@ -651,7 +726,7 @@ Class is CodeGeneratorExpressions{
 				if (rhsC:contains(needle: targetC)) {
 					return '';
 				}
-				return 'spec_str_append(' . innerChain . ', ' . rhsC . ')';
+				return 'spec_string_concat(' . innerChain . ', ' . rhsC . ')';
 			}
 		}
 		return '';

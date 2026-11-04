@@ -47,9 +47,15 @@ inspected, or implemented in Spec.
    a first-class primitive: `CharBuf` is the growable append/truncate surface
    (Spec's StringBuilder); `String` is the immutable, shareable value produced by
    `CharBuf:toString()`. Immutability is what makes interning and sharing safe under ARC.
-2. **`Char` is an 8-bit byte.** Spec strings are UTF-8; code points are a String-layer
-   concern (Go's model). Java's UTF-16 `char` is the counterexample. Byte values arise
-   from String methods and `Int`↔`Char` casts; character-literal syntax is deferred.
+2. **`Byte` is the floor primitive: an unsigned 8-bit value.** The ladder is
+   `Byte` → `Char` → `String`: raw bytes at the bottom, a real character layer
+   (code points over 1–4 UTF-8 bytes) above them, and `String` on top — Spec-native
+   versions of everything. Phase 1 delivers only `Byte`; `Char`'s exact shape is
+   designed alongside String's API in Phase 2/3. UTF-8 is a String-layer concern
+   (Go's model; Java's UTF-16 `char` is the counterexample). `Int`↔`Byte` via `as`;
+   out-of-range `Int → Byte` casts **panic** at runtime — at this primitive level,
+   fail-fast is correct and no `default:`/`error:` channel applies. Byte literals are
+   deferred.
 3. **Interned literals.** String literals compile to lazily-initialized, immortal,
    process-global `String` objects (statement-expression static caches in emitted C).
    Interning makes literal-heavy code allocation-free, gives `==` a pointer-equality
@@ -59,10 +65,24 @@ inspected, or implemented in Spec.
    and not interned), it grows that buffer in place — preserving today's O(1) append
    chains (`p: p . "..."`) while keeping value semantics for shared strings. Cached
    hashes are invalidated on in-place growth.
-5. **The C floor after migration.** The only string C that remains: `CharBuf` buffer
-   primitives (new/push/append/get/set/length/clear/slice/flatten), string
-   alloc/from-chars, intern, concat, equals (pointer-eq → memcmp), hash (FNV-1a).
-   Roughly ten small functions; no global structures, no caches, no ring.
+5. **The C floor after migration.** The only string C that remains: the `[T]` buffer
+   primitives (byte-buffer shape + pointer-vector shape: new/push/append/get/set/
+   length/clear/flatten), string alloc/from-chars, intern, concat, equals
+   (pointer-eq → memcmp), hash (FNV-1a). Roughly ten small functions; no global
+   structures, no caches, no ring.
+9. **Fallible reads take a mandatory `default:` plus an optional `error` callback —
+   never panic.** On `[T]`, `pop`/`get`/`removeAt` return the `default` whenever there
+   is no successful answer and invoke `error` (a callback receiving a diagnostic
+   String) *in addition* when a problem occurs; `set` invokes `error` on out-of-bounds
+   with nothing to return. `default:` is mandatory — every call site explicitly
+   handles failure by value. `error:` is optional: when omitted, the codegen supplies
+   a shared empty-Function singleton (never-null is preserved — omission means "the
+   function that does nothing", not null), and the runtime invokes the callback
+   unconditionally on failure: one uniform notification path, no branches, no null
+   checks. This mirrors the `File:readAsync` `onSuccess`/`onError` convention and
+   becomes the template for the later `Array:get` contract fix. Bracket syntax
+   (`buf[i]`) remains the asserting (panicking) path, per the established rule:
+   **brackets assert, named reads default.**
 6. **Bootstrap order: representation first, methods second.** The representation flip
    (Phase 2) keeps the method surface builtin-intercepted so the old compiler can build
    the new one; method bodies migrate to pure Spec afterwards (Phase 3). A 3-stage
@@ -151,15 +171,22 @@ clean diff.
 * **Gate**: full suite green under the flipped grammar; zero behavioral change beyond
   literal syntax.
 
-### Phase 1: `Char` + `CharBuf` Primitives (additive, low risk)
-* **1.1 `Char` type**: lexer/parser/TypeChecker entries; `cTypeFor` → `unsigned char`;
-  `Int`↔`Char` casts via `as`; Char as a valid `Array of Char` / `CharBuf` element.
-* **1.2 `CharBuf` builtin**: C struct (`SpecHeader` + `length` + `capacity` + `data`,
-  **no mutex, no vtable**); runtime primitives (new, push, append-from-String,
-  get/set with bounds panic, length, clear, slice, toString); `isBuiltinClass`
-  registration; `BuiltinCallGenerator` interception; interface stub in
-  `lib/base/struct/CharBuf.spec`.
-* **1.3 Tests**: positive (build/freeze/read cycles) and negative (bounds panics).
+### Phase 1: `Byte` + `[T]` Primitives (additive, low risk)
+* **1.1 `Byte` type**: lexer/parser/TypeChecker entries; `cTypeFor` → `unsigned char`;
+  `Int`↔`Byte` casts via `as`; `Byte` as a valid `[Byte]` element.
+* **1.2 `[T]` syntax**: `parseType()` accepts `[ Type ]` (one shared parser, six call
+  sites); `cTypeFor` maps `[Byte]` → byte-buffer struct, other `[T]` → pointer-vector
+  struct; container-hint channel extended for `[]` literals.
+* **1.3 `[Byte]` buffer shape**: compact contiguous `char*` data (×2 growth, **no
+  mutex, no vtable**); runtime primitives: new, push, appendString, get/set/pop with
+  mandatory `default:` + `error` callback (no panics), length, clear, toString
+  (freeze — Phase 2's builder op).
+* **1.4 `[T]` pointer-vector shape**: `void**` slots with the Stage-1 ownership kinds
+  (raw primitives untouched, objects retained/released, String elements
+  container-owned until Phase 2); same fallible-read signatures; literals
+  `['hello','hi']` and `[]`.
+* **1.5 Tests**: positive (build/freeze/read cycles, defaults, error callbacks) and
+  negative (omitted `default:`, OOB via brackets).
 * **Gate**: suite green, fixed point re-baselined, benchmarks unchanged (additive only).
 
 ### Phase 2: String Representation Flip (the risk core)
@@ -232,8 +259,11 @@ clean diff.
 - [ ] **Task 0b: Legacy raw-string sweep** — whitespace-containing `'...'` → `""`.
 - [ ] **Task 0c: Grammar flip** — `'...'` basic / `"..."` whitespace-capable; lexer,
       docs, Kate XML, optional linter rule.
-- [ ] **Task 1: `Char` primitive** — type plumbing, casts, tests.
-- [ ] **Task 2: `CharBuf` builtin** — runtime, interception, stub docs, tests.
+- [ ] **Task 1: `Byte` primitive** — type plumbing, casts, tests.
+- [ ] **Task 2: `[T]` syntax** — `parseType` brackets, `cTypeFor` shape selection.
+- [ ] **Task 3: `[Byte]` buffer builtin** — runtime, default+error reads,
+      interception, stub docs, tests.
+- [ ] **Task 4: `[T]` pointer-vector builtin** — ownership kinds, literals, tests.
 - [ ] **Task 3: String representation flip** — runtime structs, intern, uniqueness
       concat, codegen flip, shim layer (Phase 2a).
 - [ ] **Task 4: Patch-layer deletion** — ring, caches, shutdown, `SPEC_ELEM_STRING`,

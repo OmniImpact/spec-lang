@@ -196,7 +196,7 @@ Class is DeclarationGenerator{
 					out: out . 'static inline const char* ' . name . '_name(' . name . " self) {\n";
 					out: out . "    switch (self) {\n";
 					c:getMembers():each(action: local Function(Member is m){
-						out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return "' . m:getName() . "\";\n";
+						out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return spec_string_intern("' . m:getName() . '");' . "\n";
 					});
 					out: out . "        default: return \"UNKNOWN\";\n";
 					out: out . "    }\n}\n\n";
@@ -219,7 +219,7 @@ Class is DeclarationGenerator{
 									valStr: initE:stringValue;
 								}
 							}
-							out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return "' . valStr . "\";\n";
+							out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return spec_string_intern("' . valStr . '");' . "\n";
 						});
 						out: out . "        default: return \"\";\n";
 						out: out . "    }\n}\n\n";

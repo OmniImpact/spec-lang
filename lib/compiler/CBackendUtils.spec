@@ -19,6 +19,12 @@ Class is CBackendUtils{
 	## @param typeName: Spec type name.
 	## @return: C11 type signature string.
 	Function of String is cTypeFor(String is typeName){
+		if (typeName:startsWith(prefix: 'List')) {
+			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
+				return 'SpecByteBuffer*';
+			}
+			return 'SpecVec*';
+		}
 		if (typeName:startsWith(prefix: 'Array')) {
 			return 'SpecArray*';
 		}
@@ -30,9 +36,10 @@ Class is CBackendUtils{
 		}
 		return when (typeName) {
 			is 'Int', 'int': 'long long';
+			is 'Byte', 'byte': 'unsigned char';
 			is 'Float', 'float': 'double';
 			is 'Boolean', 'bool': 'bool';
-			is 'String', 'string': 'const char*';
+			is 'String', 'string': 'char*';
 			is 'void', 'Void', '': 'void';
 			is 'Array': 'SpecArray*';
 			is 'Map': 'SpecMap*';
@@ -111,7 +118,8 @@ Class is CBackendUtils{
 	Function of Boolean is isBuiltinClass(String is name){
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
-			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler';
+			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
+			name == 'List';
 	}
 
 	## Resolves the C return type of a method signature descriptor.

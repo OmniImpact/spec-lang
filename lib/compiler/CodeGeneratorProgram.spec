@@ -27,7 +27,12 @@ Class is CodeGeneratorProgram{
 				self:localVars:set(key: stmt:varName, value: self:formatVarTypeString(t: stmt:varType));
 				self:localScopeVars:set(key: stmt:varName, value: stmt:varType:getName());
 				local String is vTypeName: stmt:varType:getName();
-				local String is cType: self:cTypeFor(typeName: vTypeName);
+				local String is cType: '';
+				if (vTypeName == 'List') {
+					cType: self:cTypeFor(typeName: self:formatVarTypeString(t: stmt:varType));
+				} else {
+					cType: self:cTypeFor(typeName: vTypeName);
+				}
 				local String is varName: self:cIdent(name: stmt:varName);
 				local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
 				local String is autoPrefix: if (isArcVar) 'SPEC_AUTO ' else '';
@@ -36,15 +41,15 @@ Class is CodeGeneratorProgram{
 					if (initKind == 'ARRAY' || initKind == 'MAP') {
 						self:setContainerHint(t: self:formatVarTypeString(t: stmt:varType));
 					}
+					local Boolean is savedArg: self:argMode;
+					self:argMode: false;
 					local String is initC: self:generateExpression(expr: stmt:initExpr);
+					self:argMode: savedArg;
 					self:setContainerHint(t: '');
 					if (cType:length() > 0 && cType:charAt(index: cType:length() - 1) == '*' && cType != 'const char*' && cType != 'SpecArray*' && cType != 'SpecMap*') {
 						initC: '(' . cType . ')(' . initC . ')';
 					}
-					if (cType == 'const char*') {
-						initC: 'spec_str_clone_if_buffered(' . initC . ')';
-					}
-					if (isArcVar && !self:isFreshAllocExpr(expr: stmt:initExpr)) {
+					if (isArcVar && !self:yieldsClaim(expr: stmt:initExpr)) {
 						initC: '(' . cType . ')spec_retain((void*)(' . initC . '))';
 					}
 					return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . initC . ";\n";
@@ -62,6 +67,19 @@ Class is CodeGeneratorProgram{
 					}
 					return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
 				}
+				if (vTypeName == 'List') {
+					local String is fullT: self:formatVarTypeString(t: stmt:varType);
+					local String is elemKind: self:containerElemKind(containerType: fullT);
+					local String is newCall: 'spec_vec_new()';
+					if (elemKind == 'byte') {
+						newCall: 'spec_bytebuffer_new()';
+					} else if (elemKind == 'string') {
+						newCall: 'spec_vec_new_string()';
+					} else if (elemKind == 'object') {
+						newCall: 'spec_vec_new_object()';
+					}
+					return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+				}
 				if (vTypeName == 'Map') {
 					local String is newCall: 'spec_map_new()';
 					if (self:containerElemIsArc(containerType: self:formatVarTypeString(t: stmt:varType))) {
@@ -75,13 +93,25 @@ Class is CodeGeneratorProgram{
 				if (stmt:assignTarget:getKind() == 'INDEX') {
 					local String is containerC: self:generateExpression(expr: stmt:assignTarget:leftExpr);
 					local String is idxC: self:generateExpression(expr: stmt:assignTarget:rightExpr);
-					local String is valC: self:generateExpression(expr: stmt:assignValue);
 					local String is containerType: self:inferTargetType(expr: stmt:assignTarget:leftExpr);
+					local Boolean is savedArgIx: self:argMode;
+					self:argMode: false;
+					local String is valC: self:generateExpression(expr: stmt:assignValue);
+					self:argMode: savedArgIx;
 					if (containerType:startsWith(prefix: 'Map:') || containerType == 'Map') {
 						if (containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:isStringExpr(expr: stmt:assignValue)) {
+							if (self:yieldsClaim(expr: stmt:assignValue)) {
+								return '    spec_map_set(' . containerC . ', ' . idxC . ', ((char*)spec_claim_pool((void*)(' . valC . '))));\n';
+							}
 							return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
 						}
+						if (self:yieldsClaim(expr: stmt:assignValue)) {
+							return '    spec_map_set_any_transfer(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+						}
 						return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+					}
+					if (self:yieldsClaim(expr: stmt:assignValue)) {
+						return '    spec_array_set_transfer(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 					}
 					return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 				}
@@ -92,19 +122,20 @@ Class is CodeGeneratorProgram{
 				}
 				local String is lhsType: self:inferTargetType(expr: stmt:assignTarget);
 				local String is valKind: stmt:assignValue:getKind();
-				if ((valKind == 'ARRAY' || valKind == 'MAP') && (lhsType:startsWith(prefix: 'Array') || lhsType:startsWith(prefix: 'Map'))) {
+				if ((valKind == 'ARRAY' || valKind == 'MAP') && (lhsType:startsWith(prefix: 'Array') || lhsType:startsWith(prefix: 'Map') || lhsType:startsWith(prefix: 'List'))) {
 					self:setContainerHint(t: lhsType);
 				}
+				local Boolean is savedArg: self:argMode;
+				self:argMode: false;
 				local String is valC: self:generateExpression(expr: stmt:assignValue);
+				self:argMode: savedArg;
 				local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 				if (curCls:getTypeParams():indexOf(search: lhsType, default: -1) >= 0) {
 					valC: '(void*)(intptr_t)(' . valC . ')';
-				} else if (lhsType == 'String' || lhsType == 'string') {
-					valC: 'spec_str_clone_if_buffered(' . valC . ')';
 				}
 				local Boolean is isArcLhs: self:isArcType(typeName: lhsType);
 				if (isArcLhs) {
-					if (self:isFreshAllocExpr(expr: stmt:assignValue)) {
+					if (self:yieldsClaim(expr: stmt:assignValue)) {
 						return '    spec_assign_transfer((void**)&' . targetC . ', (void*)(' . valC . "));\n";
 					}
 					return '    spec_assign((void**)&' . targetC . ', (void*)(' . valC . "));\n";
@@ -163,12 +194,15 @@ Class is CodeGeneratorProgram{
 					if ((retKind == 'ARRAY' || retKind == 'MAP') && (self:currentMethodReturnType:startsWith(prefix: 'Array') || self:currentMethodReturnType:startsWith(prefix: 'Map'))) {
 						self:setContainerHint(t: self:currentMethodReturnType);
 					}
+					local Boolean is savedArg: self:argMode;
+					self:argMode: false;
 					local String is retC: self:generateExpression(expr: stmt:returnExpr);
+					self:argMode: savedArg;
 					local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
 						retC: '(void*)(intptr_t)(' . retC . ')';
 					} else if (self:isArcType(typeName: self:currentMethodReturnType)) {
-						if (!self:isFreshAllocExpr(expr: stmt:returnExpr)) {
+						if (!self:yieldsClaim(expr: stmt:returnExpr)) {
 							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
 						}
 					}

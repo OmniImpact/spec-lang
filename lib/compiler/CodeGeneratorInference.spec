@@ -259,7 +259,7 @@ Class is CodeGeneratorInference{
 				out: out . "    if (!self) return;\n";
 				allFields:each(action: local Function(Member is m){
 					local String is ft: m:getType():getName();
-					if ((self:allClassNames:has(key: ft) && !self:allEnumNames:has(key: ft)) || self:allTaggedEnums:has(key: ft) || ft:startsWith(prefix: 'Array') || ft:startsWith(prefix: 'Map') || ft:startsWith(prefix: 'Function') || ft == 'LoopControl') {
+					if ((self:allClassNames:has(key: ft) && !self:allEnumNames:has(key: ft)) || self:allTaggedEnums:has(key: ft) || ft:startsWith(prefix: 'Array') || ft:startsWith(prefix: 'Map') || ft:startsWith(prefix: 'List') || ft:startsWith(prefix: 'Function') || ft == 'LoopControl' || ft == 'String' || ft == 'string') {
 						out: out . '    if (self->' . self:cIdent(name: m:getName()) . ') { spec_release((void*)self->' . self:cIdent(name: m:getName()) . '); self->' . self:cIdent(name: m:getName()) . " = NULL; }\n";
 					}
 				});
@@ -273,11 +273,19 @@ Class is CodeGeneratorInference{
 				}
 				allFields:each(action: local Function(Member is m){
 					if (m:hasInit) {
-						out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . self:generateExpression(expr: m:initExpr) . ";\n";
+						local Boolean is savedArgFi: self:argMode;
+						self:argMode: false;
+						local String is fieldInitC: self:generateExpression(expr: m:initExpr);
+						self:argMode: savedArgFi;
+						local String is ftn: m:getType():getName();
+						if (self:isArcType(typeName: ftn) && !self:yieldsClaim(expr: m:initExpr)) {
+							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
+						}
+						out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . fieldInitC . ";\n";
 					} else {
 						local String is ft: m:getType():getName();
 						if (ft == 'String' || ft == 'string') {
-							out: out . '    self->' . self:cIdent(name: m:getName()) . " = \"\";\n";
+							out: out . '    self->' . self:cIdent(name: m:getName()) . ' = spec_string_intern("");' . "\n";
 						} else if (ft == 'Array') {
 							local String is elemKind: self:containerElemKind(containerType: self:formatTypeString(t: m:getType()));
 							local String is newCall: 'spec_array_new()';
@@ -291,6 +299,18 @@ Class is CodeGeneratorInference{
 							local String is newCall: 'spec_map_new()';
 							if (self:containerElemIsArc(containerType: self:formatTypeString(t: m:getType()))) {
 								newCall: 'spec_map_new_object()';
+							}
+							out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . newCall . ";\n";
+						} else if (ft == 'List') {
+							local String is fullT: self:formatTypeString(t: m:getType());
+							local String is elemKind: self:containerElemKind(containerType: fullT);
+							local String is newCall: 'spec_vec_new()';
+							if (elemKind == 'byte') {
+								newCall: 'spec_bytebuffer_new()';
+							} else if (elemKind == 'string') {
+								newCall: 'spec_vec_new_string()';
+							} else if (elemKind == 'object') {
+								newCall: 'spec_vec_new_object()';
 							}
 							out: out . '    self->' . self:cIdent(name: m:getName()) . ' = ' . newCall . ";\n";
 						}
@@ -308,6 +328,7 @@ Class is CodeGeneratorInference{
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
 		local String is savedRetLbl: self:inlineReturnLabel;
+		local Boolean is savedArc: self:inlineReturnArc;
 		self:inlineReturnLabel: 'break';
 		if (mode == 'each') {
 			self:inlineReturnVar: '';
@@ -328,7 +349,7 @@ Class is CodeGeneratorInference{
 			local String is pCType: self:cTypeFor(typeName: p:getType():getName());
 			local String is pRaw: '(' . pCType . ')(intptr_t)_a_' . id . '->items[_i_' . id . ']';
 			if (p:getType():getName() == 'String') {
-				pRaw: 'spec_str_ring_copy((const char*)(intptr_t)_a_' . id . '->items[_i_' . id . '])';
+				pRaw: '(char*)(intptr_t)_a_' . id . '->items[_i_' . id . ']';
 			}
 			paramDecl: '        ' . pCType . ' ' . self:cIdent(name: p:getName()) . ' = ' . pRaw . ";\n";
 		}
@@ -341,6 +362,7 @@ Class is CodeGeneratorInference{
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
+		self:inlineReturnArc: savedArc;
 
 		local String is arrVar: '_a_' . id;
 		local String is idxVar: '_i_' . id;
@@ -382,6 +404,7 @@ Class is CodeGeneratorInference{
 			local String is outVar: '_out_' . id;
 			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:getName());
 			if (retCType == 'void') { retCType: 'void*'; }
+			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1) == '*';
 			local String is outNewC: 'spec_array_new()';
 			if (self:isArcType(typeName: fnExpr:anonReturnType:getName())) {
 				outNewC: 'spec_array_new_object()';
@@ -422,6 +445,8 @@ Class is CodeGeneratorInference{
 
 		self:inlineReturnVar: accVar;
 		self:inlineReturnLabel: 'break';
+		local Boolean is savedArc2: self:inlineReturnArc;
+		self:inlineReturnArc: accCType:charAt(index: accCType:length() - 1) == '*';
 
 		local String is paramDecl: '';
 		if (fnExpr:anonParams:length() >= 1) {
@@ -435,7 +460,7 @@ Class is CodeGeneratorInference{
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . arrVar . '->items[' . idxVar . ']';
 			if (p1:getType():getName() == 'String') {
-				p1Raw: 'spec_str_ring_copy((const char*)(intptr_t)' . arrVar . '->items[' . idxVar . '])';
+				p1Raw: '(char*)(intptr_t)' . arrVar . '->items[' . idxVar . ']';
 			}
 			paramDecl: paramDecl . '        ' . p1CType . ' ' . self:cIdent(name: p1:getName()) . ' = ' . p1Raw . ";\n";
 		}
@@ -448,6 +473,7 @@ Class is CodeGeneratorInference{
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
+		self:inlineReturnArc: savedArc2;
 
 		local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; ' . accCType . ' ' . accVar . ' = ' . initC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
 		out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } " . accVar . '; })';
@@ -477,7 +503,7 @@ Class is CodeGeneratorInference{
 		if (fnExpr:anonParams:length() >= 1) {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p0:getName(), value: 'String');
-			paramDecl: paramDecl . '            const char* ' . self:cIdent(name: p0:getName()) . ' = spec_str_ring_copy(' . eVar . "->key);\n";
+			paramDecl: paramDecl . '            char* ' . self:cIdent(name: p0:getName()) . ' = ' . eVar . "->key;\n";
 		}
 		if (fnExpr:anonParams:length() >= 2) {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
@@ -485,7 +511,7 @@ Class is CodeGeneratorInference{
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . eVar . '->value';
 			if (p1:getType():getName() == 'String') {
-				p1Raw: 'spec_str_ring_copy((const char*)(intptr_t)' . eVar . '->value)';
+				p1Raw: '(char*)(intptr_t)' . eVar . '->value';
 			}
 			paramDecl: paramDecl . '            ' . p1CType . ' ' . self:cIdent(name: p1:getName()) . ' = ' . p1Raw . ";\n";
 		}

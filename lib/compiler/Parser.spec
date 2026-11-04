@@ -936,6 +936,16 @@ Class is Parser{
 	}
 
 	Function of Type is parseType(){
+		if (self:check(kind: 'SYMBOL', value: '[')) {
+			self:advance();
+			local Type is elem: self:parseType();
+			self:matchToken(kind: 'SYMBOL', value: ']');
+			local Type is lnode: Type:init(name: 'List');
+			local Array of Type is lparams: [];
+			lparams:add(item: elem);
+			lnode:params: lparams;
+			return lnode;
+		}
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
