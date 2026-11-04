@@ -56,18 +56,18 @@ Class is CodeGeneratorExpressions{
 		when (kind) {
 			is 'ARRAY': {
 				local Boolean is listHint: self:containerHint:startsWith(prefix: 'List');
-				local String is addFn: if (listHint) 'spec_vec_push' else 'spec_array_add';
+				local String is addFn: if (listHint) 'spec_buf_push_ptr' else 'spec_array_add';
 				local String is newCall: 'spec_array_new()';
 				if (self:containerHint != '') {
 					local String is hintKind: self:containerElemKind(containerType: self:containerHint);
 					if (hintKind == 'byte') {
-						newCall: 'spec_bytebuffer_new()';
+						newCall: 'spec_buf_new(1, 0)';
 					} else if (hintKind == 'object') {
-						newCall: if (listHint) 'spec_vec_new_object()' else 'spec_array_new_object()';
+						newCall: if (listHint) 'spec_buf_new(8, 1)' else 'spec_array_new_object()';
 					} else if (hintKind == 'string') {
-						newCall: if (listHint) 'spec_vec_new_string()' else 'spec_array_new_string()';
+						newCall: if (listHint) 'spec_buf_new(8, 2)' else 'spec_array_new_string()';
 					} else if (listHint) {
-						newCall: 'spec_vec_new()';
+						newCall: 'spec_buf_new(8, 0)';
 					}
 					self:containerHint: '';
 				} else if (expr:arrayItems:length() > 0) {
@@ -78,13 +78,15 @@ Class is CodeGeneratorExpressions{
 						newCall: 'spec_array_new_string()';
 					}
 				}
-				local String is arrCType: if (listHint) 'SpecVec*' else 'SpecArray*';
+				local String is arrCType: if (listHint) 'SpecBuf*' else 'SpecArray*';
 				local String is res: '({ ' . arrCType . ' _arr = ' . newCall . ';';
 				local Boolean is savedArg: self:argMode;
 				self:argMode: false;
 				expr:arrayItems:each(action: local Function(Expression is item){
 					local String is itemC: self:generateExpression(expr: item);
-					res: res . ' ' . addFn . '(_arr, (void*)(' . itemC . '));';
+					local String is itemAdd: addFn;
+					if (listHint) { itemAdd: 'spec_buf_push_ptr'; }
+					res: res . ' ' . itemAdd . '(_arr, (void*)(' . itemC . '));';
 				});
 				self:argMode: savedArg;
 				res: res . ' _arr; })';

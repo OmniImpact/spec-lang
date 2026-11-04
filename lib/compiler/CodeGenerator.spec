@@ -344,10 +344,7 @@ Class is CodeGenerator{
 			return 'void*';
 		}
 		if (typeName:startsWith(prefix: 'List')) {
-			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
-				return 'SpecByteBuffer*';
-			}
-			return 'SpecVec*';
+			return 'SpecBuf*';
 		}
 		if (typeName:startsWith(prefix: 'Array')) {
 			return 'SpecArray*';
