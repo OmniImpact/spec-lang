@@ -947,19 +947,18 @@ Class is BuiltinCallGenerator{
 				cg:generateExpression(expr: needleArg:getValue()) . ', ' .
 				cg:generateExpression(expr: defArg:getValue()) . ')';
 		}
+		if (targetC == 'Buf' && expr:methodName == 'bufReplace' && expr:methodArgs:length() > 2) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is searchArg: expr:methodArgs:get(index: 1);
+			local NamedArg is replArg: expr:methodArgs:get(index: 2);
+			return 'spec_string_replace_all(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: searchArg:getValue()) . ', ' .
+				cg:generateExpression(expr: replArg:getValue()) . ')';
+		}
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';
-		}
-		if (expr:methodName == 'replaceAll') {
-			local String is searchC: '""';
-			local String is replC: '""';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'search') { searchC: cg:generateExpression(expr: arg:getValue()); }
-				if (arg:getName() == 'replacement') { replC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_replace_all(' . targetC . ', ' . searchC . ', ' . replC . ')';
 		}
 		if (expr:methodName == 'split') {
 			local String is delimC: '""';

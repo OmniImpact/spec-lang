@@ -26,4 +26,8 @@
 		## First index of [needle] within buffer [b], or [def] when absent.
 		Function of Int is bufIndexOf(String is b, String is needle, Int is def){
 		}
+
+		## Buffer [b] with every [search] occurrence replaced by [replacement].
+		Function of String is bufReplace(String is b, String is search, String is replacement){
+		}
 	}

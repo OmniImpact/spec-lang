@@ -72,6 +72,7 @@ Class is String{
 
 	## Every [search] occurrence replaced by [replacement].
 	Function of String is replaceAll(String is search, String is replacement){
+		return Buf:bufReplace(b: self, search: search, replacement: replacement);
 	}
 
 	## Splits on [delimiter]; the trailing part is always present.
