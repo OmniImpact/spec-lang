@@ -185,8 +185,12 @@ Class is CodeGeneratorProgram{
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
 						retC: '(void*)(intptr_t)(' . retC . ')';
 					} else if (self:isArcType(typeName: self:currentMethodReturnType)) {
-					retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
-				}
+						if (self:isFreshConstructorCall(expr: stmt:returnExpr)) {
+							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')(' . retC . ')';
+						} else {
+							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
+						}
+					}
 					return '    return ' . retC . ";\n";
 				}
 				return "    return;\n";

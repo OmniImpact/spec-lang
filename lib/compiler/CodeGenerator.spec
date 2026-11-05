@@ -338,6 +338,21 @@ Class is CodeGenerator{
 		return false;
 	}
 
+	## A constructor call (`ClassName:init(...)` / `ClassName:new(...)`) produces a
+	## provably fresh value: the creator abandons the initial ref, so the caller
+	## owns it without an extra retain.
+	Function of Boolean is isFreshConstructorCall(Expression is expr){
+		if (expr:getKind() != 'CALL') {
+			return false;
+		}
+		local String is m: expr:methodName;
+		if (!(m == 'init' || m == 'new')) {
+			return false;
+		}
+		local String is targetT: self:inferTargetType(expr: expr:methodTarget);
+		return self:allClassNames:has(key: targetT);
+	}
+
 	Function of String is cTypeFor(String is typeName){
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {
