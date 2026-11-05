@@ -86,6 +86,24 @@ static void spec_rc_dump(void);
 extern int __asan_address_is_poisoned(void*) __attribute__((weak));
 static void* _spec_sub_samples[16];
 static int _spec_sub_n = 0;
+typedef struct { int kind; unsigned long site; } SpecTraceOp;
+static SpecTraceOp* _spec_trace_ops[16];
+static int _spec_trace_len[16];
+static int _spec_trace_cap[16];
+static void spec_trace_op(void* p, int kind, unsigned long site) {
+    for (int i = 0; i < _spec_sub_n; i++) {
+        if (_spec_sub_samples[i] != p) continue;
+        if (_spec_trace_len[i] >= _spec_trace_cap[i]) {
+            _spec_trace_cap[i] = _spec_trace_cap[i] ? _spec_trace_cap[i] * 2 : 64;
+            _spec_trace_ops[i] = (SpecTraceOp*)realloc(_spec_trace_ops[i], sizeof(SpecTraceOp) * _spec_trace_cap[i]);
+        }
+        _spec_trace_ops[i][_spec_trace_len[i]].kind = kind;
+        _spec_trace_ops[i][_spec_trace_len[i]].site = site;
+        _spec_trace_len[i]++;
+        return;
+    }
+}
+
 static int _spec_rc_debug = -1;
 static inline int spec_rc_debug_on(void) {
     if (_spec_rc_debug < 0) { _spec_rc_debug = getenv("SPEC_RC_DEBUG") ? 1 : 0; if (_spec_rc_debug) atexit(spec_rc_dump); }
@@ -145,14 +163,11 @@ static void spec_rc_dump(void) {
         if (__asan_address_is_poisoned && __asan_address_is_poisoned(p)) { fprintf(stderr, "[SUB-%d] freed\n", i); continue; }
         SpecHeader* h = SPEC_HEADER(p);
         fprintf(stderr, "[SUB-%d] ALIVE ref_count=%u\n", i, atomic_load_explicit(&h->ref_count, memory_order_relaxed));
-        SpecRcEntry* e = spec_rc_slot(p);
-        if (e->ptr == p) {
-            for (int j = 0; j < SPEC_RC_HIST; j++) {
-                int idx = (e->head + j) % SPEC_RC_HIST;
-                if (e->sites[idx] == 0) continue;
-                fprintf(stderr, "    %s 0x%lx\n", e->kinds[idx] == 1 ? "alloc" : e->kinds[idx] == 2 ? "retain" : e->kinds[idx] == 3 ? "release" : "realloc", e->sites[idx]);
-            }
+        int limit = _spec_trace_len[i] < 240 ? _spec_trace_len[i] : 240;
+        for (int j = 0; j < limit; j++) {
+            fprintf(stderr, "    %s 0x%lx\n", _spec_trace_ops[i][j].kind == 1 ? "alloc" : _spec_trace_ops[i][j].kind == 2 ? "retain" : "release", _spec_trace_ops[i][j].site);
         }
+        if (_spec_trace_len[i] > limit) fprintf(stderr, "    ... %d more ops\n", _spec_trace_len[i] - limit);
     }
 }
 
@@ -198,7 +213,7 @@ static inline void* spec_retain(void* obj) {
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;
     atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);
-    if (spec_rc_debug_on()) { spec_rc_record(obj, 2, (unsigned long)__builtin_return_address(0)); }
+    if (spec_rc_debug_on()) { unsigned long _ra = (unsigned long)__builtin_return_address(0); spec_rc_record(obj, 2, _ra); spec_trace_op(obj, 2, _ra); }
     return obj;
 }
 
@@ -208,7 +223,7 @@ static inline void spec_release(void* obj) {
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;
     if (spec_rc_debug_on()) {
-        spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));
+        unsigned long _ra = (unsigned long)__builtin_return_address(0); spec_rc_record(obj, 3, _ra); spec_trace_op(obj, 3, _ra);
         if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }
         return;
     }
@@ -749,6 +764,10 @@ static SpecMap* spec_map_new_kind(int kind) {
 
 SpecMap* spec_map_new(void) {
     return spec_map_new_kind(SPEC_ELEM_NONE);
+}
+
+SpecArray* spec_array_new_string(void) {
+    return spec_array_new_object();
 }
 
 SpecMap* spec_map_new_object(void) {
@@ -1329,7 +1348,7 @@ String spec_string_substring(String b, long long start, long long end) {
     for (long long i = s; i < e; i++) {
         spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);
     }
-    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n++] = res; }
+    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n] = res; spec_trace_op(res, 1, (unsigned long)__builtin_return_address(0)); _spec_sub_n++; }
     return res;
 }
 
@@ -1491,6 +1510,10 @@ SpecVec* spec_vec_new(void) {
 
 SpecVec* spec_vec_new_object(void) {
     return spec_vec_new_kind(1);
+}
+
+SpecVec* spec_vec_new_string(void) {
+    return spec_vec_new_object();
 }
 
 void spec_vec_push(SpecVec* v, void* item) {
@@ -27888,6 +27911,23 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("extern int __asan_address_is_poisoned(void*) __attribute__((weak));\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void* _spec_sub_samples[16];\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static int _spec_sub_n = 0;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("typedef struct { int kind; unsigned long site; } SpecTraceOp;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static SpecTraceOp* _spec_trace_ops[16];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static int _spec_trace_len[16];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static int _spec_trace_cap[16];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_trace_op(void* p, int kind, unsigned long site) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    for (int i = 0; i < _spec_sub_n; i++) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (_spec_sub_samples[i] != p) continue;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (_spec_trace_len[i] >= _spec_trace_cap[i]) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            _spec_trace_cap[i] = _spec_trace_cap[i] ? _spec_trace_cap[i] * 2 : 64;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            _spec_trace_ops[i] = (SpecTraceOp*)realloc(_spec_trace_ops[i], sizeof(SpecTraceOp) * _spec_trace_cap[i]);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        _spec_trace_ops[i][_spec_trace_len[i]].kind = kind;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        _spec_trace_ops[i][_spec_trace_len[i]].site = site;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        _spec_trace_len[i]++;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        return;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static int _spec_rc_debug = -1;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline int spec_rc_debug_on(void) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (_spec_rc_debug < 0) { _spec_rc_debug = getenv(\"SPEC_RC_DEBUG\") ? 1 : 0; if (_spec_rc_debug) atexit(spec_rc_dump); }\n"))));
@@ -27943,14 +27983,11 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (__asan_address_is_poisoned && __asan_address_is_poisoned(p)) { fprintf(stderr, \"[SUB-%d] freed\\n\", i); continue; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecHeader* h = SPEC_HEADER(p);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        fprintf(stderr, \"[SUB-%d] ALIVE ref_count=%u\\n\", i, atomic_load_explicit(&h->ref_count, memory_order_relaxed));\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecRcEntry* e = spec_rc_slot(p);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->ptr == p) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            for (int j = 0; j < SPEC_RC_HIST; j++) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                int idx = (e->head + j) % SPEC_RC_HIST;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                if (e->sites[idx] == 0) continue;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                fprintf(stderr, \"    %s 0x%lx\\n\", e->kinds[idx] == 1 ? \"alloc\" : e->kinds[idx] == 2 ? \"retain\" : e->kinds[idx] == 3 ? \"release\" : \"realloc\", e->sites[idx]);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        int limit = _spec_trace_len[i] < 240 ? _spec_trace_len[i] : 240;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        for (int j = 0; j < limit; j++) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            fprintf(stderr, \"    %s 0x%lx\\n\", _spec_trace_ops[i][j].kind == 1 ? \"alloc\" : _spec_trace_ops[i][j].kind == 2 ? \"retain\" : \"release\", _spec_trace_ops[i][j].site);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (_spec_trace_len[i] > limit) fprintf(stderr, \"    ... %d more ops\\n\", _spec_trace_len[i] - limit);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_fail(void* p, const char* what, const char* op, unsigned long ra) {\n"))));
@@ -27991,7 +28028,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecHeader* h = SPEC_HEADER(obj);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on()) { spec_rc_record(obj, 2, (unsigned long)__builtin_return_address(0)); }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on()) { unsigned long _ra = (unsigned long)__builtin_return_address(0); spec_rc_record(obj, 2, _ra); spec_trace_op(obj, 2, _ra); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return obj;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline void spec_release(void* obj) {\n"))));
@@ -28000,7 +28037,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecHeader* h = SPEC_HEADER(obj);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on()) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        unsigned long _ra = (unsigned long)__builtin_return_address(0); spec_rc_record(obj, 3, _ra); spec_trace_op(obj, 3, _ra);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
@@ -28501,6 +28538,9 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecMap* spec_map_new(void) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_map_new_kind(SPEC_ELEM_NONE);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecArray* spec_array_new_string(void) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_array_new_object();\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecMap* spec_map_new_object(void) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_map_new_kind(SPEC_ELEM_OBJECT);\n"))));
@@ -29039,7 +29079,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    for (long long i = s; i < e; i++) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n++] = res; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n] = res; spec_trace_op(res, 1, (unsigned long)__builtin_return_address(0)); _spec_sub_n++; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return res;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("long long spec_string_index_of(String b, String needle, long long def) {\n"))));
@@ -29183,6 +29223,9 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecVec* spec_vec_new_object(void) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_vec_new_kind(1);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecVec* spec_vec_new_string(void) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_vec_new_object();\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("void spec_vec_push(SpecVec* v, void* item) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!v) return;\n"))));
@@ -31419,7 +31462,8 @@ String CodeGenerator_generateTypedConstructor(CodeGenerator* self, String typeNa
 }
 
 bool CodeGenerator_containerElemIsArc(CodeGenerator* self, String containerType) {
-    return spec_string_equals(CodeGenerator_containerElemKind(self, containerType) /* inst:CodeGenerator:containerElemKind */, spec_string_intern("object"));
+    SPEC_AUTO String k = CodeGenerator_containerElemKind(self, containerType) /* inst:CodeGenerator:containerElemKind */;
+    return ((spec_string_equals(k, spec_string_intern("object"))) || (spec_string_equals(k, spec_string_intern("string"))));
 }
 
 bool CodeGenerator_yieldsClaim(CodeGenerator* self, Expression* expr) {

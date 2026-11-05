@@ -390,6 +390,27 @@ value kinds (the field-default/empty-literal path must consult the declared
 type the way VAR_DECL does). That creation-site fix is the next session's first
 move; the ASSIGN transfer and the 87k-orphan class land immediately after.
 
+### 7.1.1 Ratchet parked — verification moves to after Task 5/6 (agreed)
+
+The remaining ~81k-alloc budget is **ownership-convention orphans in codegen
+emission**, not bugs in the C string primitives: complete-lifetime traces (the
+new ledger) show unmatched retains at `Parser_check`,
+`ProgramParseLoop_iteration`, `SearchLoop_iteration`,
+`Loader_appendImplicitAny`, plus the map-assign per-iteration orphan (the
+87k-ref measurement). Since those conventions flow through the
+`BuiltinCallGenerator` interception layer that Task 6 deletes, fixing them
+there is throwaway work. Decision: park the ratchet here —
+- budget: 1.10 MB / ~81k allocs per self-compile; ASan-clean; correctness
+  neutral; `detect_leaks=1` stays off;
+- landed en route (kept): owned `map:get`, container kind-repair + string-kind
+  creation fix, RETURN null-out transfer, `new_string` constructors (latent
+  link error fixed), the rebuilt ledger + substring-sampling dump;
+- the token-text class lead: unmatched per-iteration retains in check/loop
+  methods (sites resolved in the trace dumps);
+- resume condition: after Task 5/6 (String as a Spec class, interception
+  shrink), re-run the ledger dump, diff the class inventory, fix survivors
+  with complete lifetime traces, then revisit the gate.
+
 ### 7.2 Runtime introspection plumbing (RTCORE v1)
 
 The runtime already owns the hard part of program introspection: per-address

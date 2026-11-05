@@ -284,7 +284,8 @@ Class is CodeGenerator{
 	## canonical container type string. Any-typed and unknown containers are
 	## never element-owned.
 	Function of Boolean is containerElemIsArc(String is containerType){
-		return self:containerElemKind(containerType: containerType) == 'object';
+		local String is k: self:containerElemKind(containerType: containerType);
+		return k == 'object' || k == 'string';
 	}
 
 	## Determines whether evaluating [expr] yields a transferred ownership claim:
