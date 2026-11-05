@@ -19,21 +19,24 @@ Class is CBackendUtils{
 	## @param typeName: Spec type name.
 	## @return: C11 type signature string.
 	Function of String is cTypeFor(String is typeName){
-		if (typeName:startsWith(prefix: 'List')) {
-			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
-				return 'SpecByteBuffer*';
-			}
-			return 'SpecVec*';
+	# Container checks match the builtin containers precisely (bare name or
+	# generic suffix) so class names sharing a prefix (ArrayItemsLoop,
+	# MapItemsLoop, ...) fall through to the class handling in the when below.
+	if (typeName == 'List' || typeName:startsWith(prefix: 'List of') || typeName:startsWith(prefix: 'List:')) {
+		if (typeName == 'List:Byte' || typeName == 'List of Byte') {
+			return 'SpecByteBuffer*';
 		}
-		if (typeName:startsWith(prefix: 'Array')) {
-			return 'SpecArray*';
-		}
-		if (typeName:startsWith(prefix: 'Map')) {
-			return 'SpecMap*';
-		}
-		if (typeName:startsWith(prefix: 'Function')) {
-			return 'SpecClosure*';
-		}
+		return 'SpecVec*';
+	}
+	if (typeName == 'Array' || typeName:startsWith(prefix: 'Array of') || typeName:startsWith(prefix: 'Array:')) {
+		return 'SpecArray*';
+	}
+	if (typeName == 'Map' || typeName:startsWith(prefix: 'Map of') || typeName:startsWith(prefix: 'Map:')) {
+		return 'SpecMap*';
+	}
+	if (typeName == 'Function' || typeName:startsWith(prefix: 'Function of') || typeName:startsWith(prefix: 'Function:')) {
+		return 'SpecClosure*';
+	}
 		return when (typeName) {
 			is 'Int', 'int': 'long long';
 			is 'Byte', 'byte': 'unsigned char';
@@ -119,7 +122,7 @@ Class is CBackendUtils{
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
 			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
-			name == 'List' || name == 'String';
+			name == 'List' || name == 'String' || name == 'Buf';
 	}
 
 	## Resolves the C return type of a method signature descriptor.

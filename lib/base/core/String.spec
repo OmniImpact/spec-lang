@@ -11,7 +11,7 @@ Class is String{
 
 	## Number of bytes in this string.
 	Function of Int is length(){
-		return 0;
+		return Buf:bufLength(self);
 	}
 
 	## One-character string at [index], or [default] when out of bounds.

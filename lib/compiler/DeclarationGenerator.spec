@@ -286,7 +286,10 @@ Class is DeclarationGenerator{
 		out: out . "\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:isBuiltinClass(name: c:getName()) && c:getBaseClass() != 'Enum') {
+			# String's methods compile to real C functions (direct dispatch), so
+			# their prototypes join the class prototypes; other builtin classes
+			# have no generated methods.
+			if ((!self:isBuiltinClass(name: c:getName()) || c:getName() == 'String') && c:getBaseClass() != 'Enum') {
 				local Array of String is tps: c:getTypeParams();
 				c:getMembers():each(action: local Function(Member is m){
 					when (m:getMemberKind()) {
@@ -297,7 +300,7 @@ Class is DeclarationGenerator{
 									retType: 'bool';
 								}
 							}
-							out: out . retType . ' ' . c:getName() . '_' . m:getName() . '(' . c:getName() . '* self';
+							out: out . retType . ' ' . c:getName() . '_' . m:getName() . '(' . self:cTypeForClass(typeName: c:getName(), typeParams: tps) . ' self';
 							m:getParameters():each(action: local Function(Parameter is p){
 								out: out . ', ' . self:cTypeForClass(typeName: p:getType():getName(), typeParams: tps) . ' ' . self:cIdent(name: p:getName());
 							});

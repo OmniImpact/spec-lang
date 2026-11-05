@@ -354,24 +354,34 @@ Class is CodeGenerator{
 		return self:allClassNames:has(key: targetT);
 	}
 
+	## Public class-registry lookup for call generators that receive the
+	## [CodeGenerator] by reference (BuiltinCallGenerator); findClass itself is
+	## mixin-internal. Returns an unnamed ClassInfo when the name is absent.
+	Function of ClassInfo is findClassForCall(String is name){
+		return self:findClass(name: name);
+	}
+
 	Function of String is cTypeFor(String is typeName){
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {
 			return 'void*';
 		}
-		if (typeName:startsWith(prefix: 'List')) {
+		# Container checks match the builtin containers precisely (bare name or
+		# generic suffix) so class names sharing a prefix (ArrayItemsLoop,
+		# MapItemsLoop, ...) fall through to the class handling below.
+		if (typeName == 'List' || typeName:startsWith(prefix: 'List of') || typeName:startsWith(prefix: 'List:')) {
 			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
 				return 'SpecByteBuffer*';
 			}
 			return 'SpecVec*';
 		}
-		if (typeName:startsWith(prefix: 'Array')) {
+		if (typeName == 'Array' || typeName:startsWith(prefix: 'Array of') || typeName:startsWith(prefix: 'Array:')) {
 			return 'SpecArray*';
 		}
-		if (typeName:startsWith(prefix: 'Map')) {
+		if (typeName == 'Map' || typeName:startsWith(prefix: 'Map of') || typeName:startsWith(prefix: 'Map:')) {
 			return 'SpecMap*';
 		}
-		if (typeName:startsWith(prefix: 'Function')) {
+		if (typeName == 'Function' || typeName:startsWith(prefix: 'Function of') || typeName:startsWith(prefix: 'Function:')) {
 			return 'SpecClosure*';
 		}
 		if (typeName:contains(needle: ':')) {

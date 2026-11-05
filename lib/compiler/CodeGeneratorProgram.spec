@@ -269,7 +269,9 @@ Class is CodeGeneratorProgram{
 			self:localVars:set(key: p:getName(), value: self:formatVarTypeString(t: p:getType()));
 		});
 
-		local String is out: retType . ' ' . classDef:getName() . '_' . method:getName() . '(' . classDef:getName() . '* self';
+		# Self-param: transparent classes (String) hold the buffer pointer directly,
+		# so cTypeFor yields 'String' (= SpecBuf*), not 'String*' (SpecBuf**).
+		local String is out: retType . ' ' . classDef:getName() . '_' . method:getName() . '(' . self:cTypeFor(typeName: classDef:getName()) . ' self';
 		local String is callArgs: '';
 		method:getParameters():each(action: local Function(Parameter is p){
 			out: out . ', ' . self:cTypeFor(typeName: p:getType():getName()) . ' ' . self:cIdent(name: p:getName());

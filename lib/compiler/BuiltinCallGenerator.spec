@@ -9,6 +9,9 @@ Class is BuiltinCallGenerator{
 		base:struct:Map,
 		base:iterator:*,
 		base:meta:*,
+		base:reflect:ClassInfo,
+		base:reflect:Member,
+		base:reflect:Parameter,
 		compiler:CBackendUtils,
 		compiler:CodeGenerator
 	];
@@ -33,13 +36,65 @@ Class is BuiltinCallGenerator{
 	## @param cg: Reference to parent [CodeGenerator].
 	## @return: C code string if builtin call, or empty string if not a builtin.
 	Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		# error:line - diagnostics written to stderr
-		if ((targetC == 'error' || targetC == 'Error') && expr:methodName == 'line' && expr:methodArgs:length() > 0) {
-			local NamedArg is errArg: expr:methodArgs:get(index: 0);
-			local String is errValC: cg:generateExpression(expr: errArg:getValue());
-			local String is errStrC: cg:wrapToString(expr: errArg:getValue(), exprC: errValC);
-			return 'spec_error_line(' . errStrC . ')';
+	# error:line - diagnostics written to stderr
+	if ((targetC == 'error' || targetC == 'Error') && expr:methodName == 'line' && expr:methodArgs:length() > 0) {
+		local NamedArg is errArg: expr:methodArgs:get(index: 0);
+		local String is errValC: cg:generateExpression(expr: errArg:getValue());
+		local String is errStrC: cg:wrapToString(expr: errArg:getValue(), exprC: errValC);
+		return 'spec_error_line(' . errStrC . ')';
+	}
+
+	# Generic String direct dispatch: when the String class carries a compiled
+	# body for the method, emit a direct call to it; body-less declarations fall
+	# through to the runtime interceptions below. Arguments bind positionally in
+	# declaration order first, then by name, with declaration-side defaults
+	# filling the gaps.
+	if (targetType == 'String' || targetType == 'string') {
+		local ClassInfo is strCls: cg:findClassForCall(name: 'String');
+		if (strCls:getName() == 'String') {
+			local Member is foundM;
+			local Boolean is hasM: false;
+			strCls:getMembers():each(action: local Function(Member is m){
+				if (!hasM && m:getKind() == 'METHOD' && m:getName() == expr:methodName) {
+					hasM: true;
+					foundM: m;
+				}
+			});
+			if (hasM && foundM:getBody():length() > 0) {
+				local String is argCs: '';
+				local Boolean is argsOk: true;
+				local Int is posIdx: 0;
+				foundM:getParameters():each(action: local Function(Parameter is p){
+					if (argsOk) {
+						local Boolean is got: false;
+						if (posIdx < expr:methodArgs:length() && expr:methodArgs:get(index: posIdx):getName() == '') {
+							argCs: argCs . ', ' . cg:generateExpression(expr: expr:methodArgs:get(index: posIdx):getValue());
+							posIdx: posIdx + 1;
+							got: true;
+						}
+						if (!got) {
+							expr:methodArgs:each(action: local Function(NamedArg is a){
+								if (!got && a:getName() == p:getName()) {
+									got: true;
+									argCs: argCs . ', ' . cg:generateExpression(expr: a:getValue());
+								}
+							});
+						}
+						if (!got && p:getHasDefault()) {
+							argCs: argCs . ', ' . cg:generateExpression(expr: p:getDefaultExpr());
+							got: true;
+						}
+						if (!got) {
+							argsOk: false;
+						}
+					}
+				});
+				if (argsOk) {
+					return 'String_' . expr:methodName . '(' . targetC . argCs . ')';
+				}
+			}
 		}
+	}
 
 		# Type name introspection on class instances
 		if (expr:methodName == 'typeName' && targetType != '' && !self:utils:isBuiltinClass(name: targetType) && !self:allEnumNames:has(key: targetType)) {
@@ -857,6 +912,12 @@ Class is BuiltinCallGenerator{
 				});
 				return 'spec_array_join(' . targetC . ', ' . sepC . ')';
 			}
+		}
+
+		# Buf floor primitives (body-less, bound to the C runtime)
+		if (targetC == 'Buf' && expr:methodName == 'bufLength' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_buf_length(' . cg:generateExpression(expr: bArg:getValue()) . ')';
 		}
 
 		# String methods
