@@ -37,6 +37,14 @@ Class is String{
 
 	## True when this string begins with [prefix].
 	Function of Boolean is startsWith(String is prefix){
+		local Int is pl: Buf:bufLength(b: prefix);
+		if (pl == 0) {
+			return true;
+		}
+		if (pl > Buf:bufLength(b: self)) {
+			return false;
+		}
+		return Buf:bufSubstring(b: self, start: 0, end: pl) == prefix;
 	}
 
 	## True when this string ends with [suffix].
