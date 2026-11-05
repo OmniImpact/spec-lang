@@ -349,6 +349,21 @@ the fresh ref. Measured classes (self-compile, ASan):
    2 completes, leaks are correctness-preserving and the budget is a tracked
    metric, not a failure.
 
+**Cycle results, continued (leak-pass 3/4):**
+- `spec_map_get` now returns OWNED object-kind values (retains before return),
+  honoring the claims=true contract. This was the over-release behind the
+  enum_when UAF *and* the kind-repair crash: with it fixed, the
+  `spec_array_add_object` kind-repair lands cleanly.
+- `return <owned local>;` now transfers via null-out
+  (`({ T* _t = x; x = NULL; _t; })`): the caller receives the local's own ref
+  and the SPEC_AUTO cleanup no-ops. Plain transfer without the null-out freed
+  the returned array in the returner's cleanup while the caller adopted it
+  (ASancaught on stage2). Landed with the freshness predicate from 2a.
+- Budget after both: 1.10 MB / 81k allocs - the big classes did not move, so
+  the token-text stuck ref lives beyond the tokenize return chain (suspect:
+  claim-pool adoption interplay at scale). Next session: mirror-ledger
+  tracing of one stuck substring ref.
+
 **RC-ledger findings (Task 7b tooling):** the `SPEC_RC_DEBUG` ledger's shadow
 count diverges from the atomic `ref_count` — at the flagged release the real
 header showed `ref_count = 4` (object alive and healthy) while the ledger had
