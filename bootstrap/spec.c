@@ -82,9 +82,13 @@ typedef struct {
 #define SPEC_HEADER(obj) (((SpecHeader*)(obj)) - 1)
 
 /* ============ RC DEBUG LEDGER (SPEC_RC_DEBUG=1) ============ */
+static void spec_rc_dump(void);
+extern int __asan_address_is_poisoned(void*) __attribute__((weak));
+static void* _spec_sub_samples[16];
+static int _spec_sub_n = 0;
 static int _spec_rc_debug = -1;
 static inline int spec_rc_debug_on(void) {
-    if (_spec_rc_debug < 0) { _spec_rc_debug = getenv("SPEC_RC_DEBUG") ? 1 : 0; }
+    if (_spec_rc_debug < 0) { _spec_rc_debug = getenv("SPEC_RC_DEBUG") ? 1 : 0; if (_spec_rc_debug) atexit(spec_rc_dump); }
     return _spec_rc_debug;
 }
 
@@ -92,7 +96,6 @@ static inline int spec_rc_debug_on(void) {
 #define SPEC_RC_HIST 4
 typedef struct {
     void* ptr;
-    long long count;
     unsigned long sites[SPEC_RC_HIST];
     int kinds[SPEC_RC_HIST];
     int head;
@@ -111,16 +114,51 @@ static SpecRcEntry* spec_rc_slot(void* p) {
 
 static void spec_rc_record(void* p, int kind, unsigned long ra) {
     SpecRcEntry* e = spec_rc_slot(p);
-    if (e->ptr != p) { e->ptr = p; e->count = 0; e->head = 0; }
+    if (e->ptr != p) { e->ptr = p; e->head = 0; }
     e->sites[e->head] = ra;
     e->kinds[e->head] = kind;
     e->head = (e->head + 1) % SPEC_RC_HIST;
     return;
 }
 
+static void spec_rc_dump(void) {
+    long live = 0; long printed = 0;
+    for (size_t i = 0; i < SPEC_RC_SLOTS; i++) {
+        SpecRcEntry* e = &_spec_rc_table[i];
+        if (e->ptr && atomic_load_explicit(&SPEC_HEADER(e->ptr)->ref_count, memory_order_relaxed) > 0) {
+            live++;
+            if (printed < 12) {
+                SpecHeader* h = SPEC_HEADER(e->ptr);
+                fprintf(stderr, "[RC-DUMP] %p ref_count=%u\n", e->ptr, atomic_load_explicit(&h->ref_count, memory_order_relaxed));
+                for (int j = 0; j < SPEC_RC_HIST; j++) {
+                    int idx = (e->head + j) % SPEC_RC_HIST;
+                    if (e->sites[idx] == 0) continue;
+                    fprintf(stderr, "    %s 0x%lx\n", e->kinds[idx] == 1 ? "alloc" : e->kinds[idx] == 2 ? "retain" : e->kinds[idx] == 3 ? "release" : "realloc", e->sites[idx]);
+                }
+                printed++;
+            }
+        }
+    }
+    fprintf(stderr, "[RC-DUMP] live entries: %ld\n", live);
+    for (int i = 0; i < _spec_sub_n; i++) {
+        void* p = _spec_sub_samples[i];
+        if (__asan_address_is_poisoned && __asan_address_is_poisoned(p)) { fprintf(stderr, "[SUB-%d] freed\n", i); continue; }
+        SpecHeader* h = SPEC_HEADER(p);
+        fprintf(stderr, "[SUB-%d] ALIVE ref_count=%u\n", i, atomic_load_explicit(&h->ref_count, memory_order_relaxed));
+        SpecRcEntry* e = spec_rc_slot(p);
+        if (e->ptr == p) {
+            for (int j = 0; j < SPEC_RC_HIST; j++) {
+                int idx = (e->head + j) % SPEC_RC_HIST;
+                if (e->sites[idx] == 0) continue;
+                fprintf(stderr, "    %s 0x%lx\n", e->kinds[idx] == 1 ? "alloc" : e->kinds[idx] == 2 ? "retain" : e->kinds[idx] == 3 ? "release" : "realloc", e->sites[idx]);
+            }
+        }
+    }
+}
+
 static void spec_rc_fail(void* p, const char* what, const char* op, unsigned long ra) {
     SpecRcEntry* e = spec_rc_slot(p);
-    fprintf(stderr, "[RC-DEBUG] %s: %s at 0x%lx (tracked count %lld) ra1=0x%lx ra2=0x%lx\n", what, op, (unsigned long)p, e->count, __builtin_return_address(1), __builtin_return_address(2));
+    fprintf(stderr, "[RC-DEBUG] %s: %s at 0x%lx ra1=0x%lx ra2=0x%lx\n", what, op, (unsigned long)p, __builtin_return_address(1), __builtin_return_address(2));
     for (int i = 0; i < SPEC_RC_HIST; i++) {
         int idx = (e->head + i) % SPEC_RC_HIST;
         if (e->sites[idx] == 0) continue;
@@ -136,21 +174,13 @@ static void spec_rc_fail(void* p, const char* what, const char* op, unsigned lon
 }
 
 static void* spec_rc_alloc(void* p, unsigned long ra) {
-    SpecRcEntry* e = spec_rc_slot(p);
-    if (e->ptr == p && e->count > 0) { spec_rc_fail(p, "alloc of live pointer", "alloc", ra); }
     spec_rc_record(p, 1, ra);
-    SpecRcEntry* e2 = spec_rc_slot(p);
-    e2->count = 1;
     return p;
 }
 
 static void spec_rc_released_check(void* p, unsigned long ra) {
-    SpecRcEntry* e = spec_rc_slot(p);
     SpecHeader* h = SPEC_HEADER(p);
-    long long real = (long long)atomic_load_explicit(&h->ref_count, memory_order_relaxed);
-    if (e->ptr != p) { spec_rc_fail(p, "operation on never-tracked pointer", "release", ra); }
-    if (e->count != real) { fprintf(stderr, "[RC-DEBUG] ledger divergence: tracked %lld but ref_count %lld at %p\n", e->count, real, p); }
-    if (real <= 0) { spec_rc_fail(p, "operation on freed pointer", "release", ra); }
+    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) <= 0) { spec_rc_fail(p, "release of dead object", "release", ra); }
     return;
 }
 
@@ -165,10 +195,10 @@ static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {
 
 static inline void* spec_retain(void* obj) {
     if (!obj) return NULL;
-    if (spec_rc_debug_on()) { spec_rc_released_check(obj, (unsigned long)__builtin_return_address(0)); }
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;
     atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);
+    if (spec_rc_debug_on()) { spec_rc_record(obj, 2, (unsigned long)__builtin_return_address(0)); }
     return obj;
 }
 
@@ -178,11 +208,8 @@ static inline void spec_release(void* obj) {
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;
     if (spec_rc_debug_on()) {
-        SpecRcEntry* e = spec_rc_slot(obj);
         spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));
-        e->count--;
-        if (e->count == 0) { e->ptr = NULL; if (h->destroy) h->destroy(obj); return; }
-        if (e->count < 0) { spec_rc_fail(obj, "over-release", "release", (unsigned long)__builtin_return_address(0)); }
+        if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }
         return;
     }
     if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {
@@ -401,6 +428,7 @@ typedef struct {
 
 void spec_array_destroy(void* self) {
     SpecArray* a = (SpecArray*)self;
+    if (a && getenv("SPEC_ARR_TRACE") && a->length > 500) fprintf(stderr, "[ARR-DESTROY] len=%zu kind=%d\n", a->length, a->elem_kind);
     if (a) {
         if (a->items) {
             for (size_t i = 0; i < a->length; i++) {
@@ -1301,6 +1329,7 @@ String spec_string_substring(String b, long long start, long long end) {
     for (long long i = s; i < e; i++) {
         spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);
     }
+    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n++] = res; }
     return res;
 }
 
@@ -27855,16 +27884,19 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("} SpecHeader;\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#define SPEC_HEADER(obj) (((SpecHeader*)(obj)) - 1)\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("/* ============ RC DEBUG LEDGER (SPEC_RC_DEBUG=1) ============ */\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_dump(void);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("extern int __asan_address_is_poisoned(void*) __attribute__((weak));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void* _spec_sub_samples[16];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static int _spec_sub_n = 0;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static int _spec_rc_debug = -1;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline int spec_rc_debug_on(void) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (_spec_rc_debug < 0) { _spec_rc_debug = getenv(\"SPEC_RC_DEBUG\") ? 1 : 0; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (_spec_rc_debug < 0) { _spec_rc_debug = getenv(\"SPEC_RC_DEBUG\") ? 1 : 0; if (_spec_rc_debug) atexit(spec_rc_dump); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return _spec_rc_debug;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#define SPEC_RC_SLOTS (1 << 21)\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#define SPEC_RC_HIST 4\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("typedef struct {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    void* ptr;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long count;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    unsigned long sites[SPEC_RC_HIST];\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    int kinds[SPEC_RC_HIST];\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    int head;\n"))));
@@ -27881,15 +27913,49 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_record(void* p, int kind, unsigned long ra) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecRcEntry* e = spec_rc_slot(p);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->ptr != p) { e->ptr = p; e->count = 0; e->head = 0; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->ptr != p) { e->ptr = p; e->head = 0; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    e->sites[e->head] = ra;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    e->kinds[e->head] = kind;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    e->head = (e->head + 1) % SPEC_RC_HIST;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_dump(void) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long live = 0; long printed = 0;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    for (size_t i = 0; i < SPEC_RC_SLOTS; i++) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecRcEntry* e = &_spec_rc_table[i];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->ptr && atomic_load_explicit(&SPEC_HEADER(e->ptr)->ref_count, memory_order_relaxed) > 0) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            live++;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            if (printed < 12) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                SpecHeader* h = SPEC_HEADER(e->ptr);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                fprintf(stderr, \"[RC-DUMP] %p ref_count=%u\\n\", e->ptr, atomic_load_explicit(&h->ref_count, memory_order_relaxed));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                for (int j = 0; j < SPEC_RC_HIST; j++) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                    int idx = (e->head + j) % SPEC_RC_HIST;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                    if (e->sites[idx] == 0) continue;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                    fprintf(stderr, \"    %s 0x%lx\\n\", e->kinds[idx] == 1 ? \"alloc\" : e->kinds[idx] == 2 ? \"retain\" : e->kinds[idx] == 3 ? \"release\" : \"realloc\", e->sites[idx]);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                printed++;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    fprintf(stderr, \"[RC-DUMP] live entries: %ld\\n\", live);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    for (int i = 0; i < _spec_sub_n; i++) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        void* p = _spec_sub_samples[i];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (__asan_address_is_poisoned && __asan_address_is_poisoned(p)) { fprintf(stderr, \"[SUB-%d] freed\\n\", i); continue; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecHeader* h = SPEC_HEADER(p);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        fprintf(stderr, \"[SUB-%d] ALIVE ref_count=%u\\n\", i, atomic_load_explicit(&h->ref_count, memory_order_relaxed));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecRcEntry* e = spec_rc_slot(p);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->ptr == p) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            for (int j = 0; j < SPEC_RC_HIST; j++) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                int idx = (e->head + j) % SPEC_RC_HIST;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                if (e->sites[idx] == 0) continue;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("                fprintf(stderr, \"    %s 0x%lx\\n\", e->kinds[idx] == 1 ? \"alloc\" : e->kinds[idx] == 2 ? \"retain\" : e->kinds[idx] == 3 ? \"release\" : \"realloc\", e->sites[idx]);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_fail(void* p, const char* what, const char* op, unsigned long ra) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecRcEntry* e = spec_rc_slot(p);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    fprintf(stderr, \"[RC-DEBUG] %s: %s at 0x%lx (tracked count %lld) ra1=0x%lx ra2=0x%lx\\n\", what, op, (unsigned long)p, e->count, __builtin_return_address(1), __builtin_return_address(2));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    fprintf(stderr, \"[RC-DEBUG] %s: %s at 0x%lx ra1=0x%lx ra2=0x%lx\\n\", what, op, (unsigned long)p, __builtin_return_address(1), __builtin_return_address(2));\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    for (int i = 0; i < SPEC_RC_HIST; i++) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        int idx = (e->head + i) % SPEC_RC_HIST;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->sites[idx] == 0) continue;\n"))));
@@ -27904,20 +27970,12 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    abort();\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void* spec_rc_alloc(void* p, unsigned long ra) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecRcEntry* e = spec_rc_slot(p);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->ptr == p && e->count > 0) { spec_rc_fail(p, \"alloc of live pointer\", \"alloc\", ra); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    spec_rc_record(p, 1, ra);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecRcEntry* e2 = spec_rc_slot(p);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    e2->count = 1;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return p;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_released_check(void* p, unsigned long ra) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecRcEntry* e = spec_rc_slot(p);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecHeader* h = SPEC_HEADER(p);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long real = (long long)atomic_load_explicit(&h->ref_count, memory_order_relaxed);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->ptr != p) { spec_rc_fail(p, \"operation on never-tracked pointer\", \"release\", ra); }\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->count != real) { fprintf(stderr, \"[RC-DEBUG] ledger divergence: tracked %lld but ref_count %lld at %p\\n\", e->count, real, p); }\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (real <= 0) { spec_rc_fail(p, \"operation on freed pointer\", \"release\", ra); }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) <= 0) { spec_rc_fail(p, \"release of dead object\", \"release\", ra); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {\n"))));
@@ -27930,10 +27988,10 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline void* spec_retain(void* obj) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!obj) return NULL;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on()) { spec_rc_released_check(obj, (unsigned long)__builtin_return_address(0)); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecHeader* h = SPEC_HEADER(obj);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on()) { spec_rc_record(obj, 2, (unsigned long)__builtin_return_address(0)); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return obj;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline void spec_release(void* obj) {\n"))));
@@ -27942,11 +28000,8 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecHeader* h = SPEC_HEADER(obj);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on()) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecRcEntry* e = spec_rc_slot(obj);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        e->count--;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->count == 0) { e->ptr = NULL; if (h->destroy) h->destroy(obj); return; }\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->count < 0) { spec_rc_fail(obj, \"over-release\", \"release\", (unsigned long)__builtin_return_address(0)); }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {\n"))));
@@ -28149,6 +28204,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("} SpecArray;\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("void spec_array_destroy(void* self) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecArray* a = (SpecArray*)self;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (a && getenv(\"SPEC_ARR_TRACE\") && a->length > 500) fprintf(stderr, \"[ARR-DESTROY] len=%zu kind=%d\\n\", a->length, a->elem_kind);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (a) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (a->items) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("            for (size_t i = 0; i < a->length; i++) {\n"))));
@@ -28983,6 +29039,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    for (long long i = s; i < e; i++) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n++] = res; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return res;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("long long spec_string_index_of(String b, String needle, long long def) {\n"))));

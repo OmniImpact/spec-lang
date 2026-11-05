@@ -364,6 +364,32 @@ the fresh ref. Measured classes (self-compile, ASan):
   claim-pool adoption interplay at scale). Next session: mirror-ledger
   tracing of one stuck substring ref.
 
+**Ledger rebuilt as a mirror tool (leak-pass 5):** the shadow-count design was
+fundamentally broken — `spec_retain` never recorded (shadow stayed at the alloc
+count while real refcounts climbed), and release-to-zero slot clearing let
+colliding pointers steal slots, splitting op histories. Rewritten: the ledger is
+now a pure per-address op-history ring, every check reads the atomic ref_count
+directly, and an atexit dump inventories live objects with histories.
+`spec_string_substring` samples its first 16 results; under ASan the dump
+reports which samples are still alive at exit (poison-checked) with the op
+rings. This tool is what exposed the next real class:
+
+**map:get orphans (measured, not theorized):** sampled substrings show
+`ref_count = 87,121` at exit — a hot `map:get` whose owned result is consumed by
+plain `spec_assign` (+1 orphan per iteration on the SAME shared value).
+Re-applying the claims-true ASSIGN transfer crashed the canary twice more, and
+the crashes pinned the last blockers precisely:
+- the val_kind guard in `spec_map_get` is load-bearing: NONE-kind maps store
+  ints as `(void*)(intptr_t)` — an unconditional retain dereferences fake
+  pointers;
+- NONE-kind maps holding OBJECT values (class field defaults / empty literals
+  where the container hint does not fire) store raw borrows — transfer adopts
+  those and dangles.
+So the transfer is correct **only after** container creation sites carry their
+value kinds (the field-default/empty-literal path must consult the declared
+type the way VAR_DECL does). That creation-site fix is the next session's first
+move; the ASSIGN transfer and the 87k-orphan class land immediately after.
+
 **RC-ledger findings (Task 7b tooling):** the `SPEC_RC_DEBUG` ledger's shadow
 count diverges from the atomic `ref_count` — at the flagged release the real
 header showed `ref_count = 4` (object alive and healthy) while the ledger had
