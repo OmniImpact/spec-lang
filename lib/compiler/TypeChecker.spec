@@ -256,7 +256,7 @@ Class is TypeChecker{
 	## @param name: Candidate type name.
 	## @return: true when the name is a builtin class.
 	local Function of Boolean is isBuiltinClassName(String is name){
-		if (name == 'Array' || name == 'Map' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'List') {
+		if (name == 'Array' || name == 'Map' || name == 'Buf' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'List' || name == 'Buf') {
 			return true;
 		}
 		if (name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'Output' || name == 'output' || name == 'error' || name == 'Error' || name == 'Parallel' || name == 'Ansi') {
@@ -710,7 +710,7 @@ Class is TypeChecker{
 					res: self:allEnumVariants:getString(key: name, default: 'Any');
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
-				} else if (name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'Map' || name == 'Array' || name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'output' || name == 'Output' || name == 'error' || name == 'Error' || name == 'String' || name == 'Int' || name == 'Float' || name == 'Boolean' || name == 'Function' || name == 'Any') {
+				} else if (name == 'Buf' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'Map' || name == 'Array' || name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'output' || name == 'Output' || name == 'error' || name == 'Error' || name == 'String' || name == 'Int' || name == 'Float' || name == 'Boolean' || name == 'Function' || name == 'Any') {
 					res: name;
 				} else if (name != '') {
 					self:addError(line: self:currentLine, msg: 'Undefined identifier \'' . name . '\'.');

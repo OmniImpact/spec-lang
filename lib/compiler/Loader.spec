@@ -124,7 +124,8 @@ Class is Loader{
 			];
 			is 'base:core:*': [
 				'lib/base/core/String.spec',
-				'lib/base/core/Stringable.spec',
+				'lib/base/core/Buf.spec',
+'lib/base/core/Stringable.spec',
 				'lib/base/core/Any.spec'
 			];
 			is 'base:sys:*': [
@@ -505,7 +506,8 @@ Class is Loader{
 
 		# Root class lattice preloads, before any user code.
 				self:loadFile(filePath: 'lib/base/core/String.spec');
-		self:loadFile(filePath: 'lib/base/core/Stringable.spec');
+		self:loadFile(filePath: 'lib/base/core/Buf.spec');
+self:loadFile(filePath: 'lib/base/core/Stringable.spec');
 		self:loadFile(filePath: 'lib/base/core/Any.spec');
 
 		self:loadFile(filePath: rootPath);
