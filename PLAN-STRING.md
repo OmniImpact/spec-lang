@@ -385,6 +385,47 @@ the fresh ref. Measured classes (self-compile, ASan):
   propagation mechanism understood. Next session: seed-patch the signature
   line (mirroring the namespace-list procedure), then land the body.
 
+### 7.3 Package system + String body migration (current state)
+
+**Package system (partially landed, then parked):**
+- The array using-form was implemented: `using: [['base','struct', Array], ...]`
+  with bare-class terminators; the Loader consumes it (dual-form with the old
+  colon-strings); `expandWildcard`/`resolvePath`/`PathConvLoop` deleted; 197
+  entries migrated. `Array of Array of String` declaration type confirmed.
+- Interface-style `using;` for dependency-free classes confirmed correct (the
+  Loader's `getHasInit()` guard skips them).
+- `AST.spec` houses six classes (NamedArg, Expression, Statement, ProgramNode,
+  WhenArm) — the file-per-class convention breaks; the package-include scanner
+  (phase 2) is the right answer for multi-class files.
+- The discovery model was agreed: recursive .spec scan from the executable's
+  directory + the input file's directory; the declared namespace is canonical
+  (the file path is metadata; layout mismatch = lint error); using selects
+  from the inventory. Requires a `readdir` floor primitive.
+
+**String body migration (blocked, root cause fully characterized):**
+The chain: register String as a class → cTypeFor's class-fallback branch
+(`allClassNames:has → typeName . '*'`) captures `'String'` before its own arm
+in SOME generation paths → the emitted self-param becomes `SpecBuf**` → the
+body's `spec_buf_length(self)` breaks. The cTypeFor branch-order fix (String
+arm → precise containers → class fallback) was applied to the source AND the
+seed's baked code, but each fix shifted the vtable slot assignment, breaking
+the stale generation's baked dispatches (the `StringString` self-type = the
+wrong vtable entry's return). The heap corruption in the tests followed.
+
+**Unblock procedure (next session):**
+1. `git checkout 5de7fad -- lib bootstrap/spec.c` (the green base — Buf floor
+   wired, length body parked).
+2. Apply the cTypeFor restructure (String arm → precise containers → class
+   fallback) to `CodeGenerator.spec` AND the seed's baked `CodeGenerator_
+   cTypeFor` (bootstrap/spec.c ~line 31654) in the SAME commit.
+3. Rebuild the seed (`bootstrap.sh`), then run TWO full convergence cycles
+   (the first cycle's s1v still carries the previous generation's baked
+   emitter; the second cycle's s2v/s3v converge on the new logic).
+4. Land the length body (`Buf:bufLength(self)`) — the self-param will now be
+   `String self` (SpecBuf*) and the floor call type-checks.
+5. Re-run both suites. If green: commit + remove the old interception blocks
+   per method (the dispatch branch handles them).
+
 **Ledger rebuilt as a mirror tool (leak-pass 5):** the shadow-count design was
 fundamentally broken — `spec_retain` never recorded (shadow stayed at the alloc
 count while real refcounts climbed), and release-to-zero slot clearing let
