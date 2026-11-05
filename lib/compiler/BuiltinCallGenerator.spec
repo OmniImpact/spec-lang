@@ -939,17 +939,18 @@ Class is BuiltinCallGenerator{
 				cg:generateExpression(expr: startArg:getValue()) . ', ' .
 				cg:generateExpression(expr: endArg:getValue()) . ')';
 		}
+		if (targetC == 'Buf' && expr:methodName == 'bufIndexOf' && expr:methodArgs:length() > 2) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is needleArg: expr:methodArgs:get(index: 1);
+			local NamedArg is defArg: expr:methodArgs:get(index: 2);
+			return 'spec_string_index_of(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: needleArg:getValue()) . ', ' .
+				cg:generateExpression(expr: defArg:getValue()) . ')';
+		}
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';
-		}
-		if (expr:methodName == 'contains') {
-			local String is needleC: '""';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'needle' || arg:getName() == 'search' || needleC == '""') { needleC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_contains(' . targetC . ', ' . needleC . ')';
 		}
 		if (expr:methodName == 'replaceAll') {
 			local String is searchC: '""';
@@ -988,15 +989,6 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == 'search') { searchC: cg:generateExpression(expr: arg:getValue()); }
 			});
 			return 'spec_string_count_leading(' . targetC . ', ' . searchC . ')';
-		}
-		if (expr:methodName == 'indexOf') {
-			local String is needleC: '""';
-			local String is defC: '-1';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'search' || arg:getName() == 'needle') { needleC: cg:generateExpression(expr: arg:getValue()); }
-				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_index_of(' . targetC . ', ' . needleC . ', ' . defC . ')';
 		}
 
 		# Enum methods

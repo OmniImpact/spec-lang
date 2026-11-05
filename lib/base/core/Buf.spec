@@ -22,4 +22,8 @@
 		## Bytes [start] (inclusive) to [end] (exclusive) of buffer [b].
 		Function of String is bufSubstring(String is b, Int is start, Int is end){
 		}
+
+		## First index of [needle] within buffer [b], or [def] when absent.
+		Function of Int is bufIndexOf(String is b, String is needle, Int is def){
+		}
 	}

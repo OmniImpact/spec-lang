@@ -62,10 +62,12 @@ Class is String{
 
 	## True when [needle] occurs anywhere in this string (empty needle: true).
 	Function of Boolean is contains(String is needle){
+		return self:indexOf(search: needle, default: -1) >= 0;
 	}
 
 	## First occurrence of [needle] at or after the start, or [default].
 	Function of Int is indexOf(String is search, Int is default){
+		return Buf:bufIndexOf(b: self, needle: search, def: default);
 	}
 
 	## Every [search] occurrence replaced by [replacement].
