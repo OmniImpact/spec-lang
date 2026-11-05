@@ -306,14 +306,14 @@ Class is CodeGeneratorProgram{
 		m: m . "                if (klen >= 128) klen = 127;\n";
 		m: m . "                strncpy(kbuf, argv[i] + 2, klen);\n";
 		m: m . "                kbuf[klen] = '\\0';\n";
-		m: m . "                spec_map_set(args, kbuf, eq + 1);\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(kbuf), spec_string_from_chars(eq + 1));\n";
 		m: m . "            } else {\n";
 		m: m . "                const char* key = argv[i] + 2;\n";
 		m: m . "                const char* val = \"true\";\n";
 		m: m . "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n";
 		m: m . "                    val = argv[++i];\n";
 		m: m . "                }\n";
-		m: m . "                spec_map_set(args, key, val);\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
 		m: m . "            }\n";
 		m: m . "        } else if (argv[i][0] == '-' && argv[i][1] != '\\0') {\n";
 		m: m . "            const char* eq = strchr(argv[i] + 1, '=');\n";
@@ -323,14 +323,14 @@ Class is CodeGeneratorProgram{
 		m: m . "                if (klen >= 128) klen = 127;\n";
 		m: m . "                strncpy(kbuf, argv[i] + 1, klen);\n";
 		m: m . "                kbuf[klen] = '\\0';\n";
-		m: m . "                spec_map_set(args, kbuf, eq + 1);\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(kbuf), spec_string_from_chars(eq + 1));\n";
 		m: m . "            } else {\n";
 		m: m . "                const char* key = argv[i] + 1;\n";
 		m: m . "                const char* val = \"true\";\n";
 		m: m . "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n";
 		m: m . "                    val = argv[++i];\n";
 		m: m . "                }\n";
-		m: m . "                spec_map_set(args, key, val);\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
 		m: m . "            }\n";
 		m: m . "        }\n";
 		m: m . "    }\n";
@@ -491,10 +491,10 @@ Class is CodeGeneratorProgram{
 				});
 				if (!hasToString && c:getBaseClass() != 'Enum') {
 					local String is cn: c:getName();
-					methods: methods . 'const char* ' . cn . '_toString(' . cn . "* self);\n";
-					methods: methods . 'const char* ' . cn . '_toString(' . cn . "* self) {\n";
-					methods: methods . "    if (!self) { return \"\"; }\n";
-					methods: methods . '    return "' . cn . "\";\n}\n\n";
+					methods: methods . 'SpecString ' . cn . '_toString(' . cn . "* self);\n";
+					methods: methods . 'SpecString ' . cn . '_toString(' . cn . "* self) {\n";
+					methods: methods . "    if (!self) { return spec_string_intern(\"\"); }\n";
+					methods: methods . '    return spec_string_intern("' . cn . '");' . "\n}\n\n";
 				}
 			}
 		});

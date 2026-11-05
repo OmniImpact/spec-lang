@@ -208,7 +208,7 @@ Class is CodeGeneratorExpressions{
 							if (leftClaimKind) {
 								leftClaim: leftC;
 							} else if (leftArc) {
-								leftClaim: '(char*)spec_retain((void*)(' . leftC . '))';
+								leftClaim: '(void*)spec_retain((void*)(' . leftC . '))';
 							} else {
 								leftClaim: 'spec_string_from_chars(' . leftC . ')';
 							}
@@ -261,7 +261,7 @@ Class is CodeGeneratorExpressions{
 						}
 					}
 					if (valType == 'String' || valType == 'string') {
-						return 'spec_map_get_string(' . targetC . ', ' . indexC . ', "")';
+						return 'spec_map_get_string(' . targetC . ', ' . indexC . ', spec_string_intern(""))';
 					}
 					if (valType == 'Int' || valType == 'int') {
 						return 'spec_map_get_int(' . targetC . ', ' . indexC . ', 0)';
@@ -276,7 +276,7 @@ Class is CodeGeneratorExpressions{
 					return '((' . valCType . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))';
 				}
 				if (targetType == 'Array:String' || targetType == 'Array of String') {
-					return '((const char*)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
+					return '((SpecString)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
 				}
 				if (targetType:startsWith(prefix: 'Array:') && targetType:length() > 6) {
 					local String is elemT: targetType:substring(start: 6, end: targetType:length());

@@ -92,13 +92,13 @@ Class is BuiltinCallGenerator{
 			local NamedArg is firstArg: expr:methodArgs:get(index: 0);
 			local String is valC: cg:generateExpression(expr: firstArg:getValue());
 			local String is strC: cg:wrapToString(expr: firstArg:getValue(), exprC: valC);
-			return "printf(\"%s\\n\", " . strC . ')';
+			return "printf(\"%s\\n\", spec_buf_to_cstring((SpecBuf*)(" . strC . ")))";
 		}
 		if ((targetC == 'output' || targetC == 'Output') && (expr:methodName == 'print' || expr:methodName == 'write') && expr:methodArgs:length() > 0) {
 			local NamedArg is firstArg: expr:methodArgs:get(index: 0);
 			local String is valC: cg:generateExpression(expr: firstArg:getValue());
 			local String is strC: cg:wrapToString(expr: firstArg:getValue(), exprC: valC);
-			return '({ printf("%s", ' . strC . '); fflush(stdout); })';
+			return '({ printf("%s", spec_buf_to_cstring((SpecBuf*)(' . strC . '))); fflush(stdout); })';
 		}
 
 		# String:fromCharCode
@@ -154,7 +154,7 @@ Class is BuiltinCallGenerator{
 				local Expression is mt: promptVal:methodTarget;
 				handlerClass: cg:generateExpression(expr: mt);
 			}
-			return "({ char* _line = NULL; size_t _line_cap = 0; char* _res = \"\"; ssize_t _n = getline(&_line, &_line_cap, stdin); if (_n >= 0) { if (_n > 0 && _line[_n - 1] == '\\n') _line[_n - 1] = '\\0'; _res = strdup(_line); } free(_line); " . handlerClass . '_onInput((void*)(' . handlerC . '), _res); })';
+			return "({ char* _line = NULL; size_t _line_cap = 0; char* _res = \"\"; ssize_t _n = getline(&_line, &_line_cap, stdin); if (_n >= 0) { if (_n > 0 && _line[_n - 1] == '\\n') _line[_n - 1] = '\\0'; _res = strdup(_line); } free(_line); " . handlerClass . '_onInput((void*)(' . handlerC . '), spec_string_from_chars(_res)); })';
 		}
 
 		# LoopControl methods
@@ -179,7 +179,7 @@ Class is BuiltinCallGenerator{
 		# Process static methods
 		if (targetC == 'Process') {
 			if (expr:methodName == 'execute') {
-				local String is cmdC: '""';
+				local String is cmdC: 'spec_string_intern("")';
 				local String is argsC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'command') { cmdC: cg:generateExpression(expr: arg:getValue()); }
@@ -244,22 +244,22 @@ Class is BuiltinCallGenerator{
 		# File static methods
 		if (targetC == 'File') {
 			if (expr:methodName == 'exists') {
-				local String is pathC: '""';
+				local String is pathC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'path') { pathC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return 'spec_file_exists(' . pathC . ')';
 			}
 			if (expr:methodName == 'remove') {
-				local String is pathC: '""';
+				local String is pathC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'path') { pathC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return 'spec_file_remove(' . pathC . ')';
 			}
 			if (expr:methodName == 'read') {
-				local String is pathC: '""';
-				local String is defC: '""';
+				local String is pathC: 'spec_string_intern("")';
+				local String is defC: 'spec_string_intern("")';
 				local String is onSuccC: 'NULL';
 				local String is onErrC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -271,8 +271,8 @@ Class is BuiltinCallGenerator{
 				return 'spec_file_read(' . pathC . ', ' . defC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
 			}
 			if (expr:methodName == 'readAsync') {
-				local String is pathC: '""';
-				local String is defC: '""';
+				local String is pathC: 'spec_string_intern("")';
+				local String is defC: 'spec_string_intern("")';
 				local String is onSuccC: 'NULL';
 				local String is onErrC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -284,8 +284,8 @@ Class is BuiltinCallGenerator{
 				return 'spec_file_read_async(' . pathC . ', ' . defC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
 			}
 			if (expr:methodName == 'write') {
-				local String is pathC: '""';
-				local String is contentC: '""';
+				local String is pathC: 'spec_string_intern("")';
+				local String is contentC: 'spec_string_intern("")';
 				local String is onSuccC: 'NULL';
 				local String is onErrC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -297,8 +297,8 @@ Class is BuiltinCallGenerator{
 				return 'spec_file_write(' . pathC . ', ' . contentC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
 			}
 			if (expr:methodName == 'writeAsync') {
-				local String is pathC: '""';
-				local String is contentC: '""';
+				local String is pathC: 'spec_string_intern("")';
+				local String is contentC: 'spec_string_intern("")';
 				local String is onSuccC: 'NULL';
 				local String is onErrC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -442,11 +442,11 @@ Class is BuiltinCallGenerator{
 				return 'spec_bytebuffer_push(' . targetC . ', (long long)(' . itemC . '))';
 			}
 			if (expr:methodName == 'appendString') {
-				local String is sC: '""';
+				local String is sC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					sC: cg:generateExpression(expr: arg:getValue());
 				});
-				return 'spec_bytebuffer_append_string(' . targetC . ', ' . sC . ')';
+				return 'spec_bytebuffer_append_string(' . targetC . ', spec_buf_to_cstring((SpecBuf*)(' . sC . ')))';
 			}
 			if (expr:methodName == 'get') {
 				local String is idxC: '0';
@@ -498,7 +498,7 @@ Class is BuiltinCallGenerator{
 			local String is resCast: '(long long)(intptr_t)';
 			if (elemKind == 'string') {
 				itemPre: '(void*)(';
-				resCast: '(const char*)';
+				resCast: '(SpecString)';
 			} else if (elemKind == 'object') {
 				itemPre: '(void*)(';
 				resCast: '(' . cg:cTypeFor(typeName: listElem) . ')(intptr_t)';
@@ -578,8 +578,8 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_new()';
 			}
 			if (expr:methodName == 'set') {
-				local String is keyC: '""';
-				local String is valC: '""';
+				local String is keyC: 'spec_string_intern("")';
+				local String is valC: 'spec_string_intern("")';
 				local Boolean is valIsStr: true;
 				local Expression is valExpr;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -599,8 +599,8 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 			}
 			if (expr:methodName == 'getString') {
-				local String is keyC: '""';
-				local String is defC: '""';
+				local String is keyC: 'spec_string_intern("")';
+				local String is defC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
@@ -608,7 +608,7 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_get_string(' . targetC . ', ' . keyC . ', ' . defC . ')';
 			}
 			if (expr:methodName == 'getInt') {
-				local String is keyC: '""';
+				local String is keyC: 'spec_string_intern("")';
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
@@ -617,7 +617,7 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_get_int(' . targetC . ', ' . keyC . ', ' . defC . ')';
 			}
 			if (expr:methodName == 'getFloat') {
-				local String is keyC: '""';
+				local String is keyC: 'spec_string_intern("")';
 				local String is defC: '0.0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
@@ -626,7 +626,7 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_get_float(' . targetC . ', ' . keyC . ', ' . defC . ')';
 			}
 			if (expr:methodName == 'getBool') {
-				local String is keyC: '""';
+				local String is keyC: 'spec_string_intern("")';
 				local String is defC: 'false';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
@@ -635,7 +635,7 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_get_bool(' . targetC . ', ' . keyC . ', ' . defC . ')';
 			}
 			if (expr:methodName == 'get') {
-				local String is keyC: '""';
+				local String is keyC: 'spec_string_intern("")';
 				local String is defC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
@@ -644,14 +644,14 @@ Class is BuiltinCallGenerator{
 				return 'spec_map_get(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . defC . '))';
 			}
 			if (expr:methodName == 'has') {
-				local String is keyC: '""';
+				local String is keyC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return 'spec_map_has(' . targetC . ', ' . keyC . ')';
 			}
 			if (expr:methodName == 'remove') {
-				local String is keyC: '""';
+				local String is keyC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:getName() == 'key') { keyC: cg:generateExpression(expr: arg:getValue()); }
 				});
@@ -765,7 +765,7 @@ Class is BuiltinCallGenerator{
 				local String is searchC: '""';
 				local String is defC: '-1';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if (arg:getName() == 'search') { searchC: cg:generateExpression(expr: arg:getValue()); }
+					if (arg:getName() == 'search' || arg:getName() == 'needle') { searchC: cg:generateExpression(expr: arg:getValue()); }
 					if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
 				});
 				return 'spec_array_index_of_str(' . targetC . ', ' . searchC . ', ' . defC . ')';
@@ -860,7 +860,7 @@ Class is BuiltinCallGenerator{
 		}
 		if (expr:methodName == 'charAt') {
 			local String is idxC: '0';
-			local String is defC: '""';
+			local String is defC: 'spec_string_intern("")';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
@@ -939,7 +939,7 @@ Class is BuiltinCallGenerator{
 			local String is needleC: '""';
 			local String is defC: '-1';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'needle') { needleC: cg:generateExpression(expr: arg:getValue()); }
+				if (arg:getName() == 'search' || arg:getName() == 'needle') { needleC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
 			});
 			return 'spec_str_index_of(' . targetC . ', ' . needleC . ', ' . defC . ')';

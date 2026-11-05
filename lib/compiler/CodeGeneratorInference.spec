@@ -348,9 +348,6 @@ Class is CodeGeneratorInference{
 			self:localVars:set(key: p:getName(), value: self:formatTypeString(t: p:getType()));
 			local String is pCType: self:cTypeFor(typeName: p:getType():getName());
 			local String is pRaw: '(' . pCType . ')(intptr_t)_a_' . id . '->items[_i_' . id . ']';
-			if (p:getType():getName() == 'String') {
-				pRaw: '(char*)(intptr_t)_a_' . id . '->items[_i_' . id . ']';
-			}
 			paramDecl: '        ' . pCType . ' ' . self:cIdent(name: p:getName()) . ' = ' . pRaw . ";\n";
 		}
 
@@ -459,9 +456,6 @@ Class is CodeGeneratorInference{
 			self:localVars:set(key: p1:getName(), value: self:formatTypeString(t: p1:getType()));
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . arrVar . '->items[' . idxVar . ']';
-			if (p1:getType():getName() == 'String') {
-				p1Raw: '(char*)(intptr_t)' . arrVar . '->items[' . idxVar . ']';
-			}
 			paramDecl: paramDecl . '        ' . p1CType . ' ' . self:cIdent(name: p1:getName()) . ' = ' . p1Raw . ";\n";
 		}
 
@@ -503,7 +497,7 @@ Class is CodeGeneratorInference{
 		if (fnExpr:anonParams:length() >= 1) {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p0:getName(), value: 'String');
-			paramDecl: paramDecl . '            char* ' . self:cIdent(name: p0:getName()) . ' = ' . eVar . "->key;\n";
+			paramDecl: paramDecl . '            SpecString ' . self:cIdent(name: p0:getName()) . ' = spec_string_from_chars(' . eVar . "->key);\n";
 		}
 		if (fnExpr:anonParams:length() >= 2) {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
@@ -511,7 +505,7 @@ Class is CodeGeneratorInference{
 			local String is p1CType: self:cTypeFor(typeName: p1:getType():getName());
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . eVar . '->value';
 			if (p1:getType():getName() == 'String') {
-				p1Raw: '(char*)(intptr_t)' . eVar . '->value';
+				p1Raw: 'spec_string_from_chars((const char*)' . eVar . '->value)';
 			}
 			paramDecl: paramDecl . '            ' . p1CType . ' ' . self:cIdent(name: p1:getName()) . ' = ' . p1Raw . ";\n";
 		}
