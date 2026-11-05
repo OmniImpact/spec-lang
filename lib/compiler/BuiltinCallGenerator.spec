@@ -718,7 +718,12 @@ Class is BuiltinCallGenerator{
 					cg:setArgMode(m: savedArgA);
 					itemExpr: valExpr;
 				}
-				return 'spec_array_add(' . targetC . ', (void*)(' . itemC . '))';
+				local String is elemKindA: cg:containerElemKind(containerType: targetType);
+				local String is addFn: 'spec_array_add';
+				if (elemKindA == 'object' || elemKindA == 'string') {
+					addFn: 'spec_array_add_object';
+				}
+				return addFn . '(' . targetC . ', (void*)(' . itemC . '))';
 			}
 			if (expr:methodName == 'length') {
 				return 'spec_array_length(' . targetC . ')';
