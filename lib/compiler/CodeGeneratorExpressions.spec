@@ -225,7 +225,7 @@ Class is CodeGeneratorExpressions{
 						local String is leftC: self:generateExpression(expr: expr:leftExpr);
 						local String is rightC: self:generateExpression(expr: expr:rightExpr);
 						if (self:isStringExpr(expr: expr:leftExpr) || self:isStringExpr(expr: expr:rightExpr)) {
-							return 'spec_str_equals(' . leftC . ', ' . rightC . ')';
+							return 'spec_string_equals(' . leftC . ', ' . rightC . ')';
 						}
 						return '((' . leftC . ') == (' . rightC . '))';
 					}
@@ -233,7 +233,7 @@ Class is CodeGeneratorExpressions{
 						local String is leftC: self:generateExpression(expr: expr:leftExpr);
 						local String is rightC: self:generateExpression(expr: expr:rightExpr);
 						if (self:isStringExpr(expr: expr:leftExpr) || self:isStringExpr(expr: expr:rightExpr)) {
-							return '(!spec_str_equals(' . leftC . ', ' . rightC . '))';
+							return '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
 						}
 						return '((' . leftC . ') != (' . rightC . '))';
 					}
@@ -692,11 +692,11 @@ Class is CodeGeneratorExpressions{
 		return '';
 	}
 
-	## Optimizes left-recursive string concatenation chains (`s: s . a . b`) into amortized O(1) `spec_str_append` calls.
+	## Optimizes left-recursive string concatenation chains (`s: s . a . b`) into amortized O(1) `spec_string_concat` calls.
 	##
 	## @param expr: Right-hand side assignment [Expression].
 	## @param targetC: Generated C lvalue of the assignment target.
-	## @return: `spec_str_append` call chain string if optimizable, or empty string otherwise.
+	## @return: `spec_string_append` call chain string if optimizable, or empty string otherwise.
 	local Function of String is tryGenerateAppendChain(Expression is expr, String is targetC){
 		if (targetC == '') {
 			return '';

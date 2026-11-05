@@ -179,7 +179,7 @@ Class is CodeGeneratorLookups{
 		}
 		local String is cVal: self:generateExpression(expr: c);
 		if (self:isStringExpr(expr: subjExpr)) {
-			return 'spec_str_equals(' . subjC . ', ' . cVal . ')';
+			return 'spec_string_equals(' . subjC . ', ' . cVal . ')';
 		}
 		return '((' . subjC . ') == (' . cVal . '))';
 	}

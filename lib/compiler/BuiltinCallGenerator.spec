@@ -105,7 +105,7 @@ Class is BuiltinCallGenerator{
 		if (targetC == 'String' && expr:methodName == 'fromCharCode' && expr:methodArgs:length() > 0) {
 			local NamedArg is codeArg: expr:methodArgs:get(index: 0);
 			local String is codeC: cg:generateExpression(expr: codeArg:getValue());
-			return 'spec_str_from_char_code(' . codeC . ')';
+			return 'spec_string_from_char_code(' . codeC . ')';
 		}
 
 		# Intrinsic loop runner: While:run(loop, control)
@@ -856,7 +856,7 @@ Class is BuiltinCallGenerator{
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
-			return 'spec_str_length(' . targetC . ')';
+			return 'spec_string_length(' . targetC . ')';
 		}
 		if (expr:methodName == 'charAt') {
 			local String is idxC: '0';
@@ -865,7 +865,7 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_char_at(' . targetC . ', ' . idxC . ', ' . defC . ')';
+			return 'spec_string_char_at(' . targetC . ', ' . idxC . ', ' . defC . ')';
 		}
 		if (expr:methodName == 'substring') {
 			local String is startC: '0';
@@ -874,28 +874,28 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == 'start') { startC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == 'end') { endC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_substring(' . targetC . ', ' . startC . ', ' . endC . ')';
+			return 'spec_string_substring(' . targetC . ', ' . startC . ', ' . endC . ')';
 		}
 		if (expr:methodName == 'startsWith') {
 			local String is pfxC: '""';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if (arg:getName() == 'prefix' || pfxC == '""') { pfxC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_starts_with(' . targetC . ', ' . pfxC . ')';
+			return 'spec_string_starts_with(' . targetC . ', ' . pfxC . ')';
 		}
 		if (expr:methodName == 'endsWith') {
 			local String is sfxC: '""';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if (arg:getName() == 'suffix' || sfxC == '""') { sfxC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_ends_with(' . targetC . ', ' . sfxC . ')';
+			return 'spec_string_ends_with(' . targetC . ', ' . sfxC . ')';
 		}
 		if (expr:methodName == 'contains') {
 			local String is needleC: '""';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if (arg:getName() == 'needle' || arg:getName() == 'search' || needleC == '""') { needleC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_contains(' . targetC . ', ' . needleC . ')';
+			return 'spec_string_contains(' . targetC . ', ' . needleC . ')';
 		}
 		if (expr:methodName == 'replaceAll') {
 			local String is searchC: '""';
@@ -904,36 +904,36 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == 'search') { searchC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == 'replacement') { replC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_replace_all(' . targetC . ', ' . searchC . ', ' . replC . ')';
+			return 'spec_string_replace_all(' . targetC . ', ' . searchC . ', ' . replC . ')';
 		}
 		if (expr:methodName == 'split') {
 			local String is delimC: '""';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if (arg:getName() == 'delimiter' || delimC == '""') { delimC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_split(' . targetC . ', ' . delimC . ')';
+			return 'spec_string_split(' . targetC . ', ' . delimC . ')';
 		}
 		if (expr:methodName == 'trim') {
-			return 'spec_str_trim(' . targetC . ')';
+			return 'spec_string_trim(' . targetC . ')';
 		}
 		if (expr:methodName == 'isDigit') {
-			return 'spec_str_is_digit(' . targetC . ')';
+			return 'spec_string_is_digit(' . targetC . ')';
 		}
 		if (expr:methodName == 'isAlpha') {
-			return 'spec_str_is_alpha(' . targetC . ')';
+			return 'spec_string_is_alpha(' . targetC . ')';
 		}
 		if (expr:methodName == 'isWhitespace') {
-			return 'spec_str_is_whitespace(' . targetC . ')';
+			return 'spec_string_is_whitespace(' . targetC . ')';
 		}
 		if (expr:methodName == 'lines') {
-			return 'spec_str_lines(' . targetC . ')';
+			return 'spec_string_lines(' . targetC . ')';
 		}
 		if (expr:methodName == 'countLeading') {
 			local String is searchC: '""';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if (arg:getName() == 'search') { searchC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_count_leading(' . targetC . ', ' . searchC . ')';
+			return 'spec_string_count_leading(' . targetC . ', ' . searchC . ')';
 		}
 		if (expr:methodName == 'indexOf') {
 			local String is needleC: '""';
@@ -942,7 +942,7 @@ Class is BuiltinCallGenerator{
 				if (arg:getName() == 'search' || arg:getName() == 'needle') { needleC: cg:generateExpression(expr: arg:getValue()); }
 				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
 			});
-			return 'spec_str_index_of(' . targetC . ', ' . needleC . ', ' . defC . ')';
+			return 'spec_string_index_of(' . targetC . ', ' . needleC . ', ' . defC . ')';
 		}
 
 		# Enum methods
