@@ -931,19 +931,18 @@ Class is BuiltinCallGenerator{
 			local NamedArg is bArg: expr:methodArgs:get(index: 0);
 			return 'spec_string_copy(' . cg:generateExpression(expr: bArg:getValue()) . ')';
 		}
+		if (targetC == 'Buf' && expr:methodName == 'bufSubstring' && expr:methodArgs:length() > 2) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is startArg: expr:methodArgs:get(index: 1);
+			local NamedArg is endArg: expr:methodArgs:get(index: 2);
+			return 'spec_string_substring(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: startArg:getValue()) . ', ' .
+				cg:generateExpression(expr: endArg:getValue()) . ')';
+		}
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';
-		}
-		if (expr:methodName == 'substring') {
-			local String is startC: '0';
-			local String is endC: '0';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'start') { startC: cg:generateExpression(expr: arg:getValue()); }
-				if (arg:getName() == 'end') { endC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_substring(' . targetC . ', ' . startC . ', ' . endC . ')';
 		}
 		if (expr:methodName == 'startsWith') {
 			local String is pfxC: '""';

@@ -22544,7 +22544,15 @@ String String_charAt(String self, long long index, String _default) {
 }
 
 String String_substring(String self, long long start, long long end) {
-    return 0;
+    long long s = start;
+    long long e = end;
+    if (((s) < (0))) {
+        s = 0;
+    }
+    if (((e) > (spec_buf_length(self)))) {
+        e = spec_buf_length(self);
+    }
+    return (String)spec_retain((void*)(spec_string_substring(self, s, e)));
 }
 
 bool String_startsWith(String self, String prefix) {
@@ -23520,7 +23528,7 @@ Token* Lexer_readIdentifierOrKeyword(Lexer* self) {
     long long startCol = self->col;
     long long startPos = self->pos;
     ({ void* _lp = (void*)(({ IdentScanLoop* _inst = IdentScanLoop_new(); IdentScanLoop_init(_inst, self); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (IdentScanLoop_evaluate((void*)_lp)) { if (!IdentScanLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-    SPEC_AUTO String text = spec_string_substring(self->source, startPos, self->pos);
+    SPEC_AUTO String text = String_substring(self->source, startPos, self->pos);
     TokenKind kind = ((spec_string_equals(text, spec_string_intern("true")) || spec_string_equals(text, spec_string_intern("false"))) ? (TokenKind_BOOL) : (((Lexer_isKeyword(self, text) /* inst:Lexer:isKeyword */) ? (TokenKind_KEYWORD) : (TokenKind_IDENTIFIER))));
     return (Token*)(({ Token* _inst = Token_new(); Token_init(_inst, kind, text, startLine, startCol); _inst; }));
 }
@@ -23555,7 +23563,7 @@ Token* Lexer_readNumber(Lexer* self) {
     long long startPos = self->pos;
     SPEC_AUTO NumberScanLoop* numLoop = (NumberScanLoop*)((({ NumberScanLoop* _inst = NumberScanLoop_new(); NumberScanLoop_init(_inst, self); _inst; })));
     ({ void* _lp = (void*)(numLoop); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (NumberScanLoop_evaluate((void*)_lp)) { if (!NumberScanLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-    SPEC_AUTO String text = spec_string_substring(self->source, startPos, self->pos);
+    SPEC_AUTO String text = String_substring(self->source, startPos, self->pos);
     if (spec_string_contains(text, spec_string_intern("_"))) {
         SPEC_AUTO String stripped = spec_construct_string(spec_string_intern(""));
         long long ti = 0;
@@ -23586,7 +23594,7 @@ Token* Lexer_readNumber(Lexer* self) {
         } while (0);
         if (!_ev_9) break;
         do {
-    spec_assign((void**)&text, (void*)(spec_string_substring(text, 1, String_length(text))));
+    spec_assign((void**)&text, (void*)(String_substring(text, 1, String_length(text))));
     z = ((z) + (1));
     break;
         } while (0);
@@ -25514,7 +25522,7 @@ void Linter_lintIndentation(Linter* self, String source, SpecArray* issues) {
         do {
     lineNum = ((lineNum) + (1));
     long long tabs = spec_string_count_leading(line, spec_string_intern("\t"));
-    SPEC_AUTO String rest = spec_string_substring(line, tabs, String_length(line));
+    SPEC_AUTO String rest = String_substring(line, tabs, String_length(line));
     long long spaces = spec_string_count_leading(rest, spec_string_intern(" "));
     if (((spaces) > (0))) {
         SPEC_AUTO String msg = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Space-based indentation detected ("))), spec_to_string_int(spaces)), spec_string_intern(" space(s)). Spec standard requires tabs."));
@@ -25535,7 +25543,7 @@ void Linter_lintIndentation(Linter* self, String source, SpecArray* issues) {
         do {
     SPEC_AUTO String last = String_charAt(body, ((String_length(body)) - (1)), spec_string_intern(""));
     if (((spec_string_equals(last, spec_string_intern(" "))) || (spec_string_equals(last, spec_string_intern("\t"))))) {
-        spec_assign((void**)&body, (void*)(spec_string_substring(body, 0, ((String_length(body)) - (1)))));
+        spec_assign((void**)&body, (void*)(String_substring(body, 0, ((String_length(body)) - (1)))));
     } else {
         trimming = false;
     }
@@ -26054,14 +26062,14 @@ String TypeChecker_substituteTypeParam(TypeChecker* self, String rawType, ClassI
         return (String)spec_retain((void*)(spec_array_get(typeArgs, idx)));
     }
     if (((spec_string_starts_with(rawType, spec_string_intern("Array:"))) && (((String_length(rawType)) > (6))))) {
-        SPEC_AUTO String elem = spec_string_substring(rawType, 6, String_length(rawType));
+        SPEC_AUTO String elem = String_substring(rawType, 6, String_length(rawType));
         long long eIdx = spec_array_index_of_str(tps, elem, (-(1)));
         if (((((eIdx) >= (0))) && (((eIdx) < (spec_array_length(typeArgs)))))) {
         return (String)spec_retain((void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array:"))), spec_array_get(typeArgs, eIdx))));
     }
     }
     if (((spec_string_starts_with(rawType, spec_string_intern("List:"))) && (((String_length(rawType)) > (5))))) {
-        SPEC_AUTO String elem = spec_string_substring(rawType, 5, String_length(rawType));
+        SPEC_AUTO String elem = String_substring(rawType, 5, String_length(rawType));
         long long eIdx = spec_array_index_of_str(tps, elem, (-(1)));
         if (((((eIdx) >= (0))) && (((eIdx) < (spec_array_length(typeArgs)))))) {
         return (String)spec_retain((void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("List:"))), spec_array_get(typeArgs, eIdx))));
@@ -26480,13 +26488,13 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
         SPEC_AUTO String leftT = TypeChecker_inferExpressionType(self, expr->leftExpr) /* inst:TypeChecker:inferExpressionType */;
         ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, expr->rightExpr) /* inst:TypeChecker:inferExpressionType */)));
         if (((spec_string_starts_with(leftT, spec_string_intern("Array:"))) && (((String_length(leftT)) > (6))))) {
-        spec_assign((void**)&res, (void*)(spec_string_substring(leftT, 6, String_length(leftT))));
+        spec_assign((void**)&res, (void*)(String_substring(leftT, 6, String_length(leftT))));
     } else {
         if (((spec_string_starts_with(leftT, spec_string_intern("Map:"))) && (((String_length(leftT)) > (4))))) {
-        SPEC_AUTO String afterMap = spec_string_substring(leftT, 4, String_length(leftT));
+        SPEC_AUTO String afterMap = String_substring(leftT, 4, String_length(leftT));
         long long colonIdx = spec_string_index_of(afterMap, spec_string_intern(":"), (-(1)));
         if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (String_length(afterMap)))))) {
-        spec_assign((void**)&res, (void*)(spec_string_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
+        spec_assign((void**)&res, (void*)(String_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
     } else {
         spec_assign((void**)&res, (void*)(spec_string_intern("String")));
     }
@@ -26563,7 +26571,7 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
         SPEC_AUTO String targetType = TypeChecker_inferExpressionType(self, expr->methodTarget) /* inst:TypeChecker:inferExpressionType */;
         SPEC_AUTO String method = spec_construct_string(expr->methodName);
         if (((spec_string_starts_with(targetType, spec_string_intern("Array:"))) && (((String_length(targetType)) > (6))))) {
-        SPEC_AUTO String elemTypeName = spec_string_substring(targetType, 6, String_length(targetType));
+        SPEC_AUTO String elemTypeName = String_substring(targetType, 6, String_length(targetType));
         if (((spec_string_equals(method, spec_string_intern("fold"))) && (((spec_array_length(expr->methodArgs)) >= (2))))) {
         SPEC_AUTO NamedArg* a0 = (NamedArg*)spec_retain((void*)(spec_array_get(expr->methodArgs, 0)));
         SPEC_AUTO String initType = TypeChecker_inferExpressionType(self, ({ NamedArg* _recv = (NamedArg*)(a0); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:TypeChecker:inferExpressionType */;
@@ -26603,11 +26611,11 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
     }
     } else {
         if (((spec_string_starts_with(targetType, spec_string_intern("Map:"))) && (spec_string_equals(method, spec_string_intern("each"))))) {
-        SPEC_AUTO String afterMap = spec_string_substring(targetType, 4, String_length(targetType));
+        SPEC_AUTO String afterMap = String_substring(targetType, 4, String_length(targetType));
         long long colonIdx = spec_string_index_of(afterMap, spec_string_intern(":"), (-(1)));
         SPEC_AUTO String valTypeName = spec_construct_string(spec_string_intern("String"));
         if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (String_length(afterMap)))))) {
-        spec_assign((void**)&valTypeName, (void*)(spec_string_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
+        spec_assign((void**)&valTypeName, (void*)(String_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
     }
         ({ SpecArray* _a_54 = expr->methodArgs; if (_a_54) { for (size_t _i_54 = 0; _i_54 < _a_54->length; _i_54++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_54->items[_i_54];
@@ -26683,7 +26691,7 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
     } else {
         if (spec_string_starts_with(fnVarT, spec_string_intern("Function"))) {
         if (((spec_string_starts_with(fnVarT, spec_string_intern("Function:"))) && (((String_length(fnVarT)) > (9))))) {
-        spec_assign((void**)&res, (void*)(spec_string_substring(fnVarT, 9, String_length(fnVarT))));
+        spec_assign((void**)&res, (void*)(String_substring(fnVarT, 9, String_length(fnVarT))));
     } else {
         spec_assign((void**)&res, (void*)(spec_string_intern("Any")));
     }
@@ -26707,7 +26715,7 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
     } else {
         if (((spec_string_starts_with(targetType, spec_string_intern("Array"))) && (((((spec_string_equals(method, spec_string_intern("get"))) || (spec_string_equals(method, spec_string_intern("pop"))))) || (spec_string_equals(method, spec_string_intern("removeAt"))))))) {
         if (((spec_string_starts_with(targetType, spec_string_intern("Array:"))) && (((String_length(targetType)) > (6))))) {
-        spec_assign((void**)&res, (void*)(spec_string_substring(targetType, 6, String_length(targetType))));
+        spec_assign((void**)&res, (void*)(String_substring(targetType, 6, String_length(targetType))));
     } else {
         spec_assign((void**)&res, (void*)(spec_string_intern("Any")));
     }
@@ -26740,10 +26748,10 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
         if (spec_string_starts_with(targetType, spec_string_intern("List"))) {
         SPEC_AUTO String listElem = spec_construct_string(spec_string_intern("Any"));
         if (((spec_string_starts_with(targetType, spec_string_intern("List of "))) && (((String_length(targetType)) > (7))))) {
-        spec_assign((void**)&listElem, (void*)(spec_string_substring(targetType, 7, String_length(targetType))));
+        spec_assign((void**)&listElem, (void*)(String_substring(targetType, 7, String_length(targetType))));
     } else {
         if (((spec_string_starts_with(targetType, spec_string_intern("List:"))) && (((String_length(targetType)) > (5))))) {
-        spec_assign((void**)&listElem, (void*)(spec_string_substring(targetType, 5, String_length(targetType))));
+        spec_assign((void**)&listElem, (void*)(String_substring(targetType, 5, String_length(targetType))));
     }
     }
         if (spec_string_equals(method, spec_string_intern("get"))) {
@@ -26791,10 +26799,10 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr) {
     }
     } else {
         if (((spec_string_starts_with(targetType, spec_string_intern("Map:"))) && (spec_string_equals(method, spec_string_intern("get"))))) {
-        SPEC_AUTO String afterMap = spec_string_substring(targetType, 4, String_length(targetType));
+        SPEC_AUTO String afterMap = String_substring(targetType, 4, String_length(targetType));
         long long colonIdx = spec_string_index_of(afterMap, spec_string_intern(":"), (-(1)));
         if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (String_length(afterMap)))))) {
-        spec_assign((void**)&res, (void*)(spec_string_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
+        spec_assign((void**)&res, (void*)(String_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
     } else {
         spec_assign((void**)&res, (void*)(spec_string_intern("Any")));
     }
@@ -30881,10 +30889,10 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     if (spec_string_starts_with(targetType, spec_string_intern("List"))) {
         SPEC_AUTO String listElem = spec_construct_string(spec_string_intern(""));
         if (((spec_string_starts_with(targetType, spec_string_intern("List of "))) && (((String_length(targetType)) > (7))))) {
-        spec_assign((void**)&listElem, (void*)(spec_string_substring(targetType, 7, String_length(targetType))));
+        spec_assign((void**)&listElem, (void*)(String_substring(targetType, 7, String_length(targetType))));
     } else {
         if (((spec_string_starts_with(targetType, spec_string_intern("List:"))) && (((String_length(targetType)) > (5))))) {
-        spec_assign((void**)&listElem, (void*)(spec_string_substring(targetType, 5, String_length(targetType))));
+        spec_assign((void**)&listElem, (void*)(String_substring(targetType, 5, String_length(targetType))));
     }
     }
         SPEC_AUTO String elemKind = CodeGenerator_containerElemKind(cg, targetType) /* inst:CodeGenerator:containerElemKind */;
@@ -31386,29 +31394,19 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO NamedArg* bArg = (NamedArg*)spec_retain((void*)(spec_array_get(expr->methodArgs, 0)));
         return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_copy("))), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(cg, ((Expression*)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(bArg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }))))) /* inst:CodeGenerator:generateExpression */)))), spec_string_intern(")"))));
     }
+    if (((((spec_string_equals(targetC, spec_string_intern("Buf"))) && (spec_string_equals(expr->methodName, spec_string_intern("bufSubstring"))))) && (((spec_array_length(expr->methodArgs)) > (2))))) {
+        SPEC_AUTO NamedArg* bArg = (NamedArg*)spec_retain((void*)(spec_array_get(expr->methodArgs, 0)));
+        SPEC_AUTO NamedArg* startArg = (NamedArg*)spec_retain((void*)(spec_array_get(expr->methodArgs, 1)));
+        SPEC_AUTO NamedArg* endArg = (NamedArg*)spec_retain((void*)(spec_array_get(expr->methodArgs, 2)));
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_substring("))), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(cg, ((Expression*)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(bArg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }))))) /* inst:CodeGenerator:generateExpression */)))), spec_string_intern(", ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(cg, ((Expression*)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(startArg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }))))) /* inst:CodeGenerator:generateExpression */)))), spec_string_intern(", ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(cg, ((Expression*)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(endArg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }))))) /* inst:CodeGenerator:generateExpression */)))), spec_string_intern(")"))));
+    }
     if (((spec_string_equals(expr->methodName, spec_string_intern("length"))) && (((spec_string_equals(targetType, spec_string_intern("String"))) || (spec_string_equals(targetType, spec_string_intern("string"))))))) {
         return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_length("))), targetC), spec_string_intern(")"))));
     }
-    if (spec_string_equals(expr->methodName, spec_string_intern("substring"))) {
-        SPEC_AUTO String startC = spec_construct_string(spec_string_intern("0"));
-        SPEC_AUTO String endC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_192 = expr->methodArgs; if (_a_192) { for (size_t _i_192 = 0; _i_192 < _a_192->length; _i_192++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_192->items[_i_192];
-        do {
-    if (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("start"))) {
-        spec_assign((void**)&startC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
-    }
-    if (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("end"))) {
-        spec_assign((void**)&endC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
-    }
-        } while (0);
-    } } });
-        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_substring("))), targetC), spec_string_intern(", ")), startC), spec_string_intern(", ")), endC), spec_string_intern(")"))));
-    }
     if (spec_string_equals(expr->methodName, spec_string_intern("startsWith"))) {
         SPEC_AUTO String pfxC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_193 = expr->methodArgs; if (_a_193) { for (size_t _i_193 = 0; _i_193 < _a_193->length; _i_193++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_193->items[_i_193];
+        ({ SpecArray* _a_192 = expr->methodArgs; if (_a_192) { for (size_t _i_192 = 0; _i_192 < _a_192->length; _i_192++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_192->items[_i_192];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("prefix"))) || (spec_string_equals(pfxC, spec_string_intern("\"\""))))) {
         spec_assign((void**)&pfxC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31419,8 +31417,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     }
     if (spec_string_equals(expr->methodName, spec_string_intern("endsWith"))) {
         SPEC_AUTO String sfxC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_194 = expr->methodArgs; if (_a_194) { for (size_t _i_194 = 0; _i_194 < _a_194->length; _i_194++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_194->items[_i_194];
+        ({ SpecArray* _a_193 = expr->methodArgs; if (_a_193) { for (size_t _i_193 = 0; _i_193 < _a_193->length; _i_193++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_193->items[_i_193];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("suffix"))) || (spec_string_equals(sfxC, spec_string_intern("\"\""))))) {
         spec_assign((void**)&sfxC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31431,8 +31429,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     }
     if (spec_string_equals(expr->methodName, spec_string_intern("contains"))) {
         SPEC_AUTO String needleC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_195 = expr->methodArgs; if (_a_195) { for (size_t _i_195 = 0; _i_195 < _a_195->length; _i_195++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_195->items[_i_195];
+        ({ SpecArray* _a_194 = expr->methodArgs; if (_a_194) { for (size_t _i_194 = 0; _i_194 < _a_194->length; _i_194++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_194->items[_i_194];
         do {
     if (((((spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("needle"))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("search"))))) || (spec_string_equals(needleC, spec_string_intern("\"\""))))) {
         spec_assign((void**)&needleC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31444,8 +31442,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     if (spec_string_equals(expr->methodName, spec_string_intern("replaceAll"))) {
         SPEC_AUTO String searchC = spec_construct_string(spec_string_intern("\"\""));
         SPEC_AUTO String replC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_196 = expr->methodArgs; if (_a_196) { for (size_t _i_196 = 0; _i_196 < _a_196->length; _i_196++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_196->items[_i_196];
+        ({ SpecArray* _a_195 = expr->methodArgs; if (_a_195) { for (size_t _i_195 = 0; _i_195 < _a_195->length; _i_195++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_195->items[_i_195];
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("search"))) {
         spec_assign((void**)&searchC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31459,8 +31457,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     }
     if (spec_string_equals(expr->methodName, spec_string_intern("split"))) {
         SPEC_AUTO String delimC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_197 = expr->methodArgs; if (_a_197) { for (size_t _i_197 = 0; _i_197 < _a_197->length; _i_197++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_197->items[_i_197];
+        ({ SpecArray* _a_196 = expr->methodArgs; if (_a_196) { for (size_t _i_196 = 0; _i_196 < _a_196->length; _i_196++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_196->items[_i_196];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("delimiter"))) || (spec_string_equals(delimC, spec_string_intern("\"\""))))) {
         spec_assign((void**)&delimC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31486,8 +31484,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     }
     if (spec_string_equals(expr->methodName, spec_string_intern("countLeading"))) {
         SPEC_AUTO String searchC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_198 = expr->methodArgs; if (_a_198) { for (size_t _i_198 = 0; _i_198 < _a_198->length; _i_198++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_198->items[_i_198];
+        ({ SpecArray* _a_197 = expr->methodArgs; if (_a_197) { for (size_t _i_197 = 0; _i_197 < _a_197->length; _i_197++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_197->items[_i_197];
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("search"))) {
         spec_assign((void**)&searchC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31499,8 +31497,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     if (spec_string_equals(expr->methodName, spec_string_intern("indexOf"))) {
         SPEC_AUTO String needleC = spec_construct_string(spec_string_intern("\"\""));
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("-1"));
-        ({ SpecArray* _a_199 = expr->methodArgs; if (_a_199) { for (size_t _i_199 = 0; _i_199 < _a_199->length; _i_199++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_199->items[_i_199];
+        ({ SpecArray* _a_198 = expr->methodArgs; if (_a_198) { for (size_t _i_198 = 0; _i_198 < _a_198->length; _i_198++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_198->items[_i_198];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("search"))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), spec_string_intern("needle"))))) {
         spec_assign((void**)&needleC, (void*)(CodeGenerator_generateExpression(cg, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -31601,29 +31599,29 @@ bool CodeGenerator_isArcType(CodeGenerator* self, String typeName) {
 String CodeGenerator_containerElemKind(CodeGenerator* self, String containerType) {
     SPEC_AUTO String elem = spec_construct_string(spec_string_intern(""));
     if (spec_string_starts_with(containerType, spec_string_intern("Array of "))) {
-        spec_assign((void**)&elem, (void*)(spec_string_substring(containerType, 9, String_length(containerType))));
+        spec_assign((void**)&elem, (void*)(String_substring(containerType, 9, String_length(containerType))));
     } else {
         if (spec_string_starts_with(containerType, spec_string_intern("Array:"))) {
-        spec_assign((void**)&elem, (void*)(spec_string_substring(containerType, 6, String_length(containerType))));
+        spec_assign((void**)&elem, (void*)(String_substring(containerType, 6, String_length(containerType))));
     } else {
         if (spec_string_starts_with(containerType, spec_string_intern("List of "))) {
-        spec_assign((void**)&elem, (void*)(spec_string_substring(containerType, 7, String_length(containerType))));
+        spec_assign((void**)&elem, (void*)(String_substring(containerType, 7, String_length(containerType))));
     } else {
         if (spec_string_starts_with(containerType, spec_string_intern("List:"))) {
-        spec_assign((void**)&elem, (void*)(spec_string_substring(containerType, 5, String_length(containerType))));
+        spec_assign((void**)&elem, (void*)(String_substring(containerType, 5, String_length(containerType))));
     } else {
         if (spec_string_starts_with(containerType, spec_string_intern("Map of "))) {
-        SPEC_AUTO String rest = spec_string_substring(containerType, 7, String_length(containerType));
+        SPEC_AUTO String rest = String_substring(containerType, 7, String_length(containerType));
         long long toIdx = spec_string_index_of(rest, spec_string_intern(" to "), (-(1)));
         if (((toIdx) >= (0))) {
-        spec_assign((void**)&elem, (void*)(spec_string_substring(rest, ((toIdx) + (4)), String_length(rest))));
+        spec_assign((void**)&elem, (void*)(String_substring(rest, ((toIdx) + (4)), String_length(rest))));
     }
     } else {
         if (spec_string_starts_with(containerType, spec_string_intern("Map:"))) {
-        SPEC_AUTO String rest = spec_string_substring(containerType, 4, String_length(containerType));
+        SPEC_AUTO String rest = String_substring(containerType, 4, String_length(containerType));
         long long colonIdx = spec_string_index_of(rest, spec_string_intern(":"), (-(1)));
         if (((colonIdx) >= (0))) {
-        spec_assign((void**)&elem, (void*)(spec_string_substring(rest, ((colonIdx) + (1)), String_length(rest))));
+        spec_assign((void**)&elem, (void*)(String_substring(rest, ((colonIdx) + (1)), String_length(rest))));
     }
     } else {
         return (String)spec_retain((void*)(spec_string_intern("none")));
@@ -31837,7 +31835,7 @@ String CodeGenerator_substituteTypeParam(CodeGenerator* self, String rawType, Cl
         return (String)spec_retain((void*)(spec_array_get(typeArgs, idx)));
     }
     if (((spec_string_starts_with(rawType, spec_string_intern("Array:"))) && (((String_length(rawType)) > (6))))) {
-        SPEC_AUTO String elem = spec_string_substring(rawType, 6, String_length(rawType));
+        SPEC_AUTO String elem = String_substring(rawType, 6, String_length(rawType));
         long long eIdx = spec_array_index_of_str(tps, elem, (-(1)));
         if (((((eIdx) >= (0))) && (((eIdx) < (spec_array_length(typeArgs)))))) {
         return (String)spec_retain((void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array:"))), spec_array_get(typeArgs, eIdx))));
@@ -31889,8 +31887,8 @@ String CodeGenerator_lookupFieldType(CodeGenerator* self, String className, Stri
         return (String)spec_retain((void*)((((String (*)(CodeGenerator*, String, ClassInfo*, SpecArray*))self->_vtable[156]))((CodeGenerator*)self, rawT, cls, typeArgs)));
     }
     SPEC_AUTO String inherited = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_200 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_200) { for (size_t _i_200 = 0; _i_200 < _a_200->length; _i_200++) {
-        String baseName = (String)(intptr_t)_a_200->items[_i_200];
+    ({ SpecArray* _a_199 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_199) { for (size_t _i_199 = 0; _i_199 < _a_199->length; _i_199++) {
+        String baseName = (String)(intptr_t)_a_199->items[_i_199];
         do {
     if (spec_string_equals(inherited, spec_string_intern(""))) {
         spec_assign((void**)&inherited, (void*)((((String (*)(CodeGenerator*, String, String))self->_vtable[160]))((CodeGenerator*)self, baseName, fieldName)));
@@ -31937,8 +31935,8 @@ String CodeGenerator_generateWhenCondition(CodeGenerator* self, Expression* subj
 
 String CodeGenerator_generateWhenBindings(CodeGenerator* self, String subjC, WhenArm* arm) {
     SPEC_AUTO String binds = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_201 = arm->conditions; if (_a_201) { for (size_t _i_201 = 0; _i_201 < _a_201->length; _i_201++) {
-        Expression* c = (Expression*)(intptr_t)_a_201->items[_i_201];
+    ({ SpecArray* _a_200 = arm->conditions; if (_a_200) { for (size_t _i_200 = 0; _i_200 < _a_200->length; _i_200++) {
+        Expression* c = (Expression*)(intptr_t)_a_200->items[_i_200];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(c); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("CALL"))) && (spec_map_has(self->allEnumVariants, c->methodName)))) {
         SPEC_AUTO String eName = spec_map_get_string(self->allEnumVariants, c->methodName, spec_string_intern(""));
@@ -31946,8 +31944,8 @@ String CodeGenerator_generateWhenBindings(CodeGenerator* self, String subjC, Whe
         SPEC_AUTO Member* vMem = (Member*)(((((Member* (*)(CodeGenerator*, String, String))self->_vtable[149]))((CodeGenerator*)self, eName, c->methodName)));
         SPEC_AUTO String vNameC = (((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, c->methodName);
         long long idx = 0;
-        ({ SpecArray* _a_202 = c->methodArgs; if (_a_202) { for (size_t _i_202 = 0; _i_202 < _a_202->length; _i_202++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_202->items[_i_202];
+        ({ SpecArray* _a_201 = c->methodArgs; if (_a_201) { for (size_t _i_201 = 0; _i_201 < _a_201->length; _i_201++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_201->items[_i_201];
         do {
     if (((idx) < (spec_array_length(((SpecArray*)spec_claim_pool((void*)(Member_getParameters(vMem) /* inst:Member:getParameters */))))))) {
         SPEC_AUTO Expression* av = (Expression*)((({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })));
@@ -31988,8 +31986,8 @@ String CodeGenerator_findMethodImplementingClass(CodeGenerator* self, String cla
     }
     }
     SPEC_AUTO String inherited = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_203 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_203) { for (size_t _i_203 = 0; _i_203 < _a_203->length; _i_203++) {
-        String baseName = (String)(intptr_t)_a_203->items[_i_203];
+    ({ SpecArray* _a_202 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_202) { for (size_t _i_202 = 0; _i_202 < _a_202->length; _i_202++) {
+        String baseName = (String)(intptr_t)_a_202->items[_i_202];
         do {
     if (spec_string_equals(inherited, spec_string_intern(""))) {
         spec_assign((void**)&inherited, (void*)(CodeGenerator_findMethodImplementingClass(self, baseName, methodName, paramCount) /* inst:CodeGenerator:findMethodImplementingClass */));
@@ -32015,8 +32013,8 @@ Member* CodeGenerator_lookupMethodMember(CodeGenerator* self, String className, 
         return (Member*)spec_retain((void*)(ml->res));
     }
     SPEC_AUTO Member* inherited = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, spec_string_intern("")); _inst; })));
-    ({ SpecArray* _a_204 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_204) { for (size_t _i_204 = 0; _i_204 < _a_204->length; _i_204++) {
-        String baseName = (String)(intptr_t)_a_204->items[_i_204];
+    ({ SpecArray* _a_203 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_203) { for (size_t _i_203 = 0; _i_203 < _a_203->length; _i_203++) {
+        String baseName = (String)(intptr_t)_a_203->items[_i_203];
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(inherited); (((String (*)(Member*))_recv->_vtable[34]))((Member*)_recv); })))), spec_string_intern(""))) {
         spec_assign((void**)&inherited, (void*)(CodeGenerator_lookupMethodMember(self, baseName, methodName) /* inst:CodeGenerator:lookupMethodMember */));
@@ -32037,14 +32035,14 @@ String CodeGenerator_formatCallArguments(CodeGenerator* self, String className, 
         if (((spec_array_length(params)) > (0))) {
         SPEC_AUTO String joined = spec_construct_string(spec_string_intern(""));
         long long pIdx = 0;
-        ({ SpecArray* _a_205 = params; if (_a_205) { for (size_t _i_205 = 0; _i_205 < _a_205->length; _i_205++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_205->items[_i_205];
+        ({ SpecArray* _a_204 = params; if (_a_204) { for (size_t _i_204 = 0; _i_204 < _a_204->length; _i_204++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_204->items[_i_204];
         do {
     SPEC_AUTO String pName = ({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); });
     bool matched = false;
     SPEC_AUTO String argC = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_206 = args; if (_a_206) { for (size_t _i_206 = 0; _i_206 < _a_206->length; _i_206++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_206->items[_i_206];
+    ({ SpecArray* _a_205 = args; if (_a_205) { for (size_t _i_205 = 0; _i_205 < _a_205->length; _i_205++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_205->items[_i_205];
         do {
     if ((((((!(matched))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(a); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), pName)))) && ((!spec_string_equals(pName, spec_string_intern("")))))) {
         spec_assign((void**)&argC, (void*)(CodeGenerator_generateExpression(self, ({ NamedArg* _recv = (NamedArg*)(a); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -32074,8 +32072,8 @@ String CodeGenerator_formatCallArguments(CodeGenerator* self, String className, 
     }
     }
     SPEC_AUTO String fallbackJoined = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_207 = args; if (_a_207) { for (size_t _i_207 = 0; _i_207 < _a_207->length; _i_207++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_207->items[_i_207];
+    ({ SpecArray* _a_206 = args; if (_a_206) { for (size_t _i_206 = 0; _i_206 < _a_206->length; _i_206++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_206->items[_i_206];
         do {
     fallbackJoined = spec_string_concat(spec_string_concat(fallbackJoined, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(self, ((Expression*)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }))))) /* inst:CodeGenerator:generateExpression */))));
         } while (0);
@@ -32108,8 +32106,8 @@ String CodeGenerator_lookupMethodReturnType(CodeGenerator* self, String classNam
         return (String)spec_retain((void*)((((String (*)(CodeGenerator*, String, ClassInfo*, SpecArray*))self->_vtable[156]))((CodeGenerator*)self, rawT, cls, typeArgs)));
     }
     SPEC_AUTO String inherited = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_208 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_208) { for (size_t _i_208 = 0; _i_208 < _a_208->length; _i_208++) {
-        String baseName = (String)(intptr_t)_a_208->items[_i_208];
+    ({ SpecArray* _a_207 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(cls) /* inst:ClassInfo:getBaseClasses */))); if (_a_207) { for (size_t _i_207 = 0; _i_207 < _a_207->length; _i_207++) {
+        String baseName = (String)(intptr_t)_a_207->items[_i_207];
         do {
     if (spec_string_equals(inherited, spec_string_intern(""))) {
         spec_assign((void**)&inherited, (void*)((((String (*)(CodeGenerator*, String, String))self->_vtable[161]))((CodeGenerator*)self, baseName, methodName)));
@@ -32189,7 +32187,7 @@ String CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr) {
     }
         SPEC_AUTO String m = spec_construct_string(expr->methodName);
         if (((spec_string_starts_with(tgtType, spec_string_intern("Array:"))) && (((((spec_string_equals(m, spec_string_intern("get"))) || (spec_string_equals(m, spec_string_intern("pop"))))) || (spec_string_equals(m, spec_string_intern("removeAt"))))))) {
-        return (String)spec_retain((void*)(spec_string_substring(tgtType, 6, String_length(tgtType))));
+        return (String)spec_retain((void*)(String_substring(tgtType, 6, String_length(tgtType))));
     }
         if (spec_map_has(self->allEnumNames, tgtType)) {
         if (spec_string_equals(m, spec_string_intern("name"))) {
@@ -32225,7 +32223,7 @@ String CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr) {
     if (spec_string_equals(kind, spec_string_intern("INDEX"))) {
         SPEC_AUTO String leftT = CodeGenerator_inferTargetType(self, expr->leftExpr) /* inst:CodeGenerator:inferTargetType */;
         if (((spec_string_starts_with(leftT, spec_string_intern("Array:"))) && (((String_length(leftT)) > (6))))) {
-        return (String)spec_retain((void*)(spec_string_substring(leftT, 6, String_length(leftT))));
+        return (String)spec_retain((void*)(String_substring(leftT, 6, String_length(leftT))));
     }
         return (String)spec_retain((void*)(spec_string_intern("")));
     }
@@ -32300,8 +32298,8 @@ bool CodeGenerator_isSubclassOf(CodeGenerator* self, String subName, String base
         return false;
     }
     bool matched = false;
-    ({ SpecArray* _a_209 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(subCls) /* inst:ClassInfo:getBaseClasses */))); if (_a_209) { for (size_t _i_209 = 0; _i_209 < _a_209->length; _i_209++) {
-        String parent = (String)(intptr_t)_a_209->items[_i_209];
+    ({ SpecArray* _a_208 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(subCls) /* inst:ClassInfo:getBaseClasses */))); if (_a_208) { for (size_t _i_208 = 0; _i_208 < _a_208->length; _i_208++) {
+        String parent = (String)(intptr_t)_a_208->items[_i_208];
         do {
     if (spec_string_equals(parent, baseName)) {
         matched = true;
@@ -32317,16 +32315,16 @@ bool CodeGenerator_isSubclassOf(CodeGenerator* self, String subName, String base
 
 String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classes) {
     SPEC_AUTO String out = spec_construct_string(spec_string_intern("/* Constructor Implementations */\n"));
-    ({ SpecArray* _a_210 = classes; if (_a_210) { for (size_t _i_210 = 0; _i_210 < _a_210->length; _i_210++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_210->items[_i_210];
+    ({ SpecArray* _a_209 = classes; if (_a_209) { for (size_t _i_209 = 0; _i_209 < _a_209->length; _i_209++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_209->items[_i_209];
         do {
     if ((((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum")))))) {
         spec_assign((void**)&self->currentClassName, (void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })));
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self->declGen, c, classes, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_211 = allFields; if (_a_211) { for (size_t _i_211 = 0; _i_211 < _a_211->length; _i_211++) {
-        Member* f = (Member*)(intptr_t)_a_211->items[_i_211];
+        ({ SpecArray* _a_210 = allFields; if (_a_210) { for (size_t _i_210 = 0; _i_210 < _a_210->length; _i_210++) {
+        Member* f = (Member*)(intptr_t)_a_210->items[_i_210];
         do {
     spec_map_set(self->fieldTypes, ((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(f); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, Type*))self->_vtable[155]))((CodeGenerator*)self, ((Type*)spec_claim_pool((void*)(({ Member* _recv = (Member*)(f); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); })))))))));
         } while (0);
@@ -32334,8 +32332,8 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("_destroy(void* self_ptr) {\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("* self = (")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("*)self_ptr;\n"));
         out = spec_string_concat(out, spec_string_intern("    if (!self) return;\n"));
-        ({ SpecArray* _a_212 = allFields; if (_a_212) { for (size_t _i_212 = 0; _i_212 < _a_212->length; _i_212++) {
-        Member* m = (Member*)(intptr_t)_a_212->items[_i_212];
+        ({ SpecArray* _a_211 = allFields; if (_a_211) { for (size_t _i_211 = 0; _i_211 < _a_211->length; _i_211++) {
+        Member* m = (Member*)(intptr_t)_a_211->items[_i_211];
         do {
     SPEC_AUTO String ft = ({ Type* _recv = (Type*)(({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); })); (((String (*)(Type*))_recv->_vtable[21]))((Type*)_recv); });
     if (((((((((((((((((((spec_map_has(self->allClassNames, ft)) && ((!(spec_map_has(self->allEnumNames, ft)))))) || (spec_map_has(self->allTaggedEnums, ft)))) || (spec_string_starts_with(ft, spec_string_intern("Array"))))) || (spec_string_starts_with(ft, spec_string_intern("Map"))))) || (spec_string_starts_with(ft, spec_string_intern("List"))))) || (spec_string_starts_with(ft, spec_string_intern("Function"))))) || (spec_string_equals(ft, spec_string_intern("LoopControl"))))) || (spec_string_equals(ft, spec_string_intern("String"))))) || (spec_string_equals(ft, spec_string_intern("string"))))) {
@@ -32350,8 +32348,8 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
         if (((self->methodSlotCount) > (0))) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_vtable = ")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("_vtable;\n"));
     }
-        ({ SpecArray* _a_213 = allFields; if (_a_213) { for (size_t _i_213 = 0; _i_213 < _a_213->length; _i_213++) {
-        Member* m = (Member*)(intptr_t)_a_213->items[_i_213];
+        ({ SpecArray* _a_212 = allFields; if (_a_212) { for (size_t _i_212 = 0; _i_212 < _a_212->length; _i_212++) {
+        Member* m = (Member*)(intptr_t)_a_212->items[_i_212];
         do {
     if (m->hasInit) {
         bool savedArgFi = self->argMode;
@@ -32432,8 +32430,8 @@ String CodeGenerator_generateInlineArrayOp(CodeGenerator* self, String mode, Str
     }
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_214 = outerKeys; if (_a_214) { for (size_t _i_214 = 0; _i_214 < _a_214->length; _i_214++) {
-        String k = (String)(intptr_t)_a_214->items[_i_214];
+    ({ SpecArray* _a_213 = outerKeys; if (_a_213) { for (size_t _i_213 = 0; _i_213 < _a_213->length; _i_213++) {
+        String k = (String)(intptr_t)_a_213->items[_i_213];
         do {
     spec_map_set(savedVars, k, ((String)spec_claim_pool((void*)(spec_map_get_string(self->localVars, k, spec_string_intern(""))))));
         } while (0);
@@ -32447,8 +32445,8 @@ String CodeGenerator_generateInlineArrayOp(CodeGenerator* self, String mode, Str
         spec_assign((void**)&paramDecl, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        "))), pCType), spec_string_intern(" ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))))))))), spec_string_intern(" = ")), pRaw), spec_string_intern(";\n"))));
     }
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_215 = fnExpr->anonBody; if (_a_215) { for (size_t _i_215 = 0; _i_215 < _a_215->length; _i_215++) {
-        Statement* s = (Statement*)(intptr_t)_a_215->items[_i_215];
+    ({ SpecArray* _a_214 = fnExpr->anonBody; if (_a_214) { for (size_t _i_214 = 0; _i_214 < _a_214->length; _i_214++) {
+        Statement* s = (Statement*)(intptr_t)_a_214->items[_i_214];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -32523,8 +32521,8 @@ String CodeGenerator_generateInlineArrayFold(CodeGenerator* self, String targetC
     SPEC_AUTO String savedRetLbl = spec_construct_string(self->inlineReturnLabel);
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_216 = outerKeys; if (_a_216) { for (size_t _i_216 = 0; _i_216 < _a_216->length; _i_216++) {
-        String k = (String)(intptr_t)_a_216->items[_i_216];
+    ({ SpecArray* _a_215 = outerKeys; if (_a_215) { for (size_t _i_215 = 0; _i_215 < _a_215->length; _i_215++) {
+        String k = (String)(intptr_t)_a_215->items[_i_215];
         do {
     spec_map_set(savedVars, k, ((String)spec_claim_pool((void*)(spec_map_get_string(self->localVars, k, spec_string_intern(""))))));
         } while (0);
@@ -32560,8 +32558,8 @@ String CodeGenerator_generateInlineArrayFold(CodeGenerator* self, String targetC
         paramDecl = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(paramDecl, spec_string_intern("        ")), p1CType), spec_string_intern(" ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p1); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))))))))), spec_string_intern(" = ")), p1Raw), spec_string_intern(";\n"));
     }
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_217 = fnExpr->anonBody; if (_a_217) { for (size_t _i_217 = 0; _i_217 < _a_217->length; _i_217++) {
-        Statement* s = (Statement*)(intptr_t)_a_217->items[_i_217];
+    ({ SpecArray* _a_216 = fnExpr->anonBody; if (_a_216) { for (size_t _i_216 = 0; _i_216 < _a_216->length; _i_216++) {
+        Statement* s = (Statement*)(intptr_t)_a_216->items[_i_216];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -32582,8 +32580,8 @@ String CodeGenerator_generateInlineMapEach(CodeGenerator* self, String targetC, 
     SPEC_AUTO String savedRetLbl = spec_construct_string(self->inlineReturnLabel);
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_218 = outerKeys; if (_a_218) { for (size_t _i_218 = 0; _i_218 < _a_218->length; _i_218++) {
-        String k = (String)(intptr_t)_a_218->items[_i_218];
+    ({ SpecArray* _a_217 = outerKeys; if (_a_217) { for (size_t _i_217 = 0; _i_217 < _a_217->length; _i_217++) {
+        String k = (String)(intptr_t)_a_217->items[_i_217];
         do {
     spec_map_set(savedVars, k, ((String)spec_claim_pool((void*)(spec_map_get_string(self->localVars, k, spec_string_intern(""))))));
         } while (0);
@@ -32610,8 +32608,8 @@ String CodeGenerator_generateInlineMapEach(CodeGenerator* self, String targetC, 
         paramDecl = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(paramDecl, spec_string_intern("            ")), p1CType), spec_string_intern(" ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p1); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))))))))), spec_string_intern(" = ")), p1Raw), spec_string_intern(";\n"));
     }
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_219 = fnExpr->anonBody; if (_a_219) { for (size_t _i_219 = 0; _i_219 < _a_219->length; _i_219++) {
-        Statement* s = (Statement*)(intptr_t)_a_219->items[_i_219];
+    ({ SpecArray* _a_218 = fnExpr->anonBody; if (_a_218) { for (size_t _i_218 = 0; _i_218 < _a_218->length; _i_218++) {
+        Statement* s = (Statement*)(intptr_t)_a_218->items[_i_218];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -32633,8 +32631,8 @@ String CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expressio
     spec_assign((void**)&self->inlineReturnVar, (void*)(evVar));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("break")));
     SPEC_AUTO String evalBodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_220 = evalExpr->anonBody; if (_a_220) { for (size_t _i_220 = 0; _i_220 < _a_220->length; _i_220++) {
-        Statement* s = (Statement*)(intptr_t)_a_220->items[_i_220];
+    ({ SpecArray* _a_219 = evalExpr->anonBody; if (_a_219) { for (size_t _i_219 = 0; _i_219 < _a_219->length; _i_219++) {
+        Statement* s = (Statement*)(intptr_t)_a_219->items[_i_219];
         do {
     evalBodyC = spec_string_concat(evalBodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -32642,8 +32640,8 @@ String CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expressio
     spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("break")));
     SPEC_AUTO String iterBodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_221 = iterExpr->anonBody; if (_a_221) { for (size_t _i_221 = 0; _i_221 < _a_221->length; _i_221++) {
-        Statement* s = (Statement*)(intptr_t)_a_221->items[_i_221];
+    ({ SpecArray* _a_220 = iterExpr->anonBody; if (_a_220) { for (size_t _i_220 = 0; _i_220 < _a_220->length; _i_220++) {
+        Statement* s = (Statement*)(intptr_t)_a_220->items[_i_220];
         do {
     iterBodyC = spec_string_concat(iterBodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -32725,8 +32723,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO String res = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ "))), arrCType), spec_string_intern(" _arr = ")), newCall), spec_string_intern(";"));
         bool savedArg = self->argMode;
         self->argMode = false;
-        ({ SpecArray* _a_222 = expr->arrayItems; if (_a_222) { for (size_t _i_222 = 0; _i_222 < _a_222->length; _i_222++) {
-        Expression* item = (Expression*)(intptr_t)_a_222->items[_i_222];
+        ({ SpecArray* _a_221 = expr->arrayItems; if (_a_221) { for (size_t _i_221 = 0; _i_221 < _a_221->length; _i_221++) {
+        Expression* item = (Expression*)(intptr_t)_a_221->items[_i_221];
         do {
     SPEC_AUTO String itemC = CodeGenerator_generateExpression(self, item) /* inst:CodeGenerator:generateExpression */;
     res = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(res, spec_string_intern(" ")), addFn), spec_string_intern("(_arr, (void*)(")), itemC), spec_string_intern("));"));
@@ -32754,8 +32752,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         long long idx = 0;
         bool savedArgM = self->argMode;
         self->argMode = false;
-        ({ SpecArray* _a_223 = expr->mapKeys; if (_a_223) { for (size_t _i_223 = 0; _i_223 < _a_223->length; _i_223++) {
-        Expression* kExpr = (Expression*)(intptr_t)_a_223->items[_i_223];
+        ({ SpecArray* _a_222 = expr->mapKeys; if (_a_222) { for (size_t _i_222 = 0; _i_222 < _a_222->length; _i_222++) {
+        Expression* kExpr = (Expression*)(intptr_t)_a_222->items[_i_222];
         do {
     SPEC_AUTO Expression* vExpr = (Expression*)spec_retain((void*)(spec_array_get(expr->mapValues, idx)));
     SPEC_AUTO String kC = CodeGenerator_generateExpression(self, kExpr) /* inst:CodeGenerator:generateExpression */;
@@ -32892,10 +32890,10 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         if (((spec_string_starts_with(targetType, spec_string_intern("Map:"))) || (spec_string_equals(targetType, spec_string_intern("Map"))))) {
         SPEC_AUTO String valType = spec_construct_string(spec_string_intern("String"));
         if (spec_string_starts_with(targetType, spec_string_intern("Map:"))) {
-        SPEC_AUTO String afterMap = spec_string_substring(targetType, 4, String_length(targetType));
+        SPEC_AUTO String afterMap = String_substring(targetType, 4, String_length(targetType));
         long long colonIdx = spec_string_index_of(afterMap, spec_string_intern(":"), (-(1)));
         if (((((colonIdx) >= (0))) && (((((colonIdx) + (1))) < (String_length(afterMap)))))) {
-        spec_assign((void**)&valType, (void*)(spec_string_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
+        spec_assign((void**)&valType, (void*)(String_substring(afterMap, ((colonIdx) + (1)), String_length(afterMap))));
     }
     }
         if (((spec_string_equals(valType, spec_string_intern("String"))) || (spec_string_equals(valType, spec_string_intern("string"))))) {
@@ -32917,7 +32915,7 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("((String)spec_array_get("))), targetC), spec_string_intern(", (size_t)(")), indexC), spec_string_intern(")))"))));
     }
         if (((spec_string_starts_with(targetType, spec_string_intern("Array:"))) && (((String_length(targetType)) > (6))))) {
-        SPEC_AUTO String elemT = spec_string_substring(targetType, 6, String_length(targetType));
+        SPEC_AUTO String elemT = String_substring(targetType, 6, String_length(targetType));
         SPEC_AUTO String elemCType = (((String (*)(CodeGenerator*, String))self->_vtable[180]))((CodeGenerator*)self, elemT);
         return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(("))), elemCType), spec_string_intern(")(intptr_t)spec_array_get(")), targetC), spec_string_intern(", (size_t)(")), indexC), spec_string_intern(")))"))));
     }
@@ -32993,7 +32991,7 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO String targetType = CodeGenerator_inferTargetType(self, expr->methodTarget) /* inst:CodeGenerator:inferTargetType */;
         SPEC_AUTO String fieldKey = spec_construct_string(targetC);
         if (spec_string_starts_with(targetC, spec_string_intern("self->"))) {
-        spec_assign((void**)&fieldKey, (void*)(spec_string_substring(targetC, 6, String_length(targetC))));
+        spec_assign((void**)&fieldKey, (void*)(String_substring(targetC, 6, String_length(targetC))));
     }
         if (spec_string_equals(targetType, spec_string_intern(""))) {
         spec_assign((void**)&targetType, (void*)(spec_map_get_string(self->localVars, fieldKey, spec_string_intern(""))));
@@ -33009,12 +33007,12 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO String fnVarT = spec_map_get_string(self->localVars, expr->methodName, spec_map_get_string(self->fieldTypes, expr->methodName, spec_string_intern("")));
         if (spec_string_starts_with(fnVarT, spec_string_intern("Function"))) {
         SPEC_AUTO String fnPtrC = spec_construct_string(((spec_map_has(self->localVars, expr->methodName)) ? ((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, expr->methodName)) : (spec_string_concat((void*)spec_retain((void*)(spec_string_intern("self->"))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, expr->methodName))))))));
-        SPEC_AUTO String retTName = spec_construct_string(((((spec_string_starts_with(fnVarT, spec_string_intern("Function:"))) && (((String_length(fnVarT)) > (9))))) ? (spec_string_substring(fnVarT, 9, String_length(fnVarT))) : (spec_string_intern("Void"))));
+        SPEC_AUTO String retTName = spec_construct_string(((((spec_string_starts_with(fnVarT, spec_string_intern("Function:"))) && (((String_length(fnVarT)) > (9))))) ? (String_substring(fnVarT, 9, String_length(fnVarT))) : (spec_string_intern("Void"))));
         SPEC_AUTO String retCType = (((String (*)(CodeGenerator*, String))self->_vtable[180]))((CodeGenerator*)self, retTName);
         SPEC_AUTO String pTypesC = spec_construct_string(spec_string_intern("void*"));
         SPEC_AUTO String cArgsC = spec_construct_string(spec_string_intern("_cls->env"));
-        ({ SpecArray* _a_224 = expr->methodArgs; if (_a_224) { for (size_t _i_224 = 0; _i_224 < _a_224->length; _i_224++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_224->items[_i_224];
+        ({ SpecArray* _a_223 = expr->methodArgs; if (_a_223) { for (size_t _i_223 = 0; _i_223 < _a_223->length; _i_223++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_223->items[_i_223];
         do {
     SPEC_AUTO String aValC = CodeGenerator_generateExpression(self, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */;
     SPEC_AUTO String aT = CodeGenerator_inferTargetType(self, ({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:inferTargetType */;
@@ -33033,8 +33031,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO SpecArray* vParams = (SpecArray*)((Member_getParameters(vMem) /* inst:Member:getParameters */));
         SPEC_AUTO String vArgsC = spec_construct_string(spec_string_intern(""));
         long long pIdx = 0;
-        ({ SpecArray* _a_225 = vParams; if (_a_225) { for (size_t _i_225 = 0; _i_225 < _a_225->length; _i_225++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_225->items[_i_225];
+        ({ SpecArray* _a_224 = vParams; if (_a_224) { for (size_t _i_224 = 0; _i_224 < _a_224->length; _i_224++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_224->items[_i_224];
         do {
     if (((pIdx) > (0))) {
         vArgsC = spec_string_concat(vArgsC, spec_string_intern(", "));
@@ -33042,8 +33040,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
     SPEC_AUTO String pName = ({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); });
     bool matched = false;
     SPEC_AUTO String argC = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_226 = expr->methodArgs; if (_a_226) { for (size_t _i_226 = 0; _i_226 < _a_226->length; _i_226++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_226->items[_i_226];
+    ({ SpecArray* _a_225 = expr->methodArgs; if (_a_225) { for (size_t _i_225 = 0; _i_225 < _a_225->length; _i_225++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_225->items[_i_225];
         do {
     if ((((((!(matched))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(a); (((String (*)(NamedArg*))_recv->_vtable[21]))((NamedArg*)_recv); })))), pName)))) && ((!spec_string_equals(pName, spec_string_intern("")))))) {
         spec_assign((void**)&argC, (void*)(CodeGenerator_generateExpression(self, ({ NamedArg* _recv = (NamedArg*)(a); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); })) /* inst:CodeGenerator:generateExpression */));
@@ -33099,8 +33097,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO String slotC = spec_map_get_string(self->methodSlots, expr->methodName, spec_string_intern("0"));
         SPEC_AUTO String retT = (((String (*)(CodeGenerator*, Type*))self->_vtable[164]))((CodeGenerator*)self, ({ Member* _recv = (Member*)(anyM); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }));
         SPEC_AUTO String argsC = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_227 = expr->methodArgs; if (_a_227) { for (size_t _i_227 = 0; _i_227 < _a_227->length; _i_227++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_227->items[_i_227];
+        ({ SpecArray* _a_226 = expr->methodArgs; if (_a_226) { for (size_t _i_226 = 0; _i_226 < _a_226->length; _i_226++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_226->items[_i_226];
         do {
     argsC = spec_string_concat(spec_string_concat(argsC, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(self, ((Expression*)spec_claim_pool((void*)(({ NamedArg* _recv = (NamedArg*)(arg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }))))) /* inst:CodeGenerator:generateExpression */))));
         } while (0);
@@ -33130,8 +33128,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(vm); (((String (*)(Member*))_recv->_vtable[34]))((Member*)_recv); })))), spec_string_intern("METHOD"))) {
         SPEC_AUTO String retT = (((String (*)(CodeGenerator*, Type*))self->_vtable[164]))((CodeGenerator*)self, ({ Member* _recv = (Member*)(vm); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }));
         SPEC_AUTO String sigC = spec_string_concat((void*)spec_retain((void*)(objType)), spec_string_intern("*"));
-        ({ SpecArray* _a_228 = ((SpecArray*)spec_claim_pool((void*)(Member_getParameters(vm) /* inst:Member:getParameters */))); if (_a_228) { for (size_t _i_228 = 0; _i_228 < _a_228->length; _i_228++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_228->items[_i_228];
+        ({ SpecArray* _a_227 = ((SpecArray*)spec_claim_pool((void*)(Member_getParameters(vm) /* inst:Member:getParameters */))); if (_a_227) { for (size_t _i_227 = 0; _i_227 < _a_227->length; _i_227++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_227->items[_i_227];
         do {
     sigC = spec_string_concat(spec_string_concat(sigC, spec_string_intern(", ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[180]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(((Type*)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); }))))); (((String (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })))))))));
         } while (0);
@@ -33174,16 +33172,16 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
     } else if (spec_string_equals(kind, spec_string_intern("WHEN"))) {
         SPEC_AUTO String subjC = CodeGenerator_generateExpression(self, expr->whenSubject) /* inst:CodeGenerator:generateExpression */;
         SPEC_AUTO String chain = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_229 = expr->whenArms; if (_a_229) { for (size_t _i_229 = 0; _i_229 < _a_229->length; _i_229++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_229->items[_i_229];
+        ({ SpecArray* _a_228 = expr->whenArms; if (_a_228) { for (size_t _i_228 = 0; _i_228 < _a_228->length; _i_228++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_228->items[_i_228];
         do {
     if (((arm->isElse) && (arm->hasValueExpr))) {
         spec_assign((void**)&chain, (void*)(CodeGenerator_generateExpression(self, arm->valueExpr) /* inst:CodeGenerator:generateExpression */));
     }
         } while (0);
     } } });
-        ({ SpecArray* _a_230 = expr->whenArms; if (_a_230) { for (size_t _i_230 = 0; _i_230 < _a_230->length; _i_230++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_230->items[_i_230];
+        ({ SpecArray* _a_229 = expr->whenArms; if (_a_229) { for (size_t _i_229 = 0; _i_229 < _a_229->length; _i_229++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_229->items[_i_229];
         do {
     if ((((!(arm->isElse))) && (arm->hasValueExpr))) {
         SPEC_AUTO String bindsC = CodeGenerator_generateWhenBindings(self, subjC, arm) /* inst:CodeGenerator:generateWhenBindings */;
@@ -33192,8 +33190,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         spec_assign((void**)&armVal, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ "))), bindsC), spec_string_intern(" ")), armVal), spec_string_intern("; })"))));
     }
         SPEC_AUTO String condOr = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_231 = arm->conditions; if (_a_231) { for (size_t _i_231 = 0; _i_231 < _a_231->length; _i_231++) {
-        Expression* c = (Expression*)(intptr_t)_a_231->items[_i_231];
+        ({ SpecArray* _a_230 = arm->conditions; if (_a_230) { for (size_t _i_230 = 0; _i_230 < _a_230->length; _i_230++) {
+        Expression* c = (Expression*)(intptr_t)_a_230->items[_i_230];
         do {
     SPEC_AUTO String cmp = CodeGenerator_generateWhenCondition(self, expr->whenSubject, subjC, c) /* inst:CodeGenerator:generateWhenCondition */;
     if (spec_string_equals(condOr, spec_string_intern(""))) {
@@ -33215,16 +33213,16 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO String retC = (((String (*)(CodeGenerator*, String))self->_vtable[180]))((CodeGenerator*)self, ({ Type* _recv = (Type*)(expr->anonReturnType); (((String (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }));
         SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
         SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-        ({ SpecArray* _a_232 = outerKeys; if (_a_232) { for (size_t _i_232 = 0; _i_232 < _a_232->length; _i_232++) {
-        String k = (String)(intptr_t)_a_232->items[_i_232];
+        ({ SpecArray* _a_231 = outerKeys; if (_a_231) { for (size_t _i_231 = 0; _i_231 < _a_231->length; _i_231++) {
+        String k = (String)(intptr_t)_a_231->items[_i_231];
         do {
     spec_map_set(savedVars, k, ((String)spec_claim_pool((void*)(spec_map_get_string(self->localVars, k, spec_string_intern(""))))));
         } while (0);
     } } });
         SPEC_AUTO SpecMap* savedScopeVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
         SPEC_AUTO SpecArray* outerScopeKeys = (SpecArray*)((spec_map_keys(self->localScopeVars)));
-        ({ SpecArray* _a_233 = outerScopeKeys; if (_a_233) { for (size_t _i_233 = 0; _i_233 < _a_233->length; _i_233++) {
-        String k = (String)(intptr_t)_a_233->items[_i_233];
+        ({ SpecArray* _a_232 = outerScopeKeys; if (_a_232) { for (size_t _i_232 = 0; _i_232 < _a_232->length; _i_232++) {
+        String k = (String)(intptr_t)_a_232->items[_i_232];
         do {
     spec_map_set(savedScopeVars, k, ((String)spec_claim_pool((void*)(spec_map_get_string(self->localScopeVars, k, spec_string_intern(""))))));
         } while (0);
@@ -33233,8 +33231,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         SPEC_AUTO String paramsC = spec_construct_string(spec_string_intern("void* _env_ptr"));
         SPEC_AUTO SpecArray* paramNames = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         SPEC_AUTO String paramBinds = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_234 = expr->anonParams; if (_a_234) { for (size_t _i_234 = 0; _i_234 < _a_234->length; _i_234++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_234->items[_i_234];
+        ({ SpecArray* _a_233 = expr->anonParams; if (_a_233) { for (size_t _i_233 = 0; _i_233 < _a_233->length; _i_233++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_233->items[_i_233];
         do {
     spec_array_add_object(paramNames, (void*)(((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); }))))));
     spec_map_set(self->localVars, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, ((Type*)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })))))))));
@@ -33247,8 +33245,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
         spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
         SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_235 = expr->anonBody; if (_a_235) { for (size_t _i_235 = 0; _i_235 < _a_235->length; _i_235++) {
-        Statement* s = (Statement*)(intptr_t)_a_235->items[_i_235];
+        ({ SpecArray* _a_234 = expr->anonBody; if (_a_234) { for (size_t _i_234 = 0; _i_234 < _a_234->length; _i_234++) {
+        Statement* s = (Statement*)(intptr_t)_a_234->items[_i_234];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -33272,8 +33270,8 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         capAssigns = spec_string_concat(spec_string_concat(spec_string_concat(capAssigns, spec_string_intern("    _env->self = (")), self->currentClassName), spec_string_intern("*)spec_retain((void*)self);\n"));
         capReleases = spec_string_concat(capReleases, spec_string_intern("    if (_env->self) spec_release((void*)_env->self);\n"));
     }
-        ({ SpecArray* _a_236 = outerKeys; if (_a_236) { for (size_t _i_236 = 0; _i_236 < _a_236->length; _i_236++) {
-        String k = (String)(intptr_t)_a_236->items[_i_236];
+        ({ SpecArray* _a_235 = outerKeys; if (_a_235) { for (size_t _i_235 = 0; _i_235 < _a_235->length; _i_235++) {
+        String k = (String)(intptr_t)_a_235->items[_i_235];
         do {
     if (((spec_array_index_of_str(paramNames, k, (-(1)))) < (0))) {
         SPEC_AUTO String cVar = (((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, k);
@@ -33463,16 +33461,16 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
     } else if (spec_string_equals(kind, spec_string_intern("IF"))) {
         SPEC_AUTO String condC = CodeGenerator_generateExpression(self, stmt->ifCondition) /* inst:CodeGenerator:generateExpression */;
         SPEC_AUTO String out = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if ("))), condC), spec_string_intern(") {\n"));
-        ({ SpecArray* _a_237 = stmt->thenBranch; if (_a_237) { for (size_t _i_237 = 0; _i_237 < _a_237->length; _i_237++) {
-        Statement* s = (Statement*)(intptr_t)_a_237->items[_i_237];
+        ({ SpecArray* _a_236 = stmt->thenBranch; if (_a_236) { for (size_t _i_236 = 0; _i_236 < _a_236->length; _i_236++) {
+        Statement* s = (Statement*)(intptr_t)_a_236->items[_i_236];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
     } } });
         if (stmt->hasElse) {
         out = spec_string_concat(out, spec_string_intern("    } else {\n"));
-        ({ SpecArray* _a_238 = stmt->elseBranch; if (_a_238) { for (size_t _i_238 = 0; _i_238 < _a_238->length; _i_238++) {
-        Statement* s = (Statement*)(intptr_t)_a_238->items[_i_238];
+        ({ SpecArray* _a_237 = stmt->elseBranch; if (_a_237) { for (size_t _i_237 = 0; _i_237 < _a_237->length; _i_237++) {
+        Statement* s = (Statement*)(intptr_t)_a_237->items[_i_237];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -33483,8 +33481,8 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
     } else if (spec_string_equals(kind, spec_string_intern("FORWARD"))) {
         SPEC_AUTO ClassInfo* fwdCls = (ClassInfo*)(((((ClassInfo* (*)(CodeGenerator*, String))self->_vtable[157]))((CodeGenerator*)self, self->currentClassName)));
         SPEC_AUTO String dispatchCls = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_239 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(fwdCls) /* inst:ClassInfo:getBaseClasses */))); if (_a_239) { for (size_t _i_239 = 0; _i_239 < _a_239->length; _i_239++) {
-        String baseName = (String)(intptr_t)_a_239->items[_i_239];
+        ({ SpecArray* _a_238 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(fwdCls) /* inst:ClassInfo:getBaseClasses */))); if (_a_238) { for (size_t _i_238 = 0; _i_238 < _a_238->length; _i_238++) {
+        String baseName = (String)(intptr_t)_a_238->items[_i_238];
         do {
     if (spec_string_equals(dispatchCls, spec_string_intern(""))) {
         SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, baseName, self->currentMethodName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
@@ -33548,16 +33546,16 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
         SPEC_AUTO String subjC = CodeGenerator_generateExpression(self, stmt->whenSubject) /* inst:CodeGenerator:generateExpression */;
         SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
         bool first = true;
-        ({ SpecArray* _a_240 = stmt->whenArms; if (_a_240) { for (size_t _i_240 = 0; _i_240 < _a_240->length; _i_240++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_240->items[_i_240];
+        ({ SpecArray* _a_239 = stmt->whenArms; if (_a_239) { for (size_t _i_239 = 0; _i_239 < _a_239->length; _i_239++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_239->items[_i_239];
         do {
     SPEC_AUTO String bindsC = spec_construct_string(spec_string_intern(""));
     if (arm->isElse) {
         out = spec_string_concat(out, spec_string_intern("    } else {\n"));
     } else {
         SPEC_AUTO String condOr = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_241 = arm->conditions; if (_a_241) { for (size_t _i_241 = 0; _i_241 < _a_241->length; _i_241++) {
-        Expression* c = (Expression*)(intptr_t)_a_241->items[_i_241];
+        ({ SpecArray* _a_240 = arm->conditions; if (_a_240) { for (size_t _i_240 = 0; _i_240 < _a_240->length; _i_240++) {
+        Expression* c = (Expression*)(intptr_t)_a_240->items[_i_240];
         do {
     SPEC_AUTO String cmp = CodeGenerator_generateWhenCondition(self, stmt->whenSubject, subjC, c) /* inst:CodeGenerator:generateWhenCondition */;
     if (spec_string_equals(condOr, spec_string_intern(""))) {
@@ -33576,8 +33574,8 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
     }
         out = spec_string_concat(out, bindsC);
     }
-    ({ SpecArray* _a_242 = arm->body; if (_a_242) { for (size_t _i_242 = 0; _i_242 < _a_242->length; _i_242++) {
-        Statement* s = (Statement*)(intptr_t)_a_242->items[_i_242];
+    ({ SpecArray* _a_241 = arm->body; if (_a_241) { for (size_t _i_241 = 0; _i_241 < _a_241->length; _i_241++) {
+        Statement* s = (Statement*)(intptr_t)_a_241->items[_i_241];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -33608,24 +33606,24 @@ String CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDef, Me
     }
     spec_assign((void**)&self->localVars, (void*)(spec_map_new()));
     spec_assign((void**)&self->localScopeVars, (void*)(spec_map_new()));
-    ({ SpecArray* _a_243 = ((SpecArray*)spec_claim_pool((void*)(Member_getParameters(method) /* inst:Member:getParameters */))); if (_a_243) { for (size_t _i_243 = 0; _i_243 < _a_243->length; _i_243++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_243->items[_i_243];
+    ({ SpecArray* _a_242 = ((SpecArray*)spec_claim_pool((void*)(Member_getParameters(method) /* inst:Member:getParameters */))); if (_a_242) { for (size_t _i_242 = 0; _i_242 < _a_242->length; _i_242++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_242->items[_i_242];
         do {
     spec_map_set(self->localVars, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, ((Type*)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); })))))))));
         } while (0);
     } } });
     SPEC_AUTO String out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(retType)), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(classDef); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("_")), ((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(method); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }))))), spec_string_intern("(")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[180]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(classDef); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))))))), spec_string_intern(" self"));
     SPEC_AUTO String callArgs = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_244 = ((SpecArray*)spec_claim_pool((void*)(Member_getParameters(method) /* inst:Member:getParameters */))); if (_a_244) { for (size_t _i_244 = 0; _i_244 < _a_244->length; _i_244++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_244->items[_i_244];
+    ({ SpecArray* _a_243 = ((SpecArray*)spec_claim_pool((void*)(Member_getParameters(method) /* inst:Member:getParameters */))); if (_a_243) { for (size_t _i_243 = 0; _i_243 < _a_243->length; _i_243++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_243->items[_i_243];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[180]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(((Type*)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((Type* (*)(Parameter*))_recv->_vtable[36]))((Parameter*)_recv); }))))); (((String (*)(Type*))_recv->_vtable[21]))((Type*)_recv); }))))))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })))))))));
     callArgs = spec_string_concat(spec_string_concat(callArgs, spec_string_intern(", ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[181]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ Parameter* _recv = (Parameter*)(p); (((String (*)(Parameter*))_recv->_vtable[21]))((Parameter*)_recv); })))))))));
         } while (0);
     } } });
     out = spec_string_concat(out, spec_string_intern(") {\n"));
-    ({ SpecArray* _a_245 = ((SpecArray*)spec_claim_pool((void*)(Member_getBody(method) /* inst:Member:getBody */))); if (_a_245) { for (size_t _i_245 = 0; _i_245 < _a_245->length; _i_245++) {
-        Statement* stmt = (Statement*)(intptr_t)_a_245->items[_i_245];
+    ({ SpecArray* _a_244 = ((SpecArray*)spec_claim_pool((void*)(Member_getBody(method) /* inst:Member:getBody */))); if (_a_244) { for (size_t _i_244 = 0; _i_244 < _a_244->length; _i_244++) {
+        Statement* stmt = (Statement*)(intptr_t)_a_244->items[_i_244];
         do {
     out = spec_string_concat(out, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, stmt) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -33699,26 +33697,26 @@ void CodeGenerator_collectClassesFromStatement(CodeGenerator* self, Statement* s
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Statement* _recv = (Statement*)(stmt); (((String (*)(Statement*))_recv->_vtable[34]))((Statement*)_recv); })))), spec_string_intern("CLASS"))) {
         (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[178]))((CodeGenerator*)self, stmt->nestedClass, acc);
     } else if (spec_string_equals(((String)spec_claim_pool((void*)(({ Statement* _recv = (Statement*)(stmt); (((String (*)(Statement*))_recv->_vtable[34]))((Statement*)_recv); })))), spec_string_intern("IF"))) {
-        ({ SpecArray* _a_246 = stmt->thenBranch; if (_a_246) { for (size_t _i_246 = 0; _i_246 < _a_246->length; _i_246++) {
-        Statement* s = (Statement*)(intptr_t)_a_246->items[_i_246];
+        ({ SpecArray* _a_245 = stmt->thenBranch; if (_a_245) { for (size_t _i_245 = 0; _i_245 < _a_245->length; _i_245++) {
+        Statement* s = (Statement*)(intptr_t)_a_245->items[_i_245];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[177]))((CodeGenerator*)self, s, acc);
         } while (0);
     } } });
         if (stmt->hasElse) {
-        ({ SpecArray* _a_247 = stmt->elseBranch; if (_a_247) { for (size_t _i_247 = 0; _i_247 < _a_247->length; _i_247++) {
-        Statement* s = (Statement*)(intptr_t)_a_247->items[_i_247];
+        ({ SpecArray* _a_246 = stmt->elseBranch; if (_a_246) { for (size_t _i_246 = 0; _i_246 < _a_246->length; _i_246++) {
+        Statement* s = (Statement*)(intptr_t)_a_246->items[_i_246];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[177]))((CodeGenerator*)self, s, acc);
         } while (0);
     } } });
     }
     } else if (spec_string_equals(((String)spec_claim_pool((void*)(({ Statement* _recv = (Statement*)(stmt); (((String (*)(Statement*))_recv->_vtable[34]))((Statement*)_recv); })))), spec_string_intern("WHEN"))) {
-        ({ SpecArray* _a_248 = stmt->whenArms; if (_a_248) { for (size_t _i_248 = 0; _i_248 < _a_248->length; _i_248++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_248->items[_i_248];
+        ({ SpecArray* _a_247 = stmt->whenArms; if (_a_247) { for (size_t _i_247 = 0; _i_247 < _a_247->length; _i_247++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_247->items[_i_247];
         do {
-    ({ SpecArray* _a_249 = arm->body; if (_a_249) { for (size_t _i_249 = 0; _i_249 < _a_249->length; _i_249++) {
-        Statement* s = (Statement*)(intptr_t)_a_249->items[_i_249];
+    ({ SpecArray* _a_248 = arm->body; if (_a_248) { for (size_t _i_248 = 0; _i_248 < _a_248->length; _i_248++) {
+        Statement* s = (Statement*)(intptr_t)_a_248->items[_i_248];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[177]))((CodeGenerator*)self, s, acc);
         } while (0);
@@ -33731,14 +33729,14 @@ void CodeGenerator_collectClassesFromStatement(CodeGenerator* self, Statement* s
 
 void CodeGenerator_collectClasses(CodeGenerator* self, ClassInfo* c, SpecArray* acc) {
     spec_array_add_object(acc, (void*)(c));
-    ({ SpecArray* _a_250 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_250) { for (size_t _i_250 = 0; _i_250 < _a_250->length; _i_250++) {
-        Member* m = (Member*)(intptr_t)_a_250->items[_i_250];
+    ({ SpecArray* _a_249 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_249) { for (size_t _i_249 = 0; _i_249 < _a_249->length; _i_249++) {
+        Member* m = (Member*)(intptr_t)_a_249->items[_i_249];
         do {
     if (((Member_getMemberKind(m) /* inst:Member:getMemberKind */) == (MemberKind_CLASS))) {
         (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[178]))((CodeGenerator*)self, ((ClassInfo*)spec_claim_pool((void*)(Member_getNestedClass(m) /* inst:Member:getNestedClass */))), acc);
     } else if (((Member_getMemberKind(m) /* inst:Member:getMemberKind */) == (MemberKind_METHOD))) {
-        ({ SpecArray* _a_251 = ((SpecArray*)spec_claim_pool((void*)(Member_getBody(m) /* inst:Member:getBody */))); if (_a_251) { for (size_t _i_251 = 0; _i_251 < _a_251->length; _i_251++) {
-        Statement* s = (Statement*)(intptr_t)_a_251->items[_i_251];
+        ({ SpecArray* _a_250 = ((SpecArray*)spec_claim_pool((void*)(Member_getBody(m) /* inst:Member:getBody */))); if (_a_250) { for (size_t _i_250 = 0; _i_250 < _a_250->length; _i_250++) {
+        Statement* s = (Statement*)(intptr_t)_a_250->items[_i_250];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[177]))((CodeGenerator*)self, s, acc);
         } while (0);
@@ -33751,8 +33749,8 @@ void CodeGenerator_collectClasses(CodeGenerator* self, ClassInfo* c, SpecArray* 
 
 String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, String entryClass) {
     SPEC_AUTO SpecArray* flattenedClasses = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_252 = ((SpecArray*)spec_claim_pool((void*)(ProgramNode_getClasses(program) /* inst:ProgramNode:getClasses */))); if (_a_252) { for (size_t _i_252 = 0; _i_252 < _a_252->length; _i_252++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_252->items[_i_252];
+    ({ SpecArray* _a_251 = ((SpecArray*)spec_claim_pool((void*)(ProgramNode_getClasses(program) /* inst:ProgramNode:getClasses */))); if (_a_251) { for (size_t _i_251 = 0; _i_251 < _a_251->length; _i_251++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_251->items[_i_251];
         do {
     (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[178]))((CodeGenerator*)self, c, flattenedClasses);
         } while (0);
@@ -33763,12 +33761,12 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     spec_assign((void**)&self->allEnumVariants, (void*)(spec_map_new()));
     spec_assign((void**)&self->allStringBackedEnums, (void*)(spec_map_new()));
     spec_assign((void**)&self->allTaggedEnums, (void*)(spec_map_new()));
-    ({ SpecArray* _a_253 = flattenedClasses; if (_a_253) { for (size_t _i_253 = 0; _i_253 < _a_253->length; _i_253++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_253->items[_i_253];
+    ({ SpecArray* _a_252 = flattenedClasses; if (_a_252) { for (size_t _i_252 = 0; _i_252 < _a_252->length; _i_252++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_252->items[_i_252];
         do {
     spec_map_set(self->allClassNames, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("true"));
-    ({ SpecArray* _a_254 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_254) { for (size_t _i_254 = 0; _i_254 < _a_254->length; _i_254++) {
-        Member* m = (Member*)(intptr_t)_a_254->items[_i_254];
+    ({ SpecArray* _a_253 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_253) { for (size_t _i_253 = 0; _i_253 < _a_253->length; _i_253++) {
+        Member* m = (Member*)(intptr_t)_a_253->items[_i_253];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("toString"))) && ((!(spec_map_has(self->classesWithToString, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))))) {
         spec_map_set(self->classesWithToString, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("true"));
@@ -33777,8 +33775,8 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     } } });
     if (spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum"))) {
         spec_map_set(self->allEnumNames, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("true"));
-        ({ SpecArray* _a_255 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_255) { for (size_t _i_255 = 0; _i_255 < _a_255->length; _i_255++) {
-        Member* m = (Member*)(intptr_t)_a_255->items[_i_255];
+        ({ SpecArray* _a_254 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_254) { for (size_t _i_254 = 0; _i_254 < _a_254->length; _i_254++) {
+        Member* m = (Member*)(intptr_t)_a_254->items[_i_254];
         do {
     spec_map_set(self->allEnumVariants, ((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))));
     if (((spec_array_length(((SpecArray*)spec_claim_pool((void*)(Member_getParameters(m) /* inst:Member:getParameters */))))) > (0))) {
@@ -33800,12 +33798,12 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     spec_assign((void**)&self->classesWithToString, (void*)(spec_map_new()));
     self->methodSlotCount = 0;
     spec_assign((void**)&self->slotNames, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_256 = flattenedClasses; if (_a_256) { for (size_t _i_256 = 0; _i_256 < _a_256->length; _i_256++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_256->items[_i_256];
+    ({ SpecArray* _a_255 = flattenedClasses; if (_a_255) { for (size_t _i_255 = 0; _i_255 < _a_255->length; _i_255++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_255->items[_i_255];
         do {
     if ((((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum")))))) {
-        ({ SpecArray* _a_257 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_257) { for (size_t _i_257 = 0; _i_257 < _a_257->length; _i_257++) {
-        Member* m = (Member*)(intptr_t)_a_257->items[_i_257];
+        ({ SpecArray* _a_256 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_256) { for (size_t _i_256 = 0; _i_256 < _a_256->length; _i_256++) {
+        Member* m = (Member*)(intptr_t)_a_256->items[_i_256];
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[34]))((Member*)_recv); })))), spec_string_intern("METHOD"))) {
         if (spec_map_has(self->methodSlots, ((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))))) {
@@ -33827,23 +33825,23 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     SPEC_AUTO String vt = CodeGenerator_generateVTables(self, flattenedClasses) /* inst:CodeGenerator:generateVTables */;
     SPEC_AUTO String ctors = CodeGenerator_generateConstructors(self, flattenedClasses) /* inst:CodeGenerator:generateConstructors */;
     SPEC_AUTO String methods = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_258 = flattenedClasses; if (_a_258) { for (size_t _i_258 = 0; _i_258 < _a_258->length; _i_258++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_258->items[_i_258];
+    ({ SpecArray* _a_257 = flattenedClasses; if (_a_257) { for (size_t _i_257 = 0; _i_257 < _a_257->length; _i_257++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_257->items[_i_257];
         do {
     if ((((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("String"))))) {
         spec_assign((void**)&self->currentClassName, (void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })));
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self->declGen, c, flattenedClasses, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_259 = allFields; if (_a_259) { for (size_t _i_259 = 0; _i_259 < _a_259->length; _i_259++) {
-        Member* m = (Member*)(intptr_t)_a_259->items[_i_259];
+        ({ SpecArray* _a_258 = allFields; if (_a_258) { for (size_t _i_258 = 0; _i_258 < _a_258->length; _i_258++) {
+        Member* m = (Member*)(intptr_t)_a_258->items[_i_258];
         do {
     spec_map_set(self->fieldTypes, ((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, Type*))self->_vtable[148]))((CodeGenerator*)self, ((Type*)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); })))))))));
         } while (0);
     } } });
         bool hasInit = false;
-        ({ SpecArray* _a_260 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_260) { for (size_t _i_260 = 0; _i_260 < _a_260->length; _i_260++) {
-        Member* m = (Member*)(intptr_t)_a_260->items[_i_260];
+        ({ SpecArray* _a_259 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_259) { for (size_t _i_259 = 0; _i_259 < _a_259->length; _i_259++) {
+        Member* m = (Member*)(intptr_t)_a_259->items[_i_259];
         do {
     if (((Member_getMemberKind(m) /* inst:Member:getMemberKind */) == (MemberKind_METHOD))) {
         if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("init"))) {
@@ -33858,8 +33856,8 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
         methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("void ")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("_init(")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("* self) {\n    /* default initializer */\n}\n\n"));
     }
         bool hasToString = false;
-        ({ SpecArray* _a_261 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_261) { for (size_t _i_261 = 0; _i_261 < _a_261->length; _i_261++) {
-        Member* m = (Member*)(intptr_t)_a_261->items[_i_261];
+        ({ SpecArray* _a_260 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_260) { for (size_t _i_260 = 0; _i_260 < _a_260->length; _i_260++) {
+        Member* m = (Member*)(intptr_t)_a_260->items[_i_260];
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("toString"))) {
         hasToString = true;
@@ -33892,13 +33890,13 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
 }
 
 void CodeGenerator_collectAncestors(CodeGenerator* self, ClassInfo* c, SpecArray* allClasses, SpecArray* acc) {
-    ({ SpecArray* _a_262 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */))); if (_a_262) { for (size_t _i_262 = 0; _i_262 < _a_262->length; _i_262++) {
-        String baseName = (String)(intptr_t)_a_262->items[_i_262];
+    ({ SpecArray* _a_261 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */))); if (_a_261) { for (size_t _i_261 = 0; _i_261 < _a_261->length; _i_261++) {
+        String baseName = (String)(intptr_t)_a_261->items[_i_261];
         do {
     if (((spec_array_index_of_str(acc, baseName, (-(1)))) < (0))) {
         spec_array_add_object(acc, (void*)(baseName));
-        ({ SpecArray* _a_263 = allClasses; if (_a_263) { for (size_t _i_263 = 0; _i_263 < _a_263->length; _i_263++) {
-        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_263->items[_i_263];
+        ({ SpecArray* _a_262 = allClasses; if (_a_262) { for (size_t _i_262 = 0; _i_262 < _a_262->length; _i_262++) {
+        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_262->items[_i_262];
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(cand); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), baseName)) {
         CodeGenerator_collectAncestors(self, cand, allClasses, acc) /* inst:CodeGenerator:collectAncestors */;
@@ -33916,8 +33914,8 @@ String CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* class
     out = spec_string_concat(out, spec_string_intern("    if (!actual || !target) return false;\n"));
     out = spec_string_concat(out, spec_string_intern("    if (strcmp(actual, target) == 0) return true;\n"));
     out = spec_string_concat(out, spec_string_intern("    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n"));
-    ({ SpecArray* _a_264 = classes; if (_a_264) { for (size_t _i_264 = 0; _i_264 < _a_264->length; _i_264++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_264->items[_i_264];
+    ({ SpecArray* _a_263 = classes; if (_a_263) { for (size_t _i_263 = 0; _i_263 < _a_263->length; _i_263++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_263->items[_i_263];
         do {
     if ((((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum")))))) {
         SPEC_AUTO SpecArray* ancestors = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
@@ -33926,8 +33924,8 @@ String CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* class
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (strcmp(actual, \"")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("\") == 0) {\n"));
         out = spec_string_concat(out, spec_string_intern("        return "));
         bool firstA = true;
-        ({ SpecArray* _a_265 = ancestors; if (_a_265) { for (size_t _i_265 = 0; _i_265 < _a_265->length; _i_265++) {
-        String aName = (String)(intptr_t)_a_265->items[_i_265];
+        ({ SpecArray* _a_264 = ancestors; if (_a_264) { for (size_t _i_264 = 0; _i_264 < _a_264->length; _i_264++) {
+        String aName = (String)(intptr_t)_a_264->items[_i_264];
         do {
     if ((!(firstA))) {
         out = spec_string_concat(out, spec_string_intern(" || "));
@@ -33951,18 +33949,18 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
     if (((self->methodSlotCount) == (0))) {
         return (String)({ String _ret_val = out; out = NULL; _ret_val; });
     }
-    ({ SpecArray* _a_266 = classes; if (_a_266) { for (size_t _i_266 = 0; _i_266 < _a_266->length; _i_266++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_266->items[_i_266];
+    ({ SpecArray* _a_265 = classes; if (_a_265) { for (size_t _i_265 = 0; _i_265 < _a_265->length; _i_265++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_265->items[_i_265];
         do {
     if ((((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum")))))) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static void* ")), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n"));
         long long slot = 0;
         ({ while (1) {
-        bool _ev_267 = false;
+        bool _ev_266 = false;
         do {
-    _ev_267 = ((slot) < (self->methodSlotCount)); break;
+    _ev_266 = ((slot) < (self->methodSlotCount)); break;
         } while (0);
-        if (!_ev_267) break;
+        if (!_ev_266) break;
         do {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
     SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, ({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }), mName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
@@ -34170,8 +34168,8 @@ void Loader_loadFile(Loader* self, String filePath) {
     SPEC_AUTO Lexer* lexer = (Lexer*)((({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, src); _inst; })));
     SPEC_AUTO SpecArray* tokens = (SpecArray*)((Lexer_tokenize(lexer) /* inst:Lexer:tokenize */));
     if (({ Lexer* _recv = (Lexer*)(lexer); (((bool (*)(Lexer*))_recv->_vtable[92]))((Lexer*)_recv); })) {
-        ({ SpecArray* _a_268 = ((SpecArray*)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[93]))((Lexer*)_recv); })))); if (_a_268) { for (size_t _i_268 = 0; _i_268 < _a_268->length; _i_268++) {
-        String err = (String)(intptr_t)_a_268->items[_i_268];
+        ({ SpecArray* _a_267 = ((SpecArray*)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[93]))((Lexer*)_recv); })))); if (_a_267) { for (size_t _i_267 = 0; _i_267 < _a_267->length; _i_267++) {
+        String err = (String)(intptr_t)_a_267->items[_i_267];
         do {
     spec_array_add_object(self->parseErrors, (void*)(((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LexError] ["))), filePath), spec_string_intern("] ")), err))))));
         } while (0);
@@ -34181,18 +34179,18 @@ void Loader_loadFile(Loader* self, String filePath) {
     ({ Parser* _recv = (Parser*)(parser); (((void (*)(Parser*, String))_recv->_vtable[27]))((Parser*)_recv, filePath); });
     SPEC_AUTO ProgramNode* prog = (ProgramNode*)((Parser_parseProgram(parser) /* inst:Parser:parseProgram */));
     if (({ Parser* _recv = (Parser*)(parser); (((bool (*)(Parser*))_recv->_vtable[92]))((Parser*)_recv); })) {
-        ({ SpecArray* _a_269 = ((SpecArray*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[93]))((Parser*)_recv); })))); if (_a_269) { for (size_t _i_269 = 0; _i_269 < _a_269->length; _i_269++) {
-        String err = (String)(intptr_t)_a_269->items[_i_269];
+        ({ SpecArray* _a_268 = ((SpecArray*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[93]))((Parser*)_recv); })))); if (_a_268) { for (size_t _i_268 = 0; _i_268 < _a_268->length; _i_268++) {
+        String err = (String)(intptr_t)_a_268->items[_i_268];
         do {
     spec_array_add_object(self->parseErrors, (void*)(err));
         } while (0);
     } } });
     }
-    ({ SpecArray* _a_270 = ((SpecArray*)spec_claim_pool((void*)(ProgramNode_getClasses(prog) /* inst:ProgramNode:getClasses */))); if (_a_270) { for (size_t _i_270 = 0; _i_270 < _a_270->length; _i_270++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_270->items[_i_270];
+    ({ SpecArray* _a_269 = ((SpecArray*)spec_claim_pool((void*)(ProgramNode_getClasses(prog) /* inst:ProgramNode:getClasses */))); if (_a_269) { for (size_t _i_269 = 0; _i_269 < _a_269->length; _i_269++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_269->items[_i_269];
         do {
-    ({ SpecArray* _a_271 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_271) { for (size_t _i_271 = 0; _i_271 < _a_271->length; _i_271++) {
-        Member* m = (Member*)(intptr_t)_a_271->items[_i_271];
+    ({ SpecArray* _a_270 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_270) { for (size_t _i_270 = 0; _i_270 < _a_270->length; _i_270++) {
+        Member* m = (Member*)(intptr_t)_a_270->items[_i_270];
         do {
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, String))_recv->_vtable[27]))((Member*)_recv, filePath); });
         } while (0);
@@ -34219,20 +34217,20 @@ void Loader_loadFile(Loader* self, String filePath) {
 }
 
 void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
-    ({ SpecArray* _a_272 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_272) { for (size_t _i_272 = 0; _i_272 < _a_272->length; _i_272++) {
-        Member* m = (Member*)(intptr_t)_a_272->items[_i_272];
+    ({ SpecArray* _a_271 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */))); if (_a_271) { for (size_t _i_271 = 0; _i_271 < _a_271->length; _i_271++) {
+        Member* m = (Member*)(intptr_t)_a_271->items[_i_271];
         do {
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using"))) && (Member_getHasInit(m) /* inst:Member:getHasInit */))) {
         SPEC_AUTO Expression* initExpr = (Expression*)((Member_getInitExpr(m) /* inst:Member:getInitExpr */));
         if (spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(initExpr); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("ARRAY"))) {
-        ({ SpecArray* _a_273 = initExpr->arrayItems; if (_a_273) { for (size_t _i_273 = 0; _i_273 < _a_273->length; _i_273++) {
-        Expression* item = (Expression*)(intptr_t)_a_273->items[_i_273];
+        ({ SpecArray* _a_272 = initExpr->arrayItems; if (_a_272) { for (size_t _i_272 = 0; _i_272 < _a_272->length; _i_272++) {
+        Expression* item = (Expression*)(intptr_t)_a_272->items[_i_272];
         do {
     SPEC_AUTO String importStr = spec_construct_string(item->stringValue);
     SPEC_AUTO SpecArray* wildcards = (SpecArray*)((Loader_expandWildcard(self, importStr) /* inst:Loader:expandWildcard */));
     if (((spec_array_length(wildcards)) > (0))) {
-        ({ SpecArray* _a_274 = wildcards; if (_a_274) { for (size_t _i_274 = 0; _i_274 < _a_274->length; _i_274++) {
-        String f = (String)(intptr_t)_a_274->items[_i_274];
+        ({ SpecArray* _a_273 = wildcards; if (_a_273) { for (size_t _i_273 = 0; _i_273 < _a_273->length; _i_273++) {
+        String f = (String)(intptr_t)_a_273->items[_i_273];
         do {
     Loader_loadFile(self, f) /* inst:Loader:loadFile */;
         } while (0);
@@ -34258,11 +34256,11 @@ String Loader_groupTargetOf(Loader* self, ClassInfo* c) {
     long long idx = 0;
     SPEC_AUTO String target = spec_construct_string(spec_string_intern(""));
     ({ while (1) {
-        bool _ev_275 = false;
+        bool _ev_274 = false;
         do {
-    _ev_275 = ((idx) < (spec_array_length(members))); break;
+    _ev_274 = ((idx) < (spec_array_length(members))); break;
         } while (0);
-        if (!_ev_275) break;
+        if (!_ev_274) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group"))) && (Member_getHasInit(m) /* inst:Member:getHasInit */))) {
@@ -34291,11 +34289,11 @@ ClassInfo* Loader_findLoadedClass(Loader* self, String name) {
     long long idx = 0;
     SPEC_AUTO ClassInfo* res = (ClassInfo*)((({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; })));
     ({ while (1) {
-        bool _ev_276 = false;
+        bool _ev_275 = false;
         do {
-    _ev_276 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(res); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("")))); break;
+    _ev_275 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(res); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("")))); break;
         } while (0);
-        if (!_ev_276) break;
+        if (!_ev_275) break;
         do {
     SPEC_AUTO ClassInfo* c = (ClassInfo*)spec_retain((void*)(spec_array_get(self->loadedClasses, idx)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), name)) {
@@ -34316,11 +34314,11 @@ Member* Loader_findMemberNamed(Loader* self, ClassInfo* target, String name) {
     long long idx = 0;
     SPEC_AUTO Member* res = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, spec_string_intern("")); _inst; })));
     ({ while (1) {
-        bool _ev_277 = false;
+        bool _ev_276 = false;
         do {
-    _ev_277 = ((((idx) < (spec_array_length(members)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(res); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("")))); break;
+    _ev_276 = ((((idx) < (spec_array_length(members)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(res); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("")))); break;
         } while (0);
-        if (!_ev_277) break;
+        if (!_ev_276) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), name)) {
@@ -34341,11 +34339,11 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SPEC_AUTO SpecArray* fragMembers = (SpecArray*)((ClassInfo_getMembers(frag) /* inst:ClassInfo:getMembers */));
     long long idx = 0;
     ({ while (1) {
-        bool _ev_278 = false;
+        bool _ev_277 = false;
         do {
-    _ev_278 = ((idx) < (spec_array_length(fragMembers))); break;
+    _ev_277 = ((idx) < (spec_array_length(fragMembers))); break;
         } while (0);
-        if (!_ev_278) break;
+        if (!_ev_277) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(fragMembers, idx)));
     SPEC_AUTO String mName = ({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); });
@@ -34368,12 +34366,12 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
         SPEC_AUTO Expression* fragItems = (Expression*)((Member_getInitExpr(fragUsing) /* inst:Member:getInitExpr */));
         SPEC_AUTO Expression* targetItems = (Expression*)((Member_getInitExpr(targetUsing) /* inst:Member:getInitExpr */));
         if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(fragItems); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("ARRAY"))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(targetItems); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("ARRAY"))))) {
-        ({ SpecArray* _a_279 = fragItems->arrayItems; if (_a_279) { for (size_t _i_279 = 0; _i_279 < _a_279->length; _i_279++) {
-        Expression* item = (Expression*)(intptr_t)_a_279->items[_i_279];
+        ({ SpecArray* _a_278 = fragItems->arrayItems; if (_a_278) { for (size_t _i_278 = 0; _i_278 < _a_278->length; _i_278++) {
+        Expression* item = (Expression*)(intptr_t)_a_278->items[_i_278];
         do {
     bool present = false;
-    ({ SpecArray* _a_280 = targetItems->arrayItems; if (_a_280) { for (size_t _i_280 = 0; _i_280 < _a_280->length; _i_280++) {
-        Expression* existing = (Expression*)(intptr_t)_a_280->items[_i_280];
+    ({ SpecArray* _a_279 = targetItems->arrayItems; if (_a_279) { for (size_t _i_279 = 0; _i_279 < _a_279->length; _i_279++) {
+        Expression* existing = (Expression*)(intptr_t)_a_279->items[_i_279];
         do {
     if ((((!(present))) && (spec_string_equals(existing->stringValue, item->stringValue)))) {
         present = true;
@@ -34396,11 +34394,11 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SPEC_AUTO SpecArray* mergedMembers = (SpecArray*)((ClassInfo_getMembers(target) /* inst:ClassInfo:getMembers */));
     long long scan = 0;
     ({ while (1) {
-        bool _ev_281 = false;
+        bool _ev_280 = false;
         do {
-    _ev_281 = ((scan) < (spec_array_length(mergedMembers))); break;
+    _ev_280 = ((scan) < (spec_array_length(mergedMembers))); break;
         } while (0);
-        if (!_ev_281) break;
+        if (!_ev_280) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(mergedMembers, scan)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("init"))) {
@@ -34420,11 +34418,11 @@ void Loader_stripMemberNamed(Loader* self, ClassInfo* target, String name) {
     SPEC_AUTO SpecArray* members = (SpecArray*)((ClassInfo_getMembers(target) /* inst:ClassInfo:getMembers */));
     long long idx = ((spec_array_length(members)) - (1));
     ({ while (1) {
-        bool _ev_282 = false;
+        bool _ev_281 = false;
         do {
-    _ev_282 = ((idx) >= (0)); break;
+    _ev_281 = ((idx) >= (0)); break;
         } while (0);
-        if (!_ev_282) break;
+        if (!_ev_281) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), name)) {
@@ -34439,11 +34437,11 @@ void Loader_stripMemberNamed(Loader* self, ClassInfo* target, String name) {
 void Loader_removeClassFromLoaded(Loader* self, ClassInfo* c) {
     long long idx = 0;
     ({ while (1) {
-        bool _ev_283 = false;
+        bool _ev_282 = false;
         do {
-    _ev_283 = ((idx) < (spec_array_length(self->loadedClasses))); break;
+    _ev_282 = ((idx) < (spec_array_length(self->loadedClasses))); break;
         } while (0);
-        if (!_ev_283) break;
+        if (!_ev_282) break;
         do {
     SPEC_AUTO ClassInfo* cur = (ClassInfo*)spec_retain((void*)(spec_array_get(self->loadedClasses, idx)));
     if (((cur) == (c))) {
@@ -34459,11 +34457,11 @@ void Loader_removeClassFromLoaded(Loader* self, ClassInfo* c) {
 void Loader_mergeGroups(Loader* self) {
     long long idx = 0;
     ({ while (1) {
-        bool _ev_284 = false;
+        bool _ev_283 = false;
         do {
-    _ev_284 = ((idx) < (spec_array_length(self->groupTargets))); break;
+    _ev_283 = ((idx) < (spec_array_length(self->groupTargets))); break;
         } while (0);
-        if (!_ev_284) break;
+        if (!_ev_283) break;
         do {
     SPEC_AUTO String gName = spec_construct_string(spec_array_get(self->groupTargets, idx));
     SPEC_AUTO ClassInfo* frag = (ClassInfo*)spec_retain((void*)(spec_array_get(self->groupFragments, idx)));
@@ -34500,8 +34498,8 @@ ProgramNode* Loader_loadProgram(Loader* self, String rootPath) {
 }
 
 void Loader_appendImplicitAny(Loader* self) {
-    ({ SpecArray* _a_285 = self->loadedClasses; if (_a_285) { for (size_t _i_285 = 0; _i_285 < _a_285->length; _i_285++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_285->items[_i_285];
+    ({ SpecArray* _a_284 = self->loadedClasses; if (_a_284) { for (size_t _i_284 = 0; _i_284 < _a_284->length; _i_284++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_284->items[_i_284];
         do {
     if ((((((((!spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum")))) && (((spec_array_length(((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */))))) == (0))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("Any")))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("Stringable")))))) {
         ClassInfo_withBaseClasses(c, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Any"))); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */)))) /* inst:ClassInfo:withBaseClasses */;

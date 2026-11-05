@@ -18,4 +18,8 @@
 		## Refcounted copy of buffer [b].
 		Function of String is bufCopy(String is b){
 		}
+
+		## Bytes [start] (inclusive) to [end] (exclusive) of buffer [b].
+		Function of String is bufSubstring(String is b, Int is start, Int is end){
+		}
 	}

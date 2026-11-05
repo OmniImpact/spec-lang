@@ -24,6 +24,15 @@ Class is String{
 
 	## Bytes from [start] (inclusive) to [end] (exclusive), clamped to bounds.
 	Function of String is substring(Int is start, Int is end){
+		local Int is s: start;
+		local Int is e: end;
+		if (s < 0) {
+			s: 0;
+		}
+		if (e > Buf:bufLength(b: self)) {
+			e: Buf:bufLength(b: self);
+		}
+		return Buf:bufSubstring(b: self, start: s, end: e);
 	}
 
 	## True when this string begins with [prefix].
