@@ -320,12 +320,34 @@ the fresh ref. Measured classes (self-compile, ASan):
   *only* remaining ref and never re-assigns over a shared adopt (VAR_DECL with
   `SPEC_AUTO` is safe; ASSIGN is not, without per-value ownership tracking).
 
-**Recommended design:** make returns of ARC values *owned by convention* (the
-return emitter skips `spec_retain` when the returned expression is provably
-fresh: constructor calls, concat chains, claim-true builtins), then flip the
-three consumer sites (RETURN, `add`, ASSIGN) to transfer/owned variants keyed on
-the same freshness predicate. Land one site per convergence cycle with the
-sanitizer suite as the gate; enum_when_test is the canary that caught the UAF.
+**Cycle results (owned-returns, one site per cycle):**
+- RETURN site — LANDED (leak-pass 2a): `isFreshConstructorCall` (CALL on a class
+  target, method init/new) passes the creator-abandoned ref through raw. Safe
+  because it only *removes* an over-retain; nothing new is released. 86k → 81k
+  allocs.
+- ADD site — ATTEMPTED AND REVERTED, with two decisive findings:
+  1. claims-true call results are **pool-claimed at generation time** (the emitted
+     args already carry `spec_claim_pool`); the pool owns the ref and the consumer
+     must retain. Any adoption (`add_owned`) double-adopts → pool eviction
+     releases a ref the array now owns → UAF. Consumers of claims-true values:
+     retain, never adopt.
+  2. **The leaks are load-bearing.** The dominant class is not fresh-arg orphans
+     but containers created with `elem_kind = NONE` (empty `[]` literals in field
+     defaults and locals whose LHS type inference fails), so `destroy` never
+     releases their items. Repairing the kind at the add site makes destroy
+     actually free AST nodes — and crashes: registries (ClassInfo maps, type
+     tables) hold *borrow-without-retain* pointers into those arrays. The leaks
+     keep those borrowers alive.
+
+**Revised order of operations for the leak ratchet:**
+1. Container creation must carry its element kind: fix the empty-literal and
+   field-default creation sites to consult the declared type (`Array of Token`
+   → `spec_array_new_object()`), not the add sites.
+2. Audit every cross-structure reference that borrows from a container local and
+   give it an explicit retain (or restructure ownership).
+3. Only then does destroy-freeing become safe and the gate can flip. Until step
+   2 completes, leaks are correctness-preserving and the budget is a tracked
+   metric, not a failure.
 
 ## 8. Verification Protocol
 
