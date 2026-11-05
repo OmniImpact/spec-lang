@@ -944,13 +944,6 @@ Class is BuiltinCallGenerator{
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';
 		}
-		if (expr:methodName == 'endsWith') {
-			local String is sfxC: '""';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'suffix' || sfxC == '""') { sfxC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_ends_with(' . targetC . ', ' . sfxC . ')';
-		}
 		if (expr:methodName == 'contains') {
 			local String is needleC: '""';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){

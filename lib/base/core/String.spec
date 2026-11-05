@@ -49,6 +49,15 @@ Class is String{
 
 	## True when this string ends with [suffix].
 	Function of Boolean is endsWith(String is suffix){
+		local Int is sl: Buf:bufLength(b: suffix);
+		if (sl == 0) {
+			return true;
+		}
+		local Int is bl: Buf:bufLength(b: self);
+		if (sl > bl) {
+			return false;
+		}
+		return Buf:bufSubstring(b: self, start: bl - sl, end: bl) == suffix;
 	}
 
 	## True when [needle] occurs anywhere in this string (empty needle: true).
