@@ -286,12 +286,12 @@ Class is Lexer{
 	## @return: Digit value, or -1 when not a hex digit.
 	Function of Int is digitValue(String is ch){
 		local String is lower: '0123456789abcdef';
-		local Int is d: lower:indexOf(needle: ch, default: -1);
+		local Int is d: lower:indexOf(search: ch, default: -1);
 		if (d >= 0) {
 			return d;
 		}
 		local String is upper: 'ABCDEF';
-		local Int is u: upper:indexOf(needle: ch, default: -1);
+		local Int is u: upper:indexOf(search: ch, default: -1);
 		if (u >= 0) {
 			return u + 10;
 		}

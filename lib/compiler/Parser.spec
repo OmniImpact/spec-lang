@@ -406,7 +406,7 @@ Class is Parser{
 				local String is nameVal: tok0:getValue();
 				local String is firstChar: nameVal:charAt(index: 0, default: '');
 				local String is uppers: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-				local Boolean is isUpper: uppers:indexOf(needle: firstChar, default: -1) != -1;
+				local Boolean is isUpper: uppers:indexOf(search: firstChar, default: -1) != -1;
 				if (!isUpper) {
 					local Token is nextTok: self:parser:peekAhead(offset: 2);
 					local Boolean is isNamed: false;

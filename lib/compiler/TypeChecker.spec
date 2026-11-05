@@ -916,7 +916,7 @@ Class is TypeChecker{
 					res: leftT:substring(start: 6, end: leftT:length());
 				} else if (leftT:startsWith(prefix: 'Map:') && leftT:length() > 4) {
 					local String is afterMap: leftT:substring(start: 4, end: leftT:length());
-					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
+					local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
 					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 						res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 					} else {
@@ -1017,7 +1017,7 @@ Class is TypeChecker{
 					}
 				} else if (targetType:startsWith(prefix: 'Map:') && method == 'each') {
 					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
-					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
+					local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
 					local String is valTypeName: 'String';
 					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 						valTypeName: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
@@ -1169,7 +1169,7 @@ Class is TypeChecker{
 					}
 				} else if (targetType:startsWith(prefix: 'Map:') && method == 'get') {
 					local String is afterMap: targetType:substring(start: 4, end: targetType:length());
-					local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
+					local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
 					if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 						res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 					} else {

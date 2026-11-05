@@ -199,13 +199,13 @@ Class is CodeGenerator{
 			elem: containerType:substring(start: 5, end: containerType:length());
 		} else if (containerType:startsWith(prefix: 'Map of ')) {
 			local String is rest: containerType:substring(start: 7, end: containerType:length());
-			local Int is toIdx: rest:indexOf(needle: ' to ', default: -1);
+			local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
 			if (toIdx >= 0) {
 				elem: rest:substring(start: toIdx + 4, end: rest:length());
 			}
 		} else if (containerType:startsWith(prefix: 'Map:')) {
 			local String is rest: containerType:substring(start: 4, end: containerType:length());
-			local Int is colonIdx: rest:indexOf(needle: ':', default: -1);
+			local Int is colonIdx: rest:indexOf(search: ':', default: -1);
 			if (colonIdx >= 0) {
 				elem: rest:substring(start: colonIdx + 1, end: rest:length());
 			}
@@ -316,7 +316,7 @@ Class is CodeGenerator{
 				if (mRet == '' || mRet == 'void' || mRet == 'Void') {
 					return false;
 				}
-				if (mRet == targetT && expr:methodName != 'init' && expr:methodName != targetT) {
+				if (mRet == targetT && expr:methodName != 'init' && expr:methodName != targetT && !self:isBuiltinClass(name: targetT)) {
 					return false;
 				}
 			}

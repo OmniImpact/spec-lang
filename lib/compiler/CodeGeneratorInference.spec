@@ -401,7 +401,7 @@ Class is CodeGeneratorInference{
 			local String is outVar: '_out_' . id;
 			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:getName());
 			if (retCType == 'void') { retCType: 'void*'; }
-			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1) == '*';
+			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1, default: '') == '*';
 			local String is outNewC: 'spec_array_new()';
 			if (self:isArcType(typeName: fnExpr:anonReturnType:getName())) {
 				outNewC: 'spec_array_new_object()';
@@ -443,7 +443,7 @@ Class is CodeGeneratorInference{
 		self:inlineReturnVar: accVar;
 		self:inlineReturnLabel: 'break';
 		local Boolean is savedArc2: self:inlineReturnArc;
-		self:inlineReturnArc: accCType:charAt(index: accCType:length() - 1) == '*';
+		self:inlineReturnArc: accCType:charAt(index: accCType:length() - 1, default: '') == '*';
 
 		local String is paramDecl: '';
 		if (fnExpr:anonParams:length() >= 1) {

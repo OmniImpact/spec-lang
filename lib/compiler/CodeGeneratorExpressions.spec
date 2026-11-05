@@ -255,7 +255,7 @@ Class is CodeGeneratorExpressions{
 					local String is valType: 'String';
 					if (targetType:startsWith(prefix: 'Map:')) {
 						local String is afterMap: targetType:substring(start: 4, end: targetType:length());
-						local Int is colonIdx: afterMap:indexOf(needle: ':', default: -1);
+						local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
 						if (colonIdx >= 0 && colonIdx + 1 < afterMap:length()) {
 							valType: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 						}
