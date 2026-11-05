@@ -32,11 +32,12 @@ echo "== Building ASan/UBSan-instrumented compiler =="
 	-fno-omit-frame-pointer \
 	"$ROOT/bootstrap/spec.c" -o "$ROOT/spec-asan" -pthread -lm
 
-# Leak detection is OFF by default. Strings are refcounted and interned; the
-# direct-leak residue is 414 blocks (~33 KB per self-compile): read
-# materializations consumed as borrows in a handful of paths. The gate covers
+# Leak detection is OFF by default. Strings are refcounted (SpecBuf-backed since
+# Task 4b) and interned; the direct-leak residue after leak-pass 1 is ~1.18 MB /
+# ~86k allocs per self-compile, dominated by fresh-owned values consumed by
+# retaining sites (see PLAN-STRING.md §7.1 ownership audit map). The gate covers
 # the dangerous classes: use-after-free, out-of-bounds, double-free, fatal UB.
-# Phase 4 flips detect_leaks=1 once those classes are closed.
+# Phase 4 flips detect_leaks=1 once the ownership audit (Task 7b) closes those.
 export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 export UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=1:halt_on_error=1}"
 

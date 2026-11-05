@@ -270,10 +270,62 @@ clean diff.
       clone-if-buffered, ring-copy, length caches, atexit shutdown,
       `SPEC_ELEM_STRING` paths, transfer/owned variants, and read-materialization
       sites deleted; `spec_str_equals` retained (content compare).
+- [x] **Task 4b: SpecString parallel-type bootstrap (Steps 1–3)** — String's
+      representation is now a `SpecBuf` (elem_size 1, NUL-termination invariant,
+      zero-copy `spec_buf_to_cstring`); the old char\* API was made SpecBuf-native
+      in one converged cycle (commit 5f88f09), with interning restored for 1-char
+      results. Map literals store strdup'd keys/values; every codegen emitter
+      boundary (ARC casts, enum `_name`/`_value`/`_toString`, printf, argv
+      template, getline→onInput, map/forEach plumbing) produces managed strings.
+- [x] **Task 4c: Canonical runtime family (Step 4)** — `spec_str_*` and
+      `spec_specstring_*` consolidated into one `spec_string_*` family (commit
+      945c41a); the old layers are gone from the prelude and the emitters.
+- [x] **Task 4d: Type rename (Step 5)** — `SpecString` → `String` end-to-end via
+      the two-cycle bootstrap rename (dual typedefs, then alias removal; commit
+      a47c7d5). Emitted code contains zero `SpecString` references and compiles
+      with plain `gcc -O2` (no tolerance flags).
+- [x] **Task 7a: Leak pass 1** — 1-char results interned again; prefix/suffix
+      compares are non-allocating. Budget: 1.18 MB / 86k allocs per self-compile
+      (was 2.7 MB / 172k). Transfer-based assign ownership and owned
+      map-getString defaults were attempted and REVERTED (see Task 7b).
 - [ ] **Task 5: Pure-Spec `String` class** — real bodies over primitives.
 - [ ] **Task 6: Interception shrink** — `BuiltinCallGenerator` down to the floor.
 - [ ] **Task 7: Leak ratchet** — `detect_leaks=1` default in harness and CI.
+      Blocked on the ownership audit (Task 7b).
 - [ ] **Task 8: Docs** — language guide, packages reference, README, MAINTENANCE.md.
+
+### 7.1 Phase-4 ownership audit map (Task 7b)
+
+The remaining ~86k leaks per self-compile are one systematic class: expressions
+that produce a *fresh owned* value consumed by a site that *retains*, orphaning
+the fresh ref. Measured classes (self-compile, ASan):
+
+| Class | Objects | Site |
+|---|---|---|
+| add-of-fresh | ~38k | `tokens:add(Token:init(...))` — `spec_array_add` retains, fresh ref dropped |
+| return-of-fresh | ~12k | `return <fresh concat>` — return emitter retains, fresh ref orphaned |
+| getString copies | ~9k | hit path returns a fresh copy per lookup |
+| concat-in-loops | ~5k | escapeString / cTypeFor / postfix chains |
+| working-set residue | ~1k | pre-existing AST/type-graph refs at exit |
+
+**Findings from the attempted fixes (do not re-attempt blindly):**
+- `spec_assign_transfer` on all `yieldsClaim`-true assignments introduced a UAF
+  (enum_when_test): claims-true values can be *shared* (e.g. a type string both
+  assigned to a local and cached on an AST node); transfer lets a later
+  re-assignment release a ref another holder still owns.
+- `spec_claim_pool` around assignment RHS breaks the pool contract (the pool
+  adopts the sole ref, `spec_assign` retains a second one, the slot dangles and
+  double-releases on eviction).
+- The safe rule observed so far: adopt only where the consumer takes the value's
+  *only* remaining ref and never re-assigns over a shared adopt (VAR_DECL with
+  `SPEC_AUTO` is safe; ASSIGN is not, without per-value ownership tracking).
+
+**Recommended design:** make returns of ARC values *owned by convention* (the
+return emitter skips `spec_retain` when the returned expression is provably
+fresh: constructor calls, concat chains, claim-true builtins), then flip the
+three consumer sites (RETURN, `add`, ASSIGN) to transfer/owned variants keyed on
+the same freshness predicate. Land one site per convergence cycle with the
+sanitizer suite as the gate; enum_when_test is the canary that caught the UAF.
 
 ## 8. Verification Protocol
 
@@ -285,9 +337,12 @@ bash utilities/run_tests.sh
 bash utilities/run_sanitized.sh
 
 # 3. 3-stage bootstrap convergence + re-baseline (per MAINTENANCE.md)
-./spec -i lib/compiler/Driver.spec -o spec-stage1
-./spec-stage1 -i lib/compiler/Driver.spec -o spec-stage2 --emit-c /tmp/stage2.c
-./spec-stage2 -i lib/compiler/Driver.spec -o spec-stage3 --emit-c /tmp/stage3.c
+./spec -i lib/compiler/Driver.spec --emit-c /tmp/stage1.c
+gcc -O2 /tmp/stage1.c -o spec-stage1 -pthread -lm
+./spec-stage1 -i lib/compiler/Driver.spec --emit-c /tmp/stage2.c
+gcc -O2 /tmp/stage2.c -o spec-stage2 -pthread -lm
+./spec-stage2 -i lib/compiler/Driver.spec --emit-c /tmp/stage3.c
+gcc -O2 /tmp/stage3.c -o spec-stage3 -pthread -lm
 diff -s /tmp/stage2.c /tmp/stage3.c
 cp spec-stage3 spec && cp /tmp/stage3.c bootstrap/spec.c && ./bootstrap.sh
 
