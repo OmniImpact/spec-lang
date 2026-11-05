@@ -390,6 +390,37 @@ value kinds (the field-default/empty-literal path must consult the declared
 type the way VAR_DECL does). That creation-site fix is the next session's first
 move; the ASSIGN transfer and the 87k-orphan class land immediately after.
 
+### 7.2 Runtime introspection plumbing (RTCORE v1)
+
+The runtime already owns the hard part of program introspection: per-address
+op-history rings, atomic refcounts, allocation sites, the claim pool. What it
+lacks is a **boundary** — the data lives in C structs and escapes as ad-hoc
+stderr text. Spec programs (and our own verification loop) need it readable.
+This plumbing is also the seed of future Spec debugging/tracing: the C floor
+stays a floor, all policy lands in Spec, consistent with the sysinternal
+architecture.
+
+Scope (bounded — the part that is cheap now and expensive to retrofit):
+
+1. **RTCORE v1 dump format** — the ledger's atexit output becomes a versioned,
+   stable record set (TSV-style: `ptr, ref_count, alloc_site, last_ops...`),
+   env-gated as today. Old ad-hoc lines are replaced; the format is frozen so
+   dumps stay analyzable and old tools keep working.
+2. **`sysinternal:rt` floor** — body-less C-declared functions materializing
+   the same data as Spec containers (`[RtRecord]`, site-keyed maps) for
+   in-process queries.
+3. **`sys:RuntimeReport` wrapper (Spec)** — parses a dump file with Spec's own
+   strings / `split` / maps / `parse_base`, and answers the ratchet's questions:
+   group live objects by alloc site; flag sites whose objects end on an
+   unmatched retain; attribute a live object to its creating container.
+
+Sequencing (agreed): land the **container creation-kind fix** first (it is the
+measured blocker: the 87k-orphan class sits behind the ASSIGN transfer, which
+is safe only once NONE-kind maps stop holding borrows and fake pointers); then
+build (1)-(3); then land the ASSIGN transfer with the RuntimeReport as the
+per-cycle verifier; then flip `detect_leaks=1`. The first customer of the
+Report is the token-text class — the one stuck ref still unlocated.
+
 **RC-ledger findings (Task 7b tooling):** the `SPEC_RC_DEBUG` ledger's shadow
 count diverges from the atomic `ref_count` — at the flagged release the real
 header showed `ref_count = 4` (object alive and healthy) while the ledger had
