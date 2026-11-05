@@ -30,4 +30,24 @@
 		## Buffer [b] with every [search] occurrence replaced by [replacement].
 		Function of String is bufReplace(String is b, String is search, String is replacement){
 		}
+
+		## Buffer [b] with leading/trailing space, tab, newline, CR removed.
+		Function of String is bufTrim(String is b){
+		}
+
+		## True when [b] is non-empty and every byte is a digit.
+		Function of Boolean is bufIsDigit(String is b){
+		}
+
+		## True when [b] is non-empty and every byte is a letter.
+		Function of Boolean is bufIsAlpha(String is b){
+		}
+
+		## True when [b] is non-empty and every byte is whitespace.
+		Function of Boolean is bufIsWhitespace(String is b){
+		}
+
+		## Number of leading [search] repetitions in buffer [b].
+		Function of Int is bufCountLeading(String is b, String is search){
+		}
 	}

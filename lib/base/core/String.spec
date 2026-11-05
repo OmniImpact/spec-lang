@@ -85,22 +85,27 @@ Class is String{
 
 	## Whitespace-trimmed copy (' ', '\t', '\n', '\r').
 	Function of String is trim(){
+		return Buf:bufTrim(b: self);
 	}
 
 	## Number of leading [search] repetitions.
 	Function of Int is countLeading(String is search){
+		return Buf:bufCountLeading(b: self, search: search);
 	}
 
 	## True when every byte is a digit and the string is non-empty.
 	Function of Boolean is isDigit(){
+		return Buf:bufIsDigit(b: self);
 	}
 
 	## True when every byte is a letter and the string is non-empty.
 	Function of Boolean is isAlpha(){
+		return Buf:bufIsAlpha(b: self);
 	}
 
 	## True when every byte is whitespace and the string is non-empty.
 	Function of Boolean is isWhitespace(){
+		return Buf:bufIsWhitespace(b: self);
 	}
 
 	## One-character string for [code] (0-255); empty when out of range.

@@ -955,6 +955,28 @@ Class is BuiltinCallGenerator{
 				cg:generateExpression(expr: searchArg:getValue()) . ', ' .
 				cg:generateExpression(expr: replArg:getValue()) . ')';
 		}
+		if (targetC == 'Buf' && expr:methodName == 'bufTrim' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_string_trim(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufIsDigit' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_string_is_digit(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufIsAlpha' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_string_is_alpha(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufIsWhitespace' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_string_is_whitespace(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufCountLeading' && expr:methodArgs:length() > 1) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is searchArg: expr:methodArgs:get(index: 1);
+			return 'spec_string_count_leading(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: searchArg:getValue()) . ')';
+		}
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
@@ -967,27 +989,8 @@ Class is BuiltinCallGenerator{
 			});
 			return 'spec_string_split(' . targetC . ', ' . delimC . ')';
 		}
-		if (expr:methodName == 'trim') {
-			return 'spec_string_trim(' . targetC . ')';
-		}
-		if (expr:methodName == 'isDigit') {
-			return 'spec_string_is_digit(' . targetC . ')';
-		}
-		if (expr:methodName == 'isAlpha') {
-			return 'spec_string_is_alpha(' . targetC . ')';
-		}
-		if (expr:methodName == 'isWhitespace') {
-			return 'spec_string_is_whitespace(' . targetC . ')';
-		}
 		if (expr:methodName == 'lines') {
 			return 'spec_string_lines(' . targetC . ')';
-		}
-		if (expr:methodName == 'countLeading') {
-			local String is searchC: '""';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'search') { searchC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_count_leading(' . targetC . ', ' . searchC . ')';
 		}
 
 		# Enum methods
