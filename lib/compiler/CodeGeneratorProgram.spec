@@ -185,7 +185,12 @@ Class is CodeGeneratorProgram{
 					if (curCls:getTypeParams():indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
 						retC: '(void*)(intptr_t)(' . retC . ')';
 					} else if (self:isArcType(typeName: self:currentMethodReturnType)) {
-						if (self:isFreshConstructorCall(expr: stmt:returnExpr)) {
+						local Boolean is ownedLocal: retKind == 'IDENT' && self:localScopeVars:has(key: stmt:returnExpr:stringValue);
+						if (ownedLocal) {
+							local String is identC: self:cIdent(name: stmt:returnExpr:stringValue);
+							local String is rtC: self:cTypeFor(typeName: self:currentMethodReturnType);
+							retC: '(' . rtC . ')({ ' . rtC . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
+						} else if (self:isFreshConstructorCall(expr: stmt:returnExpr)) {
 							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')(' . retC . ')';
 						} else {
 							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
