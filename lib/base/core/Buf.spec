@@ -50,4 +50,13 @@
 		## Number of leading [search] repetitions in buffer [b].
 		Function of Int is bufCountLeading(String is b, String is search){
 		}
+
+		## Parts of buffer [b] split on [delimiter]; the trailing part is
+		## always present. Empty delimiter: every byte is its own part.
+		Function of Array of String is bufSplit(String is b, String is delimiter){
+		}
+
+		## Lines of buffer [b] (split on newline, trailing CR stripped).
+		Function of Array of String is bufLines(String is b){
+		}
 	}

@@ -977,22 +977,21 @@ Class is BuiltinCallGenerator{
 			return 'spec_string_count_leading(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
 				cg:generateExpression(expr: searchArg:getValue()) . ')';
 		}
+		if (targetC == 'Buf' && expr:methodName == 'bufSplit' && expr:methodArgs:length() > 1) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is delimArg: expr:methodArgs:get(index: 1);
+			return 'spec_string_split(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: delimArg:getValue()) . ')';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufLines' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_string_lines(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';
 		}
-		if (expr:methodName == 'split') {
-			local String is delimC: '""';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'delimiter' || delimC == '""') { delimC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_split(' . targetC . ', ' . delimC . ')';
-		}
-		if (expr:methodName == 'lines') {
-			return 'spec_string_lines(' . targetC . ')';
-		}
-
 		# Enum methods
 		if (self:allEnumNames:has(key: targetC) && expr:methodName == 'values') {
 			return targetC . '_values()';

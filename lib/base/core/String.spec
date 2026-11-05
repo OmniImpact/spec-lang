@@ -77,10 +77,12 @@ Class is String{
 
 	## Splits on [delimiter]; the trailing part is always present.
 	Function of Array of String is split(String is delimiter){
+		return Buf:bufSplit(b: self, delimiter: delimiter);
 	}
 
 	## Lines of this string (split on '\n', '\r' stripped).
 	Function of Array of String is lines(){
+		return Buf:bufLines(b: self);
 	}
 
 	## Whitespace-trimmed copy (' ', '\t', '\n', '\r').

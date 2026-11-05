@@ -148,6 +148,12 @@ source. The package model (decided in prior sessions) is:
 
 Bridge scope (old compiler): parse the array forms (largely designed — Loader's
 `PackageSegLoop`), resolve using entries against the scan roots, admit the classes.
+Bridge also needs the sysinternal structural rule's two syntax features: **interface-style
+(no-brackets `;`) method declarations** and **namespace-qualified construct-and-call**
+(`base:sysinternal:Buf():bufLength(b)`). With those, the floor restructure lands: the
+twelve existing `Buf` primitives move to `base:sysinternal:Buf` as interface-style
+declarations, `base:core:Buf` becomes the delegating facade, and the Buf interception
+branches retarget the sysinternal class.
 Explicitly **out of bridge scope**: full package-semantics polish, the layout-mismatch
 lint, deleting the old colon-form, and any retrofit of `lib/` to the new syntax. The
 new compiler (Phase G) implements the real semantics and dogfoods them on its own source.
@@ -158,9 +164,45 @@ the new compiler. This is what ends the generation-lag churn permanently.
 
 ## 6. Phase D — The Floor Contract (`sysinternal`)
 
-The new compiler is written against a stable floor contract designed once, up front —
-not primitives invented per class. Target: **~40–60 tiny C functions** (vs ~230 today),
-each 2–15 lines, living in the `sysinternal` package — the sole non-dynamic package.
+**Structural rule (governs both compilers): every C-implemented function is represented
+by a `sysinternal` package class, and nothing else may touch C. The namespace is the
+annotation** — a class whose namespace ends with the segment `sysinternal` is a floor
+class; its interface-style declarations bind to C. The compiler enforces:
+
+- a **body** in a `sysinternal` class is a build error (floor classes are pure bindings);
+- a **body-less declaration outside `sysinternal`** is a build error;
+- anything but direct construct-and-call on a floor class is rejected (no vtable, no
+  subclassing, no overriding; the classes are stateless so `Buf():op(...)` is free).
+
+**C binding convention (no annotations, no tables):** a floor declaration binds to
+`spec_` + snake_case of the method name — `bufLength` → `spec_buf_length`,
+`bufGetByte` → `spec_buf_get_byte`, `fdOpen` → `spec_fd_open`. Consequences: floor
+method names carry their own grouping prefix (`buf*`, `fd*`, `sock*`, `proc*`, `thr*`),
+must be lowerCamel with no consecutive capitals (lint-checkable, keeps the case fold
+trivial), and must be unique across all of `sysinternal` — a duplicate `spec_*` target
+is a build error. The `external` keyword remains the one per-declaration marker, for
+bindings to symbols *outside* the runtime floor (`external Function of Float is
+sin(Float is x);` → C symbol `sin`, i.e. libm) — everything else binds internally.
+
+- `sysinternal` classes are **interface-style**: body-less, no-brackets declarations —
+  `Function of Int is bufLength(String is b);` — bound to C by the convention above.
+- Public classes **delegate explicitly**. A facade method reads:
+  ```
+  Function of Int is bufLength(String is b){
+      return base:sysinternal:Buf():bufLength(b);
+  }
+  ```
+  Every C dependency is therefore a visible Spec call chain; there is no hidden
+  interception surface and the "No Magic / userland implementation" promise is enforced
+  structurally — the compiler can *check* it (see the three rules above).
+- The current `base:core:Buf` body-less-with-brackets form is **transitional** (the old
+  compiler cannot yet parse interface-style declarations). When the bridge lands,
+  `Buf` becomes the delegation facade over `base:sysinternal:Buf`, and String's bodies
+  keep calling `Buf:bufX(...)` unchanged — the delegation is a mechanical rewrite of one
+  file, not of the call sites.
+
+The floor's function inventory (target: **~40–60 tiny C functions** vs ~230 today,
+each 2–15 lines):
 
 1. **Memory + ARC (4)**: `spec_alloc`, `spec_retain`, `spec_release`, `spec_assign`.
    Generated code calls these everywhere; they stay in C.
@@ -231,9 +273,11 @@ The macro-architecture is sound and is kept: Lexer → Parser → TypeChecker �
 DeclarationGenerator/CodeGenerator → Loader → Driver. The lessons live in the details,
 and each is designed in rather than patched in:
 
-- **No interceptor concept at all.** Body-less floor declarations + direct dispatch is
-  the *only* mechanism. A method is either Spec code or a floor binding; there is no
-  third path and no per-method C branches.
+- **No interceptor concept at all.** `sysinternal` interface classes are the *only*
+  body-less-legal classes; their declarations bind to C by convention and dispatch
+  directly (no vtable, no subclassing). Every other class must have real bodies, and
+  public facades delegate to `sysinternal` explicitly. A method is either Spec code or
+  a floor binding reached through a visible delegation chain — there is no third path.
 - **`String` is-a-Buf as ground truth** — no transparent-class special cases, no
   self-param pointer-depth heuristics; the type system knows buffers natively.
 - **Container typing without prefix heuristics** — generic types are parsed structures,
@@ -299,3 +343,6 @@ compiler driving compilation end to end.
    the suite is the spec, for both compilers.
 5. The floor contract (§6) changes only by explicit decision recorded here — not by
    accretion while porting.
+6. **No body-less method declarations outside `sysinternal`** — checkable by the
+   compiler itself; a violation is a build error, not a style nit. Public facades
+   always delegate through a visible `base:sysinternal:...():...` call chain.
