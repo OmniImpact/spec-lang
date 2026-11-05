@@ -919,19 +919,22 @@ Class is BuiltinCallGenerator{
 			local NamedArg is bArg: expr:methodArgs:get(index: 0);
 			return 'spec_buf_length(' . cg:generateExpression(expr: bArg:getValue()) . ')';
 		}
+		if (targetC == 'Buf' && expr:methodName == 'bufGetByte' && expr:methodArgs:length() > 2) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is idxArg: expr:methodArgs:get(index: 1);
+			local NamedArg is defArg: expr:methodArgs:get(index: 2);
+			return 'spec_buf_get_byte(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: idxArg:getValue()) . ', ' .
+				cg:generateExpression(expr: defArg:getValue()) . ', (SpecClosure*)NULL)';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufCopy' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_string_copy(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
 
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';
-		}
-		if (expr:methodName == 'charAt') {
-			local String is idxC: '0';
-			local String is defC: 'spec_string_intern("")';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'index') { idxC: cg:generateExpression(expr: arg:getValue()); }
-				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_string_char_at(' . targetC . ', ' . idxC . ', ' . defC . ')';
 		}
 		if (expr:methodName == 'substring') {
 			local String is startC: '0';

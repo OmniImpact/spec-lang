@@ -5,9 +5,17 @@
 ## The String class implements its methods over these primitives; ownership
 ## follows the standard claim/retain conventions.
 
-Class is Buf{
+	Class is Buf{
 
-	## Number of bytes held by the buffer [b].
-	Function of Int is bufLength(String is b){
+		## Number of bytes held by the buffer [b].
+		Function of Int is bufLength(String is b){
+		}
+
+		## Byte value at [idx], or [def] when out of bounds.
+		Function of Int is bufGetByte(String is b, Int is idx, Int is def){
+		}
+
+		## Refcounted copy of buffer [b].
+		Function of String is bufCopy(String is b){
+		}
 	}
-}

@@ -16,6 +16,10 @@ Class is String{
 
 	## One-character string at [index], or [default] when out of bounds.
 	Function of String is charAt(Int is index, String is default){
+		if (index < 0 || index >= Buf:bufLength(b: self)) {
+			return Buf:bufCopy(b: default);
+		}
+		return String:fromCharCode(code: Buf:bufGetByte(b: self, idx: index, def: -1));
 	}
 
 	## Bytes from [start] (inclusive) to [end] (exclusive), clamped to bounds.
