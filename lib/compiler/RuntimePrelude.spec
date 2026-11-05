@@ -112,6 +112,8 @@ Class is RuntimePrelude{
 		p: p . "    if (!src) return spec_string_intern(\"\");\n";
 		p: p . "    return spec_string_from_chars((const char*)src);\n";
 		p: p . "}\n\n";
+		p: p . "/* SpecString: the managed string type (initially char*, transitions to SpecBuf) */\n";
+		p: p . "typedef char* SpecString;\n\n";
 		p: p . "/* Spec Automated Reference Counting (ARC) Primitives */\n";
 		p: p . "#define SPEC_S_IMMORTAL 1u\n";
 		p: p . "#define SPEC_S_HASLEN 2u\n";
