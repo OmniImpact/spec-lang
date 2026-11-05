@@ -497,7 +497,7 @@ Class is CodeGeneratorInference{
 		if (fnExpr:anonParams:length() >= 1) {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p0:getName(), value: 'String');
-			paramDecl: paramDecl . '            SpecString ' . self:cIdent(name: p0:getName()) . ' = spec_string_from_chars(' . eVar . "->key);\n";
+			paramDecl: paramDecl . '            String ' . self:cIdent(name: p0:getName()) . ' = spec_string_from_chars(' . eVar . "->key);\n";
 		}
 		if (fnExpr:anonParams:length() >= 2) {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);

@@ -276,7 +276,7 @@ Class is CodeGeneratorExpressions{
 					return '((' . valCType . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))';
 				}
 				if (targetType == 'Array:String' || targetType == 'Array of String') {
-					return '((SpecString)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
+					return '((String)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
 				}
 				if (targetType:startsWith(prefix: 'Array:') && targetType:length() > 6) {
 					local String is elemT: targetType:substring(start: 6, end: targetType:length());

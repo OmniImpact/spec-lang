@@ -491,8 +491,8 @@ Class is CodeGeneratorProgram{
 				});
 				if (!hasToString && c:getBaseClass() != 'Enum') {
 					local String is cn: c:getName();
-					methods: methods . 'SpecString ' . cn . '_toString(' . cn . "* self);\n";
-					methods: methods . 'SpecString ' . cn . '_toString(' . cn . "* self) {\n";
+					methods: methods . 'String ' . cn . '_toString(' . cn . "* self);\n";
+					methods: methods . 'String ' . cn . '_toString(' . cn . "* self) {\n";
 					methods: methods . "    if (!self) { return spec_string_intern(\"\"); }\n";
 					methods: methods . '    return spec_string_intern("' . cn . '");' . "\n}\n\n";
 				}

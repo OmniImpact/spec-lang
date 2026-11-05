@@ -39,7 +39,7 @@ Class is CBackendUtils{
 			is 'Byte', 'byte': 'unsigned char';
 			is 'Float', 'float': 'double';
 			is 'Boolean', 'bool': 'bool';
-			is 'String', 'string': 'SpecString';
+			is 'String', 'string': 'String';
 			is 'void', 'Void', '': 'void';
 			is 'Array': 'SpecArray*';
 			is 'Map': 'SpecMap*';

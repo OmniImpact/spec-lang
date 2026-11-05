@@ -498,7 +498,7 @@ Class is BuiltinCallGenerator{
 			local String is resCast: '(long long)(intptr_t)';
 			if (elemKind == 'string') {
 				itemPre: '(void*)(';
-				resCast: '(SpecString)';
+				resCast: '(String)';
 			} else if (elemKind == 'object') {
 				itemPre: '(void*)(';
 				resCast: '(' . cg:cTypeFor(typeName: listElem) . ')(intptr_t)';

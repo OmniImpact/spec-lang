@@ -193,7 +193,7 @@ Class is DeclarationGenerator{
 					});
 					out: out . "};\n\n";
 
-					out: out . 'static inline SpecString ' . name . '_name(' . name . " self) {\n";
+					out: out . 'static inline String ' . name . '_name(' . name . " self) {\n";
 					out: out . "    switch (self) {\n";
 					c:getMembers():each(action: local Function(Member is m){
 						out: out . '        case ' . name . '_' . self:cIdent(name: m:getName()) . ': return spec_string_intern("' . m:getName() . '");' . "\n";
@@ -209,7 +209,7 @@ Class is DeclarationGenerator{
 					});
 
 					if (isStrBacked) {
-						out: out . 'static inline SpecString ' . name . '_value(' . name . " self) {\n";
+						out: out . 'static inline String ' . name . '_value(' . name . " self) {\n";
 						out: out . "    switch (self) {\n";
 						c:getMembers():each(action: local Function(Member is m){
 							local String is valStr: m:getName();
@@ -367,7 +367,7 @@ Class is DeclarationGenerator{
 					}
 				});
 
-				out: out . 'static inline SpecString ' . name . '_name(' . name . "* self) {\n";
+				out: out . 'static inline String ' . name . '_name(' . name . "* self) {\n";
 				out: out . "    return self ? spec_string_from_chars(self->_variant_name) : spec_string_intern(\"UNKNOWN\");\n}\n\n";
 				out: out . 'static inline long long ' . name . '_ordinal(' . name . "* self) {\n";
 				out: out . "    return self ? (long long)self->_tag : -1;\n}\n\n";
