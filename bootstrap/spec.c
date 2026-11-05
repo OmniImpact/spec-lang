@@ -22442,6 +22442,84 @@ PathConvLoop* PathConvLoop_new(void) {
     return self;
 }
 
+long long String_length(String* self) {
+    return 0;
+}
+
+String String_charAt(String* self, long long index, String _default) {
+    return 0;
+}
+
+String String_substring(String* self, long long start, long long end) {
+    return 0;
+}
+
+bool String_startsWith(String* self, String prefix) {
+    return 0;
+}
+
+bool String_endsWith(String* self, String suffix) {
+    return 0;
+}
+
+bool String_contains(String* self, String needle) {
+    return 0;
+}
+
+long long String_indexOf(String* self, String search, long long _default) {
+    return 0;
+}
+
+String String_replaceAll(String* self, String search, String replacement) {
+    return 0;
+}
+
+SpecArray* String_split(String* self, String delimiter) {
+    return 0;
+}
+
+SpecArray* String_lines(String* self) {
+    return 0;
+}
+
+String String_trim(String* self) {
+    return 0;
+}
+
+long long String_countLeading(String* self, String search) {
+    return 0;
+}
+
+bool String_isDigit(String* self) {
+    return 0;
+}
+
+bool String_isAlpha(String* self) {
+    return 0;
+}
+
+bool String_isWhitespace(String* self) {
+    return 0;
+}
+
+String String_fromCharCode(String* self, long long code) {
+    return 0;
+}
+
+long long String_parseInt(String* self, long long base, long long _default) {
+    return 0;
+}
+
+void String_init(String* self) {
+    /* default initializer */
+}
+
+String String_toString(String* self);
+String String_toString(String* self) {
+    if (!self) { return spec_string_intern(""); }
+    return spec_string_intern("String");
+}
+
 String Stringable_toString(Stringable* self) {
     return 0;
 }
@@ -33601,7 +33679,7 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     ({ SpecArray* _a_256 = flattenedClasses; if (_a_256) { for (size_t _i_256 = 0; _i_256 < _a_256->length; _i_256++) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_256->items[_i_256];
         do {
-    if ((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) {
+    if ((((!((((bool (*)(CodeGenerator*, String))self->_vtable[183]))((CodeGenerator*)self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))))))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("String"))))) {
         spec_assign((void**)&self->currentClassName, (void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })));
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));

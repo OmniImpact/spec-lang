@@ -467,7 +467,7 @@ Class is CodeGeneratorProgram{
 
 		local String is methods: '';
 		flattenedClasses:each(action: local Function(ClassInfo is c){
-			if (!self:isBuiltinClass(name: c:getName())) {
+			if (!self:isBuiltinClass(name: c:getName()) || c:getName() == 'String') {
 				self:currentClassName: c:getName();
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
