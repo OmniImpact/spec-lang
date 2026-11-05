@@ -859,6 +859,41 @@ Class is BuiltinCallGenerator{
 			}
 		}
 
+		# Buf floor primitives (body-less, bound to the C runtime)
+		if (targetC == 'Buf' && expr:methodName == 'bufLength' && expr:methodArgs:length() > 0) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			return 'spec_buf_length(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
+
+		# String methods with compiled Spec bodies dispatch directly; the rest
+		# fall through to the runtime-interception blocks below.
+		if ((targetType == 'String' || targetType == 'string') && expr:getKind() == 'CALL') {
+			local ClassInfo is strCls;
+			local Boolean is foundCls: false;
+			cg:programClasses:each(action: local Function(ClassInfo is c){
+				if (!foundCls && c:getName() == 'String') { strCls: c; foundCls: true; }
+			});
+			if (foundCls) {
+				local Member is sm;
+				local Boolean is foundM: false;
+				strCls:getMembers():each(action: local Function(Member is m){
+					if (!foundM && m:getName() == expr:methodName && m:getKind() == 'METHOD') { sm: m; foundM: true; }
+				});
+				if (foundM && sm:getBody():length() > 0) {
+					local String is callC: 'String_' . expr:methodName . '(' . targetC;
+					sm:getParameters():each(action: local Function(Parameter is p){
+						local String is argC: '';
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							if (argC == '' && arg:getName() == p:getName()) { argC: cg:generateExpression(expr: arg:getValue()); }
+						});
+						if (argC == '' && p:getHasDefault()) { argC: cg:generateExpression(expr: p:getDefaultExpr()); }
+						callC: callC . ', ' . argC;
+					});
+					return callC . ')';
+				}
+			}
+		}
+
 		# String methods
 		if (expr:methodName == 'length' && (targetType == 'String' || targetType == 'string')) {
 			return 'spec_string_length(' . targetC . ')';

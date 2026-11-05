@@ -364,6 +364,27 @@ the fresh ref. Measured classes (self-compile, ASan):
   claim-pool adoption interplay at scale). Next session: mirror-ledger
   tracing of one stuck substring ref.
 
+**Task 5/6 progress + the signature blocker (current state):**
+- LANLED (48349f4 + 1df90ae): the transparent String class with enforced
+  contract (the validation immediately caught 2 missing `default:` args and
+  reconciled `parseInt`); String's methods compile as C functions over the
+  SpecBuf self; ONE generic direct-dispatch branch replaces per-method
+  interception as bodies migrate; the Buf floor class (body-less, bound to
+  `spec_buf_*`) with its interception branch; the seed's baked namespace
+  lists patched for Buf (three sites: isBuiltinClassName, the IDENT
+  resolution list, isBuiltinClass).
+- BLOCKED: the first body migration (`length` -> `Buf:bufLength(self)`).
+  The method self-param emitter hardcodes `className . '* self'` - for
+  String that is `SpecBuf**` (String is already a pointer). The source fix
+  (self-param via cTypeFor) does NOT propagate through the bootstrap chain:
+  the emitted signature is built by the COMPILING compiler's generateMethod,
+  so the fix only takes effect one generation after the fixed compiler is
+  itself rebaselined - and the measured three stages (s1v/s2v/s3v) all kept
+  the old signature, meaning the dynamic-cTypeFor emission needs the seed's
+  baked generateMethod patched (the established seed-side procedure) OR the
+  propagation mechanism understood. Next session: seed-patch the signature
+  line (mirroring the namespace-list procedure), then land the body.
+
 **Ledger rebuilt as a mirror tool (leak-pass 5):** the shadow-count design was
 fundamentally broken — `spec_retain` never recorded (shadow stayed at the alloc
 count while real refcounts climbed), and release-to-zero slot clearing let
