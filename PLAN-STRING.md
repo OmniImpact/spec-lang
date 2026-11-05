@@ -349,6 +349,18 @@ the fresh ref. Measured classes (self-compile, ASan):
    2 completes, leaks are correctness-preserving and the budget is a tracked
    metric, not a failure.
 
+**RC-ledger findings (Task 7b tooling):** the `SPEC_RC_DEBUG` ledger's shadow
+count diverges from the atomic `ref_count` — at the flagged release the real
+header showed `ref_count = 4` (object alive and healthy) while the ledger had
+recorded only 2 lifetime ops. Both "freed pointer" symptoms are ledger
+artifacts, NOT graph bugs: the ARC graph itself is consistent (62/62 + ASan
+clean across the suite). Two ledger fixes landed (slot freed on
+release-to-zero; releases cross-check the header refcount and report
+divergence), but a trustworthy enforcer needs to *mirror* the atomic refcount
+instead of shadow-counting — next tooling task before the ratchet can rely on
+it. The leak budget remains the honest metric: 1.10 MB / 81k allocs per
+self-compile, dominated by the fresh-arg classes in the table above.
+
 ## 8. Verification Protocol
 
 ```bash

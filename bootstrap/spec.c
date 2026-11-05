@@ -146,8 +146,11 @@ static void* spec_rc_alloc(void* p, unsigned long ra) {
 
 static void spec_rc_released_check(void* p, unsigned long ra) {
     SpecRcEntry* e = spec_rc_slot(p);
+    SpecHeader* h = SPEC_HEADER(p);
+    long long real = (long long)atomic_load_explicit(&h->ref_count, memory_order_relaxed);
     if (e->ptr != p) { spec_rc_fail(p, "operation on never-tracked pointer", "release", ra); }
-    if (e->count <= 0) { spec_rc_fail(p, "operation on freed pointer", "release", ra); }
+    if (e->count != real) { fprintf(stderr, "[RC-DEBUG] ledger divergence: tracked %lld but ref_count %lld at %p\n", e->count, real, p); }
+    if (real <= 0) { spec_rc_fail(p, "operation on freed pointer", "release", ra); }
     return;
 }
 
@@ -178,7 +181,7 @@ static inline void spec_release(void* obj) {
         SpecRcEntry* e = spec_rc_slot(obj);
         spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));
         e->count--;
-        if (e->count == 0) { if (h->destroy) h->destroy(obj); return; }
+        if (e->count == 0) { e->ptr = NULL; if (h->destroy) h->destroy(obj); return; }
         if (e->count < 0) { spec_rc_fail(obj, "over-release", "release", (unsigned long)__builtin_return_address(0)); }
         return;
     }
@@ -27904,8 +27907,11 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static void spec_rc_released_check(void* p, unsigned long ra) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecRcEntry* e = spec_rc_slot(p);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecHeader* h = SPEC_HEADER(p);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long real = (long long)atomic_load_explicit(&h->ref_count, memory_order_relaxed);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->ptr != p) { spec_rc_fail(p, \"operation on never-tracked pointer\", \"release\", ra); }\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->count <= 0) { spec_rc_fail(p, \"operation on freed pointer\", \"release\", ra); }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (e->count != real) { fprintf(stderr, \"[RC-DEBUG] ledger divergence: tracked %lld but ref_count %lld at %p\\n\", e->count, real, p); }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (real <= 0) { spec_rc_fail(p, \"operation on freed pointer\", \"release\", ra); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {\n"))));
@@ -27933,7 +27939,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        SpecRcEntry* e = spec_rc_slot(obj);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        e->count--;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->count == 0) { if (h->destroy) h->destroy(obj); return; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->count == 0) { e->ptr = NULL; if (h->destroy) h->destroy(obj); return; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (e->count < 0) { spec_rc_fail(obj, \"over-release\", \"release\", (unsigned long)__builtin_return_address(0)); }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        return;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));

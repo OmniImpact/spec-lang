@@ -186,8 +186,11 @@ Class is RuntimePrelude{
 		p: p . "}\n\n";
 		p: p . "static void spec_rc_released_check(void* p, unsigned long ra) {\n";
 		p: p . "    SpecRcEntry* e = spec_rc_slot(p);\n";
+		p: p . "    SpecHeader* h = SPEC_HEADER(p);\n";
+		p: p . "    long long real = (long long)atomic_load_explicit(&h->ref_count, memory_order_relaxed);\n";
 		p: p . "    if (e->ptr != p) { spec_rc_fail(p, \"operation on never-tracked pointer\", \"release\", ra); }\n";
-		p: p . "    if (e->count <= 0) { spec_rc_fail(p, \"operation on freed pointer\", \"release\", ra); }\n";
+		p: p . "    if (e->count != real) { fprintf(stderr, \"[RC-DEBUG] ledger divergence: tracked %lld but ref_count %lld at %p\\n\", e->count, real, p); }\n";
+		p: p . "    if (real <= 0) { spec_rc_fail(p, \"operation on freed pointer\", \"release\", ra); }\n";
 		p: p . "    return;\n";
 		p: p . "}\n\n";
 		p: p . "static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {\n";
@@ -215,7 +218,7 @@ Class is RuntimePrelude{
 		p: p . "        SpecRcEntry* e = spec_rc_slot(obj);\n";
 		p: p . "        spec_rc_record(obj, 3, (unsigned long)__builtin_return_address(0));\n";
 		p: p . "        e->count--;\n";
-		p: p . "        if (e->count == 0) { if (h->destroy) h->destroy(obj); return; }\n";
+		p: p . "        if (e->count == 0) { e->ptr = NULL; if (h->destroy) h->destroy(obj); return; }\n";
 		p: p . "        if (e->count < 0) { spec_rc_fail(obj, \"over-release\", \"release\", (unsigned long)__builtin_return_address(0)); }\n";
 		p: p . "        return;\n";
 		p: p . "    }\n";
