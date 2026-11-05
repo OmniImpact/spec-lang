@@ -29,6 +29,8 @@ String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
 String spec_string_trim(String b);
+bool spec_string_has_prefix(String b, String prefix);
+bool spec_string_has_suffix(String b, String suffix);
 #include <pthread.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
@@ -317,26 +319,18 @@ String spec_string_char_at(String s, long long idx, String def) {
     if (!s || idx < 0) return def ? spec_string_copy(def) : spec_string_intern("");
     if ((size_t)idx >= (size_t)spec_string_length(s)) return def ? spec_string_copy(def) : spec_string_intern("");
     char one[2] = { (char)spec_buf_get_byte(s, idx, -1, (SpecClosure*)NULL), '\0' };
-    return spec_string_from_bytes(one, 1);
+    return spec_string_intern(one);
 }
 String spec_string_from_char_code(long long code) {
     if (code < 0 || code > 255) return spec_string_intern("");
     char one[2] = { (char)code, '\0' };
-    return spec_string_from_bytes(one, 1);
+    return spec_string_intern(one);
 }
 bool spec_string_starts_with(String s, String prefix) {
-    if (!s || !prefix) return false;
-    long long slen = spec_string_length(s);
-    long long plen = spec_string_length(prefix);
-    if (plen > slen) return false;
-    return spec_string_equals(spec_string_substring(s, 0, plen), prefix);
+    return spec_string_has_prefix(s, prefix);
 }
 bool spec_string_ends_with(String s, String suffix) {
-    if (!s || !suffix) return false;
-    long long slen = spec_string_length(s);
-    long long xlen = spec_string_length(suffix);
-    if (xlen > slen) return false;
-    return spec_string_equals(spec_string_substring(s, slen - xlen, slen), suffix);
+    return spec_string_has_suffix(s, suffix);
 }
 String spec_string_replace_all(String s, String search, String replacement) {
     if (!s) return spec_string_intern("");
@@ -1222,6 +1216,19 @@ const char* spec_buf_to_cstring(SpecBuf* b) {
 /* String: managed string backed by SpecBuf (elem_size=1) */
 typedef SpecBuf* String;
 
+bool spec_string_has_prefix(String b, String prefix) {
+    if (!b || !prefix) return false;
+    if (prefix->length == 0) return true;
+    if (prefix->length > b->length) return false;
+    return memcmp(b->data, prefix->data, prefix->length) == 0;
+}
+
+bool spec_string_has_suffix(String b, String suffix) {
+    if (!b || !suffix) return false;
+    if (suffix->length == 0) return true;
+    if (suffix->length > b->length) return false;
+    return memcmp((unsigned char*)b->data + (b->length - suffix->length), suffix->data, suffix->length) == 0;
+}
 String spec_string_from_literal(const char* lit) {
     String b = spec_buf_new(1, 0);
     if (lit && *lit) spec_buf_append_bytes(b, lit);
@@ -27700,6 +27707,8 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("long long spec_string_index_of(String b, String needle, long long def);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("long long spec_string_index_of_from(String b, String needle, long long from, long long def);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("String spec_string_trim(String b);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_has_prefix(String b, String prefix);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_has_suffix(String b, String suffix);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <pthread.h>\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <sys/wait.h>\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <sys/ioctl.h>\n"))));
@@ -27978,26 +27987,18 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!s || idx < 0) return def ? spec_string_copy(def) : spec_string_intern(\"\");\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if ((size_t)idx >= (size_t)spec_string_length(s)) return def ? spec_string_copy(def) : spec_string_intern(\"\");\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    char one[2] = { (char)spec_buf_get_byte(s, idx, -1, (SpecClosure*)NULL), '\\0' };\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_from_bytes(one, 1);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_intern(one);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("String spec_string_from_char_code(long long code) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (code < 0 || code > 255) return spec_string_intern(\"\");\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    char one[2] = { (char)code, '\\0' };\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_from_bytes(one, 1);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_intern(one);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_starts_with(String s, String prefix) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!s || !prefix) return false;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long slen = spec_string_length(s);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long plen = spec_string_length(prefix);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (plen > slen) return false;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_equals(spec_string_substring(s, 0, plen), prefix);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_has_prefix(s, prefix);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_ends_with(String s, String suffix) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!s || !suffix) return false;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long slen = spec_string_length(s);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    long long xlen = spec_string_length(suffix);\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (xlen > slen) return false;\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_equals(spec_string_substring(s, slen - xlen, slen), suffix);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_has_suffix(s, suffix);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("String spec_string_replace_all(String s, String search, String replacement) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!s) return spec_string_intern(\"\");\n"))));
@@ -28820,6 +28821,19 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("/* String: managed string backed by SpecBuf (elem_size=1) */\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("typedef SpecBuf* String;\n\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_has_prefix(String b, String prefix) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b || !prefix) return false;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (prefix->length == 0) return true;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (prefix->length > b->length) return false;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return memcmp(b->data, prefix->data, prefix->length) == 0;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_has_suffix(String b, String suffix) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b || !suffix) return false;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (suffix->length == 0) return true;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (suffix->length > b->length) return false;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return memcmp((unsigned char*)b->data + (b->length - suffix->length), suffix->data, suffix->length) == 0;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("String spec_string_from_literal(const char* lit) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    String b = spec_buf_new(1, 0);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (lit && *lit) spec_buf_append_bytes(b, lit);\n"))));
