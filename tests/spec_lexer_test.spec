@@ -82,6 +82,19 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 			failures: failures + 1;
 		}
 
+		# Errors carry provenance: message plus a trace frame at the scan
+		# position (the Error class's propagation story, seeded by the scan).
+		local Lexer is bad: Lexer:init(source: "``` unterminated");
+		local Array of Token is dead: bad:tokenize();
+		local Error is first: bad:getErrors():get(index: 0);
+		local String is rendered: first:toString();
+		if (bad:hasErrors() && rendered:contains(needle: 'Unterminated heredoc') && rendered:contains(needle: 'at Lexer:scan')) {
+			output:line('[PASS] lexical errors carry message and trace');
+		} else {
+			output:line('[FAIL] lexical error provenance: ' . rendered);
+			failures: failures + 1;
+		}
+
 		if (failures == 0) {
 			output:line('[PASS] spec lexer test complete');
 		} else {
