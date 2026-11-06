@@ -17,7 +17,7 @@ Class is String{
 	## One-character string at [index], or [default] when out of bounds.
 	Function of String is charAt(Int is index, String is default){
 		if (index < 0 || index >= Buf:bufLength(b: self)) {
-			return Buf:bufCopy(b: default);
+			return Buf:stringCopy(b: default);
 		}
 		return String:fromCharCode(code: Buf:bufGetByte(b: self, idx: index, def: -1));
 	}
@@ -32,7 +32,7 @@ Class is String{
 		if (e > Buf:bufLength(b: self)) {
 			e: Buf:bufLength(b: self);
 		}
-		return Buf:bufSubstring(b: self, start: s, end: e);
+		return Buf:stringSubstring(b: self, start: s, end: e);
 	}
 
 	## True when this string begins with [prefix].
@@ -44,7 +44,7 @@ Class is String{
 		if (pl > Buf:bufLength(b: self)) {
 			return false;
 		}
-		return Buf:bufSubstring(b: self, start: 0, end: pl) == prefix;
+		return Buf:stringSubstring(b: self, start: 0, end: pl) == prefix;
 	}
 
 	## True when this string ends with [suffix].
@@ -57,7 +57,7 @@ Class is String{
 		if (sl > bl) {
 			return false;
 		}
-		return Buf:bufSubstring(b: self, start: bl - sl, end: bl) == suffix;
+		return Buf:stringSubstring(b: self, start: bl - sl, end: bl) == suffix;
 	}
 
 	## True when [needle] occurs anywhere in this string (empty needle: true).
@@ -67,47 +67,47 @@ Class is String{
 
 	## First occurrence of [needle] at or after the start, or [default].
 	Function of Int is indexOf(String is search, Int is default){
-		return Buf:bufIndexOf(b: self, needle: search, def: default);
+		return Buf:stringIndexOf(b: self, needle: search, def: default);
 	}
 
 	## Every [search] occurrence replaced by [replacement].
 	Function of String is replaceAll(String is search, String is replacement){
-		return Buf:bufReplace(b: self, search: search, replacement: replacement);
+		return Buf:stringReplaceAll(b: self, search: search, replacement: replacement);
 	}
 
 	## Splits on [delimiter]; the trailing part is always present.
 	Function of Array of String is split(String is delimiter){
-		return Buf:bufSplit(b: self, delimiter: delimiter);
+		return Buf:stringSplit(b: self, delimiter: delimiter);
 	}
 
 	## Lines of this string (split on '\n', '\r' stripped).
 	Function of Array of String is lines(){
-		return Buf:bufLines(b: self);
+		return Buf:stringLines(b: self);
 	}
 
 	## Whitespace-trimmed copy (' ', '\t', '\n', '\r').
 	Function of String is trim(){
-		return Buf:bufTrim(b: self);
+		return Buf:stringTrim(b: self);
 	}
 
 	## Number of leading [search] repetitions.
 	Function of Int is countLeading(String is search){
-		return Buf:bufCountLeading(b: self, search: search);
+		return Buf:stringCountLeading(b: self, search: search);
 	}
 
 	## True when every byte is a digit and the string is non-empty.
 	Function of Boolean is isDigit(){
-		return Buf:bufIsDigit(b: self);
+		return Buf:stringIsDigit(b: self);
 	}
 
 	## True when every byte is a letter and the string is non-empty.
 	Function of Boolean is isAlpha(){
-		return Buf:bufIsAlpha(b: self);
+		return Buf:stringIsAlpha(b: self);
 	}
 
 	## True when every byte is whitespace and the string is non-empty.
 	Function of Boolean is isWhitespace(){
-		return Buf:bufIsWhitespace(b: self);
+		return Buf:stringIsWhitespace(b: self);
 	}
 
 	## One-character string for [code] (0-255); empty when out of range.
@@ -117,6 +117,6 @@ Class is String{
 	## Parses this string as an integer in [base] (2-36), accepting 0x/0b/0o
 	## prefixes and _ separators. Returns [default] on any invalid input.
 	Function of Int is parseInt(Int is base: 10, Int is default: -1){
-		return Buf:bufParseBase(b: self, base: base, def: default);
+		return Buf:parseBase(b: self, base: base, def: default);
 	}
 }

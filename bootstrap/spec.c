@@ -1183,31 +1183,6 @@ void spec_buf_push_ptr(SpecBuf* b, void* item) {
 void spec_buf_report(SpecClosure* error, const char* msg) {
     spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));
 }
-String spec_buf_copy(SpecBuf* b);
-String spec_buf_substring(SpecBuf* b, long long start, long long end);
-long long spec_buf_index_of(SpecBuf* b, SpecBuf* needle, long long def);
-String spec_buf_replace(SpecBuf* b, SpecBuf* search, SpecBuf* replacement);
-String spec_buf_trim(SpecBuf* b);
-bool spec_buf_is_digit(SpecBuf* b);
-bool spec_buf_is_alpha(SpecBuf* b);
-bool spec_buf_is_whitespace(SpecBuf* b);
-long long spec_buf_count_leading(SpecBuf* b, SpecBuf* search);
-SpecArray* spec_buf_split(SpecBuf* b, SpecBuf* delim);
-SpecArray* spec_buf_lines(SpecBuf* b);
-long long spec_parse_base(SpecBuf* b, long long base, long long def);
-long long spec_buf_parse_base(SpecBuf* b, long long base, long long def);
-String spec_buf_copy(SpecBuf* b) { return spec_string_copy(b); }
-String spec_buf_substring(SpecBuf* b, long long start, long long end) { return spec_string_substring(b, start, end); }
-long long spec_buf_index_of(SpecBuf* b, SpecBuf* needle, long long def) { return spec_string_index_of(b, needle, def); }
-String spec_buf_replace(SpecBuf* b, SpecBuf* search, SpecBuf* replacement) { return spec_string_replace_all(b, search, replacement); }
-String spec_buf_trim(SpecBuf* b) { return spec_string_trim(b); }
-bool spec_buf_is_digit(SpecBuf* b) { return spec_string_is_digit(b); }
-bool spec_buf_is_alpha(SpecBuf* b) { return spec_string_is_alpha(b); }
-bool spec_buf_is_whitespace(SpecBuf* b) { return spec_string_is_whitespace(b); }
-long long spec_buf_count_leading(SpecBuf* b, SpecBuf* search) { return spec_string_count_leading(b, search); }
-SpecArray* spec_buf_split(SpecBuf* b, SpecBuf* delim) { return spec_string_split(b, delim); }
-SpecArray* spec_buf_lines(SpecBuf* b) { return spec_string_lines(b); }
-long long spec_buf_parse_base(SpecBuf* b, long long base, long long def) { return spec_parse_base(b, base, def); }
 long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {
     if (!b) { return def; }
     if (idx < 0 || (size_t)idx >= b->length) {
@@ -1229,7 +1204,7 @@ void spec_buf_set_byte(SpecBuf* b, long long idx, long long v, SpecClosure* erro
 }
 
 long long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error) {
-    if (!b) { return def; }
+    if (!b) { spec_buf_report(error, "buffer is uninitialized"); return def; }
     if (b->length == 0) {
         spec_buf_report(error, "buffer pop on empty buffer");
         return def;
@@ -1239,7 +1214,7 @@ long long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error) {
     return out;
 }
 void* spec_buf_get_ptr(SpecBuf* b, long long idx, void* def, SpecClosure* error) {
-    if (!b) { return def; }
+    if (!b) { spec_buf_report(error, "buffer is uninitialized"); return def; }
     if (idx < 0 || (size_t)idx >= b->length) {
         char msg[96];
         snprintf(msg, sizeof(msg), "buffer index out of bounds: index %lld for length %zu", idx, b->length);
@@ -24835,7 +24810,7 @@ long long String_length(String self) {
 
 String String_charAt(String self, long long index, String _default) {
     if (((((index) < (0))) || (((index) >= (spec_buf_length(self)))))) {
-        return (String)spec_retain((void*)(spec_buf_copy(_default)));
+        return (String)spec_retain((void*)(spec_string_copy(_default)));
     }
     return (String)spec_retain((void*)(spec_string_from_char_code(spec_buf_get_byte(self, index, (-(1))))));
 }
@@ -24849,7 +24824,7 @@ String String_substring(String self, long long start, long long end) {
     if (((e) > (spec_buf_length(self)))) {
         e = spec_buf_length(self);
     }
-    return (String)spec_retain((void*)(spec_buf_substring(self, s, e)));
+    return (String)spec_retain((void*)(spec_string_substring(self, s, e)));
 }
 
 bool String_startsWith(String self, String prefix) {
@@ -24860,7 +24835,7 @@ bool String_startsWith(String self, String prefix) {
     if (((pl) > (spec_buf_length(self)))) {
         return false;
     }
-    return spec_string_equals(spec_buf_substring(self, 0, pl), prefix);
+    return spec_string_equals(spec_string_substring(self, 0, pl), prefix);
 }
 
 bool String_endsWith(String self, String suffix) {
@@ -24872,7 +24847,7 @@ bool String_endsWith(String self, String suffix) {
     if (((sl) > (bl))) {
         return false;
     }
-    return spec_string_equals(spec_buf_substring(self, ((bl) - (sl)), bl), suffix);
+    return spec_string_equals(spec_string_substring(self, ((bl) - (sl)), bl), suffix);
 }
 
 bool String_contains(String self, String needle) {
@@ -24880,39 +24855,39 @@ bool String_contains(String self, String needle) {
 }
 
 long long String_indexOf(String self, String search, long long _default) {
-    return spec_buf_index_of(self, search, _default);
+    return spec_string_index_of(self, search, _default);
 }
 
 String String_replaceAll(String self, String search, String replacement) {
-    return (String)spec_retain((void*)(spec_buf_replace(self, search, replacement)));
+    return (String)spec_retain((void*)(spec_string_replace_all(self, search, replacement)));
 }
 
 SpecArray* String_split(String self, String delimiter) {
-    return (SpecArray*)spec_retain((void*)(spec_buf_split(self, delimiter)));
+    return (SpecArray*)spec_retain((void*)(spec_string_split(self, delimiter)));
 }
 
 SpecArray* String_lines(String self) {
-    return (SpecArray*)spec_retain((void*)(spec_buf_lines(self)));
+    return (SpecArray*)spec_retain((void*)(spec_string_lines(self)));
 }
 
 String String_trim(String self) {
-    return (String)spec_retain((void*)(spec_buf_trim(self)));
+    return (String)spec_retain((void*)(spec_string_trim(self)));
 }
 
 long long String_countLeading(String self, String search) {
-    return spec_buf_count_leading(self, search);
+    return spec_string_count_leading(self, search);
 }
 
 bool String_isDigit(String self) {
-    return spec_buf_is_digit(self);
+    return spec_string_is_digit(self);
 }
 
 bool String_isAlpha(String self) {
-    return spec_buf_is_alpha(self);
+    return spec_string_is_alpha(self);
 }
 
 bool String_isWhitespace(String self) {
-    return spec_buf_is_whitespace(self);
+    return spec_string_is_whitespace(self);
 }
 
 String String_fromCharCode(String self, long long code) {
@@ -24920,7 +24895,7 @@ String String_fromCharCode(String self, long long code) {
 }
 
 long long String_parseInt(String self, long long base, long long _default) {
-    return spec_buf_parse_base(self, base, _default);
+    return spec_parse_base(self, base, _default);
 }
 
 void String_init(String* self) {
@@ -31810,7 +31785,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("void spec_buf_report(SpecClosure* error, const char* msg) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("String spec_buf_copy(SpecBuf* b);\nString spec_buf_substring(SpecBuf* b, long long start, long long end);\nlong long spec_buf_index_of(SpecBuf* b, SpecBuf* needle, long long def);\nString spec_buf_replace(SpecBuf* b, SpecBuf* search, SpecBuf* replacement);\nString spec_buf_trim(SpecBuf* b);\nbool spec_buf_is_digit(SpecBuf* b);\nbool spec_buf_is_alpha(SpecBuf* b);\nbool spec_buf_is_whitespace(SpecBuf* b);\nlong long spec_buf_count_leading(SpecBuf* b, SpecBuf* search);\nSpecArray* spec_buf_split(SpecBuf* b, SpecBuf* delim);\nSpecArray* spec_buf_lines(SpecBuf* b);\nlong long spec_parse_base(SpecBuf* b, long long base, long long def);\nlong long spec_buf_parse_base(SpecBuf* b, long long base, long long def);\nString spec_buf_copy(SpecBuf* b) { return spec_string_copy(b); }\nString spec_buf_substring(SpecBuf* b, long long start, long long end) { return spec_string_substring(b, start, end); }\nlong long spec_buf_index_of(SpecBuf* b, SpecBuf* needle, long long def) { return spec_string_index_of(b, needle, def); }\nString spec_buf_replace(SpecBuf* b, SpecBuf* search, SpecBuf* replacement) { return spec_string_replace_all(b, search, replacement); }\nString spec_buf_trim(SpecBuf* b) { return spec_string_trim(b); }\nbool spec_buf_is_digit(SpecBuf* b) { return spec_string_is_digit(b); }\nbool spec_buf_is_alpha(SpecBuf* b) { return spec_string_is_alpha(b); }\nbool spec_buf_is_whitespace(SpecBuf* b) { return spec_string_is_whitespace(b); }\nlong long spec_buf_count_leading(SpecBuf* b, SpecBuf* search) { return spec_string_count_leading(b, search); }\nSpecArray* spec_buf_split(SpecBuf* b, SpecBuf* delim) { return spec_string_split(b, delim); }\nSpecArray* spec_buf_lines(SpecBuf* b) { return spec_string_lines(b); }\nlong long spec_buf_parse_base(SpecBuf* b, long long base, long long def) { return spec_parse_base(b, base, def); }\nlong long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b) { return def; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (idx < 0 || (size_t)idx >= b->length) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        char msg[96];\n"))));
@@ -31831,7 +31806,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    ((unsigned char*)b->data)[idx] = (unsigned char)v;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("long long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b) { return def; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return def; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (b->length == 0) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_buf_report(error, \"buffer pop on empty buffer\");\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        return def;\n"))));
@@ -31841,7 +31816,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return out;\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("void* spec_buf_get_ptr(SpecBuf* b, long long idx, void* def, SpecClosure* error) {\n"))));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b) { return def; }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return def; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (idx < 0 || (size_t)idx >= b->length) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        char msg[96];\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        snprintf(msg, sizeof(msg), \"buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n"))));
