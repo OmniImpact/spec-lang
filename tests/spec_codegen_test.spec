@@ -7,6 +7,7 @@ Class is SpecCodegenTest{
 
 	replace Array of Array of String is using: [
 		['spec', 'base', 'compiler', 'gen', CodeGenerator],
+		['spec', 'base', 'compiler', 'gen', BuiltinCallGenerator],
 		['spec', 'base', 'compiler', 'ast', ProgramNode],
 		['spec', 'base', 'compiler', 'ast', ClassInfo],
 		['spec', 'base', 'compiler', 'ast', Member],
@@ -15,7 +16,8 @@ Class is SpecCodegenTest{
 		['spec', 'base', 'compiler', 'ast', Expression],
 		['spec', 'base', 'compiler', 'parser', Parser],
 		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['lib', 'base', 'io', Output]
+		['lib', 'base', 'io', Output],
+		['lib', 'base', 'struct', Map]
 	];
 
 	## Parses a source snippet into a program.
@@ -32,6 +34,14 @@ Class is SpecCodegenTest{
 		local Member is m: cls:members:get(index: 0) as Member;
 		local Statement is stmt: m:body:get(index: 0) as Statement;
 		return stmt:exprStmt;
+	}
+
+	## Parses a single statement from a snippet.
+	Function of Statement is stmtOf(String is src){
+		local ProgramNode is prog: self:parseOf(src: "Class is P{ replace Function is init(Map of String to String is args){ " . src . "; } }");
+		local ClassInfo is cls: prog:classes:get(index: 0) as ClassInfo;
+		local Member is m: cls:members:get(index: 0) as Member;
+		return m:body:get(index: 0) as Statement;
 	}
 
 	replace Function is init(Map of String to String is args){
@@ -200,6 +210,62 @@ Class of Animal is Dog{
 			output:line('[PASS] wrapToString');
 		} else {
 			output:line('[FAIL] wrapToString');
+			failures: failures + 1;
+		}
+
+		# --- expression emission shapes ---
+		local ProgramNode is eprog: self:parseOf(src: "Class is Animal{
+	local Int is weight: 0;
+	replace Function of String is describe(){
+		return 'animal';
+	}
+	replace Function of Int is grow(Int is by){
+		return self:weight + by;
+	}
+}");
+		local CodeGenerator is eg: CodeGenerator:init();
+		eg:registerProgram(classes: eprog:classes);
+		eg:currentClassName: 'Animal';
+		eg:fieldTypes:set(key: 'weight', value: 'Int');
+		eg:localVars:set(key: 'n', value: 'Int');
+		eg:localVars:set(key: 'xs', value: 'Array of Int');
+
+		if (eg:generateExpression(expr: self:exprOf(src: '1 + 2 * 3')) == '((1) + (((2) * (3))))'
+			&& eg:generateExpression(expr: self:exprOf(src: 'n')) == 'n'
+			&& eg:generateExpression(expr: self:exprOf(src: 'self:weight')) == 'self->weight'
+			&& eg:generateExpression(expr: self:exprOf(src: 'self:grow(by: 2)')) == 'Animal_grow(self, 2) /* inst:Animal:grow */'
+			&& eg:generateExpression(expr: self:exprOf(src: 'n as Float')) == '((double)(n))'
+			&& eg:generateExpression(expr: self:exprOf(src: '[1, 2]')):contains(needle: 'spec_array_new()')
+			&& eg:generateExpression(expr: self:exprOf(src: 'xs:get(index: 0)')):contains(needle: 'spec_array_get(xs, (size_t)(0))')) {
+			output:line('[PASS] expression emission');
+		} else {
+			output:line('[FAIL] expression emission');
+			failures: failures + 1;
+		}
+
+		# --- statement emission shapes ---
+		if (eg:generateStatement(stmt: self:stmtOf(src: 'local Int is m: n + 1')) == "    long long m = ((n) + (1));\n"
+			&& eg:generateStatement(stmt: self:stmtOf(src: 'n: 5')) == "    n = 5;\n"
+			&& eg:generateStatement(stmt: self:stmtOf(src: 'return self:weight + 1')) == "    return ((self->weight) + (1));\n") {
+			output:line('[PASS] statement emission');
+		} else {
+			output:line('[FAIL] statement emission');
+			failures: failures + 1;
+		}
+
+		# --- builtin call bindings ---
+		local BuiltinCallGenerator is bcg: BuiltinCallGenerator:init();
+		local Map of String to String is enumNames: Map:init();
+		enumNames:set(key: 'Level', value: 'true');
+		bcg:setEnumNames(names: enumNames);
+		if (bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg):contains(needle: 'printf("%s\\n", spec_buf_to_cstring((SpecBuf*)(')
+			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 's:length()'), targetC: 's', targetType: 'String', cg: eg) == 'spec_string_length(s)'
+			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg) == 'spec_math_sqrt(n)'
+			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Level:of(name: \'E\')'), targetC: 'Level', targetType: '', cg: eg) == 'Level_of(spec_string_intern("E"))'
+			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'xs:length()'), targetC: 'xs', targetType: 'Array of Int', cg: eg) == 'spec_array_length(xs)') {
+			output:line('[PASS] builtin call bindings');
+		} else {
+			output:line('[FAIL] builtin call bindings');
 			failures: failures + 1;
 		}
 

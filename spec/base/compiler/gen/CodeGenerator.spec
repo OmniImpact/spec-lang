@@ -27,6 +27,7 @@ Class is CodeGenerator{
 		['spec', 'base', 'compiler', 'gen', CBackendUtils],
 		['spec', 'base', 'compiler', 'gen', EmissionPolicy],
 		['spec', 'base', 'compiler', 'gen', DeclarationGenerator],
+		['spec', 'base', 'compiler', 'gen', BuiltinCallGenerator],
 		['lib', 'base', 'struct', Array],
 		['lib', 'base', 'struct', Map],
 		['lib', 'base', 'iterator']
@@ -43,6 +44,9 @@ Class is CodeGenerator{
 
 	## Well-known names.
 	local WellKnown is names: WellKnown:init();
+
+	## Builtin call translator (floor-class spec_* bindings).
+	local BuiltinCallGenerator is builtins: BuiltinCallGenerator:init();
 
 	## Class currently being generated.
 	local String is currentClassName: '';
@@ -880,6 +884,1202 @@ Class is CodeGenerator{
 	Function of Expression is argValue(Expression is expr, Int is index){
 		local NamedArg is arg: expr:methodArgs:get(index: index);
 		return arg:value;
+	}
+
+	## Generates C for an expression, wrapping claim-yielding results
+	## for read positions (the claim pool takes ownership).
+	##
+	## @param expr: The expression node.
+	## @return: C expression string.
+	Function of String is generateExpression(Expression is expr){
+		local String is c: self:generateExpressionInner(expr: expr);
+		local ExpressionKind is kind: expr:kind;
+		local Boolean is claim: false;
+		if (kind == ExpressionKind:CALL) {
+			claim: self:yieldsClaim(expr: expr);
+		} else if (kind == ExpressionKind:BINARY) {
+			claim: expr:binaryOp == '.';
+		} else if (kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP) {
+			claim: true;
+		} else if (kind == ExpressionKind:INDEX) {
+			local String is tgt: self:inferTargetType(expr: expr:leftExpr);
+			claim: (tgt:startsWith(prefix: 'Map') && self:inferTargetType(expr: expr) == 'String');
+		}
+		if (claim) {
+			if (self:argMode) {
+				local String is resT: self:inferTargetType(expr: expr);
+				local String is resC: self:cTypeFor(typeName: resT);
+				return '((' . resC . ')spec_claim_pool((void*)(' . c . ')))';
+			}
+		}
+		return c;
+	}
+
+	## Generates C for an expression without the claim wrapper.
+	##
+	## @param expr: The expression node.
+	## @return: C expression string.
+	Function of String is generateExpressionInner(Expression is expr){
+		local ExpressionKind is kind: expr:kind;
+
+		when (kind) {
+			is ExpressionKind:ARRAY: {
+				return self:emitArrayLiteral(expr: expr);
+			}
+			is ExpressionKind:MAP: {
+				return self:emitMapLiteral(expr: expr);
+			}
+			is ExpressionKind:STRING: {
+				# Raw strings collapse into STRING upstream; one intern path.
+				return 'spec_string_intern("' . self:utils:escapeString(s: expr:stringValue) . '")';
+			}
+			is ExpressionKind:NUMBER: {
+				if (expr:stringValue != '') {
+					return expr:stringValue;
+				}
+				return '0';
+			}
+			is ExpressionKind:FLOAT: {
+				if (expr:stringValue != '') {
+					return expr:stringValue;
+				}
+				return '0.0';
+			}
+			is ExpressionKind:BOOL: {
+				return if (expr:boolValue) 'true' else 'false';
+			}
+			is ExpressionKind:IDENT: {
+				return self:emitIdent(expr: expr);
+			}
+			is ExpressionKind:PATH: {
+				return self:emitPath(expr: expr);
+			}
+			is ExpressionKind:BINARY: {
+				return self:emitBinary(expr: expr);
+			}
+			is ExpressionKind:INDEX: {
+				return self:emitIndex(expr: expr);
+			}
+			is ExpressionKind:CAST: {
+				return self:emitCast(expr: expr);
+			}
+			is ExpressionKind:UNARY: {
+				local String is innerC: self:generateExpression(expr: expr:unaryExpr);
+				return '(' . expr:unaryOp . '(' . innerC . '))';
+			}
+			is ExpressionKind:CALL: {
+				return self:emitCall(expr: expr);
+			}
+			is ExpressionKind:FIELD_ACCESS: {
+				local String is leftC: self:generateExpression(expr: expr:leftExpr);
+				return '(' . leftC . ')->' . self:utils:cIdent(name: expr:stringValue);
+			}
+			is ExpressionKind:IF_ELSE: {
+				local String is condC: self:generateExpression(expr: expr:condExpr);
+				local String is thenC: self:generateExpression(expr: expr:thenExpr);
+				local String is elseC: self:generateExpression(expr: expr:elseExpr);
+				return '((' . condC . ') ? (' . thenC . ') : (' . elseC . '))';
+			}
+			is ExpressionKind:WHEN: {
+				return self:emitWhenExpression(expr: expr);
+			}
+			is ExpressionKind:ANON_FN: {
+				return self:emitAnonFn(expr: expr);
+			}
+			else: {
+				return '0';
+			}
+		}
+	}
+
+	## Emits an array/list literal from the container hint or the first
+	## element's inferred type.
+	##
+	## @param expr: The ARRAY expression.
+	## @return: C compound-literal allocation.
+	Function of String is emitArrayLiteral(Expression is expr){
+		local Boolean is listHint: self:containerHint:startsWith(prefix: 'List');
+		local String is addFn: if (listHint) 'spec_vec_push' else 'spec_array_add';
+		local String is newCall: 'spec_array_new()';
+		if (self:containerHint != '') {
+			local String is hintKind: self:containerElemKind(containerType: self:containerHint);
+			if (hintKind == 'byte') {
+				newCall: 'spec_bytebuffer_new()';
+			} else if (hintKind == 'object') {
+				newCall: if (listHint) 'spec_vec_new_object()' else 'spec_array_new_object()';
+			} else if (hintKind == 'string') {
+				newCall: if (listHint) 'spec_vec_new_string()' else 'spec_array_new_string()';
+			} else if (listHint) {
+				newCall: 'spec_vec_new()';
+			}
+			self:containerHint: '';
+		} else if (expr:arrayItems:length() > 0) {
+			local String is elemT: self:inferTargetType(expr: expr:arrayItems:get(index: 0));
+			if (self:isArcType(typeName: elemT)) {
+				newCall: 'spec_array_new_object()';
+			} else if (elemT == 'String') {
+				newCall: 'spec_array_new_string()';
+			}
+		}
+		local String is arrCType: if (listHint) 'SpecVec*' else 'SpecArray*';
+		local String is res: '({ ' . arrCType . ' _arr = ' . newCall . ';';
+		local Boolean is savedArg: self:argMode;
+		self:argMode: false;
+		expr:arrayItems:each(action: local Function(Expression is item){
+			local String is itemC: self:generateExpression(expr: item);
+			res: res . ' ' . addFn . '(_arr, (void*)(' . itemC . '));';
+		});
+		self:argMode: savedArg;
+		res: res . ' _arr; })';
+		return res;
+	}
+
+	## Emits a map literal from the container hint or the first value's
+	## inferred type.
+	##
+	## @param expr: The MAP expression.
+	## @return: C compound-literal allocation.
+	Function of String is emitMapLiteral(Expression is expr){
+		local String is newCall: 'spec_map_new()';
+		if (self:containerHint != '') {
+			if (self:containerElemIsArc(containerType: self:containerHint)) {
+				newCall: 'spec_map_new_object()';
+			}
+			self:containerHint: '';
+		} else if (expr:mapValues:length() > 0) {
+			local String is valT: self:inferTargetType(expr: expr:mapValues:get(index: 0));
+			if (self:isArcType(typeName: valT)) {
+				newCall: 'spec_map_new_object()';
+			}
+		}
+		local String is res: '({ SpecMap* _map = ' . newCall . ';';
+		local Int is idx: 0;
+		local Boolean is savedArgM: self:argMode;
+		self:argMode: false;
+		expr:mapKeys:each(action: local Function(Expression is kExpr){
+			local Expression is vExpr: expr:mapValues:get(index: idx);
+			local String is kC: self:generateExpression(expr: kExpr);
+			local String is vC: self:generateExpression(expr: vExpr);
+			if (self:isStringExpr(expr: vExpr, exprC: vC)) {
+				res: res . ' spec_map_set(_map, ' . kC . ', ' . vC . ');';
+			} else {
+				local String is setFn: if (self:yieldsClaim(expr: vExpr)) 'spec_map_set_any_transfer' else 'spec_map_set_any';
+				res: res . ' ' . setFn . '(_map, ' . kC . ', (void*)(intptr_t)(' . vC . '));';
+			}
+			idx: idx + 1;
+		});
+		self:argMode: savedArgM;
+		res: res . ' _map; })';
+		return res;
+	}
+
+	## Emits an identifier reference: self, enum variants, locals, fields.
+	##
+	## @param expr: The IDENT expression.
+	## @return: C identifier expression.
+	Function of String is emitIdent(Expression is expr){
+		local String is name: expr:stringValue;
+		if (name == self:names:selfIdent() || name == 'true' || name == 'false') {
+			return name;
+		}
+		if (self:allEnumVariants:has(key: name)) {
+			local String is enumName: self:allEnumVariants:getString(key: name, default: '');
+			if (self:allTaggedEnums:has(key: enumName)) {
+				return enumName . '_' . self:utils:cIdent(name: name) . '_ctor()';
+			}
+			return enumName . '_' . self:utils:cIdent(name: name);
+		}
+		if (self:localVars:has(key: name)) {
+			return self:utils:cIdent(name: name);
+		}
+		if (self:fieldTypes:has(key: name)) {
+			return 'self->' . self:utils:cIdent(name: name);
+		}
+		return self:utils:cIdent(name: name);
+	}
+
+	## Emits a colon-path reference: enum variants, chained field access.
+	##
+	## @param expr: The PATH expression.
+	## @return: C expression.
+	Function of String is emitPath(Expression is expr){
+		local Array of String is segs: expr:pathSegments;
+		if (segs:length() == 1) {
+			return segs:get(index: 0);
+		}
+		if (segs:length() >= 2) {
+			local String is root: segs:get(index: 0);
+			if (self:allEnumNames:has(key: root)) {
+				if (self:allTaggedEnums:has(key: root)) {
+					return root . '_' . self:utils:cIdent(name: segs:get(index: 1)) . '_ctor()';
+				}
+				return root . '_' . self:utils:cIdent(name: segs:get(index: 1));
+			}
+			local String is rootC: self:utils:cIdent(name: root);
+			if (!self:localVars:has(key: root) && self:fieldTypes:has(key: root)) {
+				rootC: 'self->' . rootC;
+			}
+			local Int is idx: 1;
+			local String is resC: rootC;
+			While:condition(
+				evaluate: local Function of Boolean(){
+					return idx < segs:length();
+				},
+				iteration: local Function of Boolean(){
+					resC: resC . '->' . self:utils:cIdent(name: segs:get(index: idx));
+					idx: idx + 1;
+					return true;
+				}
+			);
+			if (root != self:names:selfIdent()) {
+				local String is resolvedT: expr:resolvedType;
+				local String is rootT: self:localVars:getString(key: root, default: '');
+				if (rootT:contains(needle: ':') && !rootT:startsWith(prefix: 'Array:') && !rootT:startsWith(prefix: 'Map:') && resolvedT != '' && resolvedT != Primitive:ANY:value()) {
+					local String is castT: self:cTypeFor(typeName: resolvedT);
+					resC: '((' . castT . ')(intptr_t)(' . resC . '))';
+				}
+			}
+			return resC;
+		}
+		return '';
+	}
+
+	## Emits a binary operation: concat, equality, arithmetic, bitwise.
+	##
+	## @param expr: The BINARY expression.
+	## @return: C expression.
+	Function of String is emitBinary(Expression is expr){
+		local String is op: expr:binaryOp;
+		when (op) {
+			is '.': {
+				local String is leftC: self:generateExpressionInner(expr: expr:leftExpr);
+				local ExpressionKind is leftKind: expr:leftExpr:kind;
+				local String is leftT: self:inferTargetType(expr: expr:leftExpr);
+				local Boolean is leftPrim: leftT == Primitive:INT:value() || leftT == 'Byte' || leftT == 'Float' || leftT == 'Boolean';
+				local Boolean is leftClaimKind: leftKind == ExpressionKind:CALL || leftKind == ExpressionKind:BINARY || leftKind == ExpressionKind:ARRAY || leftKind == ExpressionKind:MAP;
+				local Boolean is leftArc: self:isArcType(typeName: leftT);
+				local String is leftClaim: leftC;
+				if (!leftPrim) {
+					if (leftClaimKind) {
+						leftClaim: leftC;
+					} else if (leftArc) {
+						leftClaim: '(void*)spec_retain((void*)(' . leftC . '))';
+					} else {
+						leftClaim: 'spec_string_from_chars(' . leftC . ')';
+					}
+				}
+				local String is leftWrap: if (leftPrim) self:wrapToString(expr: expr:leftExpr, exprC: leftClaim) else leftClaim;
+				local Boolean is savedArgR: self:argMode;
+				self:argMode: true;
+				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				self:argMode: savedArgR;
+				local String is rightWrap: self:wrapToString(expr: expr:rightExpr, exprC: rightC);
+				return 'spec_string_concat(' . leftWrap . ', ' . rightWrap . ')';
+			}
+			is 'is', '==': {
+				local String is leftC: self:generateExpression(expr: expr:leftExpr);
+				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				if (self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC)) {
+					return 'spec_string_equals(' . leftC . ', ' . rightC . ')';
+				}
+				return '((' . leftC . ') == (' . rightC . '))';
+			}
+			is '!=': {
+				local String is leftC: self:generateExpression(expr: expr:leftExpr);
+				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				if (self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC)) {
+					return '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
+				}
+				return '((' . leftC . ') != (' . rightC . '))';
+			}
+			is '<', '<=', '>', '>=', '+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>': {
+				local String is leftC: self:generateExpression(expr: expr:leftExpr);
+				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				return '((' . leftC . ') ' . op . ' (' . rightC . '))';
+			}
+			else: {
+				return '0';
+			}
+		}
+	}
+
+	## Emits an index expression: Map lookups and Array/List element access.
+	##
+	## @param expr: The INDEX expression.
+	## @return: C expression.
+	Function of String is emitIndex(Expression is expr){
+		local String is targetC: self:generateExpression(expr: expr:leftExpr);
+		local String is indexC: self:generateExpression(expr: expr:rightExpr);
+		local String is targetType: self:inferTargetType(expr: expr:leftExpr);
+		if (targetType:startsWith(prefix: 'Map:') || targetType == 'Map') {
+			local String is valType: 'String';
+			if (targetType:startsWith(prefix: 'Map:')) {
+				valType: self:elemOfType(t: targetType);
+			}
+			if (valType == 'String') {
+				return 'spec_map_get_string(' . targetC . ', ' . indexC . ', spec_string_intern(""))';
+			}
+			if (valType == Primitive:INT:value()) {
+				return 'spec_map_get_int(' . targetC . ', ' . indexC . ', 0)';
+			}
+			if (valType == 'Float') {
+				return 'spec_map_get_float(' . targetC . ', ' . indexC . ', 0.0)';
+			}
+			if (valType == 'Boolean') {
+				return 'spec_map_get_bool(' . targetC . ', ' . indexC . ', false)';
+			}
+			local String is valCType: self:cTypeFor(typeName: valType);
+			return '((' . valCType . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))';
+		}
+		local String is elemT: self:elemOfType(t: targetType);
+		if (elemT != '') {
+			local String is elemCType: self:cTypeFor(typeName: elemT);
+			return '((' . elemCType . ')(intptr_t)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
+		}
+		return '((long long)(intptr_t)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
+	}
+
+	## Emits a type cast: format casts, primitive conversions, class upcasts.
+	##
+	## @param expr: The CAST expression.
+	## @return: C expression.
+	Function of String is emitCast(Expression is expr){
+		local String is innerC: self:generateExpression(expr: expr:leftExpr);
+		local String is target: expr:castTarget;
+		local String is srcT: self:inferTargetType(expr: expr:leftExpr);
+		local String is digitsC: '0';
+		if (expr:castArgs:length() > 0) {
+			digitsC: self:generateExpression(expr: expr:castArgs:get(index: 0));
+		}
+		when (target) {
+			is 'Hex': {
+				if (srcT == 'String') {
+					return 'spec_parse_base(' . innerC . ', 16, 0)';
+				}
+				return 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
+			}
+			is 'Bin': {
+				if (srcT == 'String') {
+					return 'spec_parse_base(' . innerC . ', 2, 0)';
+				}
+				return 'spec_int_to_base(' . innerC . ', 2, ' . digitsC . ')';
+			}
+			is 'Oct': {
+				if (srcT == 'String') {
+					return 'spec_parse_base(' . innerC . ', 8, 0)';
+				}
+				return 'spec_int_to_base(' . innerC . ', 8, ' . digitsC . ')';
+			}
+			is 'Any': {
+				return innerC;
+			}
+			is 'Int': {
+				if (srcT == 'String') {
+					return 'spec_parse_base(' . innerC . ', 10, 0)';
+				}
+				if (srcT == 'Float' || srcT == 'Byte') {
+					return '((long long)(' . innerC . '))';
+				}
+				return innerC;
+			}
+			is 'Float': {
+				return '((double)(' . innerC . '))';
+			}
+			is 'Byte': {
+				if (srcT == 'Byte') {
+					return innerC;
+				}
+				return '({ long long _bv = (long long)(' . innerC . '); if (_bv < 0 || _bv > 255) { spec_panic_byte_range(_bv); } ((unsigned char)_bv); })';
+			}
+			is 'String': {
+				if (srcT == Primitive:INT:value()) {
+					return 'spec_to_string_int(' . innerC . ')';
+				}
+				if (srcT == 'Float') {
+					return 'spec_to_string_float(' . innerC . ')';
+				}
+				if (srcT == 'Boolean') {
+					return 'spec_to_string_bool(' . innerC . ')';
+				}
+				if (self:allClassNames:has(key: srcT) && !self:allEnumNames:has(key: srcT) && !self:policy:isTransparent(c: self:findClass(name: srcT))) {
+					return 'spec_type_name(' . innerC . ')';
+				}
+				return innerC;
+			}
+			else: {
+				if (self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:policy:isTransparent(c: self:findClass(name: target))) {
+					return '((' . target . '*)spec_cast_check(' . innerC . ', "' . target . '"))';
+				}
+				return innerC;
+			}
+		}
+	}
+
+	## Emits a CALL expression: builtins, constructors, tagged variant
+	## constructors, virtual dispatch, direct dispatch.
+	##
+	## @param expr: The CALL expression.
+	## @return: C expression.
+	Function of String is emitCall(Expression is expr){
+		local String is targetC: self:generateExpression(expr: expr:methodTarget);
+		local String is targetType: self:inferTargetType(expr: expr:methodTarget);
+		local String is fieldKey: targetC;
+		if (targetC:startsWith(prefix: 'self->')) {
+			fieldKey: targetC:substring(start: 6, end: targetC:length());
+		}
+		if (targetType == '') {
+			targetType: self:localVars:getString(key: fieldKey, default: '');
+		}
+		if (targetType == '') {
+			targetType: self:fieldTypes:getString(key: fieldKey, default: '');
+		}
+
+		local String is builtinC: self:builtins:generateBuiltinCall(expr: expr, targetC: targetC, targetType: targetType, cg: self);
+		if (builtinC != '') {
+			return builtinC;
+		}
+
+		# Function variable or field invocation: fnVar(args).
+		if (targetC == self:names:selfIdent() && (self:localVars:has(key: expr:methodName) || self:fieldTypes:has(key: expr:methodName))) {
+			local String is fnVarT: self:localVars:getString(key: expr:methodName, default: self:fieldTypes:getString(key: expr:methodName, default: ''));
+			if (fnVarT:startsWith(prefix: 'Function')) {
+				local String is fnPtrC: if (self:localVars:has(key: expr:methodName)) self:utils:cIdent(name: expr:methodName) else 'self->' . self:utils:cIdent(name: expr:methodName);
+				local String is retTName: if (fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9) fnVarT:substring(start: 9, end: fnVarT:length()) else 'Void';
+				local String is retCType: self:cTypeFor(typeName: retTName);
+				local String is pTypesC: 'void*';
+				local String is cArgsC: '_cls->env';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					local String is aValC: self:generateExpression(expr: arg:value);
+					local String is aT: self:inferTargetType(expr: arg:value);
+					local String is aCType: self:cTypeFor(typeName: aT);
+					pTypesC: pTypesC . ', ' . aCType;
+					cArgsC: cArgsC . ', ' . aValC;
+				});
+				return '({ SpecClosure* _cls = (SpecClosure*)(' . fnPtrC . '); if (!_cls || !_cls->fn) spec_panic("Invocation of null Function"); ((' . retCType . ' (*)(' . pTypesC . '))_cls->fn)(' . cArgsC . '); })';
+			}
+		}
+
+		# Tagged enum variant constructor.
+		if (self:allEnumVariants:has(key: expr:methodName) && (self:allTaggedEnums:has(key: targetC) || targetC == self:names:selfIdent())) {
+			local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: '');
+			if (self:allTaggedEnums:has(key: eName)) {
+				local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: expr:methodName);
+				local Array of Parameter is vParams: vMem:params;
+				local String is vArgsC: '';
+				local Int is pIdx: 0;
+				vParams:each(action: local Function(Parameter is p){
+					if (pIdx > 0) { vArgsC: vArgsC . ', '; }
+					local String is pName: p:name;
+					local Boolean is matched: false;
+					local String is argC: '0';
+					expr:methodArgs:each(action: local Function(NamedArg is a){
+						if (!matched && a:name == pName && pName != '') {
+							argC: self:generateExpression(expr: a:value);
+							matched: true;
+						}
+					});
+					if (!matched && pIdx < expr:argCount()) {
+						local Expression is posArg: self:argValue(expr: expr, index: pIdx);
+						argC: self:generateExpression(expr: posArg);
+						matched: true;
+					}
+					vArgsC: vArgsC . argC;
+					pIdx: pIdx + 1;
+				});
+				return eName . '_' . self:utils:cIdent(name: expr:methodName) . '(' . vArgsC . ')';
+			}
+		}
+
+		# Constructor or static invocation: ClassName:init(...)/ClassName:method(...).
+		if (self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC)) {
+			local String is argsJoined: self:formatCallArguments(className: targetC, methodName: expr:methodName, args: expr:methodArgs);
+			if (expr:methodName == 'init') {
+				local String is initCls: self:findMethodImplementingClass(className: targetC, methodName: 'init', paramCount: -1);
+				if (initCls == '' || initCls == targetC) {
+					return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . targetC . '_init(_inst' . argsJoined . '); _inst; })';
+				}
+				local String is initArgs: self:formatCallArguments(className: initCls, methodName: 'init', args: expr:methodArgs);
+				return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initCls . '_init((' . initCls . '*)_inst' . initArgs . '); _inst; })';
+			}
+			local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
+			if (mDef:kind == MemberKind:METHOD) {
+				local String is mRetType: self:utils:resolveReturnType(t: mDef:memberType);
+				if (mRetType != '' && mRetType != 'Void' && mRetType != 'void') {
+					return targetC . '_' . expr:methodName . '(NULL' . argsJoined . ')';
+				}
+			}
+			return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . targetC . '_' . expr:methodName . '(_inst' . argsJoined . '); _inst; })';
+		}
+
+		# Instance method invocation.
+		local String is objType: targetType;
+		if (objType == '') {
+			objType: self:localVars:getString(key: targetC, default: '');
+		}
+		if (objType == '') {
+			objType: self:fieldTypes:getString(key: targetC, default: '');
+		}
+		if (objType == '' || objType == Primitive:ANY:value() || targetC == self:names:selfIdent()) {
+			objType: self:currentClassName;
+		}
+		local String is fullObjType: objType;
+
+		# Any-typed receiver dispatches through its own vtable.
+		if (objType == Primitive:ANY:value() && self:methodSlots:has(key: expr:methodName)) {
+			local Member is anyM: self:lookupMethodMember(className: 'Any', methodName: expr:methodName);
+			if (anyM:kind == MemberKind:METHOD) {
+				local String is slotC: self:methodSlots:getString(key: expr:methodName, default: '0');
+				local String is retT: self:utils:resolveReturnType(t: anyM:memberType);
+				local String is argsC: '';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					argsC: argsC . ', ' . self:generateExpression(expr: arg:value);
+				});
+				if (retT == 'void') {
+					return '((void (*)(Any*))((Any*)' . targetC . ')->_vtable[' . slotC . '])((Any*)' . targetC . argsC . ')';
+				}
+				return '((' . retT . ' (*)(Any*))((Any*)' . targetC . ')->_vtable[' . slotC . '])((Any*)' . targetC . argsC . ')';
+			}
+		}
+
+		if (objType:startsWith(prefix: 'Array:')) {
+			objType: 'Array';
+		} else if (objType:startsWith(prefix: 'Map:')) {
+			objType: 'Map';
+		} else if (objType:contains(needle: ':')) {
+			local Array of String is parts: objType:split(delimiter: ':');
+			objType: parts:get(index: 0);
+		}
+		local String is argsC: self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs);
+		local String is callStr: '';
+		if (self:overriddenMethods:has(key: expr:methodName) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:policy:isTransparent(c: self:findClass(name: objType)) && self:methodSlots:has(key: expr:methodName)) {
+			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
+			if (vm:kind == MemberKind:METHOD) {
+				local String is retT: self:utils:resolveReturnType(t: vm:memberType);
+				local String is sigC: objType . '*';
+				vm:params:each(action: local Function(Parameter is p){
+					sigC: sigC . ', ' . self:cTypeFor(typeName: p:paramType:name);
+				});
+				local String is slotC: self:methodSlots:getString(key: expr:methodName, default: '0');
+				if (targetC == self:names:selfIdent()) {
+					callStr: '(((' . retT . ' (*)(' . sigC . '))self->_vtable[' . slotC . ']))((' . objType . '*)self' . argsC . ')';
+				} else {
+					callStr: '({ ' . objType . '* _recv = (' . objType . '*)(' . targetC . '); (((' . retT . ' (*)(' . sigC . '))_recv->_vtable[' . slotC . ']))((' . objType . '*)_recv' . argsC . '); })';
+				}
+			}
+		}
+		if (callStr == '') {
+			local String is dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
+			local String is targetExprC: targetC;
+			if (dispatchCls != '' && dispatchCls != objType) {
+				objType: dispatchCls;
+				targetExprC: '((' . dispatchCls . '*)' . targetC . ')';
+			}
+			callStr: objType . '_' . expr:methodName . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
+		}
+		local Member is targetM: self:lookupMethodMember(className: objType, methodName: expr:methodName);
+		local ClassInfo is targetCls: self:findClass(name: objType);
+		if (targetM:kind == MemberKind:METHOD && targetCls:typeParams:length() > 0) {
+			local String is rawRet: self:formatTypeString(t: targetM:memberType);
+			if (targetCls:typeParams:indexOf(search: rawRet, default: -1) >= 0) {
+				local String is resolvedRet: expr:resolvedType;
+				if (resolvedRet != '' && resolvedRet != Primitive:ANY:value()) {
+					local String is castCType: self:cTypeFor(typeName: resolvedRet);
+					callStr: '((' . castCType . ')(intptr_t)(' . callStr . '))';
+				}
+			}
+		}
+		return callStr;
+	}
+
+	## Emits a `when` expression as a nested ternary chain.
+	##
+	## @param expr: The WHEN expression.
+	## @return: C expression.
+	Function of String is emitWhenExpression(Expression is expr){
+		local String is subjC: self:generateExpression(expr: expr:whenSubject);
+		local String is chain: '0';
+		expr:whenArms:each(action: local Function(WhenArm is arm){
+			if (arm:isElse && arm:hasValueExpr) {
+				chain: self:generateExpression(expr: arm:valueExpr);
+			}
+		});
+		expr:whenArms:each(action: local Function(WhenArm is arm){
+			if (!arm:isElse && arm:hasValueExpr) {
+				local String is bindsC: self:generateWhenBindings(subjC: subjC, arm: arm);
+				local String is armVal: self:generateExpression(expr: arm:valueExpr);
+				if (bindsC != '') {
+					armVal: '({ ' . bindsC . ' ' . armVal . '; })';
+				}
+				local String is condOr: '';
+				arm:conditions:each(action: local Function(Expression is c){
+					local String is cmp: self:generateWhenCondition(subjExpr: expr:whenSubject, subjC: subjC, c: c);
+					if (condOr == '') {
+						condOr: cmp;
+					} else {
+						condOr: condOr . ' || ' . cmp;
+					}
+				});
+				chain: '((' . condOr . ') ? (' . armVal . ') : (' . chain . '))';
+			}
+		});
+		return chain;
+	}
+
+	## Emits an anonymous function as a static C function + closure.
+	##
+	## @param expr: The ANON_FN expression.
+	## @return: C closure-construction expression.
+	Function of String is emitAnonFn(Expression is expr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is fnName: '_anon_fn_' . id;
+		local String is retC: self:cTypeFor(typeName: expr:anonReturnType:name);
+
+		local Map of String to String is savedVars: Map:init();
+		local Array of String is outerKeys: self:localVars:keys();
+		outerKeys:each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+		local Map of String to String is savedScopeVars: Map:init();
+		local Array of String is outerScopeKeys: self:localScopeVars:keys();
+		outerScopeKeys:each(action: local Function(String is k){
+			savedScopeVars:set(key: k, value: self:localScopeVars:getString(key: k, default: ''));
+		});
+		self:localScopeVars: Map:init();
+
+		local String is paramsC: 'void* _env_ptr';
+		local Array of String is paramNames: [];
+		expr:anonParams:each(action: local Function(Parameter is p){
+			paramNames:add(item: p:name);
+			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
+			paramsC: paramsC . ', ' . pCType . ' ' . self:utils:cIdent(name: p:name);
+		});
+
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: '';
+		local String is bodyC: '';
+		expr:anonBody:each(action: local Function(Statement is s){
+			bodyC: bodyC . self:generateStatement(stmt: s);
+		});
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+		self:localVars: savedVars;
+		self:localScopeVars: savedScopeVars;
+
+		local String is envName: '_Env_anon_' . id;
+		local String is destroyEnvName: '_destroy_env_anon_' . id;
+		local String is capFieldDecls: '';
+		local String is capFieldBinds: '';
+		local String is capAssigns: '';
+		local String is capReleases: '';
+		local Boolean is hasCaptures: false;
+
+		if (self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: 'self')) {
+			hasCaptures: true;
+			capFieldDecls: capFieldDecls . '    ' . self:currentClassName . "* self;\n";
+			capFieldBinds: capFieldBinds . '    ' . self:currentClassName . "* self = _env->self;\n    (void)self;\n";
+			capAssigns: capAssigns . '    _env->self = (' . self:currentClassName . "*)spec_retain((void*)self);\n";
+			capReleases: capReleases . "    if (_env->self) spec_release((void*)_env->self);\n";
+		}
+
+		outerKeys:each(action: local Function(String is k){
+			if (paramNames:indexOf(search: k, default: -1) < 0) {
+				local String is cVar: self:utils:cIdent(name: k);
+				if (bodyC:contains(needle: cVar)) {
+					local String is vType: savedVars:getString(key: k, default: '');
+					local String is vCType: self:cTypeFor(typeName: vType);
+					if (vCType != 'void' && vCType != '') {
+						hasCaptures: true;
+						capFieldDecls: capFieldDecls . '    ' . vCType . ' ' . cVar . ";\n";
+						capFieldBinds: capFieldBinds . '    ' . vCType . ' ' . cVar . ' = _env->' . cVar . ";\n    (void)" . cVar . ";\n";
+						if (self:isArcType(typeName: vType)) {
+							capAssigns: capAssigns . '    _env->' . cVar . ' = (' . vCType . ')spec_retain((void*)' . cVar . ");\n";
+							capReleases: capReleases . '    if (_env->' . cVar . ') spec_release((void*)_env->' . cVar . ");\n";
+						} else {
+							capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
+						}
+					}
+				}
+			}
+		});
+
+		if (hasCaptures) {
+			local String is envStruct: "typedef struct {\n" . capFieldDecls . '} ' . envName . ";\n\n";
+			local String is destroyEnv: 'static void ' . destroyEnvName . "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    " . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capReleases . "    free(_env);\n}\n\n";
+			local String is bindsC: '    ' . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capFieldBinds;
+			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . bindsC . bodyC . "}\n\n";
+			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
+		} else {
+			self:helperFunctions: self:helperFunctions . 'static ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . bodyC . "}\n\n";
+			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
+		}
+	}
+
+	## Formats call arguments: matched by parameter name, positional
+	## fallback, declaration-side defaults.
+	##
+	## @param className: The receiver class name.
+	## @param methodName: The method name.
+	## @param args: The call arguments.
+	## @return: Comma-joined C arguments (no receiver).
+	Function of String is formatCallArguments(String is className, String is methodName, Array of NamedArg is args){
+		local Member is m: self:lookupMethodMember(className: className, methodName: methodName);
+		local Array of String is parts: className:split(delimiter: ':');
+		local String is baseClassName: parts:get(index: 0);
+		local ClassInfo is cls: self:findClass(name: baseClassName);
+		local Array of String is tps: cls:typeParams;
+		if (m:kind == MemberKind:METHOD) {
+			local Array of Parameter is params: m:params;
+			if (params:length() > 0) {
+				local String is joined: '';
+				local Int is pIdx: 0;
+				params:each(action: local Function(Parameter is p){
+					local String is pName: p:name;
+					local Boolean is matched: false;
+					local String is argC: '0';
+					args:each(action: local Function(NamedArg is a){
+						if (!matched && a:name == pName && pName != '') {
+							argC: self:generateExpression(expr: a:value);
+							matched: true;
+						}
+					});
+					if (!matched && pIdx < args:length()) {
+						local NamedArg is posArg: args:get(index: pIdx);
+						if (posArg:name == '') {
+							argC: self:generateExpression(expr: posArg:value);
+							matched: true;
+						}
+					}
+					if (!matched && p:hasDefault) {
+						argC: self:generateExpression(expr: p:defaultExpr);
+						matched: true;
+					}
+					# Ground the enclosing class's generic parameters to void*.
+					if (tps:indexOf(search: p:paramType:name, default: -1) >= 0) {
+						argC: '(void*)(intptr_t)(' . argC . ')';
+					}
+					joined: joined . ', ' . argC;
+					pIdx: pIdx + 1;
+				});
+				return joined;
+			}
+		}
+		local String is joined: '';
+		args:each(action: local Function(NamedArg is a){
+			joined: joined . ', ' . self:generateExpression(expr: a:value);
+		});
+		return joined;
+	}
+
+	## Generates the when-condition comparison for one arm condition.
+	##
+	## @param subjExpr: The when subject expression.
+	## @param subjC: The subject's C.
+	## @param c: The condition expression.
+	## @return: C boolean expression.
+	Function of String is generateWhenCondition(Expression is subjExpr, String is subjC, Expression is c){
+		if (c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName)) {
+			local String is eName: self:allEnumVariants:getString(key: c:methodName, default: '');
+			if (self:allTaggedEnums:has(key: eName)) {
+				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:methodName) . ')';
+			}
+		}
+		if (c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:stringValue)) {
+			local String is eName: self:allEnumVariants:getString(key: c:stringValue, default: '');
+			if (self:allTaggedEnums:has(key: eName)) {
+				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:stringValue) . ')';
+			}
+		}
+		if (c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && self:allTaggedEnums:has(key: c:pathSegments:get(index: 0))) {
+			local String is eName: c:pathSegments:get(index: 0);
+			local String is vName: c:pathSegments:get(index: 1);
+			return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: vName) . ')';
+		}
+		local String is cVal: self:generateExpression(expr: c);
+		if (self:isStringExpr(expr: subjExpr, exprC: subjC)) {
+			return 'spec_string_equals(' . subjC . ', ' . cVal . ')';
+		}
+		return '((' . subjC . ') == (' . cVal . '))';
+	}
+
+	## Generates variable bindings for tagged-variant pattern payloads.
+	##
+	## @param subjC: The subject's C.
+	## @param arm: The when arm.
+	## @return: C variable declarations.
+	Function of String is generateWhenBindings(String is subjC, WhenArm is arm){
+		local String is binds: '';
+		arm:conditions:each(action: local Function(Expression is c){
+			if (c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName)) {
+				local String is eName: self:allEnumVariants:getString(key: c:methodName, default: '');
+				if (self:allTaggedEnums:has(key: eName)) {
+					local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: c:methodName);
+					local String is vNameC: self:utils:cIdent(name: c:methodName);
+					local Int is idx: 0;
+					c:methodArgs:each(action: local Function(NamedArg is arg){
+						if (idx < vMem:params:length()) {
+							local Expression is av: arg:value;
+							if (av:kind == ExpressionKind:IDENT) {
+								local Parameter is pDef: vMem:params:get(index: idx);
+								local String is bindName: av:stringValue;
+								self:localVars:set(key: bindName, value: self:formatTypeString(t: pDef:paramType));
+								local String is pCType: self:cTypeFor(typeName: pDef:paramType:name);
+								binds: binds . '        ' . pCType . ' ' . self:utils:cIdent(name: bindName) . ' = (' . subjC . ')->' . vNameC . '_' . self:utils:cIdent(name: pDef:name) . ";\n";
+							}
+						}
+						idx: idx + 1;
+					});
+				}
+			}
+		});
+		return binds;
+	}
+
+	## Resolves a simple local or self-field target to its C lvalue.
+	##
+	## @param expr: The target expression.
+	## @return: C lvalue string, or '' when complex.
+	Function of String is tryGenerateTargetOnly(Expression is expr){
+		if (expr:kind == ExpressionKind:IDENT) {
+			if (self:localVars:has(key: expr:stringValue)) {
+				return self:utils:cIdent(name: expr:stringValue);
+			}
+			if (self:inMethod && self:fieldTypes:has(key: expr:stringValue)) {
+				return 'self->' . self:utils:cIdent(name: expr:stringValue);
+			}
+			return self:utils:cIdent(name: expr:stringValue);
+		}
+		if (expr:kind == ExpressionKind:PATH && expr:pathSegments:length() == 2 && expr:pathSegments:get(index: 0) == self:names:selfIdent()) {
+			return 'self->' . self:utils:cIdent(name: expr:pathSegments:get(index: 1));
+		}
+		return '';
+	}
+
+	## Optimizes left-recursive concat chains into spec_string_append.
+	##
+	## @param expr: The right-hand side expression.
+	## @param targetC: The target lvalue C.
+	## @return: Append-chain C, or '' when not optimizable.
+	Function of String is tryGenerateAppendChain(Expression is expr, String is targetC){
+		if (targetC == '') {
+			return '';
+		}
+		if (expr:kind == ExpressionKind:BINARY && expr:binaryOp == '.') {
+			local String is leftTarget: self:tryGenerateTargetOnly(expr: expr:leftExpr);
+			if (leftTarget == targetC) {
+				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
+				if (rhsC:contains(needle: targetC)) {
+					return '';
+				}
+				return 'spec_string_concat(' . targetC . ', ' . rhsC . ')';
+			}
+			local String is innerChain: self:tryGenerateAppendChain(expr: expr:leftExpr, targetC: targetC);
+			if (innerChain != '') {
+				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
+				if (rhsC:contains(needle: targetC)) {
+					return '';
+				}
+				return 'spec_string_concat(' . innerChain . ', ' . rhsC . ')';
+			}
+		}
+		return '';
+	}
+
+	## Generates C for a statement node.
+	##
+	## @param stmt: The statement node.
+	## @return: C statement code.
+	Function of String is generateStatement(Statement is stmt){
+		if (stmt:line > 0) {
+			self:currentLineHack(stmt: stmt);
+		}
+		local StatementKind is kind: stmt:kind;
+
+		when (kind) {
+			is StatementKind:VAR_DECL: {
+				return self:emitVarDecl(stmt: stmt);
+			}
+			is StatementKind:ASSIGN: {
+				return self:emitAssign(stmt: stmt);
+			}
+			is StatementKind:IF: {
+				local String is condC: self:generateExpression(expr: stmt:ifCondition);
+				local String is out: '    if (' . condC . ") {\n";
+				stmt:thenBranch:each(action: local Function(Statement is s){
+					out: out . '    ' . self:generateStatement(stmt: s);
+				});
+				if (stmt:hasElse) {
+					out: out . "    } else {\n";
+					stmt:elseBranch:each(action: local Function(Statement is s){
+						out: out . '    ' . self:generateStatement(stmt: s);
+					});
+				}
+				out: out . "    }\n";
+				return out;
+			}
+			is StatementKind:FORWARD: {
+				return self:emitForward(stmt: stmt);
+			}
+			is StatementKind:RETURN: {
+				return self:emitReturn(stmt: stmt);
+			}
+			is StatementKind:WHEN: {
+				return self:emitWhenStatement(stmt: stmt);
+			}
+			is StatementKind:EXPR: {
+				local String is exprC: self:generateExpression(expr: stmt:exprStmt);
+				return '    ' . exprC . ";\n";
+			}
+			is StatementKind:CLASS: {
+				return '';
+			}
+			else: {
+				return '';
+			}
+		}
+	}
+
+	## Compatibility: the fossil tracked currentLine but the codegen does not
+	## need it (diagnostics come from the checker).
+	Function is currentLineHack(Statement is stmt){
+	}
+
+	## Emits a variable declaration with the typed constructor.
+	##
+	## @param stmt: The VAR_DECL statement.
+	## @return: C declaration.
+	Function of String is emitVarDecl(Statement is stmt){
+		self:localVars:set(key: stmt:varName, value: self:formatTypeString(t: stmt:varType));
+		self:localScopeVars:set(key: stmt:varName, value: stmt:varType:name);
+		local String is vTypeName: stmt:varType:name;
+		local String is cType: '';
+		if (vTypeName == 'List') {
+			cType: self:cTypeFor(typeName: self:formatTypeString(t: stmt:varType));
+		} else {
+			cType: self:cTypeFor(typeName: vTypeName);
+		}
+		local String is varName: self:utils:cIdent(name: stmt:varName);
+		local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
+		local String is autoPrefix: if (isArcVar) 'SPEC_AUTO ' else '';
+		if (stmt:hasInit) {
+			local ExpressionKind is initKind: stmt:initExpr:kind;
+			if (initKind == ExpressionKind:ARRAY || initKind == ExpressionKind:MAP) {
+				self:setContainerHint(t: self:formatTypeString(t: stmt:varType));
+			}
+			local Boolean is savedArg: self:argMode;
+			self:argMode: false;
+			local String is initC: self:generateExpression(expr: stmt:initExpr);
+			self:argMode: savedArg;
+			self:setContainerHint(t: '');
+			local Boolean is claims: self:yieldsClaim(expr: stmt:initExpr);
+			initC: self:generateTypedConstructor(typeName: vTypeName, valueC: initC, cType: cType, claims: claims);
+			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . initC . ";\n";
+		}
+		if (vTypeName == 'String') {
+			return '    ' . cType . ' ' . varName . " = \"\";\n";
+		}
+		if (vTypeName == 'Array') {
+			local String is elemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
+			local String is newCall: 'spec_array_new()';
+			if (elemKind == 'object') {
+				newCall: 'spec_array_new_object()';
+			} else if (elemKind == 'string') {
+				newCall: 'spec_array_new_string()';
+			}
+			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+		}
+		if (vTypeName == 'List') {
+			local String is fullT: self:formatTypeString(t: stmt:varType);
+			local String is elemKind: self:containerElemKind(containerType: fullT);
+			local String is newCall: 'spec_vec_new()';
+			if (elemKind == 'byte') {
+				newCall: 'spec_bytebuffer_new()';
+			} else if (elemKind == 'string') {
+				newCall: 'spec_vec_new_string()';
+			} else if (elemKind == 'object') {
+				newCall: 'spec_vec_new_object()';
+			}
+			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+		}
+		if (vTypeName == 'Map') {
+			local String is newCall: 'spec_map_new()';
+			if (self:containerElemIsArc(containerType: self:formatTypeString(t: stmt:varType))) {
+				newCall: 'spec_map_new_object()';
+			}
+			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+		}
+		return '    ' . autoPrefix . cType . ' ' . varName . " = 0;\n";
+	}
+
+	## Emits an assignment: container stores, concat-chain optimization,
+	## ARC spec_assign.
+	##
+	## @param stmt: The ASSIGN statement.
+	## @return: C assignment.
+	Function of String is emitAssign(Statement is stmt){
+		if (stmt:assignTarget:kind == ExpressionKind:INDEX) {
+			local String is containerC: self:generateExpression(expr: stmt:assignTarget:leftExpr);
+			local String is idxC: self:generateExpression(expr: stmt:assignTarget:rightExpr);
+			local String is containerType: self:inferTargetType(expr: stmt:assignTarget:leftExpr);
+			local Boolean is savedArgIx: self:argMode;
+			self:argMode: false;
+			local String is valC: self:generateExpression(expr: stmt:assignValue);
+			self:argMode: savedArgIx;
+			if (containerType:startsWith(prefix: 'Map:') || containerType == 'Map') {
+				if (containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:isStringExpr(expr: stmt:assignValue, exprC: valC)) {
+					return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
+				}
+				return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+			}
+			return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+		}
+		local String is targetC: self:generateExpression(expr: stmt:assignTarget);
+		local String is appendC: self:tryGenerateAppendChain(expr: stmt:assignValue, targetC: targetC);
+		if (appendC != '') {
+			return '    ' . targetC . ' = ' . appendC . ";\n";
+		}
+		local String is lhsType: self:inferTargetType(expr: stmt:assignTarget);
+		local ExpressionKind is valKind: stmt:assignValue:kind;
+		if ((valKind == ExpressionKind:ARRAY || valKind == ExpressionKind:MAP) && (lhsType:startsWith(prefix: 'Array') || lhsType:startsWith(prefix: 'Map') || lhsType:startsWith(prefix: 'List'))) {
+			self:setContainerHint(t: lhsType);
+		}
+		local Boolean is savedArg: self:argMode;
+		self:argMode: false;
+		local String is valC: self:generateExpression(expr: stmt:assignValue);
+		self:argMode: savedArg;
+		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
+		if (curCls:typeParams:indexOf(search: lhsType, default: -1) >= 0) {
+			valC: '(void*)(intptr_t)(' . valC . ')';
+		}
+		local Boolean is isArcLhs: self:isArcType(typeName: lhsType);
+		if (isArcLhs) {
+			return '    spec_assign((void**)&' . targetC . ', (void*)(' . valC . "));\n";
+		}
+		return '    ' . targetC . ' = ' . valC . ";\n";
+	}
+
+	## Emits a merge-forward delegation to the nearest parent implementation.
+	##
+	## @param stmt: The FORWARD statement.
+	## @return: C delegation call.
+	Function of String is emitForward(Statement is stmt){
+		local ClassInfo is fwdCls: self:findClass(name: self:currentClassName);
+		local String is dispatchCls: '';
+		fwdCls:baseClasses:each(action: local Function(String is baseName){
+			if (dispatchCls == '') {
+				local String is implCls: self:findMethodImplementingClass(className: baseName, methodName: self:currentMethodName, paramCount: -1);
+				if (implCls != '') {
+					dispatchCls: implCls;
+				}
+			}
+		});
+		if (dispatchCls == '') {
+			return '';
+		}
+		local Member is superM: self:lookupMethodMember(className: dispatchCls, methodName: self:currentMethodName);
+		local String is argsC: self:formatCallArguments(className: dispatchCls, methodName: self:currentMethodName, args: stmt:forwardArgs);
+		local String is callC: dispatchCls . '_' . self:currentMethodName . '((' . dispatchCls . '*)self' . argsC . ')';
+		local String is superRet: self:utils:resolveReturnType(t: superM:memberType);
+		if (superRet != 'void') {
+			return '    return ' . callC . ";\n";
+		}
+		return '    ' . callC . ";\n";
+	}
+
+	## Emits a return with ARC ownership transfer.
+	##
+	## @param stmt: The RETURN statement.
+	## @return: C return.
+	Function of String is emitReturn(Statement is stmt){
+		if (self:inlineReturnLabel != '') {
+			if (stmt:hasReturnExpr && self:inlineReturnVar != '') {
+				local String is retC: self:generateExpression(expr: stmt:returnExpr);
+				return '    ' . self:inlineReturnVar . ' = ' . retC . "; break;\n";
+			}
+			return "    break;\n";
+		}
+		if (stmt:hasReturnExpr) {
+			local ExpressionKind is retKind: stmt:returnExpr:kind;
+			if ((retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (self:currentMethodReturnType:startsWith(prefix: 'Array') || self:currentMethodReturnType:startsWith(prefix: 'Map'))) {
+				self:setContainerHint(t: self:currentMethodReturnType);
+			}
+			local Boolean is savedArg: self:argMode;
+			self:argMode: false;
+			local String is retC: self:generateExpression(expr: stmt:returnExpr);
+			self:argMode: savedArg;
+			local ClassInfo is curCls: self:findClass(name: self:currentClassName);
+			if (curCls:typeParams:indexOf(search: self:currentMethodReturnType, default: -1) >= 0) {
+				retC: '(void*)(intptr_t)(' . retC . ')';
+			} else if (self:isArcType(typeName: self:currentMethodReturnType)) {
+				local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: stmt:returnExpr:stringValue);
+				if (ownedLocal) {
+					local String is identC: self:utils:cIdent(name: stmt:returnExpr:stringValue);
+					local String is rtC: self:cTypeFor(typeName: self:currentMethodReturnType);
+					retC: '(' . rtC . ')({ ' . rtC . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
+				} else if (self:isFreshConstructorCall(expr: stmt:returnExpr)) {
+					retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')(' . retC . ')';
+				} else {
+					retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
+				}
+			}
+			return '    return ' . retC . ";\n";
+		}
+		return "    return;\n";
+	}
+
+	## Emits a when statement as an if/else-if chain.
+	##
+	## @param stmt: The WHEN statement.
+	## @return: C if/else chain.
+	Function of String is emitWhenStatement(Statement is stmt){
+		local String is subjC: self:generateExpression(expr: stmt:whenSubject);
+		local String is out: '';
+		local Boolean is first: true;
+		stmt:whenArms:each(action: local Function(WhenArm is arm){
+			if (arm:isElse) {
+				out: out . "    } else {\n";
+			} else {
+				local String is condOr: '';
+				arm:conditions:each(action: local Function(Expression is c){
+					local String is cmp: self:generateWhenCondition(subjExpr: stmt:whenSubject, subjC: subjC, c: c);
+					if (condOr == '') {
+						condOr: cmp;
+					} else {
+						condOr: condOr . ' || ' . cmp;
+					}
+				});
+				local String is bindsC: self:generateWhenBindings(subjC: subjC, arm: arm);
+				if (first) {
+					out: out . '    if (' . condOr . ") {\n";
+					first: false;
+				} else {
+					out: out . '    } else if (' . condOr . ") {\n";
+				}
+				out: out . bindsC;
+			}
+			arm:body:each(action: local Function(Statement is s){
+				out: out . '    ' . self:generateStatement(stmt: s);
+			});
+		});
+		out: out . "    }\n";
+		return out;
+	}
+
+	## Generates a C method implementation.
+	##
+	## @param classDef: The enclosing class.
+	## @param method: The method member.
+	## @return: C method implementation.
+	## True when the class's namespace ends with sysinternal — the
+	## structural C-floor annotation (TRANSITION.md section 1).
+	##
+	## @param name: Class name.
+	## @return: true when the class is a floor binding.
+	Function of Boolean is isSysinternalClass(String is name){
+		return self:policy:isSysinternal(cls: self:findClass(name: name));
 	}
 
 	## Scans a member list for a field by name.
