@@ -13,6 +13,9 @@
 !bootstrap/spec.c
 # Sanitizer build artifact (run_sanitized.sh builds it fresh)
 /bin/spec-asan
+# Convergence-cycle scratch binaries
+/spec-stage*
+/spec-asan
 TASKS.md
 /mandelbrot
 /pi

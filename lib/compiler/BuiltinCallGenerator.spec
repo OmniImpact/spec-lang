@@ -210,6 +210,15 @@ Class is BuiltinCallGenerator{
 			return '({ printf("%s", spec_buf_to_cstring((SpecBuf*)(' . strC . '))); fflush(stdout); })';
 		}
 
+		# Reflection:class()/method() — compile-time source identity: the
+		# generator injects the enclosing class/method of the call site.
+		if (targetC == 'Reflection' && expr:methodName == 'class' && expr:methodArgs:length() == 0) {
+			return 'spec_string_intern("' . cg:currentClassName . '")';
+		}
+		if (targetC == 'Reflection' && expr:methodName == 'method' && expr:methodArgs:length() == 0) {
+			return 'spec_string_intern("' . cg:currentMethodName . '")';
+		}
+
 		# String:newline() — the newline constant, so emission code never
 		# litters escape sequences (single-quoted strings cannot carry \n).
 		if (targetC == 'String' && expr:methodName == 'newline' && expr:methodArgs:length() == 0) {

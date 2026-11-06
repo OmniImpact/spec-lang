@@ -23,6 +23,16 @@ Class is WhenArm{
 	replace Function is init(){
 	}
 
+	## Configures a guarded arm with a statement body.
+	##
+	## @param conditions: Guard expressions.
+	## @param body: The arm's statements.
+	Function is arm(Array of Expression is conditions, Array of Statement is body){
+		self:conditions: conditions;
+		self:isElse: false;
+		self:body: body;
+	}
+
 	## Configures an else arm with a statement body.
 	##
 	## @param body: The arm's statements.

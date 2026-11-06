@@ -28,40 +28,69 @@ trap 'rm -rf "$WORK"' EXIT
 pass=0
 fail=0
 
+# Parallelism: compile+run waves over this many workers (16-core host).
+JOBS="${JOBS:-12}"
+
 ok()	{ echo "  [PASS] $1"; pass=$((pass + 1)); }
 bad()	{ echo "  [FAIL] $1"; fail=$((fail + 1)); }
 
 # -----------------------------------------------------------------------------
 # 1. Demos & test suites: compile, run, require zero [FAIL] marks
+#
+# Tests run JOBS-wide (each is an independent compiler invocation plus a
+# binary run); results are collected per test and printed in scan order so
+# the output stays deterministic.
 # -----------------------------------------------------------------------------
+run_one() {
+	local src="$1" name="$2" key="$3"
+	local bin="$WORK/$key-$name"
+	if ! out="$("$SPEC" -i "$src" -o "$bin" 2>&1)"; then
+		echo "F|$name|compilation failed: $(echo "$out" | head -1)" > "$WORK/$key-$name.res"
+		return
+	fi
+	local run_out run_status
+	run_out="$(cd "$ROOT" && timeout 10 "$bin" < /dev/null 2>&1)"
+	run_status=$?
+	if [ $run_status -ne 0 ]; then
+		echo "F|$name|exited with status $run_status" > "$WORK/$key-$name.res"
+	elif echo "$run_out" | grep -q "\[FAIL\]"; then
+		echo "F|$name|$(echo "$run_out" | grep '\[FAIL\]' | head -1)" > "$WORK/$key-$name.res"
+	else
+		echo "P|$name|" > "$WORK/$key-$name.res"
+	fi
+}
+
 run_suite() {
-	local label="$1"
-	local dir="$2"
+	local label="$1" dir="$2" key="$3"
 	echo "== $label =="
+	local names=()
 	for src in "$dir"/*.spec; do
-		local name
-		name="$(basename "$src" .spec)"
-		local bin="$WORK/$name"
-		local out
-		if ! out="$("$SPEC" -i "$src" -o "$bin" 2>&1)"; then
-			bad "$name: compilation failed: $(echo "$out" | head -1)"
-			continue
-		fi
-		local run_out run_status
-		run_out="$(cd "$ROOT" && timeout 10 "$bin" < /dev/null 2>&1)"
-		run_status=$?
-		if [ $run_status -ne 0 ]; then
-			bad "$name: exited with status $run_status"
-		elif echo "$run_out" | grep -q "\[FAIL\]"; then
-			bad "$name: $(echo "$run_out" | grep '\[FAIL\]' | head -1)"
+		names+=("$(basename "$src" .spec)")
+	done
+	for name in "${names[@]}"; do
+		while [ "$(jobs -rp | wc -l)" -ge "$JOBS" ]; do
+			wait -n
+		done
+		run_one "$dir/$name.spec" "$name" "$key" &
+	done
+	wait
+	for name in "${names[@]}"; do
+		local res="${RES:-}"
+		res="$(cat "$WORK/$key-$name.res" 2>/dev/null || echo "F|$name|missing result")"
+		local st="${res%%|*}"
+		local rest="${res#*|}"
+		local nm="${rest%%|*}"
+		local detail="${rest#*|}"
+		if [ "$st" = "P" ]; then
+			ok "$nm"
 		else
-			ok "$name"
+			bad "$nm: $detail"
 		fi
 	done
 }
 
-run_suite "Demos" "$ROOT/examples"
-run_suite "Test suites" "$ROOT/tests"
+run_suite "Demos" "$ROOT/examples" demos
+run_suite "Test suites" "$ROOT/tests" tests
 
 # -----------------------------------------------------------------------------
 # 2. Negative diagnostics: must fail to compile with required messages

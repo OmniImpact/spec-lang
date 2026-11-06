@@ -33740,6 +33740,12 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String strC = CodeGenerator_wrapToString(cg, ({ NamedArg* _recv = (NamedArg*)(firstArg); (((Expression* (*)(NamedArg*))_recv->_vtable[50]))((NamedArg*)_recv); }), valC) /* inst:CodeGenerator:wrapToString */;
         return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ printf(\"%s\", spec_buf_to_cstring((SpecBuf*)("))), strC), spec_string_intern("))); fflush(stdout); })"))));
     }
+    if (((((spec_string_equals(targetC, spec_string_intern("Reflection"))) && (spec_string_equals(expr->methodName, spec_string_intern("class"))))) && (((spec_array_length(expr->methodArgs)) == (0))))) {
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_intern(\""))), cg->currentClassName), spec_string_intern("\")"))));
+    }
+    if (((((spec_string_equals(targetC, spec_string_intern("Reflection"))) && (spec_string_equals(expr->methodName, spec_string_intern("method"))))) && (((spec_array_length(expr->methodArgs)) == (0))))) {
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_intern(\""))), cg->currentMethodName), spec_string_intern("\")"))));
+    }
     if (((((spec_string_equals(targetC, spec_string_intern("String"))) && (spec_string_equals(expr->methodName, spec_string_intern("newline"))))) && (((spec_array_length(expr->methodArgs)) == (0))))) {
         return (String)spec_retain((void*)(spec_string_intern("spec_string_intern(\"\\n\")")));
     }

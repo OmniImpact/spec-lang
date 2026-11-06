@@ -14,10 +14,12 @@ Enum of String is ExpressionKind {
 	ARRAY: 'ARRAY',
 	MAP: 'MAP',
 	CAST: 'CAST',
+	INDEX: 'INDEX',
 	CALL: 'CALL',
 	BINARY: 'BINARY',
 	UNARY: 'UNARY',
 	IF_ELSE: 'IF_ELSE',
 	WHEN: 'WHEN',
-	ANON_FN: 'ANON_FN'
+	ANON_FN: 'ANON_FN',
+	UNKNOWN: 'UNKNOWN'
 }

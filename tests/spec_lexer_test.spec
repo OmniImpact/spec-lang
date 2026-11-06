@@ -83,13 +83,15 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		}
 
 		# Errors carry provenance: message plus a trace frame at the scan
-		# position (the Error class's propagation story, seeded by the scan).
+		# position. The wording's template hole must be SUBSTITUTED (the
+		# fancy-family contract) and the frame names come from Reflection,
+		# so they always match the real enclosing class/method.
 		local Lexer is bad: Lexer:init(source: "``` unterminated");
 		local Array of Token is dead: bad:tokenize();
 		local Error is first: bad:getErrors():get(index: 0);
 		local String is rendered: first:toString();
-		if (bad:hasErrors() && rendered:contains(needle: 'Unterminated heredoc') && rendered:contains(needle: 'at Lexer:scan')) {
-			output:line('[PASS] lexical errors carry message and trace');
+		if (bad:hasErrors() && rendered:contains(needle: 'missing closing ```') && rendered:contains(needle: 'at Lexer:addError')) {
+			output:line('[PASS] lexical errors carry substituted wording and reflection provenance');
 		} else {
 			output:line('[FAIL] lexical error provenance: ' . rendered);
 			failures: failures + 1;

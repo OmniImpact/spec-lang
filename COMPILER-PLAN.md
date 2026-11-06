@@ -442,9 +442,12 @@ new compiler can compile them itself; until then they go on a list, not into the
    the suite is the spec, for both compilers.
 5. The floor contract (§6) changes only by explicit decision recorded here — not by
    accretion while porting.
-6. **No body-less method declarations outside `sysinternal`** — checkable by the
-   compiler itself; a violation is a build error, not a style nit. Public facades
-   always delegate through a visible `base:sysinternal:...():...` call chain.
+6. **No body-less method declarations outside `sysinternal`** — the
+   implementation-environment package: the C floor (bound by naming convention)
+   and generator intrinsics like `Reflection` (compile-time constants injected
+   at the call site). Checkable by the compiler itself; a violation is a build
+   error, not a style nit. Public facades always delegate through a visible
+   `base:sysinternal:...():...` call chain.
 7. **The new compiler's source uses only the frozen bridge's feature set** — new
    language features are implemented in the new compiler first, self-hosted second,
    and only then used in its own source. No exceptions; this is what makes the

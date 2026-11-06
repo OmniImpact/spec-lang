@@ -29,14 +29,6 @@ Class is Error{
 		self:trace: [];
 	}
 
-	## Appends one provenance frame to the trace.
-	##
-	## @param className: Name of the class that observed the error.
-	## @param methodName: Name of the method that observed the error.
-	Function is addTrace(String is className, String is methodName){
-		self:trace:add(item: StackFrame:init(location: SourceLocation:init(file: '', line: 0, col: 0), className: className, methodName: methodName));
-	}
-
 	## Appends a provenance frame carrying source coordinates — the form
 	## producers closest to the source use (scanners and parsers know the
 	## exact position where an error was detected).

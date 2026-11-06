@@ -34,6 +34,7 @@ Class is Lexer{
 		['spec', 'base', 'compiler', 'lexer', 'loops', StripLeadingZerosLoop],
 		['spec', 'base', 'compiler', Error],
 		['spec', 'base', 'compiler', ErrorText],
+		['spec', 'base', 'sysinternal', Reflection],
 		['lib', 'base', 'iterator']
 	];
 
@@ -83,7 +84,7 @@ Class is Lexer{
 	## @param msg: Error description.
 	Function is addError(String is msg){
 		local Error is e: Error:init(message: "Line {{self:line}}: {{msg}}");
-		e:addTraceAt(className: 'Lexer', methodName: 'scan', line: self:line, col: self:col);
+		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: self:line, col: self:col);
 		self:errors:add(item: e);
 	}
 
