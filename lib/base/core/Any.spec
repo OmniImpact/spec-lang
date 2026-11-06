@@ -9,6 +9,10 @@ Class of Stringable is Any{
 	## Package dependencies declared by a class (Loader-consumed).
 	replace Array of String is using: [];
 
+	## Package namespace declaration slot: every class declares its canonical
+	## package here (array form, last-segment = package leaf).
+	replace Array of String is namespace: [];
+
 	## Default constructor; subclasses override with their own `init` signature.
 	replace Function is init(){
 		return;

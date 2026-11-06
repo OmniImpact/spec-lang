@@ -117,7 +117,7 @@ Class is DeclarationGenerator{
 				is FIELD: {
 					# Shorthand metadata properties (namespace, using, group)
 					# carry no type and never become struct fields.
-					if (m:getName() != 'using' && m:getType():getName() != '') {
+					if (m:getName() != 'using' && m:getName() != 'namespace' && m:getName() != 'group') {
 						# Most-derived declaration wins: when a child re-declares a
 						# base field (after a merge fold or a replace override), its
 						# initializer replaces the base's in place.
@@ -225,6 +225,31 @@ Class is DeclarationGenerator{
 						});
 						out: out . "        default: return spec_string_intern(\"\");\n";
 						out: out . "    }\n}\n\n";
+
+					# Reverse lookup: the string tag maps back to its variant.
+						# No match yields the empty-tag variant when the enum
+						# declares one (the NONE convention), else -1.
+						local String is emptyVariant: '';
+						out: out . 'static inline ' . name . ' ' . name . '_of(String v) {' . "\n";
+						c:getMembers():each(action: local Function(Member is m){
+							local String is valStr: m:getName();
+							if (m:hasInit) {
+								local Expression is initE2: m:initExpr;
+								if (initE2:getKind() == 'STRING') {
+									valStr: initE2:stringValue;
+								}
+							}
+							if (valStr == '') {
+								emptyVariant: m:getName();
+							}
+							out: out . '    if (spec_string_equals(v, spec_string_intern("' . valStr . '"))) return ' . name . '_' . self:cIdent(name: m:getName()) . ';' . "\n";
+						});
+						if (emptyVariant != '') {
+							out: out . '    return ' . name . '_' . self:cIdent(name: emptyVariant) . ';' . "\n";
+						} else {
+							out: out . '    return (' . name . ')-1;' . "\n";
+						}
+						out: out . "}\n\n";
 					} else {
 						out: out . 'static inline long long ' . name . '_value(' . name . " self) {\n";
 						out: out . "    switch (self) {\n";

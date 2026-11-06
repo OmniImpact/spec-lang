@@ -18,6 +18,7 @@ Enum of Int is HttpStatus {
 }
 
 Enum of String is LogLevel {
+	NONE: '',
 	DEBUG: 'DBG',
 	INFO: 'INF',
 	WARN: 'WRN',
@@ -120,6 +121,14 @@ Class is EnumWhenTest{
 		};
 		output:line('Token description: ' . tokDescription);
 
+		# String-backed reverse lookup: the tag maps back to its variant,
+		# no match yields the empty-tag default.
+		if (LogLevel:of(value: 'WRN') == LogLevel:WARN && LogLevel:of(value: 'nope') == LogLevel:NONE) {
+			output:line('Reverse lookup of() round-trips and defaults');
+		} else {
+			output:line('FAIL: of() lookup');
+		}
+
 		local HttpStatus is status: HttpStatus:SERVER_ERROR;
 		local Boolean is canRetry: when (status) {
 			is SERVER_ERROR: true;
@@ -129,6 +138,7 @@ Class is EnumWhenTest{
 		output:line('Can retry: ' . canRetry);
 
 		local Int is priority: when (LogLevel:ERROR) {
+			is NONE: 0;
 			is DEBUG: 1;
 			is INFO: 2;
 			is WARN: 3;

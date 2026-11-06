@@ -210,6 +210,12 @@ Class is BuiltinCallGenerator{
 			return '({ printf("%s", spec_buf_to_cstring((SpecBuf*)(' . strC . '))); fflush(stdout); })';
 		}
 
+		# String:newline() — the newline constant, so emission code never
+		# litters escape sequences (single-quoted strings cannot carry \n).
+		if (targetC == 'String' && expr:methodName == 'newline' && expr:methodArgs:length() == 0) {
+			return 'spec_string_intern("\\n")';
+		}
+
 		# String:fromCharCode
 		if (targetC == 'String' && expr:methodName == 'fromCharCode' && expr:methodArgs:length() > 0) {
 			local NamedArg is codeArg: expr:methodArgs:get(index: 0);
@@ -1006,6 +1012,12 @@ Class is BuiltinCallGenerator{
 		# Enum methods
 		if (self:allEnumNames:has(key: targetC) && expr:methodName == 'values') {
 			return targetC . '_values()';
+		}
+		# X:of(value) — string-backed enum lookup: the string tag maps back to
+		# its variant (no match yields the empty-tag variant, e.g. NONE).
+		if (self:allEnumNames:has(key: targetC) && expr:methodName == 'of' && expr:methodArgs:length() > 0) {
+			local NamedArg is vArg: expr:methodArgs:get(index: 0);
+			return targetC . '_of(' . cg:generateExpression(expr: vArg:getValue()) . ')';
 		}
 		if (self:allEnumNames:has(key: targetType)) {
 			if (expr:methodName == 'name') {

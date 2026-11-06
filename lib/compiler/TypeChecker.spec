@@ -1198,6 +1198,7 @@ Class is TypeChecker{
 						is 'name': { res: 'String'; }
 						is 'ordinal': { res: 'Int'; }
 						is 'values': { res: 'Array:' . targetType; }
+						is 'of': { res: targetType; }
 						is 'value': {
 							res: if (self:allStringBackedEnums:has(key: targetType)) 'String' else 'Int';
 						}
