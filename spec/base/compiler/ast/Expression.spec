@@ -148,4 +148,30 @@ Class is Expression{
 	Function is setResolvedType(String is t){
 		self:resolvedType: t;
 	}
+
+	## Returns the value expression of the call argument at [index].
+	## Typed accessor: avoids the Array.get->Any limitation.
+	##
+	## @param index: The argument index.
+	## @return: The argument's value expression.
+	Function of Expression is argValue(Int is index){
+		local NamedArg is arg: self:methodArgs:get(index: index);
+		return arg:value;
+	}
+
+	## Returns the name of the call argument at [index].
+	##
+	## @param index: The argument index.
+	## @return: The argument's name (empty for positional).
+	Function of String is argName(Int is index){
+		local NamedArg is arg: self:methodArgs:get(index: index);
+		return arg:name;
+	}
+
+	## Returns the number of call arguments.
+	##
+	## @return: The argument count.
+	Function of Int is argCount(){
+		return self:methodArgs:length();
+	}
 }

@@ -32,6 +32,63 @@ delegation. Current and planned members:
 **Rule**: nothing outside `base:sysinternal` may touch C. A body-less
 declaration anywhere else is a build error once the new checker enforces it.
 
+## 1.1 Prelude function inventory (the 1,984-line C runtime, classified)
+
+The prelude has ~192 functions. Here is every one, classified by
+destination. The prelude emission stays as the big C blob until
+self-hosting (Phase H); at that point the Spec implementations replace
+the C functions and the prelude shrinks to the §1 floor.
+
+### Stays in C (~46 — the true floor)
+
+| Group | Functions | Why C |
+|---|---|---|
+| ARC (5) | `spec_alloc`, `retain`, `release`, `assign`, `assign_transfer` | Refcount atomics on the C object header; the foundation Spec runs on |
+| ByteBuf struct + ops (9) | `SpecBuf` struct, `buf_new`, `grow`, `destroy`, `append_bytes`, `append_buf`, `to_cstring`, `get_byte`, `push_byte`, `pop_byte` | Direct `->data`/`->capacity`/realloc — THE one container in C |
+| Bootstrap intern (2) | `spec_string_intern` + hash-bucket table | Runs before any Spec code exists (every string literal calls it) |
+| Closure repr (3) | `SpecClosure` struct, `closure_new`, `call_closure_str`, `noop_closure` | Generated code's function-pointer protocol |
+| Panic (3) | `bounds`, `cast`, `byte_range` | abort/exit paths |
+| OS syscalls (~16) | `process_execute/sleep/get_pid`, `term_width/height`, `atomic_add/put/get`, `parallel_run/worker`, `file_exists/read/write/remove`, `input_prompt`, `drain_async_tasks` | fork/exec/nanosleep/ioctl/pthread/stat |
+| RTTI (2) | `type_name`, `is_subclass_of` | Reads the C object header's `_type_name` |
+| Error (1) | `error_line` | stderr write |
+| Headers (~5) | `SpecClosure`, `SpecLoopControl` typedefs, ARC header struct | C struct definitions |
+
+### Moves to Spec at self-hosting (~35 — pure computation over buf ops)
+
+| Group | Functions | Spec implementation |
+|---|---|---|
+| String ops (24) | `from_bytes`, `copy`, `length`, `equals`, `substring`, `index_of`, `index_of_from`, `trim`, `has_prefix`, `has_suffix`, `starts_with`, `ends_with`, `contains`, `char_at`, `from_char_code`, `is_digit`, `is_alpha`, `is_whitespace`, `replace_all`, `split`, `lines`, `join`, `bytes_equal`, `string_from_chars` | Byte loops over `Buf:bufGetByte`/`bufLength` — bodies already in String.spec (Phase A) |
+| Conversions (6) | `to_string_int`, `to_string_bool`, `int_to_base`, `parse_base`, `construct_string`, `construct_byte` | Division/character loops over the floor |
+| Concat (2) | `spec_string_concat`, `concat_impl` | The `.` operator emission routes to `String.concatWith` (a Spec method over bufAppendBuf) |
+
+The codegen emission changes per function: replace the `spec_string_*` call
+with the compiled Spec body's direct-dispatch call (`String_<method>`).
+The `String.concatWith` method needs two new sysinternal bindings
+(`bufNewString`, `bufAppendBuf`) plus one C wrapper (`spec_buf_new_string`).
+
+### Dies at Phase E (~61 — containers reimplemented in Spec)
+
+| Group | Functions | Replacement |
+|---|---|---|
+| Array (22) | `spec_array_new/new_object/new_string/add/add_owned/get/set/pop/remove_at/length/clear/each/filter/count/any/map/fold/join/index_of/slice` | Spec class over ByteBuf with element stride |
+| Map (16) | `spec_map_new/new_object/set/set_any/set_any_transfer/get/get_string/get_int/get_float/get_bool/has/remove/keys` + hash | Spec hash table over Array |
+| Vec (12) | `spec_vec_new/new_object/new_string/push/get/set/length/clear` | Spec class over ByteBuf |
+| ByteBuffer (11) | `spec_bytebuffer_new/new_string/push/append_string/get/pop/length/to_string` | Spec class over ByteBuf |
+
+### Debug/trace infrastructure (~25 — not emitted by the new compiler)
+
+`spec_rc_*` (debug ARC tracking), `spec_trace_*`, `_spec_rc_*` statics —
+enabled by `SPEC_RC_DEBUG` env var. The new compiler's arena model
+(plan §8) replaces the leak-tracking need. These simply don't appear
+in the new prelude.
+
+### Direct memory accesses (200 occurrences)
+
+Every `->data`, `->length`, `->capacity`, `->items`, `->elem_size`,
+`->elem_kind` targets a C runtime struct. The `SpecBuf` accesses stay
+in C (the ByteBuf floor). The `SpecArray`/`SpecMap`/`SpecVec` accesses
+die at Phase E when the containers become Spec objects.
+
 ## 2. Runtime-managed classes (transitional — die at Phase E)
 
 These live in `lib/` as pure API-surface declarations, but their

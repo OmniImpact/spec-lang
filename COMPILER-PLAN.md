@@ -12,7 +12,10 @@ dispatch, String bodies) is base-library inventory for the new compiler, not thr
 
 > **Quick reference:** [TRANSITION.md](TRANSITION.md) — the working
 > checklist of what stays in C, what becomes Spec, and what is scheduled
-> for deletion. This document is authoritative; that one is the digest.
+> for deletion. Includes the full prelude function inventory (192 functions
+> classified: ~46 stay in C, ~35 move to Spec at self-hosting, ~61 die at
+> Phase E, ~25 debug-only). This document is authoritative; that one is
+> the digest.
 
 ## 1. Executive Summary
 
