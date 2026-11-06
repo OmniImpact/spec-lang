@@ -115,7 +115,9 @@ Class is DeclarationGenerator{
 		c:getMembers():each(action: local Function(Member is m){
 			when (m:getMemberKind()) {
 				is FIELD: {
-					if (m:getName() != 'using') {
+					# Shorthand metadata properties (namespace, using, group)
+					# carry no type and never become struct fields.
+					if (m:getName() != 'using' && m:getType():getName() != '') {
 						# Most-derived declaration wins: when a child re-declares a
 						# base field (after a merge fold or a replace override), its
 						# initializer replaces the base's in place.

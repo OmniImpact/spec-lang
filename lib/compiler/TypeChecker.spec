@@ -256,7 +256,7 @@ Class is TypeChecker{
 	## @param name: Candidate type name.
 	## @return: true when the name is a builtin class.
 	local Function of Boolean is isBuiltinClassName(String is name){
-		if (name == 'Array' || name == 'Map' || name == 'Buf' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'List' || name == 'Buf') {
+		if (name == 'Array' || name == 'Map' || name == 'Buf' || name == 'Dir' || name == 'File' || name == 'Process' || name == 'Math' || name == 'math' || name == 'List') {
 			return true;
 		}
 		if (name == 'While' || name == 'Input' || name == 'LoopControl' || name == 'Output' || name == 'output' || name == 'error' || name == 'Error' || name == 'Parallel' || name == 'Ansi') {
@@ -1979,12 +1979,18 @@ Class is TypeChecker{
 					if (m:getSourceFile() != '') {
 						self:currentSourceFile: m:getSourceFile();
 					}
-					local String is declaredType: self:formatVarTypeString(t: m:getType());
-					if (m:hasInit) {
-						local String is initType: self:inferExpressionType(expr: m:initExpr);
-						if (!self:isAssignable(target: declaredType, source: initType)) {
-							local String is msg: 'Type mismatch in field \'' . classDef:getName() . ':' . m:getName() . '\': cannot assign \'' . initType . '\' to \'' . declaredType . '\'.';
-							self:addError(line: m:getLine(), msg: msg);
+					# Declarative metadata properties (using, namespace, group)
+					# are loader directives, not checked code: their
+					# initializers may reference classes the using itself
+					# loads, so type validation is skipped.
+					if (m:getName() != 'using' && m:getName() != 'namespace' && m:getName() != 'group') {
+						local String is declaredType: self:formatVarTypeString(t: m:getType());
+						if (m:hasInit) {
+							local String is initType: self:inferExpressionType(expr: m:initExpr);
+							if (!self:isAssignable(target: declaredType, source: initType)) {
+								local String is msg: 'Type mismatch in field \'' . classDef:getName() . ':' . m:getName() . '\': cannot assign \'' . initType . '\' to \'' . declaredType . '\'.';
+								self:addError(line: m:getLine(), msg: msg);
+							}
 						}
 					}
 				}

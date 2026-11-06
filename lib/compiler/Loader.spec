@@ -18,6 +18,7 @@ Class is Loader{
 	];
 
 	local Map of String to String is loadedFiles: Map:init();
+	local String is rootInputPath: '';
 	local Array of ClassInfo is loadedClasses: [];
 	local Map of String to String is seenClassNames: Map:init();
 	local Array of String is parseErrors: [];
@@ -128,7 +129,8 @@ Class is Loader{
 				'lib/base/core/Any.spec'
 			];
 			is 'base:sysinternal:*': [
-				'lib/base/sysinternal/Buf.spec'
+				'lib/base/sysinternal/Buf.spec',
+				'lib/base/sysinternal/Dir.spec'
 			];
 			is 'base:sys:*': [
 				'lib/base/sys/Parallel.spec',
@@ -221,6 +223,10 @@ Class is Loader{
 				local Expression is initExpr: m:getInitExpr();
 				if (initExpr:getKind() == 'ARRAY') {
 					initExpr:arrayItems:each(action: local Function(Expression is item){
+						if (item:getKind() == 'ARRAY') {
+							self:loadArrayFormUsing(item: item, c: c);
+							return;
+						}
 						local String is importStr: item:stringValue;
 						local Array of String is wildcards: self:expandWildcard(rawPath: importStr);
 						if (wildcards:length() > 0) {
@@ -239,6 +245,96 @@ Class is Loader{
 				}
 			}
 		});
+	}
+
+	## Resolves one array-form using entry against the scan roots (the spec
+	## executable's directory and the input file's directory). String segments
+	## name the package; the last element being a bare class identifier loads
+	## that one class, a string loads the whole package directory.
+	local Function is loadArrayFormUsing(Expression is item, ClassInfo is c){
+		local Array of Expression is segs: item:arrayItems;
+		if (segs:length() == 0) {
+			return;
+		}
+		local Array of String is parts: [];
+		local String is termClass: '';
+		segs:each(action: local Function(Expression is seg){
+			if (seg:getKind() == 'IDENT') {
+				termClass: seg:stringValue;
+			} else {
+				parts:add(item: seg:stringValue);
+			}
+		});
+		local Array of String is roots: self:scanRoots();
+		roots:each(action: local Function(String is root){
+			local String is dir: root;
+			parts:each(action: local Function(String is p){
+				dir: dir . '/' . p;
+			});
+			if (termClass != '') {
+				local String is classFile: dir . '/' . termClass . '.spec';
+				if (File:exists(path: classFile)) {
+					self:loadFile(filePath: classFile);
+				}
+				return;
+			}
+			if (File:exists(path: dir)) {
+				local Array of String is names: base:sysinternal:Dir():dirList(path: dir);
+				names:each(action: local Function(String is nm){
+					if (nm:endsWith(suffix: '.spec')) {
+						self:loadFile(filePath: dir . '/' . nm);
+					}
+				});
+			}
+		});
+	}
+
+	## Scan roots for package resolution: the spec executable's directory
+	## first, then the input file's directory.
+	Function of Array of String is scanRoots(){
+		local Array of String is roots: [];
+		roots:add(item: base:sysinternal:Dir():exeDir());
+		local String is inDir: self:dirOf(path: self:rootInputPath);
+		if (inDir != '') {
+			roots:add(item: inDir);
+		}
+		return roots;
+	}
+
+	## Directory portion of a file path ('' when the path has no slash).
+	Function of String is dirOf(String is path){
+		local LastSlashLoop is loop: LastSlashLoop:init(src: path);
+		While:run(loop: loop);
+		if (loop:lastIdx < 0) {
+			return '';
+		}
+		return path:substring(start: 0, end: loop:lastIdx);
+	}
+
+	## Walks a path tracking the final slash index.
+	Class of Loop is LastSlashLoop{
+		local String is src;
+		local Int is pos: 0;
+		local Int is lastIdx: -1;
+
+		replace Function is init(String is src){
+			self:src: src;
+			self:pos: 0;
+			self:lastIdx: -1;
+		}
+
+		replace Function of Boolean is evaluate(){
+			return self:pos < self:src:length();
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local String is ch: self:src:charAt(index: self:pos, default: '');
+			if (ch == '/') {
+				self:lastIdx: self:pos;
+			}
+			self:pos: self:pos + 1;
+			return true;
+		}
 	}
 
 	## Extracts the load-time group target declared via the `group` pseudo-field.
@@ -509,9 +605,11 @@ Class is Loader{
 		# Root class lattice preloads, before any user code.
 				self:loadFile(filePath: 'lib/base/core/String.spec');
 		self:loadFile(filePath: 'lib/base/sysinternal/Buf.spec');
+		self:loadFile(filePath: 'lib/base/sysinternal/Dir.spec');
 self:loadFile(filePath: 'lib/base/core/Stringable.spec');
 		self:loadFile(filePath: 'lib/base/core/Any.spec');
 
+		self:rootInputPath: rootPath;
 		self:loadFile(filePath: rootPath);
 		self:appendImplicitAny();
 		self:mergeGroups();

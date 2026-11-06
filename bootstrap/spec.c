@@ -32,6 +32,7 @@ long long spec_string_index_of_from(String b, String needle, long long from, lon
 String spec_string_trim(String b);
 bool spec_string_has_prefix(String b, String prefix);
 bool spec_string_has_suffix(String b, String suffix);
+#include <dirent.h>
 #include <pthread.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
@@ -1132,6 +1133,28 @@ void spec_buf_destroy(void* self) {
     if (b->data) { free(b->data); b->data = NULL; }
 }
 
+SpecArray* spec_dir_list(SpecBuf* path) {
+    SpecArray* res = spec_array_new_object();
+    if (!path) return res;
+    DIR* d = opendir(spec_buf_to_cstring(path));
+    if (!d) return res;
+    struct dirent* ent;
+    while ((ent = readdir(d)) != NULL) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        spec_array_add_owned(res, spec_string_from_bytes(ent->d_name, strlen(ent->d_name)));
+    }
+    closedir(d);
+    return res;
+}
+SpecBuf* spec_exe_dir(void) {
+    char buf[4096];
+    ssize_t n = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (n <= 0) return spec_string_from_bytes(".", 1);
+    buf[n] = '\0';
+    char* slash = strrchr(buf, '/');
+    if (!slash) return spec_string_from_bytes(".", 1);
+    return spec_string_from_bytes(buf, (size_t)(slash - buf));
+}
 SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {
     SpecBuf* b = (SpecBuf*)spec_alloc(sizeof(SpecBuf), spec_buf_destroy);
     b->data = NULL;
@@ -2342,6 +2365,9 @@ void Loader_destroy(void* self);
 typedef struct PathConvLoop PathConvLoop;
 PathConvLoop* PathConvLoop_new(void);
 void PathConvLoop_destroy(void* self);
+typedef struct LastSlashLoop LastSlashLoop;
+LastSlashLoop* LastSlashLoop_new(void);
+void LastSlashLoop_destroy(void* self);
 
 long long String_length(String self);
 String String_charAt(String self, long long index, String _default);
@@ -2827,6 +2853,9 @@ String Loader_resolvePath(Loader* self, String rawPath);
 SpecArray* Loader_expandWildcard(Loader* self, String rawPath);
 void Loader_loadFile(Loader* self, String filePath);
 void Loader_collectImportsFromClass(Loader* self, ClassInfo* c);
+void Loader_loadArrayFormUsing(Loader* self, Expression* item, ClassInfo* c);
+SpecArray* Loader_scanRoots(Loader* self);
+String Loader_dirOf(Loader* self, String path);
 String Loader_groupTargetOf(Loader* self, ClassInfo* c);
 ClassInfo* Loader_findLoadedClass(Loader* self, String name);
 Member* Loader_findMemberNamed(Loader* self, ClassInfo* target, String name);
@@ -2839,6 +2868,9 @@ void Loader_appendImplicitAny(Loader* self);
 void PathConvLoop_init(PathConvLoop* self, String src);
 bool PathConvLoop_evaluate(PathConvLoop* self);
 bool PathConvLoop_iteration(PathConvLoop* self, SpecLoopControl* control);
+void LastSlashLoop_init(LastSlashLoop* self, String src);
+bool LastSlashLoop_evaluate(LastSlashLoop* self);
+bool LastSlashLoop_iteration(LastSlashLoop* self, SpecLoopControl* control);
 
 /* Struct Layouts */
 struct Stringable {
@@ -3526,6 +3558,7 @@ struct Loader {
     const char* _type_name;
     void** _vtable;
     SpecMap* loadedFiles;
+    String rootInputPath;
     SpecArray* loadedClasses;
     SpecMap* seenClassNames;
     SpecArray* parseErrors;
@@ -3541,8 +3574,19 @@ struct PathConvLoop {
     String res;
 };
 
+struct LastSlashLoop {
+    const char* _type_name;
+    void** _vtable;
+    String src;
+    long long pos;
+    long long lastIdx;
+};
+
 /* Virtual Method Tables */
-static void* Stringable_vtable[252] = {
+static void* Stringable_vtable[255] = {
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -3797,7 +3841,10 @@ static void* Stringable_vtable[252] = {
     (void*)0
 };
 
-static void* Any_vtable[252] = {
+static void* Any_vtable[255] = {
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -4052,7 +4099,7 @@ static void* Any_vtable[252] = {
     (void*)0
 };
 
-static void* Driver_vtable[252] = {
+static void* Driver_vtable[255] = {
     (void*)0,
     (void*)Driver_init,
     (void*)0,
@@ -4304,10 +4351,13 @@ static void* Driver_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Ansi_vtable[252] = {
+static void* Ansi_vtable[255] = {
     (void*)0,
     (void*)0,
     (void*)Ansi_esc,
@@ -4559,10 +4609,13 @@ static void* Ansi_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[252] = {
+static void* ClassInfo_vtable[255] = {
     (void*)0,
     (void*)ClassInfo_init,
     (void*)0,
@@ -4814,10 +4867,13 @@ static void* ClassInfo_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[252] = {
+static void* Member_vtable[255] = {
     (void*)0,
     (void*)Member_init,
     (void*)0,
@@ -5069,10 +5125,13 @@ static void* Member_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[252] = {
+static void* Type_vtable[255] = {
     (void*)Type_toString,
     (void*)Type_init,
     (void*)0,
@@ -5324,10 +5383,13 @@ static void* Type_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[252] = {
+static void* Parameter_vtable[255] = {
     (void*)0,
     (void*)Parameter_init,
     (void*)0,
@@ -5579,10 +5641,13 @@ static void* Parameter_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[252] = {
+static void* NamedArg_vtable[255] = {
     (void*)0,
     (void*)NamedArg_init,
     (void*)0,
@@ -5834,10 +5899,13 @@ static void* NamedArg_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[252] = {
+static void* Expression_vtable[255] = {
     (void*)0,
     (void*)Expression_init,
     (void*)0,
@@ -6089,10 +6157,13 @@ static void* Expression_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[252] = {
+static void* Statement_vtable[255] = {
     (void*)0,
     (void*)Statement_init,
     (void*)0,
@@ -6344,10 +6415,13 @@ static void* Statement_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[252] = {
+static void* ProgramNode_vtable[255] = {
     (void*)0,
     (void*)ProgramNode_init,
     (void*)0,
@@ -6599,10 +6673,13 @@ static void* ProgramNode_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArm_vtable[252] = {
+static void* WhenArm_vtable[255] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -6854,10 +6931,13 @@ static void* WhenArm_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[252] = {
+static void* Token_vtable[255] = {
     (void*)0,
     (void*)Token_init,
     (void*)0,
@@ -7109,10 +7189,13 @@ static void* Token_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[252] = {
+static void* SourceLocation_vtable[255] = {
     (void*)SourceLocation_toString,
     (void*)SourceLocation_init,
     (void*)0,
@@ -7364,10 +7447,13 @@ static void* SourceLocation_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[252] = {
+static void* Lexer_vtable[255] = {
     (void*)0,
     (void*)Lexer_init,
     (void*)0,
@@ -7619,10 +7705,13 @@ static void* Lexer_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipWhitespaceLoop_vtable[252] = {
+static void* SkipWhitespaceLoop_vtable[255] = {
     (void*)0,
     (void*)SkipWhitespaceLoop_init,
     (void*)0,
@@ -7874,10 +7963,13 @@ static void* SkipWhitespaceLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipCommentLoop_vtable[252] = {
+static void* SkipCommentLoop_vtable[255] = {
     (void*)0,
     (void*)SkipCommentLoop_init,
     (void*)0,
@@ -8129,10 +8221,13 @@ static void* SkipCommentLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* IdentScanLoop_vtable[252] = {
+static void* IdentScanLoop_vtable[255] = {
     (void*)0,
     (void*)IdentScanLoop_init,
     (void*)0,
@@ -8384,10 +8479,13 @@ static void* IdentScanLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseDigitsLoop_vtable[252] = {
+static void* BaseDigitsLoop_vtable[255] = {
     (void*)0,
     (void*)BaseDigitsLoop_init,
     (void*)0,
@@ -8639,10 +8737,13 @@ static void* BaseDigitsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NumberScanLoop_vtable[252] = {
+static void* NumberScanLoop_vtable[255] = {
     (void*)0,
     (void*)NumberScanLoop_init,
     (void*)0,
@@ -8894,10 +8995,13 @@ static void* NumberScanLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StringScanLoop_vtable[252] = {
+static void* StringScanLoop_vtable[255] = {
     (void*)0,
     (void*)StringScanLoop_init,
     (void*)0,
@@ -9149,10 +9253,13 @@ static void* StringScanLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* HeredocScanLoop_vtable[252] = {
+static void* HeredocScanLoop_vtable[255] = {
     (void*)0,
     (void*)HeredocScanLoop_init,
     (void*)0,
@@ -9404,10 +9511,13 @@ static void* HeredocScanLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenizeLoop_vtable[252] = {
+static void* TokenizeLoop_vtable[255] = {
     (void*)0,
     (void*)TokenizeLoop_init,
     (void*)0,
@@ -9659,10 +9769,13 @@ static void* TokenizeLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[252] = {
+static void* Parser_vtable[255] = {
     (void*)0,
     (void*)Parser_init,
     (void*)0,
@@ -9914,10 +10027,13 @@ static void* Parser_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumVariantsLoop_vtable[252] = {
+static void* EnumVariantsLoop_vtable[255] = {
     (void*)0,
     (void*)EnumVariantsLoop_init,
     (void*)0,
@@ -10169,10 +10285,13 @@ static void* EnumVariantsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramParseLoop_vtable[252] = {
+static void* ProgramParseLoop_vtable[255] = {
     (void*)0,
     (void*)ProgramParseLoop_init,
     (void*)0,
@@ -10424,10 +10543,13 @@ static void* ProgramParseLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassMembersLoop_vtable[252] = {
+static void* ClassMembersLoop_vtable[255] = {
     (void*)0,
     (void*)ClassMembersLoop_init,
     (void*)0,
@@ -10679,10 +10801,13 @@ static void* ClassMembersLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseClassesLoop_vtable[252] = {
+static void* BaseClassesLoop_vtable[255] = {
     (void*)0,
     (void*)BaseClassesLoop_init,
     (void*)0,
@@ -10934,10 +11059,13 @@ static void* BaseClassesLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BlockStatementsLoop_vtable[252] = {
+static void* BlockStatementsLoop_vtable[255] = {
     (void*)0,
     (void*)BlockStatementsLoop_init,
     (void*)0,
@@ -11189,10 +11317,13 @@ static void* BlockStatementsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenConditionsLoop_vtable[252] = {
+static void* WhenConditionsLoop_vtable[255] = {
     (void*)0,
     (void*)WhenConditionsLoop_init,
     (void*)0,
@@ -11444,10 +11575,13 @@ static void* WhenConditionsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArmsLoop_vtable[252] = {
+static void* WhenArmsLoop_vtable[255] = {
     (void*)0,
     (void*)WhenArmsLoop_init,
     (void*)0,
@@ -11699,10 +11833,13 @@ static void* WhenArmsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArrayItemsLoop_vtable[252] = {
+static void* ArrayItemsLoop_vtable[255] = {
     (void*)0,
     (void*)ArrayItemsLoop_init,
     (void*)0,
@@ -11954,10 +12091,13 @@ static void* ArrayItemsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MapItemsLoop_vtable[252] = {
+static void* MapItemsLoop_vtable[255] = {
     (void*)0,
     (void*)MapItemsLoop_init,
     (void*)0,
@@ -12209,10 +12349,13 @@ static void* MapItemsLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ModifierLoop_vtable[252] = {
+static void* ModifierLoop_vtable[255] = {
     (void*)0,
     (void*)ModifierLoop_init,
     (void*)0,
@@ -12464,10 +12607,13 @@ static void* ModifierLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ParamLoop_vtable[252] = {
+static void* ParamLoop_vtable[255] = {
     (void*)0,
     (void*)ParamLoop_init,
     (void*)0,
@@ -12719,10 +12865,13 @@ static void* ParamLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArgLoop_vtable[252] = {
+static void* ArgLoop_vtable[255] = {
     (void*)0,
     (void*)ArgLoop_init,
     (void*)0,
@@ -12974,10 +13123,13 @@ static void* ArgLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PostfixLoop_vtable[252] = {
+static void* PostfixLoop_vtable[255] = {
     (void*)0,
     (void*)PostfixLoop_init,
     (void*)0,
@@ -13229,10 +13381,13 @@ static void* PostfixLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalOrLoop_vtable[252] = {
+static void* LogicalOrLoop_vtable[255] = {
     (void*)0,
     (void*)LogicalOrLoop_init,
     (void*)0,
@@ -13484,10 +13639,13 @@ static void* LogicalOrLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LogicalAndLoop_vtable[252] = {
+static void* LogicalAndLoop_vtable[255] = {
     (void*)0,
     (void*)LogicalAndLoop_init,
     (void*)0,
@@ -13739,10 +13897,13 @@ static void* LogicalAndLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ShiftLoop_vtable[252] = {
+static void* ShiftLoop_vtable[255] = {
     (void*)0,
     (void*)ShiftLoop_init,
     (void*)0,
@@ -13994,10 +14155,13 @@ static void* ShiftLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitAndLoop_vtable[252] = {
+static void* BitAndLoop_vtable[255] = {
     (void*)0,
     (void*)BitAndLoop_init,
     (void*)0,
@@ -14249,10 +14413,13 @@ static void* BitAndLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitXorLoop_vtable[252] = {
+static void* BitXorLoop_vtable[255] = {
     (void*)0,
     (void*)BitXorLoop_init,
     (void*)0,
@@ -14504,10 +14671,13 @@ static void* BitXorLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BitOrLoop_vtable[252] = {
+static void* BitOrLoop_vtable[255] = {
     (void*)0,
     (void*)BitOrLoop_init,
     (void*)0,
@@ -14759,10 +14929,13 @@ static void* BitOrLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EqualityLoop_vtable[252] = {
+static void* EqualityLoop_vtable[255] = {
     (void*)0,
     (void*)EqualityLoop_init,
     (void*)0,
@@ -15014,10 +15187,13 @@ static void* EqualityLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RelationalLoop_vtable[252] = {
+static void* RelationalLoop_vtable[255] = {
     (void*)0,
     (void*)RelationalLoop_init,
     (void*)0,
@@ -15269,10 +15445,13 @@ static void* RelationalLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ConcatLoop_vtable[252] = {
+static void* ConcatLoop_vtable[255] = {
     (void*)0,
     (void*)ConcatLoop_init,
     (void*)0,
@@ -15524,10 +15703,13 @@ static void* ConcatLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* AdditiveLoop_vtable[252] = {
+static void* AdditiveLoop_vtable[255] = {
     (void*)0,
     (void*)AdditiveLoop_init,
     (void*)0,
@@ -15779,10 +15961,13 @@ static void* AdditiveLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MultiplicativeLoop_vtable[252] = {
+static void* MultiplicativeLoop_vtable[255] = {
     (void*)0,
     (void*)MultiplicativeLoop_init,
     (void*)0,
@@ -16034,10 +16219,13 @@ static void* MultiplicativeLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateSplitLoop_vtable[252] = {
+static void* TemplateSplitLoop_vtable[255] = {
     (void*)0,
     (void*)TemplateSplitLoop_init,
     (void*)0,
@@ -16289,10 +16477,13 @@ static void* TemplateSplitLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateFoldLoop_vtable[252] = {
+static void* TemplateFoldLoop_vtable[255] = {
     (void*)0,
     (void*)TemplateFoldLoop_init,
     (void*)0,
@@ -16544,10 +16735,13 @@ static void* TemplateFoldLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FancyEscapeLoop_vtable[252] = {
+static void* FancyEscapeLoop_vtable[255] = {
     (void*)0,
     (void*)FancyEscapeLoop_init,
     (void*)0,
@@ -16799,10 +16993,13 @@ static void* FancyEscapeLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LintIssue_vtable[252] = {
+static void* LintIssue_vtable[255] = {
     (void*)LintIssue_toString,
     (void*)LintIssue_init,
     (void*)0,
@@ -17054,10 +17251,13 @@ static void* LintIssue_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Linter_vtable[252] = {
+static void* Linter_vtable[255] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -17309,10 +17509,13 @@ static void* Linter_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[252] = {
+static void* TypeError_vtable[255] = {
     (void*)TypeError_toString,
     (void*)TypeError_init,
     (void*)0,
@@ -17564,10 +17767,13 @@ static void* TypeError_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[252] = {
+static void* TypeChecker_vtable[255] = {
     (void*)0,
     (void*)TypeChecker_init,
     (void*)0,
@@ -17819,10 +18025,13 @@ static void* TypeChecker_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SearchLoop_vtable[252] = {
+static void* SearchLoop_vtable[255] = {
     (void*)0,
     (void*)SearchLoop_init,
     (void*)0,
@@ -18074,10 +18283,13 @@ static void* SearchLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldSearchLoop_vtable[252] = {
+static void* FieldSearchLoop_vtable[255] = {
     (void*)0,
     (void*)FieldSearchLoop_init,
     (void*)0,
@@ -18329,10 +18541,13 @@ static void* FieldSearchLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodSearchLoop_vtable[252] = {
+static void* MethodSearchLoop_vtable[255] = {
     (void*)0,
     (void*)MethodSearchLoop_init,
     (void*)0,
@@ -18584,10 +18799,13 @@ static void* MethodSearchLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathResolveLoop_vtable[252] = {
+static void* PathResolveLoop_vtable[255] = {
     (void*)0,
     (void*)PathResolveLoop_init,
     (void*)0,
@@ -18839,10 +19057,13 @@ static void* PathResolveLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberImplementLoop_vtable[252] = {
+static void* MemberImplementLoop_vtable[255] = {
     (void*)0,
     (void*)MemberImplementLoop_init,
     (void*)0,
@@ -19094,10 +19315,13 @@ static void* MemberImplementLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[252] = {
+static void* CBackendUtils_vtable[255] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -19349,10 +19573,13 @@ static void* CBackendUtils_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SnakeCaseLoop_vtable[252] = {
+static void* SnakeCaseLoop_vtable[255] = {
     (void*)0,
     (void*)SnakeCaseLoop_init,
     (void*)0,
@@ -19604,10 +19831,13 @@ static void* SnakeCaseLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EscapeLoop_vtable[252] = {
+static void* EscapeLoop_vtable[255] = {
     (void*)0,
     (void*)EscapeLoop_init,
     (void*)0,
@@ -19859,10 +20089,13 @@ static void* EscapeLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[252] = {
+static void* RuntimePrelude_vtable[255] = {
     (void*)0,
     (void*)RuntimePrelude_init,
     (void*)0,
@@ -20114,10 +20347,13 @@ static void* RuntimePrelude_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[252] = {
+static void* DeclarationGenerator_vtable[255] = {
     (void*)0,
     (void*)DeclarationGenerator_init,
     (void*)0,
@@ -20369,10 +20605,13 @@ static void* DeclarationGenerator_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* HasFieldLoop_vtable[252] = {
+static void* HasFieldLoop_vtable[255] = {
     (void*)0,
     (void*)HasFieldLoop_init,
     (void*)0,
@@ -20624,10 +20863,13 @@ static void* HasFieldLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[252] = {
+static void* BuiltinCallGenerator_vtable[255] = {
     (void*)0,
     (void*)BuiltinCallGenerator_init,
     (void*)0,
@@ -20879,10 +21121,13 @@ static void* BuiltinCallGenerator_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CodeGenerator_vtable[252] = {
+static void* CodeGenerator_vtable[255] = {
     (void*)0,
     (void*)CodeGenerator_init,
     (void*)0,
@@ -21134,10 +21379,13 @@ static void* CodeGenerator_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamespaceCheckLoop_vtable[252] = {
+static void* NamespaceCheckLoop_vtable[255] = {
     (void*)0,
     (void*)NamespaceCheckLoop_init,
     (void*)0,
@@ -21389,10 +21637,13 @@ static void* NamespaceCheckLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassSearchLoop_vtable[252] = {
+static void* ClassSearchLoop_vtable[255] = {
     (void*)0,
     (void*)ClassSearchLoop_init,
     (void*)0,
@@ -21644,10 +21895,13 @@ static void* ClassSearchLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldMemberLoop_vtable[252] = {
+static void* FieldMemberLoop_vtable[255] = {
     (void*)0,
     (void*)FieldMemberLoop_init,
     (void*)0,
@@ -21899,10 +22153,13 @@ static void* FieldMemberLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodMemberLoop_vtable[252] = {
+static void* MethodMemberLoop_vtable[255] = {
     (void*)0,
     (void*)MethodMemberLoop_init,
     (void*)0,
@@ -22154,10 +22411,13 @@ static void* MethodMemberLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathTypeResolveLoop_vtable[252] = {
+static void* PathTypeResolveLoop_vtable[255] = {
     (void*)0,
     (void*)PathTypeResolveLoop_init,
     (void*)0,
@@ -22409,10 +22669,13 @@ static void* PathTypeResolveLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathChainLoop_vtable[252] = {
+static void* PathChainLoop_vtable[255] = {
     (void*)0,
     (void*)PathChainLoop_init,
     (void*)0,
@@ -22664,10 +22927,13 @@ static void* PathChainLoop_vtable[252] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[252] = {
+static void* Loader_vtable[255] = {
     (void*)0,
     (void*)Loader_init,
     (void*)0,
@@ -22911,6 +23177,9 @@ static void* Loader_vtable[252] = {
     (void*)Loader_expandWildcard,
     (void*)Loader_loadFile,
     (void*)Loader_collectImportsFromClass,
+    (void*)Loader_loadArrayFormUsing,
+    (void*)Loader_scanRoots,
+    (void*)Loader_dirOf,
     (void*)Loader_groupTargetOf,
     (void*)Loader_findLoadedClass,
     (void*)Loader_findMemberNamed,
@@ -22922,7 +23191,7 @@ static void* Loader_vtable[252] = {
     (void*)Loader_appendImplicitAny
 };
 
-static void* PathConvLoop_vtable[252] = {
+static void* PathConvLoop_vtable[255] = {
     (void*)0,
     (void*)PathConvLoop_init,
     (void*)0,
@@ -23032,6 +23301,267 @@ static void* PathConvLoop_vtable[252] = {
     (void*)0,
     (void*)PathConvLoop_evaluate,
     (void*)PathConvLoop_iteration,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0
+};
+
+static void* LastSlashLoop_vtable[255] = {
+    (void*)0,
+    (void*)LastSlashLoop_init,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)LastSlashLoop_evaluate,
+    (void*)LastSlashLoop_iteration,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -23408,6 +23938,9 @@ static bool spec_is_subclass_of(const char* actual, const char* target) {
         return (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
     }
     if (strcmp(actual, "PathConvLoop") == 0) {
+        return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
+    }
+    if (strcmp(actual, "LastSlashLoop") == 0) {
         return (strcmp(target, "Loop") == 0) || (strcmp(target, "Any") == 0) || (strcmp(target, "Stringable") == 0);
     }
     return false;
@@ -24767,6 +25300,7 @@ void Loader_destroy(void* self_ptr) {
     Loader* self = (Loader*)self_ptr;
     if (!self) return;
     if (self->loadedFiles) { spec_release((void*)self->loadedFiles); self->loadedFiles = NULL; }
+    if (self->rootInputPath) { spec_release((void*)self->rootInputPath); self->rootInputPath = NULL; }
     if (self->loadedClasses) { spec_release((void*)self->loadedClasses); self->loadedClasses = NULL; }
     if (self->seenClassNames) { spec_release((void*)self->seenClassNames); self->seenClassNames = NULL; }
     if (self->parseErrors) { spec_release((void*)self->parseErrors); self->parseErrors = NULL; }
@@ -24779,6 +25313,7 @@ Loader* Loader_new(void) {
     self->_type_name = "Loader";
     self->_vtable = Loader_vtable;
     self->loadedFiles = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->rootInputPath = (String)spec_retain((void*)(spec_string_intern("")));
     self->loadedClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
     self->seenClassNames = (SpecMap*)spec_retain((void*)(spec_map_new()));
     self->parseErrors = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
@@ -24801,6 +25336,22 @@ PathConvLoop* PathConvLoop_new(void) {
     self->src = spec_string_intern("");
     self->pos = 0;
     self->res = (String)spec_retain((void*)(spec_string_intern("")));
+    return self;
+}
+
+void LastSlashLoop_destroy(void* self_ptr) {
+    LastSlashLoop* self = (LastSlashLoop*)self_ptr;
+    if (!self) return;
+    if (self->src) { spec_release((void*)self->src); self->src = NULL; }
+}
+
+LastSlashLoop* LastSlashLoop_new(void) {
+    LastSlashLoop* self = (LastSlashLoop*)spec_alloc(sizeof(LastSlashLoop), LastSlashLoop_destroy);
+    self->_type_name = "LastSlashLoop";
+    self->_vtable = LastSlashLoop_vtable;
+    self->src = spec_string_intern("");
+    self->pos = 0;
+    self->lastIdx = (-(1));
     return self;
 }
 
@@ -28573,7 +29124,7 @@ void TypeChecker_checkCallArguments(TypeChecker* self, Expression* callExpr) {
 }
 
 bool TypeChecker_isBuiltinClassName(TypeChecker* self, String name) {
-    if (((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("Buf"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("math"))))) || (spec_string_equals(name, spec_string_intern("List"))))) || (spec_string_equals(name, spec_string_intern("Buf"))))) {
+    if (((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("Buf"))))) || (spec_string_equals(name, spec_string_intern("Dir"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("math"))))) || (spec_string_equals(name, spec_string_intern("List"))))) {
         return true;
     }
     if (((((((((((((((((spec_string_equals(name, spec_string_intern("While"))) || (spec_string_equals(name, spec_string_intern("Input"))))) || (spec_string_equals(name, spec_string_intern("LoopControl"))))) || (spec_string_equals(name, spec_string_intern("Output"))))) || (spec_string_equals(name, spec_string_intern("output"))))) || (spec_string_equals(name, spec_string_intern("error"))))) || (spec_string_equals(name, spec_string_intern("Error"))))) || (spec_string_equals(name, spec_string_intern("Parallel"))))) || (spec_string_equals(name, spec_string_intern("Ansi"))))) {
@@ -30226,12 +30777,14 @@ void TypeChecker_checkClass(TypeChecker* self, ClassInfo* classDef) {
         if ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[28]))((Member*)_recv); })))), spec_string_intern("")))) {
         spec_assign((void**)&self->currentSourceFile, (void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[28]))((Member*)_recv); })));
     }
+        if ((((((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using")))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("namespace")))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group")))))) {
         SPEC_AUTO String declaredType = (((String (*)(TypeChecker*, Type*))self->_vtable[152]))((TypeChecker*)self, ({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }));
         if (m->hasInit) {
         SPEC_AUTO String initType = TypeChecker_inferExpressionType(self, m->initExpr) /* inst:TypeChecker:inferExpressionType */;
         if ((!(TypeChecker_isAssignable(self, declaredType, initType) /* inst:TypeChecker:isAssignable */))) {
         SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Type mismatch in field '"))), ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(classDef); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); }))))), spec_string_intern(":")), ((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); }))))), spec_string_intern("': cannot assign '")), initType), spec_string_intern("' to '")), declaredType), spec_string_intern("'."));
         (((void (*)(TypeChecker*, long long, String))self->_vtable[91]))((TypeChecker*)self, ({ Member* _recv = (Member*)(m); (((long long (*)(Member*))_recv->_vtable[26]))((Member*)_recv); }), msg);
+    }
     }
     }
     } else {
@@ -30573,7 +31126,7 @@ String CBackendUtils_escapeString(CBackendUtils* self, String s) {
 }
 
 bool CBackendUtils_isBuiltinClass(CBackendUtils* self, String name) {
-    return ((((((((((((((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("LoopControl"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Output"))))) || (spec_string_equals(name, spec_string_intern("Input"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("While"))))) || (spec_string_equals(name, spec_string_intern("Loop"))))) || (spec_string_equals(name, spec_string_intern("LoopCallback"))))) || (spec_string_equals(name, spec_string_intern("InputHandler"))))) || (spec_string_equals(name, spec_string_intern("List"))))) || (spec_string_equals(name, spec_string_intern("String"))))) || (spec_string_equals(name, spec_string_intern("Buf"))));
+    return ((((((((((((((((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("LoopControl"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Output"))))) || (spec_string_equals(name, spec_string_intern("Input"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("While"))))) || (spec_string_equals(name, spec_string_intern("Loop"))))) || (spec_string_equals(name, spec_string_intern("LoopCallback"))))) || (spec_string_equals(name, spec_string_intern("InputHandler"))))) || (spec_string_equals(name, spec_string_intern("List"))))) || (spec_string_equals(name, spec_string_intern("String"))))) || (spec_string_equals(name, spec_string_intern("Buf"))))) || (spec_string_equals(name, spec_string_intern("Dir"))));
 }
 
 String CBackendUtils_resolveReturnType(CBackendUtils* self, Type* t) {
@@ -30704,6 +31257,7 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("String spec_string_trim(String b);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_has_prefix(String b, String prefix);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("bool spec_string_has_suffix(String b, String suffix);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <dirent.h>\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <pthread.h>\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <sys/wait.h>\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("#include <sys/ioctl.h>\n"))));
@@ -31736,6 +32290,28 @@ String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (b->data) { free(b->data); b->data = NULL; }\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecArray* spec_dir_list(SpecBuf* path) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecArray* res = spec_array_new_object();\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!path) return res;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    DIR* d = opendir(spec_buf_to_cstring(path));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!d) return res;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    struct dirent* ent;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    while ((ent = readdir(d)) != NULL) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) continue;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("        spec_array_add_owned(res, spec_string_from_bytes(ent->d_name, strlen(ent->d_name)));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    }\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    closedir(d);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return res;\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecBuf* spec_exe_dir(void) {\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    char buf[4096];\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    ssize_t n = readlink(\"/proc/self/exe\", buf, sizeof(buf) - 1);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (n <= 0) return spec_string_from_bytes(\".\", 1);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    buf[n] = '\\0';\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    char* slash = strrchr(buf, '/');\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    if (!slash) return spec_string_from_bytes(\".\", 1);\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    return spec_string_from_bytes(buf, (size_t)(slash - buf));\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("}\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    SpecBuf* b = (SpecBuf*)spec_alloc(sizeof(SpecBuf), spec_buf_destroy);\n"))));
     spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("    b->data = NULL;\n"))));
@@ -32578,7 +33154,7 @@ void DeclarationGenerator_collectStructFields(DeclarationGenerator* self, ClassI
         Member* m = (Member*)(intptr_t)_a_118->items[_i_118];
         do {
     if (((Member_getMemberKind(m) /* inst:Member:getMemberKind */) == (MemberKind_FIELD))) {
-        if ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using")))) {
+        if ((((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using")))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(((Type*)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }))))); (((String (*)(Type*))_recv->_vtable[21]))((Type*)_recv); })))), spec_string_intern("")))))) {
         long long existing = DeclarationGenerator_fieldIndexNamed(self, acc, ({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })) /* inst:DeclarationGenerator:fieldIndexNamed */;
         if (((existing) >= (0))) {
         spec_array_set(acc, existing, (void*)(intptr_t)(m));
@@ -36833,7 +37409,7 @@ String Loader_resolvePath(Loader* self, String rawPath) {
 }
 
 SpecArray* Loader_expandWildcard(Loader* self, String rawPath) {
-    return (SpecArray*)spec_retain((void*)(((spec_string_equals(rawPath, spec_string_intern("compiler:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Token.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Lexer.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Parser.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Linter.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/TypeChecker.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/CBackendUtils.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/RuntimePrelude.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/DeclarationGenerator.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/BuiltinCallGenerator.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/CodeGenerator.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Loader.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Driver.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:math:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/math/Math.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:sys:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/Parallel.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/Process.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/SourceLocation.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/StackFrame.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:sysinternal:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sysinternal/Buf.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:core:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/core/String.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/core/Stringable.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/core/Any.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:struct:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/struct/Array.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/struct/Map.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:reflect:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/Type.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/Parameter.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/Member.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/ClassInfo.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:meta:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/meta/AST.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:iterator:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/Loop.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/LoopControl.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/LoopCallback.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/While.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:io:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/File.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/Input.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/InputHandler.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/Output.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/Ansi.spec"))); _arr; })) : (({ SpecArray* _arr = spec_array_new(); _arr; })))))))))))))))))))))));
+    return (SpecArray*)spec_retain((void*)(((spec_string_equals(rawPath, spec_string_intern("compiler:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Token.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Lexer.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Parser.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Linter.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/TypeChecker.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/CBackendUtils.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/RuntimePrelude.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/DeclarationGenerator.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/BuiltinCallGenerator.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/CodeGenerator.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Loader.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/compiler/Driver.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:math:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/math/Math.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:sys:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/Parallel.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/Process.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/SourceLocation.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sys/StackFrame.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:sysinternal:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sysinternal/Buf.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/sysinternal/Dir.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:core:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/core/String.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/core/Stringable.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/core/Any.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:struct:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/struct/Array.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/struct/Map.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:reflect:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/Type.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/Parameter.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/Member.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/reflect/ClassInfo.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:meta:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/meta/AST.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:iterator:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/Loop.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/LoopControl.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/LoopCallback.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/iterator/While.spec"))); _arr; })) : (((spec_string_equals(rawPath, spec_string_intern("base:io:*"))) ? (({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/File.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/Input.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/InputHandler.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/Output.spec"))); spec_array_add(_arr, (void*)(spec_string_intern("lib/base/io/Ansi.spec"))); _arr; })) : (({ SpecArray* _arr = spec_array_new(); _arr; })))))))))))))))))))))));
 }
 
 void Loader_loadFile(Loader* self, String filePath) {
@@ -36907,6 +37483,10 @@ void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
         ({ SpecArray* _a_268 = initExpr->arrayItems; if (_a_268) { for (size_t _i_268 = 0; _i_268 < _a_268->length; _i_268++) {
         Expression* item = (Expression*)(intptr_t)_a_268->items[_i_268];
         do {
+    if (spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(item); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("ARRAY"))) {
+        Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
+        break;
+    }
     SPEC_AUTO String importStr = spec_construct_string(item->stringValue);
     SPEC_AUTO SpecArray* wildcards = (SpecArray*)((Loader_expandWildcard(self, importStr) /* inst:Loader:expandWildcard */));
     if (((spec_array_length(wildcards)) > (0))) {
@@ -36932,16 +37512,85 @@ void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
     } } });
 }
 
+void Loader_loadArrayFormUsing(Loader* self, Expression* item, ClassInfo* c) {
+    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(item->arrayItems));
+    if (((spec_array_length(segs)) == (0))) {
+        return;
+    }
+    SPEC_AUTO SpecArray* parts = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+    SPEC_AUTO String termClass = spec_construct_string(spec_string_intern(""));
+    ({ SpecArray* _a_270 = segs; if (_a_270) { for (size_t _i_270 = 0; _i_270 < _a_270->length; _i_270++) {
+        Expression* seg = (Expression*)(intptr_t)_a_270->items[_i_270];
+        do {
+    if (spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(seg); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("IDENT"))) {
+        spec_assign((void**)&termClass, (void*)(seg->stringValue));
+    } else {
+        spec_array_add_object(parts, (void*)(seg->stringValue));
+    }
+        } while (0);
+    } } });
+    SPEC_AUTO SpecArray* roots = (SpecArray*)((Loader_scanRoots(self) /* inst:Loader:scanRoots */));
+    ({ SpecArray* _a_271 = roots; if (_a_271) { for (size_t _i_271 = 0; _i_271 < _a_271->length; _i_271++) {
+        String root = (String)(intptr_t)_a_271->items[_i_271];
+        do {
+    SPEC_AUTO String dir = spec_construct_string(root);
+    ({ SpecArray* _a_272 = parts; if (_a_272) { for (size_t _i_272 = 0; _i_272 < _a_272->length; _i_272++) {
+        String p = (String)(intptr_t)_a_272->items[_i_272];
+        do {
+    dir = spec_string_concat(spec_string_concat(dir, spec_string_intern("/")), p);
+        } while (0);
+    } } });
+    if ((!spec_string_equals(termClass, spec_string_intern("")))) {
+        SPEC_AUTO String classFile = spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), termClass), spec_string_intern(".spec"));
+        if (spec_file_exists(classFile)) {
+        Loader_loadFile(self, classFile) /* inst:Loader:loadFile */;
+    }
+        break;
+    }
+    if (spec_file_exists(dir)) {
+        SPEC_AUTO SpecArray* names = (SpecArray*)spec_retain((void*)(spec_dir_list(dir)));
+        ({ SpecArray* _a_273 = names; if (_a_273) { for (size_t _i_273 = 0; _i_273 < _a_273->length; _i_273++) {
+        String nm = (String)(intptr_t)_a_273->items[_i_273];
+        do {
+    if (String_endsWith(nm, spec_string_intern(".spec"))) {
+        Loader_loadFile(self, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), nm))))) /* inst:Loader:loadFile */;
+    }
+        } while (0);
+    } } });
+    }
+        } while (0);
+    } } });
+}
+
+SpecArray* Loader_scanRoots(Loader* self) {
+    SPEC_AUTO SpecArray* roots = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+    spec_array_add_object(roots, (void*)(spec_exe_dir()));
+    SPEC_AUTO String inDir = Loader_dirOf(self, self->rootInputPath) /* inst:Loader:dirOf */;
+    if ((!spec_string_equals(inDir, spec_string_intern("")))) {
+        spec_array_add_object(roots, (void*)(inDir));
+    }
+    return (SpecArray*)({ SpecArray* _ret_val = roots; roots = NULL; _ret_val; });
+}
+
+String Loader_dirOf(Loader* self, String path) {
+    SPEC_AUTO LastSlashLoop* loop = (LastSlashLoop*)((({ LastSlashLoop* _inst = LastSlashLoop_new(); LastSlashLoop_init(_inst, path); _inst; })));
+    ({ void* _lp = (void*)(loop); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LastSlashLoop_evaluate((void*)_lp)) { if (!LastSlashLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+    if (((loop->lastIdx) < (0))) {
+        return (String)spec_retain((void*)(spec_string_intern("")));
+    }
+    return (String)spec_retain((void*)(String_substring(path, 0, loop->lastIdx)));
+}
+
 String Loader_groupTargetOf(Loader* self, ClassInfo* c) {
     SPEC_AUTO SpecArray* members = (SpecArray*)((ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */));
     long long idx = 0;
     SPEC_AUTO String target = spec_construct_string(spec_string_intern(""));
     ({ while (1) {
-        bool _ev_270 = false;
+        bool _ev_274 = false;
         do {
-    _ev_270 = ((idx) < (spec_array_length(members))); break;
+    _ev_274 = ((idx) < (spec_array_length(members))); break;
         } while (0);
-        if (!_ev_270) break;
+        if (!_ev_274) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group"))) && (Member_getHasInit(m) /* inst:Member:getHasInit */))) {
@@ -36970,11 +37619,11 @@ ClassInfo* Loader_findLoadedClass(Loader* self, String name) {
     long long idx = 0;
     SPEC_AUTO ClassInfo* res = (ClassInfo*)((({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; })));
     ({ while (1) {
-        bool _ev_271 = false;
+        bool _ev_275 = false;
         do {
-    _ev_271 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(res); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("")))); break;
+    _ev_275 = ((((idx) < (spec_array_length(self->loadedClasses)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(res); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("")))); break;
         } while (0);
-        if (!_ev_271) break;
+        if (!_ev_275) break;
         do {
     SPEC_AUTO ClassInfo* c = (ClassInfo*)spec_retain((void*)(spec_array_get(self->loadedClasses, idx)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), name)) {
@@ -36995,11 +37644,11 @@ Member* Loader_findMemberNamed(Loader* self, ClassInfo* target, String name) {
     long long idx = 0;
     SPEC_AUTO Member* res = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, spec_string_intern("")); _inst; })));
     ({ while (1) {
-        bool _ev_272 = false;
+        bool _ev_276 = false;
         do {
-    _ev_272 = ((((idx) < (spec_array_length(members)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(res); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("")))); break;
+    _ev_276 = ((((idx) < (spec_array_length(members)))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(res); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("")))); break;
         } while (0);
-        if (!_ev_272) break;
+        if (!_ev_276) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), name)) {
@@ -37020,11 +37669,11 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SPEC_AUTO SpecArray* fragMembers = (SpecArray*)((ClassInfo_getMembers(frag) /* inst:ClassInfo:getMembers */));
     long long idx = 0;
     ({ while (1) {
-        bool _ev_273 = false;
+        bool _ev_277 = false;
         do {
-    _ev_273 = ((idx) < (spec_array_length(fragMembers))); break;
+    _ev_277 = ((idx) < (spec_array_length(fragMembers))); break;
         } while (0);
-        if (!_ev_273) break;
+        if (!_ev_277) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(fragMembers, idx)));
     SPEC_AUTO String mName = ({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); });
@@ -37047,12 +37696,12 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
         SPEC_AUTO Expression* fragItems = (Expression*)((Member_getInitExpr(fragUsing) /* inst:Member:getInitExpr */));
         SPEC_AUTO Expression* targetItems = (Expression*)((Member_getInitExpr(targetUsing) /* inst:Member:getInitExpr */));
         if (((spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(fragItems); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("ARRAY"))) && (spec_string_equals(((String)spec_claim_pool((void*)(({ Expression* _recv = (Expression*)(targetItems); (((String (*)(Expression*))_recv->_vtable[34]))((Expression*)_recv); })))), spec_string_intern("ARRAY"))))) {
-        ({ SpecArray* _a_274 = fragItems->arrayItems; if (_a_274) { for (size_t _i_274 = 0; _i_274 < _a_274->length; _i_274++) {
-        Expression* item = (Expression*)(intptr_t)_a_274->items[_i_274];
+        ({ SpecArray* _a_278 = fragItems->arrayItems; if (_a_278) { for (size_t _i_278 = 0; _i_278 < _a_278->length; _i_278++) {
+        Expression* item = (Expression*)(intptr_t)_a_278->items[_i_278];
         do {
     bool present = false;
-    ({ SpecArray* _a_275 = targetItems->arrayItems; if (_a_275) { for (size_t _i_275 = 0; _i_275 < _a_275->length; _i_275++) {
-        Expression* existing = (Expression*)(intptr_t)_a_275->items[_i_275];
+    ({ SpecArray* _a_279 = targetItems->arrayItems; if (_a_279) { for (size_t _i_279 = 0; _i_279 < _a_279->length; _i_279++) {
+        Expression* existing = (Expression*)(intptr_t)_a_279->items[_i_279];
         do {
     if ((((!(present))) && (spec_string_equals(existing->stringValue, item->stringValue)))) {
         present = true;
@@ -37075,11 +37724,11 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SPEC_AUTO SpecArray* mergedMembers = (SpecArray*)((ClassInfo_getMembers(target) /* inst:ClassInfo:getMembers */));
     long long scan = 0;
     ({ while (1) {
-        bool _ev_276 = false;
+        bool _ev_280 = false;
         do {
-    _ev_276 = ((scan) < (spec_array_length(mergedMembers))); break;
+    _ev_280 = ((scan) < (spec_array_length(mergedMembers))); break;
         } while (0);
-        if (!_ev_276) break;
+        if (!_ev_280) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(mergedMembers, scan)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("init"))) {
@@ -37099,11 +37748,11 @@ void Loader_stripMemberNamed(Loader* self, ClassInfo* target, String name) {
     SPEC_AUTO SpecArray* members = (SpecArray*)((ClassInfo_getMembers(target) /* inst:ClassInfo:getMembers */));
     long long idx = ((spec_array_length(members)) - (1));
     ({ while (1) {
-        bool _ev_277 = false;
+        bool _ev_281 = false;
         do {
-    _ev_277 = ((idx) >= (0)); break;
+    _ev_281 = ((idx) >= (0)); break;
         } while (0);
-        if (!_ev_277) break;
+        if (!_ev_281) break;
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), name)) {
@@ -37118,11 +37767,11 @@ void Loader_stripMemberNamed(Loader* self, ClassInfo* target, String name) {
 void Loader_removeClassFromLoaded(Loader* self, ClassInfo* c) {
     long long idx = 0;
     ({ while (1) {
-        bool _ev_278 = false;
+        bool _ev_282 = false;
         do {
-    _ev_278 = ((idx) < (spec_array_length(self->loadedClasses))); break;
+    _ev_282 = ((idx) < (spec_array_length(self->loadedClasses))); break;
         } while (0);
-        if (!_ev_278) break;
+        if (!_ev_282) break;
         do {
     SPEC_AUTO ClassInfo* cur = (ClassInfo*)spec_retain((void*)(spec_array_get(self->loadedClasses, idx)));
     if (((cur) == (c))) {
@@ -37138,11 +37787,11 @@ void Loader_removeClassFromLoaded(Loader* self, ClassInfo* c) {
 void Loader_mergeGroups(Loader* self) {
     long long idx = 0;
     ({ while (1) {
-        bool _ev_279 = false;
+        bool _ev_283 = false;
         do {
-    _ev_279 = ((idx) < (spec_array_length(self->groupTargets))); break;
+    _ev_283 = ((idx) < (spec_array_length(self->groupTargets))); break;
         } while (0);
-        if (!_ev_279) break;
+        if (!_ev_283) break;
         do {
     SPEC_AUTO String gName = spec_construct_string(spec_array_get(self->groupTargets, idx));
     SPEC_AUTO ClassInfo* frag = (ClassInfo*)spec_retain((void*)(spec_array_get(self->groupFragments, idx)));
@@ -37170,8 +37819,10 @@ ProgramNode* Loader_loadProgram(Loader* self, String rootPath) {
     spec_assign((void**)&self->groupFragments, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     Loader_loadFile(self, spec_string_intern("lib/base/core/String.spec")) /* inst:Loader:loadFile */;
     Loader_loadFile(self, spec_string_intern("lib/base/sysinternal/Buf.spec")) /* inst:Loader:loadFile */;
+    Loader_loadFile(self, spec_string_intern("lib/base/sysinternal/Dir.spec")) /* inst:Loader:loadFile */;
     Loader_loadFile(self, spec_string_intern("lib/base/core/Stringable.spec")) /* inst:Loader:loadFile */;
     Loader_loadFile(self, spec_string_intern("lib/base/core/Any.spec")) /* inst:Loader:loadFile */;
+    spec_assign((void**)&self->rootInputPath, (void*)(rootPath));
     Loader_loadFile(self, rootPath) /* inst:Loader:loadFile */;
     Loader_appendImplicitAny(self) /* inst:Loader:appendImplicitAny */;
     Loader_mergeGroups(self) /* inst:Loader:mergeGroups */;
@@ -37179,8 +37830,8 @@ ProgramNode* Loader_loadProgram(Loader* self, String rootPath) {
 }
 
 void Loader_appendImplicitAny(Loader* self) {
-    ({ SpecArray* _a_280 = self->loadedClasses; if (_a_280) { for (size_t _i_280 = 0; _i_280 < _a_280->length; _i_280++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_280->items[_i_280];
+    ({ SpecArray* _a_284 = self->loadedClasses; if (_a_284) { for (size_t _i_284 = 0; _i_284 < _a_284->length; _i_284++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_284->items[_i_284];
         do {
     if ((((((((!spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_getBaseClass(c) /* inst:ClassInfo:getBaseClass */))), spec_string_intern("Enum")))) && (((spec_array_length(((SpecArray*)spec_claim_pool((void*)(ClassInfo_getBaseClasses(c) /* inst:ClassInfo:getBaseClasses */))))) == (0))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("Any")))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), spec_string_intern("Stringable")))))) {
         ClassInfo_withBaseClasses(c, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(c); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Any"))); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(c) /* inst:ClassInfo:getMembers */)))) /* inst:ClassInfo:withBaseClasses */;
@@ -37220,6 +37871,31 @@ String PathConvLoop_toString(PathConvLoop* self);
 String PathConvLoop_toString(PathConvLoop* self) {
     if (!self) { return spec_string_intern(""); }
     return spec_string_intern("PathConvLoop");
+}
+
+void LastSlashLoop_init(LastSlashLoop* self, String src) {
+    spec_assign((void**)&self->src, (void*)(src));
+    self->pos = 0;
+    self->lastIdx = (-(1));
+}
+
+bool LastSlashLoop_evaluate(LastSlashLoop* self) {
+    return ((self->pos) < (String_length(self->src)));
+}
+
+bool LastSlashLoop_iteration(LastSlashLoop* self, SpecLoopControl* control) {
+    SPEC_AUTO String ch = String_charAt(self->src, self->pos, spec_string_intern(""));
+    if (spec_string_equals(ch, spec_string_intern("/"))) {
+        self->lastIdx = self->pos;
+    }
+    self->pos = ((self->pos) + (1));
+    return true;
+}
+
+String LastSlashLoop_toString(LastSlashLoop* self);
+String LastSlashLoop_toString(LastSlashLoop* self) {
+    if (!self) { return spec_string_intern(""); }
+    return spec_string_intern("LastSlashLoop");
 }
 
 /* Application Entry Point */

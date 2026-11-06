@@ -1,0 +1,16 @@
+#! Package base:sysinternal
+#! Filesystem directory floor: package discovery primitives.
+##
+## Body-less, interface-style declarations bound to the runtime's C floor
+## by the naming convention. Used by the Loader's package resolution.
+
+Class is Dir{
+	namespace: ['base', 'sysinternal'];
+
+	## Names of the entries in directory [path] ('.' and '..' excluded).
+	## Order is filesystem-dependent; consumers must not rely on it.
+	Function of Array of String is dirList(String is path);
+
+	## Directory containing the running spec executable.
+	Function of String is exeDir();
+}

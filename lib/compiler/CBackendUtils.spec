@@ -162,7 +162,7 @@ Class is CBackendUtils{
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
 			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
-			name == 'List' || name == 'String' || name == 'Buf';
+			name == 'List' || name == 'String' || name == 'Buf' || name == 'Dir';
 	}
 
 	## Resolves the C return type of a method signature descriptor.
