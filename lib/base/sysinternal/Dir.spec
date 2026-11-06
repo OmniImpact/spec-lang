@@ -5,7 +5,7 @@
 ## by the naming convention. Used by the Loader's package resolution.
 
 Class is Dir{
-	namespace: ['base', 'sysinternal'];
+	replace Array of String is namespace: ['base', 'sysinternal'];
 
 	## Names of the entries in directory [path] ('.' and '..' excluded).
 	## Order is filesystem-dependent; consumers must not rely on it.

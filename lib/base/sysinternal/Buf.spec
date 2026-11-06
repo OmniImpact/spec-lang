@@ -9,7 +9,7 @@
 ## conventions.
 
 Class is Buf{
-	namespace: ['base', 'sysinternal'];
+	replace Array of String is namespace: ['base', 'sysinternal'];
 
 	## Number of bytes held by the buffer [b].
 	Function of Int is bufLength(String is b);

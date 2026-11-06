@@ -6,6 +6,7 @@ Class is SpecTokenTest{
 	replace Array of Array of String is using: [
 		['spec', 'base', 'compiler', 'lexer', TokenKind],
 		['spec', 'base', 'compiler', 'lexer', Keyword],
+		['spec', 'base', 'compiler', 'lexer', Operator],
 		['spec', 'base', 'compiler', 'lexer', Token],
 		['lib', 'base', 'io', Output]
 	];
@@ -35,6 +36,15 @@ Class is SpecTokenTest{
 			output:line('[PASS] keyword classification round-trip');
 		} else {
 			output:line('[FAIL] keyword classification round-trip');
+			failures: failures + 1;
+		}
+
+		local Token is op: Token:init(kind: TokenKind:SYMBOL, value: '==', line: 2, col: 7);
+		op:setOperator(op: Operator:EQ);
+		if (op:getOperator() == Operator:EQ && sym:getOperator() == Operator:NONE) {
+			output:line('[PASS] operator classification round-trip');
+		} else {
+			output:line('[FAIL] operator classification round-trip');
 			failures: failures + 1;
 		}
 
