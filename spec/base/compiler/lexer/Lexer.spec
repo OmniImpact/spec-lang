@@ -22,6 +22,7 @@ Class is Lexer{
 		['spec', 'base', 'compiler', 'lexer', Token],
 		['spec', 'base', 'compiler', 'lexer', TokenKind],
 		['spec', 'base', 'compiler', 'lexer', Keyword],
+		['spec', 'base', 'compiler', WellKnown],
 		['spec', 'base', 'compiler', 'lexer', Operator],
 		['spec', 'base', 'compiler', 'lexer', 'loops', TokenizeLoop],
 		['spec', 'base', 'compiler', 'lexer', 'loops', SkipWhitespaceLoop],
@@ -57,6 +58,9 @@ Class is Lexer{
 
 	## Lexical errors, in scan order.
 	local Array of Error is errors: [];
+
+	## Well-known names.
+	local WellKnown is names: WellKnown:init();
 
 	## Stateless character classification (letters, digits, case). Public
 	## for the same reason as the cursor: the digit scan loops consult it.
@@ -183,6 +187,10 @@ Class is Lexer{
 		local TokenKind is kind: TokenKind:IDENTIFIER;
 		if (kw != Keyword:NONE) {
 			kind: TokenKind:KEYWORD;
+		}
+		# Boolean literals are identifier-shaped but scan as their own kind.
+		if (text == self:names:boolTrue() || text == 'false') {
+			kind: TokenKind:BOOL;
 		}
 		local Token is t: Token:init(kind: kind, value: text, line: startLine, col: startCol);
 		if (kw != Keyword:NONE) {

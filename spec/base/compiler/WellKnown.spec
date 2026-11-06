@@ -9,24 +9,28 @@
 Class is WellKnown{
 	namespace: ['base', 'compiler'];
 
+	replace Array of Array of String is using: [
+		['spec', 'base', 'compiler', 'ast', Primitive]
+	];
+
 	## The Int builtin type name.
 	Function of String is intName(){
-		return 'Int';
+		return Primitive:INT:value();
 	}
 
 	## The Any builtin type name.
 	Function of String is anyName(){
-		return 'Any';
+		return Primitive:ANY:value();
 	}
 
 	## The Void builtin type name.
 	Function of String is voidName(){
-		return 'Void';
+		return Primitive:VOID:value();
 	}
 
 	## The Function builtin type name.
 	Function of String is fnName(){
-		return 'Function';
+		return Primitive:FUNCTION:value();
 	}
 
 	## The List builtin type name.

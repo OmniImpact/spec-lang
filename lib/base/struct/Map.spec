@@ -2,7 +2,16 @@
 #! Provides contiguous dynamic collections and associative hash maps.
 
 ## An associative key-value map supporting string keys and values.
-Class is Map{
+Class is Map of K to V{
+
+	## Looks up the value mapped to [key], returning [default] if not found.
+	##
+	## @param key: Lookup key string.
+	## @param default: Fallback value returned if key is absent.
+	## @return: Mapped value, or [default].
+	## @fallback: Returns [default] when [key] does not exist in the map.
+	Function of V is get(String is key, V is default){
+	}
 
 	## Looks up a string value by key, returning [default] if not found.
 	##

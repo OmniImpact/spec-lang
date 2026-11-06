@@ -5,7 +5,7 @@
 ##
 ## In accordance with the "Never Null" standard, out-of-bounds queries,
 ## popping empty arrays, or failed searches return a caller-supplied default.
-Class is Array{
+Class is Array of T{
 
 	## Returns the number of elements contained in the array.
 	##
@@ -19,7 +19,7 @@ Class is Array{
 	## @param default: Fallback value returned if [index] is out of bounds.
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
-	Function of Any is get(Int is index, Any is default){
+	Function of T is get(Int is index, Any is default){
 	}
 
 	## Appends an element or merges another array into this array.
@@ -40,7 +40,7 @@ Class is Array{
 	## @param default: Fallback value returned if the array is empty.
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
-	Function of Any is pop(Any is default){
+	Function of T is pop(Any is default){
 	}
 
 	## Removes and returns the element at the specified index, shifting trailing elements.
@@ -49,7 +49,7 @@ Class is Array{
 	## @param default: Fallback value returned if [index] is out of bounds.
 	## @return: The removed element, or [default].
 	## @fallback: Returns [default] when index is out of bounds.
-	Function of Any is removeAt(Int is index, Any is default){
+	Function of T is removeAt(Int is index, Any is default){
 	}
 
 	## Returns a shallow sub-array slice from [start] (inclusive) to [end] (exclusive).
@@ -57,7 +57,7 @@ Class is Array{
 	## @param start: Inclusive start index.
 	## @param end: Exclusive end index.
 	## @return: New sliced [Array].
-	Function of Array is slice(Int is start, Int is end){
+	Function of Array of T is slice(Int is start, Int is end){
 	}
 
 	## Empties the array, resetting its length to zero.
@@ -97,14 +97,14 @@ Class is Array{
 	##
 	## @param predicate: Function returning `true` for elements to retain.
 	## @return: Filtered [Array].
-	Function of Array is filter(Function is predicate){
+	Function of Array of T is filter(Function is predicate){
 	}
 
 	## Transforms each element in the array using [transform], returning a new [Array].
 	##
 	## @param transform: Function mapping each item to a transformed value.
 	## @return: Mapped [Array].
-	Function of Array is map(Function is transform){
+	Function of Array of T is map(Function is transform){
 	}
 
 	## Reduces the array to a single accumulated value starting from [initial].

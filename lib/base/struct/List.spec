@@ -7,7 +7,7 @@
 ## Fallible reads take a mandatory default: value used whenever there is no
 ## successful answer, plus an optional error: callback invoked in addition when
 ## a problem occurs. Bracket indexing is not provided on List; use get.
-Class is List{
+Class is List of T{
 
 	## Appends a byte to a [Byte] buffer. Infallible: the buffer grows.
 	Function is push(Any is b){
@@ -22,15 +22,15 @@ Class is List{
 	## @param index: Zero-based position.
 	## @param default: Fallback value used when there is no successful answer.
 	## @param error: Optional callback receiving a diagnostic message.
-	Function of Any is get(Int is index, Any is default, Function is error){
+	Function of T is get(Int is index, Any is default, Function is error){
 	}
 
 	## Overwrites the byte at [index]; [error] notified if out of bounds.
-	Function is set(Int is index, Any is item, Function is error){
+	Function is set(Int is index, T is item, Function is error){
 	}
 
 	## Removes and returns the last byte, or [default] if empty ([error] notified).
-	Function of Any is pop(Any is default, Function is error){
+	Function of T is pop(Any is default, Function is error){
 	}
 
 	## Returns the number of elements.

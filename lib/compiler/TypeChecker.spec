@@ -1721,7 +1721,7 @@ Class is TypeChecker{
 				return;
 			}
 			local String is name: m:getName();
-			if (name == 'init' || name == 'using' || name == 'toString') {
+			if (name == 'init' || name == 'using' || name == 'toString' || name == 'namespace' || name == 'group' || name == 'castable') {
 				return;
 			}
 			if (self:findMemberOwnerClass(className: classDef:getName(), memberName: name) == 'Any') {
@@ -1833,7 +1833,7 @@ Class is TypeChecker{
 				classDef:getMembers():each(action: local Function(Member is subM){
 					# Declarative metadata (namespace/using/group) is per-class
 					# by design and never participates in override matching.
-					if (subM:getName() == 'namespace' || subM:getName() == 'using' || subM:getName() == 'group') {
+					if (subM:getName() == 'namespace' || subM:getName() == 'using' || subM:getName() == 'group' || subM:getName() == 'castable') {
 						return;
 					}
 					parent:getMembers():each(action: local Function(Member is parentM){
@@ -1989,7 +1989,7 @@ Class is TypeChecker{
 					# are loader directives, not checked code: their
 					# initializers may reference classes the using itself
 					# loads, so type validation is skipped.
-					if (m:getName() != 'using' && m:getName() != 'namespace' && m:getName() != 'group') {
+					if (m:getName() != 'using' && m:getName() != 'namespace' && m:getName() != 'group' && m:getName() != 'castable') {
 						local String is declaredType: self:formatVarTypeString(t: m:getType());
 						if (m:hasInit) {
 							local String is initType: self:inferExpressionType(expr: m:initExpr);

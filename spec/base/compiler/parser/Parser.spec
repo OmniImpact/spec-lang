@@ -408,6 +408,7 @@ Class is Parser{
 			local Member is m: Member:init(kind: MemberKind:FIELD);
 			m:setLine(line: nameTok:getLine());
 			m:modifiers: modifiers;
+			m:memberType: Type:init(name: '');
 			m:name: nameTok:getValue();
 			m:initExpr: initExpr;
 			m:hasInit: true;

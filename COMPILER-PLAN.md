@@ -282,6 +282,31 @@ paradigm is standard practice.**
   elements via exposed `spec_retain`/`spec_release`.
 - `Map` as a pure-Spec hash table over Array (FNV-1a over bytes; identity hash via
   pointer-as-int). `Set` over Map.
+
+### 7.1 Castable declarations (language feature, landed with G5/G6)
+
+`castable` joins the declarative-metadata family (`namespace`, `using`, `group`):
+a class declares which target types its instances cast to, and **which method
+produces the target from self**:
+
+```
+Class is String{
+	castable: [
+		[Int, parseInt]
+	];
+}
+```
+
+- `x as T` resolves in order: identity/inheritance (implicit, zero-cost) → a
+  `castable` entry on the source class whose method's declared return is T →
+  compile error. The hardcoded primitive conversion matrix dies.
+- The mapped method is called on self; **declaration-side defaults make
+  parameterized functions cast-usable zero-arg** (`parseInt(base: 10, default: -1)`
+  casts a String to Int directly).
+- The checker validates the mapped function exists and declares the target as
+  its return type; G6 emits `self:fn(...)` at cast sites. Hex/Bin/Oct remain
+  compiler format-casts (their width arguments are positional) until a declared
+  form is wanted.
 - `File`, `Socket`, `Process`, `Output`, `Input`, `Ansi` as thin pure-Spec classes over
   the fd/process primitives.
 - `Math` as pure `external` declarations over libm — zero hand-written C.
@@ -346,6 +371,22 @@ corpus as it lands — every module is a delivered artifact, no dark tunnel):
    size) with `--quiet` and `--json`; JSON needs a proper json package,
    which arrives with G7.
 8. Linter
+
+G6 checker/codegen follow-ups (ported as structural types, not name
+strings — the root cause is that `Function:Ret`-style type names discard
+parameter structure, which the AST descriptors retain):
+
+- **Structural function assignability**: compare declared parameter lists
+  and returns from `Type.params` descriptors (member signatures, var
+  decls, closures) instead of the fossil's all-Functions-compatible rule;
+  the loose rule survives only for bare `Function` (genuinely any
+  callable). This retires `bindContainerCallbackParams`'s special-case
+  table — callback parameters derive from the declared callable shape.
+- **FIELD_ACCESS emission**: `call():field` reads the struct field
+  directly; until this lands, new-tree source keeps the temp-local
+  destructuring workaround.
+- **Castable emission**: cast sites emit the declared producing method
+  (`self:fn(...)`), completing the declared-cast feature.
 
 Gate for each: the full suite compiles and passes with that module's behavior
 exercised through the WIP compiler. Gate overall: full suite green with the new

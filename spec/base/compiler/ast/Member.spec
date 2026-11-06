@@ -5,6 +5,7 @@ Class is Member{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
+		['spec', 'base', 'compiler', 'lexer', Keyword],
 		['spec', 'base', 'compiler', 'ast', Type],
 		['spec', 'base', 'compiler', 'ast', MemberKind],
 		['spec', 'base', 'compiler', 'ast', Parameter],
@@ -66,11 +67,13 @@ Class is Member{
 		self:sourceFile: file;
 	}
 
-	## True when the member carries the given modifier.
+	## True when the member carries the given modifier. Modifiers are
+	## keywords ([Keyword:LOCAL], [Keyword:CONTAINED], [Keyword:REPLACE],
+	## [Keyword:MERGE]).
 	##
-	## @param modifier: Modifier name (e.g. replace).
+	## @param kw: The modifier keyword.
 	## @return: true when present in [modifiers].
-	Function of Boolean is hasModifier(String is modifier){
-		return self:modifiers:indexOf(search: modifier, default: -1) >= 0;
+	Function of Boolean is hasModifier(Keyword is kw){
+		return self:modifiers:indexOf(search: kw:value(), default: -1) >= 0;
 	}
 }

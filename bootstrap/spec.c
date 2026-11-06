@@ -30646,7 +30646,7 @@ void TypeChecker_checkShadowTargets(TypeChecker* self, ClassInfo* classDef) {
         break;
     }
     SPEC_AUTO String name = ({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); });
-    if (((((spec_string_equals(name, spec_string_intern("init"))) || (spec_string_equals(name, spec_string_intern("using"))))) || (spec_string_equals(name, spec_string_intern("toString"))))) {
+    if (((((((((((spec_string_equals(name, spec_string_intern("init"))) || (spec_string_equals(name, spec_string_intern("using"))))) || (spec_string_equals(name, spec_string_intern("toString"))))) || (spec_string_equals(name, spec_string_intern("namespace"))))) || (spec_string_equals(name, spec_string_intern("group"))))) || (spec_string_equals(name, spec_string_intern("castable"))))) {
         break;
     }
     if (spec_string_equals(((String)spec_claim_pool((void*)(TypeChecker_findMemberOwnerClass(self, ((String)spec_claim_pool((void*)(({ ClassInfo* _recv = (ClassInfo*)(classDef); (((String (*)(ClassInfo*))_recv->_vtable[21]))((ClassInfo*)_recv); })))), name) /* inst:TypeChecker:findMemberOwnerClass */))), spec_string_intern("Any"))) {
@@ -30780,7 +30780,7 @@ void TypeChecker_checkInheritance(TypeChecker* self, ClassInfo* classDef) {
         ({ SpecArray* _a_95 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(classDef) /* inst:ClassInfo:getMembers */))); if (_a_95) { for (size_t _i_95 = 0; _i_95 < _a_95->length; _i_95++) {
         Member* subM = (Member*)(intptr_t)_a_95->items[_i_95];
         do {
-    if (((((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("namespace"))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using"))))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group"))))) {
+    if (((((((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("namespace"))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using"))))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group"))))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("castable"))))) {
         break;
     }
     ({ SpecArray* _a_96 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(parent) /* inst:ClassInfo:getMembers */))); if (_a_96) { for (size_t _i_96 = 0; _i_96 < _a_96->length; _i_96++) {
@@ -30935,7 +30935,7 @@ void TypeChecker_checkClass(TypeChecker* self, ClassInfo* classDef) {
         if ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[28]))((Member*)_recv); })))), spec_string_intern("")))) {
         spec_assign((void**)&self->currentSourceFile, (void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[28]))((Member*)_recv); })));
     }
-        if ((((((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using")))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("namespace")))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group")))))) {
+        if ((((((((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using")))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("namespace")))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group")))))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(m); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("castable")))))) {
         SPEC_AUTO String declaredType = (((String (*)(TypeChecker*, Type*))self->_vtable[152]))((TypeChecker*)self, ({ Member* _recv = (Member*)(m); (((Type* (*)(Member*))_recv->_vtable[36]))((Member*)_recv); }));
         if (m->hasInit) {
         SPEC_AUTO String initType = TypeChecker_inferExpressionType(self, m->initExpr) /* inst:TypeChecker:inferExpressionType */;

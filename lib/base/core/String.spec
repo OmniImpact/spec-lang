@@ -9,6 +9,11 @@
 
 Class is String{
 
+	## Declared casts: a String produces an Int through its parser.
+	castable: [
+		[Int, parseInt]
+	];
+
 	## Number of bytes in this string.
 	Function of Int is length(){
 		return Buf:bufLength(self);

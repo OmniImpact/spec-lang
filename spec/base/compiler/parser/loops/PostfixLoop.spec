@@ -97,7 +97,16 @@ Class of Loop is PostfixLoop{
 				return true;
 			}
 
-			# No parenthesis: the colon extends a path (Class:member chains).
+			# No parenthesis: on a PATH/IDENT root the colon extends a
+			# namespace path (Class:member chains); on any other expression
+			# it is a FIELD_ACCESS on the result (call():field).
+			if (self:currentExpr:kind != ExpressionKind:PATH && self:currentExpr:kind != ExpressionKind:IDENT) {
+				local Expression is fa: Expression:init(kind: ExpressionKind:FIELD_ACCESS);
+				fa:leftExpr: self:currentExpr;
+				fa:stringValue: method;
+				self:currentExpr: fa;
+				return true;
+			}
 			local Array of String is segs: [];
 			if (self:currentExpr:kind == ExpressionKind:PATH) {
 				self:currentExpr:pathSegments:each(action: local Function(String is s){

@@ -14,6 +14,7 @@ Enum of String is ExpressionKind {
 	ARRAY: 'ARRAY',
 	MAP: 'MAP',
 	CAST: 'CAST',
+	FIELD_ACCESS: 'FIELD_ACCESS',
 	INDEX: 'INDEX',
 	CALL: 'CALL',
 	BINARY: 'BINARY',
