@@ -1,5 +1,7 @@
 /target
-/spec
+# Compiler binaries (built by ./bootstrap.sh from bootstrap/spec.c)
+/bin/spec
+/bin/spec-asan
 /helloworldspec
 /featurestest
 /blackjack
@@ -9,8 +11,8 @@
 *.spec.c
 *.c
 !bootstrap/spec.c
-/spec-stage*
-/spec-asan
+# Sanitizer build artifact (run_sanitized.sh builds it fresh)
+/bin/spec-asan
 TASKS.md
 /mandelbrot
 /pi
