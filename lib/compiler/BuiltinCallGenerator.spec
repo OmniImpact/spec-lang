@@ -28,6 +28,69 @@ Class is BuiltinCallGenerator{
 		self:allEnumNames: names;
 	}
 
+	## Binds a sysinternal floor call to its C function per the naming
+	## convention: spec_ + snake_case(method). Arguments match the declared
+	## parameters positionally first, then by name, with declaration-side
+	## defaults filling the rest. Returns '' when the method is not a floor
+	## declaration, letting the caller fall through.
+	Function of String is bindFloorCall(String is clsName, Expression is expr, CodeGenerator is cg){
+		local ClassInfo is fCls: cg:findClassForCall(name: clsName);
+		if (fCls:getName() != clsName) {
+			return '';
+		}
+		local Member is foundM;
+		local Boolean is hasM: false;
+		fCls:getMembers():each(action: local Function(Member is m){
+			if (!hasM && m:getKind() == 'METHOD' && m:getName() == expr:methodName) {
+				hasM: true;
+				foundM: m;
+			}
+		});
+		if (!hasM) {
+			return '';
+		}
+		local Array of String is argList: [];
+		local Boolean is argsOk: true;
+		local Int is posIdx: 0;
+		foundM:getParameters():each(action: local Function(Parameter is p){
+			if (argsOk) {
+				local Boolean is got: false;
+				if (posIdx < expr:methodArgs:length() && expr:methodArgs:get(index: posIdx):getName() == '') {
+					argList:add(item: cg:generateExpression(expr: expr:methodArgs:get(index: posIdx):getValue()));
+					posIdx: posIdx + 1;
+					got: true;
+				}
+				if (!got) {
+					expr:methodArgs:each(action: local Function(NamedArg is a){
+						if (!got && a:getName() == p:getName()) {
+							got: true;
+							argList:add(item: cg:generateExpression(expr: a:getValue()));
+						}
+					});
+				}
+				if (!got && p:getHasDefault()) {
+					got: true;
+					argList:add(item: cg:generateExpression(expr: p:getDefaultExpr()));
+				}
+				if (!got) {
+					argsOk: false;
+				}
+			}
+		});
+		if (!argsOk) {
+			return '';
+		}
+		local String is argCs: '';
+		argList:each(action: local Function(String is a){
+			if (argCs == '') {
+				argCs: a;
+			} else {
+				argCs: argCs . ', ' . a;
+			}
+		});
+		return 'spec_' . self:utils:snakeCase(name: expr:methodName) . '(' . argCs . ')';
+	}
+
 	## Generates C code for a standard library or runtime intrinsic call.
 	##
 	## @param expr: AST [Expression] node of kind CALL.
@@ -905,86 +968,35 @@ Class is BuiltinCallGenerator{
 			}
 		}
 
-		# Buf floor primitives (body-less, bound to the C runtime)
-		if (targetC == 'Buf' && expr:methodName == 'bufLength' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_buf_length(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		# Namespace-driven sysinternal floor binding: a call on a class whose
+		# declared namespace ends with `sysinternal` compiles to
+		# spec_<snake(method)>(args) per the naming convention — the namespace
+		# IS the binding annotation. Handles both the short class form
+		# (Buf:bufLength(...)) and the fully qualified chain
+		# (base:sysinternal:Buf():bufLength(...)).
+		local String is floorCls: '';
+		if (targetC != '' && cg:findClassForCall(name: targetC):getName() == targetC && cg:isSysinternalClass(name: targetC)) {
+			floorCls: targetC;
+		} else {
+			local String is qCls: '';
+			if (expr:methodTarget:getKind() == 'PATH') {
+				local Array of String is qSegs: expr:methodTarget:pathSegments;
+				qCls: qSegs:get(index: qSegs:length() - 1);
+			} else if (expr:methodTarget:getKind() == 'CALL') {
+				local Expression is qInner: expr:methodTarget;
+				if (qInner:methodTarget:getKind() == 'PATH') {
+					qCls: qInner:methodName;
+				}
+			}
+			if (qCls != '' && cg:findClassForCall(name: qCls):getName() == qCls && cg:isSysinternalClass(name: qCls)) {
+				floorCls: qCls;
+			}
 		}
-		if (targetC == 'Buf' && expr:methodName == 'bufGetByte' && expr:methodArgs:length() > 2) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is idxArg: expr:methodArgs:get(index: 1);
-			local NamedArg is defArg: expr:methodArgs:get(index: 2);
-			return 'spec_buf_get_byte(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: idxArg:getValue()) . ', ' .
-				cg:generateExpression(expr: defArg:getValue()) . ', (SpecClosure*)NULL)';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufCopy' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_string_copy(' . cg:generateExpression(expr: bArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufSubstring' && expr:methodArgs:length() > 2) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is startArg: expr:methodArgs:get(index: 1);
-			local NamedArg is endArg: expr:methodArgs:get(index: 2);
-			return 'spec_string_substring(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: startArg:getValue()) . ', ' .
-				cg:generateExpression(expr: endArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufIndexOf' && expr:methodArgs:length() > 2) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is needleArg: expr:methodArgs:get(index: 1);
-			local NamedArg is defArg: expr:methodArgs:get(index: 2);
-			return 'spec_string_index_of(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: needleArg:getValue()) . ', ' .
-				cg:generateExpression(expr: defArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufReplace' && expr:methodArgs:length() > 2) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is searchArg: expr:methodArgs:get(index: 1);
-			local NamedArg is replArg: expr:methodArgs:get(index: 2);
-			return 'spec_string_replace_all(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: searchArg:getValue()) . ', ' .
-				cg:generateExpression(expr: replArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufTrim' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_string_trim(' . cg:generateExpression(expr: bArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufIsDigit' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_string_is_digit(' . cg:generateExpression(expr: bArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufIsAlpha' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_string_is_alpha(' . cg:generateExpression(expr: bArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufIsWhitespace' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_string_is_whitespace(' . cg:generateExpression(expr: bArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufCountLeading' && expr:methodArgs:length() > 1) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is searchArg: expr:methodArgs:get(index: 1);
-			return 'spec_string_count_leading(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: searchArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufSplit' && expr:methodArgs:length() > 1) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is delimArg: expr:methodArgs:get(index: 1);
-			return 'spec_string_split(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: delimArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufLines' && expr:methodArgs:length() > 0) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			return 'spec_string_lines(' . cg:generateExpression(expr: bArg:getValue()) . ')';
-		}
-		if (targetC == 'Buf' && expr:methodName == 'bufParseBase' && expr:methodArgs:length() > 2) {
-			local NamedArg is bArg: expr:methodArgs:get(index: 0);
-			local NamedArg is baseArg: expr:methodArgs:get(index: 1);
-			local NamedArg is defArg: expr:methodArgs:get(index: 2);
-			return 'spec_parse_base(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
-				cg:generateExpression(expr: baseArg:getValue()) . ', ' .
-				cg:generateExpression(expr: defArg:getValue()) . ')';
+		if (floorCls != '') {
+			local String is bound: self:bindFloorCall(clsName: floorCls, expr: expr, cg: cg);
+			if (bound != '') {
+				return bound;
+			}
 		}
 
 		# String methods

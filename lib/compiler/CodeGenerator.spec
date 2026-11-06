@@ -361,6 +361,57 @@ Class is CodeGenerator{
 		return self:findClass(name: name);
 	}
 
+	## True when the class's declared namespace ends with the segment
+	## `sysinternal` — the namespace IS the floor-binding annotation. Classes
+	## without a namespace declaration are not floor classes.
+	Function of Boolean is isSysinternalClass(String is name){
+		local ClassInfo is cls: self:findClass(name: name);
+		if (cls:getName() != name) {
+			return false;
+		}
+		local NamespaceCheckLoop is check: NamespaceCheckLoop:init(cls: cls);
+		While:run(loop: check);
+		return check:isFloor;
+	}
+
+	## Walks a class's members looking for the `namespace` array declaration
+	## and tests whether its last segment is `sysinternal`.
+	Class of Loop is NamespaceCheckLoop{
+		local ClassInfo is cls;
+		local Int is idx: 0;
+		local Boolean is isFloor: false;
+
+		replace Function is init(ClassInfo is cls){
+			self:cls: cls;
+			self:idx: 0;
+			self:isFloor: false;
+		}
+
+		replace Function of Boolean is evaluate(){
+			return self:idx < self:cls:getMembers():length();
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local Member is m: self:cls:getMembers():get(index: self:idx);
+			self:idx: self:idx + 1;
+			if (m:getName() == 'namespace' && m:getHasInit()) {
+				local Expression is nsExpr: m:getInitExpr();
+				if (nsExpr:getKind() == 'ARRAY') {
+					local Array of Expression is items: nsExpr:arrayItems;
+					if (items:length() > 0) {
+						local Expression is lastExpr: items:get(index: items:length() - 1);
+						local String is last: lastExpr:stringValue;
+						if (last == 'sysinternal') {
+							self:isFloor: true;
+							return false;
+						}
+					}
+				}
+			}
+			return true;
+		}
+	}
+
 	Function of String is cTypeFor(String is typeName){
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		if (curCls:getTypeParams():indexOf(search: typeName, default: -1) >= 0) {

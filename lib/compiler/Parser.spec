@@ -1257,6 +1257,26 @@ Class is Parser{
 			return m;
 		}
 
+		# Shorthand property: `name: <expr>;` — an untyped field with an
+		# initializer (the namespace/using declaration form of the package
+		# system).
+		if (self:peek():getKind() == 'IDENTIFIER' && self:peekAhead(offset: 1):getValue() == ':') {
+			local Token is nameTok: self:advance();
+			self:advance();
+			local Expression is initExpr: self:parseExpression();
+			if (self:check(kind: 'SYMBOL', value: ';')) {
+				self:advance();
+			}
+			local Member is m: Member:init(kind: 'FIELD');
+			m:setLine(line: nameTok:getLine());
+			m:modifiers: modifiers;
+			m:memberType: Type:init(name: '');
+			m:name: nameTok:getValue();
+			m:initExpr: initExpr;
+			m:hasInit: true;
+			return m;
+		}
+
 		if (self:peek():getKind() == 'IDENTIFIER' && self:peekAhead(offset: 1):getValue() == '(') {
 			local Token is nameTok: self:advance();
 			local String is name: nameTok:getValue();
@@ -1302,6 +1322,18 @@ Class is Parser{
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchToken(kind: 'SYMBOL', value: ')');
+			# Interface-style declaration: a `;`-terminated signature with no
+			# body — the sysinternal floor-binding form.
+			if (self:check(kind: 'SYMBOL', value: ';')) {
+				self:advance();
+				local Member is m: Member:init(kind: 'METHOD');
+				m:setLine(line: nameTok:getLine());
+				m:modifiers: modifiers;
+				m:memberType: mType;
+				m:name: name;
+				m:params: params;
+				return m;
+			}
 			self:matchToken(kind: 'SYMBOL', value: '{');
 
 			local Array of Statement is body: [];

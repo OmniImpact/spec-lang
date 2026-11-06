@@ -1048,6 +1048,24 @@ Class is TypeChecker{
 					targetType: self:currentClassName;
 				}
 
+				# Namespace-qualified chains: `base:sysinternal:Buf()` (a
+				# constructor call whose method name is a class) and method
+				# calls on one (`...Buf():bufLength(...)`). The chain's type is
+				# the named class, so the call validates against its contract.
+				if (targetType == 'Any' || targetType == '') {
+					if (expr:methodTarget:getKind() == 'PATH' && self:findClass(name: method):getName() == method) {
+						targetType: method;
+					} else if (expr:methodTarget:getKind() == 'CALL') {
+						local Expression is qInner: expr:methodTarget;
+						if (qInner:methodTarget:getKind() == 'PATH') {
+							local String is qCand: qInner:methodName;
+							if (qCand != '' && self:findClass(name: qCand):getName() == qCand) {
+								targetType: qCand;
+							}
+						}
+					}
+				}
+
 				if (!self:allEnumNames:has(key: targetType) && !self:isBuiltinClassName(name: targetType) && targetType != '' && targetType != 'Any') {
 					local Array of String is cParts: targetType:split(delimiter: ':');
 					local String is cBase: cParts:get(index: 0);

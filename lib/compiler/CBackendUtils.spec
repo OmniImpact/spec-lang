@@ -54,6 +54,14 @@ Class is CBackendUtils{
 		};
 	}
 
+	## Converts a lowerCamel method name to snake_case for C floor binding
+	## (bufGetByte -> buf_get_byte; the caller prepends spec_).
+	Function of String is snakeCase(String is name){
+		local SnakeCaseLoop is loop: SnakeCaseLoop:init(src: name);
+		While:run(loop: loop);
+		return loop:res;
+	}
+
 	## Sanitizes a Spec identifier to avoid clashes with C reserved keywords.
 	##
 	## @param name: Identifier name.
@@ -66,6 +74,38 @@ Class is CBackendUtils{
 				'unsigned', 'short', 'long', 'sizeof', 'typedef': '_' . name;
 			else: name;
 		};
+	}
+
+	## Character walk for snakeCase: inserts '_' before each uppercase and
+	## lowercases it.
+	Class of Loop is SnakeCaseLoop{
+		local String is src;
+		local Int is pos: 0;
+		local String is res: '';
+		local String is uppers: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		local String is lowers: 'abcdefghijklmnopqrstuvwxyz';
+
+		replace Function is init(String is src){
+			self:src: src;
+			self:pos: 0;
+			self:res: '';
+		}
+
+		replace Function of Boolean is evaluate(){
+			return self:pos < self:src:length();
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local String is ch: self:src:charAt(index: self:pos, default: '');
+			self:pos: self:pos + 1;
+			local Int is u: self:uppers:indexOf(search: ch, default: -1);
+			if (u >= 0) {
+				self:res: self:res . '_' . self:lowers:charAt(index: u, default: '');
+			} else {
+				self:res: self:res . ch;
+			}
+			return true;
+		}
 	}
 
 	Class of Loop is EscapeLoop{
