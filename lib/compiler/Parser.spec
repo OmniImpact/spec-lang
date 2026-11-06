@@ -21,6 +21,14 @@ Class is Parser{
 	local Int is length: 0;
 	local String is sourceFile: '';
 	local Array of String is errors: [];
+	# Nesting depth of fancy-string desugaring: 0 at statement level, >= 1
+	# inside a template hole (where inner strings stay plain — no nested
+	# template expansion).
+	local Int is templateDepth: 0;
+
+	Function is setTemplateDepth(Int is depth){
+		self:templateDepth: depth;
+	}
 
 	Class of Loop is EnumVariantsLoop{
 		local Parser is parser;
@@ -849,6 +857,267 @@ Class is Parser{
 		return self:errors;
 	}
 
+	## Desugars fancy-family string content ("..." and backtick heredocs):
+	## splits literal chunks from {{expr}} holes with escape processing applied
+	## inline, sub-parses each hole, and folds everything into the same concat
+	## chain a programmer would have written by hand. Hole-free content yields
+	## a single string literal (zero runtime cost). At depth >= 1 — inside a
+	## template hole — inner strings stay plain: escapes only, no expansion.
+	Function of Expression is expandFancyString(String is raw, Token is originTok, Int is depth){
+		local Expression is plainE: Expression:init(kind: 'STRING');
+		plainE:stringValue: '';
+		if (depth > 0) {
+			local FancyEscapeLoop is dEsc: FancyEscapeLoop:init(src: raw);
+			While:run(loop: dEsc);
+			plainE:stringValue: dEsc:res;
+			return plainE;
+		}
+		local TemplateSplitLoop is split: TemplateSplitLoop:init(raw: raw);
+		While:run(loop: split);
+		split:lits:add(item: split:lit);
+		if (split:inHole) {
+			self:addError(tok: originTok, message: 'Unterminated template hole (missing closing }})');
+			return plainE;
+		}
+		local Expression is acc: Expression:init(kind: 'STRING');
+		acc:stringValue: split:lits:get(index: 0);
+		if (split:holes:length() == 0) {
+			return acc;
+		}
+		local TemplateFoldLoop is fold: TemplateFoldLoop:init(parser: self, split: split, originTok: originTok, acc0: acc);
+		While:run(loop: fold);
+		return fold:acc;
+	}
+
+	## Parses one template hole's text as a full Spec expression using a
+	## sub-lexer and sub-parser; the hole text must be exactly one expression.
+	Function of Expression is parseTemplateExpression(String is text, Token is originTok){
+		local Expression is emptyE: Expression:init(kind: 'STRING');
+		emptyE:stringValue: '';
+		if (text:trim():length() == 0) {
+			self:addError(tok: originTok, message: 'Empty expression in string template');
+			return emptyE;
+		}
+		local Lexer is subLexer: Lexer:init(source: text);
+		local Array of Token is subTokens: subLexer:tokenize();
+		if (subLexer:hasErrors()) {
+			self:addError(tok: originTok, message: 'Invalid expression in string template');
+			return emptyE;
+		}
+		local Parser is subParser: Parser:init(tokens: subTokens);
+		subParser:setTemplateDepth(depth: 1);
+		local Expression is e: subParser:parseExpression();
+		if (subParser:hasErrors() || subParser:peek():getKind() != 'EOF') {
+			self:addError(tok: originTok, message: 'Invalid expression in string template');
+			return emptyE;
+		}
+		return e;
+	}
+
+	## Splits raw fancy-string content at unescaped {{ }} pairs into literal
+	## chunks and hole texts. Quote- and brace-aware inside holes so holes may
+	## contain string literals and nested braces. Literal escapes are processed
+	## inline (every backslash consumes its follower, so a {{ reached in
+	## literal state is always a template start; \{\{ renders as literal
+	## braces via the escape rule).
+	Class of Loop is TemplateSplitLoop{
+		local String is raw;
+		local Int is pos: 0;
+		local Boolean is inHole: false;
+		local String is lit: '';
+		local Array of String is lits: [];
+		local String is hole: '';
+		local Array of String is holes: [];
+		local String is quoteCh: '';
+		local Int is braceDepth: 0;
+
+		replace Function is init(String is raw){
+			self:raw: raw;
+			self:pos: 0;
+			self:inHole: false;
+			self:lit: '';
+			self:lits: [];
+			self:hole: '';
+			self:holes: [];
+			self:quoteCh: '';
+			self:braceDepth: 0;
+		}
+
+		replace Function of Boolean is evaluate(){
+			return self:pos < self:raw:length();
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local String is ch: self:raw:charAt(index: self:pos, default: '');
+			if (!self:inHole) {
+				if (ch == "{" && self:pos + 1 < self:raw:length() && self:raw:charAt(index: self:pos + 1, default: '') == "{") {
+					self:lits:add(item: self:lit);
+					self:lit: '';
+					self:inHole: true;
+					self:hole: '';
+					self:quoteCh: '';
+					self:braceDepth: 0;
+					self:pos: self:pos + 2;
+					return true;
+				}
+				if (ch == "\\") {
+					if (self:pos + 1 < self:raw:length()) {
+						local String is nextCh: self:raw:charAt(index: self:pos + 1, default: '');
+						when (nextCh) {
+							is 'n': { self:lit: self:lit . "\n"; }
+							is 't': { self:lit: self:lit . "\t"; }
+							is 'r': { self:lit: self:lit . "\r"; }
+							is 'e': { self:lit: self:lit . String:fromCharCode(code: 27); }
+							is '"': { self:lit: self:lit . '"'; }
+							is "\\": { self:lit: self:lit . "\\"; }
+							is '`': { self:lit: self:lit . '`'; }
+							is '{': { self:lit: self:lit . '{'; }
+							else: { self:lit: self:lit . nextCh; }
+						}
+						self:pos: self:pos + 2;
+					} else {
+						self:lit: self:lit . "\\";
+						self:pos: self:pos + 1;
+					}
+					return true;
+				}
+				self:lit: self:lit . ch;
+				self:pos: self:pos + 1;
+				return true;
+			}
+			if (self:quoteCh != '') {
+				if (ch == "\\") {
+					self:hole: self:hole . ch;
+					self:pos: self:pos + 1;
+					if (self:pos < self:raw:length()) {
+						self:hole: self:hole . self:raw:charAt(index: self:pos, default: '');
+						self:pos: self:pos + 1;
+					}
+					return true;
+				}
+				if (ch == self:quoteCh) {
+					self:quoteCh: '';
+				}
+				self:hole: self:hole . ch;
+				self:pos: self:pos + 1;
+				return true;
+			}
+			if (ch == '\'' || ch == '"') {
+				self:quoteCh: ch;
+				self:hole: self:hole . ch;
+				self:pos: self:pos + 1;
+				return true;
+			}
+			if (ch == "{") {
+				self:braceDepth: self:braceDepth + 1;
+				self:hole: self:hole . ch;
+				self:pos: self:pos + 1;
+				return true;
+			}
+			if (ch == "}") {
+				if (self:braceDepth > 0) {
+					self:braceDepth: self:braceDepth - 1;
+				} else if (self:pos + 1 < self:raw:length() && self:raw:charAt(index: self:pos + 1, default: '') == "}") {
+					self:holes:add(item: self:hole);
+					self:hole: '';
+					self:inHole: false;
+					self:pos: self:pos + 2;
+					return true;
+				}
+				self:hole: self:hole . ch;
+				self:pos: self:pos + 1;
+				return true;
+			}
+			self:hole: self:hole . ch;
+			self:pos: self:pos + 1;
+			return true;
+		}
+	}
+
+	## Folds holes and their following literal chunks into a left-associated
+	## concat chain ('.' binary expressions), matching hand-written code.
+	Class of Loop is TemplateFoldLoop{
+		local Parser is parser;
+		local TemplateSplitLoop is split;
+		local Token is originTok;
+		local Int is k: 0;
+		local Expression is acc;
+
+		replace Function is init(Parser is parser, TemplateSplitLoop is split, Token is originTok, Expression is acc0){
+			self:parser: parser;
+			self:split: split;
+			self:originTok: originTok;
+			self:k: 0;
+			self:acc: acc0;
+		}
+
+		replace Function of Boolean is evaluate(){
+			return self:k < self:split:holes:length();
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local Expression is holeE: self:parser:parseTemplateExpression(text: self:split:holes:get(index: self:k), originTok: self:originTok);
+			local Expression is withHole: Expression:init(kind: 'BINARY');
+			withHole:binaryOp: '.';
+			withHole:leftExpr: self:acc;
+			withHole:rightExpr: holeE;
+			local Expression is litE: Expression:init(kind: 'STRING');
+			litE:stringValue: self:split:lits:get(index: self:k + 1);
+			local Expression is withLit: Expression:init(kind: 'BINARY');
+			withLit:binaryOp: '.';
+			withLit:leftExpr: withHole;
+			withLit:rightExpr: litE;
+			self:acc: withLit;
+			self:k: self:k + 1;
+			return true;
+		}
+	}
+
+	## Applies the fancy escape set (n, t, r, e, ", \, `, {; unknown escapes
+	## pass the escaped character through) over raw content without expansion.
+	Class of Loop is FancyEscapeLoop{
+		local String is src;
+		local Int is pos: 0;
+		local String is res: '';
+
+		replace Function is init(String is src){
+			self:src: src;
+			self:pos: 0;
+			self:res: '';
+		}
+
+		replace Function of Boolean is evaluate(){
+			return self:pos < self:src:length();
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local String is ch: self:src:charAt(index: self:pos, default: '');
+			self:pos: self:pos + 1;
+			if (ch == "\\") {
+				if (self:pos < self:src:length()) {
+					local String is nextCh: self:src:charAt(index: self:pos, default: '');
+					self:pos: self:pos + 1;
+					when (nextCh) {
+						is 'n': { self:res: self:res . "\n"; }
+						is 't': { self:res: self:res . "\t"; }
+						is 'r': { self:res: self:res . "\r"; }
+						is 'e': { self:res: self:res . String:fromCharCode(code: 27); }
+						is '"': { self:res: self:res . '"'; }
+						is "\\": { self:res: self:res . "\\"; }
+						is '`': { self:res: self:res . '`'; }
+						is '{': { self:res: self:res . '{'; }
+						else: { self:res: self:res . nextCh; }
+					}
+				} else {
+					self:res: self:res . "\\";
+				}
+				return true;
+			}
+			self:res: self:res . ch;
+			return true;
+		}
+	}
+
 	Function of Boolean is hasErrors(){
 		return self:errors:length() > 0;
 	}
@@ -1348,6 +1617,16 @@ Class is Parser{
 				local Expression is e: Expression:init(kind: 'STRING');
 				e:stringValue: tok:getValue();
 				return e;
+			}
+			is RAWSTRING: {
+				self:advance();
+				local Expression is e: Expression:init(kind: 'STRING');
+				e:stringValue: tok:getValue();
+				return e;
+			}
+			is FANCYSTRING: {
+				self:advance();
+				return self:expandFancyString(raw: tok:getValue(), originTok: tok, depth: self:templateDepth);
 			}
 			is INT: {
 				self:advance();

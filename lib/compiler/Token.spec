@@ -8,6 +8,8 @@ Enum of String is TokenKind {
 	INT: 'INT',
 	FLOAT: 'FLOAT',
 	STRING: 'STRING',
+	RAWSTRING: 'RAWSTRING',
+	FANCYSTRING: 'FANCYSTRING',
 	BOOL: 'BOOL',
 	EOF: 'EOF'
 }

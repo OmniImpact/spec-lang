@@ -189,31 +189,67 @@ Class is Lexer{
 				return false;
 			}
 			if (ch == "\\") {
-				self:lexer:advance();
-				if (self:lexer:pos < self:lexer:length) {
-					local String is nextCh: self:lexer:advance();
-					if (self:quote == '"') {
-						when (nextCh) {
-							is 'n': { self:res: self:res . "\n"; }
-							is 't': { self:res: self:res . "\t"; }
-							is 'r': { self:res: self:res . "\r"; }
-							is 'e': { self:res: self:res . String:fromCharCode(code: 27); }
-							is '"': { self:res: self:res . '"'; }
-							is "\\": { self:res: self:res . "\\"; }
-							else: { self:res: self:res . nextCh; }
-						}
-					} else {
+				# The scan stays escape-aware in both families so an escaped
+				# quote cannot terminate the literal. Content stays raw for the
+				# double-quote family: its escapes (and templates) are processed
+				# by the parser's fancy-string desugar. Single quotes keep
+				# their two minimal escapes here.
+				if (self:quote == '\'') {
+					self:lexer:advance();
+					if (self:lexer:pos < self:lexer:length) {
+						local String is nextCh: self:lexer:advance();
 						if (nextCh == '\'' || nextCh == "\\") {
 							self:res: self:res . nextCh;
 						} else {
 							self:res: self:res . "\\" . nextCh;
 						}
 					}
+					return true;
+				}
+				self:res: self:res . "\\";
+				self:lexer:advance();
+				if (self:lexer:pos < self:lexer:length) {
+					local String is nextCh: self:lexer:advance();
+					self:res: self:res . nextCh;
 				}
 				return true;
 			}
 			self:res: self:res . ch;
 			self:lexer:advance();
+			return true;
+		}
+	}
+
+	## Scans a triple-delimiter heredoc ('''''' raw or ``` fancy) into a raw
+	## token value: every byte between the delimiters, newlines included, no
+	## escape processing. The first closing triple terminates the block.
+	Class of Loop is HeredocScanLoop{
+		local Lexer is lexer;
+		local String is quote;
+		local String is res: '';
+		local Boolean is closed: false;
+
+		replace Function is init(Lexer is lexer, String is quote){
+			self:lexer: lexer;
+			self:quote: quote;
+			self:res: '';
+			self:closed: false;
+		}
+
+		replace Function of Boolean is evaluate(){
+			return !self:closed && self:lexer:pos < self:lexer:length;
+		}
+
+		replace Function of Boolean is iteration(LoopControl is control){
+			local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
+			if (triple == self:quote) {
+				self:lexer:advance();
+				self:lexer:advance();
+				self:lexer:advance();
+				self:closed: true;
+				return false;
+			}
+			self:res: self:res . self:lexer:advance();
 			return true;
 		}
 	}
@@ -239,7 +275,23 @@ Class is Lexer{
 
 			local String is ch: lexer:source:charAt(index: lexer:pos, default: '');
 			if (ch == '"' || ch == '\'') {
-				tokens:add(item: lexer:readString(quote: ch));
+				# The raw heredoc ('''''' — bytes exactly as written) claims
+				# precedence over single/double quotes.
+				local String is triple: lexer:source:substring(start: lexer:pos, end: lexer:pos + 3);
+				if (triple == "'''") {
+					tokens:add(item: lexer:readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
+				} else {
+					tokens:add(item: lexer:readString(quote: ch));
+				}
+			} else if (ch == '`') {
+				# The fancy heredoc (backticks — escapes and templates processed
+				# later by the parser's desugar pass).
+				local String is triple: lexer:source:substring(start: lexer:pos, end: lexer:pos + 3);
+				if (triple == "```") {
+					tokens:add(item: lexer:readTriple(quote: "```", kind: TokenKind:FANCYSTRING));
+				} else {
+					tokens:add(item: lexer:readSymbol());
+				}
 			} else if (ch:isDigit()) {
 				tokens:add(item: lexer:readNumber());
 			} else if (lexer:isIdentifierStart(ch: ch)) {
@@ -433,7 +485,36 @@ Class is Lexer{
 		if (self:pos < self:length) {
 			self:advance();
 		}
+		# Double quotes are the fancy family: escapes and templates are
+		# processed by the parser's desugar, so the token carries raw content.
+		if (quote == '"') {
+			return Token:init(kind: TokenKind:FANCYSTRING, value: loop:res, line: startLine, col: startCol);
+		}
 		return Token:init(kind: TokenKind:STRING, value: loop:res, line: startLine, col: startCol);
+	}
+
+	## Scans a triple-delimiter heredoc into a raw token. [kind] selects the
+	## family: RAWSTRING ('''''' — bytes as written) or FANCYSTRING (backticks
+	## — escapes and templates processed by the parser's desugar).
+	Function of Token is readTriple(String is quote, TokenKind is kind){
+		local Int is startLine: self:line;
+		local Int is startCol: self:col;
+		self:advance();
+		self:advance();
+		self:advance();
+		# Shell-heredoc convention: the delimiter line's own newline is not
+		# content — the block's text starts on the following line.
+		if (self:pos < self:length && self:source:charAt(index: self:pos, default: '') == "\n") {
+			self:advance();
+		}
+
+		local HeredocScanLoop is loop: HeredocScanLoop:init(lexer: self, quote: quote);
+		While:run(loop: loop);
+
+		if (!loop:closed) {
+			self:addError(msg: 'Unterminated heredoc (missing closing ' . quote . ')');
+		}
+		return Token:init(kind: kind, value: loop:res, line: startLine, col: startCol);
 	}
 
 	Function of Token is readSymbol(){
