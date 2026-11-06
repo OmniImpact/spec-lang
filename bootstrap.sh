@@ -16,8 +16,8 @@ if [ ! -f "bootstrap/spec.c" ]; then
 fi
 
 CC_BIN="${CC:-gcc}"
-echo "Compiling bootstrap/spec.c -> ./spec via ${CC_BIN}..."
-"${CC_BIN}" -O2 -Wno-error=incompatible-pointer-types bootstrap/spec.c -o spec -pthread -lm
+echo "Compiling bootstrap/spec.c -> bin/spec via ${CC_BIN}..."
+"${CC_BIN}" -O2 -Wno-error=incompatible-pointer-types bootstrap/spec.c -o bin/spec -pthread -lm
 
 echo "Spec compiler bootstrapped successfully!"
-./spec --help || true
+bin/spec --help || true

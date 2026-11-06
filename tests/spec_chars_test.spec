@@ -1,16 +1,16 @@
-#! New-tree bootstrap check: the frozen toolchain compiles newc/ sources
-#! through array-form package resolution (scan roots), and the new tree's
-#! utility classes construct-and-call over the compiled String surface.
+#! New-tree bootstrap check: the frozen toolchain compiles spec/ sources
+#! through array-form package resolution, and the compiler's utility
+#! classes construct-and-call over the compiled String surface.
 
-Class is NewcCharsTest{
+Class is SpecCharsTest{
 
 	replace Array of Array of String is using: [
-		['newc', 'util', Chars],
-		['base', 'io', Output]
+		['spec', 'base', 'compiler', 'utils', Chars],
+		['lib', 'base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== New-Tree Chars Test ===');
+		output:line('=== Spec Chars Test ===');
 		local Chars is ch: Chars:init();
 		local Int is failures: 0;
 
@@ -36,9 +36,9 @@ Class is NewcCharsTest{
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] new-tree chars test complete');
+			output:line('[PASS] spec chars test complete');
 		} else {
-			output:line('[FAIL] new-tree chars test: ' . (failures as String) . ' failures');
+			output:line('[FAIL] spec chars test: ' . (failures as String) . ' failures');
 		}
 	}
 }

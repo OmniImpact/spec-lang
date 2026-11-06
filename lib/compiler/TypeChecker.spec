@@ -1830,6 +1830,11 @@ Class is TypeChecker{
 
 				# 2. Strict replace check & Method signature matching on overrides
 				classDef:getMembers():each(action: local Function(Member is subM){
+					# Declarative metadata (namespace/using/group) is per-class
+					# by design and never participates in override matching.
+					if (subM:getName() == 'namespace' || subM:getName() == 'using' || subM:getName() == 'group') {
+						return;
+					}
 					parent:getMembers():each(action: local Function(Member is parentM){
 						if (subM:getName() == parentM:getName()) {
 							local Array of String is parentMods: parentM:getModifiers();

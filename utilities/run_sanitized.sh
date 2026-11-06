@@ -30,7 +30,7 @@ echo "== Building ASan/UBSan-instrumented compiler =="
 	-fsanitize=address,undefined \
 	-fno-sanitize-recover=undefined \
 	-fno-omit-frame-pointer \
-	"$ROOT/bootstrap/spec.c" -o "$ROOT/spec-asan" -pthread -lm
+	"$ROOT/bootstrap/spec.c" -o "$ROOT/bin/spec-asan" -pthread -lm
 
 # Leak detection is OFF by default. Strings are refcounted (SpecBuf-backed since
 # Task 4b) and interned; the direct-leak residue after leak-pass 1 is ~1.18 MB /
@@ -42,7 +42,7 @@ export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
 export UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=1:halt_on_error=1}"
 
 echo "== Regression suite under sanitizer =="
-if SPEC="$ROOT/spec-asan" bash "$ROOT/utilities/run_tests.sh"; then
+if SPEC="$ROOT/bin/spec-asan" bash "$ROOT/utilities/run_tests.sh"; then
 	echo ""
 	echo "== Sanitized suite: PASS =="
 else

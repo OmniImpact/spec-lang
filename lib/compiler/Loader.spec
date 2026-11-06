@@ -293,11 +293,17 @@ Class is Loader{
 		});
 	}
 
-	## Scan roots for package resolution: the spec executable's directory
-	## first, then the input file's directory.
+	## Scan roots for package resolution: the spec executable's directory,
+	## its parent (a bin/-layout install keeps packages at the prefix), then
+	## the input file's directory.
 	Function of Array of String is scanRoots(){
 		local Array of String is roots: [];
-		roots:add(item: base:sysinternal:Dir():exeDir());
+		local String is exeDir: base:sysinternal:Dir():exeDir();
+		roots:add(item: exeDir);
+		local String is upDir: self:dirOf(path: exeDir);
+		if (upDir != '') {
+			roots:add(item: upDir);
+		}
 		local String is inDir: self:dirOf(path: self:rootInputPath);
 		if (inDir != '') {
 			roots:add(item: inDir);

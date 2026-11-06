@@ -30625,6 +30625,9 @@ void TypeChecker_checkInheritance(TypeChecker* self, ClassInfo* classDef) {
         ({ SpecArray* _a_93 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(classDef) /* inst:ClassInfo:getMembers */))); if (_a_93) { for (size_t _i_93 = 0; _i_93 < _a_93->length; _i_93++) {
         Member* subM = (Member*)(intptr_t)_a_93->items[_i_93];
         do {
+    if (((((spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("namespace"))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("using"))))) || (spec_string_equals(((String)spec_claim_pool((void*)(({ Member* _recv = (Member*)(subM); (((String (*)(Member*))_recv->_vtable[21]))((Member*)_recv); })))), spec_string_intern("group"))))) {
+        break;
+    }
     ({ SpecArray* _a_94 = ((SpecArray*)spec_claim_pool((void*)(ClassInfo_getMembers(parent) /* inst:ClassInfo:getMembers */))); if (_a_94) { for (size_t _i_94 = 0; _i_94 < _a_94->length; _i_94++) {
         Member* parentM = (Member*)(intptr_t)_a_94->items[_i_94];
         do {
@@ -37564,7 +37567,12 @@ void Loader_loadArrayFormUsing(Loader* self, Expression* item, ClassInfo* c) {
 
 SpecArray* Loader_scanRoots(Loader* self) {
     SPEC_AUTO SpecArray* roots = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    spec_array_add_object(roots, (void*)(spec_exe_dir()));
+    SPEC_AUTO String exeDir = spec_construct_string(spec_exe_dir());
+    spec_array_add_object(roots, (void*)(exeDir));
+    SPEC_AUTO String upDir = Loader_dirOf(self, exeDir) /* inst:Loader:dirOf */;
+    if ((!spec_string_equals(upDir, spec_string_intern("")))) {
+        spec_array_add_object(roots, (void*)(upDir));
+    }
     SPEC_AUTO String inDir = Loader_dirOf(self, self->rootInputPath) /* inst:Loader:dirOf */;
     if ((!spec_string_equals(inDir, spec_string_intern("")))) {
         spec_array_add_object(roots, (void*)(inDir));

@@ -2,17 +2,18 @@
 #! lexer under the frozen toolchain — numbers (bases, separators), strings
 #! (all families), comments, line/col tracking, and EOF.
 
-Class is NewcLexerTest{
+Class is SpecLexerTest{
 
 	replace Array of Array of String is using: [
-		['newc', 'lexer', Lexer],
-		['newc', 'lexer', TokenKind],
-		['newc', 'lexer', Token],
-		['base', 'io', Output]
+		['spec', 'base', 'compiler', 'lexer', Lexer],
+		['spec', 'base', 'compiler', 'lexer', TokenKind],
+		['spec', 'base', 'compiler', 'lexer', Token],
+		['spec', 'base', 'compiler', 'lexer', Keyword],
+		['lib', 'base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== New-Tree Lexer Test ===');
+		output:line('=== Spec Lexer Test ===');
 		local Int is failures: 0;
 
 		local String is src: 'local Int is n: 0xff + 1_000;' . "\n" . '# a comment
@@ -49,7 +50,7 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 			output:line('[FAIL] single-quote minimal escape');
 			failures: failures + 1;
 		}
-		if (fq:getValue() == "raw \\n stays \\{\\{x\\}\\}" && fq:getTokenKind() == TokenKind:FANCYSTRING) {
+		if (fq:getValue() == "raw \\n stays \\{\\{x\\}\\}" && fq:getTokenKind() == TokenKind:TEMPLATESTRING) {
 			output:line('[PASS] fancy string carries raw content incl. escapes');
 		} else {
 			output:line('[FAIL] fancy string raw content');
@@ -59,6 +60,15 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 			output:line('[PASS] raw heredoc with delimiter-newline strip');
 		} else {
 			output:line('[FAIL] raw heredoc content');
+			failures: failures + 1;
+		}
+
+		# Reserved words carry their Keyword classification for enum dispatch.
+		local Token is kwTok: toks:get(index: 0);
+		if (kwTok:getKeyword() == Keyword:LOCAL) {
+			output:line('[PASS] keyword classification on scanned token');
+		} else {
+			output:line('[FAIL] keyword classification on scanned token');
 			failures: failures + 1;
 		}
 
@@ -73,9 +83,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] new-tree lexer test complete');
+			output:line('[PASS] spec lexer test complete');
 		} else {
-			output:line('[FAIL] new-tree lexer test: ' . (failures as String) . ' failures');
+			output:line('[FAIL] spec lexer test: ' . (failures as String) . ' failures');
 		}
 	}
 }
