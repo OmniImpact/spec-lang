@@ -271,8 +271,12 @@ Class is Loader{
 			parts:each(action: local Function(String is p){
 				dir: dir . '/' . p;
 			});
+			# Ownership note: concat results ride the claim pool, and nested
+			# package loading recycles slots across loadFile calls — a recycled
+			# slot frees a path the parser's sourceFile field still holds. The
+			# floor copy hands loadFile an unambiguously owned string.
 			if (termClass != '') {
-				local String is classFile: dir . '/' . termClass . '.spec';
+				local String is classFile: Buf:stringCopy(b: dir . '/' . termClass . '.spec');
 				if (File:exists(path: classFile)) {
 					self:loadFile(filePath: classFile);
 				}
@@ -282,7 +286,7 @@ Class is Loader{
 				local Array of String is names: base:sysinternal:Dir():dirList(path: dir);
 				names:each(action: local Function(String is nm){
 					if (nm:endsWith(suffix: '.spec')) {
-						self:loadFile(filePath: dir . '/' . nm);
+						self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
 					}
 				});
 			}

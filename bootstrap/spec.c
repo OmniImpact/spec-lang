@@ -37541,7 +37541,7 @@ void Loader_loadArrayFormUsing(Loader* self, Expression* item, ClassInfo* c) {
         } while (0);
     } } });
     if ((!spec_string_equals(termClass, spec_string_intern("")))) {
-        SPEC_AUTO String classFile = spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), termClass), spec_string_intern(".spec"));
+        SPEC_AUTO String classFile = spec_construct_string(spec_string_copy(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), termClass), spec_string_intern(".spec"))));
         if (spec_file_exists(classFile)) {
         Loader_loadFile(self, classFile) /* inst:Loader:loadFile */;
     }
@@ -37553,7 +37553,7 @@ void Loader_loadArrayFormUsing(Loader* self, Expression* item, ClassInfo* c) {
         String nm = (String)(intptr_t)_a_273->items[_i_273];
         do {
     if (String_endsWith(nm, spec_string_intern(".spec"))) {
-        Loader_loadFile(self, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), nm))))) /* inst:Loader:loadFile */;
+        Loader_loadFile(self, spec_string_copy(((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), nm)))))) /* inst:Loader:loadFile */;
     }
         } while (0);
     } } });
