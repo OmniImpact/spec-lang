@@ -10,6 +10,10 @@ dispatch, String bodies) is base-library inventory for the new compiler, not thr
 
 ---
 
+> **Quick reference:** [TRANSITION.md](TRANSITION.md) — the working
+> checklist of what stays in C, what becomes Spec, and what is scheduled
+> for deletion. This document is authoritative; that one is the digest.
+
 ## 1. Executive Summary
 
 The current compiler carries structural sediment: 91 builtin-call interception branches
