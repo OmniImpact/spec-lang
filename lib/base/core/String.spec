@@ -117,5 +117,6 @@ Class is String{
 	## Parses this string as an integer in [base] (2-36), accepting 0x/0b/0o
 	## prefixes and _ separators. Returns [default] on any invalid input.
 	Function of Int is parseInt(Int is base: 10, Int is default: -1){
+		return Buf:bufParseBase(b: self, base: base, def: default);
 	}
 }

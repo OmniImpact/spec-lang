@@ -111,15 +111,6 @@ Class is BuiltinCallGenerator{
 			});
 			return 'spec_int_to_base(' . targetC . ', ' . baseC . ', ' . digitsC . ')';
 		}
-		if (expr:methodName == 'parseInt' && (targetType == 'String' || targetType == 'string')) {
-			local String is baseC: '10';
-			local String is defC: '0';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if (arg:getName() == 'base') { baseC: cg:generateExpression(expr: arg:getValue()); }
-				if (arg:getName() == 'default') { defC: cg:generateExpression(expr: arg:getValue()); }
-			});
-			return 'spec_parse_base(' . targetC . ', ' . baseC . ', ' . defC . ')';
-		}
 
 		# Parallel fan-out execution
 		if (targetC == 'Parallel' && expr:methodName == 'run' && expr:methodArgs:length() >= 3) {
@@ -986,6 +977,14 @@ Class is BuiltinCallGenerator{
 		if (targetC == 'Buf' && expr:methodName == 'bufLines' && expr:methodArgs:length() > 0) {
 			local NamedArg is bArg: expr:methodArgs:get(index: 0);
 			return 'spec_string_lines(' . cg:generateExpression(expr: bArg:getValue()) . ')';
+		}
+		if (targetC == 'Buf' && expr:methodName == 'bufParseBase' && expr:methodArgs:length() > 2) {
+			local NamedArg is bArg: expr:methodArgs:get(index: 0);
+			local NamedArg is baseArg: expr:methodArgs:get(index: 1);
+			local NamedArg is defArg: expr:methodArgs:get(index: 2);
+			return 'spec_parse_base(' . cg:generateExpression(expr: bArg:getValue()) . ', ' .
+				cg:generateExpression(expr: baseArg:getValue()) . ', ' .
+				cg:generateExpression(expr: defArg:getValue()) . ')';
 		}
 
 		# String methods

@@ -235,6 +235,26 @@ Pure Spec, in dependency order, each layer suite-tested before the next:
 
 - `String` over ByteBuf (Phase A's `String.spec` ports nearly verbatim — the desugar of
   PLAN-STRING.md's method surface).
+
+**String/ByteBuf design decision (settled): String WRAPS the buffer; the builder
+paradigm is standard practice.**
+
+- `ByteBuf` = the builder: mutable, append/grow, **exclusively owned during build**.
+- `String` = the finalized product: immutable, ARC-shared, holding its buffer in a
+  field (`self:bytes`). Every method is pure Spec over that field.
+- Finalize is a **zero-copy seal**: the builder transfers its bytes to the String
+  (`into`-style move) — the wrap costs one indirection, not a copy at the boundary.
+- By-value (String identity == buffer identity) was considered and rejected: it makes
+  ARC sharing and building mutually exclusive (any builder mutation breaks string
+  aliases, forcing copy-on-write), and it is not cleanly expressible once String is a
+  real class. The wrap is a *semantic* choice; physical co-allocation (inline buffer,
+  one allocation) remains available later without changing call sites.
+- Cost, accepted: one extra allocation and one pointer chase per String, amortized by
+  length-proportional method work and partially absorbed by arenas for compiler-phase
+  strings.
+- The pattern generalizes as the Spec convention: **mutable builder type → immutable
+  finalized product** (`ByteBuf` → `String` here; the same shape any future builder
+  should follow).
 - `Array` / `List` over ByteBuf with element stride: grow-by-doubling, ARC ops on
   elements via exposed `spec_retain`/`spec_release`.
 - `Map` as a pure-Spec hash table over Array (FNV-1a over bytes; identity hash via

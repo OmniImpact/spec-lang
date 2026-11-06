@@ -59,4 +59,9 @@
 		## Lines of buffer [b] (split on newline, trailing CR stripped).
 		Function of Array of String is bufLines(String is b){
 		}
+
+		## Parses buffer [b] as an integer in [base] (2-36), accepting 0x/0b/0o
+		## prefixes and _ separators. Returns [def] on any invalid input.
+		Function of Int is bufParseBase(String is b, Int is base, Int is def){
+		}
 	}
