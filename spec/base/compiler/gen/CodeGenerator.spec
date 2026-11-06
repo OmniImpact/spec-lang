@@ -28,6 +28,7 @@ Class is CodeGenerator{
 		['spec', 'base', 'compiler', 'gen', EmissionPolicy],
 		['spec', 'base', 'compiler', 'gen', DeclarationGenerator],
 		['spec', 'base', 'compiler', 'gen', BuiltinCallGenerator],
+		['spec', 'base', 'compiler', 'gen', RuntimePrelude],
 		['lib', 'base', 'struct', Array],
 		['lib', 'base', 'struct', Map],
 		['lib', 'base', 'iterator']
@@ -158,6 +159,14 @@ Class is CodeGenerator{
 		self:gcMode: mode;
 	}
 
+	## Sets the claim-pool mode: true in read positions, false in
+	## consumption positions (initializers, container stores).
+	##
+	## @param m: The new mode.
+	Function is setArgMode(Boolean is m){
+		self:argMode: m;
+	}
+
 	## Sets the declared type for the container literal being generated.
 	##
 	## @param t: The declared container type.
@@ -165,6 +174,14 @@ Class is CodeGenerator{
 		self:containerHint: t;
 	}
 
+
+	## Emits the C runtime prelude (static heredoc text).
+	##
+	## @return: The C runtime source.
+	Function of String is generatePrelude(){
+		local RuntimePrelude is rp: RuntimePrelude:init();
+		return rp:emitRuntime();
+	}
 
 	## Assigns virtual method slots in deterministic first-seen order.
 	## Names declared by two or more classes dispatch virtually; single-
@@ -696,9 +713,25 @@ Class is CodeGenerator{
 				local Array of String is parts: targetType:split(delimiter: ':');
 				targetType: parts:get(index: 0);
 			}
+			# Container element extraction: Array of X:get/pop/removeAt -> X.
+			if (targetType:startsWith(prefix: 'Array:') && (expr:methodName == 'get' || expr:methodName == 'pop' || expr:methodName == 'removeAt')) {
+				return targetType:substring(start: 6, end: targetType:length());
+			}
+			# Enum contract methods have fixed return types.
+			if (self:allEnumNames:has(key: targetType)) {
+				if (expr:methodName == 'name') { return 'String'; }
+				if (expr:methodName == 'ordinal') { return Primitive:INT:value(); }
+				if (expr:methodName == 'values') { return 'Array:' . targetType; }
+				if (expr:methodName == 'value') {
+					if (self:allStringBackedEnums:has(key: targetType)) {
+						return 'String';
+					}
+					return Primitive:INT:value();
+				}
+			}
 			local String is ret: self:lookupMethodReturnType(className: targetType, methodName: expr:methodName);
 			if (ret == '' || self:isVoidType(t: ret)) {
-				return targetType;
+				return '';
 			}
 			return ret;
 		}
@@ -726,6 +759,10 @@ Class is CodeGenerator{
 		}
 		if (kind == ExpressionKind:MAP) {
 			return 'Map';
+		}
+		if (kind == ExpressionKind:BINARY && expr:binaryOp == '.') {
+			# String concatenation chains produce a String.
+			return 'String';
 		}
 		if (kind == ExpressionKind:CAST) {
 			return expr:castTarget;
@@ -2080,6 +2117,609 @@ Class is CodeGenerator{
 	## @return: true when the class is a floor binding.
 	Function of Boolean is isSysinternalClass(String is name){
 		return self:policy:isSysinternal(cls: self:findClass(name: name));
+	}
+
+	Function of String is generateMethod(ClassInfo is classDef, Member is method){
+		self:inMethod: true;
+		self:currentMethodName: method:name;
+		self:currentMethodReturnType: self:formatTypeString(t: method:memberType);
+		local String is retType: self:utils:resolveReturnType(t: method:memberType);
+		if (retType == 'void') {
+			if (method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value()) {
+				retType: 'bool';
+			}
+		}
+
+		self:localVars: Map:init();
+		self:localScopeVars: Map:init();
+		method:params:each(action: local Function(Parameter is p){
+			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+		});
+
+		local String is selfCType: self:cTypeFor(typeName: classDef:name);
+		local String is out: retType . ' ' . classDef:name . '_' . method:name . '(' . selfCType . ' self';
+		method:params:each(action: local Function(Parameter is p){
+			out: out . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
+		});
+		out: out . ") {\n";
+
+		method:body:each(action: local Function(Statement is stmt){
+			out: out . self:generateStatement(stmt: stmt);
+		});
+
+		if (method:body:length() == 0 && retType != 'void') {
+			out: out . "    return 0;\n";
+		}
+
+		out: out . "}\n\n";
+		self:inMethod: false;
+		return out;
+	}
+
+	## Generates the C main entry point with argv->Map parsing.
+	##
+	## @param entryClass: The entry class name.
+	## @return: C main function.
+	Function of String is generateMain(String is entryClass){
+		local String is m: "/* Application Entry Point */\n";
+		m: m . "int main(int argc, char** argv) {\n";
+		m: m . "#if defined(SPEC_GC_BOEHM)\n    GC_init();\n#endif\n";
+		m: m . "    srand((unsigned int)time(NULL));\n";
+		m: m . "    SPEC_AUTO SpecMap* args = spec_map_new();\n";
+		m: m . "    for (int i = 1; i < argc; i++) {\n";
+		m: m . "        if (strncmp(argv[i], \"--\", 2) == 0) {\n";
+		m: m . "            const char* eq = strchr(argv[i] + 2, '=');\n";
+		m: m . "            if (eq) {\n";
+		m: m . "                int klen = (int)(eq - (argv[i] + 2));\n";
+		m: m . "                char kbuf[128];\n";
+		m: m . "                if (klen >= 128) klen = 127;\n";
+		m: m . "                strncpy(kbuf, argv[i] + 2, klen);\n";
+		m: m . "                kbuf[klen] = 0;\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(kbuf), spec_string_from_chars(eq + 1));\n";
+		m: m . "            } else {\n";
+		m: m . "                const char* key = argv[i] + 2;\n";
+		m: m . "                const char* val = \"true\";\n";
+		m: m . "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n";
+		m: m . "                    val = argv[++i];\n";
+		m: m . "                }\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
+		m: m . "            }\n";
+		m: m . "        } else if (argv[i][0] == '-' && argv[i][1] != 0) {\n";
+		m: m . "            const char* eq = strchr(argv[i] + 1, '=');\n";
+		m: m . "            if (eq) {\n";
+		m: m . "                int klen = (int)(eq - (argv[i] + 1));\n";
+		m: m . "                char kbuf[128];\n";
+		m: m . "                if (klen >= 128) klen = 127;\n";
+		m: m . "                strncpy(kbuf, argv[i] + 1, klen);\n";
+		m: m . "                kbuf[klen] = 0;\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(kbuf), spec_string_from_chars(eq + 1));\n";
+		m: m . "            } else {\n";
+		m: m . "                const char* key = argv[i] + 1;\n";
+		m: m . "                const char* val = \"true\";\n";
+		m: m . "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n";
+		m: m . "                    val = argv[++i];\n";
+		m: m . "                }\n";
+		m: m . "                spec_map_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
+		m: m . "            }\n";
+		m: m . "        }\n";
+		m: m . "    }\n";
+		m: m . '    SPEC_AUTO ' . entryClass . '* app = ' . entryClass . "_new();\n";
+		m: m . '    ' . entryClass . "_init(app, args);\n";
+		m: m . "    spec_drain_async_tasks();\n";
+		m: m . "    return 0;\n";
+		m: m . "}\n";
+		return m;
+	}
+
+	## Collects nested classes from a statement tree.
+	Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
+		when (stmt:kind) {
+			is StatementKind:CLASS: {
+				self:collectClasses(c: stmt:nestedClass, acc: acc);
+			}
+			is StatementKind:IF: {
+				stmt:thenBranch:each(action: local Function(Statement is s){
+					self:collectClassesFromStatement(stmt: s, acc: acc);
+				});
+				if (stmt:hasElse) {
+					stmt:elseBranch:each(action: local Function(Statement is s){
+						self:collectClassesFromStatement(stmt: s, acc: acc);
+					});
+				}
+			}
+			is StatementKind:WHEN: {
+				stmt:whenArms:each(action: local Function(WhenArm is arm){
+					arm:body:each(action: local Function(Statement is s){
+						self:collectClassesFromStatement(stmt: s, acc: acc);
+					});
+				});
+			}
+			else: {}
+		}
+	}
+
+	## Collects a class and all nested definitions.
+	Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
+		acc:add(item: c);
+		c:members:each(action: local Function(Member is m){
+			when (m:kind) {
+				is MemberKind:CLASS: {
+					self:collectClasses(c: m:nestedClass, acc: acc);
+				}
+				is MemberKind:METHOD: {
+					m:body:each(action: local Function(Statement is s){
+						self:collectClassesFromStatement(stmt: s, acc: acc);
+					});
+				}
+				else: {}
+			}
+		});
+	}
+
+	## Translates a complete parsed program into a standalone C11 file.
+	##
+	## @param program: The parsed program.
+	## @param entryClass: The entry-point class name.
+	## @return: Complete C11 source.
+	Function of String is generateProgram(ProgramNode is program, String is entryClass){
+		local Array of ClassInfo is flattenedClasses: [];
+		program:classes:each(action: local Function(ClassInfo is c){
+			self:collectClasses(c: c, acc: flattenedClasses);
+		});
+		# registerProgram was called with the FULL class set (source + preloaded)
+		# by the driver; this method's emission loop iterates only the source
+		# program's classes.
+		self:assignVirtualSlots(classes: flattenedClasses);
+		self:declGen:setEnumNames(names: self:allEnumNames);
+		self:declGen:setTaggedEnums(names: self:allTaggedEnums);
+		self:builtins:setEnumNames(names: self:allEnumNames);
+
+		local String is enums: self:declGen:generateEnums(classes: flattenedClasses);
+		local String is decls: self:declGen:generateForwardDeclarations(classes: flattenedClasses);
+		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
+		local String is vt: self:generateVTables(classes: flattenedClasses);
+		local String is ctors: self:generateConstructors(classes: flattenedClasses);
+
+		local String is methods: '';
+		flattenedClasses:each(action: local Function(ClassInfo is c){
+			if (!self:policy:isTransparent(c: c) || c:name == 'String') {
+				self:currentClassName: c:name;
+				self:fieldTypes: Map:init();
+				local Array of Member is allFields: [];
+				self:declGen:collectStructFields(c: c, allClasses: flattenedClasses, acc: allFields);
+				allFields:each(action: local Function(Member is m){
+					self:fieldTypes:set(key: m:name, value: self:formatTypeString(t: m:memberType));
+				});
+
+				local Boolean is hasInit: false;
+				c:members:each(action: local Function(Member is m){
+					when (m:kind) {
+						is MemberKind:METHOD: {
+							if (m:name == 'init') { hasInit: true; }
+							methods: methods . self:generateMethod(classDef: c, method: m);
+						}
+						else: {}
+					}
+				});
+				if (!hasInit && c:baseClass != self:names:enumHeader()) {
+					methods: methods . 'void ' . c:name . '_init(' . c:name . "* self) {\n    /* default initializer */\n}\n\n";
+				}
+
+				local Boolean is hasToString: false;
+				c:members:each(action: local Function(Member is m){
+					if (m:name == 'toString') { hasToString: true; }
+				});
+				if (!hasToString && c:baseClass != self:names:enumHeader()) {
+					local String is cn: c:name;
+					methods: methods . 'String ' . cn . '_toString(' . cn . "* self) {\n";
+					methods: methods . "    if (!self) { return spec_string_intern(\"\"); }\n";
+					methods: methods . '    return spec_string_intern("' . cn . '");' . "\n}\n\n";
+				}
+			}
+		});
+
+		local String is mainFn: self:generateMain(entryClass: entryClass);
+
+		local String is cSource: '';
+		cSource: cSource . self:generatePrelude();
+		cSource: cSource . enums;
+		cSource: cSource . decls;
+		cSource: cSource . structs;
+		cSource: cSource . vt;
+		cSource: cSource . self:generateTypeHierarchy(classes: flattenedClasses);
+		cSource: cSource . self:helperFunctions;
+		cSource: cSource . ctors;
+		cSource: cSource . methods;
+		cSource: cSource . mainFn;
+		return cSource;
+	}
+
+	## Collects all ancestor class names transitively.
+	Function is collectAncestors(ClassInfo is c, Array of ClassInfo is allClasses, Array of String is acc){
+		c:baseClasses:each(action: local Function(String is baseName){
+			if (acc:indexOf(search: baseName, default: -1) < 0) {
+				acc:add(item: baseName);
+				allClasses:each(action: local Function(ClassInfo is cand){
+					if (cand:name == baseName) {
+						self:collectAncestors(c: cand, allClasses: allClasses, acc: acc);
+					}
+				});
+			}
+		});
+	}
+
+	## Emits the RTTI class-hierarchy function.
+	##
+	## @param classes: Program classes.
+	## @return: C source text.
+	Function of String is generateTypeHierarchy(Array of ClassInfo is classes){
+		local String is out: "/* RTTI Class Hierarchy */\n";
+		out: out . "static bool spec_is_subclass_of(const char* actual, const char* target) {\n";
+		out: out . "    if (!actual || !target) return false;\n";
+		out: out . "    if (strcmp(actual, target) == 0) return true;\n";
+		out: out . "    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n";
+		classes:each(action: local Function(ClassInfo is c){
+			if (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
+				local Array of String is ancestors: [];
+				self:collectAncestors(c: c, allClasses: classes, acc: ancestors);
+				if (ancestors:length() > 0) {
+					out: out . '    if (strcmp(actual, "' . c:name . "\") == 0) {\n";
+					out: out . '        return ';
+					local Boolean is firstA: true;
+					ancestors:each(action: local Function(String is aName){
+						if (!firstA) { out: out . ' || '; }
+						out: out . '(strcmp(target, "' . aName . '") == 0)';
+						firstA: false;
+					});
+					out: out . ";\n    }\n";
+				}
+			}
+		});
+		out: out . "    return false;\n}\n\n";
+		return out;
+	}
+
+	## Emits virtual method tables for emission-visible classes.
+	##
+	## @param classes: Program classes.
+	## @return: C source text.
+	Function of String is generateVTables(Array of ClassInfo is classes){
+		local String is out: "/* Virtual Method Tables */\n";
+		if (self:methodSlotCount == 0) {
+			return out;
+		}
+		classes:each(action: local Function(ClassInfo is c){
+			if (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
+				out: out . 'static void* ' . c:name . '_vtable[' . self:methodSlotCount . "] = {\n";
+				local Int is slot: 0;
+				While:condition(
+					evaluate: local Function of Boolean(){
+						return slot < self:methodSlotCount;
+					},
+					iteration: local Function of Boolean(){
+						local String is mName: self:slotNames:get(index: slot);
+						local String is implCls: self:findMethodImplementingClass(className: c:name, methodName: mName, paramCount: -1);
+						if (slot > 0) {
+							out: out . ",\n";
+						}
+						if (implCls == '') {
+							out: out . '    (void*)0';
+						} else {
+							out: out . '    (void*)' . implCls . '_' . mName;
+						}
+						slot: slot + 1;
+						return true;
+					}
+				);
+				out: out . "\n};\n\n";
+			}
+		});
+		return out;
+	}
+
+	## Emits constructors: destroy (ARC release per field) and new (alloc +
+	## vtable + field initializers).
+	##
+	## @param classes: Program classes.
+	## @return: C source text.
+	Function of String is generateConstructors(Array of ClassInfo is classes){
+		local String is out: "/* Constructor Implementations */\n";
+
+		classes:each(action: local Function(ClassInfo is c){
+			if (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
+				self:currentClassName: c:name;
+				self:fieldTypes: Map:init();
+				local Array of Member is allFields: [];
+				self:declGen:collectStructFields(c: c, allClasses: classes, acc: allFields);
+				allFields:each(action: local Function(Member is f){
+					self:fieldTypes:set(key: f:name, value: self:formatTypeString(t: f:memberType));
+				});
+
+				out: out . 'void ' . c:name . "_destroy(void* self_ptr) {\n";
+				out: out . '    ' . c:name . '* self = (' . c:name . "*)self_ptr;\n";
+				out: out . "    if (!self) return;\n";
+				allFields:each(action: local Function(Member is m){
+					local String is ft: m:memberType:name;
+					if (self:isArcType(typeName: ft)) {
+						out: out . '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n";
+					}
+				});
+				out: out . "}\n\n";
+
+				out: out . c:name . '* ' . c:name . "_new(void) {\n";
+				out: out . '    ' . c:name . '* self = (' . c:name . '*)spec_alloc(sizeof(' . c:name . '), ' . c:name . "_destroy);\n";
+				out: out . '    self->_type_name = "' . c:name . "\";\n";
+				if (self:methodSlotCount > 0) {
+					out: out . '    self->_vtable = ' . c:name . "_vtable;\n";
+				}
+				allFields:each(action: local Function(Member is m){
+					if (m:hasInit) {
+						local Boolean is savedArgFi: self:argMode;
+						self:argMode: false;
+						local String is fieldInitC: self:generateExpression(expr: m:initExpr);
+						self:argMode: savedArgFi;
+						local String is ftn: m:memberType:name;
+						if (self:isArcType(typeName: ftn)) {
+							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
+						}
+						out: out . '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n";
+					}
+				});
+				out: out . "    return self;\n}\n\n";
+			}
+		});
+		return out;
+	}
+	## Inlines an anonymous-function callback over an Array as a C loop
+	## (each/filter/count/any/map). The fossil inlined these to give the
+	## body direct access to enclosing locals; the port keeps that.
+	##
+	## @param mode: each | filter | count | any | map.
+	## @param targetC: Generated C for the array.
+	## @param fnExpr: The ANON_FN argument.
+	## @return: C statement expression, or '0'.
+	Function of String is generateInlineArrayOp(String is mode, String is targetC, Expression is fnExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+		local Boolean is savedArc: self:inlineReturnArc;
+		self:inlineReturnLabel: 'break';
+		if (mode == 'each') {
+			self:inlineReturnVar: '';
+		} else {
+			self:inlineReturnVar: '_pred_' . id;
+		}
+
+		local Map of String to String is savedVars: Map:init();
+		self:localVars:keys():each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+
+		local String is paramDecl: '';
+		if (fnExpr:anonParams:length() > 0) {
+			local Parameter is p: fnExpr:anonParams:get(index: 0);
+			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
+			local String is pRaw: '(' . pCType . ')(intptr_t)_a_' . id . '->items[_i_' . id . ']';
+			paramDecl: '        ' . pCType . ' ' . self:utils:cIdent(name: p:name) . ' = ' . pRaw . ";\n";
+		}
+
+		local String is bodyC: '';
+		fnExpr:anonBody:each(action: local Function(Statement is s){
+			bodyC: bodyC . self:generateStatement(stmt: s);
+		});
+
+		self:localVars: savedVars;
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+		self:inlineReturnArc: savedArc;
+
+		local String is arrVar: '_a_' . id;
+		local String is idxVar: '_i_' . id;
+		local String is predVar: '_pred_' . id;
+
+		if (mode == 'each') {
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } })";
+			return out;
+		}
+		if (mode == 'filter') {
+			local String is outVar: '_out_' . id;
+			local String is outNewC: 'spec_array_new()';
+			if (fnExpr:anonParams:length() > 0) {
+				local Parameter is p0: fnExpr:anonParams:get(index: 0);
+				local String is pName: p0:paramType:name;
+				if (self:isArcType(typeName: pName)) {
+					outNewC: 'spec_array_new_object()';
+				} else if (pName == 'String') {
+					outNewC: 'spec_array_new_string()';
+				}
+			}
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') spec_array_add(' . outVar . ', ' . arrVar . '->items[' . idxVar . "]);\n    } } " . outVar . '; })';
+			return out;
+		}
+		if (mode == 'count') {
+			local String is cntVar: '_cnt_' . id;
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; long long ' . cntVar . ' = 0; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') ' . cntVar . "++;\n    } } " . cntVar . '; })';
+			return out;
+		}
+		if (mode == 'any') {
+			local String is fndVar: '_fnd_' . id;
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; bool ' . fndVar . ' = false; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') { ' . fndVar . " = true; break; }\n    } } " . fndVar . '; })';
+			return out;
+		}
+		if (mode == 'map') {
+			local String is outVar: '_out_' . id;
+			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:name);
+			if (retCType == 'void') { retCType: 'void*'; }
+			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1, default: '') == '*';
+			local String is outNewC: 'spec_array_new()';
+			if (self:isArcType(typeName: fnExpr:anonReturnType:name)) {
+				outNewC: 'spec_array_new_object()';
+			} else if (fnExpr:anonReturnType:name == 'String') {
+				outNewC: 'spec_array_new_string()';
+			}
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			out: out . paramDecl . '        ' . retCType . ' ' . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ', (void*)(intptr_t)(' . predVar . "));\n    } } " . outVar . '; })';
+			return out;
+		}
+		return '0';
+	}
+
+	## Inlines a fold over an Array: accumulator threading with the anon
+	## function's body as the loop body. Params: (acc, item).
+	##
+	## @param targetC: Generated C for the array.
+	## @param initExpr: The initial accumulator expression.
+	## @param fnExpr: The ANON_FN argument.
+	## @return: C statement expression.
+	Function of String is generateInlineArrayFold(String is targetC, Expression is initExpr, Expression is fnExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local Map of String to String is savedVars: Map:init();
+		self:localVars:keys():each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+
+		local String is accVar: '_acc_' . id;
+		local String is arrVar: '_a_' . id;
+		local String is idxVar: '_i_' . id;
+
+		local String is initC: self:generateExpression(expr: initExpr);
+		local String is accTypeName: self:inferTargetType(expr: initExpr);
+		if (accTypeName == '' && fnExpr:anonReturnType:name != 'Void' && fnExpr:anonReturnType:name != 'void') {
+			accTypeName: fnExpr:anonReturnType:name;
+		}
+		local String is accCType: self:cTypeFor(typeName: accTypeName);
+		if (accCType == 'void') { accCType: 'long long'; }
+
+		self:inlineReturnVar: accVar;
+		self:inlineReturnLabel: 'break';
+		local Boolean is savedArc: self:inlineReturnArc;
+		self:inlineReturnArc: accCType:charAt(index: accCType:length() - 1, default: '') == '*';
+
+		local String is paramDecl: '';
+		if (fnExpr:anonParams:length() >= 1) {
+			local Parameter is p0: fnExpr:anonParams:get(index: 0);
+			self:localVars:set(key: p0:name, value: accTypeName);
+			paramDecl: paramDecl . '        ' . accCType . ' ' . self:utils:cIdent(name: p0:name) . ' = ' . accVar . ";\n";
+		}
+		if (fnExpr:anonParams:length() >= 2) {
+			local Parameter is p1: fnExpr:anonParams:get(index: 1);
+			self:localVars:set(key: p1:name, value: self:formatTypeString(t: p1:paramType));
+			local String is p1CType: self:cTypeFor(typeName: p1:paramType:name);
+			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . arrVar . '->items[' . idxVar . ']';
+			paramDecl: paramDecl . '        ' . p1CType . ' ' . self:utils:cIdent(name: p1:name) . ' = ' . p1Raw . ";\n";
+		}
+
+		local String is bodyC: '';
+		fnExpr:anonBody:each(action: local Function(Statement is s){
+			bodyC: bodyC . self:generateStatement(stmt: s);
+		});
+
+		self:localVars: savedVars;
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+		self:inlineReturnArc: savedArc;
+
+		local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; ' . accCType . ' ' . accVar . ' = ' . initC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+		out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } " . accVar . '; })';
+		return out;
+	}
+
+	## Inlines a Map:each iteration: key/value unpacked per bucket entry.
+	##
+	## @param targetC: Generated C for the map.
+	## @param fnExpr: The ANON_FN argument (key, value).
+	## @return: C statement expression.
+	Function of String is generateInlineMapEach(String is targetC, Expression is fnExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local Map of String to String is savedVars: Map:init();
+		self:localVars:keys():each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+
+		local String is mapVar: '_m_' . id;
+		local String is bVar: '_b_' . id;
+		local String is eVar: '_e_' . id;
+
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: 'break';
+
+		local String is paramDecl: '';
+		if (fnExpr:anonParams:length() >= 1) {
+			local Parameter is p0: fnExpr:anonParams:get(index: 0);
+			self:localVars:set(key: p0:name, value: 'String');
+			paramDecl: paramDecl . '            String ' . self:utils:cIdent(name: p0:name) . ' = spec_string_from_chars(' . eVar . "->key);\n";
+		}
+		if (fnExpr:anonParams:length() >= 2) {
+			local Parameter is p1: fnExpr:anonParams:get(index: 1);
+			self:localVars:set(key: p1:name, value: self:formatTypeString(t: p1:paramType));
+			local String is p1CType: self:cTypeFor(typeName: p1:paramType:name);
+			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . eVar . '->value';
+			if (p1:paramType:name == 'String') {
+				p1Raw: 'spec_string_from_chars((const char*)' . eVar . '->value)';
+			}
+			paramDecl: paramDecl . '            ' . p1CType . ' ' . self:utils:cIdent(name: p1:name) . ' = ' . p1Raw . ";\n";
+		}
+
+		local String is bodyC: '';
+		fnExpr:anonBody:each(action: local Function(Statement is s){
+			bodyC: bodyC . self:generateStatement(stmt: s);
+		});
+
+		self:localVars: savedVars;
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+
+		local String is out: '({ SpecMap* ' . mapVar . ' = ' . targetC . '; if (' . mapVar . ') { for (size_t ' . bVar . ' = 0; ' . bVar . ' < SPEC_MAP_BUCKETS; ' . bVar . '++) { for (SpecMapEntry* ' . eVar . ' = ' . mapVar . '->buckets[' . bVar . ']; ' . eVar . '; ' . eVar . ' = ' . eVar . "->next) {\n";
+		out: out . paramDecl . "            do {\n" . bodyC . "            } while (0);\n        } } } })";
+		return out;
+	}
+
+	## Inlines a While:condition predicate loop: evaluate/iteration anon
+	## function bodies become the loop's condition and step.
+	##
+	## @param evalExpr: The evaluate ANON_FN.
+	## @param iterExpr: The iteration ANON_FN.
+	## @return: C statement expression.
+	Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local String is evVar: '_ev_' . id;
+		self:inlineReturnVar: evVar;
+		self:inlineReturnLabel: 'break';
+		local String is evalBodyC: '';
+		evalExpr:anonBody:each(action: local Function(Statement is s){
+			evalBodyC: evalBodyC . self:generateStatement(stmt: s);
+		});
+
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: 'break';
+		local String is iterBodyC: '';
+		iterExpr:anonBody:each(action: local Function(Statement is s){
+			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
+		});
+
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+
+		local String is out: "({ while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        do {\n" . iterBodyC . "        } while (0);\n    } })";
+		return out;
 	}
 
 	## Scans a member list for a field by name.

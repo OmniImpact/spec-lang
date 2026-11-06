@@ -236,7 +236,7 @@ Class of Animal is Dog{
 			&& eg:generateExpression(expr: self:exprOf(src: 'self:grow(by: 2)')) == 'Animal_grow(self, 2) /* inst:Animal:grow */'
 			&& eg:generateExpression(expr: self:exprOf(src: 'n as Float')) == '((double)(n))'
 			&& eg:generateExpression(expr: self:exprOf(src: '[1, 2]')):contains(needle: 'spec_array_new()')
-			&& eg:generateExpression(expr: self:exprOf(src: 'xs:get(index: 0)')):contains(needle: 'spec_array_get(xs, (size_t)(0))')) {
+			&& eg:generateExpression(expr: self:exprOf(src: 'xs:get(index: 0)')):contains(needle: 'spec_array_get(xs, 0)')) {
 			output:line('[PASS] expression emission');
 		} else {
 			output:line('[FAIL] expression emission');
@@ -266,6 +266,42 @@ Class of Animal is Dog{
 			output:line('[PASS] builtin call bindings');
 		} else {
 			output:line('[FAIL] builtin call bindings');
+			failures: failures + 1;
+		}
+
+		# --- program assembly: full C generation ---
+		local ProgramNode is assembler: self:parseOf(src: "Class is Counter{
+	local Int is count: 0;
+	replace Function is init(Map of String to String is args){
+	}
+	replace Function of Counter is bump(Int is by){
+		self:count: self:count + by;
+		return self;
+	}
+	replace Function of String is toString(){
+		return 'Counter';
+	}
+}
+Class is CodegenE2E{
+	replace Function is init(Map of String to String is args){
+		local Counter is c: Counter:init();
+		c:bump(by: 5);
+	}
+}");
+		local CodeGenerator is pg: CodeGenerator:init();
+		pg:registerProgram(classes: assembler:classes);
+		local String is cSrc: pg:generateProgram(program: assembler, entryClass: 'CodegenE2E');
+		if (cSrc:contains(needle: 'spec_alloc')
+			&& cSrc:contains(needle: 'typedef struct Counter Counter;')
+			&& cSrc:contains(needle: 'struct Counter {')
+			&& cSrc:contains(needle: 'Counter_bump')
+			&& cSrc:contains(needle: 'Counter* Counter_new(void)')
+			&& cSrc:contains(needle: 'Counter_toString')
+			&& cSrc:contains(needle: 'int main(')
+			&& cSrc:contains(needle: 'Counter* _inst = Counter_new(); Counter_init(_inst, 0);')) {
+			output:line('[PASS] program assembly');
+		} else {
+			output:line('[FAIL] program assembly');
 			failures: failures + 1;
 		}
 

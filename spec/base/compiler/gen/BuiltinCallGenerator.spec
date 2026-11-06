@@ -256,14 +256,10 @@ Class is BuiltinCallGenerator{
 			return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
 		}
 		if (targetC == 'While' && expr:methodName == 'condition' && expr:argCount() >= 2) {
-			local Expression is a0: self:argValue(expr: expr, index: 0);
-			local Expression is a1: self:argValue(expr: expr, index: 1);
-			local Expression is evalExpr: a0;
-			local Expression is iterExpr: a1;
+			local Expression is evalExpr: self:argValue(expr: expr, index: 0);
+			local Expression is iterExpr: self:argValue(expr: expr, index: 1);
 			if (evalExpr:kind == ExpressionKind:ANON_FN && iterExpr:kind == ExpressionKind:ANON_FN) {
-				local String is evalC: cg:generateExpression(expr: evalExpr);
-				local String is iterC: cg:generateExpression(expr: iterExpr);
-				return '({ SpecClosure* _ec = (SpecClosure*)(' . evalC . '); SpecClosure* _ic = (SpecClosure*)(' . iterC . '); while (_ec && _ic) { bool _v = ((bool (*)(void*))_ec->fn)(_ec->env); if (!_v) break; ((bool (*)(void*))_ic->fn)(_ic->env); } })';
+				return cg:generateInlineWhileCondition(evalExpr: evalExpr, iterExpr: iterExpr);
 			}
 		}
 
@@ -397,26 +393,29 @@ Class is BuiltinCallGenerator{
 		}
 
 		# Array/List/Map method bindings (runtime-managed; spec_* calls).
-		if (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List') || targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) {
+		# Entry is by method name on any Array-typed target — no transparency
+		# check: registered locals must bind without a registry lookup.
+		local Boolean is isArr: targetC == 'Array' || targetType == 'Array' || targetType:startsWith(prefix: 'Array') ||
+			targetType:startsWith(prefix: 'List') ||
+			((targetType == '' || targetType == Primitive:ANY:value()) && (
+				expr:methodName == 'get' || expr:methodName == 'add' || expr:methodName == 'set' || expr:methodName == 'pop' ||
+				expr:methodName == 'removeAt' || expr:methodName == 'slice' || expr:methodName == 'clear' || expr:methodName == 'join' ||
+				expr:methodName == 'each' || expr:methodName == 'filter' || expr:methodName == 'count' || expr:methodName == 'any' ||
+				expr:methodName == 'map' || expr:methodName == 'fold' ||
+				(expr:methodName == 'length' && targetType != 'String' && targetC != 'Map' && !targetType:startsWith(prefix: 'Map:'))
+			));
+		if (isArr) {
 			local String is arrC: self:bindContainerCall(expr: expr, targetC: targetC, targetType: targetType, cg: cg);
 			if (arrC != '') {
 				return arrC;
 			}
 		}
 
-		# Map literal-constructor + concrete getters.
+		# Map literal-constructor + concrete getters + inline each.
 		if (targetC == 'Map' || targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) {
 			local String is mapC: self:bindMapCall(expr: expr, targetC: targetC, targetType: targetType, cg: cg);
 			if (mapC != '') {
 				return mapC;
-			}
-		}
-
-		# Array higher-order methods (each/filter/count/any/map/fold/join).
-		if (targetType:startsWith(prefix: 'Array') && (targetC == 'self' || self:policy:isTransparent(c: cg:findClass(name: targetType)))) {
-			local String is hoC: self:bindArrayHigherOrder(expr: expr, targetC: targetC, targetType: targetType, cg: cg);
-			if (hoC != '') {
-				return hoC;
 			}
 		}
 
@@ -469,15 +468,171 @@ Class is BuiltinCallGenerator{
 		if (expr:argCount() > 1) {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		}
-		# Array methods (SpecArray*).
-		if (targetType:startsWith(prefix: 'Array') && !targetType:startsWith(prefix: 'Array of String')) {
-			when (m) {
-				is 'length': { return 'spec_array_length(' . targetC . ')'; }
-				is 'get': { return '((long long)(intptr_t)spec_array_get(' . targetC . ', (size_t)(' . a0 . ')))'; }
-				is 'pop': { return '((long long)(intptr_t)spec_array_pop(' . targetC . ', ' . a0 . '))'; }
-				is 'set': { return 'spec_array_set(' . targetC . ', ' . a0 . ', (void*)(intptr_t)(' . a1 . '))'; }
-				is 'clear': { return 'spec_array_clear(' . targetC . ')'; }
-				else: {}
+		# Array methods (SpecArray*). Named-arg extraction per the fossil.
+		if (targetType:startsWith(prefix: 'Array')) {
+			if (m == 'get') {
+				local String is idxC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_get(' . targetC . ', ' . idxC . ')';
+			}
+			if (m == 'set') {
+				local String is idxC: '0';
+				local String is itemC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'item' || arg:name == 'value') { itemC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_set(' . targetC . ', ' . idxC . ', (void*)(intptr_t)(' . itemC . '))';
+			}
+			if (m == 'add') {
+				local String is itemC: 'NULL';
+				if (expr:argCount() > 0) {
+					local Expression is valExpr: self:argValue(expr: expr, index: 0);
+					if (valExpr:kind == ExpressionKind:ARRAY) {
+						cg:setContainerHint(t: targetType);
+						itemC: cg:generateExpression(expr: valExpr);
+						return 'spec_array_add_array(' . targetC . ', ' . itemC . ')';
+					}
+					local Boolean is savedArgMode: cg:argMode;
+					cg:setArgMode(m: false);
+					itemC: cg:generateExpression(expr: valExpr);
+					cg:setArgMode(m: savedArgMode);
+				}
+				local String is elemKindA: cg:containerElemKind(containerType: targetType);
+				local String is addFn: 'spec_array_add';
+				if (elemKindA == 'object') {
+					addFn: 'spec_array_add_object';
+				}
+				return addFn . '(' . targetC . ', (void*)(' . itemC . '))';
+			}
+			if (m == 'length') {
+				return 'spec_array_length(' . targetC . ')';
+			}
+			if (m == 'pop') {
+				local String is defC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'default') {
+						local String is rawDefC: cg:generateExpression(expr: arg:value);
+						if (targetType:startsWith(prefix: 'Array:String')) {
+							defC: rawDefC;
+						} else {
+							defC: '(void*)(intptr_t)(' . rawDefC . ')';
+						}
+					}
+				});
+				return 'spec_array_pop(' . targetC . ', ' . defC . ')';
+			}
+			if (m == 'removeAt') {
+				local String is idxC: '0';
+				local String is defC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: '(void*)(intptr_t)(' . cg:generateExpression(expr: arg:value) . ')'; }
+				});
+				return 'spec_array_remove_at(' . targetC . ', ' . idxC . ', ' . defC . ')';
+			}
+			if (m == 'isEmpty') {
+				return '(long long)(spec_array_length(' . targetC . ') == 0)';
+			}
+			if (m == 'slice') {
+				local String is startC: '0';
+				local String is endC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'start') { startC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'end') { endC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_slice(' . targetC . ', ' . startC . ', ' . endC . ')';
+			}
+			if (m == 'clear') {
+				return 'spec_array_clear(' . targetC . ')';
+			}
+			if (m == 'indexOf') {
+				local String is searchC: '""';
+				local String is defC: '-1';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'search' || arg:name == 'needle') { searchC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_index_of_str(' . targetC . ', ' . searchC . ', ' . defC . ')';
+			}
+			# Higher-order: anon functions inline as loops; values as callbacks.
+			if (m == 'each') {
+				if (expr:argCount() > 0) {
+					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+					if (fnExpr:kind == ExpressionKind:ANON_FN) {
+						return cg:generateInlineArrayOp(mode: 'each', targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+				local String is fnC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'action') { fnC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_each(' . targetC . ', (void (*)(void*))(' . fnC . '))';
+			}
+			if (m == 'filter') {
+				if (expr:argCount() > 0) {
+					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+					if (fnExpr:kind == ExpressionKind:ANON_FN) {
+						return cg:generateInlineArrayOp(mode: 'filter', targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+				local String is fnC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'predicate') { fnC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_filter(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
+			}
+			if (m == 'count') {
+				if (expr:argCount() > 0) {
+					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+					if (fnExpr:kind == ExpressionKind:ANON_FN) {
+						return cg:generateInlineArrayOp(mode: 'count', targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+				local String is fnC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'predicate') { fnC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_count(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
+			}
+			if (m == 'any') {
+				if (expr:argCount() > 0) {
+					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+					if (fnExpr:kind == ExpressionKind:ANON_FN) {
+						return cg:generateInlineArrayOp(mode: 'any', targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+				local String is fnC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'predicate') { fnC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_any(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
+			}
+			if (m == 'map') {
+				if (expr:argCount() > 0) {
+					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+					if (fnExpr:kind == ExpressionKind:ANON_FN) {
+						return cg:generateInlineArrayOp(mode: 'map', targetC: targetC, fnExpr: fnExpr);
+					}
+				}
+			}
+			if (m == 'fold') {
+				if (expr:argCount() >= 2) {
+					local Expression is initExpr: self:argValue(expr: expr, index: 0);
+					local Expression is fnExpr: self:argValue(expr: expr, index: 1);
+					if (fnExpr:kind == ExpressionKind:ANON_FN) {
+						return cg:generateInlineArrayFold(targetC: targetC, initExpr: initExpr, fnExpr: fnExpr);
+					}
+				}
+			}
+			if (m == 'join') {
+				local String is sepC: '""';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'separator' || sepC == '""') { sepC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_array_join(' . targetC . ', ' . sepC . ')';
 			}
 		}
 		# List methods (SpecVec*/SpecByteBuffer*).
@@ -542,62 +697,21 @@ Class is BuiltinCallGenerator{
 		if (m == 'remove') {
 			return 'spec_map_remove(' . targetC . ', ' . a0 . ')';
 		}
+		if (m == 'keys') {
+			return 'spec_map_keys(' . targetC . ')';
+		}
+		if (m == 'length') {
+			return '(long long)spec_map_length(' . targetC . ')';
+		}
+		if (m == 'each') {
+			if (expr:argCount() > 0) {
+				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+				if (fnExpr:kind == ExpressionKind:ANON_FN) {
+					return cg:generateInlineMapEach(targetC: targetC, fnExpr: fnExpr);
+				}
+			}
+		}
 		return '';
-	}
-
-	## Binds Array higher-order methods (each/filter/count/any/map/fold/join)
-	## — the callback-taking surface.
-	##
-	## @param expr: CALL expression.
-	## @param targetC: Target C.
-	## @param targetType: Target type name.
-	## @param cg: The code generator.
-	## @return: C call, or ''.
-	Function of String is bindArrayHigherOrder(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		local String is m: expr:methodName;
-		if (expr:argCount() == 0) {
-			return '';
-		}
-		local String is fnC: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
-		when (m) {
-			is 'each': {
-				if (expr:argCount() < 2) {
-					return '';
-				}
-				return 'spec_array_each(' . targetC . ', (void (*)(void*))(' . fnC . '))';
-			}
-			is 'filter': {
-				return 'spec_array_filter(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
-			}
-			is 'count': {
-				return 'spec_array_count(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
-			}
-			is 'any': {
-				return 'spec_array_any(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
-			}
-			is 'map': {
-				return 'spec_array_map(' . targetC . ', (void* (*)(void*))(' . fnC . '))';
-			}
-			is 'fold': {
-				local String is initC: '';
-				if (expr:argCount() > 0) {
-					initC: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
-				}
-				local String is accFnC: '';
-				if (expr:argCount() > 1) {
-					accFnC: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
-				}
-				return 'spec_array_fold(' . targetC . ', ' . initC . ', ' . accFnC . ')';
-			}
-			is 'join': {
-				local String is sepC: 'spec_string_intern("")';
-				if (expr:argCount() > 0) {
-					sepC: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
-				}
-				return 'spec_array_join(' . targetC . ', ' . sepC . ')';
-			}
-			else: { return ''; }
-		}
 	}
 
 	## Binds String instance methods via direct dispatch to the compiled
