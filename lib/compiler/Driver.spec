@@ -7,6 +7,7 @@ Class is Driver{
 	replace Array of String is using: [
 		base:io:*,
 		base:sys:Process,
+		base:sysinternal:Dir,
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
@@ -37,6 +38,7 @@ Class is Driver{
 			outputPath: args:getString(key: 'output', default: '');
 		}
 		local Boolean is lintMode: args:has(key: 'lint');
+		local Boolean is quiet: args:has(key: 'quiet');
 		local String is gcMode: args:getString(key: 'gc', default: '');
 		if (gcMode != '' && gcMode != 'boehm') {
 			error:line('Error: Unsupported GC mode \'' . gcMode . '\'. Supported modes: boehm');
@@ -55,6 +57,12 @@ Class is Driver{
 		}
 
 		local String is source: File:read(path: inputPath, default: '');
+		local Int is specLines: source:lines():length();
+		local Int is t0: Process:clockMs();
+		local Int is loadMs: 0;
+		local Int is checkMs: 0;
+		local Int is genMs: 0;
+		local Int is ccMs: 0;
 
 		# 1. Linter Mode Check
 		if (lintMode) {
@@ -95,8 +103,24 @@ Class is Driver{
 		}
 
 		# 2. Multi-File Module Loading & Dependency Resolution
+		local Int is loadT0: Process:clockMs();
 		local Loader is loader: Loader:init();
 		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
+		loadMs: Process:clockMs() - loadT0;
+
+		# Compilation metrics: class and method totals across the program.
+		local Int is classCount: program:getClasses():length();
+		local Int is methodCount: 0;
+		program:getClasses():each(action: local Function(ClassInfo is c){
+			c:getMembers():each(action: local Function(Member is m){
+				if (m:getKind() == 'METHOD') {
+					methodCount: methodCount + 1;
+				}
+			});
+		});
+		if (!quiet) {
+			output:line('  [1/4] loading packages · ' . loader:loadedFileCount() . ' files, ' . classCount . ' classes');
+		}
 		if (loader:getParseErrors():length() > 0) {
 			error:line('Compilation errors encountered during loading:');
 			loader:getParseErrors():each(action: local Function(String is err){
@@ -107,8 +131,13 @@ Class is Driver{
 		}
 
 		# 4. Semantic Static Type Checking
+		local Int is checkT0: Process:clockMs();
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is typeErrors: tc:checkProgram(program: program);
+		checkMs: Process:clockMs() - checkT0;
+		if (!quiet) {
+			output:line('  [2/4] type checking · ' . typeErrors:length() . ' errors');
+		}
 		if (typeErrors:length() > 0) {
 			error:line('Type errors encountered during compilation:');
 			typeErrors:each(action: local Function(TypeError is err){
@@ -154,7 +183,13 @@ Class is Driver{
 		if (gcMode != '') {
 			cg:setGcMode(mode: gcMode);
 		}
+		local Int is genT0: Process:clockMs();
 		local String is cCode: cg:generateProgram(program: program, entryClass: entryName);
+		genMs: Process:clockMs() - genT0;
+		local Int is cLines: cCode:lines():length();
+		if (!quiet) {
+			output:line('  [3/4] generating C · ' . cLines . ' lines');
+		}
 
 		local String is tempCPath: emitCPath;
 		if (tempCPath == '') {
@@ -167,12 +202,18 @@ Class is Driver{
 		}
 
 		if (outputPath == '') {
-			output:line('Emitted C code for ' . inputPath . ' -> ' . emitCPath . ' successfully!');
+			if (!quiet) {
+				output:line('');
+				output:line('  ' . inputPath . ' -> ' . emitCPath);
+				output:line('  ' . classCount . ' classes · ' . methodCount . ' methods · ' . specLines . ' lines of spec -> ' . cLines . ' lines of C');
+				output:line('  time ' . (Process:clockMs() - t0) . 'ms  (load ' . loadMs . ' · check ' . checkMs . ' · gen ' . genMs . ')');
+				output:line('  peak memory ' . (Process:peakMemoryKb() / 1024) . ' MB');
+			}
 			return;
 		}
 
 		# 7. GCC C Compilation
-		local Array of String is gccArgs: ['-O2', tempCPath, '-o', outputPath, '-pthread', '-lm'];
+		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
 		if (gcMode == 'boehm') {
 			if (File:exists(path: '/usr/lib/x86_64-linux-gnu/libgc.so.1') || File:exists(path: '/usr/lib/libgc.so.1')) {
 				gccArgs:add(item: '-l:libgc.so.1');
@@ -180,7 +221,9 @@ Class is Driver{
 				gccArgs:add(item: '-lgc');
 			}
 		}
+		local Int is ccT0: Process:clockMs();
 		local Int is gccStatus: Process:execute(command: 'gcc', args: gccArgs);
+		ccMs: Process:clockMs() - ccT0;
 		if (emitCPath == '') {
 			File:remove(path: tempCPath);
 		}
@@ -189,7 +232,15 @@ Class is Driver{
 			Process:exit(status: 1);
 		}
 
-		output:line('Compiled ' . inputPath . ' -> ' . outputPath . ' successfully!');
+		if (!quiet) {
+			local Int is binBytes: Dir:fileSize(path: outputPath);
+			output:line('  [4/4] compiling (gcc) · ' . ccMs . 'ms');
+			output:line('');
+			output:line('  ' . inputPath . ' -> ' . outputPath);
+			output:line('  ' . classCount . ' classes · ' . methodCount . ' methods · ' . specLines . ' lines of spec -> ' . cLines . ' lines of C');
+			output:line('  time ' . (Process:clockMs() - t0) . 'ms  (load ' . loadMs . ' · check ' . checkMs . ' · gen ' . genMs . ' · cc ' . ccMs . ')');
+			output:line('  peak memory ' . (Process:peakMemoryKb() / 1024) . ' MB · binary ' . (binBytes / 1024) . ' KB');
+		}
 	}
 
 }

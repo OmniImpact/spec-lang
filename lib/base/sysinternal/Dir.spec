@@ -13,4 +13,7 @@ Class is Dir{
 
 	## Directory containing the running spec executable.
 	Function of String is exeDir();
+
+	## Size of the file at [path] in bytes, or -1 when it does not exist.
+	Function of Int is fileSize(String is path);
 }

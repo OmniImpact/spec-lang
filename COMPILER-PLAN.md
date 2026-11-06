@@ -341,7 +341,10 @@ corpus as it lands — every module is a delivered artifact, no dark tunnel):
 4. TypeChecker
 5. DeclarationGenerator
 6. CodeGenerator (expressions → program → inference)
-7. Loader (full package semantics) + Driver
+7. Loader (full package semantics) + Driver — the Driver lands the real
+   `CompilationReport` (stage progress, counts, timings, memory, binary
+   size) with `--quiet` and `--json`; JSON needs a proper json package,
+   which arrives with G7.
 8. Linter
 
 Gate for each: the full suite compiles and passes with that module's behavior

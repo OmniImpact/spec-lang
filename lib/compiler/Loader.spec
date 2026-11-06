@@ -293,6 +293,13 @@ Class is Loader{
 		});
 	}
 
+	## Number of files loaded so far (package-resolution progress metric).
+	##
+	## @return: The loaded-file count.
+	Function of Int is loadedFileCount(){
+		return self:loadedFiles:length();
+	}
+
 	## Scan roots for package resolution: the spec executable's directory,
 	## its parent (a bin/-layout install keeps packages at the prefix), then
 	## the input file's directory.

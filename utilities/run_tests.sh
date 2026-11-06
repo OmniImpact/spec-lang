@@ -44,7 +44,7 @@ bad()	{ echo "  [FAIL] $1"; fail=$((fail + 1)); }
 run_one() {
 	local src="$1" name="$2" key="$3"
 	local bin="$WORK/$key-$name"
-	if ! out="$("$SPEC" -i "$src" -o "$bin" 2>&1)"; then
+	if ! out="$("$SPEC" --quiet -i "$src" -o "$bin" 2>&1)"; then
 		echo "F|$name|compilation failed: $(echo "$out" | head -1)" > "$WORK/$key-$name.res"
 		return
 	fi
@@ -101,7 +101,7 @@ assert_compile_failure() {
 	shift 2
 	local required=("$@")
 	local out
-	out="$("$SPEC" -i "$src" -o "$WORK/$name.bin" 2>&1)"
+	out="$("$SPEC" --quiet -i "$src" -o "$WORK/$name.bin" 2>&1)"
 	local status=$?
 	if [ $status -eq 0 ]; then
 		bad "$name: compilation succeeded but must fail"
@@ -203,7 +203,7 @@ assert_runtime_panic() {
 	shift 2
 	local required=("$@")
 	local out
-	if ! out="$("$SPEC" -i "$src" -o "$WORK/$name.bin" 2>&1)"; then
+	if ! out="$("$SPEC" --quiet -i "$src" -o "$WORK/$name.bin" 2>&1)"; then
 		bad "$name: compilation failed: $(echo "$out" | head -1)"
 		return
 	fi
@@ -245,7 +245,7 @@ EOF
 printf 'Class is Broken{\n\tlocal Int is x: ;\n}\n' > "$WORK/broken.spec"
 printf 'class LegacySyntax{\n}\n' > "$WORK/legacy.spec"
 
-"$SPEC" -i "$WORK/valid.spec" -o "$WORK/valid" >/dev/null 2>&1
+"$SPEC" --quiet -i "$WORK/valid.spec" -o "$WORK/valid" >/dev/null 2>&1
 [ $? -eq 0 ] && ok "successful compile exits 0" || bad "successful compile did not exit 0"
 
 "$SPEC" -i "$WORK/broken.spec" -o "$WORK/broken" >/dev/null 2>&1
@@ -254,13 +254,13 @@ printf 'class LegacySyntax{\n}\n' > "$WORK/legacy.spec"
 "$SPEC" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "usage errors exit 2" || bad "usage errors did not exit 2"
 
-if "$SPEC" -i "$WORK/broken.spec" -o "$WORK/broken" 2>&1 >/dev/null | grep -q "SyntaxError"; then
+if "$SPEC" --quiet -i "$WORK/broken.spec" -o "$WORK/broken" 2>&1 >/dev/null | grep -q "SyntaxError"; then
 	ok "diagnostics routed to stderr"
 else
 	bad "diagnostics not routed to stderr"
 fi
 
-legacy_out="$("$SPEC" -i "$WORK/legacy.spec" -o "$WORK/legacy" 2>&1)"
+legacy_out="$("$SPEC" --quiet -i "$WORK/legacy.spec" -o "$WORK/legacy" 2>&1)"
 if echo "$legacy_out" | grep -q "no longer valid"; then
 	ok "legacy 'class' rejected with pointed diagnostic"
 else
