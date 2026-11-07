@@ -9,11 +9,11 @@ Class is Phase6CodegenTest{
 		base:sys:Process,
 		base:struct:Array,
 		base:iterator:*,
-		compiler:Token,
-		compiler:Lexer,
-		compiler:Parser,
-		compiler:TypeChecker,
-		compiler:CodeGenerator
+		spec:base:compiler:lexer:Token,
+		spec:base:compiler:lexer:Lexer,
+		spec:base:compiler:parser:Parser,
+		spec:base:compiler:checker:TypeChecker,
+		spec:base:compiler:gen:CodeGenerator
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -28,7 +28,7 @@ Class is Phase6CodegenTest{
 		local Array of Token is tokens: lexer:tokenize();
 		local Parser is parser: Parser:init(tokens: tokens);
 		local ProgramNode is prog: parser:parseProgram();
-		output:line('[PASS] Parsed classes: ' . prog:getClasses():length());
+		output:line('[PASS] Parsed classes: ' . prog:classes:length());
 
 		output:line("\n2. Running Semantic TypeChecker...");
 		local TypeChecker is tc: TypeChecker:init();

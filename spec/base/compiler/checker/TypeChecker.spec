@@ -280,8 +280,29 @@ Class is TypeChecker{
 		if (curCls:typeParams:indexOf(search: target, default: -1) >= 0 || curCls:typeParams:indexOf(search: source, default: -1) >= 0) {
 			return true;
 		}
-		local Array of String is tParts: target:split(delimiter: ':');
-		local Array of String is sParts: source:split(delimiter: ':');
+		# Of-form containers ('Array of String'): normalize to the colon
+		# form so the type-argument comparison below sees the args. Map's
+		# two args join with ' to ' — split them back out.
+		local String is tNorm: target;
+		local String is sNorm: source;
+		local Int is tOf: target:indexOf(search: ' of ', default: -1);
+		local Int is sOf: source:indexOf(search: ' of ', default: -1);
+		if (tOf > 0) {
+			tNorm: target:substring(start: 0, end: tOf) . ':' . target:substring(start: tOf + 4, end: target:length());
+		}
+		if (sOf > 0) {
+			sNorm: source:substring(start: 0, end: sOf) . ':' . source:substring(start: sOf + 4, end: source:length());
+		}
+		local Int is tTo: tNorm:indexOf(search: ' to ', default: -1);
+		local Int is sTo: sNorm:indexOf(search: ' to ', default: -1);
+		if (tTo > 0) {
+			tNorm: tNorm:substring(start: 0, end: tTo) . ':' . tNorm:substring(start: tTo + 4, end: tNorm:length());
+		}
+		if (sTo > 0) {
+			sNorm: sNorm:substring(start: 0, end: sTo) . ':' . sNorm:substring(start: sTo + 4, end: sNorm:length());
+		}
+		local Array of String is tParts: tNorm:split(delimiter: ':');
+		local Array of String is sParts: sNorm:split(delimiter: ':');
 		if (tParts:length() > 0 && sParts:length() > 0) {
 			local String is tBase: tParts:get(index: 0);
 			local String is sBase: sParts:get(index: 0);
@@ -370,6 +391,13 @@ Class is TypeChecker{
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		# Of-form generic receivers ('Box of Int'): split the base and the
+		# type argument so substitution can ground T.
+		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
+		if (ofIdx > 0 && typeArgs:length() == 0) {
+			baseClassName: className:substring(start: 0, end: ofIdx);
+			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
+		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
 			return '';
@@ -402,6 +430,13 @@ Class is TypeChecker{
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		# Of-form generic receivers ('Box of Int'): split the base and the
+		# type argument so substitution can ground T.
+		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
+		if (ofIdx > 0 && typeArgs:length() == 0) {
+			baseClassName: className:substring(start: 0, end: ofIdx);
+			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
+		}
 		if (methodName == ContractMethod:INIT:value() && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
 		}
@@ -875,10 +910,23 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:ARRAY: {
 				# Bidirectional: a container expectation from the declaration
-				# site types the literal directly — no hint state.
+				# site types the literal directly — no hint state. The
+				# elements must still be assignable to the declared element
+				# type ('Array of Int is flags: ['on']' is a compile error).
 				if (expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List'))) {
+					local String is elemT: '';
+					local Int is eColon: expected:indexOf(search: ':', default: -1);
+					local Int is eOf: expected:indexOf(search: ' of ', default: -1);
+					if (eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:'))) {
+						elemT: expected:substring(start: eColon + 1, end: expected:length());
+					} else if (eOf >= 0) {
+						elemT: expected:substring(start: eOf + 4, end: expected:length());
+					}
 					expr:arrayItems:each(action: local Function(Expression is item){
-						self:inferExpressionType(expr: item);
+						local String is itemT: self:inferExpressionType(expr: item);
+						if (elemT != '' && itemT != '' && itemT != Primitive:ANY:value() && !self:isAssignable(target: elemT, source: itemT)) {
+							self:addError(line: self:currentLine, msg: "Cannot assign 'Array:" . itemT . "' to 'Array:" . elemT . "'.");
+						}
 					});
 					res: expected;
 				} else {
@@ -898,11 +946,32 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:MAP: {
 				if (expected != '' && expected:startsWith(prefix: 'Map')) {
+					# Value type from the expectation ('Map of K to V' both
+					# spellings); values must be assignable to it.
+					local String is valT: '';
+					# Both spellings: 'Map of K to V' and the canonical
+					# colon form 'Map:K:V' (formatTypeString's output).
+					local Array of String is mParts: expected:split(delimiter: ':');
+					if (mParts:length() > 2) {
+						valT: mParts:get(index: 2);
+					} else {
+						local String is kv: expected:substring(start: 4, end: expected:length());
+						if (kv:startsWith(prefix: ' of ')) {
+							kv: kv:substring(start: 4, end: kv:length());
+						}
+						local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
+						if (toIdx >= 0) {
+							valT: kv:substring(start: toIdx + 4, end: kv:length());
+						}
+					}
 					expr:mapKeys:each(action: local Function(Expression is k){
 						self:inferExpressionType(expr: k);
 					});
 					expr:mapValues:each(action: local Function(Expression is v){
-						self:inferExpressionType(expr: v);
+						local String is vT: self:inferExpressionType(expr: v);
+						if (valT != '' && vT != '' && vT != Primitive:ANY:value() && !self:isAssignable(target: valT, source: vT)) {
+							self:addError(line: self:currentLine, msg: "Cannot assign 'Map:String:" . vT . "' to 'Map:String:" . valT . "'.");
+						}
 					});
 					res: expected;
 				} else {
@@ -1147,6 +1216,18 @@ Class is TypeChecker{
 		} else if (method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 			res: targetType;
 		} else if (self:registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !self:allEnumNames:has(key: targetType)) {
+			# List get/pop REQUIRE a 'default:' argument (Never Null).
+			if ((targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop')) {
+				local Boolean is hasDefault: false;
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'default') {
+						hasDefault: true;
+					}
+				});
+				if (!hasDefault) {
+					self:addError(line: self:currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
+				}
+			}
 			# Specialized containers ('Array:String') resolve through their
 			# base class's declarations with type-argument substitution;
 			# when the declaration is not loaded, the element type comes

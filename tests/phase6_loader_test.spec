@@ -4,12 +4,11 @@ Class is Phase6LoaderTest{
 		base:struct:Array,
 		base:struct:Map,
 		base:iterator:*,
-		base:reflect:ClassInfo,
-		compiler:Token,
-		compiler:Lexer,
-		compiler:Parser,
-		compiler:Loader,
-		base:meta:*
+		spec:base:compiler:ast:ClassInfo,
+		spec:base:compiler:lexer:Token,
+		spec:base:compiler:lexer:Lexer,
+		spec:base:compiler:parser:Parser,
+		spec:base:compiler:loader:Loader
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -22,9 +21,9 @@ Class is Phase6LoaderTest{
 		# 1. Test Single File / Hello World
 		output:line('1. Loading examples/helloworld.spec and its dependencies...');
 		local ProgramNode is helloProg: loader:loadProgram(rootPath: 'examples/helloworld.spec');
-		output:line('Loaded classes count: ' . helloProg:getClasses():length());
+		output:line('Loaded classes count: ' . helloProg:classes:length());
 
-		if (helloProg:getClasses():length() >= 1) {
+		if (helloProg:classes:length() >= 1) {
 			output:line("[PASS] Successfully loaded HelloWorld program with modules\n");
 		} else {
 			output:line("[FAIL] Expected at least 1 class in HelloWorld\n");
@@ -34,7 +33,9 @@ Class is Phase6LoaderTest{
 		output:line('2. Testing path resolution on \'base:struct:Array\'...');
 		local String is resolvedPath: loader:resolvePath(rawPath: 'base:struct:Array');
 		output:line('Resolved path: ' . resolvedPath);
-		if (resolvedPath == 'lib/base/struct/Array.spec') {
+		# The migration stdlib shadows the legacy lib: the resolver returns
+		# the spec/lib path when the class has moved.
+		if (resolvedPath:endsWith(suffix: 'base/struct/Array.spec')) {
 			output:line("[PASS] Correctly resolved package to filesystem path\n");
 		} else {
 			output:line('[FAIL] Path resolution mismatch: ' . resolvedPath . "\n");

@@ -237,6 +237,10 @@ Class is CodeGenerator{
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
 					self:allEnumVariants:set(key: m:name, value: c:name);
+					# Payload variants make the enum a tagged union.
+					if (m:params:length() > 0) {
+						self:allTaggedEnums:set(key: c:name, value: 'true');
+					}
 					if (m:memberType:name == Primitive:STRING:value()) {
 						self:allStringBackedEnums:set(key: c:name, value: 'true');
 					}
@@ -445,6 +449,28 @@ Class is CodeGenerator{
 		return self:formatTypeString(t: t);
 	}
 
+	## Reconstructs a type's full spelling INCLUDING generic arguments:
+	## Type(name='Box', params=['Int']) -> 'Box of Int' (the parser stores
+	## generics on the params list, and scope maps need the whole form for
+	## of-form resolution downstream).
+	##
+	## @param name: The base type name.
+	## @param params: The generic arguments.
+	## @return: The full type spelling.
+	Function of String is fullTypeSpelling(String is name, Array of Type is params){
+		if (params:length() == 0) {
+			return name;
+		}
+		if (name == 'Map' && params:length() == 2) {
+			return 'Map of ' . self:formatTypeString(t: params:get(index: 0)) . ' to ' . self:formatTypeString(t: params:get(index: 1));
+		}
+		local String is out: name;
+		params:each(action: local Function(Type is pt){
+			out: out . ' of ' . self:formatTypeString(t: pt);
+		});
+		return out;
+	}
+
 	## Resolves a method's return type to its C type: enum returns pass by
 	## value (the registry-aware cTypeFor), Function types unwrap to their
 	## return type's C type.
@@ -537,6 +563,13 @@ Class is CodeGenerator{
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		# Of-form generic receivers ('Box of Int'): split the base and the
+		# type argument so substitution can ground T.
+		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
+		if (ofIdx > 0 && typeArgs:length() == 0) {
+			baseClassName: className:substring(start: 0, end: ofIdx);
+			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
+		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
 			return '';
@@ -568,8 +601,58 @@ Class is CodeGenerator{
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		# Of-form generic receivers ('Box of Int'): split the base and the
+		# type argument so substitution can ground T.
+		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
+		if (ofIdx > 0 && typeArgs:length() == 0) {
+			baseClassName: className:substring(start: 0, end: ofIdx);
+			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
+		}
 		if (methodName == 'init' && self:allClassNames:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName)) {
 			return className;
+		}
+		# Container element access resolves from the type string directly:
+		# the generic machinery substitutes T through the loaded Array
+		# declaration, which leaks raw 'T' for of-form receivers.
+		if (baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map')) {
+			local Array of String is ctParts: className:split(delimiter: ':');
+			local String is elem: '';
+			if ((baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length') {
+				if (ctParts:length() > 1) {
+					elem: ctParts:get(index: 1);
+				} else if (className:startsWith(prefix: 'Array of ')) {
+					elem: className:substring(start: 9, end: className:length());
+				}
+			}
+			if (baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:')) {
+				if (ctParts:length() > 1) {
+					elem: ctParts:get(index: 1);
+				} else if (className:startsWith(prefix: 'List of ')) {
+					elem: className:substring(start: 8, end: className:length());
+				}
+			}
+			if (methodName == 'length') { return Primitive:INT:value(); }
+			if (methodName == 'isEmpty' || methodName == 'has' || methodName == 'any') { return Primitive:BOOLEAN:value(); }
+			if (methodName == 'count' || methodName == 'indexOf') { return Primitive:INT:value(); }
+			if (methodName == 'getString' || methodName == 'join') { return Primitive:STRING:value(); }
+			if (methodName == 'getInt') { return Primitive:INT:value(); }
+			if (methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push') { return 'void'; }
+			if ((methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '') {
+				return elem;
+			}
+			if (methodName == 'get' && baseClassName == 'Map') {
+				if (ctParts:length() > 2) {
+					return ctParts:get(index: 2);
+				}
+				local String is rest: className;
+				if (rest:startsWith(prefix: 'Map of ')) {
+					rest: rest:substring(start: 7, end: rest:length());
+					local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
+					if (toIdx >= 0) {
+						return rest:substring(start: toIdx + 4, end: rest:length());
+					}
+				}
+			}
 		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
@@ -648,6 +731,49 @@ Class is CodeGenerator{
 		}
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
+		# Container element access resolves from the type string directly:
+		# the generic machinery substitutes T through the loaded Array
+		# declaration, which leaks raw 'T' for of-form receivers.
+		if (baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map')) {
+			local Array of String is ctParts: className:split(delimiter: ':');
+			local String is elem: '';
+			if ((baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length') {
+				if (ctParts:length() > 1) {
+					elem: ctParts:get(index: 1);
+				} else if (className:startsWith(prefix: 'Array of ')) {
+					elem: className:substring(start: 9, end: className:length());
+				}
+			}
+			if (baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:')) {
+				if (ctParts:length() > 1) {
+					elem: ctParts:get(index: 1);
+				} else if (className:startsWith(prefix: 'List of ')) {
+					elem: className:substring(start: 8, end: className:length());
+				}
+			}
+			if (methodName == 'length') { return Primitive:INT:value(); }
+			if (methodName == 'isEmpty' || methodName == 'has' || methodName == 'any') { return Primitive:BOOLEAN:value(); }
+			if (methodName == 'count' || methodName == 'indexOf') { return Primitive:INT:value(); }
+			if (methodName == 'getString' || methodName == 'join') { return Primitive:STRING:value(); }
+			if (methodName == 'getInt') { return Primitive:INT:value(); }
+			if (methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push') { return 'void'; }
+			if ((methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '') {
+				return elem;
+			}
+			if (methodName == 'get' && baseClassName == 'Map') {
+				if (ctParts:length() > 2) {
+					return ctParts:get(index: 2);
+				}
+				local String is rest: className;
+				if (rest:startsWith(prefix: 'Map of ')) {
+					rest: rest:substring(start: 7, end: rest:length());
+					local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
+					if (toIdx >= 0) {
+						return rest:substring(start: toIdx + 4, end: rest:length());
+					}
+				}
+			}
+		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
 			# Unloaded builtin container: resolve from the builtin table so
@@ -839,9 +965,16 @@ Class is CodeGenerator{
 			if (targetType == self:names:selfIdent() || targetType == '') {
 				targetType: self:currentClassName;
 			}
+			# Keep the generic suffix ('Box:Int') for lookup: substitution
+			# needs the type arguments to ground T. The split base only
+			# feeds the enum-registry checks.
+			local String is baseOnly: targetType;
 			if (targetType:contains(needle: ':')) {
 				local Array of String is parts: targetType:split(delimiter: ':');
-				targetType: parts:get(index: 0);
+				baseOnly: parts:get(index: 0);
+			}
+			if (self:allEnumNames:has(key: baseOnly)) {
+				targetType: baseOnly;
 			}
 			# Container element extraction: Array of X:get/pop/removeAt -> X.
 			if (targetType:startsWith(prefix: 'Array:') && (expr:methodName == 'get' || expr:methodName == 'pop' || expr:methodName == 'removeAt')) {
@@ -886,6 +1019,21 @@ Class is CodeGenerator{
 			}
 			if (leftT:startsWith(prefix: 'List of ') && leftT:length() > 8) {
 				return leftT:substring(start: 8, end: leftT:length());
+			}
+			# Map indexing yields the VALUE type (both spellings).
+			if (leftT:startsWith(prefix: 'Map of ') && leftT:length() > 7) {
+				local String is kv: leftT:substring(start: 7, end: leftT:length());
+				local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
+				if (toIdx >= 0) {
+					return kv:substring(start: toIdx + 4, end: kv:length());
+				}
+			}
+			if (leftT:startsWith(prefix: 'Map:') && leftT:length() > 5) {
+				local String is kv: leftT:substring(start: 5, end: leftT:length());
+				local Int is cIdx: kv:indexOf(search: ':', default: -1);
+				if (cIdx >= 0) {
+					return kv:substring(start: cIdx + 1, end: kv:length());
+				}
 			}
 			return '';
 		}

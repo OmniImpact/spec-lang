@@ -67,21 +67,25 @@ Class is ClassBindings{
 	## tests whether its last segment is `sysinternal`.
 	Class of Loop is SysinternalCheckLoop{
 		local ClassInfo is cls;
+		# The members array is owned at init (a consumption position) so
+		# pool eviction inside the iteration cannot free it mid-scan.
+		local Array of Member is members: [];
 		local Int is idx: 0;
 		local Boolean is isFloor: false;
 
 		replace Function is init(ClassInfo is cls){
 			self:cls: cls;
+			self:members: cls:members;
 			self:idx: 0;
 			self:isFloor: false;
 		}
 
 		replace Function of Boolean is evaluate(){
-			return !self:isFloor && self:idx < self:cls:members:length();
+			return !self:isFloor && self:idx < self:members:length();
 		}
 
 		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:cls:members:get(index: self:idx);
+			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
 			if (m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
 				local Array of Expression is segs: m:initExpr:arrayItems;

@@ -495,8 +495,11 @@ Class is BuiltinCallGenerator{
 				});
 				return 'spec_math_clamp(' . vC . ', ' . loC . ', ' . hiC . ')';
 			}
-			if (m == 'toInt' || m == 'toFloat') {
-				return a0;
+			if (m == 'toInt') {
+				return '((long long)(' . a0 . '))';
+			}
+			if (m == 'toFloat') {
+				return '((double)(' . a0 . '))';
 			}
 		}
 
