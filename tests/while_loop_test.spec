@@ -17,7 +17,7 @@ Class is WhileLoopTest{
 			evaluate: { i < max },
 			iterate: {
 				sum1: sum1 + i;
-				i: i + 1;
+				i++;
 			}
 		);
 		if (sum1 == 45) {

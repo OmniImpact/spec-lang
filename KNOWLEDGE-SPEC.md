@@ -22,7 +22,7 @@ Declaration grammar: `<modifiers> <Type> is <name>`.
 - Field: `local String is title: 'text';` or `local String is title;` (deferred, must be set in init).
 - `Class is Name` with no parents implicitly extends root `Any`.
 
-Operators: `+ - * / %` arithmetic; `& | ^ << >> ~` bitwise (Int only); `.` string concat; `== != < <= > >= is` comparison; `&& || !` logical; `as` cast.
+Operators: `++ --` prefix/postfix increment/decrement; `+ - * / %` arithmetic; `& | ^ << >> ~` bitwise (Int only); `.` string concat; `== != < <= > >= is` comparison; `&& || !` logical; `as` cast.
 `as` targets: `Int` `Float` `String` (numeric/String), `Hex` `Bin` `Oct` (Int↔String base conversion, optional width arg for Int→String padding). Chaining rejected; parse failures yield 0.
 
 String literals: `"..."` (escape-processed), `'...'` (raw).

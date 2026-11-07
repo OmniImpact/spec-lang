@@ -18,5 +18,7 @@ Enum of String is Operator {
 	OR: '||',
 	SHL: '<<',
 	SHR: '>>',
-	SCOPE: '::'
+	SCOPE: '::',
+	INC: '++',
+	DEC: '--'
 }

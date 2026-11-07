@@ -34,6 +34,9 @@ Class of Loop is PostfixLoop{
 		if (self:parser:checkPunct(p: Punctuation:BRACKET_OPEN)) {
 			return true;
 		}
+		if (self:parser:checkSymbol(value: '++') || self:parser:checkSymbol(value: '--')) {
+			return true;
+		}
 		if (self:parser:checkPunct(p: Punctuation:ACCESSOR)) {
 			# Whitespace before ':' means assignment context, not a path.
 			if (self:parser:hasWhitespaceAfter(offset: 0)) {
@@ -81,6 +84,22 @@ Class of Loop is PostfixLoop{
 			indexNode:leftExpr: self:currentExpr;
 			indexNode:rightExpr: idxExpr;
 			self:currentExpr: indexNode;
+			return true;
+		}
+		if (self:parser:checkSymbol(value: '++')) {
+			self:parser:advance();
+			local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
+			u:unaryOp: 'post++';
+			u:unaryExpr: self:currentExpr;
+			self:currentExpr: u;
+			return true;
+		}
+		if (self:parser:checkSymbol(value: '--')) {
+			self:parser:advance();
+			local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
+			u:unaryOp: 'post--';
+			u:unaryExpr: self:currentExpr;
+			self:currentExpr: u;
 			return true;
 		}
 		if (self:parser:checkPunct(p: Punctuation:ACCESSOR)) {

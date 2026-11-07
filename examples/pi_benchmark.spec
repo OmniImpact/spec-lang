@@ -68,12 +68,12 @@ Class is PiBenchmark{
 							local Float is x: math:fastRandom();
 							local Float is y: math:fastRandom();
 							if ((x * x + y * y) <= 1.0) {
-								hits: hits + 1;
+								hits++;
 							}
 							lastX: math:toInt(value: x * 1000.0);
 							lastY: math:toInt(value: y * 1000.0);
-							done: done + 1;
-							b: b + 1;
+							done++;
+							b++;
 						}
 					);
 					Process:atomicAdd(slot: 0, value: batch);
@@ -113,7 +113,7 @@ Class is PiBenchmark{
 			evaluate: { row < self:gridH },
 			iterate: {
 				output:line(self:domainRow(row: row, threads: threads));
-				row: row + 1;
+				row++;
 			}
 		);
 		output:line('');
@@ -143,7 +143,7 @@ Class is PiBenchmark{
 				} else {
 					buf: buf . ' ';
 				}
-				col: col + 1;
+				col++;
 			}
 		);
 		return buf;
@@ -167,7 +167,7 @@ Class is PiBenchmark{
 				if (gx == col && gy == row) {
 					found: i;
 				}
-				i: i + 1;
+				i++;
 			}
 		);
 		return found;
@@ -252,7 +252,7 @@ Class is PiBenchmark{
 			evaluate: { i < pad },
 			iterate: {
 				line: line . ' ';
-				i: i + 1;
+				i++;
 			}
 		);
 		return line . '║';
@@ -269,7 +269,7 @@ Class is PiBenchmark{
 			evaluate: { i < width },
 			iterate: {
 				barText: barText . '═';
-				i: i + 1;
+				i++;
 			}
 		);
 		return barText;

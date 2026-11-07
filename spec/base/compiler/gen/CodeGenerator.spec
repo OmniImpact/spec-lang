@@ -1058,6 +1058,12 @@ Class is CodeGenerator{
 		if (kind == ExpressionKind:CAST) {
 			return expr:castTarget;
 		}
+		if (kind == ExpressionKind:UNARY) {
+			if (expr:unaryOp == '!') {
+				return 'Boolean';
+			}
+			return self:inferTargetType(expr: expr:unaryExpr);
+		}
 		if (kind == ExpressionKind:ANON_FN) {
 			local String is anonRet: expr:anonReturnType:name;
 			if (anonRet != '' && !self:isVoidType(t: anonRet)) {
@@ -1329,6 +1335,18 @@ Class is CodeGenerator{
 			}
 			is ExpressionKind:UNARY: {
 				local String is innerC: self:generateExpression(expr: expr:unaryExpr);
+				if (expr:unaryOp == 'post++') {
+					return '((' . innerC . ')++)';
+				}
+				if (expr:unaryOp == 'post--') {
+					return '((' . innerC . ')--)';
+				}
+				if (expr:unaryOp == '++') {
+					return '(++(' . innerC . '))';
+				}
+				if (expr:unaryOp == '--') {
+					return '(--(' . innerC . '))';
+				}
 				return '(' . expr:unaryOp . '(' . innerC . '))';
 			}
 			is ExpressionKind:CALL: {
@@ -3128,8 +3146,11 @@ Class is CodeGenerator{
 		self:inlineReturnVar: evVar;
 		self:inlineReturnLabel: 'break';
 		local String is evalBodyC: '';
+		local Int is evalCount: evalExpr:anonBody:length();
+		local Int is evIdx: 0;
 		evalExpr:anonBody:each(action: local Function(Statement is s){
-			if (s:kind == StatementKind:EXPR && self:inlineReturnVar != '') {
+			evIdx: evIdx + 1;
+			if (s:kind == StatementKind:EXPR && evIdx == evalCount && self:inlineReturnVar != '') {
 				local String is exprC: self:generateExpression(expr: s:exprStmt);
 				evalBodyC: evalBodyC . '    ' . self:inlineReturnVar . ' = ' . exprC . "; break;\n";
 			} else {

@@ -570,6 +570,19 @@ Shifts are arithmetic on signed 64-bit integers.
 local Int is total: (10 + 2) * 3 - (8 / 2);
 ```
 
+### Increment & Decrement Operators
+`++` and `--` are supported as both postfix and prefix operators on `Int` variables and fields:
+```spec
+local Int is count: 0;
+count++;                  # postfix statement: count becomes 1
+count--;                  # postfix statement: count becomes 0
+++count;                  # prefix statement: count becomes 1
+--count;                  # prefix statement: count becomes 0
+
+local Int is a: count++;  # expression: 'a' receives 0, 'count' becomes 1
+local Int is b: ++count;  # expression: 'count' becomes 2, 'b' receives 2
+```
+
 ### String Concatenation
 The dot operator (`.`) concatenates strings and automatically formats numeric primitives:
 ```spec

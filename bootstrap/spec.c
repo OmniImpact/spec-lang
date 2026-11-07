@@ -2344,6 +2344,8 @@ typedef enum {
     Operator_SHL = 7,
     Operator_SHR = 8,
     Operator_SCOPE = 9,
+    Operator_INC = 10,
+    Operator_DEC = 11,
 } Operator;
 
 static __attribute__((unused)) const char* Operator_names[] = {
@@ -2357,6 +2359,8 @@ static __attribute__((unused)) const char* Operator_names[] = {
     "SHL",
     "SHR",
     "SCOPE",
+    "INC",
+    "DEC",
 };
 
 static const Operator Operator_all_values[] = {
@@ -2370,6 +2374,8 @@ static const Operator Operator_all_values[] = {
     Operator_SHL,
     Operator_SHR,
     Operator_SCOPE,
+    Operator_INC,
+    Operator_DEC,
 };
 
 static inline String Operator_name(Operator self) {
@@ -2385,6 +2391,8 @@ static inline String Operator_name(Operator self) {
         case Operator_SHL: return spec_string_intern("SHL");
         case Operator_SHR: return spec_string_intern("SHR");
         case Operator_SCOPE: return spec_string_intern("SCOPE");
+        case Operator_INC: return spec_string_intern("INC");
+        case Operator_DEC: return spec_string_intern("DEC");
         default: return spec_string_intern("UNKNOWN");
     }
 }
@@ -2402,6 +2410,8 @@ static inline String Operator_value(Operator self) {
         case Operator_SHL: return spec_string_intern("<<");
         case Operator_SHR: return spec_string_intern(">>");
         case Operator_SCOPE: return spec_string_intern("::");
+        case Operator_INC: return spec_string_intern("++");
+        case Operator_DEC: return spec_string_intern("--");
         default: return spec_string_intern("");
     }
 }
@@ -2417,6 +2427,8 @@ static inline Operator Operator_of(String v) {
     if (spec_string_equals(v, spec_string_intern("<<"))) return Operator_SHL;
     if (spec_string_equals(v, spec_string_intern(">>"))) return Operator_SHR;
     if (spec_string_equals(v, spec_string_intern("::"))) return Operator_SCOPE;
+    if (spec_string_equals(v, spec_string_intern("++"))) return Operator_INC;
+    if (spec_string_equals(v, spec_string_intern("--"))) return Operator_DEC;
     return Operator_NONE;
 }
 
@@ -2433,13 +2445,15 @@ static inline long long Operator_ordinal(Operator self) {
         case Operator_SHL: return 7;
         case Operator_SHR: return 8;
         case Operator_SCOPE: return 9;
+        case Operator_INC: return 10;
+        case Operator_DEC: return 11;
         default: return -1;
     }
 }
 
 static inline SpecArray* Operator_values(void) {
     SpecArray* arr = spec_array_new();
-    for (size_t i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 12; i++) {
         spec_array_add(arr, (void*)(intptr_t)Operator_all_values[i]);
     }
     return arr;
@@ -36393,6 +36407,8 @@ typedef struct {
     CodeGenerator* self;
     long long id;
     String evalBodyC;
+    long long evIdx;
+    long long evalCount;
 } _Env_anon_572;
 
 static __attribute__((unused)) void _destroy_env_anon_572(void* _env_ptr) {
@@ -36411,7 +36427,12 @@ static __attribute__((unused)) void _anon_fn_572(void* _env_ptr, Statement* s) {
     (void)id;
     String evalBodyC = _env->evalBodyC;
     (void)evalBodyC;
-    if (((((s->kind) == (StatementKind_EXPR))) && ((!spec_string_equals(self->inlineReturnVar, spec_string_intern("")))))) {
+    long long evIdx = _env->evIdx;
+    (void)evIdx;
+    long long evalCount = _env->evalCount;
+    (void)evalCount;
+    evIdx = ((evIdx) + (1));
+    if (((((((s->kind) == (StatementKind_EXPR))) && (((evIdx) == (evalCount))))) && ((!spec_string_equals(self->inlineReturnVar, spec_string_intern("")))))) {
         SPEC_AUTO String exprC = CodeGenerator_generateExpression(self, s->exprStmt) /* inst:CodeGenerator:generateExpression */;
         evalBodyC = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(evalBodyC, spec_string_intern("    ")), self->inlineReturnVar), spec_string_intern(" = ")), exprC), spec_string_intern("; break;\n"));
     if (exprC) { spec_release((void*)exprC); exprC = NULL; }
@@ -43725,7 +43746,13 @@ Expression* Parser_foldBinary(Parser* self, SpecArray* ops, PrecedenceLevel next
 Expression* Parser_parseUnary(Parser* self) {
     (void)self;
     SPEC_AUTO String op = spec_construct_string(spec_string_intern(""));
-    if (Parser_checkSymbol(self, spec_string_intern("~")) /* inst:Parser:checkSymbol */) {
+    if (Parser_checkSymbol(self, spec_string_intern("++")) /* inst:Parser:checkSymbol */) {
+        spec_assign((void**)&op, (void*)(spec_string_intern("++")));
+    } else {
+        if (Parser_checkSymbol(self, spec_string_intern("--")) /* inst:Parser:checkSymbol */) {
+        spec_assign((void**)&op, (void*)(spec_string_intern("--")));
+    } else {
+        if (Parser_checkSymbol(self, spec_string_intern("~")) /* inst:Parser:checkSymbol */) {
         spec_assign((void**)&op, (void*)(spec_string_intern("~")));
     } else {
         if (Parser_checkSymbol(self, spec_string_intern("-")) /* inst:Parser:checkSymbol */) {
@@ -43735,6 +43762,8 @@ Expression* Parser_parseUnary(Parser* self) {
         spec_assign((void**)&op, (void*)(spec_string_intern("!")));
     } else {
         return (Expression*)spec_retain((void*)(Parser_parseAs(self) /* inst:Parser:parseAs */));
+    }
+    }
     }
     }
     }
@@ -44228,6 +44257,9 @@ bool PostfixLoop_evaluate(PostfixLoop* self) {
     if (Parser_checkPunct(self->parser, Punctuation_BRACKET_OPEN) /* inst:Parser:checkPunct */) {
         return true;
     }
+    if (((Parser_checkSymbol(self->parser, spec_string_intern("++")) /* inst:Parser:checkSymbol */) || (Parser_checkSymbol(self->parser, spec_string_intern("--")) /* inst:Parser:checkSymbol */))) {
+        return true;
+    }
     if (Parser_checkPunct(self->parser, Punctuation_ACCESSOR) /* inst:Parser:checkPunct */) {
         if (Parser_hasWhitespaceAfter(self->parser, 0) /* inst:Parser:hasWhitespaceAfter */) {
         return false;
@@ -44280,6 +44312,24 @@ bool PostfixLoop_iteration(PostfixLoop* self, SpecLoopControl* control) {
         return true;
     if (idxExpr) { spec_release((void*)idxExpr); idxExpr = NULL; }
     if (indexNode) { spec_release((void*)indexNode); indexNode = NULL; }
+    }
+    if (Parser_checkSymbol(self->parser, spec_string_intern("++")) /* inst:Parser:checkSymbol */) {
+        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[50]))((Parser*)_recv); }))));
+        SPEC_AUTO Expression* u = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNARY); _inst; })));
+        spec_assign((void**)&u->unaryOp, (void*)(spec_string_intern("post++")));
+        spec_assign((void**)&u->unaryExpr, (void*)(self->currentExpr));
+        spec_assign((void**)&self->currentExpr, (void*)(u));
+        return true;
+    if (u) { spec_release((void*)u); u = NULL; }
+    }
+    if (Parser_checkSymbol(self->parser, spec_string_intern("--")) /* inst:Parser:checkSymbol */) {
+        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[50]))((Parser*)_recv); }))));
+        SPEC_AUTO Expression* u = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNARY); _inst; })));
+        spec_assign((void**)&u->unaryOp, (void*)(spec_string_intern("post--")));
+        spec_assign((void**)&u->unaryExpr, (void*)(self->currentExpr));
+        spec_assign((void**)&self->currentExpr, (void*)(u));
+        return true;
+    if (u) { spec_release((void*)u); u = NULL; }
     }
     if (Parser_checkPunct(self->parser, Punctuation_ACCESSOR) /* inst:Parser:checkPunct */) {
         ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[50]))((Parser*)_recv); }))));
@@ -45934,6 +45984,11 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr, Stri
         SPEC_AUTO String innerT = TypeChecker_inferExpressionType(self, expr->unaryExpr, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */;
         if (((((((spec_string_equals(expr->unaryOp, spec_string_intern("~"))) && ((!spec_string_equals(innerT, spec_string_intern("")))))) && ((!spec_string_equals(innerT, spec_string_intern("Any")))))) && ((!spec_string_equals(innerT, ((String)spec_claim_pool((void*)(Primitive_value(Primitive_INT))))))))) {
         SPEC_AUTO String msg = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Bitwise complement '~' requires an Int operand (got '"))), innerT), spec_string_intern("')."));
+        (((void (*)(TypeChecker*, long long, String))self->_vtable[45]))((TypeChecker*)self, self->currentLine, msg);
+    if (msg) { spec_release((void*)msg); msg = NULL; }
+    }
+        if (((((((((((((spec_string_equals(expr->unaryOp, spec_string_intern("++"))) || (spec_string_equals(expr->unaryOp, spec_string_intern("--"))))) || (spec_string_equals(expr->unaryOp, spec_string_intern("post++"))))) || (spec_string_equals(expr->unaryOp, spec_string_intern("post--"))))) && ((!spec_string_equals(innerT, spec_string_intern("")))))) && ((!spec_string_equals(innerT, spec_string_intern("Any")))))) && ((!spec_string_equals(innerT, ((String)spec_claim_pool((void*)(Primitive_value(Primitive_INT))))))))) {
+        SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Operator '"))), expr->unaryOp), spec_string_intern("' requires an Int operand (got '")), innerT), spec_string_intern("')."));
         (((void (*)(TypeChecker*, long long, String))self->_vtable[45]))((TypeChecker*)self, self->currentLine, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
     }
@@ -50044,6 +50099,12 @@ String CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr) {
     if (((kind) == (ExpressionKind_CAST))) {
         return (String)spec_retain((void*)(expr->castTarget));
     }
+    if (((kind) == (ExpressionKind_UNARY))) {
+        if (spec_string_equals(expr->unaryOp, spec_string_intern("!"))) {
+        return (String)spec_retain((void*)(spec_string_intern("Boolean")));
+    }
+        return (String)spec_retain((void*)(CodeGenerator_inferTargetType(self, expr->unaryExpr) /* inst:CodeGenerator:inferTargetType */));
+    }
     if (((kind) == (ExpressionKind_ANON_FN))) {
         SPEC_AUTO String anonRet = spec_construct_string(expr->anonReturnType->name);
         if ((((!spec_string_equals(anonRet, spec_string_intern("")))) && ((!(CodeGenerator_isVoidType(self, anonRet) /* inst:CodeGenerator:isVoidType */))))) {
@@ -50285,6 +50346,18 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
         return (String)spec_retain((void*)(CodeGenerator_emitCast(self, expr) /* inst:CodeGenerator:emitCast */));
     } else if (((kind) == (ExpressionKind_UNARY))) {
         SPEC_AUTO String innerC = CodeGenerator_generateExpression(self, expr->unaryExpr) /* inst:CodeGenerator:generateExpression */;
+        if (spec_string_equals(expr->unaryOp, spec_string_intern("post++"))) {
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(("))), innerC), spec_string_intern(")++)"))));
+    }
+        if (spec_string_equals(expr->unaryOp, spec_string_intern("post--"))) {
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(("))), innerC), spec_string_intern(")--)"))));
+    }
+        if (spec_string_equals(expr->unaryOp, spec_string_intern("++"))) {
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(++("))), innerC), spec_string_intern("))"))));
+    }
+        if (spec_string_equals(expr->unaryOp, spec_string_intern("--"))) {
+        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(--("))), innerC), spec_string_intern("))"))));
+    }
         return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), expr->unaryOp), spec_string_intern("(")), innerC), spec_string_intern("))"))));
     if (innerC) { spec_release((void*)innerC); innerC = NULL; }
     } else if (((kind) == (ExpressionKind_CALL))) {
@@ -52389,10 +52462,13 @@ String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loo
     spec_assign((void**)&self->inlineReturnVar, (void*)(evVar));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("break")));
     SPEC_AUTO String evalBodyC = spec_construct_string(spec_string_intern(""));
+    long long evalCount = spec_array_length(evalExpr->anonBody);
+    long long evIdx = 0;
     ({ SpecArray* _a_573 = evalExpr->anonBody; if (_a_573) { for (size_t _i_573 = 0; _i_573 < _a_573->length; _i_573++) {
         Statement* s = (Statement*)(intptr_t)_a_573->items[_i_573];
         do {
-    if (((((s->kind) == (StatementKind_EXPR))) && ((!spec_string_equals(self->inlineReturnVar, spec_string_intern("")))))) {
+    evIdx = ((evIdx) + (1));
+    if (((((((s->kind) == (StatementKind_EXPR))) && (((evIdx) == (evalCount))))) && ((!spec_string_equals(self->inlineReturnVar, spec_string_intern("")))))) {
         SPEC_AUTO String exprC = CodeGenerator_generateExpression(self, s->exprStmt) /* inst:CodeGenerator:generateExpression */;
         evalBodyC = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(evalBodyC, spec_string_intern("    ")), self->inlineReturnVar), spec_string_intern(" = ")), exprC), spec_string_intern("; break;\n"));
     if (exprC) { spec_release((void*)exprC); exprC = NULL; }

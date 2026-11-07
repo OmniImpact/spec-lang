@@ -782,7 +782,11 @@ Class is Parser{
 	## @return: The expression node.
 	Function of Expression is parseUnary(){
 		local String is op: '';
-		if (self:checkSymbol(value: '~')) {
+		if (self:checkSymbol(value: '++')) {
+			op: '++';
+		} else if (self:checkSymbol(value: '--')) {
+			op: '--';
+		} else if (self:checkSymbol(value: '~')) {
 			op: '~';
 		} else if (self:checkSymbol(value: '-')) {
 			op: '-';

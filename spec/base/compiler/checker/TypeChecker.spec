@@ -902,6 +902,10 @@ Class is TypeChecker{
 					local String is msg: 'Bitwise complement \'~\' requires an Int operand (got \'' . innerT . '\').';
 					self:addError(line: self:currentLine, msg: msg);
 				}
+				if ((expr:unaryOp == '++' || expr:unaryOp == '--' || expr:unaryOp == 'post++' || expr:unaryOp == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value()) {
+					local String is msg: 'Operator \'' . expr:unaryOp . '\' requires an Int operand (got \'' . innerT . '\').';
+					self:addError(line: self:currentLine, msg: msg);
+				}
 				if (expr:unaryOp == '!') {
 					res: Primitive:BOOLEAN:value();
 				} else {
