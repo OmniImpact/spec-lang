@@ -677,7 +677,25 @@ Class is BuiltinCallGenerator{
 			return 'spec_map_new()';
 		}
 		if (m == 'set') {
-			return 'spec_map_set(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			# String values store directly; everything else boxes into the
+			# any-slot via spec_map_set_any.
+			local String is keyC: 'spec_string_intern("")';
+			local String is valC: 'spec_string_intern("")';
+			local Boolean is valIsStr: true;
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:name == 'key') { keyC: cg:generateExpression(expr: arg:value); }
+				if (arg:name == 'value') {
+					local Boolean is savedArgMode: cg:argMode;
+					cg:setArgMode(m: false);
+					valC: cg:generateExpression(expr: arg:value);
+					cg:setArgMode(m: savedArgMode);
+					valIsStr: cg:isStringExpr(expr: arg:value, exprC: valC);
+				}
+			});
+			if (targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String') || valIsStr) {
+				return 'spec_map_set(' . targetC . ', ' . keyC . ', ' . valC . ')';
+			}
+			return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 		}
 		if (m == 'getString') {
 			return 'spec_map_get_string(' . targetC . ', ' . a0 . ', ' . a1 . ')';

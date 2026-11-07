@@ -1711,6 +1711,27 @@ Class is CodeGenerator{
 		return joined;
 	}
 
+	## Emits scope-end releases for the ARC-typed locals directly declared
+	## in a statement list. Locals own their references (typed constructors
+	## retain borrows, spec_assign retains, containers retain elements), so
+	## releasing at block end is safe; claims pool only fresh temporaries.
+	##
+	## @param stmts: The block's statement list.
+	## @return: Release lines, or '' when nothing needs release.
+	Function of String is scopeReleases(Array of Statement is stmts){
+		local String is out: '';
+		stmts:each(action: local Function(Statement is stmt){
+			if (stmt:kind == StatementKind:VAR_DECL) {
+				local String is typeName: self:formatTypeString(t: stmt:varType);
+				if (self:isArcType(typeName: typeName)) {
+					local String is varC: self:utils:cIdent(name: stmt:varName);
+					out: out . '    if (' . varC . ') { spec_release((void*)' . varC . '); ' . varC . " = NULL; }\n";
+				}
+			}
+		});
+		return out;
+	}
+
 	## Generates the when-condition comparison for one arm condition.
 	##
 	## @param subjExpr: The when subject expression.
@@ -1848,11 +1869,13 @@ Class is CodeGenerator{
 				stmt:thenBranch:each(action: local Function(Statement is s){
 					out: out . '    ' . self:generateStatement(stmt: s);
 				});
+				out: out . self:scopeReleases(stmts: stmt:thenBranch);
 				if (stmt:hasElse) {
 					out: out . "    } else {\n";
 					stmt:elseBranch:each(action: local Function(Statement is s){
 						out: out . '    ' . self:generateStatement(stmt: s);
 					});
+					out: out . self:scopeReleases(stmts: stmt:elseBranch);
 				}
 				out: out . "    }\n";
 				return out;
@@ -1867,7 +1890,17 @@ Class is CodeGenerator{
 				return self:emitWhenStatement(stmt: stmt);
 			}
 			is StatementKind:EXPR: {
+				# Claim-yielding results go to the pool (released on
+				# eviction). A CALL that yields no claim but returns an
+				# ARC type is the blanket-RETURN-retain case: the callee
+				# retained its result for this caller and nobody consumes
+				# it, so the statement releases it. Everything else
+				# (idents, fields) is a borrow — leave it alone.
 				local String is exprC: self:generateExpression(expr: stmt:exprStmt);
+				local String is resT: self:inferTargetType(expr: stmt:exprStmt);
+				if (stmt:exprStmt:kind == ExpressionKind:CALL && !self:yieldsClaim(expr: stmt:exprStmt) && self:isArcType(typeName: resT)) {
+					return '    spec_release((void*)(' . exprC . "));\n";
+				}
 				return '    ' . exprC . ";\n";
 			}
 			is StatementKind:CLASS: {
@@ -2100,6 +2133,7 @@ Class is CodeGenerator{
 			arm:body:each(action: local Function(Statement is s){
 				out: out . '    ' . self:generateStatement(stmt: s);
 			});
+			out: out . self:scopeReleases(stmts: arm:body);
 		});
 		out: out . "    }\n";
 		return out;
@@ -2151,6 +2185,8 @@ Class is CodeGenerator{
 			out: out . "    return 0;\n";
 		}
 
+		# Scope-end releases: drop the refs this method's locals own.
+		out: out . self:scopeReleases(stmts: method:body);
 		out: out . "}\n\n";
 		self:inMethod: false;
 		return out;
@@ -2509,6 +2545,7 @@ Class is CodeGenerator{
 		fnExpr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
+		bodyC: bodyC . self:scopeReleases(stmts: fnExpr:anonBody);
 
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
@@ -2623,6 +2660,7 @@ Class is CodeGenerator{
 		fnExpr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
+		bodyC: bodyC . self:scopeReleases(stmts: fnExpr:anonBody);
 
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
@@ -2678,6 +2716,7 @@ Class is CodeGenerator{
 		fnExpr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
+		bodyC: bodyC . self:scopeReleases(stmts: fnExpr:anonBody);
 
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
@@ -2707,6 +2746,7 @@ Class is CodeGenerator{
 		evalExpr:anonBody:each(action: local Function(Statement is s){
 			evalBodyC: evalBodyC . self:generateStatement(stmt: s);
 		});
+		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
 
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: 'break';
@@ -2714,6 +2754,7 @@ Class is CodeGenerator{
 		iterExpr:anonBody:each(action: local Function(Statement is s){
 			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
 		});
+		iterBodyC: iterBodyC . self:scopeReleases(stmts: iterExpr:anonBody);
 
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
