@@ -750,8 +750,122 @@ Class is Loader{
 		self:loadFile(filePath: rootPath);
 		self:appendImplicitAny();
 		self:mergeGroups();
+		self:synthesizeInstanceImports();
 
 		return ProgramNode:init(classes: self:loadedClasses);
+	}
+
+	## INSTANCE.md E1/E2 full form: a field-ful class instance-imported
+	## via `as X(args)` materializes a real hidden field on the importing
+	## class — typed X, initialized `X:init(args)` — so struct layout,
+	## per-instance construction, ARC destroy, and constructor-argument
+	## checking all run through the ordinary field machinery. Field-less
+	## imports synthesize nothing: their methods are self-free and
+	## dispatch stays elided (§2.4). Runs after group merging so fragment
+	## unions are final. Nested classes are included.
+	Function is synthesizeInstanceImports(){
+		self:synthesizeInto(classes: self:loadedClasses);
+	}
+
+	## Recursive synthesis walk over a class list (nested classes included).
+	##
+	## @param classes: Candidate [ClassInfo] definitions.
+	Function is synthesizeInto(Array of ClassInfo is classes){
+		classes:each(action: local Function(ClassInfo is c){
+			c:members:each(action: local Function(Member is m){
+				if (m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+					m:initExpr:arrayItems:each(action: local Function(Expression is item){
+						if (item:kind == ExpressionKind:ARRAY) {
+							item:arrayItems:each(action: local Function(Expression is seg){
+								if (seg:kind == ExpressionKind:USING_AS) {
+									self:synthesizeFor(c: c, asExpr: seg);
+								}
+							});
+						}
+					});
+				}
+			});
+			c:members:each(action: local Function(Member is m){
+				if (m:kind == MemberKind:CLASS) {
+					local Array of ClassInfo is one: [m:nestedClass];
+					self:synthesizeInto(classes: one);
+				}
+			});
+		});
+	}
+
+	## Synthesizes the hidden field for one as-entry when its target is
+	## field-ful. The synthesized initializer is the constructor call with
+	## the as-form's literal arguments, so argument checking happens
+	## through the ordinary field-init path.
+	##
+	## @param c: The importing class.
+	## @param asExpr: The USING_AS expression node.
+	Function is synthesizeFor(ClassInfo is c, Expression is asExpr){
+		local String is targetName: asExpr:stringValue;
+		local ClassInfo is target: self:findLoadedClass(name: targetName);
+		if (target:name == '') {
+			return;
+		}
+		if (!self:isFieldFul(c: target)) {
+			return;
+		}
+		local String is fieldName: '_import_' . targetName;
+		local Int is idx: 0;
+		local Array of Member is members: c:members;
+		While:condition(
+			evaluate: local Function of Boolean(){ return idx < members:length(); },
+			iteration: local Function of Boolean(){
+				local Member is m: members:get(index: idx);
+				if (m:name == fieldName) {
+					self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		local Member is field: Member:init(kind: MemberKind:FIELD);
+		field:name: fieldName;
+		field:memberType: Type:init(name: targetName);
+		local Expression is ctor: Expression:init(kind: ExpressionKind:CALL);
+		local Expression is recv: Expression:init(kind: ExpressionKind:IDENT);
+		recv:stringValue: targetName;
+		ctor:methodTarget: recv;
+		ctor:methodName: 'init';
+		ctor:methodArgs: asExpr:methodArgs;
+		field:hasInit: true;
+		field:initExpr: ctor;
+		field:setSourceFile(file: c:sourceFile);
+		field:setLine(line: asExpr:line);
+		members:add(item: field);
+	}
+
+	## True when [c] declares real fields (metadata pseudo-members excluded).
+	##
+	## @param c: Candidate [ClassInfo] definition.
+	## @return: true when field-ful.
+	Function of Boolean is isFieldFul(ClassInfo is c){
+		local Boolean is found: false;
+		c:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'group' && m:name != 'castable') {
+				found: true;
+			}
+		});
+		return found;
+	}
+
+	## Finds an already-loaded class by name (top level only; nested
+	## classes are not importable — one class per named file).
+	##
+	## @param name: Class name.
+	## @return: The [ClassInfo], or an empty-named node when absent.
+	Function of ClassInfo is findLoadedClass(String is name){
+		local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: name);
+		While:run(loop: find);
+		if (find:found) {
+			return find:res;
+		}
+		return ClassInfo:init(name: '', baseClass: '', members: []);
 	}
 
 	## Appends `Any` as the parent of every class without explicit parents

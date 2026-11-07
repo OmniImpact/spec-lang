@@ -38,6 +38,9 @@ Class is Linter{
 	## restore around nested-class recursion).
 	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: []);
 
+	## Loaded class nodes by name, for the inherited-import walk.
+	local Map of String to ClassInfo is auditClassNodes: Map:init();
+
 	## Lowercase floor singletons routed by name (INSTANCE.md R1-R3 removes
 	## them, so their call sites belong on the worklist).
 	local Array of String is floorAliases: [];
@@ -49,6 +52,7 @@ Class is Linter{
 	replace Function is init(){
 		self:auditEnums: Map:init();
 		self:auditClasses: Map:init();
+		self:auditClassNodes: Map:init();
 		self:auditIssues: [];
 		self:floorAliases: [];
 		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
@@ -373,6 +377,7 @@ Class is Linter{
 		} else {
 			self:auditClasses:set(key: c:name, value: 'true');
 		}
+		self:auditClassNodes:set(key: c:name, value: c);
 		c:members:each(action: local Function(Member is m){
 			if (m:kind == MemberKind:CLASS) {
 				self:registerAuditName(c: m:nestedClass);
@@ -603,9 +608,10 @@ Class is Linter{
 			if (!self:auditClasses:has(key: name)) {
 				return;
 			}
-			if (self:auditOwner:instanceImportsAs(name: name)) {
-				# Migrated: the owning class instance-imports this class
-				# (INSTANCE.md §2.1), so the prefix call is the new model.
+			if (self:auditOwnerImportsAs(name: name)) {
+				# Migrated: the owning class (or an ancestor) instance-imports
+				# this class (INSTANCE.md §2.1), so the prefix call is the
+				# new model.
 				return;
 			}
 		} else {
@@ -621,6 +627,31 @@ Class is Linter{
 		}
 		local String is msg: 'Instance-model worklist: \'' . name . ':' . callExpr:methodName . '\' calls a member through a class name (' . file . ').';
 		self:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
+	}
+
+	## True when the class under audit, or any ancestor, instance-imports
+	## [name] — as-imports are inherited like the fields they synthesize.
+	##
+	## @param name: Receiver class name.
+	## @return: true when imported somewhere up the chain.
+	Function of Boolean is auditOwnerImportsAs(String is name){
+		local Boolean is found: false;
+		local String is walk: self:auditOwner:name;
+		local Int is hops: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return !found && walk != '' && walk != 'Any' && hops < 8; },
+			iteration: local Function of Boolean(){
+				local ClassInfo is cls: self:auditClassNodes:get(key: walk, default: self:auditOwner);
+				if (cls:name == walk && cls:instanceImportsAs(name: name)) {
+					found: true;
+					return true;
+				}
+				walk: cls:baseClass;
+				hops: hops + 1;
+				return true;
+			}
+		);
+		return found;
 	}
 
 	## True when [name] starts with an uppercase letter (the type naming

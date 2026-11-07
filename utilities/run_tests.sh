@@ -161,6 +161,10 @@ assert_compile_failure "instance-model-n8-enum-import" \
 	"$ROOT/tests/negative/n8_enum_as_import_negative_test.spec" \
 	"Cannot instance-import enum 'ExpressionKind'"
 
+assert_compile_failure "instance-model-n11-prefix-field" \
+	"$ROOT/tests/negative/n11_prefix_field_negative_test.spec" \
+	"Fields are not reachable through the class-name prefix"
+
 assert_compile_failure "instance-model-n10-init-on-instance" \
 	"$ROOT/tests/negative/n10_init_on_instance_negative_test.spec" \
 	"'init' is construct-only"

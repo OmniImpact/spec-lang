@@ -120,7 +120,17 @@ replace Array of Array of String is using: [
 - Determinism: the provider set is order-independent (a property of the set,
   not of declaration or scan order).
 
-### 2.4 Zero-field elision (performance contract)
+#### 2.4 Dispatch: elision vs the synthetic field
+
+Zero-field imports allocate nothing: their methods are provably self-free,
+so prefixed and bare calls compile to direct C calls with `self` ignored.
+Field-ful imports (E1/E2 full form) materialize a hidden field —
+`_import_X: X:init(args)` — per importing-class instance: real allocation,
+real construction, ARC-managed, dispatching through the field (inherited
+subclasses reach it through the flattened struct layout). Either way the
+prefix and the bare form hit the same instance.
+
+## 2.4 Zero-field elision (performance contract)
 
 A zero-field class (e.g. `Math`, `Output`, `Reflection`, `Process`, `While`,
 `File` — all verified field-free) imported as an instance requires **no
@@ -139,15 +149,19 @@ Each item = one checker/loader/parser duty. `E#` referenced by tests (§8).
   is a String/Int/Float/Boolean literal. No variables, no `self`, no field or
   parameter references, no enum refs, no expressions. Enforced at parse time.
   Rationale: the `using` array is declaration-level — no `init` params, no
-  ordering hazards, trivially checkable. *v1 note: implemented; the checker
-  additionally accepts only zero-argument imports (see E2 v1).*
+  ordering hazards, trivially checkable. Implemented; arguments are direct
+  literals only (parser-enforced).
 - [ ] **E2 — Init match + non-abstract.** `as X(args)` requires `X` to be a
   non-abstract class with an accessible `init` accepting `args` by count and
   type. `as X()` on an Enum is an error. Generic classes cannot be
-  instance-imported (v1 — see §10). *v1 note: implemented for the elided
-  subset — field-less classes only, zero-arg only. The synthetic-field form
-  (real allocation, literal args) is deferred until a migration site needs
-  it; every current as-import candidate is field-less.*
+  instance-imported (v1 — see §10). Implemented in full: field-less
+  classes dispatch elided (no allocation); field-ful classes materialize a
+  hidden `_import_X` field constructed from the as-form's literal
+  arguments through the ordinary field machinery — struct layout,
+  per-instance construction, ARC destroy, and constructor-argument
+  checking included. As-imports are inherited like the fields they
+  synthesize. Generic classes stay deferred (§10). Fields are not
+  reachable through a class-name prefix — methods only (§2.3).
 - [ ] **E3 — Uniqueness.** At most one instance import per class name per
   importing class (post group-merge; fragments' `using` entries union first).
   Duplicate → compile error.

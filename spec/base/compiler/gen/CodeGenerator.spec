@@ -369,8 +369,39 @@ Class is CodeGenerator{
 	## @param className: Receiver class name.
 	## @return: true when instance-imported by the current class.
 	Function of Boolean is isAsImportedReceiver(String is className){
-		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
-		return curCls:instanceImportsAs(name: className);
+		local Boolean is found: false;
+		local String is walk: self:currentClassName;
+		local Int is hops: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return !found && walk != '' && walk != 'Any' && hops < 8; },
+			iteration: local Function of Boolean(){
+				local ClassInfo is cls: self:findClass(name: walk);
+				if (cls:name != '' && cls:instanceImportsAs(name: className)) {
+					found: true;
+					return true;
+				}
+				walk: cls:baseClass;
+				hops: hops + 1;
+				return true;
+			}
+		);
+		return found;
+	}
+
+	## True when [cls] declares real fields (metadata pseudo-members
+	## excluded) — field-ful as-imports dispatch through their synthetic
+	## hidden field instead of the elided NULL path (INSTANCE.md §2.4).
+	##
+	## @param cls: The imported class.
+	## @return: true when field-ful.
+	Function of Boolean is isFieldFulClass(ClassInfo is cls){
+		local Boolean is found: false;
+		cls:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'group' && m:name != 'castable') {
+				found: true;
+			}
+		});
+		return found;
 	}
 
 	## Generates the per-type constructor call for a typed assignment:
@@ -1780,6 +1811,12 @@ Class is CodeGenerator{
 			}
 			local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
 			if (mDef:kind == MemberKind:METHOD) {
+				if (self:isFieldFulClass(cls: self:findClass(name: targetC))) {
+					# Field-ful instance import (INSTANCE.md E1/E2 full
+					# form): dispatch through the synthetic hidden field
+					# the loader materialized; the field borrows as self.
+					return targetC . '_' . expr:methodName . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
+				}
 				# Elided instance import (INSTANCE.md §2.4): under E5 every
 				# non-init class-name call is an instance-imported receiver.
 				# The class is field-less, its methods self-free — a direct
@@ -1800,6 +1837,9 @@ Class is CodeGenerator{
 				return bpBuiltin;
 			}
 			local String is bpArgs: self:formatCallArguments(className: expr:bareProvider, methodName: expr:methodName, args: expr:methodArgs);
+			if (self:isFieldFulClass(cls: self:findClass(name: expr:bareProvider))) {
+				return expr:bareProvider . '_' . expr:methodName . '((' . expr:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . expr:bareProvider) . ')' . bpArgs . ')';
+			}
 			return expr:bareProvider . '_' . expr:methodName . '(NULL' . bpArgs . ')';
 		}
 

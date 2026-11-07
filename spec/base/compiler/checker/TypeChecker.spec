@@ -786,6 +786,14 @@ Class is TypeChecker{
 						rootType: root;
 					} else if (self:registeredClasses:has(key: root)) {
 						rootType: root;
+						# INSTANCE.md §2.3: fields and values are not reachable
+						# through a class-name prefix — methods only. A PATH
+						# rooted at a non-type-level class name with further
+						# segments is a prefixed field access: rejected.
+						if (segs:length() >= 2 && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl') {
+							self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; call a method on the instance (INSTANCE.md §2.3).');
+							rootType: '';
+						}
 					}
 					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType);
 					While:run(loop: pLoop);
@@ -1120,8 +1128,7 @@ Class is TypeChecker{
 		if (recvName != '' && expr:methodName != 'init') {
 			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl';
 			if (!isTypeLevel) {
-				local ClassInfo is ownerCls: self:findClass(name: self:currentClassName);
-				if (!ownerCls:instanceImportsAs(name: recvName)) {
+				if (!self:isAsImportedInherited(className: recvName)) {
 					if (recvName == self:currentClassName) {
 						self:addError(line: self:currentLine, msg: 'Cannot call members of \'' . recvName . '\' through the class name inside \'' . recvName . '\' itself; use self (INSTANCE.md §2.2).');
 					} else {
@@ -2288,6 +2295,32 @@ Class is TypeChecker{
 	##
 	## @param program: The parsed program.
 	## @return: The type-error diagnostics.
+	## True when the current class, or any ancestor, instance-imports
+	## [className] — as-imports are inherited like the fields they
+	## synthesize (INSTANCE.md §2.1).
+	##
+	## @param className: Receiver class name.
+	## @return: true when imported somewhere up the chain.
+	Function of Boolean is isAsImportedInherited(String is className){
+		local Boolean is found: false;
+		local String is walk: self:currentClassName;
+		local Int is hops: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return !found && walk != '' && walk != 'Any' && hops < 8; },
+			iteration: local Function of Boolean(){
+				local ClassInfo is cls: self:findClass(name: walk);
+				if (cls:name != '' && cls:instanceImportsAs(name: className)) {
+					found: true;
+					return true;
+				}
+				walk: cls:baseClass;
+				hops: hops + 1;
+				return true;
+			}
+		);
+		return found;
+	}
+
 	## Collects the as-imported classes providing [methodName] for the
 	## bare scope of the current class — own bindings plus ancestors',
 	## one level deep (INSTANCE.md §2.3). Order-stable diagnostics.
@@ -2375,18 +2408,10 @@ Class is TypeChecker{
 					self:addError(line: m:line, msg: 'Cannot instance-import enum \'' . asName . '\'; enums are type-level (INSTANCE.md E2).');
 					return;
 				}
-				if (asExpr:methodArgs:length() > 0) {
-					self:addError(line: m:line, msg: 'Instance imports with constructor arguments are not supported yet; use \'as ' . asName . '()\' (INSTANCE.md E1 v1).');
-				}
-				local Boolean is isFieldFul: false;
-				target:members:each(action: local Function(Member is tm){
-					if (tm:kind == MemberKind:FIELD && tm:name != 'using' && tm:name != 'namespace' && tm:name != 'group' && tm:name != 'castable') {
-						isFieldFul: true;
+					if (target:typeParams:length() > 0) {
+						self:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (INSTANCE.md §10).');
+						return;
 					}
-				});
-				if (isFieldFul) {
-					self:addError(line: m:line, msg: 'Cannot instance-import \'' . asName . '\': the class declares fields; v1 supports field-less classes only (INSTANCE.md E2 v1).');
-				}
 			});
 		});
 	}
