@@ -815,6 +815,16 @@ Class is CodeGenerator{
 		}
 		if (kind == ExpressionKind:CALL) {
 			local String is targetType: self:inferTargetType(expr: expr:methodTarget);
+			if (targetType == 'math' || targetType == 'output' || targetType == 'error') {
+				# Lowercase floor-singleton usage forms resolve to class names.
+				if (targetType == 'math') {
+					targetType: 'Math';
+				} else if (targetType == 'output') {
+					targetType: 'Output';
+				} else {
+					targetType: 'Error';
+				}
+			}
 			if (targetType == self:names:selfIdent() || targetType == '') {
 				targetType: self:currentClassName;
 			}
@@ -837,6 +847,9 @@ Class is CodeGenerator{
 					}
 					return Primitive:INT:value();
 				}
+			}
+			if (targetType == Primitive:INT:value() && expr:methodName == 'toBase') {
+				return 'String';
 			}
 			local String is ret: self:lookupMethodReturnType(className: targetType, methodName: expr:methodName);
 			if (ret == '' || self:isVoidType(t: ret)) {
