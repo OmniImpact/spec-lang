@@ -573,6 +573,36 @@ Class is CodeGenerator{
 		}
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
+			# Unloaded builtin container: resolve from the builtin table so
+			# concat wraps know the result type (fossil parity).
+			if (baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map')) {
+				if (methodName == 'length') { return Primitive:INT:value(); }
+				if (methodName == 'isEmpty' || methodName == 'has' || methodName == 'any') { return Primitive:BOOLEAN:value(); }
+				if (methodName == 'count' || methodName == 'indexOf') { return Primitive:INT:value(); }
+				if (methodName == 'getString' || methodName == 'join') { return Primitive:STRING:value(); }
+				if (methodName == 'getInt') { return Primitive:INT:value(); }
+				if (methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push') { return 'void'; }
+				if (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') {
+					local Array of String is ta: className:split(delimiter: ':');
+					if (ta:length() > 1) {
+						return ta:get(index: 1);
+					}
+					local String is cn: className;
+					if (cn:startsWith(prefix: 'Array of ')) {
+						return cn:substring(start: 9, end: cn:length());
+					}
+					if (cn:startsWith(prefix: 'List of ')) {
+						return cn:substring(start: 8, end: cn:length());
+					}
+					if (cn:startsWith(prefix: 'Map of ')) {
+						local String is rest: cn:substring(start: 7, end: cn:length());
+						local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
+						if (toIdx >= 0) {
+							return rest:substring(start: toIdx + 4, end: rest:length());
+						}
+					}
+				}
+			}
 			return '';
 		}
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
@@ -620,6 +650,36 @@ Class is CodeGenerator{
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
+			# Unloaded builtin container: resolve from the builtin table so
+			# concat wraps know the result type (fossil parity).
+			if (baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map')) {
+				if (methodName == 'length') { return Primitive:INT:value(); }
+				if (methodName == 'isEmpty' || methodName == 'has' || methodName == 'any') { return Primitive:BOOLEAN:value(); }
+				if (methodName == 'count' || methodName == 'indexOf') { return Primitive:INT:value(); }
+				if (methodName == 'getString' || methodName == 'join') { return Primitive:STRING:value(); }
+				if (methodName == 'getInt') { return Primitive:INT:value(); }
+				if (methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push') { return 'void'; }
+				if (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') {
+					local Array of String is ta: className:split(delimiter: ':');
+					if (ta:length() > 1) {
+						return ta:get(index: 1);
+					}
+					local String is cn: className;
+					if (cn:startsWith(prefix: 'Array of ')) {
+						return cn:substring(start: 9, end: cn:length());
+					}
+					if (cn:startsWith(prefix: 'List of ')) {
+						return cn:substring(start: 8, end: cn:length());
+					}
+					if (cn:startsWith(prefix: 'Map of ')) {
+						local String is rest: cn:substring(start: 7, end: cn:length());
+						local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
+						if (toIdx >= 0) {
+							return rest:substring(start: toIdx + 4, end: rest:length());
+						}
+					}
+				}
+			}
 			return '';
 		}
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);

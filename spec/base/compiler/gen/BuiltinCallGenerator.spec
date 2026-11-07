@@ -921,6 +921,9 @@ Class is BuiltinCallGenerator{
 			}
 			return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 		}
+		if (m == 'get') {
+			return 'spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+		}
 		if (m == 'getString') {
 			return 'spec_map_get_string(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		}
@@ -990,7 +993,15 @@ Class is BuiltinCallGenerator{
 			is 'startsWith': { return 'spec_string_has_prefix(' . targetC . ', ' . a0 . ')'; }
 			is 'endsWith': { return 'spec_string_has_suffix(' . targetC . ', ' . a0 . ')'; }
 			is 'replaceAll': { return 'spec_string_replace_all(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-			is 'parseInt': { return 'spec_parse_base(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
+			is 'parseInt': {
+				local String is baseC: '10';
+				local String is defC: '-1';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'base') { baseC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_parse_base(' . targetC . ', ' . baseC . ', ' . defC . ')';
+			}
 			else: { return ''; }
 		}
 	}
