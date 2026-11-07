@@ -427,6 +427,24 @@ Class is CodeGenerator{
 		return containerC;
 	}
 
+	## Formats a type FOR LOCAL/PARAM REGISTRATION: Function types stay
+	## Function-prefixed ('Function:Int') so Function-typed locals dispatch
+	## as closures. (Plain formatTypeString unwraps to the return type,
+	## which is right for C types but wrong for scope maps.)
+	##
+	## @param t: Type descriptor.
+	## @return: Scope-map type name.
+	Function of String is formatVarTypeString(Type is t){
+		if (Primitive:of(t:name) == Primitive:FUNCTION) {
+			if (t:params:length() > 0) {
+				local Type is ret: t:params:get(index: 0);
+				return 'Function:' . self:formatTypeString(t: ret);
+			}
+			return 'Function';
+		}
+		return self:formatTypeString(t: t);
+	}
+
 	## Resolves a method's return type to its C type: enum returns pass by
 	## value (the registry-aware cTypeFor), Function types unwrap to their
 	## return type's C type.
@@ -773,6 +791,20 @@ Class is CodeGenerator{
 			}
 			return self:lookupFieldType(className: leftT, fieldName: expr:stringValue);
 		}
+		if (kind == ExpressionKind:INDEX) {
+			# Indexing a container yields its element type (both spellings).
+			local String is leftT: self:inferTargetType(expr: expr:leftExpr);
+			if (leftT:startsWith(prefix: 'Array:') && leftT:length() > 6) {
+				return leftT:substring(start: 6, end: leftT:length());
+			}
+			if (leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9) {
+				return leftT:substring(start: 9, end: leftT:length());
+			}
+			if (leftT:startsWith(prefix: 'List of ') && leftT:length() > 8) {
+				return leftT:substring(start: 8, end: leftT:length());
+			}
+			return '';
+		}
 		if (kind == ExpressionKind:STRING) {
 			return 'String';
 		}
@@ -944,6 +976,16 @@ Class is CodeGenerator{
 		if (t == 'String') {
 			return exprC;
 		}
+		if (t == 'double' || t == 'long long' || t == 'bool') {
+			# C-typed leaks from resolution — map back to Spec spellings.
+			if (t == 'double') {
+				return 'spec_to_string_float(' . exprC . ')';
+			}
+			if (t == 'bool') {
+				return 'spec_to_string_bool(' . exprC . ')';
+			}
+			return 'spec_to_string_int(' . exprC . ')';
+		}
 		if (t == Primitive:INT:value()) {
 			return 'spec_to_string_int(' . exprC . ')';
 		}
@@ -953,7 +995,11 @@ Class is CodeGenerator{
 		if (t == 'Boolean') {
 			return 'spec_to_string_bool(' . exprC . ')';
 		}
-		if (t != '' && t != Primitive:ANY:value() && self:allClassNames:has(key: t) && !self:policy:isTransparent(c: self:findClass(name: t))) {
+		# Enum values render as their variant name (Color_name(c)).
+		if (t != '' && self:allEnumNames:has(key: t) && !self:allTaggedEnums:has(key: t)) {
+			return t . '_name(' . exprC . ')';
+		}
+		if (t != '' && t != Primitive:ANY:value() && self:allClassNames:has(key: t) && !self:allEnumNames:has(key: t) && !self:policy:isTransparent(c: self:findClass(name: t))) {
 			return 'spec_type_name(' . exprC . ') /* wrap:' . t . ' */';
 		}
 		return exprC;
@@ -1636,7 +1682,7 @@ Class is CodeGenerator{
 		local Array of String is paramNames: [];
 		expr:anonParams:each(action: local Function(Parameter is p){
 			paramNames:add(item: p:name);
-			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
 			paramsC: paramsC . ', ' . pCType . ' ' . self:utils:cIdent(name: p:name);
 		});
@@ -1979,7 +2025,7 @@ Class is CodeGenerator{
 	## @param stmt: The VAR_DECL statement.
 	## @return: C declaration.
 	Function of String is emitVarDecl(Statement is stmt){
-		self:localVars:set(key: stmt:varName, value: self:formatTypeString(t: stmt:varType));
+		self:localVars:set(key: stmt:varName, value: self:formatVarTypeString(t: stmt:varType));
 		self:localScopeVars:set(key: stmt:varName, value: stmt:varType:name);
 		local String is vTypeName: stmt:varType:name;
 		local String is cType: '';
@@ -2234,7 +2280,7 @@ Class is CodeGenerator{
 		self:localScopeVars: Map:init();
 		self:currentParams: Map:init();
 		method:params:each(action: local Function(Parameter is p){
-			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 			self:currentParams:set(key: p:name, value: 'true');
 		});
 
@@ -2604,7 +2650,7 @@ Class is CodeGenerator{
 		local String is paramDecl: '';
 		if (fnExpr:anonParams:length() > 0) {
 			local Parameter is p: fnExpr:anonParams:get(index: 0);
-			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
 			local String is pRaw: '(' . pCType . ')(intptr_t)_a_' . id . '->items[_i_' . id . ']';
 			paramDecl: '        ' . pCType . ' ' . self:utils:cIdent(name: p:name) . ' = ' . pRaw . ";\n";

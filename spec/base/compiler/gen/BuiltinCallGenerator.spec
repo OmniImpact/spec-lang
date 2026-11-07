@@ -385,6 +385,32 @@ Class is BuiltinCallGenerator{
 				});
 				return 'spec_file_read(' . pathC . ', ' . defC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
 			}
+			if (expr:methodName == 'readAsync') {
+				local String is pathC: 'spec_string_intern("")';
+				local String is defC: 'spec_string_intern("")';
+				local String is onSuccC: 'NULL';
+				local String is onErrC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'path') { pathC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onSuccess') { onSuccC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onError') { onErrC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_file_read_async(' . pathC . ', ' . defC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
+			}
+			if (expr:methodName == 'writeAsync') {
+				local String is pathC: 'spec_string_intern("")';
+				local String is contentC: 'spec_string_intern("")';
+				local String is onSuccC: 'NULL';
+				local String is onErrC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'path') { pathC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'content') { contentC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onSuccess') { onSuccC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onError') { onErrC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_file_write_async(' . pathC . ', ' . contentC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
+			}
 			if (expr:methodName == 'write') {
 				local String is pathC: 'spec_string_intern("")';
 				local String is contentC: 'spec_string_intern("")';
@@ -706,22 +732,138 @@ Class is BuiltinCallGenerator{
 				return 'spec_array_join(' . targetC . ', ' . sepC . ')';
 			}
 		}
-		# List methods (SpecVec*/SpecByteBuffer*).
-		if (targetType:startsWith(prefix: 'List')) {
-			local Boolean is byteBuf: targetType == 'List:Byte' || targetType == 'List of Byte';
-			when (m) {
-				is 'push': {
-					if (byteBuf) {
-						return 'spec_bytebuffer_push(' . targetC . ', ' . a0 . ')';
+		# List methods ([Byte] byte-buffer shape; pointer-vector shapes below).
+		if (targetType == 'List:Byte' || targetType == 'List of Byte') {
+			local String is errC: 'spec_noop_closure()';
+			if (m == 'get' || m == 'pop' || m == 'set') {
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'error') {
+						errC: cg:generateExpression(expr: arg:value);
 					}
-					return 'spec_vec_push(' . targetC . ', ' . a0 . ')';
-				}
-				is 'appendString': { return 'spec_bytebuffer_append_string(' . targetC . ', ' . a0 . ')'; }
-				is 'get': { return 'spec_buf_get_byte(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-				is 'pop': { return 'spec_buf_pop_byte(' . targetC . ', ' . a0 . ')'; }
-				is 'length': { return 'spec_vec_length(' . targetC . ')'; }
-				is 'clear': { return 'spec_vec_clear(' . targetC . ')'; }
-				else: {}
+				});
+			}
+			if (m == 'push') {
+				local String is itemC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					itemC: cg:generateExpression(expr: arg:value);
+				});
+				return 'spec_bytebuffer_push(' . targetC . ', (long long)(' . itemC . '))';
+			}
+			if (m == 'appendString') {
+				local String is sC: 'spec_string_intern("")';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					sC: cg:generateExpression(expr: arg:value);
+				});
+				return 'spec_bytebuffer_append_string(' . targetC . ', spec_buf_to_cstring((SpecBuf*)(' . sC . ')))';
+			}
+			if (m == 'get') {
+				local String is idxC: '0';
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')'; }
+				});
+				return 'spec_bytebuffer_get(' . targetC . ', ' . idxC . ', ' . defC . ', ' . errC . ')';
+			}
+			if (m == 'set') {
+				local String is idxC: '0';
+				local String is itemC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'item' || arg:name == 'value') { itemC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')'; }
+				});
+				return 'spec_bytebuffer_set(' . targetC . ', ' . idxC . ', ' . itemC . ', ' . errC . ')';
+			}
+			if (m == 'pop') {
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'default') { defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')'; }
+				});
+				return 'spec_bytebuffer_pop(' . targetC . ', ' . defC . ', ' . errC . ')';
+			}
+			if (m == 'length') {
+				return 'spec_bytebuffer_length(' . targetC . ')';
+			}
+			if (m == 'clear') {
+				return 'spec_bytebuffer_clear(' . targetC . ')';
+			}
+			if (m == 'toString') {
+				return 'spec_bytebuffer_to_string(' . targetC . ')';
+			}
+		}
+
+		# List methods (pointer-vector shapes, element-kind casts).
+		if (targetType:startsWith(prefix: 'List')) {
+			local String is listElem: '';
+			if (targetType:startsWith(prefix: 'List of ') && targetType:length() > 7) {
+				listElem: targetType:substring(start: 7, end: targetType:length());
+			} else if (targetType:startsWith(prefix: 'List:') && targetType:length() > 5) {
+				listElem: targetType:substring(start: 5, end: targetType:length());
+			}
+			local String is elemKind: cg:containerElemKind(containerType: targetType);
+			local String is itemPre: '(void*)(intptr_t)(';
+			local String is itemPost: ')';
+			local String is resCast: '(long long)(intptr_t)';
+			if (elemKind == 'string') {
+				itemPre: '(void*)(';
+				resCast: '(String)';
+			} else if (elemKind == 'object') {
+				itemPre: '(void*)(';
+				resCast: '(' . cg:cTypeFor(typeName: listElem) . ')(intptr_t)';
+			}
+			local String is errC: 'spec_noop_closure()';
+			if (m == 'get' || m == 'pop' || m == 'set') {
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'error') {
+						errC: cg:generateExpression(expr: arg:value);
+					}
+				});
+			}
+			if (m == 'push') {
+				local String is itemC: '0';
+				local Boolean is savedArgV: cg:argMode;
+				cg:setArgMode(m: false);
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					itemC: cg:generateExpression(expr: arg:value);
+				});
+				cg:setArgMode(m: savedArgV);
+				return 'spec_vec_push(' . targetC . ', ' . itemPre . itemC . itemPost . ')';
+			}
+			if (m == 'get') {
+				local String is idxC: '0';
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
+				});
+				return resCast . 'spec_vec_get(' . targetC . ', ' . idxC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
+			}
+			if (m == 'set') {
+				local String is idxC: '0';
+				local String is itemC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'index') { idxC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'item' || arg:name == 'value') {
+						local Boolean is savedArgS: cg:argMode;
+						cg:setArgMode(m: false);
+						itemC: cg:generateExpression(expr: arg:value);
+						cg:setArgMode(m: savedArgS);
+					}
+				});
+				return 'spec_vec_set(' . targetC . ', ' . idxC . ', ' . itemPre . itemC . itemPost . ', ' . errC . ')';
+			}
+			if (m == 'pop') {
+				local String is defC: '0';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
+				});
+				return resCast . 'spec_vec_pop(' . targetC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
+			}
+			if (m == 'length') {
+				return 'spec_vec_length(' . targetC . ')';
+			}
+			if (m == 'clear') {
+				return 'spec_vec_clear(' . targetC . ')';
 			}
 		}
 		return '';

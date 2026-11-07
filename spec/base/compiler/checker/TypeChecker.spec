@@ -1187,9 +1187,13 @@ Class is TypeChecker{
 				else: { res: 'Any'; }
 			}
 		} else {
-			# No builtin-class guesses: every class is registered and declares
-			# its members. An undeclared member is a compile error.
-			self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not declared on class \'' . targetType . '\'.');
+			# Undeclared members are compile errors on LOADED classes; an
+			# unloaded class (floor singleton used without import) resolves
+			# as Any — the runtime magic defines it.
+			local Array of String is uParts: targetType:split(delimiter: ':');
+			if (self:registeredClasses:has(key: uParts:get(index: 0)) && self:findClass(name: uParts:get(index: 0)):name != '') {
+				self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not declared on class \'' . targetType . '\'.');
+			}
 			res: 'Any';
 		}
 		return res;
@@ -2075,6 +2079,14 @@ Class is TypeChecker{
 		self:allEnumVariants: Map:init();
 		self:allStringBackedEnums: Map:init();
 
+		# Builtin container types resolve like primitives: their methods
+		# work with or without an import (the fossil's container branches
+		# were unconditional). When the declaration is loaded its real
+		# signatures apply; when not, calls resolve to the container type.
+		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'While', 'Loop', 'LoopCallback', 'InputHandler'];
+		builtinNames:each(action: local Function(String is bn){
+			self:registeredClasses:set(key: bn, value: bn);
+		});
 		flattened:each(action: local Function(ClassInfo is c){
 			self:registeredClasses:set(key: c:name, value: c:name);
 			if (c:baseClass == self:names:enumHeader()) {

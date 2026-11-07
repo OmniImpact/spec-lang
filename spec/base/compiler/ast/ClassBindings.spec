@@ -43,10 +43,12 @@ Class is ClassBindings{
 		# emission. Common names (Error, Token, ...) stay OFF the list;
 		# floor singletons like error:line need no class at all.
 		local String is name: c:name;
+		# Ansi is NOT transparent: its sequence builders are real Spec
+		# bodies (only the terminal metrics bind to the ioctl floor).
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
 			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
-			name == 'Ansi' || name == 'Parallel' ||
+			name == 'Parallel' ||
 			name == 'List' || name == 'String';
 	}
 
