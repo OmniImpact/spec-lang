@@ -13,6 +13,7 @@
 ## operators ('+', '.', ...) stay plain lexemes.
 
 Enum of String is Punctuation {
+	namespace: ['base', 'compiler', 'lexer'],
 	TERMINATOR: ';',
 	SEPARATOR: ',',
 	BLOCK_OPEN: '{',

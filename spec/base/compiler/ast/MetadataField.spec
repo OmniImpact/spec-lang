@@ -4,6 +4,7 @@
 ## inheritance matching).
 
 Enum of String is MetadataField {
+	namespace: ['base', 'compiler', 'ast'],
 	NAMESPACE: 'namespace',
 	USING: 'using',
 	GROUP: 'group',

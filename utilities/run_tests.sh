@@ -236,7 +236,9 @@ assert_runtime_panic "byte-range-panic" \
 echo "== Exit codes =="
 cat > "$WORK/valid.spec" <<'EOF'
 Class is ValidApp{
-	replace Array of String is using: [base:io:Output];
+	replace Array of Array of String is using: [
+		['base', 'io', Output]
+	];
 	replace Function is init(Map of String to String is args){
 		output:line("valid");
 	}

@@ -8,6 +8,7 @@
 ## [NONE] marks "not a primitive".
 
 Enum of String is Primitive {
+	namespace: ['base', 'compiler', 'ast'],
 	NONE: '',
 	INT: 'Int',
 	FLOAT: 'Float',

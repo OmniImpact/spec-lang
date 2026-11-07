@@ -236,6 +236,10 @@ Class is CodeGenerator{
 			if (c:baseClass == self:names:enumHeader()) {
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
+					# The namespace declaration is metadata, not a variant.
+					if (m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+						return;
+					}
 					self:allEnumVariants:set(key: m:name, value: c:name);
 					# Payload variants make the enum a tagged union.
 					if (m:params:length() > 0) {

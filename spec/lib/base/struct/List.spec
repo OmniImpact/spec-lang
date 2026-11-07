@@ -8,6 +8,7 @@
 ## successful answer, plus an optional error: callback invoked in addition when
 ## a problem occurs. Bracket indexing is not provided on List; use get.
 Class is List of T{
+	namespace: ['base', 'struct'];
 
 	## Appends a byte to a [Byte] buffer. Infallible: the buffer grows.
 	Function is push(Any is b){

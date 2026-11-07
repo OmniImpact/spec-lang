@@ -5,6 +5,7 @@
 ## ExpressionKind with exhaustive `when` arms, never on string comparisons.
 
 Enum of String is ExpressionKind {
+	namespace: ['base', 'compiler', 'ast'],
 	STRING: 'STRING',
 	NUMBER: 'NUMBER',
 	FLOAT: 'FLOAT',

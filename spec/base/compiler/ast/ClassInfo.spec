@@ -6,6 +6,7 @@ Class is ClassInfo{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Member],
+		['base', 'sys', Buf],
 		['base', 'compiler', 'ast', ExpressionKind]
 	];
 
@@ -74,7 +75,10 @@ Class is ClassInfo{
 				return true;
 			}
 		);
-		return self:nsJoined;
+		# An owned copy: callers ride the claim pool, and pool eviction
+		# releases what it holds — returning the cached field itself would
+		# let that release free the cache while this class still owns it.
+		return Buf:stringCopy(b: self:nsJoined);
 	}
 
 	## Cached [namespaceJoined] result.

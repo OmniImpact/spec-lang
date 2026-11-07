@@ -53,121 +53,6 @@ Class is Loader{
 		return self:parseErrors;
 	}
 
-	## Converts a colon-package path to a slash directory path.
-	Class of Loop is PathConvLoop{
-		local String is src;
-		local Int is pos: 0;
-		local String is res: '';
-
-		replace Function is init(String is src){
-			self:src: src;
-			self:pos: 0;
-			self:res: '';
-		}
-
-		replace Function of Boolean is evaluate(){
-			return self:pos < self:src:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:src:charAt(index: self:pos, default: '');
-			if (ch == ':') {
-				self:res: self:res . '/';
-			} else {
-				self:res: self:res . ch;
-			}
-			self:pos: self:pos + 1;
-			return true;
-		}
-	}
-
-	## Resolves an import path to an existing .spec file: as given, then
-	## under lib/. Returns '' when unresolvable.
-	##
-	## @param rawPath: Package identifier or relative path.
-	## @return: The resolved file path, or ''.
-	Function of String is resolvePath(String is rawPath){
-		local PathConvLoop is loop: PathConvLoop:init(src: rawPath);
-		While:run(loop: loop);
-		local String is converted: loop:res;
-
-		# Stdlib resolution first (spec/lib preferred over legacy lib).
-		local String is std: self:resolveLibFile(relUnderLib: converted . '.spec');
-		if (std != '') {
-			return std;
-		}
-
-		local String is cand1: converted . '.spec';
-		if (File:exists(path: cand1)) {
-			return cand1;
-		}
-
-		local String is cand2: 'lib/' . converted . '.spec';
-		if (File:exists(path: cand2)) {
-			return cand2;
-		}
-
-		return '';
-	}
-
-	## Expands wildcard package import paths into standard library file
-	## lists. Entries are lib-root-relative ('base/io/File.spec') so the
-	## caller resolves them through [resolveLibFile] — the migration stdlib
-	## (spec/lib) shadows the legacy lib per file. The compiler:* group
-	## names the fossil compiler's own sources and dies with it.
-	##
-	## @param rawPath: Wildcard package identifier (e.g. "base:io:*").
-	## @return: Array of lib-root-relative file paths.
-	Function of Array of String is expandWildcard(String is rawPath){
-		return when (rawPath) {
-			is 'base:io:*': [
-				'base/io/File.spec',
-				'base/io/Input.spec',
-				'base/io/InputHandler.spec',
-				'base/io/Output.spec',
-				'base/io/Ansi.spec'
-			];
-			is 'base:iterator:*': [
-				'base/iterator/Loop.spec',
-				'base/iterator/LoopControl.spec',
-				'base/iterator/LoopCallback.spec',
-				'base/iterator/While.spec'
-			];
-			is 'base:meta:*': [
-				'base/meta/AST.spec'
-			];
-			is 'base:reflect:*': [
-				'base/reflect/Type.spec',
-				'base/reflect/Parameter.spec',
-				'base/reflect/Member.spec',
-				'base/reflect/ClassInfo.spec'
-			];
-			is 'base:struct:*': [
-				'base/struct/Array.spec',
-				'base/struct/Map.spec'
-			];
-			is 'base:core:*': [
-				'base/core/String.spec',
-				'base/core/Stringable.spec',
-				'base/core/Any.spec'
-			];
-			is 'base:sysinternal:*': [
-				'base/sys/Buf.spec',
-				'base/sysinternal/Dir.spec'
-			];
-			is 'base:sys:*': [
-				'base/sys/Parallel.spec',
-				'base/sys/Process.spec',
-				'base/sys/SourceLocation.spec',
-				'base/sys/StackFrame.spec'
-			];
-			is 'base:math:*': [
-				'base/math/Math.spec'
-			];
-			else: [];
-		};
-	}
-
 	## Recursively reads, tokenizes, and parses a source file and its transitive dependencies.
 	##
 	## @param filePath: Path to target `.spec` file.
@@ -251,23 +136,7 @@ Class is Loader{
 							self:loadArrayFormUsing(item: item, c: c);
 							return;
 						}
-						local String is importStr: item:stringValue;
-						local Array of String is wildcards: self:expandWildcard(rawPath: importStr);
-						if (wildcards:length() > 0) {
-							wildcards:each(action: local Function(String is f){
-								local String is wPath: self:resolveLibFile(relUnderLib: f);
-								if (wPath != '') {
-									self:loadFile(filePath: wPath);
-								}
-							});
-						} else {
-							local String is resolved: self:resolvePath(rawPath: importStr);
-							if (resolved != '') {
-								self:loadFile(filePath: resolved);
-							} else {
-								self:parseErrors:add(item: '  [LoadError] Cannot resolve import \'' . importStr . '\' declared in class \'' . c:name . '\'.');
-							}
-						}
+						self:parseErrors:add(item: '  [LoadError] Malformed import in class \'' . c:name . '\': using entries are package-segment arrays.');
 					});
 				}
 			}
@@ -278,6 +147,236 @@ Class is Loader{
 	## executable's directory and the input file's directory). String segments
 	## name the package; the last element being a bare class identifier loads
 	## that one class, a string loads the whole package directory.
+	## The scan map: class name -> ';'-joined candidate file paths. Built
+	## once from the two scan trees (the input file's tree first, then the
+	## executable's tree), so an import is a single map lookup and the
+	## namespace check at load time is the acceptance test.
+	local Map of String to String is classPaths: Map:init();
+
+	## Package directories seen while scanning: dir path -> ';'-joined
+	## .spec names. The wildcard form (a using entry without a trailing
+	## class) resolves through this: everything in the PACKAGE — the
+	## classes whose declared namespace matches — loads from here.
+	local Map of String to String is packageDirs: Map:init();
+
+	## True once [buildScanIndex] has run.
+	local Boolean is indexBuilt: false;
+
+	## Builds the scan map. Two trees, per the resolution model:
+	##
+	## 1. The directory of the .spec file being compiled, recursively.
+	## 2. The directory of the spec executable, recursively — plus its
+	##    parent when the executable sits in a bin/-style layout (its own
+	##    directory holds no .spec content; the sources live at the prefix).
+	##
+	## Descent prunes locations with no .spec files or directories and
+	## skips dot-directories. The namespace declared inside a file — not
+	## its path — determines the package it provides; the map only says
+	## where to find candidates, and resolution verifies the namespace.
+	Function is buildScanIndex(){
+		self:classPaths: Map:init();
+		self:packageDirs: Map:init();
+		# 1. The input file's tree (project packages override).
+		local String is inDir: self:dirOf(path: self:rootInputPath);
+		if (inDir != '') {
+			self:scanTree(dir: inDir, depth: 0);
+		}
+		# 2. The executable's tree — walking UP while the location holds no
+		# .spec content (a bin/-layout install keeps the sources at the
+		# prefix), bounded at three hops and never reaching a filesystem
+		# root's vast subtrees.
+		local String is exeDir: Dir:exeDir();
+		local Int is ups: 0;
+		# The walk-up loop tracks how many files the scan has indexed: it
+		# keeps climbing while the executable's locations have yielded no
+		# .spec content at all.
+		local Int is indexed: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return ups < 3 && indexed == 0;
+			},
+			iteration: local Function of Boolean(){
+				self:scanTree(dir: exeDir, depth: 0);
+				indexed: self:classPaths:keys():length();
+				if (indexed == 0) {
+					exeDir: self:dirOf(path: exeDir);
+				}
+				ups: ups + 1;
+				return true;
+			}
+		);
+		# 3. The working directory: for a compiler invoked from a project
+		# whose packages sit at the cwd, or a stage binary run from the
+		# repository root during bootstrap.
+		self:scanTree(dir: '.', depth: 0);
+		self:indexBuilt: true;
+	}
+
+	## Recursively collects .spec files under [dir] into the scan map.
+	## Descends only into directories that list entries (the floor's
+	## dirList returns empty for files, pruning them naturally), skips
+	## dot-directories, and stops at [depth] 6.
+	##
+	## @param dir: Directory to scan.
+	## @param depth: Current recursion depth.
+	Function is scanTree(String is dir, Int is depth){
+		if (depth > 8) {
+			return;
+		}
+		local Array of String is entries: Dir:dirList(path: dir);
+		entries:each(action: local Function(String is name){
+			if (name:startsWith(prefix: '.')) {
+				return;
+			}
+			local String is child: Buf:stringCopy(b: dir . '/' . name);
+			if (name:endsWith(suffix: '.spec')) {
+				local String is stem: name:substring(start: 0, end: name:length() - 5);
+				if (self:classPaths:has(key: stem)) {
+					self:classPaths:set(key: stem, value: self:classPaths:getString(key: stem, default: '') . ';' . child);
+				} else {
+					self:classPaths:set(key: stem, value: child);
+				}
+				if (self:packageDirs:has(key: dir)) {
+					self:packageDirs:set(key: dir, value: self:packageDirs:getString(key: dir, default: '') . ';' . name);
+				} else {
+					self:packageDirs:set(key: dir, value: name);
+				}
+				return;
+			}
+			local Array of String is subEntries: Dir:dirList(path: child);
+			if (subEntries:length() > 0) {
+				self:scanTree(dir: child, depth: depth + 1);
+			}
+		});
+	}
+
+	## The candidate paths recorded for [className], in scan order.
+	##
+	## @param className: The class whose file is wanted.
+	## @return: Candidate paths (first-found wins the try order).
+	Function of Array of String is candidatesFor(String is className){
+		local Array of String is out: [];
+		local String is joined: self:classPaths:getString(key: className, default: '');
+		local Int is start: 0;
+		local Int is i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return i <= joined:length();
+			},
+			iteration: local Function of Boolean(){
+				if (i == joined:length() || joined:charAt(index: i, default: '') == ';') {
+					if (i > start) {
+						out:add(item: joined:substring(start: start, end: i));
+					}
+					start: i + 1;
+				}
+				i: i + 1;
+				return true;
+			}
+		);
+		return out;
+	}
+
+	## Number of files loaded so far (package-resolution progress metric).
+	##
+	## @return: The loaded-file count.
+	Function of Int is loadedFileCount(){
+		return self:loadedFiles:length();
+	}
+
+	## True when the loaded program now provides [className] declaring the
+	## namespace [nsJoined] — the namespace IS the package, so this is the
+	## resolution's acceptance test.
+	##
+	## @param nsJoined: The requested namespace, colon-joined.
+	## @param className: The requested class name.
+	## @return: true when provided.
+	Function of Boolean is provides(String is nsJoined, String is className){
+		local Boolean is ok: false;
+		self:loadedClasses:each(action: local Function(ClassInfo is c){
+			if (!ok) {
+				# A package-form request (no class name) accepts any class
+				# declaring the namespace; a class form requires the class.
+				if (className == '') {
+					if (c:namespaceJoined() == nsJoined) {
+						ok: true;
+					}
+				} else {
+					if (c:name == className && c:namespaceJoined() == nsJoined) {
+						ok: true;
+					}
+				}
+			}
+		});
+		return ok;
+	}
+
+	## Resolves one array-form using entry through the scan map: look up
+	## the class name, try each candidate file, and accept the first whose
+	## load declares the requested class in the requested namespace.
+	##
+	## @param parts: The package path segments.
+	## @param termClass: The trailing class identifier.
+	## @param c: The importing class (for diagnostics).
+	Function is resolveImport(Array of String is parts, String is termClass, ClassInfo is c){
+		if (!self:indexBuilt) {
+			self:buildScanIndex();
+		}
+		local String is nsJoined: '';
+		parts:each(action: local Function(String is seg){
+			if (nsJoined == '') {
+				nsJoined: seg;
+			} else {
+				nsJoined: nsJoined . ':' . seg;
+			}
+		});
+		local String is wanted: nsJoined . ':' . termClass;
+		local Array of String is cands: self:candidatesFor(className: termClass);
+		# Class form: try each candidate file; accept the first whose load
+		# declares the requested class in the requested namespace.
+		local Boolean is resolved: false;
+		if (termClass != '') {
+			cands:each(action: local Function(String is cand){
+				if (!resolved) {
+					self:loadFile(filePath: cand);
+					if (self:provides(nsJoined: nsJoined, className: termClass)) {
+						resolved: true;
+					}
+				}
+			});
+		}
+		# Wildcard form (no trailing class): everything in the PACKAGE.
+		# The package's directory locates the candidates; the namespace is
+		# the authority. Class form never reaches here — the map is the
+		# whole mechanism, and the convention is one class per named file.
+		if (!resolved && termClass == '') {
+			local String is dirSuffix: '/' . nsJoined:replaceAll(search: ':', replacement: '/');
+			# The keys array is owned (a var-decl init is a consumption
+			# position): nested loadFile calls claim hundreds of pool slots
+			# and would evict a pool-held keys array mid-iteration.
+			local Array of String is allDirs: self:packageDirs:keys();
+			allDirs:each(action: local Function(String is dirPath){
+				if (dirPath:endsWith(suffix: dirSuffix)) {
+					local String is namesJoined: self:packageDirs:getString(key: dirPath, default: '');
+					local Array of String is names: namesJoined:split(delimiter: ';');
+					names:each(action: local Function(String is name){
+						self:loadFile(filePath: Buf:stringCopy(b: dirPath . '/' . name));
+					});
+				}
+			});
+			if (self:provides(nsJoined: nsJoined, className: '')) {
+				resolved: true;
+			}
+		}
+		if (!resolved) {
+			self:parseErrors:add(item: '  [LoadError] Cannot resolve import \'[' . wanted . ']' . '\' declared in class \'' . c:name . '\'.');
+		}
+	}
+
+	## Parses one array-form using entry and resolves it.
+	##
+	## @param item: The ARRAY expression naming the package segments.
+	## @param c: The importing class.
 	Function is loadArrayFormUsing(Expression is item, ClassInfo is c){
 		local Array of Expression is segs: item:arrayItems;
 		if (segs:length() == 0) {
@@ -292,158 +391,7 @@ Class is Loader{
 				parts:add(item: seg:stringValue);
 			}
 		});
-		local Array of String is roots: self:scanRoots();
-		local Boolean is resolved: false;
-		# Package paths are pure package segments ('base/io/Output'); the
-		# repository layout is the resolver's business. Each root tries the
-		# layout prefixes in priority order: the migration stdlib
-		# (spec/lib), the compiler distribution tree (spec/), the legacy
-		# lib (dies with the fossil), then the bare direct path (the
-		# pre-cascade spelling, kept one generation for the bootstrap).
-		local Array of String is prefixes: ['', 'spec/lib', 'spec', 'lib'];
-		roots:each(action: local Function(String is root){
-			prefixes:each(action: local Function(String is prefix){
-				if (!resolved) {
-					local String is dir: root;
-					if (prefix != '') {
-						dir: dir . '/' . prefix;
-					}
-					parts:each(action: local Function(String is p){
-						dir: dir . '/' . p;
-					});
-					# Ownership note: concat results ride the claim pool, and nested
-					# package loading recycles slots across loadFile calls — a recycled
-					# slot frees a path the parser's sourceFile field still holds. The
-					# floor copy hands loadFile an unambiguously owned string.
-					if (termClass != '') {
-						local String is classFile: Buf:stringCopy(b: dir . '/' . termClass . '.spec');
-						if (File:exists(path: classFile)) {
-							resolved: true;
-							self:loadFile(filePath: classFile);
-							return;
-						}
-						# The class may share a file with its package siblings (e.g.
-						# LintIssue inside Linter.spec): load the whole directory.
-						if (File:exists(path: dir)) {
-							resolved: true;
-							local Array of String is dirNames: Dir:dirList(path: dir);
-							dirNames:each(action: local Function(String is nm){
-								if (nm:endsWith(suffix: '.spec')) {
-									self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
-								}
-							});
-						}
-						return;
-					}
-					if (File:exists(path: dir)) {
-						resolved: true;
-						local Array of String is names: Dir:dirList(path: dir);
-						names:each(action: local Function(String is nm){
-							if (nm:endsWith(suffix: '.spec')) {
-								self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
-							}
-						});
-					}
-				}
-			});
-		});
-		if (!resolved) {
-			local String is wanted: '';
-			parts:each(action: local Function(String is p){
-				if (wanted == '') {
-					wanted: p;
-				} else {
-					wanted: wanted . ':' . p;
-				}
-			});
-			if (termClass != '') {
-				if (wanted == '') {
-					wanted: termClass;
-				} else {
-					wanted: wanted . ':' . termClass;
-				}
-			}
-			self:parseErrors:add(item: '  [LoadError] Cannot resolve import \'[' . wanted . ']' . '\' declared in class \'' . c:name . '\'.');
-		}
-	}
-
-	## Number of files loaded so far (package-resolution progress metric).
-	##
-	## @return: The loaded-file count.
-	Function of Int is loadedFileCount(){
-		return self:loadedFiles:length();
-	}
-
-	## Scan roots for package resolution, in priority order: the input
-	## file's directory and up to three ancestors (so a binary run outside
-	## the project layout still finds the project's packages), then the spec
-	## executable's directory and its parent (a bin/-layout install keeps
-	## packages at the prefix), then the working directory. Input-relative
-	## roots come first so the migration stdlib (spec/lib) shadows the
-	## legacy lib while both exist; the legacy lib only serves classes the
-	## migration has not absorbed yet.
-	Function of Array of String is scanRoots(){
-		local Array of String is roots: [];
-		local String is inDir: self:dirOf(path: self:rootInputPath);
-		local Int is hops: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return inDir != '' && hops < 4;
-			},
-			iteration: local Function of Boolean(){
-				roots:add(item: inDir);
-				inDir: self:dirOf(path: inDir);
-				hops: hops + 1;
-				return true;
-			}
-		);
-		local String is exeDir: Dir:exeDir();
-		roots:add(item: exeDir);
-		local String is upDir: self:dirOf(path: exeDir);
-		if (upDir != '') {
-			roots:add(item: upDir);
-		}
-		roots:add(item: '.');
-		return roots;
-	}
-
-	## Resolves a lib-root-relative path (e.g. 'base/core/String.spec')
-	## against the scan roots under three prefixes, in shadowing priority:
-	## the migration stdlib (spec/lib), the compiler distribution tree
-	## (spec/ — where the sysinternal floor lives), then the legacy lib.
-	## Returns '' when no root serves the file.
-	##
-	## @param relUnderLib: Path relative to the lib root.
-	## @return: The resolved file path, or ''.
-	Function of String is resolveLibFile(String is relUnderLib){
-		local Array of String is roots: self:scanRoots();
-		local String is found: '';
-		local Int is ri: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return found == '' && ri < roots:length();
-			},
-			iteration: local Function of Boolean(){
-				local String is root: roots:get(index: ri);
-				ri: ri + 1;
-				local String is cand: root . '/spec/lib/' . relUnderLib;
-				if (File:exists(path: cand)) {
-					found: cand;
-					return true;
-				}
-				cand: root . '/spec/' . relUnderLib;
-				if (File:exists(path: cand)) {
-					found: cand;
-					return true;
-				}
-				cand: root . '/lib/' . relUnderLib;
-				if (File:exists(path: cand)) {
-					found: cand;
-				}
-				return true;
-			}
-		);
-		return found;
+		self:resolveImport(parts: parts, termClass: termClass, c: c);
 	}
 
 	## Directory portion of a file path ('' when the path has no slash).
@@ -773,17 +721,22 @@ Class is Loader{
 		# using-imports pull the sysinternal floor in transitively, so the
 		# floor is never loaded except behind its wrapper.
 		local Array of String is preloads: [
-			'base/core/String.spec',
-			'base/sys/Buf.spec',
-			'base/sys/Dir.spec',
-			'base/core/Stringable.spec',
-			'base/core/Any.spec'
+			'String',
+			'Buf',
+			'Dir',
+			'Stringable',
+			'Any'
 		];
-		preloads:each(action: local Function(String is rel){
-			local String is path: self:resolveLibFile(relUnderLib: rel);
-			if (path != '') {
-				self:loadFile(filePath: path);
+		preloads:each(action: local Function(String is cls){
+			if (!self:indexBuilt) {
+				self:buildScanIndex();
 			}
+			local Array of String is cands: self:candidatesFor(className: cls);
+			cands:each(action: local Function(String is cand){
+				if (!self:loadedFiles:has(key: cand)) {
+					self:loadFile(filePath: cand);
+				}
+			});
 		});
 
 		self:loadFile(filePath: rootPath);

@@ -6,6 +6,7 @@
 ## string comparisons.
 
 Enum of String is TokenKind {
+	namespace: ['base', 'compiler', 'lexer'],
 	KEYWORD: 'KEYWORD',
 	IDENTIFIER: 'IDENTIFIER',
 	SYMBOL: 'SYMBOL',

@@ -398,7 +398,10 @@ Class is Parser{
 
 		# Shorthand metadata property: `name: <expr>;` — the namespace/using
 		# declaration form (an untyped field with an initializer).
-		if (self:peek():getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:ASSIGN:value()) {
+		# The name may lex as a KEYWORD during transition generations (a
+		# metadata name that shares an enum variant's tag); the ':' is what
+		# actually discriminates the metadata form.
+		if ((self:peek():getTokenKind() == TokenKind:IDENTIFIER || self:peek():getTokenKind() == TokenKind:KEYWORD) && self:peekAhead(offset: 1):getTokenKind() == TokenKind:SYMBOL && self:peekAhead(offset: 1):getValue() == ':') {
 			local Token is nameTok: self:advance();
 			self:advance();
 			local Expression is initExpr: self:parseExpression();

@@ -170,10 +170,18 @@ Class is DeclarationGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			if (c:baseClass == self:names:enumHeader()) {
 				local String is name: c:name;
+				# The namespace declaration is metadata inside the body —
+				# filter it out of the variant surface once, up front.
+				local Array of Member is variants: [];
+				c:members:each(action: local Function(Member is m){
+					if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+						variants:add(item: m);
+					}
+				});
 				if (self:allTaggedEnums:has(key: name)) {
 					out: out . "typedef enum {\n";
 					local Int is tIdx: 0;
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						out: out . '    ' . name . '_TAG_' . self:utils:cIdent(name: m:name) . ' = ' . tIdx . ",\n";
 						tIdx: tIdx + 1;
 					});
@@ -182,34 +190,34 @@ Class is DeclarationGenerator{
 				} else {
 					out: out . "typedef enum {\n";
 					local Int is idx: 0;
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						out: out . '    ' . name . '_' . self:utils:cIdent(name: m:name) . ' = ' . idx . ",\n";
 						idx: idx + 1;
 					});
 					out: out . '} ' . name . ";\n\n";
 
 					out: out . 'static const char* ' . name . "_names[] = {\n";
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						out: out . '    "' . m:name . "\",\n";
 					});
 					out: out . "};\n\n";
 
 					out: out . 'static const ' . name . ' ' . name . "_all_values[] = {\n";
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						out: out . '    ' . name . '_' . self:utils:cIdent(name: m:name) . ",\n";
 					});
 					out: out . "};\n\n";
 
 					out: out . 'static inline String ' . name . '_name(' . name . " self) {\n";
 					out: out . "    switch (self) {\n";
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . m:name . '");' . "\n";
 					});
 					out: out . "        default: return spec_string_intern(\"UNKNOWN\");\n";
 					out: out . "    }\n}\n\n";
 
 					local Boolean is isStrBacked: false;
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						if (m:memberType:name == Primitive:STRING:value()) {
 							isStrBacked: true;
 						}
@@ -224,7 +232,7 @@ Class is DeclarationGenerator{
 					out: out . 'static inline long long ' . name . '_ordinal(' . name . " self) {\n";
 					out: out . "    switch (self) {\n";
 					local Int is ordIdx: 0;
-					c:members:each(action: local Function(Member is m){
+					variants:each(action: local Function(Member is m){
 						out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return ' . ordIdx . ";\n";
 						ordIdx: ordIdx + 1;
 					});
@@ -251,9 +259,16 @@ Class is DeclarationGenerator{
 	## @return: C source text.
 	Function of String is emitStringBacking(String is name, ClassInfo is cls){
 		local String is out: '';
+		# Metadata (the namespace declaration) is not a variant.
+		local Array of Member is variants: [];
+		cls:members:each(action: local Function(Member is m){
+			if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+				variants:add(item: m);
+			}
+		});
 		out: out . 'static inline String ' . name . '_value(' . name . " self) {\n";
 		out: out . "    switch (self) {\n";
-		cls:members:each(action: local Function(Member is m){
+		variants:each(action: local Function(Member is m){
 			out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . self:variantTag(m: m) . '");' . "\n";
 		});
 		out: out . "        default: return spec_string_intern(\"\");\n";
@@ -261,7 +276,7 @@ Class is DeclarationGenerator{
 
 		local String is emptyVariant: '';
 		out: out . 'static inline ' . name . ' ' . name . '_of(String v) {' . "\n";
-		cls:members:each(action: local Function(Member is m){
+		variants:each(action: local Function(Member is m){
 			local String is valStr: self:variantTag(m: m);
 			if (valStr == '') {
 				emptyVariant: m:name;
@@ -285,10 +300,17 @@ Class is DeclarationGenerator{
 	## @return: C source text.
 	Function of String is emitIntBacking(String is name, ClassInfo is cls){
 		local String is out: '';
+		# Metadata (the namespace declaration) is not a variant.
+		local Array of Member is variants: [];
+		cls:members:each(action: local Function(Member is m){
+			if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+				variants:add(item: m);
+			}
+		});
 		out: out . 'static inline long long ' . name . '_value(' . name . " self) {\n";
 		out: out . "    switch (self) {\n";
 		local Int is vIdx: 0;
-		cls:members:each(action: local Function(Member is m){
+		variants:each(action: local Function(Member is m){
 			local String is valNum: '' . vIdx;
 			if (m:hasInit) {
 				local Expression is initE: m:initExpr;
@@ -402,10 +424,17 @@ Class is DeclarationGenerator{
 	## @return: C source text.
 	Function of String is emitTaggedEnumStruct(String is name, ClassInfo is cls){
 		local String is out: '';
+		# Metadata (the namespace declaration) is not a variant.
+		local Array of Member is variants: [];
+		cls:members:each(action: local Function(Member is m){
+			if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+				variants:add(item: m);
+			}
+		});
 		out: out . 'struct ' . name . " {\n";
 		out: out . '    ' . name . "_Tag _tag;\n";
 		out: out . "    const char* _variant_name;\n";
-		cls:members:each(action: local Function(Member is m){
+		variants:each(action: local Function(Member is m){
 			local String is vName: self:utils:cIdent(name: m:name);
 			m:params:each(action: local Function(Parameter is p){
 				out: out . '    ' . self:utils:cTypeFor(typeName: p:paramType:name) . ' ' . vName . '_' . self:utils:cIdent(name: p:name) . ";\n";
@@ -413,7 +442,7 @@ Class is DeclarationGenerator{
 		});
 		out: out . "};\n\n";
 
-		cls:members:each(action: local Function(Member is m){
+		variants:each(action: local Function(Member is m){
 			local String is vName: self:utils:cIdent(name: m:name);
 			if (m:params:length() == 0) {
 				out: out . 'static inline ' . name . '* ' . name . '_' . vName . "_ctor(void) {\n";

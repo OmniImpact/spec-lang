@@ -6,6 +6,7 @@
 ## [NONE] marks "not a keyword".
 
 Enum of String is Keyword {
+	namespace: ['base', 'compiler', 'lexer'],
 	NONE: '',
 	LOCAL: 'local',
 	CONTAINED: 'contained',
