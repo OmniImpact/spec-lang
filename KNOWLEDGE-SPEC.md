@@ -1,6 +1,12 @@
 # Spec — AI Agent Bootstrap
 
-Strictly typed, class-based, compiles to C11 via `gcc`. Self-hosted: the compiler is written in Spec. Never-null (no null; fallible reads require `default:`). Tabs for indentation.
+Strictly typed, class-based, compiles to C11 via `gcc`. Written in itself: the compiler is Spec source (`spec/base/compiler/`), bootstrapped from the canonical C seed `bootstrap/spec.c`, with the self-hosting fixed point (the compiler recompiles its own sources to byte-identical C) verified on every `./bootstrap.sh`. Never-null (no null; fallible reads require `default:`). Tabs for indentation.
+
+## Layout
+- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String), `io`, `math`, `struct` (Array/Map/List), `iterator`, `sys`. The declared namespace IS the package; directories are organization only.
+- `spec/base/sysinternal/` — the C floor (Buf, Dir, Reflection): body-less declarations bound to C by the `spec_<snake(method)>` naming convention. Only same-name wrappers in `base:sys` may call the floor; the checker enforces it.
+- `spec/base/compiler/` — the compiler: lexer, parser, checker, gen (CodeGenerator/BuiltinCallGenerator/DeclarationGenerator/RuntimePrelude), loader, linter, driver.
+- `bootstrap/spec.c` — the canonical seed. `bin/spec` — the built compiler.
 
 ## Grammar
 Keywords: `local` `contained` `replace` `merge` `is` `as` `of` `to` `if` `else` `return` `when`.
@@ -12,7 +18,7 @@ Conversion targets of `as`: `Hex` `Bin` `Oct`.
 Declaration grammar: `<modifiers> <Type> is <name>`.
 - Class: `Class of Parent1, Parent2 is Name of T { ... }` (pre-name `of` = parents, post-name `of` = generic params).
 - Variable: `local Int is count: 10;`
-- Method: `replace Function of Ret is name(Type is param) { ... }`; shorthand (inferred modifiers): `name(Type is p) -> Ret { ... }`
+- Method: `replace Function of Ret is name(Type is param) { ... }`; body-less interface form: `Function of T is name(params);` (floor declarations only).
 - Field: `local String is title: 'text';` or `local String is title;` (deferred, must be set in init).
 - `Class is Name` with no parents implicitly extends root `Any`.
 
@@ -22,6 +28,16 @@ Operators: `+ - * / %` arithmetic; `& | ^ << >> ~` bitwise (Int only); `.` strin
 String literals: `"..."` (escape-processed), `'...'` (raw).
 Base literals: `0xFF` `0b1010` `0o755` `1_000_000` (underscore separators; bare leading zero stays decimal).
 Casts: `value as Target`.
+
+## Imports & Resolution
+Array-form, pure package segments; the trailing segment names a class, omitting it imports the whole package (wildcard):
+```spec
+replace Array of Array of String is using: [
+	['base', 'io', Output],
+	['base', 'struct', Array]
+];
+```
+The loader scans two trees — the directory of the `.spec` file being compiled and the compiler executable's (walking up while a location holds no `.spec` content) — plus the working directory, recursively, pruning locations with no `.spec` content. It keeps a map (class name → candidate files); resolution loads the candidate and verifies its **declared namespace** — the namespace is the package, the map only says where to find candidates. One class per named file (the map key is the file-name stem). The root classes `String` `Buf` `Dir` `Stringable` `Any` are preloaded before user code; implicit `of Any` is appended to parentless non-enum classes.
 
 ## Visibility
 - No modifier = public: overridable, callable everywhere.
@@ -39,7 +55,7 @@ Casts: `value as Target`.
 - `replace`/`merge` on non-public ancestor members = error.
 
 ## Grouping (Partials)
-Fragment declares `Array of String is group: [Target];`. Loader merges into target; duplicate members = error; at most one `init`; fragments must not declare parents.
+Fragment declares `Array of Array of String is group: [Target];`. Loader merges into target; duplicate members = error; at most one `init`; fragments must not declare parents.
 
 ## Control Flow
 ```spec
@@ -68,6 +84,7 @@ Loops (no `while`/`for` keywords): `Loop` subclass + `While:run(loop:, control:)
 ## Collections
 - `Array of T`: `["a","b"]` `[]` `arr[i]` `arr[i]: v` — `length get set add pop removeAt slice clear indexOf join isEmpty each map fold filter count any`
 - `Map of K to V`: `["k": v]` `[:]` `m[k]` `m[k]: v` — `getString getInt getFloat getBool get set has remove keys length each`
+- `List of T`: `push appendString get set pop length clear toString` (`[Byte]` is the string-builder floor)
 
 ## Builtins (selected)
 - `output:line(text)` stdout; `error:line(text)` stderr
@@ -80,8 +97,12 @@ Loops (no `while`/`for` keywords): `Loop` subclass + `While:run(loop:, control:)
 ## Casts
 `expr as Target` — `Int` `Float` (numeric), `Hex` `Bin` `Oct` (Int→String format w/ optional width; String→Int parse, failures yield 0), class names (up/downcast, unchecked), `Any` (identity). Chaining rejected. Class instances in concatenation render class name (generated `toString`); enums render variant name.
 
+## Memory
+Reference counting with scope-end releases; runtime binaries verified leak-free under ASan/LSan. Claim pool for transient expression results (32-slot ring); parameters are borrows. The compiler process's own AST slack at exit is a known item (arena model, plan §8).
+
 ## Compiler
 - Exit: 0=ok, 1=compile/load/type/gcc error, 2=usage. Diagnostics on stderr.
-- `./spec -i file.spec -o binary`; `--lint file.spec`; `--emit-c out.c`
+- `bin/spec -i file.spec -o binary`; `--lint file.spec`; `--emit-c out.c`; `--gc=boehm`; `--quiet`.
 - Grouping: fragment declares `group: [Target]`; merges at load; duplicate members error.
-- Root files `lib/base/core/Any.spec` and `Stringable.spec` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
+- Root classes `String` `Buf` `Dir` `Stringable` `Any` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
+- Suite: `bash utilities/run_tests.sh` (70 checks); sanitized: `bash utilities/run_sanitized.sh` (the compiler under ASan).
