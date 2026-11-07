@@ -178,3 +178,30 @@ distribution's sysinternal floor. The old `lib/` is frozen — no edits.
   unconditionally and the generator binds it to the floor.
 - **Endgame**: when the fossil retires, legacy `lib/` is deleted and
   the loader's `lib/` prefix falls away — one resolver, one stdlib.
+
+## 7. Sysinternal wrapper discipline (designed; landing next)
+
+The floor is only ever touched by same-name wrappers in `base:sys`:
+
+- `base:sysinternal` keeps the C-bound interface, absolutely minimal.
+- `base:sys` carries same-name wrapper classes (`Buf`, `Dir`,
+  `Reflection` — drafted in `spec/lib/base/sys/`) with full access to
+  the floor by its QUALIFIED chain (`base:sysinternal:Buf:bufLength`),
+  and may add methods beyond the floor.
+- The checker enforces: any qualified sysinternal call from a class
+  whose namespace is not `['base','sys']` is a compile error.
+- Class identity becomes namespace-qualified in the Loader's dedupe
+  (`namespaceJoined + ':' + name`) so the wrapper and floor coexist;
+  bare names resolve to the public wrapper (it registers first — the
+  floor loads through the wrapper's imports, never directly).
+
+Landing requires a TWO-GENERATION bootstrap (the generation gap):
+existing binaries embed the bare-name-dedupe loader, which silently
+drops the second `Buf`. Sequence: (A) revert preloads/consumer imports
+to floor-direct, build bin/spec with the fossil — its embedded NEW
+loader has qualified dedupe; (B) flip preloads to `base/sys` wrappers
+and consumers to wrapper imports; bin/spec-A builds that generation;
+then the fixed-point chain as usual. The wrapper drafts, the checker
+enforcement patch, the qualified findClass paths, and the consumer
+migration are all written (this session) and revertible from git
+history of this branch's next commit.
