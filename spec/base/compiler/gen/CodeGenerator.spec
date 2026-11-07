@@ -2521,9 +2521,12 @@ Class is CodeGenerator{
 		header: header . ") {\n";
 
 		# Body first: unused-parameter suppressions need the finished text.
-		local String is bodyC: '';
+		# The accumulator is a fresh mutable buffer grown IN PLACE — a concat
+		# per statement would copy the whole body each time (quadratic).
+		local String is bodyC: Buf:stringCopy(b: '');
 		method:body:each(action: local Function(Statement is stmt){
-			bodyC: bodyC . self:generateStatement(stmt: stmt);
+			local String is stmtC: self:generateStatement(stmt: stmt);
+			Buf:bufAppendBuf(dst: bodyC, src: stmtC);
 		});
 
 		if (method:body:length() == 0 && retType != 'void') {

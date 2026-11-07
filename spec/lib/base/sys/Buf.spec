@@ -129,6 +129,15 @@ Class is Buf{
 		return base:sysinternal:Buf:stringLines(b: b);
 	}
 
+	## Appends the bytes of [src] to the end of [dst] in place. [dst] must
+	## be a mutable (non-interned) buffer — the accumulator's sole owner.
+	##
+	## @param dst: The buffer grown in place.
+	## @param src: The bytes appended.
+	Function is bufAppendBuf(String is dst, String is src){
+		base:sysinternal:Buf:bufAppendBuf(dst: dst, src: src);
+	}
+
 	## Parses buffer [b] as an integer in [base] (2-36), accepting 0x/0b/0o
 	## prefixes and _ separators. Returns [def] on any invalid input.
 	##
