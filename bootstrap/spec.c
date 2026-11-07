@@ -38042,7 +38042,7 @@ static __attribute__((unused)) void _anon_fn_596(void* _env_ptr, Statement* stmt
     String bodyC = _env->bodyC;
     (void)bodyC;
     SPEC_AUTO String stmtC = CodeGenerator_generateStatement(self, stmt) /* inst:CodeGenerator:generateStatement */;
-    ({ Buf* _inst = Buf_new(); Buf_bufAppendBuf(_inst, bodyC, stmtC); _inst; });
+    Buf_bufAppendBuf(NULL, bodyC, stmtC);
 }
 
 typedef struct {
@@ -55302,7 +55302,7 @@ String CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDef, Me
         Statement* stmt = (Statement*)(intptr_t)_a_597->items[_i_597];
         do {
     SPEC_AUTO String stmtC = CodeGenerator_generateStatement(self, stmt) /* inst:CodeGenerator:generateStatement */;
-    ({ Buf* _inst = Buf_new(); Buf_bufAppendBuf(_inst, bodyC, stmtC); _inst; });
+    Buf_bufAppendBuf(NULL, bodyC, stmtC);
     if (stmtC) { spec_release((void*)stmtC); stmtC = NULL; }
         } while (0);
     } } });

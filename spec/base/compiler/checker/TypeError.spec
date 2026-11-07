@@ -8,7 +8,7 @@ Class is TypeError{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', Error],
-		['base', 'sys', Reflection]
+		['base', 'sys', as Reflection()]
 	];
 
 	## One-based source line (0 when the error is program-level).

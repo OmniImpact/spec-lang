@@ -12,18 +12,19 @@ Class is Loader{
 	namespace: ['base', 'compiler', 'loader'];
 
 	replace Array of Array of String is using: [
-		['base', 'io', File],
+		['base', 'io', as File()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
-		['base', 'sys', Buf],
-		['base', 'sys', Dir],
+		['base', 'sys', as Buf()],
+		['base', 'sys', as Dir()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	local Map of String to String is loadedFiles: Map:init();

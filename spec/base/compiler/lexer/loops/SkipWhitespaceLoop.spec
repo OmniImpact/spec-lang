@@ -7,7 +7,8 @@ Class of Loop is SkipWhitespaceLoop{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'lexer', 'loops', SkipCommentLoop],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	local Lexer is lexer;

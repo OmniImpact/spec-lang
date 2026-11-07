@@ -40,7 +40,9 @@ Class is TypeChecker{
 		['base', 'compiler', 'checker', 'loops', MethodSearchLoop],
 		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
 		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()],
+		['base', 'sys', as Reflection()]
 	];
 
 	## Registered classes: name -> "true".

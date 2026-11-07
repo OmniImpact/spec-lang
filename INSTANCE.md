@@ -281,11 +281,13 @@ on seed/source disagreement.
   mechanical rewrites are semantics-preserving — except void-static-discard
   sites (D2), which become *more* correct (state persists); the suite
   adjudicates each.
-  - [ ] A1: stdlib leaves — `math`, `io` (R1/R2 groundwork), `iterator`
-    (`as While()` keeps all `While:run`/`While:condition` sites byte-identical),
-    `sys` wrappers.
-  - [ ] A2: compiler packages, leaves first (`ast`, `lexer`, `parser`, then
-    `checker`, `gen`, `loader`, `linter`, `driver`).
+  - [x] A1: stdlib (DONE — `String.spec` `as Buf()`/`as While()`,
+    `Array.spec` `as While()`; fixed point byte-identical across the
+    migration, proving §2.4; worklist 218 → 163).
+  - [x] A2: compiler packages (DONE — `as While()` in 14 files,
+    `as Process()`/`as File()`/`as Dir()`/`as Arena()` in Driver,
+    `as Reflection()` in Parser/Lexer/TypeChecker/TypeError, `as Buf()`
+    in Loader/CodeGenerator/ClassInfo; worklist 163 → 31).
   - [ ] A3: `tests/` + `examples/` sweep.
   - [ ] A4: singletons — R1, R2, R3 (class added, aliases deleted).
   - [ ] A5: bare-scope/collision pass — resolve each forced-qualification

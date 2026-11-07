@@ -32,7 +32,9 @@ Class is CodeGenerator{
 		['base', 'compiler', 'gen', RuntimePrelude],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()],
+		['base', 'sys', as Buf()]
 	];
 
 	## Backend utilities.

@@ -11,11 +11,11 @@ Class is Driver{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
-		['base', 'io', File],
+		['base', 'io', as File()],
 		['base', 'io', Output],
-		['base', 'sys', Process],
-		['base', 'sys', Dir],
-		['base', 'sysinternal', Arena],
+		['base', 'sys', as Process()],
+		['base', 'sys', as Dir()],
+		['base', 'sysinternal', as Arena()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],

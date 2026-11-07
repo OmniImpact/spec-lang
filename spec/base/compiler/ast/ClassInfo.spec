@@ -6,8 +6,9 @@ Class is ClassInfo{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Member],
-		['base', 'sys', Buf],
-		['base', 'compiler', 'ast', ExpressionKind]
+		['base', 'sys', as Buf()],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'iterator', as While()]
 	];
 
 	## Class identifier.

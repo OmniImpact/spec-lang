@@ -35,8 +35,9 @@ Class is Lexer{
 		['base', 'compiler', 'lexer', 'loops', StripLeadingZerosLoop],
 		['base', 'compiler', Error],
 		['base', 'compiler', ErrorText],
-		['base', 'sys', Reflection],
-		['base', 'iterator']
+		['base', 'sys', as Reflection()],
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	## The full source text being scanned. Public because the scan loops

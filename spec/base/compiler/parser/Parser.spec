@@ -33,7 +33,7 @@ Class is Parser{
 		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', Error],
-		['base', 'sys', Reflection],
+		['base', 'sys', as Reflection()],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'parser', PrecedenceLevel],
 		['base', 'compiler', 'parser', 'loops', BinaryFoldLoop],
@@ -53,7 +53,8 @@ Class is Parser{
 		['base', 'compiler', 'parser', 'loops', TemplateSplitLoop],
 		['base', 'compiler', 'parser', 'loops', TemplateFoldLoop],
 		['base', 'compiler', 'parser', 'loops', FancyEscapeLoop],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	local Array of Token is tokens: [];

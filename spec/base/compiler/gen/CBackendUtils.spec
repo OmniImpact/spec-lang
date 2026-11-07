@@ -9,7 +9,8 @@ Class is CBackendUtils{
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'lexer', Token],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	## Maps a Spec type name to its C11 type. Containers accept both

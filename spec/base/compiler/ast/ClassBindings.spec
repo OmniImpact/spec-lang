@@ -24,7 +24,8 @@ Class is ClassBindings{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	## True when the backend must not emit a struct, vtable, or constructor

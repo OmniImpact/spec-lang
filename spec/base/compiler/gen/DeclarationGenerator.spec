@@ -24,7 +24,8 @@ Class is DeclarationGenerator{
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	## Enum name -> "true" (string-backed enums included).

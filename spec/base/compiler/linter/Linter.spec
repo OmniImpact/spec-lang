@@ -21,7 +21,8 @@ Class is Linter{
 		['base', 'io', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	## Audit name sets (INSTANCE.md Phase 0.5): every enum and class name in

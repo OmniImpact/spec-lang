@@ -13,7 +13,8 @@ Class of Loop is PostfixLoop{
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', TokenKind],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	local Parser is parser;

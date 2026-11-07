@@ -13,7 +13,8 @@ Class of Loop is EnumVariantsLoop{
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'iterator', as While()]
 	];
 
 	local Parser is parser;
