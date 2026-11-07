@@ -1220,6 +1220,10 @@ Class is TypeChecker{
 				}
 				else: { res: 'Any'; }
 			}
+		} else if (targetType == Primitive:INT:value() && method == 'toBase') {
+			# Int:toBase is a floor binding (spec_int_to_base) returning a
+			# String; Int has no loaded declaration to consult.
+			res: Primitive:STRING:value();
 		} else {
 			# Undeclared members are compile errors on LOADED classes; an
 			# unloaded class (floor singleton used without import) resolves
