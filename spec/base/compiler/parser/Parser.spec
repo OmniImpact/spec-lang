@@ -562,6 +562,11 @@ Class is Parser{
 			return self:parseForwardStatement(startLine: startLine);
 		}
 
+		# Scoped callback statement: `as: call;` or `as (params): call;`.
+		if (self:checkKeyword(kw: Keyword:AS)) {
+			return self:parseAsStatement(startLine: startLine);
+		}
+
 		if (self:atClassHeader()) {
 			local ClassInfo is cls: self:parseClass();
 			local Statement is s: Statement:init(kind: StatementKind:CLASS);
@@ -627,6 +632,14 @@ Class is Parser{
 
 		if (self:checkKeyword(kw: Keyword:RETURN)) {
 			self:advance();
+			if (self:checkKeyword(kw: Keyword:AS)) {
+				local Statement is asStmt: self:parseAsStatement(startLine: startLine);
+				local Statement is s: Statement:init(kind: StatementKind:RETURN);
+				s:setLine(line: startLine);
+				s:returnExpr: asStmt:exprStmt;
+				s:hasReturnExpr: true;
+				return s;
+			}
 			local Expression is retExpr;
 			local Boolean is hasExpr: false;
 			if (!self:checkPunct(p: Punctuation:TERMINATOR)) {
@@ -728,6 +741,73 @@ Class is Parser{
 		local Statement is s: Statement:init(kind: StatementKind:FORWARD);
 		s:setLine(line: startLine);
 		s:forwardArgs: args;
+		return s;
+	}
+
+	## Parses an `as` statement that desugars into a trailing callback:
+	##   `as: callExpr;`
+	##   `as (params): callExpr;`
+	##   `as (params) of Type: callExpr;`
+	##
+	## The remainder of the enclosing block is collected into an anonymous
+	## function and appended as a trailing positional argument to callExpr.
+	##
+	## @param startLine: Source line of the `as` keyword.
+	## @return: The desugared EXPR statement holding the call.
+	local Function of Statement is parseAsStatement(Int is startLine){
+		self:advance();
+		local Array of Parameter is params: [];
+		local Boolean is hasParams: false;
+		if (self:checkPunct(p: Punctuation:GROUP_OPEN)) {
+			self:advance();
+			hasParams: true;
+			While:run(loop: ParamLoop:init(parser: self, params: params));
+			self:matchPunct(p: Punctuation:GROUP_CLOSE);
+		}
+		local Type is returnType: Type:init(name: self:names:voidName());
+		if (self:checkKeyword(kw: Keyword:OF)) {
+			self:advance();
+			returnType: self:parseType();
+		}
+		if (self:checkPunct(p: Punctuation:ACCESSOR)) {
+			self:advance();
+		} else if (!hasParams) {
+			self:matchPunct(p: Punctuation:ACCESSOR);
+		}
+		local Expression is callExpr: self:parseExpression();
+		self:matchPunct(p: Punctuation:TERMINATOR);
+
+		local Array of Statement is closureBody: [];
+		While:run(loop: BlockStatementsLoop:init(parser: self, stmts: closureBody));
+
+		local Expression is anonFn: Expression:init(kind: ExpressionKind:ANON_FN);
+		anonFn:anonReturnType: returnType;
+		anonFn:anonParams: params;
+		anonFn:anonBody: closureBody;
+
+		if (callExpr:kind != ExpressionKind:CALL) {
+			local Expression is c: Expression:init(kind: ExpressionKind:CALL);
+			if (callExpr:kind == ExpressionKind:FIELD_ACCESS) {
+				c:methodTarget: callExpr:leftExpr;
+				c:methodName: callExpr:stringValue;
+			} else if (callExpr:kind == ExpressionKind:IDENT) {
+				local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
+				selfTarget:stringValue: self:names:selfIdent();
+				c:methodTarget: selfTarget;
+				c:methodName: callExpr:stringValue;
+			} else {
+				c:methodTarget: callExpr;
+				c:methodName: '';
+			}
+			c:methodArgs: [];
+			callExpr: c;
+		}
+
+		callExpr:methodArgs:add(item: NamedArg:init(name: '', value: anonFn));
+
+		local Statement is s: Statement:init(kind: StatementKind:EXPR);
+		s:setLine(line: startLine);
+		s:exprStmt: callExpr;
 		return s;
 	}
 
@@ -1048,7 +1128,7 @@ Class is Parser{
 				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
 			iteration: local Function(){
-				if (!self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:IF) && !self:checkKeyword(kw: Keyword:WHEN)) {
+				if (!self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:IF) && !self:checkKeyword(kw: Keyword:WHEN) && !self:checkKeyword(kw: Keyword:AS)) {
 					local Expression is expr: self:parseExpression();
 					if (self:checkPunct(p: Punctuation:ASSIGN)) {
 						self:advance();

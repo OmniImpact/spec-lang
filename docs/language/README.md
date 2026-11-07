@@ -38,6 +38,8 @@
 6. [Compiler Error Recovery & Multi-File Provenance](#compiler-error-recovery--multi-file-provenance)
 7. [Unblockable Concurrency & Iteration Model](#unblockable-concurrency--iteration-model)
    - [Pure Loop Decoupling (`Loop`, `While:run`)](#pure-loop-decoupling)
+   - [Concise Scoped Loops (`While`)](#concise-scoped-loops-while)
+   - [Scoped Region Desugaring (`as`)](#scoped-region-desugaring-as)
    - [Terminating Iterations (No `break` Keyword)](#terminating-iterations-no-break-keyword)
    - [Event-Driven Non-Blocking Input](#event-driven-non-blocking-input)
 
@@ -778,6 +780,34 @@ While(
 - **Mixed Scope**: Loop bodies can read and mutate variables and collections declared in the outer scope (e.g. `sum`).
 - **Zero Overhead**: Inlined directly by the compiler into native C11 statement expressions `({ ... while (1) { ... } ... })` with zero heap allocations, zero closure wrappers, and pure register loop performance.
 - **Function Block Shorthand**: `{ ... }` acts as an anonymous function argument, auto-returning single-expression bodies `{ i < max }`.
+
+### Scoped Region Desugaring (`as`)
+Spec supports Gleam-style scoped block desugaring using the existing `as` keyword. An `as` statement desugars the entire remainder of its enclosing block into an anonymous callback passed as the trailing positional argument to the target call:
+
+```spec
+# Parameterless: acquires resource, runs remainder of block, cleans up
+as: self:withResource("data.txt", log: log);
+log:add("reading line 1");
+log:add("reading line 2");
+
+# With parameter bindings: typed or untyped
+as (String is text): self:readFile("config.json");
+output:line("Loaded: " . text);
+
+# Linear nested pipelines without rightward drift:
+as (Int is a): self:stepOne();
+as (Int is b): self:stepTwo(a);
+as (Int is c): self:stepThree(b);
+output:line("Final result: " . c);
+
+# Returning results from scoped regions:
+return as of Int: self:computeWith(base: 2);
+return 5; # Returns 5 * 2 = 10 from computeWith and the enclosing method
+```
+
+- **Zero Rightward Drift**: Flattens nested callbacks and resource scopes into clean, sequential, unindented lines.
+- **LIFO Unwinding**: Multiple nested `as` resource blocks naturally execute and unwind in reverse order upon block exit.
+- **Zero New Keywords**: Reuses `as` at statement start unambiguously.
 
 ### Terminating Iterations (No `break` Keyword)
 Because loops are evaluated explicitly per iteration:

@@ -2042,6 +2042,13 @@ Class is CodeGenerator{
 							matched: true;
 						}
 					}
+					if (!matched && pIdx == params:length() - 1 && args:length() > 0) {
+						local NamedArg is lastArg: args:get(index: args:length() - 1);
+						if (lastArg:name == '') {
+							argC: self:generateExpression(expr: lastArg:value);
+							matched: true;
+						}
+					}
 					if (!matched && p:hasDefault) {
 						argC: self:generateExpression(expr: p:defaultExpr);
 						matched: true;

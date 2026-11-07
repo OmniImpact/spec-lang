@@ -81,6 +81,8 @@ Enum is Result { Ok(String is data), Err(Int is code) }
 
 Loops (no `while`/`for` keywords): scoped inline `While([Int is i: 0], evaluate: { i < max }, iterate: { ... })` with function block shorthand `{ ... }` (inlines to zero-allocation C11 statement expression); `Loop` subclass + `While:run(loop:, control:)`; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
 
+Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `return as of Type: call(...)`) desugars the remainder of the enclosing block into an anonymous callback passed as the trailing positional argument to the call, linearizing nested callback pyramids without rightward drift.
+
 ## Collections
 - `Array of T`: `["a","b"]` `[]` `arr[i]` `arr[i]: v` — `length get set add pop removeAt slice clear indexOf join isEmpty each map fold filter count any`
 - `Map of K to V`: `["k": v]` `[:]` `m[k]` `m[k]: v` — `getString getInt getFloat getBool get set has remove keys length each`
