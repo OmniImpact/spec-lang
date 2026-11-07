@@ -1153,13 +1153,38 @@ Class is TypeChecker{
 			# from the type string itself.
 			local String is cRet: self:lookupMethodReturnType(className: targetType, methodName: method);
 			if (cRet == '' || self:isVoid(t: cRet)) {
+				# Unloaded declaration: resolve from the builtin method table
+				# (fossil parity) with element types from the type string.
 				res: targetType;
 				local Array of String is scParts: targetType:split(delimiter: ':');
-				if ((targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt')) {
-					res: scParts:get(index: 1);
+				when (method) {
+					is 'length': { res: Primitive:INT:value(); }
+					is 'isEmpty': { res: Primitive:BOOLEAN:value(); }
+					is 'count': { res: Primitive:INT:value(); }
+					is 'any': { res: Primitive:BOOLEAN:value(); }
+					is 'has': { res: Primitive:BOOLEAN:value(); }
+					is 'getString': { res: Primitive:STRING:value(); }
+					is 'getInt': { res: Primitive:INT:value(); }
+					is 'getFloat': { res: Primitive:FLOAT:value(); }
+					is 'getBool': { res: Primitive:BOOLEAN:value(); }
+					is 'indexOf': { res: Primitive:INT:value(); }
+					is 'join': { res: Primitive:STRING:value(); }
+					is 'keys': { res: 'Array of String'; }
+					is 'add': { res: 'void'; }
+					is 'set': { res: 'void'; }
+					is 'clear': { res: 'void'; }
+					is 'each': { res: 'void'; }
+					is 'push': { res: 'void'; }
+					is 'remove': { res: Primitive:BOOLEAN:value(); }
+					else: {}
 				}
-				if (targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString')) {
-					res: scParts:get(index: 2);
+				if (res == targetType) {
+					if ((targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt')) {
+						res: scParts:get(index: 1);
+					}
+					if (targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString')) {
+						res: scParts:get(index: 2);
+					}
 				}
 			} else {
 				res: cRet;
