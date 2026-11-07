@@ -3,7 +3,7 @@
 
 ## Manages standard output console stream printing.
 ##
-## Runtime-managed (TRANSITION.md section 2): calls compile to the runtime's
+## Runtime-managed: calls compile to the runtime's
 ## stdout writers; no struct or methods are emitted for the class.
 
 Class is Output{

@@ -3,7 +3,7 @@
 
 ## An associative key-value map with string keys.
 ##
-## Runtime-managed (TRANSITION.md section 2): instances are the runtime's
+## Runtime-managed: instances are the runtime's
 ## SpecMap objects (64-bucket FNV-1a hash); this declaration is the API
 ## surface. Values are stored either as refcounted strings or in the any
 ## slot, per the value's type; the typed getters read the matching slot.

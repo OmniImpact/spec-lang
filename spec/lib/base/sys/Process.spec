@@ -3,7 +3,7 @@
 
 ## Dispatches external system commands and manages operating system subprocesses.
 ##
-## Runtime-managed (TRANSITION.md section 2): every method binds to the
+## Runtime-managed: every method binds to the
 ## runtime's process/syscall floor; the declaration is the API surface.
 
 Class is Process{

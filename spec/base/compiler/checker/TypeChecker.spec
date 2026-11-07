@@ -7,7 +7,7 @@
 ## directly from their declared container and no hint state exists. Where
 ## no expectation exists, the expression infers bottom-up as before.
 ##
-## Type-name conventions (fossil compatibility, documented in WellKnown):
+## Type-name conventions (documented in WellKnown):
 ## containers are written 'Array:X' / 'Map:K:V' / 'List:X' internally, with
 ## 'Array of X' accepted on input; both void spellings compare via isVoid.
 
@@ -709,9 +709,9 @@ Class is TypeChecker{
 
 	## True when [cls]'s declarations are environment bindings rather than
 	## authoritative contracts: sysinternal C-floor bindings (structural,
-	## permanent — the namespace is the annotation) and, transitionally, the
+	## permanent — the namespace is the annotation) and, for the runtime-managed
 	## runtime-managed classes whose C implementations carry optional or
-	## variadic semantics (TRANSITION.md section 2; dies at Phase E). Call
+	## packages, whose C implementations carry optional or variadic semantics. Call
 	## sites against these classes skip argument validation.
 	##
 	## @param cls: The receiving class.
@@ -1125,7 +1125,7 @@ Class is TypeChecker{
 
 		# Sysinternal floor access by qualified chain: ONLY base:sys
 		# wrappers may call the floor — everyone else goes through the
-		# same-name wrapper (TRANSITION.md section 7).
+		# same-name wrapper (the sysinternal discipline).
 		if (expr:methodTarget:kind == ExpressionKind:PATH) {
 			local String is qJoined: '';
 			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
@@ -1235,7 +1235,7 @@ Class is TypeChecker{
 			local String is cRet: self:lookupMethodReturnType(className: targetType, methodName: method);
 			if (cRet == '' || self:isVoid(t: cRet)) {
 				# Unloaded declaration: resolve from the builtin method table
-				# (fossil parity) with element types from the type string.
+				# with element types from the type string.
 				res: targetType;
 				local Array of String is scParts: targetType:split(delimiter: ':');
 				when (method) {
@@ -2200,7 +2200,7 @@ Class is TypeChecker{
 		self:allStringBackedEnums: Map:init();
 
 		# Builtin container types resolve like primitives: their methods
-		# work with or without an import (the fossil's container branches
+		# work with or without an import (the container branches
 		# were unconditional). When the declaration is loaded its real
 		# signatures apply; when not, calls resolve to the container type.
 		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'While', 'Loop', 'LoopCallback', 'InputHandler'];

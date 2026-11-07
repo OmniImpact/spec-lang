@@ -3,7 +3,7 @@
 
 ## Runs a worker closure across multiple threads and sums the results.
 ##
-## Runtime-managed (TRANSITION.md section 2): [run] binds to the runtime's
+## Runtime-managed: [run] binds to the runtime's
 ## pthread trampoline. Workers must be pure functions of their two
 ## parameters (thread index and sample count): captured variables are shared
 ## static slots and must not be mutated from worker threads. Communication

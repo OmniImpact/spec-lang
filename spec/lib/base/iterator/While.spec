@@ -3,7 +3,7 @@
 
 ## Standard iteration runner that executes a [Loop] instance to completion.
 ##
-## Runtime-managed (TRANSITION.md section 2): both methods are intercepted
+## Runtime-managed: both methods are intercepted
 ## by the generator — [run] drives the loop protocol directly, [condition]
 ## inlines its two closures as a native C loop — so neither body is emitted.
 

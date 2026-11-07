@@ -39,7 +39,7 @@ Class is WellKnown{
 	}
 
 	## The void spelling used for untyped method member types (the checker
-	## and generator distinguish it from [voidName]; the split is fossil
+	## and generator distinguish it from [voidName]; the split is historical
 	## legacy the new checker will normalize).
 	Function of String is voidMemberType(){
 		return 'void';

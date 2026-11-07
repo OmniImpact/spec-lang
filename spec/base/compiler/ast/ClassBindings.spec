@@ -1,14 +1,14 @@
 #! Package base:compiler:ast
 #! The shared classification of floor classes.
 ##
-## Two transparency rules, kept separate (mirrors TRANSITION.md):
+## Two transparency rules, kept separate:
 ##
 ## 1. PERMANENT and structural: `sysinternal` classes (namespace ends with
 ##    the segment `sysinternal`) are interface-style C-floor bindings.
 ##    Checked by namespace, never by name, so new floor classes need no
 ##    registration anywhere.
 ##
-## 2. TRANSITIONAL, dies at Phase E: the runtime-managed classes whose
+## 2. Transitional: the runtime-managed classes whose
 ##    instances live in the C runtime (SpecArray*, SpecMap*, ...) and whose
 ##    declarations are pure API surface. When they are reimplemented in
 ##    Spec over ByteBuf, the list empties and this class shrinks to rule 1.
@@ -30,7 +30,8 @@ Class is ClassBindings{
 	## True when the backend must not emit a struct, vtable, or constructor
 	## for [c], and the checker must not hold its declarations as call
 	## contracts: either the class is a `sysinternal` binding (structural,
-	## permanent) or its instances are C-runtime-managed (transitional).
+	## permanent) or its instances are C-runtime-managed (transitional until the
+	## containers are reimplemented over the byte-buffer floor).
 	##
 	## @param c: The class.
 	## @return: true when emission-transparent and contract-free.

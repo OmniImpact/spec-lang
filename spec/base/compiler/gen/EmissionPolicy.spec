@@ -8,7 +8,7 @@
 ##    no vtable, no constructor is ever emitted for them. Checked by
 ##    namespace, never by name, so new floor classes need no registration.
 ##
-## 2. TRANSITIONAL, dies at Phase E: the runtime-managed classes whose
+## 2. Transitional: the runtime-managed classes whose
 ##    instances live in the C runtime (SpecArray*, SpecMap*, ...) and whose
 ##    declarations are pure API surface. When they are reimplemented in
 ##    Spec over ByteBuf, this list empties and the method dies.

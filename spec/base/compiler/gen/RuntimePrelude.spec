@@ -100,130 +100,11 @@ typedef struct {
 
 #define SPEC_HEADER(obj) (((SpecHeader*)(obj)) - 1)
 
-/* ============ RC DEBUG LEDGER (SPEC_RC_DEBUG=1) ============ */
-static void spec_rc_dump(void);
-extern int __asan_address_is_poisoned(void*) __attribute__((weak));
-static void* _spec_sub_samples[16];
-static int _spec_sub_n = 0;
-typedef struct { int kind; unsigned long site; } SpecTraceOp;
-static SpecTraceOp* _spec_trace_ops[16];
-static int _spec_trace_len[16];
-static int _spec_trace_cap[16];
-static void spec_trace_op(void* p, int kind, unsigned long site) {
-    for (int i = 0; i < _spec_sub_n; i++) {
-        if (_spec_sub_samples[i] != p) continue;
-        if (_spec_trace_len[i] >= _spec_trace_cap[i]) {
-            _spec_trace_cap[i] = _spec_trace_cap[i] ? _spec_trace_cap[i] * 2 : 64;
-            _spec_trace_ops[i] = (SpecTraceOp*)realloc(_spec_trace_ops[i], sizeof(SpecTraceOp) * _spec_trace_cap[i]);
-        }
-        _spec_trace_ops[i][_spec_trace_len[i]].kind = kind;
-        _spec_trace_ops[i][_spec_trace_len[i]].site = site;
-        _spec_trace_len[i]++;
-        return;
-    }
-}
-
-static int _spec_rc_debug = -1;
-static inline int spec_rc_debug_on(void) {
-    if (_spec_rc_debug < 0) { _spec_rc_debug = getenv("SPEC_RC_DEBUG") ? 1 : 0; if (_spec_rc_debug) atexit(spec_rc_dump); }
-    return _spec_rc_debug;
-}
-
-#define SPEC_RC_SLOTS (1 << 21)
-#define SPEC_RC_HIST 4
-typedef struct {
-    void* ptr;
-    unsigned long sites[SPEC_RC_HIST];
-    int kinds[SPEC_RC_HIST];
-    int head;
-} SpecRcEntry;
-static SpecRcEntry _spec_rc_table[SPEC_RC_SLOTS];
-
-static SpecRcEntry* spec_rc_slot(void* p) {
-    size_t h = ((size_t)p >> 4) * 2654435761ULL;
-    size_t i = h & (SPEC_RC_SLOTS - 1);
-    for (;;) {
-        SpecRcEntry* e = &_spec_rc_table[i];
-        if (e->ptr == p || e->ptr == NULL) return e;
-        i = (i + 1) & (SPEC_RC_SLOTS - 1);
-    }
-}
-
-static void spec_rc_record(void* p, int kind, unsigned long ra) {
-    SpecRcEntry* e = spec_rc_slot(p);
-    if (e->ptr != p) { e->ptr = p; e->head = 0; }
-    e->sites[e->head] = ra;
-    e->kinds[e->head] = kind;
-    e->head = (e->head + 1) % SPEC_RC_HIST;
-    return;
-}
-
-static void spec_rc_dump(void) {
-    long live = 0; long printed = 0;
-    for (size_t i = 0; i < SPEC_RC_SLOTS; i++) {
-        SpecRcEntry* e = &_spec_rc_table[i];
-        if (e->ptr && atomic_load_explicit(&SPEC_HEADER(e->ptr)->ref_count, memory_order_relaxed) > 0) {
-            live++;
-            if (printed < 12) {
-                SpecHeader* h = SPEC_HEADER(e->ptr);
-                fprintf(stderr, "[RC-DUMP] %p ref_count=%u\n", e->ptr, atomic_load_explicit(&h->ref_count, memory_order_relaxed));
-                for (int j = 0; j < SPEC_RC_HIST; j++) {
-                    int idx = (e->head + j) % SPEC_RC_HIST;
-                    if (e->sites[idx] == 0) continue;
-                    fprintf(stderr, "    %s 0x%lx\n", e->kinds[idx] == 1 ? "alloc" : e->kinds[idx] == 2 ? "retain" : e->kinds[idx] == 3 ? "release" : "realloc", e->sites[idx]);
-                }
-                printed++;
-            }
-        }
-    }
-    fprintf(stderr, "[RC-DUMP] live entries: %ld\n", live);
-    for (int i = 0; i < _spec_sub_n; i++) {
-        void* p = _spec_sub_samples[i];
-        if (__asan_address_is_poisoned && __asan_address_is_poisoned(p)) { fprintf(stderr, "[SUB-%d] freed\n", i); continue; }
-        SpecHeader* h = SPEC_HEADER(p);
-        fprintf(stderr, "[SUB-%d] ALIVE ref_count=%u\n", i, atomic_load_explicit(&h->ref_count, memory_order_relaxed));
-        int limit = _spec_trace_len[i] < 240 ? _spec_trace_len[i] : 240;
-        for (int j = 0; j < limit; j++) {
-            fprintf(stderr, "    %s 0x%lx\n", _spec_trace_ops[i][j].kind == 1 ? "alloc" : _spec_trace_ops[i][j].kind == 2 ? "retain" : "release", _spec_trace_ops[i][j].site);
-        }
-        if (_spec_trace_len[i] > limit) fprintf(stderr, "    ... %d more ops\n", _spec_trace_len[i] - limit);
-    }
-}
-
-static void spec_rc_fail(void* p, const char* what, const char* op, unsigned long ra) {
-    SpecRcEntry* e = spec_rc_slot(p);
-    fprintf(stderr, "[RC-DEBUG] %s: %s at 0x%lx ra1=0x%lx ra2=0x%lx\n", what, op, (unsigned long)p, __builtin_return_address(1), __builtin_return_address(2));
-    for (int i = 0; i < SPEC_RC_HIST; i++) {
-        int idx = (e->head + i) % SPEC_RC_HIST;
-        if (e->sites[idx] == 0) continue;
-        const char* kname = e->kinds[idx] == 1 ? "alloc" : e->kinds[idx] == 2 ? "retain" : e->kinds[idx] == 3 ? "release" : "realloc";
-        fprintf(stderr, "    %s 0x%lx\n", kname, e->sites[idx]);
-    }
-    unsigned char* hb = (unsigned char*)((char*)p - sizeof(SpecHeader));
-    fprintf(stderr, "[RC-DEBUG] header bytes: ");
-    for (int i = 0; i < sizeof(SpecHeader) + 32; i++) fprintf(stderr, "%02x", hb[i]);
-    fprintf(stderr, "\n[RC-DEBUG] header text: '%s' | '%s'\n", (char*)p - sizeof(SpecHeader) + 8, (char*)p);
-    fprintf(stderr, "[RC-DEBUG] map addresses with: addr2line -e <binary> <addresses>\n");
-    abort();
-}
-
-static void* spec_rc_alloc(void* p, unsigned long ra) {
-    spec_rc_record(p, 1, ra);
-    return p;
-}
-
-static void spec_rc_released_check(void* p, unsigned long ra) {
-    SpecHeader* h = SPEC_HEADER(p);
-    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) <= 0) { spec_rc_fail(p, "release of dead object", "release", ra); }
-    return;
-}
-
 static inline void* spec_alloc(size_t size, void (*destroy)(void*)) {
     SpecHeader* h = (SpecHeader*)calloc(1, sizeof(SpecHeader) + size);
     if (!h) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
     h->ref_count = 1;
     h->destroy = destroy;
-    if (spec_rc_debug_on()) spec_rc_alloc((void*)(h + 1), (unsigned long)__builtin_return_address(0));
     return (void*)(h + 1);
 }
 
@@ -232,20 +113,14 @@ static inline void* spec_retain(void* obj) {
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;
     atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);
-    if (spec_rc_debug_on()) { unsigned long _ra = (unsigned long)__builtin_return_address(0); spec_rc_record(obj, 2, _ra); spec_trace_op(obj, 2, _ra); }
     return obj;
 }
 
 static inline void spec_release(void* obj) {
     if (!obj) return;
-    if (spec_rc_debug_on()) { spec_rc_released_check(obj, (unsigned long)__builtin_return_address(0)); }
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;
-    if (spec_rc_debug_on()) {
-        unsigned long _ra = (unsigned long)__builtin_return_address(0); spec_rc_record(obj, 3, _ra); spec_trace_op(obj, 3, _ra);
-        if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }
-        return;
-    }
+    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }
     if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {
         if (h->destroy) h->destroy(obj);
         free(h);
@@ -1390,7 +1265,6 @@ String spec_string_substring(String b, long long start, long long end) {
     for (long long i = s; i < e; i++) {
         spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);
     }
-    if (spec_rc_debug_on() && _spec_sub_n < 16) { _spec_sub_samples[_spec_sub_n] = res; spec_trace_op(res, 1, (unsigned long)__builtin_return_address(0)); _spec_sub_n++; }
     return res;
 }
 

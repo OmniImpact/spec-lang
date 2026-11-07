@@ -3,7 +3,7 @@
 
 ## Manages loop flow control, early termination halts, and completion callbacks.
 ##
-## Runtime-managed (TRANSITION.md section 2): instances are the runtime's
+## Runtime-managed: instances are the runtime's
 ## SpecLoopControl objects; the declaration is the API surface the runners
 ## and loop bodies see.
 

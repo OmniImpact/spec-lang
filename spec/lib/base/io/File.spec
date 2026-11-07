@@ -4,7 +4,7 @@
 ## Filesystem read, write, and existence inspection with synchronous and
 ## asynchronous callback execution.
 ##
-## Runtime-managed (TRANSITION.md section 2): calls bind to the runtime's
+## Runtime-managed: calls bind to the runtime's
 ## fd-level floor; the declaration is the API surface. The `default`,
 ## `onSuccess`, and `onError` parameters are optional at call sites.
 

@@ -3,7 +3,7 @@
 
 ## A dynamic, auto-resizing sequential collection of elements.
 ##
-## Runtime-managed (TRANSITION.md section 2): instances are the runtime's
+## Runtime-managed: instances are the runtime's
 ## SpecArray objects; this declaration is the API surface. In accordance
 ## with the "Never Null" standard, out-of-bounds queries, popping empty
 ## arrays, and failed searches return a caller-supplied default.

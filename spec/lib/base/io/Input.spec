@@ -3,7 +3,7 @@
 
 ## Provides non-blocking, event-driven user input prompts via [InputHandler].
 ##
-## Runtime-managed (TRANSITION.md section 2): the prompt call binds to the
+## Runtime-managed: the prompt call binds to the
 ## runtime's interactive prompt loop; no struct is emitted.
 
 Class is Input{

@@ -4,7 +4,7 @@
 ## ANSI escape sequences for 16-color, 256-color, and 24-bit TrueColor
 ## output, plus terminal cursor control.
 ##
-## Runtime-managed (TRANSITION.md section 2): the terminal-metric calls bind
+## Runtime-managed: the terminal-metric calls bind
 ## to the runtime's ioctl floor; the sequence builders are plain Spec.
 
 Class is Ansi{

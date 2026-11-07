@@ -4,7 +4,7 @@
 ## Coordinates the Loader (multi-file package resolution), the Linter,
 ## the TypeChecker, and the CodeGenerator, and prints progress through
 ## the CompilationReport. This is the class the spec binary's main
-## dispatches to with the parsed argument map; at Phase H it becomes
+## dispatches to with the parsed argument map; it IS
 ## the entry point of the self-hosted compiler.
 
 Class is Driver{
@@ -46,15 +46,9 @@ Class is Driver{
 		}
 		local Boolean is lintMode: args:has(key: 'lint');
 		local Boolean is quiet: args:has(key: 'quiet');
-		local String is gcMode: args:getString(key: 'gc', default: '');
-		if (gcMode != '' && gcMode != 'boehm') {
-			error:line('Error: Unsupported GC mode \'' . gcMode . '\'. Supported modes: boehm');
-			Process:exit(status: 1);
-		}
-
 		if (inputPath == '') {
 			output:line('Spec Compiler (Pure Spec)');
-			error:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--gc=boehm] [--quiet]');
+			error:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--quiet]');
 			Process:exit(status: 2);
 		}
 
@@ -186,9 +180,6 @@ Class is Driver{
 
 		# 5. C11 code generation over the FULL loaded class set.
 		local CodeGenerator is cg: CodeGenerator:init();
-		if (gcMode != '') {
-			cg:setGcMode(mode: gcMode);
-		}
 		cg:registerProgram(classes: program:classes);
 		local Int is genT0: Process:clockMs();
 		local String is cCode: cg:generateProgram(program: program, entryClass: entryName);
@@ -213,13 +204,6 @@ Class is Driver{
 
 		# 6. GCC backend compile.
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
-		if (gcMode == 'boehm') {
-			if (File:exists(path: '/usr/lib/x86_64-linux-gnu/libgc.so.1') || File:exists(path: '/usr/lib/libgc.so.1')) {
-				gccArgs:add(item: '-l:libgc.so.1');
-			} else {
-				gccArgs:add(item: '-lgc');
-			}
-		}
 		local Int is ccT0: Process:clockMs();
 		local Int is gccStatus: Process:execute(command: 'gcc', args: gccArgs);
 		ccMs: Process:clockMs() - ccT0;

@@ -2,7 +2,7 @@
 #! Translates standard-library and runtime builtin method calls into C11
 #! runtime functions.
 ##
-## TRANSITIONAL (TRANSITION.md section 3): this class is the fossil's
+## The interception surface for the runtime-managed packages: this class is the
 ## interception surface, ported. Every branch here dies when the floor
 ## classes are reimplemented in Spec over the sysinternal primitives. The
 ## sysinternal namespace-binding block at the top is the replacement
@@ -579,7 +579,7 @@ Class is BuiltinCallGenerator{
 		if (expr:argCount() > 1) {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		}
-		# Array methods (SpecArray*). Named-arg extraction per the fossil.
+		# Array methods (SpecArray*). Named-arg extraction.
 		if (targetType:startsWith(prefix: 'Array')) {
 			if (m == 'get') {
 				local String is idxC: '0';

@@ -24,6 +24,7 @@ Class is CodeGenerator{
 		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', WellKnown],
+		['base', 'compiler', 'checker', 'loops', ClassSearchLoop],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
 		['base', 'compiler', 'gen', DeclarationGenerator],
@@ -128,8 +129,7 @@ Class is CodeGenerator{
 	## consumption positions (initializers, returns, container stores).
 	local Boolean is argMode: true;
 
-	## GC mode: '' (default ARC) or 'boehm'.
-	local String is gcMode: '';
+
 
 	## Declared-type context for the container literal being generated
 	## (selects spec_array_new_string vs _object vs _bytebuffer).
@@ -153,14 +153,6 @@ Class is CodeGenerator{
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
 		self:localScopeVars: Map:init();
-		self:gcMode: '';
-	}
-
-	## Sets the GC mode and informs the prelude emitter.
-	##
-	## @param mode: '' (ARC) or 'boehm'.
-	Function is setGcMode(String is mode){
-		self:gcMode: mode;
 	}
 
 	## Sets the claim-pool mode: true in read positions, false in
@@ -547,7 +539,7 @@ Class is CodeGenerator{
 	## @param name: Target class name.
 	## @return: The descriptor, or an unnamed one when absent.
 	Function of ClassInfo is findClass(String is name){
-		local GenClassSearchLoop is s: GenClassSearchLoop:init(list: self:programClasses, target: name);
+		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
 		While:run(loop: s);
 		if (s:found) {
 			return s:res;
@@ -661,7 +653,7 @@ Class is CodeGenerator{
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
 			# Unloaded builtin container: resolve from the builtin table so
-			# concat wraps know the result type (fossil parity).
+			# concat wraps know the result type.
 			if (baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map')) {
 				if (methodName == 'length') { return Primitive:INT:value(); }
 				if (methodName == 'isEmpty' || methodName == 'has' || methodName == 'any') { return Primitive:BOOLEAN:value(); }
@@ -781,7 +773,7 @@ Class is CodeGenerator{
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		if (cls:name == '') {
 			# Unloaded builtin container: resolve from the builtin table so
-			# concat wraps know the result type (fossil parity).
+			# concat wraps know the result type.
 			if (baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map')) {
 				if (methodName == 'length') { return Primitive:INT:value(); }
 				if (methodName == 'isEmpty' || methodName == 'has' || methodName == 'any') { return Primitive:BOOLEAN:value(); }
@@ -2198,7 +2190,6 @@ Class is CodeGenerator{
 	## @return: C statement code.
 	Function of String is generateStatement(Statement is stmt){
 		if (stmt:line > 0) {
-			self:currentLineHack(stmt: stmt);
 		}
 		local StatementKind is kind: stmt:kind;
 
@@ -2256,11 +2247,6 @@ Class is CodeGenerator{
 				return '';
 			}
 		}
-	}
-
-	## Compatibility: the fossil tracked currentLine but the codegen does not
-	## need it (diagnostics come from the checker).
-	Function is currentLineHack(Statement is stmt){
 	}
 
 	## Emits a variable declaration with the typed constructor.
@@ -2496,7 +2482,7 @@ Class is CodeGenerator{
 	## @param method: The method member.
 	## @return: C method implementation.
 	## True when the class's namespace ends with sysinternal — the
-	## structural C-floor annotation (TRANSITION.md section 1).
+	## structural C-floor annotation (the namespace is the annotation).
 	##
 	## @param name: Class name.
 	## @return: true when the class is a floor binding.
@@ -2556,7 +2542,7 @@ Class is CodeGenerator{
 	Function of String is generateMain(String is entryClass){
 		local String is m: "/* Application Entry Point */\n";
 		m: m . "int main(int argc, char** argv) {\n";
-		m: m . "#if defined(SPEC_GC_BOEHM)\n    GC_init();\n#endif\n";
+
 		m: m . "    srand((unsigned int)time(NULL));\n";
 		m: m . "    SPEC_AUTO SpecMap* args = spec_map_new();\n";
 		m: m . "    for (int i = 1; i < argc; i++) {\n";
@@ -2864,7 +2850,7 @@ Class is CodeGenerator{
 		return out;
 	}
 	## Inlines an anonymous-function callback over an Array as a C loop
-	## (each/filter/count/any/map). The fossil inlined these to give the
+	## (each/filter/count/any/map). These inline to give the
 	## body direct access to enclosing locals; the port keeps that.
 	##
 	## @param mode: each | filter | count | any | map.
@@ -3185,44 +3171,4 @@ Class is CodeGenerator{
 		}
 	}
 
-	## Scans the program registry for a class by name.
-	Class of Loop is GenClassSearchLoop{
-		local Array of ClassInfo is list;
-		local String is target;
-		local Int is idx: 0;
-		local ClassInfo is res;
-		local Boolean is found: false;
-
-		replace Function is init(Array of ClassInfo is list, String is target){
-			self:list: list;
-			self:target: target;
-			self:idx: 0;
-			self:found: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:found && self:idx < self:list:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local ClassInfo is cand: self:list:get(index: self:idx);
-			self:idx: self:idx + 1;
-			if (cand:name == self:target) {
-				self:res: cand;
-				self:found: true;
-				return false;
-			}
-			# Qualified targets ('base:sysinternal:Buf'): namespace joined
-			# with ':' plus the class name must equal the target.
-			if (self:target:contains(needle: ':')) {
-				local String is candQ: cand:namespaceJoined() . ':' . cand:name;
-				if (candQ == self:target) {
-					self:res: cand;
-					self:found: true;
-					return false;
-				}
-			}
-			return true;
-		}
-	}
 }

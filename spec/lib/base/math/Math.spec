@@ -3,7 +3,7 @@
 
 ## Mathematical functions and algorithmic primitives.
 ##
-## Runtime-managed (TRANSITION.md section 2): the libm-backed functions bind
+## Runtime-managed: the libm-backed functions bind
 ## to `external` libm declarations at the floor; the pure functions ([abs],
 ## [min], [max], [clamp]) are real Spec bodies.
 

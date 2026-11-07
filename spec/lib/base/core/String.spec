@@ -1,13 +1,13 @@
 #! Package base:core
 #! The String type: a refcounted, NUL-terminated byte buffer with a cached length.
 ##
-## String is a transparent runtime-managed class (TRANSITION.md section 2).
+## String is a transparent runtime-managed class.
 ## The type system and class registry know its method surface below, but no
 ## C struct, vtable, or constructor is emitted for the class: a String value
 ## IS the managed buffer (`SpecBuf*`). The bodies here run directly over the
-## sysinternal byte-buffer floor; during the transitional era the generator
+## sysinternal byte-buffer floor; the generator routes the hot methods to
 ## routes the hot methods to their `spec_string_*` floor equivalents, and
-## these bodies become the only implementation at Phase E.
+## these bodies as the only implementation when the floor interception retires.
 
 Class is String{
 	namespace: ['base', 'core'];
