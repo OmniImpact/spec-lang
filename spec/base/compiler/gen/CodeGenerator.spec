@@ -2836,7 +2836,20 @@ Class is CodeGenerator{
 				out: out . "}\n\n";
 
 				out: out . c:name . '* ' . c:name . "_new(void) {\n";
-				out: out . '    ' . c:name . '* self = (' . c:name . '*)spec_alloc(sizeof(' . c:name . '), ' . c:name . "_destroy);\n";
+				local ClassInfo is acls: self:findClass(name: c:name);
+				local String is ans: acls:namespaceJoined();
+				# Compilation-phase namespaces: everything the compiler
+				# process allocates during a run. sys is included for
+				# SourceLocation/StackFrame (compiler-phase types).
+				if (ans == 'base:compiler:ast' || ans == 'base:compiler:lexer' || ans == 'base:compiler:parser' ||
+					ans == 'base:compiler:checker' || ans == 'base:compiler:gen' || ans == 'base:compiler:loader' ||
+					ans == 'base:compiler:driver' || ans == 'base:compiler:linter' || ans == 'base:sys' ||
+					ans:startsWith(prefix: 'base:compiler:parser:loops') || ans:startsWith(prefix: 'base:compiler:checker:loops') ||
+					ans:startsWith(prefix: 'base:compiler:lexer:loops')) {
+					out: out . '    ' . c:name . '* self = (' . c:name . '*)spec_arena_alloc_object(sizeof(' . c:name . '), ' . c:name . "_destroy);\n";
+				} else {
+					out: out . '    ' . c:name . '* self = (' . c:name . '*)spec_alloc(sizeof(' . c:name . '), ' . c:name . "_destroy);\n";
+				}
 				out: out . '    self->_type_name = "' . c:name . "\";\n";
 				if (self:methodSlotCount > 0) {
 					out: out . '    self->_vtable = ' . c:name . "_vtable;\n";

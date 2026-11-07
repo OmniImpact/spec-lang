@@ -1022,6 +1022,111 @@ void spec_buf_destroy(void* self) {
     if (b->data) { free(b->data); b->data = NULL; }
 }
 
+/* The compilation arena: bump allocation over growing blocks. */
+typedef struct ArenaBlock {
+    struct ArenaBlock* next;
+    size_t used;
+    size_t cap;
+    char* data;
+} ArenaBlock;
+
+typedef struct SpecArena {
+    ArenaBlock* head;
+    size_t used;
+} SpecArena;
+
+#define ARENA_BLOCK_SIZE (64 * 1024)
+
+static ArenaBlock* arena_block_new(size_t cap) {
+    ArenaBlock* b = (ArenaBlock*)calloc(1, sizeof(ArenaBlock));
+    if (!b) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
+    b->data = (char*)calloc(1, cap);
+    if (!b->data) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
+    b->cap = cap;
+    b->used = 0;
+    return b;
+}
+
+static void* spec_arena_alloc(SpecArena* a, size_t size) {
+    size = (size + 15) & ~(size_t)15;
+    if (!a->head || a->head->used + size > a->head->cap) {
+        size_t cap = ARENA_BLOCK_SIZE;
+        if (size > cap) cap = size;
+        ArenaBlock* nb = arena_block_new(cap);
+        nb->next = a->head;
+        a->head = nb;
+    }
+    void* p = a->head->data + a->head->used;
+    a->head->used += size;
+    a->used += size;
+    memset(p, 0, size);
+    return p;
+}
+
+SpecArena* spec_arena_new(void) {
+    return (SpecArena*)calloc(1, sizeof(SpecArena));
+}
+
+void spec_arena_drain(SpecArena* a) {
+    ArenaBlock* b = a->head;
+    while (b) {
+        ArenaBlock* next = b->next;
+        free(b->data);
+        free(b);
+        b = next;
+    }
+    a->head = NULL;
+    a->used = 0;
+}
+
+/* Object arena: header-carrying allocations from arena memory. Refcounts
+   guard aliasing during compilation; the pending finalizers (field
+   releases) run at drain, then the blocks free wholesale. */
+typedef struct ArenaFinalizer {
+    struct ArenaFinalizer* next;
+    SpecHeader* header;
+} ArenaFinalizer;
+
+static ArenaFinalizer* _spec_object_arena_finalizers = NULL;
+static SpecArena _spec_object_arena = { NULL, 0 };
+
+void spec_arena_drain_objects(void);
+
+void* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {
+    static int drain_registered = 0;
+    if (!drain_registered) {
+        atexit(spec_arena_drain_objects);
+        drain_registered = 1;
+    }
+    char* mem = (char*)spec_arena_alloc(&_spec_object_arena, sizeof(SpecHeader) + size);
+    SpecHeader* h = (SpecHeader*)mem;
+    h->ref_count = 1;
+    h->destroy = destroy;
+    /* Immortal: release is a no-op — the arena owns the memory and drains
+       it wholesale. Refcounts may still bump (harmless); nothing frees. */
+    h->sflags = SPEC_S_IMMORTAL;
+    h->slen = 0;
+    ArenaFinalizer* f = (ArenaFinalizer*)spec_arena_alloc(&_spec_object_arena, sizeof(ArenaFinalizer));
+    f->next = _spec_object_arena_finalizers;
+    f->header = h;
+    _spec_object_arena_finalizers = f;
+    return (void*)(mem + sizeof(SpecHeader));
+}
+
+void spec_arena_drain_objects(void) {
+    ArenaFinalizer* f = _spec_object_arena_finalizers;
+    while (f) {
+        if (f->header->destroy) f->header->destroy((void*)(f->header + 1));
+        f = f->next;
+    }
+    _spec_object_arena_finalizers = NULL;
+    spec_arena_drain(&_spec_object_arena);
+}
+
+long long spec_arena_used(SpecArena* a) {
+    return (long long)a->used;
+}
+
 SpecArray* spec_dir_list(SpecBuf* path) {
     SpecArray* res = spec_array_new_object();
     if (!path) return res;

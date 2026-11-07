@@ -64,6 +64,18 @@ Class is ClassBindings{
 		return check:isFloor;
 	}
 
+	## True when [c]'s instances are compilation-phase data: the AST
+	## classes (base:compiler:ast). Their allocation routes to the object
+	## arena — refcounts guard aliasing during compilation, and the arena
+	## drains the pending field releases and blocks wholesale.
+	##
+	## @param c: The class.
+	## @return: true when arena-allocated.
+	Function of Boolean is isArenaType(ClassInfo is c){
+		local String is ns: c:namespaceJoined();
+		return ns == 'base:compiler:ast';
+	}
+
 	## Walks a class's members looking for the namespace declaration and
 	## tests whether its last segment is `sysinternal`.
 	Class of Loop is SysinternalCheckLoop{
