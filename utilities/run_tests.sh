@@ -274,7 +274,7 @@ fi
 echo "== Bootstrap fixed point =="
 if [ -f "$ROOT/bootstrap/spec.c" ]; then
 	SELF_C="$WORK/self_hosted.c"
-	if "$SPEC" -i "$ROOT/lib/compiler/Driver.spec" --emit-c "$SELF_C" >/dev/null 2>&1; then
+	if "$SPEC" -i "$ROOT/spec/base/compiler/driver/Driver.spec" --emit-c "$SELF_C" >/dev/null 2>&1; then
 		if cmp -s "$SELF_C" "$ROOT/bootstrap/spec.c"; then
 			ok "bootstrap/spec.c is the current fixed point"
 		else
