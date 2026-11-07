@@ -196,7 +196,7 @@ Class is DeclarationGenerator{
 					});
 					out: out . '} ' . name . ";\n\n";
 
-					out: out . 'static const char* ' . name . "_names[] = {\n";
+					out: out . 'static __attribute__((unused)) const char* ' . name . "_names[] = {\n";
 					variants:each(action: local Function(Member is m){
 						out: out . '    "' . m:name . "\",\n";
 					});
@@ -209,6 +209,7 @@ Class is DeclarationGenerator{
 					out: out . "};\n\n";
 
 					out: out . 'static inline String ' . name . '_name(' . name . " self) {\n";
+					out: out . "    (void)self;\n";
 					out: out . "    switch (self) {\n";
 					variants:each(action: local Function(Member is m){
 						out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . m:name . '");' . "\n";
@@ -230,6 +231,7 @@ Class is DeclarationGenerator{
 					}
 
 					out: out . 'static inline long long ' . name . '_ordinal(' . name . " self) {\n";
+					out: out . "    (void)self;\n";
 					out: out . "    switch (self) {\n";
 					local Int is ordIdx: 0;
 					variants:each(action: local Function(Member is m){
@@ -267,7 +269,8 @@ Class is DeclarationGenerator{
 			}
 		});
 		out: out . 'static inline String ' . name . '_value(' . name . " self) {\n";
-		out: out . "    switch (self) {\n";
+		out: out . "    (void)self;\n";
+					out: out . "    switch (self) {\n";
 		variants:each(action: local Function(Member is m){
 			out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . self:variantTag(m: m) . '");' . "\n";
 		});
@@ -308,7 +311,8 @@ Class is DeclarationGenerator{
 			}
 		});
 		out: out . 'static inline long long ' . name . '_value(' . name . " self) {\n";
-		out: out . "    switch (self) {\n";
+		out: out . "    (void)self;\n";
+					out: out . "    switch (self) {\n";
 		local Int is vIdx: 0;
 		variants:each(action: local Function(Member is m){
 			local String is valNum: '' . vIdx;

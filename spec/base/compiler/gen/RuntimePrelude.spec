@@ -235,9 +235,6 @@ static inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_
 }
 
 /* Spec Runtime String Utilities */
-/* Spec Runtime String Utilities */
-static char _spec_small_ints[258][8];
-static bool _spec_small_ints_init = false;
 String spec_to_string_int(long long v) {
     char buf[64];
     snprintf(buf, sizeof(buf), "%lld", v);

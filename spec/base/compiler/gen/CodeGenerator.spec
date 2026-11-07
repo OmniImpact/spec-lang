@@ -1983,12 +1983,12 @@ Class is CodeGenerator{
 
 		if (hasCaptures) {
 			local String is envStruct: "typedef struct {\n" . capFieldDecls . '} ' . envName . ";\n\n";
-			local String is destroyEnv: 'static void ' . destroyEnvName . "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    " . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capReleases . "    free(_env);\n}\n\n";
+			local String is destroyEnv: 'static __attribute__((unused)) void ' . destroyEnvName . "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    " . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capReleases . "    free(_env);\n}\n\n";
 			local String is bindsC: '    ' . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capFieldBinds;
-			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . bindsC . bodyC . "}\n\n";
+			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . bindsC . bodyC . "}\n\n";
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		} else {
-			self:helperFunctions: self:helperFunctions . 'static ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . bodyC . "}\n\n";
+			self:helperFunctions: self:helperFunctions . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . bodyC . "}\n\n";
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		}
 	}
@@ -2514,25 +2514,35 @@ Class is CodeGenerator{
 		});
 
 		local String is selfCType: self:cTypeFor(typeName: classDef:name);
-		local String is out: retType . ' ' . classDef:name . '_' . method:name . '(' . selfCType . ' self';
+		local String is header: retType . ' ' . classDef:name . '_' . method:name . '(' . selfCType . ' self';
 		method:params:each(action: local Function(Parameter is p){
-			out: out . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
+			header: header . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
 		});
-		out: out . ") {\n";
+		header: header . ") {\n";
 
+		# Body first: unused-parameter suppressions need the finished text.
+		local String is bodyC: '';
 		method:body:each(action: local Function(Statement is stmt){
-			out: out . self:generateStatement(stmt: stmt);
+			bodyC: bodyC . self:generateStatement(stmt: stmt);
 		});
 
 		if (method:body:length() == 0 && retType != 'void') {
-			out: out . "    return 0;\n";
+			bodyC: bodyC . "    return 0;\n";
 		}
 
 		# Scope-end releases: drop the refs this method's locals own.
-		out: out . self:scopeReleases(stmts: method:body);
-		out: out . "}\n\n";
+		bodyC: bodyC . self:scopeReleases(stmts: method:body);
+
+		# Unused-parameter suppressions: the (void) cast is legal on used
+		# params too, and substring use-checks false-positive on names
+		# appearing inside string literals. Emit for every param always.
+		local String is suppressions: "    (void)self;\n";
+		method:params:each(action: local Function(Parameter is p){
+			suppressions: suppressions . '    (void)' . self:utils:cIdent(name: p:name) . ";\n";
+		});
+
 		self:inMethod: false;
-		return out;
+		return header . suppressions . bodyC . "}\n\n";
 	}
 
 	## Generates the C main entry point with argv->Map parsing.
@@ -2681,7 +2691,7 @@ Class is CodeGenerator{
 					}
 				});
 				if (!hasInit && c:baseClass != self:names:enumHeader()) {
-					methods: methods . 'void ' . c:name . '_init(' . c:name . "* self) {\n    /* default initializer */\n}\n\n";
+					methods: methods . 'void ' . c:name . '_init(' . c:name . "* self) {\n    (void)self;\n}\n\n";
 				}
 
 				local Boolean is hasToString: false;
