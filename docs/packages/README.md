@@ -402,6 +402,7 @@ Controls loop continuation and completion triggers:
 - **`stop()`**: Halts iteration.
 
 ### `base:iterator:While` (`lib/base/iterator/While.spec`)
+- **`While(vars, evaluate, iterate)` / `While([Type is name: init, ...], evaluate: { ... }, iterate: { ... })`**: Inline scoped loop runner with function block shorthands. Binds typed loop variables at block scope and inlines directly to a C11 statement expression with zero closures and zero heap allocations.
 - **`While:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
 - **`While:condition(Function of Boolean is evaluate, Function of Boolean is iteration)`**: Executes an inline loop using `evaluate` and `iteration` closures without requiring a separate `Loop` subclass.
 

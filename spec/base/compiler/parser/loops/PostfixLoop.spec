@@ -54,11 +54,16 @@ Class of Loop is PostfixLoop{
 
 			local Expression is callExpr: Expression:init(kind: ExpressionKind:CALL);
 			if (self:currentExpr:kind == ExpressionKind:IDENT) {
-				# A bare identifier followed by '(' calls self.
-				local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
-				selfTarget:stringValue: self:names:selfIdent();
-				callExpr:methodTarget: selfTarget;
-				callExpr:methodName: self:currentExpr:stringValue;
+				if (self:currentExpr:stringValue == 'While') {
+					callExpr:methodTarget: self:currentExpr;
+					callExpr:methodName: 'loop';
+				} else {
+					# A bare identifier followed by '(' calls self.
+					local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
+					selfTarget:stringValue: self:names:selfIdent();
+					callExpr:methodTarget: selfTarget;
+					callExpr:methodName: self:currentExpr:stringValue;
+				}
 			} else {
 				callExpr:methodTarget: self:currentExpr;
 				callExpr:methodName: '';

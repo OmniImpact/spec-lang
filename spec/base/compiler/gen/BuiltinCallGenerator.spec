@@ -288,11 +288,53 @@ Class is BuiltinCallGenerator{
 			}
 			return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
 		}
-		if (targetC == 'While' && expr:methodName == 'condition' && expr:argCount() >= 2) {
-			local Expression is evalExpr: self:argValue(expr: expr, index: 0);
-			local Expression is iterExpr: self:argValue(expr: expr, index: 1);
-			if (evalExpr:kind == ExpressionKind:ANON_FN && iterExpr:kind == ExpressionKind:ANON_FN) {
-				return cg:generateInlineWhileCondition(evalExpr: evalExpr, iterExpr: iterExpr);
+		if (targetC == 'While' && (expr:methodName == 'condition' || expr:methodName == 'loop' || expr:methodName == 'init')) {
+			local Expression is varsExpr;
+			local Expression is evalExpr;
+			local Expression is iterExpr;
+			local Boolean is hasVars: false;
+			local Boolean is hasEval: false;
+			local Boolean is hasIter: false;
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:name == 'evaluate') {
+					evalExpr: arg:value;
+					hasEval: true;
+				} else if (arg:name == 'iterate' || arg:name == 'iteration') {
+					iterExpr: arg:value;
+					hasIter: true;
+				} else if (arg:name == 'vars' || arg:name == 'state') {
+					varsExpr: arg:value;
+					hasVars: true;
+				}
+			});
+			if (!hasEval) {
+				if (expr:argCount() >= 3) {
+					evalExpr: self:argValue(expr: expr, index: 1);
+					hasEval: true;
+				} else if (expr:argCount() >= 2) {
+					evalExpr: self:argValue(expr: expr, index: 0);
+					hasEval: true;
+				}
+			}
+			if (!hasIter) {
+				if (expr:argCount() >= 3) {
+					iterExpr: self:argValue(expr: expr, index: 2);
+					hasIter: true;
+				} else if (expr:argCount() >= 2) {
+					iterExpr: self:argValue(expr: expr, index: 1);
+					hasIter: true;
+				}
+			}
+			if (!hasVars && expr:argCount() >= 3) {
+				varsExpr: self:argValue(expr: expr, index: 0);
+				hasVars: true;
+			}
+			if (hasEval && hasIter && evalExpr:kind == ExpressionKind:ANON_FN && iterExpr:kind == ExpressionKind:ANON_FN) {
+				local Array of Parameter is loopVars: [];
+				if (hasVars && varsExpr:anonParams:length() > 0) {
+					loopVars: varsExpr:anonParams;
+				}
+				return cg:generateInlineWhileLoop(loopVars: loopVars, evalExpr: evalExpr, iterExpr: iterExpr);
 			}
 		}
 

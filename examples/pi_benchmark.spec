@@ -58,17 +58,13 @@ Class is PiBenchmark{
 			local Int is lastHits: 0;
 			local Int is lastDraw: Process:clockMs();
 
-			While:condition(
-				evaluate: local Function of Boolean(){
-					return done < count;
-				},
-				iteration: local Function(){
-					local Int is b: 0;
-					While:condition(
-						evaluate: local Function of Boolean(){
-							return b < batch && done < count;
-						},
-						iteration: local Function(){
+			While(
+				evaluate: { done < count },
+				iterate: {
+					While(
+						[Int is b: 0],
+						evaluate: { b < batch && done < count },
+						iterate: {
 							local Float is x: math:fastRandom();
 							local Float is y: math:fastRandom();
 							if ((x * x + y * y) <= 1.0) {
@@ -112,10 +108,10 @@ Class is PiBenchmark{
 	##
 	## @param threads: Thread count (markers appear as sampling proceeds).
 	local Function is drawDomain(Int is threads){
-		local Int is row: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return row < self:gridH; },
-			iteration: local Function(){
+		While(
+			[Int is row: 0],
+			evaluate: { row < self:gridH },
+			iterate: {
 				output:line(self:domainRow(row: row, threads: threads));
 				row: row + 1;
 			}
@@ -131,10 +127,10 @@ Class is PiBenchmark{
 	## @return: Rendered row string.
 	local Function of String is domainRow(Int is row, Int is threads){
 		local String is buf: '';
-		local Int is col: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return col < self:gridW; },
-			iteration: local Function(){
+		While(
+			[Int is col: 0],
+			evaluate: { col < self:gridW },
+			iterate: {
 				local Float is cx: ((math:toFloat(value: col) + 0.5) / math:toFloat(value: self:gridW)) * 2.0 - 1.0;
 				local Float is cy: ((math:toFloat(value: row) + 0.5) / math:toFloat(value: self:gridH)) * 2.0 - 1.0;
 				local Float is dist: math:sqrt(value: cx * cx + cy * cy);
@@ -161,13 +157,11 @@ Class is PiBenchmark{
 	## @param threads: Thread count.
 	## @return: Thread index, or -1.
 	local Function of Int is markerAt(Int is col, Int is row, Int is threads){
-		local Int is i: 0;
 		local Int is found: -1;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return i < threads && found < 0;
-			},
-			iteration: local Function(){
+		While(
+			[Int is i: 0],
+			evaluate: { i < threads && found < 0 },
+			iterate: {
 				local Int is gx: (Process:atomicGet(slot: i * 2 + 2) * self:gridW) / 1000;
 				local Int is gy: (Process:atomicGet(slot: i * 2 + 3) * self:gridH) / 1000;
 				if (gx == col && gy == row) {
@@ -253,10 +247,10 @@ Class is PiBenchmark{
 		if (pad < 1) {
 			pad: 1;
 		}
-		local Int is i: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return i < pad; },
-			iteration: local Function(){
+		While(
+			[Int is i: 0],
+			evaluate: { i < pad },
+			iterate: {
 				line: line . ' ';
 				i: i + 1;
 			}
@@ -270,10 +264,10 @@ Class is PiBenchmark{
 	## @return: Bar string.
 	local Function of String is bar(Int is width){
 		local String is barText: '';
-		local Int is i: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return i < width; },
-			iteration: local Function(){
+		While(
+			[Int is i: 0],
+			evaluate: { i < width },
+			iterate: {
 				barText: barText . '═';
 				i: i + 1;
 			}

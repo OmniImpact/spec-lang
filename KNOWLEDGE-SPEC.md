@@ -79,7 +79,7 @@ Enum is Result { Ok(String is data), Err(Int is code) }
 # Payload constructors: Result:Ok(data: "x"); destructuring: is Result:Ok(data): { ... }
 ```
 
-Loops (no `while`/`for` keywords): `Loop` subclass + `While:run(loop:, control:)`; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
+Loops (no `while`/`for` keywords): scoped inline `While([Int is i: 0], evaluate: { i < max }, iterate: { ... })` with function block shorthand `{ ... }` (inlines to zero-allocation C11 statement expression); `Loop` subclass + `While:run(loop:, control:)`; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
 
 ## Collections
 - `Array of T`: `["a","b"]` `[]` `arr[i]` `arr[i]: v` — `length get set add pop removeAt slice clear indexOf join isEmpty each map fold filter count any`

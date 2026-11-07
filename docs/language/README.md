@@ -746,6 +746,26 @@ of Loop is CounterLoop{
 While:run(loop: CounterLoop:init(), control: LoopControl:init());
 ```
 
+### Concise Scoped Loops (`While`)
+For local iterations that do not require an independent `Loop` subclass, Spec provides the concise `While` runner with scoped variable declarations `[Type is name: init, ...]` and anonymous function block shorthands `{ ... }`:
+
+```spec
+local Int is sum: 0;
+While(
+	[Int is i: 0, Int is max: 10],
+	evaluate: { i < max },
+	iterate: {
+		sum: sum + i;
+		i: i + 1;
+	}
+);
+```
+
+- **Scoped State**: Variables defined in `[Type is name: init, ...]` exist strictly within the loop and are inaccessible outside.
+- **Mixed Scope**: Loop bodies can read and mutate variables and collections declared in the outer scope (e.g. `sum`).
+- **Zero Overhead**: Inlined directly by the compiler into native C11 statement expressions `({ ... while (1) { ... } ... })` with zero heap allocations, zero closure wrappers, and pure register loop performance.
+- **Function Block Shorthand**: `{ ... }` acts as an anonymous function argument, auto-returning single-expression bodies `{ i < max }`.
+
 ### Terminating Iterations (No `break` Keyword)
 Because loops are evaluated explicitly per iteration:
 - **Returning `false`**: Immediately terminates the loop without needing a `break` keyword.

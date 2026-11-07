@@ -23,4 +23,13 @@ Class is While{
 	## @param iteration: Body closure executed on each step.
 	Function is condition(Function is evaluate, Function is iteration){
 	}
+
+	## Repeatedly executes [iterate] while [evaluate] returns `true`,
+	## binding any scoped loop state in [vars].
+	##
+	## @param vars: Loop state variable declarations or empty.
+	## @param evaluate: Predicate closure returning `true` to continue.
+	## @param iterate: Body closure executed on each step.
+	Function is loop(Any is vars, Function is evaluate, Function is iterate){
+	}
 }

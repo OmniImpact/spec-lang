@@ -3091,24 +3091,50 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## Inlines a While:condition predicate loop: evaluate/iteration anon
-	## function bodies become the loop's condition and step.
+	## Inlines a While loop with optional scoped loop variables:
+	## loop variables are declared at the block scope, and the evaluate/iteration
+	## anon function bodies become the loop's condition and body.
 	##
+	## @param loopVars: Scoped loop variable declarations.
 	## @param evalExpr: The evaluate ANON_FN.
 	## @param iterExpr: The iteration ANON_FN.
 	## @return: C statement expression.
-	Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
+	Function of String is generateInlineWhileLoop(Array of Parameter is loopVars, Expression is evalExpr, Expression is iterExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
 		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local Map of String to String is savedVars: Map:init();
+		local Array of String is vKeys: self:localVars:keys();
+		vKeys:each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+
+		local String is declsC: '';
+		loopVars:each(action: local Function(Parameter is p){
+			local String is pTypeName: self:formatTypeString(t: p:paramType);
+			self:localVars:set(key: p:name, value: pTypeName);
+			local String is pCType: self:cTypeFor(typeName: pTypeName);
+			local String is pNameC: self:utils:cIdent(name: p:name);
+			local String is pInitC: '0';
+			if (p:hasDefault) {
+				pInitC: self:generateExpression(expr: p:defaultExpr);
+			}
+			declsC: declsC . '    ' . pCType . ' ' . pNameC . ' = ' . pInitC . ";\n";
+		});
 
 		local String is evVar: '_ev_' . id;
 		self:inlineReturnVar: evVar;
 		self:inlineReturnLabel: 'break';
 		local String is evalBodyC: '';
 		evalExpr:anonBody:each(action: local Function(Statement is s){
-			evalBodyC: evalBodyC . self:generateStatement(stmt: s);
+			if (s:kind == StatementKind:EXPR && self:inlineReturnVar != '') {
+				local String is exprC: self:generateExpression(expr: s:exprStmt);
+				evalBodyC: evalBodyC . '    ' . self:inlineReturnVar . ' = ' . exprC . "; break;\n";
+			} else {
+				evalBodyC: evalBodyC . self:generateStatement(stmt: s);
+			}
 		});
 		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
 
@@ -3123,8 +3149,28 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        do {\n" . iterBodyC . "        } while (0);\n    } })";
+		local String is loopReleasesC: '';
+		loopVars:each(action: local Function(Parameter is p){
+			local String is pTypeName: self:formatTypeString(t: p:paramType);
+			if (self:isArcType(typeName: pTypeName)) {
+				local String is pNameC: self:utils:cIdent(name: p:name);
+				loopReleasesC: loopReleasesC . '    if (' . pNameC . ') { spec_release((void*)' . pNameC . '); ' . pNameC . " = NULL; }\n";
+			}
+		});
+
+		local String is out: "({ " . declsC . "while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        do {\n" . iterBodyC . "        } while (0);\n    }\n" . loopReleasesC . "})";
+		self:localVars: savedVars;
 		return out;
+	}
+
+	## Inlines a While:condition predicate loop: evaluate/iteration anon
+	## function bodies become the loop's condition and step.
+	##
+	## @param evalExpr: The evaluate ANON_FN.
+	## @param iterExpr: The iteration ANON_FN.
+	## @return: C statement expression.
+	Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
+		return self:generateInlineWhileLoop(loopVars: [], evalExpr: evalExpr, iterExpr: iterExpr);
 	}
 
 	## Scans a member list for a field by name.

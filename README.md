@@ -92,7 +92,8 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 - **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
 
 ### 4. Unblockable & Concurrency-First Iteration
-Spec has eliminated primitive loop keywords (`while`, `break`) entirely from the language grammar. Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects:
+Spec has eliminated primitive loop keywords (`while`, `break`) entirely from the language grammar. Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects or inlined scoped loops:
+- **`While([Type is name: init, ...], evaluate: { ... }, iterate: { ... })`**: Concise, scoped inline loops with anonymous function block shorthand (`{ ... }`), inlined to native C11 statement expressions with zero closures and zero heap allocations.
 - **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`. Returning `false` from `iteration` or `evaluate` cleanly terminates the loop.
 - **`base:iterator:LoopControl`**: Supports non-blocking halts (`stop()`) and asynchronous completion triggers (`onComplete`).
 - **`While:run(loop, control)`**: Drives the iterator lifecycle without blocking threads.

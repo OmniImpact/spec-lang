@@ -477,7 +477,7 @@ Class is TypeChecker{
 		}
 		local Array of String is parts: targetType:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
-		if (baseClassName == '' || baseClassName == Primitive:ANY:value()) {
+		if (baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While') {
 			return;
 		}
 		local Member is m: self:lookupAnyMember(className: baseClassName, methodName: callExpr:methodName);
@@ -1114,10 +1114,53 @@ Class is TypeChecker{
 		local String is method: expr:methodName;
 		local String is res: 'Any';
 
+		local String is targetName: expr:methodTarget:stringValue;
+		if (targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0) {
+			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
+		}
+		local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While') && (method == 'loop' || method == 'init' || method == 'condition');
+		local Map of String to String is savedWhileVars;
+		if (isWhileLoop) {
+			savedWhileVars: Map:init();
+			local Array of String is existingKeys: self:localVars:keys();
+			existingKeys:each(action: local Function(String is k){
+				savedWhileVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+			});
+			local Int is posIdx: 0;
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if (arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0) {
+					arg:value:anonParams:each(action: local Function(Parameter is p){
+						if (p:hasDefault) {
+							self:inferExpressionType(expr: p:defaultExpr);
+						}
+						self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
+					});
+				}
+				if (arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN) {
+					if (arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName()) {
+						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+					}
+				} else if (arg:name == '' && arg:value:kind == ExpressionKind:ANON_FN) {
+					if (posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2)) {
+						if (arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName()) {
+							arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+						}
+					}
+				}
+				posIdx: posIdx + 1;
+			});
+		}
+
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
 		expr:methodArgs:each(action: local Function(NamedArg is arg){
 			self:inferExpressionType(expr: arg:value);
 		});
+
+		if (isWhileLoop) {
+			self:localVars: savedWhileVars;
+			expr:resolvedType: 'Void';
+			return 'Void';
+		}
 
 		if (targetType == self:names:selfIdent() || targetType == '') {
 			targetType: self:currentClassName;

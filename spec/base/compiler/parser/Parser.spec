@@ -960,6 +960,10 @@ Class is Parser{
 					return self:parseArrayOrMap();
 				}
 
+				if (self:checkPunct(p: Punctuation:BLOCK_OPEN)) {
+					return self:parseFunctionBlock();
+				}
+
 				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
 				self:advance();
 				return Expression:init(kind: ExpressionKind:UNKNOWN);
@@ -967,11 +971,122 @@ Class is Parser{
 		}
 	}
 
+	## True when the current bracketed sequence begins a typed declaration
+	## list `[Type is name: init, ...]` rather than a value array.
+	##
+	## @return: true when declaration list.
+	Function of Boolean is isDeclListStart(){
+		local Int is offset: 1;
+		local Boolean is running: true;
+		local Boolean is foundIs: false;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return running;
+			},
+			iteration: local Function(){
+				local Token is t: self:peekAhead(offset: offset);
+				if (t:getTokenKind() == TokenKind:EOF || t:getValue() == ']' || t:getValue() == ',' || t:getValue() == ';') {
+					running: false;
+				} else {
+					if (t:getValue() == Keyword:IS:value()) {
+						foundIs: true;
+						running: false;
+					}
+					offset: offset + 1;
+				}
+			}
+		);
+		return foundIs;
+	}
+
+	## Parses a scoped variable declaration list `[Type is name: init, ...]`.
+	##
+	## @return: ARRAY expression carrying parsed parameters in anonParams.
+	Function of Expression is parseDeclList(){
+		self:matchPunct(p: Punctuation:BRACKET_OPEN);
+		local Array of Parameter is params: [];
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
+			},
+			iteration: local Function(){
+				local Type is pType: self:parseType();
+				self:matchKeyword(kw: Keyword:IS);
+				local Token is nameTok: self:advance();
+				local Parameter is p: Parameter:init(name: nameTok:getValue(), paramType: pType);
+				if (self:checkPunct(p: Punctuation:ASSIGN)) {
+					self:advance();
+					p:setDefault(expr: self:parseExpression());
+				}
+				params:add(item: p);
+				if (self:checkPunct(p: Punctuation:SEPARATOR)) {
+					self:advance();
+				}
+			}
+		);
+		self:matchPunct(p: Punctuation:BRACKET_CLOSE);
+		local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
+		e:anonParams: params;
+		return e;
+	}
+
+	## Parses a function block shorthand `{ ... }` as an anonymous function.
+	##
+	## @return: The ANON_FN expression.
+	Function of Expression is parseFunctionBlock(){
+		self:matchPunct(p: Punctuation:BLOCK_OPEN);
+		local Array of Statement is body: [];
+		local Array of Parameter is params: [];
+		local Type is returnType: Type:init(name: self:names:voidName());
+
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
+			},
+			iteration: local Function(){
+				if (!self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:IF) && !self:checkKeyword(kw: Keyword:WHEN)) {
+					local Expression is expr: self:parseExpression();
+					if (self:checkPunct(p: Punctuation:ASSIGN)) {
+						self:advance();
+						local Expression is val: self:parseExpression();
+						self:matchPunct(p: Punctuation:TERMINATOR);
+						local Statement is s: Statement:init(kind: StatementKind:ASSIGN);
+						s:assignTarget: expr;
+						s:assignValue: val;
+						body:add(item: s);
+					} else if (self:checkPunct(p: Punctuation:BLOCK_CLOSE)) {
+						local Statement is retS: Statement:init(kind: StatementKind:RETURN);
+						retS:returnExpr: expr;
+						retS:hasReturnExpr: true;
+						body:add(item: retS);
+					} else {
+						self:matchPunct(p: Punctuation:TERMINATOR);
+						local Statement is exprS: Statement:init(kind: StatementKind:EXPR);
+						exprS:exprStmt: expr;
+						body:add(item: exprS);
+					}
+				} else {
+					body:add(item: self:parseStatement());
+				}
+			}
+		);
+		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
+
+		local Expression is e: Expression:init(kind: ExpressionKind:ANON_FN);
+		e:anonReturnType: returnType;
+		e:anonParams: params;
+		e:anonBody: body;
+		return e;
+	}
+
 	## Parses a bracketed `[...]` literal: array, map, or their empty
 	## forms (distinguished by `:]` for an empty map).
 	##
 	## @return: The ARRAY or MAP node.
 	Function of Expression is parseArrayOrMap(){
+		if (self:isDeclListStart()) {
+			return self:parseDeclList();
+		}
 		self:advance();
 		if (self:checkPunct(p: Punctuation:BRACKET_CLOSE)) {
 			self:advance();
