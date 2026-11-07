@@ -196,17 +196,26 @@ The lowercase forms are an alias layer over real classes
   prefer the prefixed form `Output:line(...)` to keep the diff visually
   scannable; the checker permits bare `line(...)` where unique. Then delete
   the `output` alias.
-- [ ] **R3 — Replace `error:` with a real class.** `error:` canonicalizes to
-  the name `Error`, which is *taken* by the compiler package's `Error` type —
-  a stderr class must not be named `Error` (flat name space would drop one of
-  them, `Loader.spec:102`). Add `Stderr` (runtime-managed, zero-field,
-  `line`/`print`) to `base:io`, mirror of `Output`. Rewrite the 19 sites.
-  Delete the `error` alias. **Decision point:** class name — `Stderr`
-  proposed; confirm before implementing.
+- [ ] **R3 — Replace `error:` with a real class.** Verified mechanism:
+  `error:line` is a *string-matched routing key* (`BuiltinCallGenerator.spec:133`,
+  `targetC == 'error' || targetC == 'Error'`) that inlines the stderr writer —
+  the spelling `Error` binds to no struct, method, or C symbol, and merely
+  shares a name with the compiler package's real `Error` data type (harmless
+  today only because the routing also requires a method named `line`). The
+  fiction is deleted, not renamed: add `Stderr` (runtime-managed, zero-field,
+  `line`/`print`) to `base:io`, mirror of `Output` — the class-form path is
+  already proven (`Output:line` and `output:line` emit identical C). Switch
+  routing to class identity (see §6, BuiltinCallGenerator). Rewrite the 19
+  sites to `as Stderr()` + `Stderr:line(...)`. Delete the `error`/`Error`
+  routing entries and the `error` alias. End state: the name `Error` is bound
+  solely to the compiler's error data type. **Decision point:** class name —
+  `Stderr` proposed (verified unused repo-wide); confirm before implementing.
 - [ ] **R4 — Post-removal invariant.** `canonicalClassName` reduces to
   identity; `TypeChecker.spec:765`'s "callable whether or not imported"
   special case is deleted; no lowercase singleton receiver remains anywhere in
-  `spec/`, `tests/`, `examples/` (grep-verified in the gate of §7).
+  `spec/`, `tests/`, `examples/` (grep-verified in the gate of §7); and **no
+  builtin routing condition matches on a bare class-name string** — every
+  callable name resolves through a declared, imported class.
 - [ ] **R5 — Documentation.** KNOWLEDGE-SPEC "Builtins (selected)" section
   rewritten to the instance form; README language-features section updated in
   the same commit as the flip (§7 Phase B).
@@ -228,8 +237,12 @@ The lowercase forms are an alias layer over real classes
   (§2.4); E8 branch deletion; class-name receiver → synthetic-field dispatch.
 - [ ] **Linter** — Phase 0.5 worklist mode (§7), then E10; optional
   over-qualification style notice (§10).
-- [ ] **BuiltinCallGenerator** — drop the `math:`/`output:`/`error:` alias
-  routing as R1–R3 land.
+- [ ] **BuiltinCallGenerator** — route runtime-managed classes (`Output`,
+  `Stderr`, `Math`) by **declared class identity** (namespace-qualified
+  `ClassInfo` from the loaded program), never by target-name literals; delete
+  the `math:`/`output:`/`error:` alias conditions as R1–R3 land. Under the
+  instance model the receiver's class is already known at the call site, so
+  identity routing costs nothing.
 
 ## 7. Migration plan
 
