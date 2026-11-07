@@ -45,9 +45,6 @@ String spec_string_concat(String a, String b);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
-String spec_string_trim(String b);
-bool spec_string_has_prefix(String b, String prefix);
-bool spec_string_has_suffix(String b, String suffix);
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pthread.h>
@@ -261,76 +258,10 @@ String spec_to_string_float(double v) {
 String spec_to_string_bool(bool v) {
     return spec_string_intern(v ? "true" : "false");
 }
-
-String spec_string_char_at(String s, long long idx, String def) {
-    if (!s || idx < 0) return def ? spec_string_copy(def) : spec_string_intern("");
-    if ((size_t)idx >= (size_t)spec_string_length(s)) return def ? spec_string_copy(def) : spec_string_intern("");
-    char one[2] = { (char)spec_buf_get_byte(s, idx, -1), '\0' };
-    return spec_string_intern(one);
-}
 String spec_string_from_char_code(long long code) {
     if (code < 0 || code > 255) return spec_string_intern("");
     char one[2] = { (char)code, '\0' };
     return spec_string_intern(one);
-}
-bool spec_string_starts_with(String s, String prefix) {
-    return spec_string_has_prefix(s, prefix);
-}
-bool spec_string_ends_with(String s, String suffix) {
-    return spec_string_has_suffix(s, suffix);
-}
-String spec_string_replace_all(String s, String search, String replacement) {
-    if (!s) return spec_string_intern("");
-    if (!search || spec_string_length(search) == 0) return spec_string_from_bytes("", 0);
-    if (!replacement) replacement = spec_string_intern("");
-    long long slen = spec_string_length(search);
-    long long total = spec_string_length(s);
-    String out = spec_string_from_bytes("", 0);
-    long long pos = 0;
-    for (;;) {
-        long long idx = spec_string_index_of_from(s, search, pos, -1);
-        if (idx < 0) break;
-        out = spec_string_concat(out, spec_string_substring(s, pos, idx));
-        out = spec_string_concat(out, replacement);
-        pos = idx + slen;
-    }
-    if (pos < total) out = spec_string_concat(out, spec_string_substring(s, pos, total));
-    return out;
-}
-bool spec_string_is_digit(String s) {
-    if (!s) return false;
-    long long n = spec_string_length(s);
-    if (n == 0) return false;
-    for (long long i = 0; i < n; i++) {
-        if (!isdigit((unsigned char)spec_buf_get_byte(s, i, -1))) return false;
-    }
-    return true;
-}
-bool spec_string_is_alpha(String s) {
-    if (!s) return false;
-    long long n = spec_string_length(s);
-    if (n == 0) return false;
-    for (long long i = 0; i < n; i++) {
-        if (!isalpha((unsigned char)spec_buf_get_byte(s, i, -1))) return false;
-    }
-    return true;
-}
-bool spec_string_is_whitespace(String s) {
-    if (!s) return false;
-    long long n = spec_string_length(s);
-    if (n == 0) return false;
-    for (long long i = 0; i < n; i++) {
-        if (!isspace((unsigned char)spec_buf_get_byte(s, i, -1))) return false;
-    }
-    return true;
-}
-long long spec_string_count_leading(String s, String search) {
-    if (!s || !search || spec_string_length(search) == 0) return 0;
-    long long slen = spec_string_length(search);
-    long long count = 0;
-    long long pos = 0;
-    while (spec_string_index_of_from(s, search, pos, -1) == pos) { count++; pos += slen; }
-    return count;
 }
 /* Thread-Safe Spec Dynamic Array */
 #define SPEC_ELEM_NONE 0
@@ -480,19 +411,6 @@ void* spec_array_remove_at(SpecArray* a, long long idx, void* def) {
     return removed;
 }
 
-SpecArray* spec_array_slice(SpecArray* a, long long start, long long end) {
-    SpecArray* res = spec_array_new_kind(a ? a->elem_kind : SPEC_ELEM_NONE);
-    if (!a) return res;
-    pthread_mutex_lock(&a->lock);
-    if (start < 0) start = 0;
-    if (end > (long long)a->length) end = (long long)a->length;
-    for (long long i = start; i < end; i++) {
-        spec_array_add(res, a->items[i]);
-    }
-    pthread_mutex_unlock(&a->lock);
-    return res;
-}
-
 void spec_array_clear(SpecArray* a) {
     if (!a) return;
     pthread_mutex_lock(&a->lock);
@@ -504,112 +422,6 @@ void spec_array_clear(SpecArray* a) {
     pthread_mutex_unlock(&a->lock);
 }
 
-long long spec_array_index_of_str(SpecArray* a, String search, long long def) {
-    if (!a) return def;
-    for (size_t i = 0; i < a->length; i++) {
-        if (a->items[i] && spec_string_equals((String)a->items[i], search)) return (long long)i;
-    }
-    return def;
-}
-void spec_array_each(SpecArray* a, void (*fn)(void*)) {
-    if (!a || !fn) return;
-    pthread_mutex_lock(&a->lock);
-    for (size_t i = 0; i < a->length; i++) {
-        fn(a->items[i]);
-    }
-    pthread_mutex_unlock(&a->lock);
-}
-
-SpecArray* spec_array_filter(SpecArray* a, bool (*fn)(void*)) {
-    SpecArray* res = spec_array_new_kind(a ? a->elem_kind : SPEC_ELEM_NONE);
-    if (!a || !fn) return res;
-    pthread_mutex_lock(&a->lock);
-    for (size_t i = 0; i < a->length; i++) {
-        if (fn(a->items[i])) spec_array_add(res, a->items[i]);
-    }
-    pthread_mutex_unlock(&a->lock);
-    return res;
-}
-
-long long spec_array_count(SpecArray* a, bool (*fn)(void*)) {
-    if (!a || !fn) return 0;
-    pthread_mutex_lock(&a->lock);
-    long long cnt = 0;
-    for (size_t i = 0; i < a->length; i++) {
-        if (fn(a->items[i])) cnt++;
-    }
-    pthread_mutex_unlock(&a->lock);
-    return cnt;
-}
-
-bool spec_array_any(SpecArray* a, bool (*fn)(void*)) {
-    if (!a || !fn) return false;
-    pthread_mutex_lock(&a->lock);
-    for (size_t i = 0; i < a->length; i++) {
-        if (fn(a->items[i])) {
-            pthread_mutex_unlock(&a->lock);
-            return true;
-        }
-    }
-    pthread_mutex_unlock(&a->lock);
-    return false;
-}
-
-SpecArray* spec_string_lines(String s) {
-    SpecArray* res = spec_array_new_object();
-    if (!s) return res;
-    const char* cs = spec_buf_to_cstring((SpecBuf*)s);
-    const char* start = cs;
-    const char* p = cs;
-    while (*p) {
-        if (*p == '\n') {
-            size_t len = (size_t)(p - start);
-            if (len > 0 && *(p - 1) == '\r') len--;
-            spec_array_add_owned(res, spec_string_from_bytes(start, len));
-            start = p + 1;
-        }
-        p++;
-    }
-    if (p >= start && *start) {
-        size_t len = (size_t)(p - start);
-        spec_array_add_owned(res, spec_string_from_bytes(start, len));
-    }
-    return res;
-}
-SpecArray* spec_string_split(String s, String delim) {
-    SpecArray* res = spec_array_new_object();
-    if (!s) return res;
-    long long slen = spec_string_length(s);
-    if (!delim || spec_string_length(delim) == 0) {
-        for (long long i = 0; i < slen; i++) {
-            char ch[2] = { (char)spec_buf_get_byte(s, i, -1), '\0' };
-            spec_array_add_owned(res, spec_string_from_bytes(ch, 1));
-        }
-        return res;
-    }
-    long long dlen = spec_string_length(delim);
-    long long pos = 0;
-    for (;;) {
-        long long idx = spec_string_index_of_from(s, delim, pos, -1);
-        if (idx < 0) break;
-        spec_array_add_owned(res, spec_string_substring(s, pos, idx));
-        pos = idx + dlen;
-    }
-    spec_array_add_owned(res, spec_string_substring(s, pos, slen));
-    return res;
-}
-String spec_array_join(SpecArray* a, String sep) {
-    if (!a || a->length == 0) return spec_string_intern("");
-    const char* scs = sep ? spec_buf_to_cstring((SpecBuf*)sep) : "";
-    pthread_mutex_lock(&a->lock);
-    String out = spec_buf_new(1, 0);
-    for (size_t i = 0; i < a->length; i++) {
-        if (a->items[i]) spec_buf_append_buf(out, (String)a->items[i]);
-        if (i + 1 < a->length) spec_buf_append_bytes(out, scs);
-    }
-    pthread_mutex_unlock(&a->lock);
-    return out;
-}
 /* Thread-Safe Spec Hash Map (64-Bucket FNV-1a Hash Table) */
 #define SPEC_MAP_BUCKETS 64
 typedef struct SpecMapEntry {
@@ -666,10 +478,6 @@ static SpecMap* spec_map_new_kind(int kind) {
 
 SpecMap* spec_map_new(void) {
     return spec_map_new_kind(SPEC_ELEM_NONE);
-}
-
-SpecArray* spec_array_new_string(void) {
-    return spec_array_new_object();
 }
 
 SpecMap* spec_map_new_object(void) {
@@ -759,27 +567,6 @@ void spec_map_set_any_transfer(SpecMap* m, String key, void* val) {
     pthread_mutex_unlock(&m->lock);
 }
 
-String spec_map_getString(SpecMap* m, String key, String _default) {
-    if (!m || !key) return _default ? _default : spec_string_intern("");
-    const char* ck = spec_buf_to_cstring((SpecBuf*)key);
-    pthread_mutex_lock(&m->lock);
-    size_t idx = spec_hash_key(ck);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (strcmp(curr->key, ck) == 0) {
-            const char* res = (const char*)curr->value;
-            pthread_mutex_unlock(&m->lock);
-            return spec_string_from_chars(res ? res : "");
-        }
-        curr = curr->next;
-    }
-    pthread_mutex_unlock(&m->lock);
-    return _default ? _default : spec_string_intern("");
-}
-
-String spec_map_get_string(SpecMap* m, String key, String _default) {
-    return spec_map_getString(m, key, _default);
-}
 void* spec_map_get(SpecMap* m, String key, void* _default) {
     if (!m || !key) return _default;
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
@@ -791,60 +578,6 @@ void* spec_map_get(SpecMap* m, String key, void* _default) {
             void* res = curr->value;
             if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : "");
             else if (m->val_kind == SPEC_ELEM_OBJECT && res) spec_retain(res);
-            pthread_mutex_unlock(&m->lock);
-            return res;
-        }
-        curr = curr->next;
-    }
-    pthread_mutex_unlock(&m->lock);
-    return _default;
-}
-
-long long spec_map_get_int(SpecMap* m, String key, long long _default) {
-    if (!m || !key) return _default;
-    const char* ck = spec_buf_to_cstring((SpecBuf*)key);
-    pthread_mutex_lock(&m->lock);
-    size_t idx = spec_hash_key(ck);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (strcmp(curr->key, ck) == 0) {
-            long long res = curr->is_str ? atoll((const char*)curr->value) : (long long)(intptr_t)curr->value;
-            pthread_mutex_unlock(&m->lock);
-            return res;
-        }
-        curr = curr->next;
-    }
-    pthread_mutex_unlock(&m->lock);
-    return _default;
-}
-
-double spec_map_get_float(SpecMap* m, String key, double _default) {
-    if (!m || !key) return _default;
-    const char* ck = spec_buf_to_cstring((SpecBuf*)key);
-    pthread_mutex_lock(&m->lock);
-    size_t idx = spec_hash_key(ck);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (strcmp(curr->key, ck) == 0) {
-            double res = curr->is_str ? atof((const char*)curr->value) : _default;
-            pthread_mutex_unlock(&m->lock);
-            return res;
-        }
-        curr = curr->next;
-    }
-    pthread_mutex_unlock(&m->lock);
-    return _default;
-}
-
-bool spec_map_get_bool(SpecMap* m, String key, bool _default) {
-    if (!m || !key) return _default;
-    const char* ck = spec_buf_to_cstring((SpecBuf*)key);
-    pthread_mutex_lock(&m->lock);
-    size_t idx = spec_hash_key(ck);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (strcmp(curr->key, ck) == 0) {
-            bool res = curr->is_str ? (strcmp((const char*)curr->value, "true") == 0) : (bool)(intptr_t)curr->value;
             pthread_mutex_unlock(&m->lock);
             return res;
         }
@@ -1302,19 +1035,6 @@ const char* spec_buf_to_cstring(SpecBuf* b) {
 /* String: managed string backed by SpecBuf (elem_size=1) */
 typedef SpecBuf* String;
 
-bool spec_string_has_prefix(String b, String prefix) {
-    if (!b || !prefix) return false;
-    if (prefix->length == 0) return true;
-    if (prefix->length > b->length) return false;
-    return memcmp(b->data, prefix->data, prefix->length) == 0;
-}
-
-bool spec_string_has_suffix(String b, String suffix) {
-    if (!b || !suffix) return false;
-    if (suffix->length == 0) return true;
-    if (suffix->length > b->length) return false;
-    return memcmp((unsigned char*)b->data + (b->length - suffix->length), suffix->data, suffix->length) == 0;
-}
 String spec_string_from_literal(const char* lit) {
     String b = spec_buf_new(1, 0);
     if (lit && *lit) spec_buf_append_bytes(b, lit);
@@ -1398,21 +1118,6 @@ long long spec_string_index_of_from(String b, String needle, long long from, lon
         if (match) return i;
     }
     return def;
-}
-bool spec_string_contains(String b, String needle) {
-    return spec_string_index_of(b, needle, -1) >= 0;
-}
-
-String spec_string_trim(String b) {
-    String res = spec_buf_new(1, 0);
-    if (!b || !b->length) return res;
-    size_t s = 0;
-    size_t e = b->length;
-    unsigned char* data = (unsigned char*)b->data;
-    while (s < e && (data[s] == ' ' || data[s] == '\t' || data[s] == '\n' || data[s] == '\r')) s++;
-    while (e > s && (data[e-1] == ' ' || data[e-1] == '\t' || data[e-1] == '\n' || data[e-1] == '\r')) e--;
-    for (size_t i = s; i < e; i++) spec_buf_push_byte(res, (long long)data[i]);
-    return res;
 }
 
 /* Spec Byte Buffer: compact [Byte] storage (the string builder floor) */
@@ -1816,34 +1521,6 @@ String spec_int_to_base(long long v, long long base, long long digits) {
     while ((79 - idx) < (int)digits && idx > 0) buf[--idx] = '0';
     if (neg && idx > 0) buf[--idx] = '-';
     return spec_string_from_chars(buf + idx);
-}
-
-long long spec_parse_base(String str, long long base, long long def) {
-    if (!str || str->length == 0) return def;
-    const char* s = spec_buf_to_cstring((SpecBuf*)str);
-    int b = (int)base;
-    if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) { b = 16; s += 2; }
-    else if (s[0] == '0' && (s[1] == 'b' || s[1] == 'B')) { b = 2; s += 2; }
-    else if (s[0] == '0' && (s[1] == 'o' || s[1] == 'O')) { b = 8; s += 2; }
-    if (b < 2 || b > 36) return def;
-    int neg = 0;
-    if (*s == '-') { neg = 1; s++; }
-    if (!*s) return def;
-    unsigned long long v = 0;
-    int any = 0;
-    for (; *s; s++) {
-        if (*s == '_') continue;
-        int d;
-        if (*s >= '0' && *s <= '9') d = *s - '0';
-        else if (*s >= 'a' && *s <= 'z') d = *s - 'a' + 10;
-        else if (*s >= 'A' && *s <= 'Z') d = *s - 'A' + 10;
-        else return def;
-        if (d >= b) return def;
-        v = v * (unsigned long long)b + (unsigned long long)d;
-        any = 1;
-    }
-    if (!any) return def;
-    return neg ? -(long long)v : (long long)v;
 }
 
 /* Terminal Metrics */

@@ -722,6 +722,8 @@ Class is Loader{
 		# floor is never loaded except behind its wrapper.
 		local Array of String is preloads: [
 			'String',
+			'Array',
+			'Map',
 			'Buf',
 			'Dir',
 			'Stringable',

@@ -654,7 +654,7 @@ Class is BuiltinCallGenerator{
 					if (arg:name == 'start') { startC: cg:generateExpression(expr: arg:value); }
 					if (arg:name == 'end') { endC: cg:generateExpression(expr: arg:value); }
 				});
-				return 'spec_array_slice(' . targetC . ', ' . startC . ', ' . endC . ')';
+				return 'Array_slice(' . targetC . ', ' . startC . ', ' . endC . ')';
 			}
 			if (m == 'clear') {
 				return 'spec_array_clear(' . targetC . ')';
@@ -666,60 +666,24 @@ Class is BuiltinCallGenerator{
 					if (arg:name == 'search' || arg:name == 'needle') { searchC: cg:generateExpression(expr: arg:value); }
 					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
 				});
-				return 'spec_array_index_of_str(' . targetC . ', ' . searchC . ', ' . defC . ')';
+				return 'Array_indexOf(' . targetC . ', ' . searchC . ', ' . defC . ')';
 			}
 			# Higher-order: anon functions inline as loops; values as callbacks.
 			if (m == 'each') {
-				if (expr:argCount() > 0) {
-					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-					if (fnExpr:kind == ExpressionKind:ANON_FN) {
-						return cg:generateInlineArrayOp(mode: 'each', targetC: targetC, fnExpr: fnExpr);
-					}
-				}
-				local String is fnC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if (arg:name == 'action') { fnC: cg:generateExpression(expr: arg:value); }
-				});
-				return 'spec_array_each(' . targetC . ', (void (*)(void*))(' . fnC . '))';
+				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+				return cg:generateInlineArrayOp(mode: 'each', targetC: targetC, fnExpr: fnExpr);
 			}
 			if (m == 'filter') {
-				if (expr:argCount() > 0) {
-					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-					if (fnExpr:kind == ExpressionKind:ANON_FN) {
-						return cg:generateInlineArrayOp(mode: 'filter', targetC: targetC, fnExpr: fnExpr);
-					}
-				}
-				local String is fnC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if (arg:name == 'predicate') { fnC: cg:generateExpression(expr: arg:value); }
-				});
-				return 'spec_array_filter(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
+				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+				return cg:generateInlineArrayOp(mode: 'filter', targetC: targetC, fnExpr: fnExpr);
 			}
 			if (m == 'count') {
-				if (expr:argCount() > 0) {
-					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-					if (fnExpr:kind == ExpressionKind:ANON_FN) {
-						return cg:generateInlineArrayOp(mode: 'count', targetC: targetC, fnExpr: fnExpr);
-					}
-				}
-				local String is fnC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if (arg:name == 'predicate') { fnC: cg:generateExpression(expr: arg:value); }
-				});
-				return 'spec_array_count(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
+				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+				return cg:generateInlineArrayOp(mode: 'count', targetC: targetC, fnExpr: fnExpr);
 			}
 			if (m == 'any') {
-				if (expr:argCount() > 0) {
-					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-					if (fnExpr:kind == ExpressionKind:ANON_FN) {
-						return cg:generateInlineArrayOp(mode: 'any', targetC: targetC, fnExpr: fnExpr);
-					}
-				}
-				local String is fnC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if (arg:name == 'predicate') { fnC: cg:generateExpression(expr: arg:value); }
-				});
-				return 'spec_array_any(' . targetC . ', (bool (*)(void*))(' . fnC . '))';
+				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+				return cg:generateInlineArrayOp(mode: 'any', targetC: targetC, fnExpr: fnExpr);
 			}
 			if (m == 'map') {
 				if (expr:argCount() > 0) {
@@ -743,7 +707,7 @@ Class is BuiltinCallGenerator{
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if (arg:name == 'separator' || sepC == '""') { sepC: cg:generateExpression(expr: arg:value); }
 				});
-				return 'spec_array_join(' . targetC . ', ' . sepC . ')';
+				return 'Array_join(' . targetC . ', ' . sepC . ')';
 			}
 		}
 		# List methods ([Byte] byte-buffer shape; pointer-vector shapes below).
@@ -928,16 +892,16 @@ Class is BuiltinCallGenerator{
 			return 'spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		}
 		if (m == 'getString') {
-			return 'spec_map_get_string(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			return '(String)spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		}
 		if (m == 'getInt') {
-			return 'spec_map_get_int(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			return 'Map_getInt(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		}
 		if (m == 'getFloat') {
-			return 'spec_map_get_float(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			return '((double)spec_map_get(' . targetC . ', ' . a0 . ', (void*)0))';
 		}
 		if (m == 'getBool') {
-			return 'spec_map_get_bool(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			return 'Map_getBool(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		}
 		if (m == 'has') {
 			return 'spec_map_has(' . targetC . ', ' . a0 . ')';
@@ -982,20 +946,20 @@ Class is BuiltinCallGenerator{
 		}
 		when (m) {
 			is 'length': { return 'spec_string_length(' . targetC . ')'; }
-			is 'charAt': { return 'spec_string_char_at(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
+			is 'charAt': { return 'String_charAt(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
 			is 'substring': { return 'spec_string_substring(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
 			is 'indexOf': { return 'spec_string_index_of(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-			is 'trim': { return 'spec_string_trim(' . targetC . ')'; }
-			is 'isDigit': { return 'spec_string_is_digit(' . targetC . ')'; }
-			is 'isAlpha': { return 'spec_string_is_alpha(' . targetC . ')'; }
-			is 'isWhitespace': { return 'spec_string_is_whitespace(' . targetC . ')'; }
-			is 'countLeading': { return 'spec_string_count_leading(' . targetC . ', ' . a0 . ')'; }
-			is 'split': { return 'spec_string_split(' . targetC . ', ' . a0 . ')'; }
-			is 'lines': { return 'spec_string_lines(' . targetC . ')'; }
-			is 'contains': { return 'spec_string_contains(' . targetC . ', ' . a0 . ')'; }
-			is 'startsWith': { return 'spec_string_has_prefix(' . targetC . ', ' . a0 . ')'; }
-			is 'endsWith': { return 'spec_string_has_suffix(' . targetC . ', ' . a0 . ')'; }
-			is 'replaceAll': { return 'spec_string_replace_all(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
+			is 'trim': { return 'String_trim(' . targetC . ')'; }
+			is 'isDigit': { return 'String_isDigit(' . targetC . ')'; }
+			is 'isAlpha': { return 'String_isAlpha(' . targetC . ')'; }
+			is 'isWhitespace': { return 'String_isWhitespace(' . targetC . ')'; }
+			is 'countLeading': { return 'String_countLeading(' . targetC . ', ' . a0 . ')'; }
+			is 'split': { return 'String_split(' . targetC . ', ' . a0 . ')'; }
+			is 'lines': { return 'String_lines(' . targetC . ')'; }
+			is 'contains': { return 'String_contains(' . targetC . ', ' . a0 . ')'; }
+			is 'startsWith': { return 'String_startsWith(' . targetC . ', ' . a0 . ')'; }
+			is 'endsWith': { return 'String_endsWith(' . targetC . ', ' . a0 . ')'; }
+			is 'replaceAll': { return 'String_replaceAll(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
 			is 'parseInt': {
 				local String is baseC: '10';
 				local String is defC: '-1';
@@ -1003,7 +967,7 @@ Class is BuiltinCallGenerator{
 					if (arg:name == 'base') { baseC: cg:generateExpression(expr: arg:value); }
 					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
 				});
-				return 'spec_parse_base(' . targetC . ', ' . baseC . ', ' . defC . ')';
+				return 'String_parseInt(' . targetC . ', ' . baseC . ', ' . defC . ')';
 			}
 			else: { return ''; }
 		}

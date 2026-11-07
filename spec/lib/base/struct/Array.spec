@@ -11,6 +11,10 @@
 Class is Array of T{
 	namespace: ['base', 'struct'];
 
+	replace Array of Array of String is using: [
+		['base', 'iterator', While]
+	];
+
 	## Returns the number of elements contained in the array.
 	##
 	## @return: Element count.
@@ -62,6 +66,27 @@ Class is Array of T{
 	## @param end: Exclusive end index.
 	## @return: New sliced [Array].
 	Function of Array of T is slice(Int is start, Int is end){
+		local Array of T is res: [];
+		local Int is len: self:length();
+		local Int is s: start;
+		local Int is e: end;
+		if (s < 0) {
+			s: 0;
+		}
+		if (e > len) {
+			e: len;
+		}
+		local Int is i: s;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return i < e;
+			},
+			iteration: local Function(){
+				res:add(item: self:get(index: i, default: ''));
+				i: i + 1;
+			}
+		);
+		return res;
 	}
 
 	## Empties the array, resetting its length to zero.
@@ -74,7 +99,23 @@ Class is Array of T{
 	## @param default: Fallback index returned if not found.
 	## @return: Matching index, or [default].
 	## @fallback: Returns [default] (conventionally -1) if the item is absent.
-	Function of Int is indexOf(String is search, Int is default){
+	Function of Int is indexOf(String is search, Int is default: -1){
+		local Int is len: self:length();
+		local Int is i: 0;
+		local Int is found: default;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return found == default && (i < len);
+			},
+			iteration: local Function(){
+				local String is item: self:get(index: i, default: '') as String;
+				if (item == search) {
+					found: i;
+				}
+				i: i + 1;
+			}
+		);
+		return found;
 	}
 
 	## Iterates through each element in the array, invoking [action] with the element.
@@ -124,6 +165,25 @@ Class is Array of T{
 	## @param separator: Delimiter string inserted between adjacent items.
 	## @return: Joined string.
 	Function of String is join(String is separator){
+		local Int is len: self:length();
+		if (len == 0) {
+			return '';
+		}
+		local String is out: '';
+		local Int is i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return i < len;
+			},
+			iteration: local Function(){
+				if (i > 0) {
+					out: out . separator;
+				}
+				out: out . (self:get(index: i, default: '') as String);
+				i: i + 1;
+			}
+		);
+		return out;
 	}
 
 	## Returns whether the array contains zero elements.

@@ -373,17 +373,19 @@ Class is DeclarationGenerator{
 				c:members:each(action: local Function(Member is m){
 					when (m:kind) {
 						is MemberKind:METHOD: {
-							local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
-							if (retType == 'void') {
-								if (m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value()) {
-									retType: 'bool';
+							if (!self:policy:isTransparent(c: c) || m:body:length() > 0) {
+								local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
+								if (retType == 'void') {
+									if (m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value()) {
+										retType: 'bool';
+									}
 								}
+								out: out . retType . ' ' . c:name . '_' . m:name . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
+								m:params:each(action: local Function(Parameter is p){
+									out: out . ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name);
+								});
+								out: out . ");\n";
 							}
-							out: out . retType . ' ' . c:name . '_' . m:name . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
-							m:params:each(action: local Function(Parameter is p){
-								out: out . ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name);
-							});
-							out: out . ");\n";
 						}
 						else: {}
 					}

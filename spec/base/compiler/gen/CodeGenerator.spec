@@ -1369,20 +1369,16 @@ Class is CodeGenerator{
 			local String is hintKind: self:containerElemKind(containerType: self:containerHint);
 			if (hintKind == 'byte') {
 				newCall: 'spec_bytebuffer_new()';
-			} else if (hintKind == 'object') {
-				newCall: if (listHint) 'spec_vec_new_object()' else 'spec_array_new_object()';
-			} else if (hintKind == 'string') {
-				newCall: if (listHint) 'spec_vec_new_string()' else 'spec_array_new_string()';
+			} else if (hintKind == 'object' || hintKind == 'string') {
+				newCall: if (listHint) (if (hintKind == 'string') 'spec_vec_new_string()' else 'spec_vec_new_object()') else 'spec_array_new_object()';
 			} else if (listHint) {
 				newCall: 'spec_vec_new()';
 			}
 			self:containerHint: '';
 		} else if (expr:arrayItems:length() > 0) {
 			local String is elemT: self:inferTargetType(expr: expr:arrayItems:get(index: 0));
-			if (self:isArcType(typeName: elemT)) {
+			if (self:isArcType(typeName: elemT) || elemT == 'String') {
 				newCall: 'spec_array_new_object()';
-			} else if (elemT == 'String') {
-				newCall: 'spec_array_new_string()';
 			}
 		}
 		local String is arrCType: if (listHint) 'SpecVec*' else 'SpecArray*';
@@ -1581,16 +1577,16 @@ Class is CodeGenerator{
 				valType: self:elemOfType(t: targetType);
 			}
 			if (valType == 'String') {
-				return 'spec_map_get_string(' . targetC . ', ' . indexC . ', spec_string_intern(""))';
+				return '((String)spec_map_get(' . targetC . ', ' . indexC . ', spec_string_intern("")))';
 			}
 			if (valType == Primitive:INT:value()) {
-				return 'spec_map_get_int(' . targetC . ', ' . indexC . ', 0)';
+				return '((long long)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', 0))';
 			}
 			if (valType == 'Float') {
-				return 'spec_map_get_float(' . targetC . ', ' . indexC . ', 0.0)';
+				return '((double)spec_map_get(' . targetC . ', ' . indexC . ', 0))';
 			}
 			if (valType == 'Boolean') {
-				return 'spec_map_get_bool(' . targetC . ', ' . indexC . ', false)';
+				return '((bool)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', false))';
 			}
 			local String is valCType: self:cTypeFor(typeName: valType);
 			return '((' . valCType . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))';
@@ -1618,19 +1614,19 @@ Class is CodeGenerator{
 		when (target) {
 			is 'Hex': {
 				if (srcT == 'String') {
-					return 'spec_parse_base(' . innerC . ', 16, 0)';
+					return 'String_parseInt(' . innerC . ', 16, 0)';
 				}
 				return 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
 			}
 			is 'Bin': {
 				if (srcT == 'String') {
-					return 'spec_parse_base(' . innerC . ', 2, 0)';
+					return 'String_parseInt(' . innerC . ', 2, 0)';
 				}
 				return 'spec_int_to_base(' . innerC . ', 2, ' . digitsC . ')';
 			}
 			is 'Oct': {
 				if (srcT == 'String') {
-					return 'spec_parse_base(' . innerC . ', 8, 0)';
+					return 'String_parseInt(' . innerC . ', 8, 0)';
 				}
 				return 'spec_int_to_base(' . innerC . ', 8, ' . digitsC . ')';
 			}
@@ -1639,7 +1635,7 @@ Class is CodeGenerator{
 			}
 			is 'Int': {
 				if (srcT == 'String') {
-					return 'spec_parse_base(' . innerC . ', 10, 0)';
+					return 'String_parseInt(' . innerC . ', 10, 0)';
 				}
 				if (srcT == 'Float' || srcT == 'Byte') {
 					return '((long long)(' . innerC . '))';
@@ -2286,10 +2282,8 @@ Class is CodeGenerator{
 		if (vTypeName == 'Array') {
 			local String is elemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
 			local String is newCall: 'spec_array_new()';
-			if (elemKind == 'object') {
+			if (elemKind == 'object' || elemKind == 'string') {
 				newCall: 'spec_array_new_object()';
-			} else if (elemKind == 'string') {
-				newCall: 'spec_array_new_string()';
 			}
 			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
 		}
@@ -2674,7 +2668,7 @@ Class is CodeGenerator{
 
 		local String is methods: '';
 		flattenedClasses:each(action: local Function(ClassInfo is c){
-			if (!self:policy:isTransparent(c: c) || c:name == 'String') {
+			if (!self:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map') {
 				self:currentClassName: c:name;
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
@@ -2687,13 +2681,15 @@ Class is CodeGenerator{
 				c:members:each(action: local Function(Member is m){
 					when (m:kind) {
 						is MemberKind:METHOD: {
-							if (m:name == 'init') { hasInit: true; }
-							methods: methods . self:generateMethod(classDef: c, method: m);
+							if (!self:policy:isTransparent(c: c) || m:body:length() > 0) {
+								if (m:name == 'init') { hasInit: true; }
+								methods: methods . self:generateMethod(classDef: c, method: m);
+							}
 						}
 						else: {}
 					}
 				});
-				if (!hasInit && c:baseClass != self:names:enumHeader()) {
+				if (!hasInit && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
 					methods: methods . 'void ' . c:name . '_init(' . c:name . "* self) {\n    (void)self;\n}\n\n";
 				}
 
@@ -2701,7 +2697,7 @@ Class is CodeGenerator{
 				c:members:each(action: local Function(Member is m){
 					if (m:name == 'toString') { hasToString: true; }
 				});
-				if (!hasToString && c:baseClass != self:names:enumHeader()) {
+				if (!hasToString && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
 					local String is cn: c:name;
 					methods: methods . 'String ' . cn . '_toString(' . cn . "* self) {\n";
 					methods: methods . "    if (!self) { return spec_string_intern(\"\"); }\n";
@@ -2937,10 +2933,8 @@ Class is CodeGenerator{
 			if (fnExpr:anonParams:length() > 0) {
 				local Parameter is p0: fnExpr:anonParams:get(index: 0);
 				local String is pName: p0:paramType:name;
-				if (self:isArcType(typeName: pName)) {
+				if (self:isArcType(typeName: pName) || pName == 'String') {
 					outNewC: 'spec_array_new_object()';
-				} else if (pName == 'String') {
-					outNewC: 'spec_array_new_string()';
 				}
 			}
 			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
@@ -2965,10 +2959,8 @@ Class is CodeGenerator{
 			if (retCType == 'void') { retCType: 'void*'; }
 			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1, default: '') == '*';
 			local String is outNewC: 'spec_array_new()';
-			if (self:isArcType(typeName: fnExpr:anonReturnType:name)) {
+			if (self:isArcType(typeName: fnExpr:anonReturnType:name) || fnExpr:anonReturnType:name == 'String') {
 				outNewC: 'spec_array_new_object()';
-			} else if (fnExpr:anonReturnType:name == 'String') {
-				outNewC: 'spec_array_new_string()';
 			}
 			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
 			out: out . paramDecl . '        ' . retCType . ' ' . predVar . " = 0;\n        do {\n" . bodyC . "        } while (0);\n        spec_array_add(" . outVar . ', (void*)(intptr_t)(' . predVar . "));\n    } } " . outVar . '; })';

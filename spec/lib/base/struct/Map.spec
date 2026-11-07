@@ -35,6 +35,11 @@ Class is Map of K to V{
 	## @param default: Fallback integer returned if key is absent.
 	## @return: Mapped value, or [default].
 	Function of Int is getInt(String is key, Int is default){
+		local String is s: self:getString(key: key, default: '');
+		if (s:length() > 0) {
+			return s:parseInt(base: 10, default: default);
+		}
+		return default;
 	}
 
 	## Looks up a float value by key, returning [default] if not found.
@@ -51,6 +56,14 @@ Class is Map of K to V{
 	## @param default: Fallback boolean returned if key is absent.
 	## @return: Mapped value, or [default].
 	Function of Boolean is getBool(String is key, Boolean is default){
+		local String is s: self:getString(key: key, default: '');
+		if (s == 'true') {
+			return true;
+		}
+		if (s == 'false') {
+			return false;
+		}
+		return default;
 	}
 
 	## Inserts or updates an entry in the map.

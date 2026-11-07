@@ -60,6 +60,17 @@ Class is Buf{
 		return base:sysinternal:Buf:stringIndexOf(b: b, needle: needle, def: def);
 	}
 
+	## First index of [needle] within buffer [b] at or after [from], or [def] when absent.
+	##
+	## @param b: The buffer.
+	## @param needle: Byte sequence to locate.
+	## @param from: Zero-based start position.
+	## @param def: Fallback when absent (conventionally -1).
+	## @return: The index, or [def].
+	Function of Int is stringIndexOfFrom(String is b, String is needle, Int is from, Int is def){
+		return base:sysinternal:Buf:stringIndexOfFrom(b: b, needle: needle, from: from, def: def);
+	}
+
 	## Buffer [b] with every [search] occurrence replaced by [replacement].
 	##
 	## @param b: The buffer.
@@ -67,7 +78,7 @@ Class is Buf{
 	## @param replacement: Replacement sequence.
 	## @return: The replaced copy.
 	Function of String is stringReplaceAll(String is b, String is search, String is replacement){
-		return base:sysinternal:Buf:stringReplaceAll(b: b, search: search, replacement: replacement);
+		return b:replaceAll(search: search, replacement: replacement);
 	}
 
 	## Buffer [b] with leading/trailing space, tab, newline, CR removed.
@@ -75,7 +86,7 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: The trimmed copy.
 	Function of String is stringTrim(String is b){
-		return base:sysinternal:Buf:stringTrim(b: b);
+		return b:trim();
 	}
 
 	## True when [b] is non-empty and every byte is a digit.
@@ -83,7 +94,7 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: true when all digits.
 	Function of Boolean is stringIsDigit(String is b){
-		return base:sysinternal:Buf:stringIsDigit(b: b);
+		return b:isDigit();
 	}
 
 	## True when [b] is non-empty and every byte is a letter.
@@ -91,7 +102,7 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: true when all letters.
 	Function of Boolean is stringIsAlpha(String is b){
-		return base:sysinternal:Buf:stringIsAlpha(b: b);
+		return b:isAlpha();
 	}
 
 	## True when [b] is non-empty and every byte is whitespace.
@@ -99,7 +110,7 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: true when all whitespace.
 	Function of Boolean is stringIsWhitespace(String is b){
-		return base:sysinternal:Buf:stringIsWhitespace(b: b);
+		return b:isWhitespace();
 	}
 
 	## Number of leading [search] repetitions in buffer [b].
@@ -108,7 +119,7 @@ Class is Buf{
 	## @param search: The repetition unit.
 	## @return: Repetition count.
 	Function of Int is stringCountLeading(String is b, String is search){
-		return base:sysinternal:Buf:stringCountLeading(b: b, search: search);
+		return b:countLeading(search: search);
 	}
 
 	## Parts of buffer [b] split on [delimiter]; the trailing part is
@@ -118,7 +129,7 @@ Class is Buf{
 	## @param delimiter: Split boundary.
 	## @return: The parts.
 	Function of Array of String is stringSplit(String is b, String is delimiter){
-		return base:sysinternal:Buf:stringSplit(b: b, delimiter: delimiter);
+		return b:split(delimiter: delimiter);
 	}
 
 	## Lines of buffer [b] (split on newline, trailing CR stripped).
@@ -126,7 +137,7 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: The lines.
 	Function of Array of String is stringLines(String is b){
-		return base:sysinternal:Buf:stringLines(b: b);
+		return b:lines();
 	}
 
 	## Appends the bytes of [src] to the end of [dst] in place. [dst] must
@@ -146,6 +157,6 @@ Class is Buf{
 	## @param def: Fallback on invalid input.
 	## @return: The parsed value, or [def].
 	Function of Int is parseBase(String is b, Int is base, Int is def){
-		return base:sysinternal:Buf:parseBase(b: b, base: base, def: def);
+		return b:parseInt(base: base, default: def);
 	}
 }
