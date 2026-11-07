@@ -125,21 +125,120 @@ replace Array of Array of String is using: [
 
 ### 7. Language Features
 Spec includes modern, expressive language capabilities designed for type safety and clarity:
-- **User-Defined Generic Classes**: Express reusable parametric types such as `Class of T is Box` with automated type parameter substitution and casting.
-- **First-Class Capturing Closures & Direct Invocation**: Anonymous function expressions capture outer local variables and `self` automatically, and `Function` variables can be invoked directly (`scale(x: 4)`).
-- **Tagged Union Enums (Algebraic Data Types)**: Enums support payload-carrying variants (`Enum is Result { Ok(String is data), Err(Int is code, String is msg), Pending }`).
-- **Destructuring `when` Branching**: Destructure and extract tagged enum payloads in both `when` statements and `when` expressions.
-- **Default Parameter Values & Call-Site Reordering**: Functions declare optional parameters with default values; call sites may omit defaults and pass named arguments in any order.
-- **Map Literals & Index Assignment**: First-class map literals (`["alice": 95]`, empty `[:]`), bracket indexing (`scores["alice"]`, `arr[0]`), and index assignment (`scores["charlie"]: 100;`, `arr[1]: "updated";`).
-- **Functional Collection Combinators**: Transform and reduce collections fluently using `Array:map`, `Array:fold`, and `Map:each`.
-- **Parser Error Recovery & Source Provenance**: Syntax errors report precise source coordinates `[SyntaxError] [file:line:col]` with recovery, while type errors retain multi-file provenance and abort cleanly.
-- **Type Casts (`as`)**: `value as Target` unifies class up/downcasts, numeric casts, and base conversion (`as Hex`, `as Bin(width)`, `as Oct`).
-- **Class Grouping (Partials)**: Split a class across multiple files with `group: [Target]`; fragments merge at load time with duplicate detection.
-- **Visibility Model**: `local` (private), `contained` (protected + final), public by default — enforced by the checker, not by convention.
-- **Root Contract**: `Any`-typed references may only invoke root members (`toString`, `typeName`, `init`); everything else requires a cast.
 
-- **Bitwise Operators & Base Literals**: `&`, `|`, `^`, `<<`, `>>`, `~` with C precedence; `0x`/`0b`/`0o` literals with `_` separators; `toBase`/`parseInt` conversions.
-- **Parallel Execution**: `Parallel:run` fans a pure worker closure across pthreads with lock-free per-thread RNG; atomic slots coordinate shared state; virtual dispatch throughout.
+- **User-Defined Generic Classes**: Express reusable parametric types with automated type parameter substitution and casting:
+  ```spec
+  Class of T is Box {
+  	local T is item;
+  	replace Function is init(T is item){ self:item: item; }
+  	Function of T is get(){ return self:item; }
+  }
+  ```
+
+- **First-Class Capturing Closures & Direct Invocation**: Anonymous function expressions capture outer local variables and `self` automatically, and `Function` variables can be invoked directly:
+  ```spec
+  local Int is factor: 2;
+  local Function of Int is multiplier: local Function of Int(Int is x){
+  	return x * factor;
+  };
+  local Int is result: multiplier(x: 4);
+  ```
+
+- **Tagged Union Enums (Algebraic Data Types)**: Enums support payload-carrying variants as well as plain enumeration members:
+  ```spec
+  Enum is Result {
+  	Ok(String is data),
+  	Err(Int is code, String is msg),
+  	Pending
+  }
+  ```
+
+- **Destructuring `when` Branching**: Destructure and extract tagged enum payloads in both `when` statements and `when` expressions:
+  ```spec
+  when (res) {
+  	is Result:Ok(data): { output:line("Success: " . data); }
+  	is Result:Err(code, msg): { output:line("Error " . code . ": " . msg); }
+  	is Result:Pending: { output:line("Pending..."); }
+  }
+  ```
+
+- **Scoped Region Desugaring (`as`)**: Linearizes nested callbacks into sequential blocks without rightward drift:
+  ```spec
+  as: self:withResource(name: "file.txt", log: log);
+  log:add(item: "processing data");
+
+  as (String is text): self:readFile(path: "config.json");
+  output:line("Loaded: " . text);
+  ```
+
+- **Default Parameter Values & Call-Site Reordering**: Functions declare optional parameters with default values; call sites may omit defaults and pass named arguments in any order:
+  ```spec
+  Function of Int is connect(String is host, Int is port: 8080, Int is timeout: 30){ ... }
+  local Int is sock: connect(timeout: 10, host: "localhost");
+  ```
+
+- **Map Literals & Index Assignment**: First-class map literals, bracket indexing, and index assignment:
+  ```spec
+  local Map of String to Int is scores: ["alice": 95, "bob": 88];
+  scores["charlie"]: 100;
+  local Int is top: scores["alice"];
+  ```
+
+- **Functional Collection Combinators**: Transform and reduce collections fluently using higher-order combinators:
+  ```spec
+  local Array of Int is doubled: numbers:map(action: local Function of Int(Int is n){ return n * 2; });
+  local Int is total: numbers:fold(init: 0, action: local Function of Int(Int is acc, Int is n){ return acc + n; });
+  ```
+
+- **Parser Error Recovery & Source Provenance**: Syntax errors report precise source coordinates with recovery, while type errors retain multi-file provenance and abort cleanly:
+  ```text
+  [SyntaxError] [src/main.spec:42:15] Expected ';' after expression
+  ```
+
+- **Type Casts (`as`)**: Unifies class up/downcasts, numeric casts, and base conversions:
+  ```spec
+  local Animal is a: dog as Animal;
+  local String is hexStr: value as Hex;
+  local String is binStr: flags as Bin(8);
+  ```
+
+- **Class Grouping (Partials)**: Split a class across multiple files with `group: [Target]`; fragments merge at load time with duplicate detection:
+  ```spec
+  Class is NetworkClient {
+  	group: [NetworkClientSocket, NetworkClientTls];
+  }
+  ```
+
+- **Visibility Model**: `local` (private), `contained` (protected + final), and public by default — enforced by the compiler:
+  ```spec
+  local Int is secretId;
+  contained Function is internalHook(){ ... }
+  Function is publicApi(){ ... }
+  ```
+
+- **Root Contract**: `Any`-typed references may only invoke root members (`toString`, `typeName`, `init`); everything else requires a cast:
+  ```spec
+  local Any is obj: getUnknownObject();
+  output:line(obj:toString());
+  local Greeter is g: obj as Greeter;
+  g:greet();
+  ```
+
+- **Bitwise Operators & Base Literals**: Full bitwise arithmetic with C precedence, prefixed base literals with separators, and conversions:
+  ```spec
+  local Int is mask: 0xFF_00 & (0b1010_1010 | ~flags);
+  local Int is shifted: mask << 4;
+  ```
+
+- **Parallel Execution**: Fans pure worker closures across pthreads with lock-free per-thread RNG and atomic coordination:
+  ```spec
+  Parallel:run(
+  	threads: 4,
+  	iterations: 1000000,
+  	worker: local Function(Int is start, Int is end){ ... }
+  );
+  ```
+
 - **High-Efficiency C11 Runtime & Memory Model**: Amortized $O(1)$ growable string buffers (`spec_str_append`), zero-allocation character table lookups, cached $O(1)$ string length queries, lazy `SpecArray` buffer allocation, and automatic deallocation of transient `Loop` instances.
 
 ---
