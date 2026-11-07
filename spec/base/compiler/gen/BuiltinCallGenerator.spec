@@ -363,6 +363,17 @@ Class is BuiltinCallGenerator{
 				local String is codeC: cg:generateExpression(expr: codeArg);
 				return 'exit(' . codeC . ')';
 			}
+			if (expr:methodName == 'atomicAdd' || expr:methodName == 'atomicPut' || expr:methodName == 'atomicGet') {
+				local String is argsCs: '';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (argsCs != '') { argsCs: argsCs . ', '; }
+					argsCs: argsCs . cg:generateExpression(expr: arg:value);
+				});
+				local String is fn: 'spec_atomic_get';
+				if (expr:methodName == 'atomicAdd') { fn: 'spec_atomic_add'; }
+				if (expr:methodName == 'atomicPut') { fn: 'spec_atomic_put'; }
+				return fn . '(' . argsCs . ')';
+			}
 		}
 
 		# File methods.

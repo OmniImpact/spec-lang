@@ -1148,10 +1148,19 @@ Class is TypeChecker{
 			res: targetType;
 		} else if (self:registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !self:allEnumNames:has(key: targetType)) {
 			# Specialized containers ('Array:String') resolve through their
-			# base class's declarations with type-argument substitution.
+			# base class's declarations with type-argument substitution;
+			# when the declaration is not loaded, the element type comes
+			# from the type string itself.
 			local String is cRet: self:lookupMethodReturnType(className: targetType, methodName: method);
 			if (cRet == '' || self:isVoid(t: cRet)) {
 				res: targetType;
+				local Array of String is scParts: targetType:split(delimiter: ':');
+				if ((targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt')) {
+					res: scParts:get(index: 1);
+				}
+				if (targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString')) {
+					res: scParts:get(index: 2);
+				}
 			} else {
 				res: cRet;
 			}
