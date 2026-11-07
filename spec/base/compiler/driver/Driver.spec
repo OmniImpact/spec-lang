@@ -15,6 +15,7 @@ Class is Driver{
 		['base', 'io', Output],
 		['base', 'sys', Process],
 		['base', 'sys', Dir],
+		['base', 'sysinternal', Arena],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
@@ -56,6 +57,11 @@ Class is Driver{
 			error:line('Error: Source file not found: ' . inputPath);
 			Process:exit(status: 1);
 		}
+
+		# The compiler process routes its own allocations through the
+		# object arena (immortal + wholesale drain at exit). User programs
+		# never activate it and stay refcounted.
+		Arena:activateProcessArena();
 
 		local String is source: File:read(path: inputPath, default: '');
 		local Int is specLines: source:lines():length();

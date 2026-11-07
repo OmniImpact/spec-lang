@@ -88,6 +88,17 @@ static inline void* spec_cast_check(const void* obj, const char* target) {
     return (void*)obj;
 }
 
+/* The process object arena flag: the compiler driver activates it; user
+   programs never do. Lives at the top so every container constructor
+   below can consult it. */
+static bool _spec_arena_active = false;
+void* spec_arena_alloc_object(size_t size, void (*destroy)(void*));
+void spec_arena_drain_objects(void);
+
+void spec_activate_process_arena(void) {
+    _spec_arena_active = true;
+}
+
 /* Spec Automated Reference Counting (ARC) Primitives */
 #define SPEC_S_IMMORTAL 1u
 #define SPEC_S_HASLEN 2u

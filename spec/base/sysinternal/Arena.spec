@@ -31,4 +31,9 @@ Class is Arena{
 	## @param arena: The arena.
 	## @return: The live byte count.
 	Function of Int is arenaUsed(Arena is arena);
+
+	## Activates the process object arena: container and string
+	## allocations route to the arena from this point. The compiler's
+	## driver calls this in init; user programs never do and stay ARC.
+	Function is activateProcessArena();
 }
