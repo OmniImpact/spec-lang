@@ -240,7 +240,7 @@ Class is ValidApp{
 		['base', 'io', Output]
 	];
 	replace Function is init(Map of String to String is args){
-		output:line("valid");
+		Output:line("valid");
 	}
 }
 EOF

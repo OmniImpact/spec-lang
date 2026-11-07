@@ -21,6 +21,10 @@
 ## compiler output contains all four diagnostics.
 
 Class is VisBase{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local Function of Int is secret(){
 		return 1;
 	}
@@ -31,34 +35,58 @@ Class is VisBase{
 }
 
 Class is VisBreaker{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function is init(Map of String to String is args){
 		local VisBase is b: VisBase:init();
-		output:line(b:secret());
+		Output:line(b:secret());
 	}
 }
 
 Class is VisUnrelated{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function is init(Map of String to String is args){
 		local VisBase is b: VisBase:init();
-		output:line(b:helper());
+		Output:line(b:helper());
 	}
 }
 
 Class of VisBase is VisOverrideAttempt{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function of Int is secret(){
 		return 9;
 	}
 }
 
 Class is ShadowedLocal{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local Int is counter: 0;
 }
 
 Class of ShadowedLocal is ShadowChild{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local Int is counter: 1;
 }
 
 Class is ContradictoryModifiers{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace local Function of Int is broken(){
 		return 1;
 	}

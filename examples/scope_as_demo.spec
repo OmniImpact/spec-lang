@@ -15,7 +15,11 @@ Class is ScopeAsDemo{
 		['base', 'io', Output],
 		['base', 'io', File],
 		['base', 'iterator'],
-		['base', 'sys', Process]
+		['base', 'sys', Process],
+		['base', 'io', as File()],
+		['base', 'io', as Output()],
+		['base', 'sys', as Process()],
+		['base', 'iterator', as While()]
 	];
 
 	## Measures and prints elapsed execution time for an arbitrary block.
@@ -23,11 +27,11 @@ Class is ScopeAsDemo{
 	## @param label: Description of the timed operation.
 	## @param block: The code region to execute and measure.
 	Function is measure(String is label, Function is block){
-		output:line("[Timer] Starting: " . label);
+		Output:line("[Timer] Starting: " . label);
 		local Int is start: Process:clockMs();
 		block();
 		local Int is elapsed: Process:clockMs() - start;
-		output:line("[Timer] Finished: " . label . " (" . elapsed . " ms elapsed)\n");
+		Output:line("[Timer] Finished: " . label . " (" . elapsed . " ms elapsed)\n");
 	}
 
 	## Creates a temporary file, provides its path to the callback, and
@@ -37,12 +41,12 @@ Class is ScopeAsDemo{
 	## @param content: Initial file data.
 	## @param block: Callback receiving the temporary file's path.
 	Function is withTempFile(String is path, String is content, Function is block){
-		output:line("[File] Creating managed resource: " . path);
+		Output:line("[File] Creating managed resource: " . path);
 		File:write(path: path, content: content);
 		block(path);
 		if (File:exists(path)) {
 			File:remove(path);
-			output:line("[File] Cleaned up managed resource: " . path);
+			Output:line("[File] Cleaned up managed resource: " . path);
 		}
 	}
 
@@ -50,9 +54,9 @@ Class is ScopeAsDemo{
 	##
 	## @param args: CLI arguments map.
 	replace Function is init(Map of String to String is args){
-		output:line("=================================================");
-		output:line("       Spec Scoped Region (`as`) Demo            ");
-		output:line("=================================================\n");
+		Output:line("=================================================");
+		Output:line("       Spec Scoped Region (`as`) Demo            ");
+		Output:line("=================================================\n");
 
 		local String is tempPath: "/tmp/spec_users.csv";
 		local String is csvData: "id,name,role,department\n" .
@@ -68,10 +72,10 @@ Class is ScopeAsDemo{
 		as (String is path): self:withTempFile(path: tempPath, content: csvData);
 
 		# Inner workflow: Read file and process records sequentially
-		output:line("[Task] Reading records from " . path . "...");
+		Output:line("[Task] Reading records from " . path . "...");
 		local String is raw: File:read(path: path, default: "");
 		local Array of String is lines: raw:lines();
-		output:line("[Task] Total lines read: " . lines:length());
+		Output:line("[Task] Total lines read: " . lines:length());
 
 		local Array of String is names: [];
 		local Array of String is roles: [];
@@ -86,13 +90,13 @@ Class is ScopeAsDemo{
 				if (fields:length() >= 4) {
 					names:add(item: fields:get(index: 1));
 					roles:add(item: fields:get(index: 2));
-					output:line("  -> User #" . fields:get(index: 0) . ": " . fields:get(index: 1) . " (" . fields:get(index: 2) . ")");
+					Output:line("  -> User #" . fields:get(index: 0) . ": " . fields:get(index: 1) . " (" . fields:get(index: 2) . ")");
 				}
 				row++;
 			}
 		);
 
-		output:line("\n[Report] Successfully processed " . names:length() . " employee profiles.");
-		output:line("[Report] Exiting block - all resource scopes will now unwind in reverse (LIFO) order:");
+		Output:line("\n[Report] Successfully processed " . names:length() . " employee profiles.");
+		Output:line("[Report] Exiting block - all resource scopes will now unwind in reverse (LIFO) order:");
 	}
 }

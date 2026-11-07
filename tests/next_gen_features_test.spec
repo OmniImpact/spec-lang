@@ -17,6 +17,10 @@ Enum is Option {
 ## Generic single-value container class demonstrating user-defined generic type parameters.
 Class is Box of T{
 
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
+
 	## Stored value of generic type T.
 	local T is val;
 
@@ -45,6 +49,10 @@ Class is Box of T{
 
 ## Generic pair container class demonstrating multi-parameter user-defined generics.
 Class is Pair of A to B{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 
 	## First item in pair.
 	local A is first;
@@ -84,6 +92,7 @@ Class is NextGenFeaturesTest{
 		['base', 'io'],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'io', as Output()]
 	];
 
 	## Helper method demonstrating default parameter values and call-site reordering.
@@ -108,123 +117,123 @@ Class is NextGenFeaturesTest{
 
 	## Verifies Feature 2: Functional Collection Combinators (Array:map, Array:fold, Map:each).
 	local Function is testCombinators(){
-		output:line('--- Feature 2: Functional Collection Combinators ---');
+		Output:line('--- Feature 2: Functional Collection Combinators ---');
 
 		# 1. Array:map transforming integers
 		local Array of Int is nums: [1, 2, 3, 4, 5];
 		local Array of Int is doubled: nums:map(transform: local Function of Int(Int is x){
 			return x * 2;
 		});
-		output:line('Original length: ' . nums:length() . ', doubled length: ' . doubled:length());
-		output:line('doubled[0]: ' . doubled[0] . ', doubled[4]: ' . doubled[4]);
+		Output:line('Original length: ' . nums:length() . ', doubled length: ' . doubled:length());
+		Output:line('doubled[0]: ' . doubled[0] . ', doubled[4]: ' . doubled[4]);
 
 		# 2. Array:fold accumulating sum
 		local Int is sum: nums:fold(initial: 0, reducer: local Function of Int(Int is acc, Int is x){
 			return acc + x;
 		});
-		output:line('Fold sum: ' . sum);
+		Output:line('Fold sum: ' . sum);
 
 		# 3. Array:fold accumulating product
 		local Int is product: nums:fold(initial: 1, reducer: local Function of Int(Int is acc, Int is x){
 			return acc * x;
 		});
-		output:line('Fold product: ' . product);
+		Output:line('Fold product: ' . product);
 
 		# 4. Map:each iterating key-value entries
 		local Map of String to Int is inventory: ['apples': 50, 'bananas': 120, 'oranges': 75];
-		output:line('Inventory entries count: ' . inventory:length());
+		Output:line('Inventory entries count: ' . inventory:length());
 		inventory:each(action: local Function(String is item, Int is qty){
-			output:line('Item: ' . item . ' => Quantity: ' . qty);
+			Output:line('Item: ' . item . ' => Quantity: ' . qty);
 		});
 	}
 
 	## Verifies Feature 3: Default Parameter Values and Call-Site Named-Argument Reordering.
 	local Function is testDefaultsAndReordering(){
-		output:line('--- Feature 3: Default Parameter Values & Named Argument Reordering ---');
+		Output:line('--- Feature 3: Default Parameter Values & Named Argument Reordering ---');
 
 		# All defaults used except required name
 		local String is g1: self:greet(name: 'Spec');
-		output:line('g1 (default prefix/suffix): ' . g1);
+		Output:line('g1 (default prefix/suffix): ' . g1);
 
 		# Override suffix only, leaving prefix default
 		local String is g2: self:greet(name: 'World', suffix: '.');
-		output:line('g2 (override suffix): ' . g2);
+		Output:line('g2 (override suffix): ' . g2);
 
 		# Reordered named arguments: suffix, prefix, name
 		local String is g3: self:greet(suffix: '!!!', prefix: 'Welcome', name: 'Developer');
-		output:line('g3 (fully reordered): ' . g3);
+		Output:line('g3 (fully reordered): ' . g3);
 
 		# Numeric defaults
 		local Int is calc1: self:calculate(a: 5);
-		output:line('calculate(a: 5): ' . calc1);
+		Output:line('calculate(a: 5): ' . calc1);
 
 		# Reordered numeric call omitting b
 		local Int is calc2: self:calculate(c: 200, a: 3);
-		output:line('calculate(c: 200, a: 3): ' . calc2);
+		Output:line('calculate(c: 200, a: 3): ' . calc2);
 	}
 
 	## Verifies Feature 4: Map Literals and Index Assignment.
 	local Function is testMapLiteralsAndIndexAssignment(){
-		output:line('--- Feature 4: Map Literals & Index Assignment ---');
+		Output:line('--- Feature 4: Map Literals & Index Assignment ---');
 
 		# Initial map literal
 		local Map of String to Int is scores: ['alice': 95, 'bob': 88];
-		output:line('Initial scores length: ' . scores:length());
-		output:line('scores[\'alice\']: ' . scores['alice']);
-		output:line('scores[\'bob\']: ' . scores['bob']);
+		Output:line('Initial scores length: ' . scores:length());
+		Output:line('scores[\'alice\']: ' . scores['alice']);
+		Output:line('scores[\'bob\']: ' . scores['bob']);
 
 		# L-value bracket assignment on Map
 		scores['charlie']: 100;
 		scores['alice']: 98;
-		output:line('Updated scores length: ' . scores:length());
-		output:line('scores[\'charlie\']: ' . scores['charlie']);
-		output:line('Updated scores[\'alice\']: ' . scores['alice']);
+		Output:line('Updated scores length: ' . scores:length());
+		Output:line('scores[\'charlie\']: ' . scores['charlie']);
+		Output:line('Updated scores[\'alice\']: ' . scores['alice']);
 
 		# Empty map literal
 		local Map of String to String is emptyMap: [:];
-		output:line('emptyMap length before insertion: ' . emptyMap:length());
+		Output:line('emptyMap length before insertion: ' . emptyMap:length());
 		emptyMap['framework']: 'Spec Standard Library';
-		output:line('emptyMap length after insertion: ' . emptyMap:length());
-		output:line('emptyMap[\'framework\']: ' . emptyMap['framework']);
+		Output:line('emptyMap length after insertion: ' . emptyMap:length());
+		Output:line('emptyMap[\'framework\']: ' . emptyMap['framework']);
 
 		# Array bracket index read and write
 		local Array of String is languages: ['C', 'Rust', 'Spec'];
-		output:line('languages[0]: ' . languages[0]);
-		output:line('languages[1]: ' . languages[1]);
-		output:line('languages[2]: ' . languages[2]);
+		Output:line('languages[0]: ' . languages[0]);
+		Output:line('languages[1]: ' . languages[1]);
+		Output:line('languages[2]: ' . languages[2]);
 
 		languages[1]: 'Spec C11';
-		output:line('Updated languages[1]: ' . languages[1]);
+		Output:line('Updated languages[1]: ' . languages[1]);
 	}
 
 	## Verifies Feature 5: User-Defined Generic Classes.
 	local Function is testGenericClasses(){
-		output:line('--- Feature 5: User-Defined Generic Classes ---');
+		Output:line('--- Feature 5: User-Defined Generic Classes ---');
 
 		# Single-parameter generic with String
 		local Box of String is stringBox: Box:init(val: 'Generics in Spec');
-		output:line('stringBox get: ' . stringBox:get());
+		Output:line('stringBox get: ' . stringBox:get());
 		stringBox:set(newVal: 'Updated Generic String');
-		output:line('stringBox get after set: ' . stringBox:get());
+		Output:line('stringBox get after set: ' . stringBox:get());
 
 		# Single-parameter generic with Int
 		local Box of Int is intBox: Box:init(val: 777);
-		output:line('intBox get: ' . intBox:get());
+		Output:line('intBox get: ' . intBox:get());
 		intBox:set(newVal: 888);
-		output:line('intBox get after set: ' . intBox:get());
+		Output:line('intBox get after set: ' . intBox:get());
 
 		# Multi-parameter generic Pair of String to Int
 		local Pair of String to Int is pair: Pair:init(first: 'HTTP_PORT', second: 8080);
-		output:line('Pair key: ' . pair:getFirst() . ', value: ' . pair:getSecond());
+		Output:line('Pair key: ' . pair:getFirst() . ', value: ' . pair:getSecond());
 
 		# Multi-parameter generic Pair of Int to String
 		local Pair of Int to String is statusPair: Pair:init(first: 200, second: 'OK');
-		output:line('Status code: ' . statusPair:getFirst() . ', text: ' . statusPair:getSecond());
+		Output:line('Status code: ' . statusPair:getFirst() . ', text: ' . statusPair:getSecond());
 	}
 
 	## Verifies Feature 6: First-ClassInfo Capturing Closures and Direct Function Invocation.
 	local Function is testClosuresAndDirectInvocation(){
-		output:line('--- Feature 6: First-ClassInfo Capturing Closures & Direct Invocation ---');
+		Output:line('--- Feature 6: First-ClassInfo Capturing Closures & Direct Invocation ---');
 
 		local Int is factor: 10;
 		local Int is baseline: 5;
@@ -237,8 +246,8 @@ Class is NextGenFeaturesTest{
 		# Direct invocation of Function variable
 		local Int is r1: compute(x: 3);
 		local Int is r2: compute(x: 7);
-		output:line('compute(x: 3): ' . r1);
-		output:line('compute(x: 7): ' . r2);
+		Output:line('compute(x: 3): ' . r1);
+		Output:line('compute(x: 7): ' . r2);
 
 		# Closure capturing a string prefix
 		local String is tag: '[INFO]';
@@ -246,19 +255,19 @@ Class is NextGenFeaturesTest{
 			return tag . ' ' . text;
 		};
 		local String is formatted: logMsg(text: 'Compiler ready');
-		output:line('logMsg: ' . formatted);
+		Output:line('logMsg: ' . formatted);
 	}
 
 	## Verifies Feature 7: Tagged Union Enums and Destructuring when.
 	local Function is testTaggedUnionEnums(){
-		output:line('--- Feature 7: Tagged Union Enums & Destructuring When ---');
+		Output:line('--- Feature 7: Tagged Union Enums & Destructuring When ---');
 
 		local Result is resOk: Result:Ok(data: 'Payload verified');
 		local Result is resErr: Result:Err(code: 404, msg: 'Endpoint missing');
 		local Result is resPending: Result:Pending;
 
 		# When statement destructuring
-		output:line('Destructuring in when statement:');
+		Output:line('Destructuring in when statement:');
 		self:inspectResult(res: resOk);
 		self:inspectResult(res: resErr);
 		self:inspectResult(res: resPending);
@@ -269,21 +278,21 @@ Class is NextGenFeaturesTest{
 			is Err(c, m): 'Handled ERR ' . c . ': ' . m;
 			is Pending: 'Awaiting resolution';
 		};
-		output:line('descOk: ' . descOk);
+		Output:line('descOk: ' . descOk);
 
 		local String is descErr: when (resErr) {
 			is Ok(d): 'Handled OK -> ' . d;
 			is Err(c, m): 'Handled ERR ' . c . ': ' . m;
 			is Pending: 'Awaiting resolution';
 		};
-		output:line('descErr: ' . descErr);
+		Output:line('descErr: ' . descErr);
 
 		local String is descPending: when (resPending) {
 			is Ok(d): 'Handled OK -> ' . d;
 			is Err(c, m): 'Handled ERR ' . c . ': ' . m;
 			is Pending: 'Awaiting resolution';
 		};
-		output:line('descPending: ' . descPending);
+		Output:line('descPending: ' . descPending);
 
 		# Option tagged enum testing
 		local Option is someVal: Option:Some(value: 42);
@@ -293,13 +302,13 @@ Class is NextGenFeaturesTest{
 			is Some(v): v;
 			is None: 0;
 		};
-		output:line('Option:Some extracted: ' . extracted);
+		Output:line('Option:Some extracted: ' . extracted);
 
 		local Int is extractedNone: when (noneVal) {
 			is Some(v): v;
 			is None: -1;
 		};
-		output:line('Option:None extracted: ' . extractedNone);
+		Output:line('Option:None extracted: ' . extractedNone);
 	}
 
 	## Helper method to pattern match a Result variant in a when statement.
@@ -308,13 +317,13 @@ Class is NextGenFeaturesTest{
 	local Function is inspectResult(Result is res){
 		when (res) {
 			is Ok(d): {
-				output:line('  [when stmt] Result:Ok with data: ' . d);
+				Output:line('  [when stmt] Result:Ok with data: ' . d);
 			}
 			is Err(c, m): {
-				output:line('  [when stmt] Result:Err with code ' . c . ', msg: ' . m);
+				Output:line('  [when stmt] Result:Err with code ' . c . ', msg: ' . m);
 			}
 			is Pending: {
-				output:line('  [when stmt] Result:Pending variant');
+				Output:line('  [when stmt] Result:Pending variant');
 			}
 		}
 	}
@@ -323,9 +332,9 @@ Class is NextGenFeaturesTest{
 	##
 	## @param args: Command line arguments map.
 	replace Function is init(Map of String to String is args){
-		output:line('==================================================');
-		output:line(' Spec Next-Generation Language Features Test Suite');
-		output:line('==================================================');
+		Output:line('==================================================');
+		Output:line(' Spec Next-Generation Language Features Test Suite');
+		Output:line('==================================================');
 
 		self:testCombinators();
 		self:testDefaultsAndReordering();
@@ -334,9 +343,9 @@ Class is NextGenFeaturesTest{
 		self:testClosuresAndDirectInvocation();
 		self:testTaggedUnionEnums();
 
-		output:line('==================================================');
-		output:line(' All Next-Gen Feature Tests Passed Successfully! ');
-		output:line('==================================================');
+		Output:line('==================================================');
+		Output:line(' All Next-Gen Feature Tests Passed Successfully! ');
+		Output:line('==================================================');
 	}
 
 }

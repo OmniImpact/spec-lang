@@ -11,11 +11,12 @@ Class is SpecDeclGenTest{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'io', Output],
-		['base', 'io', File]
+		['base', 'io', File],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec DeclGen Test ===');
+		Output:line('=== Spec DeclGen Test ===');
 		local Int is failures: 0;
 
 		local String is src: "Enum of String is Level {
@@ -23,6 +24,10 @@ Class is SpecDeclGenTest{
 	ERR: 'E'
 }
 Class is Widget{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local Int is size: 0;
 	local String is label;
 	replace Function of Int is grow(Int is by){
@@ -41,30 +46,30 @@ Class is Widget{
 		local String is structsC: dg:generateStructs(classes: prog:classes);
 
 		if (enumsC:contains(needle: 'Level_NONE = 0') && enumsC:contains(needle: 'Level_of(String v)') && enumsC:contains(needle: 'return Level_NONE;')) {
-			output:line('[PASS] enum tables with of() and NONE default');
+			Output:line('[PASS] enum tables with of() and NONE default');
 		} else {
-			output:line('[FAIL] enum emission');
+			Output:line('[FAIL] enum emission');
 			failures: failures + 1;
 		}
 
 		if (fwdC:contains(needle: 'typedef struct Widget Widget;') && fwdC:contains(needle: 'long long Widget_grow(Widget* self, long long by);')) {
-			output:line('[PASS] forward declarations with prototypes');
+			Output:line('[PASS] forward declarations with prototypes');
 		} else {
-			output:line('[FAIL] forward declarations');
+			Output:line('[FAIL] forward declarations');
 			failures: failures + 1;
 		}
 
 		if (structsC:contains(needle: 'struct Widget {') && structsC:contains(needle: 'long long size;') && !structsC:contains(needle: 'namespace;')) {
-			output:line('[PASS] struct fields without metadata members');
+			Output:line('[PASS] struct fields without metadata members');
 		} else {
-			output:line('[FAIL] struct emission');
+			Output:line('[FAIL] struct emission');
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec declgen test complete');
+			Output:line('[PASS] spec declgen test complete');
 		} else {
-			output:line('[FAIL] spec declgen test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec declgen test: ' . (failures as String) . ' failures');
 		}
 	}
 }

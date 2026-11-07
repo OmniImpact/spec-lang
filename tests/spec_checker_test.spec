@@ -15,7 +15,9 @@ Class is SpecCheckerTest{
 		['base', 'io', Output],
 		['base', 'io', File],
 		['base', 'struct', Array],
-		['base', 'struct', Map]
+		['base', 'struct', Map],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 
 	## Parses and checks a source, returning the error messages.
@@ -68,24 +70,24 @@ Class is SpecCheckerTest{
 	}
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Checker Test ===');
+		Output:line('=== Spec Checker Test ===');
 		local Int is failures: 0;
 
 		# 1. Clean program: 0 errors
 		local Array of String is e1: self:checkOf(src: 'Class is A{ replace Function is init(Map of String to String is args){ local Int is n: 1 + 2 * 3; local Int is m: n + 1; } }');
 		if (e1:length() == 0) {
-			output:line('[PASS] clean program');
+			Output:line('[PASS] clean program');
 		} else {
-			output:line('[FAIL] clean program: ' . e1:join(separator: ' | '));
+			Output:line('[FAIL] clean program: ' . e1:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 		# 2. Bidirectional: empty array/map literals type from the declaration
 		local Array of String is e2: self:checkOf(src: "Class is B{ replace Function is init(Map of String to String is args){ local Array of String is xs: []; local Map of String to Int is m: [:]; } }");
 		if (e2:length() == 0) {
-			output:line('[PASS] bidirectional empty containers');
+			Output:line('[PASS] bidirectional empty containers');
 		} else {
-			output:line('[FAIL] bidirectional empty containers: ' . e2:join(separator: ' | '));
+			Output:line('[FAIL] bidirectional empty containers: ' . e2:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -93,27 +95,27 @@ Class is SpecCheckerTest{
 		# the fossil returned Any, so the chained length() was a root-contract error.
 		local Array of String is e3: self:checkOf(src: "Class is C{ replace Function is init(Map of String to String is args){ local Array of String is xs: ['a', 'b']; local Int is firstLen: xs:get(index: 0):length(); } }");
 		if (e3:length() == 0) {
-			output:line('[PASS] Array of X element resolution through chains');
+			Output:line('[PASS] Array of X element resolution through chains');
 		} else {
-			output:line('[FAIL] Array of X chains: ' . e3:join(separator: ' | '));
+			Output:line('[FAIL] Array of X chains: ' . e3:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 		# 4. Type mismatch error path
 		local Array of String is e4: self:checkOf(src: 'Class is D{ replace Function is init(Map of String to String is args){ local Int is n: \'hello\'; } }');
 		if (e4:length() == 1 && e4:get(index: 0):contains(needle: "cannot assign 'String' to 'Int'")) {
-			output:line('[PASS] mismatch diagnostic');
+			Output:line('[PASS] mismatch diagnostic');
 		} else {
-			output:line('[FAIL] mismatch diagnostic: ' . e4:join(separator: ' | '));
+			Output:line('[FAIL] mismatch diagnostic: ' . e4:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 		# 5. Undefined identifier
 		local Array of String is e5: self:checkOf(src: 'Class is E{ replace Function is init(Map of String to String is args){ local Int is n: untrackedTotal; } }');
 		if (e5:length() >= 1 && e5:get(index: 0):contains(needle: "Undefined identifier 'untrackedTotal'")) {
-			output:line('[PASS] undefined identifier diagnostic');
+			Output:line('[PASS] undefined identifier diagnostic');
 		} else {
-			output:line('[FAIL] undefined identifier: ' . e5:join(separator: ' | '));
+			Output:line('[FAIL] undefined identifier: ' . e5:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -124,18 +126,18 @@ Class is F{ replace Function is init(Map of String to String is args){
 	local String is tag: when (lv) { is ERR: 'e'; };
 } }");
 		if (e6:length() >= 1 && e6:get(index: 0):contains(needle: "Non-exhaustive 'when'")) {
-			output:line('[PASS] non-exhaustive when diagnostic');
+			Output:line('[PASS] non-exhaustive when diagnostic');
 		} else {
-			output:line('[FAIL] non-exhaustive when: ' . e6:join(separator: ' | '));
+			Output:line('[FAIL] non-exhaustive when: ' . e6:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 		# 7. Field initializer bidirectional + root contract
 		local Array of String is e7: self:checkOf(src: "Class is G{ replace Function is init(Map of String to String is args){ local Boolean is ok: 1 == 1; if (ok) { local Int is y: 1; } } }");
 		if (e7:length() == 0) {
-			output:line('[PASS] boolean condition typing');
+			Output:line('[PASS] boolean condition typing');
 		} else {
-			output:line('[FAIL] boolean condition: ' . e7:join(separator: ' | '));
+			Output:line('[FAIL] boolean condition: ' . e7:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -146,9 +148,9 @@ Class is H{ replace Function is init(Map of String to String is args){
 	local Int is n: xs:length();
 } }");
 		if (e8:length() == 0) {
-			output:line('[PASS] call-result field access typed from declaration');
+			Output:line('[PASS] call-result field access typed from declaration');
 		} else {
-			output:line('[FAIL] call-result field access: ' . e8:join(separator: ' | '));
+			Output:line('[FAIL] call-result field access: ' . e8:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -157,18 +159,18 @@ Class is H{ replace Function is init(Map of String to String is args){
 		local Array of String is e9: self:checkOf(src: "Class is I{ replace Function is init(Map of String to String is args){ local Int is n: 5; } }
 ");
 		if (e9:length() == 0) {
-			output:line('[PASS] regression: plain program still clean');
+			Output:line('[PASS] regression: plain program still clean');
 		} else {
-			output:line('[FAIL] plain program: ' . e9:join(separator: ' | '));
+			Output:line('[FAIL] plain program: ' . e9:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 # 10. Primitive conversion casts (declared matrix)
 		local Array of String is e10: self:checkOf(src: "Class is J{ replace Function is init(Map of String to String is args){ local Float is f: 3.9; local Int is truncated: f as Int; local Float is widened: 7 as Float; } }");
 		if (e10:length() == 0) {
-			output:line('[PASS] primitive conversion casts');
+			Output:line('[PASS] primitive conversion casts');
 		} else {
-			output:line('[FAIL] primitive conversion casts: ' . e10:join(separator: ' | '));
+			Output:line('[FAIL] primitive conversion casts: ' . e10:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -177,18 +179,18 @@ Class is H{ replace Function is init(Map of String to String is args){
 Class is Dog{ }
 Class is K{ replace Function is init(Map of String to String is args){ local Cat is c: Cat:init(); local Dog is d: c as Dog; } }");
 		if (e11:length() >= 1 && e11:get(index: 0):contains(needle: "unrelated class")) {
-			output:line('[PASS] unrelated class cast rejected by inheritance');
+			Output:line('[PASS] unrelated class cast rejected by inheritance');
 		} else {
-			output:line('[FAIL] unrelated class cast: ' . e11:join(separator: ' | '));
+			Output:line('[FAIL] unrelated class cast: ' . e11:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 		# 12. Declared cast: String -> Int via String's castable entry.
 		local Array of String is e12: self:checkOf(src: "Class is L{ replace Function is init(Map of String to String is args){ local String is digits: '1234'; local Int is num: digits as Int; } }");
 		if (e12:length() == 0) {
-			output:line('[PASS] declared cast via castable');
+			Output:line('[PASS] declared cast via castable');
 		} else {
-			output:line('[FAIL] declared cast: ' . e12:join(separator: ' | '));
+			Output:line('[FAIL] declared cast: ' . e12:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -196,16 +198,16 @@ Class is K{ replace Function is init(Map of String to String is args){ local Cat
 		local Array of String is e13: self:checkOf(src: "Class is M{ castable: [[Int, broken]]; Function of String is broken(){ return 'x'; } }
 Class is N{ replace Function is init(Map of String to String is args){ local M is m: M:init(); local Int is n: m as Int; } }");
 		if (e13:length() >= 1 && e13:get(index: 0):contains(needle: "returns 'String', not 'Int'")) {
-			output:line('[PASS] castable return-type mismatch diagnosed');
+			Output:line('[PASS] castable return-type mismatch diagnosed');
 		} else {
-			output:line('[FAIL] castable mismatch: ' . e13:join(separator: ' | '));
+			Output:line('[FAIL] castable mismatch: ' . e13:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec checker test complete');
+			Output:line('[PASS] spec checker test complete');
 		} else {
-			output:line('[FAIL] spec checker test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec checker test: ' . (failures as String) . ' failures');
 		}
 	}
 }

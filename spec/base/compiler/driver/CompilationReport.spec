@@ -9,7 +9,8 @@ Class is CompilationReport{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	## True when stage lines and the summary are suppressed.
@@ -28,7 +29,7 @@ Class is CompilationReport{
 		if (self:quiet) {
 			return;
 		}
-		output:line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
+		Output:line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
 	}
 
 	## One-line progress note inside a stage (no numbering).
@@ -36,7 +37,7 @@ Class is CompilationReport{
 		if (self:quiet) {
 			return;
 		}
-		output:line('  ' . label);
+		Output:line('  ' . label);
 	}
 
 	## Prints the end-of-run summary: paths, counts, time breakdown.
@@ -55,19 +56,19 @@ Class is CompilationReport{
 		if (self:quiet) {
 			return;
 		}
-		output:line('');
-		output:line('  ' . inputPath . ' -> ' . outputPath);
-		output:line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of C');
+		Output:line('');
+		Output:line('  ' . inputPath . ' -> ' . outputPath);
+		Output:line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of C');
 		local String is times: '  time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
 		if (ccMs >= 0) {
 			times: times . ' · cc ' . (ccMs as String);
 		}
 		times: times . ')';
-		output:line(times);
+		Output:line(times);
 		local String is last: '  peak memory ' . ((peakKb / 1024) as String) . ' MB';
 		if (binKb >= 0) {
 			last: last . ' · binary ' . ((binKb / 1024) as String) . ' KB';
 		}
-		output:line(last);
+		Output:line(last);
 	}
 }

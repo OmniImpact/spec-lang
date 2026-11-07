@@ -20,37 +20,65 @@
 ## compiler output contains the conflicting-implementations diagnostic.
 
 Class is DiamondA{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function of Int is value(){
 		return 1;
 	}
 }
 
 Class is DiamondB{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function of Int is value(){
 		return 2;
 	}
 }
 
 Class of DiamondA, DiamondB is DiamondBadChild{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function is init(Map of String to String is args){
-		output:line('unreachable');
+		Output:line('unreachable');
 	}
 }
 
 Class is SharedBase{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function of Int is shared(){
 		return 7;
 	}
 }
 
 Class of SharedBase is SharedLeft{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 }
 
 Class of SharedBase is SharedRight{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 }
 
 Class of SharedLeft, SharedRight is DiamondSharedChild{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function is init(Map of String to String is args){
-		output:line('shared ok');
+		Output:line('shared ok');
 	}
 }

@@ -12,6 +12,11 @@ Class is Mandelbrot{
 		['base', 'math'],
 		['base', 'io'],
 		['base', 'sys', Process],
+		['base', 'io', as Ansi()],
+		['base', 'math', as Math()],
+		['base', 'io', as Output()],
+		['base', 'sys', as Process()],
+		['base', 'iterator', as While()]
 	];
 
 	## Total number of complex-plane points sampled across all render modes.
@@ -61,13 +66,13 @@ Class is Mandelbrot{
 			return -1.0;
 		}
 
-		local Float is mag: math:sqrt(value: zr2 + zi2);
-		local Float is logMag: math:log(value: mag);
+		local Float is mag: Math:sqrt(value: zr2 + zi2);
+		local Float is logMag: Math:log(value: mag);
 		local Float is nu: 0.0;
 		if (logMag > 0.0) {
-			nu: math:log2(value: logMag);
+			nu: Math:log2(value: logMag);
 		}
-		return (math:toFloat(value: iter) + 1.0) - nu;
+		return (Math:toFloat(value: iter) + 1.0) - nu;
 	}
 
 	## Maps a smooth escape value to a 256-color palette index (16..231 cube or 16 for interior).
@@ -82,13 +87,13 @@ Class is Mandelbrot{
 			return 16;
 		}
 		local Float is t: mu * 0.18;
-		local Float is rf: (0.5 + (0.5 * math:cos(value: t + 0.0))) * 5.0;
-		local Float is gf: (0.5 + (0.5 * math:cos(value: t + 2.094))) * 5.0;
-		local Float is bf: (0.5 + (0.5 * math:cos(value: t + 4.188))) * 5.0;
+		local Float is rf: (0.5 + (0.5 * Math:cos(value: t + 0.0))) * 5.0;
+		local Float is gf: (0.5 + (0.5 * Math:cos(value: t + 2.094))) * 5.0;
+		local Float is bf: (0.5 + (0.5 * Math:cos(value: t + 4.188))) * 5.0;
 
-		local Int is r: math:toInt(value: math:round(value: self:clampFloat(v: rf, lo: 0.0, hi: 5.0)));
-		local Int is g: math:toInt(value: math:round(value: self:clampFloat(v: gf, lo: 0.0, hi: 5.0)));
-		local Int is b: math:toInt(value: math:round(value: self:clampFloat(v: bf, lo: 0.0, hi: 5.0)));
+		local Int is r: Math:toInt(value: Math:round(value: self:clampFloat(v: rf, lo: 0.0, hi: 5.0)));
+		local Int is g: Math:toInt(value: Math:round(value: self:clampFloat(v: gf, lo: 0.0, hi: 5.0)));
+		local Int is b: Math:toInt(value: Math:round(value: self:clampFloat(v: bf, lo: 0.0, hi: 5.0)));
 		return Ansi:cubeIndex(r: r, g: g, b: b);
 	}
 
@@ -100,7 +105,7 @@ Class is Mandelbrot{
 		if (mu < 0.0) {
 			return ' ';
 		}
-		local Int is band: math:toInt(value: mu * 2.0) % 4;
+		local Int is band: Math:toInt(value: mu * 2.0) % 4;
 		return when (band) {
 			is 0: '░';
 			is 1: '▒';
@@ -128,14 +133,14 @@ Class is Mandelbrot{
 		local Int is elapsedSec: elapsedMs / 1000;
 		local String is bar: self:repeatBar(count: width);
 
-		output:line('');
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Statistics ' . self:repeatBar(count: width - 14) . '╗'));
-		output:line(Ansi:color256(code: 51, text: '║ Resolution: ' . width . ' x ' . height . ', maxIter ' . maxIter));
-		output:line(Ansi:color256(code: 51, text: '║ Points sampled: ' . self:pointsRendered));
-		output:line(Ansi:color256(code: 51, text: '║ Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)'));
-		output:line(Ansi:color256(code: 51, text: '║ Peak memory: ' . peakKb . ' KB (' . peakMb . ' MB)'));
-		output:line(Ansi:color256(code: 51, text: '║ Threads used: ' . Process:threadCount()));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . bar . '╝'));
+		Output:line('');
+		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Statistics ' . self:repeatBar(count: width - 14) . '╗'));
+		Output:line(Ansi:color256(code: 51, text: '║ Resolution: ' . width . ' x ' . height . ', maxIter ' . maxIter));
+		Output:line(Ansi:color256(code: 51, text: '║ Points sampled: ' . self:pointsRendered));
+		Output:line(Ansi:color256(code: 51, text: '║ Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)'));
+		Output:line(Ansi:color256(code: 51, text: '║ Peak memory: ' . peakKb . ' KB (' . peakMb . ' MB)'));
+		Output:line(Ansi:color256(code: 51, text: '║ Threads used: ' . Process:threadCount()));
+		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . bar . '╝'));
 	}
 
 	## Builds a horizontal box bar of the given length.
@@ -210,12 +215,12 @@ Class is Mandelbrot{
 			}
 		}
 
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔' . self:repeatBar(count: width) . '╗'));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
-		output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:repeatBar(count: width) . '╝'));
+		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔' . self:repeatBar(count: width) . '╗'));
+		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
+		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:repeatBar(count: width) . '╝'));
 
 		if (mode == 'both' || mode == 'shaded') {
-			output:line(Ansi:color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
+			Output:line(Ansi:color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
 			self:renderShaded(
 				width: width,
 				rows: height,
@@ -228,8 +233,8 @@ Class is Mandelbrot{
 		}
 
 		if (mode == 'both' || mode == 'halfblock') {
-			output:line('');
-			output:line(Ansi:color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
+			Output:line('');
+			Output:line(Ansi:color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
 			self:renderHalfBlock(
 				width: width,
 				rows: height / 2,
@@ -248,8 +253,8 @@ Class is Mandelbrot{
 	## with 256-color foreground (top sample) and 256-color background (bottom sample).
 	local Function is renderHalfBlock(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
 		local Int is pixelHeight: rows * 2;
-		local Float is wFloat: math:toFloat(value: width - 1);
-		local Float is hFloat: math:toFloat(value: pixelHeight - 1);
+		local Float is wFloat: Math:toFloat(value: width - 1);
+		local Float is hFloat: Math:toFloat(value: pixelHeight - 1);
 		local Int is row: 0;
 
 		While:condition(
@@ -257,15 +262,15 @@ Class is Mandelbrot{
 			iteration: local Function(){
 				local Int is yTop: row * 2;
 				local Int is yBot: yTop + 1;
-				local Float is ciTop: maxIm - ((math:toFloat(value: yTop) / hFloat) * (maxIm - minIm));
-				local Float is ciBot: maxIm - ((math:toFloat(value: yBot) / hFloat) * (maxIm - minIm));
+				local Float is ciTop: maxIm - ((Math:toFloat(value: yTop) / hFloat) * (maxIm - minIm));
+				local Float is ciBot: maxIm - ((Math:toFloat(value: yBot) / hFloat) * (maxIm - minIm));
 
 				local String is lineBuf: '';
 				local Int is col: 0;
 				While:condition(
 					evaluate: local Function of Boolean(){ return col < width; },
 					iteration: local Function(){
-						local Float is cr: minRe + ((math:toFloat(value: col) / wFloat) * (maxRe - minRe));
+						local Float is cr: minRe + ((Math:toFloat(value: col) / wFloat) * (maxRe - minRe));
 						local Float is muTop: self:smoothEscape(cr: cr, ci: ciTop, maxIter: maxIter);
 						local Float is muBot: self:smoothEscape(cr: cr, ci: ciBot, maxIter: maxIter);
 
@@ -276,7 +281,7 @@ Class is Mandelbrot{
 						col: col + 1;
 					}
 				);
-				output:line(lineBuf);
+				Output:line(lineBuf);
 				row: row + 1;
 			}
 		);
@@ -284,21 +289,21 @@ Class is Mandelbrot{
 
 	## Renders the complex plane using textured shade glyphs (`█`, `▓`, `▒`, `░`, ` `) and 256-color foregrounds.
 	local Function is renderShaded(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
-		local Float is wFloat: math:toFloat(value: width - 1);
-		local Float is hFloat: math:toFloat(value: rows - 1);
+		local Float is wFloat: Math:toFloat(value: width - 1);
+		local Float is hFloat: Math:toFloat(value: rows - 1);
 		local Int is row: 0;
 
 		While:condition(
 			evaluate: local Function of Boolean(){ return row < rows; },
 			iteration: local Function(){
-				local Float is ci: maxIm - ((math:toFloat(value: row) / hFloat) * (maxIm - minIm));
+				local Float is ci: maxIm - ((Math:toFloat(value: row) / hFloat) * (maxIm - minIm));
 				local String is lineBuf: Ansi:bg256(code: 16);
 				local Int is col: 0;
 
 				While:condition(
 					evaluate: local Function of Boolean(){ return col < width; },
 					iteration: local Function(){
-						local Float is cr: minRe + ((math:toFloat(value: col) / wFloat) * (maxRe - minRe));
+						local Float is cr: minRe + ((Math:toFloat(value: col) / wFloat) * (maxRe - minRe));
 						local Float is mu: self:smoothEscape(cr: cr, ci: ci, maxIter: maxIter);
 						local Int is fgCode: self:palette256(mu: mu);
 						local String is glyph: self:shadeGlyph(mu: mu);
@@ -308,7 +313,7 @@ Class is Mandelbrot{
 					}
 				);
 				lineBuf: lineBuf . Ansi:reset();
-				output:line(lineBuf);
+				Output:line(lineBuf);
 				row: row + 1;
 			}
 		);

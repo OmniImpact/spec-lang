@@ -22,7 +22,8 @@ Class is Linter{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'io', as Output()]
 	];
 
 	## Audit name sets (INSTANCE.md Phase 0.5): every enum and class name in
@@ -49,7 +50,7 @@ Class is Linter{
 		self:auditEnums: Map:init();
 		self:auditClasses: Map:init();
 		self:auditIssues: [];
-		self:floorAliases: ['output', 'error', 'math'];
+		self:floorAliases: [];
 		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
 	}
 
@@ -329,16 +330,16 @@ Class is Linter{
 	## @param filePath: Source file path.
 	## @param issues: Array of detected [LintIssue] items.
 	Function is report(String is filePath, Array of LintIssue is issues){
-		output:line('Checking \'' . filePath . '\' for Spec code standards...');
+		Output:line('Checking \'' . filePath . '\' for Spec code standards...');
 		issues:each(action: local Function(LintIssue is issue){
-			output:line(issue:toString());
+			Output:line(issue:toString());
 		});
 
 		local Int is warnings: self:countWarnings(issues: issues);
 		local Int is notices: self:countNotices(issues: issues);
-		output:line("\nLint summary for " . filePath . ': ' . (warnings as String) . ' warning(s), ' . (notices as String) . ' notice(s).');
+		Output:line("\nLint summary for " . filePath . ': ' . (warnings as String) . ' warning(s), ' . (notices as String) . ' notice(s).');
 		if (warnings == 0) {
-			output:line('All standard checks passed successfully.');
+			Output:line('All standard checks passed successfully.');
 		}
 	}
 
@@ -649,10 +650,10 @@ Class is Linter{
 	## @param filePath: Audited root file path.
 	## @param issues: Worklist notices.
 	Function is auditReport(String is filePath, Array of LintIssue is issues){
-		output:line('Instance-model audit of \'' . filePath . '\':');
+		Output:line('Instance-model audit of \'' . filePath . '\':');
 		issues:each(action: local Function(LintIssue is issue){
-			output:line(issue:toString());
+			Output:line(issue:toString());
 		});
-		output:line('Instance-model worklist: ' . (issues:length() as String) . ' call site(s) must migrate (INSTANCE.md Phase 0.5).');
+		Output:line('Instance-model worklist: ' . (issues:length() as String) . ' call site(s) must migrate (INSTANCE.md Phase 0.5).');
 	}
 }

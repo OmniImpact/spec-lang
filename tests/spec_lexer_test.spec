@@ -9,11 +9,12 @@ Class is SpecLexerTest{
 		['base', 'compiler', 'lexer', TokenKind],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Lexer Test ===');
+		Output:line('=== Spec Lexer Test ===');
 		local Int is failures: 0;
 
 		local String is src: 'local Int is n: 0xff + 1_000;' . "\n" . '# a comment
@@ -24,9 +25,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Array of Token is toks: lx:tokenize();
 
 		if (!lx:hasErrors() && toks:length() == 31) {
-			output:line('[PASS] clean scan, expected token count');
+			Output:line('[PASS] clean scan, expected token count');
 		} else {
-			output:line('[FAIL] scan errors or token count: ' . (toks:length() as String));
+			Output:line('[FAIL] scan errors or token count: ' . (toks:length() as String));
 			failures: failures + 1;
 		}
 
@@ -34,9 +35,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Token is hex: toks:get(index: 5);
 		local Token is sep: toks:get(index: 7);
 		if (hex:getValue() == '255' && hex:getTokenKind() == TokenKind:INT && sep:getValue() == '1000') {
-			output:line('[PASS] number normalization');
+			Output:line('[PASS] number normalization');
 		} else {
-			output:line('[FAIL] number normalization');
+			Output:line('[FAIL] number normalization');
 			failures: failures + 1;
 		}
 
@@ -45,30 +46,30 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Token is fq: toks:get(index: 21);
 		local Token is hd: toks:get(index: 28);
 		if (sq:getValue() == 'it\'s' && sq:getTokenKind() == TokenKind:STRING) {
-			output:line('[PASS] single-quote minimal escape');
+			Output:line('[PASS] single-quote minimal escape');
 		} else {
-			output:line('[FAIL] single-quote minimal escape');
+			Output:line('[FAIL] single-quote minimal escape');
 			failures: failures + 1;
 		}
 		if (fq:getValue() == "raw \\n stays \\{\\{x\\}\\}" && fq:getTokenKind() == TokenKind:TEMPLATESTRING) {
-			output:line('[PASS] fancy string carries raw content incl. escapes');
+			Output:line('[PASS] fancy string carries raw content incl. escapes');
 		} else {
-			output:line('[FAIL] fancy string raw content');
+			Output:line('[FAIL] fancy string raw content');
 			failures: failures + 1;
 		}
 		if (hd:getValue() == "heredoc\n" && hd:getTokenKind() == TokenKind:RAWSTRING) {
-			output:line('[PASS] raw heredoc with delimiter-newline strip');
+			Output:line('[PASS] raw heredoc with delimiter-newline strip');
 		} else {
-			output:line('[FAIL] raw heredoc content');
+			Output:line('[FAIL] raw heredoc content');
 			failures: failures + 1;
 		}
 
 		# Reserved words carry their Keyword classification for enum dispatch.
 		local Token is kwTok: toks:get(index: 0);
 		if (kwTok:getKeyword() == Keyword:LOCAL) {
-			output:line('[PASS] keyword classification on scanned token');
+			Output:line('[PASS] keyword classification on scanned token');
 		} else {
-			output:line('[FAIL] keyword classification on scanned token');
+			Output:line('[FAIL] keyword classification on scanned token');
 			failures: failures + 1;
 		}
 
@@ -76,9 +77,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Token is afterComment: toks:get(index: 9);
 		local Token is end: toks:get(index: 30);
 		if (afterComment:getLine() == 3 && end:getTokenKind() == TokenKind:EOF && end:getLine() == 7) {
-			output:line('[PASS] line tracking across comment and heredoc');
+			Output:line('[PASS] line tracking across comment and heredoc');
 		} else {
-			output:line('[FAIL] line tracking');
+			Output:line('[FAIL] line tracking');
 			failures: failures + 1;
 		}
 
@@ -91,16 +92,16 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Error is first: bad:getErrors():get(index: 0);
 		local String is rendered: first:toString();
 		if (bad:hasErrors() && rendered:contains(needle: 'missing closing ```') && rendered:contains(needle: 'at Lexer:addError')) {
-			output:line('[PASS] lexical errors carry substituted wording and reflection provenance');
+			Output:line('[PASS] lexical errors carry substituted wording and reflection provenance');
 		} else {
-			output:line('[FAIL] lexical error provenance: ' . rendered);
+			Output:line('[FAIL] lexical error provenance: ' . rendered);
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec lexer test complete');
+			Output:line('[PASS] spec lexer test complete');
 		} else {
-			output:line('[FAIL] spec lexer test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec lexer test: ' . (failures as String) . ' failures');
 		}
 	}
 }

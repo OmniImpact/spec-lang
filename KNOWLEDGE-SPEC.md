@@ -30,10 +30,10 @@ Base literals: `0xFF` `0b1010` `0o755` `1_000_000` (underscore separators; bare 
 Casts: `value as Target`.
 
 ## Imports & Resolution
-Array-form, pure package segments; the trailing segment names a class, omitting it imports the whole package (wildcard):
+Array-form, pure package segments; the trailing segment names a class, omitting it imports the whole package (wildcard). The instance form `as ClassName()` materializes an owned instance scoped to the importing class — its members answer to the class-name prefix (INSTANCE.md):
 ```spec
 replace Array of Array of String is using: [
-	['base', 'io', Output],
+	['base', 'io', as Output()],
 	['base', 'struct', Array]
 ];
 ```
@@ -89,8 +89,7 @@ Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `retu
 - `List of T`: `push appendString get set pop length clear toString` (`[Byte]` is the string-builder floor)
 
 ## Builtins (selected)
-- `output:line(text)` stdout; `error:line(text)` stderr
-- `math:` `round floor ceil toInt toFloat sqrt pow log log2 sin cos tan atan2 random fastRandom abs min max clamp`
+- Runtime-managed classes, instance-imported: `Output:line/print/write` (stdout), `Stderr:line/print` (stderr), `Math:` `round floor ceil toInt toFloat sqrt pow log log2 sin cos tan atan2 random fastRandom abs min max clamp`. The lowercase `output:`/`error:`/`math:` alias spellings are retired (INSTANCE.md R1-R3).
 - `Process:` `execute(command:, args:)` `getPid()` `exit(status:)` `sleep(ms:)` `clockMs()` `peakMemoryKb()` `threadCount()` `atomicAdd/Put/Get(slot:, value:)`
 - `File:` `read(path:, default:)` `write(path:, content:)` `readAsync` `writeAsync` `exists(path:)` `remove(path:)`
 - `Int:toBase(base:, digits:)` `String:parseInt(base:, default:)`

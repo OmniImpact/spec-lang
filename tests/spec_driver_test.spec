@@ -9,11 +9,13 @@ Class is SpecDriverTest{
 		['base', 'compiler', 'driver', Driver],
 		['base', 'io', Output],
 		['base', 'io', File],
-		['base', 'struct', Map]
+		['base', 'struct', Map],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Driver Test ===');
+		Output:line('=== Spec Driver Test ===');
 		local Int is failures: 0;
 
 		# A valid program: multi-file, polymorphic, floor-imported.
@@ -30,6 +32,11 @@ Class is SpecDriverTest{
 	}
 }
 Class of Greeter is LoudGreeter{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
+	];
 	replace Function of String is toString(){
 		return 'LOUD ' . self:text();
 	}
@@ -40,7 +47,9 @@ Class is DriverE2E{
 		Output:line(text: g:toString());
 	}
 	replace Array of Array of String is using: [
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 }";
 		File:write(path: 'tests/.driver_app_tmp.spec', content: src);
@@ -54,18 +63,18 @@ Class is DriverE2E{
 		if (cSrc:contains(needle: 'int main(')
 			&& cSrc:contains(needle: 'LoudGreeter_toString')
 			&& cSrc:contains(needle: '_vtable[')) {
-			output:line('[PASS] driver emitted C with vtable dispatch');
+			Output:line('[PASS] driver emitted C with vtable dispatch');
 		} else {
-			output:line('[FAIL] driver emission');
+			Output:line('[FAIL] driver emission');
 			failures: failures + 1;
 		}
 		File:remove(path: 'tests/.driver_app_tmp.c');
 		File:remove(path: 'tests/.driver_app_tmp.spec');
 
 		if (failures == 0) {
-			output:line('[PASS] spec driver test complete');
+			Output:line('[PASS] spec driver test complete');
 		} else {
-			output:line('[FAIL] spec driver test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec driver test: ' . (failures as String) . ' failures');
 		}
 	}
 }

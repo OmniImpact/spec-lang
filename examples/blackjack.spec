@@ -11,6 +11,10 @@ Class is Blackjack{
 		['base', 'io', Input],
 		['base', 'io', InputHandler],
 		['base', 'math'],
+		['base', 'io', as Input()],
+		['base', 'math', as Math()],
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
 	];
 
 	# =========================================================================
@@ -31,6 +35,13 @@ Class is Blackjack{
 	#     and fires the onComplete callback attached to LoopControl
 	# =========================================================================
 	Class of Loop is DealerTurnLoop{
+
+		replace Array of Array of String is using: [
+			['base', 'io', as Input()],
+			['base', 'math', as Math()],
+			['base', 'io', as Output()],
+			['base', 'iterator', as While()]
+		];
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
@@ -49,7 +60,7 @@ Class is Blackjack{
 			game:dealerHand:add(item: card);
 
 			local Int is newScore: game:handValue(hand: game:dealerHand);
-			output:line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
+			Output:line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
 
 			return true; # Step completed normally; engine will call evaluate() next
 		}
@@ -60,6 +71,13 @@ Class is Blackjack{
 	# Triggered automatically when evaluate() returns false or control is stopped
 	# =========================================================================
 	Class of LoopCallback is DealerTurnCompleteCallback{
+
+		replace Array of Array of String is using: [
+			['base', 'io', as Input()],
+			['base', 'math', as Math()],
+			['base', 'io', as Output()],
+			['base', 'iterator', as While()]
+		];
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
@@ -67,7 +85,7 @@ Class is Blackjack{
 		}
 
 		replace Function is onComplete(LoopControl is control){
-			output:line("\nDealer stands or busts.");
+			Output:line("\nDealer stands or busts.");
 			game:evaluateRoundOutcome();
 		}
 	}
@@ -77,6 +95,13 @@ Class is Blackjack{
 	# Dispatched asynchronously on user input
 	# =========================================================================
 	Class of InputHandler is PlayerTurnHandler{
+
+		replace Array of Array of String is using: [
+			['base', 'io', as Input()],
+			['base', 'math', as Math()],
+			['base', 'io', as Output()],
+			['base', 'iterator', as While()]
+		];
 		local Blackjack is game;
 
 		replace Function is init(Blackjack is game){
@@ -85,7 +110,7 @@ Class is Blackjack{
 
 		replace Function is onInput(String is action){
 			if (action == '') {
-				output:line("\nInput closed. Thanks for playing!");
+				Output:line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
 				return;
 			}
@@ -93,27 +118,27 @@ Class is Blackjack{
 				is 'h', 'hit': {
 				local Int is card: game:drawCard();
 				game:playerHand:add(item: card);
-				output:line('You drew: ' . card);
+				Output:line('You drew: ' . card);
 
 				local Int is score: game:handValue(hand: game:playerHand);
-				output:line('Your total is now: ' . score);
+				Output:line('Your total is now: ' . score);
 
 				if (score > 21) {
-					output:line('Bust! You lose.');
+					Output:line('Bust! You lose.');
 					game:roundActive: false;
 				} else if (score == 21) {
-					output:line('21! Standing automatically.');
+					Output:line('21! Standing automatically.');
 					game:startDealerTurn();
 				} else {
 					game:promptPlayerAction();
 				}
 			}
 			is 's', 'stand': {
-				output:line('You stand with total: ' . game:handValue(hand: game:playerHand));
+				Output:line('You stand with total: ' . game:handValue(hand: game:playerHand));
 				game:startDealerTurn();
 			}
 			else: {
-				output:line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
+				Output:line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
 				game:promptPlayerAction();
 			}
 		}
@@ -124,8 +149,8 @@ Class is Blackjack{
 	# Helper Functions
 	# =========================================================================
 	Function of Int is drawCard(){
-		local Float is roll: math:random(min: 1.0, max: 11.0);
-		return math:floor(value: roll) as Int;
+		local Float is roll: Math:random(min: 1.0, max: 11.0);
+		return Math:floor(value: roll) as Int;
 	}
 
 	## Computes the best blackjack value of a hand: aces count 11, downgraded
@@ -159,13 +184,13 @@ Class is Blackjack{
 	}
 
 	Function is promptPlayerAction(){
-		output:line('Would you like to (h)it or (s)tand?');
+		Output:line('Would you like to (h)it or (s)tand?');
 		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
 		Input:prompt(handler: handler);
 	}
 
 	Function is startDealerTurn(){
-		output:line("\n--- Starting Dealer's Turn ---");
+		Output:line("\n--- Starting Dealer's Turn ---");
 
 		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: self);
 		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: self);
@@ -178,17 +203,17 @@ Class is Blackjack{
 		local Int is playerScore: handValue(hand: playerHand);
 		local Int is dealerScore: handValue(hand: dealerHand);
 
-		output:line("\n=== Final Results ===");
-		output:line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
+		Output:line("\n=== Final Results ===");
+		Output:line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
 
 		if (dealerScore > 21) {
-			output:line('Dealer busts! You win!');
+			Output:line('Dealer busts! You win!');
 		} else if (playerScore > dealerScore) {
-			output:line('You beat the dealer! You win!');
+			Output:line('You beat the dealer! You win!');
 		} else if (dealerScore > playerScore) {
-			output:line('Dealer wins!');
+			Output:line('Dealer wins!');
 		} else {
-			output:line('Push (Tie)!');
+			Output:line('Push (Tie)!');
 		}
 	}
 
@@ -196,9 +221,9 @@ Class is Blackjack{
 	# Application Entry Point
 	# =========================================================================
 	replace Function is init(Map of String to String is args){
-		output:line('======================================');
-		output:line('         Welcome to SpecJack          ');
-		output:line("======================================\n");
+		Output:line('======================================');
+		Output:line('         Welcome to SpecJack          ');
+		Output:line("======================================\n");
 
 		# 1. Build the deck: four suits of each value 1..10.
 		local Int is value: 1;
@@ -223,12 +248,12 @@ Class is Blackjack{
 		dealerHand:add(item: drawCard());
 		dealerHand:add(item: drawCard());
 
-		output:line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
-		output:line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
+		Output:line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
+		Output:line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
 		# 3. Check natural 21
 		if (handValue(hand: playerHand) == 21) {
-			output:line('Natural Blackjack! You win!');
+			Output:line('Natural Blackjack! You win!');
 			return;
 		}
 

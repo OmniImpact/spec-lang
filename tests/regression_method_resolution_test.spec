@@ -20,18 +20,19 @@ Class is RegressionMethodResolutionTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Regression: Method Resolution vs Builtins ===');
+		Output:line('=== Regression: Method Resolution vs Builtins ===');
 
 		# Case 1: user class with its own get() method (hard compile error today).
 		local UserRecord is rec: UserRecord:init();
 		local Int is got: rec:get();
 		if (got == 42) {
-			output:line('[PASS] user get() dispatch: rec:get() = 42');
+			Output:line('[PASS] user get() dispatch: rec:get() = 42');
 		} else {
-			output:line('[FAIL] user get() dispatch: expected 42, got ' . got);
+			Output:line('[FAIL] user get() dispatch: expected 42, got ' . got);
 		}
 
 		# Case 2: user class whose length() has custom semantics.
@@ -39,9 +40,9 @@ Class is RegressionMethodResolutionTest{
 		local LogStore is store: LogStore:init();
 		local Int is len: store:length();
 		if (len == 7) {
-			output:line('[PASS] user length() dispatch: store:length() = 7');
+			Output:line('[PASS] user length() dispatch: store:length() = 7');
 		} else {
-			output:line('[FAIL] user length() dispatch: expected 7, got ' . len);
+			Output:line('[FAIL] user length() dispatch: expected 7, got ' . len);
 		}
 
 		# Case 3 (control): identical shape with non-colliding method names.
@@ -49,18 +50,22 @@ Class is RegressionMethodResolutionTest{
 		local UserRecord is rec2: UserRecord:init();
 		local Int is safe: rec2:fetchIdentifier();
 		if (safe == 42) {
-			output:line('[PASS] control non-colliding method: fetchIdentifier() = 42');
+			Output:line('[PASS] control non-colliding method: fetchIdentifier() = 42');
 		} else {
-			output:line('[FAIL] control non-colliding method: expected 42, got ' . safe);
+			Output:line('[FAIL] control non-colliding method: expected 42, got ' . safe);
 		}
 
-		output:line('=== End Method Resolution Regression ===');
+		Output:line('=== End Method Resolution Regression ===');
 	}
 
 }
 
 ## User class intentionally declaring a method named like an Array builtin.
 Class is UserRecord{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local Int is identifier: 42;
 
 	## Returns the record identifier. Must NOT be lowered to spec_array_get.
@@ -76,6 +81,10 @@ Class is UserRecord{
 
 ## User class intentionally declaring a method named like an Array builtin.
 Class is LogStore{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local Int is maxEntries: 7;
 
 	## Returns the configured capacity. Must NOT be lowered to spec_array_length.

@@ -3,6 +3,7 @@ Class is ListGuardNegativeTest{
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
 		['base', 'struct', List],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -13,6 +14,6 @@ Class is ListGuardNegativeTest{
 		local [Byte] is buf;
 		local Byte is b: buf:get(index: 0);
 
-		output:line('unreachable');
+		Output:line('unreachable');
 	}
 }

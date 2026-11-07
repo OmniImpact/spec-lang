@@ -30,7 +30,9 @@ Class is Driver{
 		['base', 'compiler', 'gen', CodeGenerator],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'io', as Output()],
+		['base', 'io', as Stderr()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -49,13 +51,13 @@ Class is Driver{
 		local Boolean is auditMode: args:has(key: 'audit');
 		local Boolean is quiet: args:has(key: 'quiet');
 		if (inputPath == '') {
-			output:line('Spec Compiler (Pure Spec)');
-			error:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--audit] [--quiet]');
+			Output:line('Spec Compiler (Pure Spec)');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--audit] [--quiet]');
 			Process:exit(status: 2);
 		}
 
 		if (!File:exists(path: inputPath)) {
-			error:line('Error: Source file not found: ' . inputPath);
+			Stderr:line('Error: Source file not found: ' . inputPath);
 			Process:exit(status: 1);
 		}
 
@@ -78,10 +80,10 @@ Class is Driver{
 			local Lexer is lexer: Lexer:init(source: source);
 			local Array of Token is tokens: lexer:tokenize();
 			if (lexer:hasErrors()) {
-				error:line('Lexical errors encountered during linting:');
+				Stderr:line('Lexical errors encountered during linting:');
 				local Array of Error is lexErrors: lexer:getErrors();
 				lexErrors:each(action: local Function(Error is err){
-					error:line('  [' . inputPath . '] ' . err:toString());
+					Stderr:line('  [' . inputPath . '] ' . err:toString());
 				});
 				Process:exit(status: 1);
 			}
@@ -89,10 +91,10 @@ Class is Driver{
 			parser:setSourceFile(file: inputPath);
 			local ProgramNode is lintProgram: parser:parseProgram();
 			if (parser:hasErrors()) {
-				error:line('Syntax errors encountered during linting:');
+				Stderr:line('Syntax errors encountered during linting:');
 				local Array of Error is parseErrs: parser:getErrors();
 				parseErrs:each(action: local Function(Error is err){
-					error:line(err:toString());
+					Stderr:line(err:toString());
 				});
 				Process:exit(status: 1);
 			}
@@ -109,7 +111,7 @@ Class is Driver{
 		}
 
 		if (!auditMode && outputPath == '' && emitCPath == '') {
-			error:line('Error: Missing output binary path (-o <output_binary>)');
+			Stderr:line('Error: Missing output binary path (-o <output_binary>)');
 			Process:exit(status: 2);
 		}
 
@@ -130,12 +132,12 @@ Class is Driver{
 		});
 		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes');
 		if (loader:getParseErrors():length() > 0) {
-			error:line('Compilation errors encountered during loading:');
+			Stderr:line('Compilation errors encountered during loading:');
 			local Array of String is loadErrors: loader:getParseErrors();
 			loadErrors:each(action: local Function(String is err){
-				error:line(err);
+				Stderr:line(err);
 			});
-			error:line('Compilation aborted due to syntax or load errors.');
+			Stderr:line('Compilation aborted due to syntax or load errors.');
 			Process:exit(status: 1);
 		}
 
@@ -156,18 +158,18 @@ Class is Driver{
 		checkMs: Process:clockMs() - checkT0;
 		report:stage(n: 2, total: 4, label: 'type checking · ' . (typeErrors:length() as String) . ' errors');
 		if (typeErrors:length() > 0) {
-			error:line('Type errors encountered during compilation:');
+			Stderr:line('Type errors encountered during compilation:');
 			typeErrors:each(action: local Function(TypeError is err){
-				error:line(err:toString());
+				Stderr:line(err:toString());
 			});
-			error:line('Compilation aborted due to type errors.');
+			Stderr:line('Compilation aborted due to type errors.');
 			Process:exit(status: 1);
 		}
 
 		# 4. Entry class: the first with a Map-parameter init, else the
 		# first non-enum, else the first class.
 		if (classCount == 0) {
-			error:line('Error: No class definitions found in source file.');
+			Stderr:line('Error: No class definitions found in source file.');
 			Process:exit(status: 1);
 		}
 		local String is entryName: '';
@@ -210,7 +212,7 @@ Class is Driver{
 		}
 		local Boolean is written: File:write(path: tempCPath, content: cCode);
 		if (!written) {
-			error:line('Error: Failed to write intermediate C code to ' . tempCPath);
+			Stderr:line('Error: Failed to write intermediate C code to ' . tempCPath);
 			Process:exit(status: 1);
 		}
 
@@ -228,7 +230,7 @@ Class is Driver{
 			File:remove(path: tempCPath);
 		}
 		if (gccStatus != 0) {
-			error:line('Error: Backend C compiler (gcc) failed with exit status ' . (gccStatus as String));
+			Stderr:line('Error: Backend C compiler (gcc) failed with exit status ' . (gccStatus as String));
 			Process:exit(status: 1);
 		}
 

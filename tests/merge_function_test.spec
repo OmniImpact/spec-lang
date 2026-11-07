@@ -16,6 +16,10 @@
 ## - All checks print "[PASS]"; any "[FAIL]" is a regression.
 
 Class is LoggerBase{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	local String is tag;
 
 	replace Function is init(String is tag){
@@ -33,6 +37,10 @@ Class is LoggerBase{
 
 Class of LoggerBase is ChildLogger{
 
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
+
 	# Adapted forward: derive arguments before delegating.
 	merge Function of Int is add(Int is a, Int is b){
 		local Int is bumped: a + 100;
@@ -46,6 +54,10 @@ Class of LoggerBase is ChildLogger{
 }
 
 Class of ChildLogger is GrandLogger{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 
 	# Chained forward: delegates to ChildLogger, which delegates to LoggerBase.
 	merge Function of Int is add(Int is a, Int is b){
@@ -62,43 +74,44 @@ Class is MergeFunctionTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Regression: Function Merge ===');
+		Output:line('=== Regression: Function Merge ===');
 
 		local GrandLogger is gl: GrandLogger:init(tag: 'grand');
 
 		# Case 1: chained forward with adaptation (1+100)+2 = 103.
 		local Int is added: gl:add(a: 1, b: 2);
 		if (added == 103) {
-			output:line('[PASS] chained forward: add(1, 2) = 103');
+			Output:line('[PASS] chained forward: add(1, 2) = 103');
 		} else {
-			output:line('[FAIL] chained forward: expected 103, got ' . added);
+			Output:line('[FAIL] chained forward: expected 103, got ' . added);
 		}
 
 		# Case 2: partial named forward with parent default (7 * 2 = 14).
 		local Int is scaled: gl:scale(n: 7);
 		if (scaled == 14) {
-			output:line('[PASS] partial named forward: scale(7) = 14');
+			Output:line('[PASS] partial named forward: scale(7) = 14');
 		} else {
-			output:line('[FAIL] partial named forward: expected 14, got ' . scaled);
+			Output:line('[FAIL] partial named forward: expected 14, got ' . scaled);
 		}
 
 		# Case 3: merge init chained the parent constructor.
 		if (gl:tag == 'grand') {
-			output:line('[PASS] merge init chain: tag = grand');
+			Output:line('[PASS] merge init chain: tag = grand');
 		} else {
-			output:line('[FAIL] merge init chain: expected grand, got ' . gl:tag);
+			Output:line('[FAIL] merge init chain: expected grand, got ' . gl:tag);
 		}
 
 		# Case 4: merge init can also adapt arguments.
 		local ChildLogger is cl: ChildLogger:init(tag: 'x');
 		# ChildLogger inherits LoggerBase:init unchanged; tag round-trips.
 		if (cl:tag == 'x') {
-			output:line('[PASS] inherited init: tag = x');
+			Output:line('[PASS] inherited init: tag = x');
 		} else {
-			output:line('[FAIL] inherited init: expected x, got ' . cl:tag);
+			Output:line('[FAIL] inherited init: expected x, got ' . cl:tag);
 		}
 
 		# Case 5: merge overrides are virtual - base-typed call applies the
@@ -106,21 +119,21 @@ Class is MergeFunctionTest{
 		local LoggerBase is asBase: gl;
 		local Int is baseResult: asBase:add(a: 1, b: 2);
 		if (baseResult == 103) {
-			output:line('[PASS] base-typed call: add(1, 2) = 103 (virtual forward)');
+			Output:line('[PASS] base-typed call: add(1, 2) = 103 (virtual forward)');
 		} else {
-			output:line('[FAIL] base-typed call: expected 103, got ' . baseResult);
+			Output:line('[FAIL] base-typed call: expected 103, got ' . baseResult);
 		}
 
 		# Case 6: subclass-typed call goes through the merge forward.
 		local ChildLogger is asChild: GrandLogger:init(tag: 'c');
 		local Int is childResult: asChild:add(a: 1, b: 2);
 		if (childResult == 103) {
-			output:line('[PASS] subclass-typed call: add(1, 2) = 103 (forward applied)');
+			Output:line('[PASS] subclass-typed call: add(1, 2) = 103 (forward applied)');
 		} else {
-			output:line('[FAIL] subclass-typed call: expected 103, got ' . childResult);
+			Output:line('[FAIL] subclass-typed call: expected 103, got ' . childResult);
 		}
 
-		output:line('=== End Function Merge Regression ===');
+		Output:line('=== End Function Merge Regression ===');
 	}
 
 }

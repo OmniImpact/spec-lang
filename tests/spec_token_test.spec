@@ -8,57 +8,58 @@ Class is SpecTokenTest{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'lexer', Operator],
 		['base', 'compiler', 'lexer', Token],
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Token Test ===');
+		Output:line('=== Spec Token Test ===');
 		local Int is failures: 0;
 
 		local Token is sym: Token:init(kind: TokenKind:SYMBOL, value: '{', line: 3, col: 14);
 		if (sym:getTokenKind() == TokenKind:SYMBOL && sym:getValue() == '{' && sym:getLine() == 3 && sym:getCol() == 14) {
-			output:line('[PASS] accessors round-trip');
+			Output:line('[PASS] accessors round-trip');
 		} else {
-			output:line('[FAIL] accessors round-trip');
+			Output:line('[FAIL] accessors round-trip');
 			failures: failures + 1;
 		}
 
 		if (sym:getKeyword() == Keyword:NONE) {
-			output:line('[PASS] non-keyword carries NONE');
+			Output:line('[PASS] non-keyword carries NONE');
 		} else {
-			output:line('[FAIL] non-keyword keyword classification');
+			Output:line('[FAIL] non-keyword keyword classification');
 			failures: failures + 1;
 		}
 
 		local Token is kw: Token:init(kind: TokenKind:KEYWORD, value: 'local', line: 1, col: 1);
 		kw:setKeyword(kw: Keyword:LOCAL);
 		if (kw:getKeyword() == Keyword:LOCAL) {
-			output:line('[PASS] keyword classification round-trip');
+			Output:line('[PASS] keyword classification round-trip');
 		} else {
-			output:line('[FAIL] keyword classification round-trip');
+			Output:line('[FAIL] keyword classification round-trip');
 			failures: failures + 1;
 		}
 
 		local Token is op: Token:init(kind: TokenKind:SYMBOL, value: '==', line: 2, col: 7);
 		op:setOperator(op: Operator:EQ);
 		if (op:getOperator() == Operator:EQ && sym:getOperator() == Operator:NONE) {
-			output:line('[PASS] operator classification round-trip');
+			Output:line('[PASS] operator classification round-trip');
 		} else {
-			output:line('[FAIL] operator classification round-trip');
+			Output:line('[FAIL] operator classification round-trip');
 			failures: failures + 1;
 		}
 
 		if (sym:describe() == "SYMBOL '{' at 3:14") {
-			output:line('[PASS] describe template');
+			Output:line('[PASS] describe template');
 		} else {
-			output:line('[FAIL] describe template: ' . sym:describe());
+			Output:line('[FAIL] describe template: ' . sym:describe());
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec token test complete');
+			Output:line('[PASS] spec token test complete');
 		} else {
-			output:line('[FAIL] spec token test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec token test: ' . (failures as String) . ' failures');
 		}
 	}
 }

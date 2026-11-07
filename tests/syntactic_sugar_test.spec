@@ -5,94 +5,96 @@ Class is SyntacticSugarTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator', While],
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Testing Syntactic Sugar & Standard Library Additions ===');
+		Output:line('=== Testing Syntactic Sugar & Standard Library Additions ===');
 
 		# 1. Test self:field constructor shorthand
 		local Issue is issue: Issue:init(line: 42, isWarning: false, message: 'Tab indentation required');
-		output:line('Issue line: ' . issue:getLine());
-		output:line('Issue message: ' . issue:getMessage());
-		output:line('Issue warning: ' . issue:getIsWarning());
+		Output:line('Issue line: ' . issue:getLine());
+		Output:line('Issue message: ' . issue:getMessage());
+		Output:line('Issue warning: ' . issue:getIsWarning());
 
 		# 2. Test 'is' equality operator
 		local String is status: 'OK';
 		if (status is 'OK') {
-			output:line('is operator (string match): true');
+			Output:line('is operator (string match): true');
 		}
 		local Int is count: 10;
 		if (count is 10) {
-			output:line('is operator (int match): true');
+			Output:line('is operator (int match): true');
 		}
 
 		# 3. Test String helper inspection methods
 		local String is multiline: "Line 1\n  Line 2\n\tLine 3";
 		local Array of String is lineList: multiline:lines();
-		output:line('Lines count: ' . lineList:length());
+		Output:line('Lines count: ' . lineList:length());
 
 		local String is sample: '   hello world   ';
 		local String is trimmed: sample:trim();
-		output:line('Trimmed: \'' . trimmed . '\'');
+		Output:line('Trimmed: \'' . trimmed . '\'');
 
 		local String is leadingSpaces: '    four spaces';
 		local Int is spaceCount: leadingSpaces:countLeading(search: ' ');
-		output:line('Count leading spaces: ' . spaceCount);
+		Output:line('Count leading spaces: ' . spaceCount);
 
 		local String is prefixTest: '#! Package base';
 		if (prefixTest:startsWith(prefix: '#!')) {
-			output:line('startsWith \'#!\': true');
+			Output:line('startsWith \'#!\': true');
 		}
 
 		# 4. Test Array higher-order methods with anonymous functions
 		local Array of String is words: ['apple', 'banana', 'cherry', 'avocado'];
 
 		# Array:each
-		output:line('--- Array:each ---');
+		Output:line('--- Array:each ---');
 		words:each(action: local Function(word){
-			output:line('Word: ' . word);
+			Output:line('Word: ' . word);
 		});
 
 		# Array:any
 		local Boolean is hasBanana: words:any(predicate: local Function of Boolean(word){
 			return word is 'banana';
 		});
-		output:line('Has banana: ' . hasBanana);
+		Output:line('Has banana: ' . hasBanana);
 
 		local Boolean is hasGrape: words:any(predicate: local Function of Boolean(word){
 			return word is 'grape';
 		});
-		output:line('Has grape: ' . hasGrape);
+		Output:line('Has grape: ' . hasGrape);
 
 		# Array:count
 		local Int is aWordsCount: words:count(predicate: local Function of Boolean(word){
 			return word:startsWith(prefix: 'a');
 		});
-		output:line('Words starting with \'a\': ' . aWordsCount);
+		Output:line('Words starting with \'a\': ' . aWordsCount);
 
 		# Array:filter
 		local Array of String is aWords: words:filter(predicate: local Function of Boolean(word){
 			return word:startsWith(prefix: 'a');
 		});
-		output:line('Filtered length: ' . aWords:length());
+		Output:line('Filtered length: ' . aWords:length());
 		aWords:each(action: local Function(item){
-			output:line('Filtered item: ' . item);
+			Output:line('Filtered item: ' . item);
 		});
 
 		# 5. Test String:contains, String:endsWith, String:replaceAll, String:split, Array:join
 		local String is pathStr: '/usr/local/bin/spec';
-		output:line('contains \'local\': ' . pathStr:contains(needle: 'local'));
-		output:line('endsWith \'spec\': ' . pathStr:endsWith(suffix: 'spec'));
+		Output:line('contains \'local\': ' . pathStr:contains(needle: 'local'));
+		Output:line('endsWith \'spec\': ' . pathStr:endsWith(suffix: 'spec'));
 		local String is replacedStr: pathStr:replaceAll(search: '/', replacement: '::');
-		output:line('replaceAll: ' . replacedStr);
+		Output:line('replaceAll: ' . replacedStr);
 		local Array of String is parts: 'alpha,beta,gamma':split(delimiter: ',');
-		output:line('split & join: ' . parts:join(separator: ' | '));
+		Output:line('split & join: ' . parts:join(separator: ' | '));
 
 		# 6. Test Generic Map of String to Object & Int
 		local Map of String to Issue is issueMap: Map:init();
 		issueMap:set(key: 'first', value: issue);
 		local Issue is fetchedIssue: issueMap:get(key: 'first', default: issue);
-		output:line('Generic Map Issue line: ' . fetchedIssue:getLine());
+		Output:line('Generic Map Issue line: ' . fetchedIssue:getLine());
 
 		# 7. Test While:condition inline loop
 		local Int is counter: 0;
@@ -103,14 +105,19 @@ Class is SyntacticSugarTest{
 				return true;
 			}
 		);
-		output:line('While:condition counter: ' . counter);
+		Output:line('While:condition counter: ' . counter);
 
-		output:line('=== Syntactic Sugar Test Completed Successfully ===');
+		Output:line('=== Syntactic Sugar Test Completed Successfully ===');
 	}
 
 }
 
 Class is Issue{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
+	];
 	Int is line;
 	String is message;
 	Boolean is isWarning;

@@ -14,12 +14,20 @@
 ## compiler output contains the diagnostic.
 
 Class is StrictAnimal{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	Function of String is speak(){
 		return '...';
 	}
 }
 
 Class of StrictAnimal is StrictDog{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function of String is speak(){
 		return 'woof';
 	}
@@ -33,6 +41,7 @@ Class is StrictNegativeTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -40,6 +49,6 @@ Class is StrictNegativeTest{
 		# members (toString, typeName, init) are callable. fetch is not
 		# declared on Any, so this call is rejected.
 		local Any is anyRef: StrictDog:init();
-		output:line(anyRef:fetch());
+		Output:line(anyRef:fetch());
 	}
 }

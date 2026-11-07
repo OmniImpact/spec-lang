@@ -17,10 +17,15 @@ Class is ParallelAtomicsTest{
 		['base', 'sys', Process],
 		['base', 'sys', Parallel],
 		['base', 'math', Math],
+		['base', 'math', as Math()],
+		['base', 'io', as Output()],
+		['base', 'sys', as Parallel()],
+		['base', 'sys', as Process()],
+		['base', 'iterator', as While()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Regression: Parallel & Atomics ===');
+		Output:line('=== Regression: Parallel & Atomics ===');
 
 		# Case 1: exact sum - each worker returns its count, total == iterations.
 		local Function of Int is counter: local Function of Int(Int is threadIndex, Int is count){
@@ -28,9 +33,9 @@ Class is ParallelAtomicsTest{
 		};
 		local Int is total: Parallel:run(threads: 4, iterations: 1000, worker: counter);
 		if (total == 1000) {
-			output:line('[PASS] parallel sum: 4 threads over 1000 = 1000');
+			Output:line('[PASS] parallel sum: 4 threads over 1000 = 1000');
 		} else {
-			output:line('[FAIL] parallel sum: expected 1000, got ' . total);
+			Output:line('[FAIL] parallel sum: expected 1000, got ' . total);
 		}
 
 		# Case 2: thread indices cover 0..N-1 exactly (atomic counters per thread).
@@ -42,9 +47,9 @@ Class is ParallelAtomicsTest{
 		Parallel:run(threads: 4, iterations: 4, worker: marker);
 		local Int is indexSum: Process:atomicGet(slot: 40);
 		if (indexSum == 10) {
-			output:line('[PASS] thread indices: 1+2+3+4 = 10');
+			Output:line('[PASS] thread indices: 1+2+3+4 = 10');
 		} else {
-			output:line('[FAIL] thread indices: expected 10, got ' . indexSum);
+			Output:line('[FAIL] thread indices: expected 10, got ' . indexSum);
 		}
 
 		# Case 3: concurrent atomic add is exact.
@@ -63,9 +68,9 @@ Class is ParallelAtomicsTest{
 		Parallel:run(threads: 4, iterations: 400, worker: adder);
 		local Int is added: Process:atomicGet(slot: 41);
 		if (added == 400) {
-			output:line('[PASS] concurrent atomicAdd: 400 of 400 increments');
+			Output:line('[PASS] concurrent atomicAdd: 400 of 400 increments');
 		} else {
-			output:line('[FAIL] concurrent atomicAdd: expected 400, got ' . added);
+			Output:line('[FAIL] concurrent atomicAdd: expected 400, got ' . added);
 		}
 
 		# Case 4: fastRandom range and variance.
@@ -76,7 +81,7 @@ Class is ParallelAtomicsTest{
 		While:condition(
 			evaluate: local Function of Boolean(){ return k < 1000; },
 			iteration: local Function(){
-				local Float is r: math:fastRandom();
+				local Float is r: Math:fastRandom();
 				if (r >= 0.0 && r < 1.0) {
 					inRange: inRange + 1;
 				}
@@ -88,12 +93,12 @@ Class is ParallelAtomicsTest{
 			}
 		);
 		if (inRange == 1000 && distinct > 990) {
-			output:line('[PASS] fastRandom: 1000 in range, ' . distinct . ' distinct');
+			Output:line('[PASS] fastRandom: 1000 in range, ' . distinct . ' distinct');
 		} else {
-			output:line('[FAIL] fastRandom: ' . inRange . ' in range, ' . distinct . ' distinct');
+			Output:line('[FAIL] fastRandom: ' . inRange . ' in range, ' . distinct . ' distinct');
 		}
 
-		output:line('=== End Parallel & Atomics ===');
+		Output:line('=== End Parallel & Atomics ===');
 	}
 
 }

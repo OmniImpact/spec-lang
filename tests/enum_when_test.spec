@@ -31,85 +31,86 @@ Class is EnumWhenTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace init(Map of String to String is args){
-		output:line('=== Testing Enum, When, and Inline If/Else ===');
+		Output:line('=== Testing Enum, When, and Inline If/Else ===');
 
 		self:testInlineIfElse();
 		self:testEnumBasics();
 		self:testWhenStatement();
 		self:testWhenExpression();
 
-		output:line('=== All Enum, When, and If/Else Tests Passed Successfully ===');
+		Output:line('=== All Enum, When, and If/Else Tests Passed Successfully ===');
 	}
 
 	testInlineIfElse(){
-		output:line('--- 1. Testing Inline If/Else Expressions ---');
+		Output:line('--- 1. Testing Inline If/Else Expressions ---');
 		local Int is score: 85;
 		local String is grade: if (score >= 90) 'A' else if (score >= 80) 'B' else 'C';
-		output:line('Grade: ' . grade);
+		Output:line('Grade: ' . grade);
 
 		local Boolean is isReady: true;
 		local String is statusText: if (isReady) 'Ready' else 'Not Ready';
-		output:line('Status: ' . statusText);
+		Output:line('Status: ' . statusText);
 
 		local Int is bonus: if (score > 80) 10 else 0;
-		output:line('Bonus: ' . bonus);
+		Output:line('Bonus: ' . bonus);
 	}
 
 	testEnumBasics(){
-		output:line('--- 2. Testing Enum Reflection & Properties ---');
+		Output:line('--- 2. Testing Enum Reflection & Properties ---');
 		local TokenKind is tok: TokenKind:KEYWORD;
-		output:line('Token name: ' . tok:name());
-		output:line('Token ordinal: ' . tok:ordinal());
+		Output:line('Token name: ' . tok:name());
+		Output:line('Token ordinal: ' . tok:ordinal());
 
 		local HttpStatus is status: HttpStatus:NOT_FOUND;
-		output:line('Status name: ' . status:name());
-		output:line('Status value: ' . status:value());
-		output:line('Status ordinal: ' . status:ordinal());
+		Output:line('Status name: ' . status:name());
+		Output:line('Status value: ' . status:value());
+		Output:line('Status ordinal: ' . status:ordinal());
 
 		local LogLevel is level: LogLevel:WARN;
-		output:line('Level name: ' . level:name());
-		output:line('Level value: ' . level:value());
-		output:line('Level ordinal: ' . level:ordinal());
+		Output:line('Level name: ' . level:name());
+		Output:line('Level value: ' . level:value());
+		Output:line('Level ordinal: ' . level:ordinal());
 
 		local Array is allTokens: TokenKind:values();
-		output:line('TokenKind variant count: ' . allTokens:length());
+		Output:line('TokenKind variant count: ' . allTokens:length());
 	}
 
 	testWhenStatement(){
-		output:line('--- 3. Testing When Statement ---');
+		Output:line('--- 3. Testing When Statement ---');
 		local HttpStatus is status: HttpStatus:OK;
 
 		when (status) {
 			is OK, CREATED: {
-				output:line('Status category: Success');
+				Output:line('Status category: Success');
 			}
 			is NOT_FOUND: {
-				output:line('Status category: Client Error');
+				Output:line('Status category: Client Error');
 			}
 			else: {
-				output:line('Status category: Other');
+				Output:line('Status category: Other');
 			}
 		}
 
 		local String is method: 'POST';
 		when (method) {
 			is 'GET': {
-				output:line('HTTP Method: Read');
+				Output:line('HTTP Method: Read');
 			}
 			is 'POST', 'PUT': {
-				output:line('HTTP Method: Write');
+				Output:line('HTTP Method: Write');
 			}
 			else: {
-				output:line('HTTP Method: Unknown');
+				Output:line('HTTP Method: Unknown');
 			}
 		}
 	}
 
 	testWhenExpression(){
-		output:line('--- 4. Testing When Expression ---');
+		Output:line('--- 4. Testing When Expression ---');
 		local TokenKind is tok: TokenKind:IDENTIFIER;
 
 		local String is tokDescription: when (tok) {
@@ -119,14 +120,14 @@ Class is EnumWhenTest{
 			is STRING: 'String Literal';
 			is EOF: 'End of File';
 		};
-		output:line('Token description: ' . tokDescription);
+		Output:line('Token description: ' . tokDescription);
 
 		# String-backed reverse lookup: the tag maps back to its variant,
 		# no match yields the empty-tag default.
 		if (LogLevel:of(value: 'WRN') == LogLevel:WARN && LogLevel:of(value: 'nope') == LogLevel:NONE) {
-			output:line('Reverse lookup of() round-trips and defaults');
+			Output:line('Reverse lookup of() round-trips and defaults');
 		} else {
-			output:line('FAIL: of() lookup');
+			Output:line('FAIL: of() lookup');
 		}
 
 		local HttpStatus is status: HttpStatus:SERVER_ERROR;
@@ -135,7 +136,7 @@ Class is EnumWhenTest{
 			is NOT_FOUND: false;
 			else: false;
 		};
-		output:line('Can retry: ' . canRetry);
+		Output:line('Can retry: ' . canRetry);
 
 		local Int is priority: when (LogLevel:ERROR) {
 			is NONE: 0;
@@ -144,6 +145,6 @@ Class is EnumWhenTest{
 			is WARN: 3;
 			is ERROR: 4;
 		};
-		output:line('Error priority: ' . priority);
+		Output:line('Error priority: ' . priority);
 	}
 }

@@ -7,6 +7,7 @@ Class is HelloWorld{
 	replace Array of Array of String is using: [
 		['base', 'struct', Map],
 		['base', 'io'],
+		['base', 'io', as Output()]
 	];
 
 	# Entrypoint init method using the Function type
@@ -16,7 +17,7 @@ Class is HelloWorld{
 		local String is name: args:getString(key:'name', default:'User');
 
 		# in io: package
-		output:line(greeting.' '.name);
+		Output:line(greeting.' '.name);
 	}
 
 }

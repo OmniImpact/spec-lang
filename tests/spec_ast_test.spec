@@ -13,11 +13,12 @@ Class is SpecAstTest{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec AST Test ===');
+		Output:line('=== Spec AST Test ===');
 		local Int is failures: 0;
 
 		# Records build and cross-reference: a binary expression over idents.
@@ -30,9 +31,9 @@ Class is SpecAstTest{
 		bin:leftExpr: lhs;
 		bin:rightExpr: rhs;
 		if (bin:kind == ExpressionKind:BINARY && bin:leftExpr:stringValue == 'a' && bin:rightExpr:stringValue == 'b') {
-			output:line('[PASS] expression records cross-reference');
+			Output:line('[PASS] expression records cross-reference');
 		} else {
-			output:line('[FAIL] expression records cross-reference');
+			Output:line('[FAIL] expression records cross-reference');
 			failures: failures + 1;
 		}
 
@@ -44,19 +45,20 @@ Class is SpecAstTest{
 			else: { tag: 'other'; }
 		}
 		if (tag == 'binary') {
-			output:line('[PASS] when-dispatch on ExpressionKind');
+			Output:line('[PASS] when-dispatch on ExpressionKind');
 		} else {
-			output:line('[FAIL] when-dispatch on ExpressionKind');
+			Output:line('[FAIL] when-dispatch on ExpressionKind');
 			failures: failures + 1;
 		}
 
 		# Types format canonically.
 		local Type is elem: Type:init(name: 'String');
-		local Type is arr: Type:withParams(name: 'Array', params: [elem]);
+		local Type is arr: Type:init(name: 'Array');
+		arr:params: [elem];
 		if (arr:toString() == 'Array of String' && arr:isGeneric() && !elem:isGeneric()) {
-			output:line('[PASS] canonical type formatting');
+			Output:line('[PASS] canonical type formatting');
 		} else {
-			output:line('[FAIL] canonical type formatting: ' . arr:toString());
+			Output:line('[FAIL] canonical type formatting: ' . arr:toString());
 			failures: failures + 1;
 		}
 
@@ -77,9 +79,9 @@ Class is SpecAstTest{
 		# (Implicit-Any parenting is the loader's appendImplicitAny job, not
 		# the record's — a bare init carries no bases.)
 		if (found == 'speak' && cls:baseClasses:length() == 0) {
-			output:line('[PASS] class graph record');
+			Output:line('[PASS] class graph record');
 		} else {
-			output:line('[FAIL] class graph: ' . found);
+			Output:line('[FAIL] class graph: ' . found);
 			failures: failures + 1;
 		}
 
@@ -89,16 +91,16 @@ Class is SpecAstTest{
 		st:hasReturnExpr: true;
 		st:setLine(line: 9);
 		if (st:kind == StatementKind:RETURN && st:hasReturnExpr && st:line == 9 && st:returnExpr:kind == ExpressionKind:BINARY) {
-			output:line('[PASS] statement records carry their fields');
+			Output:line('[PASS] statement records carry their fields');
 		} else {
-			output:line('[FAIL] statement records');
+			Output:line('[FAIL] statement records');
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec ast test complete');
+			Output:line('[PASS] spec ast test complete');
 		} else {
-			output:line('[FAIL] spec ast test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec ast test: ' . (failures as String) . ' failures');
 		}
 	}
 }

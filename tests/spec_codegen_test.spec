@@ -17,7 +17,9 @@ Class is SpecCodegenTest{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'io', Output],
-		['base', 'struct', Map]
+		['base', 'struct', Map],
+		['base', 'math', as Math()],
+		['base', 'io', as Output()]
 	];
 
 	## Parses a source snippet into a program.
@@ -45,7 +47,7 @@ Class is SpecCodegenTest{
 	}
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Codegen Test (step 1) ===');
+		Output:line('=== Spec Codegen Test (step 1) ===');
 		local Int is failures: 0;
 
 		local ProgramNode is prog: self:parseOf(src: "Enum of String is Level {
@@ -53,12 +55,22 @@ Class is SpecCodegenTest{
 	ERR: 'E'
 }
 Class is Animal{
+
+	replace Array of Array of String is using: [
+		['base', 'math', as Math()],
+		['base', 'io', as Output()]
+	];
 	local Int is weight: 0;
 	replace Function of String is describe(){
 		return 'animal';
 	}
 }
 Class of Animal is Dog{
+
+	replace Array of Array of String is using: [
+		['base', 'math', as Math()],
+		['base', 'io', as Output()]
+	];
 	local String is name;
 	replace Function of Dog is init(Map of String to String is args){
 	}
@@ -81,9 +93,9 @@ Class of Animal is Dog{
 			&& cg:overriddenMethods:has(key: 'describe')
 			&& !cg:overriddenMethods:has(key: 'grow')
 			&& cg:slotNames:get(index: 0) == 'describe') {
-			output:line('[PASS] virtual slots in first-seen order');
+			Output:line('[PASS] virtual slots in first-seen order');
 		} else {
-			output:line('[FAIL] virtual slots');
+			Output:line('[FAIL] virtual slots');
 			failures: failures + 1;
 		}
 
@@ -92,9 +104,9 @@ Class of Animal is Dog{
 			&& cg:allEnumNames:has(key: 'Level')
 			&& cg:allEnumVariants:getString(key: 'ERR', default: '?') == 'Level'
 			&& cg:allStringBackedEnums:has(key: 'Level')) {
-			output:line('[PASS] program registries');
+			Output:line('[PASS] program registries');
 		} else {
-			output:line('[FAIL] program registries');
+			Output:line('[FAIL] program registries');
 			failures: failures + 1;
 		}
 
@@ -106,9 +118,9 @@ Class of Animal is Dog{
 			&& cg:isArcType(typeName: 'Array of Int')
 			&& cg:isArcType(typeName: 'Map of String to Int')
 			&& !cg:isArcType(typeName: '')) {
-			output:line('[PASS] isArcType');
+			Output:line('[PASS] isArcType');
 		} else {
-			output:line('[FAIL] isArcType');
+			Output:line('[FAIL] isArcType');
 			failures: failures + 1;
 		}
 
@@ -119,9 +131,9 @@ Class of Animal is Dog{
 			&& cg:elemOfType(t: 'Map:String:Int') == 'Int'
 			&& cg:elemOfType(t: 'List of Byte') == 'Byte'
 			&& cg:elemOfType(t: 'Int') == '') {
-			output:line('[PASS] elemOfType both spellings');
+			Output:line('[PASS] elemOfType both spellings');
 		} else {
-			output:line('[FAIL] elemOfType');
+			Output:line('[FAIL] elemOfType');
 			failures: failures + 1;
 		}
 
@@ -131,9 +143,9 @@ Class of Animal is Dog{
 			&& cg:containerElemKind(containerType: 'Array of Animal') == 'object'
 			&& cg:containerElemIsArc(containerType: 'Map of String to Animal')
 			&& !cg:containerElemIsArc(containerType: 'Map of String to Int')) {
-			output:line('[PASS] containerElemKind');
+			Output:line('[PASS] containerElemKind');
 		} else {
-			output:line('[FAIL] containerElemKind');
+			Output:line('[FAIL] containerElemKind');
 			failures: failures + 1;
 		}
 
@@ -145,9 +157,9 @@ Class of Animal is Dog{
 			&& cg:lookupMethodReturnType(className: 'Dog', methodName: 'grow') == 'Int'
 			&& cg:isSubclassOf(subName: 'Dog', baseName: 'Animal')
 			&& !cg:isSubclassOf(subName: 'Animal', baseName: 'Dog')) {
-			output:line('[PASS] lookups through inheritance');
+			Output:line('[PASS] lookups through inheritance');
 		} else {
-			output:line('[FAIL] lookups');
+			Output:line('[FAIL] lookups');
 			failures: failures + 1;
 		}
 
@@ -162,9 +174,9 @@ Class of Animal is Dog{
 			&& cg:inferTargetType(expr: self:exprOf(src: 'x')) == 'Int'
 			&& cg:inferTargetType(expr: self:exprOf(src: 'self:weight')) == 'Int'
 			&& cg:inferTargetType(expr: self:exprOf(src: 'self:grow(by: 2)')) == 'Int') {
-			output:line('[PASS] inferTargetType');
+			Output:line('[PASS] inferTargetType');
 		} else {
-			output:line('[FAIL] inferTargetType');
+			Output:line('[FAIL] inferTargetType');
 			failures: failures + 1;
 		}
 
@@ -174,9 +186,9 @@ Class of Animal is Dog{
 			&& cg:yieldsClaim(expr: self:exprOf(src: "'a' . 'b'"))
 			&& !cg:yieldsClaim(expr: self:exprOf(src: 'x'))
 			&& !cg:yieldsClaim(expr: self:exprOf(src: '42'))) {
-			output:line('[PASS] yieldsClaim / isFreshConstructorCall');
+			Output:line('[PASS] yieldsClaim / isFreshConstructorCall');
 		} else {
-			output:line('[FAIL] yieldsClaim');
+			Output:line('[FAIL] yieldsClaim');
 			failures: failures + 1;
 		}
 
@@ -187,9 +199,9 @@ Class of Animal is Dog{
 			&& cg:generateTypedConstructor(typeName: 'Animal', valueC: 'a', cType: 'Animal*', claims: false) == '(Animal*)spec_retain((void*)(a))'
 			&& cg:generateTypedConstructor(typeName: 'Animal', valueC: 'a', cType: 'Animal*', claims: true) == '(Animal*)((a))'
 			&& cg:generateTypedConstructor(typeName: 'Int', valueC: '5', cType: 'long long', claims: false) == '5') {
-			output:line('[PASS] generateTypedConstructor');
+			Output:line('[PASS] generateTypedConstructor');
 		} else {
-			output:line('[FAIL] generateTypedConstructor');
+			Output:line('[FAIL] generateTypedConstructor');
 			failures: failures + 1;
 		}
 
@@ -197,9 +209,9 @@ Class of Animal is Dog{
 		if (cg:isVoidType(t: 'void') && cg:isVoidType(t: 'Void') && !cg:isVoidType(t: 'Int')
 			&& cg:isPrimitiveName(t: 'Int') && cg:isPrimitiveName(t: 'String')
 			&& !cg:isPrimitiveName(t: 'Animal')) {
-			output:line('[PASS] isVoidType / isPrimitiveName');
+			Output:line('[PASS] isVoidType / isPrimitiveName');
 		} else {
-			output:line('[FAIL] vocabulary checks');
+			Output:line('[FAIL] vocabulary checks');
 			failures: failures + 1;
 		}
 
@@ -207,9 +219,9 @@ Class of Animal is Dog{
 		if (cg:wrapToString(expr: self:exprOf(src: '42'), exprC: '42') == 'spec_to_string_int(42)'
 			&& cg:wrapToString(expr: self:exprOf(src: 'true'), exprC: '1') == 'spec_to_string_bool(1)'
 			&& cg:wrapToString(expr: self:exprOf(src: "'hi'"), exprC: 'x') == 'spec_string_intern("hi")') {
-			output:line('[PASS] wrapToString');
+			Output:line('[PASS] wrapToString');
 		} else {
-			output:line('[FAIL] wrapToString');
+			Output:line('[FAIL] wrapToString');
 			failures: failures + 1;
 		}
 
@@ -237,9 +249,9 @@ Class of Animal is Dog{
 			&& eg:generateExpression(expr: self:exprOf(src: 'n as Float')) == '((double)(n))'
 			&& eg:generateExpression(expr: self:exprOf(src: '[1, 2]')):contains(needle: 'spec_array_new()')
 			&& eg:generateExpression(expr: self:exprOf(src: 'xs:get(index: 0)')):contains(needle: 'spec_array_get(xs, 0)')) {
-			output:line('[PASS] expression emission');
+			Output:line('[PASS] expression emission');
 		} else {
-			output:line('[FAIL] expression emission');
+			Output:line('[FAIL] expression emission');
 			failures: failures + 1;
 		}
 
@@ -247,9 +259,9 @@ Class of Animal is Dog{
 		if (eg:generateStatement(stmt: self:stmtOf(src: 'local Int is m: n + 1')) == "    long long m = ((n) + (1));\n"
 			&& eg:generateStatement(stmt: self:stmtOf(src: 'n: 5')) == "    n = 5;\n"
 			&& eg:generateStatement(stmt: self:stmtOf(src: 'return self:weight + 1')) == "    return ((self->weight) + (1));\n") {
-			output:line('[PASS] statement emission');
+			Output:line('[PASS] statement emission');
 		} else {
-			output:line('[FAIL] statement emission');
+			Output:line('[FAIL] statement emission');
 			failures: failures + 1;
 		}
 
@@ -263,9 +275,9 @@ Class of Animal is Dog{
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg) == 'spec_math_sqrt(n)'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Level:of(name: \'E\')'), targetC: 'Level', targetType: '', cg: eg) == 'Level_of(spec_string_intern("E"))'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'xs:length()'), targetC: 'xs', targetType: 'Array of Int', cg: eg) == 'spec_array_length(xs)') {
-			output:line('[PASS] builtin call bindings');
+			Output:line('[PASS] builtin call bindings');
 		} else {
-			output:line('[FAIL] builtin call bindings');
+			Output:line('[FAIL] builtin call bindings');
 			failures: failures + 1;
 		}
 
@@ -283,6 +295,11 @@ Class of Animal is Dog{
 	}
 }
 Class is CodegenE2E{
+
+	replace Array of Array of String is using: [
+		['base', 'math', as Math()],
+		['base', 'io', as Output()]
+	];
 	replace Function is init(Map of String to String is args){
 		local Counter is c: Counter:init();
 		c:bump(by: 5);
@@ -299,16 +316,16 @@ Class is CodegenE2E{
 			&& cSrc:contains(needle: 'Counter_toString')
 			&& cSrc:contains(needle: 'int main(')
 			&& cSrc:contains(needle: 'Counter* _inst = Counter_new(); Counter_init(_inst, 0);')) {
-			output:line('[PASS] program assembly');
+			Output:line('[PASS] program assembly');
 		} else {
-			output:line('[FAIL] program assembly');
+			Output:line('[FAIL] program assembly');
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec codegen test complete');
+			Output:line('[PASS] spec codegen test complete');
 		} else {
-			output:line('[FAIL] spec codegen test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec codegen test: ' . (failures as String) . ' failures');
 		}
 	}
 }

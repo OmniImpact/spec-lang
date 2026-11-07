@@ -4,12 +4,14 @@ Class is IncrementDecrementTest{
 		['base', 'io', Output],
 		['base', 'struct', Array],
 		['base', 'iterator'],
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
 	];
 
 	local Int is count: 0;
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Increment & Decrement Test ===');
+		Output:line('=== Increment & Decrement Test ===');
 
 		# Case 1: Postfix and prefix statements
 		local Int is x: 10;
@@ -23,9 +25,9 @@ Class is IncrementDecrementTest{
 		local Boolean is preDecStmt: x == 10;
 
 		if (postIncStmt && postDecStmt && preIncStmt && preDecStmt) {
-			output:line('[PASS] Postfix and prefix statements modify operand in place');
+			Output:line('[PASS] Postfix and prefix statements modify operand in place');
 		} else {
-			output:line('[FAIL] Postfix and prefix statements');
+			Output:line('[FAIL] Postfix and prefix statements');
 		}
 
 		# Case 2: Expression semantics
@@ -43,9 +45,9 @@ Class is IncrementDecrementTest{
 		local Boolean is exprPreDecOk: valPreDec == 5 && y == 5;
 
 		if (exprPostIncOk && exprPreIncOk && exprPostDecOk && exprPreDecOk) {
-			output:line('[PASS] Postfix returns previous value; prefix returns updated value');
+			Output:line('[PASS] Postfix returns previous value; prefix returns updated value');
 		} else {
-			output:line('[FAIL] Expression return values');
+			Output:line('[FAIL] Expression return values');
 		}
 
 		# Case 3: While loop iteration with increment
@@ -59,9 +61,9 @@ Class is IncrementDecrementTest{
 			}
 		);
 		if (sum == 10) {
-			output:line('[PASS] While loop with iterate i++');
+			Output:line('[PASS] While loop with iterate i++');
 		} else {
-			output:line('[FAIL] While loop with i++, sum=' . sum);
+			Output:line('[FAIL] While loop with i++, sum=' . sum);
 		}
 
 		# Case 4: While loop with decrement
@@ -75,9 +77,9 @@ Class is IncrementDecrementTest{
 			}
 		);
 		if (steps == 5) {
-			output:line('[PASS] While loop with decrement n--');
+			Output:line('[PASS] While loop with decrement n--');
 		} else {
-			output:line('[FAIL] While loop with decrement, steps=' . steps);
+			Output:line('[FAIL] While loop with decrement, steps=' . steps);
 		}
 
 		# Case 5: Field access increment and decrement
@@ -87,9 +89,9 @@ Class is IncrementDecrementTest{
 		self:count--;
 		local Boolean is fieldDecOk: self:count == 42;
 		if (fieldIncOk && fieldDecOk) {
-			output:line('[PASS] Field increment and decrement');
+			Output:line('[PASS] Field increment and decrement');
 		} else {
-			output:line('[FAIL] Field increment and decrement');
+			Output:line('[FAIL] Field increment and decrement');
 		}
 	}
 }

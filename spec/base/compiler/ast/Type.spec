@@ -26,13 +26,17 @@ Class is Type{
 		self:params: [];
 	}
 
-	## Initializes a parameterized generic type descriptor.
+	## Produces a parameterized generic type descriptor. Self-free
+	## factory: Type is field-ful, so this call never goes through the
+	## elided instance path (INSTANCE.md E2 v1); it constructs explicitly.
 	##
 	## @param name: Base type name.
 	## @param params: Generic type arguments.
-	Function is withParams(String is name, Array of Type is params){
-		self:name: name;
-		self:params: params;
+	## @return: The new [Type].
+	Function of Type is withParams(String is name, Array of Type is params){
+		local Type is t: Type:init(name: name);
+		t:params: params;
+		return t;
 	}
 
 	## True when this type carries generic arguments.

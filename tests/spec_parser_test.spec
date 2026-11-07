@@ -15,7 +15,8 @@ Class is SpecParserTest{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	## Tokenizes and parses a source string.
@@ -35,7 +36,7 @@ Class is SpecParserTest{
 	}
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Parser Test ===');
+		Output:line('=== Spec Parser Test ===');
 		local Int is failures: 0;
 
 		# Precedence: 1 + 2 * 3 folds multiplicative under additive.
@@ -47,9 +48,9 @@ Class is SpecParserTest{
 		local Statement is vd: go:body:get(index: 0);
 		local Expression is init: vd:initExpr;
 		if (!p:hasErrors() && vd:kind == StatementKind:VAR_DECL && init:kind == ExpressionKind:BINARY && init:binaryOp == '+' && init:rightExpr:binaryOp == '*') {
-			output:line('[PASS] precedence folding (additive over multiplicative)');
+			Output:line('[PASS] precedence folding (additive over multiplicative)');
 		} else {
-			output:line('[FAIL] precedence folding');
+			Output:line('[FAIL] precedence folding');
 			failures: failures + 1;
 		}
 
@@ -62,22 +63,26 @@ Class is SpecParserTest{
 		local Statement is vd2: m2:body:get(index: 0);
 		local Expression is s2: vd2:initExpr;
 		if (!p2:hasErrors() && s2:kind == ExpressionKind:BINARY && s2:binaryOp == '.' && s2:leftExpr:rightExpr:kind == ExpressionKind:BINARY) {
-			output:line('[PASS] template desugars to concat chain');
+			Output:line('[PASS] template desugars to concat chain');
 		} else {
-			output:line('[FAIL] template desugar');
+			Output:line('[FAIL] template desugar');
 			failures: failures + 1;
 		}
 
 		# Enum with tags and a generic class parse.
 		local Array of String is errs: self:parseOf(src: "Enum of String is Level { NONE: '', WARN: 'WRN' }
 Class is Box of T{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	replace Function of T is get(){ return self:item; }
 	local T is item;
 }");
 		if (errs:length() == 0) {
-			output:line('[PASS] enum + generic class parse clean');
+			Output:line('[PASS] enum + generic class parse clean');
 		} else {
-			output:line('[FAIL] enum/generic: ' . errs:join(separator: ' | '));
+			Output:line('[FAIL] enum/generic: ' . errs:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -85,9 +90,9 @@ Class is Box of T{
 		local Array of String is errs2: self:parseOf(src: "Class is Floor{ namespace: ['base', 'x'];
 	Function of Int is op(String is b); }");
 		if (errs2:length() == 0) {
-			output:line('[PASS] interface-style declaration parses');
+			Output:line('[PASS] interface-style declaration parses');
 		} else {
-			output:line('[FAIL] interface-style: ' . errs2:join(separator: ' | '));
+			Output:line('[FAIL] interface-style: ' . errs2:join(separator: ' | '));
 			failures: failures + 1;
 		}
 
@@ -96,16 +101,16 @@ Class is Box of T{
 		local Parser is p3: Parser:init(tokens: lx3:tokenize());
 		local ProgramNode is prog3: p3:parseProgram();
 		if (p3:hasErrors() && p3:getErrors():get(index: 0):getTrace():length() == 1) {
-			output:line('[PASS] parse errors carry provenance');
+			Output:line('[PASS] parse errors carry provenance');
 		} else {
-			output:line('[FAIL] parse error provenance');
+			Output:line('[FAIL] parse error provenance');
 			failures: failures + 1;
 		}
 
 		if (failures == 0) {
-			output:line('[PASS] spec parser test complete');
+			Output:line('[PASS] spec parser test complete');
 		} else {
-			output:line('[FAIL] spec parser test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec parser test: ' . (failures as String) . ' failures');
 		}
 	}
 }

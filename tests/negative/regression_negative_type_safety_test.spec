@@ -40,21 +40,37 @@ Enum is TransportMode {
 }
 
 Class is NarrowFloatField{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Violation 1: Float literal silently narrowed into an Int field.
 	local Int is samples: 3.7;
 }
 
 Class is ArrayElementMismatch{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Violation 2: String elements silently accepted by an Array of Int field.
 	local Array of Int is flags: ['on', 'off'];
 }
 
 Class is MapValueMismatch{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Violation 3: String values silently accepted by a Map of String to Int field.
 	local Map of String to Int is ages: ['ana': 'ten'];
 }
 
 Class is UndefinedIdentifier{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Violation 4: typoed identifier silently inferred as Any.
 	replace Function is init(Map of String to String is args){
 		local Int is total: untrackedTotal + 1;
@@ -62,6 +78,10 @@ Class is UndefinedIdentifier{
 }
 
 Class is NonBooleanConditionControl{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Control (already caught today): condition must be a Boolean.
 	replace Function is init(Map of String to String is args){
 		if (1) {
@@ -73,6 +93,7 @@ Class is NonBooleanConditionControl{
 Class is UnassignedFieldRead{
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	## Violation 6: the Never Null standard guarantees this does not compile,
@@ -81,11 +102,15 @@ Class is UnassignedFieldRead{
 	local String is label;
 
 	replace Function is init(Map of String to String is args){
-		output:line(self:label);
+		Output:line(self:label);
 	}
 }
 
 Class is CallArgumentMismatch{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Violation 7: call-site argument types were not checked, so a String
 	## argument silently reached an Int parameter and was truncated at the
 	## C level with no diagnostic.
@@ -99,6 +124,10 @@ Class is CallArgumentMismatch{
 }
 
 Class is IncompleteWhenBranches{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 	## Violation 8: 'when' over enum TransportMode covers only CAR and omits
 	## BIKE with no else arm. Exhaustiveness must be enforced at compile time.
 	replace Function of String is describe(TransportMode is mode){

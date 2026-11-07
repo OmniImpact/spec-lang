@@ -9,40 +9,41 @@ Class is Phase6LoaderTest{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'loader', Loader],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('======================================');
-		output:line('     Phase 6 Module Loader Test       ');
-		output:line("======================================\n");
+		Output:line('======================================');
+		Output:line('     Phase 6 Module Loader Test       ');
+		Output:line("======================================\n");
 
 		local Loader is loader: Loader:init();
 
 		# 1. Test Single File / Hello World
-		output:line('1. Loading examples/helloworld.spec and its dependencies...');
+		Output:line('1. Loading examples/helloworld.spec and its dependencies...');
 		local ProgramNode is helloProg: loader:loadProgram(rootPath: 'examples/helloworld.spec');
-		output:line('Loaded classes count: ' . helloProg:classes:length());
+		Output:line('Loaded classes count: ' . helloProg:classes:length());
 
 		if (helloProg:classes:length() >= 1) {
-			output:line("[PASS] Successfully loaded HelloWorld program with modules\n");
+			Output:line("[PASS] Successfully loaded HelloWorld program with modules\n");
 		} else {
-			output:line("[FAIL] Expected at least 1 class in HelloWorld\n");
+			Output:line("[FAIL] Expected at least 1 class in HelloWorld\n");
 		}
 
 		# 2. Package resolution is exercised by the load itself: the hello
 		# program's array-form using pulled the io package through the
 		# resolver cascade (spec/lib stdlib first), and the loader reported
 		# zero errors above.
-		output:line('2. Package resolution via the resolver cascade: covered by the load above.');
+		Output:line('2. Package resolution via the resolver cascade: covered by the load above.');
 
 		# 3. The load served every file cleanly through the cascade.
-		output:line('3. Files loaded through the cascade: ' . (loader:loadedFileCount() as String));
+		Output:line('3. Files loaded through the cascade: ' . (loader:loadedFileCount() as String));
 		if (loader:getParseErrors():length() == 0) {
-			output:line("[PASS] Resolver cascade served the imports cleanly\n");
+			Output:line("[PASS] Resolver cascade served the imports cleanly\n");
 		} else {
-			output:line('[FAIL] Resolver cascade errors\n');
+			Output:line('[FAIL] Resolver cascade errors\n');
 		}
-		output:line('Phase 6 Module Loader test completed successfully!');
+		Output:line('Phase 6 Module Loader test completed successfully!');
 	}
 
 }

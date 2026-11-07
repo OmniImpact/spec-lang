@@ -18,6 +18,10 @@
 
 Class is MergeBadBase{
 
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
+
 	replace Function of Int is signal(){
 		return 1;
 	}
@@ -26,6 +30,10 @@ Class is MergeBadBase{
 }
 
 Class of MergeBadBase is MergeBadChild{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()]
+	];
 
 	# No forward statement: merge methods must delegate explicitly.
 	merge Function of Int is signal(){
@@ -44,9 +52,10 @@ Class is MergeNegativeTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('unreachable');
+		Output:line('unreachable');
 	}
 }

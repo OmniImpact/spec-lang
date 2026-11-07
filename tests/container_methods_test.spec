@@ -4,10 +4,11 @@ Class is ContainerMethodsTest{
 		['base', 'io', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Container Methods Test ===');
+		Output:line('=== Container Methods Test ===');
 
 		# Case 1: Array:slice
 		local Array of String is words: ['zero', 'one', 'two', 'three', 'four'];
@@ -16,9 +17,9 @@ Class is ContainerMethodsTest{
 		local Boolean is midOk: mid:length() == 3 && mid:get(index: 0, default: '') == 'one' && mid:get(index: 1, default: '') == 'two' && mid:get(index: 2, default: '') == 'three';
 		local Boolean is emptyOk: emptySlice:length() == 0;
 		if (midOk && emptyOk) {
-			output:line('[PASS] Array:slice extracts subarrays and clamps bounds');
+			Output:line('[PASS] Array:slice extracts subarrays and clamps bounds');
 		} else {
-			output:line('[FAIL] Array:slice');
+			Output:line('[FAIL] Array:slice');
 		}
 
 		# Case 2: Array:indexOf
@@ -26,9 +27,9 @@ Class is ContainerMethodsTest{
 		local Int is idxFour: words:indexOf(search: 'four', default: -1);
 		local Int is idxAbsent: words:indexOf(search: 'five', default: -99);
 		if (idxOne == 1 && idxFour == 4 && idxAbsent == -99) {
-			output:line('[PASS] Array:indexOf locates elements and returns fallback');
+			Output:line('[PASS] Array:indexOf locates elements and returns fallback');
 		} else {
-			output:line('[FAIL] Array:indexOf');
+			Output:line('[FAIL] Array:indexOf');
 		}
 
 		# Case 3: Array:join
@@ -37,9 +38,9 @@ Class is ContainerMethodsTest{
 		local Array of String is singleArr: ['only'];
 		local String is joinedSingle: singleArr:join(separator: '-');
 		if (joinedComma == 'zero, one, two, three, four' && joinedEmpty == 'zeroonetwothreefour' && joinedSingle == 'only') {
-			output:line('[PASS] Array:join concatenates elements with separator');
+			Output:line('[PASS] Array:join concatenates elements with separator');
 		} else {
-			output:line('[FAIL] Array:join');
+			Output:line('[FAIL] Array:join');
 		}
 
 		# Case 4: Array combinators: each, filter, count, any
@@ -58,9 +59,9 @@ Class is ContainerMethodsTest{
 		});
 		local Boolean is aWordsOk: aWords:length() == 3 && aWords:get(index: 0, default: '') == 'apple' && aWords:get(index: 1, default: '') == 'avocado' && aWords:get(index: 2, default: '') == 'apricot';
 		if (aCount == 3 && hasCherry && !hasGrape && aWordsOk) {
-			output:line('[PASS] Array combinators: count, any, filter');
+			Output:line('[PASS] Array combinators: count, any, filter');
 		} else {
-			output:line('[FAIL] Array combinators');
+			Output:line('[FAIL] Array combinators');
 		}
 
 		# Case 5: Map basic operations: set, get, getString, getInt, has, remove, length, keys
@@ -82,9 +83,9 @@ Class is ContainerMethodsTest{
 		local Boolean is keysOk: k:length() == 2 && k:indexOf(search: 'name', default: -1) >= 0 && k:indexOf(search: 'version', default: -1) >= 0;
 
 		if (len3 && hasName && hasMissing && nameVal == 'Spec' && missVal == 'fallback' && verVal == 1 && defVerVal == 42 && removed && removeAbsent && len2 && keysOk) {
-			output:line('[PASS] Map methods: set, getString, getInt, has, remove, length, keys');
+			Output:line('[PASS] Map methods: set, getString, getInt, has, remove, length, keys');
 		} else {
-			output:line('[FAIL] Map methods');
+			Output:line('[FAIL] Map methods');
 		}
 	}
 

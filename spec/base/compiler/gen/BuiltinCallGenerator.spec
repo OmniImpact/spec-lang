@@ -129,8 +129,9 @@ Class is BuiltinCallGenerator{
 	## @param cg: The code generator.
 	## @return: C call string, or '' when not builtin.
 	Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		# error:line - diagnostics to stderr
-		if ((targetC == 'error' || targetC == 'Error') && expr:methodName == 'line' && expr:argCount() > 0) {
+		# Stderr:line - diagnostics to standard error (INSTANCE.md R3:
+		# the error:/Error routing fiction is deleted).
+		if (targetC == 'Stderr' && expr:methodName == 'line' && expr:argCount() > 0) {
 			local Expression is errArg: self:argValue(expr: expr, index: 0);
 			local String is errValC: cg:generateExpression(expr: errArg);
 			local String is errStrC: cg:wrapToString(expr: errArg, exprC: errValC);
@@ -248,13 +249,13 @@ Class is BuiltinCallGenerator{
 		}
 
 		# Output:line and Output:print/write.
-		if ((targetC == 'output' || targetC == 'Output') && expr:methodName == 'line' && expr:argCount() > 0) {
+		if ((targetC == 'Output') && expr:methodName == 'line' && expr:argCount() > 0) {
 			local Expression is firstArg: self:argValue(expr: expr, index: 0);
 			local String is valC: cg:generateExpression(expr: firstArg);
 			local String is strC: cg:wrapToString(expr: firstArg, exprC: valC);
 			return 'printf("%s\\n", spec_buf_to_cstring((SpecBuf*)(' . strC . ')))';
 		}
-		if ((targetC == 'output' || targetC == 'Output') && (expr:methodName == 'print' || expr:methodName == 'write') && expr:argCount() > 0) {
+		if ((targetC == 'Output') && (expr:methodName == 'print' || expr:methodName == 'write') && expr:argCount() > 0) {
 			local Expression is firstArg: self:argValue(expr: expr, index: 0);
 			local String is valC: cg:generateExpression(expr: firstArg);
 			local String is strC: cg:wrapToString(expr: firstArg, exprC: valC);
@@ -485,7 +486,16 @@ Class is BuiltinCallGenerator{
 		}
 
 		# Math functions.
-		if (targetC == 'Math' || targetC == 'math') {
+		# Stderr:print.
+		if (targetC == 'Stderr' && expr:methodName == 'print' && expr:argCount() > 0) {
+			local Expression is seArg: self:argValue(expr: expr, index: 0);
+			local String is seValC: cg:generateExpression(expr: seArg);
+			local String is seStrC: cg:wrapToString(expr: seArg, exprC: seValC);
+			return '({ fprintf(stderr, "%s", spec_buf_to_cstring((SpecBuf*)(' . seStrC . '))); })';
+		}
+
+		# Math functions.
+		if (targetC == 'Math') {
 			local String is m: expr:methodName;
 			local String is a0: '0.0';
 			if (expr:argCount() > 0) {

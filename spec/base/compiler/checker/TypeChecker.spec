@@ -691,24 +691,6 @@ Class is TypeChecker{
 	##
 	## Bidirectional core: [expected] carries the contextual type from the
 	## declaration/assignment/return site; array and map literals adopt it
-	## Maps the floor singletons' lowercase usage spellings to their class
-	## names; any other name returns unchanged.
-	##
-	## @param name: A referenced identifier.
-	## @return: The class name to resolve against.
-	Function of String is canonicalClassName(String is name){
-		if (name == 'output') {
-			return 'Output';
-		}
-		if (name == 'error') {
-			return 'Error';
-		}
-		if (name == 'math') {
-			return 'Math';
-		}
-		return name;
-	}
-
 	## True when [cls]'s declarations are environment bindings rather than
 	## authoritative contracts: sysinternal C-floor bindings (structural,
 	## permanent — the namespace is the annotation) and, for the runtime-managed
@@ -770,11 +752,6 @@ Class is TypeChecker{
 					res: self:allEnumVariants:getString(key: name, default: Primitive:ANY:value());
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
-				} else if (name == 'output' || name == 'error' || name == 'math') {
-					# Floor singletons are callable in their lowercase usage
-					# forms whether or not the class was imported this run
-					# (error:line needs no import — it is runtime magic).
-					res: self:canonicalClassName(name: name);
 				} else if (self:isPrimitive(t: name)) {
 					res: name;
 				} else if (name != '') {
@@ -809,9 +786,6 @@ Class is TypeChecker{
 						rootType: root;
 					} else if (self:registeredClasses:has(key: root)) {
 						rootType: root;
-					} else if (root == 'output' || root == 'error' || root == 'math') {
-						# Floor singletons in lowercase usage form.
-						rootType: self:canonicalClassName(name: root);
 					}
 					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType);
 					While:run(loop: pLoop);

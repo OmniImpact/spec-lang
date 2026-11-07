@@ -1,4 +1,9 @@
 Class is Resource{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
+	];
 	local String is name;
 
 	replace Function is init(String is name){
@@ -11,6 +16,11 @@ Class is Resource{
 }
 
 Class is Container{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
+	];
 	local Resource is res;
 
 	replace Function is init(Resource is res){
@@ -30,35 +40,37 @@ Class is ArcDestructionTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== ARC Destruction Test ===');
+		Output:line('=== ARC Destruction Test ===');
 
 		local Resource is r1: Resource:init(name: 'First');
 		local Container is c: Container:init(res: r1);
 
 		if (c:getRes():getName() == 'First') {
-			output:line('[PASS] initial field reference verified');
+			Output:line('[PASS] initial field reference verified');
 		} else {
-			output:line('[FAIL] initial field reference mismatch');
+			Output:line('[FAIL] initial field reference mismatch');
 		}
 
 		local Resource is r2: Resource:init(name: 'Second');
 		c:setRes(newRes: r2);
 
 		if (c:getRes():getName() == 'Second') {
-			output:line('[PASS] reassigned field reference verified');
+			Output:line('[PASS] reassigned field reference verified');
 		} else {
-			output:line('[FAIL] reassigned field reference mismatch');
+			Output:line('[FAIL] reassigned field reference mismatch');
 		}
 
 		# Case 3: Reassignment with a direct constructor call (transfer ownership)
 		c:setRes(newRes: Resource:init(name: 'Third'));
 		if (c:getRes():getName() == 'Third') {
-			output:line('[PASS] transfer field assignment verified');
+			Output:line('[PASS] transfer field assignment verified');
 		} else {
-			output:line('[FAIL] transfer field assignment mismatch');
+			Output:line('[FAIL] transfer field assignment mismatch');
 		}
 
 		# Case 4: Multiple loop reassignment ensuring no refcount corruptions
@@ -71,11 +83,11 @@ Class is ArcDestructionTest{
 			}
 		);
 		if (c:getRes():getName() == 'Loop_4') {
-			output:line('[PASS] loop repeated field assignment verified');
+			Output:line('[PASS] loop repeated field assignment verified');
 		} else {
-			output:line('[FAIL] loop repeated field assignment mismatch');
+			Output:line('[FAIL] loop repeated field assignment mismatch');
 		}
 
-		output:line('=== End ARC Destruction Test ===');
+		Output:line('=== End ARC Destruction Test ===');
 	}
 }

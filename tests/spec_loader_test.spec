@@ -9,11 +9,13 @@ Class is SpecLoaderTest{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'io', Output],
-		['base', 'io', File]
+		['base', 'io', File],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Spec Loader Test ===');
+		Output:line('=== Spec Loader Test ===');
 		local Int is failures: 0;
 
 		# A user program importing an io class by array-form package path.
@@ -27,6 +29,11 @@ Class is SpecLoaderTest{
 	}
 }
 Class of Greeter is LoudGreeter{
+
+	replace Array of Array of String is using: [
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
+	];
 	replace Function of String is toString(){
 		return 'LOUD ' . self:greeting;
 	}
@@ -37,7 +44,9 @@ Class is LoaderE2E{
 		Output:line(text: g:toString());
 	}
 	replace Array of Array of String is using: [
-		['base', 'io', Output]
+		['base', 'io', Output],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 }";
 		File:write(path: 'tests/.loader_app_tmp.spec', content: src);
@@ -48,11 +57,11 @@ Class is LoaderE2E{
 		# --- package resolution: imports loaded, lattice intact ---
 		if (loader:loadedFileCount() >= 6
 			&& loader:getParseErrors():length() == 0) {
-			output:line('[PASS] multi-file load with zero errors');
+			Output:line('[PASS] multi-file load with zero errors');
 		} else {
-			output:line('[FAIL] load: files=' . (loader:loadedFileCount() as String) . ' errors=' . (loader:getParseErrors():length() as String));
+			Output:line('[FAIL] load: files=' . (loader:loadedFileCount() as String) . ' errors=' . (loader:getParseErrors():length() as String));
 			loader:getParseErrors():each(action: local Function(String is e){
-				output:line(e);
+				Output:line(e);
 			});
 			failures: failures + 1;
 		}
@@ -66,9 +75,9 @@ Class is LoaderE2E{
 			&& h:hasClass(classes: classes, name: 'Any')
 			&& h:baseOf(classes: classes, name: 'LoudGreeter') == 'Greeter'
 			&& h:baseOf(classes: classes, name: 'Greeter') == 'Any') {
-			output:line('[PASS] root lattice and implicit Any');
+			Output:line('[PASS] root lattice and implicit Any');
 		} else {
-			output:line('[FAIL] lattice');
+			Output:line('[FAIL] lattice');
 			failures: failures + 1;
 		}
 
@@ -101,9 +110,9 @@ Class is GroupMain{
 			&& gh:hasClass(classes: gprog, name: 'Grouped')
 			&& !gh:hasClass(classes: gprog, name: 'GroupedPart')
 			&& gh:memberCount(classes: gprog, name: 'Grouped') == 2) {
-			output:line('[PASS] group fragment merging');
+			Output:line('[PASS] group fragment merging');
 		} else {
-			output:line('[FAIL] group merge');
+			Output:line('[FAIL] group merge');
 			failures: failures + 1;
 		}
 
@@ -112,15 +121,17 @@ Class is GroupMain{
 	replace Function is init(Map of String to String is args){
 	}
 	replace Array of Array of String is using: [
-		['no', 'such', 'Package']
+		['no', 'such', 'Package'],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 }");
 		local Loader is bloader: Loader:init();
 		bloader:loadProgram(rootPath: 'tests/.loader_bad_tmp.spec');
 		if (bloader:getParseErrors():length() > 0) {
-			output:line('[PASS] unresolvable import reported');
+			Output:line('[PASS] unresolvable import reported');
 		} else {
-			output:line('[FAIL] missing import error');
+			Output:line('[FAIL] missing import error');
 			failures: failures + 1;
 		}
 
@@ -130,9 +141,9 @@ Class is GroupMain{
 		File:remove(path: 'tests/.loader_bad_tmp.spec');
 
 		if (failures == 0) {
-			output:line('[PASS] spec loader test complete');
+			Output:line('[PASS] spec loader test complete');
 		} else {
-			output:line('[FAIL] spec loader test: ' . (failures as String) . ' failures');
+			Output:line('[FAIL] spec loader test: ' . (failures as String) . ' failures');
 		}
 	}
 }
@@ -144,7 +155,9 @@ Class is LoaderE2EHelper{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'io', as File()],
+		['base', 'io', as Output()]
 	];
 
 	Function of Boolean is hasClass(ProgramNode is classes, String is name){

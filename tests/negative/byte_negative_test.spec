@@ -2,6 +2,7 @@ Class is ByteNegativeTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -11,6 +12,6 @@ Class is ByteNegativeTest{
 		# Strings cannot cast to Byte
 		local Byte is fromString: 'hello' as Byte;
 
-		output:line('unreachable');
+		Output:line('unreachable');
 	}
 }

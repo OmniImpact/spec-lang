@@ -3,10 +3,11 @@ Class is ListByteTest{
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
 		['base', 'struct', List],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== [Byte] Buffer Test ===');
+		Output:line('=== [Byte] Buffer Test ===');
 
 		# Case 1: push/appendString/length
 		local [Byte] is buf;
@@ -14,9 +15,9 @@ Class is ListByteTest{
 		buf:push(item: 105 as Byte);
 		buf:appendString(value: '!');
 		if (buf:length() == 3) {
-			output:line('[PASS] length after push/appendString is 3');
+			Output:line('[PASS] length after push/appendString is 3');
 		} else {
-			output:line('[FAIL] length: ' . buf:length() as String);
+			Output:line('[FAIL] length: ' . buf:length() as String);
 		}
 
 		# Case 2: get reads back, error callback untouched on success
@@ -25,9 +26,9 @@ Class is ListByteTest{
 			errFlag:push(item: 1 as Byte);
 		}) as Int;
 		if (first == 72 && errFlag:length() == 0) {
-			output:line('[PASS] get returns element; error callback not fired on success');
+			Output:line('[PASS] get returns element; error callback not fired on success');
 		} else {
-			output:line('[FAIL] get: first=' . first as String . ' errCount=' . errFlag:length() as String);
+			Output:line('[FAIL] get: first=' . first as String . ' errCount=' . errFlag:length() as String);
 		}
 
 		# Case 3: out-of-bounds get returns default AND fires error callback
@@ -35,17 +36,17 @@ Class is ListByteTest{
 			errFlag:push(item: 1 as Byte);
 		});
 		if (oob as Int == 7 && errFlag:length() == 1) {
-			output:line('[PASS] OOB get yields default and notifies error callback');
+			Output:line('[PASS] OOB get yields default and notifies error callback');
 		} else {
-			output:line('[FAIL] OOB get: default=' . (oob as Int) as String . ' errCount=' . errFlag:length() as String);
+			Output:line('[FAIL] OOB get: default=' . (oob as Int) as String . ' errCount=' . errFlag:length() as String);
 		}
 
 		# Case 4: omitted error callback is legal (no-op default)
 		local Byte is silent: buf:get(index: 42, default: 3 as Byte);
 		if (silent as Int == 3) {
-			output:line('[PASS] omitted error callback falls back to no-op');
+			Output:line('[PASS] omitted error callback falls back to no-op');
 		} else {
-			output:line('[FAIL] omitted error callback: ' . (silent as Int) as String);
+			Output:line('[FAIL] omitted error callback: ' . (silent as Int) as String);
 		}
 
 		# Case 5: set overwrites in place; OOB set notifies the provided callback
@@ -57,9 +58,9 @@ Class is ListByteTest{
 			errFlag:push(item: 1 as Byte);
 		});
 		if (rewritten == 74 && errFlag:length() == 2) {
-			output:line('[PASS] set writes in place; OOB set notifies');
+			Output:line('[PASS] set writes in place; OOB set notifies');
 		} else {
-			output:line('[FAIL] set: rewritten=' . rewritten as String . ' errCount=' . errFlag:length() as String);
+			Output:line('[FAIL] set: rewritten=' . rewritten as String . ' errCount=' . errFlag:length() as String);
 		}
 
 		# Case 6: pop returns last byte; pop on empty yields default + notification
@@ -69,9 +70,9 @@ Class is ListByteTest{
 			errFlag:push(item: 1 as Byte);
 		});
 		if (last as Int == 33 && nothing as Int == 9 && errFlag:length() == 3) {
-			output:line('[PASS] pop returns last byte; empty pop yields default and notifies');
+			Output:line('[PASS] pop returns last byte; empty pop yields default and notifies');
 		} else {
-			output:line('[FAIL] pop: last=' . (last as Int) as String . ' nothing=' . (nothing as Int) as String . ' errCount=' . errFlag:length() as String);
+			Output:line('[FAIL] pop: last=' . (last as Int) as String . ' nothing=' . (nothing as Int) as String . ' errCount=' . errFlag:length() as String);
 		}
 
 		# Case 7: toString freezes the buffer
@@ -80,18 +81,18 @@ Class is ListByteTest{
 		builder:push(item: 33 as Byte);
 		local String is frozen: builder:toString();
 		if (frozen == 'Hi!') {
-			output:line('[PASS] toString freezes buffer contents');
+			Output:line('[PASS] toString freezes buffer contents');
 		} else {
-			output:line('[FAIL] toString: ' . frozen);
+			Output:line('[FAIL] toString: ' . frozen);
 		}
 
 		# Case 8: assignment shares the ARC-managed buffer
 		local [Byte] is alias: builder;
 		alias:appendString(value: '!');
 		if (builder:length() == 4) {
-			output:line('[PASS] assignment aliases the same buffer');
+			Output:line('[PASS] assignment aliases the same buffer');
 		} else {
-			output:line('[FAIL] alias length: ' . builder:length() as String);
+			Output:line('[FAIL] alias length: ' . builder:length() as String);
 		}
 
 		# Case 9: clear empties but stays usable
@@ -99,14 +100,14 @@ Class is ListByteTest{
 		if (builder:length() == 0) {
 			builder:push(item: 65 as Byte);
 			if (builder:length() == 1) {
-				output:line('[PASS] clear empties and buffer stays usable');
+				Output:line('[PASS] clear empties and buffer stays usable');
 			} else {
-				output:line('[FAIL] push after clear');
+				Output:line('[FAIL] push after clear');
 			}
 		} else {
-			output:line('[FAIL] clear: length=' . builder:length() as String);
+			Output:line('[FAIL] clear: length=' . builder:length() as String);
 		}
 
-		output:line('=== End [Byte] Buffer Test ===');
+		Output:line('=== End [Byte] Buffer Test ===');
 	}
 }

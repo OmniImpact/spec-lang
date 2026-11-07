@@ -35,61 +35,62 @@ Class is RegressionEnumValueTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== Regression: Backed Enum Values ===');
+		Output:line('=== Regression: Backed Enum Values ===');
 
 		# Case 1 (the regression): explicit Int backing value must survive codegen.
 		local Int is okCode: HttpStatus:OK:value();
 		if (okCode == 200) {
-			output:line('[PASS] HttpStatus:OK:value() = 200');
+			Output:line('[PASS] HttpStatus:OK:value() = 200');
 		} else {
-			output:line('[FAIL] HttpStatus:OK:value(): expected 200, got ' . okCode . ' (ordinal leaked instead of backing value)');
+			Output:line('[FAIL] HttpStatus:OK:value(): expected 200, got ' . okCode . ' (ordinal leaked instead of backing value)');
 		}
 
 		# Case 2 (the regression): second variant, non-zero declared value.
 		local Int is nfCode: HttpStatus:NOT_FOUND:value();
 		if (nfCode == 404) {
-			output:line('[PASS] HttpStatus:NOT_FOUND:value() = 404');
+			Output:line('[PASS] HttpStatus:NOT_FOUND:value() = 404');
 		} else {
-			output:line('[FAIL] HttpStatus:NOT_FOUND:value(): expected 404, got ' . nfCode);
+			Output:line('[FAIL] HttpStatus:NOT_FOUND:value(): expected 404, got ' . nfCode);
 		}
 
 		# Case 3 (control): variant name reflection.
 		local String is okName: HttpStatus:OK:name();
 		if (okName == 'OK') {
-			output:line('[PASS] HttpStatus:OK:name() = OK');
+			Output:line('[PASS] HttpStatus:OK:name() = OK');
 		} else {
-			output:line('[FAIL] HttpStatus:OK:name(): expected OK, got ' . okName);
+			Output:line('[FAIL] HttpStatus:OK:name(): expected OK, got ' . okName);
 		}
 
 		# Case 4 (control): declaration-order ordinal is independent of backing value.
 		local Int is nfOrdinal: HttpStatus:NOT_FOUND:ordinal();
 		if (nfOrdinal == 1) {
-			output:line('[PASS] HttpStatus:NOT_FOUND:ordinal() = 1');
+			Output:line('[PASS] HttpStatus:NOT_FOUND:ordinal() = 1');
 		} else {
-			output:line('[FAIL] HttpStatus:NOT_FOUND:ordinal(): expected 1, got ' . nfOrdinal);
+			Output:line('[FAIL] HttpStatus:NOT_FOUND:ordinal(): expected 1, got ' . nfOrdinal);
 		}
 
 		# Case 5 (control): string-backed enums already honor initializers.
 		local LogLevel is lvl: LogLevel:INFO;
 		local String is lvlValue: lvl:value();
 		if (lvlValue == 'INF') {
-			output:line('[PASS] LogLevel:INFO:value() = INF (string-backed control)');
+			Output:line('[PASS] LogLevel:INFO:value() = INF (string-backed control)');
 		} else {
-			output:line('[FAIL] LogLevel:INFO:value(): expected INF, got ' . lvlValue);
+			Output:line('[FAIL] LogLevel:INFO:value(): expected INF, got ' . lvlValue);
 		}
 
 		# Case 6 (control): unbacked enum ordinal.
 		local Int is highOrdinal: Priority:HIGH:ordinal();
 		if (highOrdinal == 1) {
-			output:line('[PASS] Priority:HIGH:ordinal() = 1 (unbacked control)');
+			Output:line('[PASS] Priority:HIGH:ordinal() = 1 (unbacked control)');
 		} else {
-			output:line('[FAIL] Priority:HIGH:ordinal(): expected 1, got ' . highOrdinal);
+			Output:line('[FAIL] Priority:HIGH:ordinal(): expected 1, got ' . highOrdinal);
 		}
 
-		output:line('=== End Backed Enum Value Regression ===');
+		Output:line('=== End Backed Enum Value Regression ===');
 	}
 
 }

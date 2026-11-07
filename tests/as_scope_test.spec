@@ -3,7 +3,8 @@ Class is AsScopeTest{
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
 		['base', 'struct', Array],
-		['base', 'struct', Map]
+		['base', 'struct', Map],
+		['base', 'io', as Output()]
 	];
 
 	Function is withResource(String is name, Array of String is log, Function is block){
@@ -38,9 +39,9 @@ Class is AsScopeTest{
 		local Array of String is log1: [];
 		self:runResource(log: log1);
 		if (log1:length() == 4 && log1:get(index: 0) == 'open:file.txt' && log1:get(index: 1) == 'read:1' && log1:get(index: 2) == 'read:2' && log1:get(index: 3) == 'close:file.txt') {
-			output:line('[PASS] Parameterless as: helper();');
+			Output:line('[PASS] Parameterless as: helper();');
 		} else {
-			output:line('[FAIL] Parameterless as: helper();');
+			Output:line('[FAIL] Parameterless as: helper();');
 		}
 	}
 
@@ -49,9 +50,9 @@ Class is AsScopeTest{
 		as (Int is x): self:withVal(val: 42);
 		receivedVal: x + 8;
 		if (receivedVal == 50) {
-			output:line('[PASS] Typed parameter as (Int is x):');
+			Output:line('[PASS] Typed parameter as (Int is x):');
 		} else {
-			output:line('[FAIL] Typed parameter as (Int is x): val=' . receivedVal);
+			Output:line('[FAIL] Typed parameter as (Int is x): val=' . receivedVal);
 		}
 	}
 
@@ -60,9 +61,9 @@ Class is AsScopeTest{
 		as (s): self:withString(str: 'spec');
 		untypedStr: 'hello ' . s;
 		if (untypedStr == 'hello spec') {
-			output:line('[PASS] Untyped parameter as (s):');
+			Output:line('[PASS] Untyped parameter as (s):');
 		} else {
-			output:line('[FAIL] Untyped parameter as (s): str=' . untypedStr);
+			Output:line('[FAIL] Untyped parameter as (s): str=' . untypedStr);
 		}
 	}
 
@@ -71,9 +72,9 @@ Class is AsScopeTest{
 		as (String is k, Int is v): self:withPair(key: 'alpha', val: 7);
 		pairStr: k . '=' . v;
 		if (pairStr == 'alpha=7') {
-			output:line('[PASS] Multiple typed parameters as (String is k, Int is v):');
+			Output:line('[PASS] Multiple typed parameters as (String is k, Int is v):');
 		} else {
-			output:line('[FAIL] Multiple typed parameters as (String is k, Int is v): ' . pairStr);
+			Output:line('[FAIL] Multiple typed parameters as (String is k, Int is v): ' . pairStr);
 		}
 	}
 
@@ -84,9 +85,9 @@ Class is AsScopeTest{
 		as (Int is c): self:withVal(val: b + 5);
 		pipelineLog:add(item: '' . c);
 		if (pipelineLog:length() == 1 && pipelineLog:get(index: 0) == '25') {
-			output:line('[PASS] Nested linear as chain');
+			Output:line('[PASS] Nested linear as chain');
 		} else {
-			output:line('[FAIL] Nested linear as chain');
+			Output:line('[FAIL] Nested linear as chain');
 		}
 	}
 
@@ -100,9 +101,9 @@ Class is AsScopeTest{
 		local Array of String is resLog: [];
 		self:runNestedResources(log: resLog);
 		if (resLog:length() == 5 && resLog:get(index: 0) == 'open:A' && resLog:get(index: 1) == 'open:B' && resLog:get(index: 2) == 'work' && resLog:get(index: 3) == 'close:B' && resLog:get(index: 4) == 'close:A') {
-			output:line('[PASS] Nested resource manager LIFO execution');
+			Output:line('[PASS] Nested resource manager LIFO execution');
 		} else {
-			output:line('[FAIL] Nested resource manager LIFO execution');
+			Output:line('[FAIL] Nested resource manager LIFO execution');
 		}
 	}
 
@@ -116,9 +117,9 @@ Class is AsScopeTest{
 		local Array of Int is collected: [];
 		self:runContainerEach(nums: nums, collected: collected);
 		if (collected:length() == 4 && collected:get(index: 0) == 10 && collected:get(index: 3) == 40) {
-			output:line('[PASS] Container each method with as (n):');
+			Output:line('[PASS] Container each method with as (n):');
 		} else {
-			output:line('[FAIL] Container each method with as (n):');
+			Output:line('[FAIL] Container each method with as (n):');
 		}
 	}
 
@@ -128,7 +129,7 @@ Class is AsScopeTest{
 	}
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== As Scope Statement Test ===');
+		Output:line('=== As Scope Statement Test ===');
 		self:testParameterless();
 		self:testTypedParam();
 		self:testUntypedParam();
@@ -144,9 +145,9 @@ Class is AsScopeTest{
 			}
 		);
 		if (computed == 30) {
-			output:line('[PASS] as of Type: callback return value');
+			Output:line('[PASS] as of Type: callback return value');
 		} else {
-			output:line('[FAIL] as of Type: callback return value, computed=' . computed);
+			Output:line('[FAIL] as of Type: callback return value, computed=' . computed);
 		}
 	}
 }

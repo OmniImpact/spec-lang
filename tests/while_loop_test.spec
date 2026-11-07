@@ -5,10 +5,12 @@ Class is WhileLoopTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
+		['base', 'io', as Output()],
+		['base', 'iterator', as While()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line('=== While Loop Test ===');
+		Output:line('=== While Loop Test ===');
 
 		# Case 1: Scoped loop variables with named arguments and auto-return
 		local Int is sum1: 0;
@@ -21,9 +23,9 @@ Class is WhileLoopTest{
 			}
 		);
 		if (sum1 == 45) {
-			output:line('[PASS] Scoped variables with named arguments and auto-return predicate');
+			Output:line('[PASS] Scoped variables with named arguments and auto-return predicate');
 		} else {
-			output:line('[FAIL] Scoped variables with named arguments, sum1=' . sum1);
+			Output:line('[FAIL] Scoped variables with named arguments, sum1=' . sum1);
 		}
 
 		# Case 2: Positional arguments with function block shorthand
@@ -37,9 +39,9 @@ Class is WhileLoopTest{
 			}
 		);
 		if (prod2 == 120) {
-			output:line('[PASS] Positional arguments with function block shorthand');
+			Output:line('[PASS] Positional arguments with function block shorthand');
 		} else {
-			output:line('[FAIL] Positional arguments, prod2=' . prod2);
+			Output:line('[FAIL] Positional arguments, prod2=' . prod2);
 		}
 
 		# Case 3: Mixed scope - reading and mutating outer collections and variables
@@ -55,9 +57,9 @@ Class is WhileLoopTest{
 		);
 		local Boolean is collectedOk: collected:length() == 5 && collected:get(index: 0, default: 0) == 3 && collected:get(index: 4, default: 0) == 15;
 		if (collectedOk) {
-			output:line('[PASS] Mixed scope: reading outer variables and mutating outer collections');
+			Output:line('[PASS] Mixed scope: reading outer variables and mutating outer collections');
 		} else {
-			output:line('[FAIL] Mixed scope collection mutation');
+			Output:line('[FAIL] Mixed scope collection mutation');
 		}
 
 		# Case 4: Nested while loops with scoped state
@@ -82,9 +84,9 @@ Class is WhileLoopTest{
 		# row 2: 20+21+22+23 = 86
 		# total = 138
 		if (gridSum == 138) {
-			output:line('[PASS] Nested while loops with scoped state');
+			Output:line('[PASS] Nested while loops with scoped state');
 		} else {
-			output:line('[FAIL] Nested while loops, gridSum=' . gridSum);
+			Output:line('[FAIL] Nested while loops, gridSum=' . gridSum);
 		}
 
 		# Case 5: While loop without scoped variables (outer state only)
@@ -98,9 +100,9 @@ Class is WhileLoopTest{
 			}
 		);
 		if (countdown == 0 && steps == 5) {
-			output:line('[PASS] While loop without scoped variables');
+			Output:line('[PASS] While loop without scoped variables');
 		} else {
-			output:line('[FAIL] While loop without scoped variables');
+			Output:line('[FAIL] While loop without scoped variables');
 		}
 
 		# Case 6: Mixed scope Map mutations
@@ -116,9 +118,9 @@ Class is WhileLoopTest{
 		);
 		local Boolean is mapOk: counts:length() == 4 && counts:getInt(key: 'item_0', default: -1) == 0 && counts:getInt(key: 'item_3', default: -1) == 300;
 		if (mapOk) {
-			output:line('[PASS] Mixed scope Map mutations');
+			Output:line('[PASS] Mixed scope Map mutations');
 		} else {
-			output:line('[FAIL] Mixed scope Map mutations');
+			Output:line('[FAIL] Mixed scope Map mutations');
 		}
 	}
 }
