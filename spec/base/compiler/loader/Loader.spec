@@ -19,8 +19,8 @@ Class is Loader{
 		['spec', 'base', 'compiler', 'ast', ExpressionKind],
 		['spec', 'base', 'compiler', 'lexer', Lexer],
 		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'sysinternal', Buf],
-		['spec', 'base', 'sysinternal', Dir],
+		['spec', 'lib', 'base', 'sys', Buf],
+		['spec', 'lib', 'base', 'sys', Dir],
 		['lib', 'base', 'struct', Array],
 		['lib', 'base', 'struct', Map],
 		['lib', 'base', 'iterator']
@@ -30,6 +30,7 @@ Class is Loader{
 	local String is rootInputPath: '';
 	local Array of ClassInfo is loadedClasses: [];
 	local Map of String to String is seenClassNames: Map:init();
+	local Map of String to String is seenBareNames: Map:init();
 	local Array of String is parseErrors: [];
 
 	## Group targets declared by fragments via the `group` pseudo-field (load order).
@@ -42,6 +43,7 @@ Class is Loader{
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
+		self:seenBareNames: Map:init();
 		self:parseErrors: [];
 		self:groupTargets: [];
 		self:groupFragments: [];
@@ -150,7 +152,7 @@ Class is Loader{
 				'base/core/Any.spec'
 			];
 			is 'base:sysinternal:*': [
-				'base/sysinternal/Buf.spec',
+				'base/sys/Buf.spec',
 				'base/sysinternal/Dir.spec'
 			];
 			is 'base:sys:*': [
@@ -205,10 +207,19 @@ Class is Loader{
 			});
 			local String is gName: self:groupTargetOf(c: c);
 			# Class identity is namespace-qualified: a base:sys wrapper and
-			# its same-name sysinternal floor coexist in one program.
+			# its same-name sysinternal floor coexist in one program. A
+			# NON-floor class whose bare name is already registered is a
+			# legacy/migration duplicate — the scan-root priority already
+			# preferred the new tree, so it is skipped.
 			local String is qName: c:namespaceJoined() . ':' . c:name;
-			if (!self:seenClassNames:has(key: qName)) {
+			local Boolean is isFloor: c:namespaceJoined():endsWith(suffix: ':sysinternal') || c:namespaceJoined() == 'sysinternal';
+			local Boolean is dup: self:seenClassNames:has(key: qName);
+			if (!isFloor && !dup && self:seenBareNames:has(key: c:name)) {
+				dup: true;
+			}
+			if (!dup) {
 				self:seenClassNames:set(key: qName, value: 'true');
+				self:seenBareNames:set(key: c:name, value: 'true');
 				self:loadedClasses:add(item: c);
 				if (gName != '' && gName != c:name) {
 					self:groupTargets:add(item: gName);
@@ -734,6 +745,7 @@ Class is Loader{
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
+		self:seenBareNames: Map:init();
 		self:parseErrors: [];
 		self:groupTargets: [];
 		self:groupFragments: [];
@@ -743,10 +755,13 @@ Class is Loader{
 
 		# Root class lattice preloads, before any user code. Resolution
 		# prefers the migration stdlib (spec/lib) over the legacy lib.
+		# Root lattice preloads load the base:sys WRAPPERS; the wrappers'
+		# using-imports pull the sysinternal floor in transitively, so the
+		# floor is never loaded except behind its wrapper.
 		local Array of String is preloads: [
 			'base/core/String.spec',
-			'base/sysinternal/Buf.spec',
-			'base/sysinternal/Dir.spec',
+			'base/sys/Buf.spec',
+			'base/sys/Dir.spec',
 			'base/core/Stringable.spec',
 			'base/core/Any.spec'
 		];

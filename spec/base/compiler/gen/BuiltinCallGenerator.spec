@@ -51,7 +51,9 @@ Class is BuiltinCallGenerator{
 	## declaration, letting the caller fall through.
 	Function of String is bindFloorCall(String is clsName, Expression is expr, CodeGenerator is cg){
 		local ClassInfo is fCls: cg:findClass(name: clsName);
-		if (fCls:name != clsName) {
+		# clsName may be qualified ('base:sysinternal:Buf'); the lookup
+		# already resolved it — only absence (empty name) is a miss.
+		if (fCls:name == '') {
 			return '';
 		}
 		local Member is foundM;
@@ -135,11 +137,28 @@ Class is BuiltinCallGenerator{
 			return 'spec_error_line(' . errStrC . ')';
 		}
 
-		# Reflection:class()/method() — compile-time source identity.
-		if (targetC == 'Reflection' && expr:methodName == 'class' && expr:argCount() == 0) {
+		# Reflection:class()/method() — compile-time source identity,
+		# injected at the call site. Matches the bare usage form AND the
+		# qualified floor chain (the base:sys wrapper delegates by chain;
+		# user code hits the bare interception first).
+		local Boolean is isReflTarget: targetC == 'Reflection';
+		if (!isReflTarget && expr:methodTarget:kind == ExpressionKind:PATH) {
+			local String is rJoined: '';
+			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
+				if (rJoined == '') {
+					rJoined: seg;
+				} else {
+					rJoined: rJoined . ':' . seg;
+				}
+			});
+			if (rJoined:endsWith(suffix: ':sysinternal:Reflection')) {
+				isReflTarget: true;
+			}
+		}
+		if (isReflTarget && expr:methodName == 'class' && expr:argCount() == 0) {
 			return 'spec_string_intern("' . cg:currentClassName . '")';
 		}
-		if (targetC == 'Reflection' && expr:methodName == 'method' && expr:argCount() == 0) {
+		if (isReflTarget && expr:methodName == 'method' && expr:argCount() == 0) {
 			return 'spec_string_intern("' . cg:currentMethodName . '")';
 		}
 

@@ -33,7 +33,7 @@ Class is Parser{
 		['spec', 'base', 'compiler', 'ast', WhenArm],
 		['spec', 'base', 'compiler', 'ast', ProgramNode],
 		['spec', 'base', 'compiler', Error],
-		['spec', 'base', 'sysinternal', Reflection],
+		['spec', 'lib', 'base', 'sys', Reflection],
 		['spec', 'base', 'compiler', WellKnown],
 		['spec', 'base', 'compiler', 'parser', PrecedenceLevel],
 		['spec', 'base', 'compiler', 'parser', 'loops', BinaryFoldLoop],

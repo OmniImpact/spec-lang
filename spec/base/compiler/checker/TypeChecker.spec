@@ -1054,6 +1054,30 @@ Class is TypeChecker{
 			targetType: self:currentClassName;
 		}
 
+		# Sysinternal floor access by qualified chain: ONLY base:sys
+		# wrappers may call the floor — everyone else goes through the
+		# same-name wrapper (TRANSITION.md section 7).
+		if (expr:methodTarget:kind == ExpressionKind:PATH) {
+			local String is qJoined: '';
+			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
+				if (qJoined == '') {
+					qJoined: seg;
+				} else {
+					qJoined: qJoined . ':' . seg;
+				}
+			});
+			if (qJoined:contains(needle: ':sysinternal:')) {
+				local ClassInfo is callerCls: self:findClass(name: self:currentClassName);
+				local String is callerNs: callerCls:namespaceJoined();
+				if (callerNs != 'base:sys') {
+					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers; call the base:sys wrapper instead (call from \'' . callerNs . '\').');
+				}
+				res: self:lookupMethodReturnType(className: qJoined, methodName: method);
+				expr:resolvedType: res;
+				return res;
+			}
+		}
+
 		# Namespace-qualified chains: `base:sysinternal:Buf()` and method
 		# calls on one — the chain's type is the named class.
 		if (targetType == Primitive:ANY:value() || targetType == '') {

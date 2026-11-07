@@ -14,7 +14,7 @@ Class is Driver{
 		['lib', 'base', 'io', File],
 		['lib', 'base', 'io', Output],
 		['lib', 'base', 'sys', Process],
-		['spec', 'base', 'sysinternal', Dir],
+		['spec', 'lib', 'base', 'sys', Dir],
 		['spec', 'base', 'compiler', 'ast', ProgramNode],
 		['spec', 'base', 'compiler', 'ast', ClassInfo],
 		['spec', 'base', 'compiler', 'ast', Member],

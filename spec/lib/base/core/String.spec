@@ -13,7 +13,7 @@ Class is String{
 	namespace: ['base', 'core'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'sysinternal', Buf]
+		['spec', 'lib', 'base', 'sys', Buf]
 	];
 
 	## Declared casts: a String produces an Int through its parser.

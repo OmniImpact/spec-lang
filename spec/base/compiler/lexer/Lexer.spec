@@ -35,7 +35,7 @@ Class is Lexer{
 		['spec', 'base', 'compiler', 'lexer', 'loops', StripLeadingZerosLoop],
 		['spec', 'base', 'compiler', Error],
 		['spec', 'base', 'compiler', ErrorText],
-		['spec', 'base', 'sysinternal', Reflection],
+		['spec', 'lib', 'base', 'sys', Reflection],
 		['lib', 'base', 'iterator']
 	];
 
