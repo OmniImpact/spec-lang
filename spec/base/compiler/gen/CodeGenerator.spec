@@ -1108,7 +1108,14 @@ Class is CodeGenerator{
 					return false;
 				}
 			}
-			if (self:policy:isTransparent(c: self:findClass(name: targetT)) || targetT == 'List' || targetT == 'String') {
+			# Container-typed receivers (incl. of-form spellings) resolve
+			# like the transparent classes they are: their element gets are
+			# BORROWS, never claims. Without this, the fallback below
+			# classified every array element-get as a claim, the typed
+			# constructor skipped its retain, and the var-decl's
+			# scope-end release underflowed the refcount.
+			if (self:policy:isTransparent(c: self:findClass(name: targetT)) || targetT == 'List' || targetT == 'String' ||
+				targetT:startsWith(prefix: 'Array') || targetT:startsWith(prefix: 'List') || targetT:startsWith(prefix: 'Map')) {
 				if (expr:methodName == 'get') {
 					return targetT:startsWith(prefix: 'Map');
 				}
