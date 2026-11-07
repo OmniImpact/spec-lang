@@ -950,29 +950,13 @@ Class is CodeGenerator{
 		}
 		if (kind == ExpressionKind:CALL) {
 			local String is targetType: self:inferTargetType(expr: expr:methodTarget);
-			# Lowercase floor-singleton usage forms (math:abs) infer '' —
-			# canonicalize by the target's own name.
-			if (targetType == '' && expr:methodTarget:kind == ExpressionKind:IDENT) {
-				local String is tn: expr:methodTarget:stringValue;
-				if (tn == 'math') {
-					targetType: 'Math';
-				} else if (tn == 'output') {
-					targetType: 'Output';
-				} else if (tn == 'error') {
-					targetType: 'Error';
-				}
-			}
-			if (targetType == 'math' || targetType == 'output' || targetType == 'error') {
-				if (targetType == 'math') {
-					targetType: 'Math';
-				} else if (targetType == 'output') {
-					targetType: 'Output';
-				} else {
-					targetType: 'Error';
-				}
-			}
 			if (targetType == self:names:selfIdent() || targetType == '') {
 				targetType: self:currentClassName;
+			}
+			# INSTANCE.md §2.3: a bare call resolved against the bare scope
+			# dispatches on its as-imported provider.
+			if (expr:bareProvider != '') {
+				targetType: expr:bareProvider;
 			}
 			# Keep the generic suffix ('Box:Int') for lookup: substitution
 			# needs the type arguments to ground T. The split base only
@@ -1795,19 +1779,28 @@ Class is CodeGenerator{
 				return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initCls . '_init((' . initCls . '*)_inst' . initArgs . '); _inst; })';
 			}
 			local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
-			if (self:isAsImportedReceiver(className: targetC) && mDef:kind == MemberKind:METHOD) {
-				# Elided instance import (INSTANCE.md §2.4): the class has no
-				# fields, so its methods are self-free — the call is a direct
-				# C call with self ignored, void or not.
+			if (mDef:kind == MemberKind:METHOD) {
+				# Elided instance import (INSTANCE.md §2.4): under E5 every
+				# non-init class-name call is an instance-imported receiver.
+				# The class is field-less, its methods self-free — a direct
+				# C call with self ignored, void or not. The old unsound
+				# static paths (unguarded NULL self, fresh-instance
+				# discard) are deleted (INSTANCE.md E8).
 				return targetC . '_' . expr:methodName . '(NULL' . argsJoined . ')';
 			}
-			if (mDef:kind == MemberKind:METHOD) {
-				local String is mRetType: self:resolveReturnType(t: mDef:memberType);
-				if (mRetType != '' && mRetType != 'Void' && mRetType != 'void') {
-					return targetC . '_' . expr:methodName . '(NULL' . argsJoined . ')';
-				}
+		}
+
+		# INSTANCE.md §2.3: bare call resolved to an as-imported provider —
+		# elided dispatch (v1 providers are field-less, self-free).
+		# Runtime-managed providers (Math, Output, Stderr) route through
+		# the builtin table under the provider's name first.
+		if (expr:bareProvider != '') {
+			local String is bpBuiltin: self:builtins:generateBuiltinCall(expr: expr, targetC: expr:bareProvider, targetType: expr:bareProvider, cg: self);
+			if (bpBuiltin != '') {
+				return bpBuiltin;
 			}
-			return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . targetC . '_' . expr:methodName . '(_inst' . argsJoined . '); _inst; })';
+			local String is bpArgs: self:formatCallArguments(className: expr:bareProvider, methodName: expr:methodName, args: expr:methodArgs);
+			return expr:bareProvider . '_' . expr:methodName . '(NULL' . bpArgs . ')';
 		}
 
 		# Instance method invocation.

@@ -1104,6 +1104,79 @@ Class is TypeChecker{
 		if (targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0) {
 			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
 		}
+
+		# INSTANCE.md E5/E7: the call model. A class-name receiver admits
+		# only init, unless the enclosing class instance-imports the class
+		# (elided dispatch) or the stratum is type-level by design (enums,
+		# primitives, containers, transparent runtime types). Conversely,
+		# init on a non-class receiver is construct-only and banned.
+		local String is recvName: '';
+		if (expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH) {
+			local String is cand: targetName;
+			if (cand != '' && cand != self:names:selfIdent() && self:registeredClasses:has(key: cand) && !self:localVars:has(key: cand) && !self:fieldTypes:has(key: cand)) {
+				recvName: cand;
+			}
+		}
+		if (recvName != '' && expr:methodName != 'init') {
+			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl';
+			if (!isTypeLevel) {
+				local ClassInfo is ownerCls: self:findClass(name: self:currentClassName);
+				if (!ownerCls:instanceImportsAs(name: recvName)) {
+					if (recvName == self:currentClassName) {
+						self:addError(line: self:currentLine, msg: 'Cannot call members of \'' . recvName . '\' through the class name inside \'' . recvName . '\' itself; use self (INSTANCE.md §2.2).');
+					} else {
+						self:addError(line: self:currentLine, msg: 'Members of \'' . recvName . '\' are callable only through an instance; instance-import it (\'as ' . recvName . '()\') or construct one (INSTANCE.md E5).');
+					}
+				}
+			}
+		}
+		if (recvName == '' && expr:methodName == 'init') {
+			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (INSTANCE.md E7).');
+		}
+
+		# INSTANCE.md §2.3/E9: bare-scope resolution for self-receiver
+		# calls. The providers are the enclosing class (own and inherited
+		# members) plus its as-imported classes, one level deep. Exactly
+		# one provider resolves; two or more collide and force
+		# qualification; zero is an error — the old behavior silently
+		# invented CurrentClass_method and died in gcc.
+		if (recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:localVars:has(key: expr:methodName) && !self:fieldTypes:has(key: expr:methodName)) {
+			local String is ownOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: expr:methodName);
+			local Array of String is bsProviders: self:bareScopeProviders(methodName: expr:methodName);
+			local Int is providerTotal: bsProviders:length() + (if (ownOwner != '') 1 else 0);
+			if (providerTotal > 1) {
+				local String is listed: '';
+				if (ownOwner != '') {
+					listed: 'the enclosing class';
+				}
+				bsProviders:each(action: local Function(String is prov){
+					if (listed == '') {
+						listed: prov;
+					} else {
+						listed: listed . ' and ' . prov;
+					}
+				});
+				self:addError(line: self:currentLine, msg: 'Function \'' . expr:methodName . '\' is provided by ' . listed . '; qualify the call (' . self:names:selfIdent() . ':' . expr:methodName . ' or the class name) (INSTANCE.md §2.3).');
+				expr:resolvedType: '';
+				return '';
+			}
+			if (providerTotal == 0) {
+				self:addError(line: self:currentLine, msg: 'Undefined function \'' . expr:methodName . '\' on class \'' . self:currentClassName . '\' (INSTANCE.md E9).');
+				expr:resolvedType: '';
+				return '';
+			}
+			if (ownOwner == '') {
+				local String is provider: bsProviders:get(index: 0);
+				expr:bareProvider: provider;
+				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
+				if (providerRet == '') {
+					providerRet: 'Any';
+				}
+				res: providerRet;
+				expr:resolvedType: res;
+				return res;
+			}
+		}
 		local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While') && (method == 'loop' || method == 'init' || method == 'condition');
 		local Map of String to String is savedWhileVars;
 		if (isWhileLoop) {
@@ -2215,6 +2288,52 @@ Class is TypeChecker{
 	##
 	## @param program: The parsed program.
 	## @return: The type-error diagnostics.
+	## Collects the as-imported classes providing [methodName] for the
+	## bare scope of the current class — own bindings plus ancestors',
+	## one level deep (INSTANCE.md §2.3). Order-stable diagnostics.
+	##
+	## @param methodName: The bare-called function name.
+	## @return: Provider class names in import order.
+	Function of Array of String is bareScopeProviders(String is methodName){
+		local Array of String is out: [];
+		local String is walk: self:currentClassName;
+		local Int is hops: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return walk != '' && walk != 'Any' && hops < 8; },
+			iteration: local Function of Boolean(){
+				local ClassInfo is cls: self:findClass(name: walk);
+				if (cls:name != '') {
+					cls:members:each(action: local Function(Member is m){
+						if (m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+							m:initExpr:arrayItems:each(action: local Function(Expression is item){
+								if (item:kind == ExpressionKind:ARRAY) {
+									item:arrayItems:each(action: local Function(Expression is seg){
+										if (seg:kind == ExpressionKind:USING_AS) {
+											local String is prov: seg:stringValue;
+											local Boolean is already: false;
+											out:each(action: local Function(String is got){
+												if (got == prov) {
+													already: true;
+												}
+											});
+											if (!already && self:findMemberOwnerClass(className: prov, memberName: methodName) != '') {
+												out:add(item: prov);
+											}
+										}
+									});
+								}
+							});
+						}
+					});
+				}
+				walk: cls:baseClass;
+				hops: hops + 1;
+				return true;
+			}
+		);
+		return out;
+	}
+
 	## Validates one class's instance imports (as-form using entries,
 	## INSTANCE.md §2.1): the target must be a loaded non-enum class, and
 	## v1 restricts the form to field-less classes with no constructor

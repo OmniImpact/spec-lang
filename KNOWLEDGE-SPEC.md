@@ -39,6 +39,9 @@ replace Array of Array of String is using: [
 ```
 The loader scans two trees — the directory of the `.spec` file being compiled and the compiler executable's (walking up while a location holds no `.spec` content) — plus the working directory, recursively, pruning locations with no `.spec` content. It keeps a map (class name → candidate files); resolution loads the candidate and verifies its **declared namespace** — the namespace is the package, the map only says where to find candidates. One class per named file (the map key is the file-name stem). The root classes `String` `Buf` `Dir` `Stringable` `Any` are preloaded before user code; implicit `of Any` is appended to parentless non-enum classes.
 
+## Call Model (instance-based)
+Members are callable only through a value of the class's type. The class name itself admits exactly one call: `init` (construction). `['pkg', as ClassName()]` imports materialize an owned, anonymous instance scoped to the importing class (and inherited by subclasses); its members answer to the class-name prefix (`Math:round(...)`) and, where the name has exactly one provider in scope, bare (`round(...)`). Name collisions force qualification; the bare scope is own + inherited members plus direct as-imports, one level deep, methods only. Zero-field classes dispatch with no allocation (methods are self-free by construction); `init` is not callable on instances; a class-name receiver that is not instance-imported is a compile error (INSTANCE.md).
+
 ## Visibility
 - No modifier = public: overridable, callable everywhere.
 - `local` = private: declaring class only; cannot be replaced/merged/shadowed.

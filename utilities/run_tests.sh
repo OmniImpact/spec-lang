@@ -129,6 +129,42 @@ assert_compile_failure "negative-type-safety" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
 	"Non-exhaustive 'when'"
 
+assert_compile_failure "instance-model-n1-own-name" \
+	"$ROOT/tests/negative/n1_own_name_negative_test.spec" \
+	"through the class name inside 'N1SelfRead' itself; use self"
+
+assert_compile_failure "instance-model-n2-undefined-bare" \
+	"$ROOT/tests/negative/n2_undefined_bare_negative_test.spec" \
+	"Undefined function 'nope' on class 'N2UndefinedBare'"
+
+assert_compile_failure "instance-model-n3-bare-collision" \
+	"$ROOT/tests/negative/n3_bare_collision_negative_test.spec" \
+	"provided by the enclosing class and Math; qualify the call"
+
+assert_compile_failure "instance-model-n4-type-import" \
+	"$ROOT/tests/negative/n4_type_import_negative_test.spec" \
+	"Members of 'Math' are callable only through an instance"
+
+assert_compile_failure "instance-model-n5-duplicate-as" \
+	"$ROOT/tests/negative/n5_duplicate_as_negative_test.spec" \
+	"instance-imports 'Math' more than once"
+
+assert_compile_failure "instance-model-n6-import-cycle" \
+	"$ROOT/tests/negative/instancecycle/cycroot.spec" \
+	"Instance import cycle: A -> B -> A"
+
+assert_compile_failure "instance-model-n7-nonliteral-arg" \
+	"$ROOT/tests/negative/n7_nonliteral_as_arg_negative_test.spec" \
+	"must be direct literal values"
+
+assert_compile_failure "instance-model-n8-enum-import" \
+	"$ROOT/tests/negative/n8_enum_as_import_negative_test.spec" \
+	"Cannot instance-import enum 'ExpressionKind'"
+
+assert_compile_failure "instance-model-n10-init-on-instance" \
+	"$ROOT/tests/negative/n10_init_on_instance_negative_test.spec" \
+	"'init' is construct-only"
+
 assert_compile_failure "grouping-negative" \
 	"$ROOT/tests/negative/grouping_negative_test.spec" \
 	"Duplicate member 'value' in class 'Merged'"
@@ -237,7 +273,7 @@ echo "== Exit codes =="
 cat > "$WORK/valid.spec" <<'EOF'
 Class is ValidApp{
 	replace Array of Array of String is using: [
-		['base', 'io', Output]
+		['base', 'io', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		Output:line("valid");

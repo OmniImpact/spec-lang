@@ -64,6 +64,11 @@ Class is Expression{
 	String is methodName: '';
 	Array of NamedArg is methodArgs: [];
 
+	## CALL: for a bare (self-receiver) call resolved against the bare
+	## scope, the as-imported class providing the member (INSTANCE.md
+	## §2.3); '' when the call is an ordinary own-member dispatch.
+	String is bareProvider: '';
+
 	## BINARY: the operator and the right operand (the left operand shares
 	## leftExpr with CAST).
 	String is binaryOp: '';

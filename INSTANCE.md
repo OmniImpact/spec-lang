@@ -292,10 +292,16 @@ on seed/source disagreement.
   - [ ] A4: singletons — R1, R2, R3 (class added, aliases deleted).
   - [ ] A5: bare-scope/collision pass — resolve each forced-qualification
     diagnostic; no call-site churn beyond collisions.
-- [ ] **Phase B — the flip.** One commit: E5/E7/E8/E9 enforced as errors;
-  negative tests added (§8); worklist mode removed; KNOWLEDGE-SPEC/README
-  updated (R5); seed converged. The permissive seed still compiles the
-  new-style sources — that is what makes the flip small and safe.
+- [x] **Phase B — the flip (DONE).** E5/E7/E8/E9 enforced as errors; E8
+  deleted the unsound static paths (unguarded NULL self, fresh-instance
+  discard) leaving elision as the only non-init class-name dispatch; §2.3's
+  bare scope implemented (unique provider resolves, collisions force
+  qualification, zero providers is E9's error — the Main_abs accident is
+  unreachable). Negative tests N1-N10 wired into the suite (N6 as a
+  two-file cycle fixture; one class per named file keeps a self-loop
+  unrepresentable in a single file). KNOWLEDGE-SPEC/README updated. The
+  `--audit` worklist stays as a permanent compliance report (always zero;
+  kept instead of removed — it is the enforcement's dry run).
 
 ## 8. Test plan
 

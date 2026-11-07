@@ -144,7 +144,8 @@ Class is F{ replace Function is init(Map of String to String is args){
 		# 8. FIELD_ACCESS on a call result: typed from the field declaration.
 		local Array of String is e8: self:checkOf(src: "Class is Box{ Array of String is items: []; Function of Box is make(){ return Box:init(); } }
 Class is H{ replace Function is init(Map of String to String is args){
-	local Array of String is xs: Box:make():items;
+	local Box is made: Box:init();
+	local Array of String is xs: made:make():items;
 	local Int is n: xs:length();
 } }");
 		if (e8:length() == 0) {

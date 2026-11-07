@@ -141,6 +141,8 @@ replace Array of Array of String is using: [
 ```
 
 ### 8. Language Features
+
+- **Instance-Based Call Model**: members are callable only through instances; `['pkg', as ClassName()]` imports materialize an owned instance whose members answer to the class-name prefix, with bare calls for unambiguous names and compile-time collision enforcement. No NULL receivers, no hidden allocations — enforced by the compiler, not by convention.
 Spec includes modern, expressive language capabilities designed for type safety and clarity:
 
 - **User-Defined Generic Classes**: Express reusable parametric types with automated type parameter substitution and casting:
