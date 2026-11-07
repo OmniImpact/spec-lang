@@ -32,7 +32,7 @@ Spec is architected with a strict philosophy: **keep the compiler minimal, and b
 | `replace` | Override an ancestor member (mandatory and checked; root-contract overrides are always replace) |
 | `merge` | Compose with the ancestor member (array fold, or function delegation via `(args...)`) |
 | `is` | Bind a name to a declaration or value; also reads as equality in comparisons |
-| `as` | Cast: classes, numerics, and the `Hex`/`Bin`/`Oct` base conversions |
+| `as` | Type cast (classes, numerics, and `Hex`/`Bin`/`Oct` base conversions) or scoped region callback desugaring (`as: call;`, `as (params): call;`) |
 | `of` | Parent classes (pre-name: `Class of Greeter is EnglishGreeter`) or generic parameters (post-name or type-level: `Class of T is Box`, `Array of Int`) |
 | `to` | Second generic parameter (`Map of K to V`, `Function of A to B`) |
 | `if` / `else` | Conditionals — statement form and inline expression form |
@@ -93,18 +93,35 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 
 ### 4. Unblockable & Concurrency-First Iteration
 Spec has eliminated primitive loop keywords (`while`, `break`) entirely from the language grammar. Rather than hardcoding blocking loop locks, iteration in Spec is fully decoupled into lifecycle objects or inlined scoped loops:
-- **`While([Type is name: init, ...], evaluate: { ... }, iterate: { ... })`**: Concise, scoped inline loops with anonymous function block shorthand (`{ ... }`), inlined to native C11 statement expressions with zero closures and zero heap allocations.
+- **`While([Type is name: init, ...], evaluate: { ... }, iterate: { ... })`**: Concise, scoped inline loops with local state declarations and function block shorthands (`{ ... }`), inlined directly to native C11 statement expressions with zero closures and zero heap allocations.
+- **Mixed Scope & Operator Ergonomics**: Scoped loops freely read and mutate outer variables and collections, paired with prefix and postfix increment/decrement operators (`++`, `--`).
 - **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`. Returning `false` from `iteration` or `evaluate` cleanly terminates the loop.
 - **`base:iterator:LoopControl`**: Supports non-blocking halts (`stop()`) and asynchronous completion triggers (`onComplete`).
 - **`While:run(loop, control)`**: Drives the iterator lifecycle without blocking threads.
 
-### 5. Tab-Based Indentation Standard
+### 5. Scoped Region Desugaring (`as`)
+Managing lifecycles, locks, transactions, and file handles often creates deeply nested callback pyramids ("rightward drift"). Spec solves this by repurposing the existing keyword `as` at statement position to desugar the remainder of the block into an anonymous callback passed to the trailing positional argument of a function:
+```spec
+# Parameterless: acquires lock/transaction, runs remainder, unwinds on exit
+as: self:withTransaction(name: "OrderProcessing");
+
+# With parameter bindings: typed or untyped
+as (String is path): self:withTempFile(path: "/tmp/data.csv", content: rawData);
+
+# Clean, linear pipeline — path is in scope, zero indentation drift!
+output:line("Processing: " . path);
+```
+- **Zero New Keywords**: Reuses `as` unambiguously at statement start.
+- **Guaranteed LIFO Unwinding**: Nested `as` statements unwind in reverse stack order on exit, matching RAII, Python `with`, and Go `defer` with zero runtime machinery.
+- **Top-to-Bottom Flow**: Flattens nested callbacks into clean, sequential code.
+
+### 6. Tab-Based Indentation Standard
 Spec establishes a standard indentation convention using **tabs**. A built-in linter detects space-based indentation and optional parameter patterns:
 ```bash
 bin/spec --lint path/to/program.spec
 ```
 
-### 6. Multi-File Module Resolution
+### 7. Multi-File Module Resolution
 Dependencies declared in `using: [...]` are **pure package segments** — the
 namespace declared inside a file is what makes it the package; directories are
 organization, not identity. The loader scans two trees (the directory of the
@@ -123,7 +140,7 @@ replace Array of Array of String is using: [
 ];
 ```
 
-### 7. Language Features
+### 8. Language Features
 Spec includes modern, expressive language capabilities designed for type safety and clarity:
 
 - **User-Defined Generic Classes**: Express reusable parametric types with automated type parameter substitution and casting:
@@ -230,6 +247,13 @@ Spec includes modern, expressive language capabilities designed for type safety 
   local Int is shifted: mask << 4;
   ```
 
+- **Prefix & Postfix Increment/Decrement (`++` / `--`)**: Expressive, zero-overhead mutation for identifiers, fields, and index expressions:
+  ```spec
+  counter++;
+  local Int is next: ++index;
+  scores[idx]--;
+  ```
+
 - **Parallel Execution**: Fans pure worker closures across pthreads with lock-free per-thread RNG and atomic coordination:
   ```spec
   Parallel:run(
@@ -265,11 +289,13 @@ Spec includes modern, expressive language capabilities designed for type safety 
 
 ### Compiling and Running a Program
 ```bash
-# Compile
+# Compile and run a basic program
 bin/spec -i examples/helloworld.spec -o helloworld
-
-# Run with CLI arguments
 ./helloworld --name Daniel
+
+# Run the scoped region and resource management demo
+bin/spec -i examples/scope_as_demo.spec -o scope_demo
+./scope_demo
 
 # Emit generated C11 source code (optional)
 bin/spec -i examples/helloworld.spec --emit-c helloworld.c
@@ -340,6 +366,7 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **Enums & matching** | Algebraic enums with payloads; `when` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
+| **Iteration & scopes** | No loop keywords; zero-allocation scoped `While` inlines to C11 statement expressions; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
 | **Concurrency** | pthreads; mutex-protected collections; atomics; parallel fan-out | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
 | **Build model** | Transpiles to one C translation unit; `gcc` links; the compiler is written in Spec and bootstraps from a single canonical C file whose fixed point is verified on every build | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
