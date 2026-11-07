@@ -71,6 +71,16 @@ Class is DeclarationGenerator{
 		if (typeParams:indexOf(search: typeName, default: -1) >= 0) {
 			return 'void*';
 		}
+		local String is base: typeName;
+		if (base:contains(needle: ':')) {
+			local Array of String is parts: base:split(delimiter: ':');
+			base: parts:get(index: 0);
+		}
+		# Enum types pass by value in prototypes, matching the definitions
+		# the method emitter produces (tagged unions are pointers).
+		if (self:allEnumNames:has(key: base) && !self:allTaggedEnums:has(key: base)) {
+			return base;
+		}
 		return self:utils:cTypeFor(typeName: typeName);
 	}
 

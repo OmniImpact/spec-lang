@@ -73,7 +73,11 @@ Class is Linter{
 	Function is lintIndentation(String is source, Array of LintIssue is issues){
 		local Int is lineNum: 0;
 		local Int is depth: 0;
-		source:lines():each(action: local Function(String is line){
+		# Own the lines array: a fresh call result rides the claim pool,
+    # and this loop's bodies claim repeatedly — 32 claims would evict it
+    # mid-iteration. A var-decl init is a consumption position.
+    local Array of String is srcLines: source:lines();
+    srcLines:each(action: local Function(String is line){
 			lineNum: lineNum + 1;
 			local Int is tabs: line:countLeading(search: "\t");
 			local String is rest: line:substring(start: tabs, end: line:length());

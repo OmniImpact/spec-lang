@@ -24,6 +24,7 @@ Class is TypeChecker{
 		['spec', 'base', 'compiler', 'ast', Member],
 		['spec', 'base', 'compiler', 'ast', MemberKind],
 		['spec', 'base', 'compiler', 'ast', ClassInfo],
+		['spec', 'base', 'compiler', 'ast', ClassBindings],
 		['spec', 'base', 'compiler', 'ast', NamedArg],
 		['spec', 'base', 'compiler', 'ast', WhenArm],
 		['spec', 'base', 'compiler', 'ast', ProgramNode],
@@ -95,6 +96,9 @@ Class is TypeChecker{
 
 	## Well-known names (builtin types, sentinels).
 	local WellKnown is names: WellKnown:init();
+
+	## The shared floor-class classification (emission + call contracts).
+	local ClassBindings is bindings: ClassBindings:init();
 
 	replace Function is init(){
 		self:programClasses: [];
@@ -481,7 +485,10 @@ Class is TypeChecker{
 						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					}
-				} else if (!p:hasDefault) {
+				} else if (!p:hasDefault && !self:isBindingDeclaration(cls: recvCls)) {
+					# Binding declarations (sysinternal + runtime-managed)
+					# sketch API surface, not call contracts — their C
+					# implementations carry optional/variadic semantics.
 					local String is msg: 'Missing argument \'' . pName . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\'.';
 					self:addError(line: self:currentLine, msg: msg);
 				}
@@ -647,6 +654,38 @@ Class is TypeChecker{
 	##
 	## Bidirectional core: [expected] carries the contextual type from the
 	## declaration/assignment/return site; array and map literals adopt it
+	## Maps the floor singletons' lowercase usage spellings to their class
+	## names; any other name returns unchanged.
+	##
+	## @param name: A referenced identifier.
+	## @return: The class name to resolve against.
+	Function of String is canonicalClassName(String is name){
+		if (name == 'output') {
+			return 'Output';
+		}
+		if (name == 'error') {
+			return 'Error';
+		}
+		if (name == 'math') {
+			return 'Math';
+		}
+		return name;
+	}
+
+	## True when [cls]'s declarations are environment bindings rather than
+	## authoritative contracts: sysinternal C-floor bindings (structural,
+	## permanent — the namespace is the annotation) and, transitionally, the
+	## runtime-managed classes whose C implementations carry optional or
+	## variadic semantics (TRANSITION.md section 2; dies at Phase E). Call
+	## sites against these classes skip argument validation.
+	##
+	## @param cls: The receiving class.
+	## @return: true when calls against it skip argument validation.
+	Function of Boolean is isBindingDeclaration(ClassInfo is cls){
+		local ClassBindings is b: self:bindings;
+		return b:isTransparent(c: cls);
+	}
+
 	## directly, replacing the previous compiler's mutable container hint.
 	##
 	## @param expr: AST expression node.
@@ -688,6 +727,10 @@ Class is TypeChecker{
 					res: self:allEnumVariants:getString(key: name, default: Primitive:ANY:value());
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
+				} else if (self:registeredClasses:has(key: self:canonicalClassName(name: name))) {
+					# Floor singletons are callable in their lowercase usage
+					# forms (output:line, error:line, math:sqrt).
+					res: self:canonicalClassName(name: name);
 				} else if (self:isPrimitive(t: name)) {
 					res: name;
 				} else if (name != '') {
@@ -722,6 +765,9 @@ Class is TypeChecker{
 						rootType: root;
 					} else if (self:registeredClasses:has(key: root)) {
 						rootType: root;
+					} else if (self:registeredClasses:has(key: self:canonicalClassName(name: root))) {
+						# Floor singletons in lowercase usage form.
+						rootType: self:canonicalClassName(name: root);
 					}
 					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType);
 					While:run(loop: pLoop);
@@ -787,20 +833,22 @@ Class is TypeChecker{
 							# Declared cast: the source class maps the target to a
 							# producing method (G6 emits the call).
 							res: target;
+						} else if (self:isPrimitive(t: target)) {
+							# Primitive conversion casts take priority over the
+							# class-cast path: Int as String is the machine
+							# conversion even though a String class is loaded.
+							# These die when the primitive classes land in Spec
+							# and declare their conversions.
+							if (!self:isCastable(src: src, target: target)) {
+								self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'' . target . '\'.');
+							}
+							res: target;
 						} else if (self:registeredClasses:has(key: target) || self:registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0))) {
 							# Class casts are inheritance-based: unrelated classes
 							# cannot cast, Any casts to anything.
 							local Boolean is related: src == Primitive:ANY:value() || self:isSubclassOf(subName: src, baseName: target) || self:isSubclassOf(subName: target, baseName: src);
 							if (!related) {
 								self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to unrelated class \'' . target . '\'.');
-							}
-							res: target;
-						} else if (self:isPrimitive(t: target)) {
-							# Primitive conversion casts: the machine conversions
-							# (parse, truncate, widen). These die when the primitive
-							# classes land in Spec and declare their conversions.
-							if (!self:isCastable(src: src, target: target)) {
-								self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'' . target . '\'.');
 							}
 							res: target;
 						} else {

@@ -135,6 +135,14 @@ Class is BuiltinCallGenerator{
 			return 'spec_error_line(' . errStrC . ')';
 		}
 
+		# Reflection:class()/method() — compile-time source identity.
+		if (targetC == 'Reflection' && expr:methodName == 'class' && expr:argCount() == 0) {
+			return 'spec_string_intern("' . cg:currentClassName . '")';
+		}
+		if (targetC == 'Reflection' && expr:methodName == 'method' && expr:argCount() == 0) {
+			return 'spec_string_intern("' . cg:currentMethodName . '")';
+		}
+
 		# Namespace-driven sysinternal floor binding: a call on a class whose
 		# namespace ends with `sysinternal` compiles to spec_<snake(method)>.
 		local String is floorCls: '';
@@ -162,14 +170,6 @@ Class is BuiltinCallGenerator{
 			if (bound != '') {
 				return bound;
 			}
-		}
-
-		# Reflection:class()/method() — compile-time source identity.
-		if (targetC == 'Reflection' && expr:methodName == 'class' && expr:argCount() == 0) {
-			return 'spec_string_intern("' . cg:currentClassName . '")';
-		}
-		if (targetC == 'Reflection' && expr:methodName == 'method' && expr:argCount() == 0) {
-			return 'spec_string_intern("' . cg:currentMethodName . '")';
 		}
 
 		# String:newline() — the newline constant.
@@ -315,17 +315,30 @@ Class is BuiltinCallGenerator{
 				return 'spec_file_exists(' . pC . ')';
 			}
 			if (expr:methodName == 'read') {
-				local Expression is pArg: self:argValue(expr: expr, index: 0);
-				local String is pC: cg:generateExpression(expr: pArg);
-				return 'spec_file_read(' . pC . ')';
+				local String is pathC: 'spec_string_intern("")';
+				local String is defC: 'spec_string_intern("")';
+				local String is onSuccC: 'NULL';
+				local String is onErrC: 'NULL';
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (arg:name == 'path') { pathC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'default') { defC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onSuccess') { onSuccC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onError') { onErrC: cg:generateExpression(expr: arg:value); }
+				});
+				return 'spec_file_read(' . pathC . ', ' . defC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
 			}
 			if (expr:methodName == 'write') {
-				local String is argsCs: '';
+				local String is pathC: 'spec_string_intern("")';
+				local String is contentC: 'spec_string_intern("")';
+				local String is onSuccC: 'NULL';
+				local String is onErrC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if (argsCs != '') { argsCs: argsCs . ', '; }
-					argsCs: argsCs . cg:generateExpression(expr: arg:value);
+					if (arg:name == 'path') { pathC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'content') { contentC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onSuccess') { onSuccC: cg:generateExpression(expr: arg:value); }
+					if (arg:name == 'onError') { onErrC: cg:generateExpression(expr: arg:value); }
 				});
-				return 'spec_file_write(' . argsCs . ')';
+				return 'spec_file_write(' . pathC . ', ' . contentC . ', (SpecClosure*)(' . onSuccC . '), (SpecClosure*)(' . onErrC . '))';
 			}
 			if (expr:methodName == 'remove') {
 				local Expression is pArg: self:argValue(expr: expr, index: 0);

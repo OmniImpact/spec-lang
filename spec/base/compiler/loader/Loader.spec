@@ -191,7 +191,8 @@ Class is Loader{
 		local Lexer is lexer: Lexer:init(source: src);
 		local Array of Token is tokens: lexer:tokenize();
 		if (lexer:hasErrors()) {
-			lexer:getErrors():each(action: local Function(Error is err){
+			local Array of Error is lexErrors: lexer:getErrors();
+			lexErrors:each(action: local Function(Error is err){
 				self:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . err:toString());
 			});
 		}
@@ -199,7 +200,8 @@ Class is Loader{
 		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();
 		if (parser:hasErrors()) {
-			parser:getErrors():each(action: local Function(Error is err){
+			local Array of Error is parseErrs: parser:getErrors();
+			parseErrs:each(action: local Function(Error is err){
 				self:parseErrors:add(item: err:toString());
 			});
 		}
@@ -296,6 +298,18 @@ Class is Loader{
 				if (File:exists(path: classFile)) {
 					resolved: true;
 					self:loadFile(filePath: classFile);
+					return;
+				}
+				# The class may share a file with its package siblings (e.g.
+				# LintIssue inside Linter.spec): load the whole directory.
+				if (File:exists(path: dir)) {
+					resolved: true;
+					local Array of String is dirNames: Dir:dirList(path: dir);
+					dirNames:each(action: local Function(String is nm){
+						if (nm:endsWith(suffix: '.spec')) {
+							self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
+						}
+					});
 				}
 				return;
 			}

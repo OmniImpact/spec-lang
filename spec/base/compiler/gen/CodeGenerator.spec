@@ -115,6 +115,10 @@ Class is CodeGenerator{
 	## Locals declared in the current scope (SPEC_AUTO injection).
 	local Map of String to String is localScopeVars: Map:init();
 
+	## Parameters of the method being generated: names are borrow targets —
+	## assignment to them must not release the caller's argument.
+	local Map of String to String is currentParams: Map:init();
+
 	## True when the current inline-return target is ARC-managed
 	## (reassignment goes through spec_assign).
 	local Boolean is inlineReturnArc: false;
@@ -214,13 +218,20 @@ Class is CodeGenerator{
 	##
 	## @param classes: The flattened program classes.
 	Function is registerProgram(Array of ClassInfo is classes){
-		self:programClasses: classes;
+		# Flatten nested classes into the registries: the driver hands over
+		# the loaded set, and nested classes are first-class citizens for
+		# lookups (static calls on them dispatch by name).
+		local Array of ClassInfo is flattened: [];
+		classes:each(action: local Function(ClassInfo is c){
+			self:collectClasses(c: c, acc: flattened);
+		});
+		self:programClasses: flattened;
 		self:allClassNames: Map:init();
 		self:allEnumNames: Map:init();
 		self:allEnumVariants: Map:init();
 		self:allStringBackedEnums: Map:init();
 		self:allTaggedEnums: Map:init();
-		classes:each(action: local Function(ClassInfo is c){
+		flattened:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:name, value: 'true');
 			if (c:baseClass == self:names:enumHeader()) {
 				self:allEnumNames:set(key: c:name, value: 'true');
@@ -250,20 +261,23 @@ Class is CodeGenerator{
 		if (self:isPrimitiveName(t: typeName)) {
 			return false;
 		}
-		if (typeName:contains(needle: ':')) {
-			local Array of String is parts: typeName:split(delimiter: ':');
-			typeName: parts:get(index: 0);
+		# Base-name extraction goes through a local: parameters are borrows,
+		# and reassigning one would release the caller's argument.
+		local String is baseName: typeName;
+		if (baseName:contains(needle: ':')) {
+			local Array of String is parts: baseName:split(delimiter: ':');
+			baseName: parts:get(index: 0);
 		}
-		if (self:allEnumNames:has(key: typeName) && !self:allTaggedEnums:has(key: typeName)) {
+		if (self:allEnumNames:has(key: baseName) && !self:allTaggedEnums:has(key: baseName)) {
 			return false;
 		}
-		if (self:allTaggedEnums:has(key: typeName)) {
+		if (self:allTaggedEnums:has(key: baseName)) {
 			return true;
 		}
-		if (typeName:startsWith(prefix: 'Array') || typeName:startsWith(prefix: 'Map') || typeName:startsWith(prefix: 'List') || typeName:startsWith(prefix: 'Function') || typeName == 'LoopControl') {
+		if (baseName:startsWith(prefix: 'Array') || baseName:startsWith(prefix: 'Map') || baseName:startsWith(prefix: 'List') || baseName:startsWith(prefix: 'Function') || baseName == 'LoopControl') {
 			return true;
 		}
-		if (self:allClassNames:has(key: typeName)) {
+		if (self:allClassNames:has(key: baseName)) {
 			return true;
 		}
 		return false;
@@ -411,6 +425,23 @@ Class is CodeGenerator{
 			return base;
 		}
 		return containerC;
+	}
+
+	## Resolves a method's return type to its C type: enum returns pass by
+	## value (the registry-aware cTypeFor), Function types unwrap to their
+	## return type's C type.
+	##
+	## @param t: Type descriptor.
+	## @return: C type string.
+	Function of String is resolveReturnType(Type is t){
+		if (Primitive:of(t:name) == Primitive:FUNCTION) {
+			if (t:params:length() > 0) {
+				local Type is ret: t:params:get(index: 0);
+				return self:cTypeFor(typeName: ret:name);
+			}
+			return 'void';
+		}
+		return self:cTypeFor(typeName: t:name);
 	}
 
 	## Formats a [Type] descriptor into the internal colon form.
@@ -849,25 +880,24 @@ Class is CodeGenerator{
 		return self:allClassNames:has(key: targetT);
 	}
 
-	## Decides whether an expression renders as a C string directly (no
-	## spec_buf_to_cstring wrap needed).
+	## Decides whether an expression's value is a Spec String (SpecBuf*):
+	## inference first (String-typed calls, fields, concat chains), then the
+	## literal kinds. Equality on such values must compare CONTENT, not
+	## pointers.
 	##
 	## @param expr: The expression node.
 	## @param exprC: Its generated C.
-	## @return: true when the C is already a C string.
+	## @return: true when the C is already a Spec String.
 	Function of Boolean is isStringExpr(Expression is expr, String is exprC){
+		local String is resolved: self:inferTargetType(expr: expr);
+		if (resolved == 'String' || resolved == 'string') {
+			return true;
+		}
 		local ExpressionKind is kind: expr:kind;
 		if (kind == ExpressionKind:STRING) {
 			return true;
 		}
-		if (kind == ExpressionKind:IDENT) {
-			return false;
-		}
-		if (kind == ExpressionKind:CALL) {
-			# toString-family calls return String (SpecBuf*).
-			return false;
-		}
-		if (exprC:startsWith(prefix: 'spec_string_') || exprC:startsWith(prefix: 'spec_buf_')) {
+		if (kind == ExpressionKind:BINARY && expr:binaryOp == '.') {
 			return true;
 		}
 		return false;
@@ -893,6 +923,22 @@ Class is CodeGenerator{
 		}
 		if (kind == ExpressionKind:BOOL) {
 			return 'spec_to_string_bool(' . exprC . ')';
+		}
+		if (kind == ExpressionKind:BINARY) {
+			local String is op: expr:binaryOp;
+			if (op == '+' || op == '-' || op == '*' || op == '/' || op == '%' || op == '&' || op == '|' || op == '^' || op == '<<' || op == '>>') {
+				return 'spec_to_string_int(' . exprC . ')';
+			}
+			if (op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' || op == '&&' || op == '||') {
+				return 'spec_to_string_bool(' . exprC . ')';
+			}
+			return exprC;
+		}
+		if (kind == ExpressionKind:UNARY) {
+			if (expr:unaryOp == '!') {
+				return 'spec_to_string_bool(' . exprC . ')';
+			}
+			return 'spec_to_string_int(' . exprC . ')';
 		}
 		local String is t: self:inferTargetType(expr: expr);
 		if (t == 'String') {
@@ -1341,7 +1387,9 @@ Class is CodeGenerator{
 				if (self:allClassNames:has(key: srcT) && !self:allEnumNames:has(key: srcT) && !self:policy:isTransparent(c: self:findClass(name: srcT))) {
 					return 'spec_type_name(' . innerC . ')';
 				}
-				return innerC;
+				# Unknown or computed sources (arithmetic binaries, calls with
+				# unresolved types) route through the string-wrap policy.
+				return self:wrapToString(expr: expr:leftExpr, exprC: innerC);
 			}
 			else: {
 				if (self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:policy:isTransparent(c: self:findClass(name: target))) {
@@ -1440,7 +1488,7 @@ Class is CodeGenerator{
 			}
 			local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
 			if (mDef:kind == MemberKind:METHOD) {
-				local String is mRetType: self:utils:resolveReturnType(t: mDef:memberType);
+				local String is mRetType: self:resolveReturnType(t: mDef:memberType);
 				if (mRetType != '' && mRetType != 'Void' && mRetType != 'void') {
 					return targetC . '_' . expr:methodName . '(NULL' . argsJoined . ')';
 				}
@@ -1466,7 +1514,7 @@ Class is CodeGenerator{
 			local Member is anyM: self:lookupMethodMember(className: 'Any', methodName: expr:methodName);
 			if (anyM:kind == MemberKind:METHOD) {
 				local String is slotC: self:methodSlots:getString(key: expr:methodName, default: '0');
-				local String is retT: self:utils:resolveReturnType(t: anyM:memberType);
+				local String is retT: self:resolveReturnType(t: anyM:memberType);
 				local String is argsC: '';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					argsC: argsC . ', ' . self:generateExpression(expr: arg:value);
@@ -1491,7 +1539,7 @@ Class is CodeGenerator{
 		if (self:overriddenMethods:has(key: expr:methodName) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:policy:isTransparent(c: self:findClass(name: objType)) && self:methodSlots:has(key: expr:methodName)) {
 			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
 			if (vm:kind == MemberKind:METHOD) {
-				local String is retT: self:utils:resolveReturnType(t: vm:memberType);
+				local String is retT: self:resolveReturnType(t: vm:memberType);
 				local String is sigC: objType . '*';
 				vm:params:each(action: local Function(Parameter is p){
 					sigC: sigC . ', ' . self:cTypeFor(typeName: p:paramType:name);
@@ -1622,8 +1670,17 @@ Class is CodeGenerator{
 			capReleases: capReleases . "    if (_env->self) spec_release((void*)_env->self);\n";
 		}
 
+		# Names the body redeclares shadow the outer scope — they are NOT
+		# captures; binding them from the env would redeclare the local.
+		local Map of String to String is bodyLocals: Map:init();
+		expr:anonBody:each(action: local Function(Statement is s){
+			if (s:kind == StatementKind:VAR_DECL) {
+				bodyLocals:set(key: s:varName, value: 'true');
+			}
+		});
+
 		outerKeys:each(action: local Function(String is k){
-			if (paramNames:indexOf(search: k, default: -1) < 0) {
+			if (paramNames:indexOf(search: k, default: -1) < 0 && !bodyLocals:has(key: k)) {
 				local String is cVar: self:utils:cIdent(name: k);
 				if (bodyC:contains(needle: cVar)) {
 					local String is vType: savedVars:getString(key: k, default: '');
@@ -2026,6 +2083,11 @@ Class is CodeGenerator{
 		}
 		local Boolean is isArcLhs: self:isArcType(typeName: lhsType);
 		if (isArcLhs) {
+			# Parameters are borrows: overwriting one retains the new value
+			# but must not release the caller's argument.
+			if (stmt:assignTarget:kind == ExpressionKind:IDENT && self:currentParams:has(key: stmt:assignTarget:stringValue)) {
+				return '    spec_retain((void*)(' . valC . ')); ' . targetC . ' = ' . valC . ";\n";
+			}
 			return '    spec_assign((void**)&' . targetC . ', (void*)(' . valC . "));\n";
 		}
 		return '    ' . targetC . ' = ' . valC . ";\n";
@@ -2052,7 +2114,7 @@ Class is CodeGenerator{
 		local Member is superM: self:lookupMethodMember(className: dispatchCls, methodName: self:currentMethodName);
 		local String is argsC: self:formatCallArguments(className: dispatchCls, methodName: self:currentMethodName, args: stmt:forwardArgs);
 		local String is callC: dispatchCls . '_' . self:currentMethodName . '((' . dispatchCls . '*)self' . argsC . ')';
-		local String is superRet: self:utils:resolveReturnType(t: superM:memberType);
+		local String is superRet: self:resolveReturnType(t: superM:memberType);
 		if (superRet != 'void') {
 			return '    return ' . callC . ";\n";
 		}
@@ -2157,7 +2219,7 @@ Class is CodeGenerator{
 		self:inMethod: true;
 		self:currentMethodName: method:name;
 		self:currentMethodReturnType: self:formatTypeString(t: method:memberType);
-		local String is retType: self:utils:resolveReturnType(t: method:memberType);
+		local String is retType: self:resolveReturnType(t: method:memberType);
 		if (retType == 'void') {
 			if (method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value()) {
 				retType: 'bool';
@@ -2166,8 +2228,10 @@ Class is CodeGenerator{
 
 		self:localVars: Map:init();
 		self:localScopeVars: Map:init();
+		self:currentParams: Map:init();
 		method:params:each(action: local Function(Parameter is p){
 			self:localVars:set(key: p:name, value: self:formatTypeString(t: p:paramType));
+			self:currentParams:set(key: p:name, value: 'true');
 		});
 
 		local String is selfCType: self:cTypeFor(typeName: classDef:name);
@@ -2528,7 +2592,8 @@ Class is CodeGenerator{
 		}
 
 		local Map of String to String is savedVars: Map:init();
-		self:localVars:keys():each(action: local Function(String is k){
+		local Array of String is outerKeys: self:localVars:keys();
+		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 
@@ -2621,7 +2686,8 @@ Class is CodeGenerator{
 		local String is savedRetLbl: self:inlineReturnLabel;
 
 		local Map of String to String is savedVars: Map:init();
-		self:localVars:keys():each(action: local Function(String is k){
+		local Array of String is outerKeys: self:localVars:keys();
+		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 
@@ -2684,7 +2750,8 @@ Class is CodeGenerator{
 		local String is savedRetLbl: self:inlineReturnLabel;
 
 		local Map of String to String is savedVars: Map:init();
-		self:localVars:keys():each(action: local Function(String is k){
+		local Array of String is outerKeys: self:localVars:keys();
+		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 

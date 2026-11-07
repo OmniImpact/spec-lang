@@ -78,7 +78,8 @@ Class is Driver{
 			local Array of Token is tokens: lexer:tokenize();
 			if (lexer:hasErrors()) {
 				error:line('Lexical errors encountered during linting:');
-				lexer:getErrors():each(action: local Function(Error is err){
+				local Array of Error is lexErrors: lexer:getErrors();
+				lexErrors:each(action: local Function(Error is err){
 					error:line('  [' . inputPath . '] ' . err:toString());
 				});
 				Process:exit(status: 1);
@@ -88,7 +89,8 @@ Class is Driver{
 			local ProgramNode is lintProgram: parser:parseProgram();
 			if (parser:hasErrors()) {
 				error:line('Syntax errors encountered during linting:');
-				parser:getErrors():each(action: local Function(Error is err){
+				local Array of Error is parseErrs: parser:getErrors();
+				parseErrs:each(action: local Function(Error is err){
 					error:line(err:toString());
 				});
 				Process:exit(status: 1);
@@ -128,7 +130,8 @@ Class is Driver{
 		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes');
 		if (loader:getParseErrors():length() > 0) {
 			error:line('Compilation errors encountered during loading:');
-			loader:getParseErrors():each(action: local Function(String is err){
+			local Array of String is loadErrors: loader:getParseErrors();
+			loadErrors:each(action: local Function(String is err){
 				error:line(err);
 			});
 			error:line('Compilation aborted due to syntax or load errors.');
