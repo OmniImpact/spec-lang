@@ -1,21 +1,21 @@
-/target
-# Compiler binaries (built by ./bootstrap.sh from bootstrap/spec.c)
+# Compiler binaries (./bootstrap.sh builds bin/spec from bootstrap/spec.c)
 /bin/spec
 /bin/spec-asan
+/spec-asan
+/spec-stage*
+# Demo binaries (built from examples/ on demand)
+/mandelbrot
+/pi
+/helloworld
 /helloworldspec
 /featurestest
 /blackjack
 /blackjack_shorthand
 /features_test
-/helloworld
+# Build intermediates
 *.spec.c
 *.c
 !bootstrap/spec.c
-# Sanitizer build artifact (run_sanitized.sh builds it fresh)
-/bin/spec-asan
-# Convergence-cycle scratch binaries
-/spec-stage*
-/spec-asan
-TASKS.md
-/mandelbrot
-/pi
+# Editor project files
+*.kdev4
+.kdev4/

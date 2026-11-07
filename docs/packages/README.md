@@ -12,11 +12,10 @@ This document details the standard library packages available in the Spec runtim
 |---|---|---|
 | **`base:io`** | `output:line`, `error:line`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
 | **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
-| **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` | Thread-safe collections with functional combinators. |
+| **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` · `List` — `push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString` | Thread-safe collections with functional combinators. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop engine and inline closure iteration. |
 | **`base:sys`** | `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | Processes, timing, memory/thread introspection, atomics, parallel fan-out. |
-| **`base:reflect`** | `Type`, `Parameter`, `Member`, `ClassInfo` | Runtime type information and reflection metadata. |
-| **`base:meta`** | `Expression`, `Statement`, `NamedArg`, `WhenArm`, `ProgramNode` | Syntax trees and meta-programming models. |
+| **`base:core`** | `Any`, `Stringable`, `String` | The root class lattice and the string type over the `base:sysinternal` floor. |
 
 Full API reference by package below.
 
@@ -40,14 +39,7 @@ Full API reference by package below.
    - [`base:sys:Process`](#basesysprocess)
    - [`base:sys:SourceLocation`](#basesyssourcelocation-libbasesyssourcelocationspec)
    - [`base:sys:StackFrame`](#basesysstackframe-libbasesysstackframespec)
-6. [`base:reflect`](#6-basereflect)
-   - [`base:reflect:Type`](#6-basereflect)
-   - [`base:reflect:Parameter`](#6-basereflect)
-   - [`base:reflect:Member`](#6-basereflect)
-   - [`base:reflect:Class`](#6-basereflect)
-7. [`base:meta`](#7-basemeta)
-   - [AST Models (`Expression`, `Statement`, `NamedArg`, `ProgramNode`)](#7-basemeta)
-8. [String Inspection Primitives](#8-string-inspection-primitives)
+6. [String Inspection Primitives](#8-string-inspection-primitives)
 
 ---
 
@@ -55,8 +47,8 @@ Full API reference by package below.
 
 Importing:
 ```spec
-replace Array of String is using: [
-	base:io:*
+replace Array of Array of String is using: [
+	['base', 'io']
 ];
 ```
 
@@ -117,8 +109,8 @@ Detection order: `ioctl(TIOCGWINSZ)`, then the `COLUMNS`/`LINES` environment var
 
 Importing:
 ```spec
-replace Array of String is using: [
-	base:math:*
+replace Array of Array of String is using: [
+	['base', 'math']
 ];
 ```
 
@@ -170,9 +162,9 @@ Implemented in pure Spec (`lib/base/math/Math.spec`):
 
 Importing:
 ```spec
-replace Array of String is using: [
-	base:struct:Array,
-	base:struct:Map
+replace Array of Array of String is using: [
+	['base', 'struct', Array],
+	['base', 'struct', Map]
 ];
 ```
 
@@ -393,8 +385,8 @@ scores["alice"]: 98;   # Updates existing entry
 
 Importing:
 ```spec
-replace Array of String is using: [
-	base:iterator:*
+replace Array of Array of String is using: [
+	['base', 'iterator']
 ];
 ```
 
@@ -419,8 +411,8 @@ Controls loop continuation and completion triggers:
 
 Importing:
 ```spec
-replace Array of String is using: [
-	base:sys:*
+replace Array of Array of String is using: [
+	['base', 'sys']
 ];
 ```
 
@@ -458,53 +450,7 @@ Represents a call frame in a runtime call stack or debugging trace:
 - `Process:peakMemoryKb() -> Int` — peak resident set size in kilobytes (`getrusage`), `0` when unavailable.
 - `Process:threadCount() -> Int` — live OS thread count for the current process (`/proc/self/status`), `1` when unavailable.
 
-## 6. `base:reflect`
-
-Importing:
-```spec
-replace Array of String is using: [
-	base:reflect:*
-];
-```
-
-Provides runtime type descriptors and object model reflection:
-
-- **`base:reflect:Type` (`lib/base/reflect/Type.spec`)**:
-  Represents primitive and parameterized types (e.g. `Int`, `Function of String`, `Map of String to Int`).
-  - `Type:init(name: String)`
-  - `Type:withParams(name: String, params: Array of Type)`
-  - `type:getName() -> String`
-  - `type:getParams() -> Array of Type`
-  - `type:isGeneric() -> Boolean`
-  - `type:toString() -> String`
-- **`base:reflect:Parameter` (`lib/base/reflect/Parameter.spec`)**:
-  Represents method parameter definitions: `name: String`, `paramType: Type`.
-- **`base:reflect:Member` (`lib/base/reflect/Member.spec`)**:
-  Represents field, method, or nested class members on a type.
-- **`base:reflect:Class` (`lib/base/reflect/Class.spec`)**:
-  Represents class definitions and metadata: `name: String`, `baseClass: String`, `members: Array of Member`.
-
----
-
-## 7. `base:meta`
-
-Importing:
-```spec
-replace Array of String is using: [
-	base:meta:*
-];
-```
-
-Provides concrete Abstract Syntax Tree models for code generation, desugaring, macros, and tooling:
-
-- **`base:meta:NamedArg`**: Named arguments in method calls.
-- **`base:meta:Expression`**: Expressions (`STRING`, `NUMBER`, `FLOAT`, `BOOL`, `IDENT`, `PATH`, `ARRAY`, `CALL`, `BINARY`, `UNARY`).
-- **`base:meta:Statement`**: Statements (`VAR_DECL`, `ASSIGN`, `IF`, `RETURN`, `CLASS`, `EXPR`).
-- **`base:meta:ProgramNode`**: Program root node containing an array of `Class` definitions.
-
----
-
-## 8. String Inspection Primitives
+## 6. String Inspection Primitives
 
 Strings in Spec provide built-in methods for lexical scanning, text transformation, and parsing:
 

@@ -51,9 +51,9 @@ Every program is organized into classes. The runtime instantiates the class cont
 ```spec
 Class is HelloWorld{
 
-	replace Array of String is using: [
-		base:struct:Map,
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Map],
+		['base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -185,7 +185,7 @@ Methods and functions declare their signatures using the `Function` type:
 
 ```spec
 of MergeBase is MergeChild{
-	merge local Array of String is using: [base:struct:Array];
+	merge local Array of Array of String is using: [['base', 'struct', Array]];
 	merge local Array of String is tags: ["extended"];
 }
 ```
@@ -381,14 +381,16 @@ local Option is opt2: Option:None;
 Payload variants are matched and destructured using Spec's `when` syntax (see [Pattern Destructuring with `when`](#pattern-destructuring-with-when)).
 
 ### Imports & `using`
-Packages are imported via the class `using` property:
+Packages are imported via the class `using` property. Each entry names the
+package segments plus the class to load; an entry ending at the package
+imports the whole package (the wildcard):
 ```spec
-replace Array of String is using: [
-	base:struct:Array,
-	base:math:*,
-	base:io:*,
-	base:sys:*,
-	base:iterator:*
+replace Array of Array of String is using: [
+	['base', 'struct', Array],
+	['base', 'math', Math],
+	['base', 'io', Output],
+	['base', 'sys', Process],
+	['base', 'iterator', While]
 ];
 ```
 Imports map directly to `.spec` files in the standard library (`lib/`) or project directory.
@@ -400,7 +402,7 @@ Loader-recognized sibling of `using`). Every fragment declares the class it belo
 to; at load time the Loader merges all fragments into a single class:
 
 ```spec
-## lib/compiler/CodeGenerator_Expr.spec
+## CodeGeneratorExpressions.spec
 Class is CodeGeneratorExpressions{
 
 	replace Array of String is group: [CodeGenerator];
@@ -715,7 +717,7 @@ The Spec compiler coordinates multi-file compilation with precise diagnostics:
 - **Clean Synchronization**: The parser records syntax errors, synchronizes at statement boundaries, and cleanly halts without cascading crashes.
 - **Semantic Type Provenance**: The semantic type checker annotates diagnostics with source file provenance:
   ```text
-  [lib/base/struct/Array.spec] Incompatible assignment type
+  [spec/lib/base/struct/Array.spec] Incompatible assignment type
   ```
 
 ---

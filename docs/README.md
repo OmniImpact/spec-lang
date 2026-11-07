@@ -17,13 +17,12 @@ Comprehensive reference for the Spec language syntax, typing rules, and executio
 ---
 
 ### 2. [Standard Library Packages](packages/README.md)
-Reference manual for the standard library implemented in Spec (`lib/`):
+Reference manual for the standard library implemented in Spec (`spec/lib/`):
 - **[`base:io`](packages/README.md#1-baseio)**: Console output (`output:line`), asynchronous input prompt (`Input:prompt`), and filesystem I/O (`File:read`, `File:write`, `File:exists`).
 - **[`base:math`](packages/README.md#2-basemath)**: Trigonometry, rounding, random generation, and pure Spec helpers (`abs`, `min`, `max`, `clamp`).
 - **[`base:struct`](packages/README.md#3-basestruct)**: Dynamic array containers (`Array` with `map`, `fold`, `filter`, `each`) and 64-bucket hash tables (`Map` with `each`, literals, and bracket indexing).
 - **[`base:iterator`](packages/README.md#4-baseiterator)**: Decoupled loop execution engine (`Loop`, `LoopControl`, `While:run`, `While:condition`).
 - **[`base:sys`](packages/README.md#5-basesys)**: Subprocess execution, source locations, and operating system dispatch (`Process:execute`).
-- **[`base:reflect` & `base:meta`](packages/README.md#6-basereflect)**: Runtime type descriptors, class/member metadata, and AST models.
 
 ---
 

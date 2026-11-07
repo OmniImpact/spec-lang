@@ -153,16 +153,17 @@ While:run(loop: CountLoop:init());
   ```spec
   Class is MyModule{
 
-  	replace Array of String is using: [
-  		base:io:*,
-  		base:struct:Array,
-  		base:reflect:Type
+  	replace Array of Array of String is using: [
+  		['base', 'io', Output],
+  		['base', 'struct', Array]
   	];
 
   	...
   }
   ```
-* **One Primary Class Per File**: The primary class name must match the file name (e.g. `lib/base/sys/SourceLocation.spec` defines `class SourceLocation`).
+  Each entry is pure package segments plus the class to load; an entry
+  ending at the package imports the whole package.
+* **One Primary Class Per File**: The primary class name must match the file name (e.g. `spec/lib/base/sys/SourceLocation.spec` defines `class SourceLocation`). The declared namespace — not the directory — is what makes the file's package.
 
 ---
 

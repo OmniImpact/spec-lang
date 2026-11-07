@@ -5,14 +5,13 @@
 ```spec
 Class is HelloWorld{
 
-	replace Array of String is using: [
-		base:struct:Map,
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){
-		local String is name: args:getString(key: "name", default: "World");
-		output:line("Hello, " . name . "!");
+		local String is name: args:getString(key: 'name', default: 'World');
+		output:line(text: 'Hello, ' . name . '!');
 	}
 
 }
@@ -54,7 +53,7 @@ Members without a visibility modifier are **public by default**: overridable via
 | `Any` | Arbitrary typed reference |
 
 `Class` and `Enum` are compiler-known declaration types (`Class is Name { ... }`), not keywords; `Hex`, `Bin`, and `Oct` are compiler-known conversion targets of `as`.
-- **Userland Implementation**: Rich language features live in the standard library (`lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
+- **Userland Implementation**: Rich language features live in the standard library (`spec/lib/`) written in pure Spec—including dynamic collections (`Array`, `Map`, `List`), filesystem operations (`File`), process management (`Process`), and concurrency runners (`While`, `Loop`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 
 ### 2. Classes and Functions as First-Class Types (Uniform Declarations)
@@ -101,21 +100,25 @@ Spec has eliminated primitive loop keywords (`while`, `break`) entirely from the
 ### 5. Tab-Based Indentation Standard
 Spec establishes a standard indentation convention using **tabs**. A built-in linter detects space-based indentation and optional parameter patterns:
 ```bash
-./spec --lint path/to/program.spec
+bin/spec --lint path/to/program.spec
 ```
 
 ### 6. Multi-File Module Resolution
-Dependencies declared in `using: [...]` automatically resolve against the standard library in `lib/` and local project files:
+Dependencies declared in `using: [...]` are **pure package segments** — the
+namespace declared inside a file is what makes it the package; directories are
+organization, not identity. The loader scans two trees (the directory of the
+`.spec` file being compiled and the compiler executable's directory, walking up
+while a location holds no `.spec` content), builds a map of where every class
+lives, and resolves each import by loading the candidate and verifying its
+declared namespace. The trailing segment names a class; omitting it imports the
+whole package:
 ```spec
-replace Array of String is using: [
-	base:struct:Array,
-	base:struct:Map,
-	base:math:*,
-	base:io:*,
-	base:sys:*,
-	base:iterator:*,
-	base:reflect:*,
-	base:meta:*
+replace Array of Array of String is using: [
+	['base', 'struct', Array],
+	['base', 'struct', Map],
+	['base', 'math', Math],
+	['base', 'io', Output],
+	['base', 'iterator', While]
 ];
 ```
 
@@ -144,7 +147,7 @@ Spec includes modern, expressive language capabilities designed for type safety 
 
 - 📚 **[Documentation Portal](docs/README.md)**: Main documentation index.
 - 📖 **[Language Guide](docs/language/README.md)**: Syntax, typing system, Never Null standard, operators, and control flow.
-- 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:io`, `base:math`, `base:struct`, `base:iterator`, `base:sys`, `base:reflect`, and `base:meta`.
+- 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:core`, `base:io`, `base:math`, `base:struct`, `base:iterator`, and `base:sys`.
 - 📜 **[Code Style & SpecDoc Guide](docs/STYLE_GUIDE.md)**: Official code style conventions, architectural idioms, and the SpecDoc documentation standard.
 - 🛠️ **[Tooling & Compiler Guide](docs/tooling/README.md)**: Compiler CLI, module loader, tab linter, and Kate editor integration.
 
@@ -163,28 +166,30 @@ Spec includes modern, expressive language capabilities designed for type safety 
 ### Compiling and Running a Program
 ```bash
 # Compile
-./spec -i examples/helloworld.spec -o helloworld
+bin/spec -i examples/helloworld.spec -o helloworld
 
 # Run with CLI arguments
 ./helloworld --name Daniel
 
 # Emit generated C11 source code (optional)
-./spec -i examples/helloworld.spec --emit-c helloworld.c
+bin/spec -i examples/helloworld.spec --emit-c helloworld.c
 ```
 
 ### Running the Linter
 ```bash
-./spec --lint examples/blackjack.spec
+bin/spec --lint examples/blackjack.spec
 ```
 
 ---
 
 ## Standard Library
 
-The standard library lives in `lib/` — seven packages covering terminal and file
-I/O, math, collections, iteration, process control, parallelism, reflection, and
-the compiler's own AST models. A summary table of every package and its functions
-lives in the **[Standard Library Reference](docs/packages/README.md)**.
+The standard library lives in `spec/lib/` — six packages covering the root
+lattice (`base:core`), terminal and file I/O (`base:io`), math (`base:math`),
+collections (`base:struct`), iteration (`base:iterator`), and process control
+and parallelism (`base:sys`) — all written in Spec over the `base:sysinternal`
+C floor. A summary table of every package and its functions lives in the
+**[Standard Library Reference](docs/packages/README.md)**.
 
 ---
 
@@ -203,15 +208,17 @@ Install syntax highlighting definitions for the KDE Kate editor:
 Spec is **100% self-hosted**. Building it requires only a C compiler (`gcc` or `clang`) with standard POSIX threads:
 
 ```bash
-# Bootstrap the official Spec compiler directly from canonical C source:
+# Bootstrap the official Spec compiler from the canonical seed and verify
+# the self-hosting fixed point (the compiler recompiles its own sources
+# and the C must match byte-for-byte):
 ./bootstrap.sh
 
 # Compile any Spec program:
-./spec -i examples/helloworld.spec -o helloworld
+bin/spec -i examples/helloworld.spec -o helloworld
 ./helloworld --name "Spec Developer"
 
 # Run the strict whitespace and style linter:
-./spec --lint lib/compiler/Driver.spec
+bin/spec --lint spec/base/compiler/driver/Driver.spec
 ```
 
 ---
@@ -226,7 +233,7 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 |---|---|---|---|---|
 | **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness, root-contract calls) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
-| **Memory** | Amortized string buffers + scoped frees; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
+| **Memory** | Reference counting with scope-end releases; binaries verified leak-free under ASan/LSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; three-tier visibility (public / `local` / `contained`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
@@ -234,15 +241,15 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
 | **Concurrency** | pthreads; mutex-protected collections; atomics; parallel fan-out | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
-| **Build model** | Transpiles to one C translation unit; `gcc` links; bit-for-bit self-hosting bootstrap | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
+| **Build model** | Transpiles to one C translation unit; `gcc` links; the compiler is written in Spec and bootstraps from a single canonical C file whose fixed point is verified on every build | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
 
 Spec's distinguishing ground: the override discipline (`replace`/`merge`), never-null
 defaults, enforced exhaustiveness, a strict root contract (`Any`-typed values may
-only call root members — cast for the rest), and a verified self-hosting fixed
-point. It is a young language — its standard library and tooling are minimal next
-to the others — but its compile-time guarantees are already stricter than C's in
-the areas it covers.
+only call root members — cast for the rest), and a compiler written in itself that
+reproduces its own C seed byte-for-byte on every build. It is a young language — its
+standard library and tooling are minimal next to the others — but its compile-time
+guarantees are already stricter than C's in the areas it covers.
 
 ## License
 
