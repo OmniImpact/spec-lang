@@ -4,6 +4,7 @@
 Class is HeredocTest{
 
 	replace Array of String is using: [
+		['lib', 'base', 'struct', Array],
 		base:io:Output
 	];
 

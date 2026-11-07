@@ -834,12 +834,14 @@ Class is TypeChecker{
 							# Declared cast: the source class maps the target to a
 							# producing method (G6 emits the call).
 							res: target;
-						} else if (self:isPrimitive(t: target)) {
+						} else if (self:isPrimitive(t: target) && target != Primitive:ANY:value()) {
 							# Primitive conversion casts take priority over the
 							# class-cast path: Int as String is the machine
 							# conversion even though a String class is loaded.
-							# These die when the primitive classes land in Spec
-							# and declare their conversions.
+							# Any is excluded — it is the universal class-cast
+							# target, always related. These die when the
+							# primitive classes land in Spec and declare their
+							# conversions.
 							if (!self:isCastable(src: src, target: target)) {
 								self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'' . target . '\'.');
 							}

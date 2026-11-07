@@ -13,7 +13,9 @@ Class is SpecCheckerTest{
 		['spec', 'base', 'compiler', 'ast', ClassInfo],
 		['spec', 'base', 'compiler', 'ast', ProgramNode],
 		['lib', 'base', 'io', Output],
-		['lib', 'base', 'io', File]
+		['lib', 'base', 'io', File],
+		['lib', 'base', 'struct', Array],
+		['lib', 'base', 'struct', Map]
 	];
 
 	## Parses and checks a source, returning the error messages.

@@ -12,7 +12,8 @@
 Class is PiBenchmark{
 
 	replace Array of String is using: [
-		base:struct:Array,
+		base:struct:*,
+		base:iterator:*,
 		base:math:*,
 		base:io:*,
 		base:sys:Process,

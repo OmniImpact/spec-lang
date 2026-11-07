@@ -13,6 +13,7 @@
 Class is ParallelAtomicsTest{
 
 	replace Array of String is using: [
+		['lib', 'base', 'iterator'],
 		base:io:Output,
 		base:sys:Process,
 		base:sys:Parallel,

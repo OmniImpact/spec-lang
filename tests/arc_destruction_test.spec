@@ -29,6 +29,7 @@ Class is Container{
 Class is ArcDestructionTest{
 
 	replace Array of String is using: [
+		['lib', 'base', 'iterator'],
 		base:io:Output
 	];
 
