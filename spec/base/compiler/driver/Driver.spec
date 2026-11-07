@@ -46,10 +46,11 @@ Class is Driver{
 			outputPath: args:getString(key: 'output', default: '');
 		}
 		local Boolean is lintMode: args:has(key: 'lint');
+		local Boolean is auditMode: args:has(key: 'audit');
 		local Boolean is quiet: args:has(key: 'quiet');
 		if (inputPath == '') {
 			output:line('Spec Compiler (Pure Spec)');
-			error:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--quiet]');
+			error:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--audit] [--quiet]');
 			Process:exit(status: 2);
 		}
 
@@ -107,7 +108,7 @@ Class is Driver{
 			emitCPath: args:getString(key: 'emit-c', default: '');
 		}
 
-		if (outputPath == '' && emitCPath == '') {
+		if (!auditMode && outputPath == '' && emitCPath == '') {
 			error:line('Error: Missing output binary path (-o <output_binary>)');
 			Process:exit(status: 2);
 		}
@@ -136,6 +137,16 @@ Class is Driver{
 			});
 			error:line('Compilation aborted due to syntax or load errors.');
 			Process:exit(status: 1);
+		}
+
+		# 2.5 Instance-model worklist audit (INSTANCE.md Phase 0.5): with the
+		# full program loaded, report class-name-receiver call sites. Purely
+		# informational; always exits 0.
+		if (auditMode) {
+			local Linter is auditor: Linter:init();
+			local Array of LintIssue is auditIssues: auditor:auditProgram(program: program);
+			auditor:auditReport(filePath: inputPath, issues: auditIssues);
+			return;
 		}
 
 		# 3. Semantic static type checking.

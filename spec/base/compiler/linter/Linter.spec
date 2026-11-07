@@ -1,9 +1,9 @@
 #! Package base:compiler:linter
 #! Pure-Spec code linter enforcing tab-based indentation, formatting,
-#! and AST idioms.
+#! and AST idioms, plus the INSTANCE.md Phase 0.5 worklist audit.
 
 ## Pure-Spec code linter enforcing tab-based indentation, formatting,
-## and AST idioms.
+## and AST idioms, plus the INSTANCE.md Phase 0.5 worklist audit.
 Class is Linter{
 	namespace: ['base', 'compiler', 'linter'];
 
@@ -17,12 +17,35 @@ Class is Linter{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ast', WhenArm],
 		['base', 'io', Output],
 		['base', 'struct', Array],
+		['base', 'struct', Map],
 		['base', 'iterator']
 	];
 
+	## Audit name sets (INSTANCE.md Phase 0.5): every enum and class name in
+	## the loaded program, nested classes included.
+	local Map of String to String is auditEnums: Map:init();
+	local Map of String to String is auditClasses: Map:init();
+
+	## Worklist notices gathered by the audit pass.
+	local Array of LintIssue is auditIssues: [];
+
+	## Lowercase floor singletons routed by name (INSTANCE.md R1-R3 removes
+	## them, so their call sites belong on the worklist).
+	local Array of String is floorAliases: [];
+
+	## Type-level exempt receivers (INSTANCE.md X3): primitives, base
+	## conversion targets, containers.
+	local Array of String is exemptClasses: [];
+
 	replace Function is init(){
+		self:auditEnums: Map:init();
+		self:auditClasses: Map:init();
+		self:auditIssues: [];
+		self:floorAliases: ['output', 'error', 'math'];
+		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
 	}
 
 	## Inspects indentation whitespace line-by-line.
@@ -312,5 +335,308 @@ Class is Linter{
 		if (warnings == 0) {
 			output:line('All standard checks passed successfully.');
 		}
+	}
+
+	## INSTANCE.md Phase 0.5 worklist audit: reports every call whose
+	## receiver names a class (or floor alias) with a non-init method,
+	## excluding the exempt strata (§4). Purely informational — the
+	## burn-down metric for the instance-based call model. Requires the
+	## LOADED program: enum and class knowledge comes from the loader,
+	## not from spelling.
+	##
+	## @param program: Loaded [ProgramNode].
+	## @return: [Array] of [LintIssue] worklist notices.
+	Function of Array of LintIssue is auditProgram(ProgramNode is program){
+		self:auditIssues: [];
+		self:buildAuditNameSets(classes: program:classes);
+		program:classes:each(action: local Function(ClassInfo is c){
+			self:auditClass(classDef: c);
+		});
+		return self:auditIssues;
+	}
+
+	## Registers one class or enum name, nested classes included (a nested
+	## class is callable by its bare name). Recurses through members, never
+	## across an array literal — the claim pool evicts pool-held arrays
+	## when a nested self-call claims (see Loader.spec's note).
+	##
+	## @param c: Candidate [ClassInfo] definition.
+	Function is registerAuditName(ClassInfo is c){
+		if (c:baseClass == 'Enum') {
+			self:auditEnums:set(key: c:name, value: 'true');
+		} else {
+			self:auditClasses:set(key: c:name, value: 'true');
+		}
+		c:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:CLASS) {
+				self:registerAuditName(c: m:nestedClass);
+			}
+		});
+	}
+
+	## Collects class and enum names into the audit sets.
+	##
+	## @param classes: Candidate [ClassInfo] definitions.
+	Function is buildAuditNameSets(Array of ClassInfo is classes){
+		classes:each(action: local Function(ClassInfo is c){
+			self:registerAuditName(c: c);
+		});
+	}
+
+	## Audits every method body of a class definition, nested classes included.
+	##
+	## @param classDef: [ClassInfo] definition.
+	Function is auditClass(ClassInfo is classDef){
+		classDef:members:each(action: local Function(Member is m){
+			when (m:kind) {
+				is MemberKind:METHOD: {
+					m:body:each(action: local Function(Statement is s){
+						self:auditStatement(stmt: s, file: m:sourceFile);
+					});
+				}
+				is MemberKind:CLASS: {
+					self:auditClass(classDef: m:nestedClass);
+				}
+				else: {}
+			}
+		});
+	}
+
+	## Walks one statement, auditing every expression it contains (when
+	## arms and merge forwards included — the metric must not undercount).
+	##
+	## @param stmt: [Statement] AST node.
+	## @param file: Source file the statement lives in.
+	Function is auditStatement(Statement is stmt, String is file){
+		when (stmt:kind) {
+			is StatementKind:VAR_DECL: {
+				if (stmt:hasInit) {
+					self:auditExpression(expr: stmt:initExpr, file: file);
+				}
+			}
+			is StatementKind:ASSIGN: {
+				self:auditExpression(expr: stmt:assignTarget, file: file);
+				self:auditExpression(expr: stmt:assignValue, file: file);
+			}
+			is StatementKind:IF: {
+				self:auditExpression(expr: stmt:ifCondition, file: file);
+				stmt:thenBranch:each(action: local Function(Statement is s){
+					self:auditStatement(stmt: s, file: file);
+				});
+				if (stmt:hasElse) {
+					stmt:elseBranch:each(action: local Function(Statement is s){
+						self:auditStatement(stmt: s, file: file);
+					});
+				}
+			}
+			is StatementKind:RETURN: {
+				if (stmt:hasReturnExpr) {
+					self:auditExpression(expr: stmt:returnExpr, file: file);
+				}
+			}
+			is StatementKind:CLASS: {
+				self:auditClass(classDef: stmt:nestedClass);
+			}
+			is StatementKind:EXPR: {
+				self:auditExpression(expr: stmt:exprStmt, file: file);
+			}
+			is StatementKind:WHEN: {
+				self:auditExpression(expr: stmt:whenSubject, file: file);
+				stmt:whenArms:each(action: local Function(WhenArm is arm){
+					self:auditWhenArm(arm: arm, file: file);
+				});
+			}
+			is StatementKind:FORWARD: {
+				stmt:forwardArgs:each(action: local Function(NamedArg is arg){
+					self:auditExpression(expr: arg:value, file: file);
+				});
+			}
+			else: {}
+		}
+	}
+
+	## Audits one when arm: guard conditions, statement body, or value
+	## expression.
+	##
+	## @param arm: [WhenArm] AST node.
+	## @param file: Source file the arm lives in.
+	Function is auditWhenArm(WhenArm is arm, String is file){
+		arm:conditions:each(action: local Function(Expression is cond){
+			self:auditExpression(expr: cond, file: file);
+		});
+		if (arm:hasValueExpr) {
+			self:auditExpression(expr: arm:valueExpr, file: file);
+		}
+		arm:body:each(action: local Function(Statement is s){
+			self:auditStatement(stmt: s, file: file);
+		});
+	}
+
+	## Walks one expression, auditing calls it contains — through casts,
+	## if/else and when expressions, map literals, index and field access,
+	## and anonymous function bodies.
+	##
+	## @param expr: [Expression] AST node.
+	## @param file: Source file the expression lives in.
+	Function is auditExpression(Expression is expr, String is file){
+		when (expr:kind) {
+			is ExpressionKind:CALL: {
+				self:auditReceiver(callExpr: expr, file: file);
+				self:auditExpression(expr: expr:methodTarget, file: file);
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					self:auditExpression(expr: arg:value, file: file);
+				});
+			}
+			is ExpressionKind:BINARY: {
+				self:auditExpression(expr: expr:leftExpr, file: file);
+				self:auditExpression(expr: expr:rightExpr, file: file);
+			}
+			is ExpressionKind:UNARY: {
+				self:auditExpression(expr: expr:unaryExpr, file: file);
+			}
+			is ExpressionKind:ARRAY: {
+				expr:arrayItems:each(action: local Function(Expression is item){
+					self:auditExpression(expr: item, file: file);
+				});
+			}
+			is ExpressionKind:MAP: {
+				expr:mapKeys:each(action: local Function(Expression is k){
+					self:auditExpression(expr: k, file: file);
+				});
+				expr:mapValues:each(action: local Function(Expression is v){
+					self:auditExpression(expr: v, file: file);
+				});
+			}
+			is ExpressionKind:CAST: {
+				self:auditExpression(expr: expr:leftExpr, file: file);
+				expr:castArgs:each(action: local Function(Expression is a){
+					self:auditExpression(expr: a, file: file);
+				});
+			}
+			is ExpressionKind:FIELD_ACCESS: {
+				self:auditExpression(expr: expr:leftExpr, file: file);
+			}
+			is ExpressionKind:INDEX: {
+				self:auditExpression(expr: expr:leftExpr, file: file);
+				expr:castArgs:each(action: local Function(Expression is a){
+					self:auditExpression(expr: a, file: file);
+				});
+			}
+			is ExpressionKind:IF_ELSE: {
+				self:auditExpression(expr: expr:condExpr, file: file);
+				self:auditExpression(expr: expr:thenExpr, file: file);
+				self:auditExpression(expr: expr:elseExpr, file: file);
+			}
+			is ExpressionKind:WHEN: {
+				self:auditExpression(expr: expr:whenSubject, file: file);
+				expr:whenArms:each(action: local Function(WhenArm is arm){
+					self:auditWhenArm(arm: arm, file: file);
+				});
+			}
+			is ExpressionKind:ANON_FN: {
+				expr:anonBody:each(action: local Function(Statement is s){
+					self:auditStatement(stmt: s, file: file);
+				});
+			}
+			else: {}
+		}
+	}
+
+	## Classifies one call's receiver (INSTANCE.md §2.2, §4): flags
+	## class-named and floor-alias receivers invoking non-init members;
+	## skips self, variables and fields, enums, the exempt type-level
+	## strata, and sysinternal floor chains. Unknown uppercase names stay
+	## silent — the metric must not guess.
+	##
+	## @param callExpr: The CALL expression.
+	## @param file: Source file the call lives in.
+	Function is auditReceiver(Expression is callExpr, String is file){
+		local String is name: '';
+		local Boolean is isFloorChain: false;
+		if (callExpr:methodTarget:kind == ExpressionKind:IDENT) {
+			name: callExpr:methodTarget:stringValue;
+		} else if (callExpr:methodTarget:kind == ExpressionKind:PATH) {
+			local Array of String is segs: callExpr:methodTarget:pathSegments;
+			if (segs:length() == 0) {
+				return;
+			}
+			name: segs:get(index: segs:length() - 1);
+			segs:each(action: local Function(String is seg){
+				if (seg == 'sysinternal') {
+					isFloorChain: true;
+				}
+			});
+		} else {
+			return;
+		}
+		if (isFloorChain || name == '' || name == 'self') {
+			return;
+		}
+		if (callExpr:methodName == 'init') {
+			return;
+		}
+		if (self:isUpperName(name: name)) {
+			if (self:auditEnums:has(key: name)) {
+				return;
+			}
+			local Boolean is isExempt: false;
+			self:exemptClasses:each(action: local Function(String is e){
+				if (e == name) {
+					isExempt: true;
+				}
+			});
+			if (isExempt) {
+				return;
+			}
+			if (!self:auditClasses:has(key: name)) {
+				return;
+			}
+		} else {
+			local Boolean is isAlias: false;
+			self:floorAliases:each(action: local Function(String is a){
+				if (a == name) {
+					isAlias: true;
+				}
+			});
+			if (!isAlias) {
+				return;
+			}
+		}
+		local String is msg: 'Instance-model worklist: \'' . name . ':' . callExpr:methodName . '\' calls a member through a class name (' . file . ').';
+		self:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
+	}
+
+	## True when [name] starts with an uppercase letter (the type naming
+	## convention); variables and fields are lowerCamel. The 26-way match
+	## is deliberate: relational operators on Strings compile to raw
+	## pointer comparison (see INSTANCE.md D5), so `first >= 'A'` is not
+	## a legal test.
+	##
+	## @param name: Identifier to classify.
+	## @return: true when the name is UpperCamel.
+	Function of Boolean is isUpperName(String is name){
+		if (name:length() == 0) {
+			return false;
+		}
+		local String is first: name:charAt(index: 0, default: '');
+		when (first) {
+			is 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M':
+				{ return true; }
+			is 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
+				{ return true; }
+			else: { return false; }
+		}
+	}
+
+	## Prints the audit worklist: per-site lines, then the total count.
+	##
+	## @param filePath: Audited root file path.
+	## @param issues: Worklist notices.
+	Function is auditReport(String is filePath, Array of LintIssue is issues){
+		output:line('Instance-model audit of \'' . filePath . '\':');
+		issues:each(action: local Function(LintIssue is issue){
+			output:line(issue:toString());
+		});
+		output:line('Instance-model worklist: ' . (issues:length() as String) . ' call site(s) must migrate (INSTANCE.md Phase 0.5).');
 	}
 }

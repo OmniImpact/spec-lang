@@ -35,6 +35,15 @@ Related, same family, in scope for this work: the own-class-name trap
 (`Widget:bump()` inside `Widget` passes NULL `self` even on a live instance —
 verified SIGSEGV), and `instance:init()` re-initializing in place.
 
+**D5 — found during Phase 0.5, fix separately.** The checker accepts
+relational operators on `String` (`first >= 'A'`), but the backend emits raw C
+pointer comparison on the `SpecBuf*` addresses
+(`(first) >= (spec_string_intern("A"))` in emitted C) — comparison by
+allocator address, not lexicographic order, so results are allocation-order
+arbitrary. Fix: reject relational operators on `String` at the checker, or
+emit a real string comparison. The linter works around it
+(`isUpperName` matches the 26 letters explicitly).
+
 Out of scope (recorded, not addressed here): unchecked `as` casts; the loader's
 flat bare-name space with readdir-order resolution (first-loaded same-stem
 class silently blocks same-named classes in other namespaces — `Loader.spec:102`,
@@ -253,10 +262,15 @@ commit seed regeneration atomically with each source change, or bisect lands
 on seed/source disagreement.
 
 - [ ] **Phase 0 — this document.** Rule text frozen; R3 class name decided.
-- [ ] **Phase 0.5 — worklist mode.** Linter reports every receiver that is a
-  bare class name with a non-`init` method, excluding exempt strata (§4).
-  Purely syntactic; no behavior change; count = burn-down metric. Keep green
-  in CI until zero.
+- [x] **Phase 0.5 — worklist mode (DONE).** `bin/spec --audit -i <root.spec>`
+  loads the full program and reports every receiver that is a bare class name
+  (or floor alias) with a non-`init` method, excluding exempt strata (§4),
+  attributed to source file. Purely informational; always exits 0; `--lint`
+  untouched. Baseline for the self-hosted compiler program: **218 sites**
+  (While ×96, Buf ×47, Process ×25, error: ×16, output: ×15, Reflection ×8,
+  File ×6, Dir ×4, Arena ×1; heaviest files: String.spec 53, Driver.spec 48,
+  Parser.spec 27, Loader.spec 21). Keep the count falling; zero is the
+  Phase A exit condition.
 - [ ] **Phase A — source migration under the permissive compiler.**
   Working-state static calls are provably self-free (a self-touching one
   would have segfaulted per D1; suite+ASan would have caught it), so
