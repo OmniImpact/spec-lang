@@ -59,7 +59,7 @@ Leak detection is off by default: the ARC engine reclaims the compiler's object 
 - **`1`** — compile failure: syntax errors, load errors (`[LoadError]`: missing module files, unresolvable imports, invalid class grouping), type errors, or backend `gcc` failure.
 - **`2`** — usage error (missing input or output path).
 
-All compiler diagnostics are written to **stderr** (via the `error:line` builtin); programs write normal output to stdout via `output:line`. A program can terminate itself with an explicit status via `Process:exit(status: N)`. This makes the compiler safe to drive from scripts and CI:
+All compiler diagnostics are written to **stderr** (via `Stderr:line`); programs write normal output to stdout via `Output:line` — both runtime-managed classes from `base:io`, instance-imported as `['base', 'io', as Output()]` / `as Stderr()`. A program can terminate itself with an explicit status via `Process:exit(status: N)`. This makes the compiler safe to drive from scripts and CI:
 ```bash
 ./spec -i app.spec -o app 2>compile.log || exit 1
 ```
@@ -91,7 +91,7 @@ Spec automatically resolves imports specified in the class's `using` header:
 ```spec
 replace Array of Array of String is using: [
 	['base', 'struct', Array],
-	['base', 'io', File]
+	['base', 'io', as File()]
 ];
 ```
 

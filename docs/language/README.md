@@ -55,11 +55,11 @@ Class is HelloWorld{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Map],
-		['base', 'io', Output]
+		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
-		output:line("Hello, World!");
+		Output:line("Hello, World!");
 	}
 
 }
@@ -226,7 +226,7 @@ Function of Int is add(Int is a, Int is b){
 
 # Void return type
 Function is logMessage(String is msg){
-	output:line(msg);
+	Output:line(msg);
 }
 ```
 
@@ -251,7 +251,7 @@ Functions can be passed inline as first-class expressions using keyword-based an
 ```spec
 # Anonymous function expression
 words:each(action: local Function(word){
-	output:line(word);
+	Output:line(word);
 });
 
 # Anonymous function with explicit return type
@@ -385,17 +385,28 @@ Payload variants are matched and destructured using Spec's `when` syntax (see [P
 ### Imports & `using`
 Packages are imported via the class `using` property. Each entry names the
 package segments plus the class to load; an entry ending at the package
-imports the whole package (the wildcard):
+imports the whole package (the wildcard). A trailing **`as ClassName()`**
+materializes an owned instance of the class scoped to the importing class —
+its members answer to the class-name prefix (`Output:line(...)`) and, where
+the name is unambiguous in scope, bare (`round(...)`):
 ```spec
 replace Array of Array of String is using: [
 	['base', 'struct', Array],
-	['base', 'math', Math],
-	['base', 'io', Output],
-	['base', 'sys', Process],
-	['base', 'iterator', While]
+	['base', 'math', as Math()],
+	['base', 'io', as Output()],
+	['base', 'sys', as Process()],
+	['base', 'iterator', as While()]
 ];
 ```
 Imports map directly to `.spec` files in the standard library (`lib/`) or project directory.
+
+**The call model:** members are callable only through instances. A plain
+entry (`['pkg', X]`) is a *type import* — `X` works in type positions and
+for `X:init(...)` construction only. The instance form (`as X(args)`)
+constructs the instance for you (literal arguments; field-less classes
+allocate nothing); prefix calls (`X:member(...)`) dispatch on it, and bare
+calls resolve when the name has exactly one provider in scope — a name
+provided by two imports, or by the class and an import, must be qualified.
 
 ### Class Grouping (Partial Classes)
 
@@ -501,7 +512,7 @@ local Function of String to Boolean is validator;
 
 # Passing a function as a parameter
 replace Function is execute(Function is callback){
-	output:line("Executing callback...");
+	Output:line("Executing callback...");
 }
 ```
 
@@ -537,8 +548,8 @@ binary operator; chaining (`x as A as B`) is a syntax error.
 ```spec
 local Animal is a: dog as Animal;       # class upcast (virtual dispatch preserved)
 local Dog is d: a as Dog;               # downcast (unchecked, C semantics)
-local Int is n: 3.9 as Int;             # numeric truncation (== math:toInt)
-local Float is f: 7 as Float;           # widening (== math:toFloat)
+local Int is n: 3.9 as Int;             # numeric truncation (== Math:toInt)
+local Float is f: 7 as Float;           # widening (== Math:toFloat)
 local String is h: 65516 as Hex;        # format: "ffec" (Bin, Oct too; width: `as Bin(8)`)
 local Int is back: "ffec" as Hex;       # parse: 65516 (invalid input yields 0)
 ```
@@ -588,14 +599,14 @@ local Int is b: ++count;  # expression: 'count' becomes 2, 'b' receives 2
 ### String Concatenation
 The dot operator (`.`) concatenates strings and automatically formats numeric primitives:
 ```spec
-output:line("Total score: " . score . " points");
+Output:line("Total score: " . score . " points");
 ```
 
 ### Member Access & Method Calls
 The colon (`:`) invokes methods and traverses namespaces:
 ```spec
-output:line("Log text");
-local Float is r: math:round(value: 3.7);
+Output:line("Log text");
+local Float is r: Math:round(value: 3.7);
 ```
 
 ### Bracket Indexing & Assignment
@@ -648,13 +659,13 @@ The `is` keyword can be used interchangeably with `==` for expressive, natural e
 
 ```spec
 if (score is 21) {
-	output:line("Blackjack!");
+	Output:line("Blackjack!");
 } else if (status is "ERROR") {
-	output:line("Failed!");
+	Output:line("Failed!");
 } else if (score > 21) {
-	output:line("Bust!");
+	Output:line("Bust!");
 } else {
-	output:line("Continue play");
+	Output:line("Continue play");
 }
 ```
 
@@ -665,13 +676,13 @@ The `when` keyword provides isolated branch matching for both statements and exp
 ```spec
 when (status) {
 	is OK, CREATED: {
-		output:line("Success");
+		Output:line("Success");
 	}
 	is NOT_FOUND: {
-		output:line("Resource not found");
+		Output:line("Resource not found");
 	}
 	else: {
-		output:line("Other error");
+		Output:line("Other error");
 	}
 }
 ```
@@ -700,13 +711,13 @@ local Result is res: Result:Ok(data: "Connection established");
 
 when (res) {
 	is Ok(d): {
-		output:line("Success: " . d);
+		Output:line("Success: " . d);
 	}
 	is Err(c, m): {
-		output:line("Error code " . c . ": " . m);
+		Output:line("Error code " . c . ": " . m);
 	}
 	is Pending: {
-		output:line("Operation pending...");
+		Output:line("Operation pending...");
 	}
 }
 ```
@@ -753,7 +764,7 @@ of Loop is CounterLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		count: count + 1;
-		output:line("Step: " . count);
+		Output:line("Step: " . count);
 		return true;
 	}
 }
@@ -792,13 +803,13 @@ log:add("reading line 2");
 
 # With parameter bindings: typed or untyped
 as (String is text): self:readFile("config.json");
-output:line("Loaded: " . text);
+Output:line("Loaded: " . text);
 
 # Linear nested pipelines without rightward drift:
 as (Int is a): self:stepOne();
 as (Int is b): self:stepTwo(a);
 as (Int is c): self:stepThree(b);
-output:line("Final result: " . c);
+Output:line("Final result: " . c);
 
 # Returning results from scoped regions:
 return as of Int: self:computeWith(base: 2);
@@ -829,7 +840,7 @@ Interactive console I/O delegates to event handlers rather than freezing thread 
 ```spec
 of InputHandler is ActionHandler{
 	replace Function is onInput(String is action){
-		output:line("User chose: " . action);
+		Output:line("User chose: " . action);
 	}
 }
 

@@ -243,7 +243,7 @@ The lowercase forms are an alias layer over real classes
   `spec/`, `tests/`, `examples/` (grep-verified in the gate of §7); and **no
   builtin routing condition matches on a bare class-name string** — every
   callable name resolves through a declared, imported class.
-- [ ] **R5 — Documentation.** KNOWLEDGE-SPEC "Builtins (selected)" section
+- [x] **R5 — Documentation.** KNOWLEDGE-SPEC "Builtins (selected)" section
   rewritten to the instance form; README language-features section updated in
   the same commit as the flip (§7 Phase B).
 

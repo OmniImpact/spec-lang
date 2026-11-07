@@ -10,7 +10,7 @@ This document details the standard library packages available in the Spec runtim
 
 | Package | Key Types & Functions | Description |
 |---|---|---|
-| **`base:io`** | `output:line`, `error:line`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
+| **`base:io`** | `Output:line/print/write`, `Stderr:line/print`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
 | **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
 | **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` · `List` — `push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString` | Thread-safe collections with functional combinators. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop engine and inline closure iteration. |
@@ -21,7 +21,7 @@ Full API reference by package below.
 
 ## Table of Contents
 1. [`base:io`](#1-baseio)
-   - [Console Output (`output:line`)](#outputline)
+   - [Console Output (`Output:line`)](#outputline)
    - [Interactive Input (`Input:prompt`)](#inputprompt)
    - [File Operations (`File`)](#file-operations)
 2. [`base:math`](#2-basemath)
@@ -43,6 +43,22 @@ Full API reference by package below.
 
 ---
 
+## Package-author guidance: type vs instance imports
+
+Consumers import your classes in one of two forms, and the shape of your
+API decides which they should use:
+
+- **Stateful handles** (`File`, `Input`, `InputHandler`) — consumers
+  construct them with `X:init(...)` and hold the instance; ship a
+  **type-import** surface (`['your', 'pkg', X]`).
+- **Services and namespaces** (`Output`, `Stderr`, `Math`, `Process`) —
+  stateless or runtime-managed; consumers instance-import them
+  (`['your', 'pkg', as X()]`) and call members through the class-name
+  prefix. Keep these classes field-less so the dispatch allocates nothing.
+- **Stateful services** — a class with fields can also be instance-imported
+  with literal constructor arguments (`as Connection(host: "db")`); each
+  importing-class instance then owns one. Design `init` for it.
+
 ## 1. `base:io`
 
 Importing:
@@ -52,12 +68,12 @@ replace Array of Array of String is using: [
 ];
 ```
 
-### `output:line`
+### `Output:line`
 Writes a string representation of an expression to standard output followed by a newline:
 
 ```spec
-output:line("Text message");
-output:line("Result: " . (10 + 20));
+Output:line("Text message");
+Output:line("Result: " . (10 + 20));
 ```
 
 ### `Input:prompt`
@@ -67,7 +83,7 @@ Provides non-blocking, event-driven user input prompts via `InputHandler`:
 Class is InputExample{
 	replace Function is init(Map of String to String is args){
 		Input:prompt("Enter your name: ", local Function(String is response){
-			output:line("Hello, " . response . "!");
+			Output:line("Hello, " . response . "!");
 		});
 	}
 }
@@ -116,45 +132,45 @@ replace Array of Array of String is using: [
 
 ### Rounding & Flooring
 
-- **`math:round(Float is value) -> Float`**:
+- **`Math:round(Float is value) -> Float`**:
   Rounds a floating point number to the nearest integer value.
   ```spec
-  local Float is r: math:round(value: 3.7); # 4.0
+  local Float is r: Math:round(value: 3.7); # 4.0
   ```
 
-- **`math:floor(Float is value) -> Float`**:
+- **`Math:floor(Float is value) -> Float`**:
   Returns the largest integer value less than or equal to `value`.
   ```spec
-  local Float is f: math:floor(value: 3.7); # 3.0
+  local Float is f: Math:floor(value: 3.7); # 3.0
   ```
 
-- **`math:ceil(Float is value) -> Float`** / **`math:ceiling(Float is value) -> Float`**:
+- **`Math:ceil(Float is value) -> Float`** / **`Math:ceiling(Float is value) -> Float`**:
   Returns the smallest integer value greater than or equal to `value`.
   ```spec
-  local Float is c: math:ceil(value: 3.2); # 4.0
+  local Float is c: Math:ceil(value: 3.2); # 4.0
   ```
 
 ### Random Number Generation
 
-- **`math:random() -> Float`**:
+- **`Math:random() -> Float`**:
   Generates pseudo-random double precision floating point numbers seeded with high-resolution epoch time in the range `[0.0, 1.0)`.
   ```spec
-  local Float is r: math:random();
+  local Float is r: Math:random();
   ```
 
-- **`math:random(min: Float, max: Float) -> Float`**:
+- **`Math:random(min: Float, max: Float) -> Float`**:
   Generates a pseudo-random floating point number in `[min, max)`.
   ```spec
-  local Float is roll: math:random(min: 1.0, max: 6.0);
+  local Float is roll: Math:random(min: 1.0, max: 6.0);
   ```
 
 ### Pure Spec Math Primitives
 Implemented in pure Spec (`lib/base/math/Math.spec`):
 
-- **`math:abs(Float is value) -> Float`**: Returns the absolute value of a number.
-- **`math:min(Float is a, Float is b) -> Float`**: Returns the minimum of two values.
-- **`math:max(Float is a, Float is b) -> Float`**: Returns the maximum of two values.
-- **`math:clamp(Float is val, Float is minVal, Float is maxVal) -> Float`**: Clamps `val` to `[minVal, maxVal]`.
+- **`Math:abs(Float is value) -> Float`**: Returns the absolute value of a number.
+- **`Math:min(Float is a, Float is b) -> Float`**: Returns the minimum of two values.
+- **`Math:max(Float is a, Float is b) -> Float`**: Returns the maximum of two values.
+- **`Math:clamp(Float is val, Float is minVal, Float is maxVal) -> Float`**: Clamps `val` to `[minVal, maxVal]`.
 
 ---
 
@@ -246,7 +262,7 @@ local Array of Int is primes: [2, 3, 5, 7];
   Iterates through each element in the array, invoking `action` with the item.
   ```spec
   fruits:each(action: local Function(item){
-  	output:line(item);
+  	Output:line(item);
   });
   ```
 
@@ -375,7 +391,7 @@ scores["alice"]: 98;   # Updates existing entry
   Iterates through each entry in the map, invoking `action` with `(key, value)`.
   ```spec
   scores:each(action: local Function(String is name, Int is score){
-  	output:line("Student: " . name . " => " . score);
+  	Output:line("Student: " . name . " => " . score);
   });
   ```
 

@@ -38,6 +38,10 @@ Class is Linter{
 	## restore around nested-class recursion).
 	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: []);
 
+	## Depth of While/Loop callback bodies the standards walk is inside
+	## (INSTANCE.md E10: construction inside a loop body is a hoist hint).
+	local Int is lintLoopDepth: 0;
+
 	## Loaded class nodes by name, for the inherited-import walk.
 	local Map of String to ClassInfo is auditClassNodes: Map:init();
 
@@ -54,6 +58,7 @@ Class is Linter{
 		self:auditClasses: Map:init();
 		self:auditClassNodes: Map:init();
 		self:auditIssues: [];
+		self:lintLoopDepth: 0;
 		self:floorAliases: [];
 		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
 	}
@@ -176,6 +181,12 @@ Class is Linter{
 				local String is method: expr:methodName;
 				local Array of NamedArg is args: expr:methodArgs;
 
+				# INSTANCE.md E10: a constructor call inside a While/Loop
+				# callback body allocates per iteration — hoisting hint.
+				if (method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget)) {
+					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (INSTANCE.md E10).'));
+				}
+
 				when (method) {
 					is 'getString': {
 						local Boolean is hasDefault: false;
@@ -199,8 +210,16 @@ Class is Linter{
 				}
 
 				self:lintExpression(expr: expr:methodTarget, issues: issues);
+				local Boolean is isLoopDriver: self:isLoopSpell(target: expr:methodTarget);
 				args:each(action: local Function(NamedArg is arg){
-					self:lintExpression(expr: arg:value, issues: issues);
+					if (isLoopDriver && arg:value:kind == ExpressionKind:ANON_FN) {
+						local Int is savedDepth: self:lintLoopDepth;
+						self:lintLoopDepth: self:lintLoopDepth + 1;
+						self:lintExpression(expr: arg:value, issues: issues);
+						self:lintLoopDepth: savedDepth;
+					} else {
+						self:lintExpression(expr: arg:value, issues: issues);
+					}
 				});
 			}
 			is ExpressionKind:BINARY: {
@@ -215,8 +234,49 @@ Class is Linter{
 					self:lintExpression(expr: item, issues: issues);
 				});
 			}
+			is ExpressionKind:ANON_FN: {
+				expr:anonBody:each(action: local Function(Statement is st){
+					self:lintStatement(stmt: st, issues: issues);
+				});
+			}
 			else: {}
 		}
+	}
+
+	## True when [target] spells a loop driver — a While/Loop class-name
+	## receiver. Purely syntactic: the standards walk has no class table.
+	##
+	## @param target: The call's receiver expression.
+	## @return: true when the receiver names While or Loop.
+	Function of Boolean is isLoopSpell(Expression is target){
+		local String is name: '';
+		if (target:kind == ExpressionKind:IDENT) {
+			name: target:stringValue;
+		} else if (target:kind == ExpressionKind:PATH) {
+			local Array of String is segs: target:pathSegments;
+			if (segs:length() > 0) {
+				name: segs:get(index: segs:length() - 1);
+			}
+		}
+		return name == 'While' || name == 'Loop';
+	}
+
+	## True when [target] spells an UpperCamel (class-like) receiver —
+	## the shape of a constructor call `X:init(...)`.
+	##
+	## @param target: The call's receiver expression.
+	## @return: true when the receiver is class-spelled.
+	Function of Boolean is isClassSpell(Expression is target){
+		local String is name: '';
+		if (target:kind == ExpressionKind:IDENT) {
+			name: target:stringValue;
+		} else if (target:kind == ExpressionKind:PATH) {
+			local Array of String is segs: target:pathSegments;
+			if (segs:length() > 0) {
+				name: segs:get(index: segs:length() - 1);
+			}
+		}
+		return self:isUpperName(name: name);
 	}
 
 	## Inspects a statement node.
