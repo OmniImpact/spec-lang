@@ -815,8 +815,19 @@ Class is CodeGenerator{
 		}
 		if (kind == ExpressionKind:CALL) {
 			local String is targetType: self:inferTargetType(expr: expr:methodTarget);
+			# Lowercase floor-singleton usage forms (math:abs) infer '' —
+			# canonicalize by the target's own name.
+			if (targetType == '' && expr:methodTarget:kind == ExpressionKind:IDENT) {
+				local String is tn: expr:methodTarget:stringValue;
+				if (tn == 'math') {
+					targetType: 'Math';
+				} else if (tn == 'output') {
+					targetType: 'Output';
+				} else if (tn == 'error') {
+					targetType: 'Error';
+				}
+			}
 			if (targetType == 'math' || targetType == 'output' || targetType == 'error') {
-				# Lowercase floor-singleton usage forms resolve to class names.
 				if (targetType == 'math') {
 					targetType: 'Math';
 				} else if (targetType == 'output') {
