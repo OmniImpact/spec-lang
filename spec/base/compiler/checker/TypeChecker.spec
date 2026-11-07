@@ -727,9 +727,10 @@ Class is TypeChecker{
 					res: self:allEnumVariants:getString(key: name, default: Primitive:ANY:value());
 				} else if (self:registeredClasses:has(key: name)) {
 					res: name;
-				} else if (self:registeredClasses:has(key: self:canonicalClassName(name: name))) {
+				} else if (name == 'output' || name == 'error' || name == 'math') {
 					# Floor singletons are callable in their lowercase usage
-					# forms (output:line, error:line, math:sqrt).
+					# forms whether or not the class was imported this run
+					# (error:line needs no import — it is runtime magic).
 					res: self:canonicalClassName(name: name);
 				} else if (self:isPrimitive(t: name)) {
 					res: name;
@@ -765,7 +766,7 @@ Class is TypeChecker{
 						rootType: root;
 					} else if (self:registeredClasses:has(key: root)) {
 						rootType: root;
-					} else if (self:registeredClasses:has(key: self:canonicalClassName(name: root))) {
+					} else if (root == 'output' || root == 'error' || root == 'math') {
 						# Floor singletons in lowercase usage form.
 						rootType: self:canonicalClassName(name: root);
 					}

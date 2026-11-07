@@ -148,3 +148,33 @@ At every step: **the 70-test suite is the spec.** Both compilers must
 pass it; a transition step that changes behavior has made a mistake
 (or the suite has been deliberately updated — which is a recorded
 decision, not an accident).
+
+## 6. Standard library migration (`spec/lib`)
+
+The stdlib now lands in `spec/lib/base/...`, ported idiomatic
+(array-form `using`, full docs, duplicates removed), built only on the
+distribution's sysinternal floor. The old `lib/` is frozen — no edits.
+
+- **Resolution shadowing**: the Loader's scan roots put input-directory
+  ancestors first, and `resolveLibFile` tries `spec/lib/`, then `spec/`
+  (where the sysinternal floor lives), then legacy `lib/`. Classes
+  present in the new tree win; un-migrated classes fall through. One
+  deterministic winner per class name — no double loads.
+- **Moved** (19 files): `sysinternal` stays at `spec/base/sysinternal`
+  (it is the compiler distribution's floor, not stdlib — and the
+  bootstrap loaders cannot resolve it under `lib/` yet);
+  `core` (Stringable, Any, String), `iterator` (Loop, LoopControl,
+  LoopCallback, While), `struct` (Array, Map), `io` (Output, Input,
+  InputHandler, Ansi, File), `sys` (Process, Parallel, StackFrame,
+  SourceLocation), `math` (Math).
+- **Deliberately not moved** (die with the fossil): `lib/base/reflect`
+  (the fossil's reflection AST mirror), `lib/base/meta` (fossil AST),
+  `lib/compiler` (the fossil itself).
+- **Known sharp edge**: the transparency list in `ast/ClassBindings`
+  is name-based; common class names must stay off it (an `Error`
+  entry collided with the compiler's own `Error` and silently dropped
+  its struct — caught by self-compilation). `error:line` needs no
+  class at all: the checker maps the lowercase singleton spelling
+  unconditionally and the generator binds it to the floor.
+- **Endgame**: when the fossil retires, legacy `lib/` is deleted and
+  the loader's `lib/` prefix falls away — one resolver, one stdlib.

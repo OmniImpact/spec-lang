@@ -38,10 +38,15 @@ Class is ClassBindings{
 		if (self:isSysinternal(cls: c)) {
 			return true;
 		}
+		# NOTE: names here must be unambiguous across the whole program —
+		# a user class sharing a listed name would silently lose its
+		# emission. Common names (Error, Token, ...) stay OFF the list;
+		# floor singletons like error:line need no class at all.
 		local String is name: c:name;
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
 			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
+			name == 'Ansi' || name == 'Parallel' ||
 			name == 'List' || name == 'String';
 	}
 

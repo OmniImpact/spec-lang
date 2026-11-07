@@ -89,6 +89,12 @@ Class is Loader{
 		While:run(loop: loop);
 		local String is converted: loop:res;
 
+		# Stdlib resolution first (spec/lib preferred over legacy lib).
+		local String is std: self:resolveLibFile(relUnderLib: converted . '.spec');
+		if (std != '') {
+			return std;
+		}
+
 		local String is cand1: converted . '.spec';
 		if (File:exists(path: cand1)) {
 			return cand1;
@@ -102,72 +108,59 @@ Class is Loader{
 		return '';
 	}
 
-	## Expands wildcard package import paths into standard library file lists.
+	## Expands wildcard package import paths into standard library file
+	## lists. Entries are lib-root-relative ('base/io/File.spec') so the
+	## caller resolves them through [resolveLibFile] — the migration stdlib
+	## (spec/lib) shadows the legacy lib per file. The compiler:* group
+	## names the fossil compiler's own sources and dies with it.
 	##
 	## @param rawPath: Wildcard package identifier (e.g. "base:io:*").
-	## @return: Array of constituent file paths.
+	## @return: Array of lib-root-relative file paths.
 	Function of Array of String is expandWildcard(String is rawPath){
 		return when (rawPath) {
 			is 'base:io:*': [
-				'lib/base/io/File.spec',
-				'lib/base/io/Input.spec',
-				'lib/base/io/InputHandler.spec',
-				'lib/base/io/Output.spec',
-				'lib/base/io/Ansi.spec'
+				'base/io/File.spec',
+				'base/io/Input.spec',
+				'base/io/InputHandler.spec',
+				'base/io/Output.spec',
+				'base/io/Ansi.spec'
 			];
 			is 'base:iterator:*': [
-				'lib/base/iterator/Loop.spec',
-				'lib/base/iterator/LoopControl.spec',
-				'lib/base/iterator/LoopCallback.spec',
-				'lib/base/iterator/While.spec'
+				'base/iterator/Loop.spec',
+				'base/iterator/LoopControl.spec',
+				'base/iterator/LoopCallback.spec',
+				'base/iterator/While.spec'
 			];
 			is 'base:meta:*': [
-				'lib/base/meta/AST.spec'
+				'base/meta/AST.spec'
 			];
 			is 'base:reflect:*': [
-				'lib/base/reflect/Type.spec',
-				'lib/base/reflect/Parameter.spec',
-				'lib/base/reflect/Member.spec',
-				'lib/base/reflect/ClassInfo.spec'
+				'base/reflect/Type.spec',
+				'base/reflect/Parameter.spec',
+				'base/reflect/Member.spec',
+				'base/reflect/ClassInfo.spec'
 			];
 			is 'base:struct:*': [
-				'lib/base/struct/Array.spec',
-				'lib/base/struct/Map.spec'
+				'base/struct/Array.spec',
+				'base/struct/Map.spec'
 			];
 			is 'base:core:*': [
-				'lib/base/core/String.spec',
-				'lib/base/core/Stringable.spec',
-				'lib/base/core/Any.spec'
+				'base/core/String.spec',
+				'base/core/Stringable.spec',
+				'base/core/Any.spec'
 			];
 			is 'base:sysinternal:*': [
-				'lib/base/sysinternal/Buf.spec',
-				'lib/base/sysinternal/Dir.spec'
+				'base/sysinternal/Buf.spec',
+				'base/sysinternal/Dir.spec'
 			];
 			is 'base:sys:*': [
-				'lib/base/sys/Parallel.spec',
-				'lib/base/sys/Process.spec',
-				'lib/base/sys/SourceLocation.spec',
-				'lib/base/sys/StackFrame.spec'
+				'base/sys/Parallel.spec',
+				'base/sys/Process.spec',
+				'base/sys/SourceLocation.spec',
+				'base/sys/StackFrame.spec'
 			];
 			is 'base:math:*': [
-				'lib/base/math/Math.spec'
-			];
-			# At Phase H (self-hosting) this group switches to the spec/
-			# tree; until then it names the fossil's own sources, which a
-			# user program never imports.
-			is 'compiler:*': [
-				'lib/compiler/Token.spec',
-				'lib/compiler/Lexer.spec',
-				'lib/compiler/Parser.spec',
-				'lib/compiler/Linter.spec',
-				'lib/compiler/TypeChecker.spec',
-				'lib/compiler/CBackendUtils.spec',
-				'lib/compiler/RuntimePrelude.spec',
-				'lib/compiler/DeclarationGenerator.spec',
-				'lib/compiler/BuiltinCallGenerator.spec',
-				'lib/compiler/CodeGenerator.spec',
-				'lib/compiler/Loader.spec',
-				'lib/compiler/Driver.spec'
+				'base/math/Math.spec'
 			];
 			else: [];
 		};
@@ -248,7 +241,10 @@ Class is Loader{
 						local Array of String is wildcards: self:expandWildcard(rawPath: importStr);
 						if (wildcards:length() > 0) {
 							wildcards:each(action: local Function(String is f){
-								self:loadFile(filePath: f);
+								local String is wPath: self:resolveLibFile(relUnderLib: f);
+								if (wPath != '') {
+									self:loadFile(filePath: wPath);
+								}
 							});
 						} else {
 							local String is resolved: self:resolvePath(rawPath: importStr);
@@ -350,19 +346,16 @@ Class is Loader{
 		return self:loadedFiles:length();
 	}
 
-	## Scan roots for package resolution: the spec executable's directory
-	## and its parent (a bin/-layout install keeps packages at the prefix),
-	## then the input file's directory and up to three of its ancestors —
-	## so a binary run outside the project tree (tests, installed tools)
-	## still finds the project's packages.
+	## Scan roots for package resolution, in priority order: the input
+	## file's directory and up to three ancestors (so a binary run outside
+	## the project layout still finds the project's packages), then the spec
+	## executable's directory and its parent (a bin/-layout install keeps
+	## packages at the prefix), then the working directory. Input-relative
+	## roots come first so the migration stdlib (spec/lib) shadows the
+	## legacy lib while both exist; the legacy lib only serves classes the
+	## migration has not absorbed yet.
 	Function of Array of String is scanRoots(){
 		local Array of String is roots: [];
-		local String is exeDir: Dir:exeDir();
-		roots:add(item: exeDir);
-		local String is upDir: self:dirOf(path: exeDir);
-		if (upDir != '') {
-			roots:add(item: upDir);
-		}
 		local String is inDir: self:dirOf(path: self:rootInputPath);
 		local Int is hops: 0;
 		While:condition(
@@ -376,11 +369,53 @@ Class is Loader{
 				return true;
 			}
 		);
-		# The working directory closes the walk: relative input paths bottom
-		# out above the project root, which for a tool invoked from the
-		# project is exactly where the packages live.
+		local String is exeDir: Dir:exeDir();
+		roots:add(item: exeDir);
+		local String is upDir: self:dirOf(path: exeDir);
+		if (upDir != '') {
+			roots:add(item: upDir);
+		}
 		roots:add(item: '.');
 		return roots;
+	}
+
+	## Resolves a lib-root-relative path (e.g. 'base/core/String.spec')
+	## against the scan roots under three prefixes, in shadowing priority:
+	## the migration stdlib (spec/lib), the compiler distribution tree
+	## (spec/ — where the sysinternal floor lives), then the legacy lib.
+	## Returns '' when no root serves the file.
+	##
+	## @param relUnderLib: Path relative to the lib root.
+	## @return: The resolved file path, or ''.
+	Function of String is resolveLibFile(String is relUnderLib){
+		local Array of String is roots: self:scanRoots();
+		local String is found: '';
+		local Int is ri: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return found == '' && ri < roots:length();
+			},
+			iteration: local Function of Boolean(){
+				local String is root: roots:get(index: ri);
+				ri: ri + 1;
+				local String is cand: root . '/spec/lib/' . relUnderLib;
+				if (File:exists(path: cand)) {
+					found: cand;
+					return true;
+				}
+				cand: root . '/spec/' . relUnderLib;
+				if (File:exists(path: cand)) {
+					found: cand;
+					return true;
+				}
+				cand: root . '/lib/' . relUnderLib;
+				if (File:exists(path: cand)) {
+					found: cand;
+				}
+				return true;
+			}
+		);
+		return found;
 	}
 
 	## Directory portion of a file path ('' when the path has no slash).
@@ -700,14 +735,25 @@ Class is Loader{
 		self:groupTargets: [];
 		self:groupFragments: [];
 
-		# Root class lattice preloads, before any user code.
-		self:loadFile(filePath: 'lib/base/core/String.spec');
-		self:loadFile(filePath: 'lib/base/sysinternal/Buf.spec');
-		self:loadFile(filePath: 'lib/base/sysinternal/Dir.spec');
-		self:loadFile(filePath: 'lib/base/core/Stringable.spec');
-		self:loadFile(filePath: 'lib/base/core/Any.spec');
-
+		# The input path anchors the scan roots before any resolution.
 		self:rootInputPath: rootPath;
+
+		# Root class lattice preloads, before any user code. Resolution
+		# prefers the migration stdlib (spec/lib) over the legacy lib.
+		local Array of String is preloads: [
+			'base/core/String.spec',
+			'base/sysinternal/Buf.spec',
+			'base/sysinternal/Dir.spec',
+			'base/core/Stringable.spec',
+			'base/core/Any.spec'
+		];
+		preloads:each(action: local Function(String is rel){
+			local String is path: self:resolveLibFile(relUnderLib: rel);
+			if (path != '') {
+				self:loadFile(filePath: path);
+			}
+		});
+
 		self:loadFile(filePath: rootPath);
 		self:appendImplicitAny();
 		self:mergeGroups();

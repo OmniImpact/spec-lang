@@ -9,11 +9,19 @@ Class is Dir{
 
 	## Names of the entries in directory [path] ('.' and '..' excluded).
 	## Order is filesystem-dependent; consumers must not rely on it.
+	##
+	## @param path: Directory to list.
+	## @return: Entry names.
 	Function of Array of String is dirList(String is path);
 
 	## Directory containing the running spec executable.
+	##
+	## @return: The executable's directory.
 	Function of String is exeDir();
 
 	## Size of the file at [path] in bytes, or -1 when it does not exist.
+	##
+	## @param path: File to measure.
+	## @return: Size in bytes, or -1.
 	Function of Int is fileSize(String is path);
 }
