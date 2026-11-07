@@ -730,6 +730,12 @@ Class is TypeChecker{
 		local ExpressionKind is kind: expr:kind;
 		local String is res: 'Any';
 
+		if (kind == ExpressionKind:USING_AS) {
+			self:addError(line: self:currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (INSTANCE.md E1).');
+			expr:resolvedType: '';
+			return '';
+		}
+
 		when (kind) {
 			is ExpressionKind:STRING: {
 				res: Primitive:STRING:value();
@@ -2233,6 +2239,120 @@ Class is TypeChecker{
 	##
 	## @param program: The parsed program.
 	## @return: The type-error diagnostics.
+	## Validates one class's instance imports (as-form using entries,
+	## INSTANCE.md §2.1): the target must be a loaded non-enum class, and
+	## v1 restricts the form to field-less classes with no constructor
+	## arguments — the elided dispatch covers the whole known migration
+	## surface; the synthetic-field form is deferred. At most one import
+	## per class name (INSTANCE.md E2, E3).
+	##
+	## @param classDef: Class definition.
+	Function is checkInstanceImports(ClassInfo is classDef){
+		local Map of String to String is seen: Map:init();
+		classDef:members:each(action: local Function(Member is m){
+			if (m:name != 'using' || !m:hasInit || m:initExpr:kind != ExpressionKind:ARRAY) {
+				return;
+			}
+			m:initExpr:arrayItems:each(action: local Function(Expression is item){
+				if (item:kind != ExpressionKind:ARRAY) {
+					return;
+				}
+				local Expression is asExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
+				item:arrayItems:each(action: local Function(Expression is seg){
+					if (seg:kind == ExpressionKind:USING_AS) {
+						asExpr: seg;
+					}
+				});
+				if (asExpr:stringValue == '') {
+					return;
+				}
+				local String is asName: asExpr:stringValue;
+				if (seen:has(key: asName)) {
+					self:addError(line: m:line, msg: 'Class \'' . classDef:name . '\' instance-imports \'' . asName . '\' more than once (INSTANCE.md E3).');
+					return;
+				}
+				seen:set(key: asName, value: 'true');
+				local ClassInfo is target: self:findClass(name: asName);
+				if (target:name == '') {
+					return;
+				}
+				if (target:baseClass == self:names:enumHeader()) {
+					self:addError(line: m:line, msg: 'Cannot instance-import enum \'' . asName . '\'; enums are type-level (INSTANCE.md E2).');
+					return;
+				}
+				if (asExpr:methodArgs:length() > 0) {
+					self:addError(line: m:line, msg: 'Instance imports with constructor arguments are not supported yet; use \'as ' . asName . '()\' (INSTANCE.md E1 v1).');
+				}
+				local Boolean is isFieldFul: false;
+				target:members:each(action: local Function(Member is tm){
+					if (tm:kind == MemberKind:FIELD && tm:name != 'using' && tm:name != 'namespace' && tm:name != 'group' && tm:name != 'castable') {
+						isFieldFul: true;
+					}
+				});
+				if (isFieldFul) {
+					self:addError(line: m:line, msg: 'Cannot instance-import \'' . asName . '\': the class declares fields; v1 supports field-less classes only (INSTANCE.md E2 v1).');
+				}
+			});
+		});
+	}
+
+	## Collects the instance-import target names of one class.
+	##
+	## @param classDef: Class definition.
+	## @return: The as-form target class names, declaration order.
+	Function of Array of String is instanceImportTargets(ClassInfo is classDef){
+		local Array of String is out: [];
+		classDef:members:each(action: local Function(Member is m){
+			if (m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+				m:initExpr:arrayItems:each(action: local Function(Expression is item){
+					if (item:kind == ExpressionKind:ARRAY) {
+						item:arrayItems:each(action: local Function(Expression is seg){
+							if (seg:kind == ExpressionKind:USING_AS) {
+								out:add(item: seg:stringValue);
+							}
+						});
+					}
+				});
+			}
+		});
+		return out;
+	}
+
+	## Verifies the instance-import graph is a DAG (INSTANCE.md E4):
+	## A importing as B and B importing as A would recurse construction
+	## forever at first init. DFS with gray/black coloring.
+	Function is checkInstanceImportGraph(){
+		local Map of String to String is color: Map:init();
+		self:programClasses:each(action: local Function(ClassInfo is c){
+			self:visitImportNode(c: c, color: color, path: '');
+		});
+	}
+
+	## One DFS visit of the import graph.
+	##
+	## @param c: Class being visited.
+	## @param color: Node states ('g' in progress, 'b' done).
+	## @param path: Cycle-report prefix.
+	Function is visitImportNode(ClassInfo is c, Map of String to String is color, String is path){
+		local String is state: color:getString(key: c:name, default: '');
+		if (state == 'b') {
+			return;
+		}
+		if (state == 'g') {
+			self:addError(line: 0, msg: 'Instance import cycle: ' . path . c:name . ' (INSTANCE.md E4); construction would recurse forever.');
+			return;
+		}
+		color:set(key: c:name, value: 'g');
+		local Array of String is targets: self:instanceImportTargets(classDef: c);
+		targets:each(action: local Function(String is t){
+			local ClassInfo is next: self:findClass(name: t);
+			if (next:name != '') {
+				self:visitImportNode(c: next, color: color, path: path . c:name . ' -> ');
+			}
+		});
+		color:set(key: c:name, value: 'b');
+	}
+
 	Function of Array of TypeError is checkProgram(ProgramNode is program){
 		self:errors: [];
 		local Array of ClassInfo is flattened: [];
@@ -2270,6 +2390,13 @@ Class is TypeChecker{
 				});
 			}
 		});
+
+		# INSTANCE.md E2/E3: validate as-form instance imports per class.
+		flattened:each(action: local Function(ClassInfo is c){
+			self:checkInstanceImports(classDef: c);
+		});
+		# INSTANCE.md E4: the instance-import graph must be a DAG.
+		self:checkInstanceImportGraph();
 
 		# Pass 1: Inheritance contract validation & type propagation
 		flattened:each(action: local Function(ClassInfo is c){

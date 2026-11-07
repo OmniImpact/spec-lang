@@ -387,6 +387,11 @@ Class is Loader{
 		segs:each(action: local Function(Expression is seg){
 			if (seg:kind == ExpressionKind:IDENT) {
 				termClass: seg:stringValue;
+			} else if (seg:kind == ExpressionKind:USING_AS) {
+				# Instance-import form (INSTANCE.md §2.1): resolves exactly
+				# like the class form; the as-ness stays on the using member
+				# for the checker, generator, and audit.
+				termClass: seg:stringValue;
 			} else {
 				parts:add(item: seg:stringValue);
 			}

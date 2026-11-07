@@ -48,6 +48,31 @@ Class is ClassInfo{
 	## @param name: Class identifier.
 	## @param baseClasses: Parent class names.
 	## @param members: The class members.
+	## True when this class's using declaration instance-imports [name]
+	## via the as-form (INSTANCE.md §2.1): a using entry terminating in
+	## `as Name()` materializes an owned instance whose members answer to
+	## the class-name prefix.
+	##
+	## @param name: Class name to test.
+	## @return: true when an as-form entry names [name].
+	Function of Boolean is instanceImportsAs(String is name){
+		local Boolean is found: false;
+		self:members:each(action: local Function(Member is m){
+			if (!found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+				m:initExpr:arrayItems:each(action: local Function(Expression is item){
+					if (item:kind == ExpressionKind:ARRAY) {
+						item:arrayItems:each(action: local Function(Expression is seg){
+							if (seg:kind == ExpressionKind:USING_AS && seg:stringValue == name) {
+								found: true;
+							}
+						});
+					}
+				});
+			}
+		});
+		return found;
+	}
+
 	## The class's declared namespace, joined with ':' ('' when undeclared).
 	##
 	## @return: The namespace path, e.g. 'base:sysinternal'.

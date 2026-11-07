@@ -32,6 +32,10 @@ Class is Linter{
 	## Worklist notices gathered by the audit pass.
 	local Array of LintIssue is auditIssues: [];
 
+	## The class whose members are currently being audited (with save and
+	## restore around nested-class recursion).
+	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: []);
+
 	## Lowercase floor singletons routed by name (INSTANCE.md R1-R3 removes
 	## them, so their call sites belong on the worklist).
 	local Array of String is floorAliases: [];
@@ -383,10 +387,15 @@ Class is Linter{
 		});
 	}
 
-	## Audits every method body of a class definition, nested classes included.
+	## Audits every method body of a class definition, nested classes
+	## included. The owning class is remembered (with save and restore
+	## around nesting) so migrated as-import receivers can leave the
+	## worklist.
 	##
 	## @param classDef: [ClassInfo] definition.
 	Function is auditClass(ClassInfo is classDef){
+		local ClassInfo is savedOwner: self:auditOwner;
+		self:auditOwner: classDef;
 		classDef:members:each(action: local Function(Member is m){
 			when (m:kind) {
 				is MemberKind:METHOD: {
@@ -400,6 +409,7 @@ Class is Linter{
 				else: {}
 			}
 		});
+		self:auditOwner: savedOwner;
 	}
 
 	## Walks one statement, auditing every expression it contains (when
@@ -589,6 +599,11 @@ Class is Linter{
 				return;
 			}
 			if (!self:auditClasses:has(key: name)) {
+				return;
+			}
+			if (self:auditOwner:instanceImportsAs(name: name)) {
+				# Migrated: the owning class instance-imports this class
+				# (INSTANCE.md §2.1), so the prefix call is the new model.
 				return;
 			}
 		} else {

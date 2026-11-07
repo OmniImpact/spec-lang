@@ -139,11 +139,15 @@ Each item = one checker/loader/parser duty. `E#` referenced by tests (§8).
   is a String/Int/Float/Boolean literal. No variables, no `self`, no field or
   parameter references, no enum refs, no expressions. Enforced at parse time.
   Rationale: the `using` array is declaration-level — no `init` params, no
-  ordering hazards, trivially checkable.
+  ordering hazards, trivially checkable. *v1 note: implemented; the checker
+  additionally accepts only zero-argument imports (see E2 v1).*
 - [ ] **E2 — Init match + non-abstract.** `as X(args)` requires `X` to be a
   non-abstract class with an accessible `init` accepting `args` by count and
   type. `as X()` on an Enum is an error. Generic classes cannot be
-  instance-imported (v1 — see §10).
+  instance-imported (v1 — see §10). *v1 note: implemented for the elided
+  subset — field-less classes only, zero-arg only. The synthetic-field form
+  (real allocation, literal args) is deferred until a migration site needs
+  it; every current as-import candidate is field-less.*
 - [ ] **E3 — Uniqueness.** At most one instance import per class name per
   importing class (post group-merge; fragments' `using` entries union first).
   Duplicate → compile error.

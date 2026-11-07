@@ -883,6 +883,42 @@ Class is Parser{
 		return u;
 	}
 
+	## Parses the instance-import form `as ClassName(args)` — a using-entry
+	## terminator (INSTANCE.md §2.1). Arguments must be direct literal
+	## values (INSTANCE.md E1); parentheses are required so the form can
+	## never be confused with the postfix cast.
+	##
+	## @return: The USING_AS expression node.
+	Function of Expression is parseUsingAs(){
+		self:advance();
+		local Token is clsTok: self:peek();
+		if (clsTok:getTokenKind() != TokenKind:IDENTIFIER) {
+			self:addError(tok: clsTok, message: "'as' in a using entry must be followed by a class name.");
+			return Expression:init(kind: ExpressionKind:UNKNOWN);
+		}
+		self:advance();
+		local Expression is e: Expression:init(kind: ExpressionKind:USING_AS);
+		e:stringValue: clsTok:getValue();
+		if (self:checkPunct(p: Punctuation:GROUP_OPEN)) {
+			self:advance();
+			if (!self:checkPunct(p: Punctuation:GROUP_CLOSE)) {
+				local Array of NamedArg is args: [];
+				While:run(loop: ArgLoop:init(parser: self, args: args));
+				e:methodArgs: args;
+				args:each(action: local Function(NamedArg is arg){
+					local ExpressionKind is ak: arg:value:kind;
+					if (ak != ExpressionKind:STRING && ak != ExpressionKind:NUMBER && ak != ExpressionKind:FLOAT && ak != ExpressionKind:BOOL) {
+						self:addError(tok: clsTok, message: 'Instance-import arguments must be direct literal values (INSTANCE.md E1).');
+					}
+				});
+			}
+			self:matchPunct(p: Punctuation:GROUP_CLOSE);
+		} else {
+			self:addError(tok: clsTok, message: "Instance import requires parentheses: 'as " . e:stringValue . "()'.");
+		}
+		return e;
+	}
+
 	## Parses a type cast: `value as Target` or `value as Target(width)`.
 	## Binding is tighter than every binary operator; chaining
 	## (`x as A as B`) is rejected.
@@ -1031,6 +1067,18 @@ Class is Parser{
 				local Expression is e: Expression:init(kind: ExpressionKind:IDENT);
 				e:stringValue: tok:getValue();
 				return e;
+			}
+			is TokenKind:KEYWORD: {
+				# Expression-initial `as` is the instance-import form
+				# `as ClassName()` (INSTANCE.md §2.1); `as` never begins any
+				# other expression (casts are postfix, scoped regions are
+				# statement-initial).
+				if (self:checkKeyword(kw: Keyword:AS)) {
+					return self:parseUsingAs();
+				}
+				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
+				self:advance();
+				return Expression:init(kind: ExpressionKind:UNKNOWN);
 			}
 			else: {
 				if (self:checkPunct(p: Punctuation:GROUP_OPEN)) {

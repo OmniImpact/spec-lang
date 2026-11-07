@@ -360,6 +360,17 @@ Class is CodeGenerator{
 		return k == 'object';
 	}
 
+	## True when the class currently being generated instance-imports
+	## [className] via an as-form using entry (INSTANCE.md §2.1) — its
+	## class-name calls dispatch on the owned (elided) instance.
+	##
+	## @param className: Receiver class name.
+	## @return: true when instance-imported by the current class.
+	Function of Boolean is isAsImportedReceiver(String is className){
+		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
+		return curCls:instanceImportsAs(name: className);
+	}
+
 	## Generates the per-type constructor call for a typed assignment:
 	## primitives are casts, String wraps into a managed value, containers
 	## and ARC types retain unless the producer transferred a claim.
@@ -1782,6 +1793,12 @@ Class is CodeGenerator{
 				return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initCls . '_init((' . initCls . '*)_inst' . initArgs . '); _inst; })';
 			}
 			local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
+			if (self:isAsImportedReceiver(className: targetC) && mDef:kind == MemberKind:METHOD) {
+				# Elided instance import (INSTANCE.md §2.4): the class has no
+				# fields, so its methods are self-free — the call is a direct
+				# C call with self ignored, void or not.
+				return targetC . '_' . expr:methodName . '(NULL' . argsJoined . ')';
+			}
 			if (mDef:kind == MemberKind:METHOD) {
 				local String is mRetType: self:resolveReturnType(t: mDef:memberType);
 				if (mRetType != '' && mRetType != 'Void' && mRetType != 'void') {

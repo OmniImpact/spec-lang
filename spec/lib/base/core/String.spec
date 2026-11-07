@@ -13,8 +13,8 @@ Class is String{
 	namespace: ['base', 'core'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', Buf],
-		['base', 'iterator', While],
+		['base', 'sys', as Buf()],
+		['base', 'iterator', as While()],
 		['base', 'struct', Array]
 	];
 

@@ -23,5 +23,6 @@ Enum of String is ExpressionKind {
 	IF_ELSE: 'IF_ELSE',
 	WHEN: 'WHEN',
 	ANON_FN: 'ANON_FN',
+	USING_AS: 'USING_AS',
 	UNKNOWN: 'UNKNOWN'
 }
