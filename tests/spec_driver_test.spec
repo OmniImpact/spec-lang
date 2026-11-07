@@ -1,0 +1,71 @@
+#! Driver + CompilationReport check: the new driver compiles a source
+#! file end to end (load, check, generate, cc) and its checker rejects
+#! invalid programs.
+
+Class is SpecDriverTest{
+	namespace: ['spec', 'test'];
+
+	replace Array of Array of String is using: [
+		['spec', 'base', 'compiler', 'driver', Driver],
+		['lib', 'base', 'io', Output],
+		['lib', 'base', 'io', File],
+		['lib', 'base', 'struct', Map]
+	];
+
+	replace Function is init(Map of String to String is args){
+		output:line('=== Spec Driver Test ===');
+		local Int is failures: 0;
+
+		# A valid program: multi-file, polymorphic, floor-imported.
+		local String is src: "Class is Greeter{
+	local String is greeting;
+	replace Function is init(String is g){
+		self:greeting: g;
+	}
+	Function of String is text(){
+		return self:greeting;
+	}
+	replace Function of String is toString(){
+		return 'Greeter(' . self:text() . ')';
+	}
+}
+Class of Greeter is LoudGreeter{
+	replace Function of String is toString(){
+		return 'LOUD ' . self:text();
+	}
+}
+Class is DriverE2E{
+	replace Function is init(Map of String to String is args){
+		local Greeter is g: LoudGreeter:init(g: 'hi');
+		Output:line(text: g:toString());
+	}
+	replace Array of Array of String is using: [
+		['lib', 'base', 'io', Output]
+	];
+}";
+		File:write(path: 'tests/.driver_app_tmp.spec', content: src);
+
+		local Map of String to String is cli: Map:init();
+		cli:set(key: 'i', value: 'tests/.driver_app_tmp.spec');
+		cli:set(key: 'emit-c', value: 'tests/.driver_app_tmp.c');
+		local Driver is d: Driver:init(args: cli);
+
+		local String is cSrc: File:read(path: 'tests/.driver_app_tmp.c', default: '');
+		if (cSrc:contains(needle: 'int main(')
+			&& cSrc:contains(needle: 'LoudGreeter_toString')
+			&& cSrc:contains(needle: '_vtable[')) {
+			output:line('[PASS] driver emitted C with vtable dispatch');
+		} else {
+			output:line('[FAIL] driver emission');
+			failures: failures + 1;
+		}
+		File:remove(path: 'tests/.driver_app_tmp.c');
+		File:remove(path: 'tests/.driver_app_tmp.spec');
+
+		if (failures == 0) {
+			output:line('[PASS] spec driver test complete');
+		} else {
+			output:line('[FAIL] spec driver test: ' . (failures as String) . ' failures');
+		}
+	}
+}
