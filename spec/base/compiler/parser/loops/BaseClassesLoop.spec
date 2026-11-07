@@ -6,8 +6,8 @@ Class of Loop is BaseClassesLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

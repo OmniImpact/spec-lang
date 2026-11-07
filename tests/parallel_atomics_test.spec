@@ -12,12 +12,11 @@
 
 Class is ParallelAtomicsTest{
 
-	replace Array of String is using: [
-		['lib', 'base', 'iterator'],
-		base:io:Output,
-		base:sys:Process,
-		base:sys:Parallel,
-		base:math:Math
+	replace Array of Array of String is using: [
+		['base', 'io', Output],
+		['base', 'sys', Process],
+		['base', 'sys', Parallel],
+		['base', 'math', Math],
 	];
 
 	replace Function is init(Map of String to String is args){

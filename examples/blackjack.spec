@@ -1,16 +1,16 @@
 Class is Blackjack{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:iterator:Loop,
-		base:iterator:LoopControl,
-		base:iterator:LoopCallback,
-		base:iterator:While,
-		base:io:Output,
-		base:io:Input,
-		base:io:InputHandler,
-		base:math:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator', Loop],
+		['base', 'iterator', LoopControl],
+		['base', 'iterator', LoopCallback],
+		['base', 'iterator', While],
+		['base', 'io', Output],
+		['base', 'io', Input],
+		['base', 'io', InputHandler],
+		['base', 'math'],
 	];
 
 	# =========================================================================

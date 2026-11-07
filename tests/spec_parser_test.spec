@@ -2,20 +2,20 @@
 #! generic-class declarations, interface-style members, and error provenance.
 
 Class is SpecParserTest{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', StatementKind],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'lexer', TokenKind],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['lib', 'base', 'io', Output]
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', StatementKind],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'lexer', TokenKind],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'io', Output]
 	];
 
 	## Tokenizes and parses a source string.

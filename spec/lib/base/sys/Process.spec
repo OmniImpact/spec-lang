@@ -10,7 +10,7 @@ Class is Process{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'struct', Array]
+		['base', 'struct', Array]
 	];
 
 	## Spawns a child process executing [command] with [args], waiting for completion.

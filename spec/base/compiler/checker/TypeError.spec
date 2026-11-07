@@ -7,8 +7,8 @@ Class is TypeError{
 	namespace: ['base', 'compiler', 'checker'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', Error],
-		['spec', 'lib', 'base', 'sys', Reflection]
+		['base', 'compiler', Error],
+		['base', 'sys', Reflection]
 	];
 
 	## One-based source line (0 when the error is program-level).

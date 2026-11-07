@@ -3,21 +3,21 @@
 #! inference, and the claim/ARC helpers — no emission yet.
 
 Class is SpecCodegenTest{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'gen', CodeGenerator],
-		['spec', 'base', 'compiler', 'gen', BuiltinCallGenerator],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'ast', StatementKind],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'struct', Map]
+		['base', 'compiler', 'gen', CodeGenerator],
+		['base', 'compiler', 'gen', BuiltinCallGenerator],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', StatementKind],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'io', Output],
+		['base', 'struct', Map]
 	];
 
 	## Parses a source snippet into a program.

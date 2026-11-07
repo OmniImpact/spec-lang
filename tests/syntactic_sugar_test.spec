@@ -1,10 +1,10 @@
 Class is SyntacticSugarTest{
 
-	replace Array of String is using: [
-		base:io:*,
-		base:struct:Array,
-		base:struct:Map,
-		base:iterator:While
+	replace Array of Array of String is using: [
+		['base', 'io'],
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator', While],
 	];
 
 	replace Function is init(Map of String to String is args){

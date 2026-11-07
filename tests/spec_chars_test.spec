@@ -5,8 +5,8 @@
 Class is SpecCharsTest{
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'utils', Chars],
-		['lib', 'base', 'io', Output]
+		['base', 'compiler', 'utils', Chars],
+		['base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){

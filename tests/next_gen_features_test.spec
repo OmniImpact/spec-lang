@@ -80,10 +80,10 @@ Class is Pair of A to B{
 ## Main test suite validating next-generation language features.
 Class is NextGenFeaturesTest{
 
-	replace Array of String is using: [
-		base:io:*,
-		base:struct:Array,
-		base:struct:Map
+	replace Array of Array of String is using: [
+		['base', 'io'],
+		['base', 'struct', Array],
+		['base', 'struct', Map],
 	];
 
 	## Helper method demonstrating default parameter values and call-site reordering.

@@ -4,16 +4,16 @@
 
 Class is Phase6CodegenTest{
 
-	replace Array of String is using: [
-		base:io:*,
-		base:sys:Process,
-		base:struct:Array,
-		base:iterator:*,
-		spec:base:compiler:lexer:Token,
-		spec:base:compiler:lexer:Lexer,
-		spec:base:compiler:parser:Parser,
-		spec:base:compiler:checker:TypeChecker,
-		spec:base:compiler:gen:CodeGenerator
+	replace Array of Array of String is using: [
+		['base', 'io'],
+		['base', 'sys', Process],
+		['base', 'struct', Array],
+		['base', 'iterator'],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'checker', TypeChecker],
+		['base', 'compiler', 'gen', CodeGenerator],
 	];
 
 	replace Function is init(Map of String to String is args){

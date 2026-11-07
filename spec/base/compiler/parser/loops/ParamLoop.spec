@@ -7,12 +7,12 @@ Class of Loop is ParamLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'ast', Parameter],
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', WellKnown],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', WellKnown],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

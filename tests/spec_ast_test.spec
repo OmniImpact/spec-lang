@@ -4,16 +4,16 @@
 Class is SpecAstTest{
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', StatementKind],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['lib', 'base', 'io', Output]
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', StatementKind],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){

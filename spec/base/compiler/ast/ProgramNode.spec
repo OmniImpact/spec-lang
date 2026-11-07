@@ -6,7 +6,7 @@ Class is ProgramNode{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ClassInfo]
+		['base', 'compiler', 'ast', ClassInfo]
 	];
 
 	## Top-level classes, in load order.

@@ -4,11 +4,11 @@
 ## Verification suite for ANSI 256-color and special character console output.
 Class is AnsiColorTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:iterator:*,
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator'],
+		['base', 'io'],
 	];
 
 	replace Function is init(Map of String to String is args){

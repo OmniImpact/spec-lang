@@ -5,13 +5,13 @@
 ## Renders the Mandelbrot set to the console using 256-color ANSI sequences and Unicode blocks.
 Class is Mandelbrot{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:iterator:*,
-		base:math:*,
-		base:io:*,
-		base:sys:Process
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator'],
+		['base', 'math'],
+		['base', 'io'],
+		['base', 'sys', Process],
 	];
 
 	## Total number of complex-plane points sampled across all render modes.

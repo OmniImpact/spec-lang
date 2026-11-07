@@ -6,13 +6,13 @@ Class of Loop is WhenArmsLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'parser', 'loops', WhenConditionsLoop],
-		['spec', 'base', 'compiler', 'parser', 'loops', BlockStatementsLoop],
-		['spec', 'base', 'compiler', 'ast', WhenArm],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'parser', 'loops', WhenConditionsLoop],
+		['base', 'compiler', 'parser', 'loops', BlockStatementsLoop],
+		['base', 'compiler', 'ast', WhenArm],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

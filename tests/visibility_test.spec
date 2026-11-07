@@ -53,8 +53,8 @@ Class of VisBase is VisChild{
 
 Class is VisibilityTest{
 
-	replace Array of String is using: [
-		base:io:Output
+	replace Array of Array of String is using: [
+		['base', 'io', Output],
 	];
 
 	replace Function is init(Map of String to String is args){

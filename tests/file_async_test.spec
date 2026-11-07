@@ -1,10 +1,10 @@
 Class is FileAsyncTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:io:File,
-		base:sys:Process
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'io', File],
+		['base', 'sys', Process],
 	];
 
 	replace Function is init(Map of String to String is args){

@@ -17,11 +17,11 @@ Class is EmissionPolicy{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', ClassBindings],
-		['spec', 'base', 'compiler', 'ast', MetadataField],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', ClassBindings],
+		['base', 'compiler', 'ast', MetadataField],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'iterator']
 	];
 
 	## The shared floor-class classification.

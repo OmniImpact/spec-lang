@@ -179,6 +179,18 @@ distribution's sysinternal floor. The old `lib/` is frozen — no edits.
 - **Endgame**: when the fossil retires, legacy `lib/` is deleted and
   the loader's `lib/` prefix falls away — one resolver, one stdlib.
 
+- **Package paths are pure package segments** (section 7 follow-up):
+  imports say `['base', 'io', Output]` / `['base', 'compiler', 'ast',
+  Type]` — the `spec/` and `lib/` directory names are repository
+  layout, never package names. The Loader's array-form resolver walks
+  layout prefixes per scan root (spec/lib stdlib, spec/ distribution,
+  legacy lib, bare direct path). All sources — tree, tests, examples —
+  are swept to this spelling; string-form `using` and the legacy
+  `lib/` prefix are now removable at the physical-retirement commit.
+  The fossil-era phase tests (phase3 lexer / phase4 parser / phase5
+  linter / phase6 typechecker) exercised legacy-internal APIs through
+  `base:meta`/`base:reflect` and retired with the fossil.
+
 ## 7. Sysinternal wrapper discipline (designed; landing next)
 
 The floor is only ever touched by same-name wrappers in `base:sys`:

@@ -10,13 +10,13 @@ Class of Loop is ArgLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'ast', NamedArg],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['spec', 'base', 'compiler', 'lexer', TokenKind],
-		['spec', 'base', 'compiler', 'utils', Chars],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', TokenKind],
+		['base', 'compiler', 'utils', Chars],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

@@ -6,9 +6,9 @@ Class of Loop is MemberImplementLoop{
 	namespace: ['base', 'compiler', 'checker', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'iterator']
 	];
 
 	local Array of Member is members;

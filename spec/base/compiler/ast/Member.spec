@@ -5,13 +5,13 @@ Class is Member{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'ast', Parameter],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ClassInfo]
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ClassInfo]
 	];
 
 	## Member category for enum dispatch.

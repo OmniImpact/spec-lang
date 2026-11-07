@@ -1,10 +1,10 @@
 Class is FeaturesTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:math:*,
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'math'],
+		['base', 'io'],
 	];
 
 	replace Function is init(Map of String to String is args){

@@ -15,32 +15,32 @@ Class is TypeChecker{
 	namespace: ['base', 'compiler', 'checker'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'ast', StatementKind],
-		['spec', 'base', 'compiler', 'ast', Parameter],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', ClassBindings],
-		['spec', 'base', 'compiler', 'ast', NamedArg],
-		['spec', 'base', 'compiler', 'ast', WhenArm],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['spec', 'base', 'compiler', 'ast', ContractMethod],
-		['spec', 'base', 'compiler', 'ast', MetadataField],
-		['spec', 'base', 'compiler', 'ast', Primitive],
-		['spec', 'base', 'compiler', WellKnown],
-		['spec', 'base', 'compiler', Error],
-		['spec', 'base', 'compiler', 'checker', TypeError],
-		['spec', 'base', 'compiler', 'checker', 'loops', ClassSearchLoop],
-		['spec', 'base', 'compiler', 'checker', 'loops', FieldSearchLoop],
-		['spec', 'base', 'compiler', 'checker', 'loops', MethodSearchLoop],
-		['spec', 'base', 'compiler', 'checker', 'loops', PathResolveLoop],
-		['spec', 'base', 'compiler', 'checker', 'loops', MemberImplementLoop],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', StatementKind],
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', ClassBindings],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ast', WhenArm],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'compiler', 'ast', ContractMethod],
+		['base', 'compiler', 'ast', MetadataField],
+		['base', 'compiler', 'ast', Primitive],
+		['base', 'compiler', WellKnown],
+		['base', 'compiler', Error],
+		['base', 'compiler', 'checker', TypeError],
+		['base', 'compiler', 'checker', 'loops', ClassSearchLoop],
+		['base', 'compiler', 'checker', 'loops', FieldSearchLoop],
+		['base', 'compiler', 'checker', 'loops', MethodSearchLoop],
+		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
+		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
+		['base', 'iterator']
 	];
 
 	## Registered classes: name -> "true".
@@ -1239,6 +1239,7 @@ Class is TypeChecker{
 				res: targetType;
 				local Array of String is scParts: targetType:split(delimiter: ':');
 				when (method) {
+					is 'toString': { res: Primitive:STRING:value(); }
 					is 'length': { res: Primitive:INT:value(); }
 					is 'isEmpty': { res: Primitive:BOOLEAN:value(); }
 					is 'count': { res: Primitive:INT:value(); }

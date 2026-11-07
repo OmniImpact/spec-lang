@@ -1,7 +1,7 @@
 Class is GenericFunctionTest{
 
-	replace Array of String is using: [
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'io'],
 	];
 
 	local Function of Boolean is testPredicate(Function of String to Boolean is predicate, String is input){

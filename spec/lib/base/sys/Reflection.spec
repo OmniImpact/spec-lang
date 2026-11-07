@@ -11,7 +11,7 @@ Class is Reflection{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'sysinternal', Reflection]
+		['base', 'sysinternal', Reflection]
 	];
 
 	## The enclosing class name at the call site, injected by the generator.

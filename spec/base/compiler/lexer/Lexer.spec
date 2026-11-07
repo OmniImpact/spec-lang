@@ -18,25 +18,25 @@ Class is Lexer{
 	replace Array of String is namespace: ['base', 'compiler', 'lexer'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'utils', Chars],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['spec', 'base', 'compiler', 'lexer', TokenKind],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['spec', 'base', 'compiler', WellKnown],
-		['spec', 'base', 'compiler', 'lexer', Operator],
-		['spec', 'base', 'compiler', 'lexer', 'loops', TokenizeLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', SkipWhitespaceLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', IdentScanLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', BaseDigitsLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', NumberScanLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', StringScanLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', HeredocScanLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', StripUnderscoresLoop],
-		['spec', 'base', 'compiler', 'lexer', 'loops', StripLeadingZerosLoop],
-		['spec', 'base', 'compiler', Error],
-		['spec', 'base', 'compiler', ErrorText],
-		['spec', 'lib', 'base', 'sys', Reflection],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'utils', Chars],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', TokenKind],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'compiler', WellKnown],
+		['base', 'compiler', 'lexer', Operator],
+		['base', 'compiler', 'lexer', 'loops', TokenizeLoop],
+		['base', 'compiler', 'lexer', 'loops', SkipWhitespaceLoop],
+		['base', 'compiler', 'lexer', 'loops', IdentScanLoop],
+		['base', 'compiler', 'lexer', 'loops', BaseDigitsLoop],
+		['base', 'compiler', 'lexer', 'loops', NumberScanLoop],
+		['base', 'compiler', 'lexer', 'loops', StringScanLoop],
+		['base', 'compiler', 'lexer', 'loops', HeredocScanLoop],
+		['base', 'compiler', 'lexer', 'loops', StripUnderscoresLoop],
+		['base', 'compiler', 'lexer', 'loops', StripLeadingZerosLoop],
+		['base', 'compiler', Error],
+		['base', 'compiler', ErrorText],
+		['base', 'sys', Reflection],
+		['base', 'iterator']
 	];
 
 	## The full source text being scanned. Public because the scan loops

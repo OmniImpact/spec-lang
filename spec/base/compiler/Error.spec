@@ -11,7 +11,7 @@ Class is Error{
 	replace Array of String is namespace: ['base', 'compiler'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'sys', StackFrame]
+		['base', 'sys', StackFrame]
 	];
 
 	## The diagnostic message (position information included by the

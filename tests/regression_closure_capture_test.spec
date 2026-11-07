@@ -20,8 +20,8 @@
 ## Status: PASSING (regression resolved; guarded by this file).
 Class is RegressionClosureCaptureTest{
 
-	replace Array of String is using: [
-		base:io:Output
+	replace Array of Array of String is using: [
+		['base', 'io', Output],
 	];
 
 	## Field read by a closure through self capture.

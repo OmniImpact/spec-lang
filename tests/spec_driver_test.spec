@@ -3,13 +3,13 @@
 #! invalid programs.
 
 Class is SpecDriverTest{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'driver', Driver],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'io', File],
-		['lib', 'base', 'struct', Map]
+		['base', 'compiler', 'driver', Driver],
+		['base', 'io', Output],
+		['base', 'io', File],
+		['base', 'struct', Map]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -40,7 +40,7 @@ Class is DriverE2E{
 		Output:line(text: g:toString());
 	}
 	replace Array of Array of String is using: [
-		['lib', 'base', 'io', Output]
+		['base', 'io', Output]
 	];
 }";
 		File:write(path: 'tests/.driver_app_tmp.spec', content: src);

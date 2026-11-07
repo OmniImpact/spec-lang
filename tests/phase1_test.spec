@@ -1,10 +1,10 @@
 Class is Phase1Test{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:io:*,
-		base:sys:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'io'],
+		['base', 'sys'],
 	];
 
 	replace Function is init(Map of String to String is args){

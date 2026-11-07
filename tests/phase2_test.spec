@@ -1,9 +1,9 @@
 Class is Phase2Test{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'io'],
 	];
 
 	replace Function is init(Map of String to String is args){

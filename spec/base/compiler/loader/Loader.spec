@@ -12,18 +12,18 @@ Class is Loader{
 	namespace: ['base', 'compiler', 'loader'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'io', File],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'lib', 'base', 'sys', Buf],
-		['spec', 'lib', 'base', 'sys', Dir],
-		['lib', 'base', 'struct', Array],
-		['lib', 'base', 'struct', Map],
-		['lib', 'base', 'iterator']
+		['base', 'io', File],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'sys', Buf],
+		['base', 'sys', Dir],
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator']
 	];
 
 	local Map of String to String is loadedFiles: Map:init();
@@ -294,44 +294,58 @@ Class is Loader{
 		});
 		local Array of String is roots: self:scanRoots();
 		local Boolean is resolved: false;
+		# Package paths are pure package segments ('base/io/Output'); the
+		# repository layout is the resolver's business. Each root tries the
+		# layout prefixes in priority order: the migration stdlib
+		# (spec/lib), the compiler distribution tree (spec/), the legacy
+		# lib (dies with the fossil), then the bare direct path (the
+		# pre-cascade spelling, kept one generation for the bootstrap).
+		local Array of String is prefixes: ['', 'spec/lib', 'spec', 'lib'];
 		roots:each(action: local Function(String is root){
-			local String is dir: root;
-			parts:each(action: local Function(String is p){
-				dir: dir . '/' . p;
-			});
-			# Ownership note: concat results ride the claim pool, and nested
-			# package loading recycles slots across loadFile calls — a recycled
-			# slot frees a path the parser's sourceFile field still holds. The
-			# floor copy hands loadFile an unambiguously owned string.
-			if (termClass != '') {
-				local String is classFile: Buf:stringCopy(b: dir . '/' . termClass . '.spec');
-				if (File:exists(path: classFile)) {
-					resolved: true;
-					self:loadFile(filePath: classFile);
-					return;
-				}
-				# The class may share a file with its package siblings (e.g.
-				# LintIssue inside Linter.spec): load the whole directory.
-				if (File:exists(path: dir)) {
-					resolved: true;
-					local Array of String is dirNames: Dir:dirList(path: dir);
-					dirNames:each(action: local Function(String is nm){
-						if (nm:endsWith(suffix: '.spec')) {
-							self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
-						}
-					});
-				}
-				return;
-			}
-			if (File:exists(path: dir)) {
-				resolved: true;
-				local Array of String is names: Dir:dirList(path: dir);
-				names:each(action: local Function(String is nm){
-					if (nm:endsWith(suffix: '.spec')) {
-						self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
+			prefixes:each(action: local Function(String is prefix){
+				if (!resolved) {
+					local String is dir: root;
+					if (prefix != '') {
+						dir: dir . '/' . prefix;
 					}
-				});
-			}
+					parts:each(action: local Function(String is p){
+						dir: dir . '/' . p;
+					});
+					# Ownership note: concat results ride the claim pool, and nested
+					# package loading recycles slots across loadFile calls — a recycled
+					# slot frees a path the parser's sourceFile field still holds. The
+					# floor copy hands loadFile an unambiguously owned string.
+					if (termClass != '') {
+						local String is classFile: Buf:stringCopy(b: dir . '/' . termClass . '.spec');
+						if (File:exists(path: classFile)) {
+							resolved: true;
+							self:loadFile(filePath: classFile);
+							return;
+						}
+						# The class may share a file with its package siblings (e.g.
+						# LintIssue inside Linter.spec): load the whole directory.
+						if (File:exists(path: dir)) {
+							resolved: true;
+							local Array of String is dirNames: Dir:dirList(path: dir);
+							dirNames:each(action: local Function(String is nm){
+								if (nm:endsWith(suffix: '.spec')) {
+									self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
+								}
+							});
+						}
+						return;
+					}
+					if (File:exists(path: dir)) {
+						resolved: true;
+						local Array of String is names: Dir:dirList(path: dir);
+						names:each(action: local Function(String is nm){
+							if (nm:endsWith(suffix: '.spec')) {
+								self:loadFile(filePath: Buf:stringCopy(b: dir . '/' . nm));
+							}
+						});
+					}
+				}
+			});
 		});
 		if (!resolved) {
 			local String is wanted: '';

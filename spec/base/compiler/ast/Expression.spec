@@ -13,12 +13,12 @@ Class is Expression{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', NamedArg],
-		['spec', 'base', 'compiler', 'ast', WhenArm],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'ast', Parameter]
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ast', WhenArm],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', Parameter]
 	];
 
 	## Node category for enum dispatch.

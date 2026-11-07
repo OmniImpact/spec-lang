@@ -5,9 +5,9 @@ Class of Loop is SkipWhitespaceLoop{
 	replace Array of String is namespace: ['base', 'compiler', 'lexer', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'lexer', 'loops', SkipCommentLoop],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'lexer', 'loops', SkipCommentLoop],
+		['base', 'iterator']
 	];
 
 	local Lexer is lexer;

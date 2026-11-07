@@ -5,15 +5,15 @@ Class of Loop is PostfixLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'parser', 'loops', ArgLoop],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', NamedArg],
-		['spec', 'base', 'compiler', WellKnown],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['spec', 'base', 'compiler', 'lexer', TokenKind],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'parser', 'loops', ArgLoop],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', WellKnown],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', TokenKind],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

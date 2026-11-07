@@ -1,14 +1,14 @@
 Class is Phase6LoaderTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:iterator:*,
-		spec:base:compiler:ast:ClassInfo,
-		spec:base:compiler:lexer:Token,
-		spec:base:compiler:lexer:Lexer,
-		spec:base:compiler:parser:Parser,
-		spec:base:compiler:loader:Loader
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator'],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'loader', Loader],
 	];
 
 	replace Function is init(Map of String to String is args){

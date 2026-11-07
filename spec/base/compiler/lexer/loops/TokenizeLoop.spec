@@ -6,10 +6,10 @@ Class of Loop is TokenizeLoop{
 	replace Array of String is namespace: ['base', 'compiler', 'lexer', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['spec', 'base', 'compiler', 'lexer', TokenKind],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', TokenKind],
+		['base', 'iterator']
 	];
 
 	local Lexer is lexer;

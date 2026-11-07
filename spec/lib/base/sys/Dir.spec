@@ -8,7 +8,7 @@ Class is Dir{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'sysinternal', Dir]
+		['base', 'sysinternal', Dir]
 	];
 
 	## Names of the entries in directory [path] ('.' and '..' excluded).

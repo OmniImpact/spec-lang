@@ -11,25 +11,25 @@ Class is Driver{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'io', File],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'sys', Process],
-		['spec', 'lib', 'base', 'sys', Dir],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'checker', TypeChecker],
-		['spec', 'base', 'compiler', 'linter', Linter],
-		['spec', 'base', 'compiler', 'linter', LintIssue],
-		['spec', 'base', 'compiler', 'loader', Loader],
-		['spec', 'base', 'compiler', 'driver', CompilationReport],
-		['spec', 'base', 'compiler', 'gen', CodeGenerator],
-		['lib', 'base', 'struct', Array],
-		['lib', 'base', 'struct', Map],
-		['lib', 'base', 'iterator']
+		['base', 'io', File],
+		['base', 'io', Output],
+		['base', 'sys', Process],
+		['base', 'sys', Dir],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'checker', TypeChecker],
+		['base', 'compiler', 'linter', Linter],
+		['base', 'compiler', 'linter', LintIssue],
+		['base', 'compiler', 'loader', Loader],
+		['base', 'compiler', 'driver', CompilationReport],
+		['base', 'compiler', 'gen', CodeGenerator],
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'iterator']
 	];
 
 	replace Function is init(Map of String to String is args){

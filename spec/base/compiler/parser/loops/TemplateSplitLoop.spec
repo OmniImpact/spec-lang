@@ -9,8 +9,8 @@ Class of Loop is TemplateSplitLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', TemplateEscapes],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', TemplateEscapes],
+		['base', 'iterator']
 	];
 
 	local String is raw;

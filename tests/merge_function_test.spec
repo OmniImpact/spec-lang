@@ -60,8 +60,8 @@ Class of ChildLogger is GrandLogger{
 
 Class is MergeFunctionTest{
 
-	replace Array of String is using: [
-		base:io:Output
+	replace Array of Array of String is using: [
+		['base', 'io', Output],
 	];
 
 	replace Function is init(Map of String to String is args){

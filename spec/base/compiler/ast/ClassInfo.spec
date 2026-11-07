@@ -5,8 +5,8 @@ Class is ClassInfo{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind]
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', ExpressionKind]
 	];
 
 	## Class identifier.

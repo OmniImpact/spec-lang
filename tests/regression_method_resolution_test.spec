@@ -18,8 +18,8 @@
 ## Status: PASSING (regression resolved; guarded by this file).
 Class is RegressionMethodResolutionTest{
 
-	replace Array of String is using: [
-		base:io:Output
+	replace Array of Array of String is using: [
+		['base', 'io', Output],
 	];
 
 	replace Function is init(Map of String to String is args){

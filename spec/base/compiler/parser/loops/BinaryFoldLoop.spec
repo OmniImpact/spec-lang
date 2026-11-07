@@ -10,13 +10,13 @@ Class of Loop is BinaryFoldLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'parser', PrecedenceLevel],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'parser', PrecedenceLevel],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

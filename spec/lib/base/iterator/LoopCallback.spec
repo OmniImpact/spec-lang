@@ -7,7 +7,7 @@ Class is LoopCallback{
 	namespace: ['base', 'iterator'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'iterator', LoopControl]
+		['base', 'iterator', LoopControl]
 	];
 
 	## Invoked when the associated loop completes.

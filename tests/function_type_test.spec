@@ -1,7 +1,7 @@
 Class is FunctionTypeTest{
 
-	replace Array of String is using: [
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'io'],
 	];
 
 	local Function is executeCallback(Function is callback){

@@ -5,9 +5,9 @@ Class of Loop is WhenConditionsLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

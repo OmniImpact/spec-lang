@@ -2,14 +2,14 @@
 #! lattice preloads, implicit-Any parenting, and group-fragment merging.
 
 Class is SpecLoaderTest{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'loader', Loader],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'io', File]
+		['base', 'compiler', 'loader', Loader],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'io', Output],
+		['base', 'io', File]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -37,7 +37,7 @@ Class is LoaderE2E{
 		Output:line(text: g:toString());
 	}
 	replace Array of Array of String is using: [
-		['lib', 'base', 'io', Output]
+		['base', 'io', Output]
 	];
 }";
 		File:write(path: 'tests/.loader_app_tmp.spec', content: src);
@@ -139,12 +139,12 @@ Class is GroupMain{
 
 ## Test helper: class lookups over a loaded program.
 Class is LoaderE2EHelper{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'iterator']
 	];
 
 	Function of Boolean is hasClass(ProgramNode is classes, String is name){

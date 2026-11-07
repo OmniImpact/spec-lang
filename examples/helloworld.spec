@@ -4,9 +4,9 @@ Class is HelloWorld{
 	local String is greeting: 'Hello';
 
 	# Imports: "using" is a native ClassInfo array property overridden using "replace"
-	replace Array of String is using: [
-		base:struct:Map,
-		base:io:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Map],
+		['base', 'io'],
 	];
 
 	# Entrypoint init method using the Function type

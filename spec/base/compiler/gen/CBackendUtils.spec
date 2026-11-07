@@ -6,10 +6,10 @@ Class is CBackendUtils{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Primitive],
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', Primitive],
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'iterator']
 	];
 
 	## Maps a Spec type name to its C11 type. Containers accept both

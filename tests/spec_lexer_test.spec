@@ -5,11 +5,11 @@
 Class is SpecLexerTest{
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'lexer', TokenKind],
-		['spec', 'base', 'compiler', 'lexer', Token],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['lib', 'base', 'io', Output]
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'lexer', TokenKind],
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'io', Output]
 	];
 
 	replace Function is init(Map of String to String is args){

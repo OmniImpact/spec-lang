@@ -10,7 +10,7 @@ Class is WellKnown{
 	namespace: ['base', 'compiler'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Primitive]
+		['base', 'compiler', 'ast', Primitive]
 	];
 
 	## The Int builtin type name.

@@ -3,19 +3,19 @@
 #! and clean programs.
 
 Class is SpecCheckerTest{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'checker', TypeChecker],
-		['spec', 'base', 'compiler', 'checker', TypeError],
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'io', File],
-		['lib', 'base', 'struct', Array],
-		['lib', 'base', 'struct', Map]
+		['base', 'compiler', 'checker', TypeChecker],
+		['base', 'compiler', 'checker', TypeError],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'io', Output],
+		['base', 'io', File],
+		['base', 'struct', Array],
+		['base', 'struct', Map]
 	];
 
 	## Parses and checks a source, returning the error messages.

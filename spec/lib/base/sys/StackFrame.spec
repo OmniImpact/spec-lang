@@ -7,7 +7,7 @@ Class is StackFrame{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'sys', SourceLocation]
+		['base', 'sys', SourceLocation]
 	];
 
 	## Source coordinate of this call frame.

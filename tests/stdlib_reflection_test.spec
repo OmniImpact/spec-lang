@@ -1,15 +1,19 @@
 Class is StdlibReflectionTest{
 
-	replace Array of String is using: [
-		base:io:*,
-		base:struct:Array,
-		base:sys:SourceLocation,
-		base:sys:StackFrame,
-		base:reflect:Type,
-		base:reflect:Parameter,
-		base:reflect:Member,
-		base:reflect:ClassInfo,
-		base:meta:*
+	replace Array of Array of String is using: [
+		['base', 'io'],
+		['base', 'struct', Array],
+		['base', 'sys', SourceLocation],
+		['base', 'sys', StackFrame],
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', StatementKind],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -62,40 +66,44 @@ Class is StdlibReflectionTest{
 		params:add(item: param1);
 
 		local Array of Statement is body: [];
-		local Member is methodMem: Member:init(kind: 'METHOD');
-		methodMem:method(modifiers: ['replace', 'local'], retType: intType, name: 'heal', params: params, body: body);
+		local Member is methodMem: Member:init(kind: MemberKind:METHOD);
+		methodMem:modifiers: ['replace', 'local'];
+		methodMem:memberType: intType;
+		methodMem:name: 'heal';
+		methodMem:params: params;
+		methodMem:body: body;
 
 		local Array of Member is members: [];
 		members:add(item: methodMem);
 
 		local ClassInfo is cls: ClassInfo:init(name: 'Healer', baseClass: 'Entity', members: members);
-		output:line('ClassInfo: ' . cls:getName() . ' extends ' . cls:getBaseClass());
-		output:line('Members count: ' . cls:getMembers():length());
-		output:line('Method: ' . methodMem:getName() . ' with ' . methodMem:getParameters():length() . ' parameter(s)');
+		output:line('ClassInfo: ' . cls:name . ' extends ' . cls:baseClass);
+		output:line('Members count: ' . cls:members:length());
+		output:line('Method: ' . methodMem:name . ' with ' . methodMem:params:length() . ' parameter(s)');
 
-		if (cls:getName() == 'Healer') {
+		if (cls:name == 'Healer') {
 			output:line('[PASS] ClassInfo name is Healer');
 		}
-		if (methodMem:getName() == 'heal') {
+		if (methodMem:name == 'heal') {
 			output:line('[PASS] Method name is heal');
 		}
 
 		# 4. Test Meta AST Expression & Statement
 		output:line("\n--- 4. Meta AST Expression & Statement ---");
-		local Expression is numExpr: Expression:init(kind: 'NUMBER');
-		numExpr:makeNumber(val: 100);
-		local Expression is identExpr: Expression:init(kind: 'IDENT');
+		local Expression is numExpr: Expression:init(kind: ExpressionKind:NUMBER);
+		numExpr:stringValue: '100';
+		local Expression is identExpr: Expression:init(kind: ExpressionKind:IDENT);
 		identExpr:makeIdent(name: 'health');
 
-		local Statement is assignStmt: Statement:init(kind: 'ASSIGN');
+		local Statement is assignStmt: Statement:init(kind: StatementKind:ASSIGN);
 		assignStmt:assign(target: identExpr, value: numExpr);
-		output:line('Assign stmt kind: ' . assignStmt:getKind());
-		output:line('Num expr kind: ' . numExpr:getKind());
+		output:line('Assign stmt kind: ' . assignStmt:kind:value());
+		output:line('Num expr kind: ' . numExpr:kind:value());
 
-		if (assignStmt:getKind() == 'ASSIGN') {
+		if (assignStmt:kind:value() == 'ASSIGN') {
 			output:line('[PASS] Statement kind is ASSIGN');
 		}
-		if (numExpr:getKind() == 'NUMBER') {
+		if (numExpr:kind:value() == 'NUMBER') {
 			output:line('[PASS] Expression kind is NUMBER');
 		}
 

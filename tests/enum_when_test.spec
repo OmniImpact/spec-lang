@@ -27,10 +27,10 @@ Enum of String is LogLevel {
 
 Class is EnumWhenTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:io:Output
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'io', Output],
 	];
 
 	replace init(Map of String to String is args){

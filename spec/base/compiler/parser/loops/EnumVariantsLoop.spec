@@ -6,14 +6,14 @@ Class of Loop is EnumVariantsLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'parser', 'loops', ParamLoop],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'parser', 'loops', ParamLoop],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;

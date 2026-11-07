@@ -1,11 +1,11 @@
 Class is MultiFileTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:math:*,
-		base:io:*,
-		base:iterator:*
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'math'],
+		['base', 'io'],
+		['base', 'iterator'],
 	];
 
 	# Declared variable initialized in init before use

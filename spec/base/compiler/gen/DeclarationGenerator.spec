@@ -11,20 +11,20 @@ Class is DeclarationGenerator{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Type],
-		['spec', 'base', 'compiler', 'ast', Primitive],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', Parameter],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', MetadataField],
-		['spec', 'base', 'compiler', 'ast', ContractMethod],
-		['spec', 'base', 'compiler', WellKnown],
-		['spec', 'base', 'compiler', 'gen', CBackendUtils],
-		['spec', 'base', 'compiler', 'gen', EmissionPolicy],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', Primitive],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', MetadataField],
+		['base', 'compiler', 'ast', ContractMethod],
+		['base', 'compiler', WellKnown],
+		['base', 'compiler', 'gen', CBackendUtils],
+		['base', 'compiler', 'gen', EmissionPolicy],
+		['base', 'iterator']
 	];
 
 	## Enum name -> "true" (string-backed enums included).

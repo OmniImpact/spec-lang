@@ -5,8 +5,8 @@ Class of Loop is ClassSearchLoop{
 	namespace: ['base', 'compiler', 'checker', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'iterator']
 	];
 
 	local Array of ClassInfo is list;

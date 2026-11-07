@@ -12,7 +12,7 @@
 Class is MergeBase{
 
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
-	merge Array of String is using: [base:io:Output];
+	merge Array of Array of String is using: [['base', 'io', Output]];
 
 	Array of String is tags: ['core'];
 
@@ -24,7 +24,7 @@ Class is MergeBase{
 Class of MergeBase is MergeChild{
 
 	## Folds onto MergeBase's using: Output + Array both load.
-	merge Array of String is using: [base:struct:Array];
+	merge Array of Array of String is using: [['base', 'struct', Array]];
 
 	## Folds onto ["core"]: result is ["core", "extended"].
 	merge Array of String is tags: ['extended'];

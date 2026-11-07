@@ -11,13 +11,13 @@
 ## worker thread) shows every thread's current sample as a colored marker.
 Class is PiBenchmark{
 
-	replace Array of String is using: [
-		base:struct:*,
-		base:iterator:*,
-		base:math:*,
-		base:io:*,
-		base:sys:Process,
-		base:sys:Parallel
+	replace Array of Array of String is using: [
+		['base', 'struct'],
+		['base', 'iterator'],
+		['base', 'math'],
+		['base', 'io'],
+		['base', 'sys', Process],
+		['base', 'sys', Parallel],
 	];
 
 	## Domain grid dimensions in characters.

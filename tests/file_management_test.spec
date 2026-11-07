@@ -1,9 +1,9 @@
 Class is FileManagementTest{
 
-	replace Array of String is using: [
-		base:struct:Array,
-		base:struct:Map,
-		base:io:File
+	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'struct', Map],
+		['base', 'io', File],
 	];
 
 	replace Function is init(Map of String to String is args){

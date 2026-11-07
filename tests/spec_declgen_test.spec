@@ -2,16 +2,16 @@
 #! declarations with C-mapped prototypes, structs without metadata.
 
 Class is SpecDeclGenTest{
-	namespace: ['spec', 'test'];
+	namespace: ['test'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'gen', DeclarationGenerator],
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'io', File]
+		['base', 'compiler', 'gen', DeclarationGenerator],
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'io', Output],
+		['base', 'io', File]
 	];
 
 	replace Function is init(Map of String to String is args){

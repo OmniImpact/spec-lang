@@ -5,7 +5,7 @@ Class is Parameter{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Type]
+		['base', 'compiler', 'ast', Type]
 	];
 
 	## Parameter identifier.

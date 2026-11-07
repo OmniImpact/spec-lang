@@ -6,8 +6,8 @@ Class of Loop is NumberScanLoop{
 	replace Array of String is namespace: ['base', 'compiler', 'lexer', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'lexer', Lexer],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'lexer', Lexer],
+		['base', 'iterator']
 	];
 
 	local Lexer is lexer;

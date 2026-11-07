@@ -45,18 +45,18 @@ Class is Linter{
 	namespace: ['base', 'compiler', 'linter'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ProgramNode],
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', MemberKind],
-		['spec', 'base', 'compiler', 'ast', Statement],
-		['spec', 'base', 'compiler', 'ast', StatementKind],
-		['spec', 'base', 'compiler', 'ast', Expression],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['spec', 'base', 'compiler', 'ast', NamedArg],
-		['lib', 'base', 'io', Output],
-		['lib', 'base', 'struct', Array],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', MemberKind],
+		['base', 'compiler', 'ast', Statement],
+		['base', 'compiler', 'ast', StatementKind],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'io', Output],
+		['base', 'struct', Array],
+		['base', 'iterator']
 	];
 
 	replace Function is init(){

@@ -21,10 +21,10 @@ Class is ClassBindings{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', ClassInfo],
-		['spec', 'base', 'compiler', 'ast', Member],
-		['spec', 'base', 'compiler', 'ast', ExpressionKind],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'ast', ClassInfo],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'iterator']
 	];
 
 	## True when the backend must not emit a struct, vtable, or constructor

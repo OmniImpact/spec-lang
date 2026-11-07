@@ -11,7 +11,7 @@ Class is Buf{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'sysinternal', Buf]
+		['base', 'sysinternal', Buf]
 	];
 
 	## Number of bytes held by the buffer [b].

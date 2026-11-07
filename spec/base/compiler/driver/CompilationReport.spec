@@ -9,7 +9,7 @@ Class is CompilationReport{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
-		['lib', 'base', 'io', Output]
+		['base', 'io', Output]
 	];
 
 	## True when stage lines and the summary are suppressed.

@@ -71,8 +71,8 @@ Class is NonBooleanConditionControl{
 }
 
 Class is UnassignedFieldRead{
-	replace Array of String is using: [
-		base:io:Output
+	replace Array of Array of String is using: [
+		['base', 'io', Output],
 	];
 
 	## Violation 6: the Never Null standard guarantees this does not compile,

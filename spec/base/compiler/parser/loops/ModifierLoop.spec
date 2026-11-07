@@ -6,9 +6,9 @@ Class of Loop is ModifierLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'parser', Parser],
-		['spec', 'base', 'compiler', 'lexer', Keyword],
-		['lib', 'base', 'iterator']
+		['base', 'compiler', 'parser', Parser],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'iterator']
 	];
 
 	local Parser is parser;
