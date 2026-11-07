@@ -154,6 +154,20 @@ Class is BuiltinCallGenerator{
 			if (expr:methodTarget:kind == ExpressionKind:PATH) {
 				local Array of String is qSegs: expr:methodTarget:pathSegments;
 				qCls: qSegs:get(index: qSegs:length() - 1);
+				# Qualified chains ('base:sysinternal:Buf') resolve by full
+				# namespace path so the floor never collides with its
+				# same-name base:sys wrapper.
+				local String is qJoined: '';
+				qSegs:each(action: local Function(String is seg){
+					if (qJoined == '') {
+						qJoined: seg;
+					} else {
+						qJoined: qJoined . ':' . seg;
+					}
+				});
+				if (qJoined:contains(needle: ':sysinternal:')) {
+					qCls: qJoined;
+				}
 			} else if (expr:methodTarget:kind == ExpressionKind:CALL) {
 				local Expression is qInner: expr:methodTarget;
 				if (qInner:methodTarget:kind == ExpressionKind:PATH) {
@@ -161,7 +175,7 @@ Class is BuiltinCallGenerator{
 				}
 			}
 			local ClassInfo is qc: cg:findClass(name: qCls);
-			if (qCls != '' && qc:name == qCls && cg:isSysinternalClass(name: qCls)) {
+			if (qCls != '' && qc:name != '' && (qc:name == qCls || (qc:namespaceJoined() . ':' . qc:name) == qCls) && cg:isSysinternalClass(name: qCls)) {
 				floorCls: qCls;
 			}
 		}
@@ -263,11 +277,36 @@ Class is BuiltinCallGenerator{
 			}
 		}
 
-		# Input:prompt.
+		# LoopControl methods: transparent runtime-managed objects — the
+		# constructor wires the optional completion callback directly.
+		if (targetC == 'LoopControl' && expr:methodName == 'init') {
+			if (expr:argCount() == 0) {
+				return 'LoopControl_new()';
+			}
+			local NamedArg is cbArg: expr:methodArgs:get(index: 0);
+			local Expression is cbVal: cbArg:value;
+			local String is cbC: cg:generateExpression(expr: cbVal);
+			local String is cbClass: cg:inferTargetType(expr: cbVal);
+			if (cbClass == '' && cbVal:kind == ExpressionKind:CALL) {
+				local Expression is mt: cbVal:methodTarget;
+				cbClass: cg:generateExpression(expr: mt);
+			}
+			return '({ SpecLoopControl* _c = LoopControl_new(); _c->callback = (void*)(' . cbC . '); _c->on_complete = (void (*)(void*, struct SpecLoopControl*))' . cbClass . '_onComplete; _c; })';
+		}
+		if (expr:methodName == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl')) {
+			return 'LoopControl_stop(' . targetC . ')';
+		}
+
+		# Input:prompt — inline getline driving the handler's onInput.
 		if (targetC == 'Input' && expr:methodName == 'prompt' && expr:argCount() > 0) {
-			local Expression is msgArg: self:argValue(expr: expr, index: 0);
-			local String is msgC: cg:generateExpression(expr: msgArg);
-			return 'spec_input_prompt(' . msgC . ')';
+			local Expression is handlerExpr: self:argValue(expr: expr, index: 0);
+			local String is handlerC: cg:generateExpression(expr: handlerExpr);
+			local String is handlerClass: cg:inferTargetType(expr: handlerExpr);
+			if (handlerClass == '' && handlerExpr:kind == ExpressionKind:CALL) {
+				local Expression is mt: handlerExpr:methodTarget;
+				handlerClass: cg:generateExpression(expr: mt);
+			}
+			return "({ char* _line = NULL; size_t _line_cap = 0; char* _res = \"\"; ssize_t _n = getline(&_line, &_line_cap, stdin); if (_n >= 0) { if (_n > 0 && _line[_n - 1] == '\\n') _line[_n - 1] = '\\0'; _res = strdup(_line); } free(_line); " . handlerClass . '_onInput((void*)(' . handlerC . '), spec_string_from_chars(_res)); })';
 		}
 
 		# Process methods.

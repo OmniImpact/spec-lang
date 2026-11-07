@@ -2212,7 +2212,11 @@ Class is CodeGenerator{
 	## @param name: Class name.
 	## @return: true when the class is a floor binding.
 	Function of Boolean is isSysinternalClass(String is name){
-		return self:policy:isSysinternal(cls: self:findClass(name: name));
+		local ClassInfo is c: self:findClass(name: name);
+		if (c:name == '') {
+			return false;
+		}
+		return self:policy:isSysinternal(cls: c);
 	}
 
 	Function of String is generateMethod(ClassInfo is classDef, Member is method){
@@ -2918,6 +2922,16 @@ Class is CodeGenerator{
 				self:res: cand;
 				self:found: true;
 				return false;
+			}
+			# Qualified targets ('base:sysinternal:Buf'): namespace joined
+			# with ':' plus the class name must equal the target.
+			if (self:target:contains(needle: ':')) {
+				local String is candQ: cand:namespaceJoined() . ':' . cand:name;
+				if (candQ == self:target) {
+					self:res: cand;
+					self:found: true;
+					return false;
+				}
 			}
 			return true;
 		}

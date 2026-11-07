@@ -5,7 +5,8 @@ Class is ClassInfo{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['spec', 'base', 'compiler', 'ast', Member]
+		['spec', 'base', 'compiler', 'ast', Member],
+		['spec', 'base', 'compiler', 'ast', ExpressionKind]
 	];
 
 	## Class identifier.
@@ -46,6 +47,39 @@ Class is ClassInfo{
 	## @param name: Class identifier.
 	## @param baseClasses: Parent class names.
 	## @param members: The class members.
+	## The class's declared namespace, joined with ':' ('' when undeclared).
+	##
+	## @return: The namespace path, e.g. 'base:sysinternal'.
+	Function of String is namespaceJoined(){
+		local Int is idx: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return idx < self:members:length();
+			},
+			iteration: local Function of Boolean(){
+				local Member is m: self:members:get(index: idx);
+				idx: idx + 1;
+				if (m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+					local String is joined: '';
+					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
+						if (joined == '') {
+							joined: seg:stringValue;
+						} else {
+							joined: joined . ':' . seg:stringValue;
+						}
+					});
+					self:nsJoined: joined;
+					return false;
+				}
+				return true;
+			}
+		);
+		return self:nsJoined;
+	}
+
+	## Cached [namespaceJoined] result.
+	local String is nsJoined: '';
+
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
 		self:baseClasses: baseClasses;

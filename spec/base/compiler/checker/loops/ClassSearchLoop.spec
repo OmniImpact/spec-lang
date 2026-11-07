@@ -34,6 +34,16 @@ Class of Loop is ClassSearchLoop{
 			self:found: true;
 			return false;
 		}
+		# Qualified targets ('base:sysinternal:Buf'): namespace joined with
+		# ':' plus the class name must equal the target.
+		if (self:target:contains(needle: ':')) {
+			local String is candQ: cand:namespaceJoined() . ':' . cand:name;
+			if (candQ == self:target) {
+				self:res: cand;
+				self:found: true;
+				return false;
+			}
+		}
 		return true;
 	}
 }

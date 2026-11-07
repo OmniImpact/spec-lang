@@ -204,8 +204,11 @@ Class is Loader{
 				m:setSourceFile(file: filePath);
 			});
 			local String is gName: self:groupTargetOf(c: c);
-			if (!self:seenClassNames:has(key: c:name)) {
-				self:seenClassNames:set(key: c:name, value: 'true');
+			# Class identity is namespace-qualified: a base:sys wrapper and
+			# its same-name sysinternal floor coexist in one program.
+			local String is qName: c:namespaceJoined() . ':' . c:name;
+			if (!self:seenClassNames:has(key: qName)) {
+				self:seenClassNames:set(key: qName, value: 'true');
 				self:loadedClasses:add(item: c);
 				if (gName != '' && gName != c:name) {
 					self:groupTargets:add(item: gName);
