@@ -43683,8 +43683,8 @@ static __attribute__((unused)) void _anon_fn_645(void* _env_ptr, Member* m) {
     (void)filePath;
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, String))_recv->_vtable[27]))((Member*)_recv, filePath); });
     if (((m->kind) == (MemberKind_CLASS))) {
-        ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
-    }
+	    ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
+	};
 }
 
 typedef struct {
@@ -43711,8 +43711,8 @@ static __attribute__((unused)) Loader* _anon_fn_644(void* _env_ptr, ClassInfo* c
         do {
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, String))_recv->_vtable[27]))((Member*)_recv, filePath); });
     if (((m->kind) == (MemberKind_CLASS))) {
-        ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
-    }
+	    ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
+	};
         } while (0);
     } } });
     SPEC_AUTO String gName = Loader_groupTargetOf(self, c) /* inst:Loader:groupTargetOf */;
@@ -43720,26 +43720,26 @@ static __attribute__((unused)) Loader* _anon_fn_644(void* _env_ptr, ClassInfo* c
     bool isFloor = ((String_endsWith(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, spec_string_intern(":sysinternal"))) || (spec_string_equals(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, spec_string_intern("sysinternal"))));
     bool dup = spec_map_has(self->seenClassNames, qName);
     if ((((((!(isFloor))) && ((!(dup))))) && (spec_map_has(self->seenBareNames, c->name)))) {
-        dup = true;
-    }
+	    dup = true;
+	};
     if ((!(dup))) {
-        spec_map_set(self->seenClassNames, qName, spec_string_intern("true"));
-        spec_map_set(self->seenBareNames, c->name, spec_string_intern("true"));
-        spec_array_add_object(self->loadedClasses, (void*)(c));
-        if ((((!spec_string_equals(gName, spec_string_intern("")))) && ((!spec_string_equals(gName, c->name))))) {
-        spec_array_add_object(self->groupTargets, (void*)(gName));
-        spec_array_add_object(self->groupFragments, (void*)(c));
-    }
-    } else {
-        if (spec_string_equals(gName, c->name)) {
-        SPEC_AUTO LoadedClassSearchLoop* find = (LoadedClassSearchLoop*)((({ LoadedClassSearchLoop* _inst = LoadedClassSearchLoop_new(); LoadedClassSearchLoop_init(_inst, self->loadedClasses, c->name); _inst; })));
-        ({ void* _lp = (void*)(find); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LoadedClassSearchLoop_evaluate((void*)_lp)) { if (!LoadedClassSearchLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-        if (find->found) {
-        Loader_mergeFragmentInto(self, find->res, c) /* inst:Loader:mergeFragmentInto */;
-    }
+	    spec_map_set(self->seenClassNames, qName, spec_string_intern("true"));
+	    spec_map_set(self->seenBareNames, c->name, spec_string_intern("true"));
+	    spec_array_add_object(self->loadedClasses, (void*)(c));
+	    if ((((!spec_string_equals(gName, spec_string_intern("")))) && ((!spec_string_equals(gName, c->name))))) {
+	    spec_array_add_object(self->groupTargets, (void*)(gName));
+	    spec_array_add_object(self->groupFragments, (void*)(c));
+	};
+	} else {
+	    if (spec_string_equals(gName, c->name)) {
+	    SPEC_AUTO LoadedClassSearchLoop* find = (LoadedClassSearchLoop*)((({ LoadedClassSearchLoop* _inst = LoadedClassSearchLoop_new(); LoadedClassSearchLoop_init(_inst, self->loadedClasses, c->name); _inst; })));
+	    ({ void* _lp = (void*)(find); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LoadedClassSearchLoop_evaluate((void*)_lp)) { if (!LoadedClassSearchLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+	    if (find->found) {
+	    Loader_mergeFragmentInto(self, find->res, c) /* inst:Loader:mergeFragmentInto */;
+	};
     if (find) { spec_release((void*)find); find = NULL; }
-    }
-    }
+	};
+	};
     Loader_collectImportsFromClass(self, c) /* inst:Loader:collectImportsFromClass */;
 }
 
@@ -43764,8 +43764,8 @@ static __attribute__((unused)) void _anon_fn_648(void* _env_ptr, Member* m) {
     (void)filePath;
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, String))_recv->_vtable[27]))((Member*)_recv, filePath); });
     if (((m->kind) == (MemberKind_CLASS))) {
-        ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
-    }
+	    ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
+	};
 }
 
 typedef struct {
@@ -43792,9 +43792,9 @@ static __attribute__((unused)) void _anon_fn_651(void* _env_ptr, Expression* ite
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
-        return;
-    }
+	    Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
+	    return;
+	};
     spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Malformed import in class '"))), c->name), spec_string_intern("': using entries are package-segment arrays."))));
 }
 
@@ -43818,21 +43818,21 @@ static __attribute__((unused)) void _anon_fn_650(void* _env_ptr, Member* m) {
     ClassInfo* c = _env->c;
     (void)c;
     if (((spec_string_equals(m->name, spec_string_intern("using"))) && (m->hasInit))) {
-        SPEC_AUTO Expression* initExpr = (Expression*)spec_retain((void*)(m->initExpr));
-        if (((initExpr->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_652 = initExpr->arrayItems; if (_a_652) { for (size_t _i_652 = 0; _i_652 < _a_652->length; _i_652++) {
+	    SPEC_AUTO Expression* initExpr = (Expression*)spec_retain((void*)(m->initExpr));
+	    if (((initExpr->kind) == (ExpressionKind_ARRAY))) {
+	    ({ SpecArray* _a_652 = initExpr->arrayItems; if (_a_652) { for (size_t _i_652 = 0; _i_652 < _a_652->length; _i_652++) {
         Expression* item = (Expression*)(intptr_t)_a_652->items[_i_652];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
-        break;
-    }
+	    Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
+	    break;
+	};
     spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Malformed import in class '"))), c->name), spec_string_intern("': using entries are package-segment arrays."))));
         } while (0);
     } } });
-    }
+	};
     if (initExpr) { spec_release((void*)initExpr); initExpr = NULL; }
-    }
+	};
 }
 
 typedef struct {
@@ -43859,9 +43859,9 @@ static __attribute__((unused)) void _anon_fn_654(void* _env_ptr, Expression* ite
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
-        return;
-    }
+	    Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
+	    return;
+	};
     spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Malformed import in class '"))), c->name), spec_string_intern("': using entries are package-segment arrays."))));
 }
 
@@ -43888,28 +43888,28 @@ static __attribute__((unused)) void _anon_fn_657(void* _env_ptr, String name) {
     long long depth = _env->depth;
     (void)depth;
     if (String_startsWith(name, spec_string_intern("."))) {
-        return;
-    }
+	    return;
+	};
     SPEC_AUTO String child = Buf_stringCopy(NULL, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), name));
     if (String_endsWith(name, spec_string_intern(".spec"))) {
-        SPEC_AUTO String stem = spec_string_substring(name, 0, ((spec_string_length(name)) - (5)));
-        if (spec_map_has(self->classPaths, stem)) {
-        spec_map_set(self->classPaths, stem, spec_string_concat(spec_string_concat((String)spec_map_get(self->classPaths, stem, spec_string_intern("")), spec_string_intern(";")), child));
-    } else {
-        spec_map_set(self->classPaths, stem, child);
-    }
-        if (spec_map_has(self->packageDirs, dir)) {
-        spec_map_set(self->packageDirs, dir, spec_string_concat(spec_string_concat((String)spec_map_get(self->packageDirs, dir, spec_string_intern("")), spec_string_intern(";")), name));
-    } else {
-        spec_map_set(self->packageDirs, dir, name);
-    }
-        return;
+	    SPEC_AUTO String stem = spec_string_substring(name, 0, ((spec_string_length(name)) - (5)));
+	    if (spec_map_has(self->classPaths, stem)) {
+	    spec_map_set(self->classPaths, stem, spec_string_concat(spec_string_concat((String)spec_map_get(self->classPaths, stem, spec_string_intern("")), spec_string_intern(";")), child));
+	} else {
+	    spec_map_set(self->classPaths, stem, child);
+	};
+	    if (spec_map_has(self->packageDirs, dir)) {
+	    spec_map_set(self->packageDirs, dir, spec_string_concat(spec_string_concat((String)spec_map_get(self->packageDirs, dir, spec_string_intern("")), spec_string_intern(";")), name));
+	} else {
+	    spec_map_set(self->packageDirs, dir, name);
+	};
+	    return;
     if (stem) { spec_release((void*)stem); stem = NULL; }
-    }
+	};
     SPEC_AUTO SpecArray* subEntries = (SpecArray*)((Dir_dirList(NULL, child)));
     if (((spec_array_length(subEntries)) > (0))) {
-        Loader_scanTree(self, child, ((depth) + (1))) /* inst:Loader:scanTree */;
-    }
+	    Loader_scanTree(self, child, ((depth) + (1))) /* inst:Loader:scanTree */;
+	};
 }
 
 typedef struct {
@@ -43935,16 +43935,16 @@ static __attribute__((unused)) void _anon_fn_660(void* _env_ptr, ClassInfo* c) {
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     if ((!(ok))) {
-        if (spec_string_equals(className, spec_string_intern(""))) {
-        if (spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */))), nsJoined)) {
-        ok = true;
-    }
-    } else {
-        if (((spec_string_equals(c->name, className)) && (spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */))), nsJoined)))) {
-        ok = true;
-    }
-    }
-    }
+	    if (spec_string_equals(className, spec_string_intern(""))) {
+	    if (spec_string_equals(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, nsJoined)) {
+	    ok = true;
+	};
+	} else {
+	    if (((spec_string_equals(c->name, className)) && (spec_string_equals(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, nsJoined)))) {
+	    ok = true;
+	};
+	};
+	};
     _env->ok = ok;
 }
 
@@ -43968,10 +43968,10 @@ static __attribute__((unused)) void _anon_fn_662(void* _env_ptr, String seg) {
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     if (spec_string_equals(nsJoined, spec_string_intern(""))) {
-        spec_assign((void**)&nsJoined, (void*)(seg));
-    } else {
-        nsJoined = spec_string_concat(spec_string_concat(nsJoined, spec_string_intern(":")), seg);
-    }
+	    spec_assign((void**)&nsJoined, (void*)(seg));
+	} else {
+	    nsJoined = spec_string_concat(spec_string_concat(nsJoined, spec_string_intern(":")), seg);
+	};
     _env->nsJoined = nsJoined;
 }
 
@@ -44006,11 +44006,11 @@ static __attribute__((unused)) void _anon_fn_664(void* _env_ptr, String cand) {
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     if ((!(resolved))) {
-        Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
-        if (Loader_provides(self, nsJoined, termClass) /* inst:Loader:provides */) {
-        resolved = true;
-    }
-    }
+	    Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
+	    if (Loader_provides(self, nsJoined, termClass) /* inst:Loader:provides */) {
+	    resolved = true;
+	};
+	};
     _env->resolved = resolved;
 }
 
@@ -44037,7 +44037,7 @@ static __attribute__((unused)) Loader* _anon_fn_667(void* _env_ptr, String name)
     (void)c;
     String dirPath = _env->dirPath;
     (void)dirPath;
-    Loader_loadFile(self, ((String)spec_claim_pool((void*)(Buf_stringCopy(NULL, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))))))))) /* inst:Loader:loadFile */;
+    Loader_loadFile(self, Buf_stringCopy(NULL, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))) /* inst:Loader:loadFile */;
 }
 
 typedef struct {
@@ -44064,17 +44064,17 @@ static __attribute__((unused)) void _anon_fn_666(void* _env_ptr, String dirPath)
     ClassInfo* c = _env->c;
     (void)c;
     if (String_endsWith(dirPath, dirSuffix)) {
-        SPEC_AUTO String namesJoined = (String)spec_map_get(self->packageDirs, dirPath, spec_string_intern(""));
-        SPEC_AUTO SpecArray* names = (SpecArray*)((String_split(namesJoined, spec_string_intern(";"))));
-        ({ SpecArray* _a_668 = names; if (_a_668) { for (size_t _i_668 = 0; _i_668 < _a_668->length; _i_668++) {
+	    SPEC_AUTO String namesJoined = (String)spec_map_get(self->packageDirs, dirPath, spec_string_intern(""));
+	    SPEC_AUTO SpecArray* names = (SpecArray*)((String_split(namesJoined, spec_string_intern(";"))));
+	    ({ SpecArray* _a_668 = names; if (_a_668) { for (size_t _i_668 = 0; _i_668 < _a_668->length; _i_668++) {
         String name = (String)(intptr_t)_a_668->items[_i_668];
         do {
-    Loader_loadFile(self, ((String)spec_claim_pool((void*)(Buf_stringCopy(NULL, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))))))))) /* inst:Loader:loadFile */;
+    Loader_loadFile(self, Buf_stringCopy(NULL, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))) /* inst:Loader:loadFile */;
         } while (0);
     } } });
     if (namesJoined) { spec_release((void*)namesJoined); namesJoined = NULL; }
     if (names) { spec_release((void*)names); names = NULL; }
-    }
+	};
 }
 
 typedef struct {
@@ -44100,7 +44100,7 @@ static __attribute__((unused)) Loader* _anon_fn_670(void* _env_ptr, String name)
     (void)c;
     String dirPath = _env->dirPath;
     (void)dirPath;
-    Loader_loadFile(self, ((String)spec_claim_pool((void*)(Buf_stringCopy(NULL, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))))))))) /* inst:Loader:loadFile */;
+    Loader_loadFile(self, Buf_stringCopy(NULL, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))) /* inst:Loader:loadFile */;
 }
 
 typedef struct {
@@ -44127,14 +44127,14 @@ static __attribute__((unused)) void _anon_fn_672(void* _env_ptr, Expression* seg
     SpecArray* parts = _env->parts;
     (void)parts;
     if (((seg->kind) == (ExpressionKind_IDENT))) {
-        spec_assign((void**)&termClass, (void*)(seg->stringValue));
-    } else {
-        if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        spec_assign((void**)&termClass, (void*)(seg->stringValue));
-    } else {
-        spec_array_add_object(parts, (void*)(seg->stringValue));
-    }
-    }
+	    spec_assign((void**)&termClass, (void*)(seg->stringValue));
+	} else {
+	    if (((seg->kind) == (ExpressionKind_USING_AS))) {
+	    spec_assign((void**)&termClass, (void*)(seg->stringValue));
+	} else {
+	    spec_array_add_object(parts, (void*)(seg->stringValue));
+	};
+	};
     _env->termClass = termClass;
 }
 
@@ -44157,8 +44157,8 @@ static __attribute__((unused)) void _anon_fn_678(void* _env_ptr, Expression* exi
     bool present = _env->present;
     (void)present;
     if ((((!(present))) && (spec_string_equals(existing->stringValue, item->stringValue)))) {
-        present = true;
-    }
+	    present = true;
+	};
     _env->present = present;
 }
 
@@ -44186,13 +44186,13 @@ static __attribute__((unused)) void _anon_fn_677(void* _env_ptr, Expression* ite
         Expression* existing = (Expression*)(intptr_t)_a_679->items[_i_679];
         do {
     if ((((!(present))) && (spec_string_equals(existing->stringValue, item->stringValue)))) {
-        present = true;
-    }
+	    present = true;
+	};
         } while (0);
     } } });
     if ((!(present))) {
-        spec_array_add_object(targetItems->arrayItems, (void*)(item));
-    }
+	    spec_array_add_object(targetItems->arrayItems, (void*)(item));
+	};
 }
 
 typedef struct {
@@ -44214,8 +44214,8 @@ static __attribute__((unused)) void _anon_fn_681(void* _env_ptr, Expression* exi
     bool present = _env->present;
     (void)present;
     if ((((!(present))) && (spec_string_equals(existing->stringValue, item->stringValue)))) {
-        present = true;
-    }
+	    present = true;
+	};
     _env->present = present;
 }
 
@@ -44235,8 +44235,8 @@ static __attribute__((unused)) void _anon_fn_688(void* _env_ptr, String cand) {
     Loader* self = _env->self;
     (void)self;
     if ((!(spec_map_has(self->loadedFiles, cand)))) {
-        Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
-    }
+	    Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
+	};
 }
 
 typedef struct {
@@ -44255,15 +44255,15 @@ static __attribute__((unused)) void _anon_fn_687(void* _env_ptr, String cls) {
     Loader* self = _env->self;
     (void)self;
     if ((!(self->indexBuilt))) {
-        Loader_buildScanIndex(self) /* inst:Loader:buildScanIndex */;
-    }
+	    Loader_buildScanIndex(self) /* inst:Loader:buildScanIndex */;
+	};
     SPEC_AUTO SpecArray* cands = (SpecArray*)((Loader_candidatesFor(self, cls) /* inst:Loader:candidatesFor */));
     ({ SpecArray* _a_689 = cands; if (_a_689) { for (size_t _i_689 = 0; _i_689 < _a_689->length; _i_689++) {
         String cand = (String)(intptr_t)_a_689->items[_i_689];
         do {
     if ((!(spec_map_has(self->loadedFiles, cand)))) {
-        Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
-    }
+	    Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
+	};
         } while (0);
     } } });
 }
@@ -44284,8 +44284,8 @@ static __attribute__((unused)) void _anon_fn_691(void* _env_ptr, String cand) {
     Loader* self = _env->self;
     (void)self;
     if ((!(spec_map_has(self->loadedFiles, cand)))) {
-        Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
-    }
+	    Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
+	};
 }
 
 typedef struct {
@@ -44308,8 +44308,8 @@ static __attribute__((unused)) void _anon_fn_696(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44336,15 +44336,15 @@ static __attribute__((unused)) void _anon_fn_695(void* _env_ptr, Expression* ite
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_697 = item->arrayItems; if (_a_697) { for (size_t _i_697 = 0; _i_697 < _a_697->length; _i_697++) {
+	    ({ SpecArray* _a_697 = item->arrayItems; if (_a_697) { for (size_t _i_697 = 0; _i_697 < _a_697->length; _i_697++) {
         Expression* seg = (Expression*)(intptr_t)_a_697->items[_i_697];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
 }
 
 typedef struct {
@@ -44367,8 +44367,8 @@ static __attribute__((unused)) void _anon_fn_699(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44391,22 +44391,22 @@ static __attribute__((unused)) void _anon_fn_694(void* _env_ptr, Member* m) {
     ClassInfo* c = _env->c;
     (void)c;
     if (((((spec_string_equals(m->name, spec_string_intern("using"))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_698 = m->initExpr->arrayItems; if (_a_698) { for (size_t _i_698 = 0; _i_698 < _a_698->length; _i_698++) {
+	    ({ SpecArray* _a_698 = m->initExpr->arrayItems; if (_a_698) { for (size_t _i_698 = 0; _i_698 < _a_698->length; _i_698++) {
         Expression* item = (Expression*)(intptr_t)_a_698->items[_i_698];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_700 = item->arrayItems; if (_a_700) { for (size_t _i_700 = 0; _i_700 < _a_700->length; _i_700++) {
+	    ({ SpecArray* _a_700 = item->arrayItems; if (_a_700) { for (size_t _i_700 = 0; _i_700 < _a_700->length; _i_700++) {
         Expression* seg = (Expression*)(intptr_t)_a_700->items[_i_700];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
-    }
+	};
 }
 
 typedef struct {
@@ -44429,8 +44429,8 @@ static __attribute__((unused)) void _anon_fn_703(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44457,15 +44457,15 @@ static __attribute__((unused)) void _anon_fn_702(void* _env_ptr, Expression* ite
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_704 = item->arrayItems; if (_a_704) { for (size_t _i_704 = 0; _i_704 < _a_704->length; _i_704++) {
+	    ({ SpecArray* _a_704 = item->arrayItems; if (_a_704) { for (size_t _i_704 = 0; _i_704 < _a_704->length; _i_704++) {
         Expression* seg = (Expression*)(intptr_t)_a_704->items[_i_704];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
 }
 
 typedef struct {
@@ -44488,8 +44488,8 @@ static __attribute__((unused)) void _anon_fn_706(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44512,10 +44512,10 @@ static __attribute__((unused)) void _anon_fn_708(void* _env_ptr, Member* m) {
     ClassInfo* c = _env->c;
     (void)c;
     if (((m->kind) == (MemberKind_CLASS))) {
-        SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
-        Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
+	    SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
+	    Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
     if (one) { spec_release((void*)one); one = NULL; }
-    }
+	};
 }
 
 typedef struct {
@@ -44537,32 +44537,32 @@ static __attribute__((unused)) void _anon_fn_693(void* _env_ptr, ClassInfo* c) {
         Member* m = (Member*)(intptr_t)_a_701->items[_i_701];
         do {
     if (((((spec_string_equals(m->name, spec_string_intern("using"))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_705 = m->initExpr->arrayItems; if (_a_705) { for (size_t _i_705 = 0; _i_705 < _a_705->length; _i_705++) {
+	    ({ SpecArray* _a_705 = m->initExpr->arrayItems; if (_a_705) { for (size_t _i_705 = 0; _i_705 < _a_705->length; _i_705++) {
         Expression* item = (Expression*)(intptr_t)_a_705->items[_i_705];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_707 = item->arrayItems; if (_a_707) { for (size_t _i_707 = 0; _i_707 < _a_707->length; _i_707++) {
+	    ({ SpecArray* _a_707 = item->arrayItems; if (_a_707) { for (size_t _i_707 = 0; _i_707 < _a_707->length; _i_707++) {
         Expression* seg = (Expression*)(intptr_t)_a_707->items[_i_707];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
     ({ SpecArray* _a_709 = c->members; if (_a_709) { for (size_t _i_709 = 0; _i_709 < _a_709->length; _i_709++) {
         Member* m = (Member*)(intptr_t)_a_709->items[_i_709];
         do {
     if (((m->kind) == (MemberKind_CLASS))) {
-        SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
-        Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
+	    SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
+	    Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
     if (one) { spec_release((void*)one); one = NULL; }
-    }
+	};
         } while (0);
     } } });
 }
@@ -44587,8 +44587,8 @@ static __attribute__((unused)) void _anon_fn_713(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44615,15 +44615,15 @@ static __attribute__((unused)) void _anon_fn_712(void* _env_ptr, Expression* ite
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_714 = item->arrayItems; if (_a_714) { for (size_t _i_714 = 0; _i_714 < _a_714->length; _i_714++) {
+	    ({ SpecArray* _a_714 = item->arrayItems; if (_a_714) { for (size_t _i_714 = 0; _i_714 < _a_714->length; _i_714++) {
         Expression* seg = (Expression*)(intptr_t)_a_714->items[_i_714];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
 }
 
 typedef struct {
@@ -44646,8 +44646,8 @@ static __attribute__((unused)) void _anon_fn_716(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44670,22 +44670,22 @@ static __attribute__((unused)) void _anon_fn_711(void* _env_ptr, Member* m) {
     ClassInfo* c = _env->c;
     (void)c;
     if (((((spec_string_equals(m->name, spec_string_intern("using"))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_715 = m->initExpr->arrayItems; if (_a_715) { for (size_t _i_715 = 0; _i_715 < _a_715->length; _i_715++) {
+	    ({ SpecArray* _a_715 = m->initExpr->arrayItems; if (_a_715) { for (size_t _i_715 = 0; _i_715 < _a_715->length; _i_715++) {
         Expression* item = (Expression*)(intptr_t)_a_715->items[_i_715];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_717 = item->arrayItems; if (_a_717) { for (size_t _i_717 = 0; _i_717 < _a_717->length; _i_717++) {
+	    ({ SpecArray* _a_717 = item->arrayItems; if (_a_717) { for (size_t _i_717 = 0; _i_717 < _a_717->length; _i_717++) {
         Expression* seg = (Expression*)(intptr_t)_a_717->items[_i_717];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
-    }
+	};
 }
 
 typedef struct {
@@ -44708,8 +44708,8 @@ static __attribute__((unused)) void _anon_fn_720(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44736,15 +44736,15 @@ static __attribute__((unused)) void _anon_fn_719(void* _env_ptr, Expression* ite
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_721 = item->arrayItems; if (_a_721) { for (size_t _i_721 = 0; _i_721 < _a_721->length; _i_721++) {
+	    ({ SpecArray* _a_721 = item->arrayItems; if (_a_721) { for (size_t _i_721 = 0; _i_721 < _a_721->length; _i_721++) {
         Expression* seg = (Expression*)(intptr_t)_a_721->items[_i_721];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
 }
 
 typedef struct {
@@ -44767,8 +44767,8 @@ static __attribute__((unused)) void _anon_fn_723(void* _env_ptr, Expression* seg
     ClassInfo* c = _env->c;
     (void)c;
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
 }
 
 typedef struct {
@@ -44791,10 +44791,10 @@ static __attribute__((unused)) void _anon_fn_725(void* _env_ptr, Member* m) {
     ClassInfo* c = _env->c;
     (void)c;
     if (((m->kind) == (MemberKind_CLASS))) {
-        SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
-        Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
+	    SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
+	    Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
     if (one) { spec_release((void*)one); one = NULL; }
-    }
+	};
 }
 
 typedef struct {
@@ -44816,16 +44816,16 @@ static __attribute__((unused)) void _anon_fn_728(void* _env_ptr, Member* m) {
     ClassInfo* c = _env->c;
     (void)c;
     if (((((((((((m->kind) == (MemberKind_FIELD))) && ((!spec_string_equals(m->name, spec_string_intern("using")))))) && ((!spec_string_equals(m->name, spec_string_intern("namespace")))))) && ((!spec_string_equals(m->name, spec_string_intern("group")))))) && ((!spec_string_equals(m->name, spec_string_intern("castable")))))) {
-        found = true;
-    }
+	    found = true;
+	};
     _env->found = found;
 }
 
 static __attribute__((unused)) void _anon_fn_730(void* _env_ptr, ClassInfo* c) {
     (void)_env_ptr;
     if ((((((((!spec_string_equals(c->baseClass, spec_string_intern("Enum")))) && (((spec_array_length(c->baseClasses)) == (0))))) && ((!spec_string_equals(c->name, spec_string_intern("Any")))))) && ((!spec_string_equals(c->name, spec_string_intern("Stringable")))))) {
-        ClassInfo_withBaseClasses(c, c->name, ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Any"))); _arr; })))), c->members) /* inst:ClassInfo:withBaseClasses */;
-    }
+	    ClassInfo_withBaseClasses(c, c->name, ({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Any"))); _arr; }), c->members) /* inst:ClassInfo:withBaseClasses */;
+	};
 }
 
 typedef struct {
@@ -62726,39 +62726,39 @@ void Loader_loadFile(Loader* self, String filePath) {
     (void)self;
     (void)filePath;
     if (spec_map_has(self->loadedFiles, filePath)) {
-        return;
-    }
+	    return;
+	};
     spec_map_set(self->loadedFiles, filePath, spec_string_intern("true"));
     if ((!(spec_file_exists(filePath)))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Module file not found: "))), filePath)));
-        return;
-    }
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Module file not found: "))), filePath)));
+	    return;
+	};
     SPEC_AUTO String src = spec_file_read(filePath, spec_string_intern(""), (SpecClosure*)(NULL), (SpecClosure*)(NULL));
     SPEC_AUTO Lexer* lexer = (Lexer*)((({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, src); _inst; })));
     SPEC_AUTO SpecArray* tokens = (SpecArray*)((Lexer_tokenize(lexer) /* inst:Lexer:tokenize */));
     if (({ Lexer* _recv = (Lexer*)(lexer); (((bool (*)(Lexer*))_recv->_vtable[48]))((Lexer*)_recv); })) {
-        SPEC_AUTO SpecArray* lexErrors = (SpecArray*)((({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[49]))((Lexer*)_recv); })));
-        ({ SpecArray* _a_641 = lexErrors; if (_a_641) { for (size_t _i_641 = 0; _i_641 < _a_641->length; _i_641++) {
+	    SPEC_AUTO SpecArray* lexErrors = (SpecArray*)((({ Lexer* _recv = (Lexer*)(lexer); (((SpecArray* (*)(Lexer*))_recv->_vtable[49]))((Lexer*)_recv); })));
+	    ({ SpecArray* _a_641 = lexErrors; if (_a_641) { for (size_t _i_641 = 0; _i_641 < _a_641->length; _i_641++) {
         Error* err = (Error*)(intptr_t)_a_641->items[_i_641];
         do {
     spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LexError] ["))), filePath), spec_string_intern("] ")), ((String)spec_claim_pool((void*)(({ Error* _recv = (Error*)(err); (((String (*)(Error*))_recv->_vtable[20]))((Error*)_recv); })))))));
         } while (0);
     } } });
     if (lexErrors) { spec_release((void*)lexErrors); lexErrors = NULL; }
-    }
+	};
     SPEC_AUTO Parser* parser = (Parser*)((({ Parser* _inst = Parser_new(); Parser_init(_inst, tokens); _inst; })));
     ({ Parser* _recv = (Parser*)(parser); (((void (*)(Parser*, String))_recv->_vtable[27]))((Parser*)_recv, filePath); });
     SPEC_AUTO ProgramNode* prog = (ProgramNode*)((Parser_parseProgram(parser) /* inst:Parser:parseProgram */));
     if (({ Parser* _recv = (Parser*)(parser); (((bool (*)(Parser*))_recv->_vtable[48]))((Parser*)_recv); })) {
-        SPEC_AUTO SpecArray* parseErrs = (SpecArray*)((({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[49]))((Parser*)_recv); })));
-        ({ SpecArray* _a_643 = parseErrs; if (_a_643) { for (size_t _i_643 = 0; _i_643 < _a_643->length; _i_643++) {
+	    SPEC_AUTO SpecArray* parseErrs = (SpecArray*)((({ Parser* _recv = (Parser*)(parser); (((SpecArray* (*)(Parser*))_recv->_vtable[49]))((Parser*)_recv); })));
+	    ({ SpecArray* _a_643 = parseErrs; if (_a_643) { for (size_t _i_643 = 0; _i_643 < _a_643->length; _i_643++) {
         Error* err = (Error*)(intptr_t)_a_643->items[_i_643];
         do {
     spec_array_add_object(self->parseErrors, (void*)(({ Error* _recv = (Error*)(err); (((String (*)(Error*))_recv->_vtable[20]))((Error*)_recv); })));
         } while (0);
     } } });
     if (parseErrs) { spec_release((void*)parseErrs); parseErrs = NULL; }
-    }
+	};
     ({ SpecArray* _a_647 = prog->classes; if (_a_647) { for (size_t _i_647 = 0; _i_647 < _a_647->length; _i_647++) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_647->items[_i_647];
         do {
@@ -62767,8 +62767,8 @@ void Loader_loadFile(Loader* self, String filePath) {
         do {
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, String))_recv->_vtable[27]))((Member*)_recv, filePath); });
     if (((m->kind) == (MemberKind_CLASS))) {
-        ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
-    }
+	    ({ ClassInfo* _recv = (ClassInfo*)(m->nestedClass); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, filePath); });
+	};
         } while (0);
     } } });
     SPEC_AUTO String gName = Loader_groupTargetOf(self, c) /* inst:Loader:groupTargetOf */;
@@ -62776,26 +62776,26 @@ void Loader_loadFile(Loader* self, String filePath) {
     bool isFloor = ((String_endsWith(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, spec_string_intern(":sysinternal"))) || (spec_string_equals(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, spec_string_intern("sysinternal"))));
     bool dup = spec_map_has(self->seenClassNames, qName);
     if ((((((!(isFloor))) && ((!(dup))))) && (spec_map_has(self->seenBareNames, c->name)))) {
-        dup = true;
-    }
+	    dup = true;
+	};
     if ((!(dup))) {
-        spec_map_set(self->seenClassNames, qName, spec_string_intern("true"));
-        spec_map_set(self->seenBareNames, c->name, spec_string_intern("true"));
-        spec_array_add_object(self->loadedClasses, (void*)(c));
-        if ((((!spec_string_equals(gName, spec_string_intern("")))) && ((!spec_string_equals(gName, c->name))))) {
-        spec_array_add_object(self->groupTargets, (void*)(gName));
-        spec_array_add_object(self->groupFragments, (void*)(c));
-    }
-    } else {
-        if (spec_string_equals(gName, c->name)) {
-        SPEC_AUTO LoadedClassSearchLoop* find = (LoadedClassSearchLoop*)((({ LoadedClassSearchLoop* _inst = LoadedClassSearchLoop_new(); LoadedClassSearchLoop_init(_inst, self->loadedClasses, c->name); _inst; })));
-        ({ void* _lp = (void*)(find); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LoadedClassSearchLoop_evaluate((void*)_lp)) { if (!LoadedClassSearchLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-        if (find->found) {
-        Loader_mergeFragmentInto(self, find->res, c) /* inst:Loader:mergeFragmentInto */;
-    }
+	    spec_map_set(self->seenClassNames, qName, spec_string_intern("true"));
+	    spec_map_set(self->seenBareNames, c->name, spec_string_intern("true"));
+	    spec_array_add_object(self->loadedClasses, (void*)(c));
+	    if ((((!spec_string_equals(gName, spec_string_intern("")))) && ((!spec_string_equals(gName, c->name))))) {
+	    spec_array_add_object(self->groupTargets, (void*)(gName));
+	    spec_array_add_object(self->groupFragments, (void*)(c));
+	};
+	} else {
+	    if (spec_string_equals(gName, c->name)) {
+	    SPEC_AUTO LoadedClassSearchLoop* find = (LoadedClassSearchLoop*)((({ LoadedClassSearchLoop* _inst = LoadedClassSearchLoop_new(); LoadedClassSearchLoop_init(_inst, self->loadedClasses, c->name); _inst; })));
+	    ({ void* _lp = (void*)(find); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LoadedClassSearchLoop_evaluate((void*)_lp)) { if (!LoadedClassSearchLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+	    if (find->found) {
+	    Loader_mergeFragmentInto(self, find->res, c) /* inst:Loader:mergeFragmentInto */;
+	};
     if (find) { spec_release((void*)find); find = NULL; }
-    }
-    }
+	};
+	};
     Loader_collectImportsFromClass(self, c) /* inst:Loader:collectImportsFromClass */;
     if (gName) { spec_release((void*)gName); gName = NULL; }
     if (qName) { spec_release((void*)qName); qName = NULL; }
@@ -62815,21 +62815,21 @@ void Loader_collectImportsFromClass(Loader* self, ClassInfo* c) {
         Member* m = (Member*)(intptr_t)_a_653->items[_i_653];
         do {
     if (((spec_string_equals(m->name, spec_string_intern("using"))) && (m->hasInit))) {
-        SPEC_AUTO Expression* initExpr = (Expression*)spec_retain((void*)(m->initExpr));
-        if (((initExpr->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_655 = initExpr->arrayItems; if (_a_655) { for (size_t _i_655 = 0; _i_655 < _a_655->length; _i_655++) {
+	    SPEC_AUTO Expression* initExpr = (Expression*)spec_retain((void*)(m->initExpr));
+	    if (((initExpr->kind) == (ExpressionKind_ARRAY))) {
+	    ({ SpecArray* _a_655 = initExpr->arrayItems; if (_a_655) { for (size_t _i_655 = 0; _i_655 < _a_655->length; _i_655++) {
         Expression* item = (Expression*)(intptr_t)_a_655->items[_i_655];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
-        break;
-    }
+	    Loader_loadArrayFormUsing(self, item, c) /* inst:Loader:loadArrayFormUsing */;
+	    break;
+	};
     spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Malformed import in class '"))), c->name), spec_string_intern("': using entries are package-segment arrays."))));
         } while (0);
     } } });
-    }
+	};
     if (initExpr) { spec_release((void*)initExpr); initExpr = NULL; }
-    }
+	};
         } while (0);
     } } });
 }
@@ -62840,8 +62840,8 @@ void Loader_buildScanIndex(Loader* self) {
     spec_assign((void**)&self->packageDirs, (void*)(spec_map_new()));
     SPEC_AUTO String inDir = Loader_dirOf(self, self->rootInputPath) /* inst:Loader:dirOf */;
     if ((!spec_string_equals(inDir, spec_string_intern("")))) {
-        Loader_scanTree(self, inDir, 0) /* inst:Loader:scanTree */;
-    }
+	    Loader_scanTree(self, inDir, 0) /* inst:Loader:scanTree */;
+	};
     SPEC_AUTO String exeDir = Dir_exeDir(NULL);
     long long ups = 0;
     long long indexed = 0;
@@ -62856,8 +62856,8 @@ void Loader_buildScanIndex(Loader* self) {
     Loader_scanTree(self, exeDir, 0) /* inst:Loader:scanTree */;
     indexed = spec_array_length(spec_map_keys(self->classPaths));
     if (((indexed) == (0))) {
-        spec_assign((void**)&exeDir, (void*)(Loader_dirOf(self, exeDir) /* inst:Loader:dirOf */));
-    }
+	    spec_assign((void**)&exeDir, (void*)(Loader_dirOf(self, exeDir) /* inst:Loader:dirOf */));
+	};
     ups = ((ups) + (1));
     _it_656 = true; break;
         } while (0);
@@ -62875,35 +62875,35 @@ void Loader_scanTree(Loader* self, String dir, long long depth) {
     (void)dir;
     (void)depth;
     if (((depth) > (8))) {
-        return;
-    }
+	    return;
+	};
     SPEC_AUTO SpecArray* entries = (SpecArray*)((Dir_dirList(NULL, dir)));
     ({ SpecArray* _a_658 = entries; if (_a_658) { for (size_t _i_658 = 0; _i_658 < _a_658->length; _i_658++) {
         String name = (String)(intptr_t)_a_658->items[_i_658];
         do {
     if (String_startsWith(name, spec_string_intern("."))) {
-        break;
-    }
+	    break;
+	};
     SPEC_AUTO String child = Buf_stringCopy(NULL, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dir)), spec_string_intern("/")), name));
     if (String_endsWith(name, spec_string_intern(".spec"))) {
-        SPEC_AUTO String stem = spec_string_substring(name, 0, ((spec_string_length(name)) - (5)));
-        if (spec_map_has(self->classPaths, stem)) {
-        spec_map_set(self->classPaths, stem, spec_string_concat(spec_string_concat((String)spec_map_get(self->classPaths, stem, spec_string_intern("")), spec_string_intern(";")), child));
-    } else {
-        spec_map_set(self->classPaths, stem, child);
-    }
-        if (spec_map_has(self->packageDirs, dir)) {
-        spec_map_set(self->packageDirs, dir, spec_string_concat(spec_string_concat((String)spec_map_get(self->packageDirs, dir, spec_string_intern("")), spec_string_intern(";")), name));
-    } else {
-        spec_map_set(self->packageDirs, dir, name);
-    }
-        break;
+	    SPEC_AUTO String stem = spec_string_substring(name, 0, ((spec_string_length(name)) - (5)));
+	    if (spec_map_has(self->classPaths, stem)) {
+	    spec_map_set(self->classPaths, stem, spec_string_concat(spec_string_concat((String)spec_map_get(self->classPaths, stem, spec_string_intern("")), spec_string_intern(";")), child));
+	} else {
+	    spec_map_set(self->classPaths, stem, child);
+	};
+	    if (spec_map_has(self->packageDirs, dir)) {
+	    spec_map_set(self->packageDirs, dir, spec_string_concat(spec_string_concat((String)spec_map_get(self->packageDirs, dir, spec_string_intern("")), spec_string_intern(";")), name));
+	} else {
+	    spec_map_set(self->packageDirs, dir, name);
+	};
+	    break;
     if (stem) { spec_release((void*)stem); stem = NULL; }
-    }
+	};
     SPEC_AUTO SpecArray* subEntries = (SpecArray*)((Dir_dirList(NULL, child)));
     if (((spec_array_length(subEntries)) > (0))) {
-        Loader_scanTree(self, child, ((depth) + (1))) /* inst:Loader:scanTree */;
-    }
+	    Loader_scanTree(self, child, ((depth) + (1))) /* inst:Loader:scanTree */;
+	};
     if (child) { spec_release((void*)child); child = NULL; }
     if (subEntries) { spec_release((void*)subEntries); subEntries = NULL; }
         } while (0);
@@ -62926,12 +62926,12 @@ SpecArray* Loader_candidatesFor(Loader* self, String className) {
         if (!_ev_659) break;
         bool _it_659 = true;
         do {
-    if (((((i) == (spec_string_length(joined)))) || (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(joined, i, spec_string_intern(""))))), spec_string_intern(";"))))) {
-        if (((i) > (start))) {
-        spec_array_add_object(out, (void*)(spec_string_substring(joined, start, i)));
-    }
-        start = ((i) + (1));
-    }
+    if (((((i) == (spec_string_length(joined)))) || (spec_string_equals(String_charAt(joined, i, spec_string_intern("")), spec_string_intern(";"))))) {
+	    if (((i) > (start))) {
+	    spec_array_add_object(out, (void*)(spec_string_substring(joined, start, i)));
+	};
+	    start = ((i) + (1));
+	};
     i = ((i) + (1));
     _it_659 = true; break;
         } while (0);
@@ -62957,16 +62957,16 @@ bool Loader_provides(Loader* self, String nsJoined, String className) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_661->items[_i_661];
         do {
     if ((!(ok))) {
-        if (spec_string_equals(className, spec_string_intern(""))) {
-        if (spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */))), nsJoined)) {
-        ok = true;
-    }
-    } else {
-        if (((spec_string_equals(c->name, className)) && (spec_string_equals(((String)spec_claim_pool((void*)(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */))), nsJoined)))) {
-        ok = true;
-    }
-    }
-    }
+	    if (spec_string_equals(className, spec_string_intern(""))) {
+	    if (spec_string_equals(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, nsJoined)) {
+	    ok = true;
+	};
+	} else {
+	    if (((spec_string_equals(c->name, className)) && (spec_string_equals(ClassInfo_namespaceJoined(c) /* inst:ClassInfo:namespaceJoined */, nsJoined)))) {
+	    ok = true;
+	};
+	};
+	};
         } while (0);
     } } });
     return ok;
@@ -62978,64 +62978,64 @@ void Loader_resolveImport(Loader* self, SpecArray* parts, String termClass, Clas
     (void)termClass;
     (void)c;
     if ((!(self->indexBuilt))) {
-        Loader_buildScanIndex(self) /* inst:Loader:buildScanIndex */;
-    }
+	    Loader_buildScanIndex(self) /* inst:Loader:buildScanIndex */;
+	};
     SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
     ({ SpecArray* _a_663 = parts; if (_a_663) { for (size_t _i_663 = 0; _i_663 < _a_663->length; _i_663++) {
         String seg = (String)(intptr_t)_a_663->items[_i_663];
         do {
     if (spec_string_equals(nsJoined, spec_string_intern(""))) {
-        spec_assign((void**)&nsJoined, (void*)(seg));
-    } else {
-        nsJoined = spec_string_concat(spec_string_concat(nsJoined, spec_string_intern(":")), seg);
-    }
+	    spec_assign((void**)&nsJoined, (void*)(seg));
+	} else {
+	    nsJoined = spec_string_concat(spec_string_concat(nsJoined, spec_string_intern(":")), seg);
+	};
         } while (0);
     } } });
     SPEC_AUTO String wanted = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")), termClass);
     SPEC_AUTO SpecArray* cands = (SpecArray*)((Loader_candidatesFor(self, termClass) /* inst:Loader:candidatesFor */));
     bool resolved = false;
     if ((!spec_string_equals(termClass, spec_string_intern("")))) {
-        ({ SpecArray* _a_665 = cands; if (_a_665) { for (size_t _i_665 = 0; _i_665 < _a_665->length; _i_665++) {
+	    ({ SpecArray* _a_665 = cands; if (_a_665) { for (size_t _i_665 = 0; _i_665 < _a_665->length; _i_665++) {
         String cand = (String)(intptr_t)_a_665->items[_i_665];
         do {
     if ((!(resolved))) {
-        Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
-        if (Loader_provides(self, nsJoined, termClass) /* inst:Loader:provides */) {
-        resolved = true;
-    }
-    }
+	    Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
+	    if (Loader_provides(self, nsJoined, termClass) /* inst:Loader:provides */) {
+	    resolved = true;
+	};
+	};
         } while (0);
     } } });
-    }
+	};
     if ((((!(resolved))) && (spec_string_equals(termClass, spec_string_intern(""))))) {
-        SPEC_AUTO String dirSuffix = spec_string_concat((void*)spec_retain((void*)(spec_string_intern("/"))), String_replaceAll(nsJoined, spec_string_intern(":"), spec_string_intern("/")));
-        SPEC_AUTO SpecArray* allDirs = (SpecArray*)((spec_map_keys(self->packageDirs)));
-        ({ SpecArray* _a_669 = allDirs; if (_a_669) { for (size_t _i_669 = 0; _i_669 < _a_669->length; _i_669++) {
+	    SPEC_AUTO String dirSuffix = spec_string_concat((void*)spec_retain((void*)(spec_string_intern("/"))), String_replaceAll(nsJoined, spec_string_intern(":"), spec_string_intern("/")));
+	    SPEC_AUTO SpecArray* allDirs = (SpecArray*)((spec_map_keys(self->packageDirs)));
+	    ({ SpecArray* _a_669 = allDirs; if (_a_669) { for (size_t _i_669 = 0; _i_669 < _a_669->length; _i_669++) {
         String dirPath = (String)(intptr_t)_a_669->items[_i_669];
         do {
     if (String_endsWith(dirPath, dirSuffix)) {
-        SPEC_AUTO String namesJoined = (String)spec_map_get(self->packageDirs, dirPath, spec_string_intern(""));
-        SPEC_AUTO SpecArray* names = (SpecArray*)((String_split(namesJoined, spec_string_intern(";"))));
-        ({ SpecArray* _a_671 = names; if (_a_671) { for (size_t _i_671 = 0; _i_671 < _a_671->length; _i_671++) {
+	    SPEC_AUTO String namesJoined = (String)spec_map_get(self->packageDirs, dirPath, spec_string_intern(""));
+	    SPEC_AUTO SpecArray* names = (SpecArray*)((String_split(namesJoined, spec_string_intern(";"))));
+	    ({ SpecArray* _a_671 = names; if (_a_671) { for (size_t _i_671 = 0; _i_671 < _a_671->length; _i_671++) {
         String name = (String)(intptr_t)_a_671->items[_i_671];
         do {
-    Loader_loadFile(self, ((String)spec_claim_pool((void*)(Buf_stringCopy(NULL, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))))))))) /* inst:Loader:loadFile */;
+    Loader_loadFile(self, Buf_stringCopy(NULL, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(dirPath)), spec_string_intern("/")), name))) /* inst:Loader:loadFile */;
         } while (0);
     } } });
     if (namesJoined) { spec_release((void*)namesJoined); namesJoined = NULL; }
     if (names) { spec_release((void*)names); names = NULL; }
-    }
+	};
         } while (0);
     } } });
-        if (Loader_provides(self, nsJoined, spec_string_intern("")) /* inst:Loader:provides */) {
-        resolved = true;
-    }
+	    if (Loader_provides(self, nsJoined, spec_string_intern("")) /* inst:Loader:provides */) {
+	    resolved = true;
+	};
     if (dirSuffix) { spec_release((void*)dirSuffix); dirSuffix = NULL; }
     if (allDirs) { spec_release((void*)allDirs); allDirs = NULL; }
-    }
+	};
     if ((!(resolved))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Cannot resolve import '["))), wanted), spec_string_intern("]")), spec_string_intern("' declared in class '")), c->name), spec_string_intern("'."))));
-    }
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Cannot resolve import '["))), wanted), spec_string_intern("]")), spec_string_intern("' declared in class '")), c->name), spec_string_intern("'."))));
+	};
     if (nsJoined) { spec_release((void*)nsJoined); nsJoined = NULL; }
     if (wanted) { spec_release((void*)wanted); wanted = NULL; }
     if (cands) { spec_release((void*)cands); cands = NULL; }
@@ -63047,22 +63047,22 @@ void Loader_loadArrayFormUsing(Loader* self, Expression* item, ClassInfo* c) {
     (void)c;
     SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(item->arrayItems));
     if (((spec_array_length(segs)) == (0))) {
-        return;
-    }
+	    return;
+	};
     SPEC_AUTO SpecArray* parts = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     SPEC_AUTO String termClass = spec_construct_string(spec_string_intern(""));
     ({ SpecArray* _a_673 = segs; if (_a_673) { for (size_t _i_673 = 0; _i_673 < _a_673->length; _i_673++) {
         Expression* seg = (Expression*)(intptr_t)_a_673->items[_i_673];
         do {
     if (((seg->kind) == (ExpressionKind_IDENT))) {
-        spec_assign((void**)&termClass, (void*)(seg->stringValue));
-    } else {
-        if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        spec_assign((void**)&termClass, (void*)(seg->stringValue));
-    } else {
-        spec_array_add_object(parts, (void*)(seg->stringValue));
-    }
-    }
+	    spec_assign((void**)&termClass, (void*)(seg->stringValue));
+	} else {
+	    if (((seg->kind) == (ExpressionKind_USING_AS))) {
+	    spec_assign((void**)&termClass, (void*)(seg->stringValue));
+	} else {
+	    spec_array_add_object(parts, (void*)(seg->stringValue));
+	};
+	};
         } while (0);
     } } });
     Loader_resolveImport(self, parts, termClass, c) /* inst:Loader:resolveImport */;
@@ -63077,8 +63077,8 @@ String Loader_dirOf(Loader* self, String path) {
     SPEC_AUTO LastSlashLoop* loop = (LastSlashLoop*)((({ LastSlashLoop* _inst = LastSlashLoop_new(); LastSlashLoop_init(_inst, path); _inst; })));
     ({ void* _lp = (void*)(loop); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LastSlashLoop_evaluate((void*)_lp)) { if (!LastSlashLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     if (((loop->lastIdx) < (0))) {
-        return (String)spec_retain((void*)(spec_string_intern("")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("")));
+	};
     return (String)spec_retain((void*)(spec_string_substring(path, 0, loop->lastIdx)));
     if (loop) { spec_release((void*)loop); loop = NULL; }
 }
@@ -63099,18 +63099,18 @@ String Loader_groupTargetOf(Loader* self, ClassInfo* c) {
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (((spec_string_equals(m->name, spec_string_intern("group"))) && (m->hasInit))) {
-        SPEC_AUTO Expression* initExpr = (Expression*)spec_retain((void*)(m->initExpr));
-        if (((initExpr->kind) == (ExpressionKind_ARRAY))) {
-        if (((spec_array_length(initExpr->arrayItems)) != (1))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] ClassInfo '"))), c->name), spec_string_intern("' declares a group with ")), spec_to_string_int(spec_array_length(initExpr->arrayItems))), spec_string_intern(" entries; exactly one target is required."))));
-    } else {
-        SPEC_AUTO Expression* firstItem = (Expression*)spec_retain((void*)(spec_array_get(initExpr->arrayItems, 0)));
-        spec_assign((void**)&target, (void*)(firstItem->stringValue));
+	    SPEC_AUTO Expression* initExpr = (Expression*)spec_retain((void*)(m->initExpr));
+	    if (((initExpr->kind) == (ExpressionKind_ARRAY))) {
+	    if (((spec_array_length(initExpr->arrayItems)) != (1))) {
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] ClassInfo '"))), c->name), spec_string_intern("' declares a group with ")), spec_to_string_int(spec_array_length(initExpr->arrayItems))), spec_string_intern(" entries; exactly one target is required."))));
+	} else {
+	    SPEC_AUTO Expression* firstItem = (Expression*)spec_retain((void*)(spec_array_get(initExpr->arrayItems, 0)));
+	    spec_assign((void**)&target, (void*)(firstItem->stringValue));
     if (firstItem) { spec_release((void*)firstItem); firstItem = NULL; }
-    }
-    }
+	};
+	};
     if (initExpr) { spec_release((void*)initExpr); initExpr = NULL; }
-    }
+	};
     idx = ((idx) + (1));
     _it_674 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
@@ -63119,9 +63119,9 @@ String Loader_groupTargetOf(Loader* self, ClassInfo* c) {
     }
 });
     if ((((!spec_string_equals(target, spec_string_intern("")))) && ((!spec_string_equals(c->baseClass, spec_string_intern("")))))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Group fragment '"))), c->name), spec_string_intern("' must not declare parent classes."))));
-        spec_assign((void**)&target, (void*)(spec_string_intern("")));
-    }
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Group fragment '"))), c->name), spec_string_intern("' must not declare parent classes."))));
+	    spec_assign((void**)&target, (void*)(spec_string_intern("")));
+	};
     return (String)({ String _ret_val = target; target = NULL; _ret_val; });
     if (members) { spec_release((void*)members); members = NULL; }
     if (target) { spec_release((void*)target); target = NULL; }
@@ -63132,14 +63132,14 @@ bool Loader_sameSignature(Loader* self, Member* a, Member* b) {
     (void)a;
     (void)b;
     if (((a->kind) != (b->kind))) {
-        return false;
-    }
+	    return false;
+	};
     if (((a->kind) == (MemberKind_FIELD))) {
-        return spec_string_equals(a->memberType->name, b->memberType->name);
-    }
+	    return spec_string_equals(a->memberType->name, b->memberType->name);
+	};
     if (((spec_array_length(a->params)) != (spec_array_length(b->params)))) {
-        return false;
-    }
+	    return false;
+	};
     bool same = true;
     long long idx = 0;
     ({ while (1) {
@@ -63153,8 +63153,8 @@ bool Loader_sameSignature(Loader* self, Member* a, Member* b) {
     SPEC_AUTO Parameter* pa = (Parameter*)spec_retain((void*)(spec_array_get(a->params, idx)));
     SPEC_AUTO Parameter* pb = (Parameter*)spec_retain((void*)(spec_array_get(b->params, idx)));
     if ((((!spec_string_equals(pa->name, pb->name))) || ((!spec_string_equals(pa->paramType->name, pb->paramType->name))))) {
-        same = false;
-    }
+	    same = false;
+	};
     idx = ((idx) + (1));
     _it_675 = true; break;
     if (pa) { spec_release((void*)pa); pa = NULL; }
@@ -63171,9 +63171,9 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     (void)target;
     (void)frag;
     if (spec_string_equals(target->baseClass, spec_string_intern("Enum"))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Group target '"))), target->name), spec_string_intern("' is an Enum; grouping is only supported for classes."))));
-        return;
-    }
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Group target '"))), target->name), spec_string_intern("' is an Enum; grouping is only supported for classes."))));
+	    return;
+	};
     SPEC_AUTO SpecArray* fragMembers = (SpecArray*)spec_retain((void*)(frag->members));
     long long idx = 0;
     ({ while (1) {
@@ -63187,20 +63187,20 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(fragMembers, idx)));
     SPEC_AUTO String mName = spec_construct_string(m->name);
     if ((((!spec_string_equals(mName, spec_string_intern("using")))) && ((!spec_string_equals(mName, spec_string_intern("group")))))) {
-        SPEC_AUTO NamedMemberLoop* dup = (NamedMemberLoop*)((({ NamedMemberLoop* _inst = NamedMemberLoop_new(); NamedMemberLoop_init(_inst, target->members, mName); _inst; })));
-        ({ void* _lp = (void*)(dup); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (NamedMemberLoop_evaluate((void*)_lp)) { if (!NamedMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-        if (dup->found) {
-        bool isSameSig = Loader_sameSignature(self, m, dup->res) /* inst:Loader:sameSignature */;
-        if (((isSameSig) || (((m->kind) != (dup->res->kind))))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Duplicate member '"))), mName), spec_string_intern("' in class '")), target->name), spec_string_intern("' (")), m->sourceFile), spec_string_intern(" conflicts with declaration in ")), dup->res->sourceFile), spec_string_intern(")."))));
-    } else {
-        spec_array_add_object(target->members, (void*)(m));
-    }
-    } else {
-        spec_array_add_object(target->members, (void*)(m));
-    }
+	    SPEC_AUTO NamedMemberLoop* dup = (NamedMemberLoop*)((({ NamedMemberLoop* _inst = NamedMemberLoop_new(); NamedMemberLoop_init(_inst, target->members, mName); _inst; })));
+	    ({ void* _lp = (void*)(dup); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (NamedMemberLoop_evaluate((void*)_lp)) { if (!NamedMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+	    if (dup->found) {
+	    bool isSameSig = Loader_sameSignature(self, m, dup->res) /* inst:Loader:sameSignature */;
+	    if (((isSameSig) || (((m->kind) != (dup->res->kind))))) {
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Duplicate member '"))), mName), spec_string_intern("' in class '")), target->name), spec_string_intern("' (")), m->sourceFile), spec_string_intern(" conflicts with declaration in ")), dup->res->sourceFile), spec_string_intern(")."))));
+	} else {
+	    spec_array_add_object(target->members, (void*)(m));
+	};
+	} else {
+	    spec_array_add_object(target->members, (void*)(m));
+	};
     if (dup) { spec_release((void*)dup); dup = NULL; }
-    }
+	};
     idx = ((idx) + (1));
     _it_676 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
@@ -63212,13 +63212,13 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     SPEC_AUTO NamedMemberLoop* fragUsing = (NamedMemberLoop*)((({ NamedMemberLoop* _inst = NamedMemberLoop_new(); NamedMemberLoop_init(_inst, frag->members, spec_string_intern("using")); _inst; })));
     ({ void* _lp = (void*)(fragUsing); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (NamedMemberLoop_evaluate((void*)_lp)) { if (!NamedMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     if (fragUsing->found) {
-        SPEC_AUTO NamedMemberLoop* targetUsing = (NamedMemberLoop*)((({ NamedMemberLoop* _inst = NamedMemberLoop_new(); NamedMemberLoop_init(_inst, target->members, spec_string_intern("using")); _inst; })));
-        ({ void* _lp = (void*)(targetUsing); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (NamedMemberLoop_evaluate((void*)_lp)) { if (!NamedMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-        if (targetUsing->found) {
-        SPEC_AUTO Expression* fragItems = (Expression*)spec_retain((void*)(fragUsing->res->initExpr));
-        SPEC_AUTO Expression* targetItems = (Expression*)spec_retain((void*)(targetUsing->res->initExpr));
-        if (((((fragItems->kind) == (ExpressionKind_ARRAY))) && (((targetItems->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_680 = fragItems->arrayItems; if (_a_680) { for (size_t _i_680 = 0; _i_680 < _a_680->length; _i_680++) {
+	    SPEC_AUTO NamedMemberLoop* targetUsing = (NamedMemberLoop*)((({ NamedMemberLoop* _inst = NamedMemberLoop_new(); NamedMemberLoop_init(_inst, target->members, spec_string_intern("using")); _inst; })));
+	    ({ void* _lp = (void*)(targetUsing); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (NamedMemberLoop_evaluate((void*)_lp)) { if (!NamedMemberLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+	    if (targetUsing->found) {
+	    SPEC_AUTO Expression* fragItems = (Expression*)spec_retain((void*)(fragUsing->res->initExpr));
+	    SPEC_AUTO Expression* targetItems = (Expression*)spec_retain((void*)(targetUsing->res->initExpr));
+	    if (((((fragItems->kind) == (ExpressionKind_ARRAY))) && (((targetItems->kind) == (ExpressionKind_ARRAY))))) {
+	    ({ SpecArray* _a_680 = fragItems->arrayItems; if (_a_680) { for (size_t _i_680 = 0; _i_680 < _a_680->length; _i_680++) {
         Expression* item = (Expression*)(intptr_t)_a_680->items[_i_680];
         do {
     bool present = false;
@@ -63226,23 +63226,23 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
         Expression* existing = (Expression*)(intptr_t)_a_682->items[_i_682];
         do {
     if ((((!(present))) && (spec_string_equals(existing->stringValue, item->stringValue)))) {
-        present = true;
-    }
+	    present = true;
+	};
         } while (0);
     } } });
     if ((!(present))) {
-        spec_array_add_object(targetItems->arrayItems, (void*)(item));
-    }
+	    spec_array_add_object(targetItems->arrayItems, (void*)(item));
+	};
         } while (0);
     } } });
-    }
+	};
     if (fragItems) { spec_release((void*)fragItems); fragItems = NULL; }
     if (targetItems) { spec_release((void*)targetItems); targetItems = NULL; }
-    } else {
-        spec_array_add_object(target->members, (void*)(fragUsing->res));
-    }
+	} else {
+	    spec_array_add_object(target->members, (void*)(fragUsing->res));
+	};
     if (targetUsing) { spec_release((void*)targetUsing); targetUsing = NULL; }
-    }
+	};
     Loader_stripMemberNamed(self, target, spec_string_intern("group")) /* inst:Loader:stripMemberNamed */;
     long long initCount = 0;
     SPEC_AUTO String initFile = spec_construct_string(spec_string_intern(""));
@@ -63258,9 +63258,9 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(mergedMembers, scan)));
     if (spec_string_equals(m->name, spec_string_intern("init"))) {
-        initCount = ((initCount) + (1));
-        spec_assign((void**)&initFile, (void*)(m->sourceFile));
-    }
+	    initCount = ((initCount) + (1));
+	    spec_assign((void**)&initFile, (void*)(m->sourceFile));
+	};
     scan = ((scan) + (1));
     _it_683 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
@@ -63269,8 +63269,8 @@ void Loader_mergeFragmentInto(Loader* self, ClassInfo* target, ClassInfo* frag) 
     }
 });
     if (((initCount) > (1))) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Multiple init methods in class '"))), target->name), spec_string_intern("' (last declared in ")), initFile), spec_string_intern("); a grouped class may declare at most one."))));
-    }
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Multiple init methods in class '"))), target->name), spec_string_intern("' (last declared in ")), initFile), spec_string_intern("); a grouped class may declare at most one."))));
+	};
     if (fragMembers) { spec_release((void*)fragMembers); fragMembers = NULL; }
     if (fragUsing) { spec_release((void*)fragUsing); fragUsing = NULL; }
     if (initFile) { spec_release((void*)initFile); initFile = NULL; }
@@ -63293,8 +63293,8 @@ void Loader_stripMemberNamed(Loader* self, ClassInfo* target, String name) {
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (spec_string_equals(m->name, name)) {
-        ((Member*)spec_claim_pool((void*)(spec_array_remove_at(members, idx, (void*)(intptr_t)(m)))));
-    }
+	    spec_array_remove_at(members, idx, (void*)(intptr_t)(m));
+	};
     idx = ((idx) - (1));
     _it_684 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
@@ -63319,9 +63319,9 @@ void Loader_removeClassFromLoaded(Loader* self, ClassInfo* c) {
         do {
     SPEC_AUTO ClassInfo* cur = (ClassInfo*)spec_retain((void*)(spec_array_get(self->loadedClasses, idx)));
     if (((cur) == (c))) {
-        ((ClassInfo*)spec_claim_pool((void*)(spec_array_remove_at(self->loadedClasses, idx, (void*)(intptr_t)(c)))));
-        _it_685 = false; break;
-    }
+	    spec_array_remove_at(self->loadedClasses, idx, (void*)(intptr_t)(c));
+	    _it_685 = false; break;
+	};
     idx = ((idx) + (1));
     _it_685 = true; break;
     if (cur) { spec_release((void*)cur); cur = NULL; }
@@ -63348,16 +63348,16 @@ void Loader_mergeGroups(Loader* self) {
     ({ void* _lp = (void*)(find); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LoadedClassSearchLoop_evaluate((void*)_lp)) { if (!LoadedClassSearchLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     SPEC_AUTO ClassInfo* target = (ClassInfo*)spec_retain((void*)(find->res));
     if ((!(find->found))) {
-        spec_assign((void**)&target, (void*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, gName, spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; })));
-        spec_array_add_object(self->loadedClasses, (void*)(target));
-    }
+	    spec_assign((void**)&target, (void*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, gName, spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; })));
+	    spec_array_add_object(self->loadedClasses, (void*)(target));
+	};
     if (((target) != (frag))) {
-        if (((spec_string_equals(target->sourceFile, spec_string_intern(""))) && ((!spec_string_equals(frag->sourceFile, spec_string_intern("")))))) {
-        ({ ClassInfo* _recv = (ClassInfo*)(target); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, frag->sourceFile); });
-    }
-        Loader_mergeFragmentInto(self, target, frag) /* inst:Loader:mergeFragmentInto */;
-        Loader_removeClassFromLoaded(self, frag) /* inst:Loader:removeClassFromLoaded */;
-    }
+	    if (((spec_string_equals(target->sourceFile, spec_string_intern(""))) && ((!spec_string_equals(frag->sourceFile, spec_string_intern("")))))) {
+	    ({ ClassInfo* _recv = (ClassInfo*)(target); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, frag->sourceFile); });
+	};
+	    Loader_mergeFragmentInto(self, target, frag) /* inst:Loader:mergeFragmentInto */;
+	    Loader_removeClassFromLoaded(self, frag) /* inst:Loader:removeClassFromLoaded */;
+	};
     idx = ((idx) + (1));
     _it_686 = true; break;
     if (gName) { spec_release((void*)gName); gName = NULL; }
@@ -63386,15 +63386,15 @@ ProgramNode* Loader_loadProgram(Loader* self, String rootPath) {
         String cls = (String)(intptr_t)_a_690->items[_i_690];
         do {
     if ((!(self->indexBuilt))) {
-        Loader_buildScanIndex(self) /* inst:Loader:buildScanIndex */;
-    }
+	    Loader_buildScanIndex(self) /* inst:Loader:buildScanIndex */;
+	};
     SPEC_AUTO SpecArray* cands = (SpecArray*)((Loader_candidatesFor(self, cls) /* inst:Loader:candidatesFor */));
     ({ SpecArray* _a_692 = cands; if (_a_692) { for (size_t _i_692 = 0; _i_692 < _a_692->length; _i_692++) {
         String cand = (String)(intptr_t)_a_692->items[_i_692];
         do {
     if ((!(spec_map_has(self->loadedFiles, cand)))) {
-        Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
-    }
+	    Loader_loadFile(self, cand) /* inst:Loader:loadFile */;
+	};
         } while (0);
     } } });
     if (cands) { spec_release((void*)cands); cands = NULL; }
@@ -63423,32 +63423,32 @@ void Loader_synthesizeInto(Loader* self, SpecArray* classes) {
         Member* m = (Member*)(intptr_t)_a_718->items[_i_718];
         do {
     if (((((spec_string_equals(m->name, spec_string_intern("using"))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_722 = m->initExpr->arrayItems; if (_a_722) { for (size_t _i_722 = 0; _i_722 < _a_722->length; _i_722++) {
+	    ({ SpecArray* _a_722 = m->initExpr->arrayItems; if (_a_722) { for (size_t _i_722 = 0; _i_722 < _a_722->length; _i_722++) {
         Expression* item = (Expression*)(intptr_t)_a_722->items[_i_722];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_724 = item->arrayItems; if (_a_724) { for (size_t _i_724 = 0; _i_724 < _a_724->length; _i_724++) {
+	    ({ SpecArray* _a_724 = item->arrayItems; if (_a_724) { for (size_t _i_724 = 0; _i_724 < _a_724->length; _i_724++) {
         Expression* seg = (Expression*)(intptr_t)_a_724->items[_i_724];
         do {
     if (((seg->kind) == (ExpressionKind_USING_AS))) {
-        Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
-    }
+	    Loader_synthesizeFor(self, c, seg) /* inst:Loader:synthesizeFor */;
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
     ({ SpecArray* _a_726 = c->members; if (_a_726) { for (size_t _i_726 = 0; _i_726 < _a_726->length; _i_726++) {
         Member* m = (Member*)(intptr_t)_a_726->items[_i_726];
         do {
     if (((m->kind) == (MemberKind_CLASS))) {
-        SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
-        Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
+	    SPEC_AUTO SpecArray* one = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(m->nestedClass)); _arr; })));
+	    Loader_synthesizeInto(self, one) /* inst:Loader:synthesizeInto */;
     if (one) { spec_release((void*)one); one = NULL; }
-    }
+	};
         } while (0);
     } } });
         } while (0);
@@ -63462,11 +63462,11 @@ void Loader_synthesizeFor(Loader* self, ClassInfo* c, Expression* asExpr) {
     SPEC_AUTO String targetName = spec_construct_string(asExpr->stringValue);
     SPEC_AUTO ClassInfo* target = (ClassInfo*)((Loader_findLoadedClass(self, targetName) /* inst:Loader:findLoadedClass */));
     if (spec_string_equals(target->name, spec_string_intern(""))) {
-        return;
-    }
+	    return;
+	};
     if ((!(Loader_isFieldFul(self, target) /* inst:Loader:isFieldFul */))) {
-        return;
-    }
+	    return;
+	};
     SPEC_AUTO String fieldName = spec_string_concat((void*)spec_retain((void*)(spec_string_intern("_import_"))), targetName);
     long long idx = 0;
     SPEC_AUTO SpecArray* members = (SpecArray*)spec_retain((void*)(c->members));
@@ -63480,8 +63480,8 @@ void Loader_synthesizeFor(Loader* self, ClassInfo* c, Expression* asExpr) {
         do {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(members, idx)));
     if (spec_string_equals(m->name, fieldName)) {
-        spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] '"))), fieldName), spec_string_intern("' collides with a declared member in class '")), c->name), spec_string_intern("'; synthetic import fields reserve the name."))));
-    }
+	    spec_array_add_object(self->parseErrors, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] '"))), fieldName), spec_string_intern("' collides with a declared member in class '")), c->name), spec_string_intern("'; synthetic import fields reserve the name."))));
+	};
     idx = ((idx) + (1));
     _it_727 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
@@ -63520,8 +63520,8 @@ bool Loader_isFieldFul(Loader* self, ClassInfo* c) {
         Member* m = (Member*)(intptr_t)_a_729->items[_i_729];
         do {
     if (((((((((((m->kind) == (MemberKind_FIELD))) && ((!spec_string_equals(m->name, spec_string_intern("using")))))) && ((!spec_string_equals(m->name, spec_string_intern("namespace")))))) && ((!spec_string_equals(m->name, spec_string_intern("group")))))) && ((!spec_string_equals(m->name, spec_string_intern("castable")))))) {
-        found = true;
-    }
+	    found = true;
+	};
         } while (0);
     } } });
     return found;
@@ -63533,8 +63533,8 @@ ClassInfo* Loader_findLoadedClass(Loader* self, String name) {
     SPEC_AUTO LoadedClassSearchLoop* find = (LoadedClassSearchLoop*)((({ LoadedClassSearchLoop* _inst = LoadedClassSearchLoop_new(); LoadedClassSearchLoop_init(_inst, self->loadedClasses, name); _inst; })));
     ({ void* _lp = (void*)(find); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (LoadedClassSearchLoop_evaluate((void*)_lp)) { if (!LoadedClassSearchLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     if (find->found) {
-        return (ClassInfo*)spec_retain((void*)(find->res));
-    }
+	    return (ClassInfo*)spec_retain((void*)(find->res));
+	};
     return (ClassInfo*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; }));
     if (find) { spec_release((void*)find); find = NULL; }
 }
@@ -63545,8 +63545,8 @@ void Loader_appendImplicitAny(Loader* self) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_731->items[_i_731];
         do {
     if ((((((((!spec_string_equals(c->baseClass, spec_string_intern("Enum")))) && (((spec_array_length(c->baseClasses)) == (0))))) && ((!spec_string_equals(c->name, spec_string_intern("Any")))))) && ((!spec_string_equals(c->name, spec_string_intern("Stringable")))))) {
-        ClassInfo_withBaseClasses(c, c->name, ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Any"))); _arr; })))), c->members) /* inst:ClassInfo:withBaseClasses */;
-    }
+	    ClassInfo_withBaseClasses(c, c->name, ({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Any"))); _arr; }), c->members) /* inst:ClassInfo:withBaseClasses */;
+	};
         } while (0);
     } } });
 }
@@ -63574,8 +63574,8 @@ bool LastSlashLoop_iteration(LastSlashLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String ch = String_charAt(self->src, self->pos, spec_string_intern(""));
     if (spec_string_equals(ch, spec_string_intern("/"))) {
-        self->lastIdx = self->pos;
-    }
+	    self->lastIdx = self->pos;
+	};
     self->pos = ((self->pos) + (1));
     return true;
     if (ch) { spec_release((void*)ch); ch = NULL; }
@@ -63607,10 +63607,10 @@ bool LoadedClassSearchLoop_iteration(LoadedClassSearchLoop* self, SpecLoopContro
     SPEC_AUTO ClassInfo* cand = (ClassInfo*)spec_retain((void*)(spec_array_get(self->list, self->idx)));
     self->idx = ((self->idx) + (1));
     if (spec_string_equals(cand->name, self->target)) {
-        spec_assign((void**)&self->res, (void*)(cand));
-        self->found = true;
-        return false;
-    }
+	    spec_assign((void**)&self->res, (void*)(cand));
+	    self->found = true;
+	    return false;
+	};
     return true;
     if (cand) { spec_release((void*)cand); cand = NULL; }
 }
@@ -63641,10 +63641,10 @@ bool NamedMemberLoop_iteration(NamedMemberLoop* self, SpecLoopControl* c) {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(self->members, self->idx)));
     self->idx = ((self->idx) + (1));
     if ((((!spec_string_equals(self->target, spec_string_intern("")))) && (spec_string_equals(m->name, self->target)))) {
-        spec_assign((void**)&self->res, (void*)(m));
-        self->found = true;
-        return false;
-    }
+	    spec_assign((void**)&self->res, (void*)(m));
+	    self->found = true;
+	    return false;
+	};
     return true;
     if (m) { spec_release((void*)m); m = NULL; }
 }
@@ -67484,8 +67484,6 @@ String CodeGenerator_generateInlineBranch(CodeGenerator* self, Expression* expr)
     SPEC_AUTO String savedVar = spec_construct_string(self->inlineReturnVar);
     SPEC_AUTO String savedLbl = spec_construct_string(self->inlineReturnLabel);
     bool savedArg = self->argMode;
-    spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
-    spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
     self->argMode = false;
     SPEC_AUTO String resT = spec_construct_string(expr->resolvedType);
     bool valueForm = ((((((((Expression_argCount(expr) /* inst:Expression:argCount */) == (3))) && ((!spec_string_equals(resT, spec_string_intern("")))))) && ((!spec_string_equals(resT, spec_string_intern("void")))))) && ((!spec_string_equals(resT, spec_string_intern("Void")))));
