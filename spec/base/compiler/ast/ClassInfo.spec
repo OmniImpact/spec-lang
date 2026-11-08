@@ -15,6 +15,14 @@ Class is ClassInfo{
 	## Class identifier.
 	String is name: '';
 
+	## FUNCTIONS.md Part IV IV.2: the qualified enclosing-class chain for a
+	## nested (inner) class — 'Outer' or 'Outer:Mid'; '' for top-level
+	## classes. The parent link rides baseClasses (the outer's bare name is
+	## appended at parse time), so the standard lattice walks — the bare
+	## scope, the §I.6 gating, the member lookup — serve inner classes
+	## without special cases.
+	String is outerName: '';
+
 	## One-based source line where the class was declared.
 	Int is line: 0;
 
@@ -110,6 +118,13 @@ Class is ClassInfo{
 
 	## Cached [namespaceJoined] result.
 	local String is nsJoined: '';
+
+	## FUNCTIONS.md Part IV IV.2: records the qualified enclosing chain.
+	##
+	## @param name: 'Outer' or 'Outer:Mid'.
+	Function is setOuter(String is name){
+		self:outerName: name;
+	}
 
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
