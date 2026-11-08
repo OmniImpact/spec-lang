@@ -374,6 +374,140 @@ a closure, and branch typing goes soft. Instead, the proven
 
 ---
 
+## Part IV — Call-scope semantics: `as` imports, inner classes, inherited imports
+
+**Status: planned.** The flip made every call flow through `Conditional:if`;
+this part defines WHO can call WHAT bare, and what an import actually grants.
+Grounded in the current implementation: `collectBareProviders` already walks
+all `baseClasses` transitively (the ancestor lattice), `accessInClass` walks
+own using + file grants + ancestors, and nested classes register flat with
+NO outer link — they are same-file classes, nothing more.
+
+### IV.1 The semantics (the contract)
+
+1. **`as` import (scoped import).** `['base', 'sys', as Conditional()]`
+   adds the imported class's **functions** to the enclosing scope: bare
+   `if(check: ..., then: ...)` resolves through the scoped provider. It
+   grants **functions only**:
+   - fields of the imported class are NOT in scope;
+   - private (`local`) members of the imported class are NOT callable
+     through the import;
+   - the import is **not re-exported**: importing a class that itself
+     imports X does not bring X into scope. One level, always.
+2. **Inner classes** (classes declared inside a class body):
+   - inherit the enclosing class's imports — plain and `as` — **as if they
+     were the inner class's direct parent's**;
+   - inherit the enclosing class's members under the standard child
+     visibility (the same as any parent-child pair; `local` members stay
+     sealed to the class that declared them);
+   - MAY declare **additional imports** that scope to the inner class and
+     everything nested inside it — and to nothing else (not the outer,
+     not siblings).
+3. **Multiple inheritance merges imports.** A class with several parents
+   sees the union of all parents' imports (plain and `as`) in its scope
+   and in its §I.6 type-position gating. This already falls out of
+   `collectBareProviders`'s lattice walk — the work is verification plus
+   the gating walk and the gen side.
+4. **An imported class is not a parent.** The as-import grants the
+   function surface; it grants no fields, no private access, and no
+   transitive scope. Only `of`-inheritance merges scope.
+
+### IV.2 The model change: the outer link
+
+- `ClassInfo` gains `outerName: ''` — set by the parser at nesting time
+  (the parser knows the nesting; the loader only flattens).
+- The registry key for an inner class becomes the qualified
+  `Outer:Inner` (chains: `Outer:Mid:Inner`), fixing today's silent
+  same-bare-name merge in `seenBareNames` — two same-named inner classes
+  under different outers are distinct classes.
+- The loader's `synthesizeInto` records the outer link; the diagnostics
+  print the qualified name.
+
+### IV.3 The resolution rules (checker)
+
+- **Bare scope** = own members → own as-imports → the outer chain's
+  members and as-imports (inner-of-inner walks all the way out) → the
+  base-class lattice's members and as-imports (existing walk). Exactly
+  one provider or a compile error (the existing E9/collision rules).
+- **Shadowing**: the closer scope wins silently (inner import over outer
+  import over parent import); a collision between two providers at the
+  SAME level stays the force-qualification error.
+- **§I.6 gating** (`accessInClass`): the access walk becomes own using →
+  the outer chain's using → the base lattice's using → the file grant.
+  The file grant remains as the same-file convenience, but the scoped
+  semantics no longer depend on it.
+- **The imported wall**: the bare-provider path and the qualified
+  `X:member` path both run the visibility check — `local` members of an
+  as-imported class are unreachable, and the as-import never exposes
+  fields. The elided-dispatch call on a field-ful import keeps the
+  synthesized `_import_X` field on the CALLING class (unchanged).
+
+### IV.4 The gen side
+
+- The inner class's bare calls to the outer's imports stamp
+  `bareProvider` exactly as today — the elided dispatch and the
+  synthesized fields must work when the caller is an inner class
+  (verify the slot map for the flattened inner classes).
+- The qualified `Outer:Inner` registry key renames the emitted C symbols
+  (`Outer_Inner_method`) — the cIdent pass handles the colon.
+
+### IV.5 Value-yield polish & hardening (Part II completion)
+
+- **V1 — the Function assignability hole.** `isAssignable` treats all
+  Function types as mutually compatible. Tighten: `Function of X` →
+  `Function` stays legal (a typed closure feeds an untyped param);
+  `Function` (void) → `Function of X` REJECTS (a void closure through a
+  bool-cast reads garbage — the spec_branch check cast); `Function of X`
+  → `Function of Y` rejects unless X == Y or either is Any. Then audit
+  the call sites the tightening breaks (the stdlib's callback params).
+- **V2 — the yield-ARC audit.** The yield assignment mirrors emitReturn's
+  owned-local NULL-swap — but a yield does not end the enclosing scope:
+  if the swapped local is read AFTER the if-expression it is NULL. Decide
+  and implement: yield = retain (the ARC-safe copy), keeping the swap
+  only for the true-return path; add a use-after-yield regression test.
+- **V3 — the negative diagnostics.** The 2-arg form in value context and
+  the 4-arg (finally) form in value context get dedicated messages
+  (today they surface as `cannot assign 'void'`).
+- **V4 — the coverage matrix tests** (`tests/value_yield_test.spec`):
+  nested yields in check positions, yields in return position, guard
+  clauses inside value branches, yields under `as:` scoped regions, bare
+  `if()` yielding, a yield feeding a binary operand, the mismatch
+  negative (N20 covers), the statement-form-in-value-context negative.
+- **V5 — the diagnostics formatting.** Function types render as
+  `Function of Boolean` in error messages (today the colon form leaks:
+  `Function:Boolean`).
+
+### IV.6 The test plan
+
+- `tests/inner_class_test.spec`: the outer's imports visible bare inside
+  the inner; the inner's own additional imports scoped to it (and NOT
+  visible in the outer or a sibling inner); the outer's members under
+  child visibility; the qualified registry name; the inner-of-inner
+  chain; the shadowing rules.
+- `tests/import_wall_test.spec`: the functions-only grant (fields,
+  private members, transitive imports all rejected); the same-name
+  collision forcing qualification; the multiple-inheritance merge (two
+  parents' imports both bare); the gating (constructing through an
+  inherited import passes §I.6).
+- Negatives N21+ for each wall (the private member through an import,
+  the transitive import, the inner's import leaking outward, the
+  same-level collision).
+
+### IV.7 Sequencing
+
+1. V1 (the Function tightening) alone — converge; fix the fallout.
+2. V2 (the yield-ARC) + the regression test — converge.
+3. V3 + V5 (the diagnostics) — converge.
+4. IV.2 (the outer link + the qualified registry name) — converge; this
+   shifts the slot map and the registry keys, so it rides alone.
+5. IV.3 (the resolution rules) + the gating walk — converge.
+6. IV.4 (the gen verification) + the test files — converge.
+7. The negatives — converge.
+Every step: the ratchet discipline (small batches, the emit→gcc→self-load
+pre-check, bootstrap, commit), the full gates green before the next.
+
+---
+
 ## Verification discipline
 
 Gates at every step: `bash utilities/run_tests.sh`,
