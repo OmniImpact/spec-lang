@@ -335,12 +335,25 @@ a closure, and branch typing goes soft. Instead, the proven
    loop-stop, not a method return), and materialized closures must write
    back mutated captures (assignments inside callbacks were silently
    lost). Remaining: tests/examples (~285 sites), then the flip (step 4).
-4. The atomic flip: rename to `if`; delete `Keyword:IF`/`ELSE`,
-   `StatementKind:IF`, `ExpressionKind:IF_ELSE`, the statement/expression
-   parse arms, the gen's if-emission, and the checker's
-   "condition must be Boolean" rule (parameter typing covers it). Every
-   exhaustive `when` over the shrunken enums loses arms.
-5. `else` ceases to be a keyword in the same commit.
+4. **The atomic flip: DONE.** `Conditional`'s user-facing API is
+   `if(check:, then:, else:, finally:)`; `Keyword:IF`/`ELSE`,
+   `StatementKind:IF`, `ExpressionKind:IF_ELSE`, their parse/checker/gen/
+   linter arms, and the AST if-fields are deleted. `else` ceased to be a
+   keyword in the same commit; the when-else arm detects it by value.
+   The floor keeps its internal `branch` binding (`spec_branch` in C) —
+   only the wrapper's Spec-level names matter.
+   Bootstrap mechanics (for the record): the flip could not land in one
+   bootstrap because each generation's compiler must parse the next
+   generation's sources, so the spelling change rode a series of
+   converged prep commits — the named-arg and expression-position
+   keyword bridges, dual branch/if recognition in the checker and gen,
+   the cIdent C-keyword escape, and expected-flow threading into binary
+   operands and branch yields — after which the rename + deletions
+   converged in one bootstrap. The bridges were removed immediately
+   after (the keywords no longer exist to bridge).
+5. `spec_checker_test`'s boolean-condition case now exercises the
+   Function-of-Boolean enforcement through `While:condition` (the
+   if-statement rule it used to check no longer exists).
 
 ---
 
