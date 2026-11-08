@@ -2144,6 +2144,66 @@ Class is CodeGenerator{
 		return chain;
 	}
 
+	## True when any statement in [stmts] (recursively through if/when
+	## branches AND the closure arguments of calls the gen inlines —
+	## branch calls, While loops, container callbacks) assigns the named
+	## local. Fully-materialized nested closures mutate their own env
+	## copies, but the over-approximation is harmless (the writeback
+	## stores an unchanged value).
+	##
+	## @param name: The local's Spec name.
+	## @param stmts: The statement list to scan.
+	## @return: true when the local is assigned.
+	Function of Boolean is bodyAssignsLocal(String is name, Array of Statement is stmts){
+		local Boolean is found: false;
+		stmts:each(action: local Function(Statement is s){
+			if (found) {
+				return;
+			}
+			if (s:kind == StatementKind:ASSIGN && s:assignTarget:kind == ExpressionKind:IDENT && s:assignTarget:stringValue == name) {
+				found: true;
+			} else if (s:kind == StatementKind:IF) {
+				if (self:bodyAssignsLocal(name: name, stmts: s:thenBranch)) {
+					found: true;
+				} else if (s:hasElse && self:bodyAssignsLocal(name: name, stmts: s:elseBranch)) {
+					found: true;
+				}
+			} else if (s:kind == StatementKind:WHEN) {
+				s:whenArms:each(action: local Function(WhenArm is arm){
+					if (!found && self:bodyAssignsLocal(name: name, stmts: arm:body)) {
+						found: true;
+					}
+				});
+			} else if (s:kind == StatementKind:EXPR) {
+				if (self:assignsViaCall(name: name, expr: s:exprStmt)) {
+					found: true;
+				}
+			} else if (s:kind == StatementKind:RETURN && s:hasReturnExpr) {
+				if (self:assignsViaCall(name: name, expr: s:returnExpr)) {
+					found: true;
+				}
+			}
+		});
+		return found;
+	}
+
+	## Descends into a call expression's ANON_FN arguments (the shapes the
+	## gen inlines into this scope).
+	Function of Boolean is assignsViaCall(String is name, Expression is expr){
+		if (expr:kind != ExpressionKind:CALL) {
+			return false;
+		}
+		local Boolean is found: false;
+		expr:methodArgs:each(action: local Function(NamedArg is arg){
+			if (!found && arg:value:kind == ExpressionKind:ANON_FN) {
+				if (self:bodyAssignsLocal(name: name, stmts: arg:value:anonBody)) {
+					found: true;
+				}
+			}
+		});
+		return found;
+	}
+
 	## Emits an anonymous function as a static C function + closure.
 	##
 	## @param expr: The ANON_FN expression.
@@ -2194,6 +2254,7 @@ Class is CodeGenerator{
 		local String is capFieldBinds: '';
 		local String is capAssigns: '';
 		local String is capReleases: '';
+		local String is capWritebacks: '';
 		local Boolean is hasCaptures: false;
 
 		if (self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: 'self')) {
@@ -2229,6 +2290,12 @@ Class is CodeGenerator{
 						} else {
 							capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
 						}
+						# FUNCTIONS.md Part II: the closure body may assign a
+						# captured local — write it back at exit or the
+						# mutation is lost (the callback ran on a copy).
+						if (self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self') {
+							capWritebacks: capWritebacks . '    _env->' . cVar . ' = ' . cVar . ";\n";
+						}
 					}
 				}
 			}
@@ -2238,7 +2305,7 @@ Class is CodeGenerator{
 			local String is envStruct: "typedef struct {\n" . capFieldDecls . '} ' . envName . ";\n\n";
 			local String is destroyEnv: 'static __attribute__((unused)) void ' . destroyEnvName . "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    " . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capReleases . "    free(_env);\n}\n\n";
 			local String is bindsC: '    ' . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capFieldBinds;
-			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . bindsC . bodyC . "}\n\n";
+			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . bindsC . bodyC . capWritebacks . "}\n\n";
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		} else {
 			self:helperFunctions: self:helperFunctions . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . bodyC . "}\n\n";
