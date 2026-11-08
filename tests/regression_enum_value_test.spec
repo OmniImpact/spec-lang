@@ -44,52 +44,52 @@ Class is RegressionEnumValueTest{
 
 		# Case 1 (the regression): explicit Int backing value must survive codegen.
 		local Int is okCode: HttpStatus:OK:value();
-		if (okCode == 200) {
+		Conditional:branch(check: { okCode == 200 }, then: {
 			Output:line('[PASS] HttpStatus:OK:value() = 200');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] HttpStatus:OK:value(): expected 200, got ' . okCode . ' (ordinal leaked instead of backing value)');
-		}
+		});
 
 		# Case 2 (the regression): second variant, non-zero declared value.
 		local Int is nfCode: HttpStatus:NOT_FOUND:value();
-		if (nfCode == 404) {
+		Conditional:branch(check: { nfCode == 404 }, then: {
 			Output:line('[PASS] HttpStatus:NOT_FOUND:value() = 404');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] HttpStatus:NOT_FOUND:value(): expected 404, got ' . nfCode);
-		}
+		});
 
 		# Case 3 (control): variant name reflection.
 		local String is okName: HttpStatus:OK:name();
-		if (okName == 'OK') {
+		Conditional:branch(check: { okName == 'OK' }, then: {
 			Output:line('[PASS] HttpStatus:OK:name() = OK');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] HttpStatus:OK:name(): expected OK, got ' . okName);
-		}
+		});
 
 		# Case 4 (control): declaration-order ordinal is independent of backing value.
 		local Int is nfOrdinal: HttpStatus:NOT_FOUND:ordinal();
-		if (nfOrdinal == 1) {
+		Conditional:branch(check: { nfOrdinal == 1 }, then: {
 			Output:line('[PASS] HttpStatus:NOT_FOUND:ordinal() = 1');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] HttpStatus:NOT_FOUND:ordinal(): expected 1, got ' . nfOrdinal);
-		}
+		});
 
 		# Case 5 (control): string-backed enums already honor initializers.
 		local LogLevel is lvl: LogLevel:INFO;
 		local String is lvlValue: lvl:value();
-		if (lvlValue == 'INF') {
+		Conditional:branch(check: { lvlValue == 'INF' }, then: {
 			Output:line('[PASS] LogLevel:INFO:value() = INF (string-backed control)');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] LogLevel:INFO:value(): expected INF, got ' . lvlValue);
-		}
+		});
 
 		# Case 6 (control): unbacked enum ordinal.
 		local Int is highOrdinal: Priority:HIGH:ordinal();
-		if (highOrdinal == 1) {
+		Conditional:branch(check: { highOrdinal == 1 }, then: {
 			Output:line('[PASS] Priority:HIGH:ordinal() = 1 (unbacked control)');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Priority:HIGH:ordinal(): expected 1, got ' . highOrdinal);
-		}
+		});
 
 		Output:line('=== End Backed Enum Value Regression ===');
 	}

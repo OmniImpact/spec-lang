@@ -31,12 +31,12 @@ Class is SpecAstTest{
 		bin:binaryOp: '+';
 		bin:leftExpr: lhs;
 		bin:rightExpr: rhs;
-		if (bin:kind == ExpressionKind:BINARY && bin:leftExpr:stringValue == 'a' && bin:rightExpr:stringValue == 'b') {
+		Conditional:branch(check: { bin:kind == ExpressionKind:BINARY && bin:leftExpr:stringValue == 'a' && bin:rightExpr:stringValue == 'b' }, then: {
 			Output:line('[PASS] expression records cross-reference');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] expression records cross-reference');
 			failures: failures + 1;
-		}
+		});
 
 		# Enum dispatch on the kind (the style contract's string-tag removal).
 		local String is tag: '';
@@ -45,23 +45,23 @@ Class is SpecAstTest{
 			is CALL: { tag: 'call'; }
 			else: { tag: 'other'; }
 		}
-		if (tag == 'binary') {
+		Conditional:branch(check: { tag == 'binary' }, then: {
 			Output:line('[PASS] when-dispatch on ExpressionKind');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] when-dispatch on ExpressionKind');
 			failures: failures + 1;
-		}
+		});
 
 		# Types format canonically.
 		local Type is elem: Type:init(name: 'String');
 		local Type is arr: Type:init(name: 'Array');
 		arr:params: [elem];
-		if (arr:toString() == 'Array of String' && arr:isGeneric() && !elem:isGeneric()) {
+		Conditional:branch(check: { arr:toString() == 'Array of String' && arr:isGeneric() && !elem:isGeneric() }, then: {
 			Output:line('[PASS] canonical type formatting');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] canonical type formatting: ' . arr:toString());
 			failures: failures + 1;
-		}
+		});
 
 		# Class -> member graph with the MemberKind dispatch.
 		local Member is m: Member:init(kind: MemberKind:METHOD);
@@ -79,29 +79,29 @@ Class is SpecAstTest{
 		});
 		# (Implicit-Any parenting is the loader's appendImplicitAny job, not
 		# the record's — a bare init carries no bases.)
-		if (found == 'speak' && cls:baseClasses:length() == 0) {
+		Conditional:branch(check: { found == 'speak' && cls:baseClasses:length() == 0 }, then: {
 			Output:line('[PASS] class graph record');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] class graph: ' . found);
 			failures: failures + 1;
-		}
+		});
 
 		# Statements carry their kind's fields.
 		local Statement is st: Statement:init(kind: StatementKind:RETURN);
 		st:returnExpr: bin;
 		st:hasReturnExpr: true;
 		st:setLine(line: 9);
-		if (st:kind == StatementKind:RETURN && st:hasReturnExpr && st:line == 9 && st:returnExpr:kind == ExpressionKind:BINARY) {
+		Conditional:branch(check: { st:kind == StatementKind:RETURN && st:hasReturnExpr && st:line == 9 && st:returnExpr:kind == ExpressionKind:BINARY }, then: {
 			Output:line('[PASS] statement records carry their fields');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] statement records');
 			failures: failures + 1;
-		}
+		});
 
-		if (failures == 0) {
+		Conditional:branch(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec ast test complete');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] spec ast test: ' . (failures as String) . ' failures');
-		}
+		});
 	}
 }
