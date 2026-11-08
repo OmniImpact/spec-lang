@@ -42721,13 +42721,13 @@ static __attribute__((unused)) void _anon_fn_555(void* _env_ptr, String line) {
     SPEC_AUTO String rest = spec_string_substring(line, tabs, spec_string_length(line));
     long long spaces = String_countLeading(rest, spec_string_intern(" "));
     if (((spaces) > (0))) {
-        SPEC_AUTO String msg = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Space-based indentation detected ("))), spec_to_string_int(spaces)), spec_string_intern(" space(s)). Spec standard requires tabs."));
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
+	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Space-based indentation detected ("))), spec_to_string_int(spaces)), spec_string_intern(" space(s)). Spec standard requires tabs."));
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
     if (msg) { spec_release((void*)msg); msg = NULL; }
-    }
-    if (((((spec_string_length(line)) > (0))) && (((spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" "))))), spec_string_intern(" "))) || (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" "))))), spec_string_intern("\t"))))))) {
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, spec_string_intern("Trailing whitespace detected.")); _inst; })));
-    }
+	};
+    if (((((spec_string_length(line)) > (0))) && (((spec_string_equals(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" ")), spec_string_intern(" "))) || (spec_string_equals(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" ")), spec_string_intern("\t"))))))) {
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, spec_string_intern("Trailing whitespace detected.")); _inst; })));
+	};
     SPEC_AUTO String masked = Linter_maskLine(self, line) /* inst:Linter:maskLine */;
     SPEC_AUTO String body = spec_construct_string(masked);
     bool trimming = true;
@@ -42741,26 +42741,26 @@ static __attribute__((unused)) void _anon_fn_555(void* _env_ptr, String line) {
         do {
     SPEC_AUTO String last = String_charAt(body, ((spec_string_length(body)) - (1)), spec_string_intern(""));
     if (((spec_string_equals(last, spec_string_intern(" "))) || (spec_string_equals(last, spec_string_intern("\t"))))) {
-        spec_assign((void**)&body, (void*)(spec_string_substring(body, 0, ((spec_string_length(body)) - (1)))));
-    } else {
-        trimming = false;
-    }
+	    spec_assign((void**)&body, (void*)(spec_string_substring(body, 0, ((spec_string_length(body)) - (1)))));
+	} else {
+	    trimming = false;
+	};
     if (last) { spec_release((void*)last); last = NULL; }
         } while (0);
         if (!_it_556) break;
     }
 });
-    if (((((spec_string_length(body)) > (0))) && (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(body, 0, spec_string_intern(""))))), spec_string_intern("}"))))) {
-        long long expectedTabs = ((depth) - (1));
-        if (((expectedTabs) < (0))) {
-        expectedTabs = 0;
-    }
-        if (((tabs) != (expectedTabs))) {
-        SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Closing brace indented at "))), spec_to_string_int(tabs)), spec_string_intern(" tab(s); nesting depth expects ")), spec_to_string_int(expectedTabs)), spec_string_intern("."));
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
+    if (((((spec_string_length(body)) > (0))) && (spec_string_equals(String_charAt(body, 0, spec_string_intern("")), spec_string_intern("}"))))) {
+	    long long expectedTabs = ((depth) - (1));
+	    if (((expectedTabs) < (0))) {
+	    expectedTabs = 0;
+	};
+	    if (((tabs) != (expectedTabs))) {
+	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Closing brace indented at "))), spec_to_string_int(tabs)), spec_string_intern(" tab(s); nesting depth expects ")), spec_to_string_int(expectedTabs)), spec_string_intern("."));
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
     if (msg) { spec_release((void*)msg); msg = NULL; }
-    }
-    }
+	};
+	};
     long long ci = 0;
     ({ while (1) {
         bool _ev_557 = false;
@@ -42772,12 +42772,12 @@ static __attribute__((unused)) void _anon_fn_555(void* _env_ptr, String line) {
         do {
     SPEC_AUTO String ch = String_charAt(masked, ci, spec_string_intern(""));
     if (spec_string_equals(ch, spec_string_intern("{"))) {
-        depth = ((depth) + (1));
-    } else {
-        if (spec_string_equals(ch, spec_string_intern("}"))) {
-        depth = ((depth) - (1));
-    }
-    }
+	    depth = ((depth) + (1));
+	} else {
+	    if (spec_string_equals(ch, spec_string_intern("}"))) {
+	    depth = ((depth) - (1));
+	};
+	};
     ci = ((ci) + (1));
     if (ch) { spec_release((void*)ch); ch = NULL; }
         } while (0);
@@ -42803,8 +42803,8 @@ static __attribute__((unused)) void _anon_fn_562(void* _env_ptr, NamedArg* arg) 
     bool hasDefault = _env->hasDefault;
     (void)hasDefault;
     if (spec_string_equals(arg->name, spec_string_intern("default"))) {
-        hasDefault = true;
-    }
+	    hasDefault = true;
+	};
     _env->hasDefault = hasDefault;
 }
 
@@ -42834,13 +42834,13 @@ static __attribute__((unused)) void _anon_fn_564(void* _env_ptr, NamedArg* arg) 
     SpecArray* issues = _env->issues;
     (void)issues;
     if (((isLoopDriver) && (((arg->value->kind) == (ExpressionKind_ANON_FN))))) {
-        long long savedDepth = self->lintLoopDepth;
-        self->lintLoopDepth = ((self->lintLoopDepth) + (1));
-        Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
-        self->lintLoopDepth = savedDepth;
-    } else {
-        Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
-    }
+	    long long savedDepth = self->lintLoopDepth;
+	    self->lintLoopDepth = ((self->lintLoopDepth) + (1));
+	    Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
+	    self->lintLoopDepth = savedDepth;
+	} else {
+	    Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
+	};
 }
 
 typedef struct {
@@ -43052,8 +43052,8 @@ static __attribute__((unused)) void _anon_fn_582(void* _env_ptr, LintIssue* issu
     long long res = _env->res;
     (void)res;
     if (issue->isWarning) {
-        res = ((res) + (1));
-    }
+	    res = ((res) + (1));
+	};
     _env->res = res;
 }
 
@@ -43072,8 +43072,8 @@ static __attribute__((unused)) void _anon_fn_584(void* _env_ptr, LintIssue* issu
     long long res = _env->res;
     (void)res;
     if ((!(issue->isWarning))) {
-        res = ((res) + (1));
-    }
+	    res = ((res) + (1));
+	};
     _env->res = res;
 }
 
@@ -43116,8 +43116,8 @@ static __attribute__((unused)) void _anon_fn_590(void* _env_ptr, Member* m) {
     Linter* self = _env->self;
     (void)self;
     if (((m->kind) == (MemberKind_CLASS))) {
-        Linter_registerAuditName(self, m->nestedClass) /* inst:Linter:registerAuditName */;
-    }
+	    Linter_registerAuditName(self, m->nestedClass) /* inst:Linter:registerAuditName */;
+	};
 }
 
 typedef struct {
@@ -43533,8 +43533,8 @@ static __attribute__((unused)) void _anon_fn_628(void* _env_ptr, String seg) {
     bool isFloorChain = _env->isFloorChain;
     (void)isFloorChain;
     if (spec_string_equals(seg, spec_string_intern("sysinternal"))) {
-        isFloorChain = true;
-    }
+	    isFloorChain = true;
+	};
     _env->isFloorChain = isFloorChain;
 }
 
@@ -43557,8 +43557,8 @@ static __attribute__((unused)) void _anon_fn_630(void* _env_ptr, String e) {
     bool isExempt = _env->isExempt;
     (void)isExempt;
     if (spec_string_equals(e, name)) {
-        isExempt = true;
-    }
+	    isExempt = true;
+	};
     _env->isExempt = isExempt;
 }
 
@@ -43581,8 +43581,8 @@ static __attribute__((unused)) void _anon_fn_632(void* _env_ptr, String a) {
     bool isAlias = _env->isAlias;
     (void)isAlias;
     if (spec_string_equals(a, name)) {
-        isAlias = true;
-    }
+	    isAlias = true;
+	};
     _env->isAlias = isAlias;
 }
 
@@ -43612,8 +43612,8 @@ static __attribute__((unused)) void _anon_fn_634(void* _env_ptr, String baseName
     bool viaParent = _env->viaParent;
     (void)viaParent;
     if ((((!(viaParent))) && (Linter_auditImportsAsAnywhere(self, baseName, targetName, ((hops) + (1))) /* inst:Linter:auditImportsAsAnywhere */))) {
-        viaParent = true;
-    }
+	    viaParent = true;
+	};
     _env->viaParent = viaParent;
 }
 
@@ -61942,13 +61942,13 @@ void Linter_lintIndentation(Linter* self, String source, SpecArray* issues) {
     SPEC_AUTO String rest = spec_string_substring(line, tabs, spec_string_length(line));
     long long spaces = String_countLeading(rest, spec_string_intern(" "));
     if (((spaces) > (0))) {
-        SPEC_AUTO String msg = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Space-based indentation detected ("))), spec_to_string_int(spaces)), spec_string_intern(" space(s)). Spec standard requires tabs."));
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
+	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Space-based indentation detected ("))), spec_to_string_int(spaces)), spec_string_intern(" space(s)). Spec standard requires tabs."));
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
     if (msg) { spec_release((void*)msg); msg = NULL; }
-    }
-    if (((((spec_string_length(line)) > (0))) && (((spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" "))))), spec_string_intern(" "))) || (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" "))))), spec_string_intern("\t"))))))) {
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, spec_string_intern("Trailing whitespace detected.")); _inst; })));
-    }
+	};
+    if (((((spec_string_length(line)) > (0))) && (((spec_string_equals(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" ")), spec_string_intern(" "))) || (spec_string_equals(String_charAt(line, ((spec_string_length(line)) - (1)), spec_string_intern(" ")), spec_string_intern("\t"))))))) {
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, spec_string_intern("Trailing whitespace detected.")); _inst; })));
+	};
     SPEC_AUTO String masked = Linter_maskLine(self, line) /* inst:Linter:maskLine */;
     SPEC_AUTO String body = spec_construct_string(masked);
     bool trimming = true;
@@ -61962,26 +61962,26 @@ void Linter_lintIndentation(Linter* self, String source, SpecArray* issues) {
         do {
     SPEC_AUTO String last = String_charAt(body, ((spec_string_length(body)) - (1)), spec_string_intern(""));
     if (((spec_string_equals(last, spec_string_intern(" "))) || (spec_string_equals(last, spec_string_intern("\t"))))) {
-        spec_assign((void**)&body, (void*)(spec_string_substring(body, 0, ((spec_string_length(body)) - (1)))));
-    } else {
-        trimming = false;
-    }
+	    spec_assign((void**)&body, (void*)(spec_string_substring(body, 0, ((spec_string_length(body)) - (1)))));
+	} else {
+	    trimming = false;
+	};
     if (last) { spec_release((void*)last); last = NULL; }
         } while (0);
         if (!_it_559) break;
     }
 });
-    if (((((spec_string_length(body)) > (0))) && (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(body, 0, spec_string_intern(""))))), spec_string_intern("}"))))) {
-        long long expectedTabs = ((depth) - (1));
-        if (((expectedTabs) < (0))) {
-        expectedTabs = 0;
-    }
-        if (((tabs) != (expectedTabs))) {
-        SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Closing brace indented at "))), spec_to_string_int(tabs)), spec_string_intern(" tab(s); nesting depth expects ")), spec_to_string_int(expectedTabs)), spec_string_intern("."));
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
+    if (((((spec_string_length(body)) > (0))) && (spec_string_equals(String_charAt(body, 0, spec_string_intern("")), spec_string_intern("}"))))) {
+	    long long expectedTabs = ((depth) - (1));
+	    if (((expectedTabs) < (0))) {
+	    expectedTabs = 0;
+	};
+	    if (((tabs) != (expectedTabs))) {
+	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Closing brace indented at "))), spec_to_string_int(tabs)), spec_string_intern(" tab(s); nesting depth expects ")), spec_to_string_int(expectedTabs)), spec_string_intern("."));
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, lineNum, true, msg); _inst; })));
     if (msg) { spec_release((void*)msg); msg = NULL; }
-    }
-    }
+	};
+	};
     long long ci = 0;
     ({ while (1) {
         bool _ev_560 = false;
@@ -61993,12 +61993,12 @@ void Linter_lintIndentation(Linter* self, String source, SpecArray* issues) {
         do {
     SPEC_AUTO String ch = String_charAt(masked, ci, spec_string_intern(""));
     if (spec_string_equals(ch, spec_string_intern("{"))) {
-        depth = ((depth) + (1));
-    } else {
-        if (spec_string_equals(ch, spec_string_intern("}"))) {
-        depth = ((depth) - (1));
-    }
-    }
+	    depth = ((depth) + (1));
+	} else {
+	    if (spec_string_equals(ch, spec_string_intern("}"))) {
+	    depth = ((depth) - (1));
+	};
+	};
     ci = ((ci) + (1));
     if (ch) { spec_release((void*)ch); ch = NULL; }
         } while (0);
@@ -62029,29 +62029,29 @@ String Linter_maskLine(Linter* self, String line) {
         do {
     SPEC_AUTO String ch = String_charAt(line, i, spec_string_intern(""));
     if ((!spec_string_equals(quote, spec_string_intern("")))) {
-        if (spec_string_equals(ch, spec_string_intern("\\"))) {
-        out = spec_string_concat(out, spec_string_intern("  "));
-        i = ((i) + (1));
-    } else {
-        if (spec_string_equals(ch, quote)) {
-        spec_assign((void**)&quote, (void*)(spec_string_intern("")));
-        out = spec_string_concat(out, spec_string_intern(" "));
-    } else {
-        out = spec_string_concat(out, spec_string_intern(" "));
-    }
-    }
-    } else {
-        if (((spec_string_equals(ch, spec_string_intern("\""))) || (spec_string_equals(ch, spec_string_intern("'"))))) {
-        spec_assign((void**)&quote, (void*)(ch));
-        out = spec_string_concat(out, spec_string_intern(" "));
-    } else {
-        if (spec_string_equals(ch, spec_string_intern("#"))) {
-        i = spec_string_length(line);
-    } else {
-        out = spec_string_concat(out, ch);
-    }
-    }
-    }
+	    if (spec_string_equals(ch, spec_string_intern("\\"))) {
+	    out = spec_string_concat(out, spec_string_intern("  "));
+	    i = ((i) + (1));
+	} else {
+	    if (spec_string_equals(ch, quote)) {
+	    spec_assign((void**)&quote, (void*)(spec_string_intern("")));
+	    out = spec_string_concat(out, spec_string_intern(" "));
+	} else {
+	    out = spec_string_concat(out, spec_string_intern(" "));
+	};
+	};
+	} else {
+	    if (((spec_string_equals(ch, spec_string_intern("\""))) || (spec_string_equals(ch, spec_string_intern("'"))))) {
+	    spec_assign((void**)&quote, (void*)(ch));
+	    out = spec_string_concat(out, spec_string_intern(" "));
+	} else {
+	    if (spec_string_equals(ch, spec_string_intern("#"))) {
+	    i = spec_string_length(line);
+	} else {
+	    out = spec_string_concat(out, ch);
+	};
+	};
+	};
     i = ((i) + (1));
     if (ch) { spec_release((void*)ch); ch = NULL; }
         } while (0);
@@ -62072,26 +62072,26 @@ void Linter_lintExpression(Linter* self, Expression* expr, SpecArray* issues) {
         SPEC_AUTO String method = spec_construct_string(expr->methodName);
         SPEC_AUTO SpecArray* args = (SpecArray*)spec_retain((void*)(expr->methodArgs));
         if (((((spec_string_equals(method, spec_string_intern("init"))) && (((self->lintLoopDepth) > (0))))) && (Linter_isClassSpell(self, expr->methodTarget) /* inst:Linter:isClassSpell */))) {
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, 0, true, spec_string_intern("Construction inside a loop body: hoist the instance out of the loop (INSTANCE.md E10).")); _inst; })));
-    }
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, 0, true, spec_string_intern("Construction inside a loop body: hoist the instance out of the loop (INSTANCE.md E10).")); _inst; })));
+	};
         if (spec_string_equals(method, spec_string_intern("getString"))) {
         bool hasDefault = false;
         ({ SpecArray* _a_563 = args; if (_a_563) { for (size_t _i_563 = 0; _i_563 < _a_563->length; _i_563++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_563->items[_i_563];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("default"))) {
-        hasDefault = true;
-    }
+	    hasDefault = true;
+	};
         } while (0);
     } } });
         if (hasDefault) {
-        spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, 0, false, spec_string_intern("Method call 'getString' provides optional parameter 'default'.")); _inst; })));
-    }
+	    spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, 0, false, spec_string_intern("Method call 'getString' provides optional parameter 'default'.")); _inst; })));
+	};
     } else if (spec_string_equals(method, spec_string_intern("random"))) {
         SPEC_AUTO String msg = spec_construct_string(spec_string_intern("Method call 'math:random' provides optional min/max range parameters."));
         if (((spec_array_length(args)) == (0))) {
-        spec_assign((void**)&msg, (void*)(spec_string_intern("Method call 'math:random' omits optional min/max parameters (using default [0.0, 1.0)).")));
-    }
+	    spec_assign((void**)&msg, (void*)(spec_string_intern("Method call 'math:random' omits optional min/max parameters (using default [0.0, 1.0)).")));
+	};
         spec_array_add_object(issues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, 0, false, msg); _inst; })));
     if (msg) { spec_release((void*)msg); msg = NULL; }
     } else {
@@ -62102,13 +62102,13 @@ void Linter_lintExpression(Linter* self, Expression* expr, SpecArray* issues) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_565->items[_i_565];
         do {
     if (((isLoopDriver) && (((arg->value->kind) == (ExpressionKind_ANON_FN))))) {
-        long long savedDepth = self->lintLoopDepth;
-        self->lintLoopDepth = ((self->lintLoopDepth) + (1));
-        Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
-        self->lintLoopDepth = savedDepth;
-    } else {
-        Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
-    }
+	    long long savedDepth = self->lintLoopDepth;
+	    self->lintLoopDepth = ((self->lintLoopDepth) + (1));
+	    Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
+	    self->lintLoopDepth = savedDepth;
+	} else {
+	    Linter_lintExpression(self, arg->value, issues) /* inst:Linter:lintExpression */;
+	};
         } while (0);
     } } });
     if (method) { spec_release((void*)method); method = NULL; }
@@ -62141,16 +62141,16 @@ bool Linter_isLoopSpell(Linter* self, Expression* target) {
     (void)target;
     SPEC_AUTO String name = spec_construct_string(spec_string_intern(""));
     if (((target->kind) == (ExpressionKind_IDENT))) {
-        spec_assign((void**)&name, (void*)(target->stringValue));
-    } else {
-        if (((target->kind) == (ExpressionKind_PATH))) {
-        SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(target->pathSegments));
-        if (((spec_array_length(segs)) > (0))) {
-        spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
-    }
+	    spec_assign((void**)&name, (void*)(target->stringValue));
+	} else {
+	    if (((target->kind) == (ExpressionKind_PATH))) {
+	    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(target->pathSegments));
+	    if (((spec_array_length(segs)) > (0))) {
+	    spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
+	};
     if (segs) { spec_release((void*)segs); segs = NULL; }
-    }
-    }
+	};
+	};
     return ((spec_string_equals(name, spec_string_intern("While"))) || (spec_string_equals(name, spec_string_intern("Loop"))));
     if (name) { spec_release((void*)name); name = NULL; }
 }
@@ -62160,16 +62160,16 @@ bool Linter_isClassSpell(Linter* self, Expression* target) {
     (void)target;
     SPEC_AUTO String name = spec_construct_string(spec_string_intern(""));
     if (((target->kind) == (ExpressionKind_IDENT))) {
-        spec_assign((void**)&name, (void*)(target->stringValue));
-    } else {
-        if (((target->kind) == (ExpressionKind_PATH))) {
-        SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(target->pathSegments));
-        if (((spec_array_length(segs)) > (0))) {
-        spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
-    }
+	    spec_assign((void**)&name, (void*)(target->stringValue));
+	} else {
+	    if (((target->kind) == (ExpressionKind_PATH))) {
+	    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(target->pathSegments));
+	    if (((spec_array_length(segs)) > (0))) {
+	    spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
+	};
     if (segs) { spec_release((void*)segs); segs = NULL; }
-    }
-    }
+	};
+	};
     return Linter_isUpperName(self, name) /* inst:Linter:isUpperName */;
     if (name) { spec_release((void*)name); name = NULL; }
 }
@@ -62181,8 +62181,8 @@ void Linter_lintStatement(Linter* self, Statement* stmt, SpecArray* issues) {
     StatementKind kind = stmt->kind;
     if (((kind) == (StatementKind_VAR_DECL))) {
         if (stmt->hasInit) {
-        Linter_lintExpression(self, stmt->initExpr, issues) /* inst:Linter:lintExpression */;
-    }
+	    Linter_lintExpression(self, stmt->initExpr, issues) /* inst:Linter:lintExpression */;
+	};
     } else if (((kind) == (StatementKind_ASSIGN))) {
         Linter_lintExpression(self, stmt->assignTarget, issues) /* inst:Linter:lintExpression */;
         Linter_lintExpression(self, stmt->assignValue, issues) /* inst:Linter:lintExpression */;
@@ -62195,17 +62195,17 @@ void Linter_lintStatement(Linter* self, Statement* stmt, SpecArray* issues) {
         } while (0);
     } } });
         if (stmt->hasElse) {
-        ({ SpecArray* _a_573 = stmt->elseBranch; if (_a_573) { for (size_t _i_573 = 0; _i_573 < _a_573->length; _i_573++) {
+	    ({ SpecArray* _a_573 = stmt->elseBranch; if (_a_573) { for (size_t _i_573 = 0; _i_573 < _a_573->length; _i_573++) {
         Statement* s = (Statement*)(intptr_t)_a_573->items[_i_573];
         do {
     Linter_lintStatement(self, s, issues) /* inst:Linter:lintStatement */;
         } while (0);
     } } });
-    }
+	};
     } else if (((kind) == (StatementKind_RETURN))) {
         if (stmt->hasReturnExpr) {
-        Linter_lintExpression(self, stmt->returnExpr, issues) /* inst:Linter:lintExpression */;
-    }
+	    Linter_lintExpression(self, stmt->returnExpr, issues) /* inst:Linter:lintExpression */;
+	};
     } else if (((kind) == (StatementKind_CLASS))) {
         Linter_lintClass(self, stmt->nestedClass, issues) /* inst:Linter:lintClass */;
     } else if (((kind) == (StatementKind_EXPR))) {
@@ -62260,8 +62260,8 @@ long long Linter_countWarnings(Linter* self, SpecArray* issues) {
         LintIssue* issue = (LintIssue*)(intptr_t)_a_583->items[_i_583];
         do {
     if (issue->isWarning) {
-        res = ((res) + (1));
-    }
+	    res = ((res) + (1));
+	};
         } while (0);
     } } });
     return res;
@@ -62275,8 +62275,8 @@ long long Linter_countNotices(Linter* self, SpecArray* issues) {
         LintIssue* issue = (LintIssue*)(intptr_t)_a_585->items[_i_585];
         do {
     if ((!(issue->isWarning))) {
-        res = ((res) + (1));
-    }
+	    res = ((res) + (1));
+	};
         } while (0);
     } } });
     return res;
@@ -62297,8 +62297,8 @@ void Linter_report(Linter* self, String filePath, SpecArray* issues) {
     long long notices = Linter_countNotices(self, issues) /* inst:Linter:countNotices */;
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("\nLint summary for "))), filePath), spec_string_intern(": ")), spec_to_string_int(warnings)), spec_string_intern(" warning(s), ")), spec_to_string_int(notices)), spec_string_intern(" notice(s)."))))))));
     if (((warnings) == (0))) {
-        printf("%s\n", spec_buf_to_cstring((SpecBuf*)(spec_string_intern("All standard checks passed successfully."))));
-    }
+	    printf("%s\n", spec_buf_to_cstring((SpecBuf*)(spec_string_intern("All standard checks passed successfully."))));
+	};
 }
 
 SpecArray* Linter_auditProgram(Linter* self, ProgramNode* program) {
@@ -62319,17 +62319,17 @@ void Linter_registerAuditName(Linter* self, ClassInfo* c) {
     (void)self;
     (void)c;
     if (spec_string_equals(c->baseClass, spec_string_intern("Enum"))) {
-        spec_map_set(self->auditEnums, c->name, spec_string_intern("true"));
-    } else {
-        spec_map_set(self->auditClasses, c->name, spec_string_intern("true"));
-    }
+	    spec_map_set(self->auditEnums, c->name, spec_string_intern("true"));
+	} else {
+	    spec_map_set(self->auditClasses, c->name, spec_string_intern("true"));
+	};
     spec_map_set_any(self->auditClassNodes, c->name, (void*)(intptr_t)(c));
     ({ SpecArray* _a_591 = c->members; if (_a_591) { for (size_t _i_591 = 0; _i_591 < _a_591->length; _i_591++) {
         Member* m = (Member*)(intptr_t)_a_591->items[_i_591];
         do {
     if (((m->kind) == (MemberKind_CLASS))) {
-        Linter_registerAuditName(self, m->nestedClass) /* inst:Linter:registerAuditName */;
-    }
+	    Linter_registerAuditName(self, m->nestedClass) /* inst:Linter:registerAuditName */;
+	};
         } while (0);
     } } });
 }
@@ -62376,8 +62376,8 @@ void Linter_auditStatement(Linter* self, Statement* stmt, String file) {
     (void)file;
     if (((stmt->kind) == (StatementKind_VAR_DECL))) {
         if (stmt->hasInit) {
-        Linter_auditExpression(self, stmt->initExpr, file) /* inst:Linter:auditExpression */;
-    }
+	    Linter_auditExpression(self, stmt->initExpr, file) /* inst:Linter:auditExpression */;
+	};
     } else if (((stmt->kind) == (StatementKind_ASSIGN))) {
         Linter_auditExpression(self, stmt->assignTarget, file) /* inst:Linter:auditExpression */;
         Linter_auditExpression(self, stmt->assignValue, file) /* inst:Linter:auditExpression */;
@@ -62390,17 +62390,17 @@ void Linter_auditStatement(Linter* self, Statement* stmt, String file) {
         } while (0);
     } } });
         if (stmt->hasElse) {
-        ({ SpecArray* _a_603 = stmt->elseBranch; if (_a_603) { for (size_t _i_603 = 0; _i_603 < _a_603->length; _i_603++) {
+	    ({ SpecArray* _a_603 = stmt->elseBranch; if (_a_603) { for (size_t _i_603 = 0; _i_603 < _a_603->length; _i_603++) {
         Statement* s = (Statement*)(intptr_t)_a_603->items[_i_603];
         do {
     Linter_auditStatement(self, s, file) /* inst:Linter:auditStatement */;
         } while (0);
     } } });
-    }
+	};
     } else if (((stmt->kind) == (StatementKind_RETURN))) {
         if (stmt->hasReturnExpr) {
-        Linter_auditExpression(self, stmt->returnExpr, file) /* inst:Linter:auditExpression */;
-    }
+	    Linter_auditExpression(self, stmt->returnExpr, file) /* inst:Linter:auditExpression */;
+	};
     } else if (((stmt->kind) == (StatementKind_CLASS))) {
         Linter_auditClass(self, stmt->nestedClass) /* inst:Linter:auditClass */;
     } else if (((stmt->kind) == (StatementKind_EXPR))) {
@@ -62435,8 +62435,8 @@ void Linter_auditWhenArm(Linter* self, WhenArm* arm, String file) {
         } while (0);
     } } });
     if (arm->hasValueExpr) {
-        Linter_auditExpression(self, arm->valueExpr, file) /* inst:Linter:auditExpression */;
-    }
+	    Linter_auditExpression(self, arm->valueExpr, file) /* inst:Linter:auditExpression */;
+	};
     ({ SpecArray* _a_611 = arm->body; if (_a_611) { for (size_t _i_611 = 0; _i_611 < _a_611->length; _i_611++) {
         Statement* s = (Statement*)(intptr_t)_a_611->items[_i_611];
         do {
@@ -62531,69 +62531,69 @@ void Linter_auditReceiver(Linter* self, Expression* callExpr, String file) {
     SPEC_AUTO String name = spec_construct_string(spec_string_intern(""));
     bool isFloorChain = false;
     if (((callExpr->methodTarget->kind) == (ExpressionKind_IDENT))) {
-        spec_assign((void**)&name, (void*)(callExpr->methodTarget->stringValue));
-    } else {
-        if (((callExpr->methodTarget->kind) == (ExpressionKind_PATH))) {
-        SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(callExpr->methodTarget->pathSegments));
-        if (((spec_array_length(segs)) == (0))) {
-        return;
-    }
-        spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
-        ({ SpecArray* _a_629 = segs; if (_a_629) { for (size_t _i_629 = 0; _i_629 < _a_629->length; _i_629++) {
+	    spec_assign((void**)&name, (void*)(callExpr->methodTarget->stringValue));
+	} else {
+	    if (((callExpr->methodTarget->kind) == (ExpressionKind_PATH))) {
+	    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(callExpr->methodTarget->pathSegments));
+	    if (((spec_array_length(segs)) == (0))) {
+	    return;
+	};
+	    spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
+	    ({ SpecArray* _a_629 = segs; if (_a_629) { for (size_t _i_629 = 0; _i_629 < _a_629->length; _i_629++) {
         String seg = (String)(intptr_t)_a_629->items[_i_629];
         do {
     if (spec_string_equals(seg, spec_string_intern("sysinternal"))) {
-        isFloorChain = true;
-    }
+	    isFloorChain = true;
+	};
         } while (0);
     } } });
     if (segs) { spec_release((void*)segs); segs = NULL; }
-    } else {
-        return;
-    }
-    }
+	} else {
+	    return;
+	};
+	};
     if (((((isFloorChain) || (spec_string_equals(name, spec_string_intern(""))))) || (spec_string_equals(name, spec_string_intern("self"))))) {
-        return;
-    }
+	    return;
+	};
     if (spec_string_equals(callExpr->methodName, spec_string_intern("init"))) {
-        return;
-    }
+	    return;
+	};
     if (Linter_isUpperName(self, name) /* inst:Linter:isUpperName */) {
-        if (spec_map_has(self->auditEnums, name)) {
-        return;
-    }
-        bool isExempt = false;
-        ({ SpecArray* _a_631 = self->exemptClasses; if (_a_631) { for (size_t _i_631 = 0; _i_631 < _a_631->length; _i_631++) {
+	    if (spec_map_has(self->auditEnums, name)) {
+	    return;
+	};
+	    bool isExempt = false;
+	    ({ SpecArray* _a_631 = self->exemptClasses; if (_a_631) { for (size_t _i_631 = 0; _i_631 < _a_631->length; _i_631++) {
         String e = (String)(intptr_t)_a_631->items[_i_631];
         do {
     if (spec_string_equals(e, name)) {
-        isExempt = true;
-    }
+	    isExempt = true;
+	};
         } while (0);
     } } });
-        if (isExempt) {
-        return;
-    }
-        if ((!(spec_map_has(self->auditClasses, name)))) {
-        return;
-    }
-        if (Linter_auditOwnerImportsAs(self, name) /* inst:Linter:auditOwnerImportsAs */) {
-        return;
-    }
-    } else {
-        bool isAlias = false;
-        ({ SpecArray* _a_633 = self->floorAliases; if (_a_633) { for (size_t _i_633 = 0; _i_633 < _a_633->length; _i_633++) {
+	    if (isExempt) {
+	    return;
+	};
+	    if ((!(spec_map_has(self->auditClasses, name)))) {
+	    return;
+	};
+	    if (Linter_auditOwnerImportsAs(self, name) /* inst:Linter:auditOwnerImportsAs */) {
+	    return;
+	};
+	} else {
+	    bool isAlias = false;
+	    ({ SpecArray* _a_633 = self->floorAliases; if (_a_633) { for (size_t _i_633 = 0; _i_633 < _a_633->length; _i_633++) {
         String a = (String)(intptr_t)_a_633->items[_i_633];
         do {
     if (spec_string_equals(a, name)) {
-        isAlias = true;
-    }
+	    isAlias = true;
+	};
         } while (0);
     } } });
-        if ((!(isAlias))) {
-        return;
-    }
-    }
+	    if ((!(isAlias))) {
+	    return;
+	};
+	};
     SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Instance-model worklist: '"))), name), spec_string_intern(":")), callExpr->methodName), spec_string_intern("' calls a member through a class name (")), file), spec_string_intern(")."));
     spec_array_add_object(self->auditIssues, (void*)(({ LintIssue* _inst = LintIssue_new(); LintIssue_init(_inst, 0, false, msg); _inst; })));
     if (name) { spec_release((void*)name); name = NULL; }
@@ -62612,22 +62612,22 @@ bool Linter_auditImportsAsAnywhere(Linter* self, String clsName, String targetNa
     (void)targetName;
     (void)hops;
     if (((((spec_string_equals(clsName, spec_string_intern(""))) || (spec_string_equals(clsName, spec_string_intern("Any"))))) || (((hops) >= (64))))) {
-        return false;
-    }
+	    return false;
+	};
     SPEC_AUTO ClassInfo* cls = (ClassInfo*)((spec_map_get(self->auditClassNodes, clsName, self->auditOwner)));
     if ((!spec_string_equals(cls->name, clsName))) {
-        return false;
-    }
+	    return false;
+	};
     if (ClassInfo_instanceImportsAs(cls, targetName) /* inst:ClassInfo:instanceImportsAs */) {
-        return true;
-    }
+	    return true;
+	};
     bool viaParent = false;
     ({ SpecArray* _a_635 = cls->baseClasses; if (_a_635) { for (size_t _i_635 = 0; _i_635 < _a_635->length; _i_635++) {
         String baseName = (String)(intptr_t)_a_635->items[_i_635];
         do {
     if ((((!(viaParent))) && (Linter_auditImportsAsAnywhere(self, baseName, targetName, ((hops) + (1))) /* inst:Linter:auditImportsAsAnywhere */))) {
-        viaParent = true;
-    }
+	    viaParent = true;
+	};
         } while (0);
     } } });
     return viaParent;
@@ -62638,8 +62638,8 @@ bool Linter_isUpperName(Linter* self, String name) {
     (void)self;
     (void)name;
     if (((spec_string_length(name)) == (0))) {
-        return false;
-    }
+	    return false;
+	};
     SPEC_AUTO String first = String_charAt(name, 0, spec_string_intern(""));
     if (spec_string_equals(first, spec_string_intern("A")) || spec_string_equals(first, spec_string_intern("B")) || spec_string_equals(first, spec_string_intern("C")) || spec_string_equals(first, spec_string_intern("D")) || spec_string_equals(first, spec_string_intern("E")) || spec_string_equals(first, spec_string_intern("F")) || spec_string_equals(first, spec_string_intern("G")) || spec_string_equals(first, spec_string_intern("H")) || spec_string_equals(first, spec_string_intern("I")) || spec_string_equals(first, spec_string_intern("J")) || spec_string_equals(first, spec_string_intern("K")) || spec_string_equals(first, spec_string_intern("L")) || spec_string_equals(first, spec_string_intern("M"))) {
         return true;

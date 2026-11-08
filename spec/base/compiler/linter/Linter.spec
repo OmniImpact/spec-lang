@@ -86,13 +86,13 @@ Class is Linter{
 			local Int is tabs: line:countLeading(search: "\t");
 			local String is rest: line:substring(start: tabs, end: line:length());
 			local Int is spaces: rest:countLeading(search: ' ');
-			if (spaces > 0) {
+			Conditional:branch(check: { spaces > 0 }, then: {
 				local String is msg: 'Space-based indentation detected (' . (spaces as String) . ' space(s)). Spec standard requires tabs.';
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
-			}
-			if (line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t")) {
+			});
+			Conditional:branch(check: { line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, then: {
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
-			}
+			});
 
 			# Mask strings and comments, then validate brace alignment.
 			local String is masked: self:maskLine(line: line);
@@ -102,33 +102,35 @@ Class is Linter{
 				evaluate: local Function of Boolean(){ return trimming && body:length() > 0; },
 				iteration: local Function(){
 					local String is last: body:charAt(index: body:length() - 1, default: '');
-					if (last == ' ' || last == "\t") {
+					Conditional:branch(check: { last == ' ' || last == "\t" }, then: {
 						body: body:substring(start: 0, end: body:length() - 1);
-					} else {
+					}, otherwise: {
 						trimming: false;
-					}
+					});
 				}
 			);
-			if (body:length() > 0 && body:charAt(index: 0, default: '') == '}') {
+			Conditional:branch(check: { body:length() > 0 && body:charAt(index: 0, default: '') == '}' }, then: {
 				local Int is expectedTabs: depth - 1;
-				if (expectedTabs < 0) {
+				Conditional:branch(check: { expectedTabs < 0 }, then: {
 					expectedTabs: 0;
-				}
-				if (tabs != expectedTabs) {
+				});
+				Conditional:branch(check: { tabs != expectedTabs }, then: {
 					local String is msg: 'Closing brace indented at ' . (tabs as String) . ' tab(s); nesting depth expects ' . (expectedTabs as String) . '.';
 					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
-				}
-			}
+				});
+			});
 			local Int is ci: 0;
 			While:condition(
 				evaluate: local Function of Boolean(){ return ci < masked:length(); },
 				iteration: local Function(){
 					local String is ch: masked:charAt(index: ci, default: '');
-					if (ch == '{') {
+					Conditional:branch(check: { ch == '{' }, then: {
 						depth: depth + 1;
-					} else if (ch == '}') {
-						depth: depth - 1;
-					}
+					}, otherwise: {
+						Conditional:branch(check: { ch == '}' }, then: {
+							depth: depth - 1;
+						});
+					});
 					ci: ci + 1;
 				}
 			);
@@ -148,24 +150,30 @@ Class is Linter{
 			evaluate: local Function of Boolean(){ return i < line:length(); },
 			iteration: local Function(){
 				local String is ch: line:charAt(index: i, default: '');
-				if (quote != '') {
-					if (ch == "\\") {
+				Conditional:branch(check: { quote != '' }, then: {
+					Conditional:branch(check: { ch == "\\" }, then: {
 						out: out . '  ';
 						i: i + 1;
-					} else if (ch == quote) {
-						quote: '';
+					}, otherwise: {
+						Conditional:branch(check: { ch == quote }, then: {
+							quote: '';
+							out: out . ' ';
+						}, otherwise: {
+							out: out . ' ';
+						});
+					});
+				}, otherwise: {
+					Conditional:branch(check: { ch == '"' || ch == '\'' }, then: {
+						quote: ch;
 						out: out . ' ';
-					} else {
-						out: out . ' ';
-					}
-				} else if (ch == '"' || ch == '\'') {
-					quote: ch;
-					out: out . ' ';
-				} else if (ch == '#') {
-					i: line:length();
-				} else {
-					out: out . ch;
-				}
+					}, otherwise: {
+						Conditional:branch(check: { ch == '#' }, then: {
+							i: line:length();
+						}, otherwise: {
+							out: out . ch;
+						});
+					});
+				});
 				i: i + 1;
 			}
 		);
@@ -186,27 +194,27 @@ Class is Linter{
 
 				# INSTANCE.md E10: a constructor call inside a While/Loop
 				# callback body allocates per iteration — hoisting hint.
-				if (method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget)) {
+				Conditional:branch(check: { method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget) }, then: {
 					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (INSTANCE.md E10).'));
-				}
+				});
 
 				when (method) {
 					is 'getString': {
 						local Boolean is hasDefault: false;
 						args:each(action: local Function(NamedArg is arg){
-							if (arg:name == 'default') {
+							Conditional:branch(check: { arg:name == 'default' }, then: {
 								hasDefault: true;
-							}
+							});
 						});
-						if (hasDefault) {
+						Conditional:branch(check: { hasDefault }, then: {
 							issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
-						}
+						});
 					}
 					is 'random': {
 						local String is msg: 'Method call \'math:random\' provides optional min/max range parameters.';
-						if (args:length() == 0) {
+						Conditional:branch(check: { args:length() == 0 }, then: {
 							msg: 'Method call \'math:random\' omits optional min/max parameters (using default [0.0, 1.0)).';
-						}
+						});
 						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 					}
 					else: {}
@@ -215,14 +223,14 @@ Class is Linter{
 				self:lintExpression(expr: expr:methodTarget, issues: issues);
 				local Boolean is isLoopDriver: self:isLoopSpell(target: expr:methodTarget);
 				args:each(action: local Function(NamedArg is arg){
-					if (isLoopDriver && arg:value:kind == ExpressionKind:ANON_FN) {
+					Conditional:branch(check: { isLoopDriver && arg:value:kind == ExpressionKind:ANON_FN }, then: {
 						local Int is savedDepth: self:lintLoopDepth;
 						self:lintLoopDepth: self:lintLoopDepth + 1;
 						self:lintExpression(expr: arg:value, issues: issues);
 						self:lintLoopDepth: savedDepth;
-					} else {
+					}, otherwise: {
 						self:lintExpression(expr: arg:value, issues: issues);
-					}
+					});
 				});
 			}
 			is ExpressionKind:BINARY: {
@@ -253,14 +261,16 @@ Class is Linter{
 	## @return: true when the receiver names While or Loop.
 	Function of Boolean is isLoopSpell(Expression is target){
 		local String is name: '';
-		if (target:kind == ExpressionKind:IDENT) {
+		Conditional:branch(check: { target:kind == ExpressionKind:IDENT }, then: {
 			name: target:stringValue;
-		} else if (target:kind == ExpressionKind:PATH) {
-			local Array of String is segs: target:pathSegments;
-			if (segs:length() > 0) {
-				name: segs:get(index: segs:length() - 1);
-			}
-		}
+		}, otherwise: {
+			Conditional:branch(check: { target:kind == ExpressionKind:PATH }, then: {
+				local Array of String is segs: target:pathSegments;
+				Conditional:branch(check: { segs:length() > 0 }, then: {
+					name: segs:get(index: segs:length() - 1);
+				});
+			});
+		});
 		return name == 'While' || name == 'Loop';
 	}
 
@@ -271,14 +281,16 @@ Class is Linter{
 	## @return: true when the receiver is class-spelled.
 	Function of Boolean is isClassSpell(Expression is target){
 		local String is name: '';
-		if (target:kind == ExpressionKind:IDENT) {
+		Conditional:branch(check: { target:kind == ExpressionKind:IDENT }, then: {
 			name: target:stringValue;
-		} else if (target:kind == ExpressionKind:PATH) {
-			local Array of String is segs: target:pathSegments;
-			if (segs:length() > 0) {
-				name: segs:get(index: segs:length() - 1);
-			}
-		}
+		}, otherwise: {
+			Conditional:branch(check: { target:kind == ExpressionKind:PATH }, then: {
+				local Array of String is segs: target:pathSegments;
+				Conditional:branch(check: { segs:length() > 0 }, then: {
+					name: segs:get(index: segs:length() - 1);
+				});
+			});
+		});
 		return self:isUpperName(name: name);
 	}
 
@@ -291,9 +303,9 @@ Class is Linter{
 
 		when (kind) {
 			is StatementKind:VAR_DECL: {
-				if (stmt:hasInit) {
+				Conditional:branch(check: { stmt:hasInit }, then: {
 					self:lintExpression(expr: stmt:initExpr, issues: issues);
-				}
+				});
 			}
 			is StatementKind:ASSIGN: {
 				self:lintExpression(expr: stmt:assignTarget, issues: issues);
@@ -304,16 +316,16 @@ Class is Linter{
 				stmt:thenBranch:each(action: local Function(Statement is s){
 					self:lintStatement(stmt: s, issues: issues);
 				});
-				if (stmt:hasElse) {
+				Conditional:branch(check: { stmt:hasElse }, then: {
 					stmt:elseBranch:each(action: local Function(Statement is s){
 						self:lintStatement(stmt: s, issues: issues);
 					});
-				}
+				});
 			}
 			is StatementKind:RETURN: {
-				if (stmt:hasReturnExpr) {
+				Conditional:branch(check: { stmt:hasReturnExpr }, then: {
 					self:lintExpression(expr: stmt:returnExpr, issues: issues);
-				}
+				});
 			}
 			is StatementKind:CLASS: {
 				self:lintClass(classDef: stmt:nestedClass, issues: issues);
@@ -371,9 +383,9 @@ Class is Linter{
 	Function of Int is countWarnings(Array of LintIssue is issues){
 		local Int is res: 0;
 		issues:each(action: local Function(LintIssue is issue){
-			if (issue:isWarning) {
+			Conditional:branch(check: { issue:isWarning }, then: {
 				res: res + 1;
-			}
+			});
 		});
 		return res;
 	}
@@ -385,9 +397,9 @@ Class is Linter{
 	Function of Int is countNotices(Array of LintIssue is issues){
 		local Int is res: 0;
 		issues:each(action: local Function(LintIssue is issue){
-			if (!issue:isWarning) {
+			Conditional:branch(check: { !issue:isWarning }, then: {
 				res: res + 1;
-			}
+			});
 		});
 		return res;
 	}
@@ -405,9 +417,9 @@ Class is Linter{
 		local Int is warnings: self:countWarnings(issues: issues);
 		local Int is notices: self:countNotices(issues: issues);
 		Output:line("\nLint summary for " . filePath . ': ' . (warnings as String) . ' warning(s), ' . (notices as String) . ' notice(s).');
-		if (warnings == 0) {
+		Conditional:branch(check: { warnings == 0 }, then: {
 			Output:line('All standard checks passed successfully.');
-		}
+		});
 	}
 
 	## INSTANCE.md Phase 0.5 worklist audit: reports every call whose
@@ -435,16 +447,16 @@ Class is Linter{
 	##
 	## @param c: Candidate [ClassInfo] definition.
 	Function is registerAuditName(ClassInfo is c){
-		if (c:baseClass == 'Enum') {
+		Conditional:branch(check: { c:baseClass == 'Enum' }, then: {
 			self:auditEnums:set(key: c:name, value: 'true');
-		} else {
+		}, otherwise: {
 			self:auditClasses:set(key: c:name, value: 'true');
-		}
+		});
 		self:auditClassNodes:set(key: c:name, value: c);
 		c:members:each(action: local Function(Member is m){
-			if (m:kind == MemberKind:CLASS) {
+			Conditional:branch(check: { m:kind == MemberKind:CLASS }, then: {
 				self:registerAuditName(c: m:nestedClass);
-			}
+			});
 		});
 	}
 
@@ -490,9 +502,9 @@ Class is Linter{
 	Function is auditStatement(Statement is stmt, String is file){
 		when (stmt:kind) {
 			is StatementKind:VAR_DECL: {
-				if (stmt:hasInit) {
+				Conditional:branch(check: { stmt:hasInit }, then: {
 					self:auditExpression(expr: stmt:initExpr, file: file);
-				}
+				});
 			}
 			is StatementKind:ASSIGN: {
 				self:auditExpression(expr: stmt:assignTarget, file: file);
@@ -503,16 +515,16 @@ Class is Linter{
 				stmt:thenBranch:each(action: local Function(Statement is s){
 					self:auditStatement(stmt: s, file: file);
 				});
-				if (stmt:hasElse) {
+				Conditional:branch(check: { stmt:hasElse }, then: {
 					stmt:elseBranch:each(action: local Function(Statement is s){
 						self:auditStatement(stmt: s, file: file);
 					});
-				}
+				});
 			}
 			is StatementKind:RETURN: {
-				if (stmt:hasReturnExpr) {
+				Conditional:branch(check: { stmt:hasReturnExpr }, then: {
 					self:auditExpression(expr: stmt:returnExpr, file: file);
-				}
+				});
 			}
 			is StatementKind:CLASS: {
 				self:auditClass(classDef: stmt:nestedClass);
@@ -544,9 +556,9 @@ Class is Linter{
 		arm:conditions:each(action: local Function(Expression is cond){
 			self:auditExpression(expr: cond, file: file);
 		});
-		if (arm:hasValueExpr) {
+		Conditional:branch(check: { arm:hasValueExpr }, then: {
 			self:auditExpression(expr: arm:valueExpr, file: file);
-		}
+		});
 		arm:body:each(action: local Function(Statement is s){
 			self:auditStatement(stmt: s, file: file);
 		});
@@ -633,61 +645,63 @@ Class is Linter{
 	Function is auditReceiver(Expression is callExpr, String is file){
 		local String is name: '';
 		local Boolean is isFloorChain: false;
-		if (callExpr:methodTarget:kind == ExpressionKind:IDENT) {
+		Conditional:branch(check: { callExpr:methodTarget:kind == ExpressionKind:IDENT }, then: {
 			name: callExpr:methodTarget:stringValue;
-		} else if (callExpr:methodTarget:kind == ExpressionKind:PATH) {
-			local Array of String is segs: callExpr:methodTarget:pathSegments;
-			if (segs:length() == 0) {
+		}, otherwise: {
+			Conditional:branch(check: { callExpr:methodTarget:kind == ExpressionKind:PATH }, then: {
+				local Array of String is segs: callExpr:methodTarget:pathSegments;
+				Conditional:branch(check: { segs:length() == 0 }, then: {
+					return;
+				});
+				name: segs:get(index: segs:length() - 1);
+				segs:each(action: local Function(String is seg){
+					Conditional:branch(check: { seg == 'sysinternal' }, then: {
+						isFloorChain: true;
+					});
+				});
+			}, otherwise: {
 				return;
-			}
-			name: segs:get(index: segs:length() - 1);
-			segs:each(action: local Function(String is seg){
-				if (seg == 'sysinternal') {
-					isFloorChain: true;
-				}
 			});
-		} else {
+		});
+		Conditional:branch(check: { isFloorChain || name == '' || name == 'self' }, then: {
 			return;
-		}
-		if (isFloorChain || name == '' || name == 'self') {
+		});
+		Conditional:branch(check: { callExpr:methodName == 'init' }, then: {
 			return;
-		}
-		if (callExpr:methodName == 'init') {
-			return;
-		}
-		if (self:isUpperName(name: name)) {
-			if (self:auditEnums:has(key: name)) {
+		});
+		Conditional:branch(check: { self:isUpperName(name: name) }, then: {
+			Conditional:branch(check: { self:auditEnums:has(key: name) }, then: {
 				return;
-			}
+			});
 			local Boolean is isExempt: false;
 			self:exemptClasses:each(action: local Function(String is e){
-				if (e == name) {
+				Conditional:branch(check: { e == name }, then: {
 					isExempt: true;
-				}
+				});
 			});
-			if (isExempt) {
+			Conditional:branch(check: { isExempt }, then: {
 				return;
-			}
-			if (!self:auditClasses:has(key: name)) {
+			});
+			Conditional:branch(check: { !self:auditClasses:has(key: name) }, then: {
 				return;
-			}
-			if (self:auditOwnerImportsAs(name: name)) {
+			});
+			Conditional:branch(check: { self:auditOwnerImportsAs(name: name) }, then: {
 				# Migrated: the owning class (or an ancestor) instance-imports
 				# this class (INSTANCE.md §2.1), so the prefix call is the
 				# new model.
 				return;
-			}
-		} else {
+			});
+		}, otherwise: {
 			local Boolean is isAlias: false;
 			self:floorAliases:each(action: local Function(String is a){
-				if (a == name) {
+				Conditional:branch(check: { a == name }, then: {
 					isAlias: true;
-				}
+				});
 			});
-			if (!isAlias) {
+			Conditional:branch(check: { !isAlias }, then: {
 				return;
-			}
-		}
+			});
+		});
 		local String is msg: 'Instance-model worklist: \'' . name . ':' . callExpr:methodName . '\' calls a member through a class name (' . file . ').';
 		self:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 	}
@@ -714,21 +728,21 @@ Class is Linter{
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
 	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		if (clsName == '' || clsName == 'Any' || hops >= 64) {
+		Conditional:branch(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
 			return false;
-		}
+		});
 		local ClassInfo is cls: self:auditClassNodes:get(key: clsName, default: self:auditOwner);
-		if (cls:name != clsName) {
+		Conditional:branch(check: { cls:name != clsName }, then: {
 			return false;
-		}
-		if (cls:instanceImportsAs(name: targetName)) {
+		});
+		Conditional:branch(check: { cls:instanceImportsAs(name: targetName) }, then: {
 			return true;
-		}
+		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			if (!viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1)) {
+			Conditional:branch(check: { !viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1) }, then: {
 				viaParent: true;
-			}
+			});
 		});
 		return viaParent;
 	}
@@ -742,9 +756,9 @@ Class is Linter{
 	## @param name: Identifier to classify.
 	## @return: true when the name is UpperCamel.
 	Function of Boolean is isUpperName(String is name){
-		if (name:length() == 0) {
+		Conditional:branch(check: { name:length() == 0 }, then: {
 			return false;
-		}
+		});
 		local String is first: name:charAt(index: 0, default: '');
 		when (first) {
 			is 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M':
