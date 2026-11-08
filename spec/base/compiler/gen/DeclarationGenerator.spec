@@ -384,11 +384,21 @@ Class is DeclarationGenerator{
 
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-				out: out . 'typedef struct ' . c:name . ' ' . c:name . ";\n";
-				out: out . c:name . '* ' . c:name . "_new(void);\n";
-				out: out . 'void ' . c:name . "_destroy(void* self);\n";
+				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+				# FUNCTIONS.md Part IV IV.2c: for nested classes the typedef
+				# ALIASES the bare name to the qualified struct — the C type
+				# spellings (the bare) keep compiling while the symbols and
+				# the struct tag qualify.
+				Conditional:if(check: { c:outerName != '' }, then: {
+					out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
+					out: out . 'typedef struct ' . cSym . ' ' . c:name . ";\n";
+				}, else: {
+					out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
+				});
+				out: out . cSym . '* ' . cSym . "_new(void);\n";
+				out: out . 'void ' . cSym . "_destroy(void* self);\n";
 				Conditional:if(check: { !self:hasFieldNamed(list: c:members, name: 'init') }, then: {
-					out: out . 'void ' . c:name . '_init(' . c:name . "* self);\n";
+					out: out . 'void ' . cSym . '_init(' . cSym . "* self);\n";
 				});
 			});
 		});
@@ -417,11 +427,11 @@ Class is DeclarationGenerator{
 										ovIdx: ovIdx + 1;
 									});
 								});
-								local String is symName: c:name . '_' . m:name;
+								local String is symName: self:utils:cIdent(name: c:qualifiedName()) . '_' . m:name;
 								Conditional:if(check: { ovHit > 0 }, then: {
 									symName: symName . '_' . (ovHit + 1) . '';
 								});
-								out: out . retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
+								out: out . retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps) . ' self';
 								m:params:each(action: local Function(Parameter is p){
 									out: out . ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name);
 								});
@@ -448,7 +458,8 @@ Class is DeclarationGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local Array of String is tps: c:typeParams;
-				out: out . 'struct ' . c:name . " {\n";
+				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+				out: out . 'struct ' . cSym . " {\n";
 				out: out . "    const char* _type_name;\n";
 				out: out . "    void** _vtable;\n";
 				local Array of Member is allFields: [];
@@ -461,10 +472,10 @@ Class is DeclarationGenerator{
 					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
 				});
 				out: out . "};\n\n";
-			}, else: {
-				Conditional:if(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
-					out: out . self:emitTaggedEnumStruct(name: c:name, cls: c);
-				});
+				}, else: {
+					Conditional:if(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
+						out: out . self:emitTaggedEnumStruct(name: c:qualifiedName(), cls: c);
+					});
 			});
 		});
 		return out;

@@ -50,7 +50,7 @@ Class is CBackendUtils{
 			is 'InputHandler': { return 'void*'; }
 			is 'LoopControl': { return 'SpecLoopControl*'; }
 			is 'File', 'Process', 'Output', 'Input', 'Math', 'While': { return 'void*'; }
-			else: { return typeName . '*'; }
+			else: { return self:cIdent(name: typeName) . '*'; }
 		}
 	}
 
@@ -70,6 +70,11 @@ Class is CBackendUtils{
 	## @param name: Spec identifier.
 	## @return: C-compatible identifier.
 	Function of String is cIdent(String is name){
+		# FUNCTIONS.md Part IV IV.2c: the qualified class names
+		# ('Outer:Helper') map the nesting separator to the C underscore.
+		Conditional:if(check: { name:contains(needle: ':') }, then: {
+			return self:cIdent(name: name:replaceAll(search: ':', replacement: '_'));
+		});
 		return when (name) {
 			is 'EOF': '_EOF';
 			is 'default', 'case', 'switch', 'struct', 'union', 'enum', 'register',

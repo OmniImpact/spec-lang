@@ -307,6 +307,12 @@ Class is BuiltinCallGenerator{
 				local Expression is mt: loopVal:methodTarget;
 				loopClass: cg:generateExpression(expr: mt);
 			});
+			# FUNCTIONS.md Part IV IV.2c: the loop-class symbol qualifies for
+			# nested classes — resolve the class and derive the qualified base.
+			local ClassInfo is loopCls: cg:findClass(name: loopClass);
+			Conditional:if(check: { loopCls:name == loopClass }, then: {
+				loopClass: cg:utils:cIdent(name: loopCls:qualifiedName());
+			});
 			local String is ctrlC: 'NULL';
 			Conditional:if(check: { expr:argCount() > 1 }, then: {
 				local Expression is ctrlArg: self:argValue(expr: expr, index: 1);
@@ -390,6 +396,12 @@ Class is BuiltinCallGenerator{
 				local Expression is mt: cbVal:methodTarget;
 				cbClass: cg:generateExpression(expr: mt);
 			});
+			# FUNCTIONS.md Part IV IV.2c: the callback-class symbol qualifies
+			# for nested classes.
+			local ClassInfo is cbCls: cg:findClass(name: cbClass);
+			Conditional:if(check: { cbCls:name == cbClass }, then: {
+				cbClass: cg:utils:cIdent(name: cbCls:qualifiedName());
+			});
 			return '({ SpecLoopControl* _c = LoopControl_new(); _c->callback = (void*)(' . cbC . '); _c->on_complete = (void (*)(void*, struct SpecLoopControl*))' . cbClass . '_onComplete; _c; })';
 		});
 		Conditional:if(check: { expr:methodName == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
@@ -404,6 +416,12 @@ Class is BuiltinCallGenerator{
 			Conditional:if(check: { handlerClass == '' && handlerExpr:kind == ExpressionKind:CALL }, then: {
 				local Expression is mt: handlerExpr:methodTarget;
 				handlerClass: cg:generateExpression(expr: mt);
+			});
+			# FUNCTIONS.md Part IV IV.2c: the handler-class symbol qualifies
+			# for nested classes.
+			local ClassInfo is handlerCls: cg:findClass(name: handlerClass);
+			Conditional:if(check: { handlerCls:name == handlerClass }, then: {
+				handlerClass: cg:utils:cIdent(name: handlerCls:qualifiedName());
 			});
 			return "({ char* _line = NULL; size_t _line_cap = 0; char* _res = \"\"; ssize_t _n = getline(&_line, &_line_cap, stdin); if (_n >= 0) { if (_n > 0 && _line[_n - 1] == '\\n') _line[_n - 1] = '\\0'; _res = strdup(_line); } free(_line); " . handlerClass . '_onInput((void*)(' . handlerC . '), spec_string_from_chars(_res)); })';
 		});

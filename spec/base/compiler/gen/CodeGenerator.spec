@@ -446,10 +446,19 @@ Class is CodeGenerator{
 	## @param idx: The overload index.
 	## @return: The C symbol.
 	Function of String is overloadSymbol(String is className, String is methodName, Int is idx){
-		Conditional:if(check: { idx > 0 }, then: {
-			return className . '_' . methodName . '_' . (idx + 1) . '';
+		# FUNCTIONS.md Part IV IV.2c: the symbol base qualifies for nested
+		# classes — the funnel resolves the class and derives the C symbol
+		# from the qualified name, so the definitions and the call sites
+		# agree.
+		local String is symBase: className;
+		local ClassInfo is symCls: self:findClass(name: className);
+		Conditional:if(check: { symCls:name == className }, then: {
+			symBase: self:utils:cIdent(name: symCls:qualifiedName());
 		});
-		return className . '_' . methodName;
+		Conditional:if(check: { idx > 0 }, then: {
+			return symBase . '_' . methodName . '_' . (idx + 1) . '';
+		});
+		return symBase . '_' . methodName;
 	}
 
 	## FUNCTIONS.md §I.2: the stamped member for a call — the idx-th
@@ -1033,7 +1042,10 @@ Class is CodeGenerator{
 		While:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			Conditional:if(check: { paramCount < 0 || ml:res:params:length() == paramCount }, then: {
-				return baseClassName;
+				# FUNCTIONS.md Part IV IV.2c: the IMPLEMENTING class's symbol
+				# base qualifies for nested classes — the vtable entries and
+				# the definitions agree.
+				return self:utils:cIdent(name: cls:qualifiedName());
 			});
 		});
 		local String is inherited: '';
@@ -2017,6 +2029,14 @@ Class is CodeGenerator{
 		# Tagged enum variant constructor.
 		Conditional:if(check: { self:allEnumVariants:has(key: expr:methodName) && (self:allTaggedEnums:has(key: targetC) || targetC == self:names:selfIdent()) }, then: {
 			local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: '');
+			# FUNCTIONS.md Part IV IV.2c: the variant symbols qualify for
+			# nested tagged enums — the registry lookups stay on the bare
+			# name; the C symbol derives from the qualified identity.
+			local String is eSym: eName;
+			local ClassInfo is eCls: self:findClass(name: eName);
+			Conditional:if(check: { eCls:name == eName }, then: {
+				eSym: self:utils:cIdent(name: eCls:qualifiedName());
+			});
 			Conditional:if(check: { self:allTaggedEnums:has(key: eName) }, then: {
 				local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: expr:methodName);
 				local Array of Parameter is vParams: vMem:params;
@@ -2043,7 +2063,7 @@ Class is CodeGenerator{
 					vArgsC: vArgsC . argC;
 					pIdx: pIdx + 1;
 				});
-				return eName . '_' . self:utils:cIdent(name: expr:methodName) . '(' . vArgsC . ')';
+				return eSym . '_' . self:utils:cIdent(name: expr:methodName) . '(' . vArgsC . ')';
 			});
 		});
 
@@ -2062,12 +2082,19 @@ Class is CodeGenerator{
 				Conditional:if(check: { symOwnerCls == '' }, then: {
 					symOwnerCls: targetC;
 				});
-				local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:overloadIndex);
-				Conditional:if(check: { initCls == '' || initCls == targetC }, then: {
-					return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
-				});
-				return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initSymbol . '((' . initCls . '*)_inst' . argsJoined . '); _inst; })';
+			local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:overloadIndex);
+			# FUNCTIONS.md Part IV IV.2c: the _new symbol qualifies like the
+			# init symbol — resolve the class's qualified identity.
+			local String is newSym: self:utils:cIdent(name: targetC);
+			local ClassInfo is newCls: self:findClass(name: targetC);
+			Conditional:if(check: { newCls:name == targetC }, then: {
+				newSym: self:utils:cIdent(name: newCls:qualifiedName());
 			});
+			Conditional:if(check: { initCls == '' || initCls == targetC }, then: {
+				return '({ ' . targetC . '* _inst = ' . newSym . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
+			});
+			return '({ ' . targetC . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . initCls . '*)_inst' . argsJoined . '); _inst; })';
+		});
 			Conditional:if(check: { mDef:kind == MemberKind:METHOD }, then: {
 				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:overloadIndex);
 				Conditional:if(check: { self:isFieldFulClass(cls: self:findClass(name: targetC)) }, then: {
@@ -3079,6 +3106,9 @@ Class is CodeGenerator{
 		flattenedClasses:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
 				self:currentClassName: c:name;
+				# FUNCTIONS.md Part IV IV.2c: the C symbol base qualifies for
+				# nested classes (Outer_Helper); the bare name for top-level.
+				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
 				local Array of Member is outerFields: [];
@@ -3105,7 +3135,7 @@ Class is CodeGenerator{
 					}
 				});
 				Conditional:if(check: { !hasInit && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-					methods: methods . 'void ' . c:name . '_init(' . c:name . "* self) {\n    (void)self;\n}\n\n";
+					methods: methods . 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n";
 				});
 
 				local Boolean is hasToString: false;
@@ -3168,7 +3198,7 @@ Class is CodeGenerator{
 				local Array of String is ancestors: [];
 				self:collectAncestors(c: c, allClasses: classes, acc: ancestors);
 				Conditional:if(check: { ancestors:length() > 0 }, then: {
-					out: out . '    if (strcmp(actual, "' . c:name . "\") == 0) {\n";
+					out: out . '    if (strcmp(actual, "' . c:qualifiedName() . "\") == 0) {\n";
 					out: out . '        return ';
 					local Boolean is firstA: true;
 					ancestors:each(action: local Function(String is aName){
@@ -3197,7 +3227,8 @@ Class is CodeGenerator{
 		});
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-				out: out . 'static void* ' . c:name . '_vtable[' . self:methodSlotCount . "] = {\n";
+				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+				out: out . 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n";
 				local Int is slot: 0;
 				While:condition(
 					evaluate: local Function of Boolean(){
@@ -3235,6 +3266,7 @@ Class is CodeGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				self:currentClassName: c:name;
+				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
 				local Array of Member is outerFields: [];
@@ -3246,8 +3278,8 @@ Class is CodeGenerator{
 					self:fieldTypes:set(key: f:name, value: self:formatTypeString(t: f:memberType));
 				});
 
-				out: out . 'void ' . c:name . "_destroy(void* self_ptr) {\n";
-				out: out . '    ' . c:name . '* self = (' . c:name . "*)self_ptr;\n";
+				out: out . 'void ' . cSym . "_destroy(void* self_ptr) {\n";
+				out: out . '    ' . cSym . '* self = (' . cSym . "*)self_ptr;\n";
 				out: out . "    if (!self) return;\n";
 				allFields:each(action: local Function(Member is m){
 					local String is ft: m:memberType:name;
@@ -3263,7 +3295,7 @@ Class is CodeGenerator{
 				});
 				out: out . "}\n\n";
 
-				out: out . c:name . '* ' . c:name . "_new(void) {\n";
+				out: out . cSym . '* ' . cSym . "_new(void) {\n";
 				local ClassInfo is acls: self:findClass(name: c:name);
 				local String is ans: acls:namespaceJoined();
 				# Compilation-phase namespaces: everything the compiler
@@ -3274,13 +3306,13 @@ Class is CodeGenerator{
 					ans == 'base:compiler:driver' || ans == 'base:compiler:linter' || ans == 'base:sys' ||
 					ans:startsWith(prefix: 'base:compiler:parser:loops') || ans:startsWith(prefix: 'base:compiler:checker:loops') ||
 					ans:startsWith(prefix: 'base:compiler:lexer:loops') }, then: {
-					out: out . '    ' . c:name . '* self = (' . c:name . '*)spec_arena_alloc_object(sizeof(' . c:name . '), ' . c:name . "_destroy);\n";
+					out: out . '    ' . cSym . '* self = (' . cSym . '*)spec_arena_alloc_object(sizeof(' . cSym . '), ' . cSym . "_destroy);\n";
 				}, else: {
-					out: out . '    ' . c:name . '* self = (' . c:name . '*)spec_alloc(sizeof(' . c:name . '), ' . c:name . "_destroy);\n";
+					out: out . '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n";
 				});
-				out: out . '    self->_type_name = "' . c:name . "\";\n";
+				out: out . '    self->_type_name = "' . c:qualifiedName() . "\";\n";
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
-					out: out . '    self->_vtable = ' . c:name . "_vtable;\n";
+					out: out . '    self->_vtable = ' . cSym . "_vtable;\n";
 				});
 				# FUNCTIONS.md Part IV IV.2: the construction expressions run for
 				# the declared-of + own fields; the OUTER-link fields zero-init

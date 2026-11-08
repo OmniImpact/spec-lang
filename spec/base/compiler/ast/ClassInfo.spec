@@ -140,6 +140,18 @@ Class is ClassInfo{
 		return found;
 	}
 
+	## FUNCTIONS.md Part IV IV.2c: the qualified identity — the outer chain
+	## + the bare name ('Outer:Helper'); the bare name for top-level
+	## classes. The C symbol base and the registry key derive from this.
+	##
+	## @return: The qualified class name.
+	Function of String is qualifiedName(){
+		Conditional:if(check: { self:outerName != '' }, then: {
+			return self:outerName . ':' . self:name;
+		});
+		return self:name;
+	}
+
 	Function is setOuter(String is name){
 		self:outerName: name;
 	}
