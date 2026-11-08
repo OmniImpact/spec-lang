@@ -230,6 +230,14 @@ Class is CodeGenerator{
 		self:allTaggedEnums: Map:init();
 		flattened:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:name, value: 'true');
+			# FUNCTIONS.md Part IV IV.2c: the nested classes register under
+			# their qualified identity too — and under the C symbol form,
+			# so the constructor path recognizes the symbol-spelled targets
+			# that emitPath produces.
+			Conditional:if(check: { c:outerName != '' }, then: {
+				self:allClassNames:set(key: c:qualifiedName(), value: 'true');
+				self:allClassNames:set(key: self:utils:cIdent(name: c:qualifiedName()), value: 'true');
+			});
 			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
@@ -452,13 +460,30 @@ Class is CodeGenerator{
 		# agree.
 		local String is symBase: className;
 		local ClassInfo is symCls: self:findClass(name: className);
-		Conditional:if(check: { symCls:name == className }, then: {
+		Conditional:if(check: { symCls:name != '' }, then: {
 			symBase: self:utils:cIdent(name: symCls:qualifiedName());
 		});
 		Conditional:if(check: { idx > 0 }, then: {
 			return symBase . '_' . methodName . '_' . (idx + 1) . '';
 		});
 		return symBase . '_' . methodName;
+	}
+
+	## FUNCTIONS.md Part IV IV.2c: the member-lookup root for a (possibly
+	## qualified) receiver type — the qualified nested-class reference
+	## resolves to the inner class; container forms keep the bare root.
+	##
+	## @param className: The receiver type string.
+	## @return: The class name to start the member walk from.
+	Function of String is memberLookupRootGen(String is className){
+		local String is root: className:split(delimiter: ':'):get(index: 0);
+		Conditional:if(check: { className:contains(needle: ':') }, then: {
+			local ClassInfo is qCls: self:findClass(name: className);
+			Conditional:if(check: { qCls:name != '' && qCls:qualifiedName() == className }, then: {
+				root: className;
+			});
+		});
+		return root;
 	}
 
 	## FUNCTIONS.md §I.2: the stamped member for a call — the idx-th
@@ -471,10 +496,9 @@ Class is CodeGenerator{
 	## @return: The member, or an empty node when absent.
 	Function of Member is lookupOverloadedMemberGen(String is className, String is methodName, Int is idx){
 		local Member is none: Member:init(kind: MemberKind:FIELD);
-		local Array of String is parts: className:split(delimiter: ':');
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroupGen(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroupGen(className: self:memberLookupRootGen(className: className), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
@@ -497,10 +521,9 @@ Class is CodeGenerator{
 	## @param idx: The stamped overload index.
 	## @return: The declaring class name, or ''.
 	Function of String is overloadOwnerNameGen(String is className, String is methodName, Int is idx){
-		local Array of String is parts: className:split(delimiter: ':');
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroupGen(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroupGen(className: self:memberLookupRootGen(className: className), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 || ownerAcc:length() == 0 }, then: {
 			return '';
 		});
@@ -519,8 +542,13 @@ Class is CodeGenerator{
 		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64 }, then: {
 			return;
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		# IV.2c: the qualified nested-class name walks the inner class
+		# itself; container forms don't resolve qualified and fall back to
+		# the bare root.
+		local ClassInfo is cls: self:findClass(name: className);
+		Conditional:if(check: { cls:name == '' }, then: {
+			cls: self:findClass(name: className:split(delimiter: ':'):get(index: 0));
+		});
 		Conditional:if(check: { cls:name == '' }, then: {
 			return;
 		});
@@ -722,6 +750,19 @@ Class is CodeGenerator{
 		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
+		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
+		# 'Outer:Inner' resolves the class whose qualified identity matches.
+		Conditional:if(check: { name:contains(needle: ':') }, then: {
+			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);
+			self:programClasses:each(action: local Function(ClassInfo is c){
+				Conditional:if(check: { qMatch:name == '' && c:qualifiedName() == name }, then: {
+					qMatch: c;
+				});
+			});
+			Conditional:if(check: { qMatch:name != '' }, then: {
+				return qMatch;
+			});
+		});
 		return ClassInfo:init(name: '', baseClass: '', members: []);
 	}
 
@@ -734,9 +775,14 @@ Class is CodeGenerator{
 		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return '';
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseClassName: parts:get(index: 0);
-		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local String is baseClassName: self:memberLookupRootGen(className: className);
+		local Array of String is typeArgs: [];
+		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# colon forms ground their segments as type arguments.
+		Conditional:if(check: { baseClassName != className }, then: {
+			local Array of String is parts: className:split(delimiter: ':');
+			typeArgs: parts:slice(start: 1, end: parts:length());
+		});
 		# Of-form generic receivers ('Box of Int'): split the base and the
 		# type argument so substitution can ground T.
 		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
@@ -772,9 +818,14 @@ Class is CodeGenerator{
 		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return '';
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseClassName: parts:get(index: 0);
-		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local String is baseClassName: self:memberLookupRootGen(className: className);
+		local Array of String is typeArgs: [];
+		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# colon forms ground their segments as type arguments.
+		Conditional:if(check: { baseClassName != className }, then: {
+			local Array of String is parts: className:split(delimiter: ':');
+			typeArgs: parts:slice(start: 1, end: parts:length());
+		});
 		# Of-form generic receivers ('Box of Int'): split the base and the
 		# type argument so substitution can ground T.
 		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
@@ -1736,6 +1787,28 @@ Class is CodeGenerator{
 		Conditional:if(check: { segs:length() == 1 }, then: {
 			return segs:get(index: 0);
 		});
+		# FUNCTIONS.md Part IV IV.2c: the nested-class chain — 'Outer:Inner'
+		# resolves to the inner class's qualified C symbol base.
+		Conditional:if(check: { segs:length() == 2 }, then: {
+			local String is root: segs:get(index: 0);
+			local ClassInfo is outerCls: self:findClass(name: root);
+			Conditional:if(check: { outerCls:name == root }, then: {
+				local String is innerRes: '';
+				outerCls:members:each(action: local Function(Member is m){
+					Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: 1) }, then: {
+						local String is innerSym: self:utils:cIdent(name: outerCls:qualifiedName() . ':' . segs:get(index: 1));
+						Conditional:if(check: { self:allTaggedEnums:has(key: root) }, then: {
+							innerRes: innerSym . '_' . self:utils:cIdent(name: segs:get(index: 1)) . '_ctor()';
+						}, else: {
+							innerRes: innerSym;
+						});
+					});
+				});
+				Conditional:if(check: { innerRes != '' }, then: {
+					return innerRes;
+				});
+			});
+		});
 		Conditional:if(check: { segs:length() >= 2 }, then: {
 			local String is root: segs:get(index: 0);
 			Conditional:if(check: { self:allEnumNames:has(key: root) }, then: {
@@ -2077,6 +2150,16 @@ Class is CodeGenerator{
 			});
 			local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
 			Conditional:if(check: { expr:methodName == 'init' }, then: {
+				# FUNCTIONS.md Part IV IV.2: a qualified inner-class target
+				# constructs with its OWN _new/default-_init pair — the
+				# enclosing class's entry-point init is not the inner's
+				# construction protocol. The gate: the targetC is a registered
+				# class identity (the qualified or the symbol form).
+				Conditional:if(check: { self:allClassNames:has(key: targetC) && targetC:contains(needle: '_') && self:findClass(name: targetC):name == '' }, then: {
+					local String is innerNewSym: targetC;
+					local String is innerInitSym: targetC . '_init';
+					return '({ ' . targetC . '* _inst = ' . innerNewSym . '_new(); ' . innerInitSym . '(_inst' . argsJoined . '); _inst; })';
+				});
 				local String is initCls: self:overloadOwnerNameGen(className: targetC, methodName: 'init', idx: expr:overloadIndex);
 				local String is symOwnerCls: initCls;
 				Conditional:if(check: { symOwnerCls == '' }, then: {
@@ -2166,7 +2249,11 @@ Class is CodeGenerator{
 			Conditional:if(check: { objType:startsWith(prefix: 'Map:') }, then: {
 				objType: 'Map';
 			}, else: {
-				Conditional:if(check: { objType:contains(needle: ':') }, then: {
+				# FUNCTIONS.md Part IV IV.2c: a qualified objType whose root is
+				# a registered class is a nested-class reference — the FULL
+				# qualified name stays (overloadSymbol qualifies the symbol);
+				# only container-prefixed types truncate.
+				Conditional:if(check: { objType:contains(needle: ':') && self:findClass(name: objType):name == '' }, then: {
 					local Array of String is parts: objType:split(delimiter: ':');
 					objType: parts:get(index: 0);
 				});

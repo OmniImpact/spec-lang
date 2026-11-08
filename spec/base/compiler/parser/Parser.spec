@@ -558,6 +558,24 @@ Class is Parser{
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
+		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
+		# `Outer:Inner` chains consume the glued colon segments into the
+		# type name, so declaration positions can spell the full path.
+		While:condition(
+			evaluate: local Function of Boolean(){
+				Conditional:if(check: { self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false }, then: {
+					return self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER;
+				});
+				return false;
+			},
+			iteration: local Function(){
+				self:advance();
+				local Token is segTok: self:advance();
+				typeName: typeName . ':' . segTok:getValue();
+				return true;
+			}
+		);
+
 		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			local Array of Type is params: [];

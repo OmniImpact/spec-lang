@@ -254,6 +254,19 @@ Class is TypeChecker{
 		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
+		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
+		# 'Outer:Inner' resolves the class whose qualified identity matches.
+		Conditional:if(check: { name:contains(needle: ':') }, then: {
+			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);
+			self:programClasses:each(action: local Function(ClassInfo is c){
+				Conditional:if(check: { qMatch:name == '' && c:qualifiedName() == name }, then: {
+					qMatch: c;
+				});
+			});
+			Conditional:if(check: { qMatch:name != '' }, then: {
+				return qMatch;
+			});
+		});
 		return ClassInfo:init(name: '', baseClass: '', members: []);
 	}
 
@@ -375,6 +388,26 @@ Class is TypeChecker{
 		return false;
 	}
 
+	## FUNCTIONS.md Part IV IV.2c: the member-lookup root for a (possibly
+	## qualified) receiver type. The qualified nested-class reference
+	## ('Outer:Inner') resolves to the inner class itself; container and
+	## grounded forms ('Array:String', 'Box of Int') resolve no qualified
+	## class and keep the bare-root walk. The of-form arrives with its
+	## arguments still attached — the callers' of-branch grounds them.
+	##
+	## @param className: The receiver type string.
+	## @return: The class name to start the member walk from.
+	Function of String is memberLookupRoot(String is className){
+		local String is root: className:split(delimiter: ':'):get(index: 0);
+		Conditional:if(check: { className:contains(needle: ':') }, then: {
+			local ClassInfo is qCls: self:findClass(name: className);
+			Conditional:if(check: { qCls:name != '' && qCls:qualifiedName() == className }, then: {
+				root: className;
+			});
+		});
+		return root;
+	}
+
 	## Looks up a member of any kind by name on a class or its bases.
 	##
 	## @param className: Class whose members are searched.
@@ -384,8 +417,7 @@ Class is TypeChecker{
 		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseClassName: parts:get(index: 0);
+		local String is baseClassName: self:memberLookupRoot(className: className);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		Conditional:if(check: { cls:name == '' }, then: {
 			return Member:init(kind: MemberKind:FIELD);
@@ -428,9 +460,14 @@ Class is TypeChecker{
 		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return '';
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseClassName: parts:get(index: 0);
-		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local String is baseClassName: self:memberLookupRoot(className: className);
+		local Array of String is typeArgs: [];
+		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# colon forms ground their segments as type arguments.
+		Conditional:if(check: { baseClassName != className }, then: {
+			local Array of String is parts: className:split(delimiter: ':');
+			typeArgs: parts:slice(start: 1, end: parts:length());
+		});
 		# Of-form generic receivers ('Box of Int'): split the base and the
 		# type argument so substitution can ground T.
 		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
@@ -467,9 +504,15 @@ Class is TypeChecker{
 		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return '';
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseClassName: parts:get(index: 0);
-		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local String is baseClassName: self:memberLookupRoot(className: className);
+		local Array of String is typeArgs: [];
+		# The resolved qualified root absorbs the colon chain — the segments
+		# after it are the nested path, not type arguments ('LibA:Helper').
+		# Bare colon forms ground as before ('Array:String').
+		Conditional:if(check: { baseClassName != className }, then: {
+			local Array of String is parts: className:split(delimiter: ':');
+			typeArgs: parts:slice(start: 1, end: parts:length());
+		});
 		# Of-form generic receivers ('Box of Int'): split the base and the
 		# type argument so substitution can ground T.
 		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
@@ -520,7 +563,7 @@ Class is TypeChecker{
 		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While' }, then: {
 			return;
 		});
-		local Member is m: self:lookupOverloadedMember(className: baseClassName, methodName: callExpr:methodName, idx: callExpr:overloadIndex);
+		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:overloadIndex);
 		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
 			return;
 		});
@@ -598,8 +641,7 @@ Class is TypeChecker{
 	## @return: The selected member, or an empty node when unresolved.
 	Function of Member is selectOverload(String is className, String is methodName, Expression is expr){
 		local Member is none: Member:init(kind: MemberKind:METHOD);
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseName: parts:get(index: 0);
+		local String is baseName: self:memberLookupRoot(className: className);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
 		self:collectOverloadGroup(className: baseName, methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
@@ -809,8 +851,13 @@ Class is TypeChecker{
 		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64 }, then: {
 			return;
 		});
-		local Array of String is parts: className:split(delimiter: ':');
-		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		# IV.2c: the qualified nested-class name walks the inner class
+		# itself; container forms don't resolve qualified and fall back to
+		# the bare root.
+		local ClassInfo is cls: self:findClass(name: className);
+		Conditional:if(check: { cls:name == '' }, then: {
+			cls: self:findClass(name: className:split(delimiter: ':'):get(index: 0));
+		});
 		Conditional:if(check: { cls:name == '' }, then: {
 			return;
 		});
@@ -909,8 +956,7 @@ Class is TypeChecker{
 	## @param selected: The stamped, selected member.
 	## @return: The resolved return type.
 	Function of String is selectedReturnType(String is className, Member is selected){
-		local Array of String is parts: className:split(delimiter: ':');
-		local String is baseName: parts:get(index: 0);
+		local String is baseName: self:memberLookupRoot(className: className);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
 		self:collectOverloadGroup(className: baseName, methodName: selected:name, hops: 0, acc: group, ownerAcc: ownerAcc);
@@ -922,7 +968,13 @@ Class is TypeChecker{
 		Conditional:if(check: { ownerCls:name == '' }, then: {
 			return '';
 		});
-		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local Array of String is typeArgs: [];
+		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# colon forms ground their segments as type arguments.
+		Conditional:if(check: { baseName != className }, then: {
+			local Array of String is parts: className:split(delimiter: ':');
+			typeArgs: parts:slice(start: 1, end: parts:length());
+		});
 		local String is rawT: self:formatTypeString(t: selected:memberType);
 		return self:substituteTypeParam(rawType: rawT, cls: ownerCls, typeArgs: typeArgs);
 	}
@@ -936,10 +988,9 @@ Class is TypeChecker{
 	## @return: The member, or an empty node when absent.
 	Function of Member is lookupOverloadedMember(String is className, String is methodName, Int is idx){
 		local Member is none: Member:init(kind: MemberKind:METHOD);
-		local Array of String is parts: className:split(delimiter: ':');
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroup(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroup(className: self:memberLookupRoot(className: className), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
@@ -1346,7 +1397,11 @@ Class is TypeChecker{
 										});
 									});
 								});
-								Conditional:if(check: { terminal == targetName }, then: {
+								# FUNCTIONS.md Part IV IV.2c: the qualified nested reference
+								# ('Outer:Inner') rides the parent's grant — the terminal
+								# matches the target's root segment.
+								local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
+								Conditional:if(check: { terminal == targetName || terminal == targetRoot }, then: {
 									granted: true;
 								});
 								Conditional:if(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
@@ -1408,7 +1463,10 @@ Class is TypeChecker{
 								});
 							});
 						});
-						Conditional:if(check: { terminal == targetName }, then: {
+						# FUNCTIONS.md Part IV IV.2c: the same root-segment grant for
+						# the qualified nested reference.
+						local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
+						Conditional:if(check: { terminal == targetName || terminal == targetRoot2 }, then: {
 							granted: true;
 						});
 						Conditional:if(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
@@ -1723,11 +1781,25 @@ Class is TypeChecker{
 								}, else: {
 									Conditional:if(check: { self:registeredClasses:has(key: root) }, then: {
 										rootType: root;
+										# FUNCTIONS.md Part IV IV.2c: a nested-class reference
+										# through the enclosing class's name — 'Outer:Inner' —
+										# resolves the inner class's qualified identity. The
+										# second segment names a CLASS-kind member.
+										Conditional:if(check: { segs:length() == 2 }, then: {
+											local ClassInfo is outerCls: self:findClass(name: root);
+											Conditional:if(check: { outerCls:name != '' }, then: {
+												outerCls:members:each(action: local Function(Member is m){
+													Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: 1) }, then: {
+														rootType: outerCls:qualifiedName() . ':' . segs:get(index: 1);
+													});
+												});
+											});
+										});
 										# INSTANCE.md §2.3: fields and values are not reachable
 										# through a class-name prefix — methods only. A PATH
 										# rooted at a non-type-level class name with further
 										# segments is a prefixed field access: rejected.
-										Conditional:if(check: { segs:length() >= 2 && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
+										Conditional:if(check: { segs:length() >= 2 && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' && rootType != root . ':' . segs:get(index: 1) }, then: {
 											self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; call a method on the instance (INSTANCE.md §2.3).');
 											rootType: '';
 										});
@@ -3766,6 +3838,12 @@ Class is TypeChecker{
 		});
 		flattened:each(action: local Function(ClassInfo is c){
 			self:registeredClasses:set(key: c:name, value: c:name);
+			# FUNCTIONS.md Part IV IV.2c: the nested classes register under
+			# their qualified identity too — 'Outer:Inner' resolves in the
+			# constructor and static-call paths.
+			Conditional:if(check: { c:outerName != '' }, then: {
+				self:registeredClasses:set(key: c:qualifiedName(), value: c:qualifiedName());
+			});
 			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
