@@ -1,7 +1,7 @@
 #! N23 (FUNCTIONS.md Part IV V3): a void expression consumed as a value
-#! explains itself — the shape-specific hint replaces the generic
-#! cannot-assign-void cascade. Not if-specific: any void call gets the
-#! general note.
+#! explains itself, derived from the CALLEE'S DECLARATION — the function's
+#! name, its void return, and the sibling overloads' parameter lists. No
+#! per-class special cases: every callable gets the same note.
 
 Class is N23VoidInValueContext{
 	replace Array of Array of String is using: [

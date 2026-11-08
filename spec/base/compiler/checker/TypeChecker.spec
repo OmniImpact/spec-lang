@@ -2862,9 +2862,11 @@ Class is TypeChecker{
 	}
 
 	## FUNCTIONS.md Part IV V3: the void-in-value-context hint. Describes
-	## WHY an expression computes no value, for the consumption-site
-	## diagnostics. Reads the AST and already-resolved types only — never
-	## re-infers. '' when nothing specific applies.
+	## WHY an expression computes no value, derived from the CALLEE'S
+	## DECLARATION — the function's name, its void return, and how many of
+	## its declared parameters the call binds. No per-class special cases:
+	## the same note serves every callable in the language. Reads the AST
+	## and already-resolved types only — never re-infers.
 	##
 	## @param expr: The void expression being consumed.
 	## @return: The hint text, or ''.
@@ -2872,28 +2874,60 @@ Class is TypeChecker{
 		Conditional:if(check: { expr:kind != ExpressionKind:CALL }, then: {
 			return '';
 		});
-		local Int is argc: expr:argCount();
 		local String is targetT: expr:methodTarget:resolvedType;
 		Conditional:if(check: { targetT == self:names:selfIdent() || targetT == '' }, then: {
 			targetT: self:currentClassName;
 		});
-		# The branch shapes: the arity tells the story (any spelling —
-		# qualified, bare, self — the method name plus the target class).
-		Conditional:if(check: { expr:methodName == 'if' && targetT == 'Conditional' && argc == 2 }, then: {
-			return 'a 2-arg if has no else branch, so the result is undefined when the check fails; add else: { ... }';
-		});
-		Conditional:if(check: { expr:methodName == 'if' && targetT == 'Conditional' && argc == 4 }, then: {
-			return 'the 4-arg if is statement-only: finally runs for its side effect and cannot yield a value';
-		});
-		# Any other call: name the callee and its declared return.
 		local ClassInfo is tc: self:findClass(name: targetT:split(delimiter: ':'):get(index: 0));
-		Conditional:if(check: { tc:name != '' }, then: {
-			local String is calleeRet: self:lookupMethodReturnType(className: targetT, methodName: expr:methodName);
-			Conditional:if(check: { self:isVoid(t: calleeRet) }, then: {
-				return 'the call declares no return value';
+		Conditional:if(check: { tc:name == '' }, then: {
+			return '';
+		});
+		local Member is m: self:lookupOverloadedMember(className: targetT, methodName: expr:methodName, idx: expr:overloadIndex);
+		Conditional:if(check: { m:name == '' }, then: {
+			return '';
+		});
+		local String is mRet: self:resolveReturnType(t: m:memberType);
+		Conditional:if(check: { !self:isVoid(t: mRet) }, then: {
+			return '';
+		});
+		local String is note: '\'' . targetT . '.' . expr:methodName . '\' declares no return value';
+		# FUNCTIONS.md Part IV V3: a partially-bound void call — the
+		# unbound parameters' effects are absent. The arity gap is the
+		# general signal (a 2-arg conditional's missing else is one case
+		# of it, not a special one).
+		Conditional:if(check: { expr:argCount() < m:params:length() }, then: {
+			note: note . ' (' . (expr:argCount() as String) . ' of ' . (m:params:length() as String) . ' declared parameters bound)';
+		});
+		# FUNCTIONS.md Part IV V3: a sibling overload binding MORE parameters
+		# is the general signal that this call's effects are incomplete — a
+		# 2-arg conditional's missing else is one case of it, not a special
+		# one. Name the sibling's parameters so the user sees what to add.
+		local Array of Member is group: [];
+		local Array of String is groupOwners: [];
+		self:collectOverloadGroup(className: targetT, methodName: expr:methodName, hops: 0, acc: group, ownerAcc: groupOwners);
+		local Int is maxParams: m:params:length();
+		group:each(action: local Function(Member is g){
+			Conditional:if(check: { g:params:length() > maxParams }, then: {
+				maxParams: g:params:length();
 			});
 		});
-		return '';
+		Conditional:if(check: { maxParams > m:params:length() }, then: {
+			local String is names: '';
+			group:each(action: local Function(Member is g){
+				Conditional:if(check: { g:params:length() == maxParams }, then: {
+					g:params:each(action: local Function(Parameter is p){
+						Conditional:if(check: { names:endsWith(suffix: p:name) == false }, then: {
+							Conditional:if(check: { names != '' }, then: {
+								names: names . ', ';
+							});
+							names: names . p:name;
+						});
+					});
+				});
+			});
+			note: note . ' (' . (maxParams as String) . ' parameters are available: ' . names . ')';
+		});
+		return note;
 	}
 
 	## Validates a merge-forward statement against its parent method:
