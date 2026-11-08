@@ -61753,19 +61753,19 @@ bool ClassSearchLoop_iteration(ClassSearchLoop* self, SpecLoopControl* c) {
     SPEC_AUTO ClassInfo* cand = (ClassInfo*)spec_retain((void*)(spec_array_get(self->list, self->idx)));
     self->idx = ((self->idx) + (1));
     if (spec_string_equals(cand->name, self->target)) {
-        spec_assign((void**)&self->res, (void*)(cand));
-        self->found = true;
-        return false;
-    }
+	    spec_assign((void**)&self->res, (void*)(cand));
+	    self->found = true;
+	    return false;
+	};
     if (String_contains(self->target, spec_string_intern(":"))) {
-        SPEC_AUTO String candQ = spec_string_concat(spec_string_concat(ClassInfo_namespaceJoined(cand) /* inst:ClassInfo:namespaceJoined */, spec_string_intern(":")), cand->name);
-        if (spec_string_equals(candQ, self->target)) {
-        spec_assign((void**)&self->res, (void*)(cand));
-        self->found = true;
-        return false;
-    }
+	    SPEC_AUTO String candQ = spec_string_concat(spec_string_concat(ClassInfo_namespaceJoined(cand) /* inst:ClassInfo:namespaceJoined */, spec_string_intern(":")), cand->name);
+	    if (spec_string_equals(candQ, self->target)) {
+	    spec_assign((void**)&self->res, (void*)(cand));
+	    self->found = true;
+	    return false;
+	};
     if (candQ) { spec_release((void*)candQ); candQ = NULL; }
-    }
+	};
     return true;
     if (cand) { spec_release((void*)cand); cand = NULL; }
 }
@@ -61796,10 +61796,10 @@ bool FieldSearchLoop_iteration(FieldSearchLoop* self, SpecLoopControl* c) {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(self->members, self->idx)));
     self->idx = ((self->idx) + (1));
     if (((((m->kind) == (MemberKind_FIELD))) && (spec_string_equals(m->name, self->fieldName)))) {
-        spec_assign((void**)&self->res, (void*)(m));
-        self->found = true;
-        return false;
-    }
+	    spec_assign((void**)&self->res, (void*)(m));
+	    self->found = true;
+	    return false;
+	};
     return true;
     if (m) { spec_release((void*)m); m = NULL; }
 }
@@ -61830,10 +61830,10 @@ bool MethodSearchLoop_iteration(MethodSearchLoop* self, SpecLoopControl* c) {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(self->members, self->idx)));
     self->idx = ((self->idx) + (1));
     if (((((m->kind) == (MemberKind_METHOD))) && (spec_string_equals(m->name, self->methodName)))) {
-        spec_assign((void**)&self->res, (void*)(m));
-        self->found = true;
-        return false;
-    }
+	    spec_assign((void**)&self->res, (void*)(m));
+	    self->found = true;
+	    return false;
+	};
     return true;
     if (m) { spec_release((void*)m); m = NULL; }
 }
@@ -61865,8 +61865,8 @@ bool PathResolveLoop_iteration(PathResolveLoop* self, SpecLoopControl* c) {
     SPEC_AUTO String seg = spec_construct_string(spec_array_get(self->segs, self->idx));
     self->idx = ((self->idx) + (1));
     if (spec_map_has(self->tc->allEnumNames, self->currType)) {
-        return true;
-    }
+	    return true;
+	};
     spec_assign((void**)&self->currType, (void*)(({ TypeChecker* _recv = (TypeChecker*)(self->tc); (((String (*)(TypeChecker*, String, String))_recv->_vtable[146]))((TypeChecker*)_recv, self->currType, seg); })));
     return true;
     if (seg) { spec_release((void*)seg); seg = NULL; }
@@ -61898,15 +61898,15 @@ bool MemberImplementLoop_iteration(MemberImplementLoop* self, SpecLoopControl* c
     SPEC_AUTO Member* subM = (Member*)spec_retain((void*)(spec_array_get(self->members, self->idx)));
     self->idx = ((self->idx) + (1));
     if (spec_string_equals(subM->name, self->target->name)) {
-        if (((((subM->kind) == (MemberKind_METHOD))) && (((spec_array_length(subM->body)) > (0))))) {
-        self->implemented = true;
-        return false;
-    }
-        if (((((subM->kind) == (MemberKind_FIELD))) && (subM->hasInit))) {
-        self->implemented = true;
-        return false;
-    }
-    }
+	    if (((((subM->kind) == (MemberKind_METHOD))) && (((spec_array_length(subM->body)) > (0))))) {
+	    self->implemented = true;
+	    return false;
+	};
+	    if (((((subM->kind) == (MemberKind_FIELD))) && (subM->hasInit))) {
+	    self->implemented = true;
+	    return false;
+	};
+	};
     return true;
     if (subM) { spec_release((void*)subM); subM = NULL; }
 }

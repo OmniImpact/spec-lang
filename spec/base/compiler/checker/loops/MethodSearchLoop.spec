@@ -31,11 +31,11 @@ Class of Loop is MethodSearchLoop{
 	replace Function of Boolean is iteration(LoopControl is c){
 		local Member is m: self:members:get(index: self:idx);
 		self:idx: self:idx + 1;
-		if (m:kind == MemberKind:METHOD && m:name == self:methodName) {
+		Conditional:branch(check: { m:kind == MemberKind:METHOD && m:name == self:methodName }, then: {
 			self:res: m;
 			self:found: true;
 			return false;
-		}
+		});
 		return true;
 	}
 }

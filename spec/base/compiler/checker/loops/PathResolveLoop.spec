@@ -30,9 +30,9 @@ Class of Loop is PathResolveLoop{
 	replace Function of Boolean is iteration(LoopControl is c){
 		local String is seg: self:segs:get(index: self:idx);
 		self:idx: self:idx + 1;
-		if (self:tc:allEnumNames:has(key: self:currType)) {
+		Conditional:branch(check: { self:tc:allEnumNames:has(key: self:currType) }, then: {
 			return true;
-		}
+		});
 		self:currType: self:tc:lookupFieldType(className: self:currType, fieldName: seg);
 		return true;
 	}
