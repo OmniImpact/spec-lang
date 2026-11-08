@@ -45,10 +45,10 @@ Class is ScopeAsDemo{
 		Output:line("[File] Creating managed resource: " . path);
 		File:write(path: path, content: content);
 		block(path);
-		if (File:exists(path)) {
+		Conditional:branch(check: { File:exists(path) }, then: {
 			File:remove(path);
 			Output:line("[File] Cleaned up managed resource: " . path);
-		}
+		});
 	}
 
 	## Entry point demonstrating linear `as` scopes.
@@ -88,11 +88,11 @@ Class is ScopeAsDemo{
 			iterate: {
 				local String is line: lines:get(index: row);
 				local Array of String is fields: line:split(delimiter: ",");
-				if (fields:length() >= 4) {
+				Conditional:branch(check: { fields:length() >= 4 }, then: {
 					names:add(item: fields:get(index: 1));
 					roles:add(item: fields:get(index: 2));
 					Output:line("  -> User #" . fields:get(index: 0) . ": " . fields:get(index: 1) . " (" . fields:get(index: 2) . ")");
-				}
+				});
 				row++;
 			}
 		);

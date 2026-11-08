@@ -52,6 +52,7 @@ Class is NarrowFloatField{
 Class is ArrayElementMismatch{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	## Violation 2: String elements silently accepted by an Array of Int field.
@@ -61,6 +62,7 @@ Class is ArrayElementMismatch{
 Class is MapValueMismatch{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	## Violation 3: String values silently accepted by a Map of String to Int field.
@@ -70,6 +72,7 @@ Class is MapValueMismatch{
 Class is UndefinedIdentifier{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	## Violation 4: typoed identifier silently inferred as Any.
@@ -81,18 +84,20 @@ Class is UndefinedIdentifier{
 Class is NonBooleanConditionControl{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	## Control (already caught today): condition must be a Boolean.
 	replace Function is init(Map of String to String is args){
-		if (1) {
+		Conditional:branch(check: { 1 }, then: {
 			local Int is unused: 0;
-		}
+		});
 	}
 }
 
 Class is UnassignedFieldRead{
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()]
 	];
@@ -110,6 +115,7 @@ Class is UnassignedFieldRead{
 Class is CallArgumentMismatch{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	## Violation 7: call-site argument types were not checked, so a String
@@ -127,6 +133,7 @@ Class is CallArgumentMismatch{
 Class is IncompleteWhenBranches{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	## Violation 8: 'when' over enum TransportMode covers only CAR and omits

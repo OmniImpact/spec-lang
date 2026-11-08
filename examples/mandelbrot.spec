@@ -37,12 +37,12 @@ Class is Mandelbrot{
 
 		# Cardioid and period-2 bulb quick rejection test
 		local Float is q: ((cr - 0.25) * (cr - 0.25)) + (ci * ci);
-		if ((q * (q + (cr - 0.25))) <= (0.25 * ci * ci)) {
+		Conditional:branch(check: { (q * (q + (cr - 0.25))) <= (0.25 * ci * ci) }, then: {
 			return -1.0;
-		}
-		if (((cr + 1.0) * (cr + 1.0)) + (ci * ci) <= 0.0625) {
+		});
+		Conditional:branch(check: { ((cr + 1.0) * (cr + 1.0)) + (ci * ci) <= 0.0625 }, then: {
 			return -1.0;
-		}
+		});
 
 		local Float is zr: 0.0;
 		local Float is zi: 0.0;
@@ -63,16 +63,16 @@ Class is Mandelbrot{
 			}
 		);
 
-		if (iter >= maxIter) {
+		Conditional:branch(check: { iter >= maxIter }, then: {
 			return -1.0;
-		}
+		});
 
 		local Float is mag: Math:sqrt(value: zr2 + zi2);
 		local Float is logMag: Math:log(value: mag);
 		local Float is nu: 0.0;
-		if (logMag > 0.0) {
+		Conditional:branch(check: { logMag > 0.0 }, then: {
 			nu: Math:log2(value: logMag);
-		}
+		});
 		return (Math:toFloat(value: iter) + 1.0) - nu;
 	}
 
@@ -84,9 +84,9 @@ Class is Mandelbrot{
 	## @param mu: Smooth iteration count (`< 0.0` if inside the set).
 	## @return: 256-color palette code (16..231).
 	local Function of Int is palette256(Float is mu){
-		if (mu < 0.0) {
+		Conditional:branch(check: { mu < 0.0 }, then: {
 			return 16;
-		}
+		});
 		local Float is t: mu * 0.18;
 		local Float is rf: (0.5 + (0.5 * Math:cos(value: t + 0.0))) * 5.0;
 		local Float is gf: (0.5 + (0.5 * Math:cos(value: t + 2.094))) * 5.0;
@@ -103,9 +103,9 @@ Class is Mandelbrot{
 	## @param mu: Smooth iteration count (`< 0.0` if inside the set).
 	## @return: Single Unicode shade block character (` `, `░`, `▒`, `▓`, `█`).
 	local Function of String is shadeGlyph(Float is mu){
-		if (mu < 0.0) {
+		Conditional:branch(check: { mu < 0.0 }, then: {
 			return ' ';
-		}
+		});
 		local Int is band: Math:toInt(value: mu * 2.0) % 4;
 		return when (band) {
 			is 0: '░';
@@ -117,8 +117,12 @@ Class is Mandelbrot{
 
 	## Clamps a float `v` into `[lo, hi]`.
 	local Function of Float is clampFloat(Float is v, Float is lo, Float is hi){
-		if (v < lo) { return lo; }
-		if (v > hi) { return hi; }
+		Conditional:branch(check: { v < lo }, then: {
+ return lo;
+		});
+		Conditional:branch(check: { v > hi }, then: {
+ return hi;
+		});
 		return v;
 	}
 
@@ -169,9 +173,9 @@ Class is Mandelbrot{
 	local Function of String is centerTitle(String is title, Int is width){
 		local String is line: '║';
 		local Int is pad: width - 2 - title:length();
-		if (pad < 1) {
+		Conditional:branch(check: { pad < 1 }, then: {
 			pad: 1;
-		}
+		});
 		local Int is left: pad / 2;
 		local Int is right: pad - left;
 		local Int is i: 0;
@@ -198,29 +202,29 @@ Class is Mandelbrot{
 		local String is mode: args:getString(key: 'mode', default: 'both');
 		local Int is startedAtMs: Process:clockMs();
 
-		if (width <= 0) {
+		Conditional:branch(check: { width <= 0 }, then: {
 			width: Ansi:terminalWidth();
-			if (width <= 0) {
+			Conditional:branch(check: { width <= 0 }, then: {
 				width: 78;
-			}
+			});
 			width: width - 1;
-		}
-		if (height <= 0) {
+		});
+		Conditional:branch(check: { height <= 0 }, then: {
 			height: Ansi:terminalHeight();
-			if (height <= 0) {
+			Conditional:branch(check: { height <= 0 }, then: {
 				height: 28;
-			}
+			});
 			height: height - 8;
-			if (height < 12) {
+			Conditional:branch(check: { height < 12 }, then: {
 				height: 12;
-			}
-		}
+			});
+		});
 
 		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔' . self:repeatBar(count: width) . '╗'));
 		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
 		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:repeatBar(count: width) . '╝'));
 
-		if (mode == 'both' || mode == 'shaded') {
+		Conditional:branch(check: { mode == 'both' || mode == 'shaded' }, then: {
 			Output:line(Ansi:color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
 			self:renderShaded(
 				width: width,
@@ -231,9 +235,9 @@ Class is Mandelbrot{
 				minIm: -1.25,
 				maxIm: 1.25
 			);
-		}
+		});
 
-		if (mode == 'both' || mode == 'halfblock') {
+		Conditional:branch(check: { mode == 'both' || mode == 'halfblock' }, then: {
 			Output:line('');
 			Output:line(Ansi:color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
 			self:renderHalfBlock(
@@ -245,7 +249,7 @@ Class is Mandelbrot{
 				minIm: 0.05,
 				maxIm: 0.17
 			);
-		}
+		});
 
 		self:printStats(width: width, height: height, maxIter: maxIter, elapsedMs: Process:clockMs() - startedAtMs);
 	}
