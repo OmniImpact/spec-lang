@@ -34564,18 +34564,18 @@ static __attribute__((unused)) void _anon_fn_61(void* _env_ptr, Parameter* p) {
     (void)self;
     SpecArray* body = _env->body;
     (void)body;
-    if (spec_string_equals(p->paramType->name, ((String)spec_claim_pool((void*)(WellKnown_selfFieldMarker(self->names) /* inst:WellKnown:selfFieldMarker */))))) {
-        SPEC_AUTO Expression* lhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_PATH); _inst; })));
-        Expression_makePath(lhs, ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */)); spec_array_add(_arr, (void*)(p->name)); _arr; }))))) /* inst:Expression:makePath */;
-        SPEC_AUTO Expression* rhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
-        Expression_makeIdent(rhs, p->name) /* inst:Expression:makeIdent */;
-        SPEC_AUTO Statement* assignS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
-        Statement_assign(assignS, lhs, rhs) /* inst:Statement:assign */;
-        spec_array_add_object(body, (void*)(assignS));
+    if (spec_string_equals(p->paramType->name, WellKnown_selfFieldMarker(self->names) /* inst:WellKnown:selfFieldMarker */)) {
+	    SPEC_AUTO Expression* lhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_PATH); _inst; })));
+	    Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */)); spec_array_add(_arr, (void*)(p->name)); _arr; })) /* inst:Expression:makePath */;
+	    SPEC_AUTO Expression* rhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
+	    Expression_makeIdent(rhs, p->name) /* inst:Expression:makeIdent */;
+	    SPEC_AUTO Statement* assignS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
+	    Statement_assign(assignS, lhs, rhs) /* inst:Statement:assign */;
+	    spec_array_add_object(body, (void*)(assignS));
     if (lhs) { spec_release((void*)lhs); lhs = NULL; }
     if (rhs) { spec_release((void*)rhs); rhs = NULL; }
     if (assignS) { spec_release((void*)assignS); assignS = NULL; }
-    }
+	};
 }
 
 typedef struct {
@@ -34603,8 +34603,8 @@ static __attribute__((unused)) void _anon_fn_64(void* _env_ptr, NamedArg* arg) {
     (void)e;
     ExpressionKind ak = arg->value->kind;
     if (((((((((ak) != (ExpressionKind_STRING))) && (((ak) != (ExpressionKind_NUMBER))))) && (((ak) != (ExpressionKind_FLOAT))))) && (((ak) != (ExpressionKind_BOOL))))) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_intern("Instance-import arguments must be direct literal values (INSTANCE.md E1)."));
-    }
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_intern("Instance-import arguments must be direct literal values (INSTANCE.md E1)."));
+	};
 }
 
 typedef struct {
@@ -55524,8 +55524,8 @@ _br_60; }));
 Token* Parser_peek(Parser* self) {
     (void)self;
     if (((self->pos) < (self->length))) {
-        return (Token*)spec_retain((void*)(spec_array_get(self->tokens, self->pos)));
-    }
+	    return (Token*)spec_retain((void*)(spec_array_get(self->tokens, self->pos)));
+	};
     return (Token*)(({ Token* _inst = Token_new(); Token_init(_inst, TokenKind__EOF, spec_string_intern(""), 0, 0); _inst; }));
 }
 
@@ -55534,8 +55534,8 @@ Token* Parser_peekAhead(Parser* self, long long offset) {
     (void)offset;
     long long idx = ((self->pos) + (offset));
     if (((idx) < (self->length))) {
-        return (Token*)spec_retain((void*)(spec_array_get(self->tokens, idx)));
-    }
+	    return (Token*)spec_retain((void*)(spec_array_get(self->tokens, idx)));
+	};
     return (Token*)(({ Token* _inst = Token_new(); Token_init(_inst, TokenKind__EOF, spec_string_intern(""), 0, 0); _inst; }));
 }
 
@@ -55543,8 +55543,8 @@ Token* Parser_advance(Parser* self) {
     (void)self;
     SPEC_AUTO Token* tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     if (((self->pos) < (self->length))) {
-        self->pos = ((self->pos) + (1));
-    }
+	    self->pos = ((self->pos) + (1));
+	};
     return (Token*)({ Token* _ret_val = tok; tok = NULL; _ret_val; });
     if (tok) { spec_release((void*)tok); tok = NULL; }
 }
@@ -55555,8 +55555,8 @@ bool Parser_hasWhitespaceAfter(Parser* self, long long offset) {
     SPEC_AUTO Token* cur = (Token*)((Parser_peekAhead(self, offset) /* inst:Parser:peekAhead */));
     SPEC_AUTO Token* nxt = (Token*)((Parser_peekAhead(self, ((offset) + (1))) /* inst:Parser:peekAhead */));
     if (((Token_getTokenKind(nxt) /* inst:Token:getTokenKind */) == (TokenKind__EOF))) {
-        return true;
-    }
+	    return true;
+	};
     return ((((({ Token* _recv = (Token*)(nxt); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })) > (({ Token* _recv = (Token*)(cur); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })))) || (((({ Token* _recv = (Token*)(nxt); (((long long (*)(Token*))_recv->_vtable[69]))((Token*)_recv); })) > (((({ Token* _recv = (Token*)(cur); (((long long (*)(Token*))_recv->_vtable[69]))((Token*)_recv); })) + (spec_string_length(Token_getValue(cur) /* inst:Token:getValue */)))))));
     if (cur) { spec_release((void*)cur); cur = NULL; }
     if (nxt) { spec_release((void*)nxt); nxt = NULL; }
@@ -55568,11 +55568,11 @@ bool Parser_check(Parser* self, TokenKind kind, String value) {
     (void)value;
     SPEC_AUTO Token* tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     if (((Token_getTokenKind(tok) /* inst:Token:getTokenKind */) != (kind))) {
-        return false;
-    }
-    if ((((!spec_string_equals(value, spec_string_intern("")))) && ((!spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(tok) /* inst:Token:getValue */))), value))))) {
-        return false;
-    }
+	    return false;
+	};
+    if ((((!spec_string_equals(value, spec_string_intern("")))) && ((!spec_string_equals(Token_getValue(tok) /* inst:Token:getValue */, value))))) {
+	    return false;
+	};
     return true;
     if (tok) { spec_release((void*)tok); tok = NULL; }
 }
@@ -55581,9 +55581,9 @@ bool Parser_matchSymbol(Parser* self, String value) {
     (void)self;
     (void)value;
     if (Parser_check(self, TokenKind_SYMBOL, value) /* inst:Parser:check */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        return true;
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    return true;
+	};
     SPEC_AUTO Token* tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, tok, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Expected '"))), value), spec_string_intern("', found '")), ((String)spec_claim_pool((void*)(Token_getValue(tok) /* inst:Token:getValue */)))), spec_string_intern("'"))))));
     return false;
@@ -55599,10 +55599,10 @@ bool Parser_checkSymbol(Parser* self, String value) {
 bool Parser_matchPunct(Parser* self, Punctuation p) {
     (void)self;
     (void)p;
-    if (Parser_check(self, TokenKind_SYMBOL, ((String)spec_claim_pool((void*)(Punctuation_value(p))))) /* inst:Parser:check */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        return true;
-    }
+    if (Parser_check(self, TokenKind_SYMBOL, Punctuation_value(p)) /* inst:Parser:check */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    return true;
+	};
     SPEC_AUTO Token* tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, tok, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Expected '"))), ((String)spec_claim_pool((void*)(Punctuation_value(p))))), spec_string_intern("', found '")), ((String)spec_claim_pool((void*)(Token_getValue(tok) /* inst:Token:getValue */)))), spec_string_intern("'"))))));
     return false;
@@ -55624,10 +55624,10 @@ bool Parser_checkKeyword(Parser* self, Keyword kw) {
 bool Parser_matchKeyword(Parser* self, Keyword kw) {
     (void)self;
     (void)kw;
-    if (Parser_check(self, TokenKind_KEYWORD, ((String)spec_claim_pool((void*)(Keyword_value(kw))))) /* inst:Parser:check */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        return true;
-    }
+    if (Parser_check(self, TokenKind_KEYWORD, Keyword_value(kw)) /* inst:Parser:check */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    return true;
+	};
     SPEC_AUTO Token* tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, tok, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Expected '"))), ((String)spec_claim_pool((void*)(Keyword_value(kw))))), spec_string_intern("', found '")), ((String)spec_claim_pool((void*)(Token_getValue(tok) /* inst:Token:getValue */)))), spec_string_intern("'"))))));
     return false;
@@ -55664,31 +55664,31 @@ SpecArray* Parser_parseWhenArms(Parser* self) {
 
 ClassInfo* Parser_parseClass(Parser* self) {
     (void)self;
-    if (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(WellKnown_legacyClassSpelling(self->names) /* inst:WellKnown:legacyClassSpelling */))))) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, ((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */))), spec_string_intern("The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'."));
-    }
+    if (spec_string_equals(Token_getValue(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getValue */, WellKnown_legacyClassSpelling(self->names) /* inst:WellKnown:legacyClassSpelling */)) {
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, Parser_peek(self) /* inst:Parser:peek */, spec_string_intern("The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'."));
+	};
     ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
     SPEC_AUTO SpecArray* baseClasses = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        ({ void* _lp = (void*)(({ BaseClassesLoop* _inst = BaseClassesLoop_new(); BaseClassesLoop_init(_inst, self, baseClasses); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BaseClassesLoop_evaluate((void*)_lp)) { if (!BaseClassesLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    ({ void* _lp = (void*)(({ BaseClassesLoop* _inst = BaseClassesLoop_new(); BaseClassesLoop_init(_inst, self, baseClasses); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BaseClassesLoop_evaluate((void*)_lp)) { if (!BaseClassesLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	};
     Parser_matchKeyword(self, Keyword_IS) /* inst:Parser:matchKeyword */;
     SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
     SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
     SPEC_AUTO SpecArray* typeParams = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Token* tp1 = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
-        spec_array_add_object(typeParams, (void*)(Token_getValue(tp1) /* inst:Token:getValue */));
-        if (Parser_checkKeyword(self, Keyword_TO) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Token* tp2 = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
-        spec_array_add_object(typeParams, (void*)(Token_getValue(tp2) /* inst:Token:getValue */));
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Token* tp1 = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
+	    spec_array_add_object(typeParams, (void*)(Token_getValue(tp1) /* inst:Token:getValue */));
+	    if (Parser_checkKeyword(self, Keyword_TO) /* inst:Parser:checkKeyword */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Token* tp2 = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
+	    spec_array_add_object(typeParams, (void*)(Token_getValue(tp2) /* inst:Token:getValue */));
     if (tp2) { spec_release((void*)tp2); tp2 = NULL; }
-    }
+	};
     if (tp1) { spec_release((void*)tp1); tp1 = NULL; }
-    }
+	};
     Parser_matchPunct(self, Punctuation_BLOCK_OPEN) /* inst:Parser:matchPunct */;
     SPEC_AUTO SpecArray* members = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     ({ void* _lp = (void*)(({ ClassMembersLoop* _inst = ClassMembersLoop_new(); ClassMembersLoop_init(_inst, self, members); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ClassMembersLoop_evaluate((void*)_lp)) { if (!ClassMembersLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
@@ -55712,11 +55712,11 @@ ClassInfo* Parser_parseEnum(Parser* self) {
     ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
     SPEC_AUTO String backingType = WellKnown_intName(self->names) /* inst:WellKnown:intName */;
     if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Type* bt = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
-        spec_assign((void**)&backingType, (void*)(bt->name));
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Type* bt = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
+	    spec_assign((void**)&backingType, (void*)(bt->name));
     if (bt) { spec_release((void*)bt); bt = NULL; }
-    }
+	};
     Parser_matchKeyword(self, Keyword_IS) /* inst:Parser:matchKeyword */;
     SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
     SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
@@ -55725,8 +55725,8 @@ ClassInfo* Parser_parseEnum(Parser* self) {
     ({ void* _lp = (void*)(({ EnumVariantsLoop* _inst = EnumVariantsLoop_new(); EnumVariantsLoop_init(_inst, self, members, backingType); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (EnumVariantsLoop_evaluate((void*)_lp)) { if (!EnumVariantsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
     Parser_matchPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
     if (Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	};
     SPEC_AUTO ClassInfo* c = (ClassInfo*)((({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, name, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */, members); _inst; })));
     ({ ClassInfo* _recv = (ClassInfo*)(c); (((void (*)(ClassInfo*, long long))_recv->_vtable[26]))((ClassInfo*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
     ({ ClassInfo* _recv = (ClassInfo*)(c); (((void (*)(ClassInfo*, String))_recv->_vtable[27]))((ClassInfo*)_recv, self->sourceFile); });
@@ -55745,104 +55745,104 @@ Member* Parser_parseMember(Parser* self) {
     SPEC_AUTO SpecArray* modifiers = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     ({ void* _lp = (void*)(({ ModifierLoop* _inst = ModifierLoop_new(); ModifierLoop_init(_inst, self, modifiers); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ModifierLoop_evaluate((void*)_lp)) { if (!ModifierLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
     if (Parser_atClassHeader(self) /* inst:Parser:atClassHeader */) {
-        SPEC_AUTO ClassInfo* nested = (ClassInfo*)((Parser_parseClass(self) /* inst:Parser:parseClass */));
-        SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_CLASS); _inst; })));
-        ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, startLine); });
-        spec_assign((void**)&m->nestedClass, (void*)(nested));
-        return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
+	    SPEC_AUTO ClassInfo* nested = (ClassInfo*)((Parser_parseClass(self) /* inst:Parser:parseClass */));
+	    SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_CLASS); _inst; })));
+	    ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, startLine); });
+	    spec_assign((void**)&m->nestedClass, (void*)(nested));
+	    return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
     if (nested) { spec_release((void*)nested); nested = NULL; }
     if (m) { spec_release((void*)m); m = NULL; }
-    }
+	};
     if (Parser_atEnumHeader(self) /* inst:Parser:atEnumHeader */) {
-        SPEC_AUTO ClassInfo* edef = (ClassInfo*)((Parser_parseEnum(self) /* inst:Parser:parseEnum */));
-        SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_CLASS); _inst; })));
-        ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, startLine); });
-        spec_assign((void**)&m->nestedClass, (void*)(edef));
-        return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
+	    SPEC_AUTO ClassInfo* edef = (ClassInfo*)((Parser_parseEnum(self) /* inst:Parser:parseEnum */));
+	    SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_CLASS); _inst; })));
+	    ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, startLine); });
+	    spec_assign((void**)&m->nestedClass, (void*)(edef));
+	    return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
     if (edef) { spec_release((void*)edef); edef = NULL; }
     if (m) { spec_release((void*)m); m = NULL; }
-    }
-    if (((((((((Token_getTokenKind(((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */)))) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) || (((Token_getTokenKind(((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */)))) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))))) && (((Token_getTokenKind(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getTokenKind */) == (TokenKind_SYMBOL))))) && (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getValue */))), spec_string_intern(":"))))) {
-        SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Expression* initExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        if (Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    }
-        SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_FIELD); _inst; })));
-        ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
-        spec_assign((void**)&m->modifiers, (void*)(modifiers));
-        spec_assign((void**)&m->memberType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, spec_string_intern("")); _inst; })));
-        spec_assign((void**)&m->name, (void*)(Token_getValue(nameTok) /* inst:Token:getValue */));
-        spec_assign((void**)&m->initExpr, (void*)(initExpr));
-        m->hasInit = true;
-        return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
+	};
+    if (((((((((Token_getTokenKind(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) || (((Token_getTokenKind(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))))) && (((Token_getTokenKind(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getTokenKind */) == (TokenKind_SYMBOL))))) && (spec_string_equals(Token_getValue(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, spec_string_intern(":"))))) {
+	    SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* initExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    if (Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	};
+	    SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_FIELD); _inst; })));
+	    ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
+	    spec_assign((void**)&m->modifiers, (void*)(modifiers));
+	    spec_assign((void**)&m->memberType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, spec_string_intern("")); _inst; })));
+	    spec_assign((void**)&m->name, (void*)(Token_getValue(nameTok) /* inst:Token:getValue */));
+	    spec_assign((void**)&m->initExpr, (void*)(initExpr));
+	    m->hasInit = true;
+	    return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
     if (nameTok) { spec_release((void*)nameTok); nameTok = NULL; }
     if (initExpr) { spec_release((void*)initExpr); initExpr = NULL; }
     if (m) { spec_release((void*)m); m = NULL; }
-    }
-    if (((((Token_getTokenKind(((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */)))) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) && (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(Punctuation_value(Punctuation_GROUP_OPEN)))))))) {
-        SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
-        SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* body = (SpecArray*)((Parser_parseMethodBody(self, params) /* inst:Parser:parseMethodBody */));
-        SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_METHOD); _inst; })));
-        ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
-        spec_assign((void**)&m->modifiers, (void*)(modifiers));
-        spec_assign((void**)&m->memberType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_voidMemberType(self->names) /* inst:WellKnown:voidMemberType */); _inst; })));
-        spec_assign((void**)&m->name, (void*)(name));
-        spec_assign((void**)&m->params, (void*)(params));
-        spec_assign((void**)&m->body, (void*)(body));
-        return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
+	};
+    if (((((Token_getTokenKind(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) && (spec_string_equals(Token_getValue(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_GROUP_OPEN))))) {
+	    SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
+	    SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* body = (SpecArray*)((Parser_parseMethodBody(self, params) /* inst:Parser:parseMethodBody */));
+	    SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_METHOD); _inst; })));
+	    ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
+	    spec_assign((void**)&m->modifiers, (void*)(modifiers));
+	    spec_assign((void**)&m->memberType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_voidMemberType(self->names) /* inst:WellKnown:voidMemberType */); _inst; })));
+	    spec_assign((void**)&m->name, (void*)(name));
+	    spec_assign((void**)&m->params, (void*)(params));
+	    spec_assign((void**)&m->body, (void*)(body));
+	    return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
     if (nameTok) { spec_release((void*)nameTok); nameTok = NULL; }
     if (name) { spec_release((void*)name); name = NULL; }
     if (params) { spec_release((void*)params); params = NULL; }
     if (body) { spec_release((void*)body); body = NULL; }
     if (m) { spec_release((void*)m); m = NULL; }
-    }
+	};
     SPEC_AUTO Type* mType = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
     Parser_matchKeyword(self, Keyword_IS) /* inst:Parser:matchKeyword */;
     SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
     SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
     if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        if (Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_METHOD); _inst; })));
-        ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
-        spec_assign((void**)&m->modifiers, (void*)(modifiers));
-        spec_assign((void**)&m->memberType, (void*)(mType));
-        spec_assign((void**)&m->name, (void*)(name));
-        spec_assign((void**)&m->params, (void*)(params));
-        return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    if (Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_METHOD); _inst; })));
+	    ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
+	    spec_assign((void**)&m->modifiers, (void*)(modifiers));
+	    spec_assign((void**)&m->memberType, (void*)(mType));
+	    spec_assign((void**)&m->name, (void*)(name));
+	    spec_assign((void**)&m->params, (void*)(params));
+	    return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
     if (m) { spec_release((void*)m); m = NULL; }
-    }
-        SPEC_AUTO SpecArray* body = (SpecArray*)((Parser_parseMethodBody(self, params) /* inst:Parser:parseMethodBody */));
-        SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_METHOD); _inst; })));
-        ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
-        spec_assign((void**)&m->modifiers, (void*)(modifiers));
-        spec_assign((void**)&m->memberType, (void*)(mType));
-        spec_assign((void**)&m->name, (void*)(name));
-        spec_assign((void**)&m->params, (void*)(params));
-        spec_assign((void**)&m->body, (void*)(body));
-        return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
+	};
+	    SPEC_AUTO SpecArray* body = (SpecArray*)((Parser_parseMethodBody(self, params) /* inst:Parser:parseMethodBody */));
+	    SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_METHOD); _inst; })));
+	    ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
+	    spec_assign((void**)&m->modifiers, (void*)(modifiers));
+	    spec_assign((void**)&m->memberType, (void*)(mType));
+	    spec_assign((void**)&m->name, (void*)(name));
+	    spec_assign((void**)&m->params, (void*)(params));
+	    spec_assign((void**)&m->body, (void*)(body));
+	    return (Member*)({ Member* _ret_val = m; m = NULL; _ret_val; });
     if (params) { spec_release((void*)params); params = NULL; }
     if (body) { spec_release((void*)body); body = NULL; }
     if (m) { spec_release((void*)m); m = NULL; }
-    }
+	};
     SPEC_AUTO Expression* initExpr = 0;
     bool hasInit = false;
     if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        spec_assign((void**)&initExpr, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        hasInit = true;
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    spec_assign((void**)&initExpr, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    hasInit = true;
+	};
     Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
     SPEC_AUTO Member* m = (Member*)((({ Member* _inst = Member_new(); Member_init(_inst, MemberKind_FIELD); _inst; })));
     ({ Member* _recv = (Member*)(m); (((void (*)(Member*, long long))_recv->_vtable[26]))((Member*)_recv, ({ Token* _recv = (Token*)(nameTok); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); })); });
@@ -55868,18 +55868,18 @@ SpecArray* Parser_parseMethodBody(Parser* self, SpecArray* params) {
     ({ SpecArray* _a_62 = params; if (_a_62) { for (size_t _i_62 = 0; _i_62 < _a_62->length; _i_62++) {
         Parameter* p = (Parameter*)(intptr_t)_a_62->items[_i_62];
         do {
-    if (spec_string_equals(p->paramType->name, ((String)spec_claim_pool((void*)(WellKnown_selfFieldMarker(self->names) /* inst:WellKnown:selfFieldMarker */))))) {
-        SPEC_AUTO Expression* lhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_PATH); _inst; })));
-        Expression_makePath(lhs, ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */)); spec_array_add(_arr, (void*)(p->name)); _arr; }))))) /* inst:Expression:makePath */;
-        SPEC_AUTO Expression* rhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
-        Expression_makeIdent(rhs, p->name) /* inst:Expression:makeIdent */;
-        SPEC_AUTO Statement* assignS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
-        Statement_assign(assignS, lhs, rhs) /* inst:Statement:assign */;
-        spec_array_add_object(body, (void*)(assignS));
+    if (spec_string_equals(p->paramType->name, WellKnown_selfFieldMarker(self->names) /* inst:WellKnown:selfFieldMarker */)) {
+	    SPEC_AUTO Expression* lhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_PATH); _inst; })));
+	    Expression_makePath(lhs, ({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */)); spec_array_add(_arr, (void*)(p->name)); _arr; })) /* inst:Expression:makePath */;
+	    SPEC_AUTO Expression* rhs = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
+	    Expression_makeIdent(rhs, p->name) /* inst:Expression:makeIdent */;
+	    SPEC_AUTO Statement* assignS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
+	    Statement_assign(assignS, lhs, rhs) /* inst:Statement:assign */;
+	    spec_array_add_object(body, (void*)(assignS));
     if (lhs) { spec_release((void*)lhs); lhs = NULL; }
     if (rhs) { spec_release((void*)rhs); rhs = NULL; }
     if (assignS) { spec_release((void*)assignS); assignS = NULL; }
-    }
+	};
         } while (0);
     } } });
     ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
@@ -55891,31 +55891,31 @@ SpecArray* Parser_parseMethodBody(Parser* self, SpecArray* params) {
 Type* Parser_parseType(Parser* self) {
     (void)self;
     if (Parser_checkPunct(self, Punctuation_BRACKET_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Type* elem = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
-        Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Type* lnode = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_listName(self->names) /* inst:WellKnown:listName */); _inst; })));
-        spec_assign((void**)&lnode->params, (void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(elem)); _arr; })));
-        return (Type*)({ Type* _ret_val = lnode; lnode = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Type* elem = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
+	    Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Type* lnode = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_listName(self->names) /* inst:WellKnown:listName */); _inst; })));
+	    spec_assign((void**)&lnode->params, (void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(elem)); _arr; })));
+	    return (Type*)({ Type* _ret_val = lnode; lnode = NULL; _ret_val; });
     if (elem) { spec_release((void*)elem); elem = NULL; }
     if (lnode) { spec_release((void*)lnode); lnode = NULL; }
-    }
+	};
     SPEC_AUTO Token* baseTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
     SPEC_AUTO String typeName = Token_getValue(baseTok) /* inst:Token:getValue */;
     if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        spec_array_add_object(params, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
-        if (Parser_checkKeyword(self, Keyword_TO) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        spec_array_add_object(params, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
-    }
-        SPEC_AUTO Type* node = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, typeName); _inst; })));
-        spec_assign((void**)&node->params, (void*)(params));
-        return (Type*)({ Type* _ret_val = node; node = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    spec_array_add_object(params, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
+	    if (Parser_checkKeyword(self, Keyword_TO) /* inst:Parser:checkKeyword */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    spec_array_add_object(params, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
+	};
+	    SPEC_AUTO Type* node = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, typeName); _inst; })));
+	    spec_assign((void**)&node->params, (void*)(params));
+	    return (Type*)({ Type* _ret_val = node; node = NULL; _ret_val; });
     if (params) { spec_release((void*)params); params = NULL; }
     if (node) { spec_release((void*)node); node = NULL; }
-    }
+	};
     return (Type*)(({ Type* _inst = Type_new(); Type_init(_inst, typeName); _inst; }));
     if (baseTok) { spec_release((void*)baseTok); baseTok = NULL; }
     if (typeName) { spec_release((void*)typeName); typeName = NULL; }
@@ -55925,145 +55925,145 @@ Statement* Parser_parseStatement(Parser* self) {
     (void)self;
     long long startLine = ({ Token* _recv = (Token*)(Parser_peek(self) /* inst:Parser:peek */); (((long long (*)(Token*))_recv->_vtable[68]))((Token*)_recv); });
     if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
-        return (Statement*)spec_retain((void*)(Parser_parseForwardStatement(self, startLine) /* inst:Parser:parseForwardStatement */));
-    }
+	    return (Statement*)spec_retain((void*)(Parser_parseForwardStatement(self, startLine) /* inst:Parser:parseForwardStatement */));
+	};
     if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
-        return (Statement*)spec_retain((void*)(Parser_parseAsStatement(self, startLine) /* inst:Parser:parseAsStatement */));
-    }
+	    return (Statement*)spec_retain((void*)(Parser_parseAsStatement(self, startLine) /* inst:Parser:parseAsStatement */));
+	};
     if (Parser_atClassHeader(self) /* inst:Parser:atClassHeader */) {
-        SPEC_AUTO ClassInfo* cls = (ClassInfo*)((Parser_parseClass(self) /* inst:Parser:parseClass */));
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_CLASS); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->nestedClass, (void*)(cls));
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    SPEC_AUTO ClassInfo* cls = (ClassInfo*)((Parser_parseClass(self) /* inst:Parser:parseClass */));
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_CLASS); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->nestedClass, (void*)(cls));
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (cls) { spec_release((void*)cls); cls = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     if (Parser_atEnumHeader(self) /* inst:Parser:atEnumHeader */) {
-        SPEC_AUTO ClassInfo* edef = (ClassInfo*)((Parser_parseEnum(self) /* inst:Parser:parseEnum */));
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_CLASS); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->nestedClass, (void*)(edef));
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    SPEC_AUTO ClassInfo* edef = (ClassInfo*)((Parser_parseEnum(self) /* inst:Parser:parseEnum */));
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_CLASS); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->nestedClass, (void*)(edef));
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (edef) { spec_release((void*)edef); edef = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self, Keyword_WHEN) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* subject = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* arms = (SpecArray*)((Parser_parseWhenArms(self) /* inst:Parser:parseWhenArms */));
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_WHEN); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        Statement_whenStmt(s, subject, arms) /* inst:Statement:whenStmt */;
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* subject = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* arms = (SpecArray*)((Parser_parseWhenArms(self) /* inst:Parser:parseWhenArms */));
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_WHEN); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    Statement_whenStmt(s, subject, arms) /* inst:Statement:whenStmt */;
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (subject) { spec_release((void*)subject); subject = NULL; }
     if (arms) { spec_release((void*)arms); arms = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self, Keyword_IF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* cond = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        Parser_matchPunct(self, Punctuation_BLOCK_OPEN) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* thenBranch = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, thenBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* elseBranch = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        bool hasElse = false;
-        if (Parser_checkKeyword(self, Keyword_ELSE) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        hasElse = true;
-        if (Parser_checkKeyword(self, Keyword_IF) /* inst:Parser:checkKeyword */) {
-        spec_array_add_object(elseBranch, (void*)(Parser_parseStatement(self) /* inst:Parser:parseStatement */));
-    } else {
-        Parser_matchPunct(self, Punctuation_BLOCK_OPEN) /* inst:Parser:matchPunct */;
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, elseBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
-    }
-    }
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_IF); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->ifCondition, (void*)(cond));
-        spec_assign((void**)&s->thenBranch, (void*)(thenBranch));
-        spec_assign((void**)&s->elseBranch, (void*)(elseBranch));
-        s->hasElse = hasElse;
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* cond = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    Parser_matchPunct(self, Punctuation_BLOCK_OPEN) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* thenBranch = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, thenBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* elseBranch = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    bool hasElse = false;
+	    if (Parser_checkKeyword(self, Keyword_ELSE) /* inst:Parser:checkKeyword */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    hasElse = true;
+	    if (Parser_checkKeyword(self, Keyword_IF) /* inst:Parser:checkKeyword */) {
+	    spec_array_add_object(elseBranch, (void*)(Parser_parseStatement(self) /* inst:Parser:parseStatement */));
+	} else {
+	    Parser_matchPunct(self, Punctuation_BLOCK_OPEN) /* inst:Parser:matchPunct */;
+	    ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self, elseBranch); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
+	};
+	};
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_IF); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->ifCondition, (void*)(cond));
+	    spec_assign((void**)&s->thenBranch, (void*)(thenBranch));
+	    spec_assign((void**)&s->elseBranch, (void*)(elseBranch));
+	    s->hasElse = hasElse;
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (cond) { spec_release((void*)cond); cond = NULL; }
     if (thenBranch) { spec_release((void*)thenBranch); thenBranch = NULL; }
     if (elseBranch) { spec_release((void*)elseBranch); elseBranch = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self, Keyword_RETURN) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
-        SPEC_AUTO Statement* asStmt = (Statement*)((Parser_parseAsStatement(self, startLine) /* inst:Parser:parseAsStatement */));
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_RETURN); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->returnExpr, (void*)(asStmt->exprStmt));
-        s->hasReturnExpr = true;
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
+	    SPEC_AUTO Statement* asStmt = (Statement*)((Parser_parseAsStatement(self, startLine) /* inst:Parser:parseAsStatement */));
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_RETURN); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->returnExpr, (void*)(asStmt->exprStmt));
+	    s->hasReturnExpr = true;
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (asStmt) { spec_release((void*)asStmt); asStmt = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
-        SPEC_AUTO Expression* retExpr = 0;
-        bool hasExpr = false;
-        if ((!(Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */))) {
-        spec_assign((void**)&retExpr, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        hasExpr = true;
-    }
-        Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_RETURN); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->returnExpr, (void*)(retExpr));
-        s->hasReturnExpr = hasExpr;
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	};
+	    SPEC_AUTO Expression* retExpr = 0;
+	    bool hasExpr = false;
+	    if ((!(Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */))) {
+	    spec_assign((void**)&retExpr, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    hasExpr = true;
+	};
+	    Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_RETURN); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->returnExpr, (void*)(retExpr));
+	    s->hasReturnExpr = hasExpr;
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (retExpr) { spec_release((void*)retExpr); retExpr = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self, Keyword_LOCAL) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Type* vType = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
-        Parser_matchKeyword(self, Keyword_IS) /* inst:Parser:matchKeyword */;
-        SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
-        SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
-        SPEC_AUTO Expression* initExpr = 0;
-        bool hasInit = false;
-        if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        spec_assign((void**)&initExpr, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        hasInit = true;
-    }
-        Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_VAR_DECL); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->modifiers, (void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("local"))); _arr; })));
-        spec_assign((void**)&s->varType, (void*)(vType));
-        spec_assign((void**)&s->varName, (void*)(name));
-        spec_assign((void**)&s->initExpr, (void*)(initExpr));
-        s->hasInit = hasInit;
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Type* vType = (Type*)((Parser_parseType(self) /* inst:Parser:parseType */));
+	    Parser_matchKeyword(self, Keyword_IS) /* inst:Parser:matchKeyword */;
+	    SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
+	    SPEC_AUTO String name = Token_getValue(nameTok) /* inst:Token:getValue */;
+	    SPEC_AUTO Expression* initExpr = 0;
+	    bool hasInit = false;
+	    if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    spec_assign((void**)&initExpr, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    hasInit = true;
+	};
+	    Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_VAR_DECL); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->modifiers, (void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("local"))); _arr; })));
+	    spec_assign((void**)&s->varType, (void*)(vType));
+	    spec_assign((void**)&s->varName, (void*)(name));
+	    spec_assign((void**)&s->initExpr, (void*)(initExpr));
+	    s->hasInit = hasInit;
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (vType) { spec_release((void*)vType); vType = NULL; }
     if (nameTok) { spec_release((void*)nameTok); nameTok = NULL; }
     if (name) { spec_release((void*)name); name = NULL; }
     if (initExpr) { spec_release((void*)initExpr); initExpr = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     SPEC_AUTO Expression* expr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
     if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Expression* val = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
-        ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
-        spec_assign((void**)&s->assignTarget, (void*)(expr));
-        spec_assign((void**)&s->assignValue, (void*)(val));
-        return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* val = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
+	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
+	    spec_assign((void**)&s->assignTarget, (void*)(expr));
+	    spec_assign((void**)&s->assignValue, (void*)(val));
+	    return (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
     if (val) { spec_release((void*)val); val = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    }
+	};
     Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
     SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_EXPR); _inst; })));
     ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
@@ -56088,17 +56088,17 @@ Statement* Parser_parseForwardStatement(Parser* self, long long startLine) {
         do {
     SPEC_AUTO String argName = spec_construct_string(spec_string_intern(""));
     SPEC_AUTO Token* tok0 = (Token*)((Parser_peekAhead(self, 0) /* inst:Parser:peekAhead */));
-    if (((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) && (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(Punctuation_value(Punctuation_NAMED_ARG)))))))) {
-        spec_assign((void**)&argName, (void*)(Token_getValue(tok0) /* inst:Token:getValue */));
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    }
+    if (((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) && (spec_string_equals(Token_getValue(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_NAMED_ARG))))) {
+	    spec_assign((void**)&argName, (void*)(Token_getValue(tok0) /* inst:Token:getValue */));
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	};
     SPEC_AUTO Expression* val = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
     spec_array_add_object(args, (void*)(({ NamedArg* _inst = NamedArg_new(); NamedArg_init(_inst, argName, val); _inst; })));
     if (Parser_checkPunct(self, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        _it_63 = true; break;
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    _it_63 = true; break;
+	};
     _it_63 = false; break;
     if (argName) { spec_release((void*)argName); argName = NULL; }
     if (tok0) { spec_release((void*)tok0); tok0 = NULL; }
@@ -56109,8 +56109,8 @@ Statement* Parser_parseForwardStatement(Parser* self, long long startLine) {
 });
     Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
     if (Parser_checkPunct(self, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	};
     SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_FORWARD); _inst; })));
     ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[26]))((Statement*)_recv, startLine); });
     spec_assign((void**)&s->forwardArgs, (void*)(args));
@@ -56126,23 +56126,23 @@ Statement* Parser_parseAsStatement(Parser* self, long long startLine) {
     SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     bool hasParams = false;
     if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        hasParams = true;
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    hasParams = true;
+	    ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	};
     SPEC_AUTO Type* returnType = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_voidName(self->names) /* inst:WellKnown:voidName */); _inst; })));
     if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        spec_assign((void**)&returnType, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    spec_assign((void**)&returnType, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
+	};
     if (Parser_checkPunct(self, Punctuation_ACCESSOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    } else {
-        if ((!(hasParams))) {
-        Parser_matchPunct(self, Punctuation_ACCESSOR) /* inst:Parser:matchPunct */;
-    }
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	} else {
+	    if ((!(hasParams))) {
+	    Parser_matchPunct(self, Punctuation_ACCESSOR) /* inst:Parser:matchPunct */;
+	};
+	};
     SPEC_AUTO Expression* callExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
     Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
     SPEC_AUTO SpecArray* closureBody = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
@@ -56152,26 +56152,26 @@ Statement* Parser_parseAsStatement(Parser* self, long long startLine) {
     spec_assign((void**)&anonFn->anonParams, (void*)(params));
     spec_assign((void**)&anonFn->anonBody, (void*)(closureBody));
     if (((callExpr->kind) != (ExpressionKind_CALL))) {
-        SPEC_AUTO Expression* c = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_CALL); _inst; })));
-        if (((callExpr->kind) == (ExpressionKind_FIELD_ACCESS))) {
-        spec_assign((void**)&c->methodTarget, (void*)(callExpr->leftExpr));
-        spec_assign((void**)&c->methodName, (void*)(callExpr->stringValue));
-    } else {
-        if (((callExpr->kind) == (ExpressionKind_IDENT))) {
-        SPEC_AUTO Expression* selfTarget = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
-        spec_assign((void**)&selfTarget->stringValue, (void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */));
-        spec_assign((void**)&c->methodTarget, (void*)(selfTarget));
-        spec_assign((void**)&c->methodName, (void*)(callExpr->stringValue));
+	    SPEC_AUTO Expression* c = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_CALL); _inst; })));
+	    if (((callExpr->kind) == (ExpressionKind_FIELD_ACCESS))) {
+	    spec_assign((void**)&c->methodTarget, (void*)(callExpr->leftExpr));
+	    spec_assign((void**)&c->methodName, (void*)(callExpr->stringValue));
+	} else {
+	    if (((callExpr->kind) == (ExpressionKind_IDENT))) {
+	    SPEC_AUTO Expression* selfTarget = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
+	    spec_assign((void**)&selfTarget->stringValue, (void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */));
+	    spec_assign((void**)&c->methodTarget, (void*)(selfTarget));
+	    spec_assign((void**)&c->methodName, (void*)(callExpr->stringValue));
     if (selfTarget) { spec_release((void*)selfTarget); selfTarget = NULL; }
-    } else {
-        spec_assign((void**)&c->methodTarget, (void*)(callExpr));
-        spec_assign((void**)&c->methodName, (void*)(spec_string_intern("")));
-    }
-    }
-        spec_assign((void**)&c->methodArgs, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        spec_assign((void**)&callExpr, (void*)(c));
+	} else {
+	    spec_assign((void**)&c->methodTarget, (void*)(callExpr));
+	    spec_assign((void**)&c->methodName, (void*)(spec_string_intern("")));
+	};
+	};
+	    spec_assign((void**)&c->methodArgs, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    spec_assign((void**)&callExpr, (void*)(c));
     if (c) { spec_release((void*)c); c = NULL; }
-    }
+	};
     spec_array_add_object(callExpr->methodArgs, (void*)(({ NamedArg* _inst = NamedArg_new(); NamedArg_init(_inst, spec_string_intern(""), anonFn); _inst; })));
     callExpr->scopedRemainder = true;
     SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_EXPR); _inst; })));
@@ -56227,10 +56227,10 @@ Expression* Parser_foldBinary(Parser* self, SpecArray* ops, PrecedenceLevel next
     (void)next;
     SPEC_AUTO Expression* left = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; })));
     if (((next) == (PrecedenceLevel_NONE))) {
-        spec_assign((void**)&left, (void*)(Parser_parseUnary(self) /* inst:Parser:parseUnary */));
-    } else {
-        spec_assign((void**)&left, (void*)(Parser_parseLevel(self, next) /* inst:Parser:parseLevel */));
-    }
+	    spec_assign((void**)&left, (void*)(Parser_parseUnary(self) /* inst:Parser:parseUnary */));
+	} else {
+	    spec_assign((void**)&left, (void*)(Parser_parseLevel(self, next) /* inst:Parser:parseLevel */));
+	};
     SPEC_AUTO BinaryFoldLoop* fold = (BinaryFoldLoop*)((({ BinaryFoldLoop* _inst = BinaryFoldLoop_new(); BinaryFoldLoop_init(_inst, self, left, ops, next); _inst; })));
     ({ void* _lp = (void*)(fold); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BinaryFoldLoop_evaluate((void*)_lp)) { if (!BinaryFoldLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     return (Expression*)spec_retain((void*)(fold->currentExpr));
@@ -56242,26 +56242,26 @@ Expression* Parser_parseUnary(Parser* self) {
     (void)self;
     SPEC_AUTO String op = spec_construct_string(spec_string_intern(""));
     if (Parser_checkSymbol(self, spec_string_intern("++")) /* inst:Parser:checkSymbol */) {
-        spec_assign((void**)&op, (void*)(spec_string_intern("++")));
-    } else {
-        if (Parser_checkSymbol(self, spec_string_intern("--")) /* inst:Parser:checkSymbol */) {
-        spec_assign((void**)&op, (void*)(spec_string_intern("--")));
-    } else {
-        if (Parser_checkSymbol(self, spec_string_intern("~")) /* inst:Parser:checkSymbol */) {
-        spec_assign((void**)&op, (void*)(spec_string_intern("~")));
-    } else {
-        if (Parser_checkSymbol(self, spec_string_intern("-")) /* inst:Parser:checkSymbol */) {
-        spec_assign((void**)&op, (void*)(spec_string_intern("-")));
-    } else {
-        if (Parser_checkSymbol(self, spec_string_intern("!")) /* inst:Parser:checkSymbol */) {
-        spec_assign((void**)&op, (void*)(spec_string_intern("!")));
-    } else {
-        return (Expression*)spec_retain((void*)(Parser_parseAs(self) /* inst:Parser:parseAs */));
-    }
-    }
-    }
-    }
-    }
+	    spec_assign((void**)&op, (void*)(spec_string_intern("++")));
+	} else {
+	    if (Parser_checkSymbol(self, spec_string_intern("--")) /* inst:Parser:checkSymbol */) {
+	    spec_assign((void**)&op, (void*)(spec_string_intern("--")));
+	} else {
+	    if (Parser_checkSymbol(self, spec_string_intern("~")) /* inst:Parser:checkSymbol */) {
+	    spec_assign((void**)&op, (void*)(spec_string_intern("~")));
+	} else {
+	    if (Parser_checkSymbol(self, spec_string_intern("-")) /* inst:Parser:checkSymbol */) {
+	    spec_assign((void**)&op, (void*)(spec_string_intern("-")));
+	} else {
+	    if (Parser_checkSymbol(self, spec_string_intern("!")) /* inst:Parser:checkSymbol */) {
+	    spec_assign((void**)&op, (void*)(spec_string_intern("!")));
+	} else {
+	    return (Expression*)spec_retain((void*)(Parser_parseAs(self) /* inst:Parser:parseAs */));
+	};
+	};
+	};
+	};
+	};
     ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
     SPEC_AUTO Expression* expr = (Expression*)((Parser_parseUnary(self) /* inst:Parser:parseUnary */));
     SPEC_AUTO Expression* u = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNARY); _inst; })));
@@ -56278,33 +56278,33 @@ Expression* Parser_parseUsingAs(Parser* self) {
     ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
     SPEC_AUTO Token* clsTok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     if (((Token_getTokenKind(clsTok) /* inst:Token:getTokenKind */) != (TokenKind_IDENTIFIER))) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_intern("'as' in a using entry must be followed by a class name."));
-        return (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; }));
-    }
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_intern("'as' in a using entry must be followed by a class name."));
+	    return (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; }));
+	};
     ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
     SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_USING_AS); _inst; })));
     spec_assign((void**)&e->stringValue, (void*)(Token_getValue(clsTok) /* inst:Token:getValue */));
     if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        if ((!(Parser_checkPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:checkPunct */))) {
-        SPEC_AUTO SpecArray* args = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ ArgLoop* _inst = ArgLoop_new(); ArgLoop_init(_inst, self, args); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArgLoop_evaluate((void*)_lp)) { if (!ArgLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        spec_assign((void**)&e->methodArgs, (void*)(args));
-        ({ SpecArray* _a_65 = args; if (_a_65) { for (size_t _i_65 = 0; _i_65 < _a_65->length; _i_65++) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    if ((!(Parser_checkPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:checkPunct */))) {
+	    SPEC_AUTO SpecArray* args = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ ArgLoop* _inst = ArgLoop_new(); ArgLoop_init(_inst, self, args); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArgLoop_evaluate((void*)_lp)) { if (!ArgLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    spec_assign((void**)&e->methodArgs, (void*)(args));
+	    ({ SpecArray* _a_65 = args; if (_a_65) { for (size_t _i_65 = 0; _i_65 < _a_65->length; _i_65++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_65->items[_i_65];
         do {
     ExpressionKind ak = arg->value->kind;
     if (((((((((ak) != (ExpressionKind_STRING))) && (((ak) != (ExpressionKind_NUMBER))))) && (((ak) != (ExpressionKind_FLOAT))))) && (((ak) != (ExpressionKind_BOOL))))) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_intern("Instance-import arguments must be direct literal values (INSTANCE.md E1)."));
-    }
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_intern("Instance-import arguments must be direct literal values (INSTANCE.md E1)."));
+	};
         } while (0);
     } } });
     if (args) { spec_release((void*)args); args = NULL; }
-    }
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-    } else {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Instance import requires parentheses: 'as "))), e->stringValue), spec_string_intern("()'."))))));
-    }
+	};
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	} else {
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, clsTok, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Instance import requires parentheses: 'as "))), e->stringValue), spec_string_intern("()'.")));
+	};
     return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (clsTok) { spec_release((void*)clsTok); clsTok = NULL; }
     if (e) { spec_release((void*)e); e = NULL; }
@@ -56314,26 +56314,26 @@ Expression* Parser_parseAs(Parser* self) {
     (void)self;
     SPEC_AUTO Expression* left = (Expression*)((Parser_parsePostfix(self) /* inst:Parser:parsePostfix */));
     if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Token* targetTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
-        SPEC_AUTO SpecArray* args = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        if ((!(Parser_checkPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:checkPunct */))) {
-        spec_array_add_object(args, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-    }
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-    }
-        if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, ((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */))), spec_string_intern("Chained 'as' casts are not supported; cast in separate steps."));
-    }
-        SPEC_AUTO Expression* c = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_CAST); _inst; })));
-        Expression_makeCast(c, left, ((String)spec_claim_pool((void*)(Token_getValue(targetTok) /* inst:Token:getValue */))), args) /* inst:Expression:makeCast */;
-        return (Expression*)({ Expression* _ret_val = c; c = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Token* targetTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
+	    SPEC_AUTO SpecArray* args = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    if ((!(Parser_checkPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:checkPunct */))) {
+	    spec_array_add_object(args, (void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	};
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	};
+	    if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, Parser_peek(self) /* inst:Parser:peek */, spec_string_intern("Chained 'as' casts are not supported; cast in separate steps."));
+	};
+	    SPEC_AUTO Expression* c = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_CAST); _inst; })));
+	    Expression_makeCast(c, left, Token_getValue(targetTok) /* inst:Token:getValue */, args) /* inst:Expression:makeCast */;
+	    return (Expression*)({ Expression* _ret_val = c; c = NULL; _ret_val; });
     if (targetTok) { spec_release((void*)targetTok); targetTok = NULL; }
     if (args) { spec_release((void*)args); args = NULL; }
     if (c) { spec_release((void*)c); c = NULL; }
-    }
+	};
     return (Expression*)({ Expression* _ret_val = left; left = NULL; _ret_val; });
     if (left) { spec_release((void*)left); left = NULL; }
 }
@@ -56351,68 +56351,68 @@ Expression* Parser_parsePostfix(Parser* self) {
 Expression* Parser_parsePrimary(Parser* self) {
     (void)self;
     bool isAnonFn = false;
-    if (((Parser_checkKeyword(self, Keyword_LOCAL) /* inst:Parser:checkKeyword */) && (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(WellKnown_fnName(self->names) /* inst:WellKnown:fnName */))))))) {
-        isAnonFn = true;
-    }
-    if (((spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(WellKnown_fnName(self->names) /* inst:WellKnown:fnName */))))) && (((spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(Punctuation_value(Punctuation_GROUP_OPEN)))))) || (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(((Token*)spec_claim_pool((void*)(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */)))) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(Keyword_value(Keyword_OF)))))))))) {
-        isAnonFn = true;
-    }
+    if (((Parser_checkKeyword(self, Keyword_LOCAL) /* inst:Parser:checkKeyword */) && (spec_string_equals(Token_getValue(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, WellKnown_fnName(self->names) /* inst:WellKnown:fnName */)))) {
+	    isAnonFn = true;
+	};
+    if (((spec_string_equals(Token_getValue(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getValue */, WellKnown_fnName(self->names) /* inst:WellKnown:fnName */)) && (((spec_string_equals(Token_getValue(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_GROUP_OPEN))) || (spec_string_equals(Token_getValue(Parser_peekAhead(self, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Keyword_value(Keyword_OF))))))) {
+	    isAnonFn = true;
+	};
     if (isAnonFn) {
-        if (Parser_checkKeyword(self, Keyword_LOCAL) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    }
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Type* returnType = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_voidName(self->names) /* inst:WellKnown:voidName */); _inst; })));
-        if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        spec_assign((void**)&returnType, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
-    }
-        Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* body = (SpecArray*)((Parser_parseMethodBody(self, params) /* inst:Parser:parseMethodBody */));
-        SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_ANON_FN); _inst; })));
-        spec_assign((void**)&e->anonReturnType, (void*)(returnType));
-        spec_assign((void**)&e->anonParams, (void*)(params));
-        spec_assign((void**)&e->anonBody, (void*)(body));
-        return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
+	    if (Parser_checkKeyword(self, Keyword_LOCAL) /* inst:Parser:checkKeyword */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	};
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Type* returnType = (Type*)((({ Type* _inst = Type_new(); Type_init(_inst, WellKnown_voidName(self->names) /* inst:WellKnown:voidName */); _inst; })));
+	    if (Parser_checkKeyword(self, Keyword_OF) /* inst:Parser:checkKeyword */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    spec_assign((void**)&returnType, (void*)(Parser_parseType(self) /* inst:Parser:parseType */));
+	};
+	    Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* params = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ ParamLoop* _inst = ParamLoop_new(); ParamLoop_init(_inst, self, params); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ParamLoop_evaluate((void*)_lp)) { if (!ParamLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* body = (SpecArray*)((Parser_parseMethodBody(self, params) /* inst:Parser:parseMethodBody */));
+	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_ANON_FN); _inst; })));
+	    spec_assign((void**)&e->anonReturnType, (void*)(returnType));
+	    spec_assign((void**)&e->anonParams, (void*)(params));
+	    spec_assign((void**)&e->anonBody, (void*)(body));
+	    return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (returnType) { spec_release((void*)returnType); returnType = NULL; }
     if (params) { spec_release((void*)params); params = NULL; }
     if (body) { spec_release((void*)body); body = NULL; }
     if (e) { spec_release((void*)e); e = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self, Keyword_WHEN) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* subject = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO SpecArray* arms = (SpecArray*)((Parser_parseWhenArms(self) /* inst:Parser:parseWhenArms */));
-        SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_WHEN); _inst; })));
-        Expression_makeWhen(e, subject, arms) /* inst:Expression:makeWhen */;
-        return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* subject = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO SpecArray* arms = (SpecArray*)((Parser_parseWhenArms(self) /* inst:Parser:parseWhenArms */));
+	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_WHEN); _inst; })));
+	    Expression_makeWhen(e, subject, arms) /* inst:Expression:makeWhen */;
+	    return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (subject) { spec_release((void*)subject); subject = NULL; }
     if (arms) { spec_release((void*)arms); arms = NULL; }
     if (e) { spec_release((void*)e); e = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self, Keyword_IF) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* cond = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* thenExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchKeyword(self, Keyword_ELSE) /* inst:Parser:matchKeyword */;
-        SPEC_AUTO Expression* elseExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IF_ELSE); _inst; })));
-        spec_assign((void**)&e->condExpr, (void*)(cond));
-        spec_assign((void**)&e->thenExpr, (void*)(thenExpr));
-        spec_assign((void**)&e->elseExpr, (void*)(elseExpr));
-        return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    Parser_matchPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* cond = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* thenExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchKeyword(self, Keyword_ELSE) /* inst:Parser:matchKeyword */;
+	    SPEC_AUTO Expression* elseExpr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IF_ELSE); _inst; })));
+	    spec_assign((void**)&e->condExpr, (void*)(cond));
+	    spec_assign((void**)&e->thenExpr, (void*)(thenExpr));
+	    spec_assign((void**)&e->elseExpr, (void*)(elseExpr));
+	    return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (cond) { spec_release((void*)cond); cond = NULL; }
     if (thenExpr) { spec_release((void*)thenExpr); thenExpr = NULL; }
     if (elseExpr) { spec_release((void*)elseExpr); elseExpr = NULL; }
     if (e) { spec_release((void*)e); e = NULL; }
-    }
+	};
     SPEC_AUTO Token* tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
     if (((Token_getTokenKind(tok) /* inst:Token:getTokenKind */) == (TokenKind_STRING))) {
         ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
@@ -56456,25 +56456,25 @@ Expression* Parser_parsePrimary(Parser* self) {
     if (e) { spec_release((void*)e); e = NULL; }
     } else if (((Token_getTokenKind(tok) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))) {
         if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
-        return (Expression*)spec_retain((void*)(Parser_parseUsingAs(self) /* inst:Parser:parseUsingAs */));
-    }
+	    return (Expression*)spec_retain((void*)(Parser_parseUsingAs(self) /* inst:Parser:parseUsingAs */));
+	};
         (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, tok, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Unexpected token '"))), ((String)spec_claim_pool((void*)(Token_getValue(tok) /* inst:Token:getValue */)))), spec_string_intern("' in expression"))))));
         ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
         return (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; }));
     } else {
         if (Parser_checkPunct(self, Punctuation_GROUP_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Expression* inner = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
-        return (Expression*)({ Expression* _ret_val = inner; inner = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* inner = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_GROUP_CLOSE) /* inst:Parser:matchPunct */;
+	    return (Expression*)({ Expression* _ret_val = inner; inner = NULL; _ret_val; });
     if (inner) { spec_release((void*)inner); inner = NULL; }
-    }
+	};
         if (Parser_checkPunct(self, Punctuation_BRACKET_OPEN) /* inst:Parser:checkPunct */) {
-        return (Expression*)spec_retain((void*)(Parser_parseArrayOrMap(self) /* inst:Parser:parseArrayOrMap */));
-    }
+	    return (Expression*)spec_retain((void*)(Parser_parseArrayOrMap(self) /* inst:Parser:parseArrayOrMap */));
+	};
         if (Parser_checkPunct(self, Punctuation_BLOCK_OPEN) /* inst:Parser:checkPunct */) {
-        return (Expression*)spec_retain((void*)(Parser_parseFunctionBlock(self) /* inst:Parser:parseFunctionBlock */));
-    }
+	    return (Expression*)spec_retain((void*)(Parser_parseFunctionBlock(self) /* inst:Parser:parseFunctionBlock */));
+	};
         (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, tok, ((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Unexpected token '"))), ((String)spec_claim_pool((void*)(Token_getValue(tok) /* inst:Token:getValue */)))), spec_string_intern("' in expression"))))));
         ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
         return (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; }));
@@ -56496,15 +56496,15 @@ bool Parser_isDeclListStart(Parser* self) {
         bool _it_66 = true;
         do {
     SPEC_AUTO Token* t = (Token*)((Parser_peekAhead(self, offset) /* inst:Parser:peekAhead */));
-    if (((((((((Token_getTokenKind(t) /* inst:Token:getTokenKind */) == (TokenKind__EOF))) || (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(t) /* inst:Token:getValue */))), spec_string_intern("]"))))) || (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(t) /* inst:Token:getValue */))), spec_string_intern(","))))) || (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(t) /* inst:Token:getValue */))), spec_string_intern(";"))))) {
-        running = false;
-    } else {
-        if (spec_string_equals(((String)spec_claim_pool((void*)(Token_getValue(t) /* inst:Token:getValue */))), ((String)spec_claim_pool((void*)(Keyword_value(Keyword_IS)))))) {
-        foundIs = true;
-        running = false;
-    }
-        offset = ((offset) + (1));
-    }
+    if (((((((((Token_getTokenKind(t) /* inst:Token:getTokenKind */) == (TokenKind__EOF))) || (spec_string_equals(Token_getValue(t) /* inst:Token:getValue */, spec_string_intern("]"))))) || (spec_string_equals(Token_getValue(t) /* inst:Token:getValue */, spec_string_intern(","))))) || (spec_string_equals(Token_getValue(t) /* inst:Token:getValue */, spec_string_intern(";"))))) {
+	    running = false;
+	} else {
+	    if (spec_string_equals(Token_getValue(t) /* inst:Token:getValue */, Keyword_value(Keyword_IS))) {
+	    foundIs = true;
+	    running = false;
+	};
+	    offset = ((offset) + (1));
+	};
     if (t) { spec_release((void*)t); t = NULL; }
         } while (0);
         if (!_it_66) break;
@@ -56530,13 +56530,13 @@ Expression* Parser_parseDeclList(Parser* self) {
     SPEC_AUTO Token* nameTok = (Token*)(((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self)));
     SPEC_AUTO Parameter* p = (Parameter*)((({ Parameter* _inst = Parameter_new(); Parameter_init(_inst, Token_getValue(nameTok) /* inst:Token:getValue */, pType); _inst; })));
     if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        Parameter_setDefault(p, ((Expression*)spec_claim_pool((void*)(Parser_parseExpression(self) /* inst:Parser:parseExpression */)))) /* inst:Parameter:setDefault */;
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    Parameter_setDefault(p, Parser_parseExpression(self) /* inst:Parser:parseExpression */) /* inst:Parameter:setDefault */;
+	};
     spec_array_add_object(params, (void*)(p));
     if (Parser_checkPunct(self, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	};
     if (pType) { spec_release((void*)pType); pType = NULL; }
     if (nameTok) { spec_release((void*)nameTok); nameTok = NULL; }
     if (p) { spec_release((void*)p); p = NULL; }
@@ -56567,36 +56567,36 @@ Expression* Parser_parseFunctionBlock(Parser* self) {
         bool _it_68 = true;
         do {
     if ((((((((((!(Parser_checkKeyword(self, Keyword_RETURN) /* inst:Parser:checkKeyword */))) && ((!(Parser_checkKeyword(self, Keyword_LOCAL) /* inst:Parser:checkKeyword */))))) && ((!(Parser_checkKeyword(self, Keyword_IF) /* inst:Parser:checkKeyword */))))) && ((!(Parser_checkKeyword(self, Keyword_WHEN) /* inst:Parser:checkKeyword */))))) && ((!(Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */))))) {
-        SPEC_AUTO Expression* expr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Expression* val = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
-        spec_assign((void**)&s->assignTarget, (void*)(expr));
-        spec_assign((void**)&s->assignValue, (void*)(val));
-        spec_array_add_object(body, (void*)(s));
+	    SPEC_AUTO Expression* expr = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    if (Parser_checkPunct(self, Punctuation_ASSIGN) /* inst:Parser:checkPunct */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* val = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Statement* s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_ASSIGN); _inst; })));
+	    spec_assign((void**)&s->assignTarget, (void*)(expr));
+	    spec_assign((void**)&s->assignValue, (void*)(val));
+	    spec_array_add_object(body, (void*)(s));
     if (val) { spec_release((void*)val); val = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
-    } else {
-        if (Parser_checkPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:checkPunct */) {
-        SPEC_AUTO Statement* retS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_RETURN); _inst; })));
-        spec_assign((void**)&retS->returnExpr, (void*)(expr));
-        retS->hasReturnExpr = true;
-        spec_array_add_object(body, (void*)(retS));
+	} else {
+	    if (Parser_checkPunct(self, Punctuation_BLOCK_CLOSE) /* inst:Parser:checkPunct */) {
+	    SPEC_AUTO Statement* retS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_RETURN); _inst; })));
+	    spec_assign((void**)&retS->returnExpr, (void*)(expr));
+	    retS->hasReturnExpr = true;
+	    spec_array_add_object(body, (void*)(retS));
     if (retS) { spec_release((void*)retS); retS = NULL; }
-    } else {
-        Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Statement* exprS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_EXPR); _inst; })));
-        spec_assign((void**)&exprS->exprStmt, (void*)(expr));
-        spec_array_add_object(body, (void*)(exprS));
+	} else {
+	    Parser_matchPunct(self, Punctuation_TERMINATOR) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Statement* exprS = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_EXPR); _inst; })));
+	    spec_assign((void**)&exprS->exprStmt, (void*)(expr));
+	    spec_array_add_object(body, (void*)(exprS));
     if (exprS) { spec_release((void*)exprS); exprS = NULL; }
-    }
-    }
+	};
+	};
     if (expr) { spec_release((void*)expr); expr = NULL; }
-    } else {
-        spec_array_add_object(body, (void*)(Parser_parseStatement(self) /* inst:Parser:parseStatement */));
-    }
+	} else {
+	    spec_array_add_object(body, (void*)(Parser_parseStatement(self) /* inst:Parser:parseStatement */));
+	};
         } while (0);
         if (!_it_68) break;
     }
@@ -56616,48 +56616,48 @@ Expression* Parser_parseFunctionBlock(Parser* self) {
 Expression* Parser_parseArrayOrMap(Parser* self) {
     (void)self;
     if (Parser_isDeclListStart(self) /* inst:Parser:isDeclListStart */) {
-        return (Expression*)spec_retain((void*)(Parser_parseDeclList(self) /* inst:Parser:parseDeclList */));
-    }
+	    return (Expression*)spec_retain((void*)(Parser_parseDeclList(self) /* inst:Parser:parseDeclList */));
+	};
     ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
     if (Parser_checkPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_ARRAY); _inst; })));
-        spec_assign((void**)&e->arrayItems, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_ARRAY); _inst; })));
+	    spec_assign((void**)&e->arrayItems, (void*)(({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (e) { spec_release((void*)e); e = NULL; }
-    }
+	};
     if (Parser_checkPunct(self, Punctuation_PAIR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_MAP); _inst; })));
-        Expression_makeMap(e, ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:Expression:makeMap */;
-        return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_MAP); _inst; })));
+	    Expression_makeMap(e, ({ SpecArray* _arr = spec_array_new(); _arr; }), ({ SpecArray* _arr = spec_array_new(); _arr; })) /* inst:Expression:makeMap */;
+	    return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (e) { spec_release((void*)e); e = NULL; }
-    }
+	};
     SPEC_AUTO Expression* firstItem = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
     if (Parser_checkPunct(self, Punctuation_PAIR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        SPEC_AUTO Expression* firstVal = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
-        SPEC_AUTO SpecArray* mKeys = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(firstItem)); _arr; })));
-        SPEC_AUTO SpecArray* mVals = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(firstVal)); _arr; })));
-        if (Parser_checkPunct(self, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        ({ void* _lp = (void*)(({ MapItemsLoop* _inst = MapItemsLoop_new(); MapItemsLoop_init(_inst, self, mKeys, mVals); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (MapItemsLoop_evaluate((void*)_lp)) { if (!MapItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-    }
-        Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_MAP); _inst; })));
-        Expression_makeMap(e, mKeys, mVals) /* inst:Expression:makeMap */;
-        return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* firstVal = (Expression*)((Parser_parseExpression(self) /* inst:Parser:parseExpression */));
+	    SPEC_AUTO SpecArray* mKeys = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(firstItem)); _arr; })));
+	    SPEC_AUTO SpecArray* mVals = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(firstVal)); _arr; })));
+	    if (Parser_checkPunct(self, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    ({ void* _lp = (void*)(({ MapItemsLoop* _inst = MapItemsLoop_new(); MapItemsLoop_init(_inst, self, mKeys, mVals); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (MapItemsLoop_evaluate((void*)_lp)) { if (!MapItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	};
+	    Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_MAP); _inst; })));
+	    Expression_makeMap(e, mKeys, mVals) /* inst:Expression:makeMap */;
+	    return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (firstVal) { spec_release((void*)firstVal); firstVal = NULL; }
     if (mKeys) { spec_release((void*)mKeys); mKeys = NULL; }
     if (mVals) { spec_release((void*)mVals); mVals = NULL; }
     if (e) { spec_release((void*)e); e = NULL; }
-    }
+	};
     SPEC_AUTO SpecArray* items = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(firstItem)); _arr; })));
     if (Parser_checkPunct(self, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)((((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self))));
-        ({ void* _lp = (void*)(({ ArrayItemsLoop* _inst = ArrayItemsLoop_new(); ArrayItemsLoop_init(_inst, self, items); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArrayItemsLoop_evaluate((void*)_lp)) { if (!ArrayItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-    }
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    ({ void* _lp = (void*)(({ ArrayItemsLoop* _inst = ArrayItemsLoop_new(); ArrayItemsLoop_init(_inst, self, items); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (ArrayItemsLoop_evaluate((void*)_lp)) { if (!ArrayItemsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	};
     Parser_matchPunct(self, Punctuation_BRACKET_CLOSE) /* inst:Parser:matchPunct */;
     SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_ARRAY); _inst; })));
     spec_assign((void**)&e->arrayItems, (void*)(items));
@@ -56674,25 +56674,25 @@ Expression* Parser_expandFancyString(Parser* self, String raw, Token* originTok,
     (void)depth;
     SPEC_AUTO Expression* plainE = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_STRING); _inst; })));
     if (((depth) > (0))) {
-        SPEC_AUTO FancyEscapeLoop* dEsc = (FancyEscapeLoop*)((({ FancyEscapeLoop* _inst = FancyEscapeLoop_new(); FancyEscapeLoop_init(_inst, raw); _inst; })));
-        ({ void* _lp = (void*)(dEsc); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (FancyEscapeLoop_evaluate((void*)_lp)) { if (!FancyEscapeLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
-        spec_assign((void**)&plainE->stringValue, (void*)(dEsc->res));
-        return (Expression*)({ Expression* _ret_val = plainE; plainE = NULL; _ret_val; });
+	    SPEC_AUTO FancyEscapeLoop* dEsc = (FancyEscapeLoop*)((({ FancyEscapeLoop* _inst = FancyEscapeLoop_new(); FancyEscapeLoop_init(_inst, raw); _inst; })));
+	    ({ void* _lp = (void*)(dEsc); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (FancyEscapeLoop_evaluate((void*)_lp)) { if (!FancyEscapeLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
+	    spec_assign((void**)&plainE->stringValue, (void*)(dEsc->res));
+	    return (Expression*)({ Expression* _ret_val = plainE; plainE = NULL; _ret_val; });
     if (dEsc) { spec_release((void*)dEsc); dEsc = NULL; }
-    }
+	};
     SPEC_AUTO TemplateSplitLoop* split = (TemplateSplitLoop*)((({ TemplateSplitLoop* _inst = TemplateSplitLoop_new(); TemplateSplitLoop_init(_inst, raw); _inst; })));
     ({ void* _lp = (void*)(split); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (TemplateSplitLoop_evaluate((void*)_lp)) { if (!TemplateSplitLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     spec_array_add_object(split->lits, (void*)(split->lit));
     if (split->inHole) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, originTok, spec_string_intern("Unterminated template hole (missing closing }})"));
-        spec_assign((void**)&plainE->stringValue, (void*)(spec_string_intern("")));
-        return (Expression*)({ Expression* _ret_val = plainE; plainE = NULL; _ret_val; });
-    }
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, originTok, spec_string_intern("Unterminated template hole (missing closing }})"));
+	    spec_assign((void**)&plainE->stringValue, (void*)(spec_string_intern("")));
+	    return (Expression*)({ Expression* _ret_val = plainE; plainE = NULL; _ret_val; });
+	};
     SPEC_AUTO Expression* acc = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_STRING); _inst; })));
     spec_assign((void**)&acc->stringValue, (void*)(spec_array_get(split->lits, 0)));
     if (((spec_array_length(split->holes)) == (0))) {
-        return (Expression*)({ Expression* _ret_val = acc; acc = NULL; _ret_val; });
-    }
+	    return (Expression*)({ Expression* _ret_val = acc; acc = NULL; _ret_val; });
+	};
     SPEC_AUTO TemplateFoldLoop* fold = (TemplateFoldLoop*)((({ TemplateFoldLoop* _inst = TemplateFoldLoop_new(); TemplateFoldLoop_init(_inst, self, split, acc); _inst; })));
     ({ void* _lp = (void*)(fold); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (TemplateFoldLoop_evaluate((void*)_lp)) { if (!TemplateFoldLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } });
     return (Expression*)spec_retain((void*)(fold->acc));
@@ -56706,23 +56706,23 @@ Expression* Parser_parseTemplateExpression(Parser* self, String text) {
     (void)self;
     (void)text;
     SPEC_AUTO Expression* emptyE = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_STRING); _inst; })));
-    if (((spec_string_length(((String)spec_claim_pool((void*)(String_trim(text)))))) == (0))) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, ((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */))), spec_string_intern("Empty expression in string template"));
-        return (Expression*)({ Expression* _ret_val = emptyE; emptyE = NULL; _ret_val; });
-    }
+    if (((spec_string_length(String_trim(text))) == (0))) {
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, Parser_peek(self) /* inst:Parser:peek */, spec_string_intern("Empty expression in string template"));
+	    return (Expression*)({ Expression* _ret_val = emptyE; emptyE = NULL; _ret_val; });
+	};
     SPEC_AUTO Lexer* subLexer = (Lexer*)((({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, text); _inst; })));
     SPEC_AUTO SpecArray* subTokens = (SpecArray*)((Lexer_tokenize(subLexer) /* inst:Lexer:tokenize */));
     if (({ Lexer* _recv = (Lexer*)(subLexer); (((bool (*)(Lexer*))_recv->_vtable[48]))((Lexer*)_recv); })) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, ((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */))), spec_string_intern("Invalid expression in string template"));
-        return (Expression*)({ Expression* _ret_val = emptyE; emptyE = NULL; _ret_val; });
-    }
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, Parser_peek(self) /* inst:Parser:peek */, spec_string_intern("Invalid expression in string template"));
+	    return (Expression*)({ Expression* _ret_val = emptyE; emptyE = NULL; _ret_val; });
+	};
     SPEC_AUTO Parser* subParser = (Parser*)((({ Parser* _inst = Parser_new(); Parser_init(_inst, subTokens); _inst; })));
     Parser_setTemplateDepth(subParser, 1) /* inst:Parser:setTemplateDepth */;
     SPEC_AUTO Expression* e = (Expression*)((Parser_parseExpression(subParser) /* inst:Parser:parseExpression */));
-    if (((({ Parser* _recv = (Parser*)(subParser); (((bool (*)(Parser*))_recv->_vtable[48]))((Parser*)_recv); })) || (((Token_getTokenKind(((Token*)spec_claim_pool((void*)(Parser_peek(subParser) /* inst:Parser:peek */)))) /* inst:Token:getTokenKind */) != (TokenKind__EOF))))) {
-        (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, ((Token*)spec_claim_pool((void*)(Parser_peek(self) /* inst:Parser:peek */))), spec_string_intern("Invalid expression in string template"));
-        return (Expression*)({ Expression* _ret_val = emptyE; emptyE = NULL; _ret_val; });
-    }
+    if (((({ Parser* _recv = (Parser*)(subParser); (((bool (*)(Parser*))_recv->_vtable[48]))((Parser*)_recv); })) || (((Token_getTokenKind(Parser_peek(subParser) /* inst:Parser:peek */) /* inst:Token:getTokenKind */) != (TokenKind__EOF))))) {
+	    (((void (*)(Parser*, Token*, String))self->_vtable[47]))((Parser*)self, Parser_peek(self) /* inst:Parser:peek */, spec_string_intern("Invalid expression in string template"));
+	    return (Expression*)({ Expression* _ret_val = emptyE; emptyE = NULL; _ret_val; });
+	};
     return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (emptyE) { spec_release((void*)emptyE); emptyE = NULL; }
     if (subLexer) { spec_release((void*)subLexer); subLexer = NULL; }
