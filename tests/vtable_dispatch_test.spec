@@ -31,6 +31,7 @@ Class is LayoutBase{
 Class of LayoutBase is LayoutMid{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	local Int is midField: 22;
@@ -43,6 +44,7 @@ Class of LayoutBase is LayoutMid{
 Class of LayoutMid is LayoutLeaf{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	local Int is leafField: 33;
@@ -55,6 +57,7 @@ Class of LayoutMid is LayoutLeaf{
 Class is MiaFeature{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	Function of String is label(){
@@ -65,6 +68,7 @@ Class is MiaFeature{
 Class is MibFeature{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	Function of String is tag(){
@@ -75,6 +79,7 @@ Class is MibFeature{
 Class of MiaFeature, MibFeature is MiChild{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	replace Function of String is label(){
@@ -85,6 +90,7 @@ Class of MiaFeature, MibFeature is MiChild{
 Class is VtableDispatchTest{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()]
 	];
@@ -95,61 +101,61 @@ Class is VtableDispatchTest{
 		local LayoutLeaf is leaf: LayoutLeaf:init();
 
 		# Case 1: fields at every level round-trip (layout integrity).
-		if (leaf:baseField == 11 && leaf:midField == 22 && leaf:leafField == 33) {
+		Conditional:branch(check: { leaf:baseField == 11 && leaf:midField == 22 && leaf:leafField == 33 }, then: {
 			Output:line('[PASS] layout: all three field levels intact');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] layout: base=' . leaf:baseField . ' mid=' . leaf:midField . ' leaf=' . leaf:leafField);
-		}
+		});
 
 		# Case 2: base-declared method reading base field via leaf object.
 		local Int is desc: leaf:describeBase();
-		if (desc == 11) {
+		Conditional:branch(check: { desc == 11 }, then: {
 			Output:line('[PASS] inherited method reads base field: 11');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] inherited method: expected 11, got ' . desc);
-		}
+		});
 
 		# Case 3: base-typed reference dispatches to most-derived override.
 		local LayoutBase is asBase: leaf;
 		local Int is poly: asBase:poly();
-		if (poly == 3) {
+		Conditional:branch(check: { poly == 3 }, then: {
 			Output:line('[PASS] base-typed virtual dispatch: poly = 3');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] base-typed virtual dispatch: expected 3, got ' . poly);
-		}
+		});
 
 		# Case 4: mid-typed reference also reaches the leaf override.
 		local LayoutMid is asMid: leaf;
-		if (asMid:poly() == 3) {
+		Conditional:branch(check: { asMid:poly() == 3 }, then: {
 			Output:line('[PASS] mid-typed virtual dispatch: poly = 3');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] mid-typed virtual dispatch: expected 3');
-		}
+		});
 
 		# Case 5: MI first-wins - child override wins over both parents.
 		local MiChild is mi: MiChild:init();
 		local String is lbl: mi:label();
-		if (lbl == 'child-mia') {
+		Conditional:branch(check: { lbl == 'child-mia' }, then: {
 			Output:line('[PASS] MI override: label = child-mia');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] MI override: expected child-mia, got ' . lbl);
-		}
+		});
 
 		# Case 6: MI first-wins - undeclared method resolves to first parent.
 		local String is tg: mi:tag();
-		if (tg == 'mib') {
+		Conditional:branch(check: { tg == 'mib' }, then: {
 			Output:line('[PASS] MI first-wins: tag = mib');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] MI first-wins: expected mib, got ' . tg);
-		}
+		});
 
 		# Case 7: base-typed MI reference dispatches virtually.
 		local MiaFeature is miAsBase: mi;
-		if (miAsBase:label() == 'child-mia') {
+		Conditional:branch(check: { miAsBase:label() == 'child-mia' }, then: {
 			Output:line('[PASS] MI base-typed dispatch: label = child-mia');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] MI base-typed dispatch: expected child-mia');
-		}
+		});
 
 		Output:line('=== End Vtable Dispatch & Layout ===');
 	}

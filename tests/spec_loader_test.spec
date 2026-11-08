@@ -32,6 +32,7 @@ Class is SpecLoaderTest{
 Class of Greeter is LoudGreeter{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as File()],
 		['base', 'io', as Output()]
 	];
@@ -45,6 +46,7 @@ Class is LoaderE2E{
 		Output:line(text: g:toString());
 	}
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as File()],
 		['base', 'io', as Output()]
@@ -56,31 +58,31 @@ Class is LoaderE2E{
 		local ProgramNode is prog: loader:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 
 		# --- package resolution: imports loaded, lattice intact ---
-		if (loader:loadedFileCount() >= 6
-			&& loader:getParseErrors():length() == 0) {
+		Conditional:branch(check: { loader:loadedFileCount() >= 6
+			&& loader:getParseErrors():length() == 0 }, then: {
 			Output:line('[PASS] multi-file load with zero errors');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] load: files=' . (loader:loadedFileCount() as String) . ' errors=' . (loader:getParseErrors():length() as String));
 			loader:getParseErrors():each(action: local Function(String is e){
 				Output:line(e);
 			});
 			failures: failures + 1;
-		}
+		});
 
 		# --- root lattice preloads + implicit Any ---
 		local Loader is probe: Loader:init();
 		local ProgramNode is classes: probe:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 		local LoaderE2EHelper is h: LoaderE2EHelper:init();
-		if (h:hasClass(classes: classes, name: 'String')
+		Conditional:branch(check: { h:hasClass(classes: classes, name: 'String')
 			&& h:hasClass(classes: classes, name: 'Any')
 			&& h:hasClass(classes: classes, name: 'Any')
 			&& h:baseOf(classes: classes, name: 'LoudGreeter') == 'Greeter'
-			&& h:baseOf(classes: classes, name: 'Greeter') == 'Any') {
+			&& h:baseOf(classes: classes, name: 'Greeter') == 'Any' }, then: {
 			Output:line('[PASS] root lattice and implicit Any');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] lattice');
 			failures: failures + 1;
-		}
+		});
 
 		# --- group fragments merge into their target ---
 		File:write(path: 'tests/.loader_group_a_tmp.spec', content: "Class is Grouped{
@@ -107,21 +109,22 @@ Class is GroupMain{
 		gloader:loadFile(filePath: 'tests/.loader_group_b_tmp.spec');
 		gloader:mergeGroups();
 		local LoaderE2EHelper is gh: LoaderE2EHelper:init();
-		if (gloader:getParseErrors():length() == 0
+		Conditional:branch(check: { gloader:getParseErrors():length() == 0
 			&& gh:hasClass(classes: gprog, name: 'Grouped')
 			&& !gh:hasClass(classes: gprog, name: 'GroupedPart')
-			&& gh:memberCount(classes: gprog, name: 'Grouped') == 2) {
+			&& gh:memberCount(classes: gprog, name: 'Grouped') == 2 }, then: {
 			Output:line('[PASS] group fragment merging');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] group merge');
 			failures: failures + 1;
-		}
+		});
 
 		# --- unresolvable imports are load errors ---
 		File:write(path: 'tests/.loader_bad_tmp.spec', content: "Class is BadImporter{
 	replace Function is init(Map of String to String is args){
 	}
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['no', 'such', 'Package'],
 		['base', 'io', as File()],
 		['base', 'io', as Output()]
@@ -129,23 +132,23 @@ Class is GroupMain{
 }");
 		local Loader is bloader: Loader:init();
 		bloader:loadProgram(rootPath: 'tests/.loader_bad_tmp.spec');
-		if (bloader:getParseErrors():length() > 0) {
+		Conditional:branch(check: { bloader:getParseErrors():length() > 0 }, then: {
 			Output:line('[PASS] unresolvable import reported');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] missing import error');
 			failures: failures + 1;
-		}
+		});
 
 		File:remove(path: 'tests/.loader_app_tmp.spec');
 		File:remove(path: 'tests/.loader_group_a_tmp.spec');
 		File:remove(path: 'tests/.loader_group_b_tmp.spec');
 		File:remove(path: 'tests/.loader_bad_tmp.spec');
 
-		if (failures == 0) {
+		Conditional:branch(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec loader test complete');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] spec loader test: ' . (failures as String) . ' failures');
-		}
+		});
 	}
 }
 
@@ -154,6 +157,7 @@ Class is LoaderE2EHelper{
 	namespace: ['test'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'iterator'],
@@ -164,9 +168,9 @@ Class is LoaderE2EHelper{
 	Function of Boolean is hasClass(ProgramNode is classes, String is name){
 		local Boolean is res: false;
 		classes:classes:each(action: local Function(ClassInfo is c){
-			if (c:name == name) {
+			Conditional:branch(check: { c:name == name }, then: {
 				res: true;
-			}
+			});
 		});
 		return res;
 	}
@@ -174,9 +178,9 @@ Class is LoaderE2EHelper{
 	Function of String is baseOf(ProgramNode is classes, String is name){
 		local String is res: '';
 		classes:classes:each(action: local Function(ClassInfo is c){
-			if (c:name == name) {
+			Conditional:branch(check: { c:name == name }, then: {
 				res: c:baseClass;
-			}
+			});
 		});
 		return res;
 	}
@@ -184,9 +188,9 @@ Class is LoaderE2EHelper{
 	Function of Int is memberCount(ProgramNode is classes, String is name){
 		local Int is res: 0;
 		classes:classes:each(action: local Function(ClassInfo is c){
-			if (c:name == name) {
+			Conditional:branch(check: { c:name == name }, then: {
 				res: c:members:length();
-			}
+			});
 		});
 		return res;
 	}
