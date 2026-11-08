@@ -458,6 +458,70 @@ merges.
   per target) — the outer's as-imports dispatch on the inner's own
   instances.
 
+### IV.2c — The qualified registry keys (planned; verified against the current behavior)
+
+**The refinement**: inner classes, like functions, are available when
+imported. Like functions, a bare reference that is ambiguous is an error,
+and the user resolves it by prefixing with the imported class
+(`LibA:Helper`). The inner classes join the same resolution surface as
+the functions — the same providers, the same ambiguity rules, the same
+prefix escape.
+
+**Verified gaps** (probed against the current build):
+
+- **Gap A — the as-import does not grant the nested classes.** LibA
+  declares a nested Helper; a consumer instance-importing LibA and
+  referencing `Helper` bare gets the §I.6 error ('Helper' is not
+  imported). The parent's as-import grants the parent's functions but
+  not its nested-class types.
+- **Gap B — the qualified type reference does not parse.**
+  `local LibA:Helper is h: ...;` is a syntax error — the type-reference
+  parse (parseType in declaration positions) has no path form.
+- The ambiguity behavior is unprobeable until A/B land (today the first
+  registration silently wins).
+
+**The unified resolution model** (what the phases build):
+
+- A nested class is a member of its enclosing class (MemberKind:CLASS ✓
+  already). The as-import of a class brings its nested classes into the
+  importer's scope — the same grant that brings its functions.
+- A bare type reference to a nested-class name resolves through the
+  provider walk — the own nested classes, the as-imported classes'
+  nested classes, the base lattice — the SAME walk the bare function
+  calls use. Exactly one provider → resolve; several → the ambiguity
+  error naming the providers; the user prefixes (`LibA:Helper`).
+- The qualified prefix resolves the member nested class of the named
+  class, in any type position.
+- The registry keys qualify (`Outer:Helper`), and the emitted C symbols
+  follow (`Outer_Helper_init`).
+
+**The phases** (each converges alone; the suite green at each boundary):
+
+1. **The C symbol qualification** — `qualifiedName()` on ClassInfo; the
+   gen's symbol emissions qualify via cIdent (':' → '_'). Zero semantic
+   change: findClass still resolves bare, the first registration wins.
+   The in-tree nested classes rename mechanically
+   (`CBackendUtils_SnakeCaseLoop_init`).
+2. **The qualified type references parse** — the declaration-position
+   type parse accepts `Path:Name` (`local LibA:Helper is h: ...;`), and
+   the resolution: the named class's nested member. Until phase 3 this
+   resolves only same-file nested classes.
+3. **The import grant + the provider resolution** — the §I.6 gating
+   counts the as-imported class's nested classes as import-granted; the
+   bare type references resolve through the provider walk (the same
+   providers as the bare function calls); the ambiguity error names the
+   providers. N25's blanket collision error is REPLACED by the
+   ambiguity-at-reference.
+4. **The registry keys qualify** — the loader's seenClassNames and the
+   checker's registry key the qualified name; the same-named inner
+   classes under different outers both register and both resolve in
+   their scopes. The bare-unique fallback serves the top-level names.
+
+**What stays out of scope**: importing a nested class WITHOUT importing
+its enclosing class (the grant rides the parent's as-import); the
+same-named inner classes in the SAME outer (the duplicate declaration —
+still an error).
+
 ### IV.3 The resolution rules (checker)
 
 - **Bare scope** = own members → own as-imports → the outer chain's
