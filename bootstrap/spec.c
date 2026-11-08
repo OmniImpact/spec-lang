@@ -56952,7 +56952,8 @@ bool ArgLoop_iteration(ArgLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String argName = spec_construct_string(spec_string_intern(""));
     SPEC_AUTO Token* tok0 = (Token*)((Parser_peekAhead(self->parser, 0) /* inst:Parser:peekAhead */));
-    if (((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) && (spec_string_equals(Token_getValue(Parser_peekAhead(self->parser, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_NAMED_ARG))))) {
+    bool nameLike = ((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) || (((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))) && (((spec_string_equals(Token_getValue(tok0) /* inst:Token:getValue */, spec_string_intern("if"))) || (spec_string_equals(Token_getValue(tok0) /* inst:Token:getValue */, spec_string_intern("else"))))))));
+    if (((nameLike) && (spec_string_equals(Token_getValue(Parser_peekAhead(self->parser, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_NAMED_ARG))))) {
 	    SPEC_AUTO String nameVal = Token_getValue(tok0) /* inst:Token:getValue */;
 	    bool isUpper = Chars_isUpper(self->chars, String_charAt(nameVal, 0, spec_string_intern(""))) /* inst:Chars:isUpper */;
 	    if ((!(isUpper))) {
