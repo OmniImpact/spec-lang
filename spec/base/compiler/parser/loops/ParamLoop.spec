@@ -35,45 +35,45 @@ Class of Loop is ParamLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		# `self: field` declares a receiver field parameter.
-		if (self:parser:peek():getValue() == self:names:selfIdent() && self:parser:peekAhead(offset: 1):getValue() == ':') {
+		Conditional:branch(check: { self:parser:peek():getValue() == self:names:selfIdent() && self:parser:peekAhead(offset: 1):getValue() == ':' }, then: {
 			self:parser:advance();
 			self:parser:advance();
 			local Token is fTok: self:parser:advance();
 			local Parameter is param: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: self:names:selfFieldMarker()));
-			if (self:parser:checkPunct(p: Punctuation:DEFAULT)) {
+			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:DEFAULT) }, then: {
 				self:parser:advance();
 				param:setDefault(expr: self:parser:parseExpression());
-			}
+			});
 			self:params:add(item: param);
-			if (self:parser:checkPunct(p: Punctuation:SEPARATOR)) {
+			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:parser:advance();
 				return true;
-			}
+			});
 			return false;
-		}
+		});
 		# Shorthand: a bare identifier is an Any-typed parameter.
-		if (self:parser:peekAhead(offset: 1):getValue() == Punctuation:SEPARATOR:value() || self:parser:peekAhead(offset: 1):getValue() == Punctuation:GROUP_CLOSE:value()) {
+		Conditional:branch(check: { self:parser:peekAhead(offset: 1):getValue() == Punctuation:SEPARATOR:value() || self:parser:peekAhead(offset: 1):getValue() == Punctuation:GROUP_CLOSE:value() }, then: {
 			local Token is pTok: self:parser:advance();
 			self:params:add(item: Parameter:init(name: pTok:getValue(), paramType: Type:init(name: self:names:anyName())));
-			if (self:parser:checkPunct(p: Punctuation:SEPARATOR)) {
+			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:parser:advance();
 				return true;
-			}
+			});
 			return false;
-		}
+		});
 		local Type is pType: self:parser:parseType();
 		self:parser:matchKeyword(kw: Keyword:IS);
 		local Token is pTok: self:parser:advance();
 		local Parameter is param: Parameter:init(name: pTok:getValue(), paramType: pType);
-		if (self:parser:checkPunct(p: Punctuation:DEFAULT)) {
+		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:DEFAULT) }, then: {
 			self:parser:advance();
 			param:setDefault(expr: self:parser:parseExpression());
-		}
+		});
 		self:params:add(item: param);
-		if (self:parser:checkPunct(p: Punctuation:SEPARATOR)) {
+		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
-		}
+		});
 		return false;
 	}
 }

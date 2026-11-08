@@ -38,30 +38,30 @@ Class of Loop is ArgLoop{
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is argName: '';
 		local Token is tok0: self:parser:peekAhead(offset: 0);
-		if (tok0:getTokenKind() == TokenKind:IDENTIFIER && self:parser:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value()) {
+		Conditional:branch(check: { tok0:getTokenKind() == TokenKind:IDENTIFIER && self:parser:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
 			local String is nameVal: tok0:getValue();
 			local Boolean is isUpper: self:chars:isUpper(ch: nameVal:charAt(index: 0, default: ''));
-			if (!isUpper) {
+			Conditional:branch(check: { !isUpper }, then: {
 				local Token is nextTok: self:parser:peekAhead(offset: 2);
 				local Boolean is isNamed: false;
-				if (nextTok:getTokenKind() != TokenKind:IDENTIFIER) {
+				Conditional:branch(check: { nextTok:getTokenKind() != TokenKind:IDENTIFIER }, then: {
 					isNamed: true;
-				} else {
+				}, otherwise: {
 					isNamed: self:parser:hasWhitespaceAfter(offset: 1);
-				}
-				if (isNamed) {
+				});
+				Conditional:branch(check: { isNamed }, then: {
 					local Token is aTok: self:parser:advance();
 					argName: aTok:getValue();
 					self:parser:advance();
-				}
-			}
-		}
+				});
+			});
+		});
 		local Expression is val: self:parser:parseExpression();
 		self:args:add(item: NamedArg:init(name: argName, value: val));
-		if (self:parser:checkPunct(p: Punctuation:SEPARATOR)) {
+		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
-		}
+		});
 		return false;
 	}
 
