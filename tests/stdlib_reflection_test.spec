@@ -31,12 +31,12 @@ Class is StdlibReflectionTest{
 		local StackFrame is frame: StackFrame:init(location: loc, className: 'Player', methodName: 'takeDamage');
 		Output:line('Stack Frame: ' . frame:toString());
 
-		if (frame:getClassName() == 'Player') {
+		Conditional:branch(check: { frame:getClassName() == 'Player' }, then: {
 			Output:line('[PASS] StackFrame class name is Player');
-		}
-		if (frame:getMethodName() == 'takeDamage') {
+		});
+		Conditional:branch(check: { frame:getMethodName() == 'takeDamage' }, then: {
 			Output:line('[PASS] StackFrame method name is takeDamage');
-		}
+		});
 
 		# 2. Test Type reflection
 		Output:line("\n--- 2. Type Reflection ---");
@@ -56,12 +56,12 @@ Class is StdlibReflectionTest{
 		mapType:params: mapParams;
 		Output:line('Map type: ' . mapType:toString());
 
-		if (arrType:isGeneric()) {
+		Conditional:branch(check: { arrType:isGeneric() }, then: {
 			Output:line('[PASS] Array of String is generic');
-		}
-		if (!intType:isGeneric()) {
+		});
+		Conditional:branch(check: { !intType:isGeneric() }, then: {
 			Output:line('[PASS] Int is not generic');
-		}
+		});
 
 		# 3. Test Parameter, Member, and ClassInfo
 		Output:line("\n--- 3. ClassInfo & Member Reflection ---");
@@ -85,12 +85,12 @@ Class is StdlibReflectionTest{
 		Output:line('Members count: ' . cls:members:length());
 		Output:line('Method: ' . methodMem:name . ' with ' . methodMem:params:length() . ' parameter(s)');
 
-		if (cls:name == 'Healer') {
+		Conditional:branch(check: { cls:name == 'Healer' }, then: {
 			Output:line('[PASS] ClassInfo name is Healer');
-		}
-		if (methodMem:name == 'heal') {
+		});
+		Conditional:branch(check: { methodMem:name == 'heal' }, then: {
 			Output:line('[PASS] Method name is heal');
-		}
+		});
 
 		# 4. Test Meta AST Expression & Statement
 		Output:line("\n--- 4. Meta AST Expression & Statement ---");
@@ -104,12 +104,12 @@ Class is StdlibReflectionTest{
 		Output:line('Assign stmt kind: ' . assignStmt:kind:value());
 		Output:line('Num expr kind: ' . numExpr:kind:value());
 
-		if (assignStmt:kind:value() == 'ASSIGN') {
+		Conditional:branch(check: { assignStmt:kind:value() == 'ASSIGN' }, then: {
 			Output:line('[PASS] Statement kind is ASSIGN');
-		}
-		if (numExpr:kind:value() == 'NUMBER') {
+		});
+		Conditional:branch(check: { numExpr:kind:value() == 'NUMBER' }, then: {
 			Output:line('[PASS] Expression kind is NUMBER');
-		}
+		});
 
 		Output:line("\nAll Standard Library refactoring tests passed successfully!");
 	}

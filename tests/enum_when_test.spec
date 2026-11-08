@@ -125,11 +125,11 @@ Class is EnumWhenTest{
 
 		# String-backed reverse lookup: the tag maps back to its variant,
 		# no match yields the empty-tag default.
-		if (LogLevel:of(value: 'WRN') == LogLevel:WARN && LogLevel:of(value: 'nope') == LogLevel:NONE) {
+		Conditional:branch(check: { LogLevel:of(value: 'WRN') == LogLevel:WARN && LogLevel:of(value: 'nope') == LogLevel:NONE }, then: {
 			Output:line('Reverse lookup of() round-trips and defaults');
-		} else {
+		}, otherwise: {
 			Output:line('FAIL: of() lookup');
-		}
+		});
 
 		local HttpStatus is status: HttpStatus:SERVER_ERROR;
 		local Boolean is canRetry: when (status) {

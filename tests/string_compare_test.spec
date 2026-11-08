@@ -16,15 +16,31 @@ Class is StringCompareTest {
 		local Int is pass: 0;
 		local Int is fail: 0;
 
-		if (a < b && b > a) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] ordering'); }
-		if (a <= a && a >= a) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] reflexivity'); }
-		if (a < a2 && a2 > a) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] prefix ordering: apple < applf'); }
-		if (('aa' > 'ab') == false) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] aa > ab'); }
+		Conditional:branch(check: { a < b && b > a }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] ordering');
+		});
+		Conditional:branch(check: { a <= a && a >= a }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] reflexivity');
+		});
+		Conditional:branch(check: { a < a2 && a2 > a }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] prefix ordering: apple < applf');
+		});
+		Conditional:branch(check: { ('aa' > 'ab') == false }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] aa > ab');
+		});
 
-		if (fail == 0) {
+		Conditional:branch(check: { fail == 0 }, then: {
 			Output:line('[PASS] string comparison: ' . (pass as String) . ' checks');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] string comparison: ' . (fail as String) . ' failures');
-		}
+		});
 	}
 }
