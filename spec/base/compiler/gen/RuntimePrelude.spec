@@ -710,6 +710,18 @@ void spec_drain_async_tasks(void) {
 static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
     if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
 }
+
+/* FUNCTIONS.md Part II: the no-argument closure invoker for the
+   conditional floor. */
+static inline void spec_call_closure_0(SpecClosure* cls) {
+    if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }
+}
+
+/* The conditional floor (FUNCTIONS.md Part II): the single primitive.
+   `else` is composed above it as `if(!check, else)`. */
+static inline void spec_branch(bool check, SpecClosure* then) {
+    if (check) { spec_call_closure_0(then); }
+}
 static inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {
     if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }
 }

@@ -205,6 +205,19 @@ unambiguous).
 
 ### II.1 The API
 
+**Foundation landed** (this commit): the floor (`base:sysinternal:Conditional`,
+one primitive bound to `spec_branch` + `spec_call_closure_0`), the wrapper
+(`base:sys:Conditional`, three overloads composed — `else` is `!check`),
+the statement-form inline (zero-allocation native C if/else; branch bodies
+inline into the enclosing function so guard-clause returns work; branch
+closures type-check against the enclosing method's return type), and the
+conditional_test regression (6 checks: 2-arg primitive, 3-arg composition,
+finally, guard clause, nesting, bare calls). The emitted C contains the
+floor's `spec_branch` only in the wrapper's own fallback body — user
+conditionals are native C. Param `otherwise` is the temp spelling of
+`else` (keyword) until the flip. Branch-as-expression is checker-rejected
+(void) until the value-yielding inline lands.
+
 ```spec
 Class is Conditional {
 	Function is if(Boolean is check, Function is then)

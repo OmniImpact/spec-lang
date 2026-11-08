@@ -1430,6 +1430,9 @@ Class is CodeGenerator{
 		local Boolean is claim: false;
 		if (kind == ExpressionKind:CALL) {
 			claim: self:yieldsClaim(expr: expr);
+			if (expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4) {
+				claim: false;
+			}
 		} else if (kind == ExpressionKind:BINARY) {
 			claim: expr:binaryOp == '.';
 		} else if (kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP) {
@@ -1892,6 +1895,29 @@ Class is CodeGenerator{
 		if (builtinC != '') {
 			return builtinC;
 		}
+
+		# FUNCTIONS.md Part II: the Conditional inline — statement-form
+		# conditionals compile to zero-allocation C if/else (the
+		# While:condition precedent). The wrapper's own floor call arrives
+		# as a qualified PATH receiver and is excluded, so the fallback
+			# stays honest.
+			if (expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional')) {
+				local Boolean is shapeOk: expr:argValue(index: 0):kind != ExpressionKind:ANON_FN;
+				local Int is bi: 1;
+				While:condition(
+					evaluate: local Function of Boolean(){ return shapeOk && bi < expr:argCount(); },
+					iteration: local Function of Boolean(){
+						if (expr:argValue(index: bi):kind != ExpressionKind:ANON_FN) {
+							shapeOk: false;
+						}
+						bi: bi + 1;
+						return true;
+					}
+				);
+				if (shapeOk) {
+					return self:generateInlineBranch(expr: expr);
+				}
+			}
 
 		# Function variable or field invocation: fnVar(args).
 		if (targetC == self:names:selfIdent() && (self:localVars:has(key: expr:methodName) || self:fieldTypes:has(key: expr:methodName))) {
@@ -3346,6 +3372,51 @@ Class is CodeGenerator{
 
 	## Inlines a While loop with optional scoped loop variables:
 	## loop variables are declared at the block scope, and the evaluate/iteration
+	## FUNCTIONS.md Part II: inlines a Conditional branch call as native
+	## C if/else. Branch bodies are inlined into the enclosing function,
+	## so a `return` inside a branch returns from the method (guard
+	## clauses work). The 2-arg form is the primitive; the 3-arg form is
+	## `else` (not-if); the 4-arg form appends `finally`.
+	##
+	## @param expr: The branch CALL expression.
+	## @return: C statement text.
+	Function of String is generateInlineBranch(Expression is expr){
+		local String is savedVar: self:inlineReturnVar;
+		local String is savedLbl: self:inlineReturnLabel;
+		local Boolean is savedArg: self:argMode;
+		self:inlineReturnVar: '';
+		self:inlineReturnLabel: '';
+		self:argMode: false;
+		local String is condC: self:generateExpression(expr: expr:argValue(index: 0));
+		local String is thenC: self:inlineBranchBody(anonFn: expr:argValue(index: 1));
+		local String is out: "if (" . condC . ") {\n" . thenC . "\t}";
+		if (expr:argCount() >= 3) {
+			local String is elseC: self:inlineBranchBody(anonFn: expr:argValue(index: 2));
+			out: out . " else {\n" . elseC . "\t}";
+		}
+		if (expr:argCount() >= 4) {
+			local String is finC: self:inlineBranchBody(anonFn: expr:argValue(index: 3));
+			out: out . "\n" . finC;
+		}
+		self:inlineReturnVar: savedVar;
+		self:inlineReturnLabel: savedLbl;
+		self:argMode: savedArg;
+		return out;
+	}
+
+	## Inlines one branch closure's body statements.
+	##
+	## @param anonFn: The branch's ANON_FN.
+	## @return: C statement text.
+	Function of String is inlineBranchBody(Expression is anonFn){
+		local String is bodyC: '';
+		anonFn:anonBody:each(action: local Function(Statement is st){
+			bodyC: bodyC . "\t" . self:generateStatement(stmt: st);
+		});
+		bodyC: bodyC . self:scopeReleases(stmts: anonFn:anonBody);
+		return bodyC;
+	}
+
 	## anon function bodies become the loop's condition and body.
 	##
 	## @param loopVars: Scoped loop variable declarations.

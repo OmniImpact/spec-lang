@@ -81,6 +81,10 @@ Class is TypeChecker{
 
 	## Anonymous-function nesting depth (forwards are top-level only).
 	local Int is anonDepth: 0;
+	# FUNCTIONS.md Part II: inside a Conditional branch-closure argument —
+	# its body inlines into the enclosing method, so returns flow to the
+	# method's return type, not the closure's.
+	local Boolean is inBranchClosure: false;
 
 	## Class currently being analyzed.
 	local String is currentClassName: '';
@@ -1893,7 +1897,9 @@ Class is TypeChecker{
 				});
 				local String is savedRet: self:currentMethodReturnType;
 
-				self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
+				if (!self:inBranchClosure) {
+					self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
+				}
 				expr:anonParams:each(action: local Function(Parameter is p){
 					self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 				});
@@ -2023,6 +2029,13 @@ Class is TypeChecker{
 				return res;
 			}
 		}
+		# FUNCTIONS.md Part II: is this a Conditional branch call? Branch
+		# closure bodies (arguments 1+) type-check against the enclosing
+		# method's return type — they inline into it.
+		local Boolean is isBranchCall: expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional');
+		local Int is argIdx: 0;
+		local Boolean is savedBranchFlag: self:inBranchClosure;
+		self:inBranchClosure: false;
 		local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While') && (method == 'loop' || method == 'init' || method == 'condition');
 		local Map of String to String is savedWhileVars;
 		if (isWhileLoop) {
@@ -2058,7 +2071,12 @@ Class is TypeChecker{
 
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
 		expr:methodArgs:each(action: local Function(NamedArg is arg){
+			if (isBranchCall && argIdx >= 1) {
+				self:inBranchClosure: true;
+			}
 			self:inferExpressionType(expr: arg:value);
+			self:inBranchClosure: false;
+			argIdx: argIdx + 1;
 		});
 
 		if (isWhileLoop) {
@@ -2275,6 +2293,11 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not declared on class \'' . targetType . '\'.');
 			}
 			res: 'Any';
+		}
+		if (isBranchCall) {
+			# Branch calls are statements: void. The value-yielding form
+			# arrives with the expression-form inline.
+			res: 'void';
 		}
 		return res;
 	}

@@ -694,6 +694,18 @@ void spec_drain_async_tasks(void) {
 static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
     if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
 }
+
+/* FUNCTIONS.md Part II: the no-argument closure invoker for the
+   conditional floor. */
+static inline void spec_call_closure_0(SpecClosure* cls) {
+    if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }
+}
+
+/* The conditional floor (FUNCTIONS.md Part II): the single primitive.
+   `else` is composed above it as `if(!check, else)`. */
+static inline void spec_branch(bool check, SpecClosure* then) {
+    if (check) { spec_call_closure_0(then); }
+}
 static inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {
     if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }
 }
@@ -3668,6 +3680,8 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
 String CodeGenerator_generateInlineArrayOp(CodeGenerator* self, String mode, String targetC, Expression* fnExpr);
 String CodeGenerator_generateInlineArrayFold(CodeGenerator* self, String targetC, Expression* initExpr, Expression* fnExpr);
 String CodeGenerator_generateInlineMapEach(CodeGenerator* self, String targetC, Expression* fnExpr);
+String CodeGenerator_generateInlineBranch(CodeGenerator* self, Expression* expr);
+String CodeGenerator_inlineBranchBody(CodeGenerator* self, Expression* anonFn);
 String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loopVars, Expression* evalExpr, Expression* iterExpr);
 String CodeGenerator_generateInlineWhileCondition(CodeGenerator* self, Expression* evalExpr, Expression* iterExpr);
 void FieldMemberLoop_init(FieldMemberLoop* self, SpecArray* members, String fieldName);
@@ -4192,6 +4206,7 @@ struct TypeChecker {
     String currentMethodName;
     bool forwardSeen;
     long long anonDepth;
+    bool inBranchClosure;
     String currentClassName;
     String currentSourceFile;
     String currentMethodReturnType;
@@ -4473,7 +4488,7 @@ struct Stderr {
 };
 
 /* Virtual Method Tables */
-static void* Buf_vtable[346] = {
+static void* Buf_vtable[348] = {
     (void*)Buf_bufLength,
     (void*)Buf_bufGetByte,
     (void*)Buf_stringCopy,
@@ -4819,10 +4834,12 @@ static void* Buf_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Dir_vtable[346] = {
+static void* Dir_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -5168,10 +5185,12 @@ static void* Dir_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Stringable_vtable[346] = {
+static void* Stringable_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -5517,359 +5536,363 @@ static void* Stringable_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
-    (void*)0
-};
-
-static void* Any_vtable[346] = {
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
-    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0
 };
 
-static void* Driver_vtable[346] = {
+static void* Any_vtable[348] = {
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0
+};
+
+static void* Driver_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -6215,10 +6238,12 @@ static void* Driver_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[346] = {
+static void* ProgramNode_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -6564,10 +6589,12 @@ static void* ProgramNode_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[346] = {
+static void* ClassInfo_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -6913,10 +6940,12 @@ static void* ClassInfo_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[346] = {
+static void* Member_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -7262,10 +7291,12 @@ static void* Member_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[346] = {
+static void* Type_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -7611,10 +7642,12 @@ static void* Type_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[346] = {
+static void* Parameter_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -7960,10 +7993,12 @@ static void* Parameter_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[346] = {
+static void* Expression_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -8309,10 +8344,12 @@ static void* Expression_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[346] = {
+static void* NamedArg_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -8658,10 +8695,12 @@ static void* NamedArg_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArm_vtable[346] = {
+static void* WhenArm_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -9007,10 +9046,12 @@ static void* WhenArm_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[346] = {
+static void* Statement_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -9356,10 +9397,12 @@ static void* Statement_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[346] = {
+static void* Lexer_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -9705,10 +9748,12 @@ static void* Lexer_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Chars_vtable[346] = {
+static void* Chars_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -10054,10 +10099,12 @@ static void* Chars_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[346] = {
+static void* Token_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -10403,10 +10450,12 @@ static void* Token_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WellKnown_vtable[346] = {
+static void* WellKnown_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -10752,10 +10801,12 @@ static void* WellKnown_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenizeLoop_vtable[346] = {
+static void* TokenizeLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -11101,10 +11152,12 @@ static void* TokenizeLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipWhitespaceLoop_vtable[346] = {
+static void* SkipWhitespaceLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -11450,10 +11503,12 @@ static void* SkipWhitespaceLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SkipCommentLoop_vtable[346] = {
+static void* SkipCommentLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -11799,10 +11854,12 @@ static void* SkipCommentLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* IdentScanLoop_vtable[346] = {
+static void* IdentScanLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -12148,10 +12205,12 @@ static void* IdentScanLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseDigitsLoop_vtable[346] = {
+static void* BaseDigitsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -12497,10 +12556,12 @@ static void* BaseDigitsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NumberScanLoop_vtable[346] = {
+static void* NumberScanLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -12846,10 +12907,12 @@ static void* NumberScanLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StringScanLoop_vtable[346] = {
+static void* StringScanLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -13195,10 +13258,12 @@ static void* StringScanLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* HeredocScanLoop_vtable[346] = {
+static void* HeredocScanLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -13544,10 +13609,12 @@ static void* HeredocScanLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StripUnderscoresLoop_vtable[346] = {
+static void* StripUnderscoresLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -13893,10 +13960,12 @@ static void* StripUnderscoresLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StripLeadingZerosLoop_vtable[346] = {
+static void* StripLeadingZerosLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -14242,10 +14311,12 @@ static void* StripLeadingZerosLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Error_vtable[346] = {
+static void* Error_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -14591,10 +14662,12 @@ static void* Error_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StackFrame_vtable[346] = {
+static void* StackFrame_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -14940,10 +15013,12 @@ static void* StackFrame_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[346] = {
+static void* SourceLocation_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -15289,10 +15364,12 @@ static void* SourceLocation_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ErrorText_vtable[346] = {
+static void* ErrorText_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -15638,10 +15715,12 @@ static void* ErrorText_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Reflection_vtable[346] = {
+static void* Reflection_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -15987,10 +16066,12 @@ static void* Reflection_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[346] = {
+static void* Parser_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -16336,10 +16417,12 @@ static void* Parser_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BinaryFoldLoop_vtable[346] = {
+static void* BinaryFoldLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -16685,10 +16768,12 @@ static void* BinaryFoldLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PostfixLoop_vtable[346] = {
+static void* PostfixLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -17034,10 +17119,12 @@ static void* PostfixLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArgLoop_vtable[346] = {
+static void* ArgLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -17383,10 +17470,12 @@ static void* ArgLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ParamLoop_vtable[346] = {
+static void* ParamLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -17732,10 +17821,12 @@ static void* ParamLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenConditionsLoop_vtable[346] = {
+static void* WhenConditionsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -18081,10 +18172,12 @@ static void* WhenConditionsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WhenArmsLoop_vtable[346] = {
+static void* WhenArmsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -18430,10 +18523,12 @@ static void* WhenArmsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BlockStatementsLoop_vtable[346] = {
+static void* BlockStatementsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -18779,10 +18874,12 @@ static void* BlockStatementsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ArrayItemsLoop_vtable[346] = {
+static void* ArrayItemsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -19128,10 +19225,12 @@ static void* ArrayItemsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MapItemsLoop_vtable[346] = {
+static void* MapItemsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -19477,10 +19576,12 @@ static void* MapItemsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ModifierLoop_vtable[346] = {
+static void* ModifierLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -19826,10 +19927,12 @@ static void* ModifierLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BaseClassesLoop_vtable[346] = {
+static void* BaseClassesLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -20175,10 +20278,12 @@ static void* BaseClassesLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassMembersLoop_vtable[346] = {
+static void* ClassMembersLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -20524,10 +20629,12 @@ static void* ClassMembersLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumVariantsLoop_vtable[346] = {
+static void* EnumVariantsLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -20873,10 +20980,12 @@ static void* EnumVariantsLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramParseLoop_vtable[346] = {
+static void* ProgramParseLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -21222,10 +21331,12 @@ static void* ProgramParseLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateSplitLoop_vtable[346] = {
+static void* TemplateSplitLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -21571,10 +21682,12 @@ static void* TemplateSplitLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateEscapes_vtable[346] = {
+static void* TemplateEscapes_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -21920,10 +22033,12 @@ static void* TemplateEscapes_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateFoldLoop_vtable[346] = {
+static void* TemplateFoldLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -22269,10 +22384,12 @@ static void* TemplateFoldLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FancyEscapeLoop_vtable[346] = {
+static void* FancyEscapeLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -22618,10 +22735,12 @@ static void* FancyEscapeLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[346] = {
+static void* TypeChecker_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -22967,10 +23086,12 @@ static void* TypeChecker_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassBindings_vtable[346] = {
+static void* ClassBindings_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -23316,10 +23437,12 @@ static void* ClassBindings_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SysinternalCheckLoop_vtable[346] = {
+static void* SysinternalCheckLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -23665,10 +23788,12 @@ static void* SysinternalCheckLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[346] = {
+static void* TypeError_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -24014,10 +24139,12 @@ static void* TypeError_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassSearchLoop_vtable[346] = {
+static void* ClassSearchLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -24363,10 +24490,12 @@ static void* ClassSearchLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldSearchLoop_vtable[346] = {
+static void* FieldSearchLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -24712,10 +24841,12 @@ static void* FieldSearchLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodSearchLoop_vtable[346] = {
+static void* MethodSearchLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -25061,10 +25192,12 @@ static void* MethodSearchLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PathResolveLoop_vtable[346] = {
+static void* PathResolveLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -25410,10 +25543,12 @@ static void* PathResolveLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberImplementLoop_vtable[346] = {
+static void* MemberImplementLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -25759,10 +25894,12 @@ static void* MemberImplementLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Linter_vtable[346] = {
+static void* Linter_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -26108,10 +26245,12 @@ static void* Linter_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LintIssue_vtable[346] = {
+static void* LintIssue_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -26457,10 +26596,12 @@ static void* LintIssue_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[346] = {
+static void* Loader_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -26806,10 +26947,12 @@ static void* Loader_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LastSlashLoop_vtable[346] = {
+static void* LastSlashLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -27155,10 +27298,12 @@ static void* LastSlashLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* LoadedClassSearchLoop_vtable[346] = {
+static void* LoadedClassSearchLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -27504,10 +27649,12 @@ static void* LoadedClassSearchLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedMemberLoop_vtable[346] = {
+static void* NamedMemberLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -27853,10 +28000,12 @@ static void* NamedMemberLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CompilationReport_vtable[346] = {
+static void* CompilationReport_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -28202,10 +28351,12 @@ static void* CompilationReport_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CodeGenerator_vtable[346] = {
+static void* CodeGenerator_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -28523,6 +28674,8 @@ static void* CodeGenerator_vtable[346] = {
     (void*)CodeGenerator_generateInlineArrayOp,
     (void*)CodeGenerator_generateInlineArrayFold,
     (void*)CodeGenerator_generateInlineMapEach,
+    (void*)CodeGenerator_generateInlineBranch,
+    (void*)CodeGenerator_inlineBranchBody,
     (void*)CodeGenerator_generateInlineWhileLoop,
     (void*)CodeGenerator_generateInlineWhileCondition,
     (void*)0,
@@ -28554,7 +28707,7 @@ static void* CodeGenerator_vtable[346] = {
     (void*)0
 };
 
-static void* FieldMemberLoop_vtable[346] = {
+static void* FieldMemberLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -28900,10 +29053,12 @@ static void* FieldMemberLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MethodMemberLoop_vtable[346] = {
+static void* MethodMemberLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -29249,10 +29404,12 @@ static void* MethodMemberLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[346] = {
+static void* CBackendUtils_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -29572,6 +29729,8 @@ static void* CBackendUtils_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)CBackendUtils_snakeCase,
     (void*)CBackendUtils_cIdent,
     (void*)CBackendUtils_escapeString,
@@ -29601,7 +29760,7 @@ static void* CBackendUtils_vtable[346] = {
     (void*)0
 };
 
-static void* SnakeCaseLoop_vtable[346] = {
+static void* SnakeCaseLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -29947,10 +30106,12 @@ static void* SnakeCaseLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EscapeLoop_vtable[346] = {
+static void* EscapeLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -30296,10 +30457,12 @@ static void* EscapeLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EmissionPolicy_vtable[346] = {
+static void* EmissionPolicy_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -30622,6 +30785,8 @@ static void* EmissionPolicy_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)EmissionPolicy_emitsPrototypes,
     (void*)0,
     (void*)0,
@@ -30648,7 +30813,7 @@ static void* EmissionPolicy_vtable[346] = {
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[346] = {
+static void* DeclarationGenerator_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -30670,6 +30835,8 @@ static void* DeclarationGenerator_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)DeclarationGenerator_init,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -30997,7 +31164,7 @@ static void* DeclarationGenerator_vtable[346] = {
     (void*)0
 };
 
-static void* HasFieldLoop_vtable[346] = {
+static void* HasFieldLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -31343,10 +31510,12 @@ static void* HasFieldLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* FieldIndexLoop_vtable[346] = {
+static void* FieldIndexLoop_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -31692,10 +31861,12 @@ static void* FieldIndexLoop_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[346] = {
+static void* BuiltinCallGenerator_vtable[348] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -32019,6 +32190,8 @@ static void* BuiltinCallGenerator_vtable[346] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)BuiltinCallGenerator_setEnumNames,
     (void*)0,
     (void*)0,
@@ -32044,7 +32217,9 @@ static void* BuiltinCallGenerator_vtable[346] = {
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[346] = {
+static void* RuntimePrelude_vtable[348] = {
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -32393,7 +32568,9 @@ static void* RuntimePrelude_vtable[346] = {
     (void*)0
 };
 
-static void* Stderr_vtable[346] = {
+static void* Stderr_vtable[348] = {
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -37802,6 +37979,8 @@ static __attribute__((unused)) void _anon_fn_314(void* _env_ptr, Parameter* p) {
 typedef struct {
     TypeChecker* self;
     String res;
+    bool isBranchCall;
+    long long argIdx;
 } _Env_anon_316;
 
 static __attribute__((unused)) void _destroy_env_anon_316(void* _env_ptr) {
@@ -37818,7 +37997,16 @@ static __attribute__((unused)) void _anon_fn_316(void* _env_ptr, NamedArg* arg) 
     (void)self;
     String res = _env->res;
     (void)res;
+    bool isBranchCall = _env->isBranchCall;
+    (void)isBranchCall;
+    long long argIdx = _env->argIdx;
+    (void)argIdx;
+    if (((isBranchCall) && (((argIdx) >= (1))))) {
+        self->inBranchClosure = true;
+    }
     ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, arg->value, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */)));
+    self->inBranchClosure = false;
+    argIdx = ((argIdx) + (1));
 }
 
 typedef struct {
@@ -44185,19 +44373,19 @@ typedef struct {
     CodeGenerator* self;
     String pTypesC;
     String cArgsC;
-} _Env_anon_751;
+} _Env_anon_752;
 
-static __attribute__((unused)) void _destroy_env_anon_751(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_752(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_751* _env = (_Env_anon_751*)_env_ptr;
+    _Env_anon_752* _env = (_Env_anon_752*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->pTypesC) spec_release((void*)_env->pTypesC);
     if (_env->cArgsC) spec_release((void*)_env->cArgsC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_751(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_751* _env = (_Env_anon_751*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_752(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_752* _env = (_Env_anon_752*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String pTypesC = _env->pTypesC;
@@ -44217,11 +44405,11 @@ typedef struct {
     bool matched;
     String argC;
     Parameter* p;
-} _Env_anon_754;
+} _Env_anon_755;
 
-static __attribute__((unused)) void _destroy_env_anon_754(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_755(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_754* _env = (_Env_anon_754*)_env_ptr;
+    _Env_anon_755* _env = (_Env_anon_755*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->pName) spec_release((void*)_env->pName);
     if (_env->argC) spec_release((void*)_env->argC);
@@ -44229,8 +44417,8 @@ static __attribute__((unused)) void _destroy_env_anon_754(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_754(void* _env_ptr, NamedArg* a) {
-    _Env_anon_754* _env = (_Env_anon_754*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_755(void* _env_ptr, NamedArg* a) {
+    _Env_anon_755* _env = (_Env_anon_755*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String pName = _env->pName;
@@ -44252,19 +44440,19 @@ typedef struct {
     Expression* expr;
     String vArgsC;
     long long pIdx;
-} _Env_anon_753;
+} _Env_anon_754;
 
-static __attribute__((unused)) void _destroy_env_anon_753(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_754(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_753* _env = (_Env_anon_753*)_env_ptr;
+    _Env_anon_754* _env = (_Env_anon_754*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->expr) spec_release((void*)_env->expr);
     if (_env->vArgsC) spec_release((void*)_env->vArgsC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_753(void* _env_ptr, Parameter* p) {
-    _Env_anon_753* _env = (_Env_anon_753*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_754(void* _env_ptr, Parameter* p) {
+    _Env_anon_754* _env = (_Env_anon_754*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     Expression* expr = _env->expr;
@@ -44279,8 +44467,8 @@ static __attribute__((unused)) void _anon_fn_753(void* _env_ptr, Parameter* p) {
     SPEC_AUTO String pName = spec_construct_string(p->name);
     bool matched = false;
     SPEC_AUTO String argC = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_755 = expr->methodArgs; if (_a_755) { for (size_t _i_755 = 0; _i_755 < _a_755->length; _i_755++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_755->items[_i_755];
+    ({ SpecArray* _a_756 = expr->methodArgs; if (_a_756) { for (size_t _i_756 = 0; _i_756 < _a_756->length; _i_756++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_756->items[_i_756];
         do {
     if ((((((!(matched))) && (spec_string_equals(a->name, pName)))) && ((!spec_string_equals(pName, spec_string_intern("")))))) {
         spec_assign((void**)&argC, (void*)(CodeGenerator_generateExpression(self, a->value) /* inst:CodeGenerator:generateExpression */));
@@ -44304,11 +44492,11 @@ typedef struct {
     bool matched;
     String argC;
     Parameter* p;
-} _Env_anon_757;
+} _Env_anon_758;
 
-static __attribute__((unused)) void _destroy_env_anon_757(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_758(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_757* _env = (_Env_anon_757*)_env_ptr;
+    _Env_anon_758* _env = (_Env_anon_758*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->pName) spec_release((void*)_env->pName);
     if (_env->argC) spec_release((void*)_env->argC);
@@ -44316,8 +44504,8 @@ static __attribute__((unused)) void _destroy_env_anon_757(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_757(void* _env_ptr, NamedArg* a) {
-    _Env_anon_757* _env = (_Env_anon_757*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_758(void* _env_ptr, NamedArg* a) {
+    _Env_anon_758* _env = (_Env_anon_758*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String pName = _env->pName;
@@ -44337,18 +44525,18 @@ static __attribute__((unused)) void _anon_fn_757(void* _env_ptr, NamedArg* a) {
 typedef struct {
     CodeGenerator* self;
     String argsC;
-} _Env_anon_759;
+} _Env_anon_760;
 
-static __attribute__((unused)) void _destroy_env_anon_759(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_760(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_759* _env = (_Env_anon_759*)_env_ptr;
+    _Env_anon_760* _env = (_Env_anon_760*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->argsC) spec_release((void*)_env->argsC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_759(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_759* _env = (_Env_anon_759*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_760(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_760* _env = (_Env_anon_760*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String argsC = _env->argsC;
@@ -44359,18 +44547,18 @@ static __attribute__((unused)) void _anon_fn_759(void* _env_ptr, NamedArg* arg) 
 typedef struct {
     CodeGenerator* self;
     String sigC;
-} _Env_anon_761;
+} _Env_anon_762;
 
-static __attribute__((unused)) void _destroy_env_anon_761(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_762(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_761* _env = (_Env_anon_761*)_env_ptr;
+    _Env_anon_762* _env = (_Env_anon_762*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->sigC) spec_release((void*)_env->sigC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_761(void* _env_ptr, Parameter* p) {
-    _Env_anon_761* _env = (_Env_anon_761*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_762(void* _env_ptr, Parameter* p) {
+    _Env_anon_762* _env = (_Env_anon_762*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String sigC = _env->sigC;
@@ -44381,18 +44569,18 @@ static __attribute__((unused)) void _anon_fn_761(void* _env_ptr, Parameter* p) {
 typedef struct {
     CodeGenerator* self;
     String chain;
-} _Env_anon_763;
+} _Env_anon_764;
 
-static __attribute__((unused)) void _destroy_env_anon_763(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_764(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_763* _env = (_Env_anon_763*)_env_ptr;
+    _Env_anon_764* _env = (_Env_anon_764*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->chain) spec_release((void*)_env->chain);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_763(void* _env_ptr, WhenArm* arm) {
-    _Env_anon_763* _env = (_Env_anon_763*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_764(void* _env_ptr, WhenArm* arm) {
+    _Env_anon_764* _env = (_Env_anon_764*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String chain = _env->chain;
@@ -44407,11 +44595,11 @@ typedef struct {
     Expression* expr;
     String condOr;
     String subjC;
-} _Env_anon_766;
+} _Env_anon_767;
 
-static __attribute__((unused)) void _destroy_env_anon_766(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_767(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_766* _env = (_Env_anon_766*)_env_ptr;
+    _Env_anon_767* _env = (_Env_anon_767*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->expr) spec_release((void*)_env->expr);
     if (_env->condOr) spec_release((void*)_env->condOr);
@@ -44419,8 +44607,8 @@ static __attribute__((unused)) void _destroy_env_anon_766(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_766(void* _env_ptr, Expression* c) {
-    _Env_anon_766* _env = (_Env_anon_766*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_767(void* _env_ptr, Expression* c) {
+    _Env_anon_767* _env = (_Env_anon_767*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     Expression* expr = _env->expr;
@@ -44442,11 +44630,11 @@ typedef struct {
     String chain;
     Expression* expr;
     String subjC;
-} _Env_anon_765;
+} _Env_anon_766;
 
-static __attribute__((unused)) void _destroy_env_anon_765(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_766(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_765* _env = (_Env_anon_765*)_env_ptr;
+    _Env_anon_766* _env = (_Env_anon_766*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->chain) spec_release((void*)_env->chain);
     if (_env->expr) spec_release((void*)_env->expr);
@@ -44454,8 +44642,8 @@ static __attribute__((unused)) void _destroy_env_anon_765(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_765(void* _env_ptr, WhenArm* arm) {
-    _Env_anon_765* _env = (_Env_anon_765*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_766(void* _env_ptr, WhenArm* arm) {
+    _Env_anon_766* _env = (_Env_anon_766*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String chain = _env->chain;
@@ -44471,8 +44659,8 @@ static __attribute__((unused)) void _anon_fn_765(void* _env_ptr, WhenArm* arm) {
         spec_assign((void**)&armVal, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ "))), bindsC), spec_string_intern(" ")), armVal), spec_string_intern("; })"))));
     }
         SPEC_AUTO String condOr = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_767 = arm->conditions; if (_a_767) { for (size_t _i_767 = 0; _i_767 < _a_767->length; _i_767++) {
-        Expression* c = (Expression*)(intptr_t)_a_767->items[_i_767];
+        ({ SpecArray* _a_768 = arm->conditions; if (_a_768) { for (size_t _i_768 = 0; _i_768 < _a_768->length; _i_768++) {
+        Expression* c = (Expression*)(intptr_t)_a_768->items[_i_768];
         do {
     SPEC_AUTO String cmp = CodeGenerator_generateWhenCondition(self, expr->whenSubject, subjC, c) /* inst:CodeGenerator:generateWhenCondition */;
     if (spec_string_equals(condOr, spec_string_intern(""))) {
@@ -44495,11 +44683,11 @@ typedef struct {
     Expression* expr;
     String condOr;
     String subjC;
-} _Env_anon_769;
+} _Env_anon_770;
 
-static __attribute__((unused)) void _destroy_env_anon_769(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_770(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_769* _env = (_Env_anon_769*)_env_ptr;
+    _Env_anon_770* _env = (_Env_anon_770*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->expr) spec_release((void*)_env->expr);
     if (_env->condOr) spec_release((void*)_env->condOr);
@@ -44507,8 +44695,8 @@ static __attribute__((unused)) void _destroy_env_anon_769(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_769(void* _env_ptr, Expression* c) {
-    _Env_anon_769* _env = (_Env_anon_769*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_770(void* _env_ptr, Expression* c) {
+    _Env_anon_770* _env = (_Env_anon_770*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     Expression* expr = _env->expr;
@@ -44528,18 +44716,18 @@ static __attribute__((unused)) void _anon_fn_769(void* _env_ptr, Expression* c) 
 typedef struct {
     CodeGenerator* self;
     SpecMap* savedVars;
-} _Env_anon_771;
+} _Env_anon_772;
 
-static __attribute__((unused)) void _destroy_env_anon_771(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_772(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_771* _env = (_Env_anon_771*)_env_ptr;
+    _Env_anon_772* _env = (_Env_anon_772*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->savedVars) spec_release((void*)_env->savedVars);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_771(void* _env_ptr, String k) {
-    _Env_anon_771* _env = (_Env_anon_771*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_772(void* _env_ptr, String k) {
+    _Env_anon_772* _env = (_Env_anon_772*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecMap* savedVars = _env->savedVars;
@@ -44550,18 +44738,18 @@ static __attribute__((unused)) void _anon_fn_771(void* _env_ptr, String k) {
 typedef struct {
     CodeGenerator* self;
     SpecMap* savedScopeVars;
-} _Env_anon_773;
+} _Env_anon_774;
 
-static __attribute__((unused)) void _destroy_env_anon_773(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_774(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_773* _env = (_Env_anon_773*)_env_ptr;
+    _Env_anon_774* _env = (_Env_anon_774*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->savedScopeVars) spec_release((void*)_env->savedScopeVars);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_773(void* _env_ptr, String k) {
-    _Env_anon_773* _env = (_Env_anon_773*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_774(void* _env_ptr, String k) {
+    _Env_anon_774* _env = (_Env_anon_774*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecMap* savedScopeVars = _env->savedScopeVars;
@@ -44574,19 +44762,19 @@ typedef struct {
     long long id;
     SpecArray* paramNames;
     String paramsC;
-} _Env_anon_775;
+} _Env_anon_776;
 
-static __attribute__((unused)) void _destroy_env_anon_775(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_776(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_775* _env = (_Env_anon_775*)_env_ptr;
+    _Env_anon_776* _env = (_Env_anon_776*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->paramNames) spec_release((void*)_env->paramNames);
     if (_env->paramsC) spec_release((void*)_env->paramsC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_775(void* _env_ptr, Parameter* p) {
-    _Env_anon_775* _env = (_Env_anon_775*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_776(void* _env_ptr, Parameter* p) {
+    _Env_anon_776* _env = (_Env_anon_776*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -44605,18 +44793,18 @@ typedef struct {
     CodeGenerator* self;
     long long id;
     String bodyC;
-} _Env_anon_777;
+} _Env_anon_778;
 
-static __attribute__((unused)) void _destroy_env_anon_777(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_778(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_777* _env = (_Env_anon_777*)_env_ptr;
+    _Env_anon_778* _env = (_Env_anon_778*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->bodyC) spec_release((void*)_env->bodyC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_777(void* _env_ptr, Statement* s) {
-    _Env_anon_777* _env = (_Env_anon_777*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_778(void* _env_ptr, Statement* s) {
+    _Env_anon_778* _env = (_Env_anon_778*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -44628,17 +44816,17 @@ static __attribute__((unused)) void _anon_fn_777(void* _env_ptr, Statement* s) {
 
 typedef struct {
     SpecMap* bodyLocals;
-} _Env_anon_779;
+} _Env_anon_780;
 
-static __attribute__((unused)) void _destroy_env_anon_779(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_780(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_779* _env = (_Env_anon_779*)_env_ptr;
+    _Env_anon_780* _env = (_Env_anon_780*)_env_ptr;
     if (_env->bodyLocals) spec_release((void*)_env->bodyLocals);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_779(void* _env_ptr, Statement* s) {
-    _Env_anon_779* _env = (_Env_anon_779*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_780(void* _env_ptr, Statement* s) {
+    _Env_anon_780* _env = (_Env_anon_780*)_env_ptr;
     SpecMap* bodyLocals = _env->bodyLocals;
     (void)bodyLocals;
     if (((s->kind) == (StatementKind_VAR_DECL))) {
@@ -44658,11 +44846,11 @@ typedef struct {
     String capFieldBinds;
     SpecMap* bodyLocals;
     String capReleases;
-} _Env_anon_781;
+} _Env_anon_782;
 
-static __attribute__((unused)) void _destroy_env_anon_781(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_782(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_781* _env = (_Env_anon_781*)_env_ptr;
+    _Env_anon_782* _env = (_Env_anon_782*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->capFieldDecls) spec_release((void*)_env->capFieldDecls);
     if (_env->paramNames) spec_release((void*)_env->paramNames);
@@ -44675,8 +44863,8 @@ static __attribute__((unused)) void _destroy_env_anon_781(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_781(void* _env_ptr, String k) {
-    _Env_anon_781* _env = (_Env_anon_781*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_782(void* _env_ptr, String k) {
+    _Env_anon_782* _env = (_Env_anon_782*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     bool hasCaptures = _env->hasCaptures;
@@ -44729,11 +44917,11 @@ typedef struct {
     String argC;
     Parameter* p;
     Member* m;
-} _Env_anon_784;
+} _Env_anon_785;
 
-static __attribute__((unused)) void _destroy_env_anon_784(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_785(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_784* _env = (_Env_anon_784*)_env_ptr;
+    _Env_anon_785* _env = (_Env_anon_785*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->pName) spec_release((void*)_env->pName);
     if (_env->argC) spec_release((void*)_env->argC);
@@ -44742,8 +44930,8 @@ static __attribute__((unused)) void _destroy_env_anon_784(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_784(void* _env_ptr, NamedArg* a) {
-    _Env_anon_784* _env = (_Env_anon_784*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_785(void* _env_ptr, NamedArg* a) {
+    _Env_anon_785* _env = (_Env_anon_785*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String pName = _env->pName;
@@ -44770,11 +44958,11 @@ typedef struct {
     SpecArray* tps;
     Member* m;
     SpecArray* args;
-} _Env_anon_783;
+} _Env_anon_784;
 
-static __attribute__((unused)) void _destroy_env_anon_783(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_784(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_783* _env = (_Env_anon_783*)_env_ptr;
+    _Env_anon_784* _env = (_Env_anon_784*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->joined) spec_release((void*)_env->joined);
     if (_env->params) spec_release((void*)_env->params);
@@ -44784,8 +44972,8 @@ static __attribute__((unused)) void _destroy_env_anon_783(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_783(void* _env_ptr, Parameter* p) {
-    _Env_anon_783* _env = (_Env_anon_783*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_784(void* _env_ptr, Parameter* p) {
+    _Env_anon_784* _env = (_Env_anon_784*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String joined = _env->joined;
@@ -44803,8 +44991,8 @@ static __attribute__((unused)) void _anon_fn_783(void* _env_ptr, Parameter* p) {
     SPEC_AUTO String pName = spec_construct_string(p->name);
     bool matched = false;
     SPEC_AUTO String argC = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_785 = args; if (_a_785) { for (size_t _i_785 = 0; _i_785 < _a_785->length; _i_785++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_785->items[_i_785];
+    ({ SpecArray* _a_786 = args; if (_a_786) { for (size_t _i_786 = 0; _i_786 < _a_786->length; _i_786++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_786->items[_i_786];
         do {
     if ((((((!(matched))) && (spec_string_equals(a->name, pName)))) && ((!spec_string_equals(pName, spec_string_intern("")))))) {
         spec_assign((void**)&argC, (void*)(CodeGenerator_generateExpression(self, a->value) /* inst:CodeGenerator:generateExpression */));
@@ -44846,11 +45034,11 @@ typedef struct {
     String argC;
     Parameter* p;
     Member* m;
-} _Env_anon_787;
+} _Env_anon_788;
 
-static __attribute__((unused)) void _destroy_env_anon_787(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_788(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_787* _env = (_Env_anon_787*)_env_ptr;
+    _Env_anon_788* _env = (_Env_anon_788*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->pName) spec_release((void*)_env->pName);
     if (_env->argC) spec_release((void*)_env->argC);
@@ -44859,8 +45047,8 @@ static __attribute__((unused)) void _destroy_env_anon_787(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_787(void* _env_ptr, NamedArg* a) {
-    _Env_anon_787* _env = (_Env_anon_787*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_788(void* _env_ptr, NamedArg* a) {
+    _Env_anon_788* _env = (_Env_anon_788*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String pName = _env->pName;
@@ -44883,19 +45071,19 @@ typedef struct {
     CodeGenerator* self;
     String joined;
     Member* m;
-} _Env_anon_789;
+} _Env_anon_790;
 
-static __attribute__((unused)) void _destroy_env_anon_789(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_790(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_789* _env = (_Env_anon_789*)_env_ptr;
+    _Env_anon_790* _env = (_Env_anon_790*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->joined) spec_release((void*)_env->joined);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_789(void* _env_ptr, NamedArg* a) {
-    _Env_anon_789* _env = (_Env_anon_789*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_790(void* _env_ptr, NamedArg* a) {
+    _Env_anon_790* _env = (_Env_anon_790*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String joined = _env->joined;
@@ -44908,18 +45096,18 @@ static __attribute__((unused)) void _anon_fn_789(void* _env_ptr, NamedArg* a) {
 typedef struct {
     CodeGenerator* self;
     String out;
-} _Env_anon_791;
+} _Env_anon_792;
 
-static __attribute__((unused)) void _destroy_env_anon_791(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_792(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_791* _env = (_Env_anon_791*)_env_ptr;
+    _Env_anon_792* _env = (_Env_anon_792*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_791(void* _env_ptr, Statement* stmt) {
-    _Env_anon_791* _env = (_Env_anon_791*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_792(void* _env_ptr, Statement* stmt) {
+    _Env_anon_792* _env = (_Env_anon_792*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -44943,11 +45131,11 @@ typedef struct {
     String vNameC;
     Expression* c;
     String subjC;
-} _Env_anon_794;
+} _Env_anon_795;
 
-static __attribute__((unused)) void _destroy_env_anon_794(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_795(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_794* _env = (_Env_anon_794*)_env_ptr;
+    _Env_anon_795* _env = (_Env_anon_795*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->binds) spec_release((void*)_env->binds);
     if (_env->vMem) spec_release((void*)_env->vMem);
@@ -44957,8 +45145,8 @@ static __attribute__((unused)) void _destroy_env_anon_794(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_794(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_794* _env = (_Env_anon_794*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_795(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_795* _env = (_Env_anon_795*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long idx = _env->idx;
@@ -44994,19 +45182,19 @@ typedef struct {
     CodeGenerator* self;
     String binds;
     String subjC;
-} _Env_anon_793;
+} _Env_anon_794;
 
-static __attribute__((unused)) void _destroy_env_anon_793(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_794(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_793* _env = (_Env_anon_793*)_env_ptr;
+    _Env_anon_794* _env = (_Env_anon_794*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->binds) spec_release((void*)_env->binds);
     if (_env->subjC) spec_release((void*)_env->subjC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_793(void* _env_ptr, Expression* c) {
-    _Env_anon_793* _env = (_Env_anon_793*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_794(void* _env_ptr, Expression* c) {
+    _Env_anon_794* _env = (_Env_anon_794*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String binds = _env->binds;
@@ -45019,8 +45207,8 @@ static __attribute__((unused)) void _anon_fn_793(void* _env_ptr, Expression* c) 
         SPEC_AUTO Member* vMem = (Member*)(((((Member* (*)(CodeGenerator*, String, String))self->_vtable[144]))((CodeGenerator*)self, eName, c->methodName)));
         SPEC_AUTO String vNameC = CBackendUtils_cIdent(self->utils, c->methodName) /* inst:CBackendUtils:cIdent */;
         long long idx = 0;
-        ({ SpecArray* _a_795 = c->methodArgs; if (_a_795) { for (size_t _i_795 = 0; _i_795 < _a_795->length; _i_795++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_795->items[_i_795];
+        ({ SpecArray* _a_796 = c->methodArgs; if (_a_796) { for (size_t _i_796 = 0; _i_796 < _a_796->length; _i_796++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_796->items[_i_796];
         do {
     if (((idx) < (spec_array_length(vMem->params)))) {
         SPEC_AUTO Expression* av = (Expression*)spec_retain((void*)(arg->value));
@@ -45054,11 +45242,11 @@ typedef struct {
     String vNameC;
     Expression* c;
     String subjC;
-} _Env_anon_797;
+} _Env_anon_798;
 
-static __attribute__((unused)) void _destroy_env_anon_797(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_798(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_797* _env = (_Env_anon_797*)_env_ptr;
+    _Env_anon_798* _env = (_Env_anon_798*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->binds) spec_release((void*)_env->binds);
     if (_env->vMem) spec_release((void*)_env->vMem);
@@ -45068,8 +45256,8 @@ static __attribute__((unused)) void _destroy_env_anon_797(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_797(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_797* _env = (_Env_anon_797*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_798(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_798* _env = (_Env_anon_798*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long idx = _env->idx;
@@ -45104,18 +45292,18 @@ static __attribute__((unused)) void _anon_fn_797(void* _env_ptr, NamedArg* arg) 
 typedef struct {
     CodeGenerator* self;
     String out;
-} _Env_anon_799;
+} _Env_anon_800;
 
-static __attribute__((unused)) void _destroy_env_anon_799(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_800(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_799* _env = (_Env_anon_799*)_env_ptr;
+    _Env_anon_800* _env = (_Env_anon_800*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_799(void* _env_ptr, Statement* s) {
-    _Env_anon_799* _env = (_Env_anon_799*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_800(void* _env_ptr, Statement* s) {
+    _Env_anon_800* _env = (_Env_anon_800*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -45126,18 +45314,18 @@ static __attribute__((unused)) void _anon_fn_799(void* _env_ptr, Statement* s) {
 typedef struct {
     CodeGenerator* self;
     String out;
-} _Env_anon_801;
+} _Env_anon_802;
 
-static __attribute__((unused)) void _destroy_env_anon_801(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_802(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_801* _env = (_Env_anon_801*)_env_ptr;
+    _Env_anon_802* _env = (_Env_anon_802*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_801(void* _env_ptr, Statement* s) {
-    _Env_anon_801* _env = (_Env_anon_801*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_802(void* _env_ptr, Statement* s) {
+    _Env_anon_802* _env = (_Env_anon_802*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -45148,18 +45336,18 @@ static __attribute__((unused)) void _anon_fn_801(void* _env_ptr, Statement* s) {
 typedef struct {
     CodeGenerator* self;
     String dispatchCls;
-} _Env_anon_803;
+} _Env_anon_804;
 
-static __attribute__((unused)) void _destroy_env_anon_803(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_804(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_803* _env = (_Env_anon_803*)_env_ptr;
+    _Env_anon_804* _env = (_Env_anon_804*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->dispatchCls) spec_release((void*)_env->dispatchCls);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_803(void* _env_ptr, String baseName) {
-    _Env_anon_803* _env = (_Env_anon_803*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_804(void* _env_ptr, String baseName) {
+    _Env_anon_804* _env = (_Env_anon_804*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String dispatchCls = _env->dispatchCls;
@@ -45178,11 +45366,11 @@ typedef struct {
     Statement* stmt;
     String condOr;
     String subjC;
-} _Env_anon_806;
+} _Env_anon_807;
 
-static __attribute__((unused)) void _destroy_env_anon_806(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_807(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_806* _env = (_Env_anon_806*)_env_ptr;
+    _Env_anon_807* _env = (_Env_anon_807*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->stmt) spec_release((void*)_env->stmt);
     if (_env->condOr) spec_release((void*)_env->condOr);
@@ -45190,8 +45378,8 @@ static __attribute__((unused)) void _destroy_env_anon_806(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_806(void* _env_ptr, Expression* c) {
-    _Env_anon_806* _env = (_Env_anon_806*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_807(void* _env_ptr, Expression* c) {
+    _Env_anon_807* _env = (_Env_anon_807*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     Statement* stmt = _env->stmt;
@@ -45211,18 +45399,18 @@ static __attribute__((unused)) void _anon_fn_806(void* _env_ptr, Expression* c) 
 typedef struct {
     CodeGenerator* self;
     String out;
-} _Env_anon_808;
+} _Env_anon_809;
 
-static __attribute__((unused)) void _destroy_env_anon_808(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_809(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_808* _env = (_Env_anon_808*)_env_ptr;
+    _Env_anon_809* _env = (_Env_anon_809*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_808(void* _env_ptr, Statement* s) {
-    _Env_anon_808* _env = (_Env_anon_808*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_809(void* _env_ptr, Statement* s) {
+    _Env_anon_809* _env = (_Env_anon_809*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -45236,11 +45424,11 @@ typedef struct {
     Statement* stmt;
     String out;
     String subjC;
-} _Env_anon_805;
+} _Env_anon_806;
 
-static __attribute__((unused)) void _destroy_env_anon_805(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_806(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_805* _env = (_Env_anon_805*)_env_ptr;
+    _Env_anon_806* _env = (_Env_anon_806*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->stmt) spec_release((void*)_env->stmt);
     if (_env->out) spec_release((void*)_env->out);
@@ -45248,8 +45436,8 @@ static __attribute__((unused)) void _destroy_env_anon_805(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_805(void* _env_ptr, WhenArm* arm) {
-    _Env_anon_805* _env = (_Env_anon_805*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_806(void* _env_ptr, WhenArm* arm) {
+    _Env_anon_806* _env = (_Env_anon_806*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     bool first = _env->first;
@@ -45264,8 +45452,8 @@ static __attribute__((unused)) void _anon_fn_805(void* _env_ptr, WhenArm* arm) {
         out = spec_string_concat(out, spec_string_intern("    } else {\n"));
     } else {
         SPEC_AUTO String condOr = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_807 = arm->conditions; if (_a_807) { for (size_t _i_807 = 0; _i_807 < _a_807->length; _i_807++) {
-        Expression* c = (Expression*)(intptr_t)_a_807->items[_i_807];
+        ({ SpecArray* _a_808 = arm->conditions; if (_a_808) { for (size_t _i_808 = 0; _i_808 < _a_808->length; _i_808++) {
+        Expression* c = (Expression*)(intptr_t)_a_808->items[_i_808];
         do {
     SPEC_AUTO String cmp = CodeGenerator_generateWhenCondition(self, stmt->whenSubject, subjC, c) /* inst:CodeGenerator:generateWhenCondition */;
     if (spec_string_equals(condOr, spec_string_intern(""))) {
@@ -45287,8 +45475,8 @@ static __attribute__((unused)) void _anon_fn_805(void* _env_ptr, WhenArm* arm) {
     if (condOr) { spec_release((void*)condOr); condOr = NULL; }
     if (bindsC) { spec_release((void*)bindsC); bindsC = NULL; }
     }
-    ({ SpecArray* _a_809 = arm->body; if (_a_809) { for (size_t _i_809 = 0; _i_809 < _a_809->length; _i_809++) {
-        Statement* s = (Statement*)(intptr_t)_a_809->items[_i_809];
+    ({ SpecArray* _a_810 = arm->body; if (_a_810) { for (size_t _i_810 = 0; _i_810 < _a_810->length; _i_810++) {
+        Statement* s = (Statement*)(intptr_t)_a_810->items[_i_810];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -45301,11 +45489,11 @@ typedef struct {
     Statement* stmt;
     String condOr;
     String subjC;
-} _Env_anon_811;
+} _Env_anon_812;
 
-static __attribute__((unused)) void _destroy_env_anon_811(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_812(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_811* _env = (_Env_anon_811*)_env_ptr;
+    _Env_anon_812* _env = (_Env_anon_812*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->stmt) spec_release((void*)_env->stmt);
     if (_env->condOr) spec_release((void*)_env->condOr);
@@ -45313,8 +45501,8 @@ static __attribute__((unused)) void _destroy_env_anon_811(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_811(void* _env_ptr, Expression* c) {
-    _Env_anon_811* _env = (_Env_anon_811*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_812(void* _env_ptr, Expression* c) {
+    _Env_anon_812* _env = (_Env_anon_812*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     Statement* stmt = _env->stmt;
@@ -45334,18 +45522,18 @@ static __attribute__((unused)) void _anon_fn_811(void* _env_ptr, Expression* c) 
 typedef struct {
     CodeGenerator* self;
     String out;
-} _Env_anon_813;
+} _Env_anon_814;
 
-static __attribute__((unused)) void _destroy_env_anon_813(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_814(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_813* _env = (_Env_anon_813*)_env_ptr;
+    _Env_anon_814* _env = (_Env_anon_814*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_813(void* _env_ptr, Statement* s) {
-    _Env_anon_813* _env = (_Env_anon_813*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_814(void* _env_ptr, Statement* s) {
+    _Env_anon_814* _env = (_Env_anon_814*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -45355,17 +45543,17 @@ static __attribute__((unused)) void _anon_fn_813(void* _env_ptr, Statement* s) {
 
 typedef struct {
     CodeGenerator* self;
-} _Env_anon_815;
+} _Env_anon_816;
 
-static __attribute__((unused)) void _destroy_env_anon_815(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_816(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_815* _env = (_Env_anon_815*)_env_ptr;
+    _Env_anon_816* _env = (_Env_anon_816*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_815(void* _env_ptr, Parameter* p) {
-    _Env_anon_815* _env = (_Env_anon_815*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_816(void* _env_ptr, Parameter* p) {
+    _Env_anon_816* _env = (_Env_anon_816*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     spec_map_set(self->localVars, p->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[137]))((CodeGenerator*)self, p->paramType));
@@ -45375,18 +45563,18 @@ static __attribute__((unused)) void _anon_fn_815(void* _env_ptr, Parameter* p) {
 typedef struct {
     CodeGenerator* self;
     String header;
-} _Env_anon_817;
+} _Env_anon_818;
 
-static __attribute__((unused)) void _destroy_env_anon_817(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_818(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_817* _env = (_Env_anon_817*)_env_ptr;
+    _Env_anon_818* _env = (_Env_anon_818*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->header) spec_release((void*)_env->header);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_817(void* _env_ptr, Parameter* p) {
-    _Env_anon_817* _env = (_Env_anon_817*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_818(void* _env_ptr, Parameter* p) {
+    _Env_anon_818* _env = (_Env_anon_818*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String header = _env->header;
@@ -45397,18 +45585,18 @@ static __attribute__((unused)) void _anon_fn_817(void* _env_ptr, Parameter* p) {
 typedef struct {
     CodeGenerator* self;
     String bodyC;
-} _Env_anon_819;
+} _Env_anon_820;
 
-static __attribute__((unused)) void _destroy_env_anon_819(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_820(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_819* _env = (_Env_anon_819*)_env_ptr;
+    _Env_anon_820* _env = (_Env_anon_820*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->bodyC) spec_release((void*)_env->bodyC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_819(void* _env_ptr, Statement* stmt) {
-    _Env_anon_819* _env = (_Env_anon_819*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_820(void* _env_ptr, Statement* stmt) {
+    _Env_anon_820* _env = (_Env_anon_820*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String bodyC = _env->bodyC;
@@ -45420,18 +45608,18 @@ static __attribute__((unused)) void _anon_fn_819(void* _env_ptr, Statement* stmt
 typedef struct {
     CodeGenerator* self;
     String suppressions;
-} _Env_anon_821;
+} _Env_anon_822;
 
-static __attribute__((unused)) void _destroy_env_anon_821(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_822(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_821* _env = (_Env_anon_821*)_env_ptr;
+    _Env_anon_822* _env = (_Env_anon_822*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->suppressions) spec_release((void*)_env->suppressions);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_821(void* _env_ptr, Parameter* p) {
-    _Env_anon_821* _env = (_Env_anon_821*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_822(void* _env_ptr, Parameter* p) {
+    _Env_anon_822* _env = (_Env_anon_822*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String suppressions = _env->suppressions;
@@ -45442,18 +45630,18 @@ static __attribute__((unused)) void _anon_fn_821(void* _env_ptr, Parameter* p) {
 typedef struct {
     CodeGenerator* self;
     SpecArray* acc;
-} _Env_anon_823;
+} _Env_anon_824;
 
-static __attribute__((unused)) void _destroy_env_anon_823(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_824(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_823* _env = (_Env_anon_823*)_env_ptr;
+    _Env_anon_824* _env = (_Env_anon_824*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->acc) spec_release((void*)_env->acc);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_823(void* _env_ptr, Statement* s) {
-    _Env_anon_823* _env = (_Env_anon_823*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_824(void* _env_ptr, Statement* s) {
+    _Env_anon_824* _env = (_Env_anon_824*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* acc = _env->acc;
@@ -45464,18 +45652,40 @@ static __attribute__((unused)) void _anon_fn_823(void* _env_ptr, Statement* s) {
 typedef struct {
     CodeGenerator* self;
     SpecArray* acc;
-} _Env_anon_825;
+} _Env_anon_826;
 
-static __attribute__((unused)) void _destroy_env_anon_825(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_826(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_825* _env = (_Env_anon_825*)_env_ptr;
+    _Env_anon_826* _env = (_Env_anon_826*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->acc) spec_release((void*)_env->acc);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_825(void* _env_ptr, Statement* s) {
-    _Env_anon_825* _env = (_Env_anon_825*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_826(void* _env_ptr, Statement* s) {
+    _Env_anon_826* _env = (_Env_anon_826*)_env_ptr;
+    CodeGenerator* self = _env->self;
+    (void)self;
+    SpecArray* acc = _env->acc;
+    (void)acc;
+    (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
+}
+
+typedef struct {
+    CodeGenerator* self;
+    SpecArray* acc;
+} _Env_anon_829;
+
+static __attribute__((unused)) void _destroy_env_anon_829(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_829* _env = (_Env_anon_829*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->acc) spec_release((void*)_env->acc);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_829(void* _env_ptr, Statement* s) {
+    _Env_anon_829* _env = (_Env_anon_829*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* acc = _env->acc;
@@ -45496,36 +45706,14 @@ static __attribute__((unused)) void _destroy_env_anon_828(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_828(void* _env_ptr, Statement* s) {
+static __attribute__((unused)) void _anon_fn_828(void* _env_ptr, WhenArm* arm) {
     _Env_anon_828* _env = (_Env_anon_828*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* acc = _env->acc;
     (void)acc;
-    (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
-}
-
-typedef struct {
-    CodeGenerator* self;
-    SpecArray* acc;
-} _Env_anon_827;
-
-static __attribute__((unused)) void _destroy_env_anon_827(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_827* _env = (_Env_anon_827*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->acc) spec_release((void*)_env->acc);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_827(void* _env_ptr, WhenArm* arm) {
-    _Env_anon_827* _env = (_Env_anon_827*)_env_ptr;
-    CodeGenerator* self = _env->self;
-    (void)self;
-    SpecArray* acc = _env->acc;
-    (void)acc;
-    ({ SpecArray* _a_829 = arm->body; if (_a_829) { for (size_t _i_829 = 0; _i_829 < _a_829->length; _i_829++) {
-        Statement* s = (Statement*)(intptr_t)_a_829->items[_i_829];
+    ({ SpecArray* _a_830 = arm->body; if (_a_830) { for (size_t _i_830 = 0; _i_830 < _a_830->length; _i_830++) {
+        Statement* s = (Statement*)(intptr_t)_a_830->items[_i_830];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
         } while (0);
@@ -45535,18 +45723,18 @@ static __attribute__((unused)) void _anon_fn_827(void* _env_ptr, WhenArm* arm) {
 typedef struct {
     CodeGenerator* self;
     SpecArray* acc;
-} _Env_anon_831;
+} _Env_anon_832;
 
-static __attribute__((unused)) void _destroy_env_anon_831(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_832(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_831* _env = (_Env_anon_831*)_env_ptr;
+    _Env_anon_832* _env = (_Env_anon_832*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->acc) spec_release((void*)_env->acc);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_831(void* _env_ptr, Statement* s) {
-    _Env_anon_831* _env = (_Env_anon_831*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_832(void* _env_ptr, Statement* s) {
+    _Env_anon_832* _env = (_Env_anon_832*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* acc = _env->acc;
@@ -45559,11 +45747,11 @@ typedef struct {
     ClassInfo* c;
     Member* m;
     SpecArray* acc;
-} _Env_anon_834;
+} _Env_anon_835;
 
-static __attribute__((unused)) void _destroy_env_anon_834(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_835(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_834* _env = (_Env_anon_834*)_env_ptr;
+    _Env_anon_835* _env = (_Env_anon_835*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->m) spec_release((void*)_env->m);
@@ -45571,8 +45759,8 @@ static __attribute__((unused)) void _destroy_env_anon_834(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_834(void* _env_ptr, Statement* s) {
-    _Env_anon_834* _env = (_Env_anon_834*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_835(void* _env_ptr, Statement* s) {
+    _Env_anon_835* _env = (_Env_anon_835*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -45588,19 +45776,19 @@ typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
     SpecArray* acc;
-} _Env_anon_833;
+} _Env_anon_834;
 
-static __attribute__((unused)) void _destroy_env_anon_833(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_834(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_833* _env = (_Env_anon_833*)_env_ptr;
+    _Env_anon_834* _env = (_Env_anon_834*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->acc) spec_release((void*)_env->acc);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_833(void* _env_ptr, Member* m) {
-    _Env_anon_833* _env = (_Env_anon_833*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_834(void* _env_ptr, Member* m) {
+    _Env_anon_834* _env = (_Env_anon_834*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -45610,8 +45798,8 @@ static __attribute__((unused)) void _anon_fn_833(void* _env_ptr, Member* m) {
     if (((m->kind) == (MemberKind_CLASS))) {
         (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[192]))((CodeGenerator*)self, m->nestedClass, acc);
     } else if (((m->kind) == (MemberKind_METHOD))) {
-        ({ SpecArray* _a_835 = m->body; if (_a_835) { for (size_t _i_835 = 0; _i_835 < _a_835->length; _i_835++) {
-        Statement* s = (Statement*)(intptr_t)_a_835->items[_i_835];
+        ({ SpecArray* _a_836 = m->body; if (_a_836) { for (size_t _i_836 = 0; _i_836 < _a_836->length; _i_836++) {
+        Statement* s = (Statement*)(intptr_t)_a_836->items[_i_836];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
         } while (0);
@@ -45625,11 +45813,11 @@ typedef struct {
     ClassInfo* c;
     Member* m;
     SpecArray* acc;
-} _Env_anon_837;
+} _Env_anon_838;
 
-static __attribute__((unused)) void _destroy_env_anon_837(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_838(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_837* _env = (_Env_anon_837*)_env_ptr;
+    _Env_anon_838* _env = (_Env_anon_838*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->m) spec_release((void*)_env->m);
@@ -45637,8 +45825,8 @@ static __attribute__((unused)) void _destroy_env_anon_837(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_837(void* _env_ptr, Statement* s) {
-    _Env_anon_837* _env = (_Env_anon_837*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_838(void* _env_ptr, Statement* s) {
+    _Env_anon_838* _env = (_Env_anon_838*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -45653,18 +45841,18 @@ static __attribute__((unused)) void _anon_fn_837(void* _env_ptr, Statement* s) {
 typedef struct {
     CodeGenerator* self;
     SpecArray* flattenedClasses;
-} _Env_anon_839;
+} _Env_anon_840;
 
-static __attribute__((unused)) void _destroy_env_anon_839(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_840(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_839* _env = (_Env_anon_839*)_env_ptr;
+    _Env_anon_840* _env = (_Env_anon_840*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->flattenedClasses) spec_release((void*)_env->flattenedClasses);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_839(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_839* _env = (_Env_anon_839*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_840(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_840* _env = (_Env_anon_840*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* flattenedClasses = _env->flattenedClasses;
@@ -45676,19 +45864,19 @@ typedef struct {
     CodeGenerator* self;
     String vt;
     ClassInfo* c;
-} _Env_anon_842;
+} _Env_anon_843;
 
-static __attribute__((unused)) void _destroy_env_anon_842(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_843(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_842* _env = (_Env_anon_842*)_env_ptr;
+    _Env_anon_843* _env = (_Env_anon_843*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->vt) spec_release((void*)_env->vt);
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_842(void* _env_ptr, Member* m) {
-    _Env_anon_842* _env = (_Env_anon_842*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_843(void* _env_ptr, Member* m) {
+    _Env_anon_843* _env = (_Env_anon_843*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String vt = _env->vt;
@@ -45704,11 +45892,11 @@ typedef struct {
     bool hasInit;
     ClassInfo* c;
     String methods;
-} _Env_anon_844;
+} _Env_anon_845;
 
-static __attribute__((unused)) void _destroy_env_anon_844(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_845(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_844* _env = (_Env_anon_844*)_env_ptr;
+    _Env_anon_845* _env = (_Env_anon_845*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->vt) spec_release((void*)_env->vt);
     if (_env->c) spec_release((void*)_env->c);
@@ -45716,8 +45904,8 @@ static __attribute__((unused)) void _destroy_env_anon_844(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_844(void* _env_ptr, Member* m) {
-    _Env_anon_844* _env = (_Env_anon_844*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_845(void* _env_ptr, Member* m) {
+    _Env_anon_845* _env = (_Env_anon_845*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String vt = _env->vt;
@@ -45742,17 +45930,17 @@ static __attribute__((unused)) void _anon_fn_844(void* _env_ptr, Member* m) {
 typedef struct {
     bool hasToString;
     ClassInfo* c;
-} _Env_anon_846;
+} _Env_anon_847;
 
-static __attribute__((unused)) void _destroy_env_anon_846(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_847(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_846* _env = (_Env_anon_846*)_env_ptr;
+    _Env_anon_847* _env = (_Env_anon_847*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_846(void* _env_ptr, Member* m) {
-    _Env_anon_846* _env = (_Env_anon_846*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_847(void* _env_ptr, Member* m) {
+    _Env_anon_847* _env = (_Env_anon_847*)_env_ptr;
     bool hasToString = _env->hasToString;
     (void)hasToString;
     ClassInfo* c = _env->c;
@@ -45767,11 +45955,11 @@ typedef struct {
     String vt;
     SpecArray* flattenedClasses;
     String methods;
-} _Env_anon_841;
+} _Env_anon_842;
 
-static __attribute__((unused)) void _destroy_env_anon_841(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_842(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_841* _env = (_Env_anon_841*)_env_ptr;
+    _Env_anon_842* _env = (_Env_anon_842*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->vt) spec_release((void*)_env->vt);
     if (_env->flattenedClasses) spec_release((void*)_env->flattenedClasses);
@@ -45779,8 +45967,8 @@ static __attribute__((unused)) void _destroy_env_anon_841(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_841(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_841* _env = (_Env_anon_841*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_842(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_842* _env = (_Env_anon_842*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String vt = _env->vt;
@@ -45794,15 +45982,15 @@ static __attribute__((unused)) void _anon_fn_841(void* _env_ptr, ClassInfo* c) {
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self->declGen, c, flattenedClasses, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_843 = allFields; if (_a_843) { for (size_t _i_843 = 0; _i_843 < _a_843->length; _i_843++) {
-        Member* m = (Member*)(intptr_t)_a_843->items[_i_843];
+        ({ SpecArray* _a_844 = allFields; if (_a_844) { for (size_t _i_844 = 0; _i_844 < _a_844->length; _i_844++) {
+        Member* m = (Member*)(intptr_t)_a_844->items[_i_844];
         do {
     spec_map_set(self->fieldTypes, m->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, m->memberType));
         } while (0);
     } } });
         bool hasInit = false;
-        ({ SpecArray* _a_845 = c->members; if (_a_845) { for (size_t _i_845 = 0; _i_845 < _a_845->length; _i_845++) {
-        Member* m = (Member*)(intptr_t)_a_845->items[_i_845];
+        ({ SpecArray* _a_846 = c->members; if (_a_846) { for (size_t _i_846 = 0; _i_846 < _a_846->length; _i_846++) {
+        Member* m = (Member*)(intptr_t)_a_846->items[_i_846];
         do {
     if (((m->kind) == (MemberKind_METHOD))) {
         if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (((spec_array_length(m->body)) > (0))))) {
@@ -45819,8 +46007,8 @@ static __attribute__((unused)) void _anon_fn_841(void* _env_ptr, ClassInfo* c) {
         methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("void ")), c->name), spec_string_intern("_init(")), c->name), spec_string_intern("* self) {\n    (void)self;\n}\n\n"));
     }
         bool hasToString = false;
-        ({ SpecArray* _a_847 = c->members; if (_a_847) { for (size_t _i_847 = 0; _i_847 < _a_847->length; _i_847++) {
-        Member* m = (Member*)(intptr_t)_a_847->items[_i_847];
+        ({ SpecArray* _a_848 = c->members; if (_a_848) { for (size_t _i_848 = 0; _i_848 < _a_848->length; _i_848++) {
+        Member* m = (Member*)(intptr_t)_a_848->items[_i_848];
         do {
     if (spec_string_equals(m->name, spec_string_intern("toString"))) {
         hasToString = true;
@@ -45842,19 +46030,19 @@ typedef struct {
     CodeGenerator* self;
     String vt;
     ClassInfo* c;
-} _Env_anon_849;
+} _Env_anon_850;
 
-static __attribute__((unused)) void _destroy_env_anon_849(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_850(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_849* _env = (_Env_anon_849*)_env_ptr;
+    _Env_anon_850* _env = (_Env_anon_850*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->vt) spec_release((void*)_env->vt);
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_849(void* _env_ptr, Member* m) {
-    _Env_anon_849* _env = (_Env_anon_849*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_850(void* _env_ptr, Member* m) {
+    _Env_anon_850* _env = (_Env_anon_850*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String vt = _env->vt;
@@ -45870,11 +46058,11 @@ typedef struct {
     bool hasInit;
     ClassInfo* c;
     String methods;
-} _Env_anon_851;
+} _Env_anon_852;
 
-static __attribute__((unused)) void _destroy_env_anon_851(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_852(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_851* _env = (_Env_anon_851*)_env_ptr;
+    _Env_anon_852* _env = (_Env_anon_852*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->vt) spec_release((void*)_env->vt);
     if (_env->c) spec_release((void*)_env->c);
@@ -45882,8 +46070,8 @@ static __attribute__((unused)) void _destroy_env_anon_851(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_851(void* _env_ptr, Member* m) {
-    _Env_anon_851* _env = (_Env_anon_851*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_852(void* _env_ptr, Member* m) {
+    _Env_anon_852* _env = (_Env_anon_852*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String vt = _env->vt;
@@ -45908,17 +46096,17 @@ static __attribute__((unused)) void _anon_fn_851(void* _env_ptr, Member* m) {
 typedef struct {
     bool hasToString;
     ClassInfo* c;
-} _Env_anon_853;
+} _Env_anon_854;
 
-static __attribute__((unused)) void _destroy_env_anon_853(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_854(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_853* _env = (_Env_anon_853*)_env_ptr;
+    _Env_anon_854* _env = (_Env_anon_854*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_853(void* _env_ptr, Member* m) {
-    _Env_anon_853* _env = (_Env_anon_853*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_854(void* _env_ptr, Member* m) {
+    _Env_anon_854* _env = (_Env_anon_854*)_env_ptr;
     bool hasToString = _env->hasToString;
     (void)hasToString;
     ClassInfo* c = _env->c;
@@ -45934,11 +46122,11 @@ typedef struct {
     ClassInfo* c;
     String baseName;
     SpecArray* acc;
-} _Env_anon_856;
+} _Env_anon_857;
 
-static __attribute__((unused)) void _destroy_env_anon_856(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_857(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_856* _env = (_Env_anon_856*)_env_ptr;
+    _Env_anon_857* _env = (_Env_anon_857*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->allClasses) spec_release((void*)_env->allClasses);
     if (_env->c) spec_release((void*)_env->c);
@@ -45947,8 +46135,8 @@ static __attribute__((unused)) void _destroy_env_anon_856(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_856(void* _env_ptr, ClassInfo* cand) {
-    _Env_anon_856* _env = (_Env_anon_856*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_857(void* _env_ptr, ClassInfo* cand) {
+    _Env_anon_857* _env = (_Env_anon_857*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* allClasses = _env->allClasses;
@@ -45969,11 +46157,11 @@ typedef struct {
     SpecArray* allClasses;
     ClassInfo* c;
     SpecArray* acc;
-} _Env_anon_855;
+} _Env_anon_856;
 
-static __attribute__((unused)) void _destroy_env_anon_855(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_856(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_855* _env = (_Env_anon_855*)_env_ptr;
+    _Env_anon_856* _env = (_Env_anon_856*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->allClasses) spec_release((void*)_env->allClasses);
     if (_env->c) spec_release((void*)_env->c);
@@ -45981,8 +46169,8 @@ static __attribute__((unused)) void _destroy_env_anon_855(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_855(void* _env_ptr, String baseName) {
-    _Env_anon_855* _env = (_Env_anon_855*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_856(void* _env_ptr, String baseName) {
+    _Env_anon_856* _env = (_Env_anon_856*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* allClasses = _env->allClasses;
@@ -45993,8 +46181,8 @@ static __attribute__((unused)) void _anon_fn_855(void* _env_ptr, String baseName
     (void)acc;
     if (((Array_indexOf(acc, baseName, (-(1)))) < (0))) {
         spec_array_add_object(acc, (void*)(baseName));
-        ({ SpecArray* _a_857 = allClasses; if (_a_857) { for (size_t _i_857 = 0; _i_857 < _a_857->length; _i_857++) {
-        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_857->items[_i_857];
+        ({ SpecArray* _a_858 = allClasses; if (_a_858) { for (size_t _i_858 = 0; _i_858 < _a_858->length; _i_858++) {
+        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_858->items[_i_858];
         do {
     if (spec_string_equals(cand->name, baseName)) {
         CodeGenerator_collectAncestors(self, cand, allClasses, acc) /* inst:CodeGenerator:collectAncestors */;
@@ -46010,11 +46198,11 @@ typedef struct {
     ClassInfo* c;
     String baseName;
     SpecArray* acc;
-} _Env_anon_859;
+} _Env_anon_860;
 
-static __attribute__((unused)) void _destroy_env_anon_859(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_860(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_859* _env = (_Env_anon_859*)_env_ptr;
+    _Env_anon_860* _env = (_Env_anon_860*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->allClasses) spec_release((void*)_env->allClasses);
     if (_env->c) spec_release((void*)_env->c);
@@ -46023,8 +46211,8 @@ static __attribute__((unused)) void _destroy_env_anon_859(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_859(void* _env_ptr, ClassInfo* cand) {
-    _Env_anon_859* _env = (_Env_anon_859*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_860(void* _env_ptr, ClassInfo* cand) {
+    _Env_anon_860* _env = (_Env_anon_860*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecArray* allClasses = _env->allClasses;
@@ -46044,18 +46232,18 @@ typedef struct {
     ClassInfo* c;
     bool firstA;
     String out;
-} _Env_anon_862;
+} _Env_anon_863;
 
-static __attribute__((unused)) void _destroy_env_anon_862(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_863(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_862* _env = (_Env_anon_862*)_env_ptr;
+    _Env_anon_863* _env = (_Env_anon_863*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_862(void* _env_ptr, String aName) {
-    _Env_anon_862* _env = (_Env_anon_862*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_863(void* _env_ptr, String aName) {
+    _Env_anon_863* _env = (_Env_anon_863*)_env_ptr;
     ClassInfo* c = _env->c;
     (void)c;
     bool firstA = _env->firstA;
@@ -46073,19 +46261,19 @@ typedef struct {
     CodeGenerator* self;
     String out;
     SpecArray* classes;
-} _Env_anon_861;
+} _Env_anon_862;
 
-static __attribute__((unused)) void _destroy_env_anon_861(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_862(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_861* _env = (_Env_anon_861*)_env_ptr;
+    _Env_anon_862* _env = (_Env_anon_862*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     if (_env->classes) spec_release((void*)_env->classes);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_861(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_861* _env = (_Env_anon_861*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_862(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_862* _env = (_Env_anon_862*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -46099,8 +46287,8 @@ static __attribute__((unused)) void _anon_fn_861(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (strcmp(actual, \"")), c->name), spec_string_intern("\") == 0) {\n"));
         out = spec_string_concat(out, spec_string_intern("        return "));
         bool firstA = true;
-        ({ SpecArray* _a_863 = ancestors; if (_a_863) { for (size_t _i_863 = 0; _i_863 < _a_863->length; _i_863++) {
-        String aName = (String)(intptr_t)_a_863->items[_i_863];
+        ({ SpecArray* _a_864 = ancestors; if (_a_864) { for (size_t _i_864 = 0; _i_864 < _a_864->length; _i_864++) {
+        String aName = (String)(intptr_t)_a_864->items[_i_864];
         do {
     if ((!(firstA))) {
         out = spec_string_concat(out, spec_string_intern(" || "));
@@ -46119,18 +46307,18 @@ typedef struct {
     ClassInfo* c;
     bool firstA;
     String out;
-} _Env_anon_865;
+} _Env_anon_866;
 
-static __attribute__((unused)) void _destroy_env_anon_865(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_866(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_865* _env = (_Env_anon_865*)_env_ptr;
+    _Env_anon_866* _env = (_Env_anon_866*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_865(void* _env_ptr, String aName) {
-    _Env_anon_865* _env = (_Env_anon_865*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_866(void* _env_ptr, String aName) {
+    _Env_anon_866* _env = (_Env_anon_866*)_env_ptr;
     ClassInfo* c = _env->c;
     (void)c;
     bool firstA = _env->firstA;
@@ -46147,18 +46335,18 @@ static __attribute__((unused)) void _anon_fn_865(void* _env_ptr, String aName) {
 typedef struct {
     CodeGenerator* self;
     String out;
-} _Env_anon_867;
+} _Env_anon_868;
 
-static __attribute__((unused)) void _destroy_env_anon_867(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_868(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_867* _env = (_Env_anon_867*)_env_ptr;
+    _Env_anon_868* _env = (_Env_anon_868*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_867(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_867* _env = (_Env_anon_867*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_868(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_868* _env = (_Env_anon_868*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -46167,12 +46355,12 @@ static __attribute__((unused)) void _anon_fn_867(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static void* ")), c->name), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n"));
         long long slot = 0;
         ({ while (1) {
-        bool _ev_868 = false;
+        bool _ev_869 = false;
         do {
-    _ev_868 = ((slot) < (self->methodSlotCount)); break;
+    _ev_869 = ((slot) < (self->methodSlotCount)); break;
         } while (0);
-        if (!_ev_868) break;
-        bool _it_868 = true;
+        if (!_ev_869) break;
+        bool _it_869 = true;
         do {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
     SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, c->name, mName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
@@ -46185,11 +46373,11 @@ static __attribute__((unused)) void _anon_fn_867(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    (void*)")), implCls), spec_string_intern("_")), mName);
     }
     slot = ((slot) + (1));
-    _it_868 = true; break;
+    _it_869 = true; break;
     if (mName) { spec_release((void*)mName); mName = NULL; }
     if (implCls) { spec_release((void*)implCls); implCls = NULL; }
         } while (0);
-        if (!_it_868) break;
+        if (!_it_869) break;
     }
 });
         out = spec_string_concat(out, spec_string_intern("\n};\n\n"));
@@ -46199,18 +46387,18 @@ static __attribute__((unused)) void _anon_fn_867(void* _env_ptr, ClassInfo* c) {
 typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
-} _Env_anon_872;
+} _Env_anon_873;
 
-static __attribute__((unused)) void _destroy_env_anon_872(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_873(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_872* _env = (_Env_anon_872*)_env_ptr;
+    _Env_anon_873* _env = (_Env_anon_873*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_872(void* _env_ptr, Member* f) {
-    _Env_anon_872* _env = (_Env_anon_872*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_873(void* _env_ptr, Member* f) {
+    _Env_anon_873* _env = (_Env_anon_873*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46222,19 +46410,19 @@ typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
     String out;
-} _Env_anon_874;
+} _Env_anon_875;
 
-static __attribute__((unused)) void _destroy_env_anon_874(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_875(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_874* _env = (_Env_anon_874*)_env_ptr;
+    _Env_anon_875* _env = (_Env_anon_875*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_874(void* _env_ptr, Member* m) {
-    _Env_anon_874* _env = (_Env_anon_874*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_875(void* _env_ptr, Member* m) {
+    _Env_anon_875* _env = (_Env_anon_875*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46251,19 +46439,19 @@ typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
     String out;
-} _Env_anon_876;
+} _Env_anon_877;
 
-static __attribute__((unused)) void _destroy_env_anon_876(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_877(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_876* _env = (_Env_anon_876*)_env_ptr;
+    _Env_anon_877* _env = (_Env_anon_877*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_876(void* _env_ptr, Member* m) {
-    _Env_anon_876* _env = (_Env_anon_876*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_877(void* _env_ptr, Member* m) {
+    _Env_anon_877* _env = (_Env_anon_877*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46289,19 +46477,19 @@ typedef struct {
     CodeGenerator* self;
     String out;
     SpecArray* classes;
-} _Env_anon_871;
+} _Env_anon_872;
 
-static __attribute__((unused)) void _destroy_env_anon_871(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_872(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_871* _env = (_Env_anon_871*)_env_ptr;
+    _Env_anon_872* _env = (_Env_anon_872*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     if (_env->classes) spec_release((void*)_env->classes);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_871(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_871* _env = (_Env_anon_871*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_872(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_872* _env = (_Env_anon_872*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -46313,8 +46501,8 @@ static __attribute__((unused)) void _anon_fn_871(void* _env_ptr, ClassInfo* c) {
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self->declGen, c, classes, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_873 = allFields; if (_a_873) { for (size_t _i_873 = 0; _i_873 < _a_873->length; _i_873++) {
-        Member* f = (Member*)(intptr_t)_a_873->items[_i_873];
+        ({ SpecArray* _a_874 = allFields; if (_a_874) { for (size_t _i_874 = 0; _i_874 < _a_874->length; _i_874++) {
+        Member* f = (Member*)(intptr_t)_a_874->items[_i_874];
         do {
     spec_map_set(self->fieldTypes, f->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, f->memberType));
         } while (0);
@@ -46322,8 +46510,8 @@ static __attribute__((unused)) void _anon_fn_871(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), c->name), spec_string_intern("_destroy(void* self_ptr) {\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), c->name), spec_string_intern("* self = (")), c->name), spec_string_intern("*)self_ptr;\n"));
         out = spec_string_concat(out, spec_string_intern("    if (!self) return;\n"));
-        ({ SpecArray* _a_875 = allFields; if (_a_875) { for (size_t _i_875 = 0; _i_875 < _a_875->length; _i_875++) {
-        Member* m = (Member*)(intptr_t)_a_875->items[_i_875];
+        ({ SpecArray* _a_876 = allFields; if (_a_876) { for (size_t _i_876 = 0; _i_876 < _a_876->length; _i_876++) {
+        Member* m = (Member*)(intptr_t)_a_876->items[_i_876];
         do {
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
@@ -46345,8 +46533,8 @@ static __attribute__((unused)) void _anon_fn_871(void* _env_ptr, ClassInfo* c) {
         if (((self->methodSlotCount) > (0))) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_vtable = ")), c->name), spec_string_intern("_vtable;\n"));
     }
-        ({ SpecArray* _a_877 = allFields; if (_a_877) { for (size_t _i_877 = 0; _i_877 < _a_877->length; _i_877++) {
-        Member* m = (Member*)(intptr_t)_a_877->items[_i_877];
+        ({ SpecArray* _a_878 = allFields; if (_a_878) { for (size_t _i_878 = 0; _i_878 < _a_878->length; _i_878++) {
+        Member* m = (Member*)(intptr_t)_a_878->items[_i_878];
         do {
     if (m->hasInit) {
         bool savedArgFi = self->argMode;
@@ -46373,18 +46561,18 @@ static __attribute__((unused)) void _anon_fn_871(void* _env_ptr, ClassInfo* c) {
 typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
-} _Env_anon_879;
+} _Env_anon_880;
 
-static __attribute__((unused)) void _destroy_env_anon_879(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_880(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_879* _env = (_Env_anon_879*)_env_ptr;
+    _Env_anon_880* _env = (_Env_anon_880*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_879(void* _env_ptr, Member* f) {
-    _Env_anon_879* _env = (_Env_anon_879*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_880(void* _env_ptr, Member* f) {
+    _Env_anon_880* _env = (_Env_anon_880*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46396,19 +46584,19 @@ typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
     String out;
-} _Env_anon_881;
+} _Env_anon_882;
 
-static __attribute__((unused)) void _destroy_env_anon_881(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_882(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_881* _env = (_Env_anon_881*)_env_ptr;
+    _Env_anon_882* _env = (_Env_anon_882*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_881(void* _env_ptr, Member* m) {
-    _Env_anon_881* _env = (_Env_anon_881*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_882(void* _env_ptr, Member* m) {
+    _Env_anon_882* _env = (_Env_anon_882*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46425,19 +46613,19 @@ typedef struct {
     CodeGenerator* self;
     ClassInfo* c;
     String out;
-} _Env_anon_883;
+} _Env_anon_884;
 
-static __attribute__((unused)) void _destroy_env_anon_883(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_884(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_883* _env = (_Env_anon_883*)_env_ptr;
+    _Env_anon_884* _env = (_Env_anon_884*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_883(void* _env_ptr, Member* m) {
-    _Env_anon_883* _env = (_Env_anon_883*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_884(void* _env_ptr, Member* m) {
+    _Env_anon_884* _env = (_Env_anon_884*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46462,18 +46650,18 @@ static __attribute__((unused)) void _anon_fn_883(void* _env_ptr, Member* m) {
 typedef struct {
     CodeGenerator* self;
     SpecMap* savedVars;
-} _Env_anon_885;
+} _Env_anon_886;
 
-static __attribute__((unused)) void _destroy_env_anon_885(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_886(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_885* _env = (_Env_anon_885*)_env_ptr;
+    _Env_anon_886* _env = (_Env_anon_886*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->savedVars) spec_release((void*)_env->savedVars);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_885(void* _env_ptr, String k) {
-    _Env_anon_885* _env = (_Env_anon_885*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_886(void* _env_ptr, String k) {
+    _Env_anon_886* _env = (_Env_anon_886*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecMap* savedVars = _env->savedVars;
@@ -46486,19 +46674,19 @@ typedef struct {
     long long id;
     String bodyC;
     Parameter* p;
-} _Env_anon_887;
+} _Env_anon_888;
 
-static __attribute__((unused)) void _destroy_env_anon_887(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_888(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_887* _env = (_Env_anon_887*)_env_ptr;
+    _Env_anon_888* _env = (_Env_anon_888*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->bodyC) spec_release((void*)_env->bodyC);
     if (_env->p) spec_release((void*)_env->p);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_887(void* _env_ptr, Statement* s) {
-    _Env_anon_887* _env = (_Env_anon_887*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_888(void* _env_ptr, Statement* s) {
+    _Env_anon_888* _env = (_Env_anon_888*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -46513,18 +46701,18 @@ static __attribute__((unused)) void _anon_fn_887(void* _env_ptr, Statement* s) {
 typedef struct {
     CodeGenerator* self;
     SpecMap* savedVars;
-} _Env_anon_889;
+} _Env_anon_890;
 
-static __attribute__((unused)) void _destroy_env_anon_889(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_890(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_889* _env = (_Env_anon_889*)_env_ptr;
+    _Env_anon_890* _env = (_Env_anon_890*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->savedVars) spec_release((void*)_env->savedVars);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_889(void* _env_ptr, String k) {
-    _Env_anon_889* _env = (_Env_anon_889*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_890(void* _env_ptr, String k) {
+    _Env_anon_890* _env = (_Env_anon_890*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecMap* savedVars = _env->savedVars;
@@ -46536,18 +46724,18 @@ typedef struct {
     CodeGenerator* self;
     long long id;
     String bodyC;
-} _Env_anon_891;
+} _Env_anon_892;
 
-static __attribute__((unused)) void _destroy_env_anon_891(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_892(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_891* _env = (_Env_anon_891*)_env_ptr;
+    _Env_anon_892* _env = (_Env_anon_892*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->bodyC) spec_release((void*)_env->bodyC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_891(void* _env_ptr, Statement* s) {
-    _Env_anon_891* _env = (_Env_anon_891*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_892(void* _env_ptr, Statement* s) {
+    _Env_anon_892* _env = (_Env_anon_892*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -46560,18 +46748,18 @@ static __attribute__((unused)) void _anon_fn_891(void* _env_ptr, Statement* s) {
 typedef struct {
     CodeGenerator* self;
     SpecMap* savedVars;
-} _Env_anon_893;
+} _Env_anon_894;
 
-static __attribute__((unused)) void _destroy_env_anon_893(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_894(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_893* _env = (_Env_anon_893*)_env_ptr;
+    _Env_anon_894* _env = (_Env_anon_894*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->savedVars) spec_release((void*)_env->savedVars);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_893(void* _env_ptr, String k) {
-    _Env_anon_893* _env = (_Env_anon_893*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_894(void* _env_ptr, String k) {
+    _Env_anon_894* _env = (_Env_anon_894*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecMap* savedVars = _env->savedVars;
@@ -46583,18 +46771,18 @@ typedef struct {
     CodeGenerator* self;
     long long id;
     String bodyC;
-} _Env_anon_895;
+} _Env_anon_896;
 
-static __attribute__((unused)) void _destroy_env_anon_895(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_896(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_895* _env = (_Env_anon_895*)_env_ptr;
+    _Env_anon_896* _env = (_Env_anon_896*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->bodyC) spec_release((void*)_env->bodyC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_895(void* _env_ptr, Statement* s) {
-    _Env_anon_895* _env = (_Env_anon_895*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_896(void* _env_ptr, Statement* s) {
+    _Env_anon_896* _env = (_Env_anon_896*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -46606,19 +46794,41 @@ static __attribute__((unused)) void _anon_fn_895(void* _env_ptr, Statement* s) {
 
 typedef struct {
     CodeGenerator* self;
-    SpecMap* savedVars;
-} _Env_anon_897;
+    String bodyC;
+} _Env_anon_898;
 
-static __attribute__((unused)) void _destroy_env_anon_897(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_898(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_897* _env = (_Env_anon_897*)_env_ptr;
+    _Env_anon_898* _env = (_Env_anon_898*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->bodyC) spec_release((void*)_env->bodyC);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_898(void* _env_ptr, Statement* st) {
+    _Env_anon_898* _env = (_Env_anon_898*)_env_ptr;
+    CodeGenerator* self = _env->self;
+    (void)self;
+    String bodyC = _env->bodyC;
+    (void)bodyC;
+    bodyC = spec_string_concat(spec_string_concat(bodyC, spec_string_intern("\t")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, st) /* inst:CodeGenerator:generateStatement */))));
+}
+
+typedef struct {
+    CodeGenerator* self;
+    SpecMap* savedVars;
+} _Env_anon_900;
+
+static __attribute__((unused)) void _destroy_env_anon_900(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_900* _env = (_Env_anon_900*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->savedVars) spec_release((void*)_env->savedVars);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_897(void* _env_ptr, String k) {
-    _Env_anon_897* _env = (_Env_anon_897*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_900(void* _env_ptr, String k) {
+    _Env_anon_900* _env = (_Env_anon_900*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     SpecMap* savedVars = _env->savedVars;
@@ -46630,18 +46840,18 @@ typedef struct {
     CodeGenerator* self;
     long long id;
     String declsC;
-} _Env_anon_899;
+} _Env_anon_902;
 
-static __attribute__((unused)) void _destroy_env_anon_899(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_902(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_899* _env = (_Env_anon_899*)_env_ptr;
+    _Env_anon_902* _env = (_Env_anon_902*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->declsC) spec_release((void*)_env->declsC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_899(void* _env_ptr, Parameter* p) {
-    _Env_anon_899* _env = (_Env_anon_899*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_902(void* _env_ptr, Parameter* p) {
+    _Env_anon_902* _env = (_Env_anon_902*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -46665,18 +46875,18 @@ typedef struct {
     String evalBodyC;
     long long evIdx;
     long long evalCount;
-} _Env_anon_901;
+} _Env_anon_904;
 
-static __attribute__((unused)) void _destroy_env_anon_901(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_904(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_901* _env = (_Env_anon_901*)_env_ptr;
+    _Env_anon_904* _env = (_Env_anon_904*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->evalBodyC) spec_release((void*)_env->evalBodyC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_901(void* _env_ptr, Statement* s) {
-    _Env_anon_901* _env = (_Env_anon_901*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_904(void* _env_ptr, Statement* s) {
+    _Env_anon_904* _env = (_Env_anon_904*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -46701,18 +46911,18 @@ typedef struct {
     CodeGenerator* self;
     String iterBodyC;
     long long id;
-} _Env_anon_903;
+} _Env_anon_906;
 
-static __attribute__((unused)) void _destroy_env_anon_903(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_906(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_903* _env = (_Env_anon_903*)_env_ptr;
+    _Env_anon_906* _env = (_Env_anon_906*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->iterBodyC) spec_release((void*)_env->iterBodyC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_903(void* _env_ptr, Statement* s) {
-    _Env_anon_903* _env = (_Env_anon_903*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_906(void* _env_ptr, Statement* s) {
+    _Env_anon_906* _env = (_Env_anon_906*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     String iterBodyC = _env->iterBodyC;
@@ -46726,18 +46936,18 @@ typedef struct {
     CodeGenerator* self;
     long long id;
     String loopReleasesC;
-} _Env_anon_905;
+} _Env_anon_908;
 
-static __attribute__((unused)) void _destroy_env_anon_905(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_908(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_905* _env = (_Env_anon_905*)_env_ptr;
+    _Env_anon_908* _env = (_Env_anon_908*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->loopReleasesC) spec_release((void*)_env->loopReleasesC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_905(void* _env_ptr, Parameter* p) {
-    _Env_anon_905* _env = (_Env_anon_905*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_908(void* _env_ptr, Parameter* p) {
+    _Env_anon_908* _env = (_Env_anon_908*)_env_ptr;
     CodeGenerator* self = _env->self;
     (void)self;
     long long id = _env->id;
@@ -46750,79 +46960,6 @@ static __attribute__((unused)) void _anon_fn_905(void* _env_ptr, Parameter* p) {
         loopReleasesC = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(loopReleasesC, spec_string_intern("    if (")), pNameC), spec_string_intern(") { spec_release((void*)")), pNameC), spec_string_intern("); ")), pNameC), spec_string_intern(" = NULL; }\n"));
     if (pNameC) { spec_release((void*)pNameC); pNameC = NULL; }
     }
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    SpecArray* allClasses;
-    ClassInfo* c;
-    String baseName;
-    SpecArray* acc;
-} _Env_anon_908;
-
-static __attribute__((unused)) void _destroy_env_anon_908(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_908* _env = (_Env_anon_908*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->allClasses) spec_release((void*)_env->allClasses);
-    if (_env->c) spec_release((void*)_env->c);
-    if (_env->baseName) spec_release((void*)_env->baseName);
-    if (_env->acc) spec_release((void*)_env->acc);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_908(void* _env_ptr, ClassInfo* cand) {
-    _Env_anon_908* _env = (_Env_anon_908*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    SpecArray* allClasses = _env->allClasses;
-    (void)allClasses;
-    ClassInfo* c = _env->c;
-    (void)c;
-    String baseName = _env->baseName;
-    (void)baseName;
-    SpecArray* acc = _env->acc;
-    (void)acc;
-    if (spec_string_equals(cand->name, baseName)) {
-        DeclarationGenerator_collectStructFields(self, cand, allClasses, acc) /* inst:DeclarationGenerator:collectStructFields */;
-    }
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    SpecArray* allClasses;
-    ClassInfo* c;
-    SpecArray* acc;
-} _Env_anon_907;
-
-static __attribute__((unused)) void _destroy_env_anon_907(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_907* _env = (_Env_anon_907*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->allClasses) spec_release((void*)_env->allClasses);
-    if (_env->c) spec_release((void*)_env->c);
-    if (_env->acc) spec_release((void*)_env->acc);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_907(void* _env_ptr, String baseName) {
-    _Env_anon_907* _env = (_Env_anon_907*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    SpecArray* allClasses = _env->allClasses;
-    (void)allClasses;
-    ClassInfo* c = _env->c;
-    (void)c;
-    SpecArray* acc = _env->acc;
-    (void)acc;
-    ({ SpecArray* _a_909 = allClasses; if (_a_909) { for (size_t _i_909 = 0; _i_909 < _a_909->length; _i_909++) {
-        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_909->items[_i_909];
-        do {
-    if (spec_string_equals(cand->name, baseName)) {
-        DeclarationGenerator_collectStructFields(self, cand, allClasses, acc) /* inst:DeclarationGenerator:collectStructFields */;
-    }
-        } while (0);
-    } } });
 }
 
 typedef struct {
@@ -46863,21 +47000,94 @@ static __attribute__((unused)) void _anon_fn_911(void* _env_ptr, ClassInfo* cand
 
 typedef struct {
     DeclarationGenerator* self;
+    SpecArray* allClasses;
     ClassInfo* c;
     SpecArray* acc;
-} _Env_anon_913;
+} _Env_anon_910;
 
-static __attribute__((unused)) void _destroy_env_anon_913(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_910(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_913* _env = (_Env_anon_913*)_env_ptr;
+    _Env_anon_910* _env = (_Env_anon_910*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->allClasses) spec_release((void*)_env->allClasses);
+    if (_env->c) spec_release((void*)_env->c);
+    if (_env->acc) spec_release((void*)_env->acc);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_910(void* _env_ptr, String baseName) {
+    _Env_anon_910* _env = (_Env_anon_910*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    SpecArray* allClasses = _env->allClasses;
+    (void)allClasses;
+    ClassInfo* c = _env->c;
+    (void)c;
+    SpecArray* acc = _env->acc;
+    (void)acc;
+    ({ SpecArray* _a_912 = allClasses; if (_a_912) { for (size_t _i_912 = 0; _i_912 < _a_912->length; _i_912++) {
+        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_912->items[_i_912];
+        do {
+    if (spec_string_equals(cand->name, baseName)) {
+        DeclarationGenerator_collectStructFields(self, cand, allClasses, acc) /* inst:DeclarationGenerator:collectStructFields */;
+    }
+        } while (0);
+    } } });
+}
+
+typedef struct {
+    DeclarationGenerator* self;
+    SpecArray* allClasses;
+    ClassInfo* c;
+    String baseName;
+    SpecArray* acc;
+} _Env_anon_914;
+
+static __attribute__((unused)) void _destroy_env_anon_914(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_914* _env = (_Env_anon_914*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->allClasses) spec_release((void*)_env->allClasses);
+    if (_env->c) spec_release((void*)_env->c);
+    if (_env->baseName) spec_release((void*)_env->baseName);
+    if (_env->acc) spec_release((void*)_env->acc);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_914(void* _env_ptr, ClassInfo* cand) {
+    _Env_anon_914* _env = (_Env_anon_914*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    SpecArray* allClasses = _env->allClasses;
+    (void)allClasses;
+    ClassInfo* c = _env->c;
+    (void)c;
+    String baseName = _env->baseName;
+    (void)baseName;
+    SpecArray* acc = _env->acc;
+    (void)acc;
+    if (spec_string_equals(cand->name, baseName)) {
+        DeclarationGenerator_collectStructFields(self, cand, allClasses, acc) /* inst:DeclarationGenerator:collectStructFields */;
+    }
+}
+
+typedef struct {
+    DeclarationGenerator* self;
+    ClassInfo* c;
+    SpecArray* acc;
+} _Env_anon_916;
+
+static __attribute__((unused)) void _destroy_env_anon_916(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_916* _env = (_Env_anon_916*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->acc) spec_release((void*)_env->acc);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_913(void* _env_ptr, Member* m) {
-    _Env_anon_913* _env = (_Env_anon_913*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_916(void* _env_ptr, Member* m) {
+    _Env_anon_916* _env = (_Env_anon_916*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -46900,18 +47110,18 @@ static __attribute__((unused)) void _anon_fn_913(void* _env_ptr, Member* m) {
 typedef struct {
     ClassInfo* c;
     SpecArray* variants;
-} _Env_anon_916;
+} _Env_anon_919;
 
-static __attribute__((unused)) void _destroy_env_anon_916(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_919(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_916* _env = (_Env_anon_916*)_env_ptr;
+    _Env_anon_919* _env = (_Env_anon_919*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->variants) spec_release((void*)_env->variants);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_916(void* _env_ptr, Member* m) {
-    _Env_anon_916* _env = (_Env_anon_916*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_919(void* _env_ptr, Member* m) {
+    _Env_anon_919* _env = (_Env_anon_919*)_env_ptr;
     ClassInfo* c = _env->c;
     (void)c;
     SpecArray* variants = _env->variants;
@@ -46927,11 +47137,11 @@ typedef struct {
     long long tIdx;
     ClassInfo* c;
     String out;
-} _Env_anon_918;
+} _Env_anon_921;
 
-static __attribute__((unused)) void _destroy_env_anon_918(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_921(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_918* _env = (_Env_anon_918*)_env_ptr;
+    _Env_anon_921* _env = (_Env_anon_921*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -46939,8 +47149,8 @@ static __attribute__((unused)) void _destroy_env_anon_918(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_918(void* _env_ptr, Member* m) {
-    _Env_anon_918* _env = (_Env_anon_918*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_921(void* _env_ptr, Member* m) {
+    _Env_anon_921* _env = (_Env_anon_921*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -46961,11 +47171,11 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_920;
+} _Env_anon_923;
 
-static __attribute__((unused)) void _destroy_env_anon_920(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_923(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_920* _env = (_Env_anon_920*)_env_ptr;
+    _Env_anon_923* _env = (_Env_anon_923*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -46973,8 +47183,8 @@ static __attribute__((unused)) void _destroy_env_anon_920(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_920(void* _env_ptr, Member* m) {
-    _Env_anon_920* _env = (_Env_anon_920*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_923(void* _env_ptr, Member* m) {
+    _Env_anon_923* _env = (_Env_anon_923*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     long long idx = _env->idx;
@@ -46993,19 +47203,19 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_922;
+} _Env_anon_925;
 
-static __attribute__((unused)) void _destroy_env_anon_922(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_925(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_922* _env = (_Env_anon_922*)_env_ptr;
+    _Env_anon_925* _env = (_Env_anon_925*)_env_ptr;
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_922(void* _env_ptr, Member* m) {
-    _Env_anon_922* _env = (_Env_anon_922*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_925(void* _env_ptr, Member* m) {
+    _Env_anon_925* _env = (_Env_anon_925*)_env_ptr;
     String name = _env->name;
     (void)name;
     ClassInfo* c = _env->c;
@@ -47020,11 +47230,11 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_924;
+} _Env_anon_927;
 
-static __attribute__((unused)) void _destroy_env_anon_924(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_927(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_924* _env = (_Env_anon_924*)_env_ptr;
+    _Env_anon_927* _env = (_Env_anon_927*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47032,8 +47242,8 @@ static __attribute__((unused)) void _destroy_env_anon_924(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_924(void* _env_ptr, Member* m) {
-    _Env_anon_924* _env = (_Env_anon_924*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_927(void* _env_ptr, Member* m) {
+    _Env_anon_927* _env = (_Env_anon_927*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47050,11 +47260,11 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_926;
+} _Env_anon_929;
 
-static __attribute__((unused)) void _destroy_env_anon_926(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_929(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_926* _env = (_Env_anon_926*)_env_ptr;
+    _Env_anon_929* _env = (_Env_anon_929*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47062,8 +47272,8 @@ static __attribute__((unused)) void _destroy_env_anon_926(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_926(void* _env_ptr, Member* m) {
-    _Env_anon_926* _env = (_Env_anon_926*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_929(void* _env_ptr, Member* m) {
+    _Env_anon_929* _env = (_Env_anon_929*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47079,18 +47289,18 @@ typedef struct {
     String name;
     bool isStrBacked;
     ClassInfo* c;
-} _Env_anon_928;
+} _Env_anon_931;
 
-static __attribute__((unused)) void _destroy_env_anon_928(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_931(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_928* _env = (_Env_anon_928*)_env_ptr;
+    _Env_anon_931* _env = (_Env_anon_931*)_env_ptr;
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_928(void* _env_ptr, Member* m) {
-    _Env_anon_928* _env = (_Env_anon_928*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_931(void* _env_ptr, Member* m) {
+    _Env_anon_931* _env = (_Env_anon_931*)_env_ptr;
     String name = _env->name;
     (void)name;
     bool isStrBacked = _env->isStrBacked;
@@ -47108,11 +47318,11 @@ typedef struct {
     ClassInfo* c;
     long long ordIdx;
     String out;
-} _Env_anon_930;
+} _Env_anon_933;
 
-static __attribute__((unused)) void _destroy_env_anon_930(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_933(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_930* _env = (_Env_anon_930*)_env_ptr;
+    _Env_anon_933* _env = (_Env_anon_933*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47120,8 +47330,8 @@ static __attribute__((unused)) void _destroy_env_anon_930(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_930(void* _env_ptr, Member* m) {
-    _Env_anon_930* _env = (_Env_anon_930*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_933(void* _env_ptr, Member* m) {
+    _Env_anon_933* _env = (_Env_anon_933*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47139,18 +47349,18 @@ static __attribute__((unused)) void _anon_fn_930(void* _env_ptr, Member* m) {
 typedef struct {
     DeclarationGenerator* self;
     String out;
-} _Env_anon_915;
+} _Env_anon_918;
 
-static __attribute__((unused)) void _destroy_env_anon_915(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_918(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_915* _env = (_Env_anon_915*)_env_ptr;
+    _Env_anon_918* _env = (_Env_anon_918*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_915* _env = (_Env_anon_915*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_918(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_918* _env = (_Env_anon_918*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -47158,8 +47368,8 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
     if (spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
         SPEC_AUTO String name = spec_construct_string(c->name);
         SPEC_AUTO SpecArray* variants = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ SpecArray* _a_917 = c->members; if (_a_917) { for (size_t _i_917 = 0; _i_917 < _a_917->length; _i_917++) {
-        Member* m = (Member*)(intptr_t)_a_917->items[_i_917];
+        ({ SpecArray* _a_920 = c->members; if (_a_920) { for (size_t _i_920 = 0; _i_920 < _a_920->length; _i_920++) {
+        Member* m = (Member*)(intptr_t)_a_920->items[_i_920];
         do {
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
         spec_array_add_object(variants, (void*)(m));
@@ -47169,8 +47379,8 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
         if (spec_map_has(self->allTaggedEnums, name)) {
         out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
         long long tIdx = 0;
-        ({ SpecArray* _a_919 = variants; if (_a_919) { for (size_t _i_919 = 0; _i_919 < _a_919->length; _i_919++) {
-        Member* m = (Member*)(intptr_t)_a_919->items[_i_919];
+        ({ SpecArray* _a_922 = variants; if (_a_922) { for (size_t _i_922 = 0; _i_922 < _a_922->length; _i_922++) {
+        Member* m = (Member*)(intptr_t)_a_922->items[_i_922];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_TAG_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n"));
     tIdx = ((tIdx) + (1));
@@ -47181,8 +47391,8 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
     } else {
         out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
         long long idx = 0;
-        ({ SpecArray* _a_921 = variants; if (_a_921) { for (size_t _i_921 = 0; _i_921 < _a_921->length; _i_921++) {
-        Member* m = (Member*)(intptr_t)_a_921->items[_i_921];
+        ({ SpecArray* _a_924 = variants; if (_a_924) { for (size_t _i_924 = 0; _i_924 < _a_924->length; _i_924++) {
+        Member* m = (Member*)(intptr_t)_a_924->items[_i_924];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n"));
     idx = ((idx) + (1));
@@ -47190,16 +47400,16 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
     } } });
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("} ")), name), spec_string_intern(";\n\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static __attribute__((unused)) const char* ")), name), spec_string_intern("_names[] = {\n"));
-        ({ SpecArray* _a_923 = variants; if (_a_923) { for (size_t _i_923 = 0; _i_923 < _a_923->length; _i_923++) {
-        Member* m = (Member*)(intptr_t)_a_923->items[_i_923];
+        ({ SpecArray* _a_926 = variants; if (_a_926) { for (size_t _i_926 = 0; _i_926 < _a_926->length; _i_926++) {
+        Member* m = (Member*)(intptr_t)_a_926->items[_i_926];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    \"")), m->name), spec_string_intern("\",\n"));
         } while (0);
     } } });
         out = spec_string_concat(out, spec_string_intern("};\n\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static const ")), name), spec_string_intern(" ")), name), spec_string_intern("_all_values[] = {\n"));
-        ({ SpecArray* _a_925 = variants; if (_a_925) { for (size_t _i_925 = 0; _i_925 < _a_925->length; _i_925++) {
-        Member* m = (Member*)(intptr_t)_a_925->items[_i_925];
+        ({ SpecArray* _a_928 = variants; if (_a_928) { for (size_t _i_928 = 0; _i_928 < _a_928->length; _i_928++) {
+        Member* m = (Member*)(intptr_t)_a_928->items[_i_928];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(",\n"));
         } while (0);
@@ -47208,8 +47418,8 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline String ")), name), spec_string_intern("_name(")), name), spec_string_intern(" self) {\n"));
         out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
         out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
-        ({ SpecArray* _a_927 = variants; if (_a_927) { for (size_t _i_927 = 0; _i_927 < _a_927->length; _i_927++) {
-        Member* m = (Member*)(intptr_t)_a_927->items[_i_927];
+        ({ SpecArray* _a_930 = variants; if (_a_930) { for (size_t _i_930 = 0; _i_930 < _a_930->length; _i_930++) {
+        Member* m = (Member*)(intptr_t)_a_930->items[_i_930];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n"));
         } while (0);
@@ -47217,8 +47427,8 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(out, spec_string_intern("        default: return spec_string_intern(\"UNKNOWN\");\n"));
         out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
         bool isStrBacked = false;
-        ({ SpecArray* _a_929 = variants; if (_a_929) { for (size_t _i_929 = 0; _i_929 < _a_929->length; _i_929++) {
-        Member* m = (Member*)(intptr_t)_a_929->items[_i_929];
+        ({ SpecArray* _a_932 = variants; if (_a_932) { for (size_t _i_932 = 0; _i_932 < _a_932->length; _i_932++) {
+        Member* m = (Member*)(intptr_t)_a_932->items[_i_932];
         do {
     if (spec_string_equals(m->memberType->name, ((String)spec_claim_pool((void*)(Primitive_value(Primitive_STRING)))))) {
         isStrBacked = true;
@@ -47234,8 +47444,8 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
         out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
         out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
         long long ordIdx = 0;
-        ({ SpecArray* _a_931 = variants; if (_a_931) { for (size_t _i_931 = 0; _i_931 < _a_931->length; _i_931++) {
-        Member* m = (Member*)(intptr_t)_a_931->items[_i_931];
+        ({ SpecArray* _a_934 = variants; if (_a_934) { for (size_t _i_934 = 0; _i_934 < _a_934->length; _i_934++) {
+        Member* m = (Member*)(intptr_t)_a_934->items[_i_934];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n"));
     ordIdx = ((ordIdx) + (1));
@@ -47257,18 +47467,18 @@ static __attribute__((unused)) void _anon_fn_915(void* _env_ptr, ClassInfo* c) {
 typedef struct {
     ClassInfo* c;
     SpecArray* variants;
-} _Env_anon_933;
+} _Env_anon_936;
 
-static __attribute__((unused)) void _destroy_env_anon_933(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_936(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_933* _env = (_Env_anon_933*)_env_ptr;
+    _Env_anon_936* _env = (_Env_anon_936*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->variants) spec_release((void*)_env->variants);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_933(void* _env_ptr, Member* m) {
-    _Env_anon_933* _env = (_Env_anon_933*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_936(void* _env_ptr, Member* m) {
+    _Env_anon_936* _env = (_Env_anon_936*)_env_ptr;
     ClassInfo* c = _env->c;
     (void)c;
     SpecArray* variants = _env->variants;
@@ -47284,11 +47494,11 @@ typedef struct {
     long long tIdx;
     ClassInfo* c;
     String out;
-} _Env_anon_935;
+} _Env_anon_938;
 
-static __attribute__((unused)) void _destroy_env_anon_935(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_938(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_935* _env = (_Env_anon_935*)_env_ptr;
+    _Env_anon_938* _env = (_Env_anon_938*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47296,8 +47506,8 @@ static __attribute__((unused)) void _destroy_env_anon_935(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_935(void* _env_ptr, Member* m) {
-    _Env_anon_935* _env = (_Env_anon_935*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_938(void* _env_ptr, Member* m) {
+    _Env_anon_938* _env = (_Env_anon_938*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47318,11 +47528,11 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_937;
+} _Env_anon_940;
 
-static __attribute__((unused)) void _destroy_env_anon_937(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_940(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_937* _env = (_Env_anon_937*)_env_ptr;
+    _Env_anon_940* _env = (_Env_anon_940*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47330,8 +47540,8 @@ static __attribute__((unused)) void _destroy_env_anon_937(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_937(void* _env_ptr, Member* m) {
-    _Env_anon_937* _env = (_Env_anon_937*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_940(void* _env_ptr, Member* m) {
+    _Env_anon_940* _env = (_Env_anon_940*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     long long idx = _env->idx;
@@ -47350,19 +47560,19 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_939;
+} _Env_anon_942;
 
-static __attribute__((unused)) void _destroy_env_anon_939(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_942(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_939* _env = (_Env_anon_939*)_env_ptr;
+    _Env_anon_942* _env = (_Env_anon_942*)_env_ptr;
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_939(void* _env_ptr, Member* m) {
-    _Env_anon_939* _env = (_Env_anon_939*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_942(void* _env_ptr, Member* m) {
+    _Env_anon_942* _env = (_Env_anon_942*)_env_ptr;
     String name = _env->name;
     (void)name;
     ClassInfo* c = _env->c;
@@ -47377,11 +47587,11 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_941;
+} _Env_anon_944;
 
-static __attribute__((unused)) void _destroy_env_anon_941(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_944(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_941* _env = (_Env_anon_941*)_env_ptr;
+    _Env_anon_944* _env = (_Env_anon_944*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47389,8 +47599,8 @@ static __attribute__((unused)) void _destroy_env_anon_941(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_941(void* _env_ptr, Member* m) {
-    _Env_anon_941* _env = (_Env_anon_941*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_944(void* _env_ptr, Member* m) {
+    _Env_anon_944* _env = (_Env_anon_944*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47407,11 +47617,11 @@ typedef struct {
     String name;
     ClassInfo* c;
     String out;
-} _Env_anon_943;
+} _Env_anon_946;
 
-static __attribute__((unused)) void _destroy_env_anon_943(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_946(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_943* _env = (_Env_anon_943*)_env_ptr;
+    _Env_anon_946* _env = (_Env_anon_946*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47419,8 +47629,8 @@ static __attribute__((unused)) void _destroy_env_anon_943(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_943(void* _env_ptr, Member* m) {
-    _Env_anon_943* _env = (_Env_anon_943*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_946(void* _env_ptr, Member* m) {
+    _Env_anon_946* _env = (_Env_anon_946*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47436,18 +47646,18 @@ typedef struct {
     String name;
     bool isStrBacked;
     ClassInfo* c;
-} _Env_anon_945;
+} _Env_anon_948;
 
-static __attribute__((unused)) void _destroy_env_anon_945(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_948(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_945* _env = (_Env_anon_945*)_env_ptr;
+    _Env_anon_948* _env = (_Env_anon_948*)_env_ptr;
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_945(void* _env_ptr, Member* m) {
-    _Env_anon_945* _env = (_Env_anon_945*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_948(void* _env_ptr, Member* m) {
+    _Env_anon_948* _env = (_Env_anon_948*)_env_ptr;
     String name = _env->name;
     (void)name;
     bool isStrBacked = _env->isStrBacked;
@@ -47465,11 +47675,11 @@ typedef struct {
     ClassInfo* c;
     long long ordIdx;
     String out;
-} _Env_anon_947;
+} _Env_anon_950;
 
-static __attribute__((unused)) void _destroy_env_anon_947(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_950(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_947* _env = (_Env_anon_947*)_env_ptr;
+    _Env_anon_950* _env = (_Env_anon_950*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->c) spec_release((void*)_env->c);
@@ -47477,8 +47687,8 @@ static __attribute__((unused)) void _destroy_env_anon_947(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_947(void* _env_ptr, Member* m) {
-    _Env_anon_947* _env = (_Env_anon_947*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_950(void* _env_ptr, Member* m) {
+    _Env_anon_950* _env = (_Env_anon_950*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47495,17 +47705,17 @@ static __attribute__((unused)) void _anon_fn_947(void* _env_ptr, Member* m) {
 
 typedef struct {
     SpecArray* variants;
-} _Env_anon_949;
+} _Env_anon_952;
 
-static __attribute__((unused)) void _destroy_env_anon_949(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_952(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_949* _env = (_Env_anon_949*)_env_ptr;
+    _Env_anon_952* _env = (_Env_anon_952*)_env_ptr;
     if (_env->variants) spec_release((void*)_env->variants);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_949(void* _env_ptr, Member* m) {
-    _Env_anon_949* _env = (_Env_anon_949*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_952(void* _env_ptr, Member* m) {
+    _Env_anon_952* _env = (_Env_anon_952*)_env_ptr;
     SpecArray* variants = _env->variants;
     (void)variants;
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
@@ -47517,19 +47727,19 @@ typedef struct {
     DeclarationGenerator* self;
     String name;
     String out;
-} _Env_anon_951;
+} _Env_anon_954;
 
-static __attribute__((unused)) void _destroy_env_anon_951(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_954(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_951* _env = (_Env_anon_951*)_env_ptr;
+    _Env_anon_954* _env = (_Env_anon_954*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_951(void* _env_ptr, Member* m) {
-    _Env_anon_951* _env = (_Env_anon_951*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_954(void* _env_ptr, Member* m) {
+    _Env_anon_954* _env = (_Env_anon_954*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47544,11 +47754,11 @@ typedef struct {
     String name;
     String emptyVariant;
     String out;
-} _Env_anon_953;
+} _Env_anon_956;
 
-static __attribute__((unused)) void _destroy_env_anon_953(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_956(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_953* _env = (_Env_anon_953*)_env_ptr;
+    _Env_anon_956* _env = (_Env_anon_956*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->emptyVariant) spec_release((void*)_env->emptyVariant);
@@ -47556,8 +47766,8 @@ static __attribute__((unused)) void _destroy_env_anon_953(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_953(void* _env_ptr, Member* m) {
-    _Env_anon_953* _env = (_Env_anon_953*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_956(void* _env_ptr, Member* m) {
+    _Env_anon_956* _env = (_Env_anon_956*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47575,17 +47785,17 @@ static __attribute__((unused)) void _anon_fn_953(void* _env_ptr, Member* m) {
 
 typedef struct {
     SpecArray* variants;
-} _Env_anon_955;
+} _Env_anon_958;
 
-static __attribute__((unused)) void _destroy_env_anon_955(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_958(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_955* _env = (_Env_anon_955*)_env_ptr;
+    _Env_anon_958* _env = (_Env_anon_958*)_env_ptr;
     if (_env->variants) spec_release((void*)_env->variants);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_955(void* _env_ptr, Member* m) {
-    _Env_anon_955* _env = (_Env_anon_955*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_958(void* _env_ptr, Member* m) {
+    _Env_anon_958* _env = (_Env_anon_958*)_env_ptr;
     SpecArray* variants = _env->variants;
     (void)variants;
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
@@ -47598,19 +47808,19 @@ typedef struct {
     String name;
     long long vIdx;
     String out;
-} _Env_anon_957;
+} _Env_anon_960;
 
-static __attribute__((unused)) void _destroy_env_anon_957(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_960(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_957* _env = (_Env_anon_957*)_env_ptr;
+    _Env_anon_960* _env = (_Env_anon_960*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_957(void* _env_ptr, Member* m) {
-    _Env_anon_957* _env = (_Env_anon_957*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_960(void* _env_ptr, Member* m) {
+    _Env_anon_960* _env = (_Env_anon_960*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -47638,18 +47848,18 @@ static __attribute__((unused)) void _anon_fn_957(void* _env_ptr, Member* m) {
 typedef struct {
     DeclarationGenerator* self;
     String out;
-} _Env_anon_959;
+} _Env_anon_962;
 
-static __attribute__((unused)) void _destroy_env_anon_959(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_962(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_959* _env = (_Env_anon_959*)_env_ptr;
+    _Env_anon_962* _env = (_Env_anon_962*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_959(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_959* _env = (_Env_anon_959*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_962(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_962* _env = (_Env_anon_962*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String out = _env->out;
@@ -47669,18 +47879,18 @@ typedef struct {
     long long ovIdx;
     ClassInfo* c;
     Member* m;
-} _Env_anon_963;
+} _Env_anon_966;
 
-static __attribute__((unused)) void _destroy_env_anon_963(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_966(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_963* _env = (_Env_anon_963*)_env_ptr;
+    _Env_anon_966* _env = (_Env_anon_966*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_963(void* _env_ptr, Member* g) {
-    _Env_anon_963* _env = (_Env_anon_963*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_966(void* _env_ptr, Member* g) {
+    _Env_anon_966* _env = (_Env_anon_966*)_env_ptr;
     long long ovHit = _env->ovHit;
     (void)ovHit;
     long long ovIdx = _env->ovIdx;
@@ -47702,6 +47912,39 @@ typedef struct {
     ClassInfo* c;
     SpecArray* tps;
     Member* m;
+    String out;
+} _Env_anon_968;
+
+static __attribute__((unused)) void _destroy_env_anon_968(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_968* _env = (_Env_anon_968*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->c) spec_release((void*)_env->c);
+    if (_env->tps) spec_release((void*)_env->tps);
+    if (_env->m) spec_release((void*)_env->m);
+    if (_env->out) spec_release((void*)_env->out);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_968(void* _env_ptr, Parameter* p) {
+    _Env_anon_968* _env = (_Env_anon_968*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    ClassInfo* c = _env->c;
+    (void)c;
+    SpecArray* tps = _env->tps;
+    (void)tps;
+    Member* m = _env->m;
+    (void)m;
+    String out = _env->out;
+    (void)out;
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
+}
+
+typedef struct {
+    DeclarationGenerator* self;
+    ClassInfo* c;
+    SpecArray* tps;
     String out;
 } _Env_anon_965;
 
@@ -47711,12 +47954,11 @@ static __attribute__((unused)) void _destroy_env_anon_965(void* _env_ptr) {
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->tps) spec_release((void*)_env->tps);
-    if (_env->m) spec_release((void*)_env->m);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_965(void* _env_ptr, Parameter* p) {
+static __attribute__((unused)) void _anon_fn_965(void* _env_ptr, Member* m) {
     _Env_anon_965* _env = (_Env_anon_965*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
@@ -47724,38 +47966,6 @@ static __attribute__((unused)) void _anon_fn_965(void* _env_ptr, Parameter* p) {
     (void)c;
     SpecArray* tps = _env->tps;
     (void)tps;
-    Member* m = _env->m;
-    (void)m;
-    String out = _env->out;
-    (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    ClassInfo* c;
-    SpecArray* tps;
-    String out;
-} _Env_anon_962;
-
-static __attribute__((unused)) void _destroy_env_anon_962(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_962* _env = (_Env_anon_962*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->c) spec_release((void*)_env->c);
-    if (_env->tps) spec_release((void*)_env->tps);
-    if (_env->out) spec_release((void*)_env->out);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_962(void* _env_ptr, Member* m) {
-    _Env_anon_962* _env = (_Env_anon_962*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    ClassInfo* c = _env->c;
-    (void)c;
-    SpecArray* tps = _env->tps;
-    (void)tps;
     String out = _env->out;
     (void)out;
     if (((m->kind) == (MemberKind_METHOD))) {
@@ -47768,139 +47978,8 @@ static __attribute__((unused)) void _anon_fn_962(void* _env_ptr, Member* m) {
     }
         long long ovIdx = 0;
         long long ovHit = 0;
-        ({ SpecArray* _a_964 = c->members; if (_a_964) { for (size_t _i_964 = 0; _i_964 < _a_964->length; _i_964++) {
-        Member* g = (Member*)(intptr_t)_a_964->items[_i_964];
-        do {
-    if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
-        if (((g) == (m))) {
-        ovHit = ovIdx;
-    }
-        ovIdx = ((ovIdx) + (1));
-    }
-        } while (0);
-    } } });
-        SPEC_AUTO String symName = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(c->name)), spec_string_intern("_")), m->name);
-        if (((ovHit) > (0))) {
-        symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
-    }
-        out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, c->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self"));
-        ({ SpecArray* _a_966 = m->params; if (_a_966) { for (size_t _i_966 = 0; _i_966 < _a_966->length; _i_966++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_966->items[_i_966];
-        do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
-        } while (0);
-    } } });
-        out = spec_string_concat(out, spec_string_intern(");\n"));
-    if (retType) { spec_release((void*)retType); retType = NULL; }
-    if (symName) { spec_release((void*)symName); symName = NULL; }
-    }
-    } else {
-    }
-}
-
-typedef struct {
-    long long ovHit;
-    long long ovIdx;
-    ClassInfo* c;
-    Member* m;
-} _Env_anon_968;
-
-static __attribute__((unused)) void _destroy_env_anon_968(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_968* _env = (_Env_anon_968*)_env_ptr;
-    if (_env->c) spec_release((void*)_env->c);
-    if (_env->m) spec_release((void*)_env->m);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_968(void* _env_ptr, Member* g) {
-    _Env_anon_968* _env = (_Env_anon_968*)_env_ptr;
-    long long ovHit = _env->ovHit;
-    (void)ovHit;
-    long long ovIdx = _env->ovIdx;
-    (void)ovIdx;
-    ClassInfo* c = _env->c;
-    (void)c;
-    Member* m = _env->m;
-    (void)m;
-    if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
-        if (((g) == (m))) {
-        ovHit = ovIdx;
-    }
-        ovIdx = ((ovIdx) + (1));
-    }
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    ClassInfo* c;
-    SpecArray* tps;
-    Member* m;
-    String out;
-} _Env_anon_970;
-
-static __attribute__((unused)) void _destroy_env_anon_970(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_970* _env = (_Env_anon_970*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->c) spec_release((void*)_env->c);
-    if (_env->tps) spec_release((void*)_env->tps);
-    if (_env->m) spec_release((void*)_env->m);
-    if (_env->out) spec_release((void*)_env->out);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_970(void* _env_ptr, Parameter* p) {
-    _Env_anon_970* _env = (_Env_anon_970*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    ClassInfo* c = _env->c;
-    (void)c;
-    SpecArray* tps = _env->tps;
-    (void)tps;
-    Member* m = _env->m;
-    (void)m;
-    String out = _env->out;
-    (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    String out;
-} _Env_anon_961;
-
-static __attribute__((unused)) void _destroy_env_anon_961(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_961* _env = (_Env_anon_961*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->out) spec_release((void*)_env->out);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_961(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_961* _env = (_Env_anon_961*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    String out = _env->out;
-    (void)out;
-    if (((EmissionPolicy_emitsPrototypes(self->policy, c) /* inst:EmissionPolicy:emitsPrototypes */) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
-        SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
         ({ SpecArray* _a_967 = c->members; if (_a_967) { for (size_t _i_967 = 0; _i_967 < _a_967->length; _i_967++) {
-        Member* m = (Member*)(intptr_t)_a_967->items[_i_967];
-        do {
-    if (((m->kind) == (MemberKind_METHOD))) {
-        if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (((spec_array_length(m->body)) > (0))))) {
-        SPEC_AUTO String retType = DeclarationGenerator_resolveReturnTypeForClass(self, m->memberType, tps) /* inst:DeclarationGenerator:resolveReturnTypeForClass */;
-        if (spec_string_equals(retType, spec_string_intern("void"))) {
-        if (((spec_string_equals(m->name, ((String)spec_claim_pool((void*)(ContractMethod_value(ContractMethod_EVALUATE)))))) || (spec_string_equals(m->name, ((String)spec_claim_pool((void*)(ContractMethod_value(ContractMethod_ITERATION)))))))) {
-        spec_assign((void**)&retType, (void*)(spec_string_intern("bool")));
-    }
-    }
-        long long ovIdx = 0;
-        long long ovHit = 0;
-        ({ SpecArray* _a_969 = c->members; if (_a_969) { for (size_t _i_969 = 0; _i_969 < _a_969->length; _i_969++) {
-        Member* g = (Member*)(intptr_t)_a_969->items[_i_969];
+        Member* g = (Member*)(intptr_t)_a_967->items[_i_967];
         do {
     if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
         if (((g) == (m))) {
@@ -47915,8 +47994,8 @@ static __attribute__((unused)) void _anon_fn_961(void* _env_ptr, ClassInfo* c) {
         symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
     }
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, c->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self"));
-        ({ SpecArray* _a_971 = m->params; if (_a_971) { for (size_t _i_971 = 0; _i_971 < _a_971->length; _i_971++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_971->items[_i_971];
+        ({ SpecArray* _a_969 = m->params; if (_a_969) { for (size_t _i_969 = 0; _i_969 < _a_969->length; _i_969++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_969->items[_i_969];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
         } while (0);
@@ -47927,10 +48006,6 @@ static __attribute__((unused)) void _anon_fn_961(void* _env_ptr, ClassInfo* c) {
     }
     } else {
     }
-        } while (0);
-    } } });
-    if (tps) { spec_release((void*)tps); tps = NULL; }
-    }
 }
 
 typedef struct {
@@ -47938,18 +48013,18 @@ typedef struct {
     long long ovIdx;
     ClassInfo* c;
     Member* m;
-} _Env_anon_974;
+} _Env_anon_971;
 
-static __attribute__((unused)) void _destroy_env_anon_974(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_971(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_974* _env = (_Env_anon_974*)_env_ptr;
+    _Env_anon_971* _env = (_Env_anon_971*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_974(void* _env_ptr, Member* g) {
-    _Env_anon_974* _env = (_Env_anon_974*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_971(void* _env_ptr, Member* g) {
+    _Env_anon_971* _env = (_Env_anon_971*)_env_ptr;
     long long ovHit = _env->ovHit;
     (void)ovHit;
     long long ovIdx = _env->ovIdx;
@@ -47971,39 +48046,6 @@ typedef struct {
     ClassInfo* c;
     SpecArray* tps;
     Member* m;
-    String out;
-} _Env_anon_976;
-
-static __attribute__((unused)) void _destroy_env_anon_976(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_976* _env = (_Env_anon_976*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->c) spec_release((void*)_env->c);
-    if (_env->tps) spec_release((void*)_env->tps);
-    if (_env->m) spec_release((void*)_env->m);
-    if (_env->out) spec_release((void*)_env->out);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_976(void* _env_ptr, Parameter* p) {
-    _Env_anon_976* _env = (_Env_anon_976*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    ClassInfo* c = _env->c;
-    (void)c;
-    SpecArray* tps = _env->tps;
-    (void)tps;
-    Member* m = _env->m;
-    (void)m;
-    String out = _env->out;
-    (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    ClassInfo* c;
-    SpecArray* tps;
     String out;
 } _Env_anon_973;
 
@@ -48013,11 +48055,12 @@ static __attribute__((unused)) void _destroy_env_anon_973(void* _env_ptr) {
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->tps) spec_release((void*)_env->tps);
+    if (_env->m) spec_release((void*)_env->m);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Member* m) {
+static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Parameter* p) {
     _Env_anon_973* _env = (_Env_anon_973*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
@@ -48025,8 +48068,37 @@ static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Member* m) {
     (void)c;
     SpecArray* tps = _env->tps;
     (void)tps;
+    Member* m = _env->m;
+    (void)m;
     String out = _env->out;
     (void)out;
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
+}
+
+typedef struct {
+    DeclarationGenerator* self;
+    String out;
+} _Env_anon_964;
+
+static __attribute__((unused)) void _destroy_env_anon_964(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_964* _env = (_Env_anon_964*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->out) spec_release((void*)_env->out);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_964(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_964* _env = (_Env_anon_964*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    String out = _env->out;
+    (void)out;
+    if (((EmissionPolicy_emitsPrototypes(self->policy, c) /* inst:EmissionPolicy:emitsPrototypes */) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
+        SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
+        ({ SpecArray* _a_970 = c->members; if (_a_970) { for (size_t _i_970 = 0; _i_970 < _a_970->length; _i_970++) {
+        Member* m = (Member*)(intptr_t)_a_970->items[_i_970];
+        do {
     if (((m->kind) == (MemberKind_METHOD))) {
         if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (((spec_array_length(m->body)) > (0))))) {
         SPEC_AUTO String retType = DeclarationGenerator_resolveReturnTypeForClass(self, m->memberType, tps) /* inst:DeclarationGenerator:resolveReturnTypeForClass */;
@@ -48037,8 +48109,8 @@ static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Member* m) {
     }
         long long ovIdx = 0;
         long long ovHit = 0;
-        ({ SpecArray* _a_975 = c->members; if (_a_975) { for (size_t _i_975 = 0; _i_975 < _a_975->length; _i_975++) {
-        Member* g = (Member*)(intptr_t)_a_975->items[_i_975];
+        ({ SpecArray* _a_972 = c->members; if (_a_972) { for (size_t _i_972 = 0; _i_972 < _a_972->length; _i_972++) {
+        Member* g = (Member*)(intptr_t)_a_972->items[_i_972];
         do {
     if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
         if (((g) == (m))) {
@@ -48053,8 +48125,8 @@ static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Member* m) {
         symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
     }
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, c->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self"));
-        ({ SpecArray* _a_977 = m->params; if (_a_977) { for (size_t _i_977 = 0; _i_977 < _a_977->length; _i_977++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_977->items[_i_977];
+        ({ SpecArray* _a_974 = m->params; if (_a_974) { for (size_t _i_974 = 0; _i_974 < _a_974->length; _i_974++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_974->items[_i_974];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
         } while (0);
@@ -48065,6 +48137,10 @@ static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Member* m) {
     }
     } else {
     }
+        } while (0);
+    } } });
+    if (tps) { spec_release((void*)tps); tps = NULL; }
+    }
 }
 
 typedef struct {
@@ -48072,18 +48148,18 @@ typedef struct {
     long long ovIdx;
     ClassInfo* c;
     Member* m;
-} _Env_anon_979;
+} _Env_anon_977;
 
-static __attribute__((unused)) void _destroy_env_anon_979(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_977(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_979* _env = (_Env_anon_979*)_env_ptr;
+    _Env_anon_977* _env = (_Env_anon_977*)_env_ptr;
     if (_env->c) spec_release((void*)_env->c);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_979(void* _env_ptr, Member* g) {
-    _Env_anon_979* _env = (_Env_anon_979*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_977(void* _env_ptr, Member* g) {
+    _Env_anon_977* _env = (_Env_anon_977*)_env_ptr;
     long long ovHit = _env->ovHit;
     (void)ovHit;
     long long ovIdx = _env->ovIdx;
@@ -48106,11 +48182,11 @@ typedef struct {
     SpecArray* tps;
     Member* m;
     String out;
-} _Env_anon_981;
+} _Env_anon_979;
 
-static __attribute__((unused)) void _destroy_env_anon_981(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_979(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_981* _env = (_Env_anon_981*)_env_ptr;
+    _Env_anon_979* _env = (_Env_anon_979*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->tps) spec_release((void*)_env->tps);
@@ -48119,8 +48195,8 @@ static __attribute__((unused)) void _destroy_env_anon_981(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_981(void* _env_ptr, Parameter* p) {
-    _Env_anon_981* _env = (_Env_anon_981*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_979(void* _env_ptr, Parameter* p) {
+    _Env_anon_979* _env = (_Env_anon_979*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -48139,11 +48215,11 @@ typedef struct {
     ClassInfo* c;
     SpecArray* tps;
     String out;
-} _Env_anon_984;
+} _Env_anon_976;
 
-static __attribute__((unused)) void _destroy_env_anon_984(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_976(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_984* _env = (_Env_anon_984*)_env_ptr;
+    _Env_anon_976* _env = (_Env_anon_976*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->c) spec_release((void*)_env->c);
     if (_env->tps) spec_release((void*)_env->tps);
@@ -48151,8 +48227,8 @@ static __attribute__((unused)) void _destroy_env_anon_984(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_984(void* _env_ptr, Member* m) {
-    _Env_anon_984* _env = (_Env_anon_984*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_976(void* _env_ptr, Member* m) {
+    _Env_anon_976* _env = (_Env_anon_976*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     ClassInfo* c = _env->c;
@@ -48161,53 +48237,111 @@ static __attribute__((unused)) void _anon_fn_984(void* _env_ptr, Member* m) {
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
+    if (((m->kind) == (MemberKind_METHOD))) {
+        if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (((spec_array_length(m->body)) > (0))))) {
+        SPEC_AUTO String retType = DeclarationGenerator_resolveReturnTypeForClass(self, m->memberType, tps) /* inst:DeclarationGenerator:resolveReturnTypeForClass */;
+        if (spec_string_equals(retType, spec_string_intern("void"))) {
+        if (((spec_string_equals(m->name, ((String)spec_claim_pool((void*)(ContractMethod_value(ContractMethod_EVALUATE)))))) || (spec_string_equals(m->name, ((String)spec_claim_pool((void*)(ContractMethod_value(ContractMethod_ITERATION)))))))) {
+        spec_assign((void**)&retType, (void*)(spec_string_intern("bool")));
+    }
+    }
+        long long ovIdx = 0;
+        long long ovHit = 0;
+        ({ SpecArray* _a_978 = c->members; if (_a_978) { for (size_t _i_978 = 0; _i_978 < _a_978->length; _i_978++) {
+        Member* g = (Member*)(intptr_t)_a_978->items[_i_978];
+        do {
+    if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
+        if (((g) == (m))) {
+        ovHit = ovIdx;
+    }
+        ovIdx = ((ovIdx) + (1));
+    }
+        } while (0);
+    } } });
+        SPEC_AUTO String symName = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(c->name)), spec_string_intern("_")), m->name);
+        if (((ovHit) > (0))) {
+        symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
+    }
+        out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, c->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self"));
+        ({ SpecArray* _a_980 = m->params; if (_a_980) { for (size_t _i_980 = 0; _i_980 < _a_980->length; _i_980++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_980->items[_i_980];
+        do {
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
+        } while (0);
+    } } });
+        out = spec_string_concat(out, spec_string_intern(");\n"));
+    if (retType) { spec_release((void*)retType); retType = NULL; }
+    if (symName) { spec_release((void*)symName); symName = NULL; }
+    }
+    } else {
+    }
+}
+
+typedef struct {
+    long long ovHit;
+    long long ovIdx;
+    ClassInfo* c;
+    Member* m;
+} _Env_anon_982;
+
+static __attribute__((unused)) void _destroy_env_anon_982(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_982* _env = (_Env_anon_982*)_env_ptr;
+    if (_env->c) spec_release((void*)_env->c);
+    if (_env->m) spec_release((void*)_env->m);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_982(void* _env_ptr, Member* g) {
+    _Env_anon_982* _env = (_Env_anon_982*)_env_ptr;
+    long long ovHit = _env->ovHit;
+    (void)ovHit;
+    long long ovIdx = _env->ovIdx;
+    (void)ovIdx;
+    ClassInfo* c = _env->c;
+    (void)c;
+    Member* m = _env->m;
+    (void)m;
+    if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
+        if (((g) == (m))) {
+        ovHit = ovIdx;
+    }
+        ovIdx = ((ovIdx) + (1));
+    }
 }
 
 typedef struct {
     DeclarationGenerator* self;
+    ClassInfo* c;
+    SpecArray* tps;
+    Member* m;
     String out;
-    SpecArray* classes;
-} _Env_anon_983;
+} _Env_anon_984;
 
-static __attribute__((unused)) void _destroy_env_anon_983(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_984(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_983* _env = (_Env_anon_983*)_env_ptr;
+    _Env_anon_984* _env = (_Env_anon_984*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
+    if (_env->c) spec_release((void*)_env->c);
+    if (_env->tps) spec_release((void*)_env->tps);
+    if (_env->m) spec_release((void*)_env->m);
     if (_env->out) spec_release((void*)_env->out);
-    if (_env->classes) spec_release((void*)_env->classes);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_983(void* _env_ptr, ClassInfo* c) {
-    _Env_anon_983* _env = (_Env_anon_983*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_984(void* _env_ptr, Parameter* p) {
+    _Env_anon_984* _env = (_Env_anon_984*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
+    ClassInfo* c = _env->c;
+    (void)c;
+    SpecArray* tps = _env->tps;
+    (void)tps;
+    Member* m = _env->m;
+    (void)m;
     String out = _env->out;
     (void)out;
-    SpecArray* classes = _env->classes;
-    (void)classes;
-    if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
-        SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
-        out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("struct ")), c->name), spec_string_intern(" {\n"));
-        out = spec_string_concat(out, spec_string_intern("    const char* _type_name;\n"));
-        out = spec_string_concat(out, spec_string_intern("    void** _vtable;\n"));
-        SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        DeclarationGenerator_collectStructFields(self, c, classes, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_985 = allFields; if (_a_985) { for (size_t _i_985 = 0; _i_985 < _a_985->length; _i_985++) {
-        Member* m = (Member*)(intptr_t)_a_985->items[_i_985];
-        do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
-        } while (0);
-    } } });
-        out = spec_string_concat(out, spec_string_intern("};\n\n"));
-    if (tps) { spec_release((void*)tps); tps = NULL; }
-    if (allFields) { spec_release((void*)allFields); allFields = NULL; }
-    } else {
-        if (((spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) && (spec_map_has(self->allTaggedEnums, c->name)))) {
-        out = spec_string_concat(out, ((String)spec_claim_pool((void*)(DeclarationGenerator_emitTaggedEnumStruct(self, c->name, c) /* inst:DeclarationGenerator:emitTaggedEnumStruct */))));
-    }
-    }
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
 }
 
 typedef struct {
@@ -48241,89 +48375,99 @@ static __attribute__((unused)) void _anon_fn_987(void* _env_ptr, Member* m) {
 }
 
 typedef struct {
-    SpecArray* variants;
-} _Env_anon_989;
+    DeclarationGenerator* self;
+    String out;
+    SpecArray* classes;
+} _Env_anon_986;
 
-static __attribute__((unused)) void _destroy_env_anon_989(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_986(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_989* _env = (_Env_anon_989*)_env_ptr;
-    if (_env->variants) spec_release((void*)_env->variants);
+    _Env_anon_986* _env = (_Env_anon_986*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->out) spec_release((void*)_env->out);
+    if (_env->classes) spec_release((void*)_env->classes);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_989(void* _env_ptr, Member* m) {
-    _Env_anon_989* _env = (_Env_anon_989*)_env_ptr;
-    SpecArray* variants = _env->variants;
-    (void)variants;
-    if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
-        spec_array_add_object(variants, (void*)(m));
+static __attribute__((unused)) void _anon_fn_986(void* _env_ptr, ClassInfo* c) {
+    _Env_anon_986* _env = (_Env_anon_986*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    String out = _env->out;
+    (void)out;
+    SpecArray* classes = _env->classes;
+    (void)classes;
+    if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
+        SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
+        out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("struct ")), c->name), spec_string_intern(" {\n"));
+        out = spec_string_concat(out, spec_string_intern("    const char* _type_name;\n"));
+        out = spec_string_concat(out, spec_string_intern("    void** _vtable;\n"));
+        SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+        DeclarationGenerator_collectStructFields(self, c, classes, allFields) /* inst:DeclarationGenerator:collectStructFields */;
+        ({ SpecArray* _a_988 = allFields; if (_a_988) { for (size_t _i_988 = 0; _i_988 < _a_988->length; _i_988++) {
+        Member* m = (Member*)(intptr_t)_a_988->items[_i_988];
+        do {
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
+        } while (0);
+    } } });
+        out = spec_string_concat(out, spec_string_intern("};\n\n"));
+    if (tps) { spec_release((void*)tps); tps = NULL; }
+    if (allFields) { spec_release((void*)allFields); allFields = NULL; }
+    } else {
+        if (((spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) && (spec_map_has(self->allTaggedEnums, c->name)))) {
+        out = spec_string_concat(out, ((String)spec_claim_pool((void*)(DeclarationGenerator_emitTaggedEnumStruct(self, c->name, c) /* inst:DeclarationGenerator:emitTaggedEnumStruct */))));
+    }
     }
 }
 
 typedef struct {
     DeclarationGenerator* self;
-    String name;
-    Member* m;
-    String vName;
+    ClassInfo* c;
+    SpecArray* tps;
     String out;
+} _Env_anon_990;
+
+static __attribute__((unused)) void _destroy_env_anon_990(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_990* _env = (_Env_anon_990*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->c) spec_release((void*)_env->c);
+    if (_env->tps) spec_release((void*)_env->tps);
+    if (_env->out) spec_release((void*)_env->out);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_990(void* _env_ptr, Member* m) {
+    _Env_anon_990* _env = (_Env_anon_990*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    ClassInfo* c = _env->c;
+    (void)c;
+    SpecArray* tps = _env->tps;
+    (void)tps;
+    String out = _env->out;
+    (void)out;
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
+}
+
+typedef struct {
+    SpecArray* variants;
 } _Env_anon_992;
 
 static __attribute__((unused)) void _destroy_env_anon_992(void* _env_ptr) {
     if (!_env_ptr) return;
     _Env_anon_992* _env = (_Env_anon_992*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->name) spec_release((void*)_env->name);
-    if (_env->m) spec_release((void*)_env->m);
-    if (_env->vName) spec_release((void*)_env->vName);
-    if (_env->out) spec_release((void*)_env->out);
+    if (_env->variants) spec_release((void*)_env->variants);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_992(void* _env_ptr, Parameter* p) {
+static __attribute__((unused)) void _anon_fn_992(void* _env_ptr, Member* m) {
     _Env_anon_992* _env = (_Env_anon_992*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    String name = _env->name;
-    (void)name;
-    Member* m = _env->m;
-    (void)m;
-    String vName = _env->vName;
-    (void)vName;
-    String out = _env->out;
-    (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(({ CBackendUtils* _recv = (CBackendUtils*)(self->utils); (((String (*)(CBackendUtils*, String))_recv->_vtable[272]))((CBackendUtils*)_recv, p->paramType->name); }))))), spec_string_intern(" ")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
-}
-
-typedef struct {
-    DeclarationGenerator* self;
-    String name;
-    String out;
-} _Env_anon_991;
-
-static __attribute__((unused)) void _destroy_env_anon_991(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_991* _env = (_Env_anon_991*)_env_ptr;
-    if (_env->self) spec_release((void*)_env->self);
-    if (_env->name) spec_release((void*)_env->name);
-    if (_env->out) spec_release((void*)_env->out);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_991(void* _env_ptr, Member* m) {
-    _Env_anon_991* _env = (_Env_anon_991*)_env_ptr;
-    DeclarationGenerator* self = _env->self;
-    (void)self;
-    String name = _env->name;
-    (void)name;
-    String out = _env->out;
-    (void)out;
-    SPEC_AUTO String vName = CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */;
-    ({ SpecArray* _a_993 = m->params; if (_a_993) { for (size_t _i_993 = 0; _i_993 < _a_993->length; _i_993++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_993->items[_i_993];
-        do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(({ CBackendUtils* _recv = (CBackendUtils*)(self->utils); (((String (*)(CBackendUtils*, String))_recv->_vtable[272]))((CBackendUtils*)_recv, p->paramType->name); }))))), spec_string_intern(" ")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
-        } while (0);
-    } } });
+    SpecArray* variants = _env->variants;
+    (void)variants;
+    if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
+        spec_array_add_object(variants, (void*)(m));
+    }
 }
 
 typedef struct {
@@ -48363,8 +48507,40 @@ static __attribute__((unused)) void _anon_fn_995(void* _env_ptr, Parameter* p) {
 typedef struct {
     DeclarationGenerator* self;
     String name;
-    bool firstP;
+    String out;
+} _Env_anon_994;
+
+static __attribute__((unused)) void _destroy_env_anon_994(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_994* _env = (_Env_anon_994*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->name) spec_release((void*)_env->name);
+    if (_env->out) spec_release((void*)_env->out);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_994(void* _env_ptr, Member* m) {
+    _Env_anon_994* _env = (_Env_anon_994*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    String name = _env->name;
+    (void)name;
+    String out = _env->out;
+    (void)out;
+    SPEC_AUTO String vName = CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */;
+    ({ SpecArray* _a_996 = m->params; if (_a_996) { for (size_t _i_996 = 0; _i_996 < _a_996->length; _i_996++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_996->items[_i_996];
+        do {
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(({ CBackendUtils* _recv = (CBackendUtils*)(self->utils); (((String (*)(CBackendUtils*, String))_recv->_vtable[272]))((CBackendUtils*)_recv, p->paramType->name); }))))), spec_string_intern(" ")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
+        } while (0);
+    } } });
+}
+
+typedef struct {
+    DeclarationGenerator* self;
+    String name;
     Member* m;
+    String vName;
     String out;
 } _Env_anon_998;
 
@@ -48374,12 +48550,46 @@ static __attribute__((unused)) void _destroy_env_anon_998(void* _env_ptr) {
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->m) spec_release((void*)_env->m);
+    if (_env->vName) spec_release((void*)_env->vName);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
 static __attribute__((unused)) void _anon_fn_998(void* _env_ptr, Parameter* p) {
     _Env_anon_998* _env = (_Env_anon_998*)_env_ptr;
+    DeclarationGenerator* self = _env->self;
+    (void)self;
+    String name = _env->name;
+    (void)name;
+    Member* m = _env->m;
+    (void)m;
+    String vName = _env->vName;
+    (void)vName;
+    String out = _env->out;
+    (void)out;
+    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(({ CBackendUtils* _recv = (CBackendUtils*)(self->utils); (((String (*)(CBackendUtils*, String))_recv->_vtable[272]))((CBackendUtils*)_recv, p->paramType->name); }))))), spec_string_intern(" ")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
+}
+
+typedef struct {
+    DeclarationGenerator* self;
+    String name;
+    bool firstP;
+    Member* m;
+    String out;
+} _Env_anon_1001;
+
+static __attribute__((unused)) void _destroy_env_anon_1001(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_1001* _env = (_Env_anon_1001*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
+    if (_env->name) spec_release((void*)_env->name);
+    if (_env->m) spec_release((void*)_env->m);
+    if (_env->out) spec_release((void*)_env->out);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_1001(void* _env_ptr, Parameter* p) {
+    _Env_anon_1001* _env = (_Env_anon_1001*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -48403,11 +48613,11 @@ typedef struct {
     Member* m;
     String vName;
     String out;
-} _Env_anon_1000;
+} _Env_anon_1003;
 
-static __attribute__((unused)) void _destroy_env_anon_1000(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1003(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1000* _env = (_Env_anon_1000*)_env_ptr;
+    _Env_anon_1003* _env = (_Env_anon_1003*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->m) spec_release((void*)_env->m);
@@ -48416,8 +48626,8 @@ static __attribute__((unused)) void _destroy_env_anon_1000(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1000(void* _env_ptr, Parameter* p) {
-    _Env_anon_1000* _env = (_Env_anon_1000*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1003(void* _env_ptr, Parameter* p) {
+    _Env_anon_1003* _env = (_Env_anon_1003*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -48435,19 +48645,19 @@ typedef struct {
     DeclarationGenerator* self;
     String name;
     String out;
-} _Env_anon_997;
+} _Env_anon_1000;
 
-static __attribute__((unused)) void _destroy_env_anon_997(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1000(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_997* _env = (_Env_anon_997*)_env_ptr;
+    _Env_anon_1000* _env = (_Env_anon_1000*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->out) spec_release((void*)_env->out);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_997(void* _env_ptr, Member* m) {
-    _Env_anon_997* _env = (_Env_anon_997*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1000(void* _env_ptr, Member* m) {
+    _Env_anon_1000* _env = (_Env_anon_1000*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -48464,8 +48674,8 @@ static __attribute__((unused)) void _anon_fn_997(void* _env_ptr, Member* m) {
     } else {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline ")), name), spec_string_intern("* ")), name), spec_string_intern("_")), vName), spec_string_intern("("));
         bool firstP = true;
-        ({ SpecArray* _a_999 = m->params; if (_a_999) { for (size_t _i_999 = 0; _i_999 < _a_999->length; _i_999++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_999->items[_i_999];
+        ({ SpecArray* _a_1002 = m->params; if (_a_1002) { for (size_t _i_1002 = 0; _i_1002 < _a_1002->length; _i_1002++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_1002->items[_i_1002];
         do {
     if ((!(firstP))) {
         out = spec_string_concat(out, spec_string_intern(", "));
@@ -48478,8 +48688,8 @@ static __attribute__((unused)) void _anon_fn_997(void* _env_ptr, Member* m) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("* _e = (")), name), spec_string_intern("*)spec_alloc(sizeof(")), name), spec_string_intern("), NULL);\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    _e->_tag = ")), name), spec_string_intern("_TAG_")), vName), spec_string_intern(";\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    _e->_variant_name = \"")), m->name), spec_string_intern("\";\n"));
-        ({ SpecArray* _a_1001 = m->params; if (_a_1001) { for (size_t _i_1001 = 0; _i_1001 < _a_1001->length; _i_1001++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_1001->items[_i_1001];
+        ({ SpecArray* _a_1004 = m->params; if (_a_1004) { for (size_t _i_1004 = 0; _i_1004 < _a_1004->length; _i_1004++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_1004->items[_i_1004];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    _e->")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
         } while (0);
@@ -48494,11 +48704,11 @@ typedef struct {
     bool firstP;
     Member* m;
     String out;
-} _Env_anon_1003;
+} _Env_anon_1006;
 
-static __attribute__((unused)) void _destroy_env_anon_1003(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1006(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1003* _env = (_Env_anon_1003*)_env_ptr;
+    _Env_anon_1006* _env = (_Env_anon_1006*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->m) spec_release((void*)_env->m);
@@ -48506,8 +48716,8 @@ static __attribute__((unused)) void _destroy_env_anon_1003(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1003(void* _env_ptr, Parameter* p) {
-    _Env_anon_1003* _env = (_Env_anon_1003*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1006(void* _env_ptr, Parameter* p) {
+    _Env_anon_1006* _env = (_Env_anon_1006*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -48531,11 +48741,11 @@ typedef struct {
     Member* m;
     String vName;
     String out;
-} _Env_anon_1005;
+} _Env_anon_1008;
 
-static __attribute__((unused)) void _destroy_env_anon_1005(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1008(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1005* _env = (_Env_anon_1005*)_env_ptr;
+    _Env_anon_1008* _env = (_Env_anon_1008*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->name) spec_release((void*)_env->name);
     if (_env->m) spec_release((void*)_env->m);
@@ -48544,8 +48754,8 @@ static __attribute__((unused)) void _destroy_env_anon_1005(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1005(void* _env_ptr, Parameter* p) {
-    _Env_anon_1005* _env = (_Env_anon_1005*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1008(void* _env_ptr, Parameter* p) {
+    _Env_anon_1008* _env = (_Env_anon_1008*)_env_ptr;
     DeclarationGenerator* self = _env->self;
     (void)self;
     String name = _env->name;
@@ -48563,18 +48773,18 @@ typedef struct {
     Expression* expr;
     Member* foundM;
     bool hasM;
-} _Env_anon_1007;
+} _Env_anon_1010;
 
-static __attribute__((unused)) void _destroy_env_anon_1007(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1010(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1007* _env = (_Env_anon_1007*)_env_ptr;
+    _Env_anon_1010* _env = (_Env_anon_1010*)_env_ptr;
     if (_env->expr) spec_release((void*)_env->expr);
     if (_env->foundM) spec_release((void*)_env->foundM);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1007(void* _env_ptr, Member* m) {
-    _Env_anon_1007* _env = (_Env_anon_1007*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1010(void* _env_ptr, Member* m) {
+    _Env_anon_1010* _env = (_Env_anon_1010*)_env_ptr;
     Expression* expr = _env->expr;
     (void)expr;
     Member* foundM = _env->foundM;
@@ -48584,97 +48794,6 @@ static __attribute__((unused)) void _anon_fn_1007(void* _env_ptr, Member* m) {
     if ((((((!(hasM))) && (((m->kind) == (MemberKind_METHOD))))) && (spec_string_equals(m->name, expr->methodName)))) {
         hasM = true;
         spec_assign((void**)&foundM, (void*)(m));
-    }
-}
-
-typedef struct {
-    CodeGenerator* cg;
-    Parameter* p;
-    SpecArray* argList;
-    bool got;
-} _Env_anon_1010;
-
-static __attribute__((unused)) void _destroy_env_anon_1010(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1010* _env = (_Env_anon_1010*)_env_ptr;
-    if (_env->cg) spec_release((void*)_env->cg);
-    if (_env->p) spec_release((void*)_env->p);
-    if (_env->argList) spec_release((void*)_env->argList);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_1010(void* _env_ptr, NamedArg* a) {
-    _Env_anon_1010* _env = (_Env_anon_1010*)_env_ptr;
-    CodeGenerator* cg = _env->cg;
-    (void)cg;
-    Parameter* p = _env->p;
-    (void)p;
-    SpecArray* argList = _env->argList;
-    (void)argList;
-    bool got = _env->got;
-    (void)got;
-    if ((((!(got))) && (spec_string_equals(a->name, p->name)))) {
-        got = true;
-        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, a->value) /* inst:CodeGenerator:generateExpression */));
-    }
-}
-
-typedef struct {
-    Expression* expr;
-    bool argsOk;
-    long long posIdx;
-    CodeGenerator* cg;
-    SpecArray* argList;
-} _Env_anon_1009;
-
-static __attribute__((unused)) void _destroy_env_anon_1009(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1009* _env = (_Env_anon_1009*)_env_ptr;
-    if (_env->expr) spec_release((void*)_env->expr);
-    if (_env->cg) spec_release((void*)_env->cg);
-    if (_env->argList) spec_release((void*)_env->argList);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_1009(void* _env_ptr, Parameter* p) {
-    _Env_anon_1009* _env = (_Env_anon_1009*)_env_ptr;
-    Expression* expr = _env->expr;
-    (void)expr;
-    bool argsOk = _env->argsOk;
-    (void)argsOk;
-    long long posIdx = _env->posIdx;
-    (void)posIdx;
-    CodeGenerator* cg = _env->cg;
-    (void)cg;
-    SpecArray* argList = _env->argList;
-    (void)argList;
-    if (argsOk) {
-        bool got = false;
-        SPEC_AUTO Expression* posArg = (Expression*)spec_retain((void*)(({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, posIdx); })));
-        if (((((posIdx) < (Expression_argCount(expr) /* inst:Expression:argCount */))) && (spec_string_equals(((String)spec_claim_pool((void*)(Expression_argName(expr, posIdx) /* inst:Expression:argName */))), spec_string_intern(""))))) {
-        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, posArg) /* inst:CodeGenerator:generateExpression */));
-        posIdx = ((posIdx) + (1));
-        got = true;
-    }
-        if ((!(got))) {
-        ({ SpecArray* _a_1011 = expr->methodArgs; if (_a_1011) { for (size_t _i_1011 = 0; _i_1011 < _a_1011->length; _i_1011++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_1011->items[_i_1011];
-        do {
-    if ((((!(got))) && (spec_string_equals(a->name, p->name)))) {
-        got = true;
-        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, a->value) /* inst:CodeGenerator:generateExpression */));
-    }
-        } while (0);
-    } } });
-    }
-        if ((((!(got))) && (p->hasDefault))) {
-        got = true;
-        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, p->defaultExpr) /* inst:CodeGenerator:generateExpression */));
-    }
-        if ((!(got))) {
-        argsOk = false;
-    }
-    if (posArg) { spec_release((void*)posArg); posArg = NULL; }
     }
 }
 
@@ -48711,18 +48830,109 @@ static __attribute__((unused)) void _anon_fn_1013(void* _env_ptr, NamedArg* a) {
 }
 
 typedef struct {
-    String argCs;
-} _Env_anon_1015;
+    Expression* expr;
+    bool argsOk;
+    long long posIdx;
+    CodeGenerator* cg;
+    SpecArray* argList;
+} _Env_anon_1012;
 
-static __attribute__((unused)) void _destroy_env_anon_1015(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1012(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1015* _env = (_Env_anon_1015*)_env_ptr;
+    _Env_anon_1012* _env = (_Env_anon_1012*)_env_ptr;
+    if (_env->expr) spec_release((void*)_env->expr);
+    if (_env->cg) spec_release((void*)_env->cg);
+    if (_env->argList) spec_release((void*)_env->argList);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_1012(void* _env_ptr, Parameter* p) {
+    _Env_anon_1012* _env = (_Env_anon_1012*)_env_ptr;
+    Expression* expr = _env->expr;
+    (void)expr;
+    bool argsOk = _env->argsOk;
+    (void)argsOk;
+    long long posIdx = _env->posIdx;
+    (void)posIdx;
+    CodeGenerator* cg = _env->cg;
+    (void)cg;
+    SpecArray* argList = _env->argList;
+    (void)argList;
+    if (argsOk) {
+        bool got = false;
+        SPEC_AUTO Expression* posArg = (Expression*)spec_retain((void*)(({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, posIdx); })));
+        if (((((posIdx) < (Expression_argCount(expr) /* inst:Expression:argCount */))) && (spec_string_equals(((String)spec_claim_pool((void*)(Expression_argName(expr, posIdx) /* inst:Expression:argName */))), spec_string_intern(""))))) {
+        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, posArg) /* inst:CodeGenerator:generateExpression */));
+        posIdx = ((posIdx) + (1));
+        got = true;
+    }
+        if ((!(got))) {
+        ({ SpecArray* _a_1014 = expr->methodArgs; if (_a_1014) { for (size_t _i_1014 = 0; _i_1014 < _a_1014->length; _i_1014++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_1014->items[_i_1014];
+        do {
+    if ((((!(got))) && (spec_string_equals(a->name, p->name)))) {
+        got = true;
+        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, a->value) /* inst:CodeGenerator:generateExpression */));
+    }
+        } while (0);
+    } } });
+    }
+        if ((((!(got))) && (p->hasDefault))) {
+        got = true;
+        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, p->defaultExpr) /* inst:CodeGenerator:generateExpression */));
+    }
+        if ((!(got))) {
+        argsOk = false;
+    }
+    if (posArg) { spec_release((void*)posArg); posArg = NULL; }
+    }
+}
+
+typedef struct {
+    CodeGenerator* cg;
+    Parameter* p;
+    SpecArray* argList;
+    bool got;
+} _Env_anon_1016;
+
+static __attribute__((unused)) void _destroy_env_anon_1016(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_1016* _env = (_Env_anon_1016*)_env_ptr;
+    if (_env->cg) spec_release((void*)_env->cg);
+    if (_env->p) spec_release((void*)_env->p);
+    if (_env->argList) spec_release((void*)_env->argList);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_1016(void* _env_ptr, NamedArg* a) {
+    _Env_anon_1016* _env = (_Env_anon_1016*)_env_ptr;
+    CodeGenerator* cg = _env->cg;
+    (void)cg;
+    Parameter* p = _env->p;
+    (void)p;
+    SpecArray* argList = _env->argList;
+    (void)argList;
+    bool got = _env->got;
+    (void)got;
+    if ((((!(got))) && (spec_string_equals(a->name, p->name)))) {
+        got = true;
+        spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, a->value) /* inst:CodeGenerator:generateExpression */));
+    }
+}
+
+typedef struct {
+    String argCs;
+} _Env_anon_1018;
+
+static __attribute__((unused)) void _destroy_env_anon_1018(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_1018* _env = (_Env_anon_1018*)_env_ptr;
     if (_env->argCs) spec_release((void*)_env->argCs);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1015(void* _env_ptr, String a) {
-    _Env_anon_1015* _env = (_Env_anon_1015*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1018(void* _env_ptr, String a) {
+    _Env_anon_1018* _env = (_Env_anon_1018*)_env_ptr;
     String argCs = _env->argCs;
     (void)argCs;
     if (spec_string_equals(argCs, spec_string_intern(""))) {
@@ -48734,17 +48944,17 @@ static __attribute__((unused)) void _anon_fn_1015(void* _env_ptr, String a) {
 
 typedef struct {
     String rJoined;
-} _Env_anon_1017;
+} _Env_anon_1020;
 
-static __attribute__((unused)) void _destroy_env_anon_1017(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1020(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1017* _env = (_Env_anon_1017*)_env_ptr;
+    _Env_anon_1020* _env = (_Env_anon_1020*)_env_ptr;
     if (_env->rJoined) spec_release((void*)_env->rJoined);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1017(void* _env_ptr, String seg) {
-    _Env_anon_1017* _env = (_Env_anon_1017*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1020(void* _env_ptr, String seg) {
+    _Env_anon_1020* _env = (_Env_anon_1020*)_env_ptr;
     String rJoined = _env->rJoined;
     (void)rJoined;
     if (spec_string_equals(rJoined, spec_string_intern(""))) {
@@ -48756,17 +48966,17 @@ static __attribute__((unused)) void _anon_fn_1017(void* _env_ptr, String seg) {
 
 typedef struct {
     String qJoined;
-} _Env_anon_1019;
+} _Env_anon_1022;
 
-static __attribute__((unused)) void _destroy_env_anon_1019(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1022(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1019* _env = (_Env_anon_1019*)_env_ptr;
+    _Env_anon_1022* _env = (_Env_anon_1022*)_env_ptr;
     if (_env->qJoined) spec_release((void*)_env->qJoined);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1019(void* _env_ptr, String seg) {
-    _Env_anon_1019* _env = (_Env_anon_1019*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1022(void* _env_ptr, String seg) {
+    _Env_anon_1022* _env = (_Env_anon_1022*)_env_ptr;
     String qJoined = _env->qJoined;
     (void)qJoined;
     if (spec_string_equals(qJoined, spec_string_intern(""))) {
@@ -48780,19 +48990,19 @@ typedef struct {
     String digitsC;
     CodeGenerator* cg;
     String baseC;
-} _Env_anon_1021;
+} _Env_anon_1024;
 
-static __attribute__((unused)) void _destroy_env_anon_1021(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1024(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1021* _env = (_Env_anon_1021*)_env_ptr;
+    _Env_anon_1024* _env = (_Env_anon_1024*)_env_ptr;
     if (_env->digitsC) spec_release((void*)_env->digitsC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->baseC) spec_release((void*)_env->baseC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1021(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1021* _env = (_Env_anon_1021*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1024(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1024* _env = (_Env_anon_1024*)_env_ptr;
     String digitsC = _env->digitsC;
     (void)digitsC;
     CodeGenerator* cg = _env->cg;
@@ -48812,11 +49022,11 @@ typedef struct {
     CodeGenerator* cg;
     String threadsC;
     String workerC;
-} _Env_anon_1023;
+} _Env_anon_1026;
 
-static __attribute__((unused)) void _destroy_env_anon_1023(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1026(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1023* _env = (_Env_anon_1023*)_env_ptr;
+    _Env_anon_1026* _env = (_Env_anon_1026*)_env_ptr;
     if (_env->iterC) spec_release((void*)_env->iterC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->threadsC) spec_release((void*)_env->threadsC);
@@ -48824,8 +49034,8 @@ static __attribute__((unused)) void _destroy_env_anon_1023(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1023(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1023* _env = (_Env_anon_1023*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1026(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1026* _env = (_Env_anon_1026*)_env_ptr;
     String iterC = _env->iterC;
     (void)iterC;
     CodeGenerator* cg = _env->cg;
@@ -48852,19 +49062,19 @@ typedef struct {
     Expression* iterExpr;
     bool hasIter;
     bool hasVars;
-} _Env_anon_1025;
+} _Env_anon_1028;
 
-static __attribute__((unused)) void _destroy_env_anon_1025(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1028(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1025* _env = (_Env_anon_1025*)_env_ptr;
+    _Env_anon_1028* _env = (_Env_anon_1028*)_env_ptr;
     if (_env->evalExpr) spec_release((void*)_env->evalExpr);
     if (_env->varsExpr) spec_release((void*)_env->varsExpr);
     if (_env->iterExpr) spec_release((void*)_env->iterExpr);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1025(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1025* _env = (_Env_anon_1025*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1028(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1028* _env = (_Env_anon_1028*)_env_ptr;
     Expression* evalExpr = _env->evalExpr;
     (void)evalExpr;
     Expression* varsExpr = _env->varsExpr;
@@ -48896,18 +49106,18 @@ static __attribute__((unused)) void _anon_fn_1025(void* _env_ptr, NamedArg* arg)
 typedef struct {
     CodeGenerator* cg;
     SpecArray* argList;
-} _Env_anon_1027;
+} _Env_anon_1030;
 
-static __attribute__((unused)) void _destroy_env_anon_1027(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1030(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1027* _env = (_Env_anon_1027*)_env_ptr;
+    _Env_anon_1030* _env = (_Env_anon_1030*)_env_ptr;
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->argList) spec_release((void*)_env->argList);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1027(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1027* _env = (_Env_anon_1027*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1030(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1030* _env = (_Env_anon_1030*)_env_ptr;
     CodeGenerator* cg = _env->cg;
     (void)cg;
     SpecArray* argList = _env->argList;
@@ -48917,17 +49127,17 @@ static __attribute__((unused)) void _anon_fn_1027(void* _env_ptr, NamedArg* arg)
 
 typedef struct {
     String cmdC;
-} _Env_anon_1029;
+} _Env_anon_1032;
 
-static __attribute__((unused)) void _destroy_env_anon_1029(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1032(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1029* _env = (_Env_anon_1029*)_env_ptr;
+    _Env_anon_1032* _env = (_Env_anon_1032*)_env_ptr;
     if (_env->cmdC) spec_release((void*)_env->cmdC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1029(void* _env_ptr, String a) {
-    _Env_anon_1029* _env = (_Env_anon_1029*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1032(void* _env_ptr, String a) {
+    _Env_anon_1032* _env = (_Env_anon_1032*)_env_ptr;
     String cmdC = _env->cmdC;
     (void)cmdC;
     if (spec_string_equals(cmdC, spec_string_intern("0"))) {
@@ -48940,18 +49150,18 @@ static __attribute__((unused)) void _anon_fn_1029(void* _env_ptr, String a) {
 typedef struct {
     CodeGenerator* cg;
     String argsCs;
-} _Env_anon_1031;
+} _Env_anon_1034;
 
-static __attribute__((unused)) void _destroy_env_anon_1031(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1034(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1031* _env = (_Env_anon_1031*)_env_ptr;
+    _Env_anon_1034* _env = (_Env_anon_1034*)_env_ptr;
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->argsCs) spec_release((void*)_env->argsCs);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1031(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1031* _env = (_Env_anon_1031*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1034(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1034* _env = (_Env_anon_1034*)_env_ptr;
     CodeGenerator* cg = _env->cg;
     (void)cg;
     String argsCs = _env->argsCs;
@@ -48968,11 +49178,11 @@ typedef struct {
     CodeGenerator* cg;
     String onErrC;
     String onSuccC;
-} _Env_anon_1033;
+} _Env_anon_1036;
 
-static __attribute__((unused)) void _destroy_env_anon_1033(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1036(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1033* _env = (_Env_anon_1033*)_env_ptr;
+    _Env_anon_1036* _env = (_Env_anon_1036*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->pathC) spec_release((void*)_env->pathC);
     if (_env->cg) spec_release((void*)_env->cg);
@@ -48981,8 +49191,8 @@ static __attribute__((unused)) void _destroy_env_anon_1033(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1033(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1033* _env = (_Env_anon_1033*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1036(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1036* _env = (_Env_anon_1036*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     String pathC = _env->pathC;
@@ -49013,11 +49223,11 @@ typedef struct {
     CodeGenerator* cg;
     String onErrC;
     String onSuccC;
-} _Env_anon_1035;
+} _Env_anon_1038;
 
-static __attribute__((unused)) void _destroy_env_anon_1035(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1038(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1035* _env = (_Env_anon_1035*)_env_ptr;
+    _Env_anon_1038* _env = (_Env_anon_1038*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->pathC) spec_release((void*)_env->pathC);
     if (_env->cg) spec_release((void*)_env->cg);
@@ -49026,8 +49236,8 @@ static __attribute__((unused)) void _destroy_env_anon_1035(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1035(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1035* _env = (_Env_anon_1035*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1038(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1038* _env = (_Env_anon_1038*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     String pathC = _env->pathC;
@@ -49058,11 +49268,11 @@ typedef struct {
     CodeGenerator* cg;
     String onErrC;
     String onSuccC;
-} _Env_anon_1037;
+} _Env_anon_1040;
 
-static __attribute__((unused)) void _destroy_env_anon_1037(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1040(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1037* _env = (_Env_anon_1037*)_env_ptr;
+    _Env_anon_1040* _env = (_Env_anon_1040*)_env_ptr;
     if (_env->contentC) spec_release((void*)_env->contentC);
     if (_env->pathC) spec_release((void*)_env->pathC);
     if (_env->cg) spec_release((void*)_env->cg);
@@ -49071,8 +49281,8 @@ static __attribute__((unused)) void _destroy_env_anon_1037(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1037(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1037* _env = (_Env_anon_1037*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1040(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1040* _env = (_Env_anon_1040*)_env_ptr;
     String contentC = _env->contentC;
     (void)contentC;
     String pathC = _env->pathC;
@@ -49103,11 +49313,11 @@ typedef struct {
     CodeGenerator* cg;
     String onErrC;
     String onSuccC;
-} _Env_anon_1039;
+} _Env_anon_1042;
 
-static __attribute__((unused)) void _destroy_env_anon_1039(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1042(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1039* _env = (_Env_anon_1039*)_env_ptr;
+    _Env_anon_1042* _env = (_Env_anon_1042*)_env_ptr;
     if (_env->contentC) spec_release((void*)_env->contentC);
     if (_env->pathC) spec_release((void*)_env->pathC);
     if (_env->cg) spec_release((void*)_env->cg);
@@ -49116,8 +49326,8 @@ static __attribute__((unused)) void _destroy_env_anon_1039(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1039(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1039* _env = (_Env_anon_1039*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1042(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1042* _env = (_Env_anon_1042*)_env_ptr;
     String contentC = _env->contentC;
     (void)contentC;
     String pathC = _env->pathC;
@@ -49148,11 +49358,11 @@ typedef struct {
     String vC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1041;
+} _Env_anon_1044;
 
-static __attribute__((unused)) void _destroy_env_anon_1041(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1044(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1041* _env = (_Env_anon_1041*)_env_ptr;
+    _Env_anon_1044* _env = (_Env_anon_1044*)_env_ptr;
     if (_env->loC) spec_release((void*)_env->loC);
     if (_env->hiC) spec_release((void*)_env->hiC);
     if (_env->vC) spec_release((void*)_env->vC);
@@ -49161,8 +49371,8 @@ static __attribute__((unused)) void _destroy_env_anon_1041(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1041(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1041* _env = (_Env_anon_1041*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1044(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1044* _env = (_Env_anon_1044*)_env_ptr;
     String loC = _env->loC;
     (void)loC;
     String hiC = _env->hiC;
@@ -49188,19 +49398,19 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1043;
+} _Env_anon_1046;
 
-static __attribute__((unused)) void _destroy_env_anon_1043(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1046(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1043* _env = (_Env_anon_1043*)_env_ptr;
+    _Env_anon_1046* _env = (_Env_anon_1046*)_env_ptr;
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     if (_env->idxC) spec_release((void*)_env->idxC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1043(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1043* _env = (_Env_anon_1043*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1046(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1046* _env = (_Env_anon_1046*)_env_ptr;
     CodeGenerator* cg = _env->cg;
     (void)cg;
     String m = _env->m;
@@ -49217,11 +49427,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1045;
+} _Env_anon_1048;
 
-static __attribute__((unused)) void _destroy_env_anon_1045(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1048(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1045* _env = (_Env_anon_1045*)_env_ptr;
+    _Env_anon_1048* _env = (_Env_anon_1048*)_env_ptr;
     if (_env->itemC) spec_release((void*)_env->itemC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49229,8 +49439,8 @@ static __attribute__((unused)) void _destroy_env_anon_1045(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1045(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1045* _env = (_Env_anon_1045*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1048(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1048* _env = (_Env_anon_1048*)_env_ptr;
     String itemC = _env->itemC;
     (void)itemC;
     CodeGenerator* cg = _env->cg;
@@ -49252,11 +49462,11 @@ typedef struct {
     String targetType;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1047;
+} _Env_anon_1050;
 
-static __attribute__((unused)) void _destroy_env_anon_1047(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1050(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1047* _env = (_Env_anon_1047*)_env_ptr;
+    _Env_anon_1050* _env = (_Env_anon_1050*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->targetType) spec_release((void*)_env->targetType);
     if (_env->cg) spec_release((void*)_env->cg);
@@ -49264,8 +49474,8 @@ static __attribute__((unused)) void _destroy_env_anon_1047(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1047(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1047* _env = (_Env_anon_1047*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1050(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1050* _env = (_Env_anon_1050*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     String targetType = _env->targetType;
@@ -49290,11 +49500,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1049;
+} _Env_anon_1052;
 
-static __attribute__((unused)) void _destroy_env_anon_1049(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1052(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1049* _env = (_Env_anon_1049*)_env_ptr;
+    _Env_anon_1052* _env = (_Env_anon_1052*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49302,8 +49512,8 @@ static __attribute__((unused)) void _destroy_env_anon_1049(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1049(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1049* _env = (_Env_anon_1049*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1052(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1052* _env = (_Env_anon_1052*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     CodeGenerator* cg = _env->cg;
@@ -49325,11 +49535,11 @@ typedef struct {
     CodeGenerator* cg;
     String endC;
     String m;
-} _Env_anon_1051;
+} _Env_anon_1054;
 
-static __attribute__((unused)) void _destroy_env_anon_1051(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1054(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1051* _env = (_Env_anon_1051*)_env_ptr;
+    _Env_anon_1054* _env = (_Env_anon_1054*)_env_ptr;
     if (_env->startC) spec_release((void*)_env->startC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->endC) spec_release((void*)_env->endC);
@@ -49337,8 +49547,8 @@ static __attribute__((unused)) void _destroy_env_anon_1051(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1051(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1051* _env = (_Env_anon_1051*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1054(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1054* _env = (_Env_anon_1054*)_env_ptr;
     String startC = _env->startC;
     (void)startC;
     CodeGenerator* cg = _env->cg;
@@ -49360,11 +49570,11 @@ typedef struct {
     String searchC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1053;
+} _Env_anon_1056;
 
-static __attribute__((unused)) void _destroy_env_anon_1053(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1056(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1053* _env = (_Env_anon_1053*)_env_ptr;
+    _Env_anon_1056* _env = (_Env_anon_1056*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->searchC) spec_release((void*)_env->searchC);
     if (_env->cg) spec_release((void*)_env->cg);
@@ -49372,8 +49582,8 @@ static __attribute__((unused)) void _destroy_env_anon_1053(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1053(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1053* _env = (_Env_anon_1053*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1056(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1056* _env = (_Env_anon_1056*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     String searchC = _env->searchC;
@@ -49394,19 +49604,19 @@ typedef struct {
     String sepC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1055;
+} _Env_anon_1058;
 
-static __attribute__((unused)) void _destroy_env_anon_1055(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1058(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1055* _env = (_Env_anon_1055*)_env_ptr;
+    _Env_anon_1058* _env = (_Env_anon_1058*)_env_ptr;
     if (_env->sepC) spec_release((void*)_env->sepC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1055(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1055* _env = (_Env_anon_1055*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1058(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1058* _env = (_Env_anon_1058*)_env_ptr;
     String sepC = _env->sepC;
     (void)sepC;
     CodeGenerator* cg = _env->cg;
@@ -49422,19 +49632,19 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String errC;
-} _Env_anon_1057;
+} _Env_anon_1060;
 
-static __attribute__((unused)) void _destroy_env_anon_1057(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1060(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1057* _env = (_Env_anon_1057*)_env_ptr;
+    _Env_anon_1060* _env = (_Env_anon_1060*)_env_ptr;
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     if (_env->errC) spec_release((void*)_env->errC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1057(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1057* _env = (_Env_anon_1057*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1060(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1060* _env = (_Env_anon_1060*)_env_ptr;
     CodeGenerator* cg = _env->cg;
     (void)cg;
     String m = _env->m;
@@ -49450,19 +49660,19 @@ typedef struct {
     String itemC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1059;
+} _Env_anon_1062;
 
-static __attribute__((unused)) void _destroy_env_anon_1059(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1062(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1059* _env = (_Env_anon_1059*)_env_ptr;
+    _Env_anon_1062* _env = (_Env_anon_1062*)_env_ptr;
     if (_env->itemC) spec_release((void*)_env->itemC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1059(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1059* _env = (_Env_anon_1059*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1062(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1062* _env = (_Env_anon_1062*)_env_ptr;
     String itemC = _env->itemC;
     (void)itemC;
     CodeGenerator* cg = _env->cg;
@@ -49475,18 +49685,18 @@ static __attribute__((unused)) void _anon_fn_1059(void* _env_ptr, NamedArg* arg)
 typedef struct {
     String sC;
     CodeGenerator* cg;
-} _Env_anon_1061;
+} _Env_anon_1064;
 
-static __attribute__((unused)) void _destroy_env_anon_1061(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1064(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1061* _env = (_Env_anon_1061*)_env_ptr;
+    _Env_anon_1064* _env = (_Env_anon_1064*)_env_ptr;
     if (_env->sC) spec_release((void*)_env->sC);
     if (_env->cg) spec_release((void*)_env->cg);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1061(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1061* _env = (_Env_anon_1061*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1064(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1064* _env = (_Env_anon_1064*)_env_ptr;
     String sC = _env->sC;
     (void)sC;
     CodeGenerator* cg = _env->cg;
@@ -49499,11 +49709,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1063;
+} _Env_anon_1066;
 
-static __attribute__((unused)) void _destroy_env_anon_1063(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1066(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1063* _env = (_Env_anon_1063*)_env_ptr;
+    _Env_anon_1066* _env = (_Env_anon_1066*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49511,8 +49721,8 @@ static __attribute__((unused)) void _destroy_env_anon_1063(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1063(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1063* _env = (_Env_anon_1063*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1066(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1066* _env = (_Env_anon_1066*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     CodeGenerator* cg = _env->cg;
@@ -49534,11 +49744,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1065;
+} _Env_anon_1068;
 
-static __attribute__((unused)) void _destroy_env_anon_1065(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1068(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1065* _env = (_Env_anon_1065*)_env_ptr;
+    _Env_anon_1068* _env = (_Env_anon_1068*)_env_ptr;
     if (_env->itemC) spec_release((void*)_env->itemC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49546,8 +49756,8 @@ static __attribute__((unused)) void _destroy_env_anon_1065(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1065(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1065* _env = (_Env_anon_1065*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1068(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1068* _env = (_Env_anon_1068*)_env_ptr;
     String itemC = _env->itemC;
     (void)itemC;
     CodeGenerator* cg = _env->cg;
@@ -49568,19 +49778,19 @@ typedef struct {
     String defC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1067;
+} _Env_anon_1070;
 
-static __attribute__((unused)) void _destroy_env_anon_1067(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1070(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1067* _env = (_Env_anon_1067*)_env_ptr;
+    _Env_anon_1070* _env = (_Env_anon_1070*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1067(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1067* _env = (_Env_anon_1067*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1070(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1070* _env = (_Env_anon_1070*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     CodeGenerator* cg = _env->cg;
@@ -49596,19 +49806,19 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String errC;
-} _Env_anon_1069;
+} _Env_anon_1072;
 
-static __attribute__((unused)) void _destroy_env_anon_1069(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1072(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1069* _env = (_Env_anon_1069*)_env_ptr;
+    _Env_anon_1072* _env = (_Env_anon_1072*)_env_ptr;
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     if (_env->errC) spec_release((void*)_env->errC);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1069(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1069* _env = (_Env_anon_1069*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1072(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1072* _env = (_Env_anon_1072*)_env_ptr;
     CodeGenerator* cg = _env->cg;
     (void)cg;
     String m = _env->m;
@@ -49624,19 +49834,19 @@ typedef struct {
     String itemC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1071;
+} _Env_anon_1074;
 
-static __attribute__((unused)) void _destroy_env_anon_1071(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1074(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1071* _env = (_Env_anon_1071*)_env_ptr;
+    _Env_anon_1074* _env = (_Env_anon_1074*)_env_ptr;
     if (_env->itemC) spec_release((void*)_env->itemC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1071(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1071* _env = (_Env_anon_1071*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1074(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1074* _env = (_Env_anon_1074*)_env_ptr;
     String itemC = _env->itemC;
     (void)itemC;
     CodeGenerator* cg = _env->cg;
@@ -49651,11 +49861,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1073;
+} _Env_anon_1076;
 
-static __attribute__((unused)) void _destroy_env_anon_1073(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1076(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1073* _env = (_Env_anon_1073*)_env_ptr;
+    _Env_anon_1076* _env = (_Env_anon_1076*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49663,8 +49873,8 @@ static __attribute__((unused)) void _destroy_env_anon_1073(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1073(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1073* _env = (_Env_anon_1073*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1076(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1076* _env = (_Env_anon_1076*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     CodeGenerator* cg = _env->cg;
@@ -49686,11 +49896,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String idxC;
-} _Env_anon_1075;
+} _Env_anon_1078;
 
-static __attribute__((unused)) void _destroy_env_anon_1075(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1078(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1075* _env = (_Env_anon_1075*)_env_ptr;
+    _Env_anon_1078* _env = (_Env_anon_1078*)_env_ptr;
     if (_env->itemC) spec_release((void*)_env->itemC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49698,8 +49908,8 @@ static __attribute__((unused)) void _destroy_env_anon_1075(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1075(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1075* _env = (_Env_anon_1075*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1078(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1078* _env = (_Env_anon_1078*)_env_ptr;
     String itemC = _env->itemC;
     (void)itemC;
     CodeGenerator* cg = _env->cg;
@@ -49723,19 +49933,19 @@ typedef struct {
     String defC;
     CodeGenerator* cg;
     String m;
-} _Env_anon_1077;
+} _Env_anon_1080;
 
-static __attribute__((unused)) void _destroy_env_anon_1077(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1080(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1077* _env = (_Env_anon_1077*)_env_ptr;
+    _Env_anon_1080* _env = (_Env_anon_1080*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1077(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1077* _env = (_Env_anon_1077*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1080(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1080* _env = (_Env_anon_1080*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     CodeGenerator* cg = _env->cg;
@@ -49753,11 +49963,11 @@ typedef struct {
     String m;
     bool valIsStr;
     String keyC;
-} _Env_anon_1079;
+} _Env_anon_1082;
 
-static __attribute__((unused)) void _destroy_env_anon_1079(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1082(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1079* _env = (_Env_anon_1079*)_env_ptr;
+    _Env_anon_1082* _env = (_Env_anon_1082*)_env_ptr;
     if (_env->valC) spec_release((void*)_env->valC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49765,8 +49975,8 @@ static __attribute__((unused)) void _destroy_env_anon_1079(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1079(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1079* _env = (_Env_anon_1079*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1082(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1082* _env = (_Env_anon_1082*)_env_ptr;
     String valC = _env->valC;
     (void)valC;
     CodeGenerator* cg = _env->cg;
@@ -49794,11 +50004,11 @@ typedef struct {
     CodeGenerator* cg;
     String m;
     String baseC;
-} _Env_anon_1081;
+} _Env_anon_1084;
 
-static __attribute__((unused)) void _destroy_env_anon_1081(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_1084(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1081* _env = (_Env_anon_1081*)_env_ptr;
+    _Env_anon_1084* _env = (_Env_anon_1084*)_env_ptr;
     if (_env->defC) spec_release((void*)_env->defC);
     if (_env->cg) spec_release((void*)_env->cg);
     if (_env->m) spec_release((void*)_env->m);
@@ -49806,8 +50016,8 @@ static __attribute__((unused)) void _destroy_env_anon_1081(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1081(void* _env_ptr, NamedArg* arg) {
-    _Env_anon_1081* _env = (_Env_anon_1081*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_1084(void* _env_ptr, NamedArg* arg) {
+    _Env_anon_1084* _env = (_Env_anon_1084*)_env_ptr;
     String defC = _env->defC;
     (void)defC;
     CodeGenerator* cg = _env->cg;
@@ -50765,6 +50975,7 @@ TypeChecker* TypeChecker_new(void) {
     self->currentMethodName = (String)spec_retain((void*)(spec_string_intern("")));
     self->forwardSeen = false;
     self->anonDepth = 0;
+    self->inBranchClosure = false;
     self->currentClassName = (String)spec_retain((void*)(spec_string_intern("")));
     self->currentSourceFile = (String)spec_retain((void*)(spec_string_intern("")));
     self->currentMethodReturnType = (String)spec_retain((void*)(spec_string_intern("")));
@@ -57850,7 +58061,9 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr, Stri
         } while (0);
     } } });
         SPEC_AUTO String savedRet = spec_construct_string(self->currentMethodReturnType);
+        if ((!(self->inBranchClosure))) {
         spec_assign((void**)&self->currentMethodReturnType, (void*)((((String (*)(TypeChecker*, Type*))self->_vtable[178]))((TypeChecker*)self, expr->anonReturnType)));
+    }
         ({ SpecArray* _a_301 = expr->anonParams; if (_a_301) { for (size_t _i_301 = 0; _i_301 < _a_301->length; _i_301++) {
         Parameter* p = (Parameter*)(intptr_t)_a_301->items[_i_301];
         do {
@@ -57976,6 +58189,10 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     if (ownOwner) { spec_release((void*)ownOwner); ownOwner = NULL; }
     if (bsProviders) { spec_release((void*)bsProviders); bsProviders = NULL; }
     }
+    bool isBranchCall = ((((((spec_string_equals(expr->methodName, spec_string_intern("branch"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) && (((((spec_string_equals(targetType, spec_string_intern("Conditional"))) && (((expr->methodTarget->kind) == (ExpressionKind_IDENT))))) || (spec_string_equals(expr->bareProvider, spec_string_intern("Conditional"))))));
+    long long argIdx = 0;
+    bool savedBranchFlag = self->inBranchClosure;
+    self->inBranchClosure = false;
     bool isWhileLoop = ((((spec_string_equals(targetType, spec_string_intern("While"))) || (spec_string_equals(targetName, spec_string_intern("While"))))) && (((((spec_string_equals(method, spec_string_intern("loop"))) || (spec_string_equals(method, spec_string_intern("init"))))) || (spec_string_equals(method, spec_string_intern("condition"))))));
     SPEC_AUTO SpecMap* savedWhileVars = spec_map_new_object();
     if (isWhileLoop) {
@@ -58024,7 +58241,12 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     ({ SpecArray* _a_317 = expr->methodArgs; if (_a_317) { for (size_t _i_317 = 0; _i_317 < _a_317->length; _i_317++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_317->items[_i_317];
         do {
+    if (((isBranchCall) && (((argIdx) >= (1))))) {
+        self->inBranchClosure = true;
+    }
     ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, arg->value, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */)));
+    self->inBranchClosure = false;
+    argIdx = ((argIdx) + (1));
         } while (0);
     } } });
     if (isWhileLoop) {
@@ -58288,6 +58510,9 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     }
     }
     }
+    }
+    if (isBranchCall) {
+        spec_assign((void**)&res, (void*)(spec_string_intern("void")));
     }
     return (String)({ String _ret_val = res; res = NULL; _ret_val; });
     if (targetType) { spec_release((void*)targetType); targetType = NULL; }
@@ -62957,6 +63182,9 @@ String CodeGenerator_generateExpression(CodeGenerator* self, Expression* expr) {
     bool claim = false;
     if (((kind) == (ExpressionKind_CALL))) {
         claim = CodeGenerator_yieldsClaim(self, expr) /* inst:CodeGenerator:yieldsClaim */;
+        if (((((spec_string_equals(expr->methodName, spec_string_intern("branch"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) {
+        claim = false;
+    }
     } else {
         if (((kind) == (ExpressionKind_BINARY))) {
         claim = spec_string_equals(expr->binaryOp, spec_string_intern("."));
@@ -63439,6 +63667,30 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
     if ((!spec_string_equals(builtinC, spec_string_intern("")))) {
         return (String)({ String _ret_val = builtinC; builtinC = NULL; _ret_val; });
     }
+    if (((((((spec_string_equals(expr->methodName, spec_string_intern("branch"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) && (((((spec_string_equals(targetC, spec_string_intern("Conditional"))) && (((expr->methodTarget->kind) == (ExpressionKind_IDENT))))) || (spec_string_equals(expr->bareProvider, spec_string_intern("Conditional"))))))) {
+        bool shapeOk = (((({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, 0); }))->kind) != (ExpressionKind_ANON_FN));
+        long long bi = 1;
+        ({ while (1) {
+        bool _ev_751 = false;
+        do {
+    _ev_751 = ((shapeOk) && (((bi) < (Expression_argCount(expr) /* inst:Expression:argCount */)))); break;
+        } while (0);
+        if (!_ev_751) break;
+        bool _it_751 = true;
+        do {
+    if ((((({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, bi); }))->kind) != (ExpressionKind_ANON_FN))) {
+        shapeOk = false;
+    }
+    bi = ((bi) + (1));
+    _it_751 = true; break;
+        } while (0);
+        if (!_it_751) break;
+    }
+});
+        if (shapeOk) {
+        return (String)spec_retain((void*)(CodeGenerator_generateInlineBranch(self, expr) /* inst:CodeGenerator:generateInlineBranch */));
+    }
+    }
     if (((spec_string_equals(targetC, ((String)spec_claim_pool((void*)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */))))) && (((spec_map_has(self->localVars, expr->methodName)) || (spec_map_has(self->fieldTypes, expr->methodName)))))) {
         SPEC_AUTO String fnVarT = (String)spec_map_get(self->localVars, expr->methodName, (String)spec_map_get(self->fieldTypes, expr->methodName, spec_string_intern("")));
         if (String_startsWith(fnVarT, spec_string_intern("Function"))) {
@@ -63447,8 +63699,8 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
         SPEC_AUTO String retCType = (((String (*)(CodeGenerator*, String))self->_vtable[272]))((CodeGenerator*)self, retTName);
         SPEC_AUTO String pTypesC = spec_construct_string(spec_string_intern("void*"));
         SPEC_AUTO String cArgsC = spec_construct_string(spec_string_intern("_cls->env"));
-        ({ SpecArray* _a_752 = expr->methodArgs; if (_a_752) { for (size_t _i_752 = 0; _i_752 < _a_752->length; _i_752++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_752->items[_i_752];
+        ({ SpecArray* _a_753 = expr->methodArgs; if (_a_753) { for (size_t _i_753 = 0; _i_753 < _a_753->length; _i_753++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_753->items[_i_753];
         do {
     SPEC_AUTO String aValC = CodeGenerator_generateExpression(self, arg->value) /* inst:CodeGenerator:generateExpression */;
     SPEC_AUTO String aT = CodeGenerator_inferTargetType(self, arg->value) /* inst:CodeGenerator:inferTargetType */;
@@ -63476,8 +63728,8 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
         SPEC_AUTO SpecArray* vParams = (SpecArray*)spec_retain((void*)(vMem->params));
         SPEC_AUTO String vArgsC = spec_construct_string(spec_string_intern(""));
         long long pIdx = 0;
-        ({ SpecArray* _a_756 = vParams; if (_a_756) { for (size_t _i_756 = 0; _i_756 < _a_756->length; _i_756++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_756->items[_i_756];
+        ({ SpecArray* _a_757 = vParams; if (_a_757) { for (size_t _i_757 = 0; _i_757 < _a_757->length; _i_757++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_757->items[_i_757];
         do {
     if (((pIdx) > (0))) {
         vArgsC = spec_string_concat(vArgsC, spec_string_intern(", "));
@@ -63485,8 +63737,8 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
     SPEC_AUTO String pName = spec_construct_string(p->name);
     bool matched = false;
     SPEC_AUTO String argC = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_758 = expr->methodArgs; if (_a_758) { for (size_t _i_758 = 0; _i_758 < _a_758->length; _i_758++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_758->items[_i_758];
+    ({ SpecArray* _a_759 = expr->methodArgs; if (_a_759) { for (size_t _i_759 = 0; _i_759 < _a_759->length; _i_759++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_759->items[_i_759];
         do {
     if ((((((!(matched))) && (spec_string_equals(a->name, pName)))) && ((!spec_string_equals(pName, spec_string_intern("")))))) {
         spec_assign((void**)&argC, (void*)(CodeGenerator_generateExpression(self, a->value) /* inst:CodeGenerator:generateExpression */));
@@ -63581,8 +63833,8 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
         SPEC_AUTO String slotC = (String)spec_map_get(self->methodSlots, expr->methodName, spec_string_intern("0"));
         SPEC_AUTO String retT = (((String (*)(CodeGenerator*, Type*))self->_vtable[178]))((CodeGenerator*)self, anyM->memberType);
         SPEC_AUTO String argsC = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_760 = expr->methodArgs; if (_a_760) { for (size_t _i_760 = 0; _i_760 < _a_760->length; _i_760++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_760->items[_i_760];
+        ({ SpecArray* _a_761 = expr->methodArgs; if (_a_761) { for (size_t _i_761 = 0; _i_761 < _a_761->length; _i_761++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_761->items[_i_761];
         do {
     argsC = spec_string_concat(spec_string_concat(argsC, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(self, arg->value) /* inst:CodeGenerator:generateExpression */))));
         } while (0);
@@ -63617,8 +63869,8 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
         if (((vm->kind) == (MemberKind_METHOD))) {
         SPEC_AUTO String retT = (((String (*)(CodeGenerator*, Type*))self->_vtable[178]))((CodeGenerator*)self, vm->memberType);
         SPEC_AUTO String sigC = spec_string_concat((void*)spec_retain((void*)(objType)), spec_string_intern("*"));
-        ({ SpecArray* _a_762 = vm->params; if (_a_762) { for (size_t _i_762 = 0; _i_762 < _a_762->length; _i_762++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_762->items[_i_762];
+        ({ SpecArray* _a_763 = vm->params; if (_a_763) { for (size_t _i_763 = 0; _i_763 < _a_763->length; _i_763++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_763->items[_i_763];
         do {
     sigC = spec_string_concat(spec_string_concat(sigC, spec_string_intern(", ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[272]))((CodeGenerator*)self, p->paramType->name)))));
         } while (0);
@@ -63682,16 +63934,16 @@ String CodeGenerator_emitWhenExpression(CodeGenerator* self, Expression* expr) {
     (void)expr;
     SPEC_AUTO String subjC = CodeGenerator_generateExpression(self, expr->whenSubject) /* inst:CodeGenerator:generateExpression */;
     SPEC_AUTO String chain = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_764 = expr->whenArms; if (_a_764) { for (size_t _i_764 = 0; _i_764 < _a_764->length; _i_764++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_764->items[_i_764];
+    ({ SpecArray* _a_765 = expr->whenArms; if (_a_765) { for (size_t _i_765 = 0; _i_765 < _a_765->length; _i_765++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_765->items[_i_765];
         do {
     if (((arm->isElse) && (arm->hasValueExpr))) {
         spec_assign((void**)&chain, (void*)(CodeGenerator_generateExpression(self, arm->valueExpr) /* inst:CodeGenerator:generateExpression */));
     }
         } while (0);
     } } });
-    ({ SpecArray* _a_768 = expr->whenArms; if (_a_768) { for (size_t _i_768 = 0; _i_768 < _a_768->length; _i_768++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_768->items[_i_768];
+    ({ SpecArray* _a_769 = expr->whenArms; if (_a_769) { for (size_t _i_769 = 0; _i_769 < _a_769->length; _i_769++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_769->items[_i_769];
         do {
     if ((((!(arm->isElse))) && (arm->hasValueExpr))) {
         SPEC_AUTO String bindsC = CodeGenerator_generateWhenBindings(self, subjC, arm) /* inst:CodeGenerator:generateWhenBindings */;
@@ -63700,8 +63952,8 @@ String CodeGenerator_emitWhenExpression(CodeGenerator* self, Expression* expr) {
         spec_assign((void**)&armVal, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ "))), bindsC), spec_string_intern(" ")), armVal), spec_string_intern("; })"))));
     }
         SPEC_AUTO String condOr = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_770 = arm->conditions; if (_a_770) { for (size_t _i_770 = 0; _i_770 < _a_770->length; _i_770++) {
-        Expression* c = (Expression*)(intptr_t)_a_770->items[_i_770];
+        ({ SpecArray* _a_771 = arm->conditions; if (_a_771) { for (size_t _i_771 = 0; _i_771 < _a_771->length; _i_771++) {
+        Expression* c = (Expression*)(intptr_t)_a_771->items[_i_771];
         do {
     SPEC_AUTO String cmp = CodeGenerator_generateWhenCondition(self, expr->whenSubject, subjC, c) /* inst:CodeGenerator:generateWhenCondition */;
     if (spec_string_equals(condOr, spec_string_intern(""))) {
@@ -63733,16 +63985,16 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     SPEC_AUTO String retC = (((String (*)(CodeGenerator*, String))self->_vtable[272]))((CodeGenerator*)self, expr->anonReturnType->name);
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_772 = outerKeys; if (_a_772) { for (size_t _i_772 = 0; _i_772 < _a_772->length; _i_772++) {
-        String k = (String)(intptr_t)_a_772->items[_i_772];
+    ({ SpecArray* _a_773 = outerKeys; if (_a_773) { for (size_t _i_773 = 0; _i_773 < _a_773->length; _i_773++) {
+        String k = (String)(intptr_t)_a_773->items[_i_773];
         do {
     spec_map_set(savedVars, k, (String)spec_map_get(self->localVars, k, spec_string_intern("")));
         } while (0);
     } } });
     SPEC_AUTO SpecMap* savedScopeVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerScopeKeys = (SpecArray*)((spec_map_keys(self->localScopeVars)));
-    ({ SpecArray* _a_774 = outerScopeKeys; if (_a_774) { for (size_t _i_774 = 0; _i_774 < _a_774->length; _i_774++) {
-        String k = (String)(intptr_t)_a_774->items[_i_774];
+    ({ SpecArray* _a_775 = outerScopeKeys; if (_a_775) { for (size_t _i_775 = 0; _i_775 < _a_775->length; _i_775++) {
+        String k = (String)(intptr_t)_a_775->items[_i_775];
         do {
     spec_map_set(savedScopeVars, k, (String)spec_map_get(self->localScopeVars, k, spec_string_intern("")));
         } while (0);
@@ -63750,8 +64002,8 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     spec_assign((void**)&self->localScopeVars, (void*)(spec_map_new()));
     SPEC_AUTO String paramsC = spec_construct_string(spec_string_intern("void* _env_ptr"));
     SPEC_AUTO SpecArray* paramNames = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_776 = expr->anonParams; if (_a_776) { for (size_t _i_776 = 0; _i_776 < _a_776->length; _i_776++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_776->items[_i_776];
+    ({ SpecArray* _a_777 = expr->anonParams; if (_a_777) { for (size_t _i_777 = 0; _i_777 < _a_777->length; _i_777++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_777->items[_i_777];
         do {
     spec_array_add_object(paramNames, (void*)(p->name));
     spec_map_set(self->localVars, p->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[137]))((CodeGenerator*)self, p->paramType));
@@ -63765,8 +64017,8 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_778 = expr->anonBody; if (_a_778) { for (size_t _i_778 = 0; _i_778 < _a_778->length; _i_778++) {
-        Statement* s = (Statement*)(intptr_t)_a_778->items[_i_778];
+    ({ SpecArray* _a_779 = expr->anonBody; if (_a_779) { for (size_t _i_779 = 0; _i_779 < _a_779->length; _i_779++) {
+        Statement* s = (Statement*)(intptr_t)_a_779->items[_i_779];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -63790,16 +64042,16 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
         capReleases = spec_string_concat(capReleases, spec_string_intern("    if (_env->self) spec_release((void*)_env->self);\n"));
     }
     SPEC_AUTO SpecMap* bodyLocals = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    ({ SpecArray* _a_780 = expr->anonBody; if (_a_780) { for (size_t _i_780 = 0; _i_780 < _a_780->length; _i_780++) {
-        Statement* s = (Statement*)(intptr_t)_a_780->items[_i_780];
+    ({ SpecArray* _a_781 = expr->anonBody; if (_a_781) { for (size_t _i_781 = 0; _i_781 < _a_781->length; _i_781++) {
+        Statement* s = (Statement*)(intptr_t)_a_781->items[_i_781];
         do {
     if (((s->kind) == (StatementKind_VAR_DECL))) {
         spec_map_set(bodyLocals, s->varName, spec_string_intern("true"));
     }
         } while (0);
     } } });
-    ({ SpecArray* _a_782 = outerKeys; if (_a_782) { for (size_t _i_782 = 0; _i_782 < _a_782->length; _i_782++) {
-        String k = (String)(intptr_t)_a_782->items[_i_782];
+    ({ SpecArray* _a_783 = outerKeys; if (_a_783) { for (size_t _i_783 = 0; _i_783 < _a_783->length; _i_783++) {
+        String k = (String)(intptr_t)_a_783->items[_i_783];
         do {
     if (((((Array_indexOf(paramNames, k, (-(1)))) < (0))) && ((!(spec_map_has(bodyLocals, k)))))) {
         SPEC_AUTO String cVar = CBackendUtils_cIdent(self->utils, k) /* inst:CBackendUtils:cIdent */;
@@ -63884,14 +64136,14 @@ String CodeGenerator_formatCallArgumentsWith(CodeGenerator* self, String classNa
         if (((spec_array_length(params)) > (0))) {
         SPEC_AUTO String joined = spec_construct_string(spec_string_intern(""));
         long long pIdx = 0;
-        ({ SpecArray* _a_786 = params; if (_a_786) { for (size_t _i_786 = 0; _i_786 < _a_786->length; _i_786++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_786->items[_i_786];
+        ({ SpecArray* _a_787 = params; if (_a_787) { for (size_t _i_787 = 0; _i_787 < _a_787->length; _i_787++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_787->items[_i_787];
         do {
     SPEC_AUTO String pName = spec_construct_string(p->name);
     bool matched = false;
     SPEC_AUTO String argC = spec_construct_string(spec_string_intern("0"));
-    ({ SpecArray* _a_788 = args; if (_a_788) { for (size_t _i_788 = 0; _i_788 < _a_788->length; _i_788++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_788->items[_i_788];
+    ({ SpecArray* _a_789 = args; if (_a_789) { for (size_t _i_789 = 0; _i_789 < _a_789->length; _i_789++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_789->items[_i_789];
         do {
     if ((((((!(matched))) && (spec_string_equals(a->name, pName)))) && ((!spec_string_equals(pName, spec_string_intern("")))))) {
         spec_assign((void**)&argC, (void*)(CodeGenerator_generateExpression(self, a->value) /* inst:CodeGenerator:generateExpression */));
@@ -63934,8 +64186,8 @@ String CodeGenerator_formatCallArgumentsWith(CodeGenerator* self, String classNa
     if (params) { spec_release((void*)params); params = NULL; }
     }
     SPEC_AUTO String joined = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_790 = args; if (_a_790) { for (size_t _i_790 = 0; _i_790 < _a_790->length; _i_790++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_790->items[_i_790];
+    ({ SpecArray* _a_791 = args; if (_a_791) { for (size_t _i_791 = 0; _i_791 < _a_791->length; _i_791++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_791->items[_i_791];
         do {
     joined = spec_string_concat(spec_string_concat(joined, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(self, a->value) /* inst:CodeGenerator:generateExpression */))));
         } while (0);
@@ -63953,8 +64205,8 @@ String CodeGenerator_scopeReleases(CodeGenerator* self, SpecArray* stmts) {
     (void)self;
     (void)stmts;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_792 = stmts; if (_a_792) { for (size_t _i_792 = 0; _i_792 < _a_792->length; _i_792++) {
-        Statement* stmt = (Statement*)(intptr_t)_a_792->items[_i_792];
+    ({ SpecArray* _a_793 = stmts; if (_a_793) { for (size_t _i_793 = 0; _i_793 < _a_793->length; _i_793++) {
+        Statement* stmt = (Statement*)(intptr_t)_a_793->items[_i_793];
         do {
     if (((stmt->kind) == (StatementKind_VAR_DECL))) {
         SPEC_AUTO String typeName = (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, stmt->varType);
@@ -64010,8 +64262,8 @@ String CodeGenerator_generateWhenBindings(CodeGenerator* self, String subjC, Whe
     (void)subjC;
     (void)arm;
     SPEC_AUTO String binds = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_796 = arm->conditions; if (_a_796) { for (size_t _i_796 = 0; _i_796 < _a_796->length; _i_796++) {
-        Expression* c = (Expression*)(intptr_t)_a_796->items[_i_796];
+    ({ SpecArray* _a_797 = arm->conditions; if (_a_797) { for (size_t _i_797 = 0; _i_797 < _a_797->length; _i_797++) {
+        Expression* c = (Expression*)(intptr_t)_a_797->items[_i_797];
         do {
     if (((((c->kind) == (ExpressionKind_CALL))) && (spec_map_has(self->allEnumVariants, c->methodName)))) {
         SPEC_AUTO String eName = (String)spec_map_get(self->allEnumVariants, c->methodName, spec_string_intern(""));
@@ -64019,8 +64271,8 @@ String CodeGenerator_generateWhenBindings(CodeGenerator* self, String subjC, Whe
         SPEC_AUTO Member* vMem = (Member*)(((((Member* (*)(CodeGenerator*, String, String))self->_vtable[144]))((CodeGenerator*)self, eName, c->methodName)));
         SPEC_AUTO String vNameC = CBackendUtils_cIdent(self->utils, c->methodName) /* inst:CBackendUtils:cIdent */;
         long long idx = 0;
-        ({ SpecArray* _a_798 = c->methodArgs; if (_a_798) { for (size_t _i_798 = 0; _i_798 < _a_798->length; _i_798++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_798->items[_i_798];
+        ({ SpecArray* _a_799 = c->methodArgs; if (_a_799) { for (size_t _i_799 = 0; _i_799 < _a_799->length; _i_799++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_799->items[_i_799];
         do {
     if (((idx) < (spec_array_length(vMem->params)))) {
         SPEC_AUTO Expression* av = (Expression*)spec_retain((void*)(arg->value));
@@ -64113,8 +64365,8 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
     } else if (((kind) == (StatementKind_IF))) {
         SPEC_AUTO String condC = CodeGenerator_generateExpression(self, stmt->ifCondition) /* inst:CodeGenerator:generateExpression */;
         SPEC_AUTO String out = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if ("))), condC), spec_string_intern(") {\n"));
-        ({ SpecArray* _a_800 = stmt->thenBranch; if (_a_800) { for (size_t _i_800 = 0; _i_800 < _a_800->length; _i_800++) {
-        Statement* s = (Statement*)(intptr_t)_a_800->items[_i_800];
+        ({ SpecArray* _a_801 = stmt->thenBranch; if (_a_801) { for (size_t _i_801 = 0; _i_801 < _a_801->length; _i_801++) {
+        Statement* s = (Statement*)(intptr_t)_a_801->items[_i_801];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -64122,8 +64374,8 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
         out = spec_string_concat(out, ((String)spec_claim_pool((void*)(CodeGenerator_scopeReleases(self, stmt->thenBranch) /* inst:CodeGenerator:scopeReleases */))));
         if (stmt->hasElse) {
         out = spec_string_concat(out, spec_string_intern("    } else {\n"));
-        ({ SpecArray* _a_802 = stmt->elseBranch; if (_a_802) { for (size_t _i_802 = 0; _i_802 < _a_802->length; _i_802++) {
-        Statement* s = (Statement*)(intptr_t)_a_802->items[_i_802];
+        ({ SpecArray* _a_803 = stmt->elseBranch; if (_a_803) { for (size_t _i_803 = 0; _i_803 < _a_803->length; _i_803++) {
+        Statement* s = (Statement*)(intptr_t)_a_803->items[_i_803];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -64295,8 +64547,8 @@ String CodeGenerator_emitForward(CodeGenerator* self, Statement* stmt) {
     (void)stmt;
     SPEC_AUTO ClassInfo* fwdCls = (ClassInfo*)(((((ClassInfo* (*)(CodeGenerator*, String))self->_vtable[140]))((CodeGenerator*)self, self->currentClassName)));
     SPEC_AUTO String dispatchCls = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_804 = fwdCls->baseClasses; if (_a_804) { for (size_t _i_804 = 0; _i_804 < _a_804->length; _i_804++) {
-        String baseName = (String)(intptr_t)_a_804->items[_i_804];
+    ({ SpecArray* _a_805 = fwdCls->baseClasses; if (_a_805) { for (size_t _i_805 = 0; _i_805 < _a_805->length; _i_805++) {
+        String baseName = (String)(intptr_t)_a_805->items[_i_805];
         do {
     if (spec_string_equals(dispatchCls, spec_string_intern(""))) {
         SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, baseName, self->currentMethodName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
@@ -64380,15 +64632,15 @@ String CodeGenerator_emitWhenStatement(CodeGenerator* self, Statement* stmt) {
     SPEC_AUTO String subjC = CodeGenerator_generateExpression(self, stmt->whenSubject) /* inst:CodeGenerator:generateExpression */;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
     bool first = true;
-    ({ SpecArray* _a_810 = stmt->whenArms; if (_a_810) { for (size_t _i_810 = 0; _i_810 < _a_810->length; _i_810++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_810->items[_i_810];
+    ({ SpecArray* _a_811 = stmt->whenArms; if (_a_811) { for (size_t _i_811 = 0; _i_811 < _a_811->length; _i_811++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_811->items[_i_811];
         do {
     if (arm->isElse) {
         out = spec_string_concat(out, spec_string_intern("    } else {\n"));
     } else {
         SPEC_AUTO String condOr = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_812 = arm->conditions; if (_a_812) { for (size_t _i_812 = 0; _i_812 < _a_812->length; _i_812++) {
-        Expression* c = (Expression*)(intptr_t)_a_812->items[_i_812];
+        ({ SpecArray* _a_813 = arm->conditions; if (_a_813) { for (size_t _i_813 = 0; _i_813 < _a_813->length; _i_813++) {
+        Expression* c = (Expression*)(intptr_t)_a_813->items[_i_813];
         do {
     SPEC_AUTO String cmp = CodeGenerator_generateWhenCondition(self, stmt->whenSubject, subjC, c) /* inst:CodeGenerator:generateWhenCondition */;
     if (spec_string_equals(condOr, spec_string_intern(""))) {
@@ -64410,8 +64662,8 @@ String CodeGenerator_emitWhenStatement(CodeGenerator* self, Statement* stmt) {
     if (condOr) { spec_release((void*)condOr); condOr = NULL; }
     if (bindsC) { spec_release((void*)bindsC); bindsC = NULL; }
     }
-    ({ SpecArray* _a_814 = arm->body; if (_a_814) { for (size_t _i_814 = 0; _i_814 < _a_814->length; _i_814++) {
-        Statement* s = (Statement*)(intptr_t)_a_814->items[_i_814];
+    ({ SpecArray* _a_815 = arm->body; if (_a_815) { for (size_t _i_815 = 0; _i_815 < _a_815->length; _i_815++) {
+        Statement* s = (Statement*)(intptr_t)_a_815->items[_i_815];
         do {
     out = spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -64452,8 +64704,8 @@ String CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDef, Me
     spec_assign((void**)&self->localVars, (void*)(spec_map_new()));
     spec_assign((void**)&self->localScopeVars, (void*)(spec_map_new()));
     spec_assign((void**)&self->currentParams, (void*)(spec_map_new()));
-    ({ SpecArray* _a_816 = method->params; if (_a_816) { for (size_t _i_816 = 0; _i_816 < _a_816->length; _i_816++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_816->items[_i_816];
+    ({ SpecArray* _a_817 = method->params; if (_a_817) { for (size_t _i_817 = 0; _i_817 < _a_817->length; _i_817++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_817->items[_i_817];
         do {
     spec_map_set(self->localVars, p->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[137]))((CodeGenerator*)self, p->paramType));
     spec_map_set(self->currentParams, p->name, spec_string_intern("true"));
@@ -64461,16 +64713,16 @@ String CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDef, Me
     } } });
     SPEC_AUTO String selfCType = (((String (*)(CodeGenerator*, String))self->_vtable[272]))((CodeGenerator*)self, classDef->name);
     SPEC_AUTO String header = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(retType)), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CodeGenerator_overloadSymbol(self, classDef->name, method->name, CodeGenerator_overloadIndexOf(self, classDef, method) /* inst:CodeGenerator:overloadIndexOf */) /* inst:CodeGenerator:overloadSymbol */)))), spec_string_intern("(")), selfCType), spec_string_intern(" self"));
-    ({ SpecArray* _a_818 = method->params; if (_a_818) { for (size_t _i_818 = 0; _i_818 < _a_818->length; _i_818++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_818->items[_i_818];
+    ({ SpecArray* _a_819 = method->params; if (_a_819) { for (size_t _i_819 = 0; _i_819 < _a_819->length; _i_819++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_819->items[_i_819];
         do {
     header = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(header, spec_string_intern(", ")), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[272]))((CodeGenerator*)self, p->paramType->name))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
         } while (0);
     } } });
     header = spec_string_concat(header, spec_string_intern(") {\n"));
     SPEC_AUTO String bodyC = Buf_stringCopy(NULL, spec_string_intern(""));
-    ({ SpecArray* _a_820 = method->body; if (_a_820) { for (size_t _i_820 = 0; _i_820 < _a_820->length; _i_820++) {
-        Statement* stmt = (Statement*)(intptr_t)_a_820->items[_i_820];
+    ({ SpecArray* _a_821 = method->body; if (_a_821) { for (size_t _i_821 = 0; _i_821 < _a_821->length; _i_821++) {
+        Statement* stmt = (Statement*)(intptr_t)_a_821->items[_i_821];
         do {
     SPEC_AUTO String stmtC = CodeGenerator_generateStatement(self, stmt) /* inst:CodeGenerator:generateStatement */;
     Buf_bufAppendBuf(NULL, bodyC, stmtC);
@@ -64482,8 +64734,8 @@ String CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDef, Me
     }
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_scopeReleases(self, method->body) /* inst:CodeGenerator:scopeReleases */))));
     SPEC_AUTO String suppressions = spec_construct_string(spec_string_intern("    (void)self;\n"));
-    ({ SpecArray* _a_822 = method->params; if (_a_822) { for (size_t _i_822 = 0; _i_822 < _a_822->length; _i_822++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_822->items[_i_822];
+    ({ SpecArray* _a_823 = method->params; if (_a_823) { for (size_t _i_823 = 0; _i_823 < _a_823->length; _i_823++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_823->items[_i_823];
         do {
     suppressions = spec_string_concat(spec_string_concat(spec_string_concat(suppressions, spec_string_intern("    (void)")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
         } while (0);
@@ -64557,26 +64809,26 @@ void CodeGenerator_collectClassesFromStatement(CodeGenerator* self, Statement* s
     if (((stmt->kind) == (StatementKind_CLASS))) {
         (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[192]))((CodeGenerator*)self, stmt->nestedClass, acc);
     } else if (((stmt->kind) == (StatementKind_IF))) {
-        ({ SpecArray* _a_824 = stmt->thenBranch; if (_a_824) { for (size_t _i_824 = 0; _i_824 < _a_824->length; _i_824++) {
-        Statement* s = (Statement*)(intptr_t)_a_824->items[_i_824];
+        ({ SpecArray* _a_825 = stmt->thenBranch; if (_a_825) { for (size_t _i_825 = 0; _i_825 < _a_825->length; _i_825++) {
+        Statement* s = (Statement*)(intptr_t)_a_825->items[_i_825];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
         } while (0);
     } } });
         if (stmt->hasElse) {
-        ({ SpecArray* _a_826 = stmt->elseBranch; if (_a_826) { for (size_t _i_826 = 0; _i_826 < _a_826->length; _i_826++) {
-        Statement* s = (Statement*)(intptr_t)_a_826->items[_i_826];
+        ({ SpecArray* _a_827 = stmt->elseBranch; if (_a_827) { for (size_t _i_827 = 0; _i_827 < _a_827->length; _i_827++) {
+        Statement* s = (Statement*)(intptr_t)_a_827->items[_i_827];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
         } while (0);
     } } });
     }
     } else if (((stmt->kind) == (StatementKind_WHEN))) {
-        ({ SpecArray* _a_830 = stmt->whenArms; if (_a_830) { for (size_t _i_830 = 0; _i_830 < _a_830->length; _i_830++) {
-        WhenArm* arm = (WhenArm*)(intptr_t)_a_830->items[_i_830];
+        ({ SpecArray* _a_831 = stmt->whenArms; if (_a_831) { for (size_t _i_831 = 0; _i_831 < _a_831->length; _i_831++) {
+        WhenArm* arm = (WhenArm*)(intptr_t)_a_831->items[_i_831];
         do {
-    ({ SpecArray* _a_832 = arm->body; if (_a_832) { for (size_t _i_832 = 0; _i_832 < _a_832->length; _i_832++) {
-        Statement* s = (Statement*)(intptr_t)_a_832->items[_i_832];
+    ({ SpecArray* _a_833 = arm->body; if (_a_833) { for (size_t _i_833 = 0; _i_833 < _a_833->length; _i_833++) {
+        Statement* s = (Statement*)(intptr_t)_a_833->items[_i_833];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
         } while (0);
@@ -64592,14 +64844,14 @@ void CodeGenerator_collectClasses(CodeGenerator* self, ClassInfo* c, SpecArray* 
     (void)c;
     (void)acc;
     spec_array_add_object(acc, (void*)(c));
-    ({ SpecArray* _a_836 = c->members; if (_a_836) { for (size_t _i_836 = 0; _i_836 < _a_836->length; _i_836++) {
-        Member* m = (Member*)(intptr_t)_a_836->items[_i_836];
+    ({ SpecArray* _a_837 = c->members; if (_a_837) { for (size_t _i_837 = 0; _i_837 < _a_837->length; _i_837++) {
+        Member* m = (Member*)(intptr_t)_a_837->items[_i_837];
         do {
     if (((m->kind) == (MemberKind_CLASS))) {
         (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[192]))((CodeGenerator*)self, m->nestedClass, acc);
     } else if (((m->kind) == (MemberKind_METHOD))) {
-        ({ SpecArray* _a_838 = m->body; if (_a_838) { for (size_t _i_838 = 0; _i_838 < _a_838->length; _i_838++) {
-        Statement* s = (Statement*)(intptr_t)_a_838->items[_i_838];
+        ({ SpecArray* _a_839 = m->body; if (_a_839) { for (size_t _i_839 = 0; _i_839 < _a_839->length; _i_839++) {
+        Statement* s = (Statement*)(intptr_t)_a_839->items[_i_839];
         do {
     (((void (*)(CodeGenerator*, Statement*, SpecArray*))self->_vtable[191]))((CodeGenerator*)self, s, acc);
         } while (0);
@@ -64615,39 +64867,39 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     (void)program;
     (void)entryClass;
     SPEC_AUTO SpecArray* flattenedClasses = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_840 = program->classes; if (_a_840) { for (size_t _i_840 = 0; _i_840 < _a_840->length; _i_840++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_840->items[_i_840];
+    ({ SpecArray* _a_841 = program->classes; if (_a_841) { for (size_t _i_841 = 0; _i_841 < _a_841->length; _i_841++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_841->items[_i_841];
         do {
     (((void (*)(CodeGenerator*, ClassInfo*, SpecArray*))self->_vtable[192]))((CodeGenerator*)self, c, flattenedClasses);
         } while (0);
     } } });
     CodeGenerator_assignVirtualSlots(self, flattenedClasses) /* inst:CodeGenerator:assignVirtualSlots */;
-    ({ DeclarationGenerator* _recv = (DeclarationGenerator*)(self->declGen); (((void (*)(DeclarationGenerator*, SpecMap*))_recv->_vtable[323]))((DeclarationGenerator*)_recv, self->allEnumNames); });
+    ({ DeclarationGenerator* _recv = (DeclarationGenerator*)(self->declGen); (((void (*)(DeclarationGenerator*, SpecMap*))_recv->_vtable[325]))((DeclarationGenerator*)_recv, self->allEnumNames); });
     DeclarationGenerator_setTaggedEnums(self->declGen, self->allTaggedEnums) /* inst:DeclarationGenerator:setTaggedEnums */;
-    ({ BuiltinCallGenerator* _recv = (BuiltinCallGenerator*)(self->builtins); (((void (*)(BuiltinCallGenerator*, SpecMap*))_recv->_vtable[323]))((BuiltinCallGenerator*)_recv, self->allEnumNames); });
+    ({ BuiltinCallGenerator* _recv = (BuiltinCallGenerator*)(self->builtins); (((void (*)(BuiltinCallGenerator*, SpecMap*))_recv->_vtable[325]))((BuiltinCallGenerator*)_recv, self->allEnumNames); });
     SPEC_AUTO String enums = DeclarationGenerator_generateEnums(self->declGen, flattenedClasses) /* inst:DeclarationGenerator:generateEnums */;
     SPEC_AUTO String decls = DeclarationGenerator_generateForwardDeclarations(self->declGen, flattenedClasses) /* inst:DeclarationGenerator:generateForwardDeclarations */;
     SPEC_AUTO String structs = DeclarationGenerator_generateStructs(self->declGen, flattenedClasses) /* inst:DeclarationGenerator:generateStructs */;
     SPEC_AUTO String vt = CodeGenerator_generateVTables(self, flattenedClasses) /* inst:CodeGenerator:generateVTables */;
     SPEC_AUTO String ctors = CodeGenerator_generateConstructors(self, flattenedClasses) /* inst:CodeGenerator:generateConstructors */;
     SPEC_AUTO String methods = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_848 = flattenedClasses; if (_a_848) { for (size_t _i_848 = 0; _i_848 < _a_848->length; _i_848++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_848->items[_i_848];
+    ({ SpecArray* _a_849 = flattenedClasses; if (_a_849) { for (size_t _i_849 = 0; _i_849 < _a_849->length; _i_849++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_849->items[_i_849];
         do {
     if ((((((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (spec_string_equals(c->name, spec_string_intern("String"))))) || (spec_string_equals(c->name, spec_string_intern("Array"))))) || (spec_string_equals(c->name, spec_string_intern("Map"))))) {
         spec_assign((void**)&self->currentClassName, (void*)(c->name));
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self->declGen, c, flattenedClasses, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_850 = allFields; if (_a_850) { for (size_t _i_850 = 0; _i_850 < _a_850->length; _i_850++) {
-        Member* m = (Member*)(intptr_t)_a_850->items[_i_850];
+        ({ SpecArray* _a_851 = allFields; if (_a_851) { for (size_t _i_851 = 0; _i_851 < _a_851->length; _i_851++) {
+        Member* m = (Member*)(intptr_t)_a_851->items[_i_851];
         do {
     spec_map_set(self->fieldTypes, m->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, m->memberType));
         } while (0);
     } } });
         bool hasInit = false;
-        ({ SpecArray* _a_852 = c->members; if (_a_852) { for (size_t _i_852 = 0; _i_852 < _a_852->length; _i_852++) {
-        Member* m = (Member*)(intptr_t)_a_852->items[_i_852];
+        ({ SpecArray* _a_853 = c->members; if (_a_853) { for (size_t _i_853 = 0; _i_853 < _a_853->length; _i_853++) {
+        Member* m = (Member*)(intptr_t)_a_853->items[_i_853];
         do {
     if (((m->kind) == (MemberKind_METHOD))) {
         if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (((spec_array_length(m->body)) > (0))))) {
@@ -64664,8 +64916,8 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
         methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("void ")), c->name), spec_string_intern("_init(")), c->name), spec_string_intern("* self) {\n    (void)self;\n}\n\n"));
     }
         bool hasToString = false;
-        ({ SpecArray* _a_854 = c->members; if (_a_854) { for (size_t _i_854 = 0; _i_854 < _a_854->length; _i_854++) {
-        Member* m = (Member*)(intptr_t)_a_854->items[_i_854];
+        ({ SpecArray* _a_855 = c->members; if (_a_855) { for (size_t _i_855 = 0; _i_855 < _a_855->length; _i_855++) {
+        Member* m = (Member*)(intptr_t)_a_855->items[_i_855];
         do {
     if (spec_string_equals(m->name, spec_string_intern("toString"))) {
         hasToString = true;
@@ -64712,13 +64964,13 @@ void CodeGenerator_collectAncestors(CodeGenerator* self, ClassInfo* c, SpecArray
     (void)c;
     (void)allClasses;
     (void)acc;
-    ({ SpecArray* _a_858 = c->baseClasses; if (_a_858) { for (size_t _i_858 = 0; _i_858 < _a_858->length; _i_858++) {
-        String baseName = (String)(intptr_t)_a_858->items[_i_858];
+    ({ SpecArray* _a_859 = c->baseClasses; if (_a_859) { for (size_t _i_859 = 0; _i_859 < _a_859->length; _i_859++) {
+        String baseName = (String)(intptr_t)_a_859->items[_i_859];
         do {
     if (((Array_indexOf(acc, baseName, (-(1)))) < (0))) {
         spec_array_add_object(acc, (void*)(baseName));
-        ({ SpecArray* _a_860 = allClasses; if (_a_860) { for (size_t _i_860 = 0; _i_860 < _a_860->length; _i_860++) {
-        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_860->items[_i_860];
+        ({ SpecArray* _a_861 = allClasses; if (_a_861) { for (size_t _i_861 = 0; _i_861 < _a_861->length; _i_861++) {
+        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_861->items[_i_861];
         do {
     if (spec_string_equals(cand->name, baseName)) {
         CodeGenerator_collectAncestors(self, cand, allClasses, acc) /* inst:CodeGenerator:collectAncestors */;
@@ -64738,8 +64990,8 @@ String CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* class
     out = spec_string_concat(out, spec_string_intern("    if (!actual || !target) return false;\n"));
     out = spec_string_concat(out, spec_string_intern("    if (strcmp(actual, target) == 0) return true;\n"));
     out = spec_string_concat(out, spec_string_intern("    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n"));
-    ({ SpecArray* _a_864 = classes; if (_a_864) { for (size_t _i_864 = 0; _i_864 < _a_864->length; _i_864++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_864->items[_i_864];
+    ({ SpecArray* _a_865 = classes; if (_a_865) { for (size_t _i_865 = 0; _i_865 < _a_865->length; _i_865++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_865->items[_i_865];
         do {
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
         SPEC_AUTO SpecArray* ancestors = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
@@ -64748,8 +65000,8 @@ String CodeGenerator_generateTypeHierarchy(CodeGenerator* self, SpecArray* class
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (strcmp(actual, \"")), c->name), spec_string_intern("\") == 0) {\n"));
         out = spec_string_concat(out, spec_string_intern("        return "));
         bool firstA = true;
-        ({ SpecArray* _a_866 = ancestors; if (_a_866) { for (size_t _i_866 = 0; _i_866 < _a_866->length; _i_866++) {
-        String aName = (String)(intptr_t)_a_866->items[_i_866];
+        ({ SpecArray* _a_867 = ancestors; if (_a_867) { for (size_t _i_867 = 0; _i_867 < _a_867->length; _i_867++) {
+        String aName = (String)(intptr_t)_a_867->items[_i_867];
         do {
     if ((!(firstA))) {
         out = spec_string_concat(out, spec_string_intern(" || "));
@@ -64776,19 +65028,19 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
     if (((self->methodSlotCount) == (0))) {
         return (String)({ String _ret_val = out; out = NULL; _ret_val; });
     }
-    ({ SpecArray* _a_869 = classes; if (_a_869) { for (size_t _i_869 = 0; _i_869 < _a_869->length; _i_869++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_869->items[_i_869];
+    ({ SpecArray* _a_870 = classes; if (_a_870) { for (size_t _i_870 = 0; _i_870 < _a_870->length; _i_870++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_870->items[_i_870];
         do {
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static void* ")), c->name), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n"));
         long long slot = 0;
         ({ while (1) {
-        bool _ev_870 = false;
+        bool _ev_871 = false;
         do {
-    _ev_870 = ((slot) < (self->methodSlotCount)); break;
+    _ev_871 = ((slot) < (self->methodSlotCount)); break;
         } while (0);
-        if (!_ev_870) break;
-        bool _it_870 = true;
+        if (!_ev_871) break;
+        bool _it_871 = true;
         do {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
     SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, c->name, mName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
@@ -64801,11 +65053,11 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    (void*)")), implCls), spec_string_intern("_")), mName);
     }
     slot = ((slot) + (1));
-    _it_870 = true; break;
+    _it_871 = true; break;
     if (mName) { spec_release((void*)mName); mName = NULL; }
     if (implCls) { spec_release((void*)implCls); implCls = NULL; }
         } while (0);
-        if (!_it_870) break;
+        if (!_it_871) break;
     }
 });
         out = spec_string_concat(out, spec_string_intern("\n};\n\n"));
@@ -64820,16 +65072,16 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
     (void)self;
     (void)classes;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern("/* Constructor Implementations */\n"));
-    ({ SpecArray* _a_878 = classes; if (_a_878) { for (size_t _i_878 = 0; _i_878 < _a_878->length; _i_878++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_878->items[_i_878];
+    ({ SpecArray* _a_879 = classes; if (_a_879) { for (size_t _i_879 = 0; _i_879 < _a_879->length; _i_879++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_879->items[_i_879];
         do {
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
         spec_assign((void**)&self->currentClassName, (void*)(c->name));
         spec_assign((void**)&self->fieldTypes, (void*)(spec_map_new()));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self->declGen, c, classes, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_880 = allFields; if (_a_880) { for (size_t _i_880 = 0; _i_880 < _a_880->length; _i_880++) {
-        Member* f = (Member*)(intptr_t)_a_880->items[_i_880];
+        ({ SpecArray* _a_881 = allFields; if (_a_881) { for (size_t _i_881 = 0; _i_881 < _a_881->length; _i_881++) {
+        Member* f = (Member*)(intptr_t)_a_881->items[_i_881];
         do {
     spec_map_set(self->fieldTypes, f->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, f->memberType));
         } while (0);
@@ -64837,8 +65089,8 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), c->name), spec_string_intern("_destroy(void* self_ptr) {\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), c->name), spec_string_intern("* self = (")), c->name), spec_string_intern("*)self_ptr;\n"));
         out = spec_string_concat(out, spec_string_intern("    if (!self) return;\n"));
-        ({ SpecArray* _a_882 = allFields; if (_a_882) { for (size_t _i_882 = 0; _i_882 < _a_882->length; _i_882++) {
-        Member* m = (Member*)(intptr_t)_a_882->items[_i_882];
+        ({ SpecArray* _a_883 = allFields; if (_a_883) { for (size_t _i_883 = 0; _i_883 < _a_883->length; _i_883++) {
+        Member* m = (Member*)(intptr_t)_a_883->items[_i_883];
         do {
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
@@ -64860,8 +65112,8 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
         if (((self->methodSlotCount) > (0))) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_vtable = ")), c->name), spec_string_intern("_vtable;\n"));
     }
-        ({ SpecArray* _a_884 = allFields; if (_a_884) { for (size_t _i_884 = 0; _i_884 < _a_884->length; _i_884++) {
-        Member* m = (Member*)(intptr_t)_a_884->items[_i_884];
+        ({ SpecArray* _a_885 = allFields; if (_a_885) { for (size_t _i_885 = 0; _i_885 < _a_885->length; _i_885++) {
+        Member* m = (Member*)(intptr_t)_a_885->items[_i_885];
         do {
     if (m->hasInit) {
         bool savedArgFi = self->argMode;
@@ -64907,8 +65159,8 @@ String CodeGenerator_generateInlineArrayOp(CodeGenerator* self, String mode, Str
     }
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_886 = outerKeys; if (_a_886) { for (size_t _i_886 = 0; _i_886 < _a_886->length; _i_886++) {
-        String k = (String)(intptr_t)_a_886->items[_i_886];
+    ({ SpecArray* _a_887 = outerKeys; if (_a_887) { for (size_t _i_887 = 0; _i_887 < _a_887->length; _i_887++) {
+        String k = (String)(intptr_t)_a_887->items[_i_887];
         do {
     spec_map_set(savedVars, k, (String)spec_map_get(self->localVars, k, spec_string_intern("")));
         } while (0);
@@ -64925,8 +65177,8 @@ String CodeGenerator_generateInlineArrayOp(CodeGenerator* self, String mode, Str
     if (pRaw) { spec_release((void*)pRaw); pRaw = NULL; }
     }
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_888 = fnExpr->anonBody; if (_a_888) { for (size_t _i_888 = 0; _i_888 < _a_888->length; _i_888++) {
-        Statement* s = (Statement*)(intptr_t)_a_888->items[_i_888];
+    ({ SpecArray* _a_889 = fnExpr->anonBody; if (_a_889) { for (size_t _i_889 = 0; _i_889 < _a_889->length; _i_889++) {
+        Statement* s = (Statement*)(intptr_t)_a_889->items[_i_889];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -65022,8 +65274,8 @@ String CodeGenerator_generateInlineArrayFold(CodeGenerator* self, String targetC
     SPEC_AUTO String savedRetLbl = spec_construct_string(self->inlineReturnLabel);
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_890 = outerKeys; if (_a_890) { for (size_t _i_890 = 0; _i_890 < _a_890->length; _i_890++) {
-        String k = (String)(intptr_t)_a_890->items[_i_890];
+    ({ SpecArray* _a_891 = outerKeys; if (_a_891) { for (size_t _i_891 = 0; _i_891 < _a_891->length; _i_891++) {
+        String k = (String)(intptr_t)_a_891->items[_i_891];
         do {
     spec_map_set(savedVars, k, (String)spec_map_get(self->localVars, k, spec_string_intern("")));
         } while (0);
@@ -65062,8 +65314,8 @@ String CodeGenerator_generateInlineArrayFold(CodeGenerator* self, String targetC
     if (p1Raw) { spec_release((void*)p1Raw); p1Raw = NULL; }
     }
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_892 = fnExpr->anonBody; if (_a_892) { for (size_t _i_892 = 0; _i_892 < _a_892->length; _i_892++) {
-        Statement* s = (Statement*)(intptr_t)_a_892->items[_i_892];
+    ({ SpecArray* _a_893 = fnExpr->anonBody; if (_a_893) { for (size_t _i_893 = 0; _i_893 < _a_893->length; _i_893++) {
+        Statement* s = (Statement*)(intptr_t)_a_893->items[_i_893];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -65101,8 +65353,8 @@ String CodeGenerator_generateInlineMapEach(CodeGenerator* self, String targetC, 
     SPEC_AUTO String savedRetLbl = spec_construct_string(self->inlineReturnLabel);
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* outerKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_894 = outerKeys; if (_a_894) { for (size_t _i_894 = 0; _i_894 < _a_894->length; _i_894++) {
-        String k = (String)(intptr_t)_a_894->items[_i_894];
+    ({ SpecArray* _a_895 = outerKeys; if (_a_895) { for (size_t _i_895 = 0; _i_895 < _a_895->length; _i_895++) {
+        String k = (String)(intptr_t)_a_895->items[_i_895];
         do {
     spec_map_set(savedVars, k, (String)spec_map_get(self->localVars, k, spec_string_intern("")));
         } while (0);
@@ -65133,8 +65385,8 @@ String CodeGenerator_generateInlineMapEach(CodeGenerator* self, String targetC, 
     if (p1Raw) { spec_release((void*)p1Raw); p1Raw = NULL; }
     }
     SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_896 = fnExpr->anonBody; if (_a_896) { for (size_t _i_896 = 0; _i_896 < _a_896->length; _i_896++) {
-        Statement* s = (Statement*)(intptr_t)_a_896->items[_i_896];
+    ({ SpecArray* _a_897 = fnExpr->anonBody; if (_a_897) { for (size_t _i_897 = 0; _i_897 < _a_897->length; _i_897++) {
+        Statement* s = (Statement*)(intptr_t)_a_897->items[_i_897];
         do {
     bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -65158,6 +65410,54 @@ String CodeGenerator_generateInlineMapEach(CodeGenerator* self, String targetC, 
     if (out) { spec_release((void*)out); out = NULL; }
 }
 
+String CodeGenerator_generateInlineBranch(CodeGenerator* self, Expression* expr) {
+    (void)self;
+    (void)expr;
+    SPEC_AUTO String savedVar = spec_construct_string(self->inlineReturnVar);
+    SPEC_AUTO String savedLbl = spec_construct_string(self->inlineReturnLabel);
+    bool savedArg = self->argMode;
+    spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
+    spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
+    self->argMode = false;
+    SPEC_AUTO String condC = CodeGenerator_generateExpression(self, ({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, 0); })) /* inst:CodeGenerator:generateExpression */;
+    SPEC_AUTO String thenC = CodeGenerator_inlineBranchBody(self, ({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, 1); })) /* inst:CodeGenerator:inlineBranchBody */;
+    SPEC_AUTO String out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("if ("))), condC), spec_string_intern(") {\n")), thenC), spec_string_intern("\t}"));
+    if (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (3))) {
+        SPEC_AUTO String elseC = CodeGenerator_inlineBranchBody(self, ({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, 2); })) /* inst:CodeGenerator:inlineBranchBody */;
+        out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(" else {\n")), elseC), spec_string_intern("\t}"));
+    if (elseC) { spec_release((void*)elseC); elseC = NULL; }
+    }
+    if (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (4))) {
+        SPEC_AUTO String finC = CodeGenerator_inlineBranchBody(self, ({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[37]))((Expression*)_recv, 3); })) /* inst:CodeGenerator:inlineBranchBody */;
+        out = spec_string_concat(spec_string_concat(out, spec_string_intern("\n")), finC);
+    if (finC) { spec_release((void*)finC); finC = NULL; }
+    }
+    spec_assign((void**)&self->inlineReturnVar, (void*)(savedVar));
+    spec_assign((void**)&self->inlineReturnLabel, (void*)(savedLbl));
+    self->argMode = savedArg;
+    return (String)({ String _ret_val = out; out = NULL; _ret_val; });
+    if (savedVar) { spec_release((void*)savedVar); savedVar = NULL; }
+    if (savedLbl) { spec_release((void*)savedLbl); savedLbl = NULL; }
+    if (condC) { spec_release((void*)condC); condC = NULL; }
+    if (thenC) { spec_release((void*)thenC); thenC = NULL; }
+    if (out) { spec_release((void*)out); out = NULL; }
+}
+
+String CodeGenerator_inlineBranchBody(CodeGenerator* self, Expression* anonFn) {
+    (void)self;
+    (void)anonFn;
+    SPEC_AUTO String bodyC = spec_construct_string(spec_string_intern(""));
+    ({ SpecArray* _a_899 = anonFn->anonBody; if (_a_899) { for (size_t _i_899 = 0; _i_899 < _a_899->length; _i_899++) {
+        Statement* st = (Statement*)(intptr_t)_a_899->items[_i_899];
+        do {
+    bodyC = spec_string_concat(spec_string_concat(bodyC, spec_string_intern("\t")), ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, st) /* inst:CodeGenerator:generateStatement */))));
+        } while (0);
+    } } });
+    bodyC = spec_string_concat(bodyC, ((String)spec_claim_pool((void*)(CodeGenerator_scopeReleases(self, anonFn->anonBody) /* inst:CodeGenerator:scopeReleases */))));
+    return (String)({ String _ret_val = bodyC; bodyC = NULL; _ret_val; });
+    if (bodyC) { spec_release((void*)bodyC); bodyC = NULL; }
+}
+
 String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loopVars, Expression* evalExpr, Expression* iterExpr) {
     (void)self;
     (void)loopVars;
@@ -65169,15 +65469,15 @@ String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loo
     SPEC_AUTO String savedRetLbl = spec_construct_string(self->inlineReturnLabel);
     SPEC_AUTO SpecMap* savedVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
     SPEC_AUTO SpecArray* vKeys = (SpecArray*)((spec_map_keys(self->localVars)));
-    ({ SpecArray* _a_898 = vKeys; if (_a_898) { for (size_t _i_898 = 0; _i_898 < _a_898->length; _i_898++) {
-        String k = (String)(intptr_t)_a_898->items[_i_898];
+    ({ SpecArray* _a_901 = vKeys; if (_a_901) { for (size_t _i_901 = 0; _i_901 < _a_901->length; _i_901++) {
+        String k = (String)(intptr_t)_a_901->items[_i_901];
         do {
     spec_map_set(savedVars, k, (String)spec_map_get(self->localVars, k, spec_string_intern("")));
         } while (0);
     } } });
     SPEC_AUTO String declsC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_900 = loopVars; if (_a_900) { for (size_t _i_900 = 0; _i_900 < _a_900->length; _i_900++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_900->items[_i_900];
+    ({ SpecArray* _a_903 = loopVars; if (_a_903) { for (size_t _i_903 = 0; _i_903 < _a_903->length; _i_903++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_903->items[_i_903];
         do {
     SPEC_AUTO String pTypeName = (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, p->paramType);
     spec_map_set(self->localVars, p->name, pTypeName);
@@ -65200,8 +65500,8 @@ String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loo
     SPEC_AUTO String evalBodyC = spec_construct_string(spec_string_intern(""));
     long long evalCount = spec_array_length(evalExpr->anonBody);
     long long evIdx = 0;
-    ({ SpecArray* _a_902 = evalExpr->anonBody; if (_a_902) { for (size_t _i_902 = 0; _i_902 < _a_902->length; _i_902++) {
-        Statement* s = (Statement*)(intptr_t)_a_902->items[_i_902];
+    ({ SpecArray* _a_905 = evalExpr->anonBody; if (_a_905) { for (size_t _i_905 = 0; _i_905 < _a_905->length; _i_905++) {
+        Statement* s = (Statement*)(intptr_t)_a_905->items[_i_905];
         do {
     evIdx = ((evIdx) + (1));
     if (((((((s->kind) == (StatementKind_EXPR))) && (((evIdx) == (evalCount))))) && ((!spec_string_equals(self->inlineReturnVar, spec_string_intern("")))))) {
@@ -65218,8 +65518,8 @@ String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loo
     spec_assign((void**)&self->inlineReturnVar, (void*)(itVar));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("break")));
     SPEC_AUTO String iterBodyC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_904 = iterExpr->anonBody; if (_a_904) { for (size_t _i_904 = 0; _i_904 < _a_904->length; _i_904++) {
-        Statement* s = (Statement*)(intptr_t)_a_904->items[_i_904];
+    ({ SpecArray* _a_907 = iterExpr->anonBody; if (_a_907) { for (size_t _i_907 = 0; _i_907 < _a_907->length; _i_907++) {
+        Statement* s = (Statement*)(intptr_t)_a_907->items[_i_907];
         do {
     iterBodyC = spec_string_concat(iterBodyC, ((String)spec_claim_pool((void*)(CodeGenerator_generateStatement(self, s) /* inst:CodeGenerator:generateStatement */))));
         } while (0);
@@ -65228,8 +65528,8 @@ String CodeGenerator_generateInlineWhileLoop(CodeGenerator* self, SpecArray* loo
     spec_assign((void**)&self->inlineReturnVar, (void*)(savedRetVar));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(savedRetLbl));
     SPEC_AUTO String loopReleasesC = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_906 = loopVars; if (_a_906) { for (size_t _i_906 = 0; _i_906 < _a_906->length; _i_906++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_906->items[_i_906];
+    ({ SpecArray* _a_909 = loopVars; if (_a_909) { for (size_t _i_909 = 0; _i_909 < _a_909->length; _i_909++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_909->items[_i_909];
         do {
     SPEC_AUTO String pTypeName = (((String (*)(CodeGenerator*, Type*))self->_vtable[138]))((CodeGenerator*)self, p->paramType);
     if (CodeGenerator_isArcType(self, pTypeName) /* inst:CodeGenerator:isArcType */) {
@@ -65606,11 +65906,11 @@ void DeclarationGenerator_collectStructFields(DeclarationGenerator* self, ClassI
     (void)c;
     (void)allClasses;
     (void)acc;
-    ({ SpecArray* _a_910 = c->baseClasses; if (_a_910) { for (size_t _i_910 = 0; _i_910 < _a_910->length; _i_910++) {
-        String baseName = (String)(intptr_t)_a_910->items[_i_910];
+    ({ SpecArray* _a_913 = c->baseClasses; if (_a_913) { for (size_t _i_913 = 0; _i_913 < _a_913->length; _i_913++) {
+        String baseName = (String)(intptr_t)_a_913->items[_i_913];
         do {
-    ({ SpecArray* _a_912 = allClasses; if (_a_912) { for (size_t _i_912 = 0; _i_912 < _a_912->length; _i_912++) {
-        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_912->items[_i_912];
+    ({ SpecArray* _a_915 = allClasses; if (_a_915) { for (size_t _i_915 = 0; _i_915 < _a_915->length; _i_915++) {
+        ClassInfo* cand = (ClassInfo*)(intptr_t)_a_915->items[_i_915];
         do {
     if (spec_string_equals(cand->name, baseName)) {
         DeclarationGenerator_collectStructFields(self, cand, allClasses, acc) /* inst:DeclarationGenerator:collectStructFields */;
@@ -65619,8 +65919,8 @@ void DeclarationGenerator_collectStructFields(DeclarationGenerator* self, ClassI
     } } });
         } while (0);
     } } });
-    ({ SpecArray* _a_914 = c->members; if (_a_914) { for (size_t _i_914 = 0; _i_914 < _a_914->length; _i_914++) {
-        Member* m = (Member*)(intptr_t)_a_914->items[_i_914];
+    ({ SpecArray* _a_917 = c->members; if (_a_917) { for (size_t _i_917 = 0; _i_917 < _a_917->length; _i_917++) {
+        Member* m = (Member*)(intptr_t)_a_917->items[_i_917];
         do {
     if (((m->kind) == (MemberKind_FIELD))) {
         if ((((((((!spec_string_equals(m->name, ((String)spec_claim_pool((void*)(MetadataField_value(MetadataField_USING))))))) && ((!spec_string_equals(m->name, ((String)spec_claim_pool((void*)(MetadataField_value(MetadataField_NAMESPACE))))))))) && ((!spec_string_equals(m->name, ((String)spec_claim_pool((void*)(MetadataField_value(MetadataField_GROUP))))))))) && ((!spec_string_equals(m->name, ((String)spec_claim_pool((void*)(MetadataField_value(MetadataField_CASTABLE))))))))) {
@@ -65651,14 +65951,14 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
     (void)self;
     (void)classes;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern("/* Enum Definitions */\n"));
-    ({ SpecArray* _a_932 = classes; if (_a_932) { for (size_t _i_932 = 0; _i_932 < _a_932->length; _i_932++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_932->items[_i_932];
+    ({ SpecArray* _a_935 = classes; if (_a_935) { for (size_t _i_935 = 0; _i_935 < _a_935->length; _i_935++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_935->items[_i_935];
         do {
     if (spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
         SPEC_AUTO String name = spec_construct_string(c->name);
         SPEC_AUTO SpecArray* variants = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ SpecArray* _a_934 = c->members; if (_a_934) { for (size_t _i_934 = 0; _i_934 < _a_934->length; _i_934++) {
-        Member* m = (Member*)(intptr_t)_a_934->items[_i_934];
+        ({ SpecArray* _a_937 = c->members; if (_a_937) { for (size_t _i_937 = 0; _i_937 < _a_937->length; _i_937++) {
+        Member* m = (Member*)(intptr_t)_a_937->items[_i_937];
         do {
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
         spec_array_add_object(variants, (void*)(m));
@@ -65668,8 +65968,8 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
         if (spec_map_has(self->allTaggedEnums, name)) {
         out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
         long long tIdx = 0;
-        ({ SpecArray* _a_936 = variants; if (_a_936) { for (size_t _i_936 = 0; _i_936 < _a_936->length; _i_936++) {
-        Member* m = (Member*)(intptr_t)_a_936->items[_i_936];
+        ({ SpecArray* _a_939 = variants; if (_a_939) { for (size_t _i_939 = 0; _i_939 < _a_939->length; _i_939++) {
+        Member* m = (Member*)(intptr_t)_a_939->items[_i_939];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_TAG_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n"));
     tIdx = ((tIdx) + (1));
@@ -65680,8 +65980,8 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
     } else {
         out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
         long long idx = 0;
-        ({ SpecArray* _a_938 = variants; if (_a_938) { for (size_t _i_938 = 0; _i_938 < _a_938->length; _i_938++) {
-        Member* m = (Member*)(intptr_t)_a_938->items[_i_938];
+        ({ SpecArray* _a_941 = variants; if (_a_941) { for (size_t _i_941 = 0; _i_941 < _a_941->length; _i_941++) {
+        Member* m = (Member*)(intptr_t)_a_941->items[_i_941];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n"));
     idx = ((idx) + (1));
@@ -65689,16 +65989,16 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
     } } });
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("} ")), name), spec_string_intern(";\n\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static __attribute__((unused)) const char* ")), name), spec_string_intern("_names[] = {\n"));
-        ({ SpecArray* _a_940 = variants; if (_a_940) { for (size_t _i_940 = 0; _i_940 < _a_940->length; _i_940++) {
-        Member* m = (Member*)(intptr_t)_a_940->items[_i_940];
+        ({ SpecArray* _a_943 = variants; if (_a_943) { for (size_t _i_943 = 0; _i_943 < _a_943->length; _i_943++) {
+        Member* m = (Member*)(intptr_t)_a_943->items[_i_943];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    \"")), m->name), spec_string_intern("\",\n"));
         } while (0);
     } } });
         out = spec_string_concat(out, spec_string_intern("};\n\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static const ")), name), spec_string_intern(" ")), name), spec_string_intern("_all_values[] = {\n"));
-        ({ SpecArray* _a_942 = variants; if (_a_942) { for (size_t _i_942 = 0; _i_942 < _a_942->length; _i_942++) {
-        Member* m = (Member*)(intptr_t)_a_942->items[_i_942];
+        ({ SpecArray* _a_945 = variants; if (_a_945) { for (size_t _i_945 = 0; _i_945 < _a_945->length; _i_945++) {
+        Member* m = (Member*)(intptr_t)_a_945->items[_i_945];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(",\n"));
         } while (0);
@@ -65707,8 +66007,8 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline String ")), name), spec_string_intern("_name(")), name), spec_string_intern(" self) {\n"));
         out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
         out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
-        ({ SpecArray* _a_944 = variants; if (_a_944) { for (size_t _i_944 = 0; _i_944 < _a_944->length; _i_944++) {
-        Member* m = (Member*)(intptr_t)_a_944->items[_i_944];
+        ({ SpecArray* _a_947 = variants; if (_a_947) { for (size_t _i_947 = 0; _i_947 < _a_947->length; _i_947++) {
+        Member* m = (Member*)(intptr_t)_a_947->items[_i_947];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n"));
         } while (0);
@@ -65716,8 +66016,8 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
         out = spec_string_concat(out, spec_string_intern("        default: return spec_string_intern(\"UNKNOWN\");\n"));
         out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
         bool isStrBacked = false;
-        ({ SpecArray* _a_946 = variants; if (_a_946) { for (size_t _i_946 = 0; _i_946 < _a_946->length; _i_946++) {
-        Member* m = (Member*)(intptr_t)_a_946->items[_i_946];
+        ({ SpecArray* _a_949 = variants; if (_a_949) { for (size_t _i_949 = 0; _i_949 < _a_949->length; _i_949++) {
+        Member* m = (Member*)(intptr_t)_a_949->items[_i_949];
         do {
     if (spec_string_equals(m->memberType->name, ((String)spec_claim_pool((void*)(Primitive_value(Primitive_STRING)))))) {
         isStrBacked = true;
@@ -65733,8 +66033,8 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
         out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
         out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
         long long ordIdx = 0;
-        ({ SpecArray* _a_948 = variants; if (_a_948) { for (size_t _i_948 = 0; _i_948 < _a_948->length; _i_948++) {
-        Member* m = (Member*)(intptr_t)_a_948->items[_i_948];
+        ({ SpecArray* _a_951 = variants; if (_a_951) { for (size_t _i_951 = 0; _i_951 < _a_951->length; _i_951++) {
+        Member* m = (Member*)(intptr_t)_a_951->items[_i_951];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n"));
     ordIdx = ((ordIdx) + (1));
@@ -65763,8 +66063,8 @@ String DeclarationGenerator_emitStringBacking(DeclarationGenerator* self, String
     (void)cls;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
     SPEC_AUTO SpecArray* variants = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_950 = cls->members; if (_a_950) { for (size_t _i_950 = 0; _i_950 < _a_950->length; _i_950++) {
-        Member* m = (Member*)(intptr_t)_a_950->items[_i_950];
+    ({ SpecArray* _a_953 = cls->members; if (_a_953) { for (size_t _i_953 = 0; _i_953 < _a_953->length; _i_953++) {
+        Member* m = (Member*)(intptr_t)_a_953->items[_i_953];
         do {
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
         spec_array_add_object(variants, (void*)(m));
@@ -65774,8 +66074,8 @@ String DeclarationGenerator_emitStringBacking(DeclarationGenerator* self, String
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline String ")), name), spec_string_intern("_value(")), name), spec_string_intern(" self) {\n"));
     out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
     out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
-    ({ SpecArray* _a_952 = variants; if (_a_952) { for (size_t _i_952 = 0; _i_952 < _a_952->length; _i_952++) {
-        Member* m = (Member*)(intptr_t)_a_952->items[_i_952];
+    ({ SpecArray* _a_955 = variants; if (_a_955) { for (size_t _i_955 = 0; _i_955 < _a_955->length; _i_955++) {
+        Member* m = (Member*)(intptr_t)_a_955->items[_i_955];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), ((String)spec_claim_pool((void*)(DeclarationGenerator_variantTag(self, m) /* inst:DeclarationGenerator:variantTag */)))), spec_string_intern("\");")), spec_string_intern("\n"));
         } while (0);
@@ -65784,8 +66084,8 @@ String DeclarationGenerator_emitStringBacking(DeclarationGenerator* self, String
     out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
     SPEC_AUTO String emptyVariant = spec_construct_string(spec_string_intern(""));
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline ")), name), spec_string_intern(" ")), name), spec_string_intern("_of(String v) {")), spec_string_intern("\n"));
-    ({ SpecArray* _a_954 = variants; if (_a_954) { for (size_t _i_954 = 0; _i_954 < _a_954->length; _i_954++) {
-        Member* m = (Member*)(intptr_t)_a_954->items[_i_954];
+    ({ SpecArray* _a_957 = variants; if (_a_957) { for (size_t _i_957 = 0; _i_957 < _a_957->length; _i_957++) {
+        Member* m = (Member*)(intptr_t)_a_957->items[_i_957];
         do {
     SPEC_AUTO String valStr = DeclarationGenerator_variantTag(self, m) /* inst:DeclarationGenerator:variantTag */;
     if (spec_string_equals(valStr, spec_string_intern(""))) {
@@ -65813,8 +66113,8 @@ String DeclarationGenerator_emitIntBacking(DeclarationGenerator* self, String na
     (void)cls;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
     SPEC_AUTO SpecArray* variants = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_956 = cls->members; if (_a_956) { for (size_t _i_956 = 0; _i_956 < _a_956->length; _i_956++) {
-        Member* m = (Member*)(intptr_t)_a_956->items[_i_956];
+    ({ SpecArray* _a_959 = cls->members; if (_a_959) { for (size_t _i_959 = 0; _i_959 < _a_959->length; _i_959++) {
+        Member* m = (Member*)(intptr_t)_a_959->items[_i_959];
         do {
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
         spec_array_add_object(variants, (void*)(m));
@@ -65825,8 +66125,8 @@ String DeclarationGenerator_emitIntBacking(DeclarationGenerator* self, String na
     out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
     out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
     long long vIdx = 0;
-    ({ SpecArray* _a_958 = variants; if (_a_958) { for (size_t _i_958 = 0; _i_958 < _a_958->length; _i_958++) {
-        Member* m = (Member*)(intptr_t)_a_958->items[_i_958];
+    ({ SpecArray* _a_961 = variants; if (_a_961) { for (size_t _i_961 = 0; _i_961 < _a_961->length; _i_961++) {
+        Member* m = (Member*)(intptr_t)_a_961->items[_i_961];
         do {
     SPEC_AUTO String valNum = spec_string_concat((void*)spec_retain((void*)(spec_string_intern(""))), spec_to_string_int(vIdx));
     if (m->hasInit) {
@@ -65869,8 +66169,8 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
     (void)self;
     (void)classes;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern("/* Forward Declarations */\n"));
-    ({ SpecArray* _a_960 = classes; if (_a_960) { for (size_t _i_960 = 0; _i_960 < _a_960->length; _i_960++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_960->items[_i_960];
+    ({ SpecArray* _a_963 = classes; if (_a_963) { for (size_t _i_963 = 0; _i_963 < _a_963->length; _i_963++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_963->items[_i_963];
         do {
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), c->name), spec_string_intern(" ")), c->name), spec_string_intern(";\n"));
@@ -65883,13 +66183,13 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
         } while (0);
     } } });
     out = spec_string_concat(out, spec_string_intern("\n"));
-    ({ SpecArray* _a_972 = classes; if (_a_972) { for (size_t _i_972 = 0; _i_972 < _a_972->length; _i_972++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_972->items[_i_972];
+    ({ SpecArray* _a_975 = classes; if (_a_975) { for (size_t _i_975 = 0; _i_975 < _a_975->length; _i_975++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_975->items[_i_975];
         do {
     if (((EmissionPolicy_emitsPrototypes(self->policy, c) /* inst:EmissionPolicy:emitsPrototypes */) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
         SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
-        ({ SpecArray* _a_978 = c->members; if (_a_978) { for (size_t _i_978 = 0; _i_978 < _a_978->length; _i_978++) {
-        Member* m = (Member*)(intptr_t)_a_978->items[_i_978];
+        ({ SpecArray* _a_981 = c->members; if (_a_981) { for (size_t _i_981 = 0; _i_981 < _a_981->length; _i_981++) {
+        Member* m = (Member*)(intptr_t)_a_981->items[_i_981];
         do {
     if (((m->kind) == (MemberKind_METHOD))) {
         if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) || (((spec_array_length(m->body)) > (0))))) {
@@ -65901,8 +66201,8 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
     }
         long long ovIdx = 0;
         long long ovHit = 0;
-        ({ SpecArray* _a_980 = c->members; if (_a_980) { for (size_t _i_980 = 0; _i_980 < _a_980->length; _i_980++) {
-        Member* g = (Member*)(intptr_t)_a_980->items[_i_980];
+        ({ SpecArray* _a_983 = c->members; if (_a_983) { for (size_t _i_983 = 0; _i_983 < _a_983->length; _i_983++) {
+        Member* g = (Member*)(intptr_t)_a_983->items[_i_983];
         do {
     if (((((g->kind) == (MemberKind_METHOD))) && (spec_string_equals(g->name, m->name)))) {
         if (((g) == (m))) {
@@ -65917,8 +66217,8 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
         symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
     }
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, c->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self"));
-        ({ SpecArray* _a_982 = m->params; if (_a_982) { for (size_t _i_982 = 0; _i_982 < _a_982->length; _i_982++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_982->items[_i_982];
+        ({ SpecArray* _a_985 = m->params; if (_a_985) { for (size_t _i_985 = 0; _i_985 < _a_985->length; _i_985++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_985->items[_i_985];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */))));
         } while (0);
@@ -65944,8 +66244,8 @@ String DeclarationGenerator_generateStructs(DeclarationGenerator* self, SpecArra
     (void)self;
     (void)classes;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern("/* Struct Layouts */\n"));
-    ({ SpecArray* _a_986 = classes; if (_a_986) { for (size_t _i_986 = 0; _i_986 < _a_986->length; _i_986++) {
-        ClassInfo* c = (ClassInfo*)(intptr_t)_a_986->items[_i_986];
+    ({ SpecArray* _a_989 = classes; if (_a_989) { for (size_t _i_989 = 0; _i_989 < _a_989->length; _i_989++) {
+        ClassInfo* c = (ClassInfo*)(intptr_t)_a_989->items[_i_989];
         do {
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[198]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, ((String)spec_claim_pool((void*)(WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)))))))) {
         SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
@@ -65954,8 +66254,8 @@ String DeclarationGenerator_generateStructs(DeclarationGenerator* self, SpecArra
         out = spec_string_concat(out, spec_string_intern("    void** _vtable;\n"));
         SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
         DeclarationGenerator_collectStructFields(self, c, classes, allFields) /* inst:DeclarationGenerator:collectStructFields */;
-        ({ SpecArray* _a_988 = allFields; if (_a_988) { for (size_t _i_988 = 0; _i_988 < _a_988->length; _i_988++) {
-        Member* m = (Member*)(intptr_t)_a_988->items[_i_988];
+        ({ SpecArray* _a_991 = allFields; if (_a_991) { for (size_t _i_991 = 0; _i_991 < _a_991->length; _i_991++) {
+        Member* m = (Member*)(intptr_t)_a_991->items[_i_991];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
         } while (0);
@@ -65980,8 +66280,8 @@ String DeclarationGenerator_emitTaggedEnumStruct(DeclarationGenerator* self, Str
     (void)cls;
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
     SPEC_AUTO SpecArray* variants = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-    ({ SpecArray* _a_990 = cls->members; if (_a_990) { for (size_t _i_990 = 0; _i_990 < _a_990->length; _i_990++) {
-        Member* m = (Member*)(intptr_t)_a_990->items[_i_990];
+    ({ SpecArray* _a_993 = cls->members; if (_a_993) { for (size_t _i_993 = 0; _i_993 < _a_993->length; _i_993++) {
+        Member* m = (Member*)(intptr_t)_a_993->items[_i_993];
         do {
     if ((!(((m->hasInit) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))))) {
         spec_array_add_object(variants, (void*)(m));
@@ -65991,12 +66291,12 @@ String DeclarationGenerator_emitTaggedEnumStruct(DeclarationGenerator* self, Str
     out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("struct ")), name), spec_string_intern(" {\n"));
     out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_Tag _tag;\n"));
     out = spec_string_concat(out, spec_string_intern("    const char* _variant_name;\n"));
-    ({ SpecArray* _a_994 = variants; if (_a_994) { for (size_t _i_994 = 0; _i_994 < _a_994->length; _i_994++) {
-        Member* m = (Member*)(intptr_t)_a_994->items[_i_994];
+    ({ SpecArray* _a_997 = variants; if (_a_997) { for (size_t _i_997 = 0; _i_997 < _a_997->length; _i_997++) {
+        Member* m = (Member*)(intptr_t)_a_997->items[_i_997];
         do {
     SPEC_AUTO String vName = CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */;
-    ({ SpecArray* _a_996 = m->params; if (_a_996) { for (size_t _i_996 = 0; _i_996 < _a_996->length; _i_996++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_996->items[_i_996];
+    ({ SpecArray* _a_999 = m->params; if (_a_999) { for (size_t _i_999 = 0; _i_999 < _a_999->length; _i_999++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_999->items[_i_999];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), ((String)spec_claim_pool((void*)(({ CBackendUtils* _recv = (CBackendUtils*)(self->utils); (((String (*)(CBackendUtils*, String))_recv->_vtable[272]))((CBackendUtils*)_recv, p->paramType->name); }))))), spec_string_intern(" ")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
         } while (0);
@@ -66005,8 +66305,8 @@ String DeclarationGenerator_emitTaggedEnumStruct(DeclarationGenerator* self, Str
         } while (0);
     } } });
     out = spec_string_concat(out, spec_string_intern("};\n\n"));
-    ({ SpecArray* _a_1002 = variants; if (_a_1002) { for (size_t _i_1002 = 0; _i_1002 < _a_1002->length; _i_1002++) {
-        Member* m = (Member*)(intptr_t)_a_1002->items[_i_1002];
+    ({ SpecArray* _a_1005 = variants; if (_a_1005) { for (size_t _i_1005 = 0; _i_1005 < _a_1005->length; _i_1005++) {
+        Member* m = (Member*)(intptr_t)_a_1005->items[_i_1005];
         do {
     SPEC_AUTO String vName = CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */;
     if (((spec_array_length(m->params)) == (0))) {
@@ -66018,8 +66318,8 @@ String DeclarationGenerator_emitTaggedEnumStruct(DeclarationGenerator* self, Str
     } else {
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline ")), name), spec_string_intern("* ")), name), spec_string_intern("_")), vName), spec_string_intern("("));
         bool firstP = true;
-        ({ SpecArray* _a_1004 = m->params; if (_a_1004) { for (size_t _i_1004 = 0; _i_1004 < _a_1004->length; _i_1004++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_1004->items[_i_1004];
+        ({ SpecArray* _a_1007 = m->params; if (_a_1007) { for (size_t _i_1007 = 0; _i_1007 < _a_1007->length; _i_1007++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_1007->items[_i_1007];
         do {
     if ((!(firstP))) {
         out = spec_string_concat(out, spec_string_intern(", "));
@@ -66032,8 +66332,8 @@ String DeclarationGenerator_emitTaggedEnumStruct(DeclarationGenerator* self, Str
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("* _e = (")), name), spec_string_intern("*)spec_alloc(sizeof(")), name), spec_string_intern("), NULL);\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    _e->_tag = ")), name), spec_string_intern("_TAG_")), vName), spec_string_intern(";\n"));
         out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    _e->_variant_name = \"")), m->name), spec_string_intern("\";\n"));
-        ({ SpecArray* _a_1006 = m->params; if (_a_1006) { for (size_t _i_1006 = 0; _i_1006 < _a_1006->length; _i_1006++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_1006->items[_i_1006];
+        ({ SpecArray* _a_1009 = m->params; if (_a_1009) { for (size_t _i_1009 = 0; _i_1009 < _a_1009->length; _i_1009++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_1009->items[_i_1009];
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    _e->")), vName), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n"));
         } while (0);
@@ -66144,8 +66444,8 @@ String BuiltinCallGenerator_bindFloorCall(BuiltinCallGenerator* self, String cls
     }
     SPEC_AUTO Member* foundM = 0;
     bool hasM = false;
-    ({ SpecArray* _a_1008 = fCls->members; if (_a_1008) { for (size_t _i_1008 = 0; _i_1008 < _a_1008->length; _i_1008++) {
-        Member* m = (Member*)(intptr_t)_a_1008->items[_i_1008];
+    ({ SpecArray* _a_1011 = fCls->members; if (_a_1011) { for (size_t _i_1011 = 0; _i_1011 < _a_1011->length; _i_1011++) {
+        Member* m = (Member*)(intptr_t)_a_1011->items[_i_1011];
         do {
     if ((((((!(hasM))) && (((m->kind) == (MemberKind_METHOD))))) && (spec_string_equals(m->name, expr->methodName)))) {
         hasM = true;
@@ -66159,8 +66459,8 @@ String BuiltinCallGenerator_bindFloorCall(BuiltinCallGenerator* self, String cls
     SPEC_AUTO SpecArray* argList = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     bool argsOk = true;
     long long posIdx = 0;
-    ({ SpecArray* _a_1012 = foundM->params; if (_a_1012) { for (size_t _i_1012 = 0; _i_1012 < _a_1012->length; _i_1012++) {
-        Parameter* p = (Parameter*)(intptr_t)_a_1012->items[_i_1012];
+    ({ SpecArray* _a_1015 = foundM->params; if (_a_1015) { for (size_t _i_1015 = 0; _i_1015 < _a_1015->length; _i_1015++) {
+        Parameter* p = (Parameter*)(intptr_t)_a_1015->items[_i_1015];
         do {
     if (argsOk) {
         bool got = false;
@@ -66171,8 +66471,8 @@ String BuiltinCallGenerator_bindFloorCall(BuiltinCallGenerator* self, String cls
         got = true;
     }
         if ((!(got))) {
-        ({ SpecArray* _a_1014 = expr->methodArgs; if (_a_1014) { for (size_t _i_1014 = 0; _i_1014 < _a_1014->length; _i_1014++) {
-        NamedArg* a = (NamedArg*)(intptr_t)_a_1014->items[_i_1014];
+        ({ SpecArray* _a_1017 = expr->methodArgs; if (_a_1017) { for (size_t _i_1017 = 0; _i_1017 < _a_1017->length; _i_1017++) {
+        NamedArg* a = (NamedArg*)(intptr_t)_a_1017->items[_i_1017];
         do {
     if ((((!(got))) && (spec_string_equals(a->name, p->name)))) {
         got = true;
@@ -66196,8 +66496,8 @@ String BuiltinCallGenerator_bindFloorCall(BuiltinCallGenerator* self, String cls
         return (String)spec_retain((void*)(spec_string_intern("")));
     }
     SPEC_AUTO String argCs = spec_construct_string(spec_string_intern(""));
-    ({ SpecArray* _a_1016 = argList; if (_a_1016) { for (size_t _i_1016 = 0; _i_1016 < _a_1016->length; _i_1016++) {
-        String a = (String)(intptr_t)_a_1016->items[_i_1016];
+    ({ SpecArray* _a_1019 = argList; if (_a_1019) { for (size_t _i_1019 = 0; _i_1019 < _a_1019->length; _i_1019++) {
+        String a = (String)(intptr_t)_a_1019->items[_i_1019];
         do {
     if (spec_string_equals(argCs, spec_string_intern(""))) {
         spec_assign((void**)&argCs, (void*)(a));
@@ -66252,8 +66552,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     bool isReflTarget = spec_string_equals(targetC, spec_string_intern("Reflection"));
     if ((((!(isReflTarget))) && (((expr->methodTarget->kind) == (ExpressionKind_PATH))))) {
         SPEC_AUTO String rJoined = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_1018 = expr->methodTarget->pathSegments; if (_a_1018) { for (size_t _i_1018 = 0; _i_1018 < _a_1018->length; _i_1018++) {
-        String seg = (String)(intptr_t)_a_1018->items[_i_1018];
+        ({ SpecArray* _a_1021 = expr->methodTarget->pathSegments; if (_a_1021) { for (size_t _i_1021 = 0; _i_1021 < _a_1021->length; _i_1021++) {
+        String seg = (String)(intptr_t)_a_1021->items[_i_1021];
         do {
     if (spec_string_equals(rJoined, spec_string_intern(""))) {
         spec_assign((void**)&rJoined, (void*)(seg));
@@ -66283,8 +66583,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO SpecArray* qSegs = (SpecArray*)spec_retain((void*)(expr->methodTarget->pathSegments));
         spec_assign((void**)&qCls, (void*)(spec_array_get(qSegs, ((spec_array_length(qSegs)) - (1)))));
         SPEC_AUTO String qJoined = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_1020 = qSegs; if (_a_1020) { for (size_t _i_1020 = 0; _i_1020 < _a_1020->length; _i_1020++) {
-        String seg = (String)(intptr_t)_a_1020->items[_i_1020];
+        ({ SpecArray* _a_1023 = qSegs; if (_a_1023) { for (size_t _i_1023 = 0; _i_1023 < _a_1023->length; _i_1023++) {
+        String seg = (String)(intptr_t)_a_1023->items[_i_1023];
         do {
     if (spec_string_equals(qJoined, spec_string_intern(""))) {
         spec_assign((void**)&qJoined, (void*)(seg));
@@ -66330,8 +66630,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     if (((spec_string_equals(expr->methodName, spec_string_intern("toBase"))) && (spec_string_equals(targetType, ((String)spec_claim_pool((void*)(Primitive_value(Primitive_INT)))))))) {
         SPEC_AUTO String baseC = spec_construct_string(spec_string_intern("10"));
         SPEC_AUTO String digitsC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1022 = expr->methodArgs; if (_a_1022) { for (size_t _i_1022 = 0; _i_1022 < _a_1022->length; _i_1022++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1022->items[_i_1022];
+        ({ SpecArray* _a_1025 = expr->methodArgs; if (_a_1025) { for (size_t _i_1025 = 0; _i_1025 < _a_1025->length; _i_1025++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1025->items[_i_1025];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("base"))) {
         spec_assign((void**)&baseC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66349,8 +66649,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String threadsC = spec_construct_string(spec_string_intern("1"));
         SPEC_AUTO String iterC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String workerC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1024 = expr->methodArgs; if (_a_1024) { for (size_t _i_1024 = 0; _i_1024 < _a_1024->length; _i_1024++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1024->items[_i_1024];
+        ({ SpecArray* _a_1027 = expr->methodArgs; if (_a_1027) { for (size_t _i_1027 = 0; _i_1027 < _a_1027->length; _i_1027++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1027->items[_i_1027];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("threads"))) {
         spec_assign((void**)&threadsC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66432,8 +66732,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         bool hasVars = false;
         bool hasEval = false;
         bool hasIter = false;
-        ({ SpecArray* _a_1026 = expr->methodArgs; if (_a_1026) { for (size_t _i_1026 = 0; _i_1026 < _a_1026->length; _i_1026++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1026->items[_i_1026];
+        ({ SpecArray* _a_1029 = expr->methodArgs; if (_a_1029) { for (size_t _i_1029 = 0; _i_1029 < _a_1029->length; _i_1029++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1029->items[_i_1029];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("evaluate"))) {
         spec_assign((void**)&evalExpr, (void*)(arg->value));
@@ -66529,14 +66829,14 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         if (spec_string_equals(expr->methodName, spec_string_intern("execute"))) {
         SPEC_AUTO String cmdC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO SpecArray* argList = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ SpecArray* _a_1028 = expr->methodArgs; if (_a_1028) { for (size_t _i_1028 = 0; _i_1028 < _a_1028->length; _i_1028++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1028->items[_i_1028];
+        ({ SpecArray* _a_1031 = expr->methodArgs; if (_a_1031) { for (size_t _i_1031 = 0; _i_1031 < _a_1031->length; _i_1031++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1031->items[_i_1031];
         do {
     spec_array_add_object(argList, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
         } while (0);
     } } });
-        ({ SpecArray* _a_1030 = argList; if (_a_1030) { for (size_t _i_1030 = 0; _i_1030 < _a_1030->length; _i_1030++) {
-        String a = (String)(intptr_t)_a_1030->items[_i_1030];
+        ({ SpecArray* _a_1033 = argList; if (_a_1033) { for (size_t _i_1033 = 0; _i_1033 < _a_1033->length; _i_1033++) {
+        String a = (String)(intptr_t)_a_1033->items[_i_1033];
         do {
     if (spec_string_equals(cmdC, spec_string_intern("0"))) {
         spec_assign((void**)&cmdC, (void*)(a));
@@ -66577,8 +66877,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     }
         if (((((spec_string_equals(expr->methodName, spec_string_intern("atomicAdd"))) || (spec_string_equals(expr->methodName, spec_string_intern("atomicPut"))))) || (spec_string_equals(expr->methodName, spec_string_intern("atomicGet"))))) {
         SPEC_AUTO String argsCs = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_1032 = expr->methodArgs; if (_a_1032) { for (size_t _i_1032 = 0; _i_1032 < _a_1032->length; _i_1032++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1032->items[_i_1032];
+        ({ SpecArray* _a_1035 = expr->methodArgs; if (_a_1035) { for (size_t _i_1035 = 0; _i_1035 < _a_1035->length; _i_1035++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1035->items[_i_1035];
         do {
     if ((!spec_string_equals(argsCs, spec_string_intern("")))) {
         argsCs = spec_string_concat(argsCs, spec_string_intern(", "));
@@ -66611,8 +66911,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
         SPEC_AUTO String onSuccC = spec_construct_string(spec_string_intern("NULL"));
         SPEC_AUTO String onErrC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1034 = expr->methodArgs; if (_a_1034) { for (size_t _i_1034 = 0; _i_1034 < _a_1034->length; _i_1034++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1034->items[_i_1034];
+        ({ SpecArray* _a_1037 = expr->methodArgs; if (_a_1037) { for (size_t _i_1037 = 0; _i_1037 < _a_1037->length; _i_1037++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1037->items[_i_1037];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("path"))) {
         spec_assign((void**)&pathC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66639,8 +66939,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
         SPEC_AUTO String onSuccC = spec_construct_string(spec_string_intern("NULL"));
         SPEC_AUTO String onErrC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1036 = expr->methodArgs; if (_a_1036) { for (size_t _i_1036 = 0; _i_1036 < _a_1036->length; _i_1036++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1036->items[_i_1036];
+        ({ SpecArray* _a_1039 = expr->methodArgs; if (_a_1039) { for (size_t _i_1039 = 0; _i_1039 < _a_1039->length; _i_1039++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1039->items[_i_1039];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("path"))) {
         spec_assign((void**)&pathC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66667,8 +66967,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String contentC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
         SPEC_AUTO String onSuccC = spec_construct_string(spec_string_intern("NULL"));
         SPEC_AUTO String onErrC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1038 = expr->methodArgs; if (_a_1038) { for (size_t _i_1038 = 0; _i_1038 < _a_1038->length; _i_1038++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1038->items[_i_1038];
+        ({ SpecArray* _a_1041 = expr->methodArgs; if (_a_1041) { for (size_t _i_1041 = 0; _i_1041 < _a_1041->length; _i_1041++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1041->items[_i_1041];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("path"))) {
         spec_assign((void**)&pathC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66695,8 +66995,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String contentC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
         SPEC_AUTO String onSuccC = spec_construct_string(spec_string_intern("NULL"));
         SPEC_AUTO String onErrC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1040 = expr->methodArgs; if (_a_1040) { for (size_t _i_1040 = 0; _i_1040 < _a_1040->length; _i_1040++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1040->items[_i_1040];
+        ({ SpecArray* _a_1043 = expr->methodArgs; if (_a_1043) { for (size_t _i_1043 = 0; _i_1043 < _a_1043->length; _i_1043++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1043->items[_i_1043];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("path"))) {
         spec_assign((void**)&pathC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66791,8 +67091,8 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
         SPEC_AUTO String vC = spec_construct_string(spec_string_intern("0.0"));
         SPEC_AUTO String loC = spec_construct_string(spec_string_intern("0.0"));
         SPEC_AUTO String hiC = spec_construct_string(spec_string_intern("1.0"));
-        ({ SpecArray* _a_1042 = expr->methodArgs; if (_a_1042) { for (size_t _i_1042 = 0; _i_1042 < _a_1042->length; _i_1042++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1042->items[_i_1042];
+        ({ SpecArray* _a_1045 = expr->methodArgs; if (_a_1045) { for (size_t _i_1045 = 0; _i_1045 < _a_1045->length; _i_1045++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1045->items[_i_1045];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("value"))) {
         spec_assign((void**)&vC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66884,8 +67184,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     if (String_startsWith(targetType, spec_string_intern("Array"))) {
         if (spec_string_equals(m, spec_string_intern("get"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1044 = expr->methodArgs; if (_a_1044) { for (size_t _i_1044 = 0; _i_1044 < _a_1044->length; _i_1044++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1044->items[_i_1044];
+        ({ SpecArray* _a_1047 = expr->methodArgs; if (_a_1047) { for (size_t _i_1047 = 0; _i_1047 < _a_1047->length; _i_1047++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1047->items[_i_1047];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66898,8 +67198,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("set"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String itemC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1046 = expr->methodArgs; if (_a_1046) { for (size_t _i_1046 = 0; _i_1046 < _a_1046->length; _i_1046++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1046->items[_i_1046];
+        ({ SpecArray* _a_1049 = expr->methodArgs; if (_a_1049) { for (size_t _i_1049 = 0; _i_1049 < _a_1049->length; _i_1049++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1049->items[_i_1049];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66943,8 +67243,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         if (spec_string_equals(m, spec_string_intern("pop"))) {
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1048 = expr->methodArgs; if (_a_1048) { for (size_t _i_1048 = 0; _i_1048 < _a_1048->length; _i_1048++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1048->items[_i_1048];
+        ({ SpecArray* _a_1051 = expr->methodArgs; if (_a_1051) { for (size_t _i_1051 = 0; _i_1051 < _a_1051->length; _i_1051++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1051->items[_i_1051];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("default"))) {
         SPEC_AUTO String rawDefC = CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */;
@@ -66963,8 +67263,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("removeAt"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("NULL"));
-        ({ SpecArray* _a_1050 = expr->methodArgs; if (_a_1050) { for (size_t _i_1050 = 0; _i_1050 < _a_1050->length; _i_1050++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1050->items[_i_1050];
+        ({ SpecArray* _a_1053 = expr->methodArgs; if (_a_1053) { for (size_t _i_1053 = 0; _i_1053 < _a_1053->length; _i_1053++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1053->items[_i_1053];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -66984,8 +67284,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("slice"))) {
         SPEC_AUTO String startC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String endC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1052 = expr->methodArgs; if (_a_1052) { for (size_t _i_1052 = 0; _i_1052 < _a_1052->length; _i_1052++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1052->items[_i_1052];
+        ({ SpecArray* _a_1055 = expr->methodArgs; if (_a_1055) { for (size_t _i_1055 = 0; _i_1055 < _a_1055->length; _i_1055++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1055->items[_i_1055];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("start"))) {
         spec_assign((void**)&startC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67005,8 +67305,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("indexOf"))) {
         SPEC_AUTO String searchC = spec_construct_string(spec_string_intern("\"\""));
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("-1"));
-        ({ SpecArray* _a_1054 = expr->methodArgs; if (_a_1054) { for (size_t _i_1054 = 0; _i_1054 < _a_1054->length; _i_1054++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1054->items[_i_1054];
+        ({ SpecArray* _a_1057 = expr->methodArgs; if (_a_1057) { for (size_t _i_1057 = 0; _i_1057 < _a_1057->length; _i_1057++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1057->items[_i_1057];
         do {
     if (((spec_string_equals(arg->name, spec_string_intern("search"))) || (spec_string_equals(arg->name, spec_string_intern("needle"))))) {
         spec_assign((void**)&searchC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67062,8 +67362,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         if (spec_string_equals(m, spec_string_intern("join"))) {
         SPEC_AUTO String sepC = spec_construct_string(spec_string_intern("\"\""));
-        ({ SpecArray* _a_1056 = expr->methodArgs; if (_a_1056) { for (size_t _i_1056 = 0; _i_1056 < _a_1056->length; _i_1056++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1056->items[_i_1056];
+        ({ SpecArray* _a_1059 = expr->methodArgs; if (_a_1059) { for (size_t _i_1059 = 0; _i_1059 < _a_1059->length; _i_1059++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1059->items[_i_1059];
         do {
     if (((spec_string_equals(arg->name, spec_string_intern("separator"))) || (spec_string_equals(sepC, spec_string_intern("\"\""))))) {
         spec_assign((void**)&sepC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67077,8 +67377,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     if (((spec_string_equals(targetType, spec_string_intern("List:Byte"))) || (spec_string_equals(targetType, spec_string_intern("List of Byte"))))) {
         SPEC_AUTO String errC = spec_construct_string(spec_string_intern("spec_noop_closure()"));
         if (((((spec_string_equals(m, spec_string_intern("get"))) || (spec_string_equals(m, spec_string_intern("pop"))))) || (spec_string_equals(m, spec_string_intern("set"))))) {
-        ({ SpecArray* _a_1058 = expr->methodArgs; if (_a_1058) { for (size_t _i_1058 = 0; _i_1058 < _a_1058->length; _i_1058++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1058->items[_i_1058];
+        ({ SpecArray* _a_1061 = expr->methodArgs; if (_a_1061) { for (size_t _i_1061 = 0; _i_1061 < _a_1061->length; _i_1061++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1061->items[_i_1061];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("error"))) {
         spec_assign((void**)&errC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67088,8 +67388,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         if (spec_string_equals(m, spec_string_intern("push"))) {
         SPEC_AUTO String itemC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1060 = expr->methodArgs; if (_a_1060) { for (size_t _i_1060 = 0; _i_1060 < _a_1060->length; _i_1060++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1060->items[_i_1060];
+        ({ SpecArray* _a_1063 = expr->methodArgs; if (_a_1063) { for (size_t _i_1063 = 0; _i_1063 < _a_1063->length; _i_1063++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1063->items[_i_1063];
         do {
     spec_assign((void**)&itemC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
         } while (0);
@@ -67099,8 +67399,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         if (spec_string_equals(m, spec_string_intern("appendString"))) {
         SPEC_AUTO String sC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
-        ({ SpecArray* _a_1062 = expr->methodArgs; if (_a_1062) { for (size_t _i_1062 = 0; _i_1062 < _a_1062->length; _i_1062++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1062->items[_i_1062];
+        ({ SpecArray* _a_1065 = expr->methodArgs; if (_a_1065) { for (size_t _i_1065 = 0; _i_1065 < _a_1065->length; _i_1065++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1065->items[_i_1065];
         do {
     spec_assign((void**)&sC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
         } while (0);
@@ -67111,8 +67411,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("get"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1064 = expr->methodArgs; if (_a_1064) { for (size_t _i_1064 = 0; _i_1064 < _a_1064->length; _i_1064++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1064->items[_i_1064];
+        ({ SpecArray* _a_1067 = expr->methodArgs; if (_a_1067) { for (size_t _i_1067 = 0; _i_1067 < _a_1067->length; _i_1067++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1067->items[_i_1067];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67129,8 +67429,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("set"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String itemC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1066 = expr->methodArgs; if (_a_1066) { for (size_t _i_1066 = 0; _i_1066 < _a_1066->length; _i_1066++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1066->items[_i_1066];
+        ({ SpecArray* _a_1069 = expr->methodArgs; if (_a_1069) { for (size_t _i_1069 = 0; _i_1069 < _a_1069->length; _i_1069++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1069->items[_i_1069];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67146,8 +67446,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         if (spec_string_equals(m, spec_string_intern("pop"))) {
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1068 = expr->methodArgs; if (_a_1068) { for (size_t _i_1068 = 0; _i_1068 < _a_1068->length; _i_1068++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1068->items[_i_1068];
+        ({ SpecArray* _a_1071 = expr->methodArgs; if (_a_1071) { for (size_t _i_1071 = 0; _i_1071 < _a_1071->length; _i_1071++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1071->items[_i_1071];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("default"))) {
         spec_assign((void**)&defC, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(long long)("))), ((String)spec_claim_pool((void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */)))), spec_string_intern(")"))));
@@ -67192,8 +67492,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         SPEC_AUTO String errC = spec_construct_string(spec_string_intern("spec_noop_closure()"));
         if (((((spec_string_equals(m, spec_string_intern("get"))) || (spec_string_equals(m, spec_string_intern("pop"))))) || (spec_string_equals(m, spec_string_intern("set"))))) {
-        ({ SpecArray* _a_1070 = expr->methodArgs; if (_a_1070) { for (size_t _i_1070 = 0; _i_1070 < _a_1070->length; _i_1070++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1070->items[_i_1070];
+        ({ SpecArray* _a_1073 = expr->methodArgs; if (_a_1073) { for (size_t _i_1073 = 0; _i_1073 < _a_1073->length; _i_1073++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1073->items[_i_1073];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("error"))) {
         spec_assign((void**)&errC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67205,8 +67505,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         SPEC_AUTO String itemC = spec_construct_string(spec_string_intern("0"));
         bool savedArgV = cg->argMode;
         CodeGenerator_setArgMode(cg, false) /* inst:CodeGenerator:setArgMode */;
-        ({ SpecArray* _a_1072 = expr->methodArgs; if (_a_1072) { for (size_t _i_1072 = 0; _i_1072 < _a_1072->length; _i_1072++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1072->items[_i_1072];
+        ({ SpecArray* _a_1075 = expr->methodArgs; if (_a_1075) { for (size_t _i_1075 = 0; _i_1075 < _a_1075->length; _i_1075++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1075->items[_i_1075];
         do {
     spec_assign((void**)&itemC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
         } while (0);
@@ -67218,8 +67518,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("get"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1074 = expr->methodArgs; if (_a_1074) { for (size_t _i_1074 = 0; _i_1074 < _a_1074->length; _i_1074++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1074->items[_i_1074];
+        ({ SpecArray* _a_1077 = expr->methodArgs; if (_a_1077) { for (size_t _i_1077 = 0; _i_1077 < _a_1077->length; _i_1077++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1077->items[_i_1077];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67236,8 +67536,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
         if (spec_string_equals(m, spec_string_intern("set"))) {
         SPEC_AUTO String idxC = spec_construct_string(spec_string_intern("0"));
         SPEC_AUTO String itemC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1076 = expr->methodArgs; if (_a_1076) { for (size_t _i_1076 = 0; _i_1076 < _a_1076->length; _i_1076++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1076->items[_i_1076];
+        ({ SpecArray* _a_1079 = expr->methodArgs; if (_a_1079) { for (size_t _i_1079 = 0; _i_1079 < _a_1079->length; _i_1079++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1079->items[_i_1079];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("index"))) {
         spec_assign((void**)&idxC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67256,8 +67556,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
     }
         if (spec_string_equals(m, spec_string_intern("pop"))) {
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("0"));
-        ({ SpecArray* _a_1078 = expr->methodArgs; if (_a_1078) { for (size_t _i_1078 = 0; _i_1078 < _a_1078->length; _i_1078++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1078->items[_i_1078];
+        ({ SpecArray* _a_1081 = expr->methodArgs; if (_a_1081) { for (size_t _i_1081 = 0; _i_1081 < _a_1081->length; _i_1081++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1081->items[_i_1081];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("default"))) {
         spec_assign((void**)&defC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67308,8 +67608,8 @@ String BuiltinCallGenerator_bindMapCall(BuiltinCallGenerator* self, Expression* 
         SPEC_AUTO String keyC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
         SPEC_AUTO String valC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
         bool valIsStr = true;
-        ({ SpecArray* _a_1080 = expr->methodArgs; if (_a_1080) { for (size_t _i_1080 = 0; _i_1080 < _a_1080->length; _i_1080++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1080->items[_i_1080];
+        ({ SpecArray* _a_1083 = expr->methodArgs; if (_a_1083) { for (size_t _i_1083 = 0; _i_1083 < _a_1083->length; _i_1083++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1083->items[_i_1083];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("key"))) {
         spec_assign((void**)&keyC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67419,8 +67719,8 @@ String BuiltinCallGenerator_bindStringDirect(BuiltinCallGenerator* self, Express
     } else if (spec_string_equals(m, spec_string_intern("parseInt"))) {
         SPEC_AUTO String baseC = spec_construct_string(spec_string_intern("10"));
         SPEC_AUTO String defC = spec_construct_string(spec_string_intern("-1"));
-        ({ SpecArray* _a_1082 = expr->methodArgs; if (_a_1082) { for (size_t _i_1082 = 0; _i_1082 < _a_1082->length; _i_1082++) {
-        NamedArg* arg = (NamedArg*)(intptr_t)_a_1082->items[_i_1082];
+        ({ SpecArray* _a_1085 = expr->methodArgs; if (_a_1085) { for (size_t _i_1085 = 0; _i_1085 < _a_1085->length; _i_1085++) {
+        NamedArg* arg = (NamedArg*)(intptr_t)_a_1085->items[_i_1085];
         do {
     if (spec_string_equals(arg->name, spec_string_intern("base"))) {
         spec_assign((void**)&baseC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
@@ -67449,7 +67749,7 @@ String BuiltinCallGenerator_toString(BuiltinCallGenerator* self) {
 String RuntimePrelude_emitRuntime(RuntimePrelude* self) {
     (void)self;
     SPEC_AUTO String p = spec_construct_string(spec_string_intern(""));
-    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("/* Generated by Pure-Spec Compiler */\n#define _POSIX_C_SOURCE 200809L\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdbool.h>\n#include <stdint.h>\n#include <ctype.h>\n#include <time.h>\n#include <errno.h>\n#include <math.h>\n#include <unistd.h>\n#pragma GCC diagnostic ignored \"-Wincompatible-pointer-types\"\n/* Forward declarations: SpecBuf-backed String layer (definitions below) */\ntypedef struct SpecBuf SpecBuf;\ntypedef SpecBuf* String;\ntypedef struct SpecClosure SpecClosure;\nSpecBuf* spec_buf_new(size_t elem_size, int elem_kind);\nvoid spec_buf_append_bytes(SpecBuf* b, const char* s);\nvoid spec_buf_append_buf(SpecBuf* dst, SpecBuf* src);\nconst char* spec_buf_to_cstring(SpecBuf* b);\nlong long spec_buf_get_byte(SpecBuf* b, long long idx, long long def);\nString spec_string_from_bytes(const char* data, size_t n);\nString spec_string_copy(String b);\nbool spec_string_bytes_equal(String b, const char* c, size_t n);\nlong long spec_string_length(String b);\nbool spec_string_equals(String a, String b);\nlong long spec_string_compare(String a, String b);\nString spec_string_concat(String a, String b);\nString spec_string_substring(String b, long long start, long long end);\nlong long spec_string_index_of(String b, String needle, long long def);\nlong long spec_string_index_of_from(String b, String needle, long long from, long long def);\n#include <dirent.h>\n#include <sys/stat.h>\n#include <pthread.h>\n#include <sys/wait.h>\n#include <sys/ioctl.h>\n#include <sys/resource.h>\n#include <stdatomic.h>\n\n/* Spec Runtime Panic & Safety Utilities */\nvoid spec_panic(const char* msg) {\n    fprintf(stderr, \"[Spec Runtime Panic] %s\\n\", msg ? msg : \"fatal error\");\n    exit(1);\n}\n\nvoid spec_panic_bounds(const char* coll, long long idx, size_t len) {\n    fprintf(stderr, \"[Spec Runtime Panic] %s index out of bounds: index %lld for length %zu\\n\", coll ? coll : \"Collection\", idx, len);\n    exit(1);\n}\n\nvoid spec_panic_cast(const char* actual, const char* target) {\n    fprintf(stderr, \"[Spec Runtime Panic] Invalid downcast: instance of '%s' cannot be cast to '%s'\\n\", actual ? actual : \"Unknown\", target ? target : \"Unknown\");\n    exit(1);\n}\n\nvoid spec_panic_byte_range(long long v) {\n    fprintf(stderr, \"[Spec Runtime Panic] Byte cast out of range: %lld (must be 0..255)\\n\", v);\n    exit(1);\n}\n\nstatic bool spec_is_subclass_of(const char* actual, const char* target);\n\nstatic inline void* spec_cast_check(const void* obj, const char* target) {\n    if (!obj) return NULL;\n    const char* actual = *((const char**)obj);\n    if (!spec_is_subclass_of(actual, target)) {\n        spec_panic_cast(actual, target);\n    }\n    return (void*)obj;\n}\n\n/* The process object arena flag: the compiler driver activates it; user\n   programs never do. Lives at the top so every container constructor\n   below can consult it. */\nstatic bool _spec_arena_active = false;\nvoid* spec_arena_alloc_object(size_t size, void (*destroy)(void*));\nvoid spec_arena_drain_objects(void);\n\nvoid spec_activate_process_arena(void) {\n    _spec_arena_active = true;\n}\n\n/* Spec Automated Reference Counting (ARC) Primitives */\n#define SPEC_S_IMMORTAL 1u\n#define SPEC_S_HASLEN 2u\ntypedef struct {\n    _Atomic uint32_t ref_count;\n    void (*destroy)(void*);\n    _Atomic uint32_t sflags;\n    uint32_t slen;\n} SpecHeader;\n\n#define SPEC_HEADER(obj) (((SpecHeader*)(obj)) - 1)\n\nstatic inline void* spec_alloc(size_t size, void (*destroy)(void*)) {\n    SpecHeader* h = (SpecHeader*)calloc(1, sizeof(SpecHeader) + size);\n    if (!h) { fprintf(stderr, \"[Spec Panic] Out of memory\\n\"); exit(1); }\n    h->ref_count = 1;\n    h->destroy = destroy;\n    return (void*)(h + 1);\n}\n\nstatic inline void* spec_retain(void* obj) {\n    if (!obj) return NULL;\n    SpecHeader* h = SPEC_HEADER(obj);\n    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;\n    atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);\n    return obj;\n}\n\nstatic inline void spec_release(void* obj) {\n    if (!obj) return;\n    SpecHeader* h = SPEC_HEADER(obj);\n    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;\n    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }\n    if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {\n        if (h->destroy) h->destroy(obj);\n        free(h);\n    }\n}\n\nstatic inline void* spec_assign(void** dest, void* src) {\n    if (src) spec_retain(src);\n    if (*dest) spec_release(*dest);\n    *dest = src;\n    return src;\n}\n\nstatic inline void* spec_assign_transfer(void** dest, void* src) {\n    if (*dest) spec_release(*dest);\n    *dest = src;\n    return src;\n}\n\nstatic inline void spec_scope_cleanup(void* pptr) {\n    void* obj = *(void**)pptr;\n    if (obj) spec_release(obj);\n}\n\n#define SPEC_AUTO __attribute__((cleanup(spec_scope_cleanup)))\n\n/* Spec String Core: refcounted, NUL-terminated, optionally interned.\n   A String value is a char* into a spec_alloc block whose header carries\n   a cached length and an immortal flag for interned literals. */\nString spec_string_from_chars(const char* c) {\n    if (!c) c = \"\";\n    return spec_string_from_bytes(c, strlen(c));\n}\n#define SPEC_INTERN_BUCKETS 256\ntypedef struct SpecInternEntry {\n    String s;\n    struct SpecInternEntry* next;\n} SpecInternEntry;\nstatic SpecInternEntry* _spec_intern[SPEC_INTERN_BUCKETS];\nstatic pthread_mutex_t _spec_intern_lock = PTHREAD_MUTEX_INITIALIZER;\n\nstatic inline size_t spec_intern_bucket(const char* c) {\n    size_t h = 1469598103934665603ULL;\n    while (*c) { h ^= (unsigned char)(*c++); h *= 1099511628211ULL; }\n    return h & (SPEC_INTERN_BUCKETS - 1);\n}\n\nString spec_string_intern(const char* c) {\n    if (!c) c = \"\";\n    size_t b = spec_intern_bucket(c);\n    size_t n = strlen(c);\n    pthread_mutex_lock(&_spec_intern_lock);\n    SpecInternEntry* e = _spec_intern[b];\n    while (e) {\n        String es = (String)e->s;\n        if (spec_string_bytes_equal(es, c, n)) { pthread_mutex_unlock(&_spec_intern_lock); return es; }\n        e = e->next;\n    }\n    String s = spec_string_from_bytes(c, n);\n    atomic_fetch_or_explicit(&SPEC_HEADER(s)->sflags, SPEC_S_IMMORTAL, memory_order_relaxed);\n    e = (SpecInternEntry*)malloc(sizeof(SpecInternEntry));\n    e->s = s;\n    e->next = _spec_intern[b];\n    _spec_intern[b] = e;\n    pthread_mutex_unlock(&_spec_intern_lock);\n    return s;\n}\n/* Claim pool: adopts ownership claims in read positions (call arguments,\n   conditions, chain targets) and recycles them on eviction. A borrowed\n   pointer stays valid until 32 further pool claims are made, which is\n   far more than any single statement evaluates. */\n#define SPEC_POOL_SLOTS 32\nstatic void* _spec_pool[SPEC_POOL_SLOTS];\nstatic size_t _spec_pool_next = 0;\nstatic pthread_mutex_t _spec_pool_lock = PTHREAD_MUTEX_INITIALIZER;\n\nvoid* spec_claim_pool(void* obj) {\n    if (!obj) return NULL;\n    pthread_mutex_lock(&_spec_pool_lock);\n    size_t slot = _spec_pool_next;\n    _spec_pool_next = (slot + 1) % SPEC_POOL_SLOTS;\n    void* old = _spec_pool[slot];\n    _spec_pool[slot] = obj;\n    pthread_mutex_unlock(&_spec_pool_lock);\n    if (old) spec_release(old);\n    return obj;\n}\n\n/* Spec First-Class Closure Representation */\ntypedef struct SpecClosure {\n    void* fn;\n    void* env;\n    void (*destroy_env)(void*);\n} SpecClosure;\n\nstatic inline void spec_closure_destroy(void* self) {\n    SpecClosure* c = (SpecClosure*)self;\n    if (c) {\n        if (c->env && c->destroy_env) {\n            c->destroy_env(c->env);\n            c->env = NULL;\n        }\n    }\n}\n\nstatic inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_env)(void*)) {\n    SpecClosure* c = (SpecClosure*)spec_alloc(sizeof(SpecClosure), spec_closure_destroy);\n    c->fn = fn;\n    c->env = env;\n    c->destroy_env = destroy_env;\n    return c;\n}\n\n/* Spec Runtime String Utilities */\nString spec_to_string_int(long long v) {\n    char buf[64];\n    snprintf(buf, sizeof(buf), \"%lld\", v);\n    return spec_string_intern(buf);\n}\n\nString spec_to_string_float(double v) {\n    char buf[64];\n    snprintf(buf, sizeof(buf), \"%g\", v);\n    return spec_string_intern(buf);\n}\n\nString spec_to_string_bool(bool v) {\n    return spec_string_intern(v ? \"true\" : \"false\");\n}\nString spec_string_from_char_code(long long code) {\n    if (code < 0 || code > 255) return spec_string_intern(\"\");\n    char one[2] = { (char)code, '\\0' };\n    return spec_string_intern(one);\n}\n/* Thread-Safe Spec Dynamic Array */\n#define SPEC_ELEM_NONE 0\n#define SPEC_ELEM_OBJECT 1\ntypedef struct {\n    void** items;\n    size_t length;\n    size_t capacity;\n    int elem_kind;\n    pthread_mutex_t lock;\n} SpecArray;\n\nvoid spec_array_destroy(void* self) {\n    SpecArray* a = (SpecArray*)self;\n    if (a && getenv(\"SPEC_ARR_TRACE\") && a->length > 500) fprintf(stderr, \"[ARR-DESTROY] len=%zu kind=%d\\n\", a->length, a->elem_kind);\n    if (a) {\n        if (a->items) {\n            for (size_t i = 0; i < a->length; i++) {\n                if (!a->items[i]) continue;\n                if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);\n            }\n        }\n        pthread_mutex_destroy(&a->lock);\n        if (a->items) free(a->items);\n    }\n}\n\nstatic SpecArray* spec_array_new_kind(int kind) {\n    SpecArray* a = (SpecArray*)spec_alloc(sizeof(SpecArray), spec_array_destroy);\n    a->items = NULL;\n    a->length = 0;\n    a->capacity = 0;\n    a->elem_kind = kind;\n    pthread_mutexattr_t attr;\n    pthread_mutexattr_init(&attr);\n    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);\n    pthread_mutex_init(&a->lock, &attr);\n    pthread_mutexattr_destroy(&attr);\n    return a;\n}\n\nSpecArray* spec_array_new(void) {\n    return spec_array_new_kind(SPEC_ELEM_NONE);\n}\n\nSpecArray* spec_array_new_object(void) {\n    return spec_array_new_kind(SPEC_ELEM_OBJECT);\n}\n\nvoid spec_array_add(SpecArray* a, void* item) {\n    if (!a) return;\n    pthread_mutex_lock(&a->lock);\n    if (a->length >= a->capacity) {\n        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;\n        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n    }\n    if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);\n    a->items[a->length++] = item;\n    pthread_mutex_unlock(&a->lock);\n}\n\nvoid spec_array_add_object(SpecArray* a, void* item) {\n    if (a && a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;\n    spec_array_add(a, item);\n}\n\nvoid spec_array_add_owned(SpecArray* a, void* item) {\n    if (!a) return;\n    pthread_mutex_lock(&a->lock);\n    if (a->length >= a->capacity) {\n        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;\n        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n    }\n    a->items[a->length++] = item;\n    pthread_mutex_unlock(&a->lock);\n}\n\nvoid spec_array_add_array(SpecArray* a, SpecArray* other) {\n    if (!a || !other) return;\n    pthread_mutex_lock(&other->lock);\n    for (size_t i = 0; i < other->length; i++) {\n        spec_array_add(a, other->items[i]);\n    }\n    pthread_mutex_unlock(&other->lock);\n}\n\nlong long spec_array_length(SpecArray* a) {\n    if (!a) return 0;\n    pthread_mutex_lock(&a->lock);\n    long long len = (long long)a->length;\n    pthread_mutex_unlock(&a->lock);\n    return len;\n}\n\nvoid* spec_array_get(SpecArray* a, long long idx) {\n    if (!a) spec_panic(\"Null pointer access on uninitialized Array\");\n    pthread_mutex_lock(&a->lock);\n    if (idx < 0 || (size_t)idx >= a->length) {\n        size_t len = a->length;\n        pthread_mutex_unlock(&a->lock);\n        spec_panic_bounds(\"Array\", idx, len);\n        return NULL;\n    }\n    void* val = a->items[idx];\n    pthread_mutex_unlock(&a->lock);\n    return val;\n}\n\nvoid spec_array_set(SpecArray* a, long long idx, void* item) {\n    if (!a) spec_panic(\"Null pointer access on uninitialized Array\");\n    pthread_mutex_lock(&a->lock);\n    if (idx < 0 || (size_t)idx >= a->length) {\n        size_t len = a->length;\n        pthread_mutex_unlock(&a->lock);\n        spec_panic_bounds(\"Array assignment\", idx, len);\n        return;\n    }\n    if (a->elem_kind == SPEC_ELEM_OBJECT) {\n        if (item) spec_retain(item);\n        if (a->items[idx]) spec_release(a->items[idx]);\n    }\n    a->items[idx] = item;\n    pthread_mutex_unlock(&a->lock);\n}\n\nvoid* spec_array_pop(SpecArray* a, void* def) {\n    if (!a) return def;\n    pthread_mutex_lock(&a->lock);\n    void* val = def;\n    if (a->length > 0) val = a->items[--a->length];\n    pthread_mutex_unlock(&a->lock);\n    return val;\n}\n\nvoid* spec_array_remove_at(SpecArray* a, long long idx, void* def) {\n    if (!a || idx < 0) return def;\n    pthread_mutex_lock(&a->lock);\n    void* removed = def;\n    if ((size_t)idx < a->length) {\n        removed = a->items[idx];\n        for (size_t i = (size_t)idx; i + 1 < a->length; i++) {\n            a->items[i] = a->items[i + 1];\n        }\n        a->length--;\n    }\n    pthread_mutex_unlock(&a->lock);\n    return removed;\n}\n\nvoid spec_array_clear(SpecArray* a) {\n    if (!a) return;\n    pthread_mutex_lock(&a->lock);\n    for (size_t i = 0; i < a->length; i++) {\n        if (!a->items[i]) continue;\n        if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);\n    }\n    a->length = 0;\n    pthread_mutex_unlock(&a->lock);\n}\n\n/* Thread-Safe Spec Hash Map (64-Bucket FNV-1a Hash Table) */\n#define SPEC_MAP_BUCKETS 64\ntypedef struct SpecMapEntry {\n    char* key;\n    void* value;\n    bool is_str;\n    struct SpecMapEntry* next;\n} SpecMapEntry;\n\ntypedef struct {\n    SpecMapEntry* buckets[SPEC_MAP_BUCKETS];\n    size_t length;\n    int val_kind;\n    pthread_mutex_t lock;\n} SpecMap;\n\nstatic inline size_t spec_hash_key(const char* key) {\n    size_t h = 1469598103934665603ULL;\n    while (*key) {\n        h ^= (unsigned char)(*key++);\n        h *= 1099511628211ULL;\n    }\n    return h & (SPEC_MAP_BUCKETS - 1);\n}\n\nvoid spec_map_destroy(void* self) {\n    SpecMap* m = (SpecMap*)self;\n    if (m) {\n        pthread_mutex_destroy(&m->lock);\n        for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n            SpecMapEntry* curr = m->buckets[i];\n            while (curr) {\n                SpecMapEntry* next = curr->next;\n                if (curr->key) free(curr->key);\n                if (curr->is_str && curr->value) free(curr->value);\n                else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n                free(curr);\n                curr = next;\n            }\n        }\n    }\n}\n\nstatic SpecMap* spec_map_new_kind(int kind) {\n    SpecMap* m = (SpecMap*)spec_alloc(sizeof(SpecMap), spec_map_destroy);\n    m->val_kind = kind;\n    pthread_mutexattr_t attr;\n    pthread_mutexattr_init(&attr);\n    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);\n    pthread_mutex_init(&m->lock, &attr);\n    pthread_mutexattr_destroy(&attr);\n    return m;\n}\n\nSpecMap* spec_map_new(void) {\n    return spec_map_new_kind(SPEC_ELEM_NONE);\n}\n\nSpecMap* spec_map_new_object(void) {\n    return spec_map_new_kind(SPEC_ELEM_OBJECT);\n}\n\nvoid spec_map_set(SpecMap* m, String key, String val) {\n    if (!m || !key) return;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (curr->is_str && curr->value) free(curr->value);\n            curr->value = (void*)strdup(cv ? cv : \"\");\n            curr->is_str = true;\n            pthread_mutex_unlock(&m->lock);\n            return;\n        }\n        curr = curr->next;\n    }\n    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n    e->key = strdup(ck);\n    e->value = (void*)strdup(cv ? cv : \"\");\n    e->is_str = true;\n    e->next = m->buckets[idx];\n    m->buckets[idx] = e;\n    m->length++;\n    pthread_mutex_unlock(&m->lock);\n}\n\nvoid spec_map_set_any(SpecMap* m, String key, void* val) {\n    if (!m || !key) return;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (curr->is_str && curr->value) free(curr->value);\n            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n            if (m->val_kind == SPEC_ELEM_OBJECT && val) spec_retain(val);\n            curr->value = val;\n            curr->is_str = false;\n            pthread_mutex_unlock(&m->lock);\n            return;\n        }\n        curr = curr->next;\n    }\n    if (m->val_kind == SPEC_ELEM_OBJECT && val) spec_retain(val);\n    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n    e->key = strdup(ck);\n    e->value = val;\n    e->is_str = false;\n    e->next = m->buckets[idx];\n    m->buckets[idx] = e;\n    m->length++;\n    pthread_mutex_unlock(&m->lock);\n}\n\nvoid spec_map_set_any_transfer(SpecMap* m, String key, void* val) {\n    if (!m || !key) return;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (curr->is_str && curr->value) free(curr->value);\n            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n            curr->value = val;\n            curr->is_str = false;\n            pthread_mutex_unlock(&m->lock);\n            return;\n        }\n        curr = curr->next;\n    }\n    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n    e->key = strdup(ck);\n    e->value = val;\n    e->is_str = false;\n    e->next = m->buckets[idx];\n    m->buckets[idx] = e;\n    m->length++;\n    pthread_mutex_unlock(&m->lock);\n}\n\nvoid* spec_map_get(SpecMap* m, String key, void* _default) {\n    if (!m || !key) return _default;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            void* res = curr->value;\n            if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : \"\");\n            else if (m->val_kind == SPEC_ELEM_OBJECT && res) spec_retain(res);\n            pthread_mutex_unlock(&m->lock);\n            return res;\n        }\n        curr = curr->next;\n    }\n    pthread_mutex_unlock(&m->lock);\n    return _default;\n}\n\nbool spec_map_has(SpecMap* m, String key) {\n    if (!m || !key) return false;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            pthread_mutex_unlock(&m->lock);\n            return true;\n        }\n        curr = curr->next;\n    }\n    pthread_mutex_unlock(&m->lock);\n    return false;\n}\n\nbool spec_map_remove(SpecMap* m, String key) {\n    if (!m || !key) return false;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    SpecMapEntry* prev = NULL;\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (prev) prev->next = curr->next;\n            else m->buckets[idx] = curr->next;\n            free(curr->key);\n            if (curr->is_str && curr->value) free(curr->value);\n            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n            free(curr);\n            m->length--;\n            pthread_mutex_unlock(&m->lock);\n            return true;\n        }\n        prev = curr;\n        curr = curr->next;\n    }\n    pthread_mutex_unlock(&m->lock);\n    return false;\n}\n\nlong long spec_map_length(SpecMap* m) {\n    if (!m) return 0;\n    pthread_mutex_lock(&m->lock);\n    long long cnt = (long long)m->length;\n    pthread_mutex_unlock(&m->lock);\n    return cnt;\n}\n\nSpecArray* spec_map_keys(SpecMap* m) {\n    SpecArray* a = spec_array_new_object();\n    if (!m) return a;\n    pthread_mutex_lock(&m->lock);\n    for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n        SpecMapEntry* curr = m->buckets[i];\n        while (curr) {\n            spec_array_add_owned(a, (void*)spec_string_from_chars(curr->key));\n            curr = curr->next;\n        }\n    }\n    pthread_mutex_unlock(&m->lock);\n    return a;\n}\n\n/* Spec Loop Control Intrinsic */\ntypedef struct SpecLoopControl {\n    bool stopped;\n    void* callback;\n    void (*on_complete)(void* callback, struct SpecLoopControl* control);\n} SpecLoopControl;\n\ntypedef struct SpecLoopControl LoopControl;\n\nSpecLoopControl* LoopControl_new(void) {\n    SpecLoopControl* c = (SpecLoopControl*)spec_alloc(sizeof(SpecLoopControl), NULL);\n    if (c) {\n        c->stopped = false;\n        c->callback = NULL;\n        c->on_complete = NULL;\n    }\n    return c;\n}\n\nvoid LoopControl_stop(SpecLoopControl* c) {\n    if (c) c->stopped = true;\n}\n\n/* Spec Async Task Manager */\nstatic int spec_in_flight_tasks = 0;\nstatic pthread_mutex_t spec_task_mutex = PTHREAD_MUTEX_INITIALIZER;\nstatic pthread_cond_t spec_task_cond = PTHREAD_COND_INITIALIZER;\n\nvoid spec_async_task_started(void) {\n    pthread_mutex_lock(&spec_task_mutex);\n    spec_in_flight_tasks++;\n    pthread_mutex_unlock(&spec_task_mutex);\n}\n\nvoid spec_async_task_finished(void) {\n    pthread_mutex_lock(&spec_task_mutex);\n    spec_in_flight_tasks--;\n    if (spec_in_flight_tasks <= 0) {\n        spec_in_flight_tasks = 0;\n        pthread_cond_broadcast(&spec_task_cond);\n    }\n    pthread_mutex_unlock(&spec_task_mutex);\n}\n\nvoid spec_drain_async_tasks(void) {\n    pthread_mutex_lock(&spec_task_mutex);\n    while (spec_in_flight_tasks > 0) {\n        pthread_cond_wait(&spec_task_cond, &spec_task_mutex);\n    }\n    pthread_mutex_unlock(&spec_task_mutex);\n}\n\n/* File Package Primitives with Callbacks and Async Worker Support */\nstatic inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {\n    if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }\n}\nstatic inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {\n    if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }\n}\n\n/* No-op callback singleton: the default for optional error callbacks */\nstatic void _spec_noop_cb(void* env, const char* msg) { (void)env; (void)msg; }\nstatic SpecClosure* _spec_noop_closure = NULL;\nstatic inline SpecClosure* spec_noop_closure(void) {\n    if (!_spec_noop_closure) { _spec_noop_closure = spec_closure_new((void*)_spec_noop_cb, NULL, NULL); }\n    return _spec_noop_closure;\n}\n\n/* Per-Type Constructors: invoked by : assignment for each type. */\nString spec_string_intern(const char* c);\nString spec_string_from_chars(const char* c);\n/* Each constructor takes the source value and produces the type's\n   canonical internal representation. For primitives this is a cast;\n   for composite types it involves allocation and initialisation. */\nstatic inline long long spec_construct_int(long long v) { return v; }\nstatic inline unsigned char spec_construct_byte(long long v) {\n    if (v < 0 || v > 255) spec_panic_byte_range(v);\n    return (unsigned char)v;\n}\n\nstatic inline double spec_construct_float(double v) { return v; }\n\nstatic inline bool spec_construct_bool(bool v) { return v; }\n\nstatic inline String spec_construct_string(const void* src) {\n    if (!src) return spec_string_intern(\"\");\n    return spec_string_copy((String)src);\n}\n/* String: the managed string type (initially char*, transitions to SpecBuf) */\ntypedef SpecBuf* String;\n\n/* Unified Growable Buffer: elem_size=1 for bytes, 8 for pointers */\ntypedef struct SpecBuf {\n    void* data;\n    size_t length;\n    size_t capacity;\n    size_t elem_size;\n    int elem_kind;\n} SpecBuf;\n\nvoid spec_buf_destroy(void* self) {\n    SpecBuf* b = (SpecBuf*)self;\n    if (!b) return;\n    if (b->data && b->elem_size == 8 && b->elem_kind != 0) {\n        void** items = (void**)b->data;\n        for (size_t i = 0; i < b->length; i++) {\n            if (!items[i]) continue;\n            if (b->elem_kind == 1) spec_release(items[i]);\n        }\n    }\n    if (b->data) { free(b->data); b->data = NULL; }\n}\n\n/* The compilation arena: bump allocation over growing blocks. */\ntypedef struct ArenaBlock {\n    struct ArenaBlock* next;\n    size_t used;\n    size_t cap;\n    char* data;\n} ArenaBlock;\n\ntypedef struct SpecArena {\n    ArenaBlock* head;\n    size_t used;\n} SpecArena;\n\n#define ARENA_BLOCK_SIZE (64 * 1024)\n\nstatic ArenaBlock* arena_block_new(size_t cap) {\n    ArenaBlock* b = (ArenaBlock*)calloc(1, sizeof(ArenaBlock));\n    if (!b) { fprintf(stderr, \"[Spec Panic] Out of memory\\n\"); exit(1); }\n    b->data = (char*)calloc(1, cap);\n    if (!b->data) { fprintf(stderr, \"[Spec Panic] Out of memory\\n\"); exit(1); }\n    b->cap = cap;\n    b->used = 0;\n    return b;\n}\n\nstatic void* spec_arena_alloc(SpecArena* a, size_t size) {\n    size = (size + 15) & ~(size_t)15;\n    if (!a->head || a->head->used + size > a->head->cap) {\n        size_t cap = ARENA_BLOCK_SIZE;\n        if (size > cap) cap = size;\n        ArenaBlock* nb = arena_block_new(cap);\n        nb->next = a->head;\n        a->head = nb;\n    }\n    void* p = a->head->data + a->head->used;\n    a->head->used += size;\n    a->used += size;\n    memset(p, 0, size);\n    return p;\n}\n\nSpecArena* spec_arena_new(void) {\n    return (SpecArena*)calloc(1, sizeof(SpecArena));\n}\n\nvoid spec_arena_drain(SpecArena* a) {\n    ArenaBlock* b = a->head;\n    while (b) {\n        ArenaBlock* next = b->next;\n        free(b->data);\n        free(b);\n        b = next;\n    }\n    a->head = NULL;\n    a->used = 0;\n}\n\n/* Object arena: header-carrying allocations from arena memory. Refcounts\n   guard aliasing during compilation; the pending finalizers (field\n   releases) run at drain, then the blocks free wholesale. */\ntypedef struct ArenaFinalizer {\n    struct ArenaFinalizer* next;\n    SpecHeader* header;\n} ArenaFinalizer;\n\nstatic ArenaFinalizer* _spec_object_arena_finalizers = NULL;\nstatic SpecArena _spec_object_arena = { NULL, 0 };\n\nvoid spec_arena_drain_objects(void);\n\nvoid* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {\n    static int drain_registered = 0;\n    if (!drain_registered) {\n        atexit(spec_arena_drain_objects);\n        drain_registered = 1;\n    }\n    char* mem = (char*)spec_arena_alloc(&_spec_object_arena, sizeof(SpecHeader) + size);\n    SpecHeader* h = (SpecHeader*)mem;\n    h->ref_count = 1;\n    h->destroy = destroy;\n    /* Immortal: release is a no-op — the arena owns the memory and drains\n       it wholesale. Refcounts may still bump (harmless); nothing frees. */\n    h->sflags = SPEC_S_IMMORTAL;\n    h->slen = 0;\n    ArenaFinalizer* f = (ArenaFinalizer*)spec_arena_alloc(&_spec_object_arena, sizeof(ArenaFinalizer));\n    f->next = _spec_object_arena_finalizers;\n    f->header = h;\n    _spec_object_arena_finalizers = f;\n    return (void*)(mem + sizeof(SpecHeader));\n}\n\nvoid spec_arena_drain_objects(void) {\n    ArenaFinalizer* f = _spec_object_arena_finalizers;\n    while (f) {\n        if (f->header->destroy) f->header->destroy((void*)(f->header + 1));\n        f = f->next;\n    }\n    _spec_object_arena_finalizers = NULL;\n    spec_arena_drain(&_spec_object_arena);\n}\n\nlong long spec_arena_used(SpecArena* a) {\n    return (long long)a->used;\n}\n\nSpecArray* spec_dir_list(SpecBuf* path) {\n    SpecArray* res = spec_array_new_object();\n    if (!path) return res;\n    DIR* d = opendir(spec_buf_to_cstring(path));\n    if (!d) return res;\n    struct dirent* ent;\n    while ((ent = readdir(d)) != NULL) {\n        if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) continue;\n        spec_array_add_owned(res, spec_string_from_bytes(ent->d_name, strlen(ent->d_name)));\n    }\n    closedir(d);\n    return res;\n}\nSpecBuf* spec_exe_dir(void) {\n    char buf[4096];\n    ssize_t n = readlink(\"/proc/self/exe\", buf, sizeof(buf) - 1);\n    if (n <= 0) return spec_string_from_bytes(\".\", 1);\n    buf[n] = '\\0';\n    char* slash = strrchr(buf, '/');\n    if (!slash) return spec_string_from_bytes(\".\", 1);\n    return spec_string_from_bytes(buf, (size_t)(slash - buf));\n}\nlong long spec_file_size(SpecBuf* path) {\n    struct stat st;\n    if (stat(spec_buf_to_cstring(path), &st) != 0) return -1;\n    return (long long)st.st_size;\n}\nSpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {\n    SpecBuf* b = (SpecBuf*)spec_alloc(sizeof(SpecBuf), spec_buf_destroy);\n    b->data = NULL;\n    b->length = 0;\n    b->capacity = 0;\n    b->elem_size = elem_size;\n    b->elem_kind = elem_kind;\n    return b;\n}\n\nstatic void spec_buf_grow(SpecBuf* b, size_t needed) {\n    size_t need = needed + ((b->elem_size == 1) ? 1 : 0);\n    if (b->length + need <= b->capacity) return;\n    size_t cap = (b->capacity == 0) ? 16 : b->capacity * 2;\n    while (cap < b->length + need) cap *= 2;\n    b->data = realloc(b->data, cap * b->elem_size);\n    b->capacity = cap;\n}\nvoid spec_buf_push_byte(SpecBuf* b, long long v) {\n    if (!b) return;\n    spec_buf_grow(b, 1);\n    ((unsigned char*)b->data)[b->length++] = (unsigned char)v;\n    ((unsigned char*)b->data)[b->length] = 0;\n}\nvoid spec_buf_append_bytes(SpecBuf* b, const char* s) {\n    if (!b || !s) return;\n    size_t n = strlen(s);\n    if (n == 0) return;\n    spec_buf_grow(b, n);\n    memcpy((unsigned char*)b->data + b->length, s, n);\n    b->length += n;\n    ((unsigned char*)b->data)[b->length] = 0;\n}\nvoid spec_buf_append_buf(SpecBuf* dst, SpecBuf* src) {\n    if (!dst || !src || src->length == 0) return;\n    if (dst->elem_size != 1 || src->elem_size != 1) return;\n    spec_buf_grow(dst, src->length);\n    memcpy((unsigned char*)dst->data + dst->length, src->data, src->length);\n    dst->length += src->length;\n    ((unsigned char*)dst->data)[dst->length] = 0;\n}\nvoid spec_buf_push_ptr(SpecBuf* b, void* item) {\n    if (!b) return;\n    spec_buf_grow(b, 1);\n    if (b->elem_kind == 1 && item) spec_retain(item);\n    ((void**)b->data)[b->length++] = item;\n}\n\nvoid spec_buf_report(SpecClosure* error, const char* msg) {\n    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n}\nlong long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {\n    if (!b) { return def; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n        return def;\n    }\n    return (long long)((unsigned char*)b->data)[idx];\n}\n\nvoid spec_buf_set_byte(SpecBuf* b, long long idx, long long v, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer assignment out of bounds: index %lld for length %zu\", idx, b->length);\n        return;\n    }\n    ((unsigned char*)b->data)[idx] = (unsigned char)v;\n}\n\nlong long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return def; }\n    if (b->length == 0) {\n        spec_buf_report(error, \"buffer pop on empty buffer\");\n        return def;\n    }\n    long long out = (long long)((unsigned char*)b->data)[--b->length];\n    ((unsigned char*)b->data)[b->length] = 0;\n    return out;\n}\nvoid* spec_buf_get_ptr(SpecBuf* b, long long idx, void* def, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return def; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n        return def;\n    }\n    return ((void**)b->data)[idx];\n}\n\nvoid spec_buf_set_ptr(SpecBuf* b, long long idx, void* item, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer assignment out of bounds: index %lld for length %zu\", idx, b->length);\n        return;\n    }\n    if (b->elem_kind == 1) {\n        if (item) spec_retain(item);\n        if (((void**)b->data)[idx]) spec_release(((void**)b->data)[idx]);\n    }\n    ((void**)b->data)[idx] = item;\n}\n\nvoid* spec_buf_pop_ptr(SpecBuf* b, void* def, SpecClosure* error) {\n    if (!b) { return def; }\n    if (b->length == 0) {\n        spec_buf_report(error, \"buffer pop on empty buffer\");\n        return def;\n    }\n    return ((void**)b->data)[--b->length];\n}\n\nlong long spec_buf_length(SpecBuf* b) {\n    return b ? (long long)b->length : 0;\n}\n\nvoid spec_buf_clear(SpecBuf* b) {\n    if (!b) return;\n    if (b->data && b->elem_size == 8 && b->elem_kind != 0) {\n        void** items = (void**)b->data;\n        for (size_t i = 0; i < b->length; i++) {\n            if (!items[i]) continue;\n            if (b->elem_kind == 1) spec_release(items[i]);\n        }\n    }\n    b->length = 0;\n    if (b->data && b->elem_size == 1) ((unsigned char*)b->data)[0] = 0;\n}\nconst char* spec_buf_to_cstring(SpecBuf* b) {\n    if (!b || b->length == 0) return \"\";\n    return (const char*)b->data;\n}\n/* String: managed string backed by SpecBuf (elem_size=1) */\ntypedef SpecBuf* String;\n\nString spec_string_from_literal(const char* lit) {\n    String b = spec_buf_new(1, 0);\n    if (lit && *lit) spec_buf_append_bytes(b, lit);\n    return b;\n}\n\nString spec_string_from_bytes(const char* data, size_t n) {\n    String b = spec_buf_new(1, 0);\n    if (data && n) {\n        spec_buf_grow(b, n);\n        memcpy((unsigned char*)b->data, data, n);\n        b->length = n;\n        ((unsigned char*)b->data)[b->length] = 0;\n    }\n    return b;\n}\n\nString spec_string_copy(String b) {\n    if (!b || b->length == 0) return spec_buf_new(1, 0);\n    return spec_string_from_bytes((const char*)b->data, b->length);\n}\n\nbool spec_string_bytes_equal(String b, const char* c, size_t n) {\n    if (!b || b->length != n) return false;\n    if (n == 0) return true;\n    return memcmp(b->data, c, n) == 0;\n}\nlong long spec_string_length(String b) {\n    return spec_buf_length(b);\n}\n\nbool spec_string_equals(String a, String b) {\n    if (a == b) return true;\n    if (!a || !b) return false;\n    if (a->length != b->length) return false;\n    if (a->length == 0) return true;\n    return memcmp(a->data, b->data, a->length) == 0;\n}\n\nlong long spec_string_compare(String a, String b) {\n    if (a == b) return 0;\n    if (!a) return b ? -1 : 0;\n    if (!b) return 1;\n    const unsigned char* pa = (const unsigned char*)a->data;\n    const unsigned char* pb = (const unsigned char*)b->data;\n    long long n = a->length < b->length ? a->length : b->length;\n    for (long long i = 0; i < n; i++) {\n        if (pa[i] != pb[i]) {\n            return (long long)pa[i] - (long long)pb[i];\n        }\n    }\n    return (long long)a->length - (long long)b->length;\n}\n\nString spec_string_concat(String a, String b) {\n    if (!a) a = spec_string_from_bytes(\"\", 0);\n    if (!b || b->length == 0) return a;\n    SpecHeader* h = SPEC_HEADER(a);\n    if (!(atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) &&\n        atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 1) {\n        spec_buf_append_buf(a, b);\n        return a;\n    }\n    String res = spec_buf_new(1, 0);\n    if (a->length) spec_buf_append_buf(res, a);\n    spec_buf_append_buf(res, b);\n    spec_release(a);\n    return res;\n}\nString spec_string_substring(String b, long long start, long long end) {\n    String res = spec_buf_new(1, 0);\n    if (!b) return res;\n    long long len = (long long)b->length;\n    long long s = start < 0 ? 0 : start;\n    long long e = end > len ? len : end;\n    for (long long i = s; i < e; i++) {\n        spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);\n    }\n    return res;\n}\n\nlong long spec_string_index_of(String b, String needle, long long def) {\n    return spec_string_index_of_from(b, needle, 0, def);\n}\n\nlong long spec_string_index_of_from(String b, String needle, long long from, long long def) {\n    if (!b || !needle) return def;\n    if (needle->length == 0) return (from >= 0 && from <= (long long)b->length) ? from : def;\n    long long slen = (long long)b->length;\n    long long nlen = (long long)needle->length;\n    for (long long i = from; i + nlen <= slen; i++) {\n        bool match = true;\n        for (long long j = 0; j < nlen; j++) {\n            if (((unsigned char*)b->data)[i+j] != ((unsigned char*)needle->data)[j]) { match = false; break; }\n        }\n        if (match) return i;\n    }\n    return def;\n}\n\n/* Spec Byte Buffer: compact [Byte] storage (the string builder floor) */\ntypedef struct {\n    unsigned char* data;\n    size_t length;\n    size_t capacity;\n} SpecByteBuffer;\n\nvoid spec_bytebuffer_destroy(void* self) {\n    SpecByteBuffer* b = (SpecByteBuffer*)self;\n    if (b && b->data) { free(b->data); b->data = NULL; }\n}\n\nSpecByteBuffer* spec_bytebuffer_new(void) {\n    SpecByteBuffer* b = (SpecByteBuffer*)spec_alloc(sizeof(SpecByteBuffer), spec_bytebuffer_destroy);\n    b->data = NULL;\n    b->length = 0;\n    b->capacity = 0;\n    return b;\n}\n\nvoid spec_bytebuffer_push(SpecByteBuffer* b, long long v) {\n    if (!b) return;\n    if (b->length >= b->capacity) {\n        b->capacity = (b->capacity == 0) ? 16 : b->capacity * 2;\n        b->data = (unsigned char*)realloc(b->data, b->capacity);\n    }\n    b->data[b->length++] = (unsigned char)v;\n}\n\nvoid spec_bytebuffer_append_string(SpecByteBuffer* b, const char* s) {\n    if (!b || !s) return;\n    size_t n = strlen(s);\n    if (n == 0) return;\n    if (b->length + n > b->capacity) {\n        size_t cap = (b->capacity == 0) ? 16 : b->capacity;\n        while (cap < b->length + n) cap *= 2;\n        b->data = (unsigned char*)realloc(b->data, cap);\n        b->capacity = cap;\n    }\n    memcpy(b->data + b->length, s, n);\n    b->length += n;\n}\n\nvoid spec_bytebuffer_report(SpecClosure* error, const char* msg) {\n    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n}\n\nlong long spec_bytebuffer_get(SpecByteBuffer* b, long long idx, long long def, SpecClosure* error) {\n    if (!b) { spec_bytebuffer_report(error, \"byte buffer is uninitialized\"); return def; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"byte buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n        spec_bytebuffer_report(error, msg);\n        return def;\n    }\n    return (long long)b->data[idx];\n}\n\nvoid spec_bytebuffer_set(SpecByteBuffer* b, long long idx, long long v, SpecClosure* error) {\n    if (!b) { spec_bytebuffer_report(error, \"byte buffer is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"byte buffer assignment out of bounds: index %lld for length %zu\", idx, b->length);\n        spec_bytebuffer_report(error, msg);\n        return;\n    }\n    b->data[idx] = (unsigned char)v;\n}\n\nlong long spec_bytebuffer_pop(SpecByteBuffer* b, long long def, SpecClosure* error) {\n    if (!b) { spec_bytebuffer_report(error, \"byte buffer is uninitialized\"); return def; }\n    if (b->length == 0) {\n        spec_bytebuffer_report(error, \"byte buffer pop on empty buffer\");\n        return def;\n    }\n    return (long long)b->data[--b->length];\n}\n\nlong long spec_bytebuffer_length(SpecByteBuffer* b) {\n    return b ? (long long)b->length : 0;\n}\n\nvoid spec_bytebuffer_clear(SpecByteBuffer* b) {\n    if (b) b->length = 0;\n}\n\nString spec_bytebuffer_to_string(SpecByteBuffer* b) {\n    if (!b || b->length == 0) return spec_string_intern(\"\");\n    return spec_string_from_bytes((const char*)b->data, b->length);\n}\n/* Spec Vec: lean pointer-vector skeleton for non-byte [T] (methods in a later phase) */\ntypedef struct {\n    void** items;\n    size_t length;\n    size_t capacity;\n    int elem_kind;\n} SpecVec;\n\nvoid spec_vec_destroy(void* self) {\n    SpecVec* v = (SpecVec*)self;\n    if (v) {\n        for (size_t i = 0; i < v->length; i++) {\n            if (!v->items[i]) continue;\n            if (v->elem_kind == 1) spec_release(v->items[i]);\n        }\n        if (v->items) free(v->items);\n    }\n}\n\nSpecVec* spec_vec_new_kind(int kind) {\n    SpecVec* v = (SpecVec*)spec_alloc(sizeof(SpecVec), spec_vec_destroy);\n    v->items = NULL;\n    v->length = 0;\n    v->capacity = 0;\n    v->elem_kind = kind;\n    return v;\n}\n\nSpecVec* spec_vec_new(void) {\n    return spec_vec_new_kind(0);\n}\n\nSpecVec* spec_vec_new_object(void) {\n    return spec_vec_new_kind(1);\n}\n\nSpecVec* spec_vec_new_string(void) {\n    return spec_vec_new_object();\n}\n\nvoid spec_vec_push(SpecVec* v, void* item) {\n    if (!v) return;\n    if (v->length >= v->capacity) {\n        v->capacity = (v->capacity == 0) ? 8 : v->capacity * 2;\n        v->items = (void**)realloc(v->items, sizeof(void*) * v->capacity);\n    }\n    if (v->elem_kind == 1 && item) spec_retain(item);\n    v->items[v->length++] = item;\n}\n\nvoid spec_vec_report(SpecClosure* error, const char* msg) {\n    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n}\n\nvoid* spec_vec_get(SpecVec* v, long long idx, void* def, SpecClosure* error) {\n    if (!v) { spec_vec_report(error, \"vector is uninitialized\"); return def; }\n    if (idx < 0 || (size_t)idx >= v->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"vector index out of bounds: index %lld for length %zu\", idx, v->length);\n        spec_vec_report(error, msg);\n        return def;\n    }\n    void* val = v->items[idx];\n    return val;\n}\n\nvoid spec_vec_set(SpecVec* v, long long idx, void* item, SpecClosure* error) {\n    if (!v) { spec_vec_report(error, \"vector is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= v->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"vector assignment out of bounds: index %lld for length %zu\", idx, v->length);\n        spec_vec_report(error, msg);\n        return;\n    }\n    if (v->elem_kind == 1) {\n        if (item) spec_retain(item);\n        if (v->items[idx]) spec_release(v->items[idx]);\n    }\n    v->items[idx] = item;\n}\n\nvoid* spec_vec_pop(SpecVec* v, void* def, SpecClosure* error) {\n    if (!v) { spec_vec_report(error, \"vector is uninitialized\"); return def; }\n    if (v->length == 0) {\n        spec_vec_report(error, \"vector pop on empty vector\");\n        return def;\n    }\n    return v->items[--v->length];\n}\n\nlong long spec_vec_length(SpecVec* v) {\n    return v ? (long long)v->length : 0;\n}\n\nvoid spec_vec_clear(SpecVec* v) {\n    if (!v) return;\n    for (size_t i = 0; i < v->length; i++) {\n        if (!v->items[i]) continue;\n        if (v->elem_kind == 1) spec_release(v->items[i]);\n    }\n    v->length = 0;\n}\n\ntypedef struct {\n    String path;\n    String content;\n    String def;\n    SpecClosure* on_success_read;\n    SpecClosure* on_success_write;\n    SpecClosure* on_error;\n} SpecFileTask;\n\nString spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {\n    if (!path || path->length == 0) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_intern(\"File error: Empty or invalid file path provided\"));\n        return def ? def : spec_string_intern(\"\");\n    }\n    const char* pc = spec_buf_to_cstring((SpecBuf*)path);\n    FILE* f = fopen(pc, \"rb\");\n    if (!f) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return def ? def : spec_string_intern(\"\");\n    }\n    if (fseek(f, 0, SEEK_END) != 0) {\n        fclose(f);\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return def ? def : spec_string_intern(\"\");\n    }\n    long size = ftell(f);\n    if (size < 0) {\n        fclose(f);\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return def ? def : spec_string_intern(\"\");\n    }\n    fseek(f, 0, SEEK_SET);\n    char* buf = (char*)malloc((size_t)size + 1);\n    if (!buf) {\n        fclose(f);\n        if (on_error) spec_call_closure_str(on_error, spec_string_intern(\"File error: Memory allocation failed during read\"));\n        return def ? def : spec_string_intern(\"\");\n    }\n    size_t read_bytes = fread(buf, 1, size, f);\n    fclose(f);\n    String out = spec_string_from_bytes(buf, read_bytes);\n    free(buf);\n    if (on_success) spec_call_closure_str(on_success, out);\n    return out;\n}\nbool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {\n    if (!path || path->length == 0) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_intern(\"File error: Empty or invalid file path provided\"));\n        return false;\n    }\n    const char* pc = spec_buf_to_cstring((SpecBuf*)path);\n    const char* cc = content ? spec_buf_to_cstring((SpecBuf*)content) : \"\";\n    FILE* f = fopen(pc, \"wb\");\n    if (!f) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return false;\n    }\n    size_t len = strlen(cc);\n    size_t written = fwrite(cc, 1, len, f);\n    fclose(f);\n    if (written != len) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return false;\n    }\n    if (on_success) spec_call_closure_int(on_success, (long long)written);\n    return true;\n}\nstatic void* spec_file_read_worker(void* arg) {\n    SpecFileTask* task = (SpecFileTask*)arg;\n    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);\n    if (task->path) spec_release(task->path);\n    if (task->def) spec_release(task->def);\n    if (task->on_success_read) spec_release(task->on_success_read);\n    if (task->on_error) spec_release(task->on_error);\n    free(task);\n    spec_async_task_finished();\n    return NULL;\n}\n\nvoid spec_file_read_async(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {\n    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n    task->path = path ? (String)spec_retain((void*)path) : NULL;\n    task->def = def ? (String)spec_retain((void*)def) : NULL;\n    task->on_success_read = (SpecClosure*)spec_retain(on_success);\n    task->on_error = (SpecClosure*)spec_retain(on_error);\n    spec_async_task_started();\n    pthread_t tid;\n    pthread_create(&tid, NULL, spec_file_read_worker, task);\n    pthread_detach(tid);\n}\n\nstatic void* spec_file_write_worker(void* arg) {\n    SpecFileTask* task = (SpecFileTask*)arg;\n    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);\n    if (task->path) spec_release(task->path);\n    if (task->content) spec_release(task->content);\n    if (task->on_success_write) spec_release(task->on_success_write);\n    if (task->on_error) spec_release(task->on_error);\n    free(task);\n    spec_async_task_finished();\n    return NULL;\n}\n\nvoid spec_file_write_async(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {\n    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n    task->path = path ? (String)spec_retain((void*)path) : NULL;\n    task->content = content ? (String)spec_retain((void*)content) : NULL;\n    task->on_success_write = (SpecClosure*)spec_retain(on_success);\n    task->on_error = (SpecClosure*)spec_retain(on_error);\n    spec_async_task_started();\n    pthread_t tid;\n    pthread_create(&tid, NULL, spec_file_write_worker, task);\n    pthread_detach(tid);\n}\n\nbool spec_file_exists(String path) {\n    if (!path) return false;\n    FILE* f = fopen(spec_buf_to_cstring((SpecBuf*)path), \"r\");\n    if (f) {\n        fclose(f);\n        return true;\n    }\n    return false;\n}\nbool spec_file_remove(String path) {\n    if (!path || path->length == 0) return false;\n    return remove(spec_buf_to_cstring((SpecBuf*)path)) == 0;\n}\n/* Process Package Primitives */\nlong long spec_process_execute(String command, SpecArray* args) {\n    if (!command) return -1;\n    const char* cc = spec_buf_to_cstring((SpecBuf*)command);\n    size_t total_len = strlen(cc) + 1;\n    if (args) {\n        for (size_t i = 0; i < args->length; i++) {\n            if (args->items[i]) total_len += strlen(spec_buf_to_cstring((SpecBuf*)args->items[i])) + 4;\n        }\n    }\n    char* cmd_line = (char*)malloc(total_len + 16);\n    strcpy(cmd_line, cc);\n    if (args) {\n        for (size_t i = 0; i < args->length; i++) {\n            if (!args->items[i]) continue;\n            strcat(cmd_line, \" \");\n            strcat(cmd_line, spec_buf_to_cstring((SpecBuf*)args->items[i]));\n        }\n    }\n    int status = system(cmd_line);\n    free(cmd_line);\n    if (status == -1) return -1;\n    return (long long)WEXITSTATUS(status);\n}\nvoid spec_process_sleep(long long ms) {\n    if (ms <= 0) return;\n    struct timespec ts;\n    ts.tv_sec = ms / 1000;\n    ts.tv_nsec = (ms % 1000) * 1000000L;\n    nanosleep(&ts, NULL);\n}\n\nlong long spec_process_get_pid(void) {\n    return (long long)getpid();\n}\n\n/* Math Package Primitives */\ndouble spec_math_round(double v) { return round(v); }\ndouble spec_math_floor(double v) { return floor(v); }\ndouble spec_math_ceil(double v) { return ceil(v); }\ndouble spec_math_abs(double v) { return fabs(v); }\nstatic inline long long spec_math_abs_int(long long v) { return v < 0 ? -v : v; }\ndouble spec_math_min(double a, double b) { return (a < b) ? a : b; }\ndouble spec_math_max(double a, double b) { return (a > b) ? a : b; }\ndouble spec_math_clamp(double v, double lo, double hi) {\n    if (hi < lo) return lo;\n    if (v < lo) return lo;\n    if (v > hi) return hi;\n    return v;\n}\ndouble spec_math_sqrt(double v) { return v < 0.0 ? 0.0 : sqrt(v); }\ndouble spec_math_sin(double v) { return sin(v); }\ndouble spec_math_cos(double v) { return cos(v); }\ndouble spec_math_tan(double v) { return tan(v); }\ndouble spec_math_atan2(double y, double x) { return atan2(y, x); }\ndouble spec_math_log(double v) { return v <= 0.0 ? 0.0 : log(v); }\ndouble spec_math_log2(double v) { return v <= 0.0 ? 0.0 : log2(v); }\ndouble spec_math_pow(double base, double exp) { return pow(base, exp); }\nlong long spec_math_to_int(double v) { return (long long)v; }\ndouble spec_math_to_float(long long v) { return (double)v; }\n\ndouble spec_math_random(double min, double max) {\n    if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));\n    return min + ((double)rand() / ((double)RAND_MAX + 1.0)) * (max - min);\n}\n\n/* Integer Base Conversion */\nString spec_int_to_base(long long v, long long base, long long digits) {\n    if (base < 2 || base > 36) base = 10;\n    if (digits < 0) digits = 0;\n    const char* digs = \"0123456789abcdefghijklmnopqrstuvwxyz\";\n    char buf[80];\n    int idx = 79;\n    buf[idx] = '\\0';\n    int neg = v < 0;\n    unsigned long long u = neg ? (unsigned long long)(-(v + 1)) + 1ULL : (unsigned long long)v;\n    if (u == 0) buf[--idx] = '0';\n    while (u > 0) { buf[--idx] = digs[u % (unsigned long long)base]; u /= (unsigned long long)base; }\n    while ((79 - idx) < (int)digits && idx > 0) buf[--idx] = '0';\n    if (neg && idx > 0) buf[--idx] = '-';\n    return spec_string_from_chars(buf + idx);\n}\n\n/* Terminal Metrics */\nlong long spec_term_width(void) {\n    if (!isatty(1)) return 0;\n    struct winsize ws;\n    if (ioctl(1, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) return (long long)ws.ws_col;\n    char* cols = getenv(\"COLUMNS\");\n    if (cols) return (long long)atoi(cols);\n    return 78;\n}\n\nlong long spec_term_height(void) {\n    if (!isatty(1)) return 0;\n    struct winsize ws;\n    if (ioctl(1, TIOCGWINSZ, &ws) == 0 && ws.ws_row > 0) return (long long)ws.ws_row;\n    char* lines = getenv(\"LINES\");\n    if (lines) return (long long)atoi(lines);\n    return 24;\n}\n\n/* Atomic Slots */\nstatic atomic_llong _spec_atomic_slots[64];\n\nlong long spec_atomic_add(long long slot, long long v) {\n    if (slot < 0 || slot >= 64) return 0;\n    return atomic_fetch_add(&_spec_atomic_slots[slot], v) + v;\n}\n\nlong long spec_atomic_put(long long slot, long long v) {\n    if (slot < 0 || slot >= 64) return v;\n    atomic_store(&_spec_atomic_slots[slot], v);\n    return v;\n}\n\nlong long spec_atomic_get(long long slot) {\n    if (slot < 0 || slot >= 64) return 0;\n    return atomic_load(&_spec_atomic_slots[slot]);\n}\n\n/* Per-Thread RNG (xorshift64*, lock-free, self-seeding) */\nstatic __thread unsigned long long _spec_rng_state = 0;\n\nstatic unsigned long long spec_rng_next(void) {\n    unsigned long long x = _spec_rng_state;\n    x ^= x >> 12;\n    x ^= x << 25;\n    x ^= x >> 27;\n    _spec_rng_state = x;\n    return x * 0x2545F4914F6CDD1DULL;\n}\n\nvoid spec_fast_random_seed(long long idx) {\n    _spec_rng_state = 0x9E3779B97F4A7C15ULL ^ ((unsigned long long)idx * 0xBF58476D1CE4E5B9ULL + 0x94D049BB133111EBULL);\n    if (_spec_rng_state == 0) _spec_rng_state = 1;\n    spec_rng_next();\n    spec_rng_next();\n    spec_rng_next();\n}\n\ndouble spec_fast_random(void) {\n    if (_spec_rng_state == 0) spec_fast_random_seed(0x5DEECE66DULL);\n    return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);\n}\n\n/* Parallel Fan-Out */\ntypedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);\ntypedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;\n\nstatic void* spec_parallel_worker(void* arg) {\n    SpecParallelTask* t = (SpecParallelTask*)arg;\n    spec_fast_random_seed(t->idx);\n    long long r = t->fn(t->env, t->idx, t->count);\n    free(t);\n    return (void*)(intptr_t)r;\n}\n\nlong long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {\n    if (threads < 1) threads = 1;\n    if (threads > 64) threads = 64;\n    SpecClosure* cls = (SpecClosure*)worker_closure;\n    if (!cls || !cls->fn) spec_panic(\"Parallel:run received null worker Function\");\n    pthread_t tids[64];\n    long long total = 0;\n    long long base = iterations / threads;\n    long long rem = iterations % threads;\n    for (long long i = 0; i < threads; i++) {\n        SpecParallelTask* t = (SpecParallelTask*)malloc(sizeof(SpecParallelTask));\n        t->fn = (SpecWorkerFn)cls->fn;\n        t->env = cls->env;\n        t->idx = i;\n        t->count = base + (i < rem ? 1 : 0);\n        if (pthread_create(&tids[i], NULL, spec_parallel_worker, t) != 0) {\n            free(t);\n            tids[i] = pthread_self();\n        }\n    }\n    for (long long i = 0; i < threads; i++) {\n        void* ret = NULL;\n        pthread_join(tids[i], &ret);\n        total += (long long)(intptr_t)ret;\n    }\n    return total;\n}\n\n/* Type Name Introspection */\nString spec_type_name(const void* obj) {\n    if (!obj) return spec_string_intern(\"\");\n    return spec_string_intern(*((const char**)obj));\n}\n\n/* Clock & Memory Metrics */\nlong long spec_clock_ms(void) {\n    struct timespec ts;\n    clock_gettime(CLOCK_MONOTONIC, &ts);\n    return ((long long)ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);\n}\n\nlong long spec_mem_peak_kb(void) {\n    struct rusage ru;\n    if (getrusage(RUSAGE_SELF, &ru) != 0) return 0;\n    return (long long)ru.ru_maxrss;\n}\n\nlong long spec_thread_count(void) {\n    FILE* f = fopen(\"/proc/self/status\", \"r\");\n    if (!f) return 1;\n    char line[256];\n    long long n = 1;\n    while (fgets(line, sizeof(line), f)) {\n        if (strncmp(line, \"Threads:\", 8) == 0) { n = atoll(line + 8); break; }\n    }\n    fclose(f);\n    return n;\n}\n\n/* Error Output Primitive */\nvoid spec_error_line(String s) {\n    const char* cs = s ? spec_buf_to_cstring((SpecBuf*)s) : \"\";\n    fprintf(stderr, \"%s\\n\", cs);\n}\n"))));
+    spec_assign((void**)&p, (void*)(spec_string_concat((void*)spec_retain((void*)(p)), spec_string_intern("/* Generated by Pure-Spec Compiler */\n#define _POSIX_C_SOURCE 200809L\n#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdbool.h>\n#include <stdint.h>\n#include <ctype.h>\n#include <time.h>\n#include <errno.h>\n#include <math.h>\n#include <unistd.h>\n#pragma GCC diagnostic ignored \"-Wincompatible-pointer-types\"\n/* Forward declarations: SpecBuf-backed String layer (definitions below) */\ntypedef struct SpecBuf SpecBuf;\ntypedef SpecBuf* String;\ntypedef struct SpecClosure SpecClosure;\nSpecBuf* spec_buf_new(size_t elem_size, int elem_kind);\nvoid spec_buf_append_bytes(SpecBuf* b, const char* s);\nvoid spec_buf_append_buf(SpecBuf* dst, SpecBuf* src);\nconst char* spec_buf_to_cstring(SpecBuf* b);\nlong long spec_buf_get_byte(SpecBuf* b, long long idx, long long def);\nString spec_string_from_bytes(const char* data, size_t n);\nString spec_string_copy(String b);\nbool spec_string_bytes_equal(String b, const char* c, size_t n);\nlong long spec_string_length(String b);\nbool spec_string_equals(String a, String b);\nlong long spec_string_compare(String a, String b);\nString spec_string_concat(String a, String b);\nString spec_string_substring(String b, long long start, long long end);\nlong long spec_string_index_of(String b, String needle, long long def);\nlong long spec_string_index_of_from(String b, String needle, long long from, long long def);\n#include <dirent.h>\n#include <sys/stat.h>\n#include <pthread.h>\n#include <sys/wait.h>\n#include <sys/ioctl.h>\n#include <sys/resource.h>\n#include <stdatomic.h>\n\n/* Spec Runtime Panic & Safety Utilities */\nvoid spec_panic(const char* msg) {\n    fprintf(stderr, \"[Spec Runtime Panic] %s\\n\", msg ? msg : \"fatal error\");\n    exit(1);\n}\n\nvoid spec_panic_bounds(const char* coll, long long idx, size_t len) {\n    fprintf(stderr, \"[Spec Runtime Panic] %s index out of bounds: index %lld for length %zu\\n\", coll ? coll : \"Collection\", idx, len);\n    exit(1);\n}\n\nvoid spec_panic_cast(const char* actual, const char* target) {\n    fprintf(stderr, \"[Spec Runtime Panic] Invalid downcast: instance of '%s' cannot be cast to '%s'\\n\", actual ? actual : \"Unknown\", target ? target : \"Unknown\");\n    exit(1);\n}\n\nvoid spec_panic_byte_range(long long v) {\n    fprintf(stderr, \"[Spec Runtime Panic] Byte cast out of range: %lld (must be 0..255)\\n\", v);\n    exit(1);\n}\n\nstatic bool spec_is_subclass_of(const char* actual, const char* target);\n\nstatic inline void* spec_cast_check(const void* obj, const char* target) {\n    if (!obj) return NULL;\n    const char* actual = *((const char**)obj);\n    if (!spec_is_subclass_of(actual, target)) {\n        spec_panic_cast(actual, target);\n    }\n    return (void*)obj;\n}\n\n/* The process object arena flag: the compiler driver activates it; user\n   programs never do. Lives at the top so every container constructor\n   below can consult it. */\nstatic bool _spec_arena_active = false;\nvoid* spec_arena_alloc_object(size_t size, void (*destroy)(void*));\nvoid spec_arena_drain_objects(void);\n\nvoid spec_activate_process_arena(void) {\n    _spec_arena_active = true;\n}\n\n/* Spec Automated Reference Counting (ARC) Primitives */\n#define SPEC_S_IMMORTAL 1u\n#define SPEC_S_HASLEN 2u\ntypedef struct {\n    _Atomic uint32_t ref_count;\n    void (*destroy)(void*);\n    _Atomic uint32_t sflags;\n    uint32_t slen;\n} SpecHeader;\n\n#define SPEC_HEADER(obj) (((SpecHeader*)(obj)) - 1)\n\nstatic inline void* spec_alloc(size_t size, void (*destroy)(void*)) {\n    SpecHeader* h = (SpecHeader*)calloc(1, sizeof(SpecHeader) + size);\n    if (!h) { fprintf(stderr, \"[Spec Panic] Out of memory\\n\"); exit(1); }\n    h->ref_count = 1;\n    h->destroy = destroy;\n    return (void*)(h + 1);\n}\n\nstatic inline void* spec_retain(void* obj) {\n    if (!obj) return NULL;\n    SpecHeader* h = SPEC_HEADER(obj);\n    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return obj;\n    atomic_fetch_add_explicit(&h->ref_count, 1, memory_order_relaxed);\n    return obj;\n}\n\nstatic inline void spec_release(void* obj) {\n    if (!obj) return;\n    SpecHeader* h = SPEC_HEADER(obj);\n    if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;\n    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }\n    if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {\n        if (h->destroy) h->destroy(obj);\n        free(h);\n    }\n}\n\nstatic inline void* spec_assign(void** dest, void* src) {\n    if (src) spec_retain(src);\n    if (*dest) spec_release(*dest);\n    *dest = src;\n    return src;\n}\n\nstatic inline void* spec_assign_transfer(void** dest, void* src) {\n    if (*dest) spec_release(*dest);\n    *dest = src;\n    return src;\n}\n\nstatic inline void spec_scope_cleanup(void* pptr) {\n    void* obj = *(void**)pptr;\n    if (obj) spec_release(obj);\n}\n\n#define SPEC_AUTO __attribute__((cleanup(spec_scope_cleanup)))\n\n/* Spec String Core: refcounted, NUL-terminated, optionally interned.\n   A String value is a char* into a spec_alloc block whose header carries\n   a cached length and an immortal flag for interned literals. */\nString spec_string_from_chars(const char* c) {\n    if (!c) c = \"\";\n    return spec_string_from_bytes(c, strlen(c));\n}\n#define SPEC_INTERN_BUCKETS 256\ntypedef struct SpecInternEntry {\n    String s;\n    struct SpecInternEntry* next;\n} SpecInternEntry;\nstatic SpecInternEntry* _spec_intern[SPEC_INTERN_BUCKETS];\nstatic pthread_mutex_t _spec_intern_lock = PTHREAD_MUTEX_INITIALIZER;\n\nstatic inline size_t spec_intern_bucket(const char* c) {\n    size_t h = 1469598103934665603ULL;\n    while (*c) { h ^= (unsigned char)(*c++); h *= 1099511628211ULL; }\n    return h & (SPEC_INTERN_BUCKETS - 1);\n}\n\nString spec_string_intern(const char* c) {\n    if (!c) c = \"\";\n    size_t b = spec_intern_bucket(c);\n    size_t n = strlen(c);\n    pthread_mutex_lock(&_spec_intern_lock);\n    SpecInternEntry* e = _spec_intern[b];\n    while (e) {\n        String es = (String)e->s;\n        if (spec_string_bytes_equal(es, c, n)) { pthread_mutex_unlock(&_spec_intern_lock); return es; }\n        e = e->next;\n    }\n    String s = spec_string_from_bytes(c, n);\n    atomic_fetch_or_explicit(&SPEC_HEADER(s)->sflags, SPEC_S_IMMORTAL, memory_order_relaxed);\n    e = (SpecInternEntry*)malloc(sizeof(SpecInternEntry));\n    e->s = s;\n    e->next = _spec_intern[b];\n    _spec_intern[b] = e;\n    pthread_mutex_unlock(&_spec_intern_lock);\n    return s;\n}\n/* Claim pool: adopts ownership claims in read positions (call arguments,\n   conditions, chain targets) and recycles them on eviction. A borrowed\n   pointer stays valid until 32 further pool claims are made, which is\n   far more than any single statement evaluates. */\n#define SPEC_POOL_SLOTS 32\nstatic void* _spec_pool[SPEC_POOL_SLOTS];\nstatic size_t _spec_pool_next = 0;\nstatic pthread_mutex_t _spec_pool_lock = PTHREAD_MUTEX_INITIALIZER;\n\nvoid* spec_claim_pool(void* obj) {\n    if (!obj) return NULL;\n    pthread_mutex_lock(&_spec_pool_lock);\n    size_t slot = _spec_pool_next;\n    _spec_pool_next = (slot + 1) % SPEC_POOL_SLOTS;\n    void* old = _spec_pool[slot];\n    _spec_pool[slot] = obj;\n    pthread_mutex_unlock(&_spec_pool_lock);\n    if (old) spec_release(old);\n    return obj;\n}\n\n/* Spec First-Class Closure Representation */\ntypedef struct SpecClosure {\n    void* fn;\n    void* env;\n    void (*destroy_env)(void*);\n} SpecClosure;\n\nstatic inline void spec_closure_destroy(void* self) {\n    SpecClosure* c = (SpecClosure*)self;\n    if (c) {\n        if (c->env && c->destroy_env) {\n            c->destroy_env(c->env);\n            c->env = NULL;\n        }\n    }\n}\n\nstatic inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_env)(void*)) {\n    SpecClosure* c = (SpecClosure*)spec_alloc(sizeof(SpecClosure), spec_closure_destroy);\n    c->fn = fn;\n    c->env = env;\n    c->destroy_env = destroy_env;\n    return c;\n}\n\n/* Spec Runtime String Utilities */\nString spec_to_string_int(long long v) {\n    char buf[64];\n    snprintf(buf, sizeof(buf), \"%lld\", v);\n    return spec_string_intern(buf);\n}\n\nString spec_to_string_float(double v) {\n    char buf[64];\n    snprintf(buf, sizeof(buf), \"%g\", v);\n    return spec_string_intern(buf);\n}\n\nString spec_to_string_bool(bool v) {\n    return spec_string_intern(v ? \"true\" : \"false\");\n}\nString spec_string_from_char_code(long long code) {\n    if (code < 0 || code > 255) return spec_string_intern(\"\");\n    char one[2] = { (char)code, '\\0' };\n    return spec_string_intern(one);\n}\n/* Thread-Safe Spec Dynamic Array */\n#define SPEC_ELEM_NONE 0\n#define SPEC_ELEM_OBJECT 1\ntypedef struct {\n    void** items;\n    size_t length;\n    size_t capacity;\n    int elem_kind;\n    pthread_mutex_t lock;\n} SpecArray;\n\nvoid spec_array_destroy(void* self) {\n    SpecArray* a = (SpecArray*)self;\n    if (a && getenv(\"SPEC_ARR_TRACE\") && a->length > 500) fprintf(stderr, \"[ARR-DESTROY] len=%zu kind=%d\\n\", a->length, a->elem_kind);\n    if (a) {\n        if (a->items) {\n            for (size_t i = 0; i < a->length; i++) {\n                if (!a->items[i]) continue;\n                if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);\n            }\n        }\n        pthread_mutex_destroy(&a->lock);\n        if (a->items) free(a->items);\n    }\n}\n\nstatic SpecArray* spec_array_new_kind(int kind) {\n    SpecArray* a = (SpecArray*)spec_alloc(sizeof(SpecArray), spec_array_destroy);\n    a->items = NULL;\n    a->length = 0;\n    a->capacity = 0;\n    a->elem_kind = kind;\n    pthread_mutexattr_t attr;\n    pthread_mutexattr_init(&attr);\n    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);\n    pthread_mutex_init(&a->lock, &attr);\n    pthread_mutexattr_destroy(&attr);\n    return a;\n}\n\nSpecArray* spec_array_new(void) {\n    return spec_array_new_kind(SPEC_ELEM_NONE);\n}\n\nSpecArray* spec_array_new_object(void) {\n    return spec_array_new_kind(SPEC_ELEM_OBJECT);\n}\n\nvoid spec_array_add(SpecArray* a, void* item) {\n    if (!a) return;\n    pthread_mutex_lock(&a->lock);\n    if (a->length >= a->capacity) {\n        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;\n        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n    }\n    if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);\n    a->items[a->length++] = item;\n    pthread_mutex_unlock(&a->lock);\n}\n\nvoid spec_array_add_object(SpecArray* a, void* item) {\n    if (a && a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;\n    spec_array_add(a, item);\n}\n\nvoid spec_array_add_owned(SpecArray* a, void* item) {\n    if (!a) return;\n    pthread_mutex_lock(&a->lock);\n    if (a->length >= a->capacity) {\n        a->capacity = (a->capacity == 0) ? 8 : a->capacity * 2;\n        a->items = (void**)realloc(a->items, sizeof(void*) * a->capacity);\n    }\n    a->items[a->length++] = item;\n    pthread_mutex_unlock(&a->lock);\n}\n\nvoid spec_array_add_array(SpecArray* a, SpecArray* other) {\n    if (!a || !other) return;\n    pthread_mutex_lock(&other->lock);\n    for (size_t i = 0; i < other->length; i++) {\n        spec_array_add(a, other->items[i]);\n    }\n    pthread_mutex_unlock(&other->lock);\n}\n\nlong long spec_array_length(SpecArray* a) {\n    if (!a) return 0;\n    pthread_mutex_lock(&a->lock);\n    long long len = (long long)a->length;\n    pthread_mutex_unlock(&a->lock);\n    return len;\n}\n\nvoid* spec_array_get(SpecArray* a, long long idx) {\n    if (!a) spec_panic(\"Null pointer access on uninitialized Array\");\n    pthread_mutex_lock(&a->lock);\n    if (idx < 0 || (size_t)idx >= a->length) {\n        size_t len = a->length;\n        pthread_mutex_unlock(&a->lock);\n        spec_panic_bounds(\"Array\", idx, len);\n        return NULL;\n    }\n    void* val = a->items[idx];\n    pthread_mutex_unlock(&a->lock);\n    return val;\n}\n\nvoid spec_array_set(SpecArray* a, long long idx, void* item) {\n    if (!a) spec_panic(\"Null pointer access on uninitialized Array\");\n    pthread_mutex_lock(&a->lock);\n    if (idx < 0 || (size_t)idx >= a->length) {\n        size_t len = a->length;\n        pthread_mutex_unlock(&a->lock);\n        spec_panic_bounds(\"Array assignment\", idx, len);\n        return;\n    }\n    if (a->elem_kind == SPEC_ELEM_OBJECT) {\n        if (item) spec_retain(item);\n        if (a->items[idx]) spec_release(a->items[idx]);\n    }\n    a->items[idx] = item;\n    pthread_mutex_unlock(&a->lock);\n}\n\nvoid* spec_array_pop(SpecArray* a, void* def) {\n    if (!a) return def;\n    pthread_mutex_lock(&a->lock);\n    void* val = def;\n    if (a->length > 0) val = a->items[--a->length];\n    pthread_mutex_unlock(&a->lock);\n    return val;\n}\n\nvoid* spec_array_remove_at(SpecArray* a, long long idx, void* def) {\n    if (!a || idx < 0) return def;\n    pthread_mutex_lock(&a->lock);\n    void* removed = def;\n    if ((size_t)idx < a->length) {\n        removed = a->items[idx];\n        for (size_t i = (size_t)idx; i + 1 < a->length; i++) {\n            a->items[i] = a->items[i + 1];\n        }\n        a->length--;\n    }\n    pthread_mutex_unlock(&a->lock);\n    return removed;\n}\n\nvoid spec_array_clear(SpecArray* a) {\n    if (!a) return;\n    pthread_mutex_lock(&a->lock);\n    for (size_t i = 0; i < a->length; i++) {\n        if (!a->items[i]) continue;\n        if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);\n    }\n    a->length = 0;\n    pthread_mutex_unlock(&a->lock);\n}\n\n/* Thread-Safe Spec Hash Map (64-Bucket FNV-1a Hash Table) */\n#define SPEC_MAP_BUCKETS 64\ntypedef struct SpecMapEntry {\n    char* key;\n    void* value;\n    bool is_str;\n    struct SpecMapEntry* next;\n} SpecMapEntry;\n\ntypedef struct {\n    SpecMapEntry* buckets[SPEC_MAP_BUCKETS];\n    size_t length;\n    int val_kind;\n    pthread_mutex_t lock;\n} SpecMap;\n\nstatic inline size_t spec_hash_key(const char* key) {\n    size_t h = 1469598103934665603ULL;\n    while (*key) {\n        h ^= (unsigned char)(*key++);\n        h *= 1099511628211ULL;\n    }\n    return h & (SPEC_MAP_BUCKETS - 1);\n}\n\nvoid spec_map_destroy(void* self) {\n    SpecMap* m = (SpecMap*)self;\n    if (m) {\n        pthread_mutex_destroy(&m->lock);\n        for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n            SpecMapEntry* curr = m->buckets[i];\n            while (curr) {\n                SpecMapEntry* next = curr->next;\n                if (curr->key) free(curr->key);\n                if (curr->is_str && curr->value) free(curr->value);\n                else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n                free(curr);\n                curr = next;\n            }\n        }\n    }\n}\n\nstatic SpecMap* spec_map_new_kind(int kind) {\n    SpecMap* m = (SpecMap*)spec_alloc(sizeof(SpecMap), spec_map_destroy);\n    m->val_kind = kind;\n    pthread_mutexattr_t attr;\n    pthread_mutexattr_init(&attr);\n    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);\n    pthread_mutex_init(&m->lock, &attr);\n    pthread_mutexattr_destroy(&attr);\n    return m;\n}\n\nSpecMap* spec_map_new(void) {\n    return spec_map_new_kind(SPEC_ELEM_NONE);\n}\n\nSpecMap* spec_map_new_object(void) {\n    return spec_map_new_kind(SPEC_ELEM_OBJECT);\n}\n\nvoid spec_map_set(SpecMap* m, String key, String val) {\n    if (!m || !key) return;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (curr->is_str && curr->value) free(curr->value);\n            curr->value = (void*)strdup(cv ? cv : \"\");\n            curr->is_str = true;\n            pthread_mutex_unlock(&m->lock);\n            return;\n        }\n        curr = curr->next;\n    }\n    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n    e->key = strdup(ck);\n    e->value = (void*)strdup(cv ? cv : \"\");\n    e->is_str = true;\n    e->next = m->buckets[idx];\n    m->buckets[idx] = e;\n    m->length++;\n    pthread_mutex_unlock(&m->lock);\n}\n\nvoid spec_map_set_any(SpecMap* m, String key, void* val) {\n    if (!m || !key) return;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (curr->is_str && curr->value) free(curr->value);\n            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n            if (m->val_kind == SPEC_ELEM_OBJECT && val) spec_retain(val);\n            curr->value = val;\n            curr->is_str = false;\n            pthread_mutex_unlock(&m->lock);\n            return;\n        }\n        curr = curr->next;\n    }\n    if (m->val_kind == SPEC_ELEM_OBJECT && val) spec_retain(val);\n    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n    e->key = strdup(ck);\n    e->value = val;\n    e->is_str = false;\n    e->next = m->buckets[idx];\n    m->buckets[idx] = e;\n    m->length++;\n    pthread_mutex_unlock(&m->lock);\n}\n\nvoid spec_map_set_any_transfer(SpecMap* m, String key, void* val) {\n    if (!m || !key) return;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (curr->is_str && curr->value) free(curr->value);\n            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n            curr->value = val;\n            curr->is_str = false;\n            pthread_mutex_unlock(&m->lock);\n            return;\n        }\n        curr = curr->next;\n    }\n    SpecMapEntry* e = (SpecMapEntry*)malloc(sizeof(SpecMapEntry));\n    e->key = strdup(ck);\n    e->value = val;\n    e->is_str = false;\n    e->next = m->buckets[idx];\n    m->buckets[idx] = e;\n    m->length++;\n    pthread_mutex_unlock(&m->lock);\n}\n\nvoid* spec_map_get(SpecMap* m, String key, void* _default) {\n    if (!m || !key) return _default;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            void* res = curr->value;\n            if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : \"\");\n            else if (m->val_kind == SPEC_ELEM_OBJECT && res) spec_retain(res);\n            pthread_mutex_unlock(&m->lock);\n            return res;\n        }\n        curr = curr->next;\n    }\n    pthread_mutex_unlock(&m->lock);\n    return _default;\n}\n\nbool spec_map_has(SpecMap* m, String key) {\n    if (!m || !key) return false;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            pthread_mutex_unlock(&m->lock);\n            return true;\n        }\n        curr = curr->next;\n    }\n    pthread_mutex_unlock(&m->lock);\n    return false;\n}\n\nbool spec_map_remove(SpecMap* m, String key) {\n    if (!m || !key) return false;\n    const char* ck = spec_buf_to_cstring((SpecBuf*)key);\n    pthread_mutex_lock(&m->lock);\n    size_t idx = spec_hash_key(ck);\n    SpecMapEntry* curr = m->buckets[idx];\n    SpecMapEntry* prev = NULL;\n    while (curr) {\n        if (strcmp(curr->key, ck) == 0) {\n            if (prev) prev->next = curr->next;\n            else m->buckets[idx] = curr->next;\n            free(curr->key);\n            if (curr->is_str && curr->value) free(curr->value);\n            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);\n            free(curr);\n            m->length--;\n            pthread_mutex_unlock(&m->lock);\n            return true;\n        }\n        prev = curr;\n        curr = curr->next;\n    }\n    pthread_mutex_unlock(&m->lock);\n    return false;\n}\n\nlong long spec_map_length(SpecMap* m) {\n    if (!m) return 0;\n    pthread_mutex_lock(&m->lock);\n    long long cnt = (long long)m->length;\n    pthread_mutex_unlock(&m->lock);\n    return cnt;\n}\n\nSpecArray* spec_map_keys(SpecMap* m) {\n    SpecArray* a = spec_array_new_object();\n    if (!m) return a;\n    pthread_mutex_lock(&m->lock);\n    for (size_t i = 0; i < SPEC_MAP_BUCKETS; i++) {\n        SpecMapEntry* curr = m->buckets[i];\n        while (curr) {\n            spec_array_add_owned(a, (void*)spec_string_from_chars(curr->key));\n            curr = curr->next;\n        }\n    }\n    pthread_mutex_unlock(&m->lock);\n    return a;\n}\n\n/* Spec Loop Control Intrinsic */\ntypedef struct SpecLoopControl {\n    bool stopped;\n    void* callback;\n    void (*on_complete)(void* callback, struct SpecLoopControl* control);\n} SpecLoopControl;\n\ntypedef struct SpecLoopControl LoopControl;\n\nSpecLoopControl* LoopControl_new(void) {\n    SpecLoopControl* c = (SpecLoopControl*)spec_alloc(sizeof(SpecLoopControl), NULL);\n    if (c) {\n        c->stopped = false;\n        c->callback = NULL;\n        c->on_complete = NULL;\n    }\n    return c;\n}\n\nvoid LoopControl_stop(SpecLoopControl* c) {\n    if (c) c->stopped = true;\n}\n\n/* Spec Async Task Manager */\nstatic int spec_in_flight_tasks = 0;\nstatic pthread_mutex_t spec_task_mutex = PTHREAD_MUTEX_INITIALIZER;\nstatic pthread_cond_t spec_task_cond = PTHREAD_COND_INITIALIZER;\n\nvoid spec_async_task_started(void) {\n    pthread_mutex_lock(&spec_task_mutex);\n    spec_in_flight_tasks++;\n    pthread_mutex_unlock(&spec_task_mutex);\n}\n\nvoid spec_async_task_finished(void) {\n    pthread_mutex_lock(&spec_task_mutex);\n    spec_in_flight_tasks--;\n    if (spec_in_flight_tasks <= 0) {\n        spec_in_flight_tasks = 0;\n        pthread_cond_broadcast(&spec_task_cond);\n    }\n    pthread_mutex_unlock(&spec_task_mutex);\n}\n\nvoid spec_drain_async_tasks(void) {\n    pthread_mutex_lock(&spec_task_mutex);\n    while (spec_in_flight_tasks > 0) {\n        pthread_cond_wait(&spec_task_cond, &spec_task_mutex);\n    }\n    pthread_mutex_unlock(&spec_task_mutex);\n}\n\n/* File Package Primitives with Callbacks and Async Worker Support */\nstatic inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {\n    if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }\n}\n\n/* FUNCTIONS.md Part II: the no-argument closure invoker for the\n   conditional floor. */\nstatic inline void spec_call_closure_0(SpecClosure* cls) {\n    if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }\n}\n\n/* The conditional floor (FUNCTIONS.md Part II): the single primitive.\n   `else` is composed above it as `if(!check, else)`. */\nstatic inline void spec_branch(bool check, SpecClosure* then) {\n    if (check) { spec_call_closure_0(then); }\n}\nstatic inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {\n    if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }\n}\n\n/* No-op callback singleton: the default for optional error callbacks */\nstatic void _spec_noop_cb(void* env, const char* msg) { (void)env; (void)msg; }\nstatic SpecClosure* _spec_noop_closure = NULL;\nstatic inline SpecClosure* spec_noop_closure(void) {\n    if (!_spec_noop_closure) { _spec_noop_closure = spec_closure_new((void*)_spec_noop_cb, NULL, NULL); }\n    return _spec_noop_closure;\n}\n\n/* Per-Type Constructors: invoked by : assignment for each type. */\nString spec_string_intern(const char* c);\nString spec_string_from_chars(const char* c);\n/* Each constructor takes the source value and produces the type's\n   canonical internal representation. For primitives this is a cast;\n   for composite types it involves allocation and initialisation. */\nstatic inline long long spec_construct_int(long long v) { return v; }\nstatic inline unsigned char spec_construct_byte(long long v) {\n    if (v < 0 || v > 255) spec_panic_byte_range(v);\n    return (unsigned char)v;\n}\n\nstatic inline double spec_construct_float(double v) { return v; }\n\nstatic inline bool spec_construct_bool(bool v) { return v; }\n\nstatic inline String spec_construct_string(const void* src) {\n    if (!src) return spec_string_intern(\"\");\n    return spec_string_copy((String)src);\n}\n/* String: the managed string type (initially char*, transitions to SpecBuf) */\ntypedef SpecBuf* String;\n\n/* Unified Growable Buffer: elem_size=1 for bytes, 8 for pointers */\ntypedef struct SpecBuf {\n    void* data;\n    size_t length;\n    size_t capacity;\n    size_t elem_size;\n    int elem_kind;\n} SpecBuf;\n\nvoid spec_buf_destroy(void* self) {\n    SpecBuf* b = (SpecBuf*)self;\n    if (!b) return;\n    if (b->data && b->elem_size == 8 && b->elem_kind != 0) {\n        void** items = (void**)b->data;\n        for (size_t i = 0; i < b->length; i++) {\n            if (!items[i]) continue;\n            if (b->elem_kind == 1) spec_release(items[i]);\n        }\n    }\n    if (b->data) { free(b->data); b->data = NULL; }\n}\n\n/* The compilation arena: bump allocation over growing blocks. */\ntypedef struct ArenaBlock {\n    struct ArenaBlock* next;\n    size_t used;\n    size_t cap;\n    char* data;\n} ArenaBlock;\n\ntypedef struct SpecArena {\n    ArenaBlock* head;\n    size_t used;\n} SpecArena;\n\n#define ARENA_BLOCK_SIZE (64 * 1024)\n\nstatic ArenaBlock* arena_block_new(size_t cap) {\n    ArenaBlock* b = (ArenaBlock*)calloc(1, sizeof(ArenaBlock));\n    if (!b) { fprintf(stderr, \"[Spec Panic] Out of memory\\n\"); exit(1); }\n    b->data = (char*)calloc(1, cap);\n    if (!b->data) { fprintf(stderr, \"[Spec Panic] Out of memory\\n\"); exit(1); }\n    b->cap = cap;\n    b->used = 0;\n    return b;\n}\n\nstatic void* spec_arena_alloc(SpecArena* a, size_t size) {\n    size = (size + 15) & ~(size_t)15;\n    if (!a->head || a->head->used + size > a->head->cap) {\n        size_t cap = ARENA_BLOCK_SIZE;\n        if (size > cap) cap = size;\n        ArenaBlock* nb = arena_block_new(cap);\n        nb->next = a->head;\n        a->head = nb;\n    }\n    void* p = a->head->data + a->head->used;\n    a->head->used += size;\n    a->used += size;\n    memset(p, 0, size);\n    return p;\n}\n\nSpecArena* spec_arena_new(void) {\n    return (SpecArena*)calloc(1, sizeof(SpecArena));\n}\n\nvoid spec_arena_drain(SpecArena* a) {\n    ArenaBlock* b = a->head;\n    while (b) {\n        ArenaBlock* next = b->next;\n        free(b->data);\n        free(b);\n        b = next;\n    }\n    a->head = NULL;\n    a->used = 0;\n}\n\n/* Object arena: header-carrying allocations from arena memory. Refcounts\n   guard aliasing during compilation; the pending finalizers (field\n   releases) run at drain, then the blocks free wholesale. */\ntypedef struct ArenaFinalizer {\n    struct ArenaFinalizer* next;\n    SpecHeader* header;\n} ArenaFinalizer;\n\nstatic ArenaFinalizer* _spec_object_arena_finalizers = NULL;\nstatic SpecArena _spec_object_arena = { NULL, 0 };\n\nvoid spec_arena_drain_objects(void);\n\nvoid* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {\n    static int drain_registered = 0;\n    if (!drain_registered) {\n        atexit(spec_arena_drain_objects);\n        drain_registered = 1;\n    }\n    char* mem = (char*)spec_arena_alloc(&_spec_object_arena, sizeof(SpecHeader) + size);\n    SpecHeader* h = (SpecHeader*)mem;\n    h->ref_count = 1;\n    h->destroy = destroy;\n    /* Immortal: release is a no-op — the arena owns the memory and drains\n       it wholesale. Refcounts may still bump (harmless); nothing frees. */\n    h->sflags = SPEC_S_IMMORTAL;\n    h->slen = 0;\n    ArenaFinalizer* f = (ArenaFinalizer*)spec_arena_alloc(&_spec_object_arena, sizeof(ArenaFinalizer));\n    f->next = _spec_object_arena_finalizers;\n    f->header = h;\n    _spec_object_arena_finalizers = f;\n    return (void*)(mem + sizeof(SpecHeader));\n}\n\nvoid spec_arena_drain_objects(void) {\n    ArenaFinalizer* f = _spec_object_arena_finalizers;\n    while (f) {\n        if (f->header->destroy) f->header->destroy((void*)(f->header + 1));\n        f = f->next;\n    }\n    _spec_object_arena_finalizers = NULL;\n    spec_arena_drain(&_spec_object_arena);\n}\n\nlong long spec_arena_used(SpecArena* a) {\n    return (long long)a->used;\n}\n\nSpecArray* spec_dir_list(SpecBuf* path) {\n    SpecArray* res = spec_array_new_object();\n    if (!path) return res;\n    DIR* d = opendir(spec_buf_to_cstring(path));\n    if (!d) return res;\n    struct dirent* ent;\n    while ((ent = readdir(d)) != NULL) {\n        if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) continue;\n        spec_array_add_owned(res, spec_string_from_bytes(ent->d_name, strlen(ent->d_name)));\n    }\n    closedir(d);\n    return res;\n}\nSpecBuf* spec_exe_dir(void) {\n    char buf[4096];\n    ssize_t n = readlink(\"/proc/self/exe\", buf, sizeof(buf) - 1);\n    if (n <= 0) return spec_string_from_bytes(\".\", 1);\n    buf[n] = '\\0';\n    char* slash = strrchr(buf, '/');\n    if (!slash) return spec_string_from_bytes(\".\", 1);\n    return spec_string_from_bytes(buf, (size_t)(slash - buf));\n}\nlong long spec_file_size(SpecBuf* path) {\n    struct stat st;\n    if (stat(spec_buf_to_cstring(path), &st) != 0) return -1;\n    return (long long)st.st_size;\n}\nSpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {\n    SpecBuf* b = (SpecBuf*)spec_alloc(sizeof(SpecBuf), spec_buf_destroy);\n    b->data = NULL;\n    b->length = 0;\n    b->capacity = 0;\n    b->elem_size = elem_size;\n    b->elem_kind = elem_kind;\n    return b;\n}\n\nstatic void spec_buf_grow(SpecBuf* b, size_t needed) {\n    size_t need = needed + ((b->elem_size == 1) ? 1 : 0);\n    if (b->length + need <= b->capacity) return;\n    size_t cap = (b->capacity == 0) ? 16 : b->capacity * 2;\n    while (cap < b->length + need) cap *= 2;\n    b->data = realloc(b->data, cap * b->elem_size);\n    b->capacity = cap;\n}\nvoid spec_buf_push_byte(SpecBuf* b, long long v) {\n    if (!b) return;\n    spec_buf_grow(b, 1);\n    ((unsigned char*)b->data)[b->length++] = (unsigned char)v;\n    ((unsigned char*)b->data)[b->length] = 0;\n}\nvoid spec_buf_append_bytes(SpecBuf* b, const char* s) {\n    if (!b || !s) return;\n    size_t n = strlen(s);\n    if (n == 0) return;\n    spec_buf_grow(b, n);\n    memcpy((unsigned char*)b->data + b->length, s, n);\n    b->length += n;\n    ((unsigned char*)b->data)[b->length] = 0;\n}\nvoid spec_buf_append_buf(SpecBuf* dst, SpecBuf* src) {\n    if (!dst || !src || src->length == 0) return;\n    if (dst->elem_size != 1 || src->elem_size != 1) return;\n    spec_buf_grow(dst, src->length);\n    memcpy((unsigned char*)dst->data + dst->length, src->data, src->length);\n    dst->length += src->length;\n    ((unsigned char*)dst->data)[dst->length] = 0;\n}\nvoid spec_buf_push_ptr(SpecBuf* b, void* item) {\n    if (!b) return;\n    spec_buf_grow(b, 1);\n    if (b->elem_kind == 1 && item) spec_retain(item);\n    ((void**)b->data)[b->length++] = item;\n}\n\nvoid spec_buf_report(SpecClosure* error, const char* msg) {\n    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n}\nlong long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {\n    if (!b) { return def; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n        return def;\n    }\n    return (long long)((unsigned char*)b->data)[idx];\n}\n\nvoid spec_buf_set_byte(SpecBuf* b, long long idx, long long v, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer assignment out of bounds: index %lld for length %zu\", idx, b->length);\n        return;\n    }\n    ((unsigned char*)b->data)[idx] = (unsigned char)v;\n}\n\nlong long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return def; }\n    if (b->length == 0) {\n        spec_buf_report(error, \"buffer pop on empty buffer\");\n        return def;\n    }\n    long long out = (long long)((unsigned char*)b->data)[--b->length];\n    ((unsigned char*)b->data)[b->length] = 0;\n    return out;\n}\nvoid* spec_buf_get_ptr(SpecBuf* b, long long idx, void* def, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return def; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n        return def;\n    }\n    return ((void**)b->data)[idx];\n}\n\nvoid spec_buf_set_ptr(SpecBuf* b, long long idx, void* item, SpecClosure* error) {\n    if (!b) { spec_buf_report(error, \"buffer is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"buffer assignment out of bounds: index %lld for length %zu\", idx, b->length);\n        return;\n    }\n    if (b->elem_kind == 1) {\n        if (item) spec_retain(item);\n        if (((void**)b->data)[idx]) spec_release(((void**)b->data)[idx]);\n    }\n    ((void**)b->data)[idx] = item;\n}\n\nvoid* spec_buf_pop_ptr(SpecBuf* b, void* def, SpecClosure* error) {\n    if (!b) { return def; }\n    if (b->length == 0) {\n        spec_buf_report(error, \"buffer pop on empty buffer\");\n        return def;\n    }\n    return ((void**)b->data)[--b->length];\n}\n\nlong long spec_buf_length(SpecBuf* b) {\n    return b ? (long long)b->length : 0;\n}\n\nvoid spec_buf_clear(SpecBuf* b) {\n    if (!b) return;\n    if (b->data && b->elem_size == 8 && b->elem_kind != 0) {\n        void** items = (void**)b->data;\n        for (size_t i = 0; i < b->length; i++) {\n            if (!items[i]) continue;\n            if (b->elem_kind == 1) spec_release(items[i]);\n        }\n    }\n    b->length = 0;\n    if (b->data && b->elem_size == 1) ((unsigned char*)b->data)[0] = 0;\n}\nconst char* spec_buf_to_cstring(SpecBuf* b) {\n    if (!b || b->length == 0) return \"\";\n    return (const char*)b->data;\n}\n/* String: managed string backed by SpecBuf (elem_size=1) */\ntypedef SpecBuf* String;\n\nString spec_string_from_literal(const char* lit) {\n    String b = spec_buf_new(1, 0);\n    if (lit && *lit) spec_buf_append_bytes(b, lit);\n    return b;\n}\n\nString spec_string_from_bytes(const char* data, size_t n) {\n    String b = spec_buf_new(1, 0);\n    if (data && n) {\n        spec_buf_grow(b, n);\n        memcpy((unsigned char*)b->data, data, n);\n        b->length = n;\n        ((unsigned char*)b->data)[b->length] = 0;\n    }\n    return b;\n}\n\nString spec_string_copy(String b) {\n    if (!b || b->length == 0) return spec_buf_new(1, 0);\n    return spec_string_from_bytes((const char*)b->data, b->length);\n}\n\nbool spec_string_bytes_equal(String b, const char* c, size_t n) {\n    if (!b || b->length != n) return false;\n    if (n == 0) return true;\n    return memcmp(b->data, c, n) == 0;\n}\nlong long spec_string_length(String b) {\n    return spec_buf_length(b);\n}\n\nbool spec_string_equals(String a, String b) {\n    if (a == b) return true;\n    if (!a || !b) return false;\n    if (a->length != b->length) return false;\n    if (a->length == 0) return true;\n    return memcmp(a->data, b->data, a->length) == 0;\n}\n\nlong long spec_string_compare(String a, String b) {\n    if (a == b) return 0;\n    if (!a) return b ? -1 : 0;\n    if (!b) return 1;\n    const unsigned char* pa = (const unsigned char*)a->data;\n    const unsigned char* pb = (const unsigned char*)b->data;\n    long long n = a->length < b->length ? a->length : b->length;\n    for (long long i = 0; i < n; i++) {\n        if (pa[i] != pb[i]) {\n            return (long long)pa[i] - (long long)pb[i];\n        }\n    }\n    return (long long)a->length - (long long)b->length;\n}\n\nString spec_string_concat(String a, String b) {\n    if (!a) a = spec_string_from_bytes(\"\", 0);\n    if (!b || b->length == 0) return a;\n    SpecHeader* h = SPEC_HEADER(a);\n    if (!(atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) &&\n        atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 1) {\n        spec_buf_append_buf(a, b);\n        return a;\n    }\n    String res = spec_buf_new(1, 0);\n    if (a->length) spec_buf_append_buf(res, a);\n    spec_buf_append_buf(res, b);\n    spec_release(a);\n    return res;\n}\nString spec_string_substring(String b, long long start, long long end) {\n    String res = spec_buf_new(1, 0);\n    if (!b) return res;\n    long long len = (long long)b->length;\n    long long s = start < 0 ? 0 : start;\n    long long e = end > len ? len : end;\n    for (long long i = s; i < e; i++) {\n        spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);\n    }\n    return res;\n}\n\nlong long spec_string_index_of(String b, String needle, long long def) {\n    return spec_string_index_of_from(b, needle, 0, def);\n}\n\nlong long spec_string_index_of_from(String b, String needle, long long from, long long def) {\n    if (!b || !needle) return def;\n    if (needle->length == 0) return (from >= 0 && from <= (long long)b->length) ? from : def;\n    long long slen = (long long)b->length;\n    long long nlen = (long long)needle->length;\n    for (long long i = from; i + nlen <= slen; i++) {\n        bool match = true;\n        for (long long j = 0; j < nlen; j++) {\n            if (((unsigned char*)b->data)[i+j] != ((unsigned char*)needle->data)[j]) { match = false; break; }\n        }\n        if (match) return i;\n    }\n    return def;\n}\n\n/* Spec Byte Buffer: compact [Byte] storage (the string builder floor) */\ntypedef struct {\n    unsigned char* data;\n    size_t length;\n    size_t capacity;\n} SpecByteBuffer;\n\nvoid spec_bytebuffer_destroy(void* self) {\n    SpecByteBuffer* b = (SpecByteBuffer*)self;\n    if (b && b->data) { free(b->data); b->data = NULL; }\n}\n\nSpecByteBuffer* spec_bytebuffer_new(void) {\n    SpecByteBuffer* b = (SpecByteBuffer*)spec_alloc(sizeof(SpecByteBuffer), spec_bytebuffer_destroy);\n    b->data = NULL;\n    b->length = 0;\n    b->capacity = 0;\n    return b;\n}\n\nvoid spec_bytebuffer_push(SpecByteBuffer* b, long long v) {\n    if (!b) return;\n    if (b->length >= b->capacity) {\n        b->capacity = (b->capacity == 0) ? 16 : b->capacity * 2;\n        b->data = (unsigned char*)realloc(b->data, b->capacity);\n    }\n    b->data[b->length++] = (unsigned char)v;\n}\n\nvoid spec_bytebuffer_append_string(SpecByteBuffer* b, const char* s) {\n    if (!b || !s) return;\n    size_t n = strlen(s);\n    if (n == 0) return;\n    if (b->length + n > b->capacity) {\n        size_t cap = (b->capacity == 0) ? 16 : b->capacity;\n        while (cap < b->length + n) cap *= 2;\n        b->data = (unsigned char*)realloc(b->data, cap);\n        b->capacity = cap;\n    }\n    memcpy(b->data + b->length, s, n);\n    b->length += n;\n}\n\nvoid spec_bytebuffer_report(SpecClosure* error, const char* msg) {\n    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n}\n\nlong long spec_bytebuffer_get(SpecByteBuffer* b, long long idx, long long def, SpecClosure* error) {\n    if (!b) { spec_bytebuffer_report(error, \"byte buffer is uninitialized\"); return def; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"byte buffer index out of bounds: index %lld for length %zu\", idx, b->length);\n        spec_bytebuffer_report(error, msg);\n        return def;\n    }\n    return (long long)b->data[idx];\n}\n\nvoid spec_bytebuffer_set(SpecByteBuffer* b, long long idx, long long v, SpecClosure* error) {\n    if (!b) { spec_bytebuffer_report(error, \"byte buffer is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= b->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"byte buffer assignment out of bounds: index %lld for length %zu\", idx, b->length);\n        spec_bytebuffer_report(error, msg);\n        return;\n    }\n    b->data[idx] = (unsigned char)v;\n}\n\nlong long spec_bytebuffer_pop(SpecByteBuffer* b, long long def, SpecClosure* error) {\n    if (!b) { spec_bytebuffer_report(error, \"byte buffer is uninitialized\"); return def; }\n    if (b->length == 0) {\n        spec_bytebuffer_report(error, \"byte buffer pop on empty buffer\");\n        return def;\n    }\n    return (long long)b->data[--b->length];\n}\n\nlong long spec_bytebuffer_length(SpecByteBuffer* b) {\n    return b ? (long long)b->length : 0;\n}\n\nvoid spec_bytebuffer_clear(SpecByteBuffer* b) {\n    if (b) b->length = 0;\n}\n\nString spec_bytebuffer_to_string(SpecByteBuffer* b) {\n    if (!b || b->length == 0) return spec_string_intern(\"\");\n    return spec_string_from_bytes((const char*)b->data, b->length);\n}\n/* Spec Vec: lean pointer-vector skeleton for non-byte [T] (methods in a later phase) */\ntypedef struct {\n    void** items;\n    size_t length;\n    size_t capacity;\n    int elem_kind;\n} SpecVec;\n\nvoid spec_vec_destroy(void* self) {\n    SpecVec* v = (SpecVec*)self;\n    if (v) {\n        for (size_t i = 0; i < v->length; i++) {\n            if (!v->items[i]) continue;\n            if (v->elem_kind == 1) spec_release(v->items[i]);\n        }\n        if (v->items) free(v->items);\n    }\n}\n\nSpecVec* spec_vec_new_kind(int kind) {\n    SpecVec* v = (SpecVec*)spec_alloc(sizeof(SpecVec), spec_vec_destroy);\n    v->items = NULL;\n    v->length = 0;\n    v->capacity = 0;\n    v->elem_kind = kind;\n    return v;\n}\n\nSpecVec* spec_vec_new(void) {\n    return spec_vec_new_kind(0);\n}\n\nSpecVec* spec_vec_new_object(void) {\n    return spec_vec_new_kind(1);\n}\n\nSpecVec* spec_vec_new_string(void) {\n    return spec_vec_new_object();\n}\n\nvoid spec_vec_push(SpecVec* v, void* item) {\n    if (!v) return;\n    if (v->length >= v->capacity) {\n        v->capacity = (v->capacity == 0) ? 8 : v->capacity * 2;\n        v->items = (void**)realloc(v->items, sizeof(void*) * v->capacity);\n    }\n    if (v->elem_kind == 1 && item) spec_retain(item);\n    v->items[v->length++] = item;\n}\n\nvoid spec_vec_report(SpecClosure* error, const char* msg) {\n    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));\n}\n\nvoid* spec_vec_get(SpecVec* v, long long idx, void* def, SpecClosure* error) {\n    if (!v) { spec_vec_report(error, \"vector is uninitialized\"); return def; }\n    if (idx < 0 || (size_t)idx >= v->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"vector index out of bounds: index %lld for length %zu\", idx, v->length);\n        spec_vec_report(error, msg);\n        return def;\n    }\n    void* val = v->items[idx];\n    return val;\n}\n\nvoid spec_vec_set(SpecVec* v, long long idx, void* item, SpecClosure* error) {\n    if (!v) { spec_vec_report(error, \"vector is uninitialized\"); return; }\n    if (idx < 0 || (size_t)idx >= v->length) {\n        char msg[96];\n        snprintf(msg, sizeof(msg), \"vector assignment out of bounds: index %lld for length %zu\", idx, v->length);\n        spec_vec_report(error, msg);\n        return;\n    }\n    if (v->elem_kind == 1) {\n        if (item) spec_retain(item);\n        if (v->items[idx]) spec_release(v->items[idx]);\n    }\n    v->items[idx] = item;\n}\n\nvoid* spec_vec_pop(SpecVec* v, void* def, SpecClosure* error) {\n    if (!v) { spec_vec_report(error, \"vector is uninitialized\"); return def; }\n    if (v->length == 0) {\n        spec_vec_report(error, \"vector pop on empty vector\");\n        return def;\n    }\n    return v->items[--v->length];\n}\n\nlong long spec_vec_length(SpecVec* v) {\n    return v ? (long long)v->length : 0;\n}\n\nvoid spec_vec_clear(SpecVec* v) {\n    if (!v) return;\n    for (size_t i = 0; i < v->length; i++) {\n        if (!v->items[i]) continue;\n        if (v->elem_kind == 1) spec_release(v->items[i]);\n    }\n    v->length = 0;\n}\n\ntypedef struct {\n    String path;\n    String content;\n    String def;\n    SpecClosure* on_success_read;\n    SpecClosure* on_success_write;\n    SpecClosure* on_error;\n} SpecFileTask;\n\nString spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {\n    if (!path || path->length == 0) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_intern(\"File error: Empty or invalid file path provided\"));\n        return def ? def : spec_string_intern(\"\");\n    }\n    const char* pc = spec_buf_to_cstring((SpecBuf*)path);\n    FILE* f = fopen(pc, \"rb\");\n    if (!f) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return def ? def : spec_string_intern(\"\");\n    }\n    if (fseek(f, 0, SEEK_END) != 0) {\n        fclose(f);\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return def ? def : spec_string_intern(\"\");\n    }\n    long size = ftell(f);\n    if (size < 0) {\n        fclose(f);\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return def ? def : spec_string_intern(\"\");\n    }\n    fseek(f, 0, SEEK_SET);\n    char* buf = (char*)malloc((size_t)size + 1);\n    if (!buf) {\n        fclose(f);\n        if (on_error) spec_call_closure_str(on_error, spec_string_intern(\"File error: Memory allocation failed during read\"));\n        return def ? def : spec_string_intern(\"\");\n    }\n    size_t read_bytes = fread(buf, 1, size, f);\n    fclose(f);\n    String out = spec_string_from_bytes(buf, read_bytes);\n    free(buf);\n    if (on_success) spec_call_closure_str(on_success, out);\n    return out;\n}\nbool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {\n    if (!path || path->length == 0) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_intern(\"File error: Empty or invalid file path provided\"));\n        return false;\n    }\n    const char* pc = spec_buf_to_cstring((SpecBuf*)path);\n    const char* cc = content ? spec_buf_to_cstring((SpecBuf*)content) : \"\";\n    FILE* f = fopen(pc, \"wb\");\n    if (!f) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return false;\n    }\n    size_t len = strlen(cc);\n    size_t written = fwrite(cc, 1, len, f);\n    fclose(f);\n    if (written != len) {\n        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));\n        return false;\n    }\n    if (on_success) spec_call_closure_int(on_success, (long long)written);\n    return true;\n}\nstatic void* spec_file_read_worker(void* arg) {\n    SpecFileTask* task = (SpecFileTask*)arg;\n    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);\n    if (task->path) spec_release(task->path);\n    if (task->def) spec_release(task->def);\n    if (task->on_success_read) spec_release(task->on_success_read);\n    if (task->on_error) spec_release(task->on_error);\n    free(task);\n    spec_async_task_finished();\n    return NULL;\n}\n\nvoid spec_file_read_async(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {\n    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n    task->path = path ? (String)spec_retain((void*)path) : NULL;\n    task->def = def ? (String)spec_retain((void*)def) : NULL;\n    task->on_success_read = (SpecClosure*)spec_retain(on_success);\n    task->on_error = (SpecClosure*)spec_retain(on_error);\n    spec_async_task_started();\n    pthread_t tid;\n    pthread_create(&tid, NULL, spec_file_read_worker, task);\n    pthread_detach(tid);\n}\n\nstatic void* spec_file_write_worker(void* arg) {\n    SpecFileTask* task = (SpecFileTask*)arg;\n    spec_file_write(task->path, task->content, task->on_success_write, task->on_error);\n    if (task->path) spec_release(task->path);\n    if (task->content) spec_release(task->content);\n    if (task->on_success_write) spec_release(task->on_success_write);\n    if (task->on_error) spec_release(task->on_error);\n    free(task);\n    spec_async_task_finished();\n    return NULL;\n}\n\nvoid spec_file_write_async(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {\n    SpecFileTask* task = (SpecFileTask*)calloc(1, sizeof(SpecFileTask));\n    task->path = path ? (String)spec_retain((void*)path) : NULL;\n    task->content = content ? (String)spec_retain((void*)content) : NULL;\n    task->on_success_write = (SpecClosure*)spec_retain(on_success);\n    task->on_error = (SpecClosure*)spec_retain(on_error);\n    spec_async_task_started();\n    pthread_t tid;\n    pthread_create(&tid, NULL, spec_file_write_worker, task);\n    pthread_detach(tid);\n}\n\nbool spec_file_exists(String path) {\n    if (!path) return false;\n    FILE* f = fopen(spec_buf_to_cstring((SpecBuf*)path), \"r\");\n    if (f) {\n        fclose(f);\n        return true;\n    }\n    return false;\n}\nbool spec_file_remove(String path) {\n    if (!path || path->length == 0) return false;\n    return remove(spec_buf_to_cstring((SpecBuf*)path)) == 0;\n}\n/* Process Package Primitives */\nlong long spec_process_execute(String command, SpecArray* args) {\n    if (!command) return -1;\n    const char* cc = spec_buf_to_cstring((SpecBuf*)command);\n    size_t total_len = strlen(cc) + 1;\n    if (args) {\n        for (size_t i = 0; i < args->length; i++) {\n            if (args->items[i]) total_len += strlen(spec_buf_to_cstring((SpecBuf*)args->items[i])) + 4;\n        }\n    }\n    char* cmd_line = (char*)malloc(total_len + 16);\n    strcpy(cmd_line, cc);\n    if (args) {\n        for (size_t i = 0; i < args->length; i++) {\n            if (!args->items[i]) continue;\n            strcat(cmd_line, \" \");\n            strcat(cmd_line, spec_buf_to_cstring((SpecBuf*)args->items[i]));\n        }\n    }\n    int status = system(cmd_line);\n    free(cmd_line);\n    if (status == -1) return -1;\n    return (long long)WEXITSTATUS(status);\n}\nvoid spec_process_sleep(long long ms) {\n    if (ms <= 0) return;\n    struct timespec ts;\n    ts.tv_sec = ms / 1000;\n    ts.tv_nsec = (ms % 1000) * 1000000L;\n    nanosleep(&ts, NULL);\n}\n\nlong long spec_process_get_pid(void) {\n    return (long long)getpid();\n}\n\n/* Math Package Primitives */\ndouble spec_math_round(double v) { return round(v); }\ndouble spec_math_floor(double v) { return floor(v); }\ndouble spec_math_ceil(double v) { return ceil(v); }\ndouble spec_math_abs(double v) { return fabs(v); }\nstatic inline long long spec_math_abs_int(long long v) { return v < 0 ? -v : v; }\ndouble spec_math_min(double a, double b) { return (a < b) ? a : b; }\ndouble spec_math_max(double a, double b) { return (a > b) ? a : b; }\ndouble spec_math_clamp(double v, double lo, double hi) {\n    if (hi < lo) return lo;\n    if (v < lo) return lo;\n    if (v > hi) return hi;\n    return v;\n}\ndouble spec_math_sqrt(double v) { return v < 0.0 ? 0.0 : sqrt(v); }\ndouble spec_math_sin(double v) { return sin(v); }\ndouble spec_math_cos(double v) { return cos(v); }\ndouble spec_math_tan(double v) { return tan(v); }\ndouble spec_math_atan2(double y, double x) { return atan2(y, x); }\ndouble spec_math_log(double v) { return v <= 0.0 ? 0.0 : log(v); }\ndouble spec_math_log2(double v) { return v <= 0.0 ? 0.0 : log2(v); }\ndouble spec_math_pow(double base, double exp) { return pow(base, exp); }\nlong long spec_math_to_int(double v) { return (long long)v; }\ndouble spec_math_to_float(long long v) { return (double)v; }\n\ndouble spec_math_random(double min, double max) {\n    if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));\n    return min + ((double)rand() / ((double)RAND_MAX + 1.0)) * (max - min);\n}\n\n/* Integer Base Conversion */\nString spec_int_to_base(long long v, long long base, long long digits) {\n    if (base < 2 || base > 36) base = 10;\n    if (digits < 0) digits = 0;\n    const char* digs = \"0123456789abcdefghijklmnopqrstuvwxyz\";\n    char buf[80];\n    int idx = 79;\n    buf[idx] = '\\0';\n    int neg = v < 0;\n    unsigned long long u = neg ? (unsigned long long)(-(v + 1)) + 1ULL : (unsigned long long)v;\n    if (u == 0) buf[--idx] = '0';\n    while (u > 0) { buf[--idx] = digs[u % (unsigned long long)base]; u /= (unsigned long long)base; }\n    while ((79 - idx) < (int)digits && idx > 0) buf[--idx] = '0';\n    if (neg && idx > 0) buf[--idx] = '-';\n    return spec_string_from_chars(buf + idx);\n}\n\n/* Terminal Metrics */\nlong long spec_term_width(void) {\n    if (!isatty(1)) return 0;\n    struct winsize ws;\n    if (ioctl(1, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) return (long long)ws.ws_col;\n    char* cols = getenv(\"COLUMNS\");\n    if (cols) return (long long)atoi(cols);\n    return 78;\n}\n\nlong long spec_term_height(void) {\n    if (!isatty(1)) return 0;\n    struct winsize ws;\n    if (ioctl(1, TIOCGWINSZ, &ws) == 0 && ws.ws_row > 0) return (long long)ws.ws_row;\n    char* lines = getenv(\"LINES\");\n    if (lines) return (long long)atoi(lines);\n    return 24;\n}\n\n/* Atomic Slots */\nstatic atomic_llong _spec_atomic_slots[64];\n\nlong long spec_atomic_add(long long slot, long long v) {\n    if (slot < 0 || slot >= 64) return 0;\n    return atomic_fetch_add(&_spec_atomic_slots[slot], v) + v;\n}\n\nlong long spec_atomic_put(long long slot, long long v) {\n    if (slot < 0 || slot >= 64) return v;\n    atomic_store(&_spec_atomic_slots[slot], v);\n    return v;\n}\n\nlong long spec_atomic_get(long long slot) {\n    if (slot < 0 || slot >= 64) return 0;\n    return atomic_load(&_spec_atomic_slots[slot]);\n}\n\n/* Per-Thread RNG (xorshift64*, lock-free, self-seeding) */\nstatic __thread unsigned long long _spec_rng_state = 0;\n\nstatic unsigned long long spec_rng_next(void) {\n    unsigned long long x = _spec_rng_state;\n    x ^= x >> 12;\n    x ^= x << 25;\n    x ^= x >> 27;\n    _spec_rng_state = x;\n    return x * 0x2545F4914F6CDD1DULL;\n}\n\nvoid spec_fast_random_seed(long long idx) {\n    _spec_rng_state = 0x9E3779B97F4A7C15ULL ^ ((unsigned long long)idx * 0xBF58476D1CE4E5B9ULL + 0x94D049BB133111EBULL);\n    if (_spec_rng_state == 0) _spec_rng_state = 1;\n    spec_rng_next();\n    spec_rng_next();\n    spec_rng_next();\n}\n\ndouble spec_fast_random(void) {\n    if (_spec_rng_state == 0) spec_fast_random_seed(0x5DEECE66DULL);\n    return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);\n}\n\n/* Parallel Fan-Out */\ntypedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);\ntypedef struct { SpecWorkerFn fn; void* env; long long idx; long long count; } SpecParallelTask;\n\nstatic void* spec_parallel_worker(void* arg) {\n    SpecParallelTask* t = (SpecParallelTask*)arg;\n    spec_fast_random_seed(t->idx);\n    long long r = t->fn(t->env, t->idx, t->count);\n    free(t);\n    return (void*)(intptr_t)r;\n}\n\nlong long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {\n    if (threads < 1) threads = 1;\n    if (threads > 64) threads = 64;\n    SpecClosure* cls = (SpecClosure*)worker_closure;\n    if (!cls || !cls->fn) spec_panic(\"Parallel:run received null worker Function\");\n    pthread_t tids[64];\n    long long total = 0;\n    long long base = iterations / threads;\n    long long rem = iterations % threads;\n    for (long long i = 0; i < threads; i++) {\n        SpecParallelTask* t = (SpecParallelTask*)malloc(sizeof(SpecParallelTask));\n        t->fn = (SpecWorkerFn)cls->fn;\n        t->env = cls->env;\n        t->idx = i;\n        t->count = base + (i < rem ? 1 : 0);\n        if (pthread_create(&tids[i], NULL, spec_parallel_worker, t) != 0) {\n            free(t);\n            tids[i] = pthread_self();\n        }\n    }\n    for (long long i = 0; i < threads; i++) {\n        void* ret = NULL;\n        pthread_join(tids[i], &ret);\n        total += (long long)(intptr_t)ret;\n    }\n    return total;\n}\n\n/* Type Name Introspection */\nString spec_type_name(const void* obj) {\n    if (!obj) return spec_string_intern(\"\");\n    return spec_string_intern(*((const char**)obj));\n}\n\n/* Clock & Memory Metrics */\nlong long spec_clock_ms(void) {\n    struct timespec ts;\n    clock_gettime(CLOCK_MONOTONIC, &ts);\n    return ((long long)ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);\n}\n\nlong long spec_mem_peak_kb(void) {\n    struct rusage ru;\n    if (getrusage(RUSAGE_SELF, &ru) != 0) return 0;\n    return (long long)ru.ru_maxrss;\n}\n\nlong long spec_thread_count(void) {\n    FILE* f = fopen(\"/proc/self/status\", \"r\");\n    if (!f) return 1;\n    char line[256];\n    long long n = 1;\n    while (fgets(line, sizeof(line), f)) {\n        if (strncmp(line, \"Threads:\", 8) == 0) { n = atoll(line + 8); break; }\n    }\n    fclose(f);\n    return n;\n}\n\n/* Error Output Primitive */\nvoid spec_error_line(String s) {\n    const char* cs = s ? spec_buf_to_cstring((SpecBuf*)s) : \"\";\n    fprintf(stderr, \"%s\\n\", cs);\n}\n"))));
     return (String)({ String _ret_val = p; p = NULL; _ret_val; });
     if (p) { spec_release((void*)p); p = NULL; }
 }
