@@ -41185,7 +41185,7 @@ static __attribute__((unused)) void _anon_fn_427(void* _env_ptr, String baseName
     (void)classDef;
     SPEC_AUTO ClassInfo* parent = (ClassInfo*)(((((ClassInfo* (*)(TypeChecker*, String))self->_vtable[144]))((TypeChecker*)self, baseName)));
     if (spec_string_equals(parent->name, baseName)) {
-	    if (((hasInit) && ((!spec_string_equals(baseName, Primitive_value(Primitive_ANY)))))) {
+	    if (((((hasInit) && ((!spec_string_equals(baseName, Primitive_value(Primitive_ANY)))))) && ((!((((!spec_string_equals(classDef->outerName, spec_string_intern("")))) && (((spec_string_equals(classDef->outerName, baseName)) || (String_contains(classDef->outerName, spec_string_concat((void*)spec_retain((void*)(spec_string_intern(":"))), baseName))))))))))) {
 	    ({ SpecArray* _a_429 = parent->members; if (_a_429) { for (size_t _i_429 = 0; _i_429 < _a_429->length; _i_429++) {
         Member* parentM = (Member*)(intptr_t)_a_429->items[_i_429];
         do {
@@ -62248,7 +62248,7 @@ void TypeChecker_checkInheritance(TypeChecker* self, ClassInfo* classDef) {
         do {
     SPEC_AUTO ClassInfo* parent = (ClassInfo*)(((((ClassInfo* (*)(TypeChecker*, String))self->_vtable[144]))((TypeChecker*)self, baseName)));
     if (spec_string_equals(parent->name, baseName)) {
-	    if (((hasInit) && ((!spec_string_equals(baseName, Primitive_value(Primitive_ANY)))))) {
+	    if (((((hasInit) && ((!spec_string_equals(baseName, Primitive_value(Primitive_ANY)))))) && ((!((((!spec_string_equals(classDef->outerName, spec_string_intern("")))) && (((spec_string_equals(classDef->outerName, baseName)) || (String_contains(classDef->outerName, spec_string_concat((void*)spec_retain((void*)(spec_string_intern(":"))), baseName))))))))))) {
 	    ({ SpecArray* _a_450 = parent->members; if (_a_450) { for (size_t _i_450 = 0; _i_450 < _a_450->length; _i_450++) {
         Member* parentM = (Member*)(intptr_t)_a_450->items[_i_450];
         do {

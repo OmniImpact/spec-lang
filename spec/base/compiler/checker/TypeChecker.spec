@@ -3329,8 +3329,11 @@ Class is TypeChecker{
 			Conditional:if(check: { parent:name == baseName }, then: {
 				# 1. Enforce abstract member implementation on concrete classes
 				# with init. The implicit root Any is exempt: its members carry
-				# concrete defaults.
-				Conditional:if(check: { hasInit && baseName != Primitive:ANY:value() }, then: {
+				# concrete defaults. The outer-link relation is exempt too: the
+				# inner-class link is an ACCESS scope, not an is-a contract —
+				# the enclosing class's unimplemented members are not the
+				# inner's obligation.
+				Conditional:if(check: { hasInit && baseName != Primitive:ANY:value() && !(classDef:outerName != '' && (classDef:outerName == baseName || classDef:outerName:contains(needle: ':' . baseName))) }, then: {
 					parent:members:each(action: local Function(Member is parentM){
 						local Boolean is isAbstract: (parentM:kind == MemberKind:FIELD && !parentM:hasInit) ||
 							(parentM:kind == MemberKind:METHOD && parentM:body:length() == 0);
