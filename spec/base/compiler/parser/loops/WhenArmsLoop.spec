@@ -34,13 +34,13 @@ Class of Loop is WhenArmsLoop{
 	}
 
 	replace Function of Boolean is iteration(LoopControl is control){
-		if (self:parser:checkKeyword(kw: Keyword:IS)) {
+		Conditional:branch(check: { self:parser:checkKeyword(kw: Keyword:IS) }, then: {
 			self:parser:advance();
 			local Array of Expression is conds: [];
 			While:run(loop: WhenConditionsLoop:init(parser: self:parser, conditions: conds));
 			self:parser:matchPunct(p: Punctuation:ARM);
 
-			if (self:parser:checkPunct(p: Punctuation:BLOCK_OPEN)) {
+			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 				self:parser:advance();
 				local Array of Statement is body: [];
 				While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
@@ -48,23 +48,23 @@ Class of Loop is WhenArmsLoop{
 				local WhenArm is arm: WhenArm:init();
 				arm:arm(conditions: conds, body: body);
 				self:arms:add(item: arm);
-			} else {
+			}, otherwise: {
 				local Expression is exprVal: self:parser:parseExpression();
-				if (self:parser:checkPunct(p: Punctuation:TERMINATOR)) {
+				Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 					self:parser:advance();
-				}
+				});
 				local WhenArm is arm: WhenArm:init();
 				arm:exprArm(conditions: conds, value: exprVal);
 				self:arms:add(item: arm);
-			}
+			});
 			return true;
-		}
+		});
 
-		if (self:parser:checkKeyword(kw: Keyword:ELSE)) {
+		Conditional:branch(check: { self:parser:checkKeyword(kw: Keyword:ELSE) }, then: {
 			self:parser:advance();
 			self:parser:matchPunct(p: Punctuation:ARM);
 
-			if (self:parser:checkPunct(p: Punctuation:BLOCK_OPEN)) {
+			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 				self:parser:advance();
 				local Array of Statement is body: [];
 				While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
@@ -72,17 +72,17 @@ Class of Loop is WhenArmsLoop{
 				local WhenArm is arm: WhenArm:init();
 				arm:elseArm(body: body);
 				self:arms:add(item: arm);
-			} else {
+			}, otherwise: {
 				local Expression is exprVal: self:parser:parseExpression();
-				if (self:parser:checkPunct(p: Punctuation:TERMINATOR)) {
+				Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 					self:parser:advance();
-				}
+				});
 				local WhenArm is arm: WhenArm:init();
 				arm:elseExprArm(value: exprVal);
 				self:arms:add(item: arm);
-			}
+			});
 			return true;
-		}
+		});
 
 		# Not an arm: stop scanning (the caller reports the stray token).
 		self:parser:advance();

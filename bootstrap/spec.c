@@ -57076,9 +57076,9 @@ bool WhenConditionsLoop_iteration(WhenConditionsLoop* self, SpecLoopControl* con
     (void)control;
     spec_array_add_object(self->conditions, (void*)(Parser_parseExpression(self->parser) /* inst:Parser:parseExpression */));
     if (Parser_checkPunct(self->parser, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        return true;
-    }
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    return true;
+	};
     return false;
 }
 
@@ -57104,60 +57104,60 @@ bool WhenArmsLoop_iteration(WhenArmsLoop* self, SpecLoopControl* control) {
     (void)self;
     (void)control;
     if (Parser_checkKeyword(self->parser, Keyword_IS) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        SPEC_AUTO SpecArray* conds = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ WhenConditionsLoop* _inst = WhenConditionsLoop_new(); WhenConditionsLoop_init(_inst, self->parser, conds); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenConditionsLoop_evaluate((void*)_lp)) { if (!WhenConditionsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self->parser, Punctuation_ARM) /* inst:Parser:matchPunct */;
-        if (Parser_checkPunct(self->parser, Punctuation_BLOCK_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        SPEC_AUTO SpecArray* body = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self->parser, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
-        WhenArm_arm(arm, conds, body) /* inst:WhenArm:arm */;
-        spec_array_add_object(self->arms, (void*)(arm));
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    SPEC_AUTO SpecArray* conds = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ WhenConditionsLoop* _inst = WhenConditionsLoop_new(); WhenConditionsLoop_init(_inst, self->parser, conds); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (WhenConditionsLoop_evaluate((void*)_lp)) { if (!WhenConditionsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self->parser, Punctuation_ARM) /* inst:Parser:matchPunct */;
+	    if (Parser_checkPunct(self->parser, Punctuation_BLOCK_OPEN) /* inst:Parser:checkPunct */) {
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    SPEC_AUTO SpecArray* body = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self->parser, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
+	    WhenArm_arm(arm, conds, body) /* inst:WhenArm:arm */;
+	    spec_array_add_object(self->arms, (void*)(arm));
     if (body) { spec_release((void*)body); body = NULL; }
     if (arm) { spec_release((void*)arm); arm = NULL; }
-    } else {
-        SPEC_AUTO Expression* exprVal = (Expression*)((Parser_parseExpression(self->parser) /* inst:Parser:parseExpression */));
-        if (Parser_checkPunct(self->parser, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-    }
-        SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
-        WhenArm_exprArm(arm, conds, exprVal) /* inst:WhenArm:exprArm */;
-        spec_array_add_object(self->arms, (void*)(arm));
+	} else {
+	    SPEC_AUTO Expression* exprVal = (Expression*)((Parser_parseExpression(self->parser) /* inst:Parser:parseExpression */));
+	    if (Parser_checkPunct(self->parser, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	};
+	    SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
+	    WhenArm_exprArm(arm, conds, exprVal) /* inst:WhenArm:exprArm */;
+	    spec_array_add_object(self->arms, (void*)(arm));
     if (exprVal) { spec_release((void*)exprVal); exprVal = NULL; }
     if (arm) { spec_release((void*)arm); arm = NULL; }
-    }
-        return true;
+	};
+	    return true;
     if (conds) { spec_release((void*)conds); conds = NULL; }
-    }
+	};
     if (Parser_checkKeyword(self->parser, Keyword_ELSE) /* inst:Parser:checkKeyword */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        Parser_matchPunct(self->parser, Punctuation_ARM) /* inst:Parser:matchPunct */;
-        if (Parser_checkPunct(self->parser, Punctuation_BLOCK_OPEN) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        SPEC_AUTO SpecArray* body = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
-        ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        Parser_matchPunct(self->parser, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
-        SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
-        WhenArm_elseArm(arm, body) /* inst:WhenArm:elseArm */;
-        spec_array_add_object(self->arms, (void*)(arm));
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    Parser_matchPunct(self->parser, Punctuation_ARM) /* inst:Parser:matchPunct */;
+	    if (Parser_checkPunct(self->parser, Punctuation_BLOCK_OPEN) /* inst:Parser:checkPunct */) {
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    SPEC_AUTO SpecArray* body = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
+	    ({ void* _lp = (void*)(({ BlockStatementsLoop* _inst = BlockStatementsLoop_new(); BlockStatementsLoop_init(_inst, self->parser, body); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (BlockStatementsLoop_evaluate((void*)_lp)) { if (!BlockStatementsLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    Parser_matchPunct(self->parser, Punctuation_BLOCK_CLOSE) /* inst:Parser:matchPunct */;
+	    SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
+	    WhenArm_elseArm(arm, body) /* inst:WhenArm:elseArm */;
+	    spec_array_add_object(self->arms, (void*)(arm));
     if (body) { spec_release((void*)body); body = NULL; }
     if (arm) { spec_release((void*)arm); arm = NULL; }
-    } else {
-        SPEC_AUTO Expression* exprVal = (Expression*)((Parser_parseExpression(self->parser) /* inst:Parser:parseExpression */));
-        if (Parser_checkPunct(self->parser, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-    }
-        SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
-        WhenArm_elseExprArm(arm, exprVal) /* inst:WhenArm:elseExprArm */;
-        spec_array_add_object(self->arms, (void*)(arm));
+	} else {
+	    SPEC_AUTO Expression* exprVal = (Expression*)((Parser_parseExpression(self->parser) /* inst:Parser:parseExpression */));
+	    if (Parser_checkPunct(self->parser, Punctuation_TERMINATOR) /* inst:Parser:checkPunct */) {
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	};
+	    SPEC_AUTO WhenArm* arm = (WhenArm*)((({ WhenArm* _inst = WhenArm_new(); WhenArm_init(_inst); _inst; })));
+	    WhenArm_elseExprArm(arm, exprVal) /* inst:WhenArm:elseExprArm */;
+	    spec_array_add_object(self->arms, (void*)(arm));
     if (exprVal) { spec_release((void*)exprVal); exprVal = NULL; }
     if (arm) { spec_release((void*)arm); arm = NULL; }
-    }
-        return true;
-    }
+	};
+	    return true;
+	};
     ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
     return false;
 }
@@ -57210,9 +57210,9 @@ bool ArrayItemsLoop_iteration(ArrayItemsLoop* self, SpecLoopControl* control) {
     (void)control;
     spec_array_add_object(self->items, (void*)(Parser_parseExpression(self->parser) /* inst:Parser:parseExpression */));
     if (Parser_checkPunct(self->parser, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        return true;
-    }
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    return true;
+	};
     return false;
 }
 
@@ -57245,9 +57245,9 @@ bool MapItemsLoop_iteration(MapItemsLoop* self, SpecLoopControl* control) {
     spec_array_add_object(self->keys, (void*)(k));
     spec_array_add_object(self->values, (void*)(v));
     if (Parser_checkPunct(self->parser, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        return true;
-    }
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    return true;
+	};
     return false;
     if (k) { spec_release((void*)k); k = NULL; }
     if (v) { spec_release((void*)v); v = NULL; }
@@ -57304,9 +57304,9 @@ bool BaseClassesLoop_iteration(BaseClassesLoop* self, SpecLoopControl* control) 
     SPEC_AUTO Token* tok = (Token*)((({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); })));
     spec_array_add_object(self->bases, (void*)(Token_getValue(tok) /* inst:Token:getValue */));
     if (Parser_checkPunct(self->parser, Punctuation_SEPARATOR) /* inst:Parser:checkPunct */) {
-        ((Token*)spec_claim_pool((void*)(({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); }))));
-        return true;
-    }
+	    ({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); });
+	    return true;
+	};
     return false;
     if (tok) { spec_release((void*)tok); tok = NULL; }
 }
@@ -57422,10 +57422,10 @@ bool ProgramParseLoop_iteration(ProgramParseLoop* self, SpecLoopControl* control
     (void)self;
     (void)control;
     if (Parser_atEnumHeader(self->parser) /* inst:Parser:atEnumHeader */) {
-        spec_array_add_object(self->classes, (void*)(Parser_parseEnum(self->parser) /* inst:Parser:parseEnum */));
-    } else {
-        spec_array_add_object(self->classes, (void*)(Parser_parseClass(self->parser) /* inst:Parser:parseClass */));
-    }
+	    spec_array_add_object(self->classes, (void*)(Parser_parseEnum(self->parser) /* inst:Parser:parseEnum */));
+	} else {
+	    spec_array_add_object(self->classes, (void*)(Parser_parseClass(self->parser) /* inst:Parser:parseClass */));
+	};
     return true;
 }
 

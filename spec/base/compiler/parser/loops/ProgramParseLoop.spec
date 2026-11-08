@@ -24,11 +24,11 @@ Class of Loop is ProgramParseLoop{
 	}
 
 	replace Function of Boolean is iteration(LoopControl is control){
-		if (self:parser:atEnumHeader()) {
+		Conditional:branch(check: { self:parser:atEnumHeader() }, then: {
 			self:classes:add(item: self:parser:parseEnum());
-		} else {
+		}, otherwise: {
 			self:classes:add(item: self:parser:parseClass());
-		}
+		});
 		return true;
 	}
 }
