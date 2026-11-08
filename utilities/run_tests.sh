@@ -177,6 +177,10 @@ assert_compile_failure "overloads-n15-mixed-call" \
 	"$ROOT/tests/negative/n15_mixed_call_negative_test.spec" \
 	"Mixed positional and named arguments are not supported"
 
+assert_compile_failure "hardening-n17-string-relational-mixed" \
+	"$ROOT/tests/negative/n17_string_relational_mixed_negative_test.spec" \
+	"requires two String operands"
+
 assert_compile_failure "overloads-n16-replace-overloaded" \
 	"$ROOT/tests/negative/n16_replace_overloaded_negative_test.spec" \
 	"Cannot replace or merge an overloaded method"

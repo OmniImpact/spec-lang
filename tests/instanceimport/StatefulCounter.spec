@@ -10,6 +10,9 @@ Class is StatefulCounter{
 		self:label: label;
 	}
 
+	replace Function is init(){
+	}
+
 	Function is tick(){
 		self:n: self:n + 1;
 	}

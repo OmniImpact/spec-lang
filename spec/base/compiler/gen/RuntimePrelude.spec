@@ -41,6 +41,7 @@ String spec_string_copy(String b);
 bool spec_string_bytes_equal(String b, const char* c, size_t n);
 long long spec_string_length(String b);
 bool spec_string_equals(String a, String b);
+long long spec_string_compare(String a, String b);
 String spec_string_concat(String a, String b);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
@@ -1072,6 +1073,21 @@ bool spec_string_equals(String a, String b) {
     if (a->length != b->length) return false;
     if (a->length == 0) return true;
     return memcmp(a->data, b->data, a->length) == 0;
+}
+
+long long spec_string_compare(String a, String b) {
+    if (a == b) return 0;
+    if (!a) return b ? -1 : 0;
+    if (!b) return 1;
+    const unsigned char* pa = (const unsigned char*)a->data;
+    const unsigned char* pb = (const unsigned char*)b->data;
+    long long n = a->length < b->length ? a->length : b->length;
+    for (long long i = 0; i < n; i++) {
+        if (pa[i] != pb[i]) {
+            return (long long)pa[i] - (long long)pb[i];
+        }
+    }
+    return (long long)a->length - (long long)b->length;
 }
 
 String spec_string_concat(String a, String b) {

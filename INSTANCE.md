@@ -44,7 +44,9 @@ arbitrary. Fix: reject relational operators on `String` at the checker, or
 emit a real string comparison. The linter works around it
 (`isUpperName` matches the 26 letters explicitly).
 
-Out of scope (recorded, not addressed here): unchecked `as` casts; the loader's
+Out of scope (recorded, not addressed here): class downcasts are
+runtime-checked (`spec_cast_check` panics via `spec_panic_cast` on a failed
+narrowing — the original "unchecked casts" concern was stale); the loader's
 flat bare-name space with readdir-order resolution (first-loaded same-stem
 class silently blocks same-named classes in other namespaces — `Loader.spec:102`,
 `seenBareNames`).

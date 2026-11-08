@@ -1471,6 +1471,14 @@ Class is TypeChecker{
 					}
 					is '==', '!=', 'is', '<', '<=', '>', '>=': {
 						res: Primitive:BOOLEAN:value();
+						# FUNCTIONS.md hardening (D5): relational ordering on
+						# String is lexicographic — and only String-to-String.
+						local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
+						local Boolean is leftStr: leftT == 'String';
+						local Boolean is rightStr: rightT == 'String';
+						if (isRel && (leftStr || rightStr) && !(leftStr && rightStr)) {
+							self:addError(line: self:currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
+						}
 					}
 					is '&&', '||': {
 						res: Primitive:BOOLEAN:value();

@@ -407,6 +407,9 @@ constructs the instance for you (literal arguments; field-less classes
 allocate nothing); prefix calls (`X:member(...)`) dispatch on it, and bare
 calls resolve when the name has exactly one provider in scope — a name
 provided by two imports, or by the class and an import, must be qualified.
+Methods may be **overloaded** — same name, distinct signatures (arity,
+parameter names, or types); resolution is exact (arity → named-argument
+set → type), and ambiguous or partial calls are compile errors.
 
 ### Class Grouping (Partial Classes)
 

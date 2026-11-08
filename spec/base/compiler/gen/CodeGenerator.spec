@@ -1731,7 +1731,18 @@ Class is CodeGenerator{
 				}
 				return '((' . leftC . ') != (' . rightC . '))';
 			}
-			is '<', '<=', '>', '>=', '+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>': {
+			is '<', '<=', '>', '>=': {
+				# FUNCTIONS.md hardening (D5): relational operators on String
+				# compare lexicographically through the floor — never by
+				# pointer.
+				local String is leftC: self:generateExpression(expr: expr:leftExpr);
+				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				if (self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC)) {
+					return '(spec_string_compare(' . leftC . ', ' . rightC . ') ' . op . ' 0)';
+				}
+				return '((' . leftC . ') ' . op . ' (' . rightC . '))';
+			}
+			is '+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>': {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
 				return '((' . leftC . ') ' . op . ' (' . rightC . '))';
@@ -3381,7 +3392,13 @@ Class is CodeGenerator{
 		});
 		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
 
-		self:inlineReturnVar: '';
+		# FUNCTIONS.md hardening: the iteration closure's returns drive the
+		# loop — `return true` continues (skipping the rest of the body),
+		# `return false` stops it, `return <expr>` decides at runtime. The
+		# body is generated with a real return variable; a body without any
+		# return defaults to continue.
+		local String is itVar: '_it_' . id;
+		self:inlineReturnVar: itVar;
 		self:inlineReturnLabel: 'break';
 		local String is iterBodyC: '';
 		iterExpr:anonBody:each(action: local Function(Statement is s){
@@ -3401,7 +3418,7 @@ Class is CodeGenerator{
 			}
 		});
 
-		local String is out: "({ " . declsC . "while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        do {\n" . iterBodyC . "        } while (0);\n    }\n" . loopReleasesC . "})";
+		local String is out: "({ " . declsC . "while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n" . loopReleasesC . "})";
 		self:localVars: savedVars;
 		return out;
 	}

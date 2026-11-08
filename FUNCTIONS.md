@@ -83,8 +83,12 @@ Exact static type only: a `Dog`-typed argument selects `f(Dog)`, never
 ### I.3 Boundaries (v1)
 
 - **No mixed calls.** A call is all-positional or all-named.
-- **No declared method-parameter defaults.** Overloads replace the use case;
-  `While`'s var-decl defaults are a separate, contained mechanism and stay.
+- **No defaults inside overload groups.** Declared parameter defaults
+  (`Int is factor: 2`) exist and work on single-method names — the
+  merge-forward path depends on them (merge_function_test) — but they are
+  invisible to overload resolution: an overloaded name's arity filter
+  rejects partial calls, so defaults cannot participate. While's var-decl
+  defaults are a separate, contained mechanism.
 - **No overriding an overloaded method.** Virtual dispatch is name-keyed
   (`methodSlots`, vtable slots); if a method name is overridden anywhere, it
   has exactly one signature. `replace` on an overloaded name is a compile
@@ -147,6 +151,28 @@ Exact static type only: a `Dog`-typed argument selects `f(Dog)`, never
 - [x] Zero migration: the full suite compiled unchanged at every step (the
   only breaks were the new strictness rules catching the scoped-region
   desugaring's shape — now sanctioned).
+
+---
+
+## Part I-b — Hardening record (landed with Part I)
+
+- **D5 fixed:** relational operators on String compare lexicographically
+  through a new `spec_string_compare` floor; the ordering-op emission is
+  split from the arithmetic arm; mixed String/non-String relational
+  comparisons are compile errors (N17). string_compare_test covers
+  ordering, reflexivity, and prefix cases.
+- **Iteration-closure return semantics fixed:** the inlined
+  `While:condition` loop now gives the iteration body a real return
+  variable — `return true` continues (skipping the rest of the body),
+  `return false` stops the loop, `return <expr>` decides at runtime. The
+  old emission discarded the returned value entirely (early `return false`
+  never stopped the loop).
+- **Stale claim corrected:** class downcasts are runtime-checked
+  (`spec_cast_check` panics on failed narrowing); INSTANCE.md's
+  "unchecked casts" note was wrong and is corrected.
+- **Composition verified:** a field-ful as-import selects among `init`
+  overloads by its literal arguments (StatefulCounter carries both
+  `init(String)` and `init()`).
 
 ---
 
