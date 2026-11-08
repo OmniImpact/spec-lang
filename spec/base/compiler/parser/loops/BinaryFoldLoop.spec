@@ -16,7 +16,8 @@ Class of Loop is BinaryFoldLoop{
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;

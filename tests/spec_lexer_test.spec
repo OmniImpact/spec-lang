@@ -12,7 +12,8 @@ Class is SpecLexerTest{
 		['base', 'io', Output],
 		['base', 'io', as Output()]
 ,
-		['base', 'compiler', Error]
+		['base', 'compiler', Error],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

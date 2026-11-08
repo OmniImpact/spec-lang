@@ -499,6 +499,10 @@ Class is DeclarationGenerator{
 
 	## True when [list] has a member with the name (scan state).
 	Class of Loop is HasFieldLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local Array of Member is list;
 		local String is name;
 		local Int is idx: 0;
@@ -528,6 +532,10 @@ Class is DeclarationGenerator{
 
 	## Walks a field accumulator tracking a name's index.
 	Class of Loop is FieldIndexLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local Array of Member is list;
 		local String is name;
 		local Int is idx: 0;

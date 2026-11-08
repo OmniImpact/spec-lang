@@ -6,7 +6,8 @@ Class is WhileLoopTest{
 		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

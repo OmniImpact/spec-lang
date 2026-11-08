@@ -15,7 +15,8 @@ Class is String{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Buf()],
 		['base', 'iterator', as While()],
-		['base', 'struct', Array]
+		['base', 'struct', Array],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Declared casts: a String produces an Int through its parser.

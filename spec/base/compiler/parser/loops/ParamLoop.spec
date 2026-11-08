@@ -14,7 +14,8 @@ Class of Loop is ParamLoop{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator']
 ,
-		['base', 'compiler', 'lexer', Token]
+		['base', 'compiler', 'lexer', Token],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;

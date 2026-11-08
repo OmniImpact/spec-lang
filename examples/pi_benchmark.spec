@@ -23,7 +23,8 @@ Class is PiBenchmark{
 		['base', 'io', as Output()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Domain grid dimensions in characters.

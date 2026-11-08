@@ -5,7 +5,8 @@ Class of Loop is StripUnderscoresLoop{
 	replace Array of String is namespace: ['base', 'compiler', 'lexer', 'loops'];
 
 	replace Array of Array of String is using: [
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local String is src;

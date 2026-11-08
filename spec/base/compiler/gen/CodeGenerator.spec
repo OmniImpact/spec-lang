@@ -3508,6 +3508,10 @@ Class is CodeGenerator{
 
 	## Scans a member list for a field by name.
 	Class of Loop is FieldMemberLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local Array of Member is members;
 		local String is fieldName;
 		local Int is idx: 0;
@@ -3539,6 +3543,10 @@ Class is CodeGenerator{
 
 	## Scans a member list for a method by name.
 	Class of Loop is MethodMemberLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local Array of Member is members;
 		local String is methodName;
 		local Int is idx: 0;

@@ -23,7 +23,8 @@ Class is RegressionOverrideDispatchTest{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

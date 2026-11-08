@@ -12,7 +12,8 @@
 Class is VisBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Public by default: overridable and externally callable.

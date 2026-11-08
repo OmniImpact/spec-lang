@@ -14,7 +14,8 @@
 Class is LayoutBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 	local Int is baseField: 11;
 

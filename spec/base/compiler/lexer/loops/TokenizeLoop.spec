@@ -9,7 +9,8 @@ Class of Loop is TokenizeLoop{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', TokenKind],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Lexer is lexer;

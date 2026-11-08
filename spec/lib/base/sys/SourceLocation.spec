@@ -8,6 +8,10 @@
 Class is SourceLocation{
 	namespace: ['base', 'sys'];
 
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+];
+
 	## File path or URI of the source file.
 	local String is file: '';
 

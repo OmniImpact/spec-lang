@@ -106,6 +106,10 @@ Class is CBackendUtils{
 	## Character walk for snakeCase: inserts '_' before each uppercase and
 	## lowercases it.
 	Class of Loop is SnakeCaseLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local String is src;
 		local Int is pos: 0;
 		local String is res: '';
@@ -137,6 +141,10 @@ Class is CBackendUtils{
 
 	## Character walk for escapeString.
 	Class of Loop is EscapeLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local String is src;
 		local Int is pos: 0;
 		local String is res: '';

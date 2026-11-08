@@ -6,7 +6,8 @@
 Class is StatefulImportTest {
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
-		['instimport', 'counter', as StatefulCounter(label: 'owned')]
+		['instimport', 'counter', as StatefulCounter(label: 'owned')],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args) {

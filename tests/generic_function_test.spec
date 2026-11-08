@@ -2,7 +2,8 @@ Class is GenericFunctionTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io'],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Function of Boolean is testPredicate(Function of String to Boolean is predicate, String is input){

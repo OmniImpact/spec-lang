@@ -43,7 +43,8 @@ Class is TypeChecker{
 		['base', 'iterator'],
 		['base', 'iterator', as While()],
 		['base', 'sys', as Reflection()],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 ];
 
 	## Registered classes: name -> "true".

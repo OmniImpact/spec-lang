@@ -7,7 +7,8 @@ Class is StackFrame{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', SourceLocation]
+		['base', 'sys', SourceLocation],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Source coordinate of this call frame.

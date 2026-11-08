@@ -11,6 +11,10 @@
 Class is Map of K to V{
 	namespace: ['base', 'struct'];
 
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+];
+
 	## Looks up the value mapped to [key], returning [default] if not found.
 	##
 	## @param key: Lookup key string.

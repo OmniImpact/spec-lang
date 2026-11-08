@@ -4,7 +4,8 @@ Class is AsScopeTest{
 		['base', 'io', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	Function is withResource(String is name, Array of String is log, Function is block){

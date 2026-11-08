@@ -35,7 +35,8 @@ Class is RegressionEnumValueTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

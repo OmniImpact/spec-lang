@@ -17,7 +17,8 @@ Class is SpecCheckerTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Parses and checks a source, returning the error messages.

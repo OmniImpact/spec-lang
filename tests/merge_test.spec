@@ -12,7 +12,7 @@
 Class is MergeBase{
 
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
-	merge Array of Array of String is using: [['base', 'io', Output], ['base', 'io', as Output()] ];
+	merge Array of Array of String is using: [['base', 'io', Output], ['base', 'io', as Output()], ['base', 'sys', as Conditional()]] ;
 
 	Array of String is tags: ['core'];
 

@@ -12,7 +12,8 @@ Class is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Returns the number of elements contained in the array.

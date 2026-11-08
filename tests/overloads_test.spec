@@ -5,7 +5,8 @@
 Class is OverloadsTest {
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
-		['ovl', 'lib', as Over()]
+		['ovl', 'lib', as Over()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args) {

@@ -9,7 +9,8 @@ Class of Loop is BaseClassesLoop{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'iterator']
 ,
-		['base', 'compiler', 'lexer', Token]
+		['base', 'compiler', 'lexer', Token],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;

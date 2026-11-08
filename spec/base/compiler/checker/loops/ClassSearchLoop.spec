@@ -6,7 +6,8 @@ Class of Loop is ClassSearchLoop{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', ClassInfo],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Array of ClassInfo is list;

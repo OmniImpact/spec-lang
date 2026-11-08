@@ -17,7 +17,8 @@ Class of Loop is WhenArmsLoop{
 ,
 		['base', 'compiler', 'ast', Statement]
 ,
-		['base', 'compiler', 'lexer', Token]
+		['base', 'compiler', 'lexer', Token],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;

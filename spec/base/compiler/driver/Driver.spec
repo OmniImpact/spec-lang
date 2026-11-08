@@ -40,7 +40,8 @@ Class is Driver{
 ,
 		['base', 'compiler', 'lexer', Token]
 ,
-		['base', 'compiler', 'checker', TypeError]
+		['base', 'compiler', 'checker', TypeError],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

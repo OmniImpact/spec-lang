@@ -7,7 +7,8 @@ Class of Loop is StringScanLoop{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'lexer', Lexer],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Lexer is lexer;

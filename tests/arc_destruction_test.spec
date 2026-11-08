@@ -2,7 +2,8 @@ Class is Resource{
 
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 	local String is name;
 

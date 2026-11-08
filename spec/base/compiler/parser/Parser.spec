@@ -54,7 +54,8 @@ Class is Parser{
 		['base', 'compiler', 'parser', 'loops', TemplateFoldLoop],
 		['base', 'compiler', 'parser', 'loops', FancyEscapeLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Array of Token is tokens: [];

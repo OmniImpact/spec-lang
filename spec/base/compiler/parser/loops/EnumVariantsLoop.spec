@@ -18,7 +18,8 @@ Class of Loop is EnumVariantsLoop{
 ,
 		['base', 'compiler', 'ast', Parameter]
 ,
-		['base', 'compiler', 'lexer', Token]
+		['base', 'compiler', 'lexer', Token],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;

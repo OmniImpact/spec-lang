@@ -20,7 +20,8 @@ Class is MultiFileTest{
 		replace Array of Array of String is using: [
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as While()]
+			['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()],
 		];
 		local MultiFileTest is app;
 

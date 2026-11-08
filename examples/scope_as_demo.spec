@@ -19,7 +19,8 @@ Class is ScopeAsDemo{
 		['base', 'io', as File()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Measures and prints elapsed execution time for an arbitrary block.

@@ -8,7 +8,8 @@ Class is ClassInfo{
 		['base', 'compiler', 'ast', Member],
 		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Class identifier.

@@ -21,7 +21,8 @@ Class is ParallelAtomicsTest{
 		['base', 'io', as Output()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

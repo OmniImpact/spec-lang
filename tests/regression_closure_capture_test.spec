@@ -22,7 +22,8 @@ Class is RegressionClosureCaptureTest{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Field read by a closure through self capture.

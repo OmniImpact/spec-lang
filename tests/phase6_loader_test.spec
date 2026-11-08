@@ -17,7 +17,8 @@ Class is Phase6LoaderTest{
 		['base', 'compiler', 'gen', CodeGenerator],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', Error]
+		['base', 'compiler', Error],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

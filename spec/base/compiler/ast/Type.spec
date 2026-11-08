@@ -9,7 +9,8 @@ Class is Type{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
-		['base', 'compiler', 'lexer', Keyword]
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Base type identifier (e.g. Int, String, Array).

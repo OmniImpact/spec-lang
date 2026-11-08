@@ -16,7 +16,8 @@ Class of Loop is ArgLoop{
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', TokenKind],
 		['base', 'compiler', 'utils', Chars],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;

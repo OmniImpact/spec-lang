@@ -10,6 +10,10 @@
 Class is Math{
 	namespace: ['base', 'math'];
 
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+];
+
 	## Rounds a floating point number to the nearest whole integer.
 	##
 	## @param value: Input floating point number.

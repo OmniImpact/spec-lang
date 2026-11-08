@@ -31,7 +31,8 @@ Class is EnumWhenTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace init(Map of String to String is args){

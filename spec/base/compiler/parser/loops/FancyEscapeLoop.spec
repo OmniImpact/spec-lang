@@ -8,7 +8,8 @@ Class of Loop is FancyEscapeLoop{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'parser', TemplateEscapes],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local String is src;

@@ -7,7 +7,8 @@ Class of Loop is PathResolveLoop{
 	namespace: ['base', 'compiler', 'checker', 'loops'];
 
 	replace Array of Array of String is using: [
-		['base', 'compiler', 'checker', TypeChecker]
+		['base', 'compiler', 'checker', TypeChecker],
+		['base', 'sys', as Conditional()]
 	];
 
 	local TypeChecker is tc;

@@ -100,7 +100,8 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as While()]
+			['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()],
 		];
 		local Blackjack is game;
 

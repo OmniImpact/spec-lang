@@ -19,7 +19,8 @@ Class is SpecCodegenTest{
 		['base', 'io', Output],
 		['base', 'struct', Map],
 		['base', 'math', as Math()],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Parses a source snippet into a program.

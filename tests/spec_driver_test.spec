@@ -11,7 +11,8 @@ Class is SpecDriverTest{
 		['base', 'io', File],
 		['base', 'struct', Map],
 		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

@@ -81,6 +81,10 @@ Class is ClassBindings{
 	## Walks a class's members looking for the namespace declaration and
 	## tests whether its last segment is `sysinternal`.
 	Class of Loop is SysinternalCheckLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local ClassInfo is cls;
 		# The members array is owned at init (a consumption position) so
 		# pool eviction inside the iteration cannot free it mid-scan.

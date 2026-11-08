@@ -14,7 +14,8 @@
 Class is RootProbe{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 	local Int is id: 5;
 

@@ -12,7 +12,8 @@ Class is SpecDeclGenTest{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'io', Output],
 		['base', 'io', File],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	replace Function is init(Map of String to String is args){

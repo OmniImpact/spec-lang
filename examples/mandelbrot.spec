@@ -16,7 +16,8 @@ Class is Mandelbrot{
 		['base', 'math', as Math()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Total number of complex-plane points sampled across all render modes.

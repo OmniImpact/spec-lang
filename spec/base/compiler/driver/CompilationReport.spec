@@ -10,7 +10,8 @@ Class is CompilationReport{
 
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 
 	## True when stage lines and the summary are suppressed.

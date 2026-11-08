@@ -8,7 +8,8 @@ Class of Loop is SkipWhitespaceLoop{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'lexer', 'loops', SkipCommentLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Lexer is lexer;

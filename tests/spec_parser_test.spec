@@ -22,7 +22,8 @@ Class is SpecParserTest{
 		['base', 'compiler', Error],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'lexer', Punctuation],
-		['base', 'compiler', 'ast', Type]
+		['base', 'compiler', 'ast', Type],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Tokenizes and parses a source string.

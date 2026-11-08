@@ -7,7 +7,8 @@ Class of Loop is FieldSearchLoop{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
-		['base', 'iterator']
+		['base', 'iterator'],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Array of Member is members;

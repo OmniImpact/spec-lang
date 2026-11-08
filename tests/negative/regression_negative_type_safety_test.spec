@@ -42,7 +42,8 @@ Enum is TransportMode {
 Class is NarrowFloatField{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'sys', as Conditional()]
 	];
 	## Violation 1: Float literal silently narrowed into an Int field.
 	local Int is samples: 3.7;

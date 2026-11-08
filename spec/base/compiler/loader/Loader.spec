@@ -425,6 +425,10 @@ Class is Loader{
 
 	## Walks a path tracking the final slash index.
 	Class of Loop is LastSlashLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local String is src;
 		local Int is pos: 0;
 		local Int is lastIdx: -1;
@@ -491,6 +495,10 @@ Class is Loader{
 
 	## Finds an already-loaded class by name.
 	Class of Loop is LoadedClassSearchLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local Array of ClassInfo is list;
 		local String is target;
 		local Int is idx: 0;
@@ -523,6 +531,10 @@ Class is Loader{
 	## Finds a named member on a class (nested-class members have no name
 	## and never match).
 	Class of Loop is NamedMemberLoop{
+
+		replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+		];
 		local Array of Member is members;
 		local String is target;
 		local Int is idx: 0;

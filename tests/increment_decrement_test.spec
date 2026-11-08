@@ -5,7 +5,8 @@ Class is IncrementDecrementTest{
 		['base', 'struct', Array],
 		['base', 'iterator'],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as While()],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Int is count: 0;

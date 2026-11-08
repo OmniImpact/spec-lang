@@ -9,7 +9,8 @@ Class of Loop is MapItemsLoop{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'iterator']
 ,
-		['base', 'compiler', 'lexer', Token]
+		['base', 'compiler', 'lexer', Token],
+		['base', 'sys', as Conditional()]
 	];
 
 	local Parser is parser;
