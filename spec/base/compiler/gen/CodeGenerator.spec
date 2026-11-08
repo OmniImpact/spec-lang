@@ -3498,8 +3498,12 @@ Class is CodeGenerator{
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
-		self:inlineReturnVar: '';
-		self:inlineReturnLabel: '';
+		# FUNCTIONS.md Part II: INHERIT the enclosing inline-return
+		# context. A branch nested in an inlined loop's iteration keeps the
+		# loop's return protocol (`return false` stops the loop); a branch
+		# at method level sees the empty context and its returns stay real
+		# method returns (guard clauses). Clearing here turned loop-stops
+		# into garbage method returns.
 		self:argMode: false;
 		# FUNCTIONS.md Part II: the value-yielding form — the checker
 		# stamped the unified yield type; emit a statement expression.
