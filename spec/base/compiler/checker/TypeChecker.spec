@@ -3735,6 +3735,20 @@ Class is TypeChecker{
 		program:classes:each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattened);
 		});
+		# FUNCTIONS.md Part IV IV.2: same-named inner classes under
+		# different enclosing classes are distinct by intent but ambiguous
+		# in the flat registry — resolve nothing, name the collision.
+		local Map of String to String is innerSeen: Map:init();
+		flattened:each(action: local Function(ClassInfo is c){
+			Conditional:if(check: { c:outerName != '' }, then: {
+				Conditional:if(check: { innerSeen:has(key: c:name) }, then: {
+					local String is msg: 'Same-named inner class \'' . c:name . '\' declared under more than one enclosing class (last under \'' . c:outerName . '\'); rename one (FUNCTIONS.md Part IV IV.2).';
+					self:addError(line: c:line, msg: msg);
+				}, else: {
+					innerSeen:set(key: c:name, value: c:outerName);
+				});
+			});
+		});
 		self:programClasses: flattened;
 
 		self:registeredClasses: Map:init();

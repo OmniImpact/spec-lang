@@ -129,6 +129,10 @@ assert_compile_failure "negative-type-safety" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
 	"Non-exhaustive 'when'"
 
+assert_compile_failure "inner-name-collision" \
+	"$ROOT/tests/negative/n25_inner_name_collision_negative_test.spec" \
+	"Same-named inner class 'Dup' declared under more than one enclosing class"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"
