@@ -13,6 +13,10 @@ Class is StatefulCounter{
 	replace Function is init(){
 	}
 
+	local Function of Int is hidden(Int is n){
+		return n + 1000;
+	}
+
 	Function is tick(){
 		self:n: self:n + 1;
 	}

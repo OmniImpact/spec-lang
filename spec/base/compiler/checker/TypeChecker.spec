@@ -2209,6 +2209,14 @@ Class is TypeChecker{
 					bareIdx: bareIdx + 1;
 				});
 				self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
+				# FUNCTIONS.md Part IV IV.1: the as-import grants FUNCTIONS
+				# ONLY under the callee's visibility — a `local` member of the
+				# imported class is not callable through the import. The same
+				# check the qualified path runs.
+				local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: expr:methodName, idx: expr:overloadIndex);
+				Conditional:if(check: { bareSelected:name != '' }, then: {
+					self:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: expr:methodName);
+				});
 				expr:bareProvider: provider;
 				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
 				Conditional:if(check: { providerRet == '' }, then: {

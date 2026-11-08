@@ -129,6 +129,14 @@ assert_compile_failure "negative-type-safety" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
 	"Non-exhaustive 'when'"
 
+assert_compile_failure "import-local-member-wall" \
+	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
+	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"
+
+assert_compile_failure "transitive-import-wall" \
+	"$ROOT/tests/transitive/TransitiveUse.spec" \
+	"Members of 'Output' are callable only through an instance"
+
 assert_compile_failure "void-in-value-context" \
 	"$ROOT/tests/negative/n23_void_in_value_context_negative_test.spec" \
 	"'Conditional.if' declares no return value" \

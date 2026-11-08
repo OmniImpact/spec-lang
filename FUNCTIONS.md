@@ -436,6 +436,28 @@ merges.
 - The loader's `synthesizeInto` records the outer link; the diagnostics
   print the qualified name.
 
+### IV.2b — Landed
+
+- **The link**: the parser's `linkNestedClasses` sets the qualified outer
+  chain (`outerName`) and appends the enclosing class to the nested
+  class's `baseClasses` — the standard lattice walks (the bare scope, the
+  §I.6 gating, the visibility, the member lookup) serve inner classes
+  with no special cases.
+- **The MI field split** (`collectStructFieldsSplit`): the declared-of
+  lattice's fields keep their construction expressions; the outer-link
+  fields zero-init. An inner instance starts with an **empty
+  parent-part** — the inner's methods set what they need. This fixed the
+  allocation storm: the hot-path scan loops were allocating the
+  enclosing class's containers per instantiation.
+- **The construction exemptions**: `init` never enters the ancestor
+  signature/return compatibility checks (constructors are per-class);
+  the outer-link relation is exempt from the abstract-member enforcement
+  (the link is an access scope, not an is-a contract).
+- **The inherited-import synthesis**: the loader walks the base lattice
+  and synthesizes each ancestor's as-entries onto the inner (deduplicated
+  per target) — the outer's as-imports dispatch on the inner's own
+  instances.
+
 ### IV.3 The resolution rules (checker)
 
 - **Bare scope** = own members → own as-imports → the outer chain's

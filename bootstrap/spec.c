@@ -60953,6 +60953,10 @@ _br_303; })));
         } while (0);
     } } });
 	    TypeChecker_selectOverload(self, provider, expr->methodName, expr) /* inst:TypeChecker:selectOverload */;
+	    SPEC_AUTO Member* bareSelected = (Member*)((TypeChecker_lookupOverloadedMember(self, provider, expr->methodName, expr->overloadIndex) /* inst:TypeChecker:lookupOverloadedMember */));
+	    if ((!spec_string_equals(bareSelected->name, spec_string_intern("")))) {
+	    TypeChecker_checkMemberVisibility(self, provider, bareSelected, expr->methodName) /* inst:TypeChecker:checkMemberVisibility */;
+	};
 	    spec_assign((void**)&expr->bareProvider, (void*)(provider));
 	    SPEC_AUTO String providerRet = (((String (*)(TypeChecker*, String, String))self->_vtable[150]))((TypeChecker*)self, provider, expr->methodName);
 	    if (spec_string_equals(providerRet, spec_string_intern(""))) {
@@ -60991,6 +60995,7 @@ _br_308; })));
 	    spec_assign((void**)&expr->resolvedType, (void*)(res));
 	    return (String)({ String _ret_val = res; res = NULL; _ret_val; });
     if (provider) { spec_release((void*)provider); provider = NULL; }
+    if (bareSelected) { spec_release((void*)bareSelected); bareSelected = NULL; }
     if (providerRet) { spec_release((void*)providerRet); providerRet = NULL; }
 	};
     if (ownOwner) { spec_release((void*)ownOwner); ownOwner = NULL; }
