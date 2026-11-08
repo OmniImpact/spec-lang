@@ -58,9 +58,9 @@ Class is SourceLocation{
 	## @return: "file:line:col", or "line:col" when no file is recorded.
 	replace Function of String is toString(){
 		local String is f: self:file;
-		if (f:length() > 0) {
+		Conditional:branch(check: { f:length() > 0 }, then: {
 			return f . ':' . (self:line as String) . ':' . (self:col as String);
-		}
+		});
 		return (self:line as String) . ':' . (self:col as String);
 	}
 }

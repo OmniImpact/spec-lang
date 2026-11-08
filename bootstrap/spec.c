@@ -53705,11 +53705,11 @@ SpecArray* Array_slice(SpecArray* self, long long start, long long end) {
     long long s = start;
     long long e = end;
     if (((s) < (0))) {
-        s = 0;
-    }
+	    s = 0;
+	};
     if (((e) > (len))) {
-        e = len;
-    }
+	    e = len;
+	};
     long long i = s;
     ({ while (1) {
         bool _ev_12 = false;
@@ -53746,8 +53746,8 @@ long long Array_indexOf(SpecArray* self, String search, long long _default) {
         do {
     SPEC_AUTO String item = spec_construct_string(spec_array_get(self, i));
     if (spec_string_equals(item, search)) {
-        found = i;
-    }
+	    found = i;
+	};
     i = ((i) + (1));
     if (item) { spec_release((void*)item); item = NULL; }
         } while (0);
@@ -53762,8 +53762,8 @@ String Array_join(SpecArray* self, String separator) {
     (void)separator;
     long long len = spec_array_length(self);
     if (((len) == (0))) {
-        return (String)spec_retain((void*)(spec_string_intern("")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("")));
+	};
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
     long long i = 0;
     ({ while (1) {
@@ -53775,8 +53775,8 @@ String Array_join(SpecArray* self, String separator) {
         bool _it_14 = true;
         do {
     if (((i) > (0))) {
-        out = spec_string_concat(out, separator);
-    }
+	    out = spec_string_concat(out, separator);
+	};
     out = spec_string_concat(out, spec_array_get(self, i));
     i = ((i) + (1));
         } while (0);
@@ -53838,8 +53838,8 @@ long long Map_getInt(SpecMap* self, String key, long long _default) {
     (void)_default;
     SPEC_AUTO String s = (String)spec_map_get(self, key, spec_string_intern(""));
     if (((spec_string_length(s)) > (0))) {
-        return String_parseInt(s, 10, _default);
-    }
+	    return String_parseInt(s, 10, _default);
+	};
     return _default;
     if (s) { spec_release((void*)s); s = NULL; }
 }
@@ -53850,11 +53850,11 @@ bool Map_getBool(SpecMap* self, String key, bool _default) {
     (void)_default;
     SPEC_AUTO String s = (String)spec_map_get(self, key, spec_string_intern(""));
     if (spec_string_equals(s, spec_string_intern("true"))) {
-        return true;
-    }
+	    return true;
+	};
     if (spec_string_equals(s, spec_string_intern("false"))) {
-        return false;
-    }
+	    return false;
+	};
     return _default;
     if (s) { spec_release((void*)s); s = NULL; }
 }
@@ -55379,12 +55379,12 @@ String StackFrame_toString(StackFrame* self) {
     (void)self;
     SPEC_AUTO String locStr = spec_construct_string(spec_string_intern(""));
     if (((({ SourceLocation* _recv = (SourceLocation*)(self->location); (((long long (*)(SourceLocation*))_recv->_vtable[68]))((SourceLocation*)_recv); })) > (0))) {
-        spec_assign((void**)&locStr, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(" ("))), ((String)spec_claim_pool((void*)(({ SourceLocation* _recv = (SourceLocation*)(self->location); (((String (*)(SourceLocation*))_recv->_vtable[20]))((SourceLocation*)_recv); }))))), spec_string_intern(")"))));
-    }
+	    spec_assign((void**)&locStr, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(" ("))), ((String)spec_claim_pool((void*)(({ SourceLocation* _recv = (SourceLocation*)(self->location); (((String (*)(SourceLocation*))_recv->_vtable[20]))((SourceLocation*)_recv); }))))), spec_string_intern(")"))));
+	};
     SPEC_AUTO String cn = spec_construct_string(self->className);
     if (((spec_string_length(cn)) > (0))) {
-        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(cn)), spec_string_intern(":")), self->methodName), locStr)));
-    }
+	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(cn)), spec_string_intern(":")), self->methodName), locStr)));
+	};
     return (String)spec_retain((void*)(spec_string_concat((void*)spec_retain((void*)(self->methodName)), locStr)));
     if (locStr) { spec_release((void*)locStr); locStr = NULL; }
     if (cn) { spec_release((void*)cn); cn = NULL; }
@@ -55419,8 +55419,8 @@ String SourceLocation_toString(SourceLocation* self) {
     (void)self;
     SPEC_AUTO String f = spec_construct_string(self->file);
     if (((spec_string_length(f)) > (0))) {
-        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(f)), spec_string_intern(":")), spec_to_string_int(self->line)), spec_string_intern(":")), spec_to_string_int(self->col))));
-    }
+	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(f)), spec_string_intern(":")), spec_to_string_int(self->line)), spec_string_intern(":")), spec_to_string_int(self->col))));
+	};
     return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_to_string_int(self->line))), spec_string_intern(":")), spec_to_string_int(self->col))));
     if (f) { spec_release((void*)f); f = NULL; }
 }

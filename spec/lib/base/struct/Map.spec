@@ -40,9 +40,9 @@ Class is Map of K to V{
 	## @return: Mapped value, or [default].
 	Function of Int is getInt(String is key, Int is default){
 		local String is s: self:getString(key: key, default: '');
-		if (s:length() > 0) {
+		Conditional:branch(check: { s:length() > 0 }, then: {
 			return s:parseInt(base: 10, default: default);
-		}
+		});
 		return default;
 	}
 
@@ -61,12 +61,12 @@ Class is Map of K to V{
 	## @return: Mapped value, or [default].
 	Function of Boolean is getBool(String is key, Boolean is default){
 		local String is s: self:getString(key: key, default: '');
-		if (s == 'true') {
+		Conditional:branch(check: { s == 'true' }, then: {
 			return true;
-		}
-		if (s == 'false') {
+		});
+		Conditional:branch(check: { s == 'false' }, then: {
 			return false;
-		}
+		});
 		return default;
 	}
 
