@@ -54407,27 +54407,27 @@ bool NumberScanLoop_iteration(NumberScanLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String ch = String_charAt(self->lexer->source, self->lexer->pos, spec_string_intern(""));
     if (spec_string_equals(ch, spec_string_intern("_"))) {
-        SPEC_AUTO String nextCh = String_charAt(self->lexer->source, ((self->lexer->pos) + (1)), spec_string_intern(""));
-        if (String_isDigit(nextCh)) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
-        return false;
+	    SPEC_AUTO String nextCh = String_charAt(self->lexer->source, ((self->lexer->pos) + (1)), spec_string_intern(""));
+	    if (String_isDigit(nextCh)) {
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
+	    return false;
     if (nextCh) { spec_release((void*)nextCh); nextCh = NULL; }
-    }
+	};
     if (String_isDigit(ch)) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     if (((spec_string_equals(ch, spec_string_intern("."))) && ((!(self->isFloat))))) {
-        SPEC_AUTO String nextCh = String_charAt(self->lexer->source, ((self->lexer->pos) + (1)), spec_string_intern(""));
-        if (String_isDigit(nextCh)) {
-        self->isFloat = true;
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    SPEC_AUTO String nextCh = String_charAt(self->lexer->source, ((self->lexer->pos) + (1)), spec_string_intern(""));
+	    if (String_isDigit(nextCh)) {
+	    self->isFloat = true;
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     if (nextCh) { spec_release((void*)nextCh); nextCh = NULL; }
-    }
+	};
     return false;
     if (ch) { spec_release((void*)ch); ch = NULL; }
 }
@@ -62937,8 +62937,8 @@ void CompilationReport_stage(CompilationReport* self, long long n, long long tot
     (void)total;
     (void)label;
     if (self->quiet) {
-        return;
-    }
+	    return;
+	};
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  ["))), spec_to_string_int(n)), spec_string_intern("/")), spec_to_string_int(total)), spec_string_intern("] ")), label)))))));
 }
 
@@ -62946,8 +62946,8 @@ void CompilationReport_note(CompilationReport* self, String label) {
     (void)self;
     (void)label;
     if (self->quiet) {
-        return;
-    }
+	    return;
+	};
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(((String)spec_claim_pool((void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  "))), label)))))));
 }
 
@@ -62967,21 +62967,21 @@ void CompilationReport_summary(CompilationReport* self, String inputPath, String
     (void)peakKb;
     (void)binKb;
     if (self->quiet) {
-        return;
-    }
+	    return;
+	};
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(spec_string_intern(""))));
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  "))), inputPath), spec_string_intern(" -> ")), outputPath)))))));
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(((String)spec_claim_pool((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  "))), spec_to_string_int(classCount)), spec_string_intern(" classes · ")), spec_to_string_int(methodCount)), spec_string_intern(" methods · ")), spec_to_string_int(specLines)), spec_string_intern(" lines of spec -> ")), spec_to_string_int(cLines)), spec_string_intern(" lines of C"))))))));
     SPEC_AUTO String times = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  time "))), spec_to_string_int(totalMs)), spec_string_intern("ms  (load ")), spec_to_string_int(loadMs)), spec_string_intern(" · check ")), spec_to_string_int(checkMs)), spec_string_intern(" · gen ")), spec_to_string_int(genMs));
     if (((ccMs) >= (0))) {
-        times = spec_string_concat(spec_string_concat(times, spec_string_intern(" · cc ")), spec_to_string_int(ccMs));
-    }
+	    times = spec_string_concat(spec_string_concat(times, spec_string_intern(" · cc ")), spec_to_string_int(ccMs));
+	};
     times = spec_string_concat(times, spec_string_intern(")"));
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(times)));
     SPEC_AUTO String last = spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  peak memory "))), spec_to_string_int(((peakKb) / (1024)))), spec_string_intern(" MB"));
     if (((binKb) >= (0))) {
-        last = spec_string_concat(spec_string_concat(spec_string_concat(last, spec_string_intern(" · binary ")), spec_to_string_int(((binKb) / (1024)))), spec_string_intern(" KB"));
-    }
+	    last = spec_string_concat(spec_string_concat(spec_string_concat(last, spec_string_intern(" · binary ")), spec_to_string_int(((binKb) / (1024)))), spec_string_intern(" KB"));
+	};
     printf("%s\n", spec_buf_to_cstring((SpecBuf*)(last)));
     if (times) { spec_release((void*)times); times = NULL; }
     if (last) { spec_release((void*)last); last = NULL; }
