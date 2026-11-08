@@ -563,7 +563,26 @@ Class is TypeChecker{
 		if (group:length() == 0) {
 			return none;
 		}
-		local Array of NamedArg is args: expr:methodArgs;
+		# FUNCTIONS.md §I.3: no mixed calls — enforced globally, including
+		# single-member names. The scoped-region desugaring no longer
+		# produces mixed calls: its remainder binds to the unbound last
+		# Function parameter instead of riding as an argument (§as).
+		local Array of NamedArg is allArgs: expr:methodArgs;
+		local Array of NamedArg is args: allArgs;
+		local Boolean is isScoped: expr:scopedRemainder;
+		if (isScoped) {
+			local Array of NamedArg is explicit: [];
+			local Int is ei: 0;
+			While:condition(
+				evaluate: local Function of Boolean(){ return ei < allArgs:length() - 1; },
+				iteration: local Function of Boolean(){
+					explicit:add(item: allArgs:get(index: ei));
+					ei: ei + 1;
+					return true;
+				}
+			);
+			args: explicit;
+		}
 		local Boolean is allPos: true;
 		local Boolean is allNamed: true;
 		args:each(action: local Function(NamedArg is a){
@@ -573,30 +592,16 @@ Class is TypeChecker{
 				allPos: false;
 			}
 		});
-		# FUNCTIONS.md §I.3: no mixed calls — enforced globally, including
-		# single-member names. The one sanctioned shape: the scoped-region
-		# desugaring's trailing callback (named arguments, then exactly one
-		# positional block last).
-		local Boolean is isDesugaredShape: false;
 		if (!allPos && !allNamed) {
-			local Int is posCount: 0;
-			local Int is lastIdx: args:length() - 1;
-			args:each(action: local Function(NamedArg is a){
-				if (a:name == '') {
-					posCount: posCount + 1;
-				}
-			});
-			local NamedArg is lastArg: args:get(index: lastIdx);
-			if (posCount == 1 && lastArg:name == '') {
-				isDesugaredShape: true;
-			}
-		}
-		if (!allPos && !allNamed && !isDesugaredShape) {
 			self:addError(line: self:currentLine, msg: 'Mixed positional and named arguments are not supported; use one form (FUNCTIONS.md §I.3).');
 			return none;
 		}
 		if (group:length() == 1) {
 			local Member is only: group:get(index: 0);
+			if (isScoped && !self:scopeSlotOk(m: only, explicitCount: args:length())) {
+				self:addError(line: self:currentLine, msg: 'The scoped region requires exactly one unbound Function parameter at the end of \'' . baseName . '.' . methodName . '\' (FUNCTIONS.md §as).');
+				return none;
+			}
 			expr:overloadIndex: 0;
 			return only;
 		}
@@ -629,8 +634,14 @@ Class is TypeChecker{
 			}
 		}
 		local Array of Member is survivors: [];
+		# FUNCTIONS.md §as: a scoped remainder binds to an unbound last
+		# Function parameter — it never widens the arity. Pass 1: exact
+		# arity on the explicit arguments. Pass 2 (only when pass 1 is
+		# empty and the call is scoped): params == explicit + 1 with the
+		# last parameter Function-typed — the open scope slot.
+		local Int is wantCount: args:length();
 		group:each(action: local Function(Member is m){
-			if (m:params:length() != args:length()) {
+			if (m:params:length() != wantCount) {
 				return;
 			}
 			if (allPos) {
@@ -638,44 +649,43 @@ Class is TypeChecker{
 				return;
 			}
 			local Boolean is namesMatch: true;
+			local Int is npIdx: 0;
 			m:params:each(action: local Function(Parameter is p){
-				local Boolean is present: false;
-				args:each(action: local Function(NamedArg is a){
-					if (a:name == p:name) {
-						present: true;
+				# The scope slot (the last parameter) is bound by the
+				# remainder, not by a named argument.
+				if (!(isScoped && npIdx == m:params:length() - 1)) {
+					local Boolean is present: false;
+					args:each(action: local Function(NamedArg is a){
+						if (a:name == p:name) {
+							present: true;
+						}
+					});
+					if (!present) {
+						namesMatch: false;
 					}
-				});
-				if (!present) {
-					namesMatch: false;
 				}
+				npIdx: npIdx + 1;
 			});
 			if (namesMatch) {
 				survivors:add(item: m);
 				return;
 			}
-			if (isDesugaredShape) {
-				# The trailing positional block binds to the last parameter;
-				# every named argument must name a real parameter.
-				local Boolean is namedOk: true;
-				args:each(action: local Function(NamedArg is a){
-					if (a:name == '') {
-						return;
-					}
-					local Boolean is hit: false;
-					m:params:each(action: local Function(Parameter is p){
-						if (p:name == a:name) {
-							hit: true;
-						}
-					});
-					if (!hit) {
-						namedOk: false;
-					}
-				});
-				if (namedOk) {
-					survivors:add(item: m);
-				}
-			}
 		});
+		if (survivors:length() == 0 && isScoped) {
+			# Pass 2: the open scope slot — params == explicit + 1, last
+			# parameter Function-typed.
+			local Array of Member is slots: [];
+			group:each(action: local Function(Member is m){
+				if (self:scopeSlotOk(m: m, explicitCount: args:length())) {
+					slots:add(item: m);
+				}
+			});
+			if (slots:length() == 1) {
+				local Member is sel: slots:get(index: 0);
+				expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+				return sel;
+			}
+		}
 		if (survivors:length() == 0) {
 			if (allPos) {
 				self:addError(line: self:currentLine, msg: 'No signature of \'' . baseName . '.' . methodName . '\' takes ' . (args:length() as String) . ' argument(s).');
@@ -686,6 +696,10 @@ Class is TypeChecker{
 		}
 		if (survivors:length() == 1) {
 			local Member is sel: survivors:get(index: 0);
+			if (isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length())) {
+				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
+				return none;
+			}
 			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
 			return sel;
 		}
@@ -697,8 +711,27 @@ Class is TypeChecker{
 		});
 		if (exact:length() == 1) {
 			local Member is sel: exact:get(index: 0);
+			if (isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length())) {
+				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
+				return none;
+			}
 			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
 			return sel;
+		}
+		if (isScoped && exact:length() == 0) {
+			# Pass 2: the open scope slot — params == explicit + 1, last
+			# parameter Function-typed.
+			local Array of Member is slots: [];
+			group:each(action: local Function(Member is m){
+				if (self:scopeSlotOk(m: m, explicitCount: args:length())) {
+					slots:add(item: m);
+				}
+			});
+			if (slots:length() == 1) {
+				local Member is sel: slots:get(index: 0);
+				expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+				return sel;
+			}
 		}
 		if (exact:length() > 1) {
 			self:addError(line: self:currentLine, msg: 'Ambiguous call to \'' . baseName . '.' . methodName . '\': the arguments match multiple overloads; use named arguments (FUNCTIONS.md §I.2).');
@@ -750,6 +783,21 @@ Class is TypeChecker{
 		cls:baseClasses:each(action: local Function(String is baseName){
 			self:collectOverloadGroup(className: baseName, methodName: methodName, hops: hops + 1, acc: acc, ownerAcc: ownerAcc);
 		});
+	}
+
+	## FUNCTIONS.md §as: true when [m]'s last parameter is the open scope
+	## slot — exactly [explicitCount] parameters precede it and the slot is
+	## Function-typed (the remainder is a closure).
+	##
+	## @param m: The candidate overload.
+	## @param explicitCount: The explicit argument count.
+	## @return: true when the scope slot is open and valid.
+	Function of Boolean is scopeSlotOk(Member is m, Int is explicitCount){
+		if (m:params:length() != explicitCount + 1) {
+			return false;
+		}
+		local Parameter is slot: m:params:get(index: m:params:length() - 1);
+		return slot:paramType:name == 'Function';
 	}
 
 	## True when every argument's inferred type equals the bound

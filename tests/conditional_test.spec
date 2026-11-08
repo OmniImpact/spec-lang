@@ -78,6 +78,13 @@ Class is ConditionalTest {
 		});
 		if (bareHits == 1) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] bare call'); }
 
+		# The scoped region fills the open then-slot: the body becomes the
+		# branch's then-closure (FUNCTIONS.md §as).
+		local Int is scopedHits: 0;
+		as: Conditional:branch(check: 2 > 1);
+			scopedHits: scopedHits + 1;
+		if (scopedHits == 1) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] scoped open slot'); }
+
 		if (fail == 0) {
 			Output:line('[PASS] conditional: ' . (pass as String) . ' checks');
 		} else {

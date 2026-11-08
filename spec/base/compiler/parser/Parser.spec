@@ -805,6 +805,10 @@ Class is Parser{
 		}
 
 		callExpr:methodArgs:add(item: NamedArg:init(name: '', value: anonFn));
+		# FUNCTIONS.md §as: the remainder is not an argument — it fills the
+		# callable's declared-but-unbound last Function parameter. The
+		# marker keeps it out of overload selection.
+		callExpr:scopedRemainder: true;
 
 		local Statement is s: Statement:init(kind: StatementKind:EXPR);
 		s:setLine(line: startLine);

@@ -154,6 +154,26 @@ Exact static type only: a `Dog`-typed argument selects `f(Dog)`, never
 
 ---
 
+## Part I-d — The scoped region (§as): no invisible argument
+
+**§as The remainder fills the declared-but-unbound scope slot.** The
+`as:`/`as (params):` statement collects the remainder of the enclosing
+block and binds it to the called callable's **last parameter, declared
+`Function`, left unbound** by the explicit arguments. The remainder
+never participates in overload selection: resolution runs on the
+explicit arguments' arity (exact match first, then the open-slot shape
+params == explicit + 1 with a Function-typed last parameter). A callable
+whose parameters are all bound has no open slot — a scoped region on it
+is a compile error (the Conditional else-collision is unrepresentable,
+N19). The scoped region on an open Conditional branch makes the body
+the then-branch — conditional scopes compose from the same primitive.
+
+The mixed-call exemption for the old desugared shape is removed: the
+desugarer no longer produces mixed calls, and the no-mixed-calls rule
+is total.
+
+---
+
 ## Part I-c — Import gating (Option A, landed)
 
 **§I.6 Construction and type positions require the import.** The
@@ -216,7 +236,12 @@ finally, guard clause, nesting, bare calls). The emitted C contains the
 floor's `spec_branch` only in the wrapper's own fallback body — user
 conditionals are native C. Param `otherwise` is the temp spelling of
 `else` (keyword) until the flip. Branch-as-expression is checker-rejected
-(void) until the value-yielding inline lands.
+(void) until the value-yielding inline lands. The `as:` interaction is
+resolved by the scoped-remainder model: the remainder is not an added
+argument — it binds to the callable's declared-but-unbound last Function
+parameter, never widening the arity. `as:` on an open branch makes the
+body the then-branch; `as:` on a fully-bound branch is a compile error
+(§as, N19) — the else-collision is unrepresentable.
 
 ```spec
 Class is Conditional {
