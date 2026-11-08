@@ -4235,6 +4235,7 @@ struct TypeChecker {
     Expression* currentAnonNode;
     bool inValueBranch;
     bool checkingValueYield;
+    String currentYieldExpected;
     SpecArray* errors;
     SpecArray* programClasses;
     WellKnown* names;
@@ -38897,6 +38898,7 @@ typedef struct {
     String res;
     bool isValueBranch;
     bool isBranchCall;
+    String expected;
     long long argIdx;
 } _Env_anon_320;
 
@@ -38905,6 +38907,7 @@ static __attribute__((unused)) void _destroy_env_anon_320(void* _env_ptr) {
     _Env_anon_320* _env = (_Env_anon_320*)_env_ptr;
     if (_env->self) spec_release((void*)_env->self);
     if (_env->res) spec_release((void*)_env->res);
+    if (_env->expected) spec_release((void*)_env->expected);
     free(_env);
 }
 
@@ -38918,6 +38921,8 @@ static __attribute__((unused)) void _anon_fn_320(void* _env_ptr, NamedArg* arg) 
     (void)isValueBranch;
     bool isBranchCall = _env->isBranchCall;
     (void)isBranchCall;
+    String expected = _env->expected;
+    (void)expected;
     long long argIdx = _env->argIdx;
     (void)argIdx;
     if (((((isBranchCall) && (((argIdx) == (0))))) && (((arg->value->kind) == (ExpressionKind_ANON_FN))))) {
@@ -38928,10 +38933,12 @@ static __attribute__((unused)) void _anon_fn_320(void* _env_ptr, NamedArg* arg) 
     if (((isBranchCall) && (((argIdx) >= (1))))) {
 	    self->inBranchClosure = true;
 	    self->inValueBranch = isValueBranch;
+	    spec_assign((void**)&self->currentYieldExpected, (void*)(((isValueBranch) ? (expected) : (spec_string_intern("")))));
 	};
     ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, arg->value, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */)));
     self->inBranchClosure = false;
     self->inValueBranch = false;
+    spec_assign((void**)&self->currentYieldExpected, (void*)(spec_string_intern("")));
     argIdx = ((argIdx) + (1));
     _env->argIdx = argIdx;
 }
@@ -52552,6 +52559,7 @@ void TypeChecker_destroy(void* self_ptr) {
     if (self->currentSourceFile) { spec_release((void*)self->currentSourceFile); self->currentSourceFile = NULL; }
     if (self->currentMethodReturnType) { spec_release((void*)self->currentMethodReturnType); self->currentMethodReturnType = NULL; }
     if (self->currentAnonNode) { spec_release((void*)self->currentAnonNode); self->currentAnonNode = NULL; }
+    if (self->currentYieldExpected) { spec_release((void*)self->currentYieldExpected); self->currentYieldExpected = NULL; }
     if (self->errors) { spec_release((void*)self->errors); self->errors = NULL; }
     if (self->programClasses) { spec_release((void*)self->programClasses); self->programClasses = NULL; }
     if (self->names) { spec_release((void*)self->names); self->names = NULL; }
@@ -52581,6 +52589,7 @@ TypeChecker* TypeChecker_new(void) {
     self->currentAnonNode = (Expression*)spec_retain((void*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; })));
     self->inValueBranch = false;
     self->checkingValueYield = false;
+    self->currentYieldExpected = (String)spec_retain((void*)(spec_string_intern("")));
     self->errors = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
     self->programClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
     self->names = (WellKnown*)spec_retain((void*)(({ WellKnown* _inst = WellKnown_new(); WellKnown_init(_inst); _inst; })));
@@ -59492,8 +59501,8 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr, Stri
 	};
     if (segs) { spec_release((void*)segs); segs = NULL; }
     } else if (((kind) == (ExpressionKind_BINARY))) {
-        SPEC_AUTO String leftT = TypeChecker_inferExpressionType(self, expr->leftExpr, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */;
-        SPEC_AUTO String rightT = TypeChecker_inferExpressionType(self, expr->rightExpr, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */;
+        SPEC_AUTO String leftT = TypeChecker_inferExpressionType(self, expr->leftExpr, expected) /* inst:TypeChecker:inferExpressionType */;
+        SPEC_AUTO String rightT = TypeChecker_inferExpressionType(self, expr->rightExpr, expected) /* inst:TypeChecker:inferExpressionType */;
         SPEC_AUTO String op = spec_construct_string(expr->binaryOp);
         if (spec_string_equals(op, spec_string_intern("."))) {
         spec_assign((void**)&res, (void*)(Primitive_value(Primitive_STRING)));
@@ -60046,10 +60055,12 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     if (((isBranchCall) && (((argIdx) >= (1))))) {
 	    self->inBranchClosure = true;
 	    self->inValueBranch = isValueBranch;
+	    spec_assign((void**)&self->currentYieldExpected, (void*)(((isValueBranch) ? (expected) : (spec_string_intern("")))));
 	};
     ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, arg->value, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */)));
     self->inBranchClosure = false;
     self->inValueBranch = false;
+    spec_assign((void**)&self->currentYieldExpected, (void*)(spec_string_intern("")));
     argIdx = ((argIdx) + (1));
         } while (0);
     } } });
@@ -60539,7 +60550,11 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
         TypeChecker_checkForward(self, stmt) /* inst:TypeChecker:checkForward */;
     } else if (((kind) == (StatementKind_RETURN))) {
         if (stmt->hasReturnExpr) {
-	    SPEC_AUTO String retType = TypeChecker_inferExpressionType(self, stmt->returnExpr, self->currentMethodReturnType) /* inst:TypeChecker:inferExpressionType */;
+	    SPEC_AUTO String yieldExpected = spec_construct_string(self->currentMethodReturnType);
+	    if (((self->checkingValueYield) && ((!spec_string_equals(self->currentYieldExpected, spec_string_intern("")))))) {
+	    spec_assign((void**)&yieldExpected, (void*)(self->currentYieldExpected));
+	};
+	    SPEC_AUTO String retType = TypeChecker_inferExpressionType(self, stmt->returnExpr, yieldExpected) /* inst:TypeChecker:inferExpressionType */;
 	    if (self->checkingValueYield) {
 	    if (TypeChecker_isVoid(self, self->currentAnonNode->anonReturnType->name) /* inst:TypeChecker:isVoid */) {
 	    spec_assign((void**)&self->currentAnonNode->anonReturnType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, retType); _inst; })));
@@ -60563,6 +60578,7 @@ void TypeChecker_checkStatement(TypeChecker* self, Statement* stmt) {
 	};
 	};
 	};
+    if (yieldExpected) { spec_release((void*)yieldExpected); yieldExpected = NULL; }
     if (retType) { spec_release((void*)retType); retType = NULL; }
 	} else {
 	    if ((((((((!spec_string_equals(self->currentMethodReturnType, spec_string_intern("void")))) && ((!spec_string_equals(self->currentMethodReturnType, spec_string_intern("Void")))))) && ((!spec_string_equals(self->currentMethodReturnType, spec_string_intern("")))))) && ((!spec_string_equals(self->currentMethodReturnType, spec_string_intern("Any")))))) {

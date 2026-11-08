@@ -108,6 +108,11 @@ Class is TypeChecker{
 	## branch closure — its return establishes the branch's yield type.
 	local Boolean is checkingValueYield: false;
 
+	## FUNCTIONS.md Part II: the expected type of the value-yielding branch
+	## being checked — flows into its yields so nested branch calls type in
+	## context.
+	local String is currentYieldExpected: '';
+
 	## Accumulated type errors.
 	local Array of TypeError is errors: [];
 
@@ -1723,8 +1728,11 @@ Class is TypeChecker{
 				});
 			}
 			is ExpressionKind:BINARY: {
-				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
-				local String is rightT: self:inferExpressionType(expr: expr:rightExpr);
+				# FUNCTIONS.md Part II: the expected type flows into the
+				# operands so a value-yielding branch call nested in an
+				# expression (e.g. `n + if(...)`) types in context.
+				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
+				local String is rightT: self:inferExpressionType(expr: expr:rightExpr, expected: expected);
 				local String is op: expr:binaryOp;
 				when (op) {
 					is '.': {
@@ -2237,10 +2245,12 @@ Class is TypeChecker{
 			Conditional:branch(check: { isBranchCall && argIdx >= 1 }, then: {
 				self:inBranchClosure: true;
 				self:inValueBranch: isValueBranch;
+				self:currentYieldExpected: (if (isValueBranch) expected else '');
 			});
 			self:inferExpressionType(expr: arg:value);
 			self:inBranchClosure: false;
 			self:inValueBranch: false;
+			self:currentYieldExpected: '';
 			argIdx: argIdx + 1;
 		});
 
@@ -2668,8 +2678,14 @@ Class is TypeChecker{
 			}
 			is StatementKind:RETURN: {
 				Conditional:branch(check: { stmt:hasReturnExpr }, then: {
-					# Bidirectional: the declared return type flows in.
-					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: self:currentMethodReturnType);
+					# Bidirectional: the declared return type flows in — and a
+					# value-yielding branch's yield takes the branch's own
+					# expected type (nested branch calls type in context).
+					local String is yieldExpected: self:currentMethodReturnType;
+					Conditional:branch(check: { self:checkingValueYield && self:currentYieldExpected != '' }, then: {
+						yieldExpected: self:currentYieldExpected;
+					});
+					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: yieldExpected);
 					# FUNCTIONS.md Part II: the last statement of a
 					# value-yielding branch closure establishes the branch's
 					# yield type (the inBranchClosure method-routing does not
