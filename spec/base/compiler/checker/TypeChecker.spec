@@ -2062,9 +2062,18 @@ Class is TypeChecker{
 			if (ownOwner == '') {
 				local String is provider: bsProviders:get(index: 0);
 				# The bare-scope branch runs before arg inference: type the
-				# arguments now so overload selection sees exact types.
+				# arguments now so overload selection sees exact types. Branch
+				# closures (args 1+) of a Conditional call keep the enclosing
+				# method's return type (FUNCTIONS.md Part II).
+				local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
+				local Int is bareIdx: 0;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if (bareIsBranch && bareIdx >= 1) {
+						self:inBranchClosure: true;
+					}
 					self:inferExpressionType(expr: arg:value);
+					self:inBranchClosure: false;
+					bareIdx: bareIdx + 1;
 				});
 				self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
 				expr:bareProvider: provider;

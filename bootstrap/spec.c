@@ -37773,6 +37773,8 @@ static __attribute__((unused)) void _anon_fn_295(void* _env_ptr, String prov) {
 typedef struct {
     TypeChecker* self;
     String res;
+    long long bareIdx;
+    bool bareIsBranch;
 } _Env_anon_297;
 
 static __attribute__((unused)) void _destroy_env_anon_297(void* _env_ptr) {
@@ -37789,7 +37791,16 @@ static __attribute__((unused)) void _anon_fn_297(void* _env_ptr, NamedArg* arg) 
     (void)self;
     String res = _env->res;
     (void)res;
+    long long bareIdx = _env->bareIdx;
+    (void)bareIdx;
+    bool bareIsBranch = _env->bareIsBranch;
+    (void)bareIsBranch;
+    if (((bareIsBranch) && (((bareIdx) >= (1))))) {
+        self->inBranchClosure = true;
+    }
     ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, arg->value, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */)));
+    self->inBranchClosure = false;
+    bareIdx = ((bareIdx) + (1));
 }
 
 typedef struct {
@@ -58160,10 +58171,17 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     }
         if (spec_string_equals(ownOwner, spec_string_intern(""))) {
         SPEC_AUTO String provider = spec_construct_string(spec_array_get(bsProviders, 0));
+        bool bareIsBranch = ((((spec_string_equals(provider, spec_string_intern("Conditional"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))));
+        long long bareIdx = 0;
         ({ SpecArray* _a_298 = expr->methodArgs; if (_a_298) { for (size_t _i_298 = 0; _i_298 < _a_298->length; _i_298++) {
         NamedArg* arg = (NamedArg*)(intptr_t)_a_298->items[_i_298];
         do {
+    if (((bareIsBranch) && (((bareIdx) >= (1))))) {
+        self->inBranchClosure = true;
+    }
     ((String)spec_claim_pool((void*)(TypeChecker_inferExpressionType(self, arg->value, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */)));
+    self->inBranchClosure = false;
+    bareIdx = ((bareIdx) + (1));
         } while (0);
     } } });
         ((Member*)spec_claim_pool((void*)(TypeChecker_selectOverload(self, provider, expr->methodName, expr) /* inst:TypeChecker:selectOverload */)));
