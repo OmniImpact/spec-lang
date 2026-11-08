@@ -133,6 +133,14 @@ assert_compile_failure "nested-ambiguity-at-reference" \
 	"$ROOT/tests/negative/n25_inner_name_collision_negative_test.spec" \
 	"Type 'Helper' is provided by LibA:Helper and LibB:Helper; qualify the reference"
 
+assert_compile_failure "field-through-import-wall" \
+	"$ROOT/tests/negative/n26_field_through_import_negative_test.spec" \
+	"Fields are not reachable through the class-name prefix 'FieldDep'"
+
+assert_compile_failure "inner-import-leak-wall" \
+	"$ROOT/tests/negative/n27_inner_import_leak_negative_test.spec" \
+	"Undefined function 'floor' on class 'N27InnerImportLeak'"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"

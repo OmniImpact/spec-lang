@@ -571,21 +571,21 @@ still an error).
   `Function of Boolean` in error messages (today the colon form leaks:
   `Function:Boolean`).
 
-### IV.6 The test plan
+### IV.6 The test plan (verified)
 
-- `tests/inner_class_test.spec`: the outer's imports visible bare inside
-  the inner; the inner's own additional imports scoped to it (and NOT
-  visible in the outer or a sibling inner); the outer's members under
-  child visibility; the qualified registry name; the inner-of-inner
-  chain; the shadowing rules.
-- `tests/import_wall_test.spec`: the functions-only grant (fields,
-  private members, transitive imports all rejected); the same-name
-  collision forcing qualification; the multiple-inheritance merge (two
-  parents' imports both bare); the gating (constructing through an
-  inherited import passes §I.6).
-- Negatives N21+ for each wall (the private member through an import,
-  the transitive import, the inner's import leaking outward, the
-  same-level collision).
+- `tests/inner_class_test.spec`: the outer's members and imports visible
+  inside the inner (the parent method, the parent field, the outer's
+  as-import bare); the inner's own additional import scoped to it.
+- `tests/import_wall_test.spec`: the grant surface — the MI merge (two
+  parents' as-imports both callable bare through the lattice), the
+  inherited-import gating (the parent's imported class's nested type
+  constructs and dispatches through §I.6 via the lattice).
+- The rejection surfaces (the walls hold, each pinned by a regression):
+  N24 (the `local` member through an import), N26 (the field wall —
+  the grant never exposes fields), N27 (the inner's own import does not
+  leak into the enclosing class), the transitive pair (no re-export),
+  N3 (the same-level collision forcing qualification), N25 (the bare
+  nested reference with two providers naming them).
 
 ### IV.7 Sequencing
 
