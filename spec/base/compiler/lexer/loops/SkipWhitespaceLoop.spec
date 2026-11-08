@@ -24,14 +24,14 @@ Class of Loop is SkipWhitespaceLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		if (ch:isWhitespace()) {
+		Conditional:branch(check: { ch:isWhitespace() }, then: {
 			self:lexer:advance();
 			return true;
-		}
-		if (ch == '#') {
+		});
+		Conditional:branch(check: { ch == '#' }, then: {
 			While:run(loop: SkipCommentLoop:init(lexer: self:lexer));
 			return true;
-		}
+		});
 		return false;
 	}
 }

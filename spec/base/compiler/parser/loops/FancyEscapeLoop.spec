@@ -32,16 +32,16 @@ Class of Loop is FancyEscapeLoop{
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:src:charAt(index: self:pos, default: '');
 		self:pos: self:pos + 1;
-		if (ch == "\\") {
-			if (self:pos < self:src:length()) {
+		Conditional:branch(check: { ch == "\\" }, then: {
+			Conditional:branch(check: { self:pos < self:src:length() }, then: {
 				local String is nextCh: self:src:charAt(index: self:pos, default: '');
 				self:pos: self:pos + 1;
 				self:res: self:res . self:esc:expand(escaped: nextCh);
-			} else {
+			}, otherwise: {
 				self:res: self:res . "\\";
-			}
+			});
 			return true;
-		}
+		});
 		self:res: self:res . ch;
 		return true;
 	}

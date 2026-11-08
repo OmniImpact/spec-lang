@@ -26,9 +26,9 @@ Class of Loop is StripUnderscoresLoop{
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:src:charAt(index: self:pos, default: '');
 		self:pos: self:pos + 1;
-		if (ch != '_') {
+		Conditional:branch(check: { ch != '_' }, then: {
 			self:res: self:res . ch;
-		}
+		});
 		return true;
 	}
 }

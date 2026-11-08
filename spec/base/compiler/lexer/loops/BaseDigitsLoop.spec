@@ -32,22 +32,22 @@ Class of Loop is BaseDigitsLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		if (ch == '_') {
+		Conditional:branch(check: { ch == '_' }, then: {
 			self:lexer:advance();
 			return true;
-		}
+		});
 		local Int is d: self:lexer:digitValue(ch: ch);
-		if (d >= 0 && d < self:base) {
+		Conditional:branch(check: { d >= 0 && d < self:base }, then: {
 			self:value: (self:value * self:base) + d;
 			self:digitCount: self:digitCount + 1;
 			self:lexer:advance();
 			return true;
-		}
-		if (self:lexer:chars:isIdentifierContinue(ch: ch)) {
+		});
+		Conditional:branch(check: { self:lexer:chars:isIdentifierContinue(ch: ch) }, then: {
 			self:hadInvalid: true;
 			self:lexer:advance();
 			return true;
-		}
+		});
 		return false;
 	}
 }

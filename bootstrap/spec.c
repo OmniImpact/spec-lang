@@ -55007,13 +55007,13 @@ bool SkipWhitespaceLoop_iteration(SkipWhitespaceLoop* self, SpecLoopControl* con
     (void)control;
     SPEC_AUTO String ch = String_charAt(self->lexer->source, self->lexer->pos, spec_string_intern(""));
     if (String_isWhitespace(ch)) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     if (spec_string_equals(ch, spec_string_intern("#"))) {
-        ({ void* _lp = (void*)(({ SkipCommentLoop* _inst = SkipCommentLoop_new(); SkipCommentLoop_init(_inst, self->lexer); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (SkipCommentLoop_evaluate((void*)_lp)) { if (!SkipCommentLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
-        return true;
-    }
+	    ({ void* _lp = (void*)(({ SkipCommentLoop* _inst = SkipCommentLoop_new(); SkipCommentLoop_init(_inst, self->lexer); _inst; })); SpecLoopControl* _ctrl = (SpecLoopControl*)(NULL); while (SkipCommentLoop_evaluate((void*)_lp)) { if (!SkipCommentLoop_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); } spec_release(_lp); });
+	    return true;
+	};
     return false;
     if (ch) { spec_release((void*)ch); ch = NULL; }
 }
@@ -55062,9 +55062,9 @@ bool IdentScanLoop_iteration(IdentScanLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String ch = String_charAt(self->lexer->source, self->lexer->pos, spec_string_intern(""));
     if (({ Lexer* _recv = (Lexer*)(self->lexer); (((bool (*)(Lexer*, String))_recv->_vtable[54]))((Lexer*)_recv, ch); })) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     return false;
     if (ch) { spec_release((void*)ch); ch = NULL; }
 }
@@ -55095,21 +55095,21 @@ bool BaseDigitsLoop_iteration(BaseDigitsLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String ch = String_charAt(self->lexer->source, self->lexer->pos, spec_string_intern(""));
     if (spec_string_equals(ch, spec_string_intern("_"))) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     long long d = Lexer_digitValue(self->lexer, ch) /* inst:Lexer:digitValue */;
     if (((((d) >= (0))) && (((d) < (self->base))))) {
-        self->value = ((((self->value) * (self->base))) + (d));
-        self->digitCount = ((self->digitCount) + (1));
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    self->value = ((((self->value) * (self->base))) + (d));
+	    self->digitCount = ((self->digitCount) + (1));
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     if (({ Chars* _recv = (Chars*)(self->lexer->chars); (((bool (*)(Chars*, String))_recv->_vtable[54]))((Chars*)_recv, ch); })) {
-        self->hadInvalid = true;
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        return true;
-    }
+	    self->hadInvalid = true;
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    return true;
+	};
     return false;
     if (ch) { spec_release((void*)ch); ch = NULL; }
 }
@@ -55185,31 +55185,31 @@ bool StringScanLoop_iteration(StringScanLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String ch = String_charAt(self->lexer->source, self->lexer->pos, spec_string_intern(""));
     if (spec_string_equals(ch, self->quote)) {
-        return false;
-    }
+	    return false;
+	};
     if (spec_string_equals(ch, spec_string_intern("\\"))) {
-        if (spec_string_equals(self->quote, spec_string_intern("'"))) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        if (((self->lexer->pos) < (self->lexer->length))) {
-        SPEC_AUTO String nextCh = ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
-        if (((spec_string_equals(nextCh, spec_string_intern("'"))) || (spec_string_equals(nextCh, spec_string_intern("\\"))))) {
-        self->res = spec_string_concat(self->res, nextCh);
-    } else {
-        self->res = spec_string_concat(spec_string_concat(self->res, spec_string_intern("\\")), nextCh);
-    }
+	    if (spec_string_equals(self->quote, spec_string_intern("'"))) {
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    if (((self->lexer->pos) < (self->lexer->length))) {
+	    SPEC_AUTO String nextCh = ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    if (((spec_string_equals(nextCh, spec_string_intern("'"))) || (spec_string_equals(nextCh, spec_string_intern("\\"))))) {
+	    self->res = spec_string_concat(self->res, nextCh);
+	} else {
+	    self->res = spec_string_concat(spec_string_concat(self->res, spec_string_intern("\\")), nextCh);
+	};
     if (nextCh) { spec_release((void*)nextCh); nextCh = NULL; }
-    }
-        return true;
-    }
-        self->res = spec_string_concat(self->res, spec_string_intern("\\"));
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        if (((self->lexer->pos) < (self->lexer->length))) {
-        SPEC_AUTO String nextCh = ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
-        self->res = spec_string_concat(self->res, nextCh);
+	};
+	    return true;
+	};
+	    self->res = spec_string_concat(self->res, spec_string_intern("\\"));
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    if (((self->lexer->pos) < (self->lexer->length))) {
+	    SPEC_AUTO String nextCh = ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    self->res = spec_string_concat(self->res, nextCh);
     if (nextCh) { spec_release((void*)nextCh); nextCh = NULL; }
-    }
-        return true;
-    }
+	};
+	    return true;
+	};
     self->res = spec_string_concat(self->res, ch);
     ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
     return true;
@@ -55241,12 +55241,12 @@ bool HeredocScanLoop_iteration(HeredocScanLoop* self, SpecLoopControl* control) 
     (void)control;
     SPEC_AUTO String triple = spec_string_substring(self->lexer->source, self->lexer->pos, ((self->lexer->pos) + (3)));
     if (spec_string_equals(triple, self->quote)) {
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); }))));
-        self->closed = true;
-        return false;
-    }
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    ({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); });
+	    self->closed = true;
+	    return false;
+	};
     self->res = spec_string_concat(self->res, ((String)spec_claim_pool((void*)(({ Lexer* _recv = (Lexer*)(self->lexer); (((String (*)(Lexer*))_recv->_vtable[52]))((Lexer*)_recv); })))));
     return true;
     if (triple) { spec_release((void*)triple); triple = NULL; }
@@ -55276,8 +55276,8 @@ bool StripUnderscoresLoop_iteration(StripUnderscoresLoop* self, SpecLoopControl*
     SPEC_AUTO String ch = String_charAt(self->src, self->pos, spec_string_intern(""));
     self->pos = ((self->pos) + (1));
     if ((!spec_string_equals(ch, spec_string_intern("_")))) {
-        self->res = spec_string_concat(self->res, ch);
-    }
+	    self->res = spec_string_concat(self->res, ch);
+	};
     return true;
     if (ch) { spec_release((void*)ch); ch = NULL; }
 }
@@ -56760,15 +56760,15 @@ bool BinaryFoldLoop_iteration(BinaryFoldLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO Token* opTok = (Token*)((({ Parser* _recv = (Parser*)(self->parser); (((Token* (*)(Parser*))_recv->_vtable[52]))((Parser*)_recv); })));
     SPEC_AUTO String op = Token_getValue(opTok) /* inst:Token:getValue */;
-    if (spec_string_equals(op, ((String)spec_claim_pool((void*)(Keyword_value(Keyword_IS)))))) {
-        spec_assign((void**)&op, (void*)(spec_string_intern("==")));
-    }
+    if (spec_string_equals(op, Keyword_value(Keyword_IS))) {
+	    spec_assign((void**)&op, (void*)(spec_string_intern("==")));
+	};
     SPEC_AUTO Expression* right = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; })));
     if (((self->next) == (PrecedenceLevel_NONE))) {
-        spec_assign((void**)&right, (void*)(Parser_parseUnary(self->parser) /* inst:Parser:parseUnary */));
-    } else {
-        spec_assign((void**)&right, (void*)(Parser_parseLevel(self->parser, self->next) /* inst:Parser:parseLevel */));
-    }
+	    spec_assign((void**)&right, (void*)(Parser_parseUnary(self->parser) /* inst:Parser:parseUnary */));
+	} else {
+	    spec_assign((void**)&right, (void*)(Parser_parseLevel(self->parser, self->next) /* inst:Parser:parseLevel */));
+	};
     SPEC_AUTO Expression* binExpr = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_BINARY); _inst; })));
     spec_assign((void**)&binExpr->binaryOp, (void*)(op));
     spec_assign((void**)&binExpr->leftExpr, (void*)(self->currentExpr));
@@ -57636,16 +57636,16 @@ bool FancyEscapeLoop_iteration(FancyEscapeLoop* self, SpecLoopControl* control) 
     SPEC_AUTO String ch = String_charAt(self->src, self->pos, spec_string_intern(""));
     self->pos = ((self->pos) + (1));
     if (spec_string_equals(ch, spec_string_intern("\\"))) {
-        if (((self->pos) < (spec_string_length(self->src)))) {
-        SPEC_AUTO String nextCh = String_charAt(self->src, self->pos, spec_string_intern(""));
-        self->pos = ((self->pos) + (1));
-        self->res = spec_string_concat(self->res, ((String)spec_claim_pool((void*)(TemplateEscapes_expand(self->esc, nextCh) /* inst:TemplateEscapes:expand */))));
+	    if (((self->pos) < (spec_string_length(self->src)))) {
+	    SPEC_AUTO String nextCh = String_charAt(self->src, self->pos, spec_string_intern(""));
+	    self->pos = ((self->pos) + (1));
+	    self->res = spec_string_concat(self->res, TemplateEscapes_expand(self->esc, nextCh) /* inst:TemplateEscapes:expand */);
     if (nextCh) { spec_release((void*)nextCh); nextCh = NULL; }
-    } else {
-        self->res = spec_string_concat(self->res, spec_string_intern("\\"));
-    }
-        return true;
-    }
+	} else {
+	    self->res = spec_string_concat(self->res, spec_string_intern("\\"));
+	};
+	    return true;
+	};
     self->res = spec_string_concat(self->res, ch);
     return true;
     if (ch) { spec_release((void*)ch); ch = NULL; }

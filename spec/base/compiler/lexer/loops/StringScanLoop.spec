@@ -27,34 +27,34 @@ Class of Loop is StringScanLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		if (ch == self:quote) {
+		Conditional:branch(check: { ch == self:quote }, then: {
 			return false;
-		}
-		if (ch == "\\") {
-			if (self:quote == '\'') {
+		});
+		Conditional:branch(check: { ch == "\\" }, then: {
+			Conditional:branch(check: { self:quote == '\'' }, then: {
 				# Single-quote family: two minimal escapes, everything
 				# else passes through with its backslash.
 				self:lexer:advance();
-				if (self:lexer:pos < self:lexer:length) {
+				Conditional:branch(check: { self:lexer:pos < self:lexer:length }, then: {
 					local String is nextCh: self:lexer:advance();
-					if (nextCh == '\'' || nextCh == "\\") {
+					Conditional:branch(check: { nextCh == '\'' || nextCh == "\\" }, then: {
 						self:res: self:res . nextCh;
-					} else {
+					}, otherwise: {
 						self:res: self:res . "\\" . nextCh;
-					}
-				}
+					});
+				});
 				return true;
-			}
+			});
 			# Template family: raw content; the backslash and its follower
 			# are copied verbatim.
 			self:res: self:res . "\\";
 			self:lexer:advance();
-			if (self:lexer:pos < self:lexer:length) {
+			Conditional:branch(check: { self:lexer:pos < self:lexer:length }, then: {
 				local String is nextCh: self:lexer:advance();
 				self:res: self:res . nextCh;
-			}
+			});
 			return true;
-		}
+		});
 		self:res: self:res . ch;
 		self:lexer:advance();
 		return true;
