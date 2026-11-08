@@ -46,31 +46,31 @@ Class is Widget{
 		local String is fwdC: dg:generateForwardDeclarations(classes: prog:classes);
 		local String is structsC: dg:generateStructs(classes: prog:classes);
 
-		if (enumsC:contains(needle: 'Level_NONE = 0') && enumsC:contains(needle: 'Level_of(String v)') && enumsC:contains(needle: 'return Level_NONE;')) {
+		Conditional:branch(check: { enumsC:contains(needle: 'Level_NONE = 0') && enumsC:contains(needle: 'Level_of(String v)') && enumsC:contains(needle: 'return Level_NONE;') }, then: {
 			Output:line('[PASS] enum tables with of() and NONE default');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] enum emission');
 			failures: failures + 1;
-		}
+		});
 
-		if (fwdC:contains(needle: 'typedef struct Widget Widget;') && fwdC:contains(needle: 'long long Widget_grow(Widget* self, long long by);')) {
+		Conditional:branch(check: { fwdC:contains(needle: 'typedef struct Widget Widget;') && fwdC:contains(needle: 'long long Widget_grow(Widget* self, long long by);') }, then: {
 			Output:line('[PASS] forward declarations with prototypes');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] forward declarations');
 			failures: failures + 1;
-		}
+		});
 
-		if (structsC:contains(needle: 'struct Widget {') && structsC:contains(needle: 'long long size;') && !structsC:contains(needle: 'namespace;')) {
+		Conditional:branch(check: { structsC:contains(needle: 'struct Widget {') && structsC:contains(needle: 'long long size;') && !structsC:contains(needle: 'namespace;') }, then: {
 			Output:line('[PASS] struct fields without metadata members');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] struct emission');
 			failures: failures + 1;
-		}
+		});
 
-		if (failures == 0) {
+		Conditional:branch(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec declgen test complete');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] spec declgen test: ' . (failures as String) . ' failures');
-		}
+		});
 	}
 }

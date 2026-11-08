@@ -40,6 +40,7 @@ Class is VisBase{
 Class of VisBase is VisChild{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 
@@ -63,6 +64,7 @@ Class of VisBase is VisChild{
 Class is VisibilityTest{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()]
 	];
@@ -74,32 +76,32 @@ Class is VisibilityTest{
 		local VisChild is child: VisChild:init();
 
 		# Case 1: public members are callable externally and dispatch virtually.
-		if (base:openValue() == 10 && child:openValue() == 99) {
+		Conditional:branch(check: { base:openValue() == 10 && child:openValue() == 99 }, then: {
 			Output:line('[PASS] public: external call + virtual override');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] public: ' . base:openValue() . ', ' . child:openValue());
-		}
+		});
 
 		# Case 2: local members work inside the declaring class.
-		if (base:publicViaSecret() == 21) {
+		Conditional:branch(check: { base:publicViaSecret() == 21 }, then: {
 			Output:line('[PASS] local: internal use = 21');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] local: ' . base:publicViaSecret());
-		}
+		});
 
 		# Case 3: contained members are visible to subclasses.
-		if (child:viaHelper() == 60) {
+		Conditional:branch(check: { child:viaHelper() == 60 }, then: {
 			Output:line('[PASS] contained: subclass access = 60');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] contained: ' . child:viaHelper());
-		}
+		});
 
 		# Case 4: contained access through a reference, from within a subclass.
-		if (child:viaHelperRef(ref: child as VisBase) == 30) {
+		Conditional:branch(check: { child:viaHelperRef(ref: child as VisBase) == 30 }, then: {
 			Output:line('[PASS] contained: reference access from subclass = 30');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] contained: ' . child:viaHelperRef(ref: child as VisBase));
-		}
+		});
 
 		Output:line('=== End Visibility ===');
 	}
