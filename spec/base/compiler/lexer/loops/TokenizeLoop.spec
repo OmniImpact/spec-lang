@@ -27,35 +27,41 @@ Class of Loop is TokenizeLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		self:lexer:skipWhitespaceAndComments();
-		if (self:lexer:pos >= self:lexer:length) {
+		Conditional:branch(check: { self:lexer:pos >= self:lexer:length }, then: {
 			return false;
-		}
+		});
 
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		if (ch == '"' || ch == '\'') {
+		Conditional:branch(check: { ch == '"' || ch == '\'' }, then: {
 			# The raw heredoc claims precedence over single quotes.
 			local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
-			if (triple == "'''") {
+			Conditional:branch(check: { triple == "'''" }, then: {
 				self:tokens:add(item: self:lexer:readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
-			} else {
+			}, otherwise: {
 				self:tokens:add(item: self:lexer:readString(quote: ch));
-			}
-		} else if (ch == '`') {
-			# The template heredoc: raw content now, escapes and templates
-			# interpreted by the parser's desugar.
-			local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
-			if (triple == "```") {
-				self:tokens:add(item: self:lexer:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
-			} else {
-				self:tokens:add(item: self:lexer:readSymbol());
-			}
-		} else if (ch:isDigit()) {
-			self:tokens:add(item: self:lexer:readNumber());
-		} else if (self:lexer:isIdentifierStart(ch: ch)) {
-			self:tokens:add(item: self:lexer:readIdentifierOrKeyword());
-		} else {
-			self:tokens:add(item: self:lexer:readSymbol());
-		}
+			});
+		}, otherwise: {
+			Conditional:branch(check: { ch == '`' }, then: {
+				# The template heredoc: raw content now, escapes and templates
+				# interpreted by the parser's desugar.
+				local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
+				Conditional:branch(check: { triple == "```" }, then: {
+					self:tokens:add(item: self:lexer:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
+				}, otherwise: {
+					self:tokens:add(item: self:lexer:readSymbol());
+				});
+			}, otherwise: {
+				Conditional:branch(check: { ch:isDigit() }, then: {
+					self:tokens:add(item: self:lexer:readNumber());
+				}, otherwise: {
+					Conditional:branch(check: { self:lexer:isIdentifierStart(ch: ch) }, then: {
+						self:tokens:add(item: self:lexer:readIdentifierOrKeyword());
+					}, otherwise: {
+						self:tokens:add(item: self:lexer:readSymbol());
+					});
+				});
+			});
+		});
 		return true;
 	}
 }

@@ -45,8 +45,8 @@ Class of Loop is TemplateSplitLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:raw:charAt(index: self:pos, default: '');
-		if (!self:inHole) {
-			if (ch == "{" && self:pos + 1 < self:raw:length() && self:raw:charAt(index: self:pos + 1, default: '') == "{") {
+		Conditional:branch(check: { !self:inHole }, then: {
+			Conditional:branch(check: { ch == "{" && self:pos + 1 < self:raw:length() && self:raw:charAt(index: self:pos + 1, default: '') == "{" }, then: {
 				self:lits:add(item: self:lit);
 				self:lit: '';
 				self:inHole: true;
@@ -55,65 +55,67 @@ Class of Loop is TemplateSplitLoop{
 				self:braceDepth: 0;
 				self:pos: self:pos + 2;
 				return true;
-			}
-			if (ch == "\\") {
-				if (self:pos + 1 < self:raw:length()) {
+			});
+			Conditional:branch(check: { ch == "\\" }, then: {
+				Conditional:branch(check: { self:pos + 1 < self:raw:length() }, then: {
 					local String is nextCh: self:raw:charAt(index: self:pos + 1, default: '');
 					self:lit: self:lit . self:esc:expand(escaped: nextCh);
 					self:pos: self:pos + 2;
-				} else {
+				}, otherwise: {
 					self:lit: self:lit . "\\";
 					self:pos: self:pos + 1;
-				}
+				});
 				return true;
-			}
+			});
 			self:lit: self:lit . ch;
 			self:pos: self:pos + 1;
 			return true;
-		}
-		if (self:quoteCh != '') {
-			if (ch == "\\") {
+		});
+		Conditional:branch(check: { self:quoteCh != '' }, then: {
+			Conditional:branch(check: { ch == "\\" }, then: {
 				self:hole: self:hole . ch;
 				self:pos: self:pos + 1;
-				if (self:pos < self:raw:length()) {
+				Conditional:branch(check: { self:pos < self:raw:length() }, then: {
 					self:hole: self:hole . self:raw:charAt(index: self:pos, default: '');
 					self:pos: self:pos + 1;
-				}
+				});
 				return true;
-			}
-			if (ch == self:quoteCh) {
+			});
+			Conditional:branch(check: { ch == self:quoteCh }, then: {
 				self:quoteCh: '';
-			}
+			});
 			self:hole: self:hole . ch;
 			self:pos: self:pos + 1;
 			return true;
-		}
-		if (ch == '\'' || ch == '"') {
+		});
+		Conditional:branch(check: { ch == '\'' || ch == '"' }, then: {
 			self:quoteCh: ch;
 			self:hole: self:hole . ch;
 			self:pos: self:pos + 1;
 			return true;
-		}
-		if (ch == "{") {
+		});
+		Conditional:branch(check: { ch == "{" }, then: {
 			self:braceDepth: self:braceDepth + 1;
 			self:hole: self:hole . ch;
 			self:pos: self:pos + 1;
 			return true;
-		}
-		if (ch == "}") {
-			if (self:braceDepth > 0) {
+		});
+		Conditional:branch(check: { ch == "}" }, then: {
+			Conditional:branch(check: { self:braceDepth > 0 }, then: {
 				self:braceDepth: self:braceDepth - 1;
-			} else if (self:pos + 1 < self:raw:length() && self:raw:charAt(index: self:pos + 1, default: '') == "}") {
-				self:holes:add(item: self:hole);
-				self:hole: '';
-				self:inHole: false;
-				self:pos: self:pos + 2;
-				return true;
-			}
+			}, otherwise: {
+				Conditional:branch(check: { self:pos + 1 < self:raw:length() && self:raw:charAt(index: self:pos + 1, default: '') == "}" }, then: {
+					self:holes:add(item: self:hole);
+					self:hole: '';
+					self:inHole: false;
+					self:pos: self:pos + 2;
+					return true;
+				});
+			});
 			self:hole: self:hole . ch;
 			self:pos: self:pos + 1;
 			return true;
-		}
+		});
 		self:hole: self:hole . ch;
 		self:pos: self:pos + 1;
 		return true;
