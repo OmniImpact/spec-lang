@@ -381,7 +381,21 @@ Class is DeclarationGenerator{
 										retType: 'bool';
 									}
 								}
-								out: out . retType . ' ' . c:name . '_' . m:name . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
+								local Int is ovIdx: 0;
+								local Int is ovHit: 0;
+								c:members:each(action: local Function(Member is g){
+									if (g:kind == MemberKind:METHOD && g:name == m:name) {
+										if (g == m) {
+											ovHit: ovIdx;
+										}
+										ovIdx: ovIdx + 1;
+									}
+								});
+								local String is symName: c:name . '_' . m:name;
+								if (ovHit > 0) {
+									symName: symName . '_' . (ovHit + 1) . '';
+								}
+								out: out . retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
 								m:params:each(action: local Function(Parameter is p){
 									out: out . ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name);
 								});

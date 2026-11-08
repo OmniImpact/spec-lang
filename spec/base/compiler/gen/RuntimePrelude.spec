@@ -1482,6 +1482,7 @@ double spec_math_round(double v) { return round(v); }
 double spec_math_floor(double v) { return floor(v); }
 double spec_math_ceil(double v) { return ceil(v); }
 double spec_math_abs(double v) { return fabs(v); }
+static inline long long spec_math_abs_int(long long v) { return v < 0 ? -v : v; }
 double spec_math_min(double a, double b) { return (a < b) ? a : b; }
 double spec_math_max(double a, double b) { return (a > b) ? a : b; }
 double spec_math_clamp(double v, double lo, double hi) {

@@ -42,8 +42,9 @@ Class is TypeChecker{
 		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
 		['base', 'iterator'],
 		['base', 'iterator', as While()],
-		['base', 'sys', as Reflection()]
-	];
+		['base', 'sys', as Reflection()],
+		['base', 'io', as Output()]
+];
 
 	## Registered classes: name -> "true".
 	local Map of String to String is registeredClasses: Map:init();
@@ -482,7 +483,7 @@ Class is TypeChecker{
 		if (baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While') {
 			return;
 		}
-		local Member is m: self:lookupAnyMember(className: baseClassName, methodName: callExpr:methodName);
+		local Member is m: self:lookupOverloadedMember(className: baseClassName, methodName: callExpr:methodName, idx: callExpr:overloadIndex);
 		if (m:kind != MemberKind:METHOD) {
 			return;
 		}
@@ -532,6 +533,664 @@ Class is TypeChecker{
 			}
 			pIdx: pIdx + 1;
 		});
+	}
+
+	## FUNCTIONS.md §I.2: resolves one same-name member group to the
+	## overload the call selects, stamping expr:overloadIndex. Candidates
+	## are the same-name METHOD members of the nearest declaring ancestor
+	## (all parents walked, first subtree wins). Stage 1 filters by arity
+	## (all-positional) or name-set (all-named) — mixed calls are
+	## rejected. Stage 2, among multiple survivors, filters by exact type
+	## match. Exactly one candidate or a compile error; a single candidate
+	## short-circuits (legacy semantics, assignability checked
+	## downstream).
+	##
+	## @param className: The (possibly grounded) receiver class name.
+	## @param methodName: The called member's name.
+	## @param expr: The CALL expression, stamped on selection.
+	## @return: The selected member, or an empty node when unresolved.
+	Function of Member is selectOverload(String is className, String is methodName, Expression is expr){
+		local Member is none: Member:init(kind: MemberKind:METHOD);
+		local Array of String is parts: className:split(delimiter: ':');
+		local String is baseName: parts:get(index: 0);
+		local Array of Member is group: [];
+		local Array of String is ownerAcc: [];
+		self:collectOverloadGroup(className: baseName, methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		if (group:length() == 0) {
+			return none;
+		}
+		local Array of NamedArg is args: expr:methodArgs;
+		local Boolean is allPos: true;
+		local Boolean is allNamed: true;
+		args:each(action: local Function(NamedArg is a){
+			if (a:name == '') {
+				allNamed: false;
+			} else {
+				allPos: false;
+			}
+		});
+		# FUNCTIONS.md §I.3: no mixed calls — enforced globally, including
+		# single-member names. The one sanctioned shape: the scoped-region
+		# desugaring's trailing callback (named arguments, then exactly one
+		# positional block last).
+		local Boolean is isDesugaredShape: false;
+		if (!allPos && !allNamed) {
+			local Int is posCount: 0;
+			local Int is lastIdx: args:length() - 1;
+			args:each(action: local Function(NamedArg is a){
+				if (a:name == '') {
+					posCount: posCount + 1;
+				}
+			});
+			local NamedArg is lastArg: args:get(index: lastIdx);
+			if (posCount == 1 && lastArg:name == '') {
+				isDesugaredShape: true;
+			}
+		}
+		if (!allPos && !allNamed && !isDesugaredShape) {
+			self:addError(line: self:currentLine, msg: 'Mixed positional and named arguments are not supported; use one form (FUNCTIONS.md §I.3).');
+			return none;
+		}
+		if (group:length() == 1) {
+			local Member is only: group:get(index: 0);
+			expr:overloadIndex: 0;
+			return only;
+		}
+		if (allNamed) {
+			local Boolean is dupArg: false;
+			local Int is ai: 0;
+			While:condition(
+				evaluate: local Function of Boolean(){ return !dupArg && ai < args:length(); },
+				iteration: local Function of Boolean(){
+					local Int is aj: ai + 1;
+					While:condition(
+						evaluate: local Function of Boolean(){ return !dupArg && aj < args:length(); },
+						iteration: local Function of Boolean(){
+							local NamedArg is argA: args:get(index: ai);
+							local NamedArg is argB: args:get(index: aj);
+							if (argA:name == argB:name) {
+								dupArg: true;
+							}
+							aj: aj + 1;
+							return true;
+						}
+					);
+					ai: ai + 1;
+					return true;
+				}
+			);
+			if (dupArg) {
+				self:addError(line: self:currentLine, msg: 'Duplicate named argument in call to \'' . baseName . '.' . methodName . '\'.');
+				return none;
+			}
+		}
+		local Array of Member is survivors: [];
+		group:each(action: local Function(Member is m){
+			if (m:params:length() != args:length()) {
+				return;
+			}
+			if (allPos) {
+				survivors:add(item: m);
+				return;
+			}
+			local Boolean is namesMatch: true;
+			m:params:each(action: local Function(Parameter is p){
+				local Boolean is present: false;
+				args:each(action: local Function(NamedArg is a){
+					if (a:name == p:name) {
+						present: true;
+					}
+				});
+				if (!present) {
+					namesMatch: false;
+				}
+			});
+			if (namesMatch) {
+				survivors:add(item: m);
+				return;
+			}
+			if (isDesugaredShape) {
+				# The trailing positional block binds to the last parameter;
+				# every named argument must name a real parameter.
+				local Boolean is namedOk: true;
+				args:each(action: local Function(NamedArg is a){
+					if (a:name == '') {
+						return;
+					}
+					local Boolean is hit: false;
+					m:params:each(action: local Function(Parameter is p){
+						if (p:name == a:name) {
+							hit: true;
+						}
+					});
+					if (!hit) {
+						namedOk: false;
+					}
+				});
+				if (namedOk) {
+					survivors:add(item: m);
+				}
+			}
+		});
+		if (survivors:length() == 0) {
+			if (allPos) {
+				self:addError(line: self:currentLine, msg: 'No signature of \'' . baseName . '.' . methodName . '\' takes ' . (args:length() as String) . ' argument(s).');
+			} else {
+				self:addError(line: self:currentLine, msg: 'No signature of \'' . baseName . '.' . methodName . '\' matches the named arguments.');
+			}
+			return none;
+		}
+		if (survivors:length() == 1) {
+			local Member is sel: survivors:get(index: 0);
+			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+			return sel;
+		}
+		local Array of Member is exact: [];
+		survivors:each(action: local Function(Member is m){
+			if (self:exactTypeMatch(m: m, expr: expr)) {
+				exact:add(item: m);
+			}
+		});
+		if (exact:length() == 1) {
+			local Member is sel: exact:get(index: 0);
+			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+			return sel;
+		}
+		if (exact:length() > 1) {
+			self:addError(line: self:currentLine, msg: 'Ambiguous call to \'' . baseName . '.' . methodName . '\': the arguments match multiple overloads; use named arguments (FUNCTIONS.md §I.2).');
+			return none;
+		}
+		local String is argTypes: '';
+		args:each(action: local Function(NamedArg is a){
+			local String is at: a:value:resolvedType;
+			if (at == '') {
+				at: 'Any';
+			}
+			if (argTypes == '') {
+				argTypes: at;
+			} else {
+				argTypes: argTypes . ', ' . at;
+			}
+		});
+		self:addError(line: self:currentLine, msg: 'No exact overload of \'' . baseName . '.' . methodName . '\' for (' . argTypes . '); cast the arguments or give the signatures distinct names (FUNCTIONS.md §I.2).');
+		return none;
+	}
+	## Collects the same-name METHOD members of the nearest declaring
+	## ancestor: the first subtree (class, then parents in declaration
+	## order) that declares the name wins; deeper walk stops there.
+	## Walks every parent (multiple inheritance), first-wins.
+	##
+	## @param className: The class to start from.
+	## @param methodName: The member name.
+	## @param hops: Recursion budget guard.
+	## @param acc: The collected group (nearest-declaration semantics).
+	## @param ownerAcc: The declaring class name accumulator (reference).
+	Function is collectOverloadGroup(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
+		if (ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 8) {
+			return;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return;
+		}
+		cls:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:METHOD && m:name == methodName) {
+				acc:add(item: m);
+			}
+		});
+		if (acc:length() > 0) {
+			ownerAcc:add(item: cls:name);
+			return;
+		}
+		cls:baseClasses:each(action: local Function(String is baseName){
+			self:collectOverloadGroup(className: baseName, methodName: methodName, hops: hops + 1, acc: acc, ownerAcc: ownerAcc);
+		});
+	}
+
+	## True when every argument's inferred type equals the bound
+	## parameter's declared type (positional by index, named by name).
+	##
+	## @param m: The candidate overload.
+	## @param expr: The CALL expression.
+	## @return: true when all argument types match exactly.
+	Function of Boolean is exactTypeMatch(Member is m, Expression is expr){
+		local Boolean is allMatch: true;
+		local Int is posIdx: 0;
+		m:params:each(action: local Function(Parameter is p){
+			local Expression is bound: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Boolean is found: false;
+			if (p:name != '') {
+				expr:methodArgs:each(action: local Function(NamedArg is a){
+					if (!found && a:name == p:name) {
+						bound: a:value;
+						found: true;
+					}
+				});
+			}
+			if (!found && posIdx < expr:methodArgs:length()) {
+				local NamedArg is pa: expr:methodArgs:get(index: posIdx);
+				if (pa:name == '') {
+					bound: pa:value;
+					found: true;
+				}
+			}
+			if (!found || bound:resolvedType == '' || bound:resolvedType != p:paramType:name) {
+				allMatch: false;
+			}
+			posIdx: posIdx + 1;
+		});
+		return allMatch;
+	}
+	## The 0-based position of [m] within [group] (identity compare).
+	##
+	## @param group: The same-name member group.
+	## @param m: The selected member.
+	## @return: The overload index.
+	Function of Int is indexOfMember(Array of Member is group, Member is m){
+		local Int is idx: 0;
+		local Int is hit: 0;
+		group:each(action: local Function(Member is g){
+			if (g == m) {
+				hit: idx;
+			}
+			idx: idx + 1;
+		});
+		return hit;
+	}
+	## The selected overload's return type. Single-member names keep the
+	## legacy lookup (of-form handling, substitution); overloaded names
+	## substitute against the selected member directly (colon-form
+	## grounding).
+	##
+	## @param className: The (possibly grounded) receiver class name.
+	## @param selected: The stamped, selected member.
+	## @return: The resolved return type.
+	Function of String is selectedReturnType(String is className, Member is selected){
+		local Array of String is parts: className:split(delimiter: ':');
+		local String is baseName: parts:get(index: 0);
+		local Array of Member is group: [];
+		local Array of String is ownerAcc: [];
+		self:collectOverloadGroup(className: baseName, methodName: selected:name, hops: 0, acc: group, ownerAcc: ownerAcc);
+		if (group:length() <= 1 || ownerAcc:length() == 0) {
+			return self:lookupMethodReturnType(className: className, methodName: selected:name);
+		}
+		local String is owner: ownerAcc:get(index: 0);
+		local ClassInfo is ownerCls: self:findClass(name: owner);
+		if (ownerCls:name == '') {
+			return '';
+		}
+		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
+		local String is rawT: self:formatTypeString(t: selected:memberType);
+		return self:substituteTypeParam(rawType: rawT, cls: ownerCls, typeArgs: typeArgs);
+	}
+	## The stamped member for a call: the idx-th same-name METHOD member at
+	## the nearest declaring ancestor (idx below zero resolves as the
+	## first — the legacy single-member shape).
+	##
+	## @param className: The receiver base class name.
+	## @param methodName: The called member's name.
+	## @param idx: The stamped overload index.
+	## @return: The member, or an empty node when absent.
+	Function of Member is lookupOverloadedMember(String is className, String is methodName, Int is idx){
+		local Member is none: Member:init(kind: MemberKind:METHOD);
+		local Array of String is parts: className:split(delimiter: ':');
+		local Array of Member is group: [];
+		local Array of String is ownerAcc: [];
+		self:collectOverloadGroup(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		if (group:length() == 0) {
+			return none;
+		}
+		local Int is use: idx;
+		if (use < 0) {
+			use: 0;
+		}
+		if (use >= group:length()) {
+			use: group:length() - 1;
+		}
+		local Member is cand: group:get(index: use);
+		return cand;
+	}
+	## True when the current class, or any ancestor (all parents,
+	## transitively), instance-imports [className] — as-imports are
+	## inherited like the fields they synthesize (INSTANCE.md §2.1).
+	##
+	## @param className: Receiver class name.
+	## @return: true when imported somewhere up the chain.
+	Function of Boolean is isAsImportedInherited(String is className){
+		return self:importsAsAnywhere(clsName: self:currentClassName, targetName: className, hops: 0);
+	}
+
+	## Recursive import search over the ancestor lattice.
+	##
+	## @param clsName: Class being visited.
+	## @param targetName: The imported class name sought.
+	## @param hops: Recursion budget guard.
+	## @return: true when found on this class or an ancestor.
+	Function of Boolean is importsAsAnywhere(String is clsName, String is targetName, Int is hops){
+		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+			return false;
+		}
+		local ClassInfo is cls: self:findClass(name: clsName);
+		if (cls:name == '') {
+			return false;
+		}
+		if (cls:instanceImportsAs(name: targetName)) {
+			return true;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:importsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1)) {
+				viaParent: true;
+			}
+		});
+		return viaParent;
+	}
+
+	## FUNCTIONS.md §2.3: collects the as-imported classes providing
+	## [methodName] for the bare scope of the current class — own
+	## bindings plus every ancestor's, one level deep. Order-stable
+	## diagnostics; duplicates dropped.
+	##
+	## @param methodName: The bare-called function name.
+	## @return: Provider class names in walk order.
+	Function of Array of String is bareScopeProviders(String is methodName){
+		local Array of String is out: [];
+		self:collectBareProviders(clsName: self:currentClassName, methodName: methodName, hops: 0, acc: out);
+		return out;
+	}
+
+	## Recursive provider collection over the ancestor lattice.
+	##
+	## @param clsName: Class being visited.
+	## @param methodName: The bare-called function name.
+	## @param hops: Recursion budget guard.
+	## @param acc: The provider accumulator.
+	Function is collectBareProviders(String is clsName, String is methodName, Int is hops, Array of String is acc){
+		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+			return;
+		}
+		local ClassInfo is cls: self:findClass(name: clsName);
+		if (cls:name == '') {
+			return;
+		}
+		cls:members:each(action: local Function(Member is m){
+			if (m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+				m:initExpr:arrayItems:each(action: local Function(Expression is item){
+					if (item:kind == ExpressionKind:ARRAY) {
+						item:arrayItems:each(action: local Function(Expression is seg){
+							if (seg:kind == ExpressionKind:USING_AS) {
+								local String is prov: seg:stringValue;
+								local Boolean is already: false;
+								acc:each(action: local Function(String is got){
+									if (got == prov) {
+										already: true;
+									}
+								});
+								if (!already && self:findMemberOwnerClass(className: prov, memberName: methodName) != '') {
+									acc:add(item: prov);
+								}
+							}
+						});
+					}
+				});
+			}
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			self:collectBareProviders(clsName: baseName, methodName: methodName, hops: hops + 1, acc: acc);
+		});
+	}
+
+	## True when an ancestor of [className] (any parent, transitively)
+	## declares [methodName] as a method. The starting class's own members
+	## are excluded — an overload group on the class itself is legal.
+	##
+	## @param className: The class whose ancestors are walked.
+	## @param methodName: The member name.
+	## @param hops: Recursion budget guard.
+	## @return: true when an ancestor declares the name.
+	Function of Boolean is ancestorDeclares(String is className, String is methodName, Int is hops){
+		if (className == '' || className == 'Any' || hops >= 8) {
+			return false;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return false;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1)) {
+				viaParent: true;
+			}
+		});
+		return viaParent;
+	}
+
+	## True when [className] declares [methodName] or inherits it from an
+	## ancestor (all parents walked, nearest declaration wins).
+	##
+	## @param className: Class being visited.
+	## @param methodName: The member name.
+	## @param hops: Recursion budget guard.
+	## @return: true when declared here or inherited.
+	Function of Boolean is declaresOrInherits(String is className, String is methodName, Int is hops){
+		if (className == '' || className == 'Any' || hops >= 8) {
+			return false;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return false;
+		}
+		local Boolean is found: false;
+		cls:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:METHOD && m:name == methodName) {
+				found: true;
+			}
+		});
+		if (found) {
+			return true;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1)) {
+				viaParent: true;
+			}
+		});
+		return viaParent;
+	}
+
+	## True when the nearest declaring ancestor of [methodName] above
+	## [className] carries an overload group (two or more same-name
+	## methods) — such names cannot be replaced or merged. The starting
+	## class's own members are excluded.
+	##
+	## @param className: The class whose ancestors are walked.
+	## @param methodName: The member name.
+	## @param hops: Recursion budget guard.
+	## @return: true when the inherited name is overloaded.
+	Function of Boolean is ancestorOverloaded(String is className, String is methodName, Int is hops){
+		if (className == '' || className == 'Any' || hops >= 8) {
+			return false;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return false;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1)) {
+				viaParent: true;
+			}
+		});
+		return viaParent;
+	}
+
+	## True when the nearest declaration of [methodName] at or above
+	## [className] is an overload group.
+	##
+	## @param className: Class being visited.
+	## @param methodName: The member name.
+	## @param hops: Recursion budget guard.
+	## @return: true when the nearest declaration is overloaded.
+	Function of Boolean is nearestGroupOverloaded(String is className, String is methodName, Int is hops){
+		if (className == '' || className == 'Any' || hops >= 8) {
+			return false;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return false;
+		}
+		local Int is groupSize: 0;
+		cls:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:METHOD && m:name == methodName) {
+				groupSize: groupSize + 1;
+			}
+		});
+		if (groupSize >= 2) {
+			return true;
+		}
+		if (groupSize == 1) {
+			return false;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1)) {
+				viaParent: true;
+			}
+		});
+		return viaParent;
+	}
+
+	## FUNCTIONS.md §I.1: validates every class's same-name METHOD groups —
+	## identical signatures are the duplicate error; overload groups must
+	## declare concrete parameter types and must not shadow an inherited
+	## name (the virtual machinery is name-keyed; overloads dispatch
+	## directly). The per-member body nests instead of returning early: an
+	## iteration closure's early `return` compiles to a loop `break`.
+	Function is checkOverloadLegality(){
+		self:programClasses:each(action: local Function(ClassInfo is c){
+			local Array of Member is members: c:members;
+			local Int is i: 0;
+			While:condition(
+				evaluate: local Function of Boolean(){ return i < members:length(); },
+				iteration: local Function of Boolean(){
+					local Member is m: members:get(index: i);
+					if (m:kind == MemberKind:METHOD) {
+						local Boolean is earlier: false;
+						local Int is j: 0;
+						While:condition(
+							evaluate: local Function of Boolean(){ return !earlier && j < i; },
+							iteration: local Function of Boolean(){
+								local Member is g: members:get(index: j);
+								if (g:kind == MemberKind:METHOD && g:name == m:name) {
+									earlier: true;
+								}
+								j: j + 1;
+								return true;
+							}
+						);
+						if (!earlier) {
+							local Int is groupSize: 0;
+							local Int is k: 0;
+							While:condition(
+								evaluate: local Function of Boolean(){ return k < members:length(); },
+								iteration: local Function of Boolean(){
+									local Member is g: members:get(index: k);
+									if (g:kind == MemberKind:METHOD && g:name == m:name) {
+										groupSize: groupSize + 1;
+									}
+									k: k + 1;
+									return true;
+								}
+							);
+							if (groupSize >= 2) {
+								local Int is a: 0;
+								While:condition(
+									evaluate: local Function of Boolean(){ return a < members:length(); },
+									iteration: local Function of Boolean(){
+										local Member is ma: members:get(index: a);
+										if (ma:kind == MemberKind:METHOD && ma:name == m:name) {
+											local Int is b: a + 1;
+											While:condition(
+												evaluate: local Function of Boolean(){ return b < members:length(); },
+												iteration: local Function of Boolean(){
+													local Member is mb: members:get(index: b);
+													if (mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb)) {
+														self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (FUNCTIONS.md §I.1).');
+													}
+													b: b + 1;
+													return true;
+												}
+											);
+										}
+										a: a + 1;
+										return true;
+									}
+								);
+								local Boolean is nonConcrete: false;
+								local Int is p: 0;
+								While:condition(
+									evaluate: local Function of Boolean(){ return !nonConcrete && p < members:length(); },
+									iteration: local Function of Boolean(){
+										local Member is g: members:get(index: p);
+										if (g:kind == MemberKind:METHOD && g:name == m:name) {
+											g:params:each(action: local Function(Parameter is pp){
+												local String is pt: pp:paramType:name;
+												if (pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0) {
+													nonConcrete: true;
+												}
+											});
+										}
+										p: p + 1;
+										return true;
+									}
+								);
+								if (nonConcrete) {
+									self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (FUNCTIONS.md §I.3).');
+								}
+								if (m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name, hops: 0)) {
+									self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (FUNCTIONS.md §I.3).');
+								}
+							}
+						}
+					}
+					i: i + 1;
+					return true;
+				}
+			);
+		});
+	}
+
+	## FUNCTIONS.md §I.1: signature equality for the legality pass —
+	## parameter count, names, and types all equal; type spellings are
+	## canonicalized before comparison.
+	##
+	## @param a: First member.
+	## @param b: Second member.
+	## @return: true when signatures are identical.
+	Function of Boolean is checkerSameSignature(Member is a, Member is b){
+		if (a:params:length() != b:params:length()) {
+			return false;
+		}
+		local Boolean is same: true;
+		local Int is idx: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
+			iteration: local Function of Boolean(){
+				local Parameter is pa: a:params:get(index: idx);
+				local Parameter is pb: b:params:get(index: idx);
+				if (pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType)) {
+					same: false;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		return same;
 	}
 
 	## Enforces compile-time exhaustiveness of `when` over an enum subject.
@@ -1174,6 +1833,12 @@ Class is TypeChecker{
 			}
 			if (ownOwner == '') {
 				local String is provider: bsProviders:get(index: 0);
+				# The bare-scope branch runs before arg inference: type the
+				# arguments now so overload selection sees exact types.
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					self:inferExpressionType(expr: arg:value);
+				});
+				self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
 				expr:bareProvider: provider;
 				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
 				if (providerRet == '') {
@@ -1323,6 +1988,8 @@ Class is TypeChecker{
 		} else if (method == 'typeName' && self:registeredClasses:has(key: targetType)) {
 			res: Primitive:STRING:value();
 		} else if (method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
+			# FUNCTIONS.md §I.2: init overloads are selected and stamped like any member.
+			self:selectOverload(className: targetType, methodName: 'init', expr: expr);
 			res: targetType;
 		} else if (self:registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !self:allEnumNames:has(key: targetType)) {
 			# List get/pop REQUIRE a 'default:' argument (Never Null).
@@ -1341,7 +2008,11 @@ Class is TypeChecker{
 			# base class's declarations with type-argument substitution;
 			# when the declaration is not loaded, the element type comes
 			# from the type string itself.
-			local String is cRet: self:lookupMethodReturnType(className: targetType, methodName: method);
+			local Member is selected: self:selectOverload(className: targetType, methodName: method, expr: expr);
+			local String is cRet: '';
+			if (selected:name != '') {
+				cRet: self:selectedReturnType(className: targetType, selected: selected);
+			}
 			if (cRet == '' || self:isVoid(t: cRet)) {
 				# Unloaded declaration: resolve from the builtin method table
 				# with element types from the type string.
@@ -1727,6 +2398,9 @@ Class is TypeChecker{
 		self:anonDepth: 0;
 		self:currentMethodIsMerge: method:hasModifier(kw: Keyword:MERGE);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
+		if (mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name, hops: 0)) {
+			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (FUNCTIONS.md §I.3).');
+		}
 		if (self:currentMethodIsMerge && mergeTarget:name == '') {
 			self:addError(line: method:line, msg: 'Method \'' . method:name . '\' in class \'' . self:currentClassName . '\' declares \'merge\' but no parent declares a method with that name.');
 		}
@@ -2291,81 +2965,7 @@ Class is TypeChecker{
 		});
 	}
 
-	## Performs semantic type checking across all classes in the program.
-	##
-	## @param program: The parsed program.
-	## @return: The type-error diagnostics.
-	## True when the current class, or any ancestor, instance-imports
-	## [className] — as-imports are inherited like the fields they
-	## synthesize (INSTANCE.md §2.1).
-	##
-	## @param className: Receiver class name.
-	## @return: true when imported somewhere up the chain.
-	Function of Boolean is isAsImportedInherited(String is className){
-		local Boolean is found: false;
-		local String is walk: self:currentClassName;
-		local Int is hops: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return !found && walk != '' && walk != 'Any' && hops < 8; },
-			iteration: local Function of Boolean(){
-				local ClassInfo is cls: self:findClass(name: walk);
-				if (cls:name != '' && cls:instanceImportsAs(name: className)) {
-					found: true;
-					return true;
-				}
-				walk: cls:baseClass;
-				hops: hops + 1;
-				return true;
-			}
-		);
-		return found;
-	}
 
-	## Collects the as-imported classes providing [methodName] for the
-	## bare scope of the current class — own bindings plus ancestors',
-	## one level deep (INSTANCE.md §2.3). Order-stable diagnostics.
-	##
-	## @param methodName: The bare-called function name.
-	## @return: Provider class names in import order.
-	Function of Array of String is bareScopeProviders(String is methodName){
-		local Array of String is out: [];
-		local String is walk: self:currentClassName;
-		local Int is hops: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return walk != '' && walk != 'Any' && hops < 8; },
-			iteration: local Function of Boolean(){
-				local ClassInfo is cls: self:findClass(name: walk);
-				if (cls:name != '') {
-					cls:members:each(action: local Function(Member is m){
-						if (m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
-							m:initExpr:arrayItems:each(action: local Function(Expression is item){
-								if (item:kind == ExpressionKind:ARRAY) {
-									item:arrayItems:each(action: local Function(Expression is seg){
-										if (seg:kind == ExpressionKind:USING_AS) {
-											local String is prov: seg:stringValue;
-											local Boolean is already: false;
-											out:each(action: local Function(String is got){
-												if (got == prov) {
-													already: true;
-												}
-											});
-											if (!already && self:findMemberOwnerClass(className: prov, memberName: methodName) != '') {
-												out:add(item: prov);
-											}
-										}
-									});
-								}
-							});
-						}
-					});
-				}
-				walk: cls:baseClass;
-				hops: hops + 1;
-				return true;
-			}
-		);
-		return out;
-	}
 
 	## Validates one class's instance imports (as-form using entries,
 	## INSTANCE.md §2.1): the target must be a loaded non-enum class, and
@@ -2517,6 +3117,8 @@ Class is TypeChecker{
 		});
 		# INSTANCE.md E4: the instance-import graph must be a DAG.
 		self:checkInstanceImportGraph();
+		# FUNCTIONS.md §I.1: overload legality across all classes.
+		self:checkOverloadLegality();
 
 		# Pass 1: Inheritance contract validation & type propagation
 		flattened:each(action: local Function(ClassInfo is c){

@@ -125,6 +125,20 @@ Class is BuiltinCallGenerator{
 	##
 	## @param expr: CALL expression node.
 	## @param targetC: Generated C for the method target.
+	## True when the first argument of a builtin math call is Int-typed
+	## (FUNCTIONS.md §I.4: selects the integer overload's floor).
+	##
+	## @param expr: The call expression.
+	## @param cg: The code generator.
+	## @return: true when the first argument is Int.
+	Function of Boolean is absArgIsInt(Expression is expr, CodeGenerator is cg){
+		if (expr:argCount() == 0) {
+			return false;
+		}
+		local Expression is a0: expr:argValue(index: 0);
+		return cg:inferTargetType(expr: a0) == 'Int';
+	}
+
 	## @param targetType: Inferred type of the target.
 	## @param cg: The code generator.
 	## @return: C call string, or '' when not builtin.
@@ -506,7 +520,14 @@ Class is BuiltinCallGenerator{
 				is 'round': { return 'spec_math_round(' . a0 . ')'; }
 				is 'floor': { return 'spec_math_floor(' . a0 . ')'; }
 				is 'ceil', 'ceiling': { return 'spec_math_ceil(' . a0 . ')'; }
-				is 'abs': { return 'spec_math_abs(' . a0 . ')'; }
+				is 'abs': {
+					# FUNCTIONS.md §I.4: type-distinct overloads — the Int
+					# overload routes to the integer floor.
+					if (self:absArgIsInt(expr: expr, cg: cg)) {
+						return 'spec_math_abs_int(' . a0 . ')';
+					}
+					return 'spec_math_abs(' . a0 . ')';
+				}
 				is 'sqrt': { return 'spec_math_sqrt(' . a0 . ')'; }
 				is 'sin': { return 'spec_math_sin(' . a0 . ')'; }
 				is 'cos': { return 'spec_math_cos(' . a0 . ')'; }

@@ -102,41 +102,51 @@ Exact static type only: a `Dog`-typed argument selects `f(Dog)`, never
 
 ### I.4 Implementation map
 
-- [ ] **Loader** — replace duplicate-member rejection with the legality
+- [x] **Loader** — replace duplicate-member rejection with the legality
   validation (same name legal iff signatures differ; identical signature →
   the upgraded duplicate error). Group merging validates the same rule
   post-union.
-- [ ] **Checker** — `selectOverload(className, methodName, args)`:
+- [x] **Checker** — `selectOverload(className, methodName, args)`:
   the I.2 pipeline, in order, with diagnostics naming the candidates and the
   argument types. Stamp the selected overload on the call expression
   (`overloadIndex`) — the one place the gen must not re-derive.
   `checkCallArguments` type-checks against the selected overload.
-- [ ] **CodeGenerator** — consume the stamp; emit type-suffixed C symbols
+- [x] **CodeGenerator** — consume the stamp; emit type-suffixed C symbols
   (`Class_method`, `Class_method_2`, … by declaration order — deterministic
   under the fixed point). `formatCallArguments` binds against the stamped
   overload's parameters.
-- [ ] **BuiltinCallGenerator** — type-aware interception for overloaded
+- [x] **BuiltinCallGenerator** — type-aware interception for overloaded
   runtime-managed methods (Math first: `abs(Int)` via an integer floor, or
   de-intercept Math into real bodies over a floor — decide at
   implementation).
-- [ ] **Driver** — entry heuristic: *first class with an init accepting a
-  Map* (any overload), else first non-enum.
+- [x] **Driver** — the heuristic iterates members, so any `init` overload
+  with a Map parameter already matches; verified unchanged.
+- [x] **Resolution note (implementation finding):** the scoped-region
+  desugaring (`as:` / `as (params):`) appends the remainder block as a
+  trailing positional argument to a named-argument call — the one sanctioned
+  mixed shape. The resolution filter accepts it (named arguments must name
+  real parameters; the trailing positional binds to the last parameter).
+- [x] **Iteration-closure finding:** an early `return` inside a
+  `While:condition` iteration closure compiles to a loop `break` — the
+  legality pass nests its body instead of returning early. Codegen
+  reference for future passes.
 - [ ] **INSTANCE.md's consumers** — E5/E9/bare-scope providers stay
   name-level; overload selection applies within a provider. Composes without
   change.
 
 ### I.5 Tests
 
-- [ ] Positive: arity-distinct overloads (the Conditional API shape);
+- [x] Positive: arity-distinct overloads (the Conditional API shape);
   type-distinct same-arity `init` overloads; overloads + bare scope;
-  overloads on a field-ful as-import (synthesized constructor call selects
-  by literal types).
-- [ ] Negative: illegal identical signature; ambiguous positional (same-arity
-  overloads, positional call); no-exact-match (Any argument; wrong type);
-  mixed-call rejection; `replace` on an overloaded name; overload on a floor
-  method.
-- [ ] Zero migration: the full suite compiles unchanged (no overloads exist
-  today; every call has exactly one member).
+  `Math:abs(Int)` via the type-aware interception (`spec_math_abs_int`).
+  tests/overloads_test.spec + tests/overloads/Over.spec.
+- [x] Negative: illegal identical signature (N12); ambiguous positional
+  (N13); no-exact-match for Any arguments (N14); mixed-call rejection
+  (N15); `replace` on an overloaded name (N16). Overload-on-floor-method
+  is blocked by the sysinternal naming convention (no explicit test).
+- [x] Zero migration: the full suite compiled unchanged at every step (the
+  only breaks were the new strictness rules catching the scoped-region
+  desugaring's shape — now sanctioned).
 
 ---
 

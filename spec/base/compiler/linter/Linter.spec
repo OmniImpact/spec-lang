@@ -694,24 +694,40 @@ Class is Linter{
 	##
 	## @param name: Receiver class name.
 	## @return: true when imported somewhere up the chain.
+	## True when the class under audit, or any ancestor (all parents,
+	## transitively), instance-imports [name] — as-imports are inherited
+	## like the fields they synthesize.
+	##
+	## @param name: Receiver class name.
+	## @return: true when imported somewhere up the chain.
 	Function of Boolean is auditOwnerImportsAs(String is name){
-		local Boolean is found: false;
-		local String is walk: self:auditOwner:name;
-		local Int is hops: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return !found && walk != '' && walk != 'Any' && hops < 8; },
-			iteration: local Function of Boolean(){
-				local ClassInfo is cls: self:auditClassNodes:get(key: walk, default: self:auditOwner);
-				if (cls:name == walk && cls:instanceImportsAs(name: name)) {
-					found: true;
-					return true;
-				}
-				walk: cls:baseClass;
-				hops: hops + 1;
-				return true;
+		return self:auditImportsAsAnywhere(clsName: self:auditOwner:name, targetName: name, hops: 0);
+	}
+
+	## Recursive import search over the audit's ancestor lattice.
+	##
+	## @param clsName: Class being visited.
+	## @param targetName: The imported class name sought.
+	## @param hops: Recursion budget guard.
+	## @return: true when found on this class or an ancestor.
+	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
+		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+			return false;
+		}
+		local ClassInfo is cls: self:auditClassNodes:get(key: clsName, default: self:auditOwner);
+		if (cls:name != clsName) {
+			return false;
+		}
+		if (cls:instanceImportsAs(name: targetName)) {
+			return true;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1)) {
+				viaParent: true;
 			}
-		);
-		return found;
+		});
+		return viaParent;
 	}
 
 	## True when [name] starts with an uppercase letter (the type naming

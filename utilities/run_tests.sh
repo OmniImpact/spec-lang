@@ -161,6 +161,26 @@ assert_compile_failure "instance-model-n8-enum-import" \
 	"$ROOT/tests/negative/n8_enum_as_import_negative_test.spec" \
 	"Cannot instance-import enum 'ExpressionKind'"
 
+assert_compile_failure "overloads-n12-identical-signature" \
+	"$ROOT/tests/negative/n12_identical_signature_negative_test.spec" \
+	"declare identical signatures"
+
+assert_compile_failure "overloads-n13-ambiguous-positional" \
+	"$ROOT/tests/negative/n13_ambiguous_positional_negative_test.spec" \
+	"the arguments match multiple overloads; use named arguments"
+
+assert_compile_failure "overloads-n14-no-exact-match" \
+	"$ROOT/tests/negative/n14_no_exact_match_negative_test.spec" \
+	"No exact overload of 'N14NoExact.f' for (Any)"
+
+assert_compile_failure "overloads-n15-mixed-call" \
+	"$ROOT/tests/negative/n15_mixed_call_negative_test.spec" \
+	"Mixed positional and named arguments are not supported"
+
+assert_compile_failure "overloads-n16-replace-overloaded" \
+	"$ROOT/tests/negative/n16_replace_overloaded_negative_test.spec" \
+	"Cannot replace or merge an overloaded method"
+
 assert_compile_failure "instance-model-n11-prefix-field" \
 	"$ROOT/tests/negative/n11_prefix_field_negative_test.spec" \
 	"Fields are not reachable through the class-name prefix"

@@ -539,6 +539,40 @@ Class is Loader{
 		}
 	}
 
+	## True when two members declare the same signature — for methods:
+	## parameter count, names, and types all equal; for fields: the declared
+	## type (FUNCTIONS.md §I.1).
+	##
+	## @param a: First member.
+	## @param b: Second member.
+	## @return: true when signatures are identical.
+	Function of Boolean is sameSignature(Member is a, Member is b){
+		if (a:kind != b:kind) {
+			return false;
+		}
+		if (a:kind == MemberKind:FIELD) {
+			return a:memberType:name == b:memberType:name;
+		}
+		if (a:params:length() != b:params:length()) {
+			return false;
+		}
+		local Boolean is same: true;
+		local Int is idx: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
+			iteration: local Function of Boolean(){
+				local Parameter is pa: a:params:get(index: idx);
+				local Parameter is pb: b:params:get(index: idx);
+				if (pa:name != pb:name || pa:paramType:name != pb:paramType:name) {
+					same: false;
+				}
+				idx: idx + 1;
+				return true;
+			}
+		);
+		return same;
+	}
+
 	## Merges a group fragment's members into its target class.
 	##
 	## Appends members in fragment order, rejecting duplicate member names with
@@ -566,7 +600,13 @@ Class is Loader{
 					local NamedMemberLoop is dup: NamedMemberLoop:init(members: target:members, target: mName);
 					While:run(loop: dup);
 					if (dup:found) {
+						local Boolean is isSameSig: self:sameSignature(a: m, b: dup:res);
+						if (isSameSig || m:kind != dup:res:kind) {
 						self:parseErrors:add(item: '  [LoadError] Duplicate member \'' . mName . '\' in class \'' . target:name . '\' (' . m:sourceFile . ' conflicts with declaration in ' . dup:res:sourceFile . ').');
+						} else {
+							# FUNCTIONS.md §I.1: same name, distinct signature — a legal overload.
+							target:members:add(item: m);
+						}
 					} else {
 						target:members:add(item: m);
 					}

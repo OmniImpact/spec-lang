@@ -131,6 +131,17 @@ Class is Math{
 		return value;
 	}
 
+	## Integer absolute value (FUNCTIONS.md §I: type-distinct overload).
+	##
+	## @param value: Input integer.
+	## @return: Non-negative magnitude.
+	Function of Int is abs(Int is value){
+		if (value < 0) {
+			return -value;
+		}
+		return value;
+	}
+
 	## Computes the minimum of two values.
 	##
 	## @param a: First operand.

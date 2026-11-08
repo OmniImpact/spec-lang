@@ -69,6 +69,11 @@ Class is Expression{
 	## §2.3); '' when the call is an ordinary own-member dispatch.
 	String is bareProvider: '';
 
+	## CALL: the checker-selected overload's position within the owning
+	## class's same-name member group (FUNCTIONS.md §I.2); -1 when
+	## unstamped (single-member names resolve as index 0).
+	Int is overloadIndex: -1;
+
 	## BINARY: the operator and the right operand (the left operand shares
 	## leftExpr with CAST).
 	String is binaryOp: '';

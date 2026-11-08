@@ -369,23 +369,34 @@ Class is CodeGenerator{
 	## @param className: Receiver class name.
 	## @return: true when instance-imported by the current class.
 	Function of Boolean is isAsImportedReceiver(String is className){
-		local Boolean is found: false;
-		local String is walk: self:currentClassName;
-		local Int is hops: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){ return !found && walk != '' && walk != 'Any' && hops < 8; },
-			iteration: local Function of Boolean(){
-				local ClassInfo is cls: self:findClass(name: walk);
-				if (cls:name != '' && cls:instanceImportsAs(name: className)) {
-					found: true;
-					return true;
-				}
-				walk: cls:baseClass;
-				hops: hops + 1;
-				return true;
+		return self:genImportsAsAnywhere(clsName: self:currentClassName, targetName: className, hops: 0);
+	}
+
+	## Recursive import search over the ancestor lattice (the emitted
+	## struct flattens ancestors, so the field is reachable from here).
+	##
+	## @param clsName: Class being visited.
+	## @param targetName: The imported class name sought.
+	## @param hops: Recursion budget guard.
+	## @return: true when found on this class or an ancestor.
+	Function of Boolean is genImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
+		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+			return false;
+		}
+		local ClassInfo is cls: self:findClass(name: clsName);
+		if (cls:name == '') {
+			return false;
+		}
+		if (cls:instanceImportsAs(name: targetName)) {
+			return true;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:genImportsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1)) {
+				viaParent: true;
 			}
-		);
-		return found;
+		});
+		return viaParent;
 	}
 
 	## True when [cls] declares real fields (metadata pseudo-members
@@ -402,6 +413,117 @@ Class is CodeGenerator{
 			}
 		});
 		return found;
+	}
+
+	## FUNCTIONS.md §I.2: the 0-based overload position of [method]
+	## within its class's same-name METHOD group (identity compare).
+	##
+	## @param classDef: The declaring class.
+	## @param method: The member.
+	## @return: The overload index.
+	Function of Int is overloadIndexOf(ClassInfo is classDef, Member is method){
+		local Int is idx: 0;
+		local Int is hit: 0;
+		classDef:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:METHOD && m:name == method:name) {
+				if (m == method) {
+					hit: idx;
+				}
+				idx: idx + 1;
+			}
+		});
+		return hit;
+	}
+
+	## The C symbol for a method definition or call: Class_method, with a
+	## declaration-order suffix for overloads (FUNCTIONS.md §I.4).
+	##
+	## @param className: The declaring class name.
+	## @param methodName: The method name.
+	## @param idx: The overload index.
+	## @return: The C symbol.
+	Function of String is overloadSymbol(String is className, String is methodName, Int is idx){
+		if (idx > 0) {
+			return className . '_' . methodName . '_' . (idx + 1) . '';
+		}
+		return className . '_' . methodName;
+	}
+
+	## FUNCTIONS.md §I.2: the stamped member for a call — the idx-th
+	## same-name METHOD member at the nearest declaring ancestor (all
+	## parents walked; idx below zero resolves as the first).
+	##
+	## @param className: The receiver base class name.
+	## @param methodName: The called member's name.
+	## @param idx: The stamped overload index.
+	## @return: The member, or an empty node when absent.
+	Function of Member is lookupOverloadedMemberGen(String is className, String is methodName, Int is idx){
+		local Member is none: Member:init(kind: MemberKind:FIELD);
+		local Array of String is parts: className:split(delimiter: ':');
+		local Array of Member is group: [];
+		local Array of String is ownerAcc: [];
+		self:collectOverloadGroupGen(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		if (group:length() == 0) {
+			return none;
+		}
+		local Int is use: idx;
+		if (use < 0) {
+			use: 0;
+		}
+		if (use >= group:length()) {
+			use: group:length() - 1;
+		}
+		local Member is cand: group:get(index: use);
+		return cand;
+	}
+
+	## The name of the class declaring the stamped overload (empty when
+	## the name is undeclared).
+	##
+	## @param className: The receiver base class name.
+	## @param methodName: The called member's name.
+	## @param idx: The stamped overload index.
+	## @return: The declaring class name, or ''.
+	Function of String is overloadOwnerNameGen(String is className, String is methodName, Int is idx){
+		local Array of String is parts: className:split(delimiter: ':');
+		local Array of Member is group: [];
+		local Array of String is ownerAcc: [];
+		self:collectOverloadGroupGen(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		if (group:length() == 0 || ownerAcc:length() == 0) {
+			return '';
+		}
+		local String is owner: ownerAcc:get(index: 0);
+		return owner;
+	}
+
+	## Recursive overload-group collection (nearest declaring ancestor,
+	## all parents walked, first subtree wins).
+	##
+	## @param className: Class being visited.
+	## @param methodName: The member name.
+	## @param hops: Recursion budget guard.
+	## @param acc: The collected group.
+	Function is collectOverloadGroupGen(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
+		if (ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 8) {
+			return;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return;
+		}
+		cls:members:each(action: local Function(Member is m){
+			if (m:kind == MemberKind:METHOD && m:name == methodName) {
+				acc:add(item: m);
+			}
+		});
+		if (acc:length() > 0) {
+			ownerAcc:add(item: cls:name);
+			return;
+		}
+		cls:baseClasses:each(action: local Function(String is baseName){
+			self:collectOverloadGroupGen(className: baseName, methodName: methodName, hops: hops + 1, acc: acc, ownerAcc: ownerAcc);
+		});
 	}
 
 	## Generates the per-type constructor call for a typed assignment:
@@ -1019,7 +1141,18 @@ Class is CodeGenerator{
 			if (targetType == Primitive:INT:value() && expr:methodName == 'toBase') {
 				return 'String';
 			}
-			local String is ret: self:lookupMethodReturnType(className: targetType, methodName: expr:methodName);
+			local String is ret: '';
+			if (expr:overloadIndex > 0) {
+				# The checker stamped the exact return type for the selected
+				# overload (FUNCTIONS.md §I.2); it is the source of truth.
+				local String is rt: expr:resolvedType;
+				if (rt != '' && rt != Primitive:ANY:value()) {
+					ret: rt;
+				}
+			}
+			if (ret == '') {
+				ret: self:lookupMethodReturnType(className: targetType, methodName: expr:methodName);
+			}
 			if (ret == '' || self:isVoidType(t: ret)) {
 				return '';
 			}
@@ -1800,22 +1933,32 @@ Class is CodeGenerator{
 
 		# Constructor or static invocation: ClassName:init(...)/ClassName:method(...).
 		if (self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC)) {
-			local String is argsJoined: self:formatCallArguments(className: targetC, methodName: expr:methodName, args: expr:methodArgs);
-			if (expr:methodName == 'init') {
-				local String is initCls: self:findMethodImplementingClass(className: targetC, methodName: 'init', paramCount: -1);
-				if (initCls == '' || initCls == targetC) {
-					return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . targetC . '_init(_inst' . argsJoined . '); _inst; })';
-				}
-				local String is initArgs: self:formatCallArguments(className: initCls, methodName: 'init', args: expr:methodArgs);
-				return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initCls . '_init((' . initCls . '*)_inst' . initArgs . '); _inst; })';
+			local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex);
+			local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex);
+			local String is symOwner: ownerName;
+			if (symOwner == '') {
+				symOwner: targetC;
 			}
-			local Member is mDef: self:lookupMethodMember(className: targetC, methodName: expr:methodName);
+			local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
+			if (expr:methodName == 'init') {
+				local String is initCls: self:overloadOwnerNameGen(className: targetC, methodName: 'init', idx: expr:overloadIndex);
+				local String is symOwnerCls: initCls;
+				if (symOwnerCls == '') {
+					symOwnerCls: targetC;
+				}
+				local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:overloadIndex);
+				if (initCls == '' || initCls == targetC) {
+					return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
+				}
+				return '({ ' . targetC . '* _inst = ' . targetC . '_new(); ' . initSymbol . '((' . initCls . '*)_inst' . argsJoined . '); _inst; })';
+			}
 			if (mDef:kind == MemberKind:METHOD) {
+				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:overloadIndex);
 				if (self:isFieldFulClass(cls: self:findClass(name: targetC))) {
 					# Field-ful instance import (INSTANCE.md E1/E2 full
 					# form): dispatch through the synthetic hidden field
 					# the loader materialized; the field borrows as self.
-					return targetC . '_' . expr:methodName . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
+					return callSymbol . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
 				}
 				# Elided instance import (INSTANCE.md §2.4): under E5 every
 				# non-init class-name call is an instance-imported receiver.
@@ -1823,7 +1966,7 @@ Class is CodeGenerator{
 				# C call with self ignored, void or not. The old unsound
 				# static paths (unguarded NULL self, fresh-instance
 				# discard) are deleted (INSTANCE.md E8).
-				return targetC . '_' . expr:methodName . '(NULL' . argsJoined . ')';
+				return callSymbol . '(NULL' . argsJoined . ')';
 			}
 		}
 
@@ -1836,11 +1979,12 @@ Class is CodeGenerator{
 			if (bpBuiltin != '') {
 				return bpBuiltin;
 			}
-			local String is bpArgs: self:formatCallArguments(className: expr:bareProvider, methodName: expr:methodName, args: expr:methodArgs);
+			local String is bpArgs: self:formatCallArgumentsWith(className: expr:bareProvider, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
+			local String is bpSymbol: self:overloadSymbol(className: expr:bareProvider, methodName: expr:methodName, idx: expr:overloadIndex);
 			if (self:isFieldFulClass(cls: self:findClass(name: expr:bareProvider))) {
-				return expr:bareProvider . '_' . expr:methodName . '((' . expr:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . expr:bareProvider) . ')' . bpArgs . ')';
+				return bpSymbol . '((' . expr:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . expr:bareProvider) . ')' . bpArgs . ')';
 			}
-			return expr:bareProvider . '_' . expr:methodName . '(NULL' . bpArgs . ')';
+			return bpSymbol . '(NULL' . bpArgs . ')';
 		}
 
 		# Instance method invocation.
@@ -1881,7 +2025,7 @@ Class is CodeGenerator{
 			local Array of String is parts: objType:split(delimiter: ':');
 			objType: parts:get(index: 0);
 		}
-		local String is argsC: self:formatCallArguments(className: fullObjType, methodName: expr:methodName, args: expr:methodArgs);
+		local String is argsC: self:formatCallArgumentsWith(className: fullObjType, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
 		local String is callStr: '';
 		if (self:overriddenMethods:has(key: expr:methodName) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:policy:isTransparent(c: self:findClass(name: objType)) && self:methodSlots:has(key: expr:methodName)) {
 			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
@@ -1900,15 +2044,18 @@ Class is CodeGenerator{
 			}
 		}
 		if (callStr == '') {
-			local String is dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
+			local String is dispatchCls: self:overloadOwnerNameGen(className: objType, methodName: expr:methodName, idx: expr:overloadIndex);
+			if (dispatchCls == '') {
+				dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
+			}
 			local String is targetExprC: targetC;
 			if (dispatchCls != '' && dispatchCls != objType) {
 				objType: dispatchCls;
 				targetExprC: '((' . dispatchCls . '*)' . targetC . ')';
 			}
-			callStr: objType . '_' . expr:methodName . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
+			callStr: self:overloadSymbol(className: objType, methodName: expr:methodName, idx: expr:overloadIndex) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
 		}
-		local Member is targetM: self:lookupMethodMember(className: objType, methodName: expr:methodName);
+		local Member is targetM: self:lookupOverloadedMemberGen(className: objType, methodName: expr:methodName, idx: expr:overloadIndex);
 		local ClassInfo is targetCls: self:findClass(name: objType);
 		if (targetM:kind == MemberKind:METHOD && targetCls:typeParams:length() > 0) {
 			local String is rawRet: self:formatTypeString(t: targetM:memberType);
@@ -2067,7 +2214,23 @@ Class is CodeGenerator{
 	## @param args: The call arguments.
 	## @return: Comma-joined C arguments (no receiver).
 	Function of String is formatCallArguments(String is className, String is methodName, Array of NamedArg is args){
-		local Member is m: self:lookupMethodMember(className: className, methodName: methodName);
+		return self:formatCallArgumentsWith(className: className, methodName: methodName, idx: -1, args: args);
+	}
+
+	## FUNCTIONS.md §I.2: binds call arguments against the STAMPED
+	## overload's parameters (idx below zero resolves as the first —
+	## the legacy single-member shape).
+	##
+	## @param className: The receiver base class name.
+	## @param methodName: The called member's name.
+	## @param idx: The stamped overload index.
+	## @param args: The call's arguments.
+	## @return: The C argument list.
+	Function of String is formatCallArgumentsWith(String is className, String is methodName, Int is idx, Array of NamedArg is args){
+		local Member is m: self:lookupOverloadedMemberGen(className: className, methodName: methodName, idx: idx);
+		if (m:kind != MemberKind:METHOD) {
+			m: self:lookupMethodMember(className: className, methodName: methodName);
+		}
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
@@ -2585,7 +2748,7 @@ Class is CodeGenerator{
 		});
 
 		local String is selfCType: self:cTypeFor(typeName: classDef:name);
-		local String is header: retType . ' ' . classDef:name . '_' . method:name . '(' . selfCType . ' self';
+		local String is header: retType . ' ' . self:overloadSymbol(className: classDef:name, methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
 		method:params:each(action: local Function(Parameter is p){
 			header: header . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
 		});
