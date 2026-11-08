@@ -458,7 +458,7 @@ merges.
   per target) — the outer's as-imports dispatch on the inner's own
   instances.
 
-### IV.2c — The qualified registry keys (planned; verified against the current behavior)
+### IV.2c — The qualified registry keys (phases 1–2 landed; 3–4 pending)
 
 **The refinement**: inner classes, like functions, are available when
 imported. Like functions, a bare reference that is ambiguous is an error,
@@ -473,12 +473,12 @@ prefix escape.
   declares a nested Helper; a consumer instance-importing LibA and
   referencing `Helper` bare gets the §I.6 error ('Helper' is not
   imported). The parent's as-import grants the parent's functions but
-  not its nested-class types.
-- **Gap B — the qualified type reference does not parse.**
-  `local LibA:Helper is h: ...;` is a syntax error — the type-reference
-  parse (parseType in declaration positions) has no path form.
+  not its nested-class types. *(phase 3 closes this)*
+- **Gap B — the qualified type reference does not parse.** ✅ (phase 2)
+  `local LibA:Helper is h: ...;` parses, resolves, and emits the
+  qualified symbols end-to-end.
 - The ambiguity behavior is unprobeable until A/B land (today the first
-  registration silently wins).
+  registration silently wins). *(phase 3 replaces this)*
 
 **The unified resolution model** (what the phases build):
 
@@ -497,15 +497,22 @@ prefix escape.
 
 **The phases** (each converges alone; the suite green at each boundary):
 
-1. **The C symbol qualification** — `qualifiedName()` on ClassInfo; the
-   gen's symbol emissions qualify via cIdent (':' → '_'). Zero semantic
-   change: findClass still resolves bare, the first registration wins.
-   The in-tree nested classes rename mechanically
+1. **The C symbol qualification** ✅ (90495e3) — `qualifiedName()` on
+   ClassInfo; the gen's symbol emissions qualify via cIdent (':' → '_').
+   Zero semantic change: findClass still resolves bare, the first
+   registration wins. The in-tree nested classes rename mechanically
    (`CBackendUtils_SnakeCaseLoop_init`).
-2. **The qualified type references parse** — the declaration-position
-   type parse accepts `Path:Name` (`local LibA:Helper is h: ...;`), and
-   the resolution: the named class's nested member. Until phase 3 this
-   resolves only same-file nested classes.
+2. **The qualified type references parse** ✅ (dc9cc8b) — parseType
+   consumes the glued colon path; findClass (checker + gen) resolves the
+   qualified identity; the registries carry the qualified and C-symbol
+   keys. The member-lookup funnels route through one canonical resolver
+   (`memberLookupRoot` / the gen twin): the qualified receiver resolves
+   to the inner class itself — its members, its return types, its
+   construction pair (`LibA_Helper_new/_init`) and dispatch symbol
+   (`LibA_Helper_value`). The resolved root absorbs the colon chain, so
+   the segments are never mistaken for type arguments (container forms
+   like `Array:String` keep the bare root). Until phase 3 this resolves
+   same-file and import-granted nested classes through the file grant.
 3. **The import grant + the provider resolution** — the §I.6 gating
    counts the as-imported class's nested classes as import-granted; the
    bare type references resolve through the provider walk (the same
