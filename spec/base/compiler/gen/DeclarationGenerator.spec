@@ -11,6 +11,7 @@ Class is DeclarationGenerator{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Expression],
@@ -69,19 +70,19 @@ Class is DeclarationGenerator{
 	## @param typeParams: The class's generic parameter names.
 	## @return: C type string.
 	Function of String is cTypeForClass(String is typeName, Array of String is typeParams){
-		if (typeParams:indexOf(search: typeName, default: -1) >= 0) {
+		Conditional:branch(check: { typeParams:indexOf(search: typeName, default: -1) >= 0 }, then: {
 			return 'void*';
-		}
+		});
 		local String is base: typeName;
-		if (base:contains(needle: ':')) {
+		Conditional:branch(check: { base:contains(needle: ':') }, then: {
 			local Array of String is parts: base:split(delimiter: ':');
 			base: parts:get(index: 0);
-		}
+		});
 		# Enum types pass by value in prototypes, matching the definitions
 		# the method emitter produces (tagged unions are pointers).
-		if (self:allEnumNames:has(key: base) && !self:allTaggedEnums:has(key: base)) {
+		Conditional:branch(check: { self:allEnumNames:has(key: base) && !self:allTaggedEnums:has(key: base) }, then: {
 			return base;
-		}
+		});
 		return self:utils:cTypeFor(typeName: typeName);
 	}
 
@@ -91,13 +92,13 @@ Class is DeclarationGenerator{
 	## @param typeParams: The class's generic parameter names.
 	## @return: C return type string.
 	Function of String is resolveReturnTypeForClass(Type is t, Array of String is typeParams){
-		if (Primitive:of(t:name) == Primitive:FUNCTION) {
-			if (t:params:length() > 0) {
+		Conditional:branch(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
+			Conditional:branch(check: { t:params:length() > 0 }, then: {
 				local Type is ret: t:params:get(index: 0);
 				return self:cTypeForClass(typeName: ret:name, typeParams: typeParams);
-			}
+			});
 			return 'void';
-		}
+		});
 		return self:cTypeForClass(typeName: t:name, typeParams: typeParams);
 	}
 
@@ -122,9 +123,9 @@ Class is DeclarationGenerator{
 	Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
 		c:baseClasses:each(action: local Function(String is baseName){
 			allClasses:each(action: local Function(ClassInfo is cand){
-				if (cand:name == baseName) {
+				Conditional:branch(check: { cand:name == baseName }, then: {
 					self:collectStructFields(c: cand, allClasses: allClasses, acc: acc);
-				}
+				});
 			});
 		});
 		c:members:each(action: local Function(Member is m){
@@ -132,15 +133,15 @@ Class is DeclarationGenerator{
 				is MemberKind:FIELD: {
 					# Declarative metadata (namespace/using/group/castable)
 					# never becomes a struct field.
-					if (m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
-						m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value()) {
+					Conditional:branch(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
+						m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value() }, then: {
 						local Int is existing: self:fieldIndexNamed(list: acc, name: m:name);
-						if (existing >= 0) {
+						Conditional:branch(check: { existing >= 0 }, then: {
 							acc:set(index: existing, item: m);
-						} else {
+						}, otherwise: {
 							acc:add(item: m);
-						}
-					}
+						});
+					});
 				}
 				else: {}
 			}
@@ -169,17 +170,17 @@ Class is DeclarationGenerator{
 		local String is out: "/* Enum Definitions */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (c:baseClass == self:names:enumHeader()) {
+			Conditional:branch(check: { c:baseClass == self:names:enumHeader() }, then: {
 				local String is name: c:name;
 				# The namespace declaration is metadata inside the body —
 				# filter it out of the variant surface once, up front.
 				local Array of Member is variants: [];
 				c:members:each(action: local Function(Member is m){
-					if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+					Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 						variants:add(item: m);
-					}
+					});
 				});
-				if (self:allTaggedEnums:has(key: name)) {
+				Conditional:branch(check: { self:allTaggedEnums:has(key: name) }, then: {
 					out: out . "typedef enum {\n";
 					local Int is tIdx: 0;
 					variants:each(action: local Function(Member is m){
@@ -188,7 +189,7 @@ Class is DeclarationGenerator{
 					});
 					out: out . '} ' . name . "_Tag;\n";
 					out: out . 'typedef struct ' . name . ' ' . name . ";\n\n";
-				} else {
+				}, otherwise: {
 					out: out . "typedef enum {\n";
 					local Int is idx: 0;
 					variants:each(action: local Function(Member is m){
@@ -220,16 +221,16 @@ Class is DeclarationGenerator{
 
 					local Boolean is isStrBacked: false;
 					variants:each(action: local Function(Member is m){
-						if (m:memberType:name == Primitive:STRING:value()) {
+						Conditional:branch(check: { m:memberType:name == Primitive:STRING:value() }, then: {
 							isStrBacked: true;
-						}
+						});
 					});
 
-					if (isStrBacked) {
+					Conditional:branch(check: { isStrBacked }, then: {
 						out: out . self:emitStringBacking(name: name, cls: c);
-					} else {
+					}, otherwise: {
 						out: out . self:emitIntBacking(name: name, cls: c);
-					}
+					});
 
 					out: out . 'static inline long long ' . name . '_ordinal(' . name . " self) {\n";
 					out: out . "    (void)self;\n";
@@ -247,8 +248,8 @@ Class is DeclarationGenerator{
 					out: out . '    for (size_t i = 0; i < ' . idx . "; i++) {\n";
 					out: out . '        spec_array_add(arr, (void*)(intptr_t)' . name . "_all_values[i]);\n";
 					out: out . "    }\n    return arr;\n}\n\n";
-				}
-			}
+				});
+			});
 		});
 
 		return out;
@@ -265,9 +266,9 @@ Class is DeclarationGenerator{
 		# Metadata (the namespace declaration) is not a variant.
 		local Array of Member is variants: [];
 		cls:members:each(action: local Function(Member is m){
-			if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+			Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 				variants:add(item: m);
-			}
+			});
 		});
 		out: out . 'static inline String ' . name . '_value(' . name . " self) {\n";
 		out: out . "    (void)self;\n";
@@ -282,16 +283,16 @@ Class is DeclarationGenerator{
 		out: out . 'static inline ' . name . ' ' . name . '_of(String v) {' . "\n";
 		variants:each(action: local Function(Member is m){
 			local String is valStr: self:variantTag(m: m);
-			if (valStr == '') {
+			Conditional:branch(check: { valStr == '' }, then: {
 				emptyVariant: m:name;
-			}
+			});
 			out: out . '    if (spec_string_equals(v, spec_string_intern("' . valStr . '"))) return ' . name . '_' . self:utils:cIdent(name: m:name) . ";\n";
 		});
-		if (emptyVariant != '') {
+		Conditional:branch(check: { emptyVariant != '' }, then: {
 			out: out . '    return ' . name . '_' . self:utils:cIdent(name: emptyVariant) . ";\n";
-		} else {
+		}, otherwise: {
 			out: out . '    return (' . name . ")-1;\n";
-		}
+		});
 		out: out . "}\n\n";
 		return out;
 	}
@@ -307,9 +308,9 @@ Class is DeclarationGenerator{
 		# Metadata (the namespace declaration) is not a variant.
 		local Array of Member is variants: [];
 		cls:members:each(action: local Function(Member is m){
-			if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+			Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 				variants:add(item: m);
-			}
+			});
 		});
 		out: out . 'static inline long long ' . name . '_value(' . name . " self) {\n";
 		out: out . "    (void)self;\n";
@@ -317,14 +318,16 @@ Class is DeclarationGenerator{
 		local Int is vIdx: 0;
 		variants:each(action: local Function(Member is m){
 			local String is valNum: '' . vIdx;
-			if (m:hasInit) {
+			Conditional:branch(check: { m:hasInit }, then: {
 				local Expression is initE: m:initExpr;
-				if (initE:kind == ExpressionKind:NUMBER && initE:stringValue != '') {
+				Conditional:branch(check: { initE:kind == ExpressionKind:NUMBER && initE:stringValue != '' }, then: {
 					valNum: initE:stringValue;
-				} else if (initE:kind == ExpressionKind:UNARY && initE:unaryOp == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER) {
-					valNum: '-' . initE:unaryExpr:stringValue;
-				}
-			}
+				}, otherwise: {
+					Conditional:branch(check: { initE:kind == ExpressionKind:UNARY && initE:unaryOp == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER }, then: {
+						valNum: '-' . initE:unaryExpr:stringValue;
+					});
+				});
+			});
 			out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return ' . valNum . "LL;\n";
 			vIdx: vIdx + 1;
 		});
@@ -339,12 +342,12 @@ Class is DeclarationGenerator{
 	## @param m: The variant member.
 	## @return: The tag string.
 	Function of String is variantTag(Member is m){
-		if (m:hasInit) {
+		Conditional:branch(check: { m:hasInit }, then: {
 			local Expression is initE: m:initExpr;
-			if (initE:kind == ExpressionKind:STRING) {
+			Conditional:branch(check: { initE:kind == ExpressionKind:STRING }, then: {
 				return initE:stringValue;
-			}
-		}
+			});
+		});
 		return m:name;
 	}
 
@@ -357,55 +360,55 @@ Class is DeclarationGenerator{
 		local String is out: "/* Forward Declarations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
+			Conditional:branch(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				out: out . 'typedef struct ' . c:name . ' ' . c:name . ";\n";
 				out: out . c:name . '* ' . c:name . "_new(void);\n";
 				out: out . 'void ' . c:name . "_destroy(void* self);\n";
-				if (!self:hasFieldNamed(list: c:members, name: 'init')) {
+				Conditional:branch(check: { !self:hasFieldNamed(list: c:members, name: 'init') }, then: {
 					out: out . 'void ' . c:name . '_init(' . c:name . "* self);\n";
-				}
-			}
+				});
+			});
 		});
 		out: out . "\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader()) {
+			Conditional:branch(check: { self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local Array of String is tps: c:typeParams;
 				c:members:each(action: local Function(Member is m){
 					when (m:kind) {
 						is MemberKind:METHOD: {
-							if (!self:policy:isTransparent(c: c) || m:body:length() > 0) {
+							Conditional:branch(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 								local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
-								if (retType == 'void') {
-									if (m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value()) {
+								Conditional:branch(check: { retType == 'void' }, then: {
+									Conditional:branch(check: { m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() }, then: {
 										retType: 'bool';
-									}
-								}
+									});
+								});
 								local Int is ovIdx: 0;
 								local Int is ovHit: 0;
 								c:members:each(action: local Function(Member is g){
-									if (g:kind == MemberKind:METHOD && g:name == m:name) {
-										if (g == m) {
+									Conditional:branch(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+										Conditional:branch(check: { g == m }, then: {
 											ovHit: ovIdx;
-										}
+										});
 										ovIdx: ovIdx + 1;
-									}
+									});
 								});
 								local String is symName: c:name . '_' . m:name;
-								if (ovHit > 0) {
+								Conditional:branch(check: { ovHit > 0 }, then: {
 									symName: symName . '_' . (ovHit + 1) . '';
-								}
+								});
 								out: out . retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
 								m:params:each(action: local Function(Parameter is p){
 									out: out . ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name);
 								});
 								out: out . ");\n";
-							}
+							});
 						}
 						else: {}
 					}
 				});
-			}
+			});
 		});
 		out: out . "\n";
 		return out;
@@ -420,7 +423,7 @@ Class is DeclarationGenerator{
 		local String is out: "/* Struct Layouts */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			if (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) {
+			Conditional:branch(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local Array of String is tps: c:typeParams;
 				out: out . 'struct ' . c:name . " {\n";
 				out: out . "    const char* _type_name;\n";
@@ -431,9 +434,11 @@ Class is DeclarationGenerator{
 					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
 				});
 				out: out . "};\n\n";
-			} else if (c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name)) {
-				out: out . self:emitTaggedEnumStruct(name: c:name, cls: c);
-			}
+			}, otherwise: {
+				Conditional:branch(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
+					out: out . self:emitTaggedEnumStruct(name: c:name, cls: c);
+				});
+			});
 		});
 		return out;
 	}
@@ -448,9 +453,9 @@ Class is DeclarationGenerator{
 		# Metadata (the namespace declaration) is not a variant.
 		local Array of Member is variants: [];
 		cls:members:each(action: local Function(Member is m){
-			if (!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)) {
+			Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 				variants:add(item: m);
-			}
+			});
 		});
 		out: out . 'struct ' . name . " {\n";
 		out: out . '    ' . name . "_Tag _tag;\n";
@@ -465,17 +470,19 @@ Class is DeclarationGenerator{
 
 		variants:each(action: local Function(Member is m){
 			local String is vName: self:utils:cIdent(name: m:name);
-			if (m:params:length() == 0) {
+			Conditional:branch(check: { m:params:length() == 0 }, then: {
 				out: out . 'static inline ' . name . '* ' . name . '_' . vName . "_ctor(void) {\n";
 				out: out . '    ' . name . '* _e = (' . name . '*)spec_alloc(sizeof(' . name . "), NULL);\n";
 				out: out . '    _e->_tag = ' . name . '_TAG_' . vName . ";\n";
 				out: out . '    _e->_variant_name = "' . m:name . "\";\n";
 				out: out . "    return _e;\n}\n\n";
-			} else {
+			}, otherwise: {
 				out: out . 'static inline ' . name . '* ' . name . '_' . vName . '(';
 				local Boolean is firstP: true;
 				m:params:each(action: local Function(Parameter is p){
-					if (!firstP) { out: out . ', '; }
+					Conditional:branch(check: { !firstP }, then: {
+ out: out . ', ';
+					});
 					out: out . self:utils:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
 					firstP: false;
 				});
@@ -487,7 +494,7 @@ Class is DeclarationGenerator{
 					out: out . '    _e->' . vName . '_' . self:utils:cIdent(name: p:name) . ' = ' . self:utils:cIdent(name: p:name) . ";\n";
 				});
 				out: out . "    return _e;\n}\n\n";
-			}
+			});
 		});
 
 		out: out . 'static inline String ' . name . '_name(' . name . "* self) {\n";
@@ -522,10 +529,10 @@ Class is DeclarationGenerator{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
-			if (m:name == self:name) {
+			Conditional:branch(check: { m:name == self:name }, then: {
 				self:found: true;
 				return false;
-			}
+			});
 			return true;
 		}
 	}
@@ -554,9 +561,9 @@ Class is DeclarationGenerator{
 
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:list:get(index: self:idx);
-			if (m:name == self:name) {
+			Conditional:branch(check: { m:name == self:name }, then: {
 				self:res: self:idx;
-			}
+			});
 			self:idx: self:idx + 1;
 			return true;
 		}
