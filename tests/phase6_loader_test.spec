@@ -33,11 +33,11 @@ Class is Phase6LoaderTest{
 		local ProgramNode is helloProg: loader:loadProgram(rootPath: 'examples/helloworld.spec');
 		Output:line('Loaded classes count: ' . helloProg:classes:length());
 
-		if (helloProg:classes:length() >= 1) {
+		Conditional:branch(check: { helloProg:classes:length() >= 1 }, then: {
 			Output:line("[PASS] Successfully loaded HelloWorld program with modules\n");
-		} else {
+		}, otherwise: {
 			Output:line("[FAIL] Expected at least 1 class in HelloWorld\n");
-		}
+		});
 
 		# 2. Package resolution is exercised by the load itself: the hello
 		# program's array-form using pulled the io package through the
@@ -47,11 +47,11 @@ Class is Phase6LoaderTest{
 
 		# 3. The load served every file cleanly through the cascade.
 		Output:line('3. Files loaded through the cascade: ' . (loader:loadedFileCount() as String));
-		if (loader:getParseErrors():length() == 0) {
+		Conditional:branch(check: { loader:getParseErrors():length() == 0 }, then: {
 			Output:line("[PASS] Resolver cascade served the imports cleanly\n");
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Resolver cascade errors\n');
-		}
+		});
 		Output:line('Phase 6 Module Loader test completed successfully!');
 	}
 

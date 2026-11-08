@@ -30,31 +30,31 @@ Class is RegressionMethodResolutionTest{
 		# Case 1: user class with its own get() method (hard compile error today).
 		local UserRecord is rec: UserRecord:init();
 		local Int is got: rec:get();
-		if (got == 42) {
+		Conditional:branch(check: { got == 42 }, then: {
 			Output:line('[PASS] user get() dispatch: rec:get() = 42');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] user get() dispatch: expected 42, got ' . got);
-		}
+		});
 
 		# Case 2: user class whose length() has custom semantics.
 		# The builtin hijack silently returns the wrong number on some toolchains.
 		local LogStore is store: LogStore:init();
 		local Int is len: store:length();
-		if (len == 7) {
+		Conditional:branch(check: { len == 7 }, then: {
 			Output:line('[PASS] user length() dispatch: store:length() = 7');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] user length() dispatch: expected 7, got ' . len);
-		}
+		});
 
 		# Case 3 (control): identical shape with non-colliding method names.
 		# This path already works today and must keep working.
 		local UserRecord is rec2: UserRecord:init();
 		local Int is safe: rec2:fetchIdentifier();
-		if (safe == 42) {
+		Conditional:branch(check: { safe == 42 }, then: {
 			Output:line('[PASS] control non-colliding method: fetchIdentifier() = 42');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] control non-colliding method: expected 42, got ' . safe);
-		}
+		});
 
 		Output:line('=== End Method Resolution Regression ===');
 	}
@@ -65,6 +65,7 @@ Class is RegressionMethodResolutionTest{
 Class is UserRecord{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	local Int is identifier: 42;
@@ -84,6 +85,7 @@ Class is UserRecord{
 Class is LogStore{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	local Int is maxEntries: 7;

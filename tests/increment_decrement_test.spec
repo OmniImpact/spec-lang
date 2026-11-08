@@ -25,11 +25,11 @@ Class is IncrementDecrementTest{
 		--x;
 		local Boolean is preDecStmt: x == 10;
 
-		if (postIncStmt && postDecStmt && preIncStmt && preDecStmt) {
+		Conditional:branch(check: { postIncStmt && postDecStmt && preIncStmt && preDecStmt }, then: {
 			Output:line('[PASS] Postfix and prefix statements modify operand in place');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Postfix and prefix statements');
-		}
+		});
 
 		# Case 2: Expression semantics
 		local Int is y: 5;
@@ -45,11 +45,11 @@ Class is IncrementDecrementTest{
 		local Int is valPreDec: --y;
 		local Boolean is exprPreDecOk: valPreDec == 5 && y == 5;
 
-		if (exprPostIncOk && exprPreIncOk && exprPostDecOk && exprPreDecOk) {
+		Conditional:branch(check: { exprPostIncOk && exprPreIncOk && exprPostDecOk && exprPreDecOk }, then: {
 			Output:line('[PASS] Postfix returns previous value; prefix returns updated value');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Expression return values');
-		}
+		});
 
 		# Case 3: While loop iteration with increment
 		local Int is sum: 0;
@@ -61,11 +61,11 @@ Class is IncrementDecrementTest{
 				i++;
 			}
 		);
-		if (sum == 10) {
+		Conditional:branch(check: { sum == 10 }, then: {
 			Output:line('[PASS] While loop with iterate i++');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] While loop with i++, sum=' . sum);
-		}
+		});
 
 		# Case 4: While loop with decrement
 		local Int is steps: 0;
@@ -77,11 +77,11 @@ Class is IncrementDecrementTest{
 				n--;
 			}
 		);
-		if (steps == 5) {
+		Conditional:branch(check: { steps == 5 }, then: {
 			Output:line('[PASS] While loop with decrement n--');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] While loop with decrement, steps=' . steps);
-		}
+		});
 
 		# Case 5: Field access increment and decrement
 		self:count: 42;
@@ -89,10 +89,10 @@ Class is IncrementDecrementTest{
 		local Boolean is fieldIncOk: self:count == 43;
 		self:count--;
 		local Boolean is fieldDecOk: self:count == 42;
-		if (fieldIncOk && fieldDecOk) {
+		Conditional:branch(check: { fieldIncOk && fieldDecOk }, then: {
 			Output:line('[PASS] Field increment and decrement');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Field increment and decrement');
-		}
+		});
 	}
 }

@@ -17,32 +17,32 @@ Class is ContainerMethodsTest{
 		local Array of String is emptySlice: words:slice(start: 3, end: 2);
 		local Boolean is midOk: mid:length() == 3 && mid:get(index: 0, default: '') == 'one' && mid:get(index: 1, default: '') == 'two' && mid:get(index: 2, default: '') == 'three';
 		local Boolean is emptyOk: emptySlice:length() == 0;
-		if (midOk && emptyOk) {
+		Conditional:branch(check: { midOk && emptyOk }, then: {
 			Output:line('[PASS] Array:slice extracts subarrays and clamps bounds');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Array:slice');
-		}
+		});
 
 		# Case 2: Array:indexOf
 		local Int is idxOne: words:indexOf(search: 'one', default: -1);
 		local Int is idxFour: words:indexOf(search: 'four', default: -1);
 		local Int is idxAbsent: words:indexOf(search: 'five', default: -99);
-		if (idxOne == 1 && idxFour == 4 && idxAbsent == -99) {
+		Conditional:branch(check: { idxOne == 1 && idxFour == 4 && idxAbsent == -99 }, then: {
 			Output:line('[PASS] Array:indexOf locates elements and returns fallback');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Array:indexOf');
-		}
+		});
 
 		# Case 3: Array:join
 		local String is joinedComma: words:join(separator: ', ');
 		local String is joinedEmpty: words:join(separator: '');
 		local Array of String is singleArr: ['only'];
 		local String is joinedSingle: singleArr:join(separator: '-');
-		if (joinedComma == 'zero, one, two, three, four' && joinedEmpty == 'zeroonetwothreefour' && joinedSingle == 'only') {
+		Conditional:branch(check: { joinedComma == 'zero, one, two, three, four' && joinedEmpty == 'zeroonetwothreefour' && joinedSingle == 'only' }, then: {
 			Output:line('[PASS] Array:join concatenates elements with separator');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Array:join');
-		}
+		});
 
 		# Case 4: Array combinators: each, filter, count, any
 		local Array of String is items: ['apple', 'avocado', 'banana', 'apricot', 'cherry'];
@@ -59,11 +59,11 @@ Class is ContainerMethodsTest{
 			return s:startsWith(prefix: 'a');
 		});
 		local Boolean is aWordsOk: aWords:length() == 3 && aWords:get(index: 0, default: '') == 'apple' && aWords:get(index: 1, default: '') == 'avocado' && aWords:get(index: 2, default: '') == 'apricot';
-		if (aCount == 3 && hasCherry && !hasGrape && aWordsOk) {
+		Conditional:branch(check: { aCount == 3 && hasCherry && !hasGrape && aWordsOk }, then: {
 			Output:line('[PASS] Array combinators: count, any, filter');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Array combinators');
-		}
+		});
 
 		# Case 5: Map basic operations: set, get, getString, getInt, has, remove, length, keys
 		local Map of String to String is dict: [:];
@@ -83,11 +83,11 @@ Class is ContainerMethodsTest{
 		local Array of String is k: dict:keys();
 		local Boolean is keysOk: k:length() == 2 && k:indexOf(search: 'name', default: -1) >= 0 && k:indexOf(search: 'version', default: -1) >= 0;
 
-		if (len3 && hasName && hasMissing && nameVal == 'Spec' && missVal == 'fallback' && verVal == 1 && defVerVal == 42 && removed && removeAbsent && len2 && keysOk) {
+		Conditional:branch(check: { len3 && hasName && hasMissing && nameVal == 'Spec' && missVal == 'fallback' && verVal == 1 && defVerVal == 42 && removed && removeAbsent && len2 && keysOk }, then: {
 			Output:line('[PASS] Map methods: set, getString, getInt, has, remove, length, keys');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] Map methods');
-		}
+		});
 	}
 
 }

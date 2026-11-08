@@ -24,6 +24,7 @@ Class is NamedContract{
 Class is IdentifiableContract{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	Int is id;
@@ -35,6 +36,7 @@ Class is IdentifiableContract{
 Class of NamedContract, IdentifiableContract is ServiceAccount{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 
@@ -58,11 +60,11 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 		Output:line('Account Name: ' . self:name);
 		Output:line('Account ID:   ' . self:id);
 
-		if (self:name == 'AdminService' && self:id == 9001) {
+		Conditional:branch(check: { self:name == 'AdminService' && self:id == 9001 }, then: {
 			Output:line("[PASS] Successfully inherited fields from multiple contracts\n");
-		} else {
+		}, otherwise: {
 			Output:line("[FAIL] Property inheritance mismatch\n");
-		}
+		});
 
 		Output:line('2. Testing implementation of abstract interface methods...');
 		local String is desc: self:describe();
@@ -70,11 +72,11 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 		Output:line('Description: ' . desc);
 		Output:line('Tag:         ' . tag);
 
-		if (desc == 'AdminService (ID: 9001)' && tag == '[AdminService]') {
+		Conditional:branch(check: { desc == 'AdminService (ID: 9001)' && tag == '[AdminService]' }, then: {
 			Output:line("[PASS] Successfully implemented abstract interface methods\n");
-		} else {
+		}, otherwise: {
 			Output:line("[FAIL] Method implementation mismatch\n");
-		}
+		});
 
 		Output:line('3. Testing polymorphic dispatch through interface references...');
 		local NamedContract is namedRef: self;
@@ -84,11 +86,11 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 		Output:line('Polymorphic NamedContract:describe() -> ' . polyDesc);
 		Output:line('Polymorphic IdentifiableContract:getTag() -> ' . polyTag);
 
-		if (polyDesc == 'AdminService (ID: 9001)' && polyTag == '[AdminService]') {
+		Conditional:branch(check: { polyDesc == 'AdminService (ID: 9001)' && polyTag == '[AdminService]' }, then: {
 			Output:line("[PASS] Successfully dispatched polymorphically on interface types\n");
-		} else {
+		}, otherwise: {
 			Output:line("[FAIL] Polymorphic dispatch mismatch\n");
-		}
+		});
 
 		Output:line('Multiple inheritance and abstraction test completed successfully!');
 	}
