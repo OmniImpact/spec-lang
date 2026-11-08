@@ -38,13 +38,7 @@ Class of Loop is ArgLoop{
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is argName: '';
 		local Token is tok0: self:parser:peekAhead(offset: 0);
-		# FUNCTIONS.md Part II: the flip renames the branch param to `else`
-		# while Keyword:ELSE still exists in the preceding generation — the
-		# named-arg position accepts those keywords so the seed can parse
-		# the flipped spelling. Ordinary keywords still bind only as names
-		# when followed by the named-arg punctuation.
-		local Boolean is nameLike: tok0:getTokenKind() == TokenKind:IDENTIFIER || (tok0:getTokenKind() == TokenKind:KEYWORD && (tok0:getValue() == 'if' || tok0:getValue() == 'else'));
-		Conditional:if(check: { nameLike && self:parser:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
+		Conditional:if(check: { tok0:getTokenKind() == TokenKind:IDENTIFIER && self:parser:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
 			local String is nameVal: tok0:getValue();
 			local Boolean is isUpper: self:chars:isUpper(ch: nameVal:charAt(index: 0, default: ''));
 			Conditional:if(check: { !isUpper }, then: {

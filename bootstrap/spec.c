@@ -56103,15 +56103,6 @@ Expression* Parser_parsePrimary(Parser* self) {
         return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (e) { spec_release((void*)e); e = NULL; }
     } else if (((Token_getTokenKind(tok) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))) {
-        if (((spec_string_equals(Token_getValue(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getValue */, spec_string_intern("if"))) || (spec_string_equals(Token_getValue(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getValue */, spec_string_intern("else"))))) {
-	    SPEC_AUTO Token* kwTok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
-	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
-	    SPEC_AUTO Expression* kwExpr = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
-	    spec_assign((void**)&kwExpr->stringValue, (void*)(Token_getValue(kwTok) /* inst:Token:getValue */));
-	    return (Expression*)({ Expression* _ret_val = kwExpr; kwExpr = NULL; _ret_val; });
-    if (kwTok) { spec_release((void*)kwTok); kwTok = NULL; }
-    if (kwExpr) { spec_release((void*)kwExpr); kwExpr = NULL; }
-	};
         if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
 	    return (Expression*)spec_retain((void*)(Parser_parseUsingAs(self) /* inst:Parser:parseUsingAs */));
 	};
@@ -56609,8 +56600,7 @@ bool ArgLoop_iteration(ArgLoop* self, SpecLoopControl* control) {
     (void)control;
     SPEC_AUTO String argName = spec_construct_string(spec_string_intern(""));
     SPEC_AUTO Token* tok0 = (Token*)((Parser_peekAhead(self->parser, 0) /* inst:Parser:peekAhead */));
-    bool nameLike = ((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) || (((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))) && (((spec_string_equals(Token_getValue(tok0) /* inst:Token:getValue */, spec_string_intern("if"))) || (spec_string_equals(Token_getValue(tok0) /* inst:Token:getValue */, spec_string_intern("else"))))))));
-    if (((nameLike) && (spec_string_equals(Token_getValue(Parser_peekAhead(self->parser, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_NAMED_ARG))))) {
+    if (((((Token_getTokenKind(tok0) /* inst:Token:getTokenKind */) == (TokenKind_IDENTIFIER))) && (spec_string_equals(Token_getValue(Parser_peekAhead(self->parser, 1) /* inst:Parser:peekAhead */) /* inst:Token:getValue */, Punctuation_value(Punctuation_NAMED_ARG))))) {
 	    SPEC_AUTO String nameVal = Token_getValue(tok0) /* inst:Token:getValue */;
 	    bool isUpper = Chars_isUpper(self->chars, String_charAt(nameVal, 0, spec_string_intern(""))) /* inst:Chars:isUpper */;
 	    if ((!(isUpper))) {

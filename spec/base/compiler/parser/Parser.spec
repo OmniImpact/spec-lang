@@ -1038,17 +1038,6 @@ Class is Parser{
 				return e;
 			}
 			is TokenKind:KEYWORD: {
-				# FUNCTIONS.md Part II: the flip renames the else-param while
-				# Keyword:ELSE lives in the preceding generation — the bridge
-				# accepts `if`/`else` keywords as identifier expressions so
-				# the seed parses the flipped spelling.
-				Conditional:if(check: { self:peek():getValue() == 'if' || self:peek():getValue() == 'else' }, then: {
-					local Token is kwTok: self:peek();
-					self:advance();
-					local Expression is kwExpr: Expression:init(kind: ExpressionKind:IDENT);
-					kwExpr:stringValue: kwTok:getValue();
-					return kwExpr;
-				});
 				# Expression-initial `as` is the instance-import form
 				# `as ClassName()` (INSTANCE.md §2.1); `as` never begins any
 				# other expression (casts are postfix, scoped regions are
