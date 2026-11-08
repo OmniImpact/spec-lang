@@ -129,9 +129,9 @@ assert_compile_failure "negative-type-safety" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
 	"Non-exhaustive 'when'"
 
-assert_compile_failure "inner-name-collision" \
+assert_compile_failure "nested-ambiguity-at-reference" \
 	"$ROOT/tests/negative/n25_inner_name_collision_negative_test.spec" \
-	"Same-named inner class 'Dup' declared under more than one enclosing class"
+	"Type 'Helper' is provided by LibA:Helper and LibB:Helper; qualify the reference"
 
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \

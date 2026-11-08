@@ -50,6 +50,17 @@ Class is TypeChecker{
 	## Registered classes: name -> "true".
 	local Map of String to String is registeredClasses: Map:init();
 
+	## FUNCTIONS.md Part IV IV.2c: the per-scope nested-type map — bare
+	## nested-class name -> ';'-joined qualified identities visible in
+	## [nestedScopeFor]. Built once per scope (own nested classes, the
+	## as-imported classes' nested classes, the base lattice), cleared and
+	## rebuilt when the scope changes; the per-reference cost is one
+	## lookup.
+	local Map of String to String is nestedScopeMap: Map:init();
+
+	## The scope [nestedScopeMap] was built for ('' initially).
+	local String is nestedScopeFor: '';
+
 	## All enum type names in the program.
 	local Map of String to String is allEnumNames: Map:init();
 
@@ -134,6 +145,8 @@ Class is TypeChecker{
 		self:localVars: Map:init();
 		self:fieldTypes: Map:init();
 		self:unassignedFields: Map:init();
+		self:nestedScopeMap: Map:init();
+		self:nestedScopeFor: '';
 		self:currentLine: 0;
 		self:currentSourceFile: '';
 	}
@@ -1094,6 +1107,96 @@ Class is TypeChecker{
 		});
 	}
 
+	## FUNCTIONS.md Part IV IV.2c (phase 3): the per-scope nested-type
+	## map. Built once for [className] — own nested classes, the
+	## as-imported classes' nested classes, then the base lattice (the
+	## outer link serves the inner-of-inner walk) — so a bare nested
+	## reference resolves with ONE lookup instead of a per-type lattice
+	## walk. [nestedScopeMap] is cleared and rebuilt when the scope
+	## changes, keeping the working set small.
+	##
+	## @param className: The class whose scope resolves the reference.
+	## @param typeName: The bare nested-class name sought.
+	## @return: The ';'-joined qualified identities, or '' when none.
+	Function of String is nestedScopeResolve(String is className, String is typeName){
+		Conditional:if(check: { self:nestedScopeFor != className }, then: {
+			self:nestedScopeMap: Map:init();
+			self:nestedScopeFor: className;
+			self:collectNestedScopeEntries(clsName: className, hops: 0);
+		});
+		return self:nestedScopeMap:getString(key: typeName, default: '');
+	}
+
+	## One scope-map pass over the ancestor lattice: every visited class
+	## contributes its own nested classes and its as-imported classes'
+	## nested classes to [nestedScopeMap].
+	##
+	## @param clsName: Class being visited.
+	## @param hops: Recursion budget guard.
+	Function is collectNestedScopeEntries(String is clsName, Int is hops){
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+			return;
+		});
+		local ClassInfo is cls: self:findClass(name: clsName);
+		Conditional:if(check: { cls:name == '' }, then: {
+			return;
+		});
+		# Own nested classes.
+		cls:members:each(action: local Function(Member is m){
+			Conditional:if(check: { m:kind == MemberKind:CLASS }, then: {
+				self:appendNestedScopeEntry(bare: m:nestedClass:name, q: m:nestedClass:qualifiedName());
+			});
+		});
+		# The as-imported classes' nested classes.
+		cls:members:each(action: local Function(Member is m){
+			Conditional:if(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+				m:initExpr:arrayItems:each(action: local Function(Expression is item){
+					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
+						item:arrayItems:each(action: local Function(Expression is seg){
+							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+								local ClassInfo is provCls: self:findClass(name: seg:stringValue);
+								Conditional:if(check: { provCls:name != '' }, then: {
+									provCls:members:each(action: local Function(Member is nm){
+										Conditional:if(check: { nm:kind == MemberKind:CLASS }, then: {
+											self:appendNestedScopeEntry(bare: nm:nestedClass:name, q: nm:nestedClass:qualifiedName());
+										});
+									});
+								});
+							});
+						});
+					});
+				});
+			});
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			self:collectNestedScopeEntries(clsName: baseName, hops: hops + 1);
+		});
+	}
+
+	## Adds one qualified identity under its bare name, deduplicating.
+	##
+	## @param bare: The nested class's bare name (the map key).
+	## @param q: The qualified identity ('Outer:Inner').
+	Function is appendNestedScopeEntry(String is bare, String is q){
+		Conditional:if(check: { bare == '' || q == '' }, then: {
+			return;
+		});
+		local String is cur: self:nestedScopeMap:getString(key: bare, default: '');
+		Conditional:if(check: { cur == '' }, then: {
+			self:nestedScopeMap:set(key: bare, value: q);
+		}, else: {
+			local Boolean is dup: false;
+			cur:split(delimiter: ';'):each(action: local Function(String is got){
+				Conditional:if(check: { got == q }, then: {
+					dup: true;
+				});
+			});
+			Conditional:if(check: { !dup }, then: {
+				self:nestedScopeMap:set(key: bare, value: cur . ';' . q);
+			});
+		});
+	}
+
 	## True when an ancestor of [className] (any parent, transitively)
 	## declares [methodName] as a method. The starting class's own members
 	## are excluded — an overload group on the class itself is legal.
@@ -1376,7 +1479,10 @@ Class is TypeChecker{
 		local Boolean is granted: false;
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !granted && c:sourceFile == sourceFile }, then: {
-				Conditional:if(check: { c:name == targetName }, then: {
+				# IV.2c: the flattened nested classes match their qualified
+				# identity too — the outer's own rewritten references
+				# ('LibA:Helper') grant as the bare declaration does.
+				Conditional:if(check: { c:name == targetName || c:qualifiedName() == targetName }, then: {
 					granted: true;
 					return;
 				});
@@ -1496,6 +1602,32 @@ Class is TypeChecker{
 	Function is validateTypeAccess(Type is t, Int is line){
 		Conditional:if(check: { t:name == '' }, then: {
 			return;
+		});
+		# FUNCTIONS.md Part IV IV.2c (phase 3): the bare nested-class
+		# reference resolves through the per-scope map — one lookup. Exactly
+		# one provider rewrites the type to its qualified identity (the
+		# parent grant covers it downstream); several collide and force the
+		# qualification — the same rule the bare function calls run.
+		Conditional:if(check: { !t:name:contains(needle: ':') }, then: {
+			local String is idents: self:nestedScopeResolve(className: self:currentClassName, typeName: t:name);
+			Conditional:if(check: { idents != '' }, then: {
+				local Array of String is provs: idents:split(delimiter: ';');
+				Conditional:if(check: { provs:length() == 1 }, then: {
+					t:name: provs:get(index: 0);
+				});
+				Conditional:if(check: { provs:length() > 1 }, then: {
+					local String is listed: '';
+					provs:each(action: local Function(String is p){
+						Conditional:if(check: { listed == '' }, then: {
+							listed: p;
+						}, else: {
+							listed: listed . ' and ' . p;
+						});
+					});
+					self:addError(line: line, msg: 'Type \'' . t:name . '\' is provided by ' . listed . '; qualify the reference (FUNCTIONS.md Part IV IV.2c).');
+					return;
+				});
+			});
 		});
 		Conditional:if(check: { self:registeredClasses:has(key: t:name) && !self:classHasAccess(className: self:currentClassName, targetName: t:name) }, then: {
 			self:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration (FUNCTIONS.md §I.6).');
@@ -2769,6 +2901,10 @@ Class is TypeChecker{
 		when (kind) {
 			is StatementKind:VAR_DECL: {
 				local String is varName: stmt:varName;
+				# IV.2c phase 3: the access gate resolves the bare nested
+				# reference BEFORE the scope map stamps it — the checker and
+				# the gen agree on the qualified identity.
+				self:validateTypeAccess(t: stmt:varType, line: stmt:line);
 				local String is fullType: self:formatVarTypeString(t: stmt:varType);
 				self:localVars:set(key: varName, value: fullType);
 
@@ -2776,7 +2912,6 @@ Class is TypeChecker{
 					local String is msg: 'Bare List type requires [T] element syntax.';
 					self:addError(line: stmt:line, msg: msg);
 				});
-				self:validateTypeAccess(t: stmt:varType, line: stmt:line);
 
 				Conditional:if(check: { stmt:hasInit }, then: {
 					# Bidirectional: the declared type flows into the
@@ -3807,17 +3942,19 @@ Class is TypeChecker{
 		program:classes:each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattened);
 		});
-		# FUNCTIONS.md Part IV IV.2: same-named inner classes under
-		# different enclosing classes are distinct by intent but ambiguous
-		# in the flat registry — resolve nothing, name the collision.
+		# FUNCTIONS.md Part IV IV.2c (phase 3): the same-named inner classes
+		# under DIFFERENT enclosing classes are distinct by qualified
+		# identity — the ambiguity moves to the reference (the provider
+		# walk names the providers). The duplicate WITHIN one outer stays
+		# the declaration error.
 		local Map of String to String is innerSeen: Map:init();
 		flattened:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { c:outerName != '' }, then: {
-				Conditional:if(check: { innerSeen:has(key: c:name) }, then: {
-					local String is msg: 'Same-named inner class \'' . c:name . '\' declared under more than one enclosing class (last under \'' . c:outerName . '\'); rename one (FUNCTIONS.md Part IV IV.2).';
+				Conditional:if(check: { innerSeen:has(key: c:qualifiedName()) }, then: {
+					local String is msg: 'Inner class \'' . c:qualifiedName() . '\' is declared more than once in \'' . c:outerName . '\'; rename one (FUNCTIONS.md Part IV IV.2c).';
 					self:addError(line: c:line, msg: msg);
 				}, else: {
-					innerSeen:set(key: c:name, value: c:outerName);
+					innerSeen:set(key: c:qualifiedName(), value: c:outerName);
 				});
 			});
 		});
