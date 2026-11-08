@@ -40261,7 +40261,7 @@ _br_424; }));
 	};
 	    return;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -40401,7 +40401,7 @@ _br_428; }));
 	};
 	    break;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -40541,7 +40541,7 @@ _br_433; }));
 	};
 	    return;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -40699,7 +40699,7 @@ _br_437; }));
 	};
 	    break;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -40885,7 +40885,7 @@ _br_445; }));
 	};
 	    return;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -41025,7 +41025,7 @@ _br_449; }));
 	};
 	    break;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -41165,7 +41165,7 @@ _br_454; }));
 	};
 	    return;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -60069,7 +60069,7 @@ String TypeChecker_displayType(TypeChecker* self, String t) {
         if (!_ev_334) break;
         bool _it_334 = true;
         do {
-    if (spec_string_equals(spec_string_substring(t, i, ((i) + (9))), spec_string_intern("Function:"))) {
+    if (((((((i) + (9))) <= (spec_string_length(t)))) && (spec_string_equals(spec_string_substring(t, i, ((i) + (9))), spec_string_intern("Function:"))))) {
 	    out = spec_string_concat(out, spec_string_intern("Function of "));
 	    i = ((i) + (9));
 	} else {
@@ -60722,7 +60722,7 @@ _br_458; }));
 	};
 	    break;
 	};
-	    if (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))) {
+	    if ((((!spec_string_equals(subM->name, spec_string_intern("init")))) && (((spec_array_length(subM->params)) != (spec_array_length(parentM->params)))))) {
 	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Method '"))), subM->name), spec_string_intern("' in class '")), classDef->name), spec_string_intern("' parameter count mismatch with ancestor in '")), baseName), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[48]))((TypeChecker*)self, subM->line, msg);
     if (msg) { spec_release((void*)msg); msg = NULL; }

@@ -2848,7 +2848,7 @@ Class is TypeChecker{
 				return i < t:length();
 			},
 			iteration: local Function(){
-				Conditional:if(check: { t:substring(start: i, end: i + 9) == 'Function:' }, then: {
+				Conditional:if(check: { i + 9 <= t:length() && t:substring(start: i, end: i + 9) == 'Function:' }, then: {
 					out: out . 'Function of ';
 					i: i + 9;
 				}, else: {
@@ -3388,7 +3388,11 @@ Class is TypeChecker{
 									});
 									return;
 								});
-								Conditional:if(check: { subM:params:length() != parentM:params:length() }, then: {
+								# FUNCTIONS.md Part IV IV.2: constructors are per-class — they are not
+									# polymorphic, so an init never needs to match an ancestor's
+									# signature (inner classes inherit their enclosing class,
+									# whose init differs by design).
+								Conditional:if(check: { subM:name != 'init' && subM:params:length() != parentM:params:length() }, then: {
 									local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' parameter count mismatch with ancestor in \'' . baseName . '\'.';
 									self:addError(line: subM:line, msg: msg);
 								}, else: {
