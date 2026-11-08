@@ -21,13 +21,13 @@ Class is SyntacticSugarTest{
 
 		# 2. Test 'is' equality operator
 		local String is status: 'OK';
-		if (status is 'OK') {
+		Conditional:branch(check: { status is 'OK' }, then: {
 			Output:line('is operator (string match): true');
-		}
+		});
 		local Int is count: 10;
-		if (count is 10) {
+		Conditional:branch(check: { count is 10 }, then: {
 			Output:line('is operator (int match): true');
-		}
+		});
 
 		# 3. Test String helper inspection methods
 		local String is multiline: "Line 1\n  Line 2\n\tLine 3";
@@ -43,9 +43,9 @@ Class is SyntacticSugarTest{
 		Output:line('Count leading spaces: ' . spaceCount);
 
 		local String is prefixTest: '#! Package base';
-		if (prefixTest:startsWith(prefix: '#!')) {
+		Conditional:branch(check: { prefixTest:startsWith(prefix: '#!') }, then: {
 			Output:line('startsWith \'#!\': true');
-		}
+		});
 
 		# 4. Test Array higher-order methods with anonymous functions
 		local Array of String is words: ['apple', 'banana', 'cherry', 'avocado'];
@@ -116,6 +116,7 @@ Class is SyntacticSugarTest{
 Class is Issue{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()],
 		['base', 'iterator', as While()]
 	];

@@ -33,11 +33,11 @@ Class is ParallelAtomicsTest{
 			return count;
 		};
 		local Int is total: Parallel:run(threads: 4, iterations: 1000, worker: counter);
-		if (total == 1000) {
+		Conditional:branch(check: { total == 1000 }, then: {
 			Output:line('[PASS] parallel sum: 4 threads over 1000 = 1000');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] parallel sum: expected 1000, got ' . total);
-		}
+		});
 
 		# Case 2: thread indices cover 0..N-1 exactly (atomic counters per thread).
 		Process:atomicPut(slot: 40, value: 0);
@@ -47,11 +47,11 @@ Class is ParallelAtomicsTest{
 		};
 		Parallel:run(threads: 4, iterations: 4, worker: marker);
 		local Int is indexSum: Process:atomicGet(slot: 40);
-		if (indexSum == 10) {
+		Conditional:branch(check: { indexSum == 10 }, then: {
 			Output:line('[PASS] thread indices: 1+2+3+4 = 10');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] thread indices: expected 10, got ' . indexSum);
-		}
+		});
 
 		# Case 3: concurrent atomic add is exact.
 		Process:atomicPut(slot: 41, value: 0);
@@ -68,11 +68,11 @@ Class is ParallelAtomicsTest{
 		};
 		Parallel:run(threads: 4, iterations: 400, worker: adder);
 		local Int is added: Process:atomicGet(slot: 41);
-		if (added == 400) {
+		Conditional:branch(check: { added == 400 }, then: {
 			Output:line('[PASS] concurrent atomicAdd: 400 of 400 increments');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] concurrent atomicAdd: expected 400, got ' . added);
-		}
+		});
 
 		# Case 4: fastRandom range and variance.
 		local Int is inRange: 0;
@@ -83,21 +83,21 @@ Class is ParallelAtomicsTest{
 			evaluate: local Function of Boolean(){ return k < 1000; },
 			iteration: local Function(){
 				local Float is r: Math:fastRandom();
-				if (r >= 0.0 && r < 1.0) {
+				Conditional:branch(check: { r >= 0.0 && r < 1.0 }, then: {
 					inRange: inRange + 1;
-				}
-				if (r != last) {
+				});
+				Conditional:branch(check: { r != last }, then: {
 					distinct: distinct + 1;
-				}
+				});
 				last: r;
 				k: k + 1;
 			}
 		);
-		if (inRange == 1000 && distinct > 990) {
+		Conditional:branch(check: { inRange == 1000 && distinct > 990 }, then: {
 			Output:line('[PASS] fastRandom: 1000 in range, ' . distinct . ' distinct');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] fastRandom: ' . inRange . ' in range, ' . distinct . ' distinct');
-		}
+		});
 
 		Output:line('=== End Parallel & Atomics ===');
 	}

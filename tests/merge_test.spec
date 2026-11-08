@@ -37,6 +37,7 @@ Class of MergeBase is MergeChild{
 Class is MergeTest{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 
@@ -47,35 +48,35 @@ Class is MergeTest{
 
 		# Case 1: merged array contains parent item first.
 		local String is first: child:tags:get(index: 0);
-		if (first == 'core') {
+		Conditional:branch(check: { first == 'core' }, then: {
 			Output:line('[PASS] merge fold order: tags[0] = core');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] merge fold order: expected core, got ' . first);
-		}
+		});
 
 		# Case 2: merged array appends child item.
 		local String is second: child:tags:get(index: 1);
-		if (second == 'extended') {
+		Conditional:branch(check: { second == 'extended' }, then: {
 			Output:line('[PASS] merge fold append: tags[1] = extended');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] merge fold append: expected extended, got ' . second);
-		}
+		});
 
 		# Case 3: merged length is parent + child.
 		local Int is count: child:tags:length();
-		if (count == 2) {
+		Conditional:branch(check: { count == 2 }, then: {
 			Output:line('[PASS] merge fold length: tags length = 2');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] merge fold length: expected 2, got ' . count);
-		}
+		});
 
 		# Case 4: `merge` did not disturb normal override semantics.
 		local Int is value: child:baseValue();
-		if (value == 20) {
+		Conditional:branch(check: { value == 20 }, then: {
 			Output:line('[PASS] replace alongside merge: baseValue = 20');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] replace alongside merge: expected 20, got ' . value);
-		}
+		});
 
 		Output:line('=== End Merge Modifier Regression ===');
 	}

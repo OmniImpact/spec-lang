@@ -1,6 +1,7 @@
 Class is MultiFileTest{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'math'],
@@ -35,10 +36,10 @@ Class is MultiFileTest{
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			app:counter: app:counter + 1;
-			if (app:counter == 5) {
+			Conditional:branch(check: { app:counter == 5 }, then: {
 				Output:line('Stop reached at counter = ' . app:counter);
 				return false;
-			}
+			});
 			return true;
 		}
 	}
