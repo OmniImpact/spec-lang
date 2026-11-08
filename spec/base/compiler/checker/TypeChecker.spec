@@ -2028,6 +2028,13 @@ Class is TypeChecker{
 				self:checkingValueYield: false;
 
 				Conditional:if(check: { !self:inBranchClosure }, then: {
+					# FUNCTIONS.md Part IV V1: the bidirectional closure typing —
+					# a closure literal assigned into a `Function of X` context
+					# types its body against X, so its own type comes out
+					# `Function of X` and the narrowed param accepts it.
+					Conditional:if(check: { expected:startsWith(prefix: 'Function:') && self:isVoid(t: expr:anonReturnType:name) }, then: {
+						expr:anonReturnType: Type:init(name: expected:substring(start: 9, end: expected:length()));
+					});
 					self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
 				});
 				expr:anonParams:each(action: local Function(Parameter is p){
@@ -2182,13 +2189,23 @@ Class is TypeChecker{
 				# closures (args 1+) of a Conditional call keep the enclosing
 				# method's return type (FUNCTIONS.md Part II).
 				local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
+				# FUNCTIONS.md Part IV: the bare form carries the value-yield
+				# semantics exactly like the qualified call.
+				local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
 				local Int is bareIdx: 0;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					Conditional:if(check: { bareIsBranch && bareIdx >= 1 }, then: {
 						self:inBranchClosure: true;
+						self:inValueBranch: bareIsValue;
+						self:currentYieldExpected: '';
+						Conditional:if(check: { bareIsValue }, then: {
+							self:currentYieldExpected: expected;
+						});
 					});
 					self:inferExpressionType(expr: arg:value);
 					self:inBranchClosure: false;
+					self:inValueBranch: false;
+					self:currentYieldExpected: '';
 					bareIdx: bareIdx + 1;
 				});
 				self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
@@ -2196,6 +2213,25 @@ Class is TypeChecker{
 				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
 				Conditional:if(check: { providerRet == '' }, then: {
 					providerRet: 'Any';
+				});
+				Conditional:if(check: { bareIsValue }, then: {
+					local Expression is bareThen: expr:argValue(index: 1);
+					local Expression is bareElse: expr:argValue(index: 2);
+					local String is bareThenT: bareThen:anonReturnType:name;
+					local String is bareElseT: bareElse:anonReturnType:name;
+					Conditional:if(check: { self:isVoid(t: bareThenT) || self:isVoid(t: bareElseT) }, then: {
+						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (FUNCTIONS.md Part II).');
+						res: 'void';
+					}, else: {
+						Conditional:if(check: { !self:isAssignable(target: bareThenT, source: bareElseT) && !self:isAssignable(target: bareElseT, source: bareThenT) }, then: {
+							self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . bareThenT . '\' and \''. bareElseT . '\'.');
+							res: bareThenT;
+						}, else: {
+							res: Conditional:if(check: { bareThenT == Primitive:ANY:value() }, then: { bareElseT }, else: { bareThenT });
+						});
+					});
+					expr:resolvedType: res;
+					return res;
 				});
 				res: providerRet;
 				expr:resolvedType: res;

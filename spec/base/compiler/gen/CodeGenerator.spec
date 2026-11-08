@@ -3640,16 +3640,15 @@ Class is CodeGenerator{
 				local String is retC: self:generateExpression(expr: st:returnExpr);
 				self:argMode: savedArg;
 				Conditional:if(check: { self:isArcType(typeName: yieldT) }, then: {
-					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: st:returnExpr:stringValue);
-					Conditional:if(check: { ownedLocal }, then: {
-						local String is identC: self:utils:cIdent(name: st:returnExpr:stringValue);
-						retC: '(' . yieldCType . ')({ ' . yieldCType . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
+					# FUNCTIONS.md Part IV V2: a yield does not end the enclosing
+					# scope — the source local may be read after the
+					# if-expression, so the yield RETAINS (the ARC-safe copy)
+					# instead of the return path's ownership NULL-swap. A fresh
+					# allocation flows unclaimed into the result variable.
+					Conditional:if(check: { self:isFreshConstructorCall(expr: st:returnExpr) }, then: {
+						retC: '(' . yieldCType . ')(' . retC . ')';
 					}, else: {
-						Conditional:if(check: { self:isFreshConstructorCall(expr: st:returnExpr) }, then: {
-							retC: '(' . yieldCType . ')(' . retC . ')';
-						}, else: {
-							retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
-						});
+						retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
 					});
 				});
 				bodyC: bodyC . "\t" . yieldVar . ' = ' . retC . ";\n";
