@@ -121,25 +121,48 @@ Class is DeclarationGenerator{
 	## @param allClasses: The full program classes (base lookup).
 	## @param acc: Output field list.
 	Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
+		local Array of Member is ignoredOuter: [];
+		self:collectStructFieldsSplit(c: c, allClasses: allClasses, acc: acc, outerAcc: ignoredOuter, fromOuterLink: false);
+	}
+
+	## FUNCTIONS.md Part IV IV.2: the struct-field collection with the
+	## outer-link split — the fields reached through the OUTER chain (the
+	## inner-class link) accumulate into [outerAcc]; the declared-of
+	## lattice and the class's own fields into [acc]. The construction
+	## expressions run for [acc] only; [outerAcc] zero-inits.
+	##
+	## @param c: The class.
+	## @param allClasses: The full program classes (base lookup).
+	## @param acc: The declared-of + own field list.
+	## @param outerAcc: The outer-link field list.
+	## @param fromOuterLink: True when [c] was reached through the outer chain.
+	Function is collectStructFieldsSplit(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc, Array of Member is outerAcc, Boolean is fromOuterLink){
+		local Array of Member is target: acc;
+		Conditional:if(check: { fromOuterLink }, then: {
+			target: outerAcc;
+		});
 		c:baseClasses:each(action: local Function(String is baseName){
+			# FUNCTIONS.md Part IV IV.2: the base is the outer-link relation
+			# when its name appears in this class's outer chain.
+			local Boolean is baseIsOuter: c:outerName != '' && (c:outerName == baseName || c:outerName:contains(needle: ':' . baseName));
 			allClasses:each(action: local Function(ClassInfo is cand){
 				Conditional:if(check: { cand:name == baseName }, then: {
-					self:collectStructFields(c: cand, allClasses: allClasses, acc: acc);
+					self:collectStructFieldsSplit(c: cand, allClasses: allClasses, acc: acc, outerAcc: outerAcc, fromOuterLink: baseIsOuter);
 				});
 			});
 		});
 		c:members:each(action: local Function(Member is m){
 			when (m:kind) {
 				is MemberKind:FIELD: {
-					# Declarative metadata (namespace/using/group/castable)
+					# Declarative metadata (namespace/using/castable)
 					# never becomes a struct field.
 					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
 						m:name != MetadataField:CASTABLE:value() }, then: {
-						local Int is existing: self:fieldIndexNamed(list: acc, name: m:name);
+						local Int is existing: self:fieldIndexNamed(list: target, name: m:name);
 						Conditional:if(check: { existing >= 0 }, then: {
-							acc:set(index: existing, item: m);
+							target:set(index: existing, item: m);
 						}, else: {
-							acc:add(item: m);
+							target:add(item: m);
 						});
 					});
 				}
@@ -429,8 +452,12 @@ Class is DeclarationGenerator{
 				out: out . "    const char* _type_name;\n";
 				out: out . "    void** _vtable;\n";
 				local Array of Member is allFields: [];
-				self:collectStructFields(c: c, allClasses: classes, acc: allFields);
+				local Array of Member is outerFields: [];
+				self:collectStructFieldsSplit(c: c, allClasses: classes, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
 				allFields:each(action: local Function(Member is m){
+					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
+				});
+				outerFields:each(action: local Function(Member is m){
 					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
 				});
 				out: out . "};\n\n";

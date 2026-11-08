@@ -3388,11 +3388,16 @@ Class is TypeChecker{
 									});
 									return;
 								});
-								# FUNCTIONS.md Part IV IV.2: constructors are per-class — they are not
-									# polymorphic, so an init never needs to match an ancestor's
-									# signature (inner classes inherit their enclosing class,
-									# whose init differs by design).
-								Conditional:if(check: { subM:name != 'init' && subM:params:length() != parentM:params:length() }, then: {
+								# FUNCTIONS.md Part IV IV.2: constructors are per-class —
+								# they are not polymorphic. An init never enters the
+								# ancestor signature/return compatibility checks at all
+								# (inner classes inherit their enclosing class, whose
+								# init differs by design — and whose parameter list may
+								# be empty, so the param-merge below cannot run on it).
+								Conditional:if(check: { subM:name == 'init' }, then: {
+									return;
+								});
+								Conditional:if(check: { subM:params:length() != parentM:params:length() }, then: {
 									local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' parameter count mismatch with ancestor in \'' . baseName . '\'.';
 									self:addError(line: subM:line, msg: msg);
 								}, else: {

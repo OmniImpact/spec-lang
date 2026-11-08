@@ -641,6 +641,41 @@ Class is Loader{
 					self:synthesizeInto(classes: one);
 				});
 			});
+			# FUNCTIONS.md Part IV IV.2: an inner class inherits the enclosing
+			# chain's as-imports — its instances carry their own synthesized
+			# fields, so the inherited functions dispatch on the inner.
+			self:synthesizeInheritedImports(cls: c, hops: 0);
+		});
+	}
+
+	## Walks [cls]'s base lattice and synthesizes each ancestor's as-entries
+	## onto [cls] itself (deduplicated per target by the field-presence
+	## check in synthesizeFor).
+	##
+	## @param cls: The class receiving the inherited imports.
+	## @param hops: Recursion budget guard.
+	Function is synthesizeInheritedImports(ClassInfo is cls, Int is hops){
+		Conditional:if(check: { hops >= 16 }, then: {
+			return;
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			local ClassInfo is base: self:findLoadedClass(name: baseName);
+			Conditional:if(check: { base:name != '' }, then: {
+				base:members:each(action: local Function(Member is m){
+					Conditional:if(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+						m:initExpr:arrayItems:each(action: local Function(Expression is item){
+							Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
+								item:arrayItems:each(action: local Function(Expression is seg){
+									Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+										self:synthesizeFor(c: cls, asExpr: seg);
+									});
+								});
+							});
+						});
+					});
+				});
+				self:synthesizeInheritedImports(cls: base, hops: hops + 1);
+			});
 		});
 	}
 
@@ -662,18 +697,30 @@ Class is Loader{
 		});
 		local String is fieldName: '_import_' . targetName;
 		local Int is idx: 0;
+		local Boolean is already: false;
 		local Array of Member is members: c:members;
 		While:condition(
 			evaluate: local Function of Boolean(){ return idx < members:length(); },
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);
 				Conditional:if(check: { m:name == fieldName }, then: {
-					self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
+					# FUNCTIONS.md Part IV IV.2: an inherited-import synthesis
+					# finds the field already synthesized from the class's own
+					# using (or a prior ancestor hop) — deduplicate silently. A
+					# DECLARED member with that name is still a collision.
+					Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasInit && m:initExpr:kind == ExpressionKind:CALL }, then: {
+						already: true;
+					}, else: {
+						self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
+					});
 				});
 				idx: idx + 1;
 				return true;
 			}
 		);
+		Conditional:if(check: { already }, then: {
+			return;
+		});
 		local Member is field: Member:init(kind: MemberKind:FIELD);
 		field:name: fieldName;
 		field:memberType: Type:init(name: targetName);

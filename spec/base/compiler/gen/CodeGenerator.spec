@@ -3081,8 +3081,12 @@ Class is CodeGenerator{
 				self:currentClassName: c:name;
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
-				self:declGen:collectStructFields(c: c, allClasses: flattenedClasses, acc: allFields);
+				local Array of Member is outerFields: [];
+				self:declGen:collectStructFieldsSplit(c: c, allClasses: flattenedClasses, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
 				allFields:each(action: local Function(Member is m){
+					self:fieldTypes:set(key: m:name, value: self:formatTypeString(t: m:memberType));
+				});
+				outerFields:each(action: local Function(Member is m){
 					self:fieldTypes:set(key: m:name, value: self:formatTypeString(t: m:memberType));
 				});
 
@@ -3233,8 +3237,12 @@ Class is CodeGenerator{
 				self:currentClassName: c:name;
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
-				self:declGen:collectStructFields(c: c, allClasses: classes, acc: allFields);
+				local Array of Member is outerFields: [];
+				self:declGen:collectStructFieldsSplit(c: c, allClasses: classes, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
 				allFields:each(action: local Function(Member is f){
+					self:fieldTypes:set(key: f:name, value: self:formatTypeString(t: f:memberType));
+				});
+				outerFields:each(action: local Function(Member is f){
 					self:fieldTypes:set(key: f:name, value: self:formatTypeString(t: f:memberType));
 				});
 
@@ -3242,6 +3250,12 @@ Class is CodeGenerator{
 				out: out . '    ' . c:name . '* self = (' . c:name . "*)self_ptr;\n";
 				out: out . "    if (!self) return;\n";
 				allFields:each(action: local Function(Member is m){
+					local String is ft: m:memberType:name;
+					Conditional:if(check: { self:isArcType(typeName: ft) }, then: {
+						out: out . '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n";
+					});
+				});
+				outerFields:each(action: local Function(Member is m){
 					local String is ft: m:memberType:name;
 					Conditional:if(check: { self:isArcType(typeName: ft) }, then: {
 						out: out . '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n";
@@ -3268,6 +3282,11 @@ Class is CodeGenerator{
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
 					out: out . '    self->_vtable = ' . c:name . "_vtable;\n";
 				});
+				# FUNCTIONS.md Part IV IV.2: the construction expressions run for
+				# the declared-of + own fields; the OUTER-link fields zero-init
+				# (an inner instance starts with an empty parent-part — the
+				# enclosing class's containers must not allocate per inner
+				# instantiation: the hot-path scan loops).
 				allFields:each(action: local Function(Member is m){
 					Conditional:if(check: { m:hasInit }, then: {
 						local Boolean is savedArgFi: self:argMode;
@@ -3279,6 +3298,13 @@ Class is CodeGenerator{
 							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
 						});
 						out: out . '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n";
+					});
+				});
+				outerFields:each(action: local Function(Member is m){
+					Conditional:if(check: { self:isArcType(typeName: m:memberType:name) }, then: {
+						out: out . '    self->' . self:utils:cIdent(name: m:name) . " = NULL;\n";
+					}, else: {
+						out: out . '    self->' . self:utils:cIdent(name: m:name) . " = 0;\n";
 					});
 				});
 				out: out . "    return self;\n}\n\n";

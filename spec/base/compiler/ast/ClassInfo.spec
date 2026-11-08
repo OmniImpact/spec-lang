@@ -122,6 +122,24 @@ Class is ClassInfo{
 	## FUNCTIONS.md Part IV IV.2: records the qualified enclosing chain.
 	##
 	## @param name: 'Outer' or 'Outer:Mid'.
+	## FUNCTIONS.md Part IV IV.2: true when [member] is declared directly
+	## by THIS class (identity compare) — as opposed to inherited through
+	## the base lattice. The constructor emission uses it to run the
+	## construction expressions for own fields only; inherited fields
+	## start empty on inner instances.
+	##
+	## @param member: The flattened-field member.
+	## @return: true when declared by this class.
+	Function of Boolean is declaresMember(Member is member){
+		local Boolean is found: false;
+		self:members:each(action: local Function(Member is m){
+			Conditional:if(check: { !found && m == member }, then: {
+				found: true;
+			});
+		});
+		return found;
+	}
+
 	Function is setOuter(String is name){
 		self:outerName: name;
 	}

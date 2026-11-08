@@ -262,7 +262,30 @@ Class is Parser{
 	Function of ProgramNode is parseProgram(){
 		local Array of ClassInfo is classes: [];
 		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
+		self:linkNestedClasses(classes: classes);
 		return ProgramNode:init(classes: classes);
+	}
+
+	## FUNCTIONS.md Part IV IV.2: links nested classes to their enclosing
+	## class — the qualified outer chain (outerName) and the parent link
+	## (the outer appended to baseClasses), so the standard lattice walks
+	## serve inner classes. Recurses through the nesting.
+	##
+	## @param classes: The classes at this nesting level.
+	Function is linkNestedClasses(Array of ClassInfo is classes){
+		classes:each(action: local Function(ClassInfo is c){
+			local String is qualifiedOuter: c:name;
+			Conditional:if(check: { c:outerName != '' }, then: {
+				qualifiedOuter: c:outerName . ':' . c:name;
+			});
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:CLASS }, then: {
+					m:nestedClass:setOuter(name: qualifiedOuter);
+					m:nestedClass:baseClasses:add(item: c:name);
+					self:linkNestedClasses(classes: [m:nestedClass]);
+				});
+			});
+		});
 	}
 
 	## True when the cursor sits on a class declaration header. `Class` is
