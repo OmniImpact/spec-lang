@@ -296,10 +296,25 @@ Class is TypeChecker{
 		Conditional:if(check: { target == 'Float' && source == Primitive:INT:value() }, then: {
 			return true;
 		});
-		# Function types are mutually compatible across signatures
-		# (higher-order parameters accept any callable of the shape).
+		# FUNCTIONS.md Part IV V1: Function assignability is directional. A
+		# typed closure feeds an untyped param (covariance — the callback
+		# idiom); a TYPED param accepts only a closure promising the same
+		# return type. A void or differently-typed closure would read
+		# garbage through the typed invocation (the check closure's bool
+		# cast), so the narrowing direction rejects.
 		Conditional:if(check: { target:startsWith(prefix: 'Function') && source:startsWith(prefix: 'Function') }, then: {
-			return true;
+			Conditional:if(check: { !target:startsWith(prefix: 'Function:') }, then: {
+				return true;
+			});
+			Conditional:if(check: { !source:startsWith(prefix: 'Function:') }, then: {
+				return false;
+			});
+			local String is tRet: target:substring(start: 9, end: target:length());
+			local String is sRet: source:substring(start: 9, end: source:length());
+			Conditional:if(check: { tRet == sRet || tRet == Primitive:ANY:value() || sRet == Primitive:ANY:value() }, then: {
+				return true;
+			});
+			return false;
 		});
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
 		Conditional:if(check: { curCls:typeParams:indexOf(search: target, default: -1) >= 0 || curCls:typeParams:indexOf(search: source, default: -1) >= 0 }, then: {
@@ -519,6 +534,14 @@ Class is TypeChecker{
 		params:each(action: local Function(Parameter is p){
 			local String is pName: p:name;
 			local String is pT: p:paramType:name;
+			# FUNCTIONS.md Part IV V1: a Function-typed param enforces
+			# assignability in the colon form — the raw name would broaden
+			# every Function param to plain Function (the void-into-check
+			# hole).
+			local String is pTF: pT;
+			Conditional:if(check: { pT:startsWith(prefix: 'Function') }, then: {
+				pTF: self:formatVarTypeString(t: p:paramType);
+			});
 			Conditional:if(check: { pT != self:names:selfFieldMarker() && pT != Primitive:ANY:value() && pT != '' && recvTypeParams:indexOf(search: pT, default: -1) < 0 }, then: {
 				local Expression is matchedValue: Expression:init(kind: ExpressionKind:UNKNOWN);
 				local Boolean is found: false;
@@ -540,9 +563,9 @@ Class is TypeChecker{
 				});
 				Conditional:if(check: { found }, then: {
 					local String is argT: matchedValue:resolvedType;
-					Conditional:if(check: { argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT) }, then: {
+					Conditional:if(check: { argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pTF, source: argT) }, then: {
 						local String is label: Conditional:if(check: { pName != '' }, then: { pName }, else: { 'position ' . (pIdx + 1) });
-						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
+						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pTF . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				}, else: {
@@ -847,7 +870,14 @@ Class is TypeChecker{
 					found: true;
 				});
 			});
-			Conditional:if(check: { !found || bound:resolvedType == '' || bound:resolvedType != p:paramType:name }, then: {
+			# FUNCTIONS.md Part IV V1: a Function-typed param compares in the
+			# colon form ('Function of Boolean' -> 'Function:Boolean') — the
+			# raw name erases the return type and matches every closure.
+			local String is pT: p:paramType:name;
+			Conditional:if(check: { pT:startsWith(prefix: 'Function') }, then: {
+				pT: self:formatVarTypeString(t: p:paramType);
+			});
+			Conditional:if(check: { !found || bound:resolvedType == '' || bound:resolvedType != pT }, then: {
 				allMatch: false;
 			});
 			posIdx: posIdx + 1;

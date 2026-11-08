@@ -34485,6 +34485,10 @@ static __attribute__((unused)) void _anon_fn_81(void* _env_ptr, Parameter* p) {
     (void)callExpr;
     SPEC_AUTO String pName = spec_construct_string(p->name);
     SPEC_AUTO String pT = spec_construct_string(p->paramType->name);
+    SPEC_AUTO String pTF = spec_construct_string(pT);
+    if (String_startsWith(pT, spec_string_intern("Function"))) {
+	    spec_assign((void**)&pTF, (void*)((((String (*)(TypeChecker*, Type*))self->_vtable[138]))((TypeChecker*)self, p->paramType)));
+	};
     if ((((((((!spec_string_equals(pT, WellKnown_selfFieldMarker(self->names) /* inst:WellKnown:selfFieldMarker */))) && ((!spec_string_equals(pT, Primitive_value(Primitive_ANY)))))) && ((!spec_string_equals(pT, spec_string_intern("")))))) && (((Array_indexOf(recvTypeParams, pT, (-(1)))) < (0))))) {
 	    SPEC_AUTO Expression* matchedValue = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; })));
 	    bool found = false;
@@ -34512,7 +34516,7 @@ static __attribute__((unused)) void _anon_fn_81(void* _env_ptr, Parameter* p) {
 	};
 	    if (found) {
 	    SPEC_AUTO String argT = spec_construct_string(matchedValue->resolvedType);
-	    if ((((((!spec_string_equals(argT, spec_string_intern("")))) && ((!spec_string_equals(argT, Primitive_value(Primitive_ANY)))))) && ((!(TypeChecker_isAssignable(self, pT, argT) /* inst:TypeChecker:isAssignable */))))) {
+	    if ((((((!spec_string_equals(argT, spec_string_intern("")))) && ((!spec_string_equals(argT, Primitive_value(Primitive_ANY)))))) && ((!(TypeChecker_isAssignable(self, pTF, argT) /* inst:TypeChecker:isAssignable */))))) {
 	    SPEC_AUTO String label = spec_construct_string(({ String _br_86;
 if ((!spec_string_equals(pName, spec_string_intern("")))) {
 	_br_86 = (String)({ String _ret_val = pName; pName = NULL; _ret_val; });
@@ -34520,7 +34524,7 @@ if ((!spec_string_equals(pName, spec_string_intern("")))) {
 	_br_86 = (String)spec_retain((void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("position "))), spec_to_string_int(((pIdx) + (1))))));
 	}
 _br_86; }));
-	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Argument '"))), label), spec_string_intern("' for '")), baseClassName), spec_string_intern(".")), callExpr->methodName), spec_string_intern("': cannot assign '")), argT), spec_string_intern("' to '")), pT), spec_string_intern("'."));
+	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Argument '"))), label), spec_string_intern("' for '")), baseClassName), spec_string_intern(".")), callExpr->methodName), spec_string_intern("': cannot assign '")), argT), spec_string_intern("' to '")), pTF), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[47]))((TypeChecker*)self, self->currentLine, msg);
     if (label) { spec_release((void*)label); label = NULL; }
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -35125,6 +35129,7 @@ static __attribute__((unused)) void _anon_fn_125(void* _env_ptr, NamedArg* a) {
 }
 
 typedef struct {
+    TypeChecker* self;
     Expression* expr;
     long long posIdx;
     Member* m;
@@ -35134,6 +35139,7 @@ typedef struct {
 static __attribute__((unused)) void _destroy_env_anon_124(void* _env_ptr) {
     if (!_env_ptr) return;
     _Env_anon_124* _env = (_Env_anon_124*)_env_ptr;
+    if (_env->self) spec_release((void*)_env->self);
     if (_env->expr) spec_release((void*)_env->expr);
     if (_env->m) spec_release((void*)_env->m);
     free(_env);
@@ -35141,6 +35147,8 @@ static __attribute__((unused)) void _destroy_env_anon_124(void* _env_ptr) {
 
 static __attribute__((unused)) void _anon_fn_124(void* _env_ptr, Parameter* p) {
     _Env_anon_124* _env = (_Env_anon_124*)_env_ptr;
+    TypeChecker* self = _env->self;
+    (void)self;
     Expression* expr = _env->expr;
     (void)expr;
     long long posIdx = _env->posIdx;
@@ -35170,7 +35178,11 @@ static __attribute__((unused)) void _anon_fn_124(void* _env_ptr, Parameter* p) {
 	};
     if (pa) { spec_release((void*)pa); pa = NULL; }
 	};
-    if ((((((!(found))) || (spec_string_equals(bound->resolvedType, spec_string_intern(""))))) || ((!spec_string_equals(bound->resolvedType, p->paramType->name))))) {
+    SPEC_AUTO String pT = spec_construct_string(p->paramType->name);
+    if (String_startsWith(pT, spec_string_intern("Function"))) {
+	    spec_assign((void**)&pT, (void*)((((String (*)(TypeChecker*, Type*))self->_vtable[138]))((TypeChecker*)self, p->paramType)));
+	};
+    if ((((((!(found))) || (spec_string_equals(bound->resolvedType, spec_string_intern(""))))) || ((!spec_string_equals(bound->resolvedType, pT))))) {
 	    allMatch = false;
 	};
     posIdx = ((posIdx) + (1));
@@ -56812,7 +56824,20 @@ bool TypeChecker_isAssignable(TypeChecker* self, String target, String source) {
 	    return true;
 	};
     if (((String_startsWith(target, spec_string_intern("Function"))) && (String_startsWith(source, spec_string_intern("Function"))))) {
+	    if ((!(String_startsWith(target, spec_string_intern("Function:"))))) {
 	    return true;
+	};
+	    if ((!(String_startsWith(source, spec_string_intern("Function:"))))) {
+	    return false;
+	};
+	    SPEC_AUTO String tRet = spec_string_substring(target, 9, spec_string_length(target));
+	    SPEC_AUTO String sRet = spec_string_substring(source, 9, spec_string_length(source));
+	    if (((((spec_string_equals(tRet, sRet)) || (spec_string_equals(tRet, Primitive_value(Primitive_ANY))))) || (spec_string_equals(sRet, Primitive_value(Primitive_ANY))))) {
+	    return true;
+	};
+	    return false;
+    if (tRet) { spec_release((void*)tRet); tRet = NULL; }
+    if (sRet) { spec_release((void*)sRet); sRet = NULL; }
 	};
     SPEC_AUTO ClassInfo* curCls = (ClassInfo*)(((((ClassInfo* (*)(TypeChecker*, String))self->_vtable[141]))((TypeChecker*)self, self->currentClassName)));
     if (((((Array_indexOf(curCls->typeParams, target, (-(1)))) >= (0))) || (((Array_indexOf(curCls->typeParams, source, (-(1)))) >= (0))))) {
@@ -57060,6 +57085,10 @@ void TypeChecker_checkCallArguments(TypeChecker* self, Expression* callExpr) {
         do {
     SPEC_AUTO String pName = spec_construct_string(p->name);
     SPEC_AUTO String pT = spec_construct_string(p->paramType->name);
+    SPEC_AUTO String pTF = spec_construct_string(pT);
+    if (String_startsWith(pT, spec_string_intern("Function"))) {
+	    spec_assign((void**)&pTF, (void*)((((String (*)(TypeChecker*, Type*))self->_vtable[138]))((TypeChecker*)self, p->paramType)));
+	};
     if ((((((((!spec_string_equals(pT, WellKnown_selfFieldMarker(self->names) /* inst:WellKnown:selfFieldMarker */))) && ((!spec_string_equals(pT, Primitive_value(Primitive_ANY)))))) && ((!spec_string_equals(pT, spec_string_intern("")))))) && (((Array_indexOf(recvTypeParams, pT, (-(1)))) < (0))))) {
 	    SPEC_AUTO Expression* matchedValue = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN); _inst; })));
 	    bool found = false;
@@ -57087,7 +57116,7 @@ void TypeChecker_checkCallArguments(TypeChecker* self, Expression* callExpr) {
 	};
 	    if (found) {
 	    SPEC_AUTO String argT = spec_construct_string(matchedValue->resolvedType);
-	    if ((((((!spec_string_equals(argT, spec_string_intern("")))) && ((!spec_string_equals(argT, Primitive_value(Primitive_ANY)))))) && ((!(TypeChecker_isAssignable(self, pT, argT) /* inst:TypeChecker:isAssignable */))))) {
+	    if ((((((!spec_string_equals(argT, spec_string_intern("")))) && ((!spec_string_equals(argT, Primitive_value(Primitive_ANY)))))) && ((!(TypeChecker_isAssignable(self, pTF, argT) /* inst:TypeChecker:isAssignable */))))) {
 	    SPEC_AUTO String label = spec_construct_string(({ String _br_92;
 if ((!spec_string_equals(pName, spec_string_intern("")))) {
 	_br_92 = (String)({ String _ret_val = pName; pName = NULL; _ret_val; });
@@ -57095,7 +57124,7 @@ if ((!spec_string_equals(pName, spec_string_intern("")))) {
 	_br_92 = (String)spec_retain((void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("position "))), spec_to_string_int(((pIdx) + (1))))));
 	}
 _br_92; }));
-	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Argument '"))), label), spec_string_intern("' for '")), baseClassName), spec_string_intern(".")), callExpr->methodName), spec_string_intern("': cannot assign '")), argT), spec_string_intern("' to '")), pT), spec_string_intern("'."));
+	    SPEC_AUTO String msg = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Argument '"))), label), spec_string_intern("' for '")), baseClassName), spec_string_intern(".")), callExpr->methodName), spec_string_intern("': cannot assign '")), argT), spec_string_intern("' to '")), pTF), spec_string_intern("'."));
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[47]))((TypeChecker*)self, self->currentLine, msg);
     if (label) { spec_release((void*)label); label = NULL; }
     if (msg) { spec_release((void*)msg); msg = NULL; }
@@ -57113,6 +57142,7 @@ _br_92; }));
     pIdx = ((pIdx) + (1));
     if (pName) { spec_release((void*)pName); pName = NULL; }
     if (pT) { spec_release((void*)pT); pT = NULL; }
+    if (pTF) { spec_release((void*)pTF); pTF = NULL; }
         } while (0);
     } } });
     if (targetType) { spec_release((void*)targetType); targetType = NULL; }
@@ -57458,11 +57488,16 @@ bool TypeChecker_exactTypeMatch(TypeChecker* self, Member* m, Expression* expr) 
 	};
     if (pa) { spec_release((void*)pa); pa = NULL; }
 	};
-    if ((((((!(found))) || (spec_string_equals(bound->resolvedType, spec_string_intern(""))))) || ((!spec_string_equals(bound->resolvedType, p->paramType->name))))) {
+    SPEC_AUTO String pT = spec_construct_string(p->paramType->name);
+    if (String_startsWith(pT, spec_string_intern("Function"))) {
+	    spec_assign((void**)&pT, (void*)((((String (*)(TypeChecker*, Type*))self->_vtable[138]))((TypeChecker*)self, p->paramType)));
+	};
+    if ((((((!(found))) || (spec_string_equals(bound->resolvedType, spec_string_intern(""))))) || ((!spec_string_equals(bound->resolvedType, pT))))) {
 	    allMatch = false;
 	};
     posIdx = ((posIdx) + (1));
     if (bound) { spec_release((void*)bound); bound = NULL; }
+    if (pT) { spec_release((void*)pT); pT = NULL; }
         } while (0);
     } } });
     return allMatch;
