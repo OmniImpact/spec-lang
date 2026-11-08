@@ -1501,7 +1501,7 @@ Class is CodeGenerator{
 		local Boolean is claim: false;
 		Conditional:branch(check: { kind == ExpressionKind:CALL }, then: {
 			claim: self:yieldsClaim(expr: expr);
-			Conditional:branch(check: { expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 }, then: {
+			Conditional:branch(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 }, then: {
 				claim: false;
 			});
 		}, otherwise: {
@@ -1988,7 +1988,7 @@ Class is CodeGenerator{
 		# While:condition precedent). The wrapper's own floor call arrives
 		# as a qualified PATH receiver and is excluded, so the fallback
 			# stays honest.
-			Conditional:branch(check: { expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional') }, then: {
+			Conditional:branch(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional') }, then: {
 				local Boolean is shapeOk: expr:argValue(index: 0):kind == ExpressionKind:ANON_FN;
 				local Int is bi: 1;
 				While:condition(

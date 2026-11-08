@@ -2183,7 +2183,7 @@ Class is TypeChecker{
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
-		local Boolean is isBranchCall: expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
+		local Boolean is isBranchCall: (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
 		# FUNCTIONS.md Part II: the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline

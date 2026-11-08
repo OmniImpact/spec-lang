@@ -56455,6 +56455,15 @@ Expression* Parser_parsePrimary(Parser* self) {
         return (Expression*)({ Expression* _ret_val = e; e = NULL; _ret_val; });
     if (e) { spec_release((void*)e); e = NULL; }
     } else if (((Token_getTokenKind(tok) /* inst:Token:getTokenKind */) == (TokenKind_KEYWORD))) {
+        if (((spec_string_equals(Token_getValue(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getValue */, spec_string_intern("if"))) || (spec_string_equals(Token_getValue(Parser_peek(self) /* inst:Parser:peek */) /* inst:Token:getValue */, spec_string_intern("else"))))) {
+	    SPEC_AUTO Token* kwTok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
+	    (((Token* (*)(Parser*))self->_vtable[52]))((Parser*)self);
+	    SPEC_AUTO Expression* kwExpr = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_IDENT); _inst; })));
+	    spec_assign((void**)&kwExpr->stringValue, (void*)(Token_getValue(kwTok) /* inst:Token:getValue */));
+	    return (Expression*)({ Expression* _ret_val = kwExpr; kwExpr = NULL; _ret_val; });
+    if (kwTok) { spec_release((void*)kwTok); kwTok = NULL; }
+    if (kwExpr) { spec_release((void*)kwExpr); kwExpr = NULL; }
+	};
         if (Parser_checkKeyword(self, Keyword_AS) /* inst:Parser:checkKeyword */) {
 	    return (Expression*)spec_retain((void*)(Parser_parseUsingAs(self) /* inst:Parser:parseUsingAs */));
 	};
@@ -59976,7 +59985,7 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     if (ownOwner) { spec_release((void*)ownOwner); ownOwner = NULL; }
     if (bsProviders) { spec_release((void*)bsProviders); bsProviders = NULL; }
 	};
-    bool isBranchCall = ((((((spec_string_equals(expr->methodName, spec_string_intern("branch"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) && (((((((spec_string_equals(targetType, spec_string_intern("Conditional"))) && (((expr->methodTarget->kind) == (ExpressionKind_IDENT))))) || (((((((expr->methodTarget->kind) == (ExpressionKind_IDENT))) && (spec_string_equals(expr->methodTarget->stringValue, WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */)))) && (spec_string_equals(self->currentClassName, spec_string_intern("Conditional"))))))) || (spec_string_equals(expr->bareProvider, spec_string_intern("Conditional"))))));
+    bool isBranchCall = ((((((((spec_string_equals(expr->methodName, spec_string_intern("if"))) || (spec_string_equals(expr->methodName, spec_string_intern("branch"))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) && (((((((spec_string_equals(targetType, spec_string_intern("Conditional"))) && (((expr->methodTarget->kind) == (ExpressionKind_IDENT))))) || (((((((expr->methodTarget->kind) == (ExpressionKind_IDENT))) && (spec_string_equals(expr->methodTarget->stringValue, WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */)))) && (spec_string_equals(self->currentClassName, spec_string_intern("Conditional"))))))) || (spec_string_equals(expr->bareProvider, spec_string_intern("Conditional"))))));
     bool isValueBranch = ((((((((((isBranchCall) && (((Expression_argCount(expr) /* inst:Expression:argCount */) == (3))))) && ((!spec_string_equals(expected, spec_string_intern("")))))) && ((!(TypeChecker_isVoid(self, expected) /* inst:TypeChecker:isVoid */))))) && ((((({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[38]))((Expression*)_recv, 1); }))->kind) == (ExpressionKind_ANON_FN))))) && ((((({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[38]))((Expression*)_recv, 2); }))->kind) == (ExpressionKind_ANON_FN))));
     long long argIdx = 0;
     bool savedBranchFlag = self->inBranchClosure;
@@ -65071,7 +65080,7 @@ String CodeGenerator_generateExpression(CodeGenerator* self, Expression* expr) {
     bool claim = false;
     if (((kind) == (ExpressionKind_CALL))) {
 	    claim = CodeGenerator_yieldsClaim(self, expr) /* inst:CodeGenerator:yieldsClaim */;
-	    if (((((spec_string_equals(expr->methodName, spec_string_intern("branch"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) {
+	    if (((((((spec_string_equals(expr->methodName, spec_string_intern("if"))) || (spec_string_equals(expr->methodName, spec_string_intern("branch"))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) {
 	    claim = false;
 	};
 	} else {
@@ -65592,7 +65601,7 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
     if ((!spec_string_equals(builtinC, spec_string_intern("")))) {
 	    return (String)({ String _ret_val = builtinC; builtinC = NULL; _ret_val; });
 	};
-    if (((((((spec_string_equals(expr->methodName, spec_string_intern("branch"))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) && (((((spec_string_equals(targetC, spec_string_intern("Conditional"))) && (((expr->methodTarget->kind) == (ExpressionKind_IDENT))))) || (spec_string_equals(expr->bareProvider, spec_string_intern("Conditional"))))))) {
+    if (((((((((spec_string_equals(expr->methodName, spec_string_intern("if"))) || (spec_string_equals(expr->methodName, spec_string_intern("branch"))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) >= (2))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) <= (4))))) && (((((spec_string_equals(targetC, spec_string_intern("Conditional"))) && (((expr->methodTarget->kind) == (ExpressionKind_IDENT))))) || (spec_string_equals(expr->bareProvider, spec_string_intern("Conditional"))))))) {
 	    bool shapeOk = (((({ Expression* _recv = (Expression*)(expr); (((Expression* (*)(Expression*, long long))_recv->_vtable[38]))((Expression*)_recv, 0); }))->kind) == (ExpressionKind_ANON_FN));
 	    long long bi = 1;
 	    ({ while (1) {
