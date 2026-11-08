@@ -565,7 +565,7 @@ Class is TypeChecker{
 					local String is argT: matchedValue:resolvedType;
 					Conditional:if(check: { argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pTF, source: argT) }, then: {
 						local String is label: Conditional:if(check: { pName != '' }, then: { pName }, else: { 'position ' . (pIdx + 1) });
-						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pTF . '\'.';
+						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . self:displayType(t: pTF) . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				}, else: {
@@ -2469,7 +2469,16 @@ Class is TypeChecker{
 								Conditional:if(check: { selected:name != '' }, then: {
 									cRet: self:selectedReturnType(className: targetType, selected: selected);
 								});
-								Conditional:if(check: { cRet == '' || self:isVoid(t: cRet) }, then: {
+								# FUNCTIONS.md Part IV V3: a LOADED void declaration keeps
+								# its void — the fallback below is for UNLOADED classes
+								# only. Resolving a void member as the receiver made
+								# every void call lie about its type.
+								Conditional:if(check: { cRet != '' }, then: {
+									res: cRet;
+								}, else: {
+									# Unloaded declaration: resolve from the builtin method table
+									# with element types from the type string.
+									res: targetType;
 									# Unloaded declaration: resolve from the builtin method table
 									# with element types from the type string.
 									res: targetType;
@@ -2504,8 +2513,6 @@ Class is TypeChecker{
 											res: scParts:get(index: 2);
 										});
 									});
-								}, else: {
-									res: cRet;
 								});
 							}, else: {
 								Conditional:if(check: { targetType:startsWith(prefix: 'Array') && method == 'map' }, then: {
@@ -2697,6 +2704,15 @@ Class is TypeChecker{
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr, expected: fullType);
 					Conditional:if(check: { !self:isAssignable(target: fullType, source: initType) }, then: {
 						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
+						# FUNCTIONS.md Part IV V3: a void expression consumed as a
+						# value explains itself instead of cascading into the
+						# generic mismatch.
+						Conditional:if(check: { self:isVoid(t: initType) }, then: {
+							local String is note: self:voidUseNote(expr: stmt:initExpr);
+							Conditional:if(check: { note != '' }, then: {
+								msg: 'cannot initialize \'' . fullType . '\' from a void expression: ' . note;
+							});
+						});
 						self:addError(line: stmt:line, msg: msg);
 					});
 				});
@@ -2714,10 +2730,17 @@ Class is TypeChecker{
 				});
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
-				Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
-					local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
-					self:addError(line: stmt:line, msg: msg);
-				});
+					Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
+						local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
+						# FUNCTIONS.md Part IV V3: the same for assignments.
+						Conditional:if(check: { self:isVoid(t: valType) }, then: {
+							local String is note: self:voidUseNote(expr: stmt:assignValue);
+							Conditional:if(check: { note != '' }, then: {
+								msg: 'cannot assign a void expression to \'' . targetType . '\': ' . note;
+							});
+						});
+						self:addError(line: stmt:line, msg: msg);
+					});
 			}
 			is StatementKind:WHEN: {
 				local String is stmtSubjectType: self:inferExpressionType(expr: stmt:whenSubject);
@@ -2809,6 +2832,68 @@ Class is TypeChecker{
 			}
 			else: {}
 		}
+	}
+
+	## FUNCTIONS.md Part IV V5: the diagnostic display form of a type
+	## name — the internal colon form ('Function:Boolean') renders the way
+	## the language spells it ('Function of Boolean').
+	##
+	## @param t: Internal type name.
+	## @return: The display name.
+	Function of String is displayType(String is t){
+		local String is out: '';
+		local Int is i: 0;
+		While:condition(
+			evaluate: local Function of Boolean(){
+				return i < t:length();
+			},
+			iteration: local Function(){
+				Conditional:if(check: { t:substring(start: i, end: i + 9) == 'Function:' }, then: {
+					out: out . 'Function of ';
+					i: i + 9;
+				}, else: {
+					out: out . t:charAt(index: i, default: '');
+					i: i + 1;
+				});
+				return true;
+			}
+		);
+		return out;
+	}
+
+	## FUNCTIONS.md Part IV V3: the void-in-value-context hint. Describes
+	## WHY an expression computes no value, for the consumption-site
+	## diagnostics. Reads the AST and already-resolved types only — never
+	## re-infers. '' when nothing specific applies.
+	##
+	## @param expr: The void expression being consumed.
+	## @return: The hint text, or ''.
+	Function of String is voidUseNote(Expression is expr){
+		Conditional:if(check: { expr:kind != ExpressionKind:CALL }, then: {
+			return '';
+		});
+		local Int is argc: expr:argCount();
+		local String is targetT: expr:methodTarget:resolvedType;
+		Conditional:if(check: { targetT == self:names:selfIdent() || targetT == '' }, then: {
+			targetT: self:currentClassName;
+		});
+		# The branch shapes: the arity tells the story (any spelling —
+		# qualified, bare, self — the method name plus the target class).
+		Conditional:if(check: { expr:methodName == 'if' && targetT == 'Conditional' && argc == 2 }, then: {
+			return 'a 2-arg if has no else branch, so the result is undefined when the check fails; add else: { ... }';
+		});
+		Conditional:if(check: { expr:methodName == 'if' && targetT == 'Conditional' && argc == 4 }, then: {
+			return 'the 4-arg if is statement-only: finally runs for its side effect and cannot yield a value';
+		});
+		# Any other call: name the callee and its declared return.
+		local ClassInfo is tc: self:findClass(name: targetT:split(delimiter: ':'):get(index: 0));
+		Conditional:if(check: { tc:name != '' }, then: {
+			local String is calleeRet: self:lookupMethodReturnType(className: targetT, methodName: expr:methodName);
+			Conditional:if(check: { self:isVoid(t: calleeRet) }, then: {
+				return 'the call declares no return value';
+			});
+		});
+		return '';
 	}
 
 	## Validates a merge-forward statement against its parent method:

@@ -129,6 +129,12 @@ assert_compile_failure "negative-type-safety" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
 	"Non-exhaustive 'when'"
 
+assert_compile_failure "void-in-value-context" \
+	"$ROOT/tests/negative/n23_void_in_value_context_negative_test.spec" \
+	"a 2-arg if has no else branch" \
+	"the 4-arg if is statement-only" \
+	"the call declares no return value"
+
 assert_compile_failure "instance-model-n1-own-name" \
 	"$ROOT/tests/negative/n1_own_name_negative_test.spec" \
 	"through the class name inside 'N1SelfRead' itself; use self"
