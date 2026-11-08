@@ -41,7 +41,7 @@ Class is ClassInfo{
 	replace Function is init(String is name, String is baseClass, Array of Member is members){
 		self:name: name;
 		self:baseClass: baseClass;
-		self:baseClasses: if (baseClass != '') [baseClass] else [];
+		self:baseClasses: Conditional:branch(check: { baseClass != '' }, then: { [baseClass] }, otherwise: { [] });
 		self:members: members;
 	}
 
@@ -114,7 +114,7 @@ Class is ClassInfo{
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
 		self:baseClasses: baseClasses;
-		self:baseClass: if (baseClasses:length() > 0) baseClasses:get(index: 0) else '';
+		self:baseClass: Conditional:branch(check: { baseClasses:length() > 0 }, then: { baseClasses:get(index: 0) }, otherwise: { '' });
 		self:members: members;
 	}
 

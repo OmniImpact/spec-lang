@@ -12,6 +12,7 @@ Class is CodeGenerator{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Type],
+		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
@@ -1482,7 +1483,7 @@ Class is CodeGenerator{
 				return '0.0';
 			}
 			is ExpressionKind:BOOL: {
-				return if (expr:boolValue) 'true' else 'false';
+				return Conditional:branch(check: { expr:boolValue }, then: { 'true' }, otherwise: { 'false' });
 			}
 			is ExpressionKind:IDENT: {
 				return self:emitIdent(expr: expr);
@@ -1547,14 +1548,14 @@ Class is CodeGenerator{
 	## @return: C compound-literal allocation.
 	Function of String is emitArrayLiteral(Expression is expr){
 		local Boolean is listHint: self:containerHint:startsWith(prefix: 'List');
-		local String is addFn: if (listHint) 'spec_vec_push' else 'spec_array_add';
+		local String is addFn: Conditional:branch(check: { listHint }, then: { 'spec_vec_push' }, otherwise: { 'spec_array_add' });
 		local String is newCall: 'spec_array_new()';
 		if (self:containerHint != '') {
 			local String is hintKind: self:containerElemKind(containerType: self:containerHint);
 			if (hintKind == 'byte') {
 				newCall: 'spec_bytebuffer_new()';
 			} else if (hintKind == 'object' || hintKind == 'string') {
-				newCall: if (listHint) (if (hintKind == 'string') 'spec_vec_new_string()' else 'spec_vec_new_object()') else 'spec_array_new_object()';
+				newCall: Conditional:branch(check: { listHint }, then: { (if (hintKind == 'string') 'spec_vec_new_string()' else 'spec_vec_new_object()') }, otherwise: { 'spec_array_new_object()' });
 			} else if (listHint) {
 				newCall: 'spec_vec_new()';
 			}
@@ -1565,7 +1566,7 @@ Class is CodeGenerator{
 				newCall: 'spec_array_new_object()';
 			}
 		}
-		local String is arrCType: if (listHint) 'SpecVec*' else 'SpecArray*';
+		local String is arrCType: Conditional:branch(check: { listHint }, then: { 'SpecVec*' }, otherwise: { 'SpecArray*' });
 		local String is res: '({ ' . arrCType . ' _arr = ' . newCall . ';';
 		local Boolean is savedArg: self:argMode;
 		self:argMode: false;
@@ -1607,7 +1608,7 @@ Class is CodeGenerator{
 			if (self:isStringExpr(expr: vExpr, exprC: vC)) {
 				res: res . ' spec_map_set(_map, ' . kC . ', ' . vC . ');';
 			} else {
-				local String is setFn: if (self:yieldsClaim(expr: vExpr)) 'spec_map_set_any_transfer' else 'spec_map_set_any';
+				local String is setFn: Conditional:branch(check: { self:yieldsClaim(expr: vExpr) }, then: { 'spec_map_set_any_transfer' }, otherwise: { 'spec_map_set_any' });
 				res: res . ' ' . setFn . '(_map, ' . kC . ', (void*)(intptr_t)(' . vC . '));';
 			}
 			idx: idx + 1;
@@ -1712,7 +1713,7 @@ Class is CodeGenerator{
 						leftClaim: 'spec_string_from_chars(' . leftC . ')';
 					}
 				}
-				local String is leftWrap: if (leftPrim) self:wrapToString(expr: expr:leftExpr, exprC: leftClaim) else leftClaim;
+				local String is leftWrap: Conditional:branch(check: { leftPrim }, then: { self:wrapToString(expr: expr:leftExpr, exprC: leftClaim) }, otherwise: { leftClaim });
 				local Boolean is savedArgR: self:argMode;
 				self:argMode: true;
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
@@ -1923,8 +1924,8 @@ Class is CodeGenerator{
 		if (targetC == self:names:selfIdent() && (self:localVars:has(key: expr:methodName) || self:fieldTypes:has(key: expr:methodName))) {
 			local String is fnVarT: self:localVars:getString(key: expr:methodName, default: self:fieldTypes:getString(key: expr:methodName, default: ''));
 			if (fnVarT:startsWith(prefix: 'Function')) {
-				local String is fnPtrC: if (self:localVars:has(key: expr:methodName)) self:utils:cIdent(name: expr:methodName) else 'self->' . self:utils:cIdent(name: expr:methodName);
-				local String is retTName: if (fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9) fnVarT:substring(start: 9, end: fnVarT:length()) else 'Void';
+				local String is fnPtrC: Conditional:branch(check: { self:localVars:has(key: expr:methodName) }, then: { self:utils:cIdent(name: expr:methodName) }, otherwise: { 'self->' . self:utils:cIdent(name: expr:methodName) });
+				local String is retTName: Conditional:branch(check: { fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, then: { fnVarT:substring(start: 9, end: fnVarT:length()) }, otherwise: { 'Void' });
 				local String is retCType: self:cTypeFor(typeName: retTName);
 				local String is pTypesC: 'void*';
 				local String is cArgsC: '_cls->env';
@@ -2540,7 +2541,7 @@ Class is CodeGenerator{
 		}
 		local String is varName: self:utils:cIdent(name: stmt:varName);
 		local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
-		local String is autoPrefix: if (isArcVar) 'SPEC_AUTO ' else '';
+		local String is autoPrefix: Conditional:branch(check: { isArcVar }, then: { 'SPEC_AUTO ' }, otherwise: { '' });
 		if (stmt:hasInit) {
 			local ExpressionKind is initKind: stmt:initExpr:kind;
 			if (initKind == ExpressionKind:ARRAY || initKind == ExpressionKind:MAP) {
@@ -3383,16 +3384,28 @@ Class is CodeGenerator{
 	Function of String is checkConditionC(Expression is checkAnon, Array of String is prefixOut){
 		local Expression is condExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
 		local Int is lastExprIdx: -1;
+		local Boolean is lastIsReturn: false;
 		local Int is si: 0;
 		checkAnon:anonBody:each(action: local Function(Statement is st){
+			# Both the explicit-terminator form (`expr;`) and the brace
+			# shorthand's RETURN-desugared trailing expression carry the
+			# condition.
 			if (st:kind == StatementKind:EXPR) {
 				lastExprIdx: si;
+				lastIsReturn: false;
+			} else if (st:kind == StatementKind:RETURN && st:hasReturnExpr) {
+				lastExprIdx: si;
+				lastIsReturn: true;
 			}
 			si: si + 1;
 		});
 		if (lastExprIdx >= 0) {
 			local Statement is lastStmt: checkAnon:anonBody:get(index: lastExprIdx);
-			condExpr: lastStmt:exprStmt;
+			if (lastIsReturn) {
+				condExpr: lastStmt:returnExpr;
+			} else {
+				condExpr: lastStmt:exprStmt;
+			}
 		}
 		if (lastExprIdx > 0) {
 			local Int is ei: 0;
@@ -3421,26 +3434,85 @@ Class is CodeGenerator{
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
 		self:argMode: false;
+		# FUNCTIONS.md Part II: the value-yielding form — the checker
+		# stamped the unified yield type; emit a statement expression.
+		local String is resT: expr:resolvedType;
+		local Boolean is valueForm: expr:argCount() == 3 && resT != '' && resT != 'void' && resT != 'Void';
 		local Array of String is condPrefix: [];
 		local String is condC: self:checkConditionC(checkAnon: expr:argValue(index: 0), prefixOut: condPrefix);
-		local String is thenC: self:inlineBranchBody(anonFn: expr:argValue(index: 1));
 		local String is prefixC: '';
 		condPrefix:each(action: local Function(String is p){
 			prefixC: prefixC . p;
 		});
-		local String is out: prefixC . "if (" . condC . ") {\n" . thenC . "\t}";
-		if (expr:argCount() >= 3) {
-			local String is elseC: self:inlineBranchBody(anonFn: expr:argValue(index: 2));
-			out: out . " else {\n" . elseC . "\t}";
-		}
-		if (expr:argCount() >= 4) {
-			local String is finC: self:inlineBranchBody(anonFn: expr:argValue(index: 3));
-			out: out . "\n" . finC;
+		local String is out: '';
+		if (valueForm) {
+			self:anonCounter: self:anonCounter + 1;
+			local String is yieldVar: '_br_' . (self:anonCounter as String);
+			local String is yieldCType: self:cTypeFor(typeName: resT);
+			local String is thenC: self:inlineBranchBodyYield(anonFn: expr:argValue(index: 1), yieldVar: yieldVar, yieldT: resT);
+			local String is elseC: self:inlineBranchBodyYield(anonFn: expr:argValue(index: 2), yieldVar: yieldVar, yieldT: resT);
+			out: '({ ' . yieldCType . ' ' . yieldVar . ";\n" . prefixC . "if (" . condC . ") {\n" . thenC . "\t} else {\n" . elseC . "\t}\n" . yieldVar . "; })";
+		} else {
+			local String is thenC: self:inlineBranchBody(anonFn: expr:argValue(index: 1));
+			out: prefixC . "if (" . condC . ") {\n" . thenC . "\t}";
+			if (expr:argCount() >= 3) {
+				local String is elseC: self:inlineBranchBody(anonFn: expr:argValue(index: 2));
+				out: out . " else {\n" . elseC . "\t}";
+			}
+			if (expr:argCount() >= 4) {
+				local String is finC: self:inlineBranchBody(anonFn: expr:argValue(index: 3));
+				out: out . "\n" . finC;
+			}
 		}
 		self:inlineReturnVar: savedVar;
 		self:inlineReturnLabel: savedLbl;
 		self:argMode: savedArg;
 		return out;
+	}
+
+	## Inlines one value-branch closure's body: every statement as-is, the
+	## final return replaced by the yield assignment. The yield mirrors
+	## emitReturn's ARC three-way (owned-local swap, fresh-cast, retain) so
+	## scope releases cannot dangle the result.
+	##
+	## @param anonFn: The branch's ANON_FN.
+	## @param yieldVar: The statement-expression's result variable.
+	## @param yieldT: The unified yield type name.
+	## @return: C statement text.
+	Function of String is inlineBranchBodyYield(Expression is anonFn, String is yieldVar, String is yieldT){
+		local String is bodyC: '';
+		local String is yieldCType: self:cTypeFor(typeName: yieldT);
+		local Int is bodyLen: anonFn:anonBody:length();
+		local Int is bi: 0;
+		anonFn:anonBody:each(action: local Function(Statement is st){
+			if (bi == bodyLen - 1 && st:kind == StatementKind:RETURN && st:hasReturnExpr) {
+				local ExpressionKind is retKind: st:returnExpr:kind;
+				if ((retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (yieldT:startsWith(prefix: 'Array') || yieldT:startsWith(prefix: 'Map'))) {
+					self:setContainerHint(t: yieldT);
+				}
+				local Boolean is savedArg: self:argMode;
+				self:argMode: false;
+				local String is retC: self:generateExpression(expr: st:returnExpr);
+				self:argMode: savedArg;
+				if (self:isArcType(typeName: yieldT)) {
+					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: st:returnExpr:stringValue);
+					if (ownedLocal) {
+						local String is identC: self:utils:cIdent(name: st:returnExpr:stringValue);
+						retC: '(' . yieldCType . ')({ ' . yieldCType . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
+					} else if (self:isFreshConstructorCall(expr: st:returnExpr)) {
+						retC: '(' . yieldCType . ')(' . retC . ')';
+					} else {
+						retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
+					}
+				}
+				bodyC: bodyC . "\t" . yieldVar . ' = ' . retC . ";\n";
+			} else {
+				bodyC: bodyC . "\t" . self:generateStatement(stmt: st);
+			}
+			bi: bi + 1;
+		});
+		bodyC: bodyC . self:scopeReleases(stmts: anonFn:anonBody);
+		return bodyC;
 	}
 
 	## Inlines one branch closure's body statements.

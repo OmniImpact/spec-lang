@@ -100,6 +100,14 @@ Class is TypeChecker{
 	## (the Kotlin write-back target for void-declared closures).
 	local Expression is currentAnonNode: Expression:init(kind: ExpressionKind:UNKNOWN);
 
+	## FUNCTIONS.md Part II: inside a value-yielding branch's then/otherwise
+	## closure (the call site expects a value).
+	local Boolean is inValueBranch: false;
+
+	## FUNCTIONS.md Part II: checking the last statement of a value-yielding
+	## branch closure — its return establishes the branch's yield type.
+	local Boolean is checkingValueYield: false;
+
 	## Accumulated type errors.
 	local Array of TypeError is errors: [];
 
@@ -130,7 +138,7 @@ Class is TypeChecker{
 	## @param line: Source line number.
 	## @param msg: Diagnostic message.
 	Function is addError(Int is line, String is msg){
-		local String is fullMsg: if (self:currentSourceFile != '') '[' . self:currentSourceFile . '] ' . msg else msg;
+		local String is fullMsg: Conditional:branch(check: { self:currentSourceFile != '' }, then: { '[' . self:currentSourceFile . '] ' . msg }, otherwise: { msg });
 		local Error is e: Error:init(message: fullMsg);
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: line, col: 0);
 		self:errors:add(item: TypeError:init(line: line, message: fullMsg));
@@ -528,7 +536,7 @@ Class is TypeChecker{
 				if (found) {
 					local String is argT: matchedValue:resolvedType;
 					if (argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT)) {
-						local String is label: if (pName != '') pName else 'position ' . (pIdx + 1);
+						local String is label: Conditional:branch(check: { pName != '' }, then: { pName }, otherwise: { 'position ' . (pIdx + 1) });
 						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					}
@@ -1707,7 +1715,7 @@ Class is TypeChecker{
 						res: Primitive:BOOLEAN:value();
 					}
 					is '+', '-', '*', '/', '%': {
-						res: if (leftT == 'Float' || rightT == 'Float') 'Float' else Primitive:INT:value();
+						res: Conditional:branch(check: { leftT == 'Float' || rightT == 'Float' }, then: { 'Float' }, otherwise: { Primitive:INT:value() });
 					}
 					is '&', '|', '^', '<<', '>>': {
 						res: Primitive:INT:value();
@@ -1725,7 +1733,7 @@ Class is TypeChecker{
 			is ExpressionKind:CAST: {
 				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
 				local String is target: expr:castTarget;
-				local String is src: if (innerT != '') innerT else Primitive:ANY:value();
+				local String is src: Conditional:branch(check: { innerT != '' }, then: { innerT }, otherwise: { Primitive:ANY:value() });
 				local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
 				# Every non-format cast takes no arguments.
 				if (expr:castArgs:length() > 0 && !isFormat) {
@@ -1739,7 +1747,7 @@ Class is TypeChecker{
 						if (src != 'Any' && src != 'String' && src != Primitive:INT:value()) {
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
 						}
-						res: if (src == 'String') Primitive:INT:value() else 'String';
+						res: Conditional:branch(check: { src == 'String' }, then: { Primitive:INT:value() }, otherwise: { 'String' });
 					}
 					else: {
 						if (self:allEnumNames:has(key: target)) {
@@ -1893,7 +1901,7 @@ Class is TypeChecker{
 						self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: faBase, memberName: fName), memberName: fName);
 					}
 					local String is fT: self:lookupFieldType(className: leftT, fieldName: fName);
-					res: if (fT != '') fT else 'Any';
+					res: Conditional:branch(check: { fT != '' }, then: { fT }, otherwise: { 'Any' });
 				}
 			}
 			is ExpressionKind:INDEX: {
@@ -1922,7 +1930,7 @@ Class is TypeChecker{
 				self:inferExpressionType(expr: expr:condExpr);
 				local String is thenT: self:inferExpressionType(expr: expr:thenExpr);
 				local String is elseT: self:inferExpressionType(expr: expr:elseExpr);
-				res: if (thenT != '' && thenT != Primitive:ANY:value()) thenT else elseT;
+				res: Conditional:branch(check: { thenT != '' && thenT != Primitive:ANY:value() }, then: { thenT }, otherwise: { elseT });
 			}
 			is ExpressionKind:WHEN: {
 				local String is subjectType: self:inferExpressionType(expr: expr:whenSubject);
@@ -1958,10 +1966,19 @@ Class is TypeChecker{
 				expr:anonParams:each(action: local Function(Parameter is p){
 					self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 				});
+				local Int is bodyLen: expr:anonBody:length();
+				local Int is bodyIdx: 0;
 				expr:anonBody:each(action: local Function(Statement is s){
 					self:anonDepth: self:anonDepth + 1;
+					# FUNCTIONS.md Part II: the last statement of a
+					# value-yielding branch closure is the branch's yield.
+					if (self:inValueBranch && bodyIdx == bodyLen - 1) {
+						self:checkingValueYield: true;
+					}
 					self:checkStatement(stmt: s);
+					self:checkingValueYield: false;
 					self:anonDepth: self:anonDepth - 1;
+					bodyIdx: bodyIdx + 1;
 				});
 
 				self:localVars: savedVars;
@@ -2121,6 +2138,11 @@ Class is TypeChecker{
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
 		local Boolean is isBranchCall: expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
+		# FUNCTIONS.md Part II: the value-yielding form — a 3-arg branch
+		# call in a context that expects a value (a declaration, an
+		# assignment, a return). Both branch closures must be inline
+		# literals; their last expressions are the yields.
+		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
@@ -2166,9 +2188,11 @@ Class is TypeChecker{
 			}
 			if (isBranchCall && argIdx >= 1) {
 				self:inBranchClosure: true;
+				self:inValueBranch: isValueBranch;
 			}
 			self:inferExpressionType(expr: arg:value);
 			self:inBranchClosure: false;
+			self:inValueBranch: false;
 			argIdx: argIdx + 1;
 		});
 
@@ -2354,7 +2378,7 @@ Class is TypeChecker{
 					}
 				}
 			}
-			res: if (mappedElem != Primitive:ANY:value()) 'Array:' . mappedElem else 'Array';
+			res: Conditional:branch(check: { mappedElem != Primitive:ANY:value() }, then: { 'Array:' . mappedElem }, otherwise: { 'Array' });
 		} else if (targetType:startsWith(prefix: 'Array') && method == 'fold') {
 			if (expr:methodArgs:length() > 0) {
 				local NamedArg is a0: expr:methodArgs:get(index: 0);
@@ -2369,7 +2393,7 @@ Class is TypeChecker{
 				is 'values': { res: 'Array:' . targetType; }
 				is 'of': { res: targetType; }
 				is 'value': {
-					res: if (self:allStringBackedEnums:has(key: targetType)) 'String' else Primitive:INT:value();
+					res: Conditional:branch(check: { self:allStringBackedEnums:has(key: targetType) }, then: { 'String' }, otherwise: { Primitive:INT:value() });
 				}
 				else: { res: 'Any'; }
 			}
@@ -2387,9 +2411,26 @@ Class is TypeChecker{
 			}
 			res: 'Any';
 		}
-		if (isBranchCall) {
-			# Branch calls are statements: void. The value-yielding form
-			# arrives with the expression-form inline.
+		if (isValueBranch) {
+			# FUNCTIONS.md Part II: the value-yielding form — both branch
+			# closures' established return types must unify. Read from the
+			# nodes (the write-backs happened during the body check); never
+			# re-infer.
+			local Expression is thenAnon: expr:argValue(index: 1);
+			local Expression is elseAnon: expr:argValue(index: 2);
+			local String is thenT: thenAnon:anonReturnType:name;
+			local String is elseT: elseAnon:anonReturnType:name;
+			if (self:isVoid(t: thenT) || self:isVoid(t: elseT)) {
+				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (FUNCTIONS.md Part II).');
+				res: 'void';
+			} else if (!self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT)) {
+				self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . thenT . '\' and \'' . elseT . '\'.');
+				res: thenT;
+			} else {
+				res: Conditional:branch(check: { thenT == Primitive:ANY:value() }, then: { elseT }, otherwise: { thenT });
+			}
+		} else if (isBranchCall) {
+			# Branch calls are statements: void.
 			res: 'void';
 		}
 		return res;
@@ -2553,12 +2594,25 @@ Class is TypeChecker{
 				if (stmt:hasReturnExpr) {
 					# Bidirectional: the declared return type flows in.
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: self:currentMethodReturnType);
+					# FUNCTIONS.md Part II: the last statement of a
+					# value-yielding branch closure establishes the branch's
+					# yield type (the inBranchClosure method-routing does not
+					# apply to it).
+					if (self:checkingValueYield) {
+						if (self:isVoid(t: self:currentAnonNode:anonReturnType:name)) {
+							self:currentAnonNode:anonReturnType: Type:init(name: retType);
+							self:currentMethodReturnType: retType;
+						} else if (!self:isAssignable(target: self:currentAnonNode:anonReturnType:name, source: retType)) {
+							local String is msg: 'Branch yields mismatched types: expected \'' . self:currentAnonNode:anonReturnType:name . '\', found \'' . retType . '\'.';
+							self:addError(line: stmt:line, msg: msg);
+						}
+					}
 					# FUNCTIONS.md Part II: the Kotlin convention — a
 					# void-declared closure's `return <expr>` establishes the
 					# closure's return type instead of erroring (the body
 					# determines the return). Branch closures keep routing to
 					# the enclosing method's declared return.
-					if (self:anonDepth > 0 && !self:inBranchClosure && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType)) {
+					else if (self:anonDepth > 0 && !self:inBranchClosure && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType)) {
 						self:currentAnonNode:anonReturnType: Type:init(name: retType);
 						self:currentMethodReturnType: retType;
 					} else if (!self:isAssignable(target: self:currentMethodReturnType, source: retType)) {
@@ -2668,7 +2722,7 @@ Class is TypeChecker{
 				local String is argT: self:inferExpressionType(expr: matchedValue);
 				local String is pT: p:paramType:name;
 				if (pT != Primitive:ANY:value() && pT != '' && argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT)) {
-					local String is label: if (p:name != '') p:name else 'position ' . (pIdx + 1);
+					local String is label: Conditional:branch(check: { p:name != '' }, then: { p:name }, otherwise: { 'position ' . (pIdx + 1) });
 					local String is msg: 'Forward argument \'' . label . '\' of \'' . self:currentMethodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 					self:addError(line: stmt:line, msg: msg);
 				}
@@ -2914,11 +2968,11 @@ Class is TypeChecker{
 			}
 			local Member is anc: self:findAncestorMember(className: classDef:name, memberName: name);
 			if (anc:name == '') {
-				local String is what: if (hasMerge) 'merge' else 'replace';
+				local String is what: Conditional:branch(check: { hasMerge }, then: { 'merge' }, otherwise: { 'replace' });
 				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' declares \'' . what . '\' but no ancestor declares a member with that name.';
 				self:addError(line: m:line, msg: msg);
 			} else if (anc:hasModifier(kw: Keyword:LOCAL) || anc:hasModifier(kw: Keyword:CONTAINED)) {
-				local String is vis: if (anc:hasModifier(kw: Keyword:LOCAL)) 'local' else 'contained';
+				local String is vis: Conditional:branch(check: { anc:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, otherwise: { 'contained' });
 				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' targets a ' . vis . ' ancestor member; ' . vis . ' members cannot be replaced or merged.';
 				self:addError(line: m:line, msg: msg);
 			} else if (anc:kind != m:kind) {
@@ -3023,7 +3077,7 @@ Class is TypeChecker{
 					parent:members:each(action: local Function(Member is parentM){
 						if (subM:name == parentM:name) {
 							if (parentM:hasModifier(kw: Keyword:LOCAL) || parentM:hasModifier(kw: Keyword:CONTAINED)) {
-								local String is vis: if (parentM:hasModifier(kw: Keyword:LOCAL)) 'local' else 'contained';
+								local String is vis: Conditional:branch(check: { parentM:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, otherwise: { 'contained' });
 								local String is msg: 'Member \'' . subM:name . '\' is ' . vis . ' in ancestor \'' . baseName . '\' and cannot be replaced or merged.';
 								self:addError(line: subM:line, msg: msg);
 							}

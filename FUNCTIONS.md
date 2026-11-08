@@ -297,10 +297,20 @@ a closure, and branch typing goes soft. Instead, the proven
   self-calls are recognized as branch calls (the self disjunct), so the
   composed overloads' `check: { return !check(); }` not-closures pre-type
   Boolean and invoke through `spec_branch`'s bool-cast.
-- The expression form (`local X is x: if(check: c, then: { a }, else: { b });`)
-  inlines as a statement expression; branch typing uses the checker's
-  bidirectional flow (the expected type flows into both branches' last
-  expressions — the same machinery container callbacks use).
+- The expression form (`local X is Conditional:branch(check: { c }, then:
+  { a }, otherwise: { b });`) **landed**: a 3-arg branch call in a context
+  that expects a value (declaration, assignment, return — detected via the
+  bidirectional `expected` flow) is a statement expression
+  `({ T _v; if (cond) { ... _v = a; } else { ... _v = b; } _v; })`. Each
+  branch closure's LAST return is its yield (the `checkingValueYield`
+  marker overrides the method-routing for that one statement; mid-body
+  returns still return from the method); the two yields must unify
+  (mismatch = compile error, N20). The yield assignment mirrors
+  `emitReturn`'s ARC three-way (owned-local swap / fresh-cast / retain) so
+  scope releases cannot dangle the result. Statement-form 3-arg calls stay
+  void-routed. The whole compiler's 27 legacy `if`-expression sites were
+  migrated to this form — the fixed point is byte-identical with control
+  flow compiling through Conditional.
 
 ### II.3 The flip
 

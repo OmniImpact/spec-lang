@@ -117,7 +117,7 @@ Class is Parser{
 	## @param tok: The offending token.
 	## @param message: What went wrong.
 	Function is addError(Token is tok, String is message){
-		local String is prefix: if (self:sourceFile != '') self:sourceFile . ':' else 'Line ';
+		local String is prefix: Conditional:branch(check: { self:sourceFile != '' }, then: { self:sourceFile . ':' }, otherwise: { 'Line ' });
 		local Error is e: Error:init(message: "  [SyntaxError] [{{prefix}}{{tok:getLine()}}:{{tok:getCol()}}] {{message}}");
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: tok:getLine(), col: tok:getCol());
 		self:errors:add(item: e);

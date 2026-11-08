@@ -78,6 +78,12 @@ Class is ConditionalTest {
 		});
 		if (bareHits == 1) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] bare call'); }
 
+		# Value-yielding branch: the if-expression form (FUNCTIONS.md
+		# Part II). Both branches end in an expression; the yields unify.
+		local String is picked: Conditional:branch(check: { 3 > 2 }, then: { 'big' }, otherwise: { 'small' });
+		local String is picked2: Conditional:branch(check: { 3 > 9 }, then: { picked . '!' }, otherwise: { 'tiny' });
+		if (picked == 'big' && picked2 == 'tiny') { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] value yield: ' . picked . ' / ' . picked2); }
+
 		# The scoped region fills the open then-slot: the body becomes the
 		# branch's then-closure (FUNCTIONS.md §as).
 		local Int is scopedHits: 0;

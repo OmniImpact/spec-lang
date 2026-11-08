@@ -5,6 +5,10 @@
 Class is LintIssue{
 	namespace: ['base', 'compiler', 'linter'];
 
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+
 	## One-based line number where the issue was found (0 if general).
 	Int is line: 0;
 
@@ -32,8 +36,8 @@ Class is LintIssue{
 	##
 	## @return: Formatted display string.
 	replace Function of String is toString(){
-		local String is tag: if (self:isWarning) '[Warning]' else '[Notice] ';
-		local String is loc: if (self:line > 0) 'Line ' . (self:line as String) . ': ' else '';
+		local String is tag: Conditional:branch(check: { self:isWarning }, then: { '[Warning]' }, otherwise: { '[Notice] ' });
+		local String is loc: Conditional:branch(check: { self:line > 0 }, then: { 'Line ' . (self:line as String) . ': ' }, otherwise: { '' });
 		return '  ' . tag . ' ' . loc . self:message;
 	}
 }
