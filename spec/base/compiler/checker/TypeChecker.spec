@@ -96,6 +96,10 @@ Class is TypeChecker{
 	## Return type name of the method currently being checked.
 	local String is currentMethodReturnType: '';
 
+	## FUNCTIONS.md Part II: the anon-fn node whose body is being checked
+	## (the Kotlin write-back target for void-declared closures).
+	local Expression is currentAnonNode: Expression:init(kind: ExpressionKind:UNKNOWN);
+
 	## Accumulated type errors.
 	local Array of TypeError is errors: [];
 
@@ -1945,6 +1949,8 @@ Class is TypeChecker{
 					savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 				});
 				local String is savedRet: self:currentMethodReturnType;
+				local Expression is savedAnonNode: self:currentAnonNode;
+				self:currentAnonNode: expr;
 
 				if (!self:inBranchClosure) {
 					self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
@@ -1960,6 +1966,28 @@ Class is TypeChecker{
 
 				self:localVars: savedVars;
 				self:currentMethodReturnType: savedRet;
+				# FUNCTIONS.md Part II: the Kotlin convention — the closure
+				# body determines the return. Return-site write-backs happened
+				# during the body check (the RETURN arm); here only the
+				# explicit-terminator last-expression form is handled, reading
+				# the type the body check already resolved — never
+				# re-inferring.
+				local Int is lastIdx: expr:anonBody:length() - 1;
+				if (lastIdx >= 0) {
+					local Statement is lastStmt: expr:anonBody:get(index: lastIdx);
+					if (lastStmt:kind == StatementKind:EXPR) {
+						local String is lastT: lastStmt:exprStmt:resolvedType;
+						if (self:isVoid(t: expr:anonReturnType:name)) {
+							if (lastT != '' && !self:isVoid(t: lastT)) {
+								expr:anonReturnType: Type:init(name: lastT);
+							}
+						} else if (lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT)) {
+							local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\' (FUNCTIONS.md Part II).';
+							self:addError(line: self:currentLine, msg: msg);
+						}
+					}
+				}
+				self:currentAnonNode: savedAnonNode;
 				local String is anonRetName: expr:anonReturnType:name;
 				if (anonRetName != '' && !self:isVoid(t: anonRetName)) {
 					res: 'Function:' . self:formatTypeString(t: expr:anonReturnType);
@@ -2089,8 +2117,10 @@ Class is TypeChecker{
 		}
 		# FUNCTIONS.md Part II: is this a Conditional branch call? Branch
 		# closure bodies (arguments 1+) type-check against the enclosing
-		# method's return type — they inline into it.
-		local Boolean is isBranchCall: expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional');
+		# method's return type — they inline into it. The self-call
+		# disjunct lets the wrapper's own self-calls pre-type their check
+		# closures too.
+		local Boolean is isBranchCall: expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
@@ -2129,6 +2159,11 @@ Class is TypeChecker{
 
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
 		expr:methodArgs:each(action: local Function(NamedArg is arg){
+			if (isBranchCall && argIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN) {
+				if (arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName()) {
+					arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+				}
+			}
 			if (isBranchCall && argIdx >= 1) {
 				self:inBranchClosure: true;
 			}
@@ -2518,7 +2553,15 @@ Class is TypeChecker{
 				if (stmt:hasReturnExpr) {
 					# Bidirectional: the declared return type flows in.
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: self:currentMethodReturnType);
-					if (!self:isAssignable(target: self:currentMethodReturnType, source: retType)) {
+					# FUNCTIONS.md Part II: the Kotlin convention — a
+					# void-declared closure's `return <expr>` establishes the
+					# closure's return type instead of erroring (the body
+					# determines the return). Branch closures keep routing to
+					# the enclosing method's declared return.
+					if (self:anonDepth > 0 && !self:inBranchClosure && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType)) {
+						self:currentAnonNode:anonReturnType: Type:init(name: retType);
+						self:currentMethodReturnType: retType;
+					} else if (!self:isAssignable(target: self:currentMethodReturnType, source: retType)) {
 						local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\'.';
 						self:addError(line: stmt:line, msg: msg);
 					}

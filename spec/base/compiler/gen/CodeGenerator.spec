@@ -1902,7 +1902,7 @@ Class is CodeGenerator{
 		# as a qualified PATH receiver and is excluded, so the fallback
 			# stays honest.
 			if (expr:methodName == 'branch' && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional')) {
-				local Boolean is shapeOk: expr:argValue(index: 0):kind != ExpressionKind:ANON_FN;
+				local Boolean is shapeOk: expr:argValue(index: 0):kind == ExpressionKind:ANON_FN;
 				local Int is bi: 1;
 				While:condition(
 					evaluate: local Function of Boolean(){ return shapeOk && bi < expr:argCount(); },
@@ -3372,6 +3372,40 @@ Class is CodeGenerator{
 
 	## Inlines a While loop with optional scoped loop variables:
 	## loop variables are declared at the block scope, and the evaluate/iteration
+	## FUNCTIONS.md Part II: extracts the condition C from a check
+	## closure — the body's last expression statement is the condition
+	## (the Kotlin convention). Earlier statements, if any, are emitted
+		## into a do-block prefix.
+	##
+	## @param checkAnon: The check closure's ANON_FN.
+	## @param prefixOut: Accumulator for any pre-condition statements.
+	## @return: The C condition expression.
+	Function of String is checkConditionC(Expression is checkAnon, Array of String is prefixOut){
+		local Expression is condExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
+		local Int is lastExprIdx: -1;
+		local Int is si: 0;
+		checkAnon:anonBody:each(action: local Function(Statement is st){
+			if (st:kind == StatementKind:EXPR) {
+				lastExprIdx: si;
+			}
+			si: si + 1;
+		});
+		if (lastExprIdx >= 0) {
+			local Statement is lastStmt: checkAnon:anonBody:get(index: lastExprIdx);
+			condExpr: lastStmt:exprStmt;
+		}
+		if (lastExprIdx > 0) {
+			local Int is ei: 0;
+			checkAnon:anonBody:each(action: local Function(Statement is st){
+				if (ei < lastExprIdx) {
+					prefixOut:add(item: self:generateStatement(stmt: st));
+				}
+				ei: ei + 1;
+			});
+		}
+		return self:generateExpression(expr: condExpr);
+	}
+
 	## FUNCTIONS.md Part II: inlines a Conditional branch call as native
 	## C if/else. Branch bodies are inlined into the enclosing function,
 	## so a `return` inside a branch returns from the method (guard
@@ -3387,9 +3421,14 @@ Class is CodeGenerator{
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
 		self:argMode: false;
-		local String is condC: self:generateExpression(expr: expr:argValue(index: 0));
+		local Array of String is condPrefix: [];
+		local String is condC: self:checkConditionC(checkAnon: expr:argValue(index: 0), prefixOut: condPrefix);
 		local String is thenC: self:inlineBranchBody(anonFn: expr:argValue(index: 1));
-		local String is out: "if (" . condC . ") {\n" . thenC . "\t}";
+		local String is prefixC: '';
+		condPrefix:each(action: local Function(String is p){
+			prefixC: prefixC . p;
+		});
+		local String is out: prefixC . "if (" . condC . ") {\n" . thenC . "\t}";
 		if (expr:argCount() >= 3) {
 			local String is elseC: self:inlineBranchBody(anonFn: expr:argValue(index: 2));
 			out: out . " else {\n" . elseC . "\t}";

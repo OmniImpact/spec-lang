@@ -719,8 +719,12 @@ static inline void spec_call_closure_0(SpecClosure* cls) {
 
 /* The conditional floor (FUNCTIONS.md Part II): the single primitive.
    `else` is composed above it as `if(!check, else)`. */
-static inline void spec_branch(bool check, SpecClosure* then) {
-    if (check) { spec_call_closure_0(then); }
+static inline void spec_branch(SpecClosure* check, SpecClosure* then) {
+    if (check && check->fn) {
+        if (((bool (*)(void*))check->fn)(check->env)) {
+            spec_call_closure_0(then);
+        }
+    }
 }
 static inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {
     if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }

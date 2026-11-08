@@ -13,6 +13,6 @@ Class is Conditional{
 	##
 	## @param check: The condition.
 	## @param then: The closure to run when the condition holds.
-	Function is branch(Boolean is check, Function is then){
+	Function is branch(Function of Boolean is check, Function is then){
 	}
 }

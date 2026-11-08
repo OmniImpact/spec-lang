@@ -11,7 +11,7 @@ Class is ConditionalTest {
 
 	# A guard clause: the branch returns from the method.
 	Function of String is guard(Int is v){
-		Conditional:branch(check: v < 0, then: {
+		Conditional:branch(check: { v < 0; }, then: {
 			return 'negative';
 		});
 		return 'non-negative';
@@ -24,22 +24,22 @@ Class is ConditionalTest {
 
 		# 2-arg primitive.
 		local Int is hits: 0;
-		Conditional:branch(check: 1 > 0, then: {
+		Conditional:branch(check: { 1 > 0; }, then: {
 			hits: hits + 1;
 		});
-		Conditional:branch(check: 1 > 2, then: {
+		Conditional:branch(check: { 1 > 2; }, then: {
 			hits: hits + 10;
 		});
 		if (hits == 1) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] 2-arg primitive'); }
 
 		# 3-arg composed: else = not if.
 		local String is which: '';
-		Conditional:branch(check: 5 > 3, then: {
+		Conditional:branch(check: { 5 > 3; }, then: {
 			which: 'then';
 		}, otherwise: {
 			which: 'else';
 		});
-		Conditional:branch(check: 1 > 3, then: {
+		Conditional:branch(check: { 1 > 3; }, then: {
 			which: which . '!';
 		}, otherwise: {
 			which: which . '2';
@@ -48,7 +48,7 @@ Class is ConditionalTest {
 
 		# 4-arg with finally.
 		local String is order: '';
-		Conditional:branch(check: true, then: {
+		Conditional:branch(check: { true; }, then: {
 			order: 't';
 		}, otherwise: {
 			order: 'e';
@@ -64,8 +64,8 @@ Class is ConditionalTest {
 
 		# Nested conditionals.
 		local String is nest: '';
-		Conditional:branch(check: 1 < 2, then: {
-			Conditional:branch(check: 2 < 3, then: {
+		Conditional:branch(check: { 1 < 2; }, then: {
+			Conditional:branch(check: { 2 < 3; }, then: {
 				nest: 'deep';
 			});
 		});
@@ -73,7 +73,7 @@ Class is ConditionalTest {
 
 		# Bare calls through the unique provider.
 		local Int is bareHits: 0;
-		branch(check: true, then: {
+		branch(check: { true; }, then: {
 			bareHits: bareHits + 1;
 		});
 		if (bareHits == 1) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] bare call'); }
@@ -81,7 +81,7 @@ Class is ConditionalTest {
 		# The scoped region fills the open then-slot: the body becomes the
 		# branch's then-closure (FUNCTIONS.md §as).
 		local Int is scopedHits: 0;
-		as: Conditional:branch(check: 2 > 1);
+		as: Conditional:branch(check: { 2 > 1; });
 			scopedHits: scopedHits + 1;
 		if (scopedHits == 1) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] scoped open slot'); }
 

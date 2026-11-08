@@ -231,8 +231,8 @@ one primitive bound to `spec_branch` + `spec_call_closure_0`), the wrapper
 the statement-form inline (zero-allocation native C if/else; branch bodies
 inline into the enclosing function so guard-clause returns work; branch
 closures type-check against the enclosing method's return type), and the
-conditional_test regression (6 checks: 2-arg primitive, 3-arg composition,
-finally, guard clause, nesting, bare calls). The emitted C contains the
+conditional_test regression (7 checks: 2-arg primitive, 3-arg composition,
+finally, guard clause, nesting, bare calls, scoped open slot). The emitted C contains the
 floor's `spec_branch` only in the wrapper's own fallback body — user
 conditionals are native C. Param `otherwise` is the temp spelling of
 `else` (keyword) until the flip. Branch-as-expression is checker-rejected
@@ -245,11 +245,15 @@ body the then-branch; `as:` on a fully-bound branch is a compile error
 
 ```spec
 Class is Conditional {
-	Function is if(Boolean is check, Function is then)
-	Function is if(Boolean is check, Function is then, Function is else)
-	Function is if(Boolean is check, Function is then, Function is else, Function is finally)
+	Function is if(Function of Boolean is check, Function is then)
+	Function is if(Function of Boolean is check, Function is then, Function is else)
+	Function is if(Function of Boolean is check, Function is then, Function is else, Function is finally)
 }
 ```
+
+Call sites pass the check as a Kotlin-style closure — `if(check: { x > 0 },
+then: { ... })` — or rely on the parse-desugar to produce it from the
+legacy statement form.
 
 `finally` runs always (after whichever branch). `else if` chains become
 nested calls — accepted readability cost, and the natural future case for
@@ -272,7 +276,27 @@ a closure, and branch typing goes soft. Instead, the proven
   `spec_noop_closure` for omitted branches) is the **reference
   implementation and fallback** for any call shape the inliner does not
   recognize.
-- The check is an **expression** (`Boolean is check`), never a closure.
+- The check is a **closure that must return Boolean**
+  (`Function of Boolean is check`) — adopted after the expression form
+  (below) proved unenforceable: with the param typed `Boolean`, the
+  composition `!check` in the wrapper could not be expressed once check
+  became a value, and the Boolean-ness of the check body was validated
+  only by special case. With the param typed `Function of Boolean` the
+  three-stage exact match enforces the shape structurally: a closure
+  whose body yields a non-Boolean last expression keeps the plain
+  `Function` type and is rejected. The **Kotlin convention** completes
+  the typing (FUNCTIONS.md Part II, checker RETURN arm + ANON arm): a
+  void-declared closure's `return <expr>` *establishes* the closure's
+  return type (the body determines the return), the brace shorthand's
+  trailing expression already desugars to that return at parse time, and
+  a typed closure's explicit-terminator last expression validates
+  against the declared return. Write-backs happen at the return site —
+  the checker never re-infers an already-checked expression (re-running
+  the call machinery mid-check corrupts the checker's persistent
+  scoping state and cascades into every later file). The wrapper's own
+  self-calls are recognized as branch calls (the self disjunct), so the
+  composed overloads' `check: { return !check(); }` not-closures pre-type
+  Boolean and invoke through `spec_branch`'s bool-cast.
 - The expression form (`local X is x: if(check: c, then: { a }, else: { b });`)
   inlines as a statement expression; branch typing uses the checker's
   bidirectional flow (the expected type flows into both branches' last
