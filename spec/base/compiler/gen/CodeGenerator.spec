@@ -118,6 +118,28 @@ Class is CodeGenerator{
 	## Active inline-return label (closure inlining).
 	local String is inlineReturnLabel: '';
 
+	## FUNCTIONS.md Part IV memory discipline: the active method-level
+	## cleanup label — returns funnel through it so the scope-end releases
+	## run on every exit path, not only the fall-through one.
+	local String is cleanupLabel: '';
+
+	## The method's return variable (set when the return type is ARC or a
+	## scalar; '' for void methods).
+	local String is cleanupRetVar: '';
+
+	## Per-method cleanup-label counter (labels are function-scoped).
+	local Int is cleanupCounter: 0;
+
+	## Locals excluded from the scope-end releases — the closure write-backs
+	## transfer their ownership to the env, so releasing them here would
+	## drop a ref the env owns.
+	local Map of String to String is releaseExclusions: Map:init();
+
+	## FUNCTIONS.md Part IV memory discipline: the top-level ARC locals
+	## hoisted to zero-initialized declarations for the active funnel — a
+	## goto must never jump over an initializer the cleanup releases.
+	local Map of String to String is hoistedLocals: Map:init();
+
 	## Locals declared in the current scope (SPEC_AUTO injection).
 	local Map of String to String is localScopeVars: Map:init();
 
@@ -157,6 +179,11 @@ Class is CodeGenerator{
 		self:anonCounter: 0;
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
+		self:cleanupLabel: '';
+		self:cleanupRetVar: '';
+		self:cleanupCounter: 0;
+		self:releaseExclusions: Map:init();
+		self:hoistedLocals: Map:init();
 		self:localScopeVars: Map:init();
 	}
 
@@ -2433,6 +2460,20 @@ Class is CodeGenerator{
 		local String is savedRetLbl: self:inlineReturnLabel;
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
+		# The closure body is its own C function with its OWN cleanup
+		# funnel: its returns release its locals through the label, and the
+		# write-backs transfer their locals' ownership to the env (those
+		# locals are excluded from the releases). The enclosing method's
+		# funnel does not reach into it.
+		local String is savedCleanupLabel: self:cleanupLabel;
+		local String is savedCleanupRetVar: self:cleanupRetVar;
+		local Map of String to String is savedExclusions: self:releaseExclusions;
+		self:cleanupLabel: '_cleanup_anon_' . id;
+		self:cleanupRetVar: '';
+		self:releaseExclusions: Map:init();
+		Conditional:if(check: { retC != 'void' }, then: {
+			self:cleanupRetVar: '_mret_anon_' . id;
+		});
 		local String is bodyC: '';
 		expr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
@@ -2449,6 +2490,7 @@ Class is CodeGenerator{
 		local String is capAssigns: '';
 		local String is capReleases: '';
 		local String is capWritebacks: '';
+		local Array of String is writebackNames: [];
 		local Boolean is hasCaptures: false;
 
 		Conditional:if(check: { self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: 'self') }, then: {
@@ -2489,6 +2531,7 @@ Class is CodeGenerator{
 						# mutation is lost (the callback ran on a copy).
 						Conditional:if(check: { self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, then: {
 							capWritebacks: capWritebacks . '    _env->' . cVar . ' = ' . cVar . ";\n";
+							writebackNames:add(item: k);
 					});
 				});
 			});
@@ -2499,10 +2542,43 @@ Class is CodeGenerator{
 			local String is envStruct: "typedef struct {\n" . capFieldDecls . '} ' . envName . ";\n\n";
 			local String is destroyEnv: 'static __attribute__((unused)) void ' . destroyEnvName . "(void* _env_ptr) {\n    if (!_env_ptr) return;\n    " . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capReleases . "    free(_env);\n}\n\n";
 			local String is bindsC: '    ' . envName . '* _env = (' . envName . "*)_env_ptr;\n" . capFieldBinds;
-			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . bindsC . bodyC . capWritebacks . "}\n\n";
+			# The closure's cleanup funnel: the write-back locals transfer
+			# their ownership to the env and are excluded from the releases;
+			# everything else the body declared releases here, on every
+			# return path and on the fall-through.
+			writebackNames:each(action: local Function(String is wn){
+				self:releaseExclusions:set(key: wn, value: 'true');
+			});
+			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody) . capWritebacks;
+			self:releaseExclusions: savedExclusions;
+			Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+				cleanupTail: cleanupTail . '    return ' . self:cleanupRetVar . ";\n";
+			}, else: {
+				cleanupTail: cleanupTail . "    return;\n";
+			});
+			local String is retDecl: '';
+			Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+				retDecl: '    ' . retC . ' ' . self:cleanupRetVar . " = 0;\n";
+			});
+			self:cleanupLabel: savedCleanupLabel;
+			self:cleanupRetVar: savedCleanupRetVar;
+			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . bindsC . bodyC . cleanupTail . "}\n\n";
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, else: {
-			self:helperFunctions: self:helperFunctions . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . bodyC . "}\n\n";
+			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
+			self:releaseExclusions: savedExclusions;
+			Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+				cleanupTail: cleanupTail . '    return ' . self:cleanupRetVar . ";\n";
+			}, else: {
+				cleanupTail: cleanupTail . "    return;\n";
+			});
+			local String is retDecl: '';
+			Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+				retDecl: '    ' . retC . ' ' . self:cleanupRetVar . " = 0;\n";
+			});
+			self:cleanupLabel: savedCleanupLabel;
+			self:cleanupRetVar: savedCleanupRetVar;
+			self:helperFunctions: self:helperFunctions . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . bodyC . cleanupTail . "}\n\n";
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}
@@ -2597,10 +2673,12 @@ Class is CodeGenerator{
 		local String is out: '';
 		stmts:each(action: local Function(Statement is stmt){
 			Conditional:if(check: { stmt:kind == StatementKind:VAR_DECL }, then: {
-				local String is typeName: self:formatTypeString(t: stmt:varType);
-				Conditional:if(check: { self:isArcType(typeName: typeName) }, then: {
-					local String is varC: self:utils:cIdent(name: stmt:varName);
-					out: out . '    if (' . varC . ') { spec_release((void*)' . varC . '); ' . varC . " = NULL; }\n";
+				Conditional:if(check: { !self:releaseExclusions:has(key: stmt:varName) }, then: {
+					local String is typeName: self:formatTypeString(t: stmt:varType);
+					Conditional:if(check: { self:isArcType(typeName: typeName) }, then: {
+						local String is varC: self:utils:cIdent(name: stmt:varName);
+						out: out . '    if (' . varC . ') { spec_release((void*)' . varC . '); ' . varC . " = NULL; }\n";
+					});
 				});
 			});
 		});
@@ -2787,6 +2865,61 @@ Class is CodeGenerator{
 		local String is varName: self:utils:cIdent(name: stmt:varName);
 		local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
 		local String is autoPrefix: Conditional:if(check: { isArcVar }, then: { 'SPEC_AUTO ' }, else: { '' });
+		# FUNCTIONS.md Part IV memory discipline: a hoisted local's
+		# declaration lives in the funnel prologue (zero-initialized) — the
+		# statement assigns, so a goto can never skip the initializer.
+		Conditional:if(check: { self:hoistedLocals:has(key: stmt:varName) }, then: {
+			Conditional:if(check: { stmt:hasInit }, then: {
+				local ExpressionKind is hInitKind: stmt:initExpr:kind;
+				Conditional:if(check: { hInitKind == ExpressionKind:ARRAY || hInitKind == ExpressionKind:MAP }, then: {
+					self:setContainerHint(t: self:formatTypeString(t: stmt:varType));
+				});
+				local Boolean is hSavedArg: self:argMode;
+				self:argMode: false;
+				local String is hInitC: self:generateExpression(expr: stmt:initExpr);
+				self:argMode: hSavedArg;
+				self:setContainerHint(t: '');
+				local Boolean is hClaims: self:yieldsClaim(expr: stmt:initExpr);
+				hInitC: self:generateTypedConstructor(typeName: vTypeName, valueC: hInitC, cType: cType, claims: hClaims);
+				return '    ' . varName . ' = ' . hInitC . ";\n";
+			});
+			Conditional:if(check: { vTypeName == 'String' }, then: {
+				return '    ' . varName . " = \"\";\n";
+			});
+			Conditional:if(check: { vTypeName == 'Array' }, then: {
+				local String is hElemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
+				local String is hNewCall: 'spec_array_new()';
+				Conditional:if(check: { hElemKind == 'object' || hElemKind == 'string' }, then: {
+					hNewCall: 'spec_array_new_object()';
+				});
+				return '    ' . varName . ' = ' . hNewCall . ";\n";
+			});
+			Conditional:if(check: { vTypeName == 'List' }, then: {
+				local String is hFullT: self:formatTypeString(t: stmt:varType);
+				local String is hElemKind: self:containerElemKind(containerType: hFullT);
+				local String is hNewCall: 'spec_vec_new()';
+				Conditional:if(check: { hElemKind == 'byte' }, then: {
+					hNewCall: 'spec_bytebuffer_new()';
+				}, else: {
+					Conditional:if(check: { hElemKind == 'string' }, then: {
+						hNewCall: 'spec_vec_new_string()';
+					}, else: {
+						Conditional:if(check: { hElemKind == 'object' }, then: {
+							hNewCall: 'spec_vec_new_object()';
+						});
+					});
+				});
+				return '    ' . varName . ' = ' . hNewCall . ";\n";
+			});
+			Conditional:if(check: { vTypeName == 'Map' }, then: {
+				local String is hNewCall: 'spec_map_new()';
+				Conditional:if(check: { self:containerElemIsArc(containerType: self:formatTypeString(t: stmt:varType)) }, then: {
+					hNewCall: 'spec_map_new_object()';
+				});
+				return '    ' . varName . ' = ' . hNewCall . ";\n";
+			});
+			return '';
+		});
 		Conditional:if(check: { stmt:hasInit }, then: {
 			local ExpressionKind is initKind: stmt:initExpr:kind;
 			Conditional:if(check: { initKind == ExpressionKind:ARRAY || initKind == ExpressionKind:MAP }, then: {
@@ -2959,7 +3092,19 @@ Class is CodeGenerator{
 					});
 				});
 			});
+			# FUNCTIONS.md Part IV memory discipline: the return funnels
+			# through the method's cleanup label so the scope releases run
+			# on this exit path too.
+			Conditional:if(check: { self:cleanupLabel != '' }, then: {
+				Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+					return '    ' . self:cleanupRetVar . ' = ' . retC . ";\n    goto " . self:cleanupLabel . ";\n";
+				});
+				return '    goto ' . self:cleanupLabel . ";\n";
+			});
 			return '    return ' . retC . ";\n";
+		});
+		Conditional:if(check: { self:cleanupLabel != '' }, then: {
+			return '    goto ' . self:cleanupLabel . ";\n";
 		});
 		return "    return;\n";
 	}
@@ -3051,6 +3196,44 @@ Class is CodeGenerator{
 		# The accumulator is a fresh mutable buffer grown IN PLACE — a concat
 		# per statement would copy the whole body each time (quadratic).
 		local String is bodyC: Buf:stringCopy(b: '');
+
+		# FUNCTIONS.md Part IV memory discipline: the scope-end releases
+		# move under a cleanup label and every return funnels through it —
+		# a trailing release list is dead code after any return, which
+		# leaked every early-returning method's locals. Void methods funnel
+		# too: a bare `return` skips the releases just the same.
+		self:cleanupCounter: self:cleanupCounter + 1;
+		local String is releasesC: self:scopeReleases(stmts: method:body);
+		Conditional:if(check: { releasesC:length() > 0 }, then: {
+			self:cleanupLabel: '_cleanup_' . (self:cleanupCounter as String);
+		});
+		Conditional:if(check: { retType != 'void' && self:cleanupLabel != '' }, then: {
+			self:cleanupRetVar: '_mret_' . (self:cleanupCounter as String);
+		});
+		# The funnel's goto must never jump over an initializer a release
+		# reads: the top-level ARC locals hoist to zero-initialized
+		# declarations in the prologue; their statements assign.
+		Conditional:if(check: { self:cleanupLabel != '' }, then: {
+			method:body:each(action: local Function(Statement is vs){
+				Conditional:if(check: { vs:kind == StatementKind:VAR_DECL && self:isArcType(typeName: vs:varType:name) }, then: {
+					local String is hType: '';
+					Conditional:if(check: { vs:varType:name == 'List' }, then: {
+						hType: self:cTypeFor(typeName: self:formatTypeString(t: vs:varType));
+					}, else: {
+						hType: self:cTypeFor(typeName: vs:varType:name);
+					});
+					self:hoistedLocals:set(key: vs:varName, value: hType);
+				});
+			});
+		});
+
+		Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+			Buf:bufAppendBuf(dst: bodyC, src: '    ' . retType . ' ' . self:cleanupRetVar . " = 0;\n");
+		});
+		self:hoistedLocals:each(action: local Function(String is hName){
+			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
+			Buf:bufAppendBuf(dst: bodyC, src: '    SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
+		});
 		method:body:each(action: local Function(Statement is stmt){
 			local String is stmtC: self:generateStatement(stmt: stmt);
 			Buf:bufAppendBuf(dst: bodyC, src: stmtC);
@@ -3060,8 +3243,23 @@ Class is CodeGenerator{
 			bodyC: bodyC . "    return 0;\n";
 		});
 
-		# Scope-end releases: drop the refs this method's locals own.
-		bodyC: bodyC . self:scopeReleases(stmts: method:body);
+		Conditional:if(check: { self:cleanupLabel != '' }, then: {
+			# The funnel: releases run on the fall-through too. The return
+			# variable is pre-zeroed, so a fall-through on a non-void body
+			# behaves like the old trailing form.
+			bodyC: bodyC . '    ' . self:cleanupLabel . ": ;\n";
+			bodyC: bodyC . releasesC;
+			Conditional:if(check: { self:cleanupRetVar != '' }, then: {
+				bodyC: bodyC . '    return ' . self:cleanupRetVar . ";\n";
+			}, else: {
+				bodyC: bodyC . "    return;\n";
+			});
+			self:cleanupLabel: '';
+			self:cleanupRetVar: '';
+		}, else: {
+			# Bodies without ARC locals keep the plain trailing form.
+			bodyC: bodyC . releasesC;
+		});
 
 		# Unused-parameter suppressions: the (void) cast is legal on used
 		# params too, and substring use-checks false-positive on names
@@ -3071,6 +3269,7 @@ Class is CodeGenerator{
 			suppressions: suppressions . '    (void)' . self:utils:cIdent(name: p:name) . ";\n";
 		});
 
+		self:hoistedLocals: Map:init();
 		self:inMethod: false;
 		return header . suppressions . bodyC . "}\n\n";
 	}
@@ -3383,20 +3582,13 @@ Class is CodeGenerator{
 				out: out . "}\n\n";
 
 				out: out . cSym . '* ' . cSym . "_new(void) {\n";
-				local ClassInfo is acls: self:findClass(name: c:name);
-				local String is ans: acls:namespaceJoined();
-				# Compilation-phase namespaces: everything the compiler
-				# process allocates during a run. sys is included for
-				# SourceLocation/StackFrame (compiler-phase types).
-				Conditional:if(check: { ans == 'base:compiler:ast' || ans == 'base:compiler:lexer' || ans == 'base:compiler:parser' ||
-					ans == 'base:compiler:checker' || ans == 'base:compiler:gen' || ans == 'base:compiler:loader' ||
-					ans == 'base:compiler:driver' || ans == 'base:compiler:linter' || ans == 'base:sys' ||
-					ans:startsWith(prefix: 'base:compiler:parser:loops') || ans:startsWith(prefix: 'base:compiler:checker:loops') ||
-					ans:startsWith(prefix: 'base:compiler:lexer:loops') }, then: {
-					out: out . '    ' . cSym . '* self = (' . cSym . '*)spec_arena_alloc_object(sizeof(' . cSym . '), ' . cSym . "_destroy);\n";
-				}, else: {
-					out: out . '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n";
-				});
+				# FUNCTIONS.md Part IV memory discipline: every class
+				# allocates through ARC — refcounts drive the frees, so the
+				# parser's tokens, the loop objects, and every transient
+				# reclaim their memory during compilation. The old
+				# compiler-phase arena made everything immortal and turned
+				# the peak into total allocation volume.
+				out: out . '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n";
 				out: out . '    self->_type_name = "' . c:qualifiedName() . "\";\n";
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
 					out: out . '    self->_vtable = ' . cSym . "_vtable;\n";

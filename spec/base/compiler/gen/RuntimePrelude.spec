@@ -100,6 +100,7 @@ void spec_activate_process_arena(void) {
 /* Spec Automated Reference Counting (ARC) Primitives */
 #define SPEC_S_IMMORTAL 1u
 #define SPEC_S_HASLEN 2u
+#define SPEC_S_ARENA 4u
 typedef struct {
     _Atomic uint32_t ref_count;
     void (*destroy)(void*);
@@ -132,6 +133,10 @@ static inline void spec_release(void* obj) {
     if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }
     if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {
         if (h->destroy) h->destroy(obj);
+        /* Arena-owned headers live in arena blocks: run the destructor
+           (freeing the object's malloc'd data) but never free(h) — the
+           wholesale drain reclaims the block. */
+        if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_ARENA) return;
         free(h);
     }
 }
@@ -863,9 +868,10 @@ void* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {
     SpecHeader* h = (SpecHeader*)mem;
     h->ref_count = 1;
     h->destroy = destroy;
-    /* Immortal: release is a no-op — the arena owns the memory and drains
-       it wholesale. Refcounts may still bump (harmless); nothing frees. */
-    h->sflags = SPEC_S_IMMORTAL;
+    /* Arena-owned: release runs the destructor (freeing malloc'd data)
+       but the header block stays for the wholesale drain. Refcounts stay
+       accurate so transients reclaim their data during compilation. */
+    h->sflags = SPEC_S_ARENA;
     h->slen = 0;
     ArenaFinalizer* f = (ArenaFinalizer*)spec_arena_alloc(&_spec_object_arena, sizeof(ArenaFinalizer));
     f->next = _spec_object_arena_finalizers;
