@@ -53125,8 +53125,8 @@ String String_charAt(String self, long long index, String _default) {
     (void)index;
     (void)_default;
     if (((((index) < (0))) || (((index) >= (Buf_bufLength(NULL, self)))))) {
-        return (String)spec_retain((void*)(Buf_stringCopy(NULL, _default)));
-    }
+	    return (String)spec_retain((void*)(Buf_stringCopy(NULL, _default)));
+	};
     return (String)spec_retain((void*)(spec_string_from_char_code(Buf_bufGetByte(NULL, self, index, (-(1))))));
 }
 
@@ -53137,11 +53137,11 @@ String String_substring(String self, long long start, long long end) {
     long long s = start;
     long long e = end;
     if (((s) < (0))) {
-        s = 0;
-    }
+	    s = 0;
+	};
     if (((e) > (Buf_bufLength(NULL, self)))) {
-        e = Buf_bufLength(NULL, self);
-    }
+	    e = Buf_bufLength(NULL, self);
+	};
     return (String)spec_retain((void*)(Buf_stringSubstring(NULL, self, s, e)));
 }
 
@@ -53150,11 +53150,11 @@ bool String_startsWith(String self, String prefix) {
     (void)prefix;
     long long pl = Buf_bufLength(NULL, prefix);
     if (((pl) == (0))) {
-        return true;
-    }
+	    return true;
+	};
     if (((pl) > (Buf_bufLength(NULL, self)))) {
-        return false;
-    }
+	    return false;
+	};
     return spec_string_equals(Buf_stringSubstring(NULL, self, 0, pl), prefix);
 }
 
@@ -53163,12 +53163,12 @@ bool String_endsWith(String self, String suffix) {
     (void)suffix;
     long long sl = Buf_bufLength(NULL, suffix);
     if (((sl) == (0))) {
-        return true;
-    }
+	    return true;
+	};
     long long bl = Buf_bufLength(NULL, self);
     if (((sl) > (bl))) {
-        return false;
-    }
+	    return false;
+	};
     return spec_string_equals(Buf_stringSubstring(NULL, self, ((bl) - (sl)), bl), suffix);
 }
 
@@ -53191,8 +53191,8 @@ String String_replaceAll(String self, String search, String replacement) {
     (void)replacement;
     long long slen = Buf_bufLength(NULL, search);
     if (((slen) == (0))) {
-        return (String)spec_retain((void*)(Buf_stringCopy(NULL, self)));
-    }
+	    return (String)spec_retain((void*)(Buf_stringCopy(NULL, self)));
+	};
     long long total = Buf_bufLength(NULL, self);
     SPEC_AUTO String out = spec_construct_string(spec_string_intern(""));
     long long pos = 0;
@@ -53207,11 +53207,11 @@ String String_replaceAll(String self, String search, String replacement) {
         do {
     long long idx = Buf_stringIndexOfFrom(NULL, self, search, pos, (-(1)));
     if (((idx) < (0))) {
-        running = false;
-    } else {
-        out = spec_string_concat(spec_string_concat(out, ((String)spec_claim_pool((void*)(spec_string_substring(self, pos, idx))))), replacement);
-        pos = ((idx) + (slen));
-    }
+	    running = false;
+	} else {
+	    out = spec_string_concat(spec_string_concat(out, spec_string_substring(self, pos, idx)), replacement);
+	    pos = ((idx) + (slen));
+	};
         } while (0);
         if (!_it_1) break;
     }
@@ -53227,12 +53227,12 @@ SpecArray* String_split(String self, String delimiter) {
     SPEC_AUTO SpecArray* res = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     long long slen = Buf_bufLength(NULL, self);
     if (((slen) == (0))) {
-        return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
-    }
+	    return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
+	};
     long long dlen = Buf_bufLength(NULL, delimiter);
     if (((dlen) == (0))) {
-        long long i = 0;
-        ({ while (1) {
+	    long long i = 0;
+	    ({ while (1) {
         bool _ev_2 = false;
         do {
     _ev_2 = ((i) < (slen)); break;
@@ -53246,8 +53246,8 @@ SpecArray* String_split(String self, String delimiter) {
         if (!_it_2) break;
     }
 });
-        return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
-    }
+	    return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
+	};
     long long pos = 0;
     bool running = true;
     ({ while (1) {
@@ -53260,11 +53260,11 @@ SpecArray* String_split(String self, String delimiter) {
         do {
     long long idx = Buf_stringIndexOfFrom(NULL, self, delimiter, pos, (-(1)));
     if (((idx) < (0))) {
-        running = false;
-    } else {
-        spec_array_add_object(res, (void*)(spec_string_substring(self, pos, idx)));
-        pos = ((idx) + (dlen));
-    }
+	    running = false;
+	} else {
+	    spec_array_add_object(res, (void*)(spec_string_substring(self, pos, idx)));
+	    pos = ((idx) + (dlen));
+	};
         } while (0);
         if (!_it_3) break;
     }
@@ -53279,8 +53279,8 @@ SpecArray* String_lines(String self) {
     SPEC_AUTO SpecArray* res = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); _arr; })));
     long long len = Buf_bufLength(NULL, self);
     if (((len) == (0))) {
-        return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
-    }
+	    return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
+	};
     long long start = 0;
     long long i = 0;
     ({ while (1) {
@@ -53293,29 +53293,29 @@ SpecArray* String_lines(String self) {
         do {
     long long b = Buf_bufGetByte(NULL, self, i, (-(1)));
     if (((b) == (10))) {
-        long long endIdx = i;
-        if (((endIdx) > (start))) {
-        long long prev = Buf_bufGetByte(NULL, self, ((endIdx) - (1)), (-(1)));
-        if (((prev) == (13))) {
-        endIdx = ((endIdx) - (1));
-    }
-    }
-        spec_array_add_object(res, (void*)(spec_string_substring(self, start, endIdx)));
-        start = ((i) + (1));
-    }
+	    long long endIdx = i;
+	    if (((endIdx) > (start))) {
+	    long long prev = Buf_bufGetByte(NULL, self, ((endIdx) - (1)), (-(1)));
+	    if (((prev) == (13))) {
+	    endIdx = ((endIdx) - (1));
+	};
+	};
+	    spec_array_add_object(res, (void*)(spec_string_substring(self, start, endIdx)));
+	    start = ((i) + (1));
+	};
     i = ((i) + (1));
         } while (0);
         if (!_it_4) break;
     }
 });
     if (((start) < (len))) {
-        long long endIdx = len;
-        long long prev = Buf_bufGetByte(NULL, self, ((endIdx) - (1)), (-(1)));
-        if (((prev) == (13))) {
-        endIdx = ((endIdx) - (1));
-    }
-        spec_array_add_object(res, (void*)(spec_string_substring(self, start, endIdx)));
-    }
+	    long long endIdx = len;
+	    long long prev = Buf_bufGetByte(NULL, self, ((endIdx) - (1)), (-(1)));
+	    if (((prev) == (13))) {
+	    endIdx = ((endIdx) - (1));
+	};
+	    spec_array_add_object(res, (void*)(spec_string_substring(self, start, endIdx)));
+	};
     return (SpecArray*)({ SpecArray* _ret_val = res; res = NULL; _ret_val; });
     if (res) { spec_release((void*)res); res = NULL; }
 }
@@ -53324,8 +53324,8 @@ String String_trim(String self) {
     (void)self;
     long long len = Buf_bufLength(NULL, self);
     if (((len) == (0))) {
-        return (String)spec_retain((void*)(spec_string_intern("")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("")));
+	};
     long long s = 0;
     bool sTrimming = true;
     ({ while (1) {
@@ -53338,17 +53338,17 @@ String String_trim(String self) {
         do {
     long long b = Buf_bufGetByte(NULL, self, s, (-(1)));
     if (((((((((b) == (32))) || (((b) == (9))))) || (((b) == (10))))) || (((b) == (13))))) {
-        s = ((s) + (1));
-    } else {
-        sTrimming = false;
-    }
+	    s = ((s) + (1));
+	} else {
+	    sTrimming = false;
+	};
         } while (0);
         if (!_it_5) break;
     }
 });
     if (((s) >= (len))) {
-        return (String)spec_retain((void*)(spec_string_intern("")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("")));
+	};
     long long e = len;
     bool eTrimming = true;
     ({ while (1) {
@@ -53361,10 +53361,10 @@ String String_trim(String self) {
         do {
     long long b = Buf_bufGetByte(NULL, self, ((e) - (1)), (-(1)));
     if (((((((((b) == (32))) || (((b) == (9))))) || (((b) == (10))))) || (((b) == (13))))) {
-        e = ((e) - (1));
-    } else {
-        eTrimming = false;
-    }
+	    e = ((e) - (1));
+	} else {
+	    eTrimming = false;
+	};
         } while (0);
         if (!_it_6) break;
     }
@@ -53378,8 +53378,8 @@ long long String_countLeading(String self, String search) {
     long long slen = Buf_bufLength(NULL, search);
     long long blen = Buf_bufLength(NULL, self);
     if (((((slen) == (0))) || (((blen) == (0))))) {
-        return 0;
-    }
+	    return 0;
+	};
     long long count = 0;
     long long pos = 0;
     bool matching = true;
@@ -53391,12 +53391,12 @@ long long String_countLeading(String self, String search) {
         if (!_ev_7) break;
         bool _it_7 = true;
         do {
-    if (spec_string_equals(((String)spec_claim_pool((void*)(Buf_stringSubstring(NULL, self, pos, ((pos) + (slen)))))), search)) {
-        count = ((count) + (1));
-        pos = ((pos) + (slen));
-    } else {
-        matching = false;
-    }
+    if (spec_string_equals(Buf_stringSubstring(NULL, self, pos, ((pos) + (slen))), search)) {
+	    count = ((count) + (1));
+	    pos = ((pos) + (slen));
+	} else {
+	    matching = false;
+	};
         } while (0);
         if (!_it_7) break;
     }
@@ -53408,8 +53408,8 @@ bool String_isDigit(String self) {
     (void)self;
     long long n = Buf_bufLength(NULL, self);
     if (((n) == (0))) {
-        return false;
-    }
+	    return false;
+	};
     long long i = 0;
     bool ok = true;
     ({ while (1) {
@@ -53422,8 +53422,8 @@ bool String_isDigit(String self) {
         do {
     long long b = Buf_bufGetByte(NULL, self, i, (-(1)));
     if (((((b) < (48))) || (((b) > (57))))) {
-        ok = false;
-    }
+	    ok = false;
+	};
     i = ((i) + (1));
         } while (0);
         if (!_it_8) break;
@@ -53436,8 +53436,8 @@ bool String_isAlpha(String self) {
     (void)self;
     long long n = Buf_bufLength(NULL, self);
     if (((n) == (0))) {
-        return false;
-    }
+	    return false;
+	};
     long long i = 0;
     bool ok = true;
     ({ while (1) {
@@ -53452,8 +53452,8 @@ bool String_isAlpha(String self) {
     bool isUpper = ((((b) >= (65))) && (((b) <= (90))));
     bool isLower = ((((b) >= (97))) && (((b) <= (122))));
     if ((((!(isUpper))) && ((!(isLower))))) {
-        ok = false;
-    }
+	    ok = false;
+	};
     i = ((i) + (1));
         } while (0);
         if (!_it_9) break;
@@ -53466,8 +53466,8 @@ bool String_isWhitespace(String self) {
     (void)self;
     long long n = Buf_bufLength(NULL, self);
     if (((n) == (0))) {
-        return false;
-    }
+	    return false;
+	};
     long long i = 0;
     bool ok = true;
     ({ while (1) {
@@ -53480,8 +53480,8 @@ bool String_isWhitespace(String self) {
         do {
     long long b = Buf_bufGetByte(NULL, self, i, (-(1)));
     if (((((((((((((b) != (32))) && (((b) != (9))))) && (((b) != (10))))) && (((b) != (13))))) && (((b) != (11))))) && (((b) != (12))))) {
-        ok = false;
-    }
+	    ok = false;
+	};
     i = ((i) + (1));
         } while (0);
         if (!_it_10) break;
@@ -53496,38 +53496,38 @@ long long String_parseInt(String self, long long base, long long _default) {
     (void)_default;
     long long len = Buf_bufLength(NULL, self);
     if (((len) == (0))) {
-        return _default;
-    }
+	    return _default;
+	};
     long long b = base;
     long long start = 0;
     if (((((len) >= (2))) && (((Buf_bufGetByte(NULL, self, 0, (-(1)))) == (48))))) {
-        long long prefixCh = Buf_bufGetByte(NULL, self, 1, (-(1)));
-        if (((((prefixCh) == (120))) || (((prefixCh) == (88))))) {
-        b = 16;
-        start = 2;
-    } else {
-        if (((((prefixCh) == (98))) || (((prefixCh) == (66))))) {
-        b = 2;
-        start = 2;
-    } else {
-        if (((((prefixCh) == (111))) || (((prefixCh) == (79))))) {
-        b = 8;
-        start = 2;
-    }
-    }
-    }
-    }
+	    long long prefixCh = Buf_bufGetByte(NULL, self, 1, (-(1)));
+	    if (((((prefixCh) == (120))) || (((prefixCh) == (88))))) {
+	    b = 16;
+	    start = 2;
+	} else {
+	    if (((((prefixCh) == (98))) || (((prefixCh) == (66))))) {
+	    b = 2;
+	    start = 2;
+	} else {
+	    if (((((prefixCh) == (111))) || (((prefixCh) == (79))))) {
+	    b = 8;
+	    start = 2;
+	};
+	};
+	};
+	};
     if (((((b) < (2))) || (((b) > (36))))) {
-        return _default;
-    }
+	    return _default;
+	};
     bool neg = false;
     if (((((start) < (len))) && (((Buf_bufGetByte(NULL, self, start, (-(1)))) == (45))))) {
-        neg = true;
-        start = ((start) + (1));
-    }
+	    neg = true;
+	    start = ((start) + (1));
+	};
     if (((start) >= (len))) {
-        return _default;
-    }
+	    return _default;
+	};
     long long val = 0;
     long long i = start;
     bool ok = true;
@@ -53542,36 +53542,36 @@ long long String_parseInt(String self, long long base, long long _default) {
         do {
     long long ch = Buf_bufGetByte(NULL, self, i, (-(1)));
     if (((ch) != (95))) {
-        long long digit = (-(1));
-        if (((((ch) >= (48))) && (((ch) <= (57))))) {
-        digit = ((ch) - (48));
-    } else {
-        if (((((ch) >= (97))) && (((ch) <= (122))))) {
-        digit = ((((ch) - (97))) + (10));
-    } else {
-        if (((((ch) >= (65))) && (((ch) <= (90))))) {
-        digit = ((((ch) - (65))) + (10));
-    }
-    }
-    }
-        if (((((digit) < (0))) || (((digit) >= (b))))) {
-        ok = false;
-    } else {
-        val = ((((val) * (b))) + (digit));
-        anyDigits = true;
-    }
-    }
+	    long long digit = (-(1));
+	    if (((((ch) >= (48))) && (((ch) <= (57))))) {
+	    digit = ((ch) - (48));
+	} else {
+	    if (((((ch) >= (97))) && (((ch) <= (122))))) {
+	    digit = ((((ch) - (97))) + (10));
+	} else {
+	    if (((((ch) >= (65))) && (((ch) <= (90))))) {
+	    digit = ((((ch) - (65))) + (10));
+	};
+	};
+	};
+	    if (((((digit) < (0))) || (((digit) >= (b))))) {
+	    ok = false;
+	} else {
+	    val = ((((val) * (b))) + (digit));
+	    anyDigits = true;
+	};
+	};
     i = ((i) + (1));
         } while (0);
         if (!_it_11) break;
     }
 });
     if ((((!(ok))) || ((!(anyDigits))))) {
-        return _default;
-    }
+	    return _default;
+	};
     if (neg) {
-        return (-(val));
-    }
+	    return (-(val));
+	};
     return val;
 }
 
