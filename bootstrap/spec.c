@@ -34306,8 +34306,8 @@ static __attribute__((unused)) void _anon_fn_42(void* _env_ptr, Expression* seg)
     Member* m = _env->m;
     (void)m;
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
     _env->found = found;
 }
 
@@ -34334,15 +34334,15 @@ static __attribute__((unused)) void _anon_fn_41(void* _env_ptr, Expression* item
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_43 = item->arrayItems; if (_a_43) { for (size_t _i_43 = 0; _i_43 < _a_43->length; _i_43++) {
+	    ({ SpecArray* _a_43 = item->arrayItems; if (_a_43) { for (size_t _i_43 = 0; _i_43 < _a_43->length; _i_43++) {
         Expression* seg = (Expression*)(intptr_t)_a_43->items[_i_43];
         do {
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
         } while (0);
     } } });
-    }
+	};
     _env->found = found;
 }
 
@@ -34369,8 +34369,8 @@ static __attribute__((unused)) void _anon_fn_45(void* _env_ptr, Expression* seg)
     Member* m = _env->m;
     (void)m;
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
     _env->found = found;
 }
 
@@ -34393,22 +34393,22 @@ static __attribute__((unused)) void _anon_fn_40(void* _env_ptr, Member* m) {
     String name = _env->name;
     (void)name;
     if ((((((((!(found))) && (spec_string_equals(m->name, spec_string_intern("using"))))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_44 = m->initExpr->arrayItems; if (_a_44) { for (size_t _i_44 = 0; _i_44 < _a_44->length; _i_44++) {
+	    ({ SpecArray* _a_44 = m->initExpr->arrayItems; if (_a_44) { for (size_t _i_44 = 0; _i_44 < _a_44->length; _i_44++) {
         Expression* item = (Expression*)(intptr_t)_a_44->items[_i_44];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_46 = item->arrayItems; if (_a_46) { for (size_t _i_46 = 0; _i_46 < _a_46->length; _i_46++) {
+	    ({ SpecArray* _a_46 = item->arrayItems; if (_a_46) { for (size_t _i_46 = 0; _i_46 < _a_46->length; _i_46++) {
         Expression* seg = (Expression*)(intptr_t)_a_46->items[_i_46];
         do {
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
-    }
+	};
     _env->found = found;
 }
 
@@ -34435,8 +34435,8 @@ static __attribute__((unused)) void _anon_fn_49(void* _env_ptr, Expression* seg)
     Member* m = _env->m;
     (void)m;
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
     _env->found = found;
 }
 
@@ -34463,15 +34463,15 @@ static __attribute__((unused)) void _anon_fn_48(void* _env_ptr, Expression* item
     Member* m = _env->m;
     (void)m;
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_50 = item->arrayItems; if (_a_50) { for (size_t _i_50 = 0; _i_50 < _a_50->length; _i_50++) {
+	    ({ SpecArray* _a_50 = item->arrayItems; if (_a_50) { for (size_t _i_50 = 0; _i_50 < _a_50->length; _i_50++) {
         Expression* seg = (Expression*)(intptr_t)_a_50->items[_i_50];
         do {
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
         } while (0);
     } } });
-    }
+	};
     _env->found = found;
 }
 
@@ -34498,8 +34498,8 @@ static __attribute__((unused)) void _anon_fn_52(void* _env_ptr, Expression* seg)
     Member* m = _env->m;
     (void)m;
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
     _env->found = found;
 }
 
@@ -34519,10 +34519,10 @@ static __attribute__((unused)) void _anon_fn_55(void* _env_ptr, Expression* seg)
     String joined = _env->joined;
     (void)joined;
     if (spec_string_equals(joined, spec_string_intern(""))) {
-        spec_assign((void**)&joined, (void*)(seg->stringValue));
-    } else {
-        joined = spec_string_concat(spec_string_concat(joined, spec_string_intern(":")), seg->stringValue);
-    }
+	    spec_assign((void**)&joined, (void*)(seg->stringValue));
+	} else {
+	    joined = spec_string_concat(spec_string_concat(joined, spec_string_intern(":")), seg->stringValue);
+	};
     _env->joined = joined;
 }
 
@@ -54175,22 +54175,22 @@ bool ClassInfo_instanceImportsAs(ClassInfo* self, String name) {
         Member* m = (Member*)(intptr_t)_a_47->items[_i_47];
         do {
     if ((((((((!(found))) && (spec_string_equals(m->name, spec_string_intern("using"))))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        ({ SpecArray* _a_51 = m->initExpr->arrayItems; if (_a_51) { for (size_t _i_51 = 0; _i_51 < _a_51->length; _i_51++) {
+	    ({ SpecArray* _a_51 = m->initExpr->arrayItems; if (_a_51) { for (size_t _i_51 = 0; _i_51 < _a_51->length; _i_51++) {
         Expression* item = (Expression*)(intptr_t)_a_51->items[_i_51];
         do {
     if (((item->kind) == (ExpressionKind_ARRAY))) {
-        ({ SpecArray* _a_53 = item->arrayItems; if (_a_53) { for (size_t _i_53 = 0; _i_53 < _a_53->length; _i_53++) {
+	    ({ SpecArray* _a_53 = item->arrayItems; if (_a_53) { for (size_t _i_53 = 0; _i_53 < _a_53->length; _i_53++) {
         Expression* seg = (Expression*)(intptr_t)_a_53->items[_i_53];
         do {
     if (((((seg->kind) == (ExpressionKind_USING_AS))) && (spec_string_equals(seg->stringValue, name)))) {
-        found = true;
-    }
+	    found = true;
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
-    }
+	};
         } while (0);
     } } });
     return found;
@@ -54210,21 +54210,21 @@ String ClassInfo_namespaceJoined(ClassInfo* self) {
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(self->members, idx)));
     idx = ((idx) + (1));
     if (((((spec_string_equals(m->name, spec_string_intern("namespace"))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        SPEC_AUTO String joined = spec_construct_string(spec_string_intern(""));
-        ({ SpecArray* _a_56 = m->initExpr->arrayItems; if (_a_56) { for (size_t _i_56 = 0; _i_56 < _a_56->length; _i_56++) {
+	    SPEC_AUTO String joined = spec_construct_string(spec_string_intern(""));
+	    ({ SpecArray* _a_56 = m->initExpr->arrayItems; if (_a_56) { for (size_t _i_56 = 0; _i_56 < _a_56->length; _i_56++) {
         Expression* seg = (Expression*)(intptr_t)_a_56->items[_i_56];
         do {
     if (spec_string_equals(joined, spec_string_intern(""))) {
-        spec_assign((void**)&joined, (void*)(seg->stringValue));
-    } else {
-        joined = spec_string_concat(spec_string_concat(joined, spec_string_intern(":")), seg->stringValue);
-    }
+	    spec_assign((void**)&joined, (void*)(seg->stringValue));
+	} else {
+	    joined = spec_string_concat(spec_string_concat(joined, spec_string_intern(":")), seg->stringValue);
+	};
         } while (0);
     } } });
-        spec_assign((void**)&self->nsJoined, (void*)(joined));
-        _it_54 = false; break;
+	    spec_assign((void**)&self->nsJoined, (void*)(joined));
+	    _it_54 = false; break;
     if (joined) { spec_release((void*)joined); joined = NULL; }
-    }
+	};
     _it_54 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
         } while (0);
@@ -54328,13 +54328,13 @@ bool Type_isGeneric(Type* self) {
 String Type_toString(Type* self) {
     (void)self;
     if (((spec_array_length(self->params)) == (0))) {
-        return (String)spec_retain((void*)(self->name));
-    }
+	    return (String)spec_retain((void*)(self->name));
+	};
     if (((spec_array_length(self->params)) == (1))) {
-        SPEC_AUTO Type* p0 = (Type*)spec_retain((void*)(spec_array_get(self->params, 0)));
-        return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(self->name)), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(Keyword_value(Keyword_OF))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(p0); (((String (*)(Type*))_recv->_vtable[20]))((Type*)_recv); })))))));
+	    SPEC_AUTO Type* p0 = (Type*)spec_retain((void*)(spec_array_get(self->params, 0)));
+	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(self->name)), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(Keyword_value(Keyword_OF))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(p0); (((String (*)(Type*))_recv->_vtable[20]))((Type*)_recv); })))))));
     if (p0) { spec_release((void*)p0); p0 = NULL; }
-    }
+	};
     SPEC_AUTO Type* first = (Type*)spec_retain((void*)(spec_array_get(self->params, 0)));
     SPEC_AUTO Type* second = (Type*)spec_retain((void*)(spec_array_get(self->params, 1)));
     return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(self->name)), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(Keyword_value(Keyword_OF))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(first); (((String (*)(Type*))_recv->_vtable[20]))((Type*)_recv); }))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(Keyword_value(Keyword_TO))))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(({ Type* _recv = (Type*)(second); (((String (*)(Type*))_recv->_vtable[20]))((Type*)_recv); })))))));
@@ -61644,8 +61644,8 @@ bool ClassBindings_isTransparent(ClassBindings* self, ClassInfo* c) {
     (void)self;
     (void)c;
     if ((((bool (*)(ClassBindings*, ClassInfo*))self->_vtable[201]))((ClassBindings*)self, c)) {
-        return true;
-    }
+	    return true;
+	};
     SPEC_AUTO String name = spec_construct_string(c->name);
     return ((((((((((((((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("LoopControl"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Output"))))) || (spec_string_equals(name, spec_string_intern("Input"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("While"))))) || (spec_string_equals(name, spec_string_intern("Loop"))))) || (spec_string_equals(name, spec_string_intern("LoopCallback"))))) || (spec_string_equals(name, spec_string_intern("InputHandler"))))) || (spec_string_equals(name, spec_string_intern("Parallel"))))) || (spec_string_equals(name, spec_string_intern("List"))))) || (spec_string_equals(name, spec_string_intern("String"))));
     if (name) { spec_release((void*)name); name = NULL; }
@@ -61697,16 +61697,16 @@ bool SysinternalCheckLoop_iteration(SysinternalCheckLoop* self, SpecLoopControl*
     SPEC_AUTO Member* m = (Member*)spec_retain((void*)(spec_array_get(self->members, self->idx)));
     self->idx = ((self->idx) + (1));
     if (((((spec_string_equals(m->name, spec_string_intern("namespace"))) && (m->hasInit))) && (((m->initExpr->kind) == (ExpressionKind_ARRAY))))) {
-        SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(m->initExpr->arrayItems));
-        if (((spec_array_length(segs)) > (0))) {
-        SPEC_AUTO Expression* last = (Expression*)spec_retain((void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
-        if (spec_string_equals(last->stringValue, spec_string_intern("sysinternal"))) {
-        self->isFloor = true;
-    }
+	    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(m->initExpr->arrayItems));
+	    if (((spec_array_length(segs)) > (0))) {
+	    SPEC_AUTO Expression* last = (Expression*)spec_retain((void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
+	    if (spec_string_equals(last->stringValue, spec_string_intern("sysinternal"))) {
+	    self->isFloor = true;
+	};
     if (last) { spec_release((void*)last); last = NULL; }
-    }
+	};
     if (segs) { spec_release((void*)segs); segs = NULL; }
-    }
+	};
     return true;
     if (m) { spec_release((void*)m); m = NULL; }
 }

@@ -320,17 +320,21 @@ a closure, and branch typing goes soft. Instead, the proven
 2. Inline codegen + floor fallback, tested.
 3. Scripted migration of ~1,934 `if` sites (1,649 compiler/stdlib statements,
    285 tests/examples, 94 `else if` chains, 26 if-expressions).
-   **Migration status:** a textual if→branch sweep was attempted and
-   **reverted** — the self-hosted checker's own if-statements are
-   state-machine code (local declarations feeding sibling branches,
-   validation guards sharing checker state) that closure-conversion
-   turns into checker-internal type errors. The correct tool is a
-   **parse-time desugar**: the parser's if-statement arm emits the
-   branch-call AST directly (the established pattern — the `as:` and
-   template desugars work exactly this way), handling every shape
-   structurally. Sequencing: desugar if→branch behind the keyword
-   (sources keep reading `if` but compile to Conditional calls), verify
-   the suite, then the flip.
+   **Migration status: the compiler/stdlib half is DONE** — every
+   statement-form `if` in `spec/base` and `spec/lib` (≈1,800 sites across
+   ~50 files) now compiles as `Conditional:branch(...)`, statement form
+   and value form; only the raw-C prelude (RuntimePrelude.spec) still has
+   C `if`, and it was never Spec. The first textual sweep was reverted;
+   the working tool is a string/comment-aware scanner with
+   paren/brace-matched spans, run **incrementally** (a few files per
+   batch, emit→gcc→self-load pre-check, bootstrap, commit — the ratchet:
+   a too-big single hop breaks the old generation's loader, small hops
+   converge). Two latent gen bugs surfaced and were fixed along the way:
+   the branch inline must INHERIT the enclosing inline-return context
+   (a `return false` inside a branch nested in a loop's iteration is a
+   loop-stop, not a method return), and materialized closures must write
+   back mutated captures (assignments inside callbacks were silently
+   lost). Remaining: tests/examples (~285 sites), then the flip (step 4).
 4. The atomic flip: rename to `if`; delete `Keyword:IF`/`ELSE`,
    `StatementKind:IF`, `ExpressionKind:IF_ELSE`, the statement/expression
    parse arms, the gen's if-emission, and the checker's
