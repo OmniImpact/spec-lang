@@ -9,6 +9,10 @@
 Class is Input{
 	namespace: ['base', 'io'];
 
+	replace Array of Array of String is using: [
+		['base', 'io', InputHandler]
+];
+
 	## Registers an input handler callback to process interactive user console entries.
 	##
 	## @param handler: An [InputHandler] subclass responding to user input events.

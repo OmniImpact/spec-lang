@@ -8,6 +8,13 @@
 Class is Token{
 	replace Array of String is namespace: ['base', 'compiler', 'lexer'];
 
+	replace Array of Array of String is using: [
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'compiler', 'lexer', Operator]
+,
+		['base', 'compiler', 'lexer', TokenKind]
+];
+
 	## Lexical token category.
 	local TokenKind is kind: TokenKind:EOF;
 

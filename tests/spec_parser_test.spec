@@ -17,6 +17,12 @@ Class is SpecParserTest{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'io', Output],
 		['base', 'io', as Output()]
+,
+		['base', 'compiler', 'lexer', Token],
+		['base', 'compiler', Error],
+		['base', 'compiler', 'lexer', Keyword],
+		['base', 'compiler', 'lexer', Punctuation],
+		['base', 'compiler', 'ast', Type]
 	];
 
 	## Tokenizes and parses a source string.

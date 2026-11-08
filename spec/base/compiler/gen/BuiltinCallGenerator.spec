@@ -27,6 +27,8 @@ Class is BuiltinCallGenerator{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator']
+,
+		['base', 'compiler', 'gen', CodeGenerator]
 	];
 
 	local CBackendUtils is utils: CBackendUtils:init();

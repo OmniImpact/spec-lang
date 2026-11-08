@@ -25,6 +25,16 @@ Class is Loader{
 		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'iterator', as While()]
+,
+		['base', 'compiler', 'ast', Expression]
+,
+		['base', 'compiler', 'ast', Parameter]
+,
+		['base', 'compiler', 'lexer', Token]
+,
+		['base', 'compiler', 'ast', Type]
+,
+		['base', 'compiler', Error]
 	];
 
 	local Map of String to String is loadedFiles: Map:init();
@@ -90,6 +100,9 @@ Class is Loader{
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is m){
 				m:setSourceFile(file: filePath);
+				if (m:kind == MemberKind:CLASS) {
+					m:nestedClass:setSourceFile(file: filePath);
+				}
 			});
 			local String is gName: self:groupTargetOf(c: c);
 			# Class identity is namespace-qualified: a base:sys wrapper and
@@ -736,6 +749,11 @@ Class is Loader{
 					self:loadedClasses:add(item: target);
 				}
 				if (target != frag) {
+					if (target:sourceFile == '' && frag:sourceFile != '') {
+						# A freshly created group target adopts the fragment's
+						# file so the import gate's compilation-unit grant sees it.
+						target:setSourceFile(file: frag:sourceFile);
+					}
 					self:mergeFragmentInto(target: target, frag: frag);
 					self:removeClassFromLoaded(c: frag);
 				}

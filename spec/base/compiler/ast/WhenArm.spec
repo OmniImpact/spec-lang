@@ -5,6 +5,12 @@
 Class is WhenArm{
 	namespace: ['base', 'compiler', 'ast'];
 
+	replace Array of Array of String is using: [
+		['base', 'compiler', 'ast', Expression]
+,
+		['base', 'compiler', 'ast', Statement]
+];
+
 	## Guard conditions; any match selects this arm.
 	Array of Expression is conditions: [];
 

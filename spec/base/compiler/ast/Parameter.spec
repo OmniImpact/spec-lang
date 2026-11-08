@@ -6,6 +6,8 @@ Class is Parameter{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Type]
+,
+		['base', 'compiler', 'ast', Expression]
 	];
 
 	## Parameter identifier.

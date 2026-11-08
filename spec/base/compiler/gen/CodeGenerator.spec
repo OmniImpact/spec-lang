@@ -35,6 +35,8 @@ Class is CodeGenerator{
 		['base', 'iterator'],
 		['base', 'iterator', as While()],
 		['base', 'sys', as Buf()]
+,
+		['base', 'compiler', 'ast', StatementKind]
 	];
 
 	## Backend utilities.
@@ -380,7 +382,7 @@ Class is CodeGenerator{
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
 	Function of Boolean is genImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+		if (clsName == '' || clsName == 'Any' || hops >= 64) {
 			return false;
 		}
 		local ClassInfo is cls: self:findClass(name: clsName);
@@ -504,7 +506,7 @@ Class is CodeGenerator{
 	## @param hops: Recursion budget guard.
 	## @param acc: The collected group.
 	Function is collectOverloadGroupGen(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
-		if (ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 8) {
+		if (ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64) {
 			return;
 		}
 		local Array of String is parts: className:split(delimiter: ':');

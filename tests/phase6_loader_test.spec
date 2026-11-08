@@ -10,6 +10,14 @@ Class is Phase6LoaderTest{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'loader', Loader],
 		['base', 'io', as Output()]
+,
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'checker', TypeError],
+		['base', 'compiler', 'checker', TypeChecker],
+		['base', 'compiler', 'gen', CodeGenerator],
+		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', Error]
 	];
 
 	replace Function is init(Map of String to String is args){

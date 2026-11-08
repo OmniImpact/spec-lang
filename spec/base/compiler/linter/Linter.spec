@@ -24,6 +24,8 @@ Class is Linter{
 		['base', 'iterator'],
 		['base', 'iterator', as While()],
 		['base', 'io', as Output()]
+,
+		['base', 'compiler', 'linter', LintIssue]
 	];
 
 	## Audit name sets (INSTANCE.md Phase 0.5): every enum and class name in
@@ -711,7 +713,7 @@ Class is Linter{
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
 	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+		if (clsName == '' || clsName == 'Any' || hops >= 64) {
 			return false;
 		}
 		local ClassInfo is cls: self:auditClassNodes:get(key: clsName, default: self:auditOwner);

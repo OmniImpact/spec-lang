@@ -726,7 +726,7 @@ Class is TypeChecker{
 	## @param acc: The collected group (nearest-declaration semantics).
 	## @param ownerAcc: The declaring class name accumulator (reference).
 	Function is collectOverloadGroup(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
-		if (ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 8) {
+		if (ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64) {
 			return;
 		}
 		local Array of String is parts: className:split(delimiter: ':');
@@ -868,7 +868,7 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
 	Function of Boolean is importsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+		if (clsName == '' || clsName == 'Any' || hops >= 64) {
 			return false;
 		}
 		local ClassInfo is cls: self:findClass(name: clsName);
@@ -907,7 +907,7 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @param acc: The provider accumulator.
 	Function is collectBareProviders(String is clsName, String is methodName, Int is hops, Array of String is acc){
-		if (clsName == '' || clsName == 'Any' || hops >= 8) {
+		if (clsName == '' || clsName == 'Any' || hops >= 64) {
 			return;
 		}
 		local ClassInfo is cls: self:findClass(name: clsName);
@@ -950,7 +950,7 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when an ancestor declares the name.
 	Function of Boolean is ancestorDeclares(String is className, String is methodName, Int is hops){
-		if (className == '' || className == 'Any' || hops >= 8) {
+		if (className == '' || className == 'Any' || hops >= 64) {
 			return false;
 		}
 		local Array of String is parts: className:split(delimiter: ':');
@@ -975,7 +975,7 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when declared here or inherited.
 	Function of Boolean is declaresOrInherits(String is className, String is methodName, Int is hops){
-		if (className == '' || className == 'Any' || hops >= 8) {
+		if (className == '' || className == 'Any' || hops >= 64) {
 			return false;
 		}
 		local Array of String is parts: className:split(delimiter: ':');
@@ -1011,7 +1011,7 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when the inherited name is overloaded.
 	Function of Boolean is ancestorOverloaded(String is className, String is methodName, Int is hops){
-		if (className == '' || className == 'Any' || hops >= 8) {
+		if (className == '' || className == 'Any' || hops >= 64) {
 			return false;
 		}
 		local Array of String is parts: className:split(delimiter: ':');
@@ -1036,7 +1036,7 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when the nearest declaration is overloaded.
 	Function of Boolean is nearestGroupOverloaded(String is className, String is methodName, Int is hops){
-		if (className == '' || className == 'Any' || hops >= 8) {
+		if (className == '' || className == 'Any' || hops >= 64) {
 			return false;
 		}
 		local Array of String is parts: className:split(delimiter: ':');
@@ -1191,6 +1191,172 @@ Class is TypeChecker{
 			}
 		);
 		return same;
+	}
+
+	## FUNCTIONS.md §I.6: the import gate. True when [targetName] is
+	## usable by [className] in type positions and for construction:
+	## the X3 stratum, the class itself, an ancestor, the same source
+	## file, or any using entry of the class or its ancestors (type
+	## imports, as-imports, and package wildcards all grant).
+	##
+	## @param className: The enclosing class.
+	## @param targetName: The referenced class name.
+	## @return: true when access is granted.
+	Function of Boolean is classHasAccess(String is className, String is targetName){
+		if (targetName == '' || self:isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl') {
+			return true;
+		}
+		return self:accessInClass(className: className, targetName: targetName, hops: 0);
+	}
+
+	## The compilation-unit grant: any class declared in [sourceFile] is
+	## accessible, and any same-file class's using entries grant the
+	## target (type import, as-import, or package wildcard).
+	##
+	## @param sourceFile: The visiting class's source file.
+	## @param targetName: The referenced class name.
+	## @param targetNs: The target's declared namespace ('' when unknown).
+	## @return: true when the file grants access.
+	Function of Boolean is fileGrants(String is sourceFile, String is targetName, String is targetNs){
+		# An empty sourceFile is one anonymous unit (the self-checking
+		# snippets): its classes grant one another.
+		local Boolean is granted: false;
+		self:programClasses:each(action: local Function(ClassInfo is c){
+			if (!granted && c:sourceFile == sourceFile) {
+				if (c:name == targetName) {
+					granted: true;
+					return;
+				}
+				c:members:each(action: local Function(Member is m){
+					if (!granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+						m:initExpr:arrayItems:each(action: local Function(Expression is gi){
+							if (gi:stringValue == targetName) {
+								granted: true;
+							}
+						});
+					}
+					if (!granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+						m:initExpr:arrayItems:each(action: local Function(Expression is item){
+							if (!granted && item:kind == ExpressionKind:ARRAY) {
+								local String is terminal: '';
+								local String is nsJoined: '';
+								item:arrayItems:each(action: local Function(Expression is seg){
+									if (seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS) {
+										terminal: seg:stringValue;
+									} else {
+										if (nsJoined == '') {
+											nsJoined: seg:stringValue;
+										} else {
+											nsJoined: nsJoined . ':' . seg:stringValue;
+										}
+									}
+								});
+								if (terminal == targetName) {
+									granted: true;
+								}
+								if (terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':'))) {
+									granted: true;
+								}
+							}
+						});
+					}
+				});
+			}
+		});
+		return granted;
+	}
+
+	## Recursive access walk over the ancestor lattice.
+	##
+	## @param className: Class being visited.
+	## @param targetName: The referenced class name.
+	## @param hops: Recursion budget guard.
+	## @return: true when access is granted at this level or above.
+	Function of Boolean is accessInClass(String is className, String is targetName, Int is hops){
+		if (hops >= 64 || className == '') {
+			return false;
+		}
+		if (className == targetName) {
+			return true;
+		}
+		local Array of String is parts: className:split(delimiter: ':');
+		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
+		if (cls:name == '') {
+			return false;
+		}
+		local String is targetNs: '';
+		local ClassInfo is tgt: self:findClass(name: targetName);
+		if (tgt:name != '') {
+			targetNs: tgt:namespaceJoined();
+		}
+		# The file's compilation unit: same-file classes are accessible, and
+		# every same-file class's using declaration grants (nested classes
+		# live under the outer class's using).
+		if (self:fileGrants(sourceFile: cls:sourceFile, targetName: targetName, targetNs: targetNs)) {
+			return true;
+		}
+		local Boolean is granted: false;
+		cls:members:each(action: local Function(Member is m){
+			if (!granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+				m:initExpr:arrayItems:each(action: local Function(Expression is gi){
+					if (gi:stringValue == targetName) {
+						granted: true;
+					}
+				});
+			}
+			if (!granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+				m:initExpr:arrayItems:each(action: local Function(Expression is item){
+					if (!granted && item:kind == ExpressionKind:ARRAY) {
+						local String is terminal: '';
+						local String is nsJoined: '';
+						item:arrayItems:each(action: local Function(Expression is seg){
+							if (seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS) {
+								terminal: seg:stringValue;
+							} else {
+								if (nsJoined == '') {
+									nsJoined: seg:stringValue;
+								} else {
+									nsJoined: nsJoined . ':' . seg:stringValue;
+								}
+							}
+						});
+						if (terminal == targetName) {
+							granted: true;
+						}
+						if (terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':'))) {
+							granted: true;
+						}
+					}
+				});
+			}
+		});
+		if (granted) {
+			return true;
+		}
+		local Boolean is viaParent: false;
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if (!viaParent && self:accessInClass(className: baseName, targetName: targetName, hops: hops + 1)) {
+				viaParent: true;
+			}
+		});
+		return viaParent;
+	}
+
+	## FUNCTIONS.md §I.6: gates a declared type — the base name and every
+		## type argument must be accessible from the enclosing class.
+	##
+	## @param t: The declared type.
+	## @param line: The declaration's source line.
+	Function is validateTypeAccess(Type is t, Int is line){
+		if (t:name == '') {
+			return;
+		}
+		if (self:registeredClasses:has(key: t:name) && !self:classHasAccess(className: self:currentClassName, targetName: t:name)) {
+			self:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration (FUNCTIONS.md §I.6).');
+		}
+		t:params:each(action: local Function(Type is p){
+			self:validateTypeAccess(t: p, line: line);
+		});
 	}
 
 	## Enforces compile-time exhaustiveness of `when` over an enum subject.
@@ -1799,7 +1965,7 @@ Class is TypeChecker{
 					if (recvName == self:currentClassName) {
 						self:addError(line: self:currentLine, msg: 'Cannot call members of \'' . recvName . '\' through the class name inside \'' . recvName . '\' itself; use self (INSTANCE.md §2.2).');
 					} else {
-						self:addError(line: self:currentLine, msg: 'Members of \'' . recvName . '\' are callable only through an instance; instance-import it (\'as ' . recvName . '()\') or construct one (INSTANCE.md E5).');
+						self:addError(line: self:currentLine, msg: 'Members of \'' . recvName . '\' are callable only through an instance; instance-import it (\'as ' . recvName . '()\') (FUNCTIONS.md §I.6).');
 					}
 				}
 			}
@@ -1998,6 +2164,12 @@ Class is TypeChecker{
 		} else if (method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType)) {
 			# FUNCTIONS.md §I.2: init overloads are selected and stamped like any member.
 			self:selectOverload(className: targetType, methodName: 'init', expr: expr);
+			# FUNCTIONS.md §I.6: construction requires the import too — the
+			# X3 stratum, the class itself, an ancestor, the same file, or the
+			# class's own using grants it.
+			if (!self:classHasAccess(className: self:currentClassName, targetName: targetType:split(delimiter: ':'):get(index: 0))) {
+				self:addError(line: self:currentLine, msg: '\'' . targetType . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration to construct it (FUNCTIONS.md §I.6).');
+			}
 			res: targetType;
 		} else if (self:registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !self:allEnumNames:has(key: targetType)) {
 			# List get/pop REQUIRE a 'default:' argument (Never Null).
@@ -2202,6 +2374,7 @@ Class is TypeChecker{
 					local String is msg: 'Bare List type requires [T] element syntax.';
 					self:addError(line: stmt:line, msg: msg);
 				}
+				self:validateTypeAccess(t: stmt:varType, line: stmt:line);
 
 				if (stmt:hasInit) {
 					# Bidirectional: the declared type flows into the
@@ -2405,6 +2578,10 @@ Class is TypeChecker{
 		self:forwardSeen: false;
 		self:anonDepth: 0;
 		self:currentMethodIsMerge: method:hasModifier(kw: Keyword:MERGE);
+		method:params:each(action: local Function(Parameter is p){
+			self:validateTypeAccess(t: p:paramType, line: method:line);
+		});
+		self:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
 		if (mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name, hops: 0)) {
 			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (FUNCTIONS.md §I.3).');
@@ -2868,6 +3045,7 @@ Class is TypeChecker{
 					# are loader directives, not checked code: their
 					# initializers may reference classes the using itself
 					# loads, so type validation is skipped.
+					self:validateTypeAccess(t: m:memberType, line: m:line);
 					if (m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value()) {
 						local String is declaredType: self:formatVarTypeString(t: m:memberType);
 						if (m:hasInit) {

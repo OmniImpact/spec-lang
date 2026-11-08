@@ -9,6 +9,8 @@ Class of Loop is ModifierLoop{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator']
+,
+		['base', 'compiler', 'lexer', Token]
 	];
 
 	local Parser is parser;

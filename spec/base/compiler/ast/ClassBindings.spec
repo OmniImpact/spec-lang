@@ -23,6 +23,7 @@ Class is ClassBindings{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
+		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'iterator'],
 		['base', 'iterator', as While()]

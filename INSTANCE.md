@@ -29,7 +29,7 @@ this model.
 | D1 | Class-name call to a self-reading method compiles clean (exit 0, lint clean), segfaults at runtime — generator emits `Class_method(NULL, ...)` | `CodeGenerator.spec:1788`; reproduced with `Widget:bump()` reading `self:count` → SIGSEGV |
 | D2 | Void method called via class name allocates a fresh instance per call, mutates it, discards it — silent state loss + hidden malloc/ARC per call | `CodeGenerator.spec:1791`; generated C: `({ C* _inst = C_new(); C_bump(_inst); _inst; })` ×N |
 | D3 | Bare call of an imported class's function passes type checking, then fails in gcc (`implicit declaration of function 'Main_abs'`) — the implicit-self fallback invents symbols | `TypeChecker.spec:1169` (`targetType == ''` → current class); reproduced with `abs(-5)` while `Math` imported |
-| D4 | `using` is a load manifest, not an access list: any loaded class is callable from anywhere; a class's true dependencies are unreadable | `TypeChecker.spec:763` (global `registeredClasses`); reproduced: `Main` used `Helper` with no import of its own |
+| D4 | `using` is a load manifest, not an access list: any loaded class is callable from anywhere; a class's true dependencies are unreadable | `TypeChecker.spec:763` (global `registeredClasses`); reproduced: `Main` used `Helper` with no import of its own. **Closed by §I.6 import gating** (FUNCTIONS.md Part I-c): member calls, construction, and type positions all require the import |
 
 Related, same family, in scope for this work: the own-class-name trap
 (`Widget:bump()` inside `Widget` passes NULL `self` even on a live instance —

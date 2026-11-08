@@ -8,6 +8,8 @@ Class of Loop is BaseClassesLoop{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'parser', Parser],
 		['base', 'iterator']
+,
+		['base', 'compiler', 'lexer', Token]
 	];
 
 	local Parser is parser;

@@ -8,6 +8,8 @@ Class of Loop is MapItemsLoop{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'iterator']
+,
+		['base', 'compiler', 'lexer', Token]
 	];
 
 	local Parser is parser;

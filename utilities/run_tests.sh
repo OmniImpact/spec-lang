@@ -177,6 +177,10 @@ assert_compile_failure "overloads-n15-mixed-call" \
 	"$ROOT/tests/negative/n15_mixed_call_negative_test.spec" \
 	"Mixed positional and named arguments are not supported"
 
+assert_compile_failure "gating-n18-unimported-type" \
+	"$ROOT/tests/negative/n18gate/n18_unimported_type_negative_test.spec" \
+	"'GTarget' is not imported by 'N18UnimportedType'"
+
 assert_compile_failure "hardening-n17-string-relational-mixed" \
 	"$ROOT/tests/negative/n17_string_relational_mixed_negative_test.spec" \
 	"requires two String operands"

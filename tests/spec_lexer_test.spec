@@ -11,6 +11,8 @@ Class is SpecLexerTest{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'io', Output],
 		['base', 'io', as Output()]
+,
+		['base', 'compiler', Error]
 	];
 
 	replace Function is init(Map of String to String is args){

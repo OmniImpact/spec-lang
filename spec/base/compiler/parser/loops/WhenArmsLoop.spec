@@ -14,6 +14,10 @@ Class of Loop is WhenArmsLoop{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator'],
 		['base', 'iterator', as While()]
+,
+		['base', 'compiler', 'ast', Statement]
+,
+		['base', 'compiler', 'lexer', Token]
 	];
 
 	local Parser is parser;

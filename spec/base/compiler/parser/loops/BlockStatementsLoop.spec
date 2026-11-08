@@ -8,6 +8,8 @@ Class of Loop is BlockStatementsLoop{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'iterator']
+,
+		['base', 'compiler', 'lexer', Token]
 	];
 
 	local Parser is parser;

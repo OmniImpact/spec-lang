@@ -154,6 +154,27 @@ Exact static type only: a `Dog`-typed argument selects `f(Dog)`, never
 
 ---
 
+## Part I-c — Import gating (Option A, landed)
+
+**§I.6 Construction and type positions require the import.** The
+transitive availability of a dependency's dependency grants nothing:
+a type position (`local X is v`, parameters, fields, return types,
+`Array of X` elements, casts to `X`) and an `X:init(...)` call require
+`X` in the enclosing class's own `using` — or an ancestor's (imports
+are inherited), or the same source file, or the X3 stratum. Package
+wildcards cover every class whose declared namespace falls inside them;
+`group: [X]` declarations grant their target. As-imports grant
+everything (they are using entries). When-patterns are ungated: the
+subject's declared type already required the import.
+
+The E5 diagnostic no longer says "or construct one" — construction is
+gated too. The ancestor-walk budget is raised 8 → 64 (deep hierarchies
+no longer fail as misleading undefined-member errors). N18 pins the
+gate: a dependency's dependency, loaded but not imported, is rejected
+in both type and constructor positions.
+
+---
+
 ## Part I-b — Hardening record (landed with Part I)
 
 - **D5 fixed:** relational operators on String compare lexicographically

@@ -33,6 +33,14 @@ Class is Driver{
 		['base', 'iterator'],
 		['base', 'io', as Output()],
 		['base', 'io', as Stderr()]
+,
+		['base', 'compiler', Error]
+,
+		['base', 'compiler', 'ast', Parameter]
+,
+		['base', 'compiler', 'lexer', Token]
+,
+		['base', 'compiler', 'checker', TypeError]
 	];
 
 	replace Function is init(Map of String to String is args){

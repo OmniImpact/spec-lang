@@ -17,6 +17,9 @@ Class is Phase6CodegenTest{
 		['base', 'io', as File()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Process()]
+,
+		['base', 'compiler', 'ast', ProgramNode],
+		['base', 'compiler', 'checker', TypeError]
 	];
 
 	replace Function is init(Map of String to String is args){

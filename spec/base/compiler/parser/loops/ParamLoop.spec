@@ -13,6 +13,8 @@ Class of Loop is ParamLoop{
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator']
+,
+		['base', 'compiler', 'lexer', Token]
 	];
 
 	local Parser is parser;

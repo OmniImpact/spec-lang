@@ -4,6 +4,10 @@
 Class is NamedArg{
 	namespace: ['base', 'compiler', 'ast'];
 
+	replace Array of Array of String is using: [
+		['base', 'compiler', 'ast', Expression]
+];
+
 	## Argument key; empty for positional arguments.
 	String is name: '';
 

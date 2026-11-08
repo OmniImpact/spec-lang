@@ -12,6 +12,8 @@ Class is Error{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', StackFrame]
+,
+		['base', 'sys', SourceLocation]
 	];
 
 	## The diagnostic message (position information included by the

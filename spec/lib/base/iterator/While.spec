@@ -10,6 +10,10 @@
 Class is While{
 	namespace: ['base', 'iterator'];
 
+	replace Array of Array of String is using: [
+		['base', 'iterator', Loop]
+];
+
 	## Repeatedly evaluates and steps [loop] until termination or halt.
 	##
 	## @param loop: The [Loop] instance executing iterations.
