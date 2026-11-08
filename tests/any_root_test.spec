@@ -27,6 +27,7 @@ Class is RootProbe{
 Class is AnyRootTest{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()]
 	];
@@ -38,45 +39,45 @@ Class is AnyRootTest{
 
 		# Case 1: default toString via Any's Stringable composition.
 		local String is label: 'probe: ' . probe;
-		if (label == 'probe: RootProbe') {
+		Conditional:branch(check: { label == 'probe: RootProbe' }, then: {
 			Output:line('[PASS] default toString: renders class name');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] default toString: \'' . label . '\'');
-		}
+		});
 
 		# Case 2: typeName builtin reports the runtime class.
 		local String is tn: probe:typeName();
-		if (tn == 'RootProbe') {
+		Conditional:branch(check: { tn == 'RootProbe' }, then: {
 			Output:line('[PASS] typeName: RootProbe');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] typeName: \'' . tn . '\'');
-		}
+		});
 
 		# Case 3: typeName through an Any-typed reference still resolves.
 		local Any is asAny: probe;
 		local String is tnAny: asAny:typeName();
-		if (tnAny == 'RootProbe') {
+		Conditional:branch(check: { tnAny == 'RootProbe' }, then: {
 			Output:line('[PASS] typeName via Any: RootProbe');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] typeName via Any: \'' . tnAny . '\'');
-		}
+		});
 
 		# Case 4: rendering through an Any-typed reference via cast.
 		local String is strAny: asAny as String;
-		if (strAny == 'RootProbe') {
+		Conditional:branch(check: { strAny == 'RootProbe' }, then: {
 			Output:line('[PASS] toString via Any: RootProbe');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] toString via Any: \'' . strAny . '\'');
-		}
+		});
 
 		# Case 5: root upcast and implicit downcast round trip.
 		local Any is up: probe as Any;
 		local RootProbe is down: up as RootProbe;
-		if (down:id == 5) {
+		Conditional:branch(check: { down:id == 5 }, then: {
 			Output:line('[PASS] as Any round trip: id = 5');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] as Any round trip: ' . down:id);
-		}
+		});
 
 		Output:line('=== End Any Root Class ===');
 	}

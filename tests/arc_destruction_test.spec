@@ -19,6 +19,7 @@ Class is Resource{
 Class is Container{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()],
 		['base', 'iterator', as While()]
 	];
@@ -40,6 +41,7 @@ Class is Container{
 Class is ArcDestructionTest{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()],
 		['base', 'iterator', as While()]
@@ -51,28 +53,28 @@ Class is ArcDestructionTest{
 		local Resource is r1: Resource:init(name: 'First');
 		local Container is c: Container:init(res: r1);
 
-		if (c:getRes():getName() == 'First') {
+		Conditional:branch(check: { c:getRes():getName() == 'First' }, then: {
 			Output:line('[PASS] initial field reference verified');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] initial field reference mismatch');
-		}
+		});
 
 		local Resource is r2: Resource:init(name: 'Second');
 		c:setRes(newRes: r2);
 
-		if (c:getRes():getName() == 'Second') {
+		Conditional:branch(check: { c:getRes():getName() == 'Second' }, then: {
 			Output:line('[PASS] reassigned field reference verified');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] reassigned field reference mismatch');
-		}
+		});
 
 		# Case 3: Reassignment with a direct constructor call (transfer ownership)
 		c:setRes(newRes: Resource:init(name: 'Third'));
-		if (c:getRes():getName() == 'Third') {
+		Conditional:branch(check: { c:getRes():getName() == 'Third' }, then: {
 			Output:line('[PASS] transfer field assignment verified');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] transfer field assignment mismatch');
-		}
+		});
 
 		# Case 4: Multiple loop reassignment ensuring no refcount corruptions
 		local Int is count: 0;
@@ -83,11 +85,11 @@ Class is ArcDestructionTest{
 				count: count + 1;
 			}
 		);
-		if (c:getRes():getName() == 'Loop_4') {
+		Conditional:branch(check: { c:getRes():getName() == 'Loop_4' }, then: {
 			Output:line('[PASS] loop repeated field assignment verified');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] loop repeated field assignment mismatch');
-		}
+		});
 
 		Output:line('=== End ARC Destruction Test ===');
 	}

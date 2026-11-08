@@ -15,26 +15,46 @@ Class is OverloadsTest {
 		local Int is fail: 0;
 
 		local Int is i1: Over:twice(21);
-		if (i1 == 42) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] twice(Int): ' . (i1 as String)); }
+		Conditional:branch(check: { i1 == 42 }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] twice(Int): ' . (i1 as String));
+		});
 
 		local String is s1: Over:twice('ab');
-		if (s1 == 'abab') { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] twice(String): ' . s1); }
+		Conditional:branch(check: { s1 == 'abab' }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] twice(String): ' . s1);
+		});
 
 		local Int is s2: Over:sum(5);
 		local Int is s3: Over:sum(2, 3);
-		if (s2 == 5 && s3 == 5) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] sum arity overloads'); }
+		Conditional:branch(check: { s2 == 5 && s3 == 5 }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] sum arity overloads');
+		});
 
 		local Over is a: Over:init();
 		local Over is b: Over:init(start: 9);
-		if (a:seedValue() == 0 && b:seedValue() == 9) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] init overloads'); }
+		Conditional:branch(check: { a:seedValue() == 0 && b:seedValue() == 9 }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] init overloads');
+		});
 
 		local Int is b1: twice(4);
-		if (b1 == 8) { pass: pass + 1; } else { fail: fail + 1; Output:line('[FAIL] bare unique provider: ' . (b1 as String)); }
+		Conditional:branch(check: { b1 == 8 }, then: {
+ pass: pass + 1;
+		}, otherwise: {
+ fail: fail + 1; Output:line('[FAIL] bare unique provider: ' . (b1 as String));
+		});
 
-		if (fail == 0) {
+		Conditional:branch(check: { fail == 0 }, then: {
 			Output:line('[PASS] overloads: ' . (pass as String) . ' checks');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] overloads: ' . (fail as String) . ' failures');
-		}
+		});
 	}
 }

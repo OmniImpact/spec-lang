@@ -14,9 +14,9 @@ Class is GenericFunctionTest{
 	replace Function is init(Map of String to String is args){
 		local Function of String to Boolean is myPred;
 		local Boolean is result: self:testPredicate(predicate: myPred, input: 'test');
-		if (result) {
+		Conditional:branch(check: { result }, then: {
 			Output:line('Generic function type test passed!');
-		}
+		});
 	}
 
 }

@@ -34,29 +34,29 @@ Class is RegressionOverrideDispatchTest{
 		# This path already works today and must keep working.
 		local Animal is dogAsAnimal: Dog:init();
 		local String is dogSound: dogAsAnimal:speak();
-		if (dogSound == 'woof') {
+		Conditional:branch(check: { dogSound == 'woof' }, then: {
 			Output:line('[PASS] one-level override: Dog speaks woof');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] one-level override: expected woof, got ' . dogSound);
-		}
+		});
 
 		# Case 2 (the regression): two-level override, no re-override in Puppy.
 		local Animal is puppyAsAnimal: Puppy:init();
 		local String is puppySound: puppyAsAnimal:speak();
-		if (puppySound == 'woof') {
+		Conditional:branch(check: { puppySound == 'woof' }, then: {
 			Output:line('[PASS] two-level override: Puppy inherits Dog\'s woof');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] two-level override: expected woof, got \'' . puppySound . '\' (Base body leaked through)');
-		}
+		});
 
 		# Case 3 (the regression): three-level chain, override declared two levels up.
 		local Animal is labAsAnimal: Lab:init();
 		local String is labSound: labAsAnimal:speak();
-		if (labSound == 'woof') {
+		Conditional:branch(check: { labSound == 'woof' }, then: {
 			Output:line('[PASS] three-level override: Lab inherits Dog\'s woof');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] three-level override: expected woof, got \'' . labSound . '\'');
-		}
+		});
 
 		# Case 4: heterogeneous collection mixing all levels of the chain.
 		# Every resident must dispatch to Dog's override via Animal's trampoline.
@@ -64,11 +64,11 @@ Class is RegressionOverrideDispatchTest{
 		local Int is woofCount: kennel:count(predicate: local Function of Boolean(Animal is resident){
 			return resident:speak() == 'woof';
 		});
-		if (woofCount == 3) {
+		Conditional:branch(check: { woofCount == 3 }, then: {
 			Output:line('[PASS] heterogeneous dispatch: 3 of 3 kennel residents speak woof');
-		} else {
+		}, otherwise: {
 			Output:line('[FAIL] heterogeneous dispatch: expected 3 woofs, got ' . woofCount);
-		}
+		});
 
 		Output:line('=== End Override Dispatch Regression ===');
 	}
@@ -79,6 +79,7 @@ Class is RegressionOverrideDispatchTest{
 Class is Animal{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	Function of String is speak(){
@@ -90,6 +91,7 @@ Class is Animal{
 Class of Animal is Dog{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	replace Function of String is speak(){
@@ -101,6 +103,7 @@ Class of Animal is Dog{
 Class of Dog is Puppy{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	local Boolean is isYoung: true;
@@ -110,6 +113,7 @@ Class of Dog is Puppy{
 Class of Dog is Lab{
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
 	local String is breed: 'labrador';
