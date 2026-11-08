@@ -30,16 +30,16 @@ Class of Loop is ClassSearchLoop{
 	replace Function of Boolean is iteration(LoopControl is c){
 		local ClassInfo is cand: self:list:get(index: self:idx);
 		self:idx: self:idx + 1;
-		Conditional:branch(check: { cand:name == self:target }, then: {
+		Conditional:if(check: { cand:name == self:target }, then: {
 			self:res: cand;
 			self:found: true;
 			return false;
 		});
 		# Qualified targets ('base:sysinternal:Buf'): namespace joined with
 		# ':' plus the class name must equal the target.
-		Conditional:branch(check: { self:target:contains(needle: ':') }, then: {
+		Conditional:if(check: { self:target:contains(needle: ':') }, then: {
 			local String is candQ: cand:namespaceJoined() . ':' . cand:name;
-			Conditional:branch(check: { candQ == self:target }, then: {
+			Conditional:if(check: { candQ == self:target }, then: {
 				self:res: cand;
 				self:found: true;
 				return false;

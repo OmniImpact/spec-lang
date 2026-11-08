@@ -45,7 +45,7 @@ Class is ScopeAsDemo{
 		Output:line("[File] Creating managed resource: " . path);
 		File:write(path: path, content: content);
 		block(path);
-		Conditional:branch(check: { File:exists(path) }, then: {
+		Conditional:if(check: { File:exists(path) }, then: {
 			File:remove(path);
 			Output:line("[File] Cleaned up managed resource: " . path);
 		});
@@ -88,7 +88,7 @@ Class is ScopeAsDemo{
 			iterate: {
 				local String is line: lines:get(index: row);
 				local Array of String is fields: line:split(delimiter: ",");
-				Conditional:branch(check: { fields:length() >= 4 }, then: {
+				Conditional:if(check: { fields:length() >= 4 }, then: {
 					names:add(item: fields:get(index: 1));
 					roles:add(item: fields:get(index: 2));
 					Output:line("  -> User #" . fields:get(index: 0) . ": " . fields:get(index: 1) . " (" . fields:get(index: 2) . ")");

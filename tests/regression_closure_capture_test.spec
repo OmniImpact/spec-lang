@@ -42,9 +42,9 @@ Class is RegressionClosureCaptureTest{
 			return x + offset;
 		};
 		local Int is sum: addOffset(5);
-		Conditional:branch(check: { sum == 15 }, then: {
+		Conditional:if(check: { sum == 15 }, then: {
 			Output:line('[PASS] init-scope Int capture: addOffset(5) = 15');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] init-scope Int capture: expected 15, got ' . sum);
 		});
 
@@ -53,9 +53,9 @@ Class is RegressionClosureCaptureTest{
 			return x * self:multiplier;
 		};
 		local Int is product: timesThree(7);
-		Conditional:branch(check: { product == 21 }, then: {
+		Conditional:if(check: { product == 21 }, then: {
 			Output:line('[PASS] self capture: timesThree(7) = 21');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] self capture: expected 21, got ' . product);
 		});
 
@@ -65,9 +65,9 @@ Class is RegressionClosureCaptureTest{
 			return prefix . code;
 		};
 		local String is tagged: tag('9');
-		Conditional:branch(check: { tagged == 'v9' }, then: {
+		Conditional:if(check: { tagged == 'v9' }, then: {
 			Output:line('[PASS] String capture: tag(9) = v9');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String capture: expected v9, got ' . tagged);
 		});
 
@@ -76,18 +76,18 @@ Class is RegressionClosureCaptureTest{
 			return x * 2;
 		};
 		local Int is applied: self:apply(fn: doubler, v: 5);
-		Conditional:branch(check: { applied == 10 }, then: {
+		Conditional:if(check: { applied == 10 }, then: {
 			Output:line('[PASS] higher-order call: apply(doubler, 5) = 10');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] higher-order call: expected 10, got ' . applied);
 		});
 
 		# Case 5 (control): closure inside a helper method with no Map in scope.
 		# This path already works today and must keep working.
 		local Int is control: self:computeWithLocal();
-		Conditional:branch(check: { control == 124 }, then: {
+		Conditional:if(check: { control == 124 }, then: {
 			Output:line('[PASS] control helper-method capture: computeWithLocal() = 124');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] control helper-method capture: expected 124, got ' . control);
 		});
 

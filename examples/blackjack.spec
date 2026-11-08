@@ -113,7 +113,7 @@ Class is Blackjack{
 		}
 
 		replace Function is onInput(String is action){
-			Conditional:branch(check: { action == '' }, then: {
+			Conditional:if(check: { action == '' }, then: {
 				Output:line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
 				return;
@@ -127,14 +127,14 @@ Class is Blackjack{
 				local Int is score: game:handValue(hand: game:playerHand);
 				Output:line('Your total is now: ' . score);
 
-				Conditional:branch(check: { score > 21 }, then: {
+				Conditional:if(check: { score > 21 }, then: {
 					Output:line('Bust! You lose.');
 					game:roundActive: false;
-				}, otherwise: {
-					Conditional:branch(check: { score == 21 }, then: {
+				}, else: {
+					Conditional:if(check: { score == 21 }, then: {
 						Output:line('21! Standing automatically.');
 						game:startDealerTurn();
-					}, otherwise: {
+					}, else: {
 						game:promptPlayerAction();
 					});
 				});
@@ -168,7 +168,7 @@ Class is Blackjack{
 		local Int is total: hand:fold(
 			initial: 0,
 			accumulate: local Function of Int(Int is acc, Int is card){
-				return acc + if (card == 1) 11 else card;
+				return acc + Conditional:if(check: { card == 1 }, then: { 11 }, else: { card });
 			}
 		);
 		local Int is aceCount: hand:count(
@@ -180,9 +180,9 @@ Class is Blackjack{
 		# Each ace can absorb 10 points of excess; compute how many must downgrade.
 		local Int is excess: total - 21;
 		local Int is downgrades: 0;
-		Conditional:branch(check: { excess > 0 }, then: {
+		Conditional:if(check: { excess > 0 }, then: {
 			downgrades: (excess + 9) / 10;
-			Conditional:branch(check: { downgrades > aceCount }, then: {
+			Conditional:if(check: { downgrades > aceCount }, then: {
 				downgrades: aceCount;
 			});
 		});
@@ -212,15 +212,15 @@ Class is Blackjack{
 		Output:line("\n=== Final Results ===");
 		Output:line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
 
-		Conditional:branch(check: { dealerScore > 21 }, then: {
+		Conditional:if(check: { dealerScore > 21 }, then: {
 			Output:line('Dealer busts! You win!');
-		}, otherwise: {
-			Conditional:branch(check: { playerScore > dealerScore }, then: {
+		}, else: {
+			Conditional:if(check: { playerScore > dealerScore }, then: {
 				Output:line('You beat the dealer! You win!');
-			}, otherwise: {
-				Conditional:branch(check: { dealerScore > playerScore }, then: {
+			}, else: {
+				Conditional:if(check: { dealerScore > playerScore }, then: {
 					Output:line('Dealer wins!');
-				}, otherwise: {
+				}, else: {
 					Output:line('Push (Tie)!');
 				});
 			});
@@ -262,7 +262,7 @@ Class is Blackjack{
 		Output:line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
 		# 3. Check natural 21
-		Conditional:branch(check: { handValue(hand: playerHand) == 21 }, then: {
+		Conditional:if(check: { handValue(hand: playerHand) == 21 }, then: {
 			Output:line('Natural Blackjack! You win!');
 			return;
 		});

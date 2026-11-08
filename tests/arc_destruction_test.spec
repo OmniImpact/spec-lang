@@ -53,26 +53,26 @@ Class is ArcDestructionTest{
 		local Resource is r1: Resource:init(name: 'First');
 		local Container is c: Container:init(res: r1);
 
-		Conditional:branch(check: { c:getRes():getName() == 'First' }, then: {
+		Conditional:if(check: { c:getRes():getName() == 'First' }, then: {
 			Output:line('[PASS] initial field reference verified');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] initial field reference mismatch');
 		});
 
 		local Resource is r2: Resource:init(name: 'Second');
 		c:setRes(newRes: r2);
 
-		Conditional:branch(check: { c:getRes():getName() == 'Second' }, then: {
+		Conditional:if(check: { c:getRes():getName() == 'Second' }, then: {
 			Output:line('[PASS] reassigned field reference verified');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] reassigned field reference mismatch');
 		});
 
 		# Case 3: Reassignment with a direct constructor call (transfer ownership)
 		c:setRes(newRes: Resource:init(name: 'Third'));
-		Conditional:branch(check: { c:getRes():getName() == 'Third' }, then: {
+		Conditional:if(check: { c:getRes():getName() == 'Third' }, then: {
 			Output:line('[PASS] transfer field assignment verified');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] transfer field assignment mismatch');
 		});
 
@@ -85,9 +85,9 @@ Class is ArcDestructionTest{
 				count: count + 1;
 			}
 		);
-		Conditional:branch(check: { c:getRes():getName() == 'Loop_4' }, then: {
+		Conditional:if(check: { c:getRes():getName() == 'Loop_4' }, then: {
 			Output:line('[PASS] loop repeated field assignment verified');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] loop repeated field assignment mismatch');
 		});
 

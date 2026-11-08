@@ -33,9 +33,9 @@ Class is ParallelAtomicsTest{
 			return count;
 		};
 		local Int is total: Parallel:run(threads: 4, iterations: 1000, worker: counter);
-		Conditional:branch(check: { total == 1000 }, then: {
+		Conditional:if(check: { total == 1000 }, then: {
 			Output:line('[PASS] parallel sum: 4 threads over 1000 = 1000');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] parallel sum: expected 1000, got ' . total);
 		});
 
@@ -47,9 +47,9 @@ Class is ParallelAtomicsTest{
 		};
 		Parallel:run(threads: 4, iterations: 4, worker: marker);
 		local Int is indexSum: Process:atomicGet(slot: 40);
-		Conditional:branch(check: { indexSum == 10 }, then: {
+		Conditional:if(check: { indexSum == 10 }, then: {
 			Output:line('[PASS] thread indices: 1+2+3+4 = 10');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] thread indices: expected 10, got ' . indexSum);
 		});
 
@@ -68,9 +68,9 @@ Class is ParallelAtomicsTest{
 		};
 		Parallel:run(threads: 4, iterations: 400, worker: adder);
 		local Int is added: Process:atomicGet(slot: 41);
-		Conditional:branch(check: { added == 400 }, then: {
+		Conditional:if(check: { added == 400 }, then: {
 			Output:line('[PASS] concurrent atomicAdd: 400 of 400 increments');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] concurrent atomicAdd: expected 400, got ' . added);
 		});
 
@@ -83,19 +83,19 @@ Class is ParallelAtomicsTest{
 			evaluate: local Function of Boolean(){ return k < 1000; },
 			iteration: local Function(){
 				local Float is r: Math:fastRandom();
-				Conditional:branch(check: { r >= 0.0 && r < 1.0 }, then: {
+				Conditional:if(check: { r >= 0.0 && r < 1.0 }, then: {
 					inRange: inRange + 1;
 				});
-				Conditional:branch(check: { r != last }, then: {
+				Conditional:if(check: { r != last }, then: {
 					distinct: distinct + 1;
 				});
 				last: r;
 				k: k + 1;
 			}
 		);
-		Conditional:branch(check: { inRange == 1000 && distinct > 990 }, then: {
+		Conditional:if(check: { inRange == 1000 && distinct > 990 }, then: {
 			Output:line('[PASS] fastRandom: 1000 in range, ' . distinct . ' distinct');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] fastRandom: ' . inRange . ' in range, ' . distinct . ' distinct');
 		});
 

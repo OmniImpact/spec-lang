@@ -60,9 +60,9 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 		Output:line('Account Name: ' . self:name);
 		Output:line('Account ID:   ' . self:id);
 
-		Conditional:branch(check: { self:name == 'AdminService' && self:id == 9001 }, then: {
+		Conditional:if(check: { self:name == 'AdminService' && self:id == 9001 }, then: {
 			Output:line("[PASS] Successfully inherited fields from multiple contracts\n");
-		}, otherwise: {
+		}, else: {
 			Output:line("[FAIL] Property inheritance mismatch\n");
 		});
 
@@ -72,9 +72,9 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 		Output:line('Description: ' . desc);
 		Output:line('Tag:         ' . tag);
 
-		Conditional:branch(check: { desc == 'AdminService (ID: 9001)' && tag == '[AdminService]' }, then: {
+		Conditional:if(check: { desc == 'AdminService (ID: 9001)' && tag == '[AdminService]' }, then: {
 			Output:line("[PASS] Successfully implemented abstract interface methods\n");
-		}, otherwise: {
+		}, else: {
 			Output:line("[FAIL] Method implementation mismatch\n");
 		});
 
@@ -86,9 +86,9 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 		Output:line('Polymorphic NamedContract:describe() -> ' . polyDesc);
 		Output:line('Polymorphic IdentifiableContract:getTag() -> ' . polyTag);
 
-		Conditional:branch(check: { polyDesc == 'AdminService (ID: 9001)' && polyTag == '[AdminService]' }, then: {
+		Conditional:if(check: { polyDesc == 'AdminService (ID: 9001)' && polyTag == '[AdminService]' }, then: {
 			Output:line("[PASS] Successfully dispatched polymorphically on interface types\n");
-		}, otherwise: {
+		}, else: {
 			Output:line("[FAIL] Polymorphic dispatch mismatch\n");
 		});
 

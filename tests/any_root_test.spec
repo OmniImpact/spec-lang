@@ -39,43 +39,43 @@ Class is AnyRootTest{
 
 		# Case 1: default toString via Any's Stringable composition.
 		local String is label: 'probe: ' . probe;
-		Conditional:branch(check: { label == 'probe: RootProbe' }, then: {
+		Conditional:if(check: { label == 'probe: RootProbe' }, then: {
 			Output:line('[PASS] default toString: renders class name');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] default toString: \'' . label . '\'');
 		});
 
 		# Case 2: typeName builtin reports the runtime class.
 		local String is tn: probe:typeName();
-		Conditional:branch(check: { tn == 'RootProbe' }, then: {
+		Conditional:if(check: { tn == 'RootProbe' }, then: {
 			Output:line('[PASS] typeName: RootProbe');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] typeName: \'' . tn . '\'');
 		});
 
 		# Case 3: typeName through an Any-typed reference still resolves.
 		local Any is asAny: probe;
 		local String is tnAny: asAny:typeName();
-		Conditional:branch(check: { tnAny == 'RootProbe' }, then: {
+		Conditional:if(check: { tnAny == 'RootProbe' }, then: {
 			Output:line('[PASS] typeName via Any: RootProbe');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] typeName via Any: \'' . tnAny . '\'');
 		});
 
 		# Case 4: rendering through an Any-typed reference via cast.
 		local String is strAny: asAny as String;
-		Conditional:branch(check: { strAny == 'RootProbe' }, then: {
+		Conditional:if(check: { strAny == 'RootProbe' }, then: {
 			Output:line('[PASS] toString via Any: RootProbe');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] toString via Any: \'' . strAny . '\'');
 		});
 
 		# Case 5: root upcast and implicit downcast round trip.
 		local Any is up: probe as Any;
 		local RootProbe is down: up as RootProbe;
-		Conditional:branch(check: { down:id == 5 }, then: {
+		Conditional:if(check: { down:id == 5 }, then: {
 			Output:line('[PASS] as Any round trip: id = 5');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] as Any round trip: ' . down:id);
 		});
 

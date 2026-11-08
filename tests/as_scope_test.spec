@@ -39,9 +39,9 @@ Class is AsScopeTest{
 	Function is testParameterless(){
 		local Array of String is log1: [];
 		self:runResource(log: log1);
-		Conditional:branch(check: { log1:length() == 4 && log1:get(index: 0) == 'open:file.txt' && log1:get(index: 1) == 'read:1' && log1:get(index: 2) == 'read:2' && log1:get(index: 3) == 'close:file.txt' }, then: {
+		Conditional:if(check: { log1:length() == 4 && log1:get(index: 0) == 'open:file.txt' && log1:get(index: 1) == 'read:1' && log1:get(index: 2) == 'read:2' && log1:get(index: 3) == 'close:file.txt' }, then: {
 			Output:line('[PASS] Parameterless as: helper();');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Parameterless as: helper();');
 		});
 	}
@@ -50,9 +50,9 @@ Class is AsScopeTest{
 		local Int is receivedVal: 0;
 		as (Int is x): self:withVal(val: 42);
 		receivedVal: x + 8;
-		Conditional:branch(check: { receivedVal == 50 }, then: {
+		Conditional:if(check: { receivedVal == 50 }, then: {
 			Output:line('[PASS] Typed parameter as (Int is x):');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Typed parameter as (Int is x): val=' . receivedVal);
 		});
 	}
@@ -61,9 +61,9 @@ Class is AsScopeTest{
 		local String is untypedStr: '';
 		as (s): self:withString(str: 'spec');
 		untypedStr: 'hello ' . s;
-		Conditional:branch(check: { untypedStr == 'hello spec' }, then: {
+		Conditional:if(check: { untypedStr == 'hello spec' }, then: {
 			Output:line('[PASS] Untyped parameter as (s):');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Untyped parameter as (s): str=' . untypedStr);
 		});
 	}
@@ -72,9 +72,9 @@ Class is AsScopeTest{
 		local String is pairStr: '';
 		as (String is k, Int is v): self:withPair(key: 'alpha', val: 7);
 		pairStr: k . '=' . v;
-		Conditional:branch(check: { pairStr == 'alpha=7' }, then: {
+		Conditional:if(check: { pairStr == 'alpha=7' }, then: {
 			Output:line('[PASS] Multiple typed parameters as (String is k, Int is v):');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Multiple typed parameters as (String is k, Int is v): ' . pairStr);
 		});
 	}
@@ -85,9 +85,9 @@ Class is AsScopeTest{
 		as (Int is b): self:withVal(val: a * 2);
 		as (Int is c): self:withVal(val: b + 5);
 		pipelineLog:add(item: '' . c);
-		Conditional:branch(check: { pipelineLog:length() == 1 && pipelineLog:get(index: 0) == '25' }, then: {
+		Conditional:if(check: { pipelineLog:length() == 1 && pipelineLog:get(index: 0) == '25' }, then: {
 			Output:line('[PASS] Nested linear as chain');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Nested linear as chain');
 		});
 	}
@@ -101,9 +101,9 @@ Class is AsScopeTest{
 	Function is testNestedResources(){
 		local Array of String is resLog: [];
 		self:runNestedResources(log: resLog);
-		Conditional:branch(check: { resLog:length() == 5 && resLog:get(index: 0) == 'open:A' && resLog:get(index: 1) == 'open:B' && resLog:get(index: 2) == 'work' && resLog:get(index: 3) == 'close:B' && resLog:get(index: 4) == 'close:A' }, then: {
+		Conditional:if(check: { resLog:length() == 5 && resLog:get(index: 0) == 'open:A' && resLog:get(index: 1) == 'open:B' && resLog:get(index: 2) == 'work' && resLog:get(index: 3) == 'close:B' && resLog:get(index: 4) == 'close:A' }, then: {
 			Output:line('[PASS] Nested resource manager LIFO execution');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Nested resource manager LIFO execution');
 		});
 	}
@@ -117,9 +117,9 @@ Class is AsScopeTest{
 		local Array of Int is nums: [1, 2, 3, 4];
 		local Array of Int is collected: [];
 		self:runContainerEach(nums: nums, collected: collected);
-		Conditional:branch(check: { collected:length() == 4 && collected:get(index: 0) == 10 && collected:get(index: 3) == 40 }, then: {
+		Conditional:if(check: { collected:length() == 4 && collected:get(index: 0) == 10 && collected:get(index: 3) == 40 }, then: {
 			Output:line('[PASS] Container each method with as (n):');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Container each method with as (n):');
 		});
 	}
@@ -145,9 +145,9 @@ Class is AsScopeTest{
 				return self:testReturnValue();
 			}
 		);
-		Conditional:branch(check: { computed == 30 }, then: {
+		Conditional:if(check: { computed == 30 }, then: {
 			Output:line('[PASS] as of Type: callback return value');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] as of Type: callback return value, computed=' . computed);
 		});
 	}

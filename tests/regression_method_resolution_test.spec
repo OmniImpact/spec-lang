@@ -30,9 +30,9 @@ Class is RegressionMethodResolutionTest{
 		# Case 1: user class with its own get() method (hard compile error today).
 		local UserRecord is rec: UserRecord:init();
 		local Int is got: rec:get();
-		Conditional:branch(check: { got == 42 }, then: {
+		Conditional:if(check: { got == 42 }, then: {
 			Output:line('[PASS] user get() dispatch: rec:get() = 42');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] user get() dispatch: expected 42, got ' . got);
 		});
 
@@ -40,9 +40,9 @@ Class is RegressionMethodResolutionTest{
 		# The builtin hijack silently returns the wrong number on some toolchains.
 		local LogStore is store: LogStore:init();
 		local Int is len: store:length();
-		Conditional:branch(check: { len == 7 }, then: {
+		Conditional:if(check: { len == 7 }, then: {
 			Output:line('[PASS] user length() dispatch: store:length() = 7');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] user length() dispatch: expected 7, got ' . len);
 		});
 
@@ -50,9 +50,9 @@ Class is RegressionMethodResolutionTest{
 		# This path already works today and must keep working.
 		local UserRecord is rec2: UserRecord:init();
 		local Int is safe: rec2:fetchIdentifier();
-		Conditional:branch(check: { safe == 42 }, then: {
+		Conditional:if(check: { safe == 42 }, then: {
 			Output:line('[PASS] control non-colliding method: fetchIdentifier() = 42');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] control non-colliding method: expected 42, got ' . safe);
 		});
 

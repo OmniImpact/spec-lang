@@ -129,7 +129,7 @@ Class is Math{
 	## @param value: Input number.
 	## @return: Non-negative magnitude float.
 	Function of Float is abs(Float is value){
-		Conditional:branch(check: { value < 0.0 }, then: {
+		Conditional:if(check: { value < 0.0 }, then: {
 			return -value;
 		});
 		return value;
@@ -140,7 +140,7 @@ Class is Math{
 	## @param value: Input integer.
 	## @return: Non-negative magnitude.
 	Function of Int is abs(Int is value){
-		Conditional:branch(check: { value < 0 }, then: {
+		Conditional:if(check: { value < 0 }, then: {
 			return -value;
 		});
 		return value;
@@ -152,7 +152,7 @@ Class is Math{
 	## @param b: Second operand.
 	## @return: Smaller of [a] and [b].
 	Function of Float is min(Float is a, Float is b){
-		Conditional:branch(check: { a < b }, then: {
+		Conditional:if(check: { a < b }, then: {
 			return a;
 		});
 		return b;
@@ -164,7 +164,7 @@ Class is Math{
 	## @param b: Second operand.
 	## @return: Larger of [a] and [b].
 	Function of Float is max(Float is a, Float is b){
-		Conditional:branch(check: { a > b }, then: {
+		Conditional:if(check: { a > b }, then: {
 			return a;
 		});
 		return b;
@@ -177,10 +177,10 @@ Class is Math{
 	## @param maxVal: Upper bound.
 	## @return: Clamped value.
 	Function of Float is clamp(Float is val, Float is minVal, Float is maxVal){
-		Conditional:branch(check: { val < minVal }, then: {
+		Conditional:if(check: { val < minVal }, then: {
 			return minVal;
 		});
-		Conditional:branch(check: { val > maxVal }, then: {
+		Conditional:if(check: { val > maxVal }, then: {
 			return maxVal;
 		});
 		return val;

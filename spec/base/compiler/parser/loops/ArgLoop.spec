@@ -44,18 +44,18 @@ Class of Loop is ArgLoop{
 		# the flipped spelling. Ordinary keywords still bind only as names
 		# when followed by the named-arg punctuation.
 		local Boolean is nameLike: tok0:getTokenKind() == TokenKind:IDENTIFIER || (tok0:getTokenKind() == TokenKind:KEYWORD && (tok0:getValue() == 'if' || tok0:getValue() == 'else'));
-		Conditional:branch(check: { nameLike && self:parser:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
+		Conditional:if(check: { nameLike && self:parser:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
 			local String is nameVal: tok0:getValue();
 			local Boolean is isUpper: self:chars:isUpper(ch: nameVal:charAt(index: 0, default: ''));
-			Conditional:branch(check: { !isUpper }, then: {
+			Conditional:if(check: { !isUpper }, then: {
 				local Token is nextTok: self:parser:peekAhead(offset: 2);
 				local Boolean is isNamed: false;
-				Conditional:branch(check: { nextTok:getTokenKind() != TokenKind:IDENTIFIER }, then: {
+				Conditional:if(check: { nextTok:getTokenKind() != TokenKind:IDENTIFIER }, then: {
 					isNamed: true;
-				}, otherwise: {
+				}, else: {
 					isNamed: self:parser:hasWhitespaceAfter(offset: 1);
 				});
-				Conditional:branch(check: { isNamed }, then: {
+				Conditional:if(check: { isNamed }, then: {
 					local Token is aTok: self:parser:advance();
 					argName: aTok:getValue();
 					self:parser:advance();
@@ -64,7 +64,7 @@ Class of Loop is ArgLoop{
 		});
 		local Expression is val: self:parser:parseExpression();
 		self:args:add(item: NamedArg:init(name: argName, value: val));
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
 		});

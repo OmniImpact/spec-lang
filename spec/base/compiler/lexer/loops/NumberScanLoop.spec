@@ -25,21 +25,21 @@ Class of Loop is NumberScanLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		Conditional:branch(check: { ch == '_' }, then: {
+		Conditional:if(check: { ch == '_' }, then: {
 			local String is nextCh: self:lexer:source:charAt(index: self:lexer:pos + 1, default: '');
-			Conditional:branch(check: { nextCh:isDigit() }, then: {
+			Conditional:if(check: { nextCh:isDigit() }, then: {
 				self:lexer:advance();
 				return true;
 			});
 			return false;
 		});
-		Conditional:branch(check: { ch:isDigit() }, then: {
+		Conditional:if(check: { ch:isDigit() }, then: {
 			self:lexer:advance();
 			return true;
 		});
-		Conditional:branch(check: { ch == '.' && !self:isFloat }, then: {
+		Conditional:if(check: { ch == '.' && !self:isFloat }, then: {
 			local String is nextCh: self:lexer:source:charAt(index: self:lexer:pos + 1, default: '');
-			Conditional:branch(check: { nextCh:isDigit() }, then: {
+			Conditional:if(check: { nextCh:isDigit() }, then: {
 				self:isFloat: true;
 				self:lexer:advance();
 				return true;

@@ -71,10 +71,10 @@ Class is Array of T{
 		local Int is len: self:length();
 		local Int is s: start;
 		local Int is e: end;
-		Conditional:branch(check: { s < 0 }, then: {
+		Conditional:if(check: { s < 0 }, then: {
 			s: 0;
 		});
-		Conditional:branch(check: { e > len }, then: {
+		Conditional:if(check: { e > len }, then: {
 			e: len;
 		});
 		local Int is i: s;
@@ -110,7 +110,7 @@ Class is Array of T{
 			},
 			iteration: local Function(){
 				local String is item: self:get(index: i, default: '') as String;
-				Conditional:branch(check: { item == search }, then: {
+				Conditional:if(check: { item == search }, then: {
 					found: i;
 				});
 				i: i + 1;
@@ -167,7 +167,7 @@ Class is Array of T{
 	## @return: Joined string.
 	Function of String is join(String is separator){
 		local Int is len: self:length();
-		Conditional:branch(check: { len == 0 }, then: {
+		Conditional:if(check: { len == 0 }, then: {
 			return '';
 		});
 		local String is out: '';
@@ -177,7 +177,7 @@ Class is Array of T{
 				return i < len;
 			},
 			iteration: local Function(){
-				Conditional:branch(check: { i > 0 }, then: {
+				Conditional:if(check: { i > 0 }, then: {
 					out: out . separator;
 				});
 				out: out . (self:get(index: i, default: '') as String);

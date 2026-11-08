@@ -46,15 +46,15 @@ Class of Loop is BinaryFoldLoop{
 	replace Function of Boolean is iteration(LoopControl is control){
 		local Token is opTok: self:parser:advance();
 		local String is op: opTok:getValue();
-		Conditional:branch(check: { op == Keyword:IS:value() }, then: {
+		Conditional:if(check: { op == Keyword:IS:value() }, then: {
 			# The identity keyword compares equal: normalize to '==' so the
 			# checker and generator see one operator.
 			op: '==';
 		});
 		local Expression is right: Expression:init(kind: ExpressionKind:UNKNOWN);
-		Conditional:branch(check: { self:next == PrecedenceLevel:NONE }, then: {
+		Conditional:if(check: { self:next == PrecedenceLevel:NONE }, then: {
 			right: self:parser:parseUnary();
-		}, otherwise: {
+		}, else: {
 			right: self:parser:parseLevel(level: self:next);
 		});
 		local Expression is binExpr: Expression:init(kind: ExpressionKind:BINARY);

@@ -36,8 +36,8 @@ Class is LintIssue{
 	##
 	## @return: Formatted display string.
 	replace Function of String is toString(){
-		local String is tag: Conditional:branch(check: { self:isWarning }, then: { '[Warning]' }, otherwise: { '[Notice] ' });
-		local String is loc: Conditional:branch(check: { self:line > 0 }, then: { 'Line ' . (self:line as String) . ': ' }, otherwise: { '' });
+		local String is tag: Conditional:if(check: { self:isWarning }, then: { '[Warning]' }, else: { '[Notice] ' });
+		local String is loc: Conditional:if(check: { self:line > 0 }, then: { 'Line ' . (self:line as String) . ': ' }, else: { '' });
 		return '  ' . tag . ' ' . loc . self:message;
 	}
 }

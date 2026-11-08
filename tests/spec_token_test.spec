@@ -18,48 +18,48 @@ Class is SpecTokenTest{
 		local Int is failures: 0;
 
 		local Token is sym: Token:init(kind: TokenKind:SYMBOL, value: '{', line: 3, col: 14);
-		Conditional:branch(check: { sym:getTokenKind() == TokenKind:SYMBOL && sym:getValue() == '{' && sym:getLine() == 3 && sym:getCol() == 14 }, then: {
+		Conditional:if(check: { sym:getTokenKind() == TokenKind:SYMBOL && sym:getValue() == '{' && sym:getLine() == 3 && sym:getCol() == 14 }, then: {
 			Output:line('[PASS] accessors round-trip');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] accessors round-trip');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { sym:getKeyword() == Keyword:NONE }, then: {
+		Conditional:if(check: { sym:getKeyword() == Keyword:NONE }, then: {
 			Output:line('[PASS] non-keyword carries NONE');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] non-keyword keyword classification');
 			failures: failures + 1;
 		});
 
 		local Token is kw: Token:init(kind: TokenKind:KEYWORD, value: 'local', line: 1, col: 1);
 		kw:setKeyword(kw: Keyword:LOCAL);
-		Conditional:branch(check: { kw:getKeyword() == Keyword:LOCAL }, then: {
+		Conditional:if(check: { kw:getKeyword() == Keyword:LOCAL }, then: {
 			Output:line('[PASS] keyword classification round-trip');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] keyword classification round-trip');
 			failures: failures + 1;
 		});
 
 		local Token is op: Token:init(kind: TokenKind:SYMBOL, value: '==', line: 2, col: 7);
 		op:setOperator(op: Operator:EQ);
-		Conditional:branch(check: { op:getOperator() == Operator:EQ && sym:getOperator() == Operator:NONE }, then: {
+		Conditional:if(check: { op:getOperator() == Operator:EQ && sym:getOperator() == Operator:NONE }, then: {
 			Output:line('[PASS] operator classification round-trip');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] operator classification round-trip');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { sym:describe() == "SYMBOL '{' at 3:14" }, then: {
+		Conditional:if(check: { sym:describe() == "SYMBOL '{' at 3:14" }, then: {
 			Output:line('[PASS] describe template');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] describe template: ' . sym:describe());
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec token test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec token test: ' . (failures as String) . ' failures');
 		});
 	}

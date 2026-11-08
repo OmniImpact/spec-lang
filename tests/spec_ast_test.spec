@@ -31,9 +31,9 @@ Class is SpecAstTest{
 		bin:binaryOp: '+';
 		bin:leftExpr: lhs;
 		bin:rightExpr: rhs;
-		Conditional:branch(check: { bin:kind == ExpressionKind:BINARY && bin:leftExpr:stringValue == 'a' && bin:rightExpr:stringValue == 'b' }, then: {
+		Conditional:if(check: { bin:kind == ExpressionKind:BINARY && bin:leftExpr:stringValue == 'a' && bin:rightExpr:stringValue == 'b' }, then: {
 			Output:line('[PASS] expression records cross-reference');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] expression records cross-reference');
 			failures: failures + 1;
 		});
@@ -45,9 +45,9 @@ Class is SpecAstTest{
 			is CALL: { tag: 'call'; }
 			else: { tag: 'other'; }
 		}
-		Conditional:branch(check: { tag == 'binary' }, then: {
+		Conditional:if(check: { tag == 'binary' }, then: {
 			Output:line('[PASS] when-dispatch on ExpressionKind');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] when-dispatch on ExpressionKind');
 			failures: failures + 1;
 		});
@@ -56,9 +56,9 @@ Class is SpecAstTest{
 		local Type is elem: Type:init(name: 'String');
 		local Type is arr: Type:init(name: 'Array');
 		arr:params: [elem];
-		Conditional:branch(check: { arr:toString() == 'Array of String' && arr:isGeneric() && !elem:isGeneric() }, then: {
+		Conditional:if(check: { arr:toString() == 'Array of String' && arr:isGeneric() && !elem:isGeneric() }, then: {
 			Output:line('[PASS] canonical type formatting');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] canonical type formatting: ' . arr:toString());
 			failures: failures + 1;
 		});
@@ -79,9 +79,9 @@ Class is SpecAstTest{
 		});
 		# (Implicit-Any parenting is the loader's appendImplicitAny job, not
 		# the record's — a bare init carries no bases.)
-		Conditional:branch(check: { found == 'speak' && cls:baseClasses:length() == 0 }, then: {
+		Conditional:if(check: { found == 'speak' && cls:baseClasses:length() == 0 }, then: {
 			Output:line('[PASS] class graph record');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] class graph: ' . found);
 			failures: failures + 1;
 		});
@@ -91,16 +91,16 @@ Class is SpecAstTest{
 		st:returnExpr: bin;
 		st:hasReturnExpr: true;
 		st:setLine(line: 9);
-		Conditional:branch(check: { st:kind == StatementKind:RETURN && st:hasReturnExpr && st:line == 9 && st:returnExpr:kind == ExpressionKind:BINARY }, then: {
+		Conditional:if(check: { st:kind == StatementKind:RETURN && st:hasReturnExpr && st:line == 9 && st:returnExpr:kind == ExpressionKind:BINARY }, then: {
 			Output:line('[PASS] statement records carry their fields');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] statement records');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec ast test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec ast test: ' . (failures as String) . ' failures');
 		});
 	}

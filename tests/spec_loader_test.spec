@@ -58,10 +58,10 @@ Class is LoaderE2E{
 		local ProgramNode is prog: loader:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 
 		# --- package resolution: imports loaded, lattice intact ---
-		Conditional:branch(check: { loader:loadedFileCount() >= 6
+		Conditional:if(check: { loader:loadedFileCount() >= 6
 			&& loader:getParseErrors():length() == 0 }, then: {
 			Output:line('[PASS] multi-file load with zero errors');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] load: files=' . (loader:loadedFileCount() as String) . ' errors=' . (loader:getParseErrors():length() as String));
 			loader:getParseErrors():each(action: local Function(String is e){
 				Output:line(e);
@@ -73,13 +73,13 @@ Class is LoaderE2E{
 		local Loader is probe: Loader:init();
 		local ProgramNode is classes: probe:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 		local LoaderE2EHelper is h: LoaderE2EHelper:init();
-		Conditional:branch(check: { h:hasClass(classes: classes, name: 'String')
+		Conditional:if(check: { h:hasClass(classes: classes, name: 'String')
 			&& h:hasClass(classes: classes, name: 'Any')
 			&& h:hasClass(classes: classes, name: 'Any')
 			&& h:baseOf(classes: classes, name: 'LoudGreeter') == 'Greeter'
 			&& h:baseOf(classes: classes, name: 'Greeter') == 'Any' }, then: {
 			Output:line('[PASS] root lattice and implicit Any');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] lattice');
 			failures: failures + 1;
 		});
@@ -109,12 +109,12 @@ Class is GroupMain{
 		gloader:loadFile(filePath: 'tests/.loader_group_b_tmp.spec');
 		gloader:mergeGroups();
 		local LoaderE2EHelper is gh: LoaderE2EHelper:init();
-		Conditional:branch(check: { gloader:getParseErrors():length() == 0
+		Conditional:if(check: { gloader:getParseErrors():length() == 0
 			&& gh:hasClass(classes: gprog, name: 'Grouped')
 			&& !gh:hasClass(classes: gprog, name: 'GroupedPart')
 			&& gh:memberCount(classes: gprog, name: 'Grouped') == 2 }, then: {
 			Output:line('[PASS] group fragment merging');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] group merge');
 			failures: failures + 1;
 		});
@@ -132,9 +132,9 @@ Class is GroupMain{
 }");
 		local Loader is bloader: Loader:init();
 		bloader:loadProgram(rootPath: 'tests/.loader_bad_tmp.spec');
-		Conditional:branch(check: { bloader:getParseErrors():length() > 0 }, then: {
+		Conditional:if(check: { bloader:getParseErrors():length() > 0 }, then: {
 			Output:line('[PASS] unresolvable import reported');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] missing import error');
 			failures: failures + 1;
 		});
@@ -144,9 +144,9 @@ Class is GroupMain{
 		File:remove(path: 'tests/.loader_group_b_tmp.spec');
 		File:remove(path: 'tests/.loader_bad_tmp.spec');
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec loader test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec loader test: ' . (failures as String) . ' failures');
 		});
 	}
@@ -168,7 +168,7 @@ Class is LoaderE2EHelper{
 	Function of Boolean is hasClass(ProgramNode is classes, String is name){
 		local Boolean is res: false;
 		classes:classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { c:name == name }, then: {
+			Conditional:if(check: { c:name == name }, then: {
 				res: true;
 			});
 		});
@@ -178,7 +178,7 @@ Class is LoaderE2EHelper{
 	Function of String is baseOf(ProgramNode is classes, String is name){
 		local String is res: '';
 		classes:classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { c:name == name }, then: {
+			Conditional:if(check: { c:name == name }, then: {
 				res: c:baseClass;
 			});
 		});
@@ -188,7 +188,7 @@ Class is LoaderE2EHelper{
 	Function of Int is memberCount(ProgramNode is classes, String is name){
 		local Int is res: 0;
 		classes:classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { c:name == name }, then: {
+			Conditional:if(check: { c:name == name }, then: {
 				res: c:members:length();
 			});
 		});

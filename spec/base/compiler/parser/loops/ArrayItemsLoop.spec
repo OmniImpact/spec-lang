@@ -27,7 +27,7 @@ Class of Loop is ArrayItemsLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		self:items:add(item: self:parser:parseExpression());
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
 		});

@@ -18,9 +18,9 @@ Class is StringInspectionTest{
 		local Boolean is dAlpha: '12a3':isDigit();
 		local Boolean is dSpace: ' 123':isDigit();
 		local Boolean is dNeg: '-5':isDigit();
-		Conditional:branch(check: { d1 && d2 && d3 && !dEmpty && !dAlpha && !dSpace && !dNeg }, then: {
+		Conditional:if(check: { d1 && d2 && d3 && !dEmpty && !dAlpha && !dSpace && !dNeg }, then: {
 			Output:line('[PASS] String:isDigit accepts digits and rejects non-digits');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:isDigit');
 		});
 
@@ -32,9 +32,9 @@ Class is StringInspectionTest{
 		local Boolean is aDigit: 'abc1':isAlpha();
 		local Boolean is aSpace: 'hello world':isAlpha();
 		local Boolean is aUnderscore: 'foo_bar':isAlpha();
-		Conditional:branch(check: { a1 && a2 && a3 && !aEmpty && !aDigit && !aSpace && !aUnderscore }, then: {
+		Conditional:if(check: { a1 && a2 && a3 && !aEmpty && !aDigit && !aSpace && !aUnderscore }, then: {
 			Output:line('[PASS] String:isAlpha accepts letters and rejects non-letters');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:isAlpha');
 		});
 
@@ -46,9 +46,9 @@ Class is StringInspectionTest{
 		local Boolean is wMixed: " \t\n\r ":isWhitespace();
 		local Boolean is wEmpty: '':isWhitespace();
 		local Boolean is wWord: ' a ':isWhitespace();
-		Conditional:branch(check: { wSpace && wTab && wNewline && wCR && wMixed && !wEmpty && !wWord }, then: {
+		Conditional:if(check: { wSpace && wTab && wNewline && wCR && wMixed && !wEmpty && !wWord }, then: {
 			Output:line('[PASS] String:isWhitespace accepts whitespace and rejects non-whitespace');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:isWhitespace');
 		});
 
@@ -57,9 +57,9 @@ Class is StringInspectionTest{
 		local Int is tabCount: "\t\t\ttabs":countLeading(search: "\t");
 		local Int is noCount: 'no leading':countLeading(search: ' ');
 		local Int is repCount: 'abababrest':countLeading(search: 'ab');
-		Conditional:branch(check: { spCount == 4 && tabCount == 3 && noCount == 0 && repCount == 3 }, then: {
+		Conditional:if(check: { spCount == 4 && tabCount == 3 && noCount == 0 && repCount == 3 }, then: {
 			Output:line('[PASS] String:countLeading counts leading repetitions correctly');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:countLeading');
 		});
 
@@ -69,9 +69,9 @@ Class is StringInspectionTest{
 		local String is t3: '   ':trim();
 		local String is t4: '':trim();
 		local String is t5: 'already clean':trim();
-		Conditional:branch(check: { t1 == 'hello world' && t2 == 'clean' && t3 == '' && t4 == '' && t5 == 'already clean' }, then: {
+		Conditional:if(check: { t1 == 'hello world' && t2 == 'clean' && t3 == '' && t4 == '' && t5 == 'already clean' }, then: {
 			Output:line('[PASS] String:trim strips leading and trailing whitespace');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:trim');
 		});
 
@@ -85,9 +85,9 @@ Class is StringInspectionTest{
 		local Boolean is ewEmpty: text:endsWith(suffix: '');
 		local Boolean is cTrue: text:contains(needle: 'quick');
 		local Boolean is cFalse: text:contains(needle: 'lazy');
-		Conditional:branch(check: { swTrue && !swFalse && swEmpty && ewTrue && !ewFalse && ewEmpty && cTrue && !cFalse }, then: {
+		Conditional:if(check: { swTrue && !swFalse && swEmpty && ewTrue && !ewFalse && ewEmpty && cTrue && !cFalse }, then: {
 			Output:line('[PASS] String predicates: startsWith, endsWith, contains');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String predicates: startsWith, endsWith, contains');
 		});
 
@@ -96,18 +96,18 @@ Class is StringInspectionTest{
 		local Array of String is emptyDelim: 'abc':split(delimiter: '');
 		local Boolean is pOk: parts:length() == 3 && parts:get(index: 0, default: '') == 'apple' && parts:get(index: 1, default: '') == 'banana' && parts:get(index: 2, default: '') == 'cherry';
 		local Boolean is eOk: emptyDelim:length() == 3 && emptyDelim:get(index: 0, default: '') == 'a' && emptyDelim:get(index: 1, default: '') == 'b' && emptyDelim:get(index: 2, default: '') == 'c';
-		Conditional:branch(check: { pOk && eOk }, then: {
+		Conditional:if(check: { pOk && eOk }, then: {
 			Output:line('[PASS] String:split splits with and without delimiter');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:split');
 		});
 
 		# Case 8: lines
 		local Array of String is linesList: "line1\nline2\r\nline3\n":lines();
 		local Boolean is lOk: linesList:length() == 3 && linesList:get(index: 0, default: '') == 'line1' && linesList:get(index: 1, default: '') == 'line2' && linesList:get(index: 2, default: '') == 'line3';
-		Conditional:branch(check: { lOk }, then: {
+		Conditional:if(check: { lOk }, then: {
 			Output:line('[PASS] String:lines handles unix and crlf newlines');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:lines');
 		});
 
@@ -119,9 +119,9 @@ Class is StringInspectionTest{
 		local Int is pOct: '0o77':parseInt(base: 8, default: -1);
 		local Int is pSep: '1_000_000':parseInt(base: 10, default: -1);
 		local Int is pDef: 'not_a_number':parseInt(base: 10, default: 42);
-		Conditional:branch(check: { p10 == 12345 && pNeg == -999 && pHex == 26 && pBin == 11 && pOct == 63 && pSep == 1000000 && pDef == 42 }, then: {
+		Conditional:if(check: { p10 == 12345 && pNeg == -999 && pHex == 26 && pBin == 11 && pOct == 63 && pSep == 1000000 && pDef == 42 }, then: {
 			Output:line('[PASS] String:parseInt parses bases, prefixes, separators, and defaults');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:parseInt');
 		});
 
@@ -130,9 +130,9 @@ Class is StringInspectionTest{
 		local String is c4: 'hello':charAt(index: 4, default: '?');
 		local String is cOut: 'hello':charAt(index: 10, default: '?');
 		local String is cNeg: 'hello':charAt(index: -1, default: '?');
-		Conditional:branch(check: { c0 == 'h' && c4 == 'o' && cOut == '?' && cNeg == '?' }, then: {
+		Conditional:if(check: { c0 == 'h' && c4 == 'o' && cOut == '?' && cNeg == '?' }, then: {
 			Output:line('[PASS] String:charAt extracts characters and handles bounds');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:charAt');
 		});
 
@@ -140,9 +140,9 @@ Class is StringInspectionTest{
 		local String is rep1: 'foo bar foo':replaceAll(search: 'foo', replacement: 'baz');
 		local String is repEmpty: 'abc':replaceAll(search: '', replacement: 'x');
 		local String is repNone: 'hello':replaceAll(search: 'xyz', replacement: 'abc');
-		Conditional:branch(check: { rep1 == 'baz bar baz' && repEmpty == 'abc' && repNone == 'hello' }, then: {
+		Conditional:if(check: { rep1 == 'baz bar baz' && repEmpty == 'abc' && repNone == 'hello' }, then: {
 			Output:line('[PASS] String:replaceAll replaces occurrences');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String:replaceAll');
 		});
 	}

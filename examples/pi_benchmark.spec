@@ -45,10 +45,10 @@ Class is PiBenchmark{
 		local Int is points: args:getInt(key: 'points', default: 1_000_000_000);
 		local Int is refreshMs: args:getInt(key: 'refresh', default: 40);
 
-		Conditional:branch(check: { threads < 1 }, then: {
+		Conditional:if(check: { threads < 1 }, then: {
  threads: 1;
 		});
-		Conditional:branch(check: { threads > 16 }, then: {
+		Conditional:if(check: { threads > 16 }, then: {
  threads: 16;
 		});
 
@@ -78,7 +78,7 @@ Class is PiBenchmark{
 						iterate: {
 							local Float is x: Math:fastRandom();
 							local Float is y: Math:fastRandom();
-							Conditional:branch(check: { (x * x + y * y) <= 1.0 }, then: {
+							Conditional:if(check: { (x * x + y * y) <= 1.0 }, then: {
 								hits++;
 							});
 							lastX: Math:toInt(value: x * 1000.0);
@@ -94,9 +94,9 @@ Class is PiBenchmark{
 					Process:atomicPut(slot: threadIndex * 2 + 3, value: lastY);
 
 					# Thread 0 doubles as the display thread.
-					Conditional:branch(check: { threadIndex == 0 }, then: {
+					Conditional:if(check: { threadIndex == 0 }, then: {
 						local Int is now: Process:clockMs();
-						Conditional:branch(check: { now - lastDraw >= refreshMs }, then: {
+						Conditional:if(check: { now - lastDraw >= refreshMs }, then: {
 							self:drawProgress(threads: threads);
 							lastDraw: now;
 						});
@@ -147,12 +147,12 @@ Class is PiBenchmark{
 				local Float is dist: Math:sqrt(value: cx * cx + cy * cy);
 
 				local Int is marker: self:markerAt(col: col, row: row, threads: threads);
-				Conditional:branch(check: { marker >= 0 }, then: {
+				Conditional:if(check: { marker >= 0 }, then: {
 					buf: buf . Ansi:color256(code: self:threadColor(index: marker), text: '●');
-				}, otherwise: {
-					Conditional:branch(check: { dist <= 1.0 }, then: {
+				}, else: {
+					Conditional:if(check: { dist <= 1.0 }, then: {
 						buf: buf . Ansi:color256(code: 236, text: '·');
-					}, otherwise: {
+					}, else: {
 						buf: buf . ' ';
 					});
 				});
@@ -177,7 +177,7 @@ Class is PiBenchmark{
 			iterate: {
 				local Int is gx: (Process:atomicGet(slot: i * 2 + 2) * self:gridW) / 1000;
 				local Int is gy: (Process:atomicGet(slot: i * 2 + 3) * self:gridH) / 1000;
-				Conditional:branch(check: { gx == col && gy == row }, then: {
+				Conditional:if(check: { gx == col && gy == row }, then: {
 					found: i;
 				});
 				i++;
@@ -196,7 +196,7 @@ Class is PiBenchmark{
 		local Int is samples: Process:atomicGet(slot: 0);
 		local Int is hits: Process:atomicGet(slot: 1);
 		local Float is pi: 0.0;
-		Conditional:branch(check: { samples > 0 }, then: {
+		Conditional:if(check: { samples > 0 }, then: {
 			pi: (4.0 * Math:toFloat(value: hits)) / Math:toFloat(value: samples);
 		});
 		Output:line(Ansi:color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . self:piText(value: pi) . '  threads: ' . threads));
@@ -212,7 +212,7 @@ Class is PiBenchmark{
 		local Float is pi: (4.0 * Math:toFloat(value: totalHits)) / Math:toFloat(value: points);
 		local Float is err: Math:abs(value: pi - 3.14159265358979);
 		local Int is perSec: 0;
-		Conditional:branch(check: { elapsedMs > 0 }, then: {
+		Conditional:if(check: { elapsedMs > 0 }, then: {
 			perSec: (points * 1000) / elapsedMs;
 		});
 
@@ -233,10 +233,10 @@ Class is PiBenchmark{
 		local Int is whole: thousandths / 1000;
 		local Int is frac: thousandths % 1000;
 		local String is fracText: '' . frac;
-		Conditional:branch(check: { frac < 10 }, then: {
+		Conditional:if(check: { frac < 10 }, then: {
 			fracText: '00' . fracText;
-		}, otherwise: {
-			Conditional:branch(check: { frac < 100 }, then: {
+		}, else: {
+			Conditional:if(check: { frac < 100 }, then: {
 				fracText: '0' . fracText;
 			});
 		});
@@ -259,7 +259,7 @@ Class is PiBenchmark{
 	local Function of String is boxed(String is inner, Int is width){
 		local String is line: '║ ' . inner;
 		local Int is pad: width - 2 - inner:length();
-		Conditional:branch(check: { pad < 1 }, then: {
+		Conditional:if(check: { pad < 1 }, then: {
 			pad: 1;
 		});
 		While(

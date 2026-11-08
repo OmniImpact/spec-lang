@@ -29,9 +29,9 @@ Class is ListStringTest{
 
 		# Case 1: string literal
 		local [String] is names: ['alice', 'bob'];
-		Conditional:branch(check: { names:length() == 2 }, then: {
+		Conditional:if(check: { names:length() == 2 }, then: {
 			Output:line('[PASS] string literal constructs');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] literal length: ' . names:length() as String);
 		});
 
@@ -43,9 +43,9 @@ Class is ListStringTest{
 		local String is missing: names:get(index: 9, default: 'fallback', error: local Function(String is m){
 			errFlag:push(item: 1 as Byte);
 		});
-		Conditional:branch(check: { first == 'alice' && missing == 'fallback' && errFlag:length() == 1 }, then: {
+		Conditional:if(check: { first == 'alice' && missing == 'fallback' && errFlag:length() == 1 }, then: {
 			Output:line('[PASS] string get, default, and error notification');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] string get: first=' . first . ' missing=' . missing);
 		});
 
@@ -55,9 +55,9 @@ Class is ListStringTest{
 			errFlag:push(item: 1 as Byte);
 		});
 		local String is popped: names:pop(default: '');
-		Conditional:branch(check: { popped == 'carol' && names:length() == 2 && errFlag:length() == 1 }, then: {
+		Conditional:if(check: { popped == 'carol' && names:length() == 2 && errFlag:length() == 1 }, then: {
 			Output:line('[PASS] string push/set/pop ownership round-trip');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] push/set/pop: popped=' . popped . ' len=' . names:length() as String);
 		});
 
@@ -65,9 +65,9 @@ Class is ListStringTest{
 		local [Int] is nums: [1, 2, 3];
 		local Int is mid: nums:get(index: 1, default: 0);
 		nums:push(item: 4);
-		Conditional:branch(check: { mid == 2 && nums:length() == 4 && nums:get(index: 3, default: 0) == 4 }, then: {
+		Conditional:if(check: { mid == 2 && nums:length() == 4 && nums:get(index: 3, default: 0) == 4 }, then: {
 			Output:line('[PASS] int literal elements');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] int list: mid=' . mid as String . ' len=' . nums:length() as String);
 		});
 
@@ -75,27 +75,27 @@ Class is ListStringTest{
 		local [Greeting] is seen: [Greeting:init(text: 'hello')];
 		seen:push(item: Greeting:init(text: 'world'));
 		local Greeting is g1: seen:get(index: 1, default: Greeting:init(text: 'none'));
-		Conditional:branch(check: { g1:getValue() == 'world' }, then: {
+		Conditional:if(check: { g1:getValue() == 'world' }, then: {
 			Output:line('[PASS] object elements retained and readable');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] object element: ' . g1:getValue());
 		});
 
 		# Case 6: aliasing — assignment shares the vector
 		local [Greeting] is alias: seen;
 		alias:pop(default: Greeting:init(text: 'none'));
-		Conditional:branch(check: { seen:length() == 1 }, then: {
+		Conditional:if(check: { seen:length() == 1 }, then: {
 			Output:line('[PASS] alias pop observed through original reference');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] alias: len=' . seen:length() as String);
 		});
 
 		# Case 7: clear empties and stays usable
 		names:clear();
 		names:push(item: 'zed');
-		Conditional:branch(check: { names:length() == 1 && names:get(index: 0, default: '') == 'zed' }, then: {
+		Conditional:if(check: { names:length() == 1 && names:get(index: 0, default: '') == 'zed' }, then: {
 			Output:line('[PASS] clear empties and vector stays usable');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] clear');
 		});
 
@@ -109,9 +109,9 @@ Class is ListStringTest{
 		local Greeting is f1: fresh:get(index: 0, default: Greeting:init(text: 'none'));
 		local Greeting is f2: fresh:get(index: 1, default: Greeting:init(text: 'none'));
 		local Greeting is f3: fresh:get(index: 2, default: Greeting:init(text: 'none'));
-		Conditional:branch(check: { f1:getValue() == 'lit1' && f2:getValue() == 'world' && f3:getValue() == 'lit3' && errFlag:length() == 1 }, then: {
+		Conditional:if(check: { f1:getValue() == 'lit1' && f2:getValue() == 'world' && f3:getValue() == 'lit3' && errFlag:length() == 1 }, then: {
 			Output:line('[PASS] fresh and borrowed inserts coexist with balanced ownership');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] fresh inserts: f1=' . f1:getValue() . ' f2=' . f2:getValue() . ' f3=' . f3:getValue() . ' err=' . errFlag:length() as String);
 		});
 

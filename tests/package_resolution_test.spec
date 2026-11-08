@@ -13,9 +13,9 @@ Class is PackageResolutionTest{
 		Output:line('=== Package Resolution Test ===');
 		local Widget is w: Widget:init();
 		local String is msg: w:speak();
-		Conditional:branch(check: { msg == 'widget online' }, then: {
+		Conditional:if(check: { msg == 'widget online' }, then: {
 			Output:line('[PASS] array-form using resolved the class from the package tree');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] package resolution: ' . msg);
 		});
 	}

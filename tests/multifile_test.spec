@@ -36,7 +36,7 @@ Class is MultiFileTest{
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			app:counter: app:counter + 1;
-			Conditional:branch(check: { app:counter == 5 }, then: {
+			Conditional:if(check: { app:counter == 5 }, then: {
 				Output:line('Stop reached at counter = ' . app:counter);
 				return false;
 			});

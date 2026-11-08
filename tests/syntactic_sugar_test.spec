@@ -21,11 +21,11 @@ Class is SyntacticSugarTest{
 
 		# 2. Test 'is' equality operator
 		local String is status: 'OK';
-		Conditional:branch(check: { status is 'OK' }, then: {
+		Conditional:if(check: { status is 'OK' }, then: {
 			Output:line('is operator (string match): true');
 		});
 		local Int is count: 10;
-		Conditional:branch(check: { count is 10 }, then: {
+		Conditional:if(check: { count is 10 }, then: {
 			Output:line('is operator (int match): true');
 		});
 
@@ -43,7 +43,7 @@ Class is SyntacticSugarTest{
 		Output:line('Count leading spaces: ' . spaceCount);
 
 		local String is prefixTest: '#! Package base';
-		Conditional:branch(check: { prefixTest:startsWith(prefix: '#!') }, then: {
+		Conditional:if(check: { prefixTest:startsWith(prefix: '#!') }, then: {
 			Output:line('startsWith \'#!\': true');
 		});
 

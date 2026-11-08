@@ -41,7 +41,7 @@ Class is ClassInfo{
 	replace Function is init(String is name, String is baseClass, Array of Member is members){
 		self:name: name;
 		self:baseClass: baseClass;
-		self:baseClasses: Conditional:branch(check: { baseClass != '' }, then: { [baseClass] }, otherwise: { [] });
+		self:baseClasses: Conditional:if(check: { baseClass != '' }, then: { [baseClass] }, else: { [] });
 		self:members: members;
 	}
 
@@ -60,11 +60,11 @@ Class is ClassInfo{
 	Function of Boolean is instanceImportsAs(String is name){
 		local Boolean is found: false;
 		self:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { !found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { !found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					Conditional:branch(check: { item:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
-							Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS && seg:stringValue == name }, then: {
+							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS && seg:stringValue == name }, then: {
 								found: true;
 							});
 						});
@@ -87,12 +87,12 @@ Class is ClassInfo{
 			iteration: local Function of Boolean(){
 				local Member is m: self:members:get(index: idx);
 				idx: idx + 1;
-				Conditional:branch(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+				Conditional:if(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 					local String is joined: '';
 					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
-						Conditional:branch(check: { joined == '' }, then: {
+						Conditional:if(check: { joined == '' }, then: {
 							joined: seg:stringValue;
-						}, otherwise: {
+						}, else: {
 							joined: joined . ':' . seg:stringValue;
 						});
 					});
@@ -114,7 +114,7 @@ Class is ClassInfo{
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
 		self:baseClasses: baseClasses;
-		self:baseClass: Conditional:branch(check: { baseClasses:length() > 0 }, then: { baseClasses:get(index: 0) }, otherwise: { '' });
+		self:baseClass: Conditional:if(check: { baseClasses:length() > 0 }, then: { baseClasses:get(index: 0) }, else: { '' });
 		self:members: members;
 	}
 

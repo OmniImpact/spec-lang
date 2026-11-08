@@ -37,7 +37,7 @@ Class is String{
 	## @param default: Fallback when out of bounds.
 	## @return: The character, or [default].
 	Function of String is charAt(Int is index, String is default){
-		Conditional:branch(check: { index < 0 || index >= Buf:bufLength(b: self) }, then: {
+		Conditional:if(check: { index < 0 || index >= Buf:bufLength(b: self) }, then: {
 			return Buf:stringCopy(b: default);
 		});
 		return String:fromCharCode(code: Buf:bufGetByte(b: self, idx: index, def: -1));
@@ -51,10 +51,10 @@ Class is String{
 	Function of String is substring(Int is start, Int is end){
 		local Int is s: start;
 		local Int is e: end;
-		Conditional:branch(check: { s < 0 }, then: {
+		Conditional:if(check: { s < 0 }, then: {
 			s: 0;
 		});
-		Conditional:branch(check: { e > Buf:bufLength(b: self) }, then: {
+		Conditional:if(check: { e > Buf:bufLength(b: self) }, then: {
 			e: Buf:bufLength(b: self);
 		});
 		return Buf:stringSubstring(b: self, start: s, end: e);
@@ -66,10 +66,10 @@ Class is String{
 	## @return: true when present.
 	Function of Boolean is startsWith(String is prefix){
 		local Int is pl: Buf:bufLength(b: prefix);
-		Conditional:branch(check: { pl == 0 }, then: {
+		Conditional:if(check: { pl == 0 }, then: {
 			return true;
 		});
-		Conditional:branch(check: { pl > Buf:bufLength(b: self) }, then: {
+		Conditional:if(check: { pl > Buf:bufLength(b: self) }, then: {
 			return false;
 		});
 		return Buf:stringSubstring(b: self, start: 0, end: pl) == prefix;
@@ -81,11 +81,11 @@ Class is String{
 	## @return: true when present.
 	Function of Boolean is endsWith(String is suffix){
 		local Int is sl: Buf:bufLength(b: suffix);
-		Conditional:branch(check: { sl == 0 }, then: {
+		Conditional:if(check: { sl == 0 }, then: {
 			return true;
 		});
 		local Int is bl: Buf:bufLength(b: self);
-		Conditional:branch(check: { sl > bl }, then: {
+		Conditional:if(check: { sl > bl }, then: {
 			return false;
 		});
 		return Buf:stringSubstring(b: self, start: bl - sl, end: bl) == suffix;
@@ -115,7 +115,7 @@ Class is String{
 	## @return: The replaced copy.
 	Function of String is replaceAll(String is search, String is replacement){
 		local Int is slen: Buf:bufLength(b: search);
-		Conditional:branch(check: { slen == 0 }, then: {
+		Conditional:if(check: { slen == 0 }, then: {
 			return Buf:stringCopy(b: self);
 		});
 		local Int is total: Buf:bufLength(b: self);
@@ -128,9 +128,9 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is idx: Buf:stringIndexOfFrom(b: self, needle: search, from: pos, def: -1);
-				Conditional:branch(check: { idx < 0 }, then: {
+				Conditional:if(check: { idx < 0 }, then: {
 					running: false;
-				}, otherwise: {
+				}, else: {
 					out: out . self:substring(start: pos, end: idx) . replacement;
 					pos: idx + slen;
 				});
@@ -147,11 +147,11 @@ Class is String{
 	Function of Array of String is split(String is delimiter){
 		local Array of String is res: [];
 		local Int is slen: Buf:bufLength(b: self);
-		Conditional:branch(check: { slen == 0 }, then: {
+		Conditional:if(check: { slen == 0 }, then: {
 			return res;
 		});
 		local Int is dlen: Buf:bufLength(b: delimiter);
-		Conditional:branch(check: { dlen == 0 }, then: {
+		Conditional:if(check: { dlen == 0 }, then: {
 			local Int is i: 0;
 			While:condition(
 				evaluate: local Function of Boolean(){
@@ -172,9 +172,9 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is idx: Buf:stringIndexOfFrom(b: self, needle: delimiter, from: pos, def: -1);
-				Conditional:branch(check: { idx < 0 }, then: {
+				Conditional:if(check: { idx < 0 }, then: {
 					running: false;
-				}, otherwise: {
+				}, else: {
 					res:add(item: self:substring(start: pos, end: idx));
 					pos: idx + dlen;
 				});
@@ -190,7 +190,7 @@ Class is String{
 	Function of Array of String is lines(){
 		local Array of String is res: [];
 		local Int is len: Buf:bufLength(b: self);
-		Conditional:branch(check: { len == 0 }, then: {
+		Conditional:if(check: { len == 0 }, then: {
 			return res;
 		});
 		local Int is start: 0;
@@ -201,11 +201,11 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:branch(check: { b == 10 }, then: {
+				Conditional:if(check: { b == 10 }, then: {
 					local Int is endIdx: i;
-					Conditional:branch(check: { endIdx > start }, then: {
+					Conditional:if(check: { endIdx > start }, then: {
 						local Int is prev: Buf:bufGetByte(b: self, idx: endIdx - 1, def: -1);
-						Conditional:branch(check: { prev == 13 }, then: {
+						Conditional:if(check: { prev == 13 }, then: {
 							endIdx: endIdx - 1;
 						});
 					});
@@ -215,10 +215,10 @@ Class is String{
 				i: i + 1;
 			}
 		);
-		Conditional:branch(check: { start < len }, then: {
+		Conditional:if(check: { start < len }, then: {
 			local Int is endIdx: len;
 			local Int is prev: Buf:bufGetByte(b: self, idx: endIdx - 1, def: -1);
-			Conditional:branch(check: { prev == 13 }, then: {
+			Conditional:if(check: { prev == 13 }, then: {
 				endIdx: endIdx - 1;
 			});
 			res:add(item: self:substring(start: start, end: endIdx));
@@ -231,7 +231,7 @@ Class is String{
 	## @return: The trimmed copy.
 	Function of String is trim(){
 		local Int is len: Buf:bufLength(b: self);
-		Conditional:branch(check: { len == 0 }, then: {
+		Conditional:if(check: { len == 0 }, then: {
 			return '';
 		});
 		local Int is s: 0;
@@ -242,14 +242,14 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is b: Buf:bufGetByte(b: self, idx: s, def: -1);
-				Conditional:branch(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
+				Conditional:if(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
 					s: s + 1;
-				}, otherwise: {
+				}, else: {
 					sTrimming: false;
 				});
 			}
 		);
-		Conditional:branch(check: { s >= len }, then: {
+		Conditional:if(check: { s >= len }, then: {
 			return '';
 		});
 		local Int is e: len;
@@ -260,9 +260,9 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is b: Buf:bufGetByte(b: self, idx: e - 1, def: -1);
-				Conditional:branch(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
+				Conditional:if(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
 					e: e - 1;
-				}, otherwise: {
+				}, else: {
 					eTrimming: false;
 				});
 			}
@@ -277,7 +277,7 @@ Class is String{
 	Function of Int is countLeading(String is search){
 		local Int is slen: Buf:bufLength(b: search);
 		local Int is blen: Buf:bufLength(b: self);
-		Conditional:branch(check: { slen == 0 || blen == 0 }, then: {
+		Conditional:if(check: { slen == 0 || blen == 0 }, then: {
 			return 0;
 		});
 		local Int is count: 0;
@@ -288,10 +288,10 @@ Class is String{
 				return matching && (pos + slen <= blen);
 			},
 			iteration: local Function(){
-				Conditional:branch(check: { Buf:stringSubstring(b: self, start: pos, end: pos + slen) == search }, then: {
+				Conditional:if(check: { Buf:stringSubstring(b: self, start: pos, end: pos + slen) == search }, then: {
 					count: count + 1;
 					pos: pos + slen;
-				}, otherwise: {
+				}, else: {
 					matching: false;
 				});
 			}
@@ -304,7 +304,7 @@ Class is String{
 	## @return: true when all digits.
 	Function of Boolean is isDigit(){
 		local Int is n: Buf:bufLength(b: self);
-		Conditional:branch(check: { n == 0 }, then: {
+		Conditional:if(check: { n == 0 }, then: {
 			return false;
 		});
 		local Int is i: 0;
@@ -315,7 +315,7 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:branch(check: { b < 48 || b > 57 }, then: {
+				Conditional:if(check: { b < 48 || b > 57 }, then: {
 					ok: false;
 				});
 				i: i + 1;
@@ -329,7 +329,7 @@ Class is String{
 	## @return: true when all letters.
 	Function of Boolean is isAlpha(){
 		local Int is n: Buf:bufLength(b: self);
-		Conditional:branch(check: { n == 0 }, then: {
+		Conditional:if(check: { n == 0 }, then: {
 			return false;
 		});
 		local Int is i: 0;
@@ -342,7 +342,7 @@ Class is String{
 				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
 				local Boolean is isUpper: (b >= 65 && b <= 90);
 				local Boolean is isLower: (b >= 97 && b <= 122);
-				Conditional:branch(check: { !isUpper && !isLower }, then: {
+				Conditional:if(check: { !isUpper && !isLower }, then: {
 					ok: false;
 				});
 				i: i + 1;
@@ -356,7 +356,7 @@ Class is String{
 	## @return: true when all whitespace.
 	Function of Boolean is isWhitespace(){
 		local Int is n: Buf:bufLength(b: self);
-		Conditional:branch(check: { n == 0 }, then: {
+		Conditional:if(check: { n == 0 }, then: {
 			return false;
 		});
 		local Int is i: 0;
@@ -367,7 +367,7 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:branch(check: { b != 32 && b != 9 && b != 10 && b != 13 && b != 11 && b != 12 }, then: {
+				Conditional:if(check: { b != 32 && b != 9 && b != 10 && b != 13 && b != 11 && b != 12 }, then: {
 					ok: false;
 				});
 				i: i + 1;
@@ -391,37 +391,37 @@ Class is String{
 	## @return: The parsed value, or [default].
 	Function of Int is parseInt(Int is base: 10, Int is default: -1){
 		local Int is len: Buf:bufLength(b: self);
-		Conditional:branch(check: { len == 0 }, then: {
+		Conditional:if(check: { len == 0 }, then: {
 			return default;
 		});
 		local Int is b: base;
 		local Int is start: 0;
-		Conditional:branch(check: { len >= 2 && Buf:bufGetByte(b: self, idx: 0, def: -1) == 48 }, then: {
+		Conditional:if(check: { len >= 2 && Buf:bufGetByte(b: self, idx: 0, def: -1) == 48 }, then: {
 			local Int is prefixCh: Buf:bufGetByte(b: self, idx: 1, def: -1);
-			Conditional:branch(check: { prefixCh == 120 || prefixCh == 88 }, then: {
+			Conditional:if(check: { prefixCh == 120 || prefixCh == 88 }, then: {
 				b: 16;
 				start: 2;
-			}, otherwise: {
-				Conditional:branch(check: { prefixCh == 98 || prefixCh == 66 }, then: {
+			}, else: {
+				Conditional:if(check: { prefixCh == 98 || prefixCh == 66 }, then: {
 					b: 2;
 					start: 2;
-				}, otherwise: {
-					Conditional:branch(check: { prefixCh == 111 || prefixCh == 79 }, then: {
+				}, else: {
+					Conditional:if(check: { prefixCh == 111 || prefixCh == 79 }, then: {
 						b: 8;
 						start: 2;
 					});
 				});
 			});
 		});
-		Conditional:branch(check: { b < 2 || b > 36 }, then: {
+		Conditional:if(check: { b < 2 || b > 36 }, then: {
 			return default;
 		});
 		local Boolean is neg: false;
-		Conditional:branch(check: { start < len && Buf:bufGetByte(b: self, idx: start, def: -1) == 45 }, then: {
+		Conditional:if(check: { start < len && Buf:bufGetByte(b: self, idx: start, def: -1) == 45 }, then: {
 			neg: true;
 			start: start + 1;
 		});
-		Conditional:branch(check: { start >= len }, then: {
+		Conditional:if(check: { start >= len }, then: {
 			return default;
 		});
 		local Int is val: 0;
@@ -434,22 +434,22 @@ Class is String{
 			},
 			iteration: local Function(){
 				local Int is ch: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:branch(check: { ch != 95 }, then: {
+				Conditional:if(check: { ch != 95 }, then: {
 					local Int is digit: -1;
-					Conditional:branch(check: { ch >= 48 && ch <= 57 }, then: {
+					Conditional:if(check: { ch >= 48 && ch <= 57 }, then: {
 						digit: ch - 48;
-					}, otherwise: {
-						Conditional:branch(check: { ch >= 97 && ch <= 122 }, then: {
+					}, else: {
+						Conditional:if(check: { ch >= 97 && ch <= 122 }, then: {
 							digit: ch - 97 + 10;
-						}, otherwise: {
-							Conditional:branch(check: { ch >= 65 && ch <= 90 }, then: {
+						}, else: {
+							Conditional:if(check: { ch >= 65 && ch <= 90 }, then: {
 								digit: ch - 65 + 10;
 							});
 						});
 					});
-					Conditional:branch(check: { digit < 0 || digit >= b }, then: {
+					Conditional:if(check: { digit < 0 || digit >= b }, then: {
 						ok: false;
-					}, otherwise: {
+					}, else: {
 						val: (val * b) + digit;
 						anyDigits: true;
 					});
@@ -457,10 +457,10 @@ Class is String{
 				i: i + 1;
 			}
 		);
-		Conditional:branch(check: { !ok || !anyDigits }, then: {
+		Conditional:if(check: { !ok || !anyDigits }, then: {
 			return default;
 		});
-		Conditional:branch(check: { neg }, then: {
+		Conditional:if(check: { neg }, then: {
 			return -val;
 		});
 		return val;

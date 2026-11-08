@@ -35,27 +35,27 @@ Class of Loop is ParamLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		# `self: field` declares a receiver field parameter.
-		Conditional:branch(check: { self:parser:peek():getValue() == self:names:selfIdent() && self:parser:peekAhead(offset: 1):getValue() == ':' }, then: {
+		Conditional:if(check: { self:parser:peek():getValue() == self:names:selfIdent() && self:parser:peekAhead(offset: 1):getValue() == ':' }, then: {
 			self:parser:advance();
 			self:parser:advance();
 			local Token is fTok: self:parser:advance();
 			local Parameter is param: Parameter:init(name: fTok:getValue(), paramType: Type:init(name: self:names:selfFieldMarker()));
-			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:DEFAULT) }, then: {
+			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:DEFAULT) }, then: {
 				self:parser:advance();
 				param:setDefault(expr: self:parser:parseExpression());
 			});
 			self:params:add(item: param);
-			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:parser:advance();
 				return true;
 			});
 			return false;
 		});
 		# Shorthand: a bare identifier is an Any-typed parameter.
-		Conditional:branch(check: { self:parser:peekAhead(offset: 1):getValue() == Punctuation:SEPARATOR:value() || self:parser:peekAhead(offset: 1):getValue() == Punctuation:GROUP_CLOSE:value() }, then: {
+		Conditional:if(check: { self:parser:peekAhead(offset: 1):getValue() == Punctuation:SEPARATOR:value() || self:parser:peekAhead(offset: 1):getValue() == Punctuation:GROUP_CLOSE:value() }, then: {
 			local Token is pTok: self:parser:advance();
 			self:params:add(item: Parameter:init(name: pTok:getValue(), paramType: Type:init(name: self:names:anyName())));
-			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:parser:advance();
 				return true;
 			});
@@ -65,12 +65,12 @@ Class of Loop is ParamLoop{
 		self:parser:matchKeyword(kw: Keyword:IS);
 		local Token is pTok: self:parser:advance();
 		local Parameter is param: Parameter:init(name: pTok:getValue(), paramType: pType);
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:DEFAULT) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:DEFAULT) }, then: {
 			self:parser:advance();
 			param:setDefault(expr: self:parser:parseExpression());
 		});
 		self:params:add(item: param);
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
 		});

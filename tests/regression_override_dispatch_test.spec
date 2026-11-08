@@ -34,27 +34,27 @@ Class is RegressionOverrideDispatchTest{
 		# This path already works today and must keep working.
 		local Animal is dogAsAnimal: Dog:init();
 		local String is dogSound: dogAsAnimal:speak();
-		Conditional:branch(check: { dogSound == 'woof' }, then: {
+		Conditional:if(check: { dogSound == 'woof' }, then: {
 			Output:line('[PASS] one-level override: Dog speaks woof');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] one-level override: expected woof, got ' . dogSound);
 		});
 
 		# Case 2 (the regression): two-level override, no re-override in Puppy.
 		local Animal is puppyAsAnimal: Puppy:init();
 		local String is puppySound: puppyAsAnimal:speak();
-		Conditional:branch(check: { puppySound == 'woof' }, then: {
+		Conditional:if(check: { puppySound == 'woof' }, then: {
 			Output:line('[PASS] two-level override: Puppy inherits Dog\'s woof');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] two-level override: expected woof, got \'' . puppySound . '\' (Base body leaked through)');
 		});
 
 		# Case 3 (the regression): three-level chain, override declared two levels up.
 		local Animal is labAsAnimal: Lab:init();
 		local String is labSound: labAsAnimal:speak();
-		Conditional:branch(check: { labSound == 'woof' }, then: {
+		Conditional:if(check: { labSound == 'woof' }, then: {
 			Output:line('[PASS] three-level override: Lab inherits Dog\'s woof');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] three-level override: expected woof, got \'' . labSound . '\'');
 		});
 
@@ -64,9 +64,9 @@ Class is RegressionOverrideDispatchTest{
 		local Int is woofCount: kennel:count(predicate: local Function of Boolean(Animal is resident){
 			return resident:speak() == 'woof';
 		});
-		Conditional:branch(check: { woofCount == 3 }, then: {
+		Conditional:if(check: { woofCount == 3 }, then: {
 			Output:line('[PASS] heterogeneous dispatch: 3 of 3 kennel residents speak woof');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] heterogeneous dispatch: expected 3 woofs, got ' . woofCount);
 		});
 

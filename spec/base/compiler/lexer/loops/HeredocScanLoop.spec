@@ -28,7 +28,7 @@ Class of Loop is HeredocScanLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
-		Conditional:branch(check: { triple == self:quote }, then: {
+		Conditional:if(check: { triple == self:quote }, then: {
 			self:lexer:advance();
 			self:lexer:advance();
 			self:lexer:advance();

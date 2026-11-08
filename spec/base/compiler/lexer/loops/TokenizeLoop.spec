@@ -27,36 +27,36 @@ Class of Loop is TokenizeLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		self:lexer:skipWhitespaceAndComments();
-		Conditional:branch(check: { self:lexer:pos >= self:lexer:length }, then: {
+		Conditional:if(check: { self:lexer:pos >= self:lexer:length }, then: {
 			return false;
 		});
 
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		Conditional:branch(check: { ch == '"' || ch == '\'' }, then: {
+		Conditional:if(check: { ch == '"' || ch == '\'' }, then: {
 			# The raw heredoc claims precedence over single quotes.
 			local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
-			Conditional:branch(check: { triple == "'''" }, then: {
+			Conditional:if(check: { triple == "'''" }, then: {
 				self:tokens:add(item: self:lexer:readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
-			}, otherwise: {
+			}, else: {
 				self:tokens:add(item: self:lexer:readString(quote: ch));
 			});
-		}, otherwise: {
-			Conditional:branch(check: { ch == '`' }, then: {
+		}, else: {
+			Conditional:if(check: { ch == '`' }, then: {
 				# The template heredoc: raw content now, escapes and templates
 				# interpreted by the parser's desugar.
 				local String is triple: self:lexer:source:substring(start: self:lexer:pos, end: self:lexer:pos + 3);
-				Conditional:branch(check: { triple == "```" }, then: {
+				Conditional:if(check: { triple == "```" }, then: {
 					self:tokens:add(item: self:lexer:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
-				}, otherwise: {
+				}, else: {
 					self:tokens:add(item: self:lexer:readSymbol());
 				});
-			}, otherwise: {
-				Conditional:branch(check: { ch:isDigit() }, then: {
+			}, else: {
+				Conditional:if(check: { ch:isDigit() }, then: {
 					self:tokens:add(item: self:lexer:readNumber());
-				}, otherwise: {
-					Conditional:branch(check: { self:lexer:isIdentifierStart(ch: ch) }, then: {
+				}, else: {
+					Conditional:if(check: { self:lexer:isIdentifierStart(ch: ch) }, then: {
 						self:tokens:add(item: self:lexer:readIdentifierOrKeyword());
-					}, otherwise: {
+					}, else: {
 						self:tokens:add(item: self:lexer:readSymbol());
 					});
 				});

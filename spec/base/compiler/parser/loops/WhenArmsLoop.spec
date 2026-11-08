@@ -34,13 +34,13 @@ Class of Loop is WhenArmsLoop{
 	}
 
 	replace Function of Boolean is iteration(LoopControl is control){
-		Conditional:branch(check: { self:parser:checkKeyword(kw: Keyword:IS) }, then: {
+		Conditional:if(check: { self:parser:checkKeyword(kw: Keyword:IS) }, then: {
 			self:parser:advance();
 			local Array of Expression is conds: [];
 			While:run(loop: WhenConditionsLoop:init(parser: self:parser, conditions: conds));
 			self:parser:matchPunct(p: Punctuation:ARM);
 
-			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
+			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 				self:parser:advance();
 				local Array of Statement is body: [];
 				While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
@@ -48,9 +48,9 @@ Class of Loop is WhenArmsLoop{
 				local WhenArm is arm: WhenArm:init();
 				arm:arm(conditions: conds, body: body);
 				self:arms:add(item: arm);
-			}, otherwise: {
+			}, else: {
 				local Expression is exprVal: self:parser:parseExpression();
-				Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+				Conditional:if(check: { self:parser:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 					self:parser:advance();
 				});
 				local WhenArm is arm: WhenArm:init();
@@ -60,11 +60,11 @@ Class of Loop is WhenArmsLoop{
 			return true;
 		});
 
-		Conditional:branch(check: { self:parser:checkKeyword(kw: Keyword:ELSE) }, then: {
+		Conditional:if(check: { self:parser:check(kind: TokenKind:IDENTIFIER, value: 'else') }, then: {
 			self:parser:advance();
 			self:parser:matchPunct(p: Punctuation:ARM);
 
-			Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
+			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 				self:parser:advance();
 				local Array of Statement is body: [];
 				While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
@@ -72,9 +72,9 @@ Class of Loop is WhenArmsLoop{
 				local WhenArm is arm: WhenArm:init();
 				arm:elseArm(body: body);
 				self:arms:add(item: arm);
-			}, otherwise: {
+			}, else: {
 				local Expression is exprVal: self:parser:parseExpression();
-				Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+				Conditional:if(check: { self:parser:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 					self:parser:advance();
 				});
 				local WhenArm is arm: WhenArm:init();

@@ -9,7 +9,7 @@ Class is N19AsFilledBranch {
 	];
 
 	replace Function is init(Map of String to String is args) {
-		as: Conditional:branch(check: true, then: {
+		as: Conditional:if(check: true, then: {
 			Output:line('then');
 		});
 		Output:line('cleanup');

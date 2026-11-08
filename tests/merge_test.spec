@@ -48,33 +48,33 @@ Class is MergeTest{
 
 		# Case 1: merged array contains parent item first.
 		local String is first: child:tags:get(index: 0);
-		Conditional:branch(check: { first == 'core' }, then: {
+		Conditional:if(check: { first == 'core' }, then: {
 			Output:line('[PASS] merge fold order: tags[0] = core');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] merge fold order: expected core, got ' . first);
 		});
 
 		# Case 2: merged array appends child item.
 		local String is second: child:tags:get(index: 1);
-		Conditional:branch(check: { second == 'extended' }, then: {
+		Conditional:if(check: { second == 'extended' }, then: {
 			Output:line('[PASS] merge fold append: tags[1] = extended');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] merge fold append: expected extended, got ' . second);
 		});
 
 		# Case 3: merged length is parent + child.
 		local Int is count: child:tags:length();
-		Conditional:branch(check: { count == 2 }, then: {
+		Conditional:if(check: { count == 2 }, then: {
 			Output:line('[PASS] merge fold length: tags length = 2');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] merge fold length: expected 2, got ' . count);
 		});
 
 		# Case 4: `merge` did not disturb normal override semantics.
 		local Int is value: child:baseValue();
-		Conditional:branch(check: { value == 20 }, then: {
+		Conditional:if(check: { value == 20 }, then: {
 			Output:line('[PASS] replace alongside merge: baseValue = 20');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] replace alongside merge: expected 20, got ' . value);
 		});
 

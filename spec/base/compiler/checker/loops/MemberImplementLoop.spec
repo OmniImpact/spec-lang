@@ -31,12 +31,12 @@ Class of Loop is MemberImplementLoop{
 	replace Function of Boolean is iteration(LoopControl is c){
 		local Member is subM: self:members:get(index: self:idx);
 		self:idx: self:idx + 1;
-		Conditional:branch(check: { subM:name == self:target:name }, then: {
-			Conditional:branch(check: { subM:kind == MemberKind:METHOD && subM:body:length() > 0 }, then: {
+		Conditional:if(check: { subM:name == self:target:name }, then: {
+			Conditional:if(check: { subM:kind == MemberKind:METHOD && subM:body:length() > 0 }, then: {
 				self:implemented: true;
 				return false;
 			});
-			Conditional:branch(check: { subM:kind == MemberKind:FIELD && subM:hasInit }, then: {
+			Conditional:if(check: { subM:kind == MemberKind:FIELD && subM:hasInit }, then: {
 				self:implemented: true;
 				return false;
 			});

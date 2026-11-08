@@ -76,30 +76,30 @@ Class is VisibilityTest{
 		local VisChild is child: VisChild:init();
 
 		# Case 1: public members are callable externally and dispatch virtually.
-		Conditional:branch(check: { base:openValue() == 10 && child:openValue() == 99 }, then: {
+		Conditional:if(check: { base:openValue() == 10 && child:openValue() == 99 }, then: {
 			Output:line('[PASS] public: external call + virtual override');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] public: ' . base:openValue() . ', ' . child:openValue());
 		});
 
 		# Case 2: local members work inside the declaring class.
-		Conditional:branch(check: { base:publicViaSecret() == 21 }, then: {
+		Conditional:if(check: { base:publicViaSecret() == 21 }, then: {
 			Output:line('[PASS] local: internal use = 21');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] local: ' . base:publicViaSecret());
 		});
 
 		# Case 3: contained members are visible to subclasses.
-		Conditional:branch(check: { child:viaHelper() == 60 }, then: {
+		Conditional:if(check: { child:viaHelper() == 60 }, then: {
 			Output:line('[PASS] contained: subclass access = 60');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] contained: ' . child:viaHelper());
 		});
 
 		# Case 4: contained access through a reference, from within a subclass.
-		Conditional:branch(check: { child:viaHelperRef(ref: child as VisBase) == 30 }, then: {
+		Conditional:if(check: { child:viaHelperRef(ref: child as VisBase) == 30 }, then: {
 			Output:line('[PASS] contained: reference access from subclass = 30');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] contained: ' . child:viaHelperRef(ref: child as VisBase));
 		});
 

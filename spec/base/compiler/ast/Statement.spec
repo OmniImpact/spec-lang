@@ -40,10 +40,6 @@ Class is Statement{
 	Expression is assignValue;
 
 	## IF: condition, branches, and else presence.
-	Expression is ifCondition;
-	Array of Statement is thenBranch: [];
-	Array of Statement is elseBranch: [];
-	Boolean is hasElse: false;
 
 	## RETURN: the returned expression and its presence flag.
 	Expression is returnExpr;

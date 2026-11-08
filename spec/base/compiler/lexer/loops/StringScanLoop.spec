@@ -27,19 +27,19 @@ Class of Loop is StringScanLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		Conditional:branch(check: { ch == self:quote }, then: {
+		Conditional:if(check: { ch == self:quote }, then: {
 			return false;
 		});
-		Conditional:branch(check: { ch == "\\" }, then: {
-			Conditional:branch(check: { self:quote == '\'' }, then: {
+		Conditional:if(check: { ch == "\\" }, then: {
+			Conditional:if(check: { self:quote == '\'' }, then: {
 				# Single-quote family: two minimal escapes, everything
 				# else passes through with its backslash.
 				self:lexer:advance();
-				Conditional:branch(check: { self:lexer:pos < self:lexer:length }, then: {
+				Conditional:if(check: { self:lexer:pos < self:lexer:length }, then: {
 					local String is nextCh: self:lexer:advance();
-					Conditional:branch(check: { nextCh == '\'' || nextCh == "\\" }, then: {
+					Conditional:if(check: { nextCh == '\'' || nextCh == "\\" }, then: {
 						self:res: self:res . nextCh;
-					}, otherwise: {
+					}, else: {
 						self:res: self:res . "\\" . nextCh;
 					});
 				});
@@ -49,7 +49,7 @@ Class of Loop is StringScanLoop{
 			# are copied verbatim.
 			self:res: self:res . "\\";
 			self:lexer:advance();
-			Conditional:branch(check: { self:lexer:pos < self:lexer:length }, then: {
+			Conditional:if(check: { self:lexer:pos < self:lexer:length }, then: {
 				local String is nextCh: self:lexer:advance();
 				self:res: self:res . nextCh;
 			});

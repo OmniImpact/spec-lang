@@ -89,7 +89,7 @@ Class is NonBooleanConditionControl{
 	];
 	## Control (already caught today): condition must be a Boolean.
 	replace Function is init(Map of String to String is args){
-		Conditional:branch(check: { 1 }, then: {
+		Conditional:if(check: { 1 }, then: {
 			local Int is unused: 0;
 		});
 	}

@@ -87,7 +87,7 @@ Class of Animal is Dog{
 		cg:assignVirtualSlots(classes: prog:classes);
 
 		# --- virtual slots: first-seen order, overrides flagged ---
-		Conditional:branch(check: { cg:methodSlots:getString(key: 'describe', default: '?') == '0'
+		Conditional:if(check: { cg:methodSlots:getString(key: 'describe', default: '?') == '0'
 			&& cg:methodSlots:getString(key: 'init', default: '?') == '1'
 			&& cg:methodSlots:getString(key: 'grow', default: '?') == '2'
 			&& cg:methodSlotCount == 3
@@ -95,24 +95,24 @@ Class of Animal is Dog{
 			&& !cg:overriddenMethods:has(key: 'grow')
 			&& cg:slotNames:get(index: 0) == 'describe' }, then: {
 			Output:line('[PASS] virtual slots in first-seen order');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] virtual slots');
 			failures: failures + 1;
 		});
 
 		# --- registries: classes, enums, variants ---
-		Conditional:branch(check: { cg:allClassNames:has(key: 'Dog')
+		Conditional:if(check: { cg:allClassNames:has(key: 'Dog')
 			&& cg:allEnumNames:has(key: 'Level')
 			&& cg:allEnumVariants:getString(key: 'ERR', default: '?') == 'Level'
 			&& cg:allStringBackedEnums:has(key: 'Level') }, then: {
 			Output:line('[PASS] program registries');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] program registries');
 			failures: failures + 1;
 		});
 
 		# --- ownership policy: isArcType ---
-		Conditional:branch(check: { cg:isArcType(typeName: 'String')
+		Conditional:if(check: { cg:isArcType(typeName: 'String')
 			&& !cg:isArcType(typeName: 'Int')
 			&& !cg:isArcType(typeName: 'Level')
 			&& cg:isArcType(typeName: 'Animal')
@@ -120,46 +120,46 @@ Class of Animal is Dog{
 			&& cg:isArcType(typeName: 'Map of String to Int')
 			&& !cg:isArcType(typeName: '') }, then: {
 			Output:line('[PASS] isArcType');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] isArcType');
 			failures: failures + 1;
 		});
 
 		# --- container element extraction, both spellings ---
-		Conditional:branch(check: { cg:elemOfType(t: 'Array of String') == 'String'
+		Conditional:if(check: { cg:elemOfType(t: 'Array of String') == 'String'
 			&& cg:elemOfType(t: 'Array:String') == 'String'
 			&& cg:elemOfType(t: 'Map of String to Int') == 'Int'
 			&& cg:elemOfType(t: 'Map:String:Int') == 'Int'
 			&& cg:elemOfType(t: 'List of Byte') == 'Byte'
 			&& cg:elemOfType(t: 'Int') == '' }, then: {
 			Output:line('[PASS] elemOfType both spellings');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] elemOfType');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { cg:containerElemKind(containerType: 'Array of Int') == 'none'
+		Conditional:if(check: { cg:containerElemKind(containerType: 'Array of Int') == 'none'
 			&& cg:containerElemKind(containerType: 'Array of Byte') == 'byte'
 			&& cg:containerElemKind(containerType: 'Array of String') == 'object'
 			&& cg:containerElemKind(containerType: 'Array of Animal') == 'object'
 			&& cg:containerElemIsArc(containerType: 'Map of String to Animal')
 			&& !cg:containerElemIsArc(containerType: 'Map of String to Int') }, then: {
 			Output:line('[PASS] containerElemKind');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] containerElemKind');
 			failures: failures + 1;
 		});
 
 		# --- symbol lookups through the inheritance chain ---
 		local ClassInfo is dogCls: cg:findClass(name: 'Dog');
-		Conditional:branch(check: { dogCls:name == 'Dog'
+		Conditional:if(check: { dogCls:name == 'Dog'
 			&& cg:lookupFieldType(className: 'Dog', fieldName: 'name') == 'String'
 			&& cg:lookupFieldType(className: 'Dog', fieldName: 'weight') == 'Int'
 			&& cg:lookupMethodReturnType(className: 'Dog', methodName: 'grow') == 'Int'
 			&& cg:isSubclassOf(subName: 'Dog', baseName: 'Animal')
 			&& !cg:isSubclassOf(subName: 'Animal', baseName: 'Dog') }, then: {
 			Output:line('[PASS] lookups through inheritance');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] lookups');
 			failures: failures + 1;
 		});
@@ -168,7 +168,7 @@ Class of Animal is Dog{
 		cg:currentClassName: 'Dog';
 		cg:fieldTypes:set(key: 'weight', value: 'Int');
 		cg:localVars:set(key: 'x', value: 'Int');
-		Conditional:branch(check: { cg:inferTargetType(expr: self:exprOf(src: "'hi'")) == 'String'
+		Conditional:if(check: { cg:inferTargetType(expr: self:exprOf(src: "'hi'")) == 'String'
 			&& cg:inferTargetType(expr: self:exprOf(src: '42')) == 'Int'
 			&& cg:inferTargetType(expr: self:exprOf(src: '3.5')) == 'Float'
 			&& cg:inferTargetType(expr: self:exprOf(src: 'true')) == 'Boolean'
@@ -176,52 +176,52 @@ Class of Animal is Dog{
 			&& cg:inferTargetType(expr: self:exprOf(src: 'self:weight')) == 'Int'
 			&& cg:inferTargetType(expr: self:exprOf(src: 'self:grow(by: 2)')) == 'Int' }, then: {
 			Output:line('[PASS] inferTargetType');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] inferTargetType');
 			failures: failures + 1;
 		});
 
 		# --- claims: constructors yes, borrows no, concat yes ---
-		Conditional:branch(check: { cg:isFreshConstructorCall(expr: self:exprOf(src: 'Dog:init()'))
+		Conditional:if(check: { cg:isFreshConstructorCall(expr: self:exprOf(src: 'Dog:init()'))
 			&& cg:yieldsClaim(expr: self:exprOf(src: 'Dog:init()'))
 			&& cg:yieldsClaim(expr: self:exprOf(src: "'a' . 'b'"))
 			&& !cg:yieldsClaim(expr: self:exprOf(src: 'x'))
 			&& !cg:yieldsClaim(expr: self:exprOf(src: '42')) }, then: {
 			Output:line('[PASS] yieldsClaim / isFreshConstructorCall');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] yieldsClaim');
 			failures: failures + 1;
 		});
 
 		# --- typed constructors: cast, wrap, retain, claim passthrough ---
-		Conditional:branch(check: { cg:generateTypedConstructor(typeName: 'String', valueC: 'lit', cType: 'SpecBuf*', claims: false) == 'spec_construct_string(lit)'
+		Conditional:if(check: { cg:generateTypedConstructor(typeName: 'String', valueC: 'lit', cType: 'SpecBuf*', claims: false) == 'spec_construct_string(lit)'
 			&& cg:generateTypedConstructor(typeName: 'String', valueC: 'lit', cType: 'SpecBuf*', claims: true) == 'lit'
 			&& cg:generateTypedConstructor(typeName: 'Byte', valueC: 'b', cType: 'unsigned char', claims: false) == 'spec_construct_byte((long long)(b))'
 			&& cg:generateTypedConstructor(typeName: 'Animal', valueC: 'a', cType: 'Animal*', claims: false) == '(Animal*)spec_retain((void*)(a))'
 			&& cg:generateTypedConstructor(typeName: 'Animal', valueC: 'a', cType: 'Animal*', claims: true) == '(Animal*)((a))'
 			&& cg:generateTypedConstructor(typeName: 'Int', valueC: '5', cType: 'long long', claims: false) == '5' }, then: {
 			Output:line('[PASS] generateTypedConstructor');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] generateTypedConstructor');
 			failures: failures + 1;
 		});
 
 		# --- vocabulary: void spellings and primitive names ---
-		Conditional:branch(check: { cg:isVoidType(t: 'void') && cg:isVoidType(t: 'Void') && !cg:isVoidType(t: 'Int')
+		Conditional:if(check: { cg:isVoidType(t: 'void') && cg:isVoidType(t: 'Void') && !cg:isVoidType(t: 'Int')
 			&& cg:isPrimitiveName(t: 'Int') && cg:isPrimitiveName(t: 'String')
 			&& !cg:isPrimitiveName(t: 'Animal') }, then: {
 			Output:line('[PASS] isVoidType / isPrimitiveName');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] vocabulary checks');
 			failures: failures + 1;
 		});
 
 		# --- string wrapping policy ---
-		Conditional:branch(check: { cg:wrapToString(expr: self:exprOf(src: '42'), exprC: '42') == 'spec_to_string_int(42)'
+		Conditional:if(check: { cg:wrapToString(expr: self:exprOf(src: '42'), exprC: '42') == 'spec_to_string_int(42)'
 			&& cg:wrapToString(expr: self:exprOf(src: 'true'), exprC: '1') == 'spec_to_string_bool(1)'
 			&& cg:wrapToString(expr: self:exprOf(src: "'hi'"), exprC: 'x') == 'spec_string_intern("hi")' }, then: {
 			Output:line('[PASS] wrapToString');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] wrapToString');
 			failures: failures + 1;
 		});
@@ -243,7 +243,7 @@ Class of Animal is Dog{
 		eg:localVars:set(key: 'n', value: 'Int');
 		eg:localVars:set(key: 'xs', value: 'Array of Int');
 
-		Conditional:branch(check: { eg:generateExpression(expr: self:exprOf(src: '1 + 2 * 3')) == '((1) + (((2) * (3))))'
+		Conditional:if(check: { eg:generateExpression(expr: self:exprOf(src: '1 + 2 * 3')) == '((1) + (((2) * (3))))'
 			&& eg:generateExpression(expr: self:exprOf(src: 'n')) == 'n'
 			&& eg:generateExpression(expr: self:exprOf(src: 'self:weight')) == 'self->weight'
 			&& eg:generateExpression(expr: self:exprOf(src: 'self:grow(by: 2)')) == 'Animal_grow(self, 2) /* inst:Animal:grow */'
@@ -251,17 +251,17 @@ Class of Animal is Dog{
 			&& eg:generateExpression(expr: self:exprOf(src: '[1, 2]')):contains(needle: 'spec_array_new()')
 			&& eg:generateExpression(expr: self:exprOf(src: 'xs:get(index: 0)')):contains(needle: 'spec_array_get(xs, 0)') }, then: {
 			Output:line('[PASS] expression emission');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] expression emission');
 			failures: failures + 1;
 		});
 
 		# --- statement emission shapes ---
-		Conditional:branch(check: { eg:generateStatement(stmt: self:stmtOf(src: 'local Int is m: n + 1')) == "    long long m = ((n) + (1));\n"
+		Conditional:if(check: { eg:generateStatement(stmt: self:stmtOf(src: 'local Int is m: n + 1')) == "    long long m = ((n) + (1));\n"
 			&& eg:generateStatement(stmt: self:stmtOf(src: 'n: 5')) == "    n = 5;\n"
 			&& eg:generateStatement(stmt: self:stmtOf(src: 'return self:weight + 1')) == "    return ((self->weight) + (1));\n" }, then: {
 			Output:line('[PASS] statement emission');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] statement emission');
 			failures: failures + 1;
 		});
@@ -271,13 +271,13 @@ Class of Animal is Dog{
 		local Map of String to String is enumNames: Map:init();
 		enumNames:set(key: 'Level', value: 'true');
 		bcg:setEnumNames(names: enumNames);
-		Conditional:branch(check: { bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg):contains(needle: 'printf("%s\\n", spec_buf_to_cstring((SpecBuf*)(')
+		Conditional:if(check: { bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg):contains(needle: 'printf("%s\\n", spec_buf_to_cstring((SpecBuf*)(')
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 's:length()'), targetC: 's', targetType: 'String', cg: eg) == 'spec_string_length(s)'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg) == 'spec_math_sqrt(n)'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Level:of(name: \'E\')'), targetC: 'Level', targetType: '', cg: eg) == 'Level_of(spec_string_intern("E"))'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'xs:length()'), targetC: 'xs', targetType: 'Array of Int', cg: eg) == 'spec_array_length(xs)' }, then: {
 			Output:line('[PASS] builtin call bindings');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] builtin call bindings');
 			failures: failures + 1;
 		});
@@ -309,7 +309,7 @@ Class is CodegenE2E{
 		local CodeGenerator is pg: CodeGenerator:init();
 		pg:registerProgram(classes: assembler:classes);
 		local String is cSrc: pg:generateProgram(program: assembler, entryClass: 'CodegenE2E');
-		Conditional:branch(check: { cSrc:contains(needle: 'spec_alloc')
+		Conditional:if(check: { cSrc:contains(needle: 'spec_alloc')
 			&& cSrc:contains(needle: 'typedef struct Counter Counter;')
 			&& cSrc:contains(needle: 'struct Counter {')
 			&& cSrc:contains(needle: 'Counter_bump')
@@ -318,14 +318,14 @@ Class is CodegenE2E{
 			&& cSrc:contains(needle: 'int main(')
 			&& cSrc:contains(needle: 'Counter* _inst = Counter_new(); Counter_init(_inst, 0);') }, then: {
 			Output:line('[PASS] program assembly');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] program assembly');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec codegen test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec codegen test: ' . (failures as String) . ' failures');
 		});
 	}

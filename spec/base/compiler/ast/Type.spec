@@ -54,10 +54,10 @@ Class is Type{
 	##
 	## @return: Canonical type string.
 	replace Function of String is toString(){
-		Conditional:branch(check: { self:params:length() == 0 }, then: {
+		Conditional:if(check: { self:params:length() == 0 }, then: {
 			return self:name;
 		});
-		Conditional:branch(check: { self:params:length() == 1 }, then: {
+		Conditional:if(check: { self:params:length() == 1 }, then: {
 			local Type is p0: self:params:get(index: 0);
 			return self:name . ' ' . Keyword:OF:value() . ' ' . p0:toString();
 		});

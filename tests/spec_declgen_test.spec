@@ -46,30 +46,30 @@ Class is Widget{
 		local String is fwdC: dg:generateForwardDeclarations(classes: prog:classes);
 		local String is structsC: dg:generateStructs(classes: prog:classes);
 
-		Conditional:branch(check: { enumsC:contains(needle: 'Level_NONE = 0') && enumsC:contains(needle: 'Level_of(String v)') && enumsC:contains(needle: 'return Level_NONE;') }, then: {
+		Conditional:if(check: { enumsC:contains(needle: 'Level_NONE = 0') && enumsC:contains(needle: 'Level_of(String v)') && enumsC:contains(needle: 'return Level_NONE;') }, then: {
 			Output:line('[PASS] enum tables with of() and NONE default');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] enum emission');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { fwdC:contains(needle: 'typedef struct Widget Widget;') && fwdC:contains(needle: 'long long Widget_grow(Widget* self, long long by);') }, then: {
+		Conditional:if(check: { fwdC:contains(needle: 'typedef struct Widget Widget;') && fwdC:contains(needle: 'long long Widget_grow(Widget* self, long long by);') }, then: {
 			Output:line('[PASS] forward declarations with prototypes');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] forward declarations');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { structsC:contains(needle: 'struct Widget {') && structsC:contains(needle: 'long long size;') && !structsC:contains(needle: 'namespace;') }, then: {
+		Conditional:if(check: { structsC:contains(needle: 'struct Widget {') && structsC:contains(needle: 'long long size;') && !structsC:contains(needle: 'namespace;') }, then: {
 			Output:line('[PASS] struct fields without metadata members');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] struct emission');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec declgen test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec declgen test: ' . (failures as String) . ' failures');
 		});
 	}

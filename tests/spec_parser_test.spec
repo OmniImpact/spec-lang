@@ -54,9 +54,9 @@ Class is SpecParserTest{
 		local Member is go: cls:members:get(index: 0);
 		local Statement is vd: go:body:get(index: 0);
 		local Expression is init: vd:initExpr;
-		Conditional:branch(check: { !p:hasErrors() && vd:kind == StatementKind:VAR_DECL && init:kind == ExpressionKind:BINARY && init:binaryOp == '+' && init:rightExpr:binaryOp == '*' }, then: {
+		Conditional:if(check: { !p:hasErrors() && vd:kind == StatementKind:VAR_DECL && init:kind == ExpressionKind:BINARY && init:binaryOp == '+' && init:rightExpr:binaryOp == '*' }, then: {
 			Output:line('[PASS] precedence folding (additive over multiplicative)');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] precedence folding');
 			failures: failures + 1;
 		});
@@ -69,9 +69,9 @@ Class is SpecParserTest{
 		local Member is m2: cls2:members:get(index: 0);
 		local Statement is vd2: m2:body:get(index: 0);
 		local Expression is s2: vd2:initExpr;
-		Conditional:branch(check: { !p2:hasErrors() && s2:kind == ExpressionKind:BINARY && s2:binaryOp == '.' && s2:leftExpr:rightExpr:kind == ExpressionKind:BINARY }, then: {
+		Conditional:if(check: { !p2:hasErrors() && s2:kind == ExpressionKind:BINARY && s2:binaryOp == '.' && s2:leftExpr:rightExpr:kind == ExpressionKind:BINARY }, then: {
 			Output:line('[PASS] template desugars to concat chain');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] template desugar');
 			failures: failures + 1;
 		});
@@ -86,9 +86,9 @@ Class is Box of T{
 	replace Function of T is get(){ return self:item; }
 	local T is item;
 }");
-		Conditional:branch(check: { errs:length() == 0 }, then: {
+		Conditional:if(check: { errs:length() == 0 }, then: {
 			Output:line('[PASS] enum + generic class parse clean');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] enum/generic: ' . errs:join(separator: ' | '));
 			failures: failures + 1;
 		});
@@ -96,9 +96,9 @@ Class is Box of T{
 		# Interface-style floor declaration parses body-less.
 		local Array of String is errs2: self:parseOf(src: "Class is Floor{ namespace: ['base', 'x'];
 	Function of Int is op(String is b); }");
-		Conditional:branch(check: { errs2:length() == 0 }, then: {
+		Conditional:if(check: { errs2:length() == 0 }, then: {
 			Output:line('[PASS] interface-style declaration parses');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] interface-style: ' . errs2:join(separator: ' | '));
 			failures: failures + 1;
 		});
@@ -107,16 +107,16 @@ Class is Box of T{
 		local Lexer is lx3: Lexer:init(source: 'Class is T{ Function is go(){ local Int is n: ; } }');
 		local Parser is p3: Parser:init(tokens: lx3:tokenize());
 		local ProgramNode is prog3: p3:parseProgram();
-		Conditional:branch(check: { p3:hasErrors() && p3:getErrors():get(index: 0):getTrace():length() == 1 }, then: {
+		Conditional:if(check: { p3:hasErrors() && p3:getErrors():get(index: 0):getTrace():length() == 1 }, then: {
 			Output:line('[PASS] parse errors carry provenance');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] parse error provenance');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec parser test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec parser test: ' . (failures as String) . ' failures');
 		});
 	}

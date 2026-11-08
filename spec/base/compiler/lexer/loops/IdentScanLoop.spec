@@ -22,7 +22,7 @@ Class of Loop is IdentScanLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local String is ch: self:lexer:source:charAt(index: self:lexer:pos, default: '');
-		Conditional:branch(check: { self:lexer:isIdentifierContinue(ch: ch) }, then: {
+		Conditional:if(check: { self:lexer:isIdentifierContinue(ch: ch) }, then: {
 			self:lexer:advance();
 			return true;
 		});

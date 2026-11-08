@@ -27,9 +27,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Lexer is lx: Lexer:init(source: src);
 		local Array of Token is toks: lx:tokenize();
 
-		Conditional:branch(check: { !lx:hasErrors() && toks:length() == 31 }, then: {
+		Conditional:if(check: { !lx:hasErrors() && toks:length() == 31 }, then: {
 			Output:line('[PASS] clean scan, expected token count');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] scan errors or token count: ' . (toks:length() as String));
 			failures: failures + 1;
 		});
@@ -37,9 +37,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		# Base-prefixed numbers normalize to decimal; separators strip.
 		local Token is hex: toks:get(index: 5);
 		local Token is sep: toks:get(index: 7);
-		Conditional:branch(check: { hex:getValue() == '255' && hex:getTokenKind() == TokenKind:INT && sep:getValue() == '1000' }, then: {
+		Conditional:if(check: { hex:getValue() == '255' && hex:getTokenKind() == TokenKind:INT && sep:getValue() == '1000' }, then: {
 			Output:line('[PASS] number normalization');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] number normalization');
 			failures: failures + 1;
 		});
@@ -48,30 +48,30 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Token is sq: toks:get(index: 14);
 		local Token is fq: toks:get(index: 21);
 		local Token is hd: toks:get(index: 28);
-		Conditional:branch(check: { sq:getValue() == 'it\'s' && sq:getTokenKind() == TokenKind:STRING }, then: {
+		Conditional:if(check: { sq:getValue() == 'it\'s' && sq:getTokenKind() == TokenKind:STRING }, then: {
 			Output:line('[PASS] single-quote minimal escape');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] single-quote minimal escape');
 			failures: failures + 1;
 		});
-		Conditional:branch(check: { fq:getValue() == "raw \\n stays \\{\\{x\\}\\}" && fq:getTokenKind() == TokenKind:TEMPLATESTRING }, then: {
+		Conditional:if(check: { fq:getValue() == "raw \\n stays \\{\\{x\\}\\}" && fq:getTokenKind() == TokenKind:TEMPLATESTRING }, then: {
 			Output:line('[PASS] fancy string carries raw content incl. escapes');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] fancy string raw content');
 			failures: failures + 1;
 		});
-		Conditional:branch(check: { hd:getValue() == "heredoc\n" && hd:getTokenKind() == TokenKind:RAWSTRING }, then: {
+		Conditional:if(check: { hd:getValue() == "heredoc\n" && hd:getTokenKind() == TokenKind:RAWSTRING }, then: {
 			Output:line('[PASS] raw heredoc with delimiter-newline strip');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] raw heredoc content');
 			failures: failures + 1;
 		});
 
 		# Reserved words carry their Keyword classification for enum dispatch.
 		local Token is kwTok: toks:get(index: 0);
-		Conditional:branch(check: { kwTok:getKeyword() == Keyword:LOCAL }, then: {
+		Conditional:if(check: { kwTok:getKeyword() == Keyword:LOCAL }, then: {
 			Output:line('[PASS] keyword classification on scanned token');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] keyword classification on scanned token');
 			failures: failures + 1;
 		});
@@ -79,9 +79,9 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		# Line/col tracking across the comment line and the multi-line heredoc.
 		local Token is afterComment: toks:get(index: 9);
 		local Token is end: toks:get(index: 30);
-		Conditional:branch(check: { afterComment:getLine() == 3 && end:getTokenKind() == TokenKind:EOF && end:getLine() == 7 }, then: {
+		Conditional:if(check: { afterComment:getLine() == 3 && end:getTokenKind() == TokenKind:EOF && end:getLine() == 7 }, then: {
 			Output:line('[PASS] line tracking across comment and heredoc');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] line tracking');
 			failures: failures + 1;
 		});
@@ -94,16 +94,16 @@ local String is h: ' . "'''\nheredoc\n'''" . ';';
 		local Array of Token is dead: bad:tokenize();
 		local Error is first: bad:getErrors():get(index: 0);
 		local String is rendered: first:toString();
-		Conditional:branch(check: { bad:hasErrors() && rendered:contains(needle: 'missing closing ```') && rendered:contains(needle: 'at Lexer:addError') }, then: {
+		Conditional:if(check: { bad:hasErrors() && rendered:contains(needle: 'missing closing ```') && rendered:contains(needle: 'at Lexer:addError') }, then: {
 			Output:line('[PASS] lexical errors carry substituted wording and reflection provenance');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] lexical error provenance: ' . rendered);
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec lexer test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec lexer test: ' . (failures as String) . ' failures');
 		});
 	}

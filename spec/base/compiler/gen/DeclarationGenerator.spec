@@ -70,17 +70,17 @@ Class is DeclarationGenerator{
 	## @param typeParams: The class's generic parameter names.
 	## @return: C type string.
 	Function of String is cTypeForClass(String is typeName, Array of String is typeParams){
-		Conditional:branch(check: { typeParams:indexOf(search: typeName, default: -1) >= 0 }, then: {
+		Conditional:if(check: { typeParams:indexOf(search: typeName, default: -1) >= 0 }, then: {
 			return 'void*';
 		});
 		local String is base: typeName;
-		Conditional:branch(check: { base:contains(needle: ':') }, then: {
+		Conditional:if(check: { base:contains(needle: ':') }, then: {
 			local Array of String is parts: base:split(delimiter: ':');
 			base: parts:get(index: 0);
 		});
 		# Enum types pass by value in prototypes, matching the definitions
 		# the method emitter produces (tagged unions are pointers).
-		Conditional:branch(check: { self:allEnumNames:has(key: base) && !self:allTaggedEnums:has(key: base) }, then: {
+		Conditional:if(check: { self:allEnumNames:has(key: base) && !self:allTaggedEnums:has(key: base) }, then: {
 			return base;
 		});
 		return self:utils:cTypeFor(typeName: typeName);
@@ -92,8 +92,8 @@ Class is DeclarationGenerator{
 	## @param typeParams: The class's generic parameter names.
 	## @return: C return type string.
 	Function of String is resolveReturnTypeForClass(Type is t, Array of String is typeParams){
-		Conditional:branch(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
-			Conditional:branch(check: { t:params:length() > 0 }, then: {
+		Conditional:if(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
+			Conditional:if(check: { t:params:length() > 0 }, then: {
 				local Type is ret: t:params:get(index: 0);
 				return self:cTypeForClass(typeName: ret:name, typeParams: typeParams);
 			});
@@ -123,7 +123,7 @@ Class is DeclarationGenerator{
 	Function is collectStructFields(ClassInfo is c, Array of ClassInfo is allClasses, Array of Member is acc){
 		c:baseClasses:each(action: local Function(String is baseName){
 			allClasses:each(action: local Function(ClassInfo is cand){
-				Conditional:branch(check: { cand:name == baseName }, then: {
+				Conditional:if(check: { cand:name == baseName }, then: {
 					self:collectStructFields(c: cand, allClasses: allClasses, acc: acc);
 				});
 			});
@@ -133,12 +133,12 @@ Class is DeclarationGenerator{
 				is MemberKind:FIELD: {
 					# Declarative metadata (namespace/using/group/castable)
 					# never becomes a struct field.
-					Conditional:branch(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
+					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
 						m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value() }, then: {
 						local Int is existing: self:fieldIndexNamed(list: acc, name: m:name);
-						Conditional:branch(check: { existing >= 0 }, then: {
+						Conditional:if(check: { existing >= 0 }, then: {
 							acc:set(index: existing, item: m);
-						}, otherwise: {
+						}, else: {
 							acc:add(item: m);
 						});
 					});
@@ -170,17 +170,17 @@ Class is DeclarationGenerator{
 		local String is out: "/* Enum Definitions */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { c:baseClass == self:names:enumHeader() }, then: {
+			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
 				local String is name: c:name;
 				# The namespace declaration is metadata inside the body —
 				# filter it out of the variant surface once, up front.
 				local Array of Member is variants: [];
 				c:members:each(action: local Function(Member is m){
-					Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+					Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 						variants:add(item: m);
 					});
 				});
-				Conditional:branch(check: { self:allTaggedEnums:has(key: name) }, then: {
+				Conditional:if(check: { self:allTaggedEnums:has(key: name) }, then: {
 					out: out . "typedef enum {\n";
 					local Int is tIdx: 0;
 					variants:each(action: local Function(Member is m){
@@ -189,7 +189,7 @@ Class is DeclarationGenerator{
 					});
 					out: out . '} ' . name . "_Tag;\n";
 					out: out . 'typedef struct ' . name . ' ' . name . ";\n\n";
-				}, otherwise: {
+				}, else: {
 					out: out . "typedef enum {\n";
 					local Int is idx: 0;
 					variants:each(action: local Function(Member is m){
@@ -221,14 +221,14 @@ Class is DeclarationGenerator{
 
 					local Boolean is isStrBacked: false;
 					variants:each(action: local Function(Member is m){
-						Conditional:branch(check: { m:memberType:name == Primitive:STRING:value() }, then: {
+						Conditional:if(check: { m:memberType:name == Primitive:STRING:value() }, then: {
 							isStrBacked: true;
 						});
 					});
 
-					Conditional:branch(check: { isStrBacked }, then: {
+					Conditional:if(check: { isStrBacked }, then: {
 						out: out . self:emitStringBacking(name: name, cls: c);
-					}, otherwise: {
+					}, else: {
 						out: out . self:emitIntBacking(name: name, cls: c);
 					});
 
@@ -266,7 +266,7 @@ Class is DeclarationGenerator{
 		# Metadata (the namespace declaration) is not a variant.
 		local Array of Member is variants: [];
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+			Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 				variants:add(item: m);
 			});
 		});
@@ -283,14 +283,14 @@ Class is DeclarationGenerator{
 		out: out . 'static inline ' . name . ' ' . name . '_of(String v) {' . "\n";
 		variants:each(action: local Function(Member is m){
 			local String is valStr: self:variantTag(m: m);
-			Conditional:branch(check: { valStr == '' }, then: {
+			Conditional:if(check: { valStr == '' }, then: {
 				emptyVariant: m:name;
 			});
 			out: out . '    if (spec_string_equals(v, spec_string_intern("' . valStr . '"))) return ' . name . '_' . self:utils:cIdent(name: m:name) . ";\n";
 		});
-		Conditional:branch(check: { emptyVariant != '' }, then: {
+		Conditional:if(check: { emptyVariant != '' }, then: {
 			out: out . '    return ' . name . '_' . self:utils:cIdent(name: emptyVariant) . ";\n";
-		}, otherwise: {
+		}, else: {
 			out: out . '    return (' . name . ")-1;\n";
 		});
 		out: out . "}\n\n";
@@ -308,7 +308,7 @@ Class is DeclarationGenerator{
 		# Metadata (the namespace declaration) is not a variant.
 		local Array of Member is variants: [];
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+			Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 				variants:add(item: m);
 			});
 		});
@@ -318,12 +318,12 @@ Class is DeclarationGenerator{
 		local Int is vIdx: 0;
 		variants:each(action: local Function(Member is m){
 			local String is valNum: '' . vIdx;
-			Conditional:branch(check: { m:hasInit }, then: {
+			Conditional:if(check: { m:hasInit }, then: {
 				local Expression is initE: m:initExpr;
-				Conditional:branch(check: { initE:kind == ExpressionKind:NUMBER && initE:stringValue != '' }, then: {
+				Conditional:if(check: { initE:kind == ExpressionKind:NUMBER && initE:stringValue != '' }, then: {
 					valNum: initE:stringValue;
-				}, otherwise: {
-					Conditional:branch(check: { initE:kind == ExpressionKind:UNARY && initE:unaryOp == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER }, then: {
+				}, else: {
+					Conditional:if(check: { initE:kind == ExpressionKind:UNARY && initE:unaryOp == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER }, then: {
 						valNum: '-' . initE:unaryExpr:stringValue;
 					});
 				});
@@ -342,9 +342,9 @@ Class is DeclarationGenerator{
 	## @param m: The variant member.
 	## @return: The tag string.
 	Function of String is variantTag(Member is m){
-		Conditional:branch(check: { m:hasInit }, then: {
+		Conditional:if(check: { m:hasInit }, then: {
 			local Expression is initE: m:initExpr;
-			Conditional:branch(check: { initE:kind == ExpressionKind:STRING }, then: {
+			Conditional:if(check: { initE:kind == ExpressionKind:STRING }, then: {
 				return initE:stringValue;
 			});
 		});
@@ -360,11 +360,11 @@ Class is DeclarationGenerator{
 		local String is out: "/* Forward Declarations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				out: out . 'typedef struct ' . c:name . ' ' . c:name . ";\n";
 				out: out . c:name . '* ' . c:name . "_new(void);\n";
 				out: out . 'void ' . c:name . "_destroy(void* self);\n";
-				Conditional:branch(check: { !self:hasFieldNamed(list: c:members, name: 'init') }, then: {
+				Conditional:if(check: { !self:hasFieldNamed(list: c:members, name: 'init') }, then: {
 					out: out . 'void ' . c:name . '_init(' . c:name . "* self);\n";
 				});
 			});
@@ -372,30 +372,30 @@ Class is DeclarationGenerator{
 		out: out . "\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local Array of String is tps: c:typeParams;
 				c:members:each(action: local Function(Member is m){
 					when (m:kind) {
 						is MemberKind:METHOD: {
-							Conditional:branch(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
+							Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 								local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
-								Conditional:branch(check: { retType == 'void' }, then: {
-									Conditional:branch(check: { m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() }, then: {
+								Conditional:if(check: { retType == 'void' }, then: {
+									Conditional:if(check: { m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() }, then: {
 										retType: 'bool';
 									});
 								});
 								local Int is ovIdx: 0;
 								local Int is ovHit: 0;
 								c:members:each(action: local Function(Member is g){
-									Conditional:branch(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
-										Conditional:branch(check: { g == m }, then: {
+									Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+										Conditional:if(check: { g == m }, then: {
 											ovHit: ovIdx;
 										});
 										ovIdx: ovIdx + 1;
 									});
 								});
 								local String is symName: c:name . '_' . m:name;
-								Conditional:branch(check: { ovHit > 0 }, then: {
+								Conditional:if(check: { ovHit > 0 }, then: {
 									symName: symName . '_' . (ovHit + 1) . '';
 								});
 								out: out . retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:name, typeParams: tps) . ' self';
@@ -423,7 +423,7 @@ Class is DeclarationGenerator{
 		local String is out: "/* Struct Layouts */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local Array of String is tps: c:typeParams;
 				out: out . 'struct ' . c:name . " {\n";
 				out: out . "    const char* _type_name;\n";
@@ -434,8 +434,8 @@ Class is DeclarationGenerator{
 					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
 				});
 				out: out . "};\n\n";
-			}, otherwise: {
-				Conditional:branch(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
+			}, else: {
+				Conditional:if(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
 					out: out . self:emitTaggedEnumStruct(name: c:name, cls: c);
 				});
 			});
@@ -453,7 +453,7 @@ Class is DeclarationGenerator{
 		# Metadata (the namespace declaration) is not a variant.
 		local Array of Member is variants: [];
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+			Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
 				variants:add(item: m);
 			});
 		});
@@ -470,17 +470,17 @@ Class is DeclarationGenerator{
 
 		variants:each(action: local Function(Member is m){
 			local String is vName: self:utils:cIdent(name: m:name);
-			Conditional:branch(check: { m:params:length() == 0 }, then: {
+			Conditional:if(check: { m:params:length() == 0 }, then: {
 				out: out . 'static inline ' . name . '* ' . name . '_' . vName . "_ctor(void) {\n";
 				out: out . '    ' . name . '* _e = (' . name . '*)spec_alloc(sizeof(' . name . "), NULL);\n";
 				out: out . '    _e->_tag = ' . name . '_TAG_' . vName . ";\n";
 				out: out . '    _e->_variant_name = "' . m:name . "\";\n";
 				out: out . "    return _e;\n}\n\n";
-			}, otherwise: {
+			}, else: {
 				out: out . 'static inline ' . name . '* ' . name . '_' . vName . '(';
 				local Boolean is firstP: true;
 				m:params:each(action: local Function(Parameter is p){
-					Conditional:branch(check: { !firstP }, then: {
+					Conditional:if(check: { !firstP }, then: {
  out: out . ', ';
 					});
 					out: out . self:utils:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
@@ -529,7 +529,7 @@ Class is DeclarationGenerator{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
-			Conditional:branch(check: { m:name == self:name }, then: {
+			Conditional:if(check: { m:name == self:name }, then: {
 				self:found: true;
 				return false;
 			});
@@ -561,7 +561,7 @@ Class is DeclarationGenerator{
 
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:list:get(index: self:idx);
-			Conditional:branch(check: { m:name == self:name }, then: {
+			Conditional:if(check: { m:name == self:name }, then: {
 				self:res: self:idx;
 			});
 			self:idx: self:idx + 1;

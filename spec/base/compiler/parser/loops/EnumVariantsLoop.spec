@@ -42,18 +42,18 @@ Class of Loop is EnumVariantsLoop{
 		local Token is vTok: self:parser:advance();
 		local String is vName: vTok:getValue();
 		local Array of Parameter is vParams: [];
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:parser:advance();
 			While:run(loop: ParamLoop:init(parser: self:parser, params: vParams));
 			self:parser:matchPunct(p: Punctuation:GROUP_CLOSE);
 		});
 		local Expression is valExpr: Expression:init(kind: ExpressionKind:NUMBER);
 		local Boolean is hasInit: false;
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:TAG) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:TAG) }, then: {
 			self:parser:advance();
 			valExpr: self:parser:parseExpression();
 			hasInit: true;
-		}, otherwise: {
+		}, else: {
 			# Untagged variant: its ordinal is the value.
 			valExpr:stringValue: '' . self:count;
 			valExpr:intValue: self:count;
@@ -70,7 +70,7 @@ Class of Loop is EnumVariantsLoop{
 		m:hasInit: hasInit;
 		self:members:add(item: m);
 
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
 		});

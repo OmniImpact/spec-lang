@@ -18,9 +18,9 @@ Class is StatefulImportTest {
 		local String is first: StatefulCounter:report();
 		tick();
 		local String is second: StatefulCounter:report();
-		Conditional:branch(check: { first == 'owned=3' && second == 'owned=4' }, then: {
+		Conditional:if(check: { first == 'owned=3' && second == 'owned=4' }, then: {
 			Output:line('[PASS] field-ful import: state persists, bare and prefixed calls share the instance');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] field-ful import: ' . first . ' / ' . second);
 		});
 	}

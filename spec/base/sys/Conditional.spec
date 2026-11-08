@@ -14,7 +14,7 @@ Class is Conditional{
 	##
 	## @param check: The condition.
 	## @param then: The closure to run when the condition holds.
-	Function is branch(Function of Boolean is check, Function is then){
+	Function is if(Function of Boolean is check, Function is then){
 		base:sysinternal:Conditional:branch(check: check, then: then);
 	}
 
@@ -23,21 +23,21 @@ Class is Conditional{
 	##
 	## @param check: The condition.
 	## @param then: The closure for the true case.
-	## @param otherwise: The closure for the false case.
-	Function is branch(Function of Boolean is check, Function is then, Function is otherwise){
-		self:branch(check: check, then: then);
-		self:branch(check: { return !check(); }, then: otherwise);
+	## @param else: The closure for the false case.
+	Function is if(Function of Boolean is check, Function is then, Function is else){
+		self:if(check: check, then: then);
+		self:if(check: { return !check(); }, then: else);
 	}
 
 	## Runs [then] or [else], then [finally] either way.
 	##
 	## @param check: The condition.
 	## @param then: The closure for the true case.
-	## @param otherwise: The closure for the false case.
+	## @param else: The closure for the false case.
 	## @param finally: Runs after whichever branch ran.
-	Function is branch(Function of Boolean is check, Function is then, Function is otherwise, Function is finally){
-		self:branch(check: check, then: then);
-		self:branch(check: { return !check(); }, then: otherwise);
+	Function is if(Function of Boolean is check, Function is then, Function is else, Function is finally){
+		self:if(check: check, then: then);
+		self:if(check: { return !check(); }, then: else);
 		finally();
 	}
 }

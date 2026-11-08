@@ -33,7 +33,7 @@ Class of Loop is MapItemsLoop{
 		local Expression is v: self:parser:parseExpression();
 		self:keys:add(item: k);
 		self:values:add(item: v);
-		Conditional:branch(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;
 		});

@@ -16,30 +16,30 @@ Class is SpecCharsTest{
 		local Chars is ch: Chars:init();
 		local Int is failures: 0;
 
-		Conditional:branch(check: { ch:isIdentifierStart(ch: '_') && ch:isIdentifierStart(ch: 'a') && !ch:isIdentifierStart(ch: '7') }, then: {
+		Conditional:if(check: { ch:isIdentifierStart(ch: '_') && ch:isIdentifierStart(ch: 'a') && !ch:isIdentifierStart(ch: '7') }, then: {
 			Output:line('[PASS] identifier start classification');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] identifier start classification');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { ch:isIdentifierContinue(ch: '7') && ch:isIdentifierContinue(ch: '_') && !ch:isIdentifierContinue(ch: '-') }, then: {
+		Conditional:if(check: { ch:isIdentifierContinue(ch: '7') && ch:isIdentifierContinue(ch: '_') && !ch:isIdentifierContinue(ch: '-') }, then: {
 			Output:line('[PASS] identifier continue classification');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] identifier continue classification');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { ch:isUpper(ch: 'A') && !ch:isUpper(ch: 'a') }, then: {
+		Conditional:if(check: { ch:isUpper(ch: 'A') && !ch:isUpper(ch: 'a') }, then: {
 			Output:line('[PASS] uppercase classification');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] uppercase classification');
 			failures: failures + 1;
 		});
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec chars test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec chars test: ' . (failures as String) . ' failures');
 		});
 	}

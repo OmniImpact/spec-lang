@@ -61,20 +61,20 @@ Class is DriverE2E{
 		local Driver is d: Driver:init(args: cli);
 
 		local String is cSrc: File:read(path: 'tests/.driver_app_tmp.c', default: '');
-		Conditional:branch(check: { cSrc:contains(needle: 'int main(')
+		Conditional:if(check: { cSrc:contains(needle: 'int main(')
 			&& cSrc:contains(needle: 'LoudGreeter_toString')
 			&& cSrc:contains(needle: '_vtable[') }, then: {
 			Output:line('[PASS] driver emitted C with vtable dispatch');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] driver emission');
 			failures: failures + 1;
 		});
 		File:remove(path: 'tests/.driver_app_tmp.c');
 		File:remove(path: 'tests/.driver_app_tmp.spec');
 
-		Conditional:branch(check: { failures == 0 }, then: {
+		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec driver test complete');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] spec driver test: ' . (failures as String) . ' failures');
 		});
 	}

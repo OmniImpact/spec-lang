@@ -90,9 +90,6 @@ Class is Expression{
 	Expression is unaryExpr;
 
 	## IF_ELSE: condition and branches.
-	Expression is condExpr;
-	Expression is thenExpr;
-	Expression is elseExpr;
 
 	## WHEN: the subject and arms.
 	Expression is whenSubject;

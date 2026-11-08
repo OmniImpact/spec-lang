@@ -33,9 +33,9 @@ Class is Phase6LoaderTest{
 		local ProgramNode is helloProg: loader:loadProgram(rootPath: 'examples/helloworld.spec');
 		Output:line('Loaded classes count: ' . helloProg:classes:length());
 
-		Conditional:branch(check: { helloProg:classes:length() >= 1 }, then: {
+		Conditional:if(check: { helloProg:classes:length() >= 1 }, then: {
 			Output:line("[PASS] Successfully loaded HelloWorld program with modules\n");
-		}, otherwise: {
+		}, else: {
 			Output:line("[FAIL] Expected at least 1 class in HelloWorld\n");
 		});
 
@@ -47,9 +47,9 @@ Class is Phase6LoaderTest{
 
 		# 3. The load served every file cleanly through the cascade.
 		Output:line('3. Files loaded through the cascade: ' . (loader:loadedFileCount() as String));
-		Conditional:branch(check: { loader:getParseErrors():length() == 0 }, then: {
+		Conditional:if(check: { loader:getParseErrors():length() == 0 }, then: {
 			Output:line("[PASS] Resolver cascade served the imports cleanly\n");
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Resolver cascade errors\n');
 		});
 		Output:line('Phase 6 Module Loader test completed successfully!');

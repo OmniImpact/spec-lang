@@ -86,26 +86,26 @@ Class is GroupingTest{
 		# Case 1: no-primary group - Calc exists only as a merged union.
 		local Calc is calc: Calc:init();
 		local Int is sum: calc:add(a: 2, b: 40);
-		Conditional:branch(check: { sum == 42 }, then: {
+		Conditional:if(check: { sum == 42 }, then: {
 			Output:line('[PASS] no-primary group: Calc.add(2, 40) = 42');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] no-primary group: expected 42, got ' . sum);
 		});
 
 		# Case 2: second fragment's members are reachable on the merged class.
 		local String is shouted: calc:shout(msg: 'grouped');
-		Conditional:branch(check: { shouted == 'grouped!' }, then: {
+		Conditional:if(check: { shouted == 'grouped!' }, then: {
 			Output:line('[PASS] merged fragments: Calc.shout works');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] merged fragments: expected \'grouped!\', got ' . shouted);
 		});
 
 		# Case 3: same-name opt-in partial merge (field from part 1, method from part 2).
 		local Accumulator is acc: Accumulator:init(start: 100);
 		acc:bump(by: 1);
-		Conditional:branch(check: { acc:total == 101 }, then: {
+		Conditional:if(check: { acc:total == 101 }, then: {
 			Output:line('[PASS] same-name partial: Accumulator total = 101');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] same-name partial: expected 101, got ' . acc:total);
 		});
 

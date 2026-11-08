@@ -101,59 +101,59 @@ Class is VtableDispatchTest{
 		local LayoutLeaf is leaf: LayoutLeaf:init();
 
 		# Case 1: fields at every level round-trip (layout integrity).
-		Conditional:branch(check: { leaf:baseField == 11 && leaf:midField == 22 && leaf:leafField == 33 }, then: {
+		Conditional:if(check: { leaf:baseField == 11 && leaf:midField == 22 && leaf:leafField == 33 }, then: {
 			Output:line('[PASS] layout: all three field levels intact');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] layout: base=' . leaf:baseField . ' mid=' . leaf:midField . ' leaf=' . leaf:leafField);
 		});
 
 		# Case 2: base-declared method reading base field via leaf object.
 		local Int is desc: leaf:describeBase();
-		Conditional:branch(check: { desc == 11 }, then: {
+		Conditional:if(check: { desc == 11 }, then: {
 			Output:line('[PASS] inherited method reads base field: 11');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] inherited method: expected 11, got ' . desc);
 		});
 
 		# Case 3: base-typed reference dispatches to most-derived override.
 		local LayoutBase is asBase: leaf;
 		local Int is poly: asBase:poly();
-		Conditional:branch(check: { poly == 3 }, then: {
+		Conditional:if(check: { poly == 3 }, then: {
 			Output:line('[PASS] base-typed virtual dispatch: poly = 3');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] base-typed virtual dispatch: expected 3, got ' . poly);
 		});
 
 		# Case 4: mid-typed reference also reaches the leaf override.
 		local LayoutMid is asMid: leaf;
-		Conditional:branch(check: { asMid:poly() == 3 }, then: {
+		Conditional:if(check: { asMid:poly() == 3 }, then: {
 			Output:line('[PASS] mid-typed virtual dispatch: poly = 3');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] mid-typed virtual dispatch: expected 3');
 		});
 
 		# Case 5: MI first-wins - child override wins over both parents.
 		local MiChild is mi: MiChild:init();
 		local String is lbl: mi:label();
-		Conditional:branch(check: { lbl == 'child-mia' }, then: {
+		Conditional:if(check: { lbl == 'child-mia' }, then: {
 			Output:line('[PASS] MI override: label = child-mia');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] MI override: expected child-mia, got ' . lbl);
 		});
 
 		# Case 6: MI first-wins - undeclared method resolves to first parent.
 		local String is tg: mi:tag();
-		Conditional:branch(check: { tg == 'mib' }, then: {
+		Conditional:if(check: { tg == 'mib' }, then: {
 			Output:line('[PASS] MI first-wins: tag = mib');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] MI first-wins: expected mib, got ' . tg);
 		});
 
 		# Case 7: base-typed MI reference dispatches virtually.
 		local MiaFeature is miAsBase: mi;
-		Conditional:branch(check: { miAsBase:label() == 'child-mia' }, then: {
+		Conditional:if(check: { miAsBase:label() == 'child-mia' }, then: {
 			Output:line('[PASS] MI base-typed dispatch: label = child-mia');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] MI base-typed dispatch: expected child-mia');
 		});
 

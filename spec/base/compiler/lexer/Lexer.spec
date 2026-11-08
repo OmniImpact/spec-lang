@@ -126,12 +126,12 @@ Class is Lexer{
 	Function of Int is digitValue(String is ch){
 		local String is lower: '0123456789abcdef';
 		local Int is d: lower:indexOf(search: ch, default: -1);
-		Conditional:branch(check: { d >= 0 }, then: {
+		Conditional:if(check: { d >= 0 }, then: {
 			return d;
 		});
 		local String is upper: 'ABCDEF';
 		local Int is u: upper:indexOf(search: ch, default: -1);
-		Conditional:branch(check: { u >= 0 }, then: {
+		Conditional:if(check: { u >= 0 }, then: {
 			return u + 10;
 		});
 		return -1;
@@ -143,10 +143,10 @@ Class is Lexer{
 	Function of String is advance(){
 		local String is ch: self:source:charAt(index: self:pos, default: '');
 		self:pos: self:pos + 1;
-		Conditional:branch(check: { ch == "\n" }, then: {
+		Conditional:if(check: { ch == "\n" }, then: {
 			self:line: self:line + 1;
 			self:col: 1;
-		}, otherwise: {
+		}, else: {
 			self:col: self:col + 1;
 		});
 		return ch;
@@ -187,15 +187,15 @@ Class is Lexer{
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		local Keyword is kw: Keyword:of(text);
 		local TokenKind is kind: TokenKind:IDENTIFIER;
-		Conditional:branch(check: { kw != Keyword:NONE }, then: {
+		Conditional:if(check: { kw != Keyword:NONE }, then: {
 			kind: TokenKind:KEYWORD;
 		});
 		# Boolean literals are identifier-shaped but scan as their own kind.
-		Conditional:branch(check: { text == self:names:boolTrue() || text == 'false' }, then: {
+		Conditional:if(check: { text == self:names:boolTrue() || text == 'false' }, then: {
 			kind: TokenKind:BOOL;
 		});
 		local Token is t: Token:init(kind: kind, value: text, line: startLine, col: startCol);
-		Conditional:branch(check: { kw != Keyword:NONE }, then: {
+		Conditional:if(check: { kw != Keyword:NONE }, then: {
 			t:setKeyword(kw: kw);
 		});
 		return t;
@@ -212,23 +212,23 @@ Class is Lexer{
 
 		local String is ch: self:source:charAt(index: self:pos, default: '');
 		local String is nextCh: self:source:charAt(index: self:pos + 1, default: '');
-		Conditional:branch(check: { ch == '0' && nextCh != '' && nextCh != '.' && !nextCh:isDigit() }, then: {
-			Conditional:branch(check: { nextCh == 'x' || nextCh == 'X' || nextCh == 'b' || nextCh == 'B' || nextCh == 'o' || nextCh == 'O' }, then: {
+		Conditional:if(check: { ch == '0' && nextCh != '' && nextCh != '.' && !nextCh:isDigit() }, then: {
+			Conditional:if(check: { nextCh == 'x' || nextCh == 'X' || nextCh == 'b' || nextCh == 'B' || nextCh == 'o' || nextCh == 'O' }, then: {
 				local Int is base: 16;
-				Conditional:branch(check: { nextCh == 'b' || nextCh == 'B' }, then: {
+				Conditional:if(check: { nextCh == 'b' || nextCh == 'B' }, then: {
 					base: 2;
 				});
-				Conditional:branch(check: { nextCh == 'o' || nextCh == 'O' }, then: {
+				Conditional:if(check: { nextCh == 'o' || nextCh == 'O' }, then: {
 					base: 8;
 				});
 				self:advance();
 				self:advance();
 				local BaseDigitsLoop is digitLoop: BaseDigitsLoop:init(lexer: self, base: base);
 				While:run(loop: digitLoop);
-				Conditional:branch(check: { digitLoop:hadInvalid }, then: {
+				Conditional:if(check: { digitLoop:hadInvalid }, then: {
 					self:addError(msg: self:errText:errInvalidDigitInBase(base: base));
 				});
-				Conditional:branch(check: { digitLoop:digitCount == 0 }, then: {
+				Conditional:if(check: { digitLoop:digitCount == 0 }, then: {
 					self:addError(msg: self:errText:errMissingDigitsAfterPrefix());
 				});
 				return Token:init(kind: TokenKind:INT, value: '' . digitLoop:value, line: startLine, col: startCol);
@@ -245,10 +245,10 @@ Class is Lexer{
 		text: strip:res;
 
 		local TokenKind is kind: TokenKind:INT;
-		Conditional:branch(check: { numLoop:isFloat }, then: {
+		Conditional:if(check: { numLoop:isFloat }, then: {
 			kind: TokenKind:FLOAT;
 		});
-		Conditional:branch(check: { kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0' }, then: {
+		Conditional:if(check: { kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0' }, then: {
 			# A bare leading zero stays decimal in Spec; strip it so C does
 			# not reinterpret the emitted literal as octal.
 			local StripLeadingZerosLoop is zeros: StripLeadingZerosLoop:init(src: text);
@@ -274,10 +274,10 @@ Class is Lexer{
 		local StringScanLoop is loop: StringScanLoop:init(lexer: self, quote: quote);
 		While:run(loop: loop);
 
-		Conditional:branch(check: { self:pos < self:length }, then: {
+		Conditional:if(check: { self:pos < self:length }, then: {
 			self:advance();
 		});
-		Conditional:branch(check: { quote == '"' }, then: {
+		Conditional:if(check: { quote == '"' }, then: {
 			return Token:init(kind: TokenKind:TEMPLATESTRING, value: loop:res, line: startLine, col: startCol);
 		});
 		return Token:init(kind: TokenKind:STRING, value: loop:res, line: startLine, col: startCol);
@@ -296,14 +296,14 @@ Class is Lexer{
 		self:advance();
 		self:advance();
 		self:advance();
-		Conditional:branch(check: { self:pos < self:length && self:source:charAt(index: self:pos, default: '') == "\n" }, then: {
+		Conditional:if(check: { self:pos < self:length && self:source:charAt(index: self:pos, default: '') == "\n" }, then: {
 			self:advance();
 		});
 
 		local HeredocScanLoop is loop: HeredocScanLoop:init(lexer: self, quote: quote);
 		While:run(loop: loop);
 
-		Conditional:branch(check: { !loop:closed }, then: {
+		Conditional:if(check: { !loop:closed }, then: {
 			self:addError(msg: self:errText:errUnterminatedHeredoc(quote: quote));
 		});
 		return Token:init(kind: kind, value: loop:res, line: startLine, col: startCol);
@@ -322,7 +322,7 @@ Class is Lexer{
 		local String is pair: ch . nextCh;
 
 		local Operator is op: Operator:of(pair);
-		Conditional:branch(check: { op != Operator:NONE }, then: {
+		Conditional:if(check: { op != Operator:NONE }, then: {
 			self:advance();
 			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: pair, line: startLine, col: startCol);
 			t:setOperator(op: op);

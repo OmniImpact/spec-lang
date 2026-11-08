@@ -143,7 +143,7 @@ Class is TypeChecker{
 	## @param line: Source line number.
 	## @param msg: Diagnostic message.
 	Function is addError(Int is line, String is msg){
-		local String is fullMsg: Conditional:branch(check: { self:currentSourceFile != '' }, then: { '[' . self:currentSourceFile . '] ' . msg }, otherwise: { msg });
+		local String is fullMsg: Conditional:if(check: { self:currentSourceFile != '' }, then: { '[' . self:currentSourceFile . '] ' . msg }, else: { msg });
 		local Error is e: Error:init(message: fullMsg);
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: line, col: 0);
 		self:errors:add(item: TypeError:init(line: line, message: fullMsg));
@@ -171,8 +171,8 @@ Class is TypeChecker{
 	## @param t: Type descriptor.
 	## @return: Type name string.
 	Function of String is formatVarTypeString(Type is t){
-		Conditional:branch(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
-			Conditional:branch(check: { t:params:length() > 0 }, then: {
+		Conditional:if(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
+			Conditional:if(check: { t:params:length() > 0 }, then: {
 				local Type is ret: t:params:get(index: 0);
 				return 'Function:' . self:formatTypeString(t: ret);
 			});
@@ -188,18 +188,18 @@ Class is TypeChecker{
 	## @return: Type name string.
 	Function of String is formatTypeString(Type is t){
 		local String is baseName: t:name;
-		Conditional:branch(check: { Primitive:of(baseName) == Primitive:FUNCTION }, then: {
-			Conditional:branch(check: { t:params:length() > 0 }, then: {
+		Conditional:if(check: { Primitive:of(baseName) == Primitive:FUNCTION }, then: {
+			Conditional:if(check: { t:params:length() > 0 }, then: {
 				local Type is ret: t:params:get(index: 0);
 				return self:formatTypeString(t: ret);
 			});
 			return 'void';
 		});
-		Conditional:branch(check: { t:params:length() == 1 }, then: {
+		Conditional:if(check: { t:params:length() == 1 }, then: {
 			local Type is p0: t:params:get(index: 0);
 			return baseName . ':' . self:formatTypeString(t: p0);
 		});
-		Conditional:branch(check: { t:params:length() >= 2 }, then: {
+		Conditional:if(check: { t:params:length() >= 2 }, then: {
 			local Type is p0: t:params:get(index: 0);
 			local Type is p1: t:params:get(index: 1);
 			return baseName . ':' . self:formatTypeString(t: p0) . ':' . self:formatTypeString(t: p1);
@@ -215,29 +215,29 @@ Class is TypeChecker{
 	## @return: The substituted type name.
 	Function of String is substituteTypeParam(String is rawType, ClassInfo is cls, Array of String is typeArgs){
 		local Array of String is tps: cls:typeParams;
-		Conditional:branch(check: { tps:length() == 0 || typeArgs:length() == 0 }, then: {
+		Conditional:if(check: { tps:length() == 0 || typeArgs:length() == 0 }, then: {
 			return rawType;
 		});
 		local Int is idx: tps:indexOf(search: rawType, default: -1);
-		Conditional:branch(check: { idx >= 0 }, then: {
+		Conditional:if(check: { idx >= 0 }, then: {
 			# Grounded when the container carries type arguments; a bare
 			# container ('Array' without 'of T') degrades to Any.
-			Conditional:branch(check: { idx < typeArgs:length() }, then: {
+			Conditional:if(check: { idx < typeArgs:length() }, then: {
 				return typeArgs:get(index: idx);
 			});
 			return Primitive:ANY:value();
 		});
-		Conditional:branch(check: { rawType:startsWith(prefix: 'Array:') && rawType:length() > 6 }, then: {
+		Conditional:if(check: { rawType:startsWith(prefix: 'Array:') && rawType:length() > 6 }, then: {
 			local String is elem: rawType:substring(start: 6, end: rawType:length());
 			local Int is eIdx: tps:indexOf(search: elem, default: -1);
-			Conditional:branch(check: { eIdx >= 0 && eIdx < typeArgs:length() }, then: {
+			Conditional:if(check: { eIdx >= 0 && eIdx < typeArgs:length() }, then: {
 				return 'Array:' . typeArgs:get(index: eIdx);
 			});
 		});
-		Conditional:branch(check: { rawType:startsWith(prefix: 'List:') && rawType:length() > 5 }, then: {
+		Conditional:if(check: { rawType:startsWith(prefix: 'List:') && rawType:length() > 5 }, then: {
 			local String is elem: rawType:substring(start: 5, end: rawType:length());
 			local Int is eIdx: tps:indexOf(search: elem, default: -1);
-			Conditional:branch(check: { eIdx >= 0 && eIdx < typeArgs:length() }, then: {
+			Conditional:if(check: { eIdx >= 0 && eIdx < typeArgs:length() }, then: {
 				return 'List:' . typeArgs:get(index: eIdx);
 			});
 		});
@@ -251,7 +251,7 @@ Class is TypeChecker{
 	Function of ClassInfo is findClass(String is name){
 		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
 		While:run(loop: s);
-		Conditional:branch(check: { s:found }, then: {
+		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
 		return ClassInfo:init(name: '', baseClass: '', members: []);
@@ -263,19 +263,19 @@ Class is TypeChecker{
 	## @param baseName: Candidate base type.
 	## @return: Subclass relationship.
 	Function of Boolean is isSubclassOf(String is subName, String is baseName){
-		Conditional:branch(check: { subName == '' || baseName == '' }, then: {
+		Conditional:if(check: { subName == '' || baseName == '' }, then: {
 			return false;
 		});
-		Conditional:branch(check: { subName == baseName }, then: {
+		Conditional:if(check: { subName == baseName }, then: {
 			return true;
 		});
 		local ClassInfo is subCls: self:findClass(name: subName);
-		Conditional:branch(check: { subCls:name == '' }, then: {
+		Conditional:if(check: { subCls:name == '' }, then: {
 			return false;
 		});
 		local Boolean is matched: false;
 		subCls:baseClasses:each(action: local Function(String is pName){
-			Conditional:branch(check: { pName == baseName || self:isSubclassOf(subName: pName, baseName: baseName) }, then: {
+			Conditional:if(check: { pName == baseName || self:isSubclassOf(subName: pName, baseName: baseName) }, then: {
 				matched: true;
 			});
 		});
@@ -288,21 +288,21 @@ Class is TypeChecker{
 	## @param source: Source type name.
 	## @return: true when compatible.
 	Function of Boolean is isAssignable(String is target, String is source){
-		Conditional:branch(check: { target == source || target == Primitive:ANY:value() || source == Primitive:ANY:value() || target == '' || source == '' }, then: {
+		Conditional:if(check: { target == source || target == Primitive:ANY:value() || source == Primitive:ANY:value() || target == '' || source == '' }, then: {
 			return true;
 		});
 		# Implicit numeric widening: Int assigns to Float (explicit casts
 		# handle the narrowing directions).
-		Conditional:branch(check: { target == 'Float' && source == Primitive:INT:value() }, then: {
+		Conditional:if(check: { target == 'Float' && source == Primitive:INT:value() }, then: {
 			return true;
 		});
 		# Function types are mutually compatible across signatures
 		# (higher-order parameters accept any callable of the shape).
-		Conditional:branch(check: { target:startsWith(prefix: 'Function') && source:startsWith(prefix: 'Function') }, then: {
+		Conditional:if(check: { target:startsWith(prefix: 'Function') && source:startsWith(prefix: 'Function') }, then: {
 			return true;
 		});
 		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
-		Conditional:branch(check: { curCls:typeParams:indexOf(search: target, default: -1) >= 0 || curCls:typeParams:indexOf(search: source, default: -1) >= 0 }, then: {
+		Conditional:if(check: { curCls:typeParams:indexOf(search: target, default: -1) >= 0 || curCls:typeParams:indexOf(search: source, default: -1) >= 0 }, then: {
 			return true;
 		});
 		# Of-form containers ('Array of String'): normalize to the colon
@@ -312,27 +312,27 @@ Class is TypeChecker{
 		local String is sNorm: source;
 		local Int is tOf: target:indexOf(search: ' of ', default: -1);
 		local Int is sOf: source:indexOf(search: ' of ', default: -1);
-		Conditional:branch(check: { tOf > 0 }, then: {
+		Conditional:if(check: { tOf > 0 }, then: {
 			tNorm: target:substring(start: 0, end: tOf) . ':' . target:substring(start: tOf + 4, end: target:length());
 		});
-		Conditional:branch(check: { sOf > 0 }, then: {
+		Conditional:if(check: { sOf > 0 }, then: {
 			sNorm: source:substring(start: 0, end: sOf) . ':' . source:substring(start: sOf + 4, end: source:length());
 		});
 		local Int is tTo: tNorm:indexOf(search: ' to ', default: -1);
 		local Int is sTo: sNorm:indexOf(search: ' to ', default: -1);
-		Conditional:branch(check: { tTo > 0 }, then: {
+		Conditional:if(check: { tTo > 0 }, then: {
 			tNorm: tNorm:substring(start: 0, end: tTo) . ':' . tNorm:substring(start: tTo + 4, end: tNorm:length());
 		});
-		Conditional:branch(check: { sTo > 0 }, then: {
+		Conditional:if(check: { sTo > 0 }, then: {
 			sNorm: sNorm:substring(start: 0, end: sTo) . ':' . sNorm:substring(start: sTo + 4, end: sNorm:length());
 		});
 		local Array of String is tParts: tNorm:split(delimiter: ':');
 		local Array of String is sParts: sNorm:split(delimiter: ':');
-		Conditional:branch(check: { tParts:length() > 0 && sParts:length() > 0 }, then: {
+		Conditional:if(check: { tParts:length() > 0 && sParts:length() > 0 }, then: {
 			local String is tBase: tParts:get(index: 0);
 			local String is sBase: sParts:get(index: 0);
-			Conditional:branch(check: { tBase == sBase || self:isSubclassOf(subName: sBase, baseName: tBase) }, then: {
-				Conditional:branch(check: { tParts:length() > 1 && sParts:length() > 1 }, then: {
+			Conditional:if(check: { tBase == sBase || self:isSubclassOf(subName: sBase, baseName: tBase) }, then: {
+				Conditional:if(check: { tParts:length() > 1 && sParts:length() > 1 }, then: {
 					local Boolean is argsOk: true;
 					local Int is pIdx: 1;
 					While:condition(
@@ -342,7 +342,7 @@ Class is TypeChecker{
 						iteration: local Function of Boolean(){
 							local String is tp: tParts:get(index: pIdx);
 							local String is sp: sParts:get(index: pIdx);
-							Conditional:branch(check: { !self:isAssignable(target: tp, source: sp) }, then: {
+							Conditional:if(check: { !self:isAssignable(target: tp, source: sp) }, then: {
 								argsOk: false;
 							});
 							pIdx: pIdx + 1;
@@ -354,7 +354,7 @@ Class is TypeChecker{
 				return true;
 			});
 		});
-		Conditional:branch(check: { self:isSubclassOf(subName: source, baseName: target) }, then: {
+		Conditional:if(check: { self:isSubclassOf(subName: source, baseName: target) }, then: {
 			return true;
 		});
 		return false;
@@ -366,23 +366,23 @@ Class is TypeChecker{
 	## @param methodName: Member name to locate.
 	## @return: The member, or an empty-named one when absent.
 	Function of Member is lookupAnyMember(String is className, String is methodName){
-		Conditional:branch(check: { className == '' || className == Primitive:ANY:value() }, then: {
+		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
 		While:run(loop: ml);
-		Conditional:branch(check: { ml:found }, then: {
+		Conditional:if(check: { ml:found }, then: {
 			return ml:res;
 		});
 		local Member is inherited: Member:init(kind: MemberKind:FIELD);
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { inherited:name == '' }, then: {
+			Conditional:if(check: { inherited:name == '' }, then: {
 				inherited: self:lookupAnyMember(className: baseName, methodName: methodName);
 			});
 		});
@@ -398,7 +398,7 @@ Class is TypeChecker{
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: variantName);
 		While:run(loop: fl);
-		Conditional:branch(check: { fl:found }, then: {
+		Conditional:if(check: { fl:found }, then: {
 			return fl:res;
 		});
 		return Member:init(kind: MemberKind:FIELD);
@@ -410,7 +410,7 @@ Class is TypeChecker{
 	## @param fieldName: Field name.
 	## @return: The field type name, or '' when absent.
 	Function of String is lookupFieldType(String is className, String is fieldName){
-		Conditional:branch(check: { className == '' || className == Primitive:ANY:value() }, then: {
+		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return '';
 		});
 		local Array of String is parts: className:split(delimiter: ':');
@@ -419,24 +419,24 @@ Class is TypeChecker{
 		# Of-form generic receivers ('Box of Int'): split the base and the
 		# type argument so substitution can ground T.
 		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
-		Conditional:branch(check: { ofIdx > 0 && typeArgs:length() == 0 }, then: {
+		Conditional:if(check: { ofIdx > 0 && typeArgs:length() == 0 }, then: {
 			baseClassName: className:substring(start: 0, end: ofIdx);
 			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
 		});
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: fieldName);
 		While:run(loop: fl);
-		Conditional:branch(check: { fl:found }, then: {
+		Conditional:if(check: { fl:found }, then: {
 			local Member is foundM: fl:res;
 			local String is rawT: self:formatTypeString(t: foundM:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		});
 		local String is inherited: '';
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { inherited == '' }, then: {
+			Conditional:if(check: { inherited == '' }, then: {
 				inherited: self:lookupFieldType(className: baseName, fieldName: fieldName);
 			});
 		});
@@ -449,7 +449,7 @@ Class is TypeChecker{
 	## @param methodName: Method name.
 	## @return: The return type name, or '' when absent.
 	Function of String is lookupMethodReturnType(String is className, String is methodName){
-		Conditional:branch(check: { className == '' || className == Primitive:ANY:value() }, then: {
+		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
 			return '';
 		});
 		local Array of String is parts: className:split(delimiter: ':');
@@ -458,27 +458,27 @@ Class is TypeChecker{
 		# Of-form generic receivers ('Box of Int'): split the base and the
 		# type argument so substitution can ground T.
 		local Int is ofIdx: className:indexOf(search: ' of ', default: -1);
-		Conditional:branch(check: { ofIdx > 0 && typeArgs:length() == 0 }, then: {
+		Conditional:if(check: { ofIdx > 0 && typeArgs:length() == 0 }, then: {
 			baseClassName: className:substring(start: 0, end: ofIdx);
 			typeArgs:add(item: className:substring(start: ofIdx + 4, end: className:length()));
 		});
-		Conditional:branch(check: { methodName == ContractMethod:INIT:value() && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName) }, then: {
+		Conditional:if(check: { methodName == ContractMethod:INIT:value() && self:registeredClasses:has(key: baseClassName) && !self:allEnumNames:has(key: baseClassName) }, then: {
 			return className;
 		});
 		local ClassInfo is cls: self:findClass(name: baseClassName);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
 		While:run(loop: ml);
-		Conditional:branch(check: { ml:found }, then: {
+		Conditional:if(check: { ml:found }, then: {
 			local Member is foundM: ml:res;
 			local String is rawT: self:formatTypeString(t: foundM:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		});
 		local String is inherited: '';
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { inherited == '' }, then: {
+			Conditional:if(check: { inherited == '' }, then: {
 				inherited: self:lookupMethodReturnType(className: baseName, methodName: methodName);
 			});
 		});
@@ -494,23 +494,23 @@ Class is TypeChecker{
 	## @param callExpr: The CALL expression.
 	Function is checkCallArguments(Expression is callExpr){
 		local String is targetType: callExpr:methodTarget:resolvedType;
-		Conditional:branch(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
+		Conditional:if(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
 			targetType: self:currentClassName;
 		});
-		Conditional:branch(check: { targetType == '' || targetType == Primitive:ANY:value() || self:allEnumNames:has(key: targetType) }, then: {
+		Conditional:if(check: { targetType == '' || targetType == Primitive:ANY:value() || self:allEnumNames:has(key: targetType) }, then: {
 			return;
 		});
 		local Array of String is parts: targetType:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
-		Conditional:branch(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While' }, then: {
+		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While' }, then: {
 			return;
 		});
 		local Member is m: self:lookupOverloadedMember(className: baseClassName, methodName: callExpr:methodName, idx: callExpr:overloadIndex);
-		Conditional:branch(check: { m:kind != MemberKind:METHOD }, then: {
+		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
 			return;
 		});
 		local Array of Parameter is params: m:params;
-		Conditional:branch(check: { params:length() == 0 }, then: {
+		Conditional:if(check: { params:length() == 0 }, then: {
 			return;
 		});
 		local ClassInfo is recvCls: self:findClass(name: baseClassName);
@@ -519,34 +519,34 @@ Class is TypeChecker{
 		params:each(action: local Function(Parameter is p){
 			local String is pName: p:name;
 			local String is pT: p:paramType:name;
-			Conditional:branch(check: { pT != self:names:selfFieldMarker() && pT != Primitive:ANY:value() && pT != '' && recvTypeParams:indexOf(search: pT, default: -1) < 0 }, then: {
+			Conditional:if(check: { pT != self:names:selfFieldMarker() && pT != Primitive:ANY:value() && pT != '' && recvTypeParams:indexOf(search: pT, default: -1) < 0 }, then: {
 				local Expression is matchedValue: Expression:init(kind: ExpressionKind:UNKNOWN);
 				local Boolean is found: false;
 				local Int is posIdx: 0;
 				callExpr:methodArgs:each(action: local Function(NamedArg is a){
-					Conditional:branch(check: { !found && pName != '' && a:name == pName }, then: {
+					Conditional:if(check: { !found && pName != '' && a:name == pName }, then: {
 						matchedValue: a:value;
 						found: true;
 					});
 				});
-				Conditional:branch(check: { !found }, then: {
+				Conditional:if(check: { !found }, then: {
 					callExpr:methodArgs:each(action: local Function(NamedArg is a){
-						Conditional:branch(check: { !found && a:name == '' && posIdx == pIdx }, then: {
+						Conditional:if(check: { !found && a:name == '' && posIdx == pIdx }, then: {
 							matchedValue: a:value;
 							found: true;
 						});
 						posIdx: posIdx + 1;
 					});
 				});
-				Conditional:branch(check: { found }, then: {
+				Conditional:if(check: { found }, then: {
 					local String is argT: matchedValue:resolvedType;
-					Conditional:branch(check: { argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT) }, then: {
-						local String is label: Conditional:branch(check: { pName != '' }, then: { pName }, otherwise: { 'position ' . (pIdx + 1) });
+					Conditional:if(check: { argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT) }, then: {
+						local String is label: Conditional:if(check: { pName != '' }, then: { pName }, else: { 'position ' . (pIdx + 1) });
 						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					});
-				}, otherwise: {
-					Conditional:branch(check: { !p:hasDefault && !self:isBindingDeclaration(cls: recvCls) }, then: {
+				}, else: {
+					Conditional:if(check: { !p:hasDefault && !self:isBindingDeclaration(cls: recvCls) }, then: {
 						# Binding declarations (sysinternal + runtime-managed)
 						# sketch API surface, not call contracts — their C
 						# implementations carry optional/variadic semantics.
@@ -580,7 +580,7 @@ Class is TypeChecker{
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
 		self:collectOverloadGroup(className: baseName, methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
-		Conditional:branch(check: { group:length() == 0 }, then: {
+		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
 		# FUNCTIONS.md §I.3: no mixed calls — enforced globally, including
@@ -590,7 +590,7 @@ Class is TypeChecker{
 		local Array of NamedArg is allArgs: expr:methodArgs;
 		local Array of NamedArg is args: allArgs;
 		local Boolean is isScoped: expr:scopedRemainder;
-		Conditional:branch(check: { isScoped }, then: {
+		Conditional:if(check: { isScoped }, then: {
 			local Array of NamedArg is explicit: [];
 			local Int is ei: 0;
 			While:condition(
@@ -606,26 +606,26 @@ Class is TypeChecker{
 		local Boolean is allPos: true;
 		local Boolean is allNamed: true;
 		args:each(action: local Function(NamedArg is a){
-			Conditional:branch(check: { a:name == '' }, then: {
+			Conditional:if(check: { a:name == '' }, then: {
 				allNamed: false;
-			}, otherwise: {
+			}, else: {
 				allPos: false;
 			});
 		});
-		Conditional:branch(check: { !allPos && !allNamed }, then: {
+		Conditional:if(check: { !allPos && !allNamed }, then: {
 			self:addError(line: self:currentLine, msg: 'Mixed positional and named arguments are not supported; use one form (FUNCTIONS.md §I.3).');
 			return none;
 		});
-		Conditional:branch(check: { group:length() == 1 }, then: {
+		Conditional:if(check: { group:length() == 1 }, then: {
 			local Member is only: group:get(index: 0);
-			Conditional:branch(check: { isScoped && !self:scopeSlotOk(m: only, explicitCount: args:length()) }, then: {
+			Conditional:if(check: { isScoped && !self:scopeSlotOk(m: only, explicitCount: args:length()) }, then: {
 				self:addError(line: self:currentLine, msg: 'The scoped region requires exactly one unbound Function parameter at the end of \'' . baseName . '.' . methodName . '\' (FUNCTIONS.md §as).');
 				return none;
 			});
 			expr:overloadIndex: 0;
 			return only;
 		});
-		Conditional:branch(check: { allNamed }, then: {
+		Conditional:if(check: { allNamed }, then: {
 			local Boolean is dupArg: false;
 			local Int is ai: 0;
 			While:condition(
@@ -637,7 +637,7 @@ Class is TypeChecker{
 						iteration: local Function of Boolean(){
 							local NamedArg is argA: args:get(index: ai);
 							local NamedArg is argB: args:get(index: aj);
-							Conditional:branch(check: { argA:name == argB:name }, then: {
+							Conditional:if(check: { argA:name == argB:name }, then: {
 								dupArg: true;
 							});
 							aj: aj + 1;
@@ -648,7 +648,7 @@ Class is TypeChecker{
 					return true;
 				}
 			);
-			Conditional:branch(check: { dupArg }, then: {
+			Conditional:if(check: { dupArg }, then: {
 				self:addError(line: self:currentLine, msg: 'Duplicate named argument in call to \'' . baseName . '.' . methodName . '\'.');
 				return none;
 			});
@@ -661,10 +661,10 @@ Class is TypeChecker{
 		# last parameter Function-typed — the open scope slot.
 		local Int is wantCount: args:length();
 		group:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:params:length() != wantCount }, then: {
+			Conditional:if(check: { m:params:length() != wantCount }, then: {
 				return;
 			});
-			Conditional:branch(check: { allPos }, then: {
+			Conditional:if(check: { allPos }, then: {
 				survivors:add(item: m);
 				return;
 			});
@@ -673,50 +673,50 @@ Class is TypeChecker{
 			m:params:each(action: local Function(Parameter is p){
 				# The scope slot (the last parameter) is bound by the
 				# remainder, not by a named argument.
-				Conditional:branch(check: { !(isScoped && npIdx == m:params:length() - 1) }, then: {
+				Conditional:if(check: { !(isScoped && npIdx == m:params:length() - 1) }, then: {
 					local Boolean is present: false;
 					args:each(action: local Function(NamedArg is a){
-						Conditional:branch(check: { a:name == p:name }, then: {
+						Conditional:if(check: { a:name == p:name }, then: {
 							present: true;
 						});
 					});
-					Conditional:branch(check: { !present }, then: {
+					Conditional:if(check: { !present }, then: {
 						namesMatch: false;
 					});
 				});
 				npIdx: npIdx + 1;
 			});
-			Conditional:branch(check: { namesMatch }, then: {
+			Conditional:if(check: { namesMatch }, then: {
 				survivors:add(item: m);
 				return;
 			});
 		});
-		Conditional:branch(check: { survivors:length() == 0 && isScoped }, then: {
+		Conditional:if(check: { survivors:length() == 0 && isScoped }, then: {
 			# Pass 2: the open scope slot — params == explicit + 1, last
 			# parameter Function-typed.
 			local Array of Member is slots: [];
 			group:each(action: local Function(Member is m){
-				Conditional:branch(check: { self:scopeSlotOk(m: m, explicitCount: args:length()) }, then: {
+				Conditional:if(check: { self:scopeSlotOk(m: m, explicitCount: args:length()) }, then: {
 					slots:add(item: m);
 				});
 			});
-			Conditional:branch(check: { slots:length() == 1 }, then: {
+			Conditional:if(check: { slots:length() == 1 }, then: {
 				local Member is sel: slots:get(index: 0);
 				expr:overloadIndex: self:indexOfMember(group: group, m: sel);
 				return sel;
 			});
 		});
-		Conditional:branch(check: { survivors:length() == 0 }, then: {
-			Conditional:branch(check: { allPos }, then: {
+		Conditional:if(check: { survivors:length() == 0 }, then: {
+			Conditional:if(check: { allPos }, then: {
 				self:addError(line: self:currentLine, msg: 'No signature of \'' . baseName . '.' . methodName . '\' takes ' . (args:length() as String) . ' argument(s).');
-			}, otherwise: {
+			}, else: {
 				self:addError(line: self:currentLine, msg: 'No signature of \'' . baseName . '.' . methodName . '\' matches the named arguments.');
 			});
 			return none;
 		});
-		Conditional:branch(check: { survivors:length() == 1 }, then: {
+		Conditional:if(check: { survivors:length() == 1 }, then: {
 			local Member is sel: survivors:get(index: 0);
-			Conditional:branch(check: { isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length()) }, then: {
+			Conditional:if(check: { isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length()) }, then: {
 				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
 				return none;
 			});
@@ -725,47 +725,47 @@ Class is TypeChecker{
 		});
 		local Array of Member is exact: [];
 		survivors:each(action: local Function(Member is m){
-			Conditional:branch(check: { self:exactTypeMatch(m: m, expr: expr) }, then: {
+			Conditional:if(check: { self:exactTypeMatch(m: m, expr: expr) }, then: {
 				exact:add(item: m);
 			});
 		});
-		Conditional:branch(check: { exact:length() == 1 }, then: {
+		Conditional:if(check: { exact:length() == 1 }, then: {
 			local Member is sel: exact:get(index: 0);
-			Conditional:branch(check: { isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length()) }, then: {
+			Conditional:if(check: { isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length()) }, then: {
 				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
 				return none;
 			});
 			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
 			return sel;
 		});
-		Conditional:branch(check: { isScoped && exact:length() == 0 }, then: {
+		Conditional:if(check: { isScoped && exact:length() == 0 }, then: {
 			# Pass 2: the open scope slot — params == explicit + 1, last
 			# parameter Function-typed.
 			local Array of Member is slots: [];
 			group:each(action: local Function(Member is m){
-				Conditional:branch(check: { self:scopeSlotOk(m: m, explicitCount: args:length()) }, then: {
+				Conditional:if(check: { self:scopeSlotOk(m: m, explicitCount: args:length()) }, then: {
 					slots:add(item: m);
 				});
 			});
-			Conditional:branch(check: { slots:length() == 1 }, then: {
+			Conditional:if(check: { slots:length() == 1 }, then: {
 				local Member is sel: slots:get(index: 0);
 				expr:overloadIndex: self:indexOfMember(group: group, m: sel);
 				return sel;
 			});
 		});
-		Conditional:branch(check: { exact:length() > 1 }, then: {
+		Conditional:if(check: { exact:length() > 1 }, then: {
 			self:addError(line: self:currentLine, msg: 'Ambiguous call to \'' . baseName . '.' . methodName . '\': the arguments match multiple overloads; use named arguments (FUNCTIONS.md §I.2).');
 			return none;
 		});
 		local String is argTypes: '';
 		args:each(action: local Function(NamedArg is a){
 			local String is at: a:value:resolvedType;
-			Conditional:branch(check: { at == '' }, then: {
+			Conditional:if(check: { at == '' }, then: {
 				at: 'Any';
 			});
-			Conditional:branch(check: { argTypes == '' }, then: {
+			Conditional:if(check: { argTypes == '' }, then: {
 				argTypes: at;
-			}, otherwise: {
+			}, else: {
 				argTypes: argTypes . ', ' . at;
 			});
 		});
@@ -783,20 +783,20 @@ Class is TypeChecker{
 	## @param acc: The collected group (nearest-declaration semantics).
 	## @param ownerAcc: The declaring class name accumulator (reference).
 	Function is collectOverloadGroup(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
-		Conditional:branch(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64 }, then: {
 			return;
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
+			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
 				acc:add(item: m);
 			});
 		});
-		Conditional:branch(check: { acc:length() > 0 }, then: {
+		Conditional:if(check: { acc:length() > 0 }, then: {
 			ownerAcc:add(item: cls:name);
 			return;
 		});
@@ -813,7 +813,7 @@ Class is TypeChecker{
 	## @param explicitCount: The explicit argument count.
 	## @return: true when the scope slot is open and valid.
 	Function of Boolean is scopeSlotOk(Member is m, Int is explicitCount){
-		Conditional:branch(check: { m:params:length() != explicitCount + 1 }, then: {
+		Conditional:if(check: { m:params:length() != explicitCount + 1 }, then: {
 			return false;
 		});
 		local Parameter is slot: m:params:get(index: m:params:length() - 1);
@@ -832,22 +832,22 @@ Class is TypeChecker{
 		m:params:each(action: local Function(Parameter is p){
 			local Expression is bound: Expression:init(kind: ExpressionKind:UNKNOWN);
 			local Boolean is found: false;
-			Conditional:branch(check: { p:name != '' }, then: {
+			Conditional:if(check: { p:name != '' }, then: {
 				expr:methodArgs:each(action: local Function(NamedArg is a){
-					Conditional:branch(check: { !found && a:name == p:name }, then: {
+					Conditional:if(check: { !found && a:name == p:name }, then: {
 						bound: a:value;
 						found: true;
 					});
 				});
 			});
-			Conditional:branch(check: { !found && posIdx < expr:methodArgs:length() }, then: {
+			Conditional:if(check: { !found && posIdx < expr:methodArgs:length() }, then: {
 				local NamedArg is pa: expr:methodArgs:get(index: posIdx);
-				Conditional:branch(check: { pa:name == '' }, then: {
+				Conditional:if(check: { pa:name == '' }, then: {
 					bound: pa:value;
 					found: true;
 				});
 			});
-			Conditional:branch(check: { !found || bound:resolvedType == '' || bound:resolvedType != p:paramType:name }, then: {
+			Conditional:if(check: { !found || bound:resolvedType == '' || bound:resolvedType != p:paramType:name }, then: {
 				allMatch: false;
 			});
 			posIdx: posIdx + 1;
@@ -863,7 +863,7 @@ Class is TypeChecker{
 		local Int is idx: 0;
 		local Int is hit: 0;
 		group:each(action: local Function(Member is g){
-			Conditional:branch(check: { g == m }, then: {
+			Conditional:if(check: { g == m }, then: {
 				hit: idx;
 			});
 			idx: idx + 1;
@@ -884,12 +884,12 @@ Class is TypeChecker{
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
 		self:collectOverloadGroup(className: baseName, methodName: selected:name, hops: 0, acc: group, ownerAcc: ownerAcc);
-		Conditional:branch(check: { group:length() <= 1 || ownerAcc:length() == 0 }, then: {
+		Conditional:if(check: { group:length() <= 1 || ownerAcc:length() == 0 }, then: {
 			return self:lookupMethodReturnType(className: className, methodName: selected:name);
 		});
 		local String is owner: ownerAcc:get(index: 0);
 		local ClassInfo is ownerCls: self:findClass(name: owner);
-		Conditional:branch(check: { ownerCls:name == '' }, then: {
+		Conditional:if(check: { ownerCls:name == '' }, then: {
 			return '';
 		});
 		local Array of String is typeArgs: parts:slice(start: 1, end: parts:length());
@@ -910,14 +910,14 @@ Class is TypeChecker{
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
 		self:collectOverloadGroup(className: parts:get(index: 0), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
-		Conditional:branch(check: { group:length() == 0 }, then: {
+		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
 		local Int is use: idx;
-		Conditional:branch(check: { use < 0 }, then: {
+		Conditional:if(check: { use < 0 }, then: {
 			use: 0;
 		});
-		Conditional:branch(check: { use >= group:length() }, then: {
+		Conditional:if(check: { use >= group:length() }, then: {
 			use: group:length() - 1;
 		});
 		local Member is cand: group:get(index: use);
@@ -940,19 +940,19 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
 	Function of Boolean is importsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		Conditional:branch(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
 			return false;
 		});
 		local ClassInfo is cls: self:findClass(name: clsName);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
 		});
-		Conditional:branch(check: { cls:instanceImportsAs(name: targetName) }, then: {
+		Conditional:if(check: { cls:instanceImportsAs(name: targetName) }, then: {
 			return true;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { !viaParent && self:importsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:importsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1) }, then: {
 				viaParent: true;
 			});
 		});
@@ -979,27 +979,27 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @param acc: The provider accumulator.
 	Function is collectBareProviders(String is clsName, String is methodName, Int is hops, Array of String is acc){
-		Conditional:branch(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
 			return;
 		});
 		local ClassInfo is cls: self:findClass(name: clsName);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					Conditional:branch(check: { item:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
-							Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
 								local String is prov: seg:stringValue;
 								local Boolean is already: false;
 								acc:each(action: local Function(String is got){
-									Conditional:branch(check: { got == prov }, then: {
+									Conditional:if(check: { got == prov }, then: {
 										already: true;
 									});
 								});
-								Conditional:branch(check: { !already && self:findMemberOwnerClass(className: prov, memberName: methodName) != '' }, then: {
+								Conditional:if(check: { !already && self:findMemberOwnerClass(className: prov, memberName: methodName) != '' }, then: {
 									acc:add(item: prov);
 								});
 							});
@@ -1022,17 +1022,17 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when an ancestor declares the name.
 	Function of Boolean is ancestorDeclares(String is className, String is methodName, Int is hops){
-		Conditional:branch(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
 			return false;
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1047,26 +1047,26 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when declared here or inherited.
 	Function of Boolean is declaresOrInherits(String is className, String is methodName, Int is hops){
-		Conditional:branch(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
 			return false;
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
 		});
 		local Boolean is found: false;
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
+			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
 				found: true;
 			});
 		});
-		Conditional:branch(check: { found }, then: {
+		Conditional:if(check: { found }, then: {
 			return true;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1083,17 +1083,17 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when the inherited name is overloaded.
 	Function of Boolean is ancestorOverloaded(String is className, String is methodName, Int is hops){
-		Conditional:branch(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
 			return false;
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1108,29 +1108,29 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when the nearest declaration is overloaded.
 	Function of Boolean is nearestGroupOverloaded(String is className, String is methodName, Int is hops){
-		Conditional:branch(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
 			return false;
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
 		});
 		local Int is groupSize: 0;
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
+			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
 				groupSize: groupSize + 1;
 			});
 		});
-		Conditional:branch(check: { groupSize >= 2 }, then: {
+		Conditional:if(check: { groupSize >= 2 }, then: {
 			return true;
 		});
-		Conditional:branch(check: { groupSize == 1 }, then: {
+		Conditional:if(check: { groupSize == 1 }, then: {
 			return false;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1151,47 +1151,47 @@ Class is TypeChecker{
 				evaluate: local Function of Boolean(){ return i < members:length(); },
 				iteration: local Function of Boolean(){
 					local Member is m: members:get(index: i);
-					Conditional:branch(check: { m:kind == MemberKind:METHOD }, then: {
+					Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 						local Boolean is earlier: false;
 						local Int is j: 0;
 						While:condition(
 							evaluate: local Function of Boolean(){ return !earlier && j < i; },
 							iteration: local Function of Boolean(){
 								local Member is g: members:get(index: j);
-								Conditional:branch(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+								Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
 									earlier: true;
 								});
 								j: j + 1;
 								return true;
 							}
 						);
-						Conditional:branch(check: { !earlier }, then: {
+						Conditional:if(check: { !earlier }, then: {
 							local Int is groupSize: 0;
 							local Int is k: 0;
 							While:condition(
 								evaluate: local Function of Boolean(){ return k < members:length(); },
 								iteration: local Function of Boolean(){
 									local Member is g: members:get(index: k);
-									Conditional:branch(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+									Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
 										groupSize: groupSize + 1;
 									});
 									k: k + 1;
 									return true;
 								}
 							);
-							Conditional:branch(check: { groupSize >= 2 }, then: {
+							Conditional:if(check: { groupSize >= 2 }, then: {
 								local Int is a: 0;
 								While:condition(
 									evaluate: local Function of Boolean(){ return a < members:length(); },
 									iteration: local Function of Boolean(){
 										local Member is ma: members:get(index: a);
-										Conditional:branch(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
+										Conditional:if(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
 											local Int is b: a + 1;
 											While:condition(
 												evaluate: local Function of Boolean(){ return b < members:length(); },
 												iteration: local Function of Boolean(){
 													local Member is mb: members:get(index: b);
-													Conditional:branch(check: { mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, then: {
+													Conditional:if(check: { mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, then: {
 														self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (FUNCTIONS.md §I.1).');
 													});
 													b: b + 1;
@@ -1209,10 +1209,10 @@ Class is TypeChecker{
 									evaluate: local Function of Boolean(){ return !nonConcrete && p < members:length(); },
 									iteration: local Function of Boolean(){
 										local Member is g: members:get(index: p);
-										Conditional:branch(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+										Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
 											g:params:each(action: local Function(Parameter is pp){
 												local String is pt: pp:paramType:name;
-												Conditional:branch(check: { pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0 }, then: {
+												Conditional:if(check: { pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0 }, then: {
 													nonConcrete: true;
 												});
 											});
@@ -1221,10 +1221,10 @@ Class is TypeChecker{
 										return true;
 									}
 								);
-								Conditional:branch(check: { nonConcrete }, then: {
+								Conditional:if(check: { nonConcrete }, then: {
 									self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (FUNCTIONS.md §I.3).');
 								});
-								Conditional:branch(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name, hops: 0) }, then: {
+								Conditional:if(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name, hops: 0) }, then: {
 									self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (FUNCTIONS.md §I.3).');
 								});
 							});
@@ -1245,7 +1245,7 @@ Class is TypeChecker{
 	## @param b: Second member.
 	## @return: true when signatures are identical.
 	Function of Boolean is checkerSameSignature(Member is a, Member is b){
-		Conditional:branch(check: { a:params:length() != b:params:length() }, then: {
+		Conditional:if(check: { a:params:length() != b:params:length() }, then: {
 			return false;
 		});
 		local Boolean is same: true;
@@ -1255,7 +1255,7 @@ Class is TypeChecker{
 			iteration: local Function of Boolean(){
 				local Parameter is pa: a:params:get(index: idx);
 				local Parameter is pb: b:params:get(index: idx);
-				Conditional:branch(check: { pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType) }, then: {
+				Conditional:if(check: { pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType) }, then: {
 					same: false;
 				});
 				idx: idx + 1;
@@ -1275,7 +1275,7 @@ Class is TypeChecker{
 	## @param targetName: The referenced class name.
 	## @return: true when access is granted.
 	Function of Boolean is classHasAccess(String is className, String is targetName){
-		Conditional:branch(check: { targetName == '' || self:isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl' }, then: {
+		Conditional:if(check: { targetName == '' || self:isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl' }, then: {
 			return true;
 		});
 		return self:accessInClass(className: className, targetName: targetName, hops: 0);
@@ -1294,39 +1294,39 @@ Class is TypeChecker{
 		# snippets): its classes grant one another.
 		local Boolean is granted: false;
 		self:programClasses:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { !granted && c:sourceFile == sourceFile }, then: {
-				Conditional:branch(check: { c:name == targetName }, then: {
+			Conditional:if(check: { !granted && c:sourceFile == sourceFile }, then: {
+				Conditional:if(check: { c:name == targetName }, then: {
 					granted: true;
 					return;
 				});
 				c:members:each(action: local Function(Member is m){
-					Conditional:branch(check: { !granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { !granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 						m:initExpr:arrayItems:each(action: local Function(Expression is gi){
-							Conditional:branch(check: { gi:stringValue == targetName }, then: {
+							Conditional:if(check: { gi:stringValue == targetName }, then: {
 								granted: true;
 							});
 						});
 					});
-					Conditional:branch(check: { !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 						m:initExpr:arrayItems:each(action: local Function(Expression is item){
-							Conditional:branch(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
+							Conditional:if(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
 								local String is terminal: '';
 								local String is nsJoined: '';
 								item:arrayItems:each(action: local Function(Expression is seg){
-									Conditional:branch(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
+									Conditional:if(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
 										terminal: seg:stringValue;
-									}, otherwise: {
-										Conditional:branch(check: { nsJoined == '' }, then: {
+									}, else: {
+										Conditional:if(check: { nsJoined == '' }, then: {
 											nsJoined: seg:stringValue;
-										}, otherwise: {
+										}, else: {
 											nsJoined: nsJoined . ':' . seg:stringValue;
 										});
 									});
 								});
-								Conditional:branch(check: { terminal == targetName }, then: {
+								Conditional:if(check: { terminal == targetName }, then: {
 									granted: true;
 								});
-								Conditional:branch(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
+								Conditional:if(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
 									granted: true;
 								});
 							});
@@ -1345,69 +1345,69 @@ Class is TypeChecker{
 	## @param hops: Recursion budget guard.
 	## @return: true when access is granted at this level or above.
 	Function of Boolean is accessInClass(String is className, String is targetName, Int is hops){
-		Conditional:branch(check: { hops >= 64 || className == '' }, then: {
+		Conditional:if(check: { hops >= 64 || className == '' }, then: {
 			return false;
 		});
-		Conditional:branch(check: { className == targetName }, then: {
+		Conditional:if(check: { className == targetName }, then: {
 			return true;
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
 		});
 		local String is targetNs: '';
 		local ClassInfo is tgt: self:findClass(name: targetName);
-		Conditional:branch(check: { tgt:name != '' }, then: {
+		Conditional:if(check: { tgt:name != '' }, then: {
 			targetNs: tgt:namespaceJoined();
 		});
 		# The file's compilation unit: same-file classes are accessible, and
 		# every same-file class's using declaration grants (nested classes
 		# live under the outer class's using).
-		Conditional:branch(check: { self:fileGrants(sourceFile: cls:sourceFile, targetName: targetName, targetNs: targetNs) }, then: {
+		Conditional:if(check: { self:fileGrants(sourceFile: cls:sourceFile, targetName: targetName, targetNs: targetNs) }, then: {
 			return true;
 		});
 		local Boolean is granted: false;
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { !granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { !granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is gi){
-					Conditional:branch(check: { gi:stringValue == targetName }, then: {
+					Conditional:if(check: { gi:stringValue == targetName }, then: {
 						granted: true;
 					});
 				});
 			});
-			Conditional:branch(check: { !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					Conditional:branch(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
 						local String is terminal: '';
 						local String is nsJoined: '';
 						item:arrayItems:each(action: local Function(Expression is seg){
-							Conditional:branch(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
+							Conditional:if(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
 								terminal: seg:stringValue;
-							}, otherwise: {
-								Conditional:branch(check: { nsJoined == '' }, then: {
+							}, else: {
+								Conditional:if(check: { nsJoined == '' }, then: {
 									nsJoined: seg:stringValue;
-								}, otherwise: {
+								}, else: {
 									nsJoined: nsJoined . ':' . seg:stringValue;
 								});
 							});
 						});
-						Conditional:branch(check: { terminal == targetName }, then: {
+						Conditional:if(check: { terminal == targetName }, then: {
 							granted: true;
 						});
-						Conditional:branch(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
+						Conditional:if(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
 							granted: true;
 						});
 					});
 				});
 			});
 		});
-		Conditional:branch(check: { granted }, then: {
+		Conditional:if(check: { granted }, then: {
 			return true;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { !viaParent && self:accessInClass(className: baseName, targetName: targetName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:accessInClass(className: baseName, targetName: targetName, hops: hops + 1) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1420,10 +1420,10 @@ Class is TypeChecker{
 	## @param t: The declared type.
 	## @param line: The declaration's source line.
 	Function is validateTypeAccess(Type is t, Int is line){
-		Conditional:branch(check: { t:name == '' }, then: {
+		Conditional:if(check: { t:name == '' }, then: {
 			return;
 		});
-		Conditional:branch(check: { self:registeredClasses:has(key: t:name) && !self:classHasAccess(className: self:currentClassName, targetName: t:name) }, then: {
+		Conditional:if(check: { self:registeredClasses:has(key: t:name) && !self:classHasAccess(className: self:currentClassName, targetName: t:name) }, then: {
 			self:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration (FUNCTIONS.md §I.6).');
 		});
 		t:params:each(action: local Function(Type is p){
@@ -1441,44 +1441,44 @@ Class is TypeChecker{
 	## @param arms: The when arms.
 	## @param line: Source line for diagnostics.
 	Function is checkWhenExhaustive(String is subjectType, Array of WhenArm is arms, Int is line){
-		Conditional:branch(check: { subjectType == '' || !self:allEnumNames:has(key: subjectType) }, then: {
+		Conditional:if(check: { subjectType == '' || !self:allEnumNames:has(key: subjectType) }, then: {
 			return;
 		});
 		local Map of String to String is covered: Map:init();
 		local Boolean is hasElse: false;
 		arms:each(action: local Function(WhenArm is arm){
-			Conditional:branch(check: { arm:isElse }, then: {
+			Conditional:if(check: { arm:isElse }, then: {
 				hasElse: true;
 			});
 			arm:conditions:each(action: local Function(Expression is c){
 				local String is variantName: '';
-				Conditional:branch(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: '') == subjectType }, then: {
+				Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: '') == subjectType }, then: {
 					variantName: c:methodName;
-				}, otherwise: {
-					Conditional:branch(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:stringValue) && self:allEnumVariants:getString(key: c:stringValue, default: '') == subjectType }, then: {
+				}, else: {
+					Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:stringValue) && self:allEnumVariants:getString(key: c:stringValue, default: '') == subjectType }, then: {
 						variantName: c:stringValue;
-					}, otherwise: {
-						Conditional:branch(check: { c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1)) }, then: {
+					}, else: {
+						Conditional:if(check: { c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1)) }, then: {
 							variantName: c:pathSegments:get(index: 1);
 						});
 					});
 				});
-				Conditional:branch(check: { variantName != '' }, then: {
+				Conditional:if(check: { variantName != '' }, then: {
 					covered:set(key: variantName, value: 'true');
 				});
 			});
 		});
-		Conditional:branch(check: { hasElse }, then: {
+		Conditional:if(check: { hasElse }, then: {
 			return;
 		});
 		local ClassInfo is enumCls: self:findClass(name: subjectType);
 		local Array of String is missing: [];
 		enumCls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { !covered:has(key: m:name) }, then: {
+			Conditional:if(check: { !covered:has(key: m:name) }, then: {
 				missing:add(item: m:name);
 			});
 		});
-		Conditional:branch(check: { missing:length() > 0 }, then: {
+		Conditional:if(check: { missing:length() > 0 }, then: {
 			local String is msg: 'Non-exhaustive \'when\': enum \'' . subjectType . '\' variant(s) not covered (e.g. \'' . missing:get(index: 0) . '\'). Add matching arm(s) or an \'else:\' fallback.';
 			self:addError(line: line, msg: msg);
 		});
@@ -1491,14 +1491,14 @@ Class is TypeChecker{
 	## @param arm: The when arm.
 	Function is bindWhenPatternVars(WhenArm is arm){
 		arm:conditions:each(action: local Function(Expression is c){
-			Conditional:branch(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) }, then: {
+			Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) }, then: {
 				local String is enumName: self:allEnumVariants:getString(key: c:methodName, default: '');
 				local Member is vMem: self:lookupEnumVariant(enumName: enumName, variantName: c:methodName);
 				local Int is idx: 0;
 				c:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:branch(check: { idx < vMem:params:length() }, then: {
+					Conditional:if(check: { idx < vMem:params:length() }, then: {
 						local Expression is av: arg:value;
-						Conditional:branch(check: { av:kind == ExpressionKind:IDENT }, then: {
+						Conditional:if(check: { av:kind == ExpressionKind:IDENT }, then: {
 							local Parameter is pDef: vMem:params:get(index: idx);
 							self:localVars:set(key: av:stringValue, value: self:formatVarTypeString(t: pDef:paramType));
 						});
@@ -1506,7 +1506,7 @@ Class is TypeChecker{
 					idx: idx + 1;
 				});
 				c:resolvedType: enumName;
-			}, otherwise: {
+			}, else: {
 				self:inferExpressionType(expr: c);
 			});
 		});
@@ -1522,66 +1522,66 @@ Class is TypeChecker{
 	## @param expr: The CALL expression.
 	Function is bindContainerCallbackParams(String is targetType, String is method, Expression is expr){
 		local String is cbElem: Primitive:ANY:value();
-		Conditional:branch(check: { targetType:startsWith(prefix: 'Array of ') && targetType:length() > 9 }, then: {
+		Conditional:if(check: { targetType:startsWith(prefix: 'Array of ') && targetType:length() > 9 }, then: {
 			cbElem: targetType:substring(start: 9, end: targetType:length());
-		}, otherwise: {
-			Conditional:branch(check: { targetType:startsWith(prefix: 'Array:') && targetType:length() > 6 }, then: {
+		}, else: {
+			Conditional:if(check: { targetType:startsWith(prefix: 'Array:') && targetType:length() > 6 }, then: {
 				cbElem: targetType:substring(start: 6, end: targetType:length());
 			});
 		});
-		Conditional:branch(check: { cbElem != Primitive:ANY:value() }, then: {
+		Conditional:if(check: { cbElem != Primitive:ANY:value() }, then: {
 			local String is elemTypeName: cbElem;
-			Conditional:branch(check: { method == 'fold' && expr:methodArgs:length() >= 2 }, then: {
+			Conditional:if(check: { method == 'fold' && expr:methodArgs:length() >= 2 }, then: {
 				local NamedArg is a0: expr:methodArgs:get(index: 0);
 				local String is initType: self:inferExpressionType(expr: a0:value);
 				local NamedArg is a1: expr:methodArgs:get(index: 1);
 				local Expression is av: a1:value;
-				Conditional:branch(check: { av:kind == ExpressionKind:ANON_FN }, then: {
-					Conditional:branch(check: { av:anonParams:length() >= 1 }, then: {
+				Conditional:if(check: { av:kind == ExpressionKind:ANON_FN }, then: {
+					Conditional:if(check: { av:anonParams:length() >= 1 }, then: {
 						local Parameter is p0: av:anonParams:get(index: 0);
-						Conditional:branch(check: { p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, then: {
+						Conditional:if(check: { p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, then: {
 							p0:paramType: Type:init(name: initType);
 						});
 					});
-					Conditional:branch(check: { av:anonParams:length() >= 2 }, then: {
+					Conditional:if(check: { av:anonParams:length() >= 2 }, then: {
 						local Parameter is p1: av:anonParams:get(index: 1);
-						Conditional:branch(check: { p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, then: {
+						Conditional:if(check: { p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, then: {
 							p1:paramType: Type:init(name: elemTypeName);
 						});
 					});
 				});
-			}, otherwise: {
+			}, else: {
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					local Expression is av: arg:value;
-					Conditional:branch(check: { av:kind == ExpressionKind:ANON_FN }, then: {
+					Conditional:if(check: { av:kind == ExpressionKind:ANON_FN }, then: {
 						av:anonParams:each(action: local Function(Parameter is p){
-							Conditional:branch(check: { p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, then: {
+							Conditional:if(check: { p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, then: {
 								p:paramType: Type:init(name: elemTypeName);
 							});
 						});
 					});
 				});
 			});
-		}, otherwise: {
-			Conditional:branch(check: { targetType:startsWith(prefix: 'Map:') && method == 'each' }, then: {
+		}, else: {
+			Conditional:if(check: { targetType:startsWith(prefix: 'Map:') && method == 'each' }, then: {
 				local String is afterMap: targetType:substring(start: 4, end: targetType:length());
 				local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
 				local String is valTypeName: Primitive:STRING:value();
-				Conditional:branch(check: { colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, then: {
+				Conditional:if(check: { colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, then: {
 					valTypeName: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 				});
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					local Expression is av: arg:value;
-					Conditional:branch(check: { av:kind == ExpressionKind:ANON_FN }, then: {
-						Conditional:branch(check: { av:anonParams:length() >= 1 }, then: {
+					Conditional:if(check: { av:kind == ExpressionKind:ANON_FN }, then: {
+						Conditional:if(check: { av:anonParams:length() >= 1 }, then: {
 							local Parameter is p0: av:anonParams:get(index: 0);
-							Conditional:branch(check: { p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, then: {
+							Conditional:if(check: { p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, then: {
 								p0:paramType: Type:init(name: 'String');
 							});
 						});
-						Conditional:branch(check: { av:anonParams:length() >= 2 }, then: {
+						Conditional:if(check: { av:anonParams:length() >= 2 }, then: {
 							local Parameter is p1: av:anonParams:get(index: 1);
-							Conditional:branch(check: { p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, then: {
+							Conditional:if(check: { p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, then: {
 								p1:paramType: Type:init(name: valTypeName);
 							});
 						});
@@ -1619,7 +1619,7 @@ Class is TypeChecker{
 		local ExpressionKind is kind: expr:kind;
 		local String is res: 'Any';
 
-		Conditional:branch(check: { kind == ExpressionKind:USING_AS }, then: {
+		Conditional:if(check: { kind == ExpressionKind:USING_AS }, then: {
 			self:addError(line: self:currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (INSTANCE.md E1).');
 			expr:resolvedType: '';
 			return '';
@@ -1640,32 +1640,32 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:IDENT: {
 				local String is name: expr:stringValue;
-				Conditional:branch(check: { name == self:names:selfIdent() }, then: {
+				Conditional:if(check: { name == self:names:selfIdent() }, then: {
 					res: self:currentClassName;
-				}, otherwise: {
-					Conditional:branch(check: { self:localVars:has(key: name) }, then: {
+				}, else: {
+					Conditional:if(check: { self:localVars:has(key: name) }, then: {
 						res: self:localVars:getString(key: name, default: Primitive:ANY:value());
-					}, otherwise: {
-						Conditional:branch(check: { self:fieldTypes:has(key: name) }, then: {
-							Conditional:branch(check: { self:unassignedFields:has(key: name) }, then: {
+					}, else: {
+						Conditional:if(check: { self:fieldTypes:has(key: name) }, then: {
+							Conditional:if(check: { self:unassignedFields:has(key: name) }, then: {
 								self:addError(line: self:currentLine, msg: 'Field \'' . name . '\' in class \'' . self:currentClassName . '\' is read before being initialized.');
 							});
 							local String is owner: self:findMemberOwnerClass(className: self:currentClassName, memberName: name);
-							Conditional:branch(check: { owner != '' }, then: {
+							Conditional:if(check: { owner != '' }, then: {
 								self:checkMemberVisibility(ownerClass: owner, member: self:findAncestorMember(className: self:currentClassName, memberName: name), memberName: name);
 							});
 							res: self:fieldTypes:getString(key: name, default: Primitive:ANY:value());
-						}, otherwise: {
-							Conditional:branch(check: { self:allEnumVariants:has(key: name) }, then: {
+						}, else: {
+							Conditional:if(check: { self:allEnumVariants:has(key: name) }, then: {
 								res: self:allEnumVariants:getString(key: name, default: Primitive:ANY:value());
-							}, otherwise: {
-								Conditional:branch(check: { self:registeredClasses:has(key: name) }, then: {
+							}, else: {
+								Conditional:if(check: { self:registeredClasses:has(key: name) }, then: {
 									res: name;
-								}, otherwise: {
-									Conditional:branch(check: { self:isPrimitive(t: name) }, then: {
+								}, else: {
+									Conditional:if(check: { self:isPrimitive(t: name) }, then: {
 										res: name;
-									}, otherwise: {
-										Conditional:branch(check: { name != '' }, then: {
+									}, else: {
+										Conditional:if(check: { name != '' }, then: {
 											self:addError(line: self:currentLine, msg: 'Undefined identifier \'' . name . '\'.');
 										});
 									});
@@ -1677,41 +1677,41 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:PATH: {
 				local Array of String is segs: expr:pathSegments;
-				Conditional:branch(check: { segs:length() > 0 }, then: {
+				Conditional:if(check: { segs:length() > 0 }, then: {
 					local String is root: segs:get(index: 0);
 					local String is rootType: '';
-					Conditional:branch(check: { root == self:names:selfIdent() }, then: {
+					Conditional:if(check: { root == self:names:selfIdent() }, then: {
 						rootType: self:currentClassName;
-						Conditional:branch(check: { segs:length() >= 2 && self:unassignedFields:has(key: segs:get(index: 1)) }, then: {
+						Conditional:if(check: { segs:length() >= 2 && self:unassignedFields:has(key: segs:get(index: 1)) }, then: {
 							self:addError(line: self:currentLine, msg: 'Field \'' . segs:get(index: 1) . '\' in class \'' . self:currentClassName . '\' is read before being initialized.');
 						});
-						Conditional:branch(check: { segs:length() >= 2 }, then: {
+						Conditional:if(check: { segs:length() >= 2 }, then: {
 							local String is fName: segs:get(index: 1);
 							local String is fOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: fName);
-							Conditional:branch(check: { fOwner != '' }, then: {
+							Conditional:if(check: { fOwner != '' }, then: {
 								self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: self:currentClassName, memberName: fName), memberName: fName);
 							});
 						});
-					}, otherwise: {
-						Conditional:branch(check: { self:localVars:has(key: root) }, then: {
+					}, else: {
+						Conditional:if(check: { self:localVars:has(key: root) }, then: {
 							rootType: self:localVars:getString(key: root, default: '');
-						}, otherwise: {
-							Conditional:branch(check: { self:fieldTypes:has(key: root) }, then: {
-								Conditional:branch(check: { self:unassignedFields:has(key: root) }, then: {
+						}, else: {
+							Conditional:if(check: { self:fieldTypes:has(key: root) }, then: {
+								Conditional:if(check: { self:unassignedFields:has(key: root) }, then: {
 									self:addError(line: self:currentLine, msg: 'Field \'' . root . '\' in class \'' . self:currentClassName . '\' is read before being initialized.');
 								});
 								rootType: self:fieldTypes:getString(key: root, default: '');
-							}, otherwise: {
-								Conditional:branch(check: { self:allEnumNames:has(key: root) }, then: {
+							}, else: {
+								Conditional:if(check: { self:allEnumNames:has(key: root) }, then: {
 									rootType: root;
-								}, otherwise: {
-									Conditional:branch(check: { self:registeredClasses:has(key: root) }, then: {
+								}, else: {
+									Conditional:if(check: { self:registeredClasses:has(key: root) }, then: {
 										rootType: root;
 										# INSTANCE.md §2.3: fields and values are not reachable
 										# through a class-name prefix — methods only. A PATH
 										# rooted at a non-type-level class name with further
 										# segments is a prefixed field access: rejected.
-										Conditional:branch(check: { segs:length() >= 2 && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
+										Conditional:if(check: { segs:length() >= 2 && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
 											self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; call a method on the instance (INSTANCE.md §2.3).');
 											rootType: '';
 										});
@@ -1722,7 +1722,7 @@ Class is TypeChecker{
 					});
 					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType);
 					While:run(loop: pLoop);
-					Conditional:branch(check: { pLoop:currType != '' }, then: {
+					Conditional:if(check: { pLoop:currType != '' }, then: {
 						res: pLoop:currType;
 					});
 				});
@@ -1745,7 +1745,7 @@ Class is TypeChecker{
 						local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
 						local Boolean is leftStr: leftT == 'String';
 						local Boolean is rightStr: rightT == 'String';
-						Conditional:branch(check: { isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, then: {
+						Conditional:if(check: { isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, then: {
 							self:addError(line: self:currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
 						});
 					}
@@ -1753,11 +1753,11 @@ Class is TypeChecker{
 						res: Primitive:BOOLEAN:value();
 					}
 					is '+', '-', '*', '/', '%': {
-						res: Conditional:branch(check: { leftT == 'Float' || rightT == 'Float' }, then: { 'Float' }, otherwise: { Primitive:INT:value() });
+						res: Conditional:if(check: { leftT == 'Float' || rightT == 'Float' }, then: { 'Float' }, else: { Primitive:INT:value() });
 					}
 					is '&', '|', '^', '<<', '>>': {
 						res: Primitive:INT:value();
-						Conditional:branch(check: { (leftT != '' && leftT != 'Any' && leftT != Primitive:INT:value()) ||
+						Conditional:if(check: { (leftT != '' && leftT != 'Any' && leftT != Primitive:INT:value()) ||
 							(rightT != '' && rightT != 'Any' && rightT != Primitive:INT:value()) }, then: {
 							local String is msg: 'Bitwise operator \'' . op . '\' requires Int operands (got \'' . leftT . '\' and \'' . rightT . '\').';
 							self:addError(line: self:currentLine, msg: msg);
@@ -1771,33 +1771,33 @@ Class is TypeChecker{
 			is ExpressionKind:CAST: {
 				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
 				local String is target: expr:castTarget;
-				local String is src: Conditional:branch(check: { innerT != '' }, then: { innerT }, otherwise: { Primitive:ANY:value() });
+				local String is src: Conditional:if(check: { innerT != '' }, then: { innerT }, else: { Primitive:ANY:value() });
 				local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
 				# Every non-format cast takes no arguments.
-				Conditional:branch(check: { expr:castArgs:length() > 0 && !isFormat }, then: {
+				Conditional:if(check: { expr:castArgs:length() > 0 && !isFormat }, then: {
 					self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
 				});
 				when (target) {
 					is 'Hex', 'Bin', 'Oct': {
-						Conditional:branch(check: { expr:castArgs:length() > 1 }, then: {
+						Conditional:if(check: { expr:castArgs:length() > 1 }, then: {
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
 						});
-						Conditional:branch(check: { src != 'Any' && src != 'String' && src != Primitive:INT:value() }, then: {
+						Conditional:if(check: { src != 'Any' && src != 'String' && src != Primitive:INT:value() }, then: {
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
 						});
-						res: Conditional:branch(check: { src == 'String' }, then: { Primitive:INT:value() }, otherwise: { 'String' });
+						res: Conditional:if(check: { src == 'String' }, then: { Primitive:INT:value() }, else: { 'String' });
 					}
 					else: {
-						Conditional:branch(check: { self:allEnumNames:has(key: target) }, then: {
+						Conditional:if(check: { self:allEnumNames:has(key: target) }, then: {
 							self:addError(line: self:currentLine, msg: 'Cannot cast to enum \'' . target . '\'; construct a variant instead.');
 							res: target;
-						}, otherwise: {
-							Conditional:branch(check: { self:castableMethod(srcType: src, target: target) != '' }, then: {
+						}, else: {
+							Conditional:if(check: { self:castableMethod(srcType: src, target: target) != '' }, then: {
 								# Declared cast: the source class maps the target to a
 								# producing method (G6 emits the call).
 								res: target;
-							}, otherwise: {
-								Conditional:branch(check: { self:isPrimitive(t: target) && target != Primitive:ANY:value() }, then: {
+							}, else: {
+								Conditional:if(check: { self:isPrimitive(t: target) && target != Primitive:ANY:value() }, then: {
 									# Primitive conversion casts take priority over the
 									# class-cast path: Int as String is the machine
 									# conversion even though a String class is loaded.
@@ -1805,20 +1805,20 @@ Class is TypeChecker{
 									# target, always related. These die when the
 									# primitive classes land in Spec and declare their
 									# conversions.
-									Conditional:branch(check: { !self:isCastable(src: src, target: target) }, then: {
+									Conditional:if(check: { !self:isCastable(src: src, target: target) }, then: {
 										self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to \'' . target . '\'.');
 									});
 									res: target;
-								}, otherwise: {
-									Conditional:branch(check: { self:registeredClasses:has(key: target) || self:registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0)) }, then: {
+								}, else: {
+									Conditional:if(check: { self:registeredClasses:has(key: target) || self:registeredClasses:has(key: target:split(delimiter: ':'):get(index: 0)) }, then: {
 										# Class casts are inheritance-based: unrelated classes
 										# cannot cast, Any casts to anything.
 										local Boolean is related: src == Primitive:ANY:value() || self:isSubclassOf(subName: src, baseName: target) || self:isSubclassOf(subName: target, baseName: src);
-										Conditional:branch(check: { !related }, then: {
+										Conditional:if(check: { !related }, then: {
 											self:addError(line: self:currentLine, msg: 'Cannot cast \'' . src . '\' to unrelated class \'' . target . '\'.');
 										});
 										res: target;
-									}, otherwise: {
+									}, else: {
 										self:addError(line: self:currentLine, msg: 'Unknown cast target \'' . target . '\'.');
 										res: 'Any';
 									});
@@ -1830,17 +1830,17 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:UNARY: {
 				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
-				Conditional:branch(check: { expr:unaryOp == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
+				Conditional:if(check: { expr:unaryOp == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
 					local String is msg: 'Bitwise complement \'~\' requires an Int operand (got \'' . innerT . '\').';
 					self:addError(line: self:currentLine, msg: msg);
 				});
-				Conditional:branch(check: { (expr:unaryOp == '++' || expr:unaryOp == '--' || expr:unaryOp == 'post++' || expr:unaryOp == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
+				Conditional:if(check: { (expr:unaryOp == '++' || expr:unaryOp == '--' || expr:unaryOp == 'post++' || expr:unaryOp == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
 					local String is msg: 'Operator \'' . expr:unaryOp . '\' requires an Int operand (got \'' . innerT . '\').';
 					self:addError(line: self:currentLine, msg: msg);
 				});
-				Conditional:branch(check: { expr:unaryOp == '!' }, then: {
+				Conditional:if(check: { expr:unaryOp == '!' }, then: {
 					res: Primitive:BOOLEAN:value();
-				}, otherwise: {
+				}, else: {
 					res: innerT;
 				});
 			}
@@ -1849,56 +1849,56 @@ Class is TypeChecker{
 				# site types the literal directly — no hint state. The
 				# elements must still be assignable to the declared element
 				# type ('Array of Int is flags: ['on']' is a compile error).
-				Conditional:branch(check: { expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List')) }, then: {
+				Conditional:if(check: { expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List')) }, then: {
 					local String is elemT: '';
 					local Int is eColon: expected:indexOf(search: ':', default: -1);
 					local Int is eOf: expected:indexOf(search: ' of ', default: -1);
-					Conditional:branch(check: { eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, then: {
+					Conditional:if(check: { eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, then: {
 						elemT: expected:substring(start: eColon + 1, end: expected:length());
-					}, otherwise: {
-						Conditional:branch(check: { eOf >= 0 }, then: {
+					}, else: {
+						Conditional:if(check: { eOf >= 0 }, then: {
 							elemT: expected:substring(start: eOf + 4, end: expected:length());
 						});
 					});
 					expr:arrayItems:each(action: local Function(Expression is item){
 						local String is itemT: self:inferExpressionType(expr: item);
-						Conditional:branch(check: { elemT != '' && itemT != '' && itemT != Primitive:ANY:value() && !self:isAssignable(target: elemT, source: itemT) }, then: {
+						Conditional:if(check: { elemT != '' && itemT != '' && itemT != Primitive:ANY:value() && !self:isAssignable(target: elemT, source: itemT) }, then: {
 							self:addError(line: self:currentLine, msg: "Cannot assign 'Array:" . itemT . "' to 'Array:" . elemT . "'.");
 						});
 					});
 					res: expected;
-				}, otherwise: {
+				}, else: {
 					local String is firstElemType: '';
 					expr:arrayItems:each(action: local Function(Expression is item){
 						local String is itemT: self:inferExpressionType(expr: item);
-						Conditional:branch(check: { firstElemType == '' && itemT != '' && itemT != Primitive:ANY:value() }, then: {
+						Conditional:if(check: { firstElemType == '' && itemT != '' && itemT != Primitive:ANY:value() }, then: {
 							firstElemType: itemT;
 						});
 					});
-					Conditional:branch(check: { firstElemType != '' }, then: {
+					Conditional:if(check: { firstElemType != '' }, then: {
 						res: 'Array:' . firstElemType;
-					}, otherwise: {
+					}, else: {
 						res: 'Array';
 					});
 				});
 			}
 			is ExpressionKind:MAP: {
-				Conditional:branch(check: { expected != '' && expected:startsWith(prefix: 'Map') }, then: {
+				Conditional:if(check: { expected != '' && expected:startsWith(prefix: 'Map') }, then: {
 					# Value type from the expectation ('Map of K to V' both
 					# spellings); values must be assignable to it.
 					local String is valT: '';
 					# Both spellings: 'Map of K to V' and the canonical
 					# colon form 'Map:K:V' (formatTypeString's output).
 					local Array of String is mParts: expected:split(delimiter: ':');
-					Conditional:branch(check: { mParts:length() > 2 }, then: {
+					Conditional:if(check: { mParts:length() > 2 }, then: {
 						valT: mParts:get(index: 2);
-					}, otherwise: {
+					}, else: {
 						local String is kv: expected:substring(start: 4, end: expected:length());
-						Conditional:branch(check: { kv:startsWith(prefix: ' of ') }, then: {
+						Conditional:if(check: { kv:startsWith(prefix: ' of ') }, then: {
 							kv: kv:substring(start: 4, end: kv:length());
 						});
 						local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
-						Conditional:branch(check: { toIdx >= 0 }, then: {
+						Conditional:if(check: { toIdx >= 0 }, then: {
 							valT: kv:substring(start: toIdx + 4, end: kv:length());
 						});
 					});
@@ -1907,91 +1907,85 @@ Class is TypeChecker{
 					});
 					expr:mapValues:each(action: local Function(Expression is v){
 						local String is vT: self:inferExpressionType(expr: v);
-						Conditional:branch(check: { valT != '' && vT != '' && vT != Primitive:ANY:value() && !self:isAssignable(target: valT, source: vT) }, then: {
+						Conditional:if(check: { valT != '' && vT != '' && vT != Primitive:ANY:value() && !self:isAssignable(target: valT, source: vT) }, then: {
 							self:addError(line: self:currentLine, msg: "Cannot assign 'Map:String:" . vT . "' to 'Map:String:" . valT . "'.");
 						});
 					});
 					res: expected;
-				}, otherwise: {
+				}, else: {
 					local String is firstKeyType: '';
 					local String is firstValType: '';
 					expr:mapKeys:each(action: local Function(Expression is k){
 						local String is kt: self:inferExpressionType(expr: k);
-						Conditional:branch(check: { firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, then: {
+						Conditional:if(check: { firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, then: {
 							firstKeyType: kt;
 						});
 					});
 					expr:mapValues:each(action: local Function(Expression is v){
 						local String is vt: self:inferExpressionType(expr: v);
-						Conditional:branch(check: { firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, then: {
+						Conditional:if(check: { firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, then: {
 							firstValType: vt;
 						});
 					});
-					Conditional:branch(check: { firstKeyType != '' && firstValType != '' }, then: {
+					Conditional:if(check: { firstKeyType != '' && firstValType != '' }, then: {
 						res: 'Map:' . firstKeyType . ':' . firstValType;
-					}, otherwise: {
+					}, else: {
 						res: 'Map';
 					});
 				});
 			}
 			is ExpressionKind:FIELD_ACCESS: {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
-				Conditional:branch(check: { leftT == '' || leftT == 'Any' || self:isPrimitive(t: leftT) }, then: {
+				Conditional:if(check: { leftT == '' || leftT == 'Any' || self:isPrimitive(t: leftT) }, then: {
 					res: 'Any';
-				}, otherwise: {
+				}, else: {
 					local Array of String is faParts: leftT:split(delimiter: ':');
 					local String is faBase: faParts:get(index: 0);
 					local String is fName: expr:stringValue;
 					local String is fOwner: self:findMemberOwnerClass(className: faBase, memberName: fName);
-					Conditional:branch(check: { fOwner != '' }, then: {
+					Conditional:if(check: { fOwner != '' }, then: {
 						self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: faBase, memberName: fName), memberName: fName);
 					});
 					local String is fT: self:lookupFieldType(className: leftT, fieldName: fName);
-					res: Conditional:branch(check: { fT != '' }, then: { fT }, otherwise: { 'Any' });
+					res: Conditional:if(check: { fT != '' }, then: { fT }, else: { 'Any' });
 				});
 			}
 			is ExpressionKind:INDEX: {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
 				self:inferExpressionType(expr: expr:rightExpr);
 				# Element extraction accepts both container spellings.
-				Conditional:branch(check: { leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, then: {
+				Conditional:if(check: { leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, then: {
 					res: leftT:substring(start: 9, end: leftT:length());
-				}, otherwise: {
-					Conditional:branch(check: { leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, then: {
+				}, else: {
+					Conditional:if(check: { leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, then: {
 						res: leftT:substring(start: 6, end: leftT:length());
-					}, otherwise: {
-						Conditional:branch(check: { leftT:startsWith(prefix: 'Map:') && leftT:length() > 4 }, then: {
+					}, else: {
+						Conditional:if(check: { leftT:startsWith(prefix: 'Map:') && leftT:length() > 4 }, then: {
 							local String is afterMap: leftT:substring(start: 4, end: leftT:length());
 							local Int is colonIdx: afterMap:indexOf(search: ':', default: -1);
-							Conditional:branch(check: { colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, then: {
+							Conditional:if(check: { colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, then: {
 								res: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
-							}, otherwise: {
+							}, else: {
 								res: Primitive:STRING:value();
 							});
-						}, otherwise: {
-							Conditional:branch(check: { leftT == 'Map' }, then: {
+						}, else: {
+							Conditional:if(check: { leftT == 'Map' }, then: {
 								res: Primitive:STRING:value();
-							}, otherwise: {
+							}, else: {
 								res: 'Any';
 							});
 						});
 					});
 				});
 			}
-			is ExpressionKind:IF_ELSE: {
-				self:inferExpressionType(expr: expr:condExpr);
-				local String is thenT: self:inferExpressionType(expr: expr:thenExpr);
-				local String is elseT: self:inferExpressionType(expr: expr:elseExpr);
-				res: Conditional:branch(check: { thenT != '' && thenT != Primitive:ANY:value() }, then: { thenT }, otherwise: { elseT });
-			}
 			is ExpressionKind:WHEN: {
 				local String is subjectType: self:inferExpressionType(expr: expr:whenSubject);
 				local String is armType: 'Any';
 				expr:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
-					Conditional:branch(check: { arm:hasValueExpr }, then: {
+					Conditional:if(check: { arm:hasValueExpr }, then: {
 						local String is vt: self:inferExpressionType(expr: arm:valueExpr);
-						Conditional:branch(check: { armType == Primitive:ANY:value() && vt != '' && vt != Primitive:ANY:value() }, then: {
+						Conditional:if(check: { armType == Primitive:ANY:value() && vt != '' && vt != Primitive:ANY:value() }, then: {
 							armType: vt;
 						});
 					});
@@ -2011,8 +2005,13 @@ Class is TypeChecker{
 				local String is savedRet: self:currentMethodReturnType;
 				local Expression is savedAnonNode: self:currentAnonNode;
 				self:currentAnonNode: expr;
+				# FUNCTIONS.md Part II: the yield flag scopes to THIS closure —
+				# the enclosing closure's last-statement check must not leak
+				# into nested closures' return typing.
+				local Boolean is savedYieldFlag: self:checkingValueYield;
+				self:checkingValueYield: false;
 
-				Conditional:branch(check: { !self:inBranchClosure }, then: {
+				Conditional:if(check: { !self:inBranchClosure }, then: {
 					self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
 				});
 				expr:anonParams:each(action: local Function(Parameter is p){
@@ -2024,7 +2023,7 @@ Class is TypeChecker{
 					self:anonDepth: self:anonDepth + 1;
 					# FUNCTIONS.md Part II: the last statement of a
 					# value-yielding branch closure is the branch's yield.
-					Conditional:branch(check: { self:inValueBranch && bodyIdx == bodyLen - 1 }, then: {
+					Conditional:if(check: { self:inValueBranch && bodyIdx == bodyLen - 1 }, then: {
 						self:checkingValueYield: true;
 					});
 					self:checkStatement(stmt: s);
@@ -2042,16 +2041,16 @@ Class is TypeChecker{
 				# the type the body check already resolved — never
 				# re-inferring.
 				local Int is lastIdx: expr:anonBody:length() - 1;
-				Conditional:branch(check: { lastIdx >= 0 }, then: {
+				Conditional:if(check: { lastIdx >= 0 }, then: {
 					local Statement is lastStmt: expr:anonBody:get(index: lastIdx);
-					Conditional:branch(check: { lastStmt:kind == StatementKind:EXPR }, then: {
+					Conditional:if(check: { lastStmt:kind == StatementKind:EXPR }, then: {
 						local String is lastT: lastStmt:exprStmt:resolvedType;
-						Conditional:branch(check: { self:isVoid(t: expr:anonReturnType:name) }, then: {
-							Conditional:branch(check: { lastT != '' && !self:isVoid(t: lastT) }, then: {
+						Conditional:if(check: { self:isVoid(t: expr:anonReturnType:name) }, then: {
+							Conditional:if(check: { lastT != '' && !self:isVoid(t: lastT) }, then: {
 								expr:anonReturnType: Type:init(name: lastT);
 							});
-						}, otherwise: {
-							Conditional:branch(check: { lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, then: {
+						}, else: {
+							Conditional:if(check: { lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, then: {
 								local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\' (FUNCTIONS.md Part II).';
 								self:addError(line: self:currentLine, msg: msg);
 							});
@@ -2059,10 +2058,11 @@ Class is TypeChecker{
 					});
 				});
 				self:currentAnonNode: savedAnonNode;
+				self:checkingValueYield: savedYieldFlag;
 				local String is anonRetName: expr:anonReturnType:name;
-				Conditional:branch(check: { anonRetName != '' && !self:isVoid(t: anonRetName) }, then: {
+				Conditional:if(check: { anonRetName != '' && !self:isVoid(t: anonRetName) }, then: {
 					res: 'Function:' . self:formatTypeString(t: expr:anonReturnType);
-				}, otherwise: {
+				}, else: {
 					res: 'Function';
 				});
 			}
@@ -2074,7 +2074,7 @@ Class is TypeChecker{
 			}
 		}
 
-		Conditional:branch(check: { kind == ExpressionKind:CALL }, then: {
+		Conditional:if(check: { kind == ExpressionKind:CALL }, then: {
 			self:checkCallArguments(callExpr: expr);
 		});
 
@@ -2096,7 +2096,7 @@ Class is TypeChecker{
 		local String is res: 'Any';
 
 		local String is targetName: expr:methodTarget:stringValue;
-		Conditional:branch(check: { targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, then: {
+		Conditional:if(check: { targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, then: {
 			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
 		});
 
@@ -2106,25 +2106,25 @@ Class is TypeChecker{
 		# primitives, containers, transparent runtime types). Conversely,
 		# init on a non-class receiver is construct-only and banned.
 		local String is recvName: '';
-		Conditional:branch(check: { expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH }, then: {
+		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH }, then: {
 			local String is cand: targetName;
-			Conditional:branch(check: { cand != '' && cand != self:names:selfIdent() && self:registeredClasses:has(key: cand) && !self:localVars:has(key: cand) && !self:fieldTypes:has(key: cand) }, then: {
+			Conditional:if(check: { cand != '' && cand != self:names:selfIdent() && self:registeredClasses:has(key: cand) && !self:localVars:has(key: cand) && !self:fieldTypes:has(key: cand) }, then: {
 				recvName: cand;
 			});
 		});
-		Conditional:branch(check: { recvName != '' && expr:methodName != 'init' }, then: {
+		Conditional:if(check: { recvName != '' && expr:methodName != 'init' }, then: {
 			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl';
-			Conditional:branch(check: { !isTypeLevel }, then: {
-				Conditional:branch(check: { !self:isAsImportedInherited(className: recvName) }, then: {
-					Conditional:branch(check: { recvName == self:currentClassName }, then: {
+			Conditional:if(check: { !isTypeLevel }, then: {
+				Conditional:if(check: { !self:isAsImportedInherited(className: recvName) }, then: {
+					Conditional:if(check: { recvName == self:currentClassName }, then: {
 						self:addError(line: self:currentLine, msg: 'Cannot call members of \'' . recvName . '\' through the class name inside \'' . recvName . '\' itself; use self (INSTANCE.md §2.2).');
-					}, otherwise: {
+					}, else: {
 						self:addError(line: self:currentLine, msg: 'Members of \'' . recvName . '\' are callable only through an instance; instance-import it (\'as ' . recvName . '()\') (FUNCTIONS.md §I.6).');
 					});
 				});
 			});
 		});
-		Conditional:branch(check: { recvName == '' && expr:methodName == 'init' }, then: {
+		Conditional:if(check: { recvName == '' && expr:methodName == 'init' }, then: {
 			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (INSTANCE.md E7).');
 		});
 
@@ -2134,19 +2134,19 @@ Class is TypeChecker{
 		# one provider resolves; two or more collide and force
 		# qualification; zero is an error — the old behavior silently
 		# invented CurrentClass_method and died in gcc.
-		Conditional:branch(check: { recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:localVars:has(key: expr:methodName) && !self:fieldTypes:has(key: expr:methodName) }, then: {
+		Conditional:if(check: { recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:localVars:has(key: expr:methodName) && !self:fieldTypes:has(key: expr:methodName) }, then: {
 			local String is ownOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: expr:methodName);
 			local Array of String is bsProviders: self:bareScopeProviders(methodName: expr:methodName);
-			local Int is providerTotal: bsProviders:length() + (if (ownOwner != '') 1 else 0);
-			Conditional:branch(check: { providerTotal > 1 }, then: {
+			local Int is providerTotal: bsProviders:length() + Conditional:if(check: { ownOwner != '' }, then: { 1 }, else: { 0 });
+			Conditional:if(check: { providerTotal > 1 }, then: {
 				local String is listed: '';
-				Conditional:branch(check: { ownOwner != '' }, then: {
+				Conditional:if(check: { ownOwner != '' }, then: {
 					listed: 'the enclosing class';
 				});
 				bsProviders:each(action: local Function(String is prov){
-					Conditional:branch(check: { listed == '' }, then: {
+					Conditional:if(check: { listed == '' }, then: {
 						listed: prov;
-					}, otherwise: {
+					}, else: {
 						listed: listed . ' and ' . prov;
 					});
 				});
@@ -2154,12 +2154,12 @@ Class is TypeChecker{
 				expr:resolvedType: '';
 				return '';
 			});
-			Conditional:branch(check: { providerTotal == 0 }, then: {
+			Conditional:if(check: { providerTotal == 0 }, then: {
 				self:addError(line: self:currentLine, msg: 'Undefined function \'' . expr:methodName . '\' on class \'' . self:currentClassName . '\' (INSTANCE.md E9).');
 				expr:resolvedType: '';
 				return '';
 			});
-			Conditional:branch(check: { ownOwner == '' }, then: {
+			Conditional:if(check: { ownOwner == '' }, then: {
 				local String is provider: bsProviders:get(index: 0);
 				# The bare-scope branch runs before arg inference: type the
 				# arguments now so overload selection sees exact types. Branch
@@ -2168,7 +2168,7 @@ Class is TypeChecker{
 				local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
 				local Int is bareIdx: 0;
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:branch(check: { bareIsBranch && bareIdx >= 1 }, then: {
+					Conditional:if(check: { bareIsBranch && bareIdx >= 1 }, then: {
 						self:inBranchClosure: true;
 					});
 					self:inferExpressionType(expr: arg:value);
@@ -2178,7 +2178,7 @@ Class is TypeChecker{
 				self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
 				expr:bareProvider: provider;
 				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
-				Conditional:branch(check: { providerRet == '' }, then: {
+				Conditional:if(check: { providerRet == '' }, then: {
 					providerRet: 'Any';
 				});
 				res: providerRet;
@@ -2191,18 +2191,37 @@ Class is TypeChecker{
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
-		local Boolean is isBranchCall: (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
+		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
 		# FUNCTIONS.md Part II: the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline
 		# literals; their last expressions are the yields.
 		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
+		# FUNCTIONS.md Part II: the value form is structural — BOTH branch
+		# closures must end in a return-expression (the yield). Closures that
+		# end in assignments are statement-style branches even in a
+		# value-typed context; they stay void-routed.
+		Conditional:if(check: { isValueBranch }, then: {
+			local Expression is tAnon: expr:argValue(index: 1);
+			local Expression is eAnon: expr:argValue(index: 2);
+			local Int is tLen: tAnon:anonBody:length();
+			local Int is eLen: eAnon:anonBody:length();
+			Conditional:if(check: { tLen == 0 || eLen == 0 }, then: {
+				isValueBranch: false;
+			}, else: {
+				local Statement is tLast: tAnon:anonBody:get(index: tLen - 1);
+				local Statement is eLast: eAnon:anonBody:get(index: eLen - 1);
+				Conditional:if(check: { !(tLast:kind == StatementKind:RETURN && tLast:hasReturnExpr) || !(eLast:kind == StatementKind:RETURN && eLast:hasReturnExpr) }, then: {
+					isValueBranch: false;
+				});
+			});
+		});
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
 		local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While') && (method == 'loop' || method == 'init' || method == 'condition');
 		local Map of String to String is savedWhileVars;
-		Conditional:branch(check: { isWhileLoop }, then: {
+		Conditional:if(check: { isWhileLoop }, then: {
 			savedWhileVars: Map:init();
 			local Array of String is existingKeys: self:localVars:keys();
 			existingKeys:each(action: local Function(String is k){
@@ -2210,22 +2229,22 @@ Class is TypeChecker{
 			});
 			local Int is posIdx: 0;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:branch(check: { arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, then: {
+				Conditional:if(check: { arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, then: {
 					arg:value:anonParams:each(action: local Function(Parameter is p){
-						Conditional:branch(check: { p:hasDefault }, then: {
+						Conditional:if(check: { p:hasDefault }, then: {
 							self:inferExpressionType(expr: p:defaultExpr);
 						});
 						self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 					});
 				});
-				Conditional:branch(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
-					Conditional:branch(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+				Conditional:if(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+					Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
 						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
 					});
-				}, otherwise: {
-					Conditional:branch(check: { arg:name == '' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
-						Conditional:branch(check: { posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2) }, then: {
-							Conditional:branch(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+				}, else: {
+					Conditional:if(check: { arg:name == '' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+						Conditional:if(check: { posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2) }, then: {
+							Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
 								arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
 							});
 						});
@@ -2237,15 +2256,18 @@ Class is TypeChecker{
 
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
 		expr:methodArgs:each(action: local Function(NamedArg is arg){
-			Conditional:branch(check: { isBranchCall && argIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, then: {
-				Conditional:branch(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+			Conditional:if(check: { isBranchCall && argIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+				Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
 					arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
 				});
 			});
-			Conditional:branch(check: { isBranchCall && argIdx >= 1 }, then: {
+			Conditional:if(check: { isBranchCall && argIdx >= 1 }, then: {
 				self:inBranchClosure: true;
 				self:inValueBranch: isValueBranch;
-				self:currentYieldExpected: (if (isValueBranch) expected else '');
+				self:currentYieldExpected: '';
+				Conditional:if(check: { isValueBranch }, then: {
+					self:currentYieldExpected: expected;
+				});
 			});
 			self:inferExpressionType(expr: arg:value);
 			self:inBranchClosure: false;
@@ -2254,32 +2276,32 @@ Class is TypeChecker{
 			argIdx: argIdx + 1;
 		});
 
-		Conditional:branch(check: { isWhileLoop }, then: {
+		Conditional:if(check: { isWhileLoop }, then: {
 			self:localVars: savedWhileVars;
 			expr:resolvedType: 'Void';
 			return 'Void';
 		});
 
-		Conditional:branch(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
+		Conditional:if(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
 			targetType: self:currentClassName;
 		});
 
 		# Sysinternal floor access by qualified chain: ONLY base:sys
 		# wrappers may call the floor — everyone else goes through the
 		# same-name wrapper (the sysinternal discipline).
-		Conditional:branch(check: { expr:methodTarget:kind == ExpressionKind:PATH }, then: {
+		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:PATH }, then: {
 			local String is qJoined: '';
 			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
-				Conditional:branch(check: { qJoined == '' }, then: {
+				Conditional:if(check: { qJoined == '' }, then: {
 					qJoined: seg;
-				}, otherwise: {
+				}, else: {
 					qJoined: qJoined . ':' . seg;
 				});
 			});
-			Conditional:branch(check: { qJoined:contains(needle: ':sysinternal:') }, then: {
+			Conditional:if(check: { qJoined:contains(needle: ':sysinternal:') }, then: {
 				local ClassInfo is callerCls: self:findClass(name: self:currentClassName);
 				local String is callerNs: callerCls:namespaceJoined();
-				Conditional:branch(check: { callerNs != 'base:sys' }, then: {
+				Conditional:if(check: { callerNs != 'base:sys' }, then: {
 					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers; call the base:sys wrapper instead (call from \'' . callerNs . '\').');
 				});
 				res: self:lookupMethodReturnType(className: qJoined, methodName: method);
@@ -2290,19 +2312,19 @@ Class is TypeChecker{
 
 		# Namespace-qualified chains: `base:sysinternal:Buf()` and method
 		# calls on one — the chain's type is the named class.
-		Conditional:branch(check: { targetType == Primitive:ANY:value() || targetType == '' }, then: {
-			Conditional:branch(check: { expr:methodTarget:kind == ExpressionKind:PATH }, then: {
+		Conditional:if(check: { targetType == Primitive:ANY:value() || targetType == '' }, then: {
+			Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:PATH }, then: {
 				local ClassInfo is qCls: self:findClass(name: method);
-				Conditional:branch(check: { qCls:name == method }, then: {
+				Conditional:if(check: { qCls:name == method }, then: {
 					targetType: method;
 				});
-			}, otherwise: {
-				Conditional:branch(check: { expr:methodTarget:kind == ExpressionKind:CALL }, then: {
+			}, else: {
+				Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:CALL }, then: {
 					local Expression is qInner: expr:methodTarget;
-					Conditional:branch(check: { qInner:methodTarget:kind == ExpressionKind:PATH }, then: {
+					Conditional:if(check: { qInner:methodTarget:kind == ExpressionKind:PATH }, then: {
 						local String is qCand: qInner:methodName;
 						local ClassInfo is qCls: self:findClass(name: qCand);
-						Conditional:branch(check: { qCand != '' && qCls:name == qCand }, then: {
+						Conditional:if(check: { qCand != '' && qCls:name == qCand }, then: {
 							targetType: qCand;
 						});
 					});
@@ -2310,79 +2332,79 @@ Class is TypeChecker{
 			});
 		});
 
-		Conditional:branch(check: { !self:allEnumNames:has(key: targetType) && targetType != '' && targetType != 'Any' }, then: {
+		Conditional:if(check: { !self:allEnumNames:has(key: targetType) && targetType != '' && targetType != 'Any' }, then: {
 			local Array of String is cParts: targetType:split(delimiter: ':');
 			local String is cBase: cParts:get(index: 0);
 			local String is mOwner: self:findMemberOwnerClass(className: cBase, memberName: method);
-			Conditional:branch(check: { mOwner != '' }, then: {
+			Conditional:if(check: { mOwner != '' }, then: {
 				self:checkMemberVisibility(ownerClass: mOwner, member: self:lookupAnyMember(className: cBase, methodName: method), memberName: method);
 			});
 		});
-		Conditional:branch(check: { targetType == Primitive:ANY:value() && method != 'toString' && method != 'typeName' && method != 'init' }, then: {
+		Conditional:if(check: { targetType == Primitive:ANY:value() && method != 'toString' && method != 'typeName' && method != 'init' }, then: {
 			self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not part of the root contract; cast the Any-typed value to a concrete class before calling it (value as ClassName).');
 		});
 
 		local String is fnVarT: '';
-		Conditional:branch(check: { expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() }, then: {
+		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() }, then: {
 			fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ''));
 		});
-		Conditional:branch(check: { targetType == 'Parallel' && method == 'run' }, then: {
+		Conditional:if(check: { targetType == 'Parallel' && method == 'run' }, then: {
 			local Boolean is hasWorker: false;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				local String is aName: arg:name;
 				local String is aType: self:inferExpressionType(expr: arg:value);
-				Conditional:branch(check: { aName == 'threads' || aName == 'iterations' }, then: {
-					Conditional:branch(check: { aType != Primitive:INT:value() && aType != 'Any' }, then: {
+				Conditional:if(check: { aName == 'threads' || aName == 'iterations' }, then: {
+					Conditional:if(check: { aType != Primitive:INT:value() && aType != 'Any' }, then: {
 						self:addError(line: self:currentLine, msg: 'Parallel:run \'' . aName . '\' argument must be Int, found \'' . aType . '\'.');
 					});
-				}, otherwise: {
-					Conditional:branch(check: { aName == 'worker' }, then: {
+				}, else: {
+					Conditional:if(check: { aName == 'worker' }, then: {
 						hasWorker: true;
-						Conditional:branch(check: { !aType:startsWith(prefix: 'Function') && aType != 'Any' }, then: {
+						Conditional:if(check: { !aType:startsWith(prefix: 'Function') && aType != 'Any' }, then: {
 							self:addError(line: self:currentLine, msg: 'Parallel:run \'worker\' argument must be a Function, found \'' . aType . '\'.');
 						});
 					});
 				});
 			});
-			Conditional:branch(check: { !hasWorker }, then: {
+			Conditional:if(check: { !hasWorker }, then: {
 				self:addError(line: self:currentLine, msg: 'Parallel:run requires \'worker\' named argument.');
 			});
 			res: Primitive:INT:value();
-		}, otherwise: {
-			Conditional:branch(check: { fnVarT:startsWith(prefix: 'Function') }, then: {
-				Conditional:branch(check: { fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, then: {
+		}, else: {
+			Conditional:if(check: { fnVarT:startsWith(prefix: 'Function') }, then: {
+				Conditional:if(check: { fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, then: {
 					res: fnVarT:substring(start: 9, end: fnVarT:length());
-				}, otherwise: {
+				}, else: {
 					res: 'Any';
 				});
-			}, otherwise: {
-				Conditional:branch(check: { self:allEnumVariants:has(key: method) && (self:allEnumNames:has(key: targetType) || targetType == self:currentClassName) }, then: {
+			}, else: {
+				Conditional:if(check: { self:allEnumVariants:has(key: method) && (self:allEnumNames:has(key: targetType) || targetType == self:currentClassName) }, then: {
 					res: self:allEnumVariants:getString(key: method, default: Primitive:ANY:value());
-				}, otherwise: {
-					Conditional:branch(check: { method == 'typeName' && self:registeredClasses:has(key: targetType) }, then: {
+				}, else: {
+					Conditional:if(check: { method == 'typeName' && self:registeredClasses:has(key: targetType) }, then: {
 						res: Primitive:STRING:value();
-					}, otherwise: {
-						Conditional:branch(check: { method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType) }, then: {
+					}, else: {
+						Conditional:if(check: { method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType) }, then: {
 							# FUNCTIONS.md §I.2: init overloads are selected and stamped like any member.
 							self:selectOverload(className: targetType, methodName: 'init', expr: expr);
 							# FUNCTIONS.md §I.6: construction requires the import too — the
 							# X3 stratum, the class itself, an ancestor, the same file, or the
 							# class's own using grants it.
-							Conditional:branch(check: { !self:classHasAccess(className: self:currentClassName, targetName: targetType:split(delimiter: ':'):get(index: 0)) }, then: {
+							Conditional:if(check: { !self:classHasAccess(className: self:currentClassName, targetName: targetType:split(delimiter: ':'):get(index: 0)) }, then: {
 								self:addError(line: self:currentLine, msg: '\'' . targetType . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration to construct it (FUNCTIONS.md §I.6).');
 							});
 							res: targetType;
-						}, otherwise: {
-							Conditional:branch(check: { self:registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !self:allEnumNames:has(key: targetType) }, then: {
+						}, else: {
+							Conditional:if(check: { self:registeredClasses:has(key: targetType:split(delimiter: ':'):get(index: 0)) && !self:allEnumNames:has(key: targetType) }, then: {
 								# List get/pop REQUIRE a 'default:' argument (Never Null).
-								Conditional:branch(check: { (targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop') }, then: {
+								Conditional:if(check: { (targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop') }, then: {
 									local Boolean is hasDefault: false;
 									expr:methodArgs:each(action: local Function(NamedArg is arg){
-										Conditional:branch(check: { arg:name == 'default' }, then: {
+										Conditional:if(check: { arg:name == 'default' }, then: {
 											hasDefault: true;
 										});
 									});
-									Conditional:branch(check: { !hasDefault }, then: {
+									Conditional:if(check: { !hasDefault }, then: {
 										self:addError(line: self:currentLine, msg: 'List \'' . method . '\' requires a \'default:\' argument.');
 									});
 								});
@@ -2392,10 +2414,10 @@ Class is TypeChecker{
 								# from the type string itself.
 								local Member is selected: self:selectOverload(className: targetType, methodName: method, expr: expr);
 								local String is cRet: '';
-								Conditional:branch(check: { selected:name != '' }, then: {
+								Conditional:if(check: { selected:name != '' }, then: {
 									cRet: self:selectedReturnType(className: targetType, selected: selected);
 								});
-								Conditional:branch(check: { cRet == '' || self:isVoid(t: cRet) }, then: {
+								Conditional:if(check: { cRet == '' || self:isVoid(t: cRet) }, then: {
 									# Unloaded declaration: resolve from the builtin method table
 									# with element types from the type string.
 									res: targetType;
@@ -2422,62 +2444,62 @@ Class is TypeChecker{
 										is 'remove': { res: Primitive:BOOLEAN:value(); }
 										else: {}
 									}
-									Conditional:branch(check: { res == targetType }, then: {
-										Conditional:branch(check: { (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt') }, then: {
+									Conditional:if(check: { res == targetType }, then: {
+										Conditional:if(check: { (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt') }, then: {
 											res: scParts:get(index: 1);
 										});
-										Conditional:branch(check: { targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString') }, then: {
+										Conditional:if(check: { targetType:startsWith(prefix: 'Map') && scParts:length() > 2 && (method == 'get' || method == 'getString') }, then: {
 											res: scParts:get(index: 2);
 										});
 									});
-								}, otherwise: {
+								}, else: {
 									res: cRet;
 								});
-							}, otherwise: {
-								Conditional:branch(check: { targetType:startsWith(prefix: 'Array') && method == 'map' }, then: {
+							}, else: {
+								Conditional:if(check: { targetType:startsWith(prefix: 'Array') && method == 'map' }, then: {
 									local String is mappedElem: Primitive:ANY:value();
-									Conditional:branch(check: { expr:methodArgs:length() > 0 }, then: {
+									Conditional:if(check: { expr:methodArgs:length() > 0 }, then: {
 										local NamedArg is a0: expr:methodArgs:get(index: 0);
 										local Expression is fnExpr: a0:value;
-										Conditional:branch(check: { fnExpr:kind == ExpressionKind:ANON_FN }, then: {
+										Conditional:if(check: { fnExpr:kind == ExpressionKind:ANON_FN }, then: {
 											local String is fnRet: fnExpr:anonReturnType:name;
-											Conditional:branch(check: { fnRet != '' && !self:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, then: {
+											Conditional:if(check: { fnRet != '' && !self:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, then: {
 												mappedElem: self:formatTypeString(t: fnExpr:anonReturnType);
 											});
 										});
 									});
-									res: Conditional:branch(check: { mappedElem != Primitive:ANY:value() }, then: { 'Array:' . mappedElem }, otherwise: { 'Array' });
-								}, otherwise: {
-									Conditional:branch(check: { targetType:startsWith(prefix: 'Array') && method == 'fold' }, then: {
-										Conditional:branch(check: { expr:methodArgs:length() > 0 }, then: {
+									res: Conditional:if(check: { mappedElem != Primitive:ANY:value() }, then: { 'Array:' . mappedElem }, else: { 'Array' });
+								}, else: {
+									Conditional:if(check: { targetType:startsWith(prefix: 'Array') && method == 'fold' }, then: {
+										Conditional:if(check: { expr:methodArgs:length() > 0 }, then: {
 											local NamedArg is a0: expr:methodArgs:get(index: 0);
 											res: a0:value:resolvedType;
-										}, otherwise: {
+										}, else: {
 											res: 'Any';
 										});
-									}, otherwise: {
-										Conditional:branch(check: { self:allEnumNames:has(key: targetType) }, then: {
+									}, else: {
+										Conditional:if(check: { self:allEnumNames:has(key: targetType) }, then: {
 											when (method) {
 												is 'name': { res: Primitive:STRING:value(); }
 												is 'ordinal': { res: Primitive:INT:value(); }
 												is 'values': { res: 'Array:' . targetType; }
 												is 'of': { res: targetType; }
 												is 'value': {
-													res: Conditional:branch(check: { self:allStringBackedEnums:has(key: targetType) }, then: { 'String' }, otherwise: { Primitive:INT:value() });
+													res: Conditional:if(check: { self:allStringBackedEnums:has(key: targetType) }, then: { 'String' }, else: { Primitive:INT:value() });
 												}
 												else: { res: 'Any'; }
 											}
-										}, otherwise: {
-											Conditional:branch(check: { targetType == Primitive:INT:value() && method == 'toBase' }, then: {
+										}, else: {
+											Conditional:if(check: { targetType == Primitive:INT:value() && method == 'toBase' }, then: {
 												# Int:toBase is a floor binding (spec_int_to_base) returning a
 												# String; Int has no loaded declaration to consult.
 												res: Primitive:STRING:value();
-											}, otherwise: {
+											}, else: {
 												# Undeclared members are compile errors on LOADED classes; an
 												# unloaded class (floor singleton used without import) resolves
 												# as Any — the runtime magic defines it.
 												local Array of String is uParts: targetType:split(delimiter: ':');
-												Conditional:branch(check: { self:registeredClasses:has(key: uParts:get(index: 0)) && self:findClass(name: uParts:get(index: 0)):name != '' }, then: {
+												Conditional:if(check: { self:registeredClasses:has(key: uParts:get(index: 0)) && self:findClass(name: uParts:get(index: 0)):name != '' }, then: {
 													self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not declared on class \'' . targetType . '\'.');
 												});
 												res: 'Any';
@@ -2491,7 +2513,7 @@ Class is TypeChecker{
 				});
 			});
 		});
-		Conditional:branch(check: { isValueBranch }, then: {
+		Conditional:if(check: { isValueBranch }, then: {
 			# FUNCTIONS.md Part II: the value-yielding form — both branch
 			# closures' established return types must unify. Read from the
 			# nodes (the write-backs happened during the body check); never
@@ -2500,19 +2522,19 @@ Class is TypeChecker{
 			local Expression is elseAnon: expr:argValue(index: 2);
 			local String is thenT: thenAnon:anonReturnType:name;
 			local String is elseT: elseAnon:anonReturnType:name;
-			Conditional:branch(check: { self:isVoid(t: thenT) || self:isVoid(t: elseT) }, then: {
+			Conditional:if(check: { self:isVoid(t: thenT) || self:isVoid(t: elseT) }, then: {
 				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (FUNCTIONS.md Part II).');
 				res: 'void';
-			}, otherwise: {
-				Conditional:branch(check: { !self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT) }, then: {
+			}, else: {
+				Conditional:if(check: { !self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT) }, then: {
 					self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . thenT . '\' and \'' . elseT . '\'.');
 					res: thenT;
-				}, otherwise: {
-					res: Conditional:branch(check: { thenT == Primitive:ANY:value() }, then: { elseT }, otherwise: { thenT });
+				}, else: {
+					res: Conditional:if(check: { thenT == Primitive:ANY:value() }, then: { elseT }, else: { thenT });
 				});
 			});
-		}, otherwise: {
-			Conditional:branch(check: { isBranchCall }, then: {
+		}, else: {
+			Conditional:if(check: { isBranchCall }, then: {
 				# Branch calls are statements: void.
 				res: 'void';
 			});
@@ -2528,19 +2550,19 @@ Class is TypeChecker{
 	## @param target: Cast target name.
 	## @return: true when the conversion is declared.
 	Function of Boolean is isCastable(String is src, String is target){
-		Conditional:branch(check: { src == target || src == Primitive:ANY:value() }, then: {
+		Conditional:if(check: { src == target || src == Primitive:ANY:value() }, then: {
 			return true;
 		});
-		Conditional:branch(check: { target == Primitive:INT:value() }, then: {
+		Conditional:if(check: { target == Primitive:INT:value() }, then: {
 			return src == 'Float' || src == 'String' || src == 'Byte';
 		});
-		Conditional:branch(check: { target == 'Float' }, then: {
+		Conditional:if(check: { target == 'Float' }, then: {
 			return src == Primitive:INT:value();
 		});
-		Conditional:branch(check: { target == 'Byte' }, then: {
+		Conditional:if(check: { target == 'Byte' }, then: {
 			return src == Primitive:INT:value();
 		});
-		Conditional:branch(check: { target == 'String' }, then: {
+		Conditional:if(check: { target == 'String' }, then: {
 			return true;
 		});
 		return false;
@@ -2555,12 +2577,12 @@ Class is TypeChecker{
 	## @param target: The cast target name.
 	## @return: The producing method name, or ''.
 	Function of String is castableMethod(String is srcType, String is target){
-		Conditional:branch(check: { srcType == '' || srcType == Primitive:ANY:value() || self:isPrimitive(t: srcType) }, then: {
+		Conditional:if(check: { srcType == '' || srcType == Primitive:ANY:value() || self:isPrimitive(t: srcType) }, then: {
 			return '';
 		});
 		local Array of String is srcParts: srcType:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: srcParts:get(index: 0));
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
 		# castable is a metadata FIELD declared on the class itself — the
@@ -2568,23 +2590,23 @@ Class is TypeChecker{
 		# the declaring class. Search own members directly.
 		local FieldSearchLoop is castLoop: FieldSearchLoop:init(members: cls:members, fieldName: MetadataField:CASTABLE:value());
 		While:run(loop: castLoop);
-		Conditional:branch(check: { !castLoop:found }, then: {
+		Conditional:if(check: { !castLoop:found }, then: {
 			return '';
 		});
 		local Member is castM: castLoop:res;
-		Conditional:branch(check: { !castM:hasInit || castM:initExpr:kind != ExpressionKind:ARRAY }, then: {
+		Conditional:if(check: { !castM:hasInit || castM:initExpr:kind != ExpressionKind:ARRAY }, then: {
 			return '';
 		});
 		local String is found: '';
 		castM:initExpr:arrayItems:each(action: local Function(Expression is entry){
-			Conditional:branch(check: { found == '' && entry:kind == ExpressionKind:ARRAY && entry:arrayItems:length() == 2 }, then: {
+			Conditional:if(check: { found == '' && entry:kind == ExpressionKind:ARRAY && entry:arrayItems:length() == 2 }, then: {
 				local Expression is tExpr: entry:arrayItems:get(index: 0);
 				local Expression is fExpr: entry:arrayItems:get(index: 1);
 				local String is entryTarget: tExpr:stringValue;
 				local String is entryFn: fExpr:stringValue;
-				Conditional:branch(check: { entryTarget == target }, then: {
+				Conditional:if(check: { entryTarget == target }, then: {
 					local String is fnRet: self:lookupMethodReturnType(className: srcType, methodName: entryFn);
-					Conditional:branch(check: { fnRet != target }, then: {
+					Conditional:if(check: { fnRet != target }, then: {
 						self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
 						found: entryFn;
 						return;
@@ -2600,7 +2622,7 @@ Class is TypeChecker{
 	##
 	## @param stmt: AST statement node.
 	Function is checkStatement(Statement is stmt){
-		Conditional:branch(check: { stmt:line > 0 }, then: {
+		Conditional:if(check: { stmt:line > 0 }, then: {
 			self:currentLine: stmt:line;
 		});
 		local StatementKind is kind: stmt:kind;
@@ -2611,60 +2633,45 @@ Class is TypeChecker{
 				local String is fullType: self:formatVarTypeString(t: stmt:varType);
 				self:localVars:set(key: varName, value: fullType);
 
-				Conditional:branch(check: { fullType == 'List' }, then: {
+				Conditional:if(check: { fullType == 'List' }, then: {
 					local String is msg: 'Bare List type requires [T] element syntax.';
 					self:addError(line: stmt:line, msg: msg);
 				});
 				self:validateTypeAccess(t: stmt:varType, line: stmt:line);
 
-				Conditional:branch(check: { stmt:hasInit }, then: {
+				Conditional:if(check: { stmt:hasInit }, then: {
 					# Bidirectional: the declared type flows into the
 					# initializer, typing container literals directly.
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr, expected: fullType);
-					Conditional:branch(check: { !self:isAssignable(target: fullType, source: initType) }, then: {
+					Conditional:if(check: { !self:isAssignable(target: fullType, source: initType) }, then: {
 						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
 						self:addError(line: stmt:line, msg: msg);
 					});
 				});
 			}
 			is StatementKind:ASSIGN: {
-				Conditional:branch(check: { stmt:assignTarget:kind == ExpressionKind:PATH }, then: {
+				Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:PATH }, then: {
 					local Array of String is tSegs: stmt:assignTarget:pathSegments;
-					Conditional:branch(check: { tSegs:length() == 2 && tSegs:get(index: 0) == self:names:selfIdent() }, then: {
+					Conditional:if(check: { tSegs:length() == 2 && tSegs:get(index: 0) == self:names:selfIdent() }, then: {
 						self:unassignedFields:remove(key: tSegs:get(index: 1));
 					});
-				}, otherwise: {
-					Conditional:branch(check: { stmt:assignTarget:kind == ExpressionKind:IDENT }, then: {
+				}, else: {
+					Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:IDENT }, then: {
 						self:unassignedFields:remove(key: stmt:assignTarget:stringValue);
 					});
 				});
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
-				Conditional:branch(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
+				Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
 					local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
 					self:addError(line: stmt:line, msg: msg);
-				});
-			}
-			is StatementKind:IF: {
-				local String is condType: self:inferExpressionType(expr: stmt:ifCondition);
-				Conditional:branch(check: { condType != 'Boolean' && condType != Primitive:ANY:value() }, then: {
-					local String is msg: 'Condition in \'if\' must be Boolean, found \'' . condType . '\'.';
-					self:addError(line: stmt:line, msg: msg);
-				});
-				stmt:thenBranch:each(action: local Function(Statement is s){
-					self:checkStatement(stmt: s);
-				});
-				Conditional:branch(check: { stmt:hasElse }, then: {
-					stmt:elseBranch:each(action: local Function(Statement is s){
-						self:checkStatement(stmt: s);
-					});
 				});
 			}
 			is StatementKind:WHEN: {
 				local String is stmtSubjectType: self:inferExpressionType(expr: stmt:whenSubject);
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
-					Conditional:branch(check: { arm:hasValueExpr }, then: {
+					Conditional:if(check: { arm:hasValueExpr }, then: {
 						self:inferExpressionType(expr: arm:valueExpr);
 					});
 					arm:body:each(action: local Function(Statement is s){
@@ -2677,12 +2684,12 @@ Class is TypeChecker{
 				self:checkForward(stmt: stmt);
 			}
 			is StatementKind:RETURN: {
-				Conditional:branch(check: { stmt:hasReturnExpr }, then: {
+				Conditional:if(check: { stmt:hasReturnExpr }, then: {
 					# Bidirectional: the declared return type flows in — and a
 					# value-yielding branch's yield takes the branch's own
 					# expected type (nested branch calls type in context).
 					local String is yieldExpected: self:currentMethodReturnType;
-					Conditional:branch(check: { self:checkingValueYield && self:currentYieldExpected != '' }, then: {
+					Conditional:if(check: { self:checkingValueYield && self:currentYieldExpected != '' }, then: {
 						yieldExpected: self:currentYieldExpected;
 					});
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: yieldExpected);
@@ -2690,29 +2697,29 @@ Class is TypeChecker{
 					# value-yielding branch closure establishes the branch's
 					# yield type (the inBranchClosure method-routing does not
 					# apply to it).
-					Conditional:branch(check: { self:checkingValueYield }, then: {
-						Conditional:branch(check: { self:isVoid(t: self:currentAnonNode:anonReturnType:name) }, then: {
+					Conditional:if(check: { self:checkingValueYield }, then: {
+						Conditional:if(check: { self:isVoid(t: self:currentAnonNode:anonReturnType:name) }, then: {
 							self:currentAnonNode:anonReturnType: Type:init(name: retType);
 							self:currentMethodReturnType: retType;
-						}, otherwise: {
-							Conditional:branch(check: { !self:isAssignable(target: self:currentAnonNode:anonReturnType:name, source: retType) }, then: {
+						}, else: {
+							Conditional:if(check: { !self:isAssignable(target: self:currentAnonNode:anonReturnType:name, source: retType) }, then: {
 								local String is msg: 'Branch yields mismatched types: expected \'' . self:currentAnonNode:anonReturnType:name . '\', found \'' . retType . '\'.';
 								self:addError(line: stmt:line, msg: msg);
 							});
 						});
-					}, otherwise: {
-						Conditional:branch(check: { self:anonDepth > 0 && !self:inBranchClosure && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType) }, then: {
+					}, else: {
+						Conditional:if(check: { self:anonDepth > 0 && !self:inBranchClosure && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType) }, then: {
 							self:currentAnonNode:anonReturnType: Type:init(name: retType);
 							self:currentMethodReturnType: retType;
-						}, otherwise: {
-							Conditional:branch(check: { !self:isAssignable(target: self:currentMethodReturnType, source: retType) }, then: {
+						}, else: {
+							Conditional:if(check: { !self:isAssignable(target: self:currentMethodReturnType, source: retType) }, then: {
 								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\'.';
 								self:addError(line: stmt:line, msg: msg);
 							});
 						});
 					});
-				}, otherwise: {
-					Conditional:branch(check: { self:currentMethodReturnType != 'void' && self:currentMethodReturnType != 'Void' && self:currentMethodReturnType != '' && self:currentMethodReturnType != 'Any' }, then: {
+				}, else: {
+					Conditional:if(check: { self:currentMethodReturnType != 'void' && self:currentMethodReturnType != 'Void' && self:currentMethodReturnType != '' && self:currentMethodReturnType != 'Any' }, then: {
 						local String is msg: 'Method expects return value of type \'' . self:currentMethodReturnType . '\', but found empty return.';
 						self:addError(line: stmt:line, msg: msg);
 					});
@@ -2757,36 +2764,36 @@ Class is TypeChecker{
 	##
 	## @param stmt: The FORWARD statement.
 	Function is checkForward(Statement is stmt){
-		Conditional:branch(check: { !self:currentMethodIsMerge }, then: {
+		Conditional:if(check: { !self:currentMethodIsMerge }, then: {
 			self:addError(line: stmt:line, msg: 'Forward statement `(args...)` requires the enclosing method to declare \'merge\'.');
 			return;
 		});
-		Conditional:branch(check: { self:anonDepth > 0 }, then: {
+		Conditional:if(check: { self:anonDepth > 0 }, then: {
 			self:addError(line: stmt:line, msg: 'Forward statement is not allowed inside a nested function.');
 			return;
 		});
-		Conditional:branch(check: { self:forwardSeen }, then: {
+		Conditional:if(check: { self:forwardSeen }, then: {
 			self:addError(line: stmt:line, msg: 'Multiple forward statements in method \'' . self:currentMethodName . '\'; at most one is allowed.');
 			return;
 		});
 		self:forwardSeen: true;
 
 		local Member is superM: self:findFirstSuperMethod(className: self:currentClassName, methodName: self:currentMethodName);
-		Conditional:branch(check: { superM:name == '' }, then: {
+		Conditional:if(check: { superM:name == '' }, then: {
 			self:addError(line: stmt:line, msg: 'Forward statement in \'' . self:currentMethodName . '\': no parent method to delegate to.');
 			return;
 		});
 		local Array of Parameter is params: superM:params;
 		local Array of NamedArg is args: stmt:forwardArgs;
 
-		Conditional:branch(check: { args:length() > params:length() }, then: {
+		Conditional:if(check: { args:length() > params:length() }, then: {
 			self:addError(line: stmt:line, msg: 'Forward statement passes ' . args:length() . ' arguments but parent \'' . superM:name . '\' accepts ' . params:length() . '.');
 			return;
 		});
-		Conditional:branch(check: { args:length() < params:length() }, then: {
+		Conditional:if(check: { args:length() < params:length() }, then: {
 			local Int is nIdx: 0;
 			args:each(action: local Function(NamedArg is a){
-				Conditional:branch(check: { a:name == '' }, then: {
+				Conditional:if(check: { a:name == '' }, then: {
 					self:addError(line: stmt:line, msg: 'Partial forward requires named arguments; argument ' . (nIdx + 1) . ' of \'' . self:currentMethodName . '\' is unnamed.');
 				});
 				nIdx: nIdx + 1;
@@ -2798,28 +2805,28 @@ Class is TypeChecker{
 			local Expression is matchedValue: Expression:init(kind: ExpressionKind:UNKNOWN);
 			local Boolean is found: false;
 			args:each(action: local Function(NamedArg is a){
-				Conditional:branch(check: { !found && a:name != '' && a:name == p:name }, then: {
+				Conditional:if(check: { !found && a:name != '' && a:name == p:name }, then: {
 					matchedValue: a:value;
 					found: true;
 				});
 			});
-			Conditional:branch(check: { !found && pIdx < args:length() }, then: {
+			Conditional:if(check: { !found && pIdx < args:length() }, then: {
 				local NamedArg is posArg: args:get(index: pIdx);
-				Conditional:branch(check: { posArg:name == '' }, then: {
+				Conditional:if(check: { posArg:name == '' }, then: {
 					matchedValue: posArg:value;
 					found: true;
 				});
 			});
-			Conditional:branch(check: { found }, then: {
+			Conditional:if(check: { found }, then: {
 				local String is argT: self:inferExpressionType(expr: matchedValue);
 				local String is pT: p:paramType:name;
-				Conditional:branch(check: { pT != Primitive:ANY:value() && pT != '' && argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT) }, then: {
-					local String is label: Conditional:branch(check: { p:name != '' }, then: { p:name }, otherwise: { 'position ' . (pIdx + 1) });
+				Conditional:if(check: { pT != Primitive:ANY:value() && pT != '' && argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT) }, then: {
+					local String is label: Conditional:if(check: { p:name != '' }, then: { p:name }, else: { 'position ' . (pIdx + 1) });
 					local String is msg: 'Forward argument \'' . label . '\' of \'' . self:currentMethodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
 					self:addError(line: stmt:line, msg: msg);
 				});
-			}, otherwise: {
-				Conditional:branch(check: { !p:hasDefault }, then: {
+			}, else: {
+				Conditional:if(check: { !p:hasDefault }, then: {
 					local String is msg: 'Forward statement omits \'' . p:name . '\' of \'' . self:currentMethodName . '\' which has no default value.';
 					self:addError(line: stmt:line, msg: msg);
 				});
@@ -2840,10 +2847,10 @@ Class is TypeChecker{
 	##
 	## @param method: Method member descriptor.
 	Function is checkMethod(Member is method){
-		Conditional:branch(check: { method:line > 0 }, then: {
+		Conditional:if(check: { method:line > 0 }, then: {
 			self:currentLine: method:line;
 		});
-		Conditional:branch(check: { method:sourceFile != '' }, then: {
+		Conditional:if(check: { method:sourceFile != '' }, then: {
 			self:currentSourceFile: method:sourceFile;
 		});
 		self:currentMethodName: method:name;
@@ -2855,22 +2862,22 @@ Class is TypeChecker{
 		});
 		self:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
-		Conditional:branch(check: { mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name, hops: 0) }, then: {
+		Conditional:if(check: { mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name, hops: 0) }, then: {
 			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (FUNCTIONS.md §I.3).');
 		});
-		Conditional:branch(check: { self:currentMethodIsMerge && mergeTarget:name == '' }, then: {
+		Conditional:if(check: { self:currentMethodIsMerge && mergeTarget:name == '' }, then: {
 			self:addError(line: method:line, msg: 'Method \'' . method:name . '\' in class \'' . self:currentClassName . '\' declares \'merge\' but no parent declares a method with that name.');
 		});
 		method:params:each(action: local Function(Parameter is p){
-			Conditional:branch(check: { p:paramType:name == self:names:selfFieldMarker() }, then: {
+			Conditional:if(check: { p:paramType:name == self:names:selfFieldMarker() }, then: {
 				local String is ft: self:fieldTypes:getString(key: p:name, default: Primitive:ANY:value());
 				p:paramType: Type:init(name: ft);
 				self:unassignedFields:remove(key: p:name);
 			});
 		});
 		self:currentMethodReturnType: self:resolveReturnType(t: method:memberType);
-		Conditional:branch(check: { self:currentMethodReturnType == '' || self:isVoid(t: self:currentMethodReturnType) }, then: {
-			Conditional:branch(check: { method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value() }, then: {
+		Conditional:if(check: { self:currentMethodReturnType == '' || self:isVoid(t: self:currentMethodReturnType) }, then: {
+			Conditional:if(check: { method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value() }, then: {
 				self:currentMethodReturnType: 'Boolean';
 				method:memberType: Type:init(name: 'Boolean');
 			});
@@ -2885,7 +2892,7 @@ Class is TypeChecker{
 			self:checkStatement(stmt: stmt);
 		});
 
-		Conditional:branch(check: { self:currentMethodIsMerge && !self:forwardSeen && method:body:length() > 0 }, then: {
+		Conditional:if(check: { self:currentMethodIsMerge && !self:forwardSeen && method:body:length() > 0 }, then: {
 			self:addError(line: method:line, msg: 'Merge method \'' . method:name . '\' in class \'' . self:currentClassName . '\' must contain a forward statement `(args...)`.');
 		});
 		self:currentMethodIsMerge: false;
@@ -2900,14 +2907,14 @@ Class is TypeChecker{
 	## @return: The parent member, or an empty-named one when absent.
 	Function of Member is findFirstSuperMethod(String is className, String is methodName){
 		local ClassInfo is cls: self:findClass(name: className);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local Member is res: Member:init(kind: MemberKind:FIELD);
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { res:name == '' }, then: {
+			Conditional:if(check: { res:name == '' }, then: {
 				local Member is m: self:lookupAnyMember(className: baseName, methodName: methodName);
-				Conditional:branch(check: { m:kind == MemberKind:METHOD }, then: {
+				Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 					res: m;
 				});
 			});
@@ -2923,23 +2930,23 @@ Class is TypeChecker{
 	## @param seen: Dedup map of visited class names.
 	## @param acc: Output array of declaring class names.
 	Function is collectConcreteDeclarers(String is className, String is methodName, Map of String to String is seen, Array of String is acc){
-		Conditional:branch(check: { seen:has(key: className) }, then: {
+		Conditional:if(check: { seen:has(key: className) }, then: {
 			return;
 		});
 		seen:set(key: className, value: 'true');
 		local ClassInfo is cls: self:findClass(name: className);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:kind == MemberKind:METHOD && m:name == methodName && m:body:length() > 0 }, then: {
+			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName && m:body:length() > 0 }, then: {
 				local Boolean is present: false;
 				acc:each(action: local Function(String is n){
-					Conditional:branch(check: { !present && n == className }, then: {
+					Conditional:if(check: { !present && n == className }, then: {
 						present: true;
 					});
 				});
-				Conditional:branch(check: { !present }, then: {
+				Conditional:if(check: { !present }, then: {
 					acc:add(item: className);
 				});
 			});
@@ -2956,25 +2963,25 @@ Class is TypeChecker{
 	## @return: The ancestor member, or an empty-named one when absent.
 	Function of Member is findAncestorMember(String is className, String is memberName){
 		local ClassInfo is cls: self:findClass(name: className);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local Member is res: Member:init(kind: MemberKind:FIELD);
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { res:name == '' }, then: {
+			Conditional:if(check: { res:name == '' }, then: {
 				local ClassInfo is anc: self:findClass(name: baseName);
-				Conditional:branch(check: { anc:name != '' }, then: {
+				Conditional:if(check: { anc:name != '' }, then: {
 					anc:members:each(action: local Function(Member is m){
-						Conditional:branch(check: { res:name == '' && m:name == memberName }, then: {
+						Conditional:if(check: { res:name == '' && m:name == memberName }, then: {
 							res: m;
 						});
 					});
 				});
 			});
 		});
-		Conditional:branch(check: { res:name == '' }, then: {
+		Conditional:if(check: { res:name == '' }, then: {
 			cls:baseClasses:each(action: local Function(String is baseName){
-				Conditional:branch(check: { res:name == '' }, then: {
+				Conditional:if(check: { res:name == '' }, then: {
 					res: self:findAncestorMember(className: baseName, memberName: memberName);
 				});
 			});
@@ -2989,20 +2996,20 @@ Class is TypeChecker{
 	## @return: The declaring ancestor\'s name, or '' when absent.
 	Function of String is findMemberOwnerClass(String is className, String is memberName){
 		local ClassInfo is cls: self:findClass(name: className);
-		Conditional:branch(check: { cls:name == '' }, then: {
+		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
 		local String is owner: '';
 		cls:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { owner == '' && m:name == memberName }, then: {
+			Conditional:if(check: { owner == '' && m:name == memberName }, then: {
 				owner: cls:name;
 			});
 		});
-		Conditional:branch(check: { owner != '' }, then: {
+		Conditional:if(check: { owner != '' }, then: {
 			return owner;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:branch(check: { owner == '' }, then: {
+			Conditional:if(check: { owner == '' }, then: {
 				owner: self:findMemberOwnerClass(className: baseName, memberName: memberName);
 			});
 		});
@@ -3016,17 +3023,17 @@ Class is TypeChecker{
 	## @param member: The resolved member.
 	## @param memberName: Member name for diagnostics.
 	Function is checkMemberVisibility(String is ownerClass, Member is member, String is memberName){
-		Conditional:branch(check: { ownerClass == '' || ownerClass == 'Any' || memberName == ContractMethod:INIT:value() }, then: {
+		Conditional:if(check: { ownerClass == '' || ownerClass == 'Any' || memberName == ContractMethod:INIT:value() }, then: {
 			return;
 		});
-		Conditional:branch(check: { member:hasModifier(kw: Keyword:LOCAL) }, then: {
-			Conditional:branch(check: { self:currentClassName != ownerClass }, then: {
+		Conditional:if(check: { member:hasModifier(kw: Keyword:LOCAL) }, then: {
+			Conditional:if(check: { self:currentClassName != ownerClass }, then: {
 				local String is msg: 'Member \'' . memberName . '\' is local to class \'' . ownerClass . '\' and cannot be accessed from \'' . self:currentClassName . '\'.';
 				self:addError(line: self:currentLine, msg: msg);
 			});
-		}, otherwise: {
-			Conditional:branch(check: { member:hasModifier(kw: Keyword:CONTAINED) }, then: {
-				Conditional:branch(check: { !self:isSubclassOf(subName: self:currentClassName, baseName: ownerClass) }, then: {
+		}, else: {
+			Conditional:if(check: { member:hasModifier(kw: Keyword:CONTAINED) }, then: {
+				Conditional:if(check: { !self:isSubclassOf(subName: self:currentClassName, baseName: ownerClass) }, then: {
 					local String is msg: 'Member \'' . memberName . '\' is contained in class \'' . ownerClass . '\' and cannot be accessed from unrelated class \'' . self:currentClassName . '\'.';
 					self:addError(line: self:currentLine, msg: msg);
 				});
@@ -3043,37 +3050,37 @@ Class is TypeChecker{
 		classDef:members:each(action: local Function(Member is m){
 			local Boolean is hasReplace: m:hasModifier(kw: Keyword:REPLACE);
 			local Boolean is hasMerge: m:hasModifier(kw: Keyword:MERGE);
-			Conditional:branch(check: { hasReplace || hasMerge }, then: {
-				Conditional:branch(check: { m:hasModifier(kw: Keyword:LOCAL) || m:hasModifier(kw: Keyword:CONTAINED) }, then: {
+			Conditional:if(check: { hasReplace || hasMerge }, then: {
+				Conditional:if(check: { m:hasModifier(kw: Keyword:LOCAL) || m:hasModifier(kw: Keyword:CONTAINED) }, then: {
 					local String is msg: 'Member \'' . m:name . '\' in class \'' . classDef:name . '\' combines \'replace\'/\'merge\' with a visibility modifier; replace and merge members are public by definition.';
 					self:addError(line: m:line, msg: msg);
 					return;
 				});
 			});
-			Conditional:branch(check: { !hasReplace && !hasMerge }, then: {
+			Conditional:if(check: { !hasReplace && !hasMerge }, then: {
 				return;
 			});
 			local String is name: m:name;
-			Conditional:branch(check: { name == ContractMethod:INIT:value() || name == ContractMethod:USING:value() || name == ContractMethod:TO_STRING:value() }, then: {
+			Conditional:if(check: { name == ContractMethod:INIT:value() || name == ContractMethod:USING:value() || name == ContractMethod:TO_STRING:value() }, then: {
 				return;
 			});
-			Conditional:branch(check: { self:findMemberOwnerClass(className: classDef:name, memberName: name) == Primitive:ANY:value() }, then: {
+			Conditional:if(check: { self:findMemberOwnerClass(className: classDef:name, memberName: name) == Primitive:ANY:value() }, then: {
 				# Root-contract member: Any declares it public, so overriding
 				# is always legitimate.
 				return;
 			});
 			local Member is anc: self:findAncestorMember(className: classDef:name, memberName: name);
-			Conditional:branch(check: { anc:name == '' }, then: {
-				local String is what: Conditional:branch(check: { hasMerge }, then: { 'merge' }, otherwise: { 'replace' });
+			Conditional:if(check: { anc:name == '' }, then: {
+				local String is what: Conditional:if(check: { hasMerge }, then: { 'merge' }, else: { 'replace' });
 				local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' declares \'' . what . '\' but no ancestor declares a member with that name.';
 				self:addError(line: m:line, msg: msg);
-			}, otherwise: {
-				Conditional:branch(check: { anc:hasModifier(kw: Keyword:LOCAL) || anc:hasModifier(kw: Keyword:CONTAINED) }, then: {
-					local String is vis: Conditional:branch(check: { anc:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, otherwise: { 'contained' });
+			}, else: {
+				Conditional:if(check: { anc:hasModifier(kw: Keyword:LOCAL) || anc:hasModifier(kw: Keyword:CONTAINED) }, then: {
+					local String is vis: Conditional:if(check: { anc:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, else: { 'contained' });
 					local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' targets a ' . vis . ' ancestor member; ' . vis . ' members cannot be replaced or merged.';
 					self:addError(line: m:line, msg: msg);
-				}, otherwise: {
-					Conditional:branch(check: { anc:kind != m:kind }, then: {
+				}, else: {
+					Conditional:if(check: { anc:kind != m:kind }, then: {
 						local String is msg: 'Member \'' . name . '\' in class \'' . classDef:name . '\' is a ' . m:kind:value() . ' but the ancestor member it targets is a ' . anc:kind:value() . '.';
 						self:addError(line: m:line, msg: msg);
 					});
@@ -3092,9 +3099,9 @@ Class is TypeChecker{
 		local Map of String to String is seenMethods: Map:init();
 		classDef:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is anc: self:findClass(name: baseName);
-			Conditional:branch(check: { anc:name != '' }, then: {
+			Conditional:if(check: { anc:name != '' }, then: {
 				anc:members:each(action: local Function(Member is m){
-					Conditional:branch(check: { m:kind == MemberKind:METHOD }, then: {
+					Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 						seenMethods:set(key: m:name, value: 'true');
 					});
 				});
@@ -3104,11 +3111,11 @@ Class is TypeChecker{
 		names:each(action: local Function(String is mName){
 			local Boolean is declaredLocally: false;
 			classDef:members:each(action: local Function(Member is m){
-				Conditional:branch(check: { m:kind == MemberKind:METHOD && m:name == mName }, then: {
+				Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == mName }, then: {
 					declaredLocally: true;
 				});
 			});
-			Conditional:branch(check: { !declaredLocally }, then: {
+			Conditional:if(check: { !declaredLocally }, then: {
 				local Map of String to String is seen: Map:init();
 				local Array of String is declarers: [];
 				classDef:baseClasses:each(action: local Function(String is baseName){
@@ -3118,15 +3125,15 @@ Class is TypeChecker{
 				declarers:each(action: local Function(String is d){
 					local Boolean is isSubsumed: false;
 					declarers:each(action: local Function(String is other){
-						Conditional:branch(check: { !isSubsumed && other != d && self:isSubclassOf(subName: other, baseName: d) }, then: {
+						Conditional:if(check: { !isSubsumed && other != d && self:isSubclassOf(subName: other, baseName: d) }, then: {
 							isSubsumed: true;
 						});
 					});
-					Conditional:branch(check: { !isSubsumed }, then: {
+					Conditional:if(check: { !isSubsumed }, then: {
 						maximal:add(item: d);
 					});
 				});
-				Conditional:branch(check: { maximal:length() >= 2 }, then: {
+				Conditional:if(check: { maximal:length() >= 2 }, then: {
 					local String is msg: 'ClassInfo \'' . classDef:name . '\' inherits conflicting implementations of \'' . mName . '\' from \'' . maximal:get(index: 0) . '\' and \'' . maximal:get(index: 1) . '\'; declare the method (replace or merge) to resolve the conflict.';
 					self:addError(line: classDef:line, msg: msg);
 				});
@@ -3141,25 +3148,25 @@ Class is TypeChecker{
 		self:currentSourceFile: classDef:sourceFile;
 		local Boolean is hasInit: false;
 		classDef:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:name == ContractMethod:INIT:value() }, then: {
+			Conditional:if(check: { m:name == ContractMethod:INIT:value() }, then: {
 				hasInit: true;
 			});
 		});
 
 		classDef:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is parent: self:findClass(name: baseName);
-			Conditional:branch(check: { parent:name == baseName }, then: {
+			Conditional:if(check: { parent:name == baseName }, then: {
 				# 1. Enforce abstract member implementation on concrete classes
 				# with init. The implicit root Any is exempt: its members carry
 				# concrete defaults.
-				Conditional:branch(check: { hasInit && baseName != Primitive:ANY:value() }, then: {
+				Conditional:if(check: { hasInit && baseName != Primitive:ANY:value() }, then: {
 					parent:members:each(action: local Function(Member is parentM){
 						local Boolean is isAbstract: (parentM:kind == MemberKind:FIELD && !parentM:hasInit) ||
 							(parentM:kind == MemberKind:METHOD && parentM:body:length() == 0);
-						Conditional:branch(check: { isAbstract }, then: {
+						Conditional:if(check: { isAbstract }, then: {
 							local MemberImplementLoop is chk: MemberImplementLoop:init(members: classDef:members, target: parentM);
 							While:run(loop: chk);
-							Conditional:branch(check: { !chk:implemented }, then: {
+							Conditional:if(check: { !chk:implemented }, then: {
 								local String is msg: 'ClassInfo \'' . classDef:name . '\' does not implement abstract member \'' . parentM:name . '\' required by parent \'' . baseName . '\'.';
 								self:addError(line: classDef:line, msg: msg);
 							});
@@ -3171,53 +3178,53 @@ Class is TypeChecker{
 				classDef:members:each(action: local Function(Member is subM){
 					# Declarative metadata (namespace/using/group) is per-class
 					# by design and never participates in override matching.
-					Conditional:branch(check: { subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:GROUP:value() || subM:name == MetadataField:CASTABLE:value() }, then: {
+					Conditional:if(check: { subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:GROUP:value() || subM:name == MetadataField:CASTABLE:value() }, then: {
 						return;
 					});
 					parent:members:each(action: local Function(Member is parentM){
-						Conditional:branch(check: { subM:name == parentM:name }, then: {
-							Conditional:branch(check: { parentM:hasModifier(kw: Keyword:LOCAL) || parentM:hasModifier(kw: Keyword:CONTAINED) }, then: {
-								local String is vis: Conditional:branch(check: { parentM:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, otherwise: { 'contained' });
+						Conditional:if(check: { subM:name == parentM:name }, then: {
+							Conditional:if(check: { parentM:hasModifier(kw: Keyword:LOCAL) || parentM:hasModifier(kw: Keyword:CONTAINED) }, then: {
+								local String is vis: Conditional:if(check: { parentM:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, else: { 'contained' });
 								local String is msg: 'Member \'' . subM:name . '\' is ' . vis . ' in ancestor \'' . baseName . '\' and cannot be replaced or merged.';
 								self:addError(line: subM:line, msg: msg);
 							});
 							local Boolean is hasReplace: subM:hasModifier(kw: Keyword:REPLACE);
 							local Boolean is hasMerge: subM:hasModifier(kw: Keyword:MERGE);
-							Conditional:branch(check: { hasMerge }, then: {
-								Conditional:branch(check: { subM:kind == MemberKind:METHOD }, then: {
-									Conditional:branch(check: { parentM:kind == MemberKind:METHOD && parentM:body:length() == 0 }, then: {
+							Conditional:if(check: { hasMerge }, then: {
+								Conditional:if(check: { subM:kind == MemberKind:METHOD }, then: {
+									Conditional:if(check: { parentM:kind == MemberKind:METHOD && parentM:body:length() == 0 }, then: {
 										local String is msg: 'Cannot merge method \'' . subM:name . '\' in class \'' . classDef:name . '\' with abstract method from \'' . baseName . '\'.';
 										self:addError(line: subM:line, msg: msg);
 									});
-								}, otherwise: {
+								}, else: {
 									self:applyMerge(classDef: classDef, subM: subM, parentM: parentM, baseName: baseName);
 								});
-							}, otherwise: {
-								Conditional:branch(check: { !hasReplace }, then: {
+							}, else: {
+								Conditional:if(check: { !hasReplace }, then: {
 									local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides ancestor member from \'' . baseName . '\', but is missing \'replace\' modifier.';
 									self:addError(line: subM:line, msg: msg);
 								});
 							});
 
-							Conditional:branch(check: { subM:kind == MemberKind:METHOD && parentM:kind == MemberKind:METHOD }, then: {
+							Conditional:if(check: { subM:kind == MemberKind:METHOD && parentM:kind == MemberKind:METHOD }, then: {
 								# Root-contract carve-out: init/using/toString declared
 								# in Any are name reservations; per-class signatures
 								# are legitimate. Override must still carry replace.
-								Conditional:branch(check: { baseName == Primitive:ANY:value() }, then: {
-									Conditional:branch(check: { !subM:hasModifier(kw: Keyword:REPLACE) && !subM:hasModifier(kw: Keyword:MERGE) }, then: {
+								Conditional:if(check: { baseName == Primitive:ANY:value() }, then: {
+									Conditional:if(check: { !subM:hasModifier(kw: Keyword:REPLACE) && !subM:hasModifier(kw: Keyword:MERGE) }, then: {
 										local String is msg: 'Member \'' . subM:name . '\' in class \'' . classDef:name . '\' overrides root-contract member from \'Any\', but is missing \'replace\' modifier.';
 										self:addError(line: subM:line, msg: msg);
 									});
 									return;
 								});
-								Conditional:branch(check: { subM:params:length() != parentM:params:length() }, then: {
+								Conditional:if(check: { subM:params:length() != parentM:params:length() }, then: {
 									local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' parameter count mismatch with ancestor in \'' . baseName . '\'.';
 									self:addError(line: subM:line, msg: msg);
-								}, otherwise: {
+								}, else: {
 									local Int is pIdx: 0;
 									subM:params:each(action: local Function(Parameter is subP){
 										local Parameter is parentP: parentM:params:get(index: pIdx);
-										Conditional:branch(check: { subP:paramType:name == 'Any' || subP:paramType:name == '' }, then: {
+										Conditional:if(check: { subP:paramType:name == 'Any' || subP:paramType:name == '' }, then: {
 											subP:paramType: parentP:paramType;
 										});
 										pIdx: pIdx + 1;
@@ -3225,10 +3232,10 @@ Class is TypeChecker{
 								});
 								local String is subRet: self:resolveReturnType(t: subM:memberType);
 								local String is parentRet: self:resolveReturnType(t: parentM:memberType);
-								Conditional:branch(check: { subM:memberType:name == '' || self:isVoid(t: subM:memberType:name) }, then: {
+								Conditional:if(check: { subM:memberType:name == '' || self:isVoid(t: subM:memberType:name) }, then: {
 									subM:memberType: parentM:memberType;
-								}, otherwise: {
-									Conditional:branch(check: { !self:isAssignable(target: subRet, source: parentRet) }, then: {
+								}, else: {
+									Conditional:if(check: { !self:isAssignable(target: subRet, source: parentRet) }, then: {
 										local String is msg: 'Method \'' . subM:name . '\' in class \'' . classDef:name . '\' return type \'' . subRet . '\' does not match ancestor return type \'' . parentRet . '\'.';
 										self:addError(line: subM:line, msg: msg);
 									});
@@ -3252,28 +3259,28 @@ Class is TypeChecker{
 	## @param parentM: Ancestor member being merged with.
 	## @param baseName: Ancestor class name for diagnostics.
 	Function is applyMerge(ClassInfo is classDef, Member is subM, Member is parentM, String is baseName){
-		Conditional:branch(check: { subM:kind != MemberKind:FIELD }, then: {
+		Conditional:if(check: { subM:kind != MemberKind:FIELD }, then: {
 			self:addError(line: subM:line, msg: '\'merge\' is only valid on fields; member \'' . subM:name . '\' in class \'' . classDef:name . '\' is not a field.');
 			return;
 		});
 		local String is typeName: subM:memberType:name;
-		Conditional:branch(check: { !typeName:startsWith(prefix: 'Array') }, then: {
+		Conditional:if(check: { !typeName:startsWith(prefix: 'Array') }, then: {
 			self:addError(line: subM:line, msg: '\'merge\' requires an Array field; \'' . typeName . '\' is not mergeable.');
 			return;
 		});
-		Conditional:branch(check: { !parentM:hasInit }, then: {
+		Conditional:if(check: { !parentM:hasInit }, then: {
 			return;
 		});
 		local Expression is parentInit: parentM:initExpr;
-		Conditional:branch(check: { parentInit:kind != ExpressionKind:ARRAY }, then: {
+		Conditional:if(check: { parentInit:kind != ExpressionKind:ARRAY }, then: {
 			self:addError(line: subM:line, msg: '\'merge\' requires a constant array literal in parent \'' . baseName . '.' . parentM:name . '.');
 			return;
 		});
-		Conditional:branch(check: { !subM:hasInit }, then: {
+		Conditional:if(check: { !subM:hasInit }, then: {
 			return;
 		});
 		local Expression is childInit: subM:initExpr;
-		Conditional:branch(check: { childInit:kind != ExpressionKind:ARRAY }, then: {
+		Conditional:if(check: { childInit:kind != ExpressionKind:ARRAY }, then: {
 			self:addError(line: subM:line, msg: '\'merge\' requires a constant array literal initializer on \'' . classDef:name . '.' . subM:name . '.');
 			return;
 		});
@@ -3294,14 +3301,14 @@ Class is TypeChecker{
 	Function is collectClassFieldTypes(ClassInfo is classDef){
 		classDef:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is parent: self:findClass(name: baseName);
-			Conditional:branch(check: { parent:name != '' }, then: {
+			Conditional:if(check: { parent:name != '' }, then: {
 				self:collectClassFieldTypes(classDef: parent);
 			});
 		});
 		classDef:members:each(action: local Function(Member is m){
 			# Metadata members carry no type and are not fields of the
 			# generated struct.
-			Conditional:branch(check: { m:kind == MemberKind:FIELD && m:memberType:name != '' }, then: {
+			Conditional:if(check: { m:kind == MemberKind:FIELD && m:memberType:name != '' }, then: {
 				self:fieldTypes:set(key: m:name, value: self:formatVarTypeString(t: m:memberType));
 			});
 		});
@@ -3320,7 +3327,7 @@ Class is TypeChecker{
 			when (m:kind) {
 				is MemberKind:FIELD: {
 					self:currentLine: m:line;
-					Conditional:branch(check: { m:sourceFile != '' }, then: {
+					Conditional:if(check: { m:sourceFile != '' }, then: {
 						self:currentSourceFile: m:sourceFile;
 					});
 					# Declarative metadata properties (using, namespace, group)
@@ -3328,12 +3335,12 @@ Class is TypeChecker{
 					# initializers may reference classes the using itself
 					# loads, so type validation is skipped.
 					self:validateTypeAccess(t: m:memberType, line: m:line);
-					Conditional:branch(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value() }, then: {
+					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value() }, then: {
 						local String is declaredType: self:formatVarTypeString(t: m:memberType);
-						Conditional:branch(check: { m:hasInit }, then: {
+						Conditional:if(check: { m:hasInit }, then: {
 							# Bidirectional: the declared type flows in.
 							local String is initType: self:inferExpressionType(expr: m:initExpr, expected: declaredType);
-							Conditional:branch(check: { !self:isAssignable(target: declaredType, source: initType) }, then: {
+							Conditional:if(check: { !self:isAssignable(target: declaredType, source: initType) }, then: {
 								local String is msg: 'Type mismatch in field \'' . classDef:name . ':' . m:name . '\': cannot assign \'' . initType . '\' to \'' . declaredType . '\'.';
 								self:addError(line: m:line, msg: msg);
 							});
@@ -3348,9 +3355,9 @@ Class is TypeChecker{
 			when (m:kind) {
 				is MemberKind:METHOD: {
 					self:unassignedFields: Map:init();
-					Conditional:branch(check: { m:name == ContractMethod:INIT:value() }, then: {
+					Conditional:if(check: { m:name == ContractMethod:INIT:value() }, then: {
 						classDef:members:each(action: local Function(Member is fm){
-							Conditional:branch(check: { fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != ContractMethod:USING:value() }, then: {
+							Conditional:if(check: { fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != ContractMethod:USING:value() }, then: {
 								self:unassignedFields:set(key: fm:name, value: 'true');
 							});
 						});
@@ -3390,16 +3397,6 @@ Class is TypeChecker{
 		when (stmt:kind) {
 			is StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
-			}
-			is StatementKind:IF: {
-				stmt:thenBranch:each(action: local Function(Statement is s){
-					self:collectClassesFromStatement(stmt: s, acc: acc);
-				});
-				Conditional:branch(check: { stmt:hasElse }, then: {
-					stmt:elseBranch:each(action: local Function(Statement is s){
-						self:collectClassesFromStatement(stmt: s, acc: acc);
-					});
-				});
 			}
 			is StatementKind:WHEN: {
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
@@ -3446,37 +3443,37 @@ Class is TypeChecker{
 	Function is checkInstanceImports(ClassInfo is classDef){
 		local Map of String to String is seen: Map:init();
 		classDef:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:name != 'using' || !m:hasInit || m:initExpr:kind != ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { m:name != 'using' || !m:hasInit || m:initExpr:kind != ExpressionKind:ARRAY }, then: {
 				return;
 			});
 			m:initExpr:arrayItems:each(action: local Function(Expression is item){
-				Conditional:branch(check: { item:kind != ExpressionKind:ARRAY }, then: {
+				Conditional:if(check: { item:kind != ExpressionKind:ARRAY }, then: {
 					return;
 				});
 				local Expression is asExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
 				item:arrayItems:each(action: local Function(Expression is seg){
-					Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+					Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
 						asExpr: seg;
 					});
 				});
-				Conditional:branch(check: { asExpr:stringValue == '' }, then: {
+				Conditional:if(check: { asExpr:stringValue == '' }, then: {
 					return;
 				});
 				local String is asName: asExpr:stringValue;
-				Conditional:branch(check: { seen:has(key: asName) }, then: {
+				Conditional:if(check: { seen:has(key: asName) }, then: {
 					self:addError(line: m:line, msg: 'Class \'' . classDef:name . '\' instance-imports \'' . asName . '\' more than once (INSTANCE.md E3).');
 					return;
 				});
 				seen:set(key: asName, value: 'true');
 				local ClassInfo is target: self:findClass(name: asName);
-				Conditional:branch(check: { target:name == '' }, then: {
+				Conditional:if(check: { target:name == '' }, then: {
 					return;
 				});
-				Conditional:branch(check: { target:baseClass == self:names:enumHeader() }, then: {
+				Conditional:if(check: { target:baseClass == self:names:enumHeader() }, then: {
 					self:addError(line: m:line, msg: 'Cannot instance-import enum \'' . asName . '\'; enums are type-level (INSTANCE.md E2).');
 					return;
 				});
-					Conditional:branch(check: { target:typeParams:length() > 0 }, then: {
+					Conditional:if(check: { target:typeParams:length() > 0 }, then: {
 						self:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (INSTANCE.md §10).');
 						return;
 					});
@@ -3491,11 +3488,11 @@ Class is TypeChecker{
 	Function of Array of String is instanceImportTargets(ClassInfo is classDef){
 		local Array of String is out: [];
 		classDef:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					Conditional:branch(check: { item:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
-							Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
 								out:add(item: seg:stringValue);
 							});
 						});
@@ -3523,10 +3520,10 @@ Class is TypeChecker{
 	## @param path: Cycle-report prefix.
 	Function is visitImportNode(ClassInfo is c, Map of String to String is color, String is path){
 		local String is state: color:getString(key: c:name, default: '');
-		Conditional:branch(check: { state == 'b' }, then: {
+		Conditional:if(check: { state == 'b' }, then: {
 			return;
 		});
-		Conditional:branch(check: { state == 'g' }, then: {
+		Conditional:if(check: { state == 'g' }, then: {
 			self:addError(line: 0, msg: 'Instance import cycle: ' . path . c:name . ' (INSTANCE.md E4); construction would recurse forever.');
 			return;
 		});
@@ -3534,7 +3531,7 @@ Class is TypeChecker{
 		local Array of String is targets: self:instanceImportTargets(classDef: c);
 		targets:each(action: local Function(String is t){
 			local ClassInfo is next: self:findClass(name: t);
-			Conditional:branch(check: { next:name != '' }, then: {
+			Conditional:if(check: { next:name != '' }, then: {
 				self:visitImportNode(c: next, color: color, path: path . c:name . ' -> ');
 			});
 		});
@@ -3564,15 +3561,15 @@ Class is TypeChecker{
 		});
 		flattened:each(action: local Function(ClassInfo is c){
 			self:registeredClasses:set(key: c:name, value: c:name);
-			Conditional:branch(check: { c:baseClass == self:names:enumHeader() }, then: {
+			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
 					# The namespace declaration is metadata, not a variant.
-					Conditional:branch(check: { m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+					Conditional:if(check: { m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 						return;
 					});
 					self:allEnumVariants:set(key: m:name, value: c:name);
-					Conditional:branch(check: { m:memberType:name == Primitive:STRING:value() }, then: {
+					Conditional:if(check: { m:memberType:name == Primitive:STRING:value() }, then: {
 						self:allStringBackedEnums:set(key: c:name, value: 'true');
 					});
 				});

@@ -117,7 +117,7 @@ Class is Parser{
 	## @param tok: The offending token.
 	## @param message: What went wrong.
 	Function is addError(Token is tok, String is message){
-		local String is prefix: Conditional:branch(check: { self:sourceFile != '' }, then: { self:sourceFile . ':' }, otherwise: { 'Line ' });
+		local String is prefix: Conditional:if(check: { self:sourceFile != '' }, then: { self:sourceFile . ':' }, else: { 'Line ' });
 		local Error is e: Error:init(message: "  [SyntaxError] [{{prefix}}{{tok:getLine()}}:{{tok:getCol()}}] {{message}}");
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: tok:getLine(), col: tok:getCol());
 		self:errors:add(item: e);
@@ -127,7 +127,7 @@ Class is Parser{
 	##
 	## @return: The current token; EOF past the end.
 	Function of Token is peek(){
-		Conditional:branch(check: { self:pos < self:length }, then: {
+		Conditional:if(check: { self:pos < self:length }, then: {
 			return self:tokens:get(index: self:pos);
 		});
 		return Token:init(kind: TokenKind:EOF, value: '', line: 0, col: 0);
@@ -139,7 +139,7 @@ Class is Parser{
 	## @return: The token; EOF past the end.
 	Function of Token is peekAhead(Int is offset){
 		local Int is idx: self:pos + offset;
-		Conditional:branch(check: { idx < self:length }, then: {
+		Conditional:if(check: { idx < self:length }, then: {
 			return self:tokens:get(index: idx);
 		});
 		return Token:init(kind: TokenKind:EOF, value: '', line: 0, col: 0);
@@ -150,7 +150,7 @@ Class is Parser{
 	## @return: The consumed token.
 	Function of Token is advance(){
 		local Token is tok: self:peek();
-		Conditional:branch(check: { self:pos < self:length }, then: {
+		Conditional:if(check: { self:pos < self:length }, then: {
 			self:pos: self:pos + 1;
 		});
 		return tok;
@@ -164,7 +164,7 @@ Class is Parser{
 	Function of Boolean is hasWhitespaceAfter(Int is offset){
 		local Token is cur: self:peekAhead(offset: offset);
 		local Token is nxt: self:peekAhead(offset: offset + 1);
-		Conditional:branch(check: { nxt:getTokenKind() == TokenKind:EOF }, then: {
+		Conditional:if(check: { nxt:getTokenKind() == TokenKind:EOF }, then: {
 			return true;
 		});
 		return nxt:getLine() > cur:getLine() || nxt:getCol() > (cur:getCol() + cur:getValue():length());
@@ -178,10 +178,10 @@ Class is Parser{
 	## @return: true on match.
 	Function of Boolean is check(TokenKind is kind, String is value){
 		local Token is tok: self:peek();
-		Conditional:branch(check: { tok:getTokenKind() != kind }, then: {
+		Conditional:if(check: { tok:getTokenKind() != kind }, then: {
 			return false;
 		});
-		Conditional:branch(check: { value != '' && tok:getValue() != value }, then: {
+		Conditional:if(check: { value != '' && tok:getValue() != value }, then: {
 			return false;
 		});
 		return true;
@@ -193,7 +193,7 @@ Class is Parser{
 	## @param value: Expected symbol lexeme.
 	## @return: true on match.
 	Function of Boolean is matchSymbol(String is value){
-		Conditional:branch(check: { self:check(kind: TokenKind:SYMBOL, value: value) }, then: {
+		Conditional:if(check: { self:check(kind: TokenKind:SYMBOL, value: value) }, then: {
 			self:advance();
 			return true;
 		});
@@ -216,7 +216,7 @@ Class is Parser{
 	## @param p: Expected punctuation.
 	## @return: true on match.
 	Function of Boolean is matchPunct(Punctuation is p){
-		Conditional:branch(check: { self:check(kind: TokenKind:SYMBOL, value: p:value()) }, then: {
+		Conditional:if(check: { self:check(kind: TokenKind:SYMBOL, value: p:value()) }, then: {
 			self:advance();
 			return true;
 		});
@@ -247,7 +247,7 @@ Class is Parser{
 	## @param kw: Expected keyword.
 	## @return: true on match.
 	Function of Boolean is matchKeyword(Keyword is kw){
-		Conditional:branch(check: { self:check(kind: TokenKind:KEYWORD, value: kw:value()) }, then: {
+		Conditional:if(check: { self:check(kind: TokenKind:KEYWORD, value: kw:value()) }, then: {
 			self:advance();
 			return true;
 		});
@@ -300,14 +300,14 @@ Class is Parser{
 	##
 	## @return: The class descriptor.
 	Function of ClassInfo is parseClass(){
-		Conditional:branch(check: { self:peek():getValue() == self:names:legacyClassSpelling() }, then: {
+		Conditional:if(check: { self:peek():getValue() == self:names:legacyClassSpelling() }, then: {
 			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'.");
 		});
 		self:advance();
 
 		# Pre-binder `of`: parent classes.
 		local Array of String is baseClasses: [];
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			While:run(loop: BaseClassesLoop:init(parser: self, bases: baseClasses));
 		});
@@ -318,11 +318,11 @@ Class is Parser{
 
 		# Post-name `of`: generic type parameters.
 		local Array of String is typeParams: [];
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			local Token is tp1: self:advance();
 			typeParams:add(item: tp1:getValue());
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:TO) }, then: {
+			Conditional:if(check: { self:checkKeyword(kw: Keyword:TO) }, then: {
 				self:advance();
 				local Token is tp2: self:advance();
 				typeParams:add(item: tp2:getValue());
@@ -349,7 +349,7 @@ Class is Parser{
 	Function of ClassInfo is parseEnum(){
 		self:advance();
 		local String is backingType: self:names:intName();
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			local Type is bt: self:parseType();
 			backingType: bt:name;
@@ -362,7 +362,7 @@ Class is Parser{
 		local Array of Member is members: [];
 		While:run(loop: EnumVariantsLoop:init(parser: self, members: members, backingType: backingType));
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 			self:advance();
 		});
 
@@ -382,7 +382,7 @@ Class is Parser{
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
-		Conditional:branch(check: { self:atClassHeader() }, then: {
+		Conditional:if(check: { self:atClassHeader() }, then: {
 			local ClassInfo is nested: self:parseClass();
 			local Member is m: Member:init(kind: MemberKind:CLASS);
 			m:setLine(line: startLine);
@@ -390,7 +390,7 @@ Class is Parser{
 			return m;
 		});
 
-		Conditional:branch(check: { self:atEnumHeader() }, then: {
+		Conditional:if(check: { self:atEnumHeader() }, then: {
 			local ClassInfo is edef: self:parseEnum();
 			local Member is m: Member:init(kind: MemberKind:CLASS);
 			m:setLine(line: startLine);
@@ -403,11 +403,11 @@ Class is Parser{
 		# The name may lex as a KEYWORD during transition generations (a
 		# metadata name that shares an enum variant's tag); the ':' is what
 		# actually discriminates the metadata form.
-		Conditional:branch(check: { (self:peek():getTokenKind() == TokenKind:IDENTIFIER || self:peek():getTokenKind() == TokenKind:KEYWORD) && self:peekAhead(offset: 1):getTokenKind() == TokenKind:SYMBOL && self:peekAhead(offset: 1):getValue() == ':' }, then: {
+		Conditional:if(check: { (self:peek():getTokenKind() == TokenKind:IDENTIFIER || self:peek():getTokenKind() == TokenKind:KEYWORD) && self:peekAhead(offset: 1):getTokenKind() == TokenKind:SYMBOL && self:peekAhead(offset: 1):getValue() == ':' }, then: {
 			local Token is nameTok: self:advance();
 			self:advance();
 			local Expression is initExpr: self:parseExpression();
-			Conditional:branch(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+			Conditional:if(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 				self:advance();
 			});
 			local Member is m: Member:init(kind: MemberKind:FIELD);
@@ -421,7 +421,7 @@ Class is Parser{
 		});
 
 		# Untyped (void) method: `name(params) { ... }`.
-		Conditional:branch(check: { self:peek():getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:GROUP_OPEN:value() }, then: {
+		Conditional:if(check: { self:peek():getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:GROUP_OPEN:value() }, then: {
 			local Token is nameTok: self:advance();
 			local String is name: nameTok:getValue();
 			self:advance();
@@ -446,14 +446,14 @@ Class is Parser{
 		local Token is nameTok: self:advance();
 		local String is name: nameTok:getValue();
 
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:advance();
 			local Array of Parameter is params: [];
 			While:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			# Interface-style declaration: a `;`-terminated signature with no
 			# body — the sysinternal floor-binding form.
-			Conditional:branch(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+			Conditional:if(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 				self:advance();
 				local Member is m: Member:init(kind: MemberKind:METHOD);
 				m:setLine(line: nameTok:getLine());
@@ -478,7 +478,7 @@ Class is Parser{
 		# Field
 		local Expression is initExpr;
 		local Boolean is hasInit: false;
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
 			self:advance();
 			initExpr: self:parseExpression();
 			hasInit: true;
@@ -504,7 +504,7 @@ Class is Parser{
 		self:matchPunct(p: Punctuation:BLOCK_OPEN);
 		local Array of Statement is body: [];
 		params:each(action: local Function(Parameter is p){
-			Conditional:branch(check: { p:paramType:name == self:names:selfFieldMarker() }, then: {
+			Conditional:if(check: { p:paramType:name == self:names:selfFieldMarker() }, then: {
 				local Expression is lhs: Expression:init(kind: ExpressionKind:PATH);
 				lhs:makePath(segments: [self:names:selfIdent(), p:name]);
 				local Expression is rhs: Expression:init(kind: ExpressionKind:IDENT);
@@ -524,7 +524,7 @@ Class is Parser{
 	##
 	## @return: The type descriptor.
 	Function of Type is parseType(){
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:BRACKET_OPEN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:BRACKET_OPEN) }, then: {
 			self:advance();
 			local Type is elem: self:parseType();
 			self:matchPunct(p: Punctuation:BRACKET_CLOSE);
@@ -535,12 +535,12 @@ Class is Parser{
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			local Array of Type is params: [];
 			params:add(item: self:parseType());
 
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:TO) }, then: {
+			Conditional:if(check: { self:checkKeyword(kw: Keyword:TO) }, then: {
 				self:advance();
 				params:add(item: self:parseType());
 			});
@@ -560,16 +560,16 @@ Class is Parser{
 		local Int is startLine: self:peek():getLine();
 
 		# Merge-forward statement: `(arg, name: arg, ...)`.
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			return self:parseForwardStatement(startLine: startLine);
 		});
 
 		# Scoped callback statement: `as: call;` or `as (params): call;`.
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
 			return self:parseAsStatement(startLine: startLine);
 		});
 
-		Conditional:branch(check: { self:atClassHeader() }, then: {
+		Conditional:if(check: { self:atClassHeader() }, then: {
 			local ClassInfo is cls: self:parseClass();
 			local Statement is s: Statement:init(kind: StatementKind:CLASS);
 			s:setLine(line: startLine);
@@ -577,7 +577,7 @@ Class is Parser{
 			return s;
 		});
 
-		Conditional:branch(check: { self:atEnumHeader() }, then: {
+		Conditional:if(check: { self:atEnumHeader() }, then: {
 			local ClassInfo is edef: self:parseEnum();
 			local Statement is s: Statement:init(kind: StatementKind:CLASS);
 			s:setLine(line: startLine);
@@ -585,7 +585,7 @@ Class is Parser{
 			return s;
 		});
 
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:WHEN) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:WHEN) }, then: {
 			self:advance();
 			self:matchPunct(p: Punctuation:GROUP_OPEN);
 			local Expression is subject: self:parseExpression();
@@ -598,43 +598,9 @@ Class is Parser{
 			return s;
 		});
 
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:IF) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:RETURN) }, then: {
 			self:advance();
-			self:matchPunct(p: Punctuation:GROUP_OPEN);
-			local Expression is cond: self:parseExpression();
-			self:matchPunct(p: Punctuation:GROUP_CLOSE);
-			self:matchPunct(p: Punctuation:BLOCK_OPEN);
-
-			local Array of Statement is thenBranch: [];
-			While:run(loop: BlockStatementsLoop:init(parser: self, stmts: thenBranch));
-			self:matchPunct(p: Punctuation:BLOCK_CLOSE);
-
-			local Array of Statement is elseBranch: [];
-			local Boolean is hasElse: false;
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:ELSE) }, then: {
-				self:advance();
-				hasElse: true;
-				Conditional:branch(check: { self:checkKeyword(kw: Keyword:IF) }, then: {
-					elseBranch:add(item: self:parseStatement());
-				}, otherwise: {
-					self:matchPunct(p: Punctuation:BLOCK_OPEN);
-					While:run(loop: BlockStatementsLoop:init(parser: self, stmts: elseBranch));
-					self:matchPunct(p: Punctuation:BLOCK_CLOSE);
-				});
-			});
-
-			local Statement is s: Statement:init(kind: StatementKind:IF);
-			s:setLine(line: startLine);
-			s:ifCondition: cond;
-			s:thenBranch: thenBranch;
-			s:elseBranch: elseBranch;
-			s:hasElse: hasElse;
-			return s;
-		});
-
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:RETURN) }, then: {
-			self:advance();
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
+			Conditional:if(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
 				local Statement is asStmt: self:parseAsStatement(startLine: startLine);
 				local Statement is s: Statement:init(kind: StatementKind:RETURN);
 				s:setLine(line: startLine);
@@ -644,7 +610,7 @@ Class is Parser{
 			});
 			local Expression is retExpr;
 			local Boolean is hasExpr: false;
-			Conditional:branch(check: { !self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+			Conditional:if(check: { !self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 				retExpr: self:parseExpression();
 				hasExpr: true;
 			});
@@ -657,7 +623,7 @@ Class is Parser{
 			return s;
 		});
 
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:LOCAL) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:LOCAL) }, then: {
 			self:advance();
 			local Type is vType: self:parseType();
 			self:matchKeyword(kw: Keyword:IS);
@@ -666,7 +632,7 @@ Class is Parser{
 
 			local Expression is initExpr;
 			local Boolean is hasInit: false;
-			Conditional:branch(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+			Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
 				self:advance();
 				initExpr: self:parseExpression();
 				hasInit: true;
@@ -687,7 +653,7 @@ Class is Parser{
 		# evaluates for effect.
 		local Expression is expr: self:parseExpression();
 
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
 			self:advance();
 			local Expression is val: self:parseExpression();
 			self:matchPunct(p: Punctuation:TERMINATOR);
@@ -722,14 +688,14 @@ Class is Parser{
 			iteration: local Function of Boolean(){
 				local String is argName: '';
 				local Token is tok0: self:peekAhead(offset: 0);
-				Conditional:branch(check: { tok0:getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
+				Conditional:if(check: { tok0:getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
 					argName: tok0:getValue();
 					self:advance();
 					self:advance();
 				});
 				local Expression is val: self:parseExpression();
 				args:add(item: NamedArg:init(name: argName, value: val));
-				Conditional:branch(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+				Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 					self:advance();
 					return true;
 				});
@@ -737,7 +703,7 @@ Class is Parser{
 			}
 		);
 		self:matchPunct(p: Punctuation:GROUP_CLOSE);
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 			self:advance();
 		});
 		local Statement is s: Statement:init(kind: StatementKind:FORWARD);
@@ -760,21 +726,21 @@ Class is Parser{
 		self:advance();
 		local Array of Parameter is params: [];
 		local Boolean is hasParams: false;
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:advance();
 			hasParams: true;
 			While:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 		});
 		local Type is returnType: Type:init(name: self:names:voidName());
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			returnType: self:parseType();
 		});
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:ACCESSOR) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:ACCESSOR) }, then: {
 			self:advance();
-		}, otherwise: {
-			Conditional:branch(check: { !hasParams }, then: {
+		}, else: {
+			Conditional:if(check: { !hasParams }, then: {
 				self:matchPunct(p: Punctuation:ACCESSOR);
 			});
 		});
@@ -789,18 +755,18 @@ Class is Parser{
 		anonFn:anonParams: params;
 		anonFn:anonBody: closureBody;
 
-		Conditional:branch(check: { callExpr:kind != ExpressionKind:CALL }, then: {
+		Conditional:if(check: { callExpr:kind != ExpressionKind:CALL }, then: {
 			local Expression is c: Expression:init(kind: ExpressionKind:CALL);
-			Conditional:branch(check: { callExpr:kind == ExpressionKind:FIELD_ACCESS }, then: {
+			Conditional:if(check: { callExpr:kind == ExpressionKind:FIELD_ACCESS }, then: {
 				c:methodTarget: callExpr:leftExpr;
 				c:methodName: callExpr:stringValue;
-			}, otherwise: {
-				Conditional:branch(check: { callExpr:kind == ExpressionKind:IDENT }, then: {
+			}, else: {
+				Conditional:if(check: { callExpr:kind == ExpressionKind:IDENT }, then: {
 					local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
 					selfTarget:stringValue: self:names:selfIdent();
 					c:methodTarget: selfTarget;
 					c:methodName: callExpr:stringValue;
-				}, otherwise: {
+				}, else: {
 					c:methodTarget: callExpr;
 					c:methodName: '';
 				});
@@ -857,9 +823,9 @@ Class is Parser{
 	## @return: The folded expression.
 	Function of Expression is foldBinary(Array of String is ops, PrecedenceLevel is next){
 		local Expression is left: Expression:init(kind: ExpressionKind:UNKNOWN);
-		Conditional:branch(check: { next == PrecedenceLevel:NONE }, then: {
+		Conditional:if(check: { next == PrecedenceLevel:NONE }, then: {
 			left: self:parseUnary();
-		}, otherwise: {
+		}, else: {
 			left: self:parseLevel(level: next);
 		});
 		local BinaryFoldLoop is fold: BinaryFoldLoop:init(parser: self, expr: left, ops: ops, next: next);
@@ -872,21 +838,21 @@ Class is Parser{
 	## @return: The expression node.
 	Function of Expression is parseUnary(){
 		local String is op: '';
-		Conditional:branch(check: { self:checkSymbol(value: '++') }, then: {
+		Conditional:if(check: { self:checkSymbol(value: '++') }, then: {
 			op: '++';
-		}, otherwise: {
-			Conditional:branch(check: { self:checkSymbol(value: '--') }, then: {
+		}, else: {
+			Conditional:if(check: { self:checkSymbol(value: '--') }, then: {
 				op: '--';
-			}, otherwise: {
-				Conditional:branch(check: { self:checkSymbol(value: '~') }, then: {
+			}, else: {
+				Conditional:if(check: { self:checkSymbol(value: '~') }, then: {
 					op: '~';
-				}, otherwise: {
-					Conditional:branch(check: { self:checkSymbol(value: '-') }, then: {
+				}, else: {
+					Conditional:if(check: { self:checkSymbol(value: '-') }, then: {
 						op: '-';
-					}, otherwise: {
-						Conditional:branch(check: { self:checkSymbol(value: '!') }, then: {
+					}, else: {
+						Conditional:if(check: { self:checkSymbol(value: '!') }, then: {
 							op: '!';
-						}, otherwise: {
+						}, else: {
 							return self:parseAs();
 						});
 					});
@@ -910,28 +876,28 @@ Class is Parser{
 	Function of Expression is parseUsingAs(){
 		self:advance();
 		local Token is clsTok: self:peek();
-		Conditional:branch(check: { clsTok:getTokenKind() != TokenKind:IDENTIFIER }, then: {
+		Conditional:if(check: { clsTok:getTokenKind() != TokenKind:IDENTIFIER }, then: {
 			self:addError(tok: clsTok, message: "'as' in a using entry must be followed by a class name.");
 			return Expression:init(kind: ExpressionKind:UNKNOWN);
 		});
 		self:advance();
 		local Expression is e: Expression:init(kind: ExpressionKind:USING_AS);
 		e:stringValue: clsTok:getValue();
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:advance();
-			Conditional:branch(check: { !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, then: {
+			Conditional:if(check: { !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, then: {
 				local Array of NamedArg is args: [];
 				While:run(loop: ArgLoop:init(parser: self, args: args));
 				e:methodArgs: args;
 				args:each(action: local Function(NamedArg is arg){
 					local ExpressionKind is ak: arg:value:kind;
-					Conditional:branch(check: { ak != ExpressionKind:STRING && ak != ExpressionKind:NUMBER && ak != ExpressionKind:FLOAT && ak != ExpressionKind:BOOL }, then: {
+					Conditional:if(check: { ak != ExpressionKind:STRING && ak != ExpressionKind:NUMBER && ak != ExpressionKind:FLOAT && ak != ExpressionKind:BOOL }, then: {
 						self:addError(tok: clsTok, message: 'Instance-import arguments must be direct literal values (INSTANCE.md E1).');
 					});
 				});
 			});
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
-		}, otherwise: {
+		}, else: {
 			self:addError(tok: clsTok, message: "Instance import requires parentheses: 'as " . e:stringValue . "()'.");
 		});
 		return e;
@@ -944,18 +910,18 @@ Class is Parser{
 	## @return: The expression node.
 	Function of Expression is parseAs(){
 		local Expression is left: self:parsePostfix();
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
 			self:advance();
 			local Token is targetTok: self:advance();
 			local Array of Expression is args: [];
-			Conditional:branch(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+			Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 				self:advance();
-				Conditional:branch(check: { !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, then: {
+				Conditional:if(check: { !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, then: {
 					args:add(item: self:parseExpression());
 				});
 				self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			});
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
+			Conditional:if(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
 				self:addError(tok: self:peek(), message: "Chained 'as' casts are not supported; cast in separate steps.");
 			});
 			local Expression is c: Expression:init(kind: ExpressionKind:CAST);
@@ -985,20 +951,20 @@ Class is Parser{
 		# Anonymous function: `Function of T is (params) { ... }` or its
 		# `local`-prefixed form.
 		local Boolean is isAnonFn: false;
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:LOCAL) && self:peekAhead(offset: 1):getValue() == self:names:fnName() }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:LOCAL) && self:peekAhead(offset: 1):getValue() == self:names:fnName() }, then: {
 			isAnonFn: true;
 		});
-		Conditional:branch(check: { self:peek():getValue() == self:names:fnName() && (self:peekAhead(offset: 1):getValue() == Punctuation:GROUP_OPEN:value() || self:peekAhead(offset: 1):getValue() == Keyword:OF:value()) }, then: {
+		Conditional:if(check: { self:peek():getValue() == self:names:fnName() && (self:peekAhead(offset: 1):getValue() == Punctuation:GROUP_OPEN:value() || self:peekAhead(offset: 1):getValue() == Keyword:OF:value()) }, then: {
 			isAnonFn: true;
 		});
 
-		Conditional:branch(check: { isAnonFn }, then: {
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:LOCAL) }, then: {
+		Conditional:if(check: { isAnonFn }, then: {
+			Conditional:if(check: { self:checkKeyword(kw: Keyword:LOCAL) }, then: {
 				self:advance();
 			});
 			self:advance();
 			local Type is returnType: Type:init(name: self:names:voidName());
-			Conditional:branch(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
+			Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 				self:advance();
 				returnType: self:parseType();
 			});
@@ -1015,7 +981,7 @@ Class is Parser{
 			return e;
 		});
 
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:WHEN) }, then: {
+		Conditional:if(check: { self:checkKeyword(kw: Keyword:WHEN) }, then: {
 			self:advance();
 			self:matchPunct(p: Punctuation:GROUP_OPEN);
 			local Expression is subject: self:parseExpression();
@@ -1024,21 +990,6 @@ Class is Parser{
 
 			local Expression is e: Expression:init(kind: ExpressionKind:WHEN);
 			e:makeWhen(subject: subject, arms: arms);
-			return e;
-		});
-
-		Conditional:branch(check: { self:checkKeyword(kw: Keyword:IF) }, then: {
-			self:advance();
-			self:matchPunct(p: Punctuation:GROUP_OPEN);
-			local Expression is cond: self:parseExpression();
-			self:matchPunct(p: Punctuation:GROUP_CLOSE);
-			local Expression is thenExpr: self:parseExpression();
-			self:matchKeyword(kw: Keyword:ELSE);
-			local Expression is elseExpr: self:parseExpression();
-			local Expression is e: Expression:init(kind: ExpressionKind:IF_ELSE);
-			e:condExpr: cond;
-			e:thenExpr: thenExpr;
-			e:elseExpr: elseExpr;
 			return e;
 		});
 
@@ -1091,7 +1042,7 @@ Class is Parser{
 				# Keyword:ELSE lives in the preceding generation — the bridge
 				# accepts `if`/`else` keywords as identifier expressions so
 				# the seed parses the flipped spelling.
-				Conditional:branch(check: { self:peek():getValue() == 'if' || self:peek():getValue() == 'else' }, then: {
+				Conditional:if(check: { self:peek():getValue() == 'if' || self:peek():getValue() == 'else' }, then: {
 					local Token is kwTok: self:peek();
 					self:advance();
 					local Expression is kwExpr: Expression:init(kind: ExpressionKind:IDENT);
@@ -1102,7 +1053,7 @@ Class is Parser{
 				# `as ClassName()` (INSTANCE.md §2.1); `as` never begins any
 				# other expression (casts are postfix, scoped regions are
 				# statement-initial).
-				Conditional:branch(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
+				Conditional:if(check: { self:checkKeyword(kw: Keyword:AS) }, then: {
 					return self:parseUsingAs();
 				});
 				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
@@ -1110,18 +1061,18 @@ Class is Parser{
 				return Expression:init(kind: ExpressionKind:UNKNOWN);
 			}
 			else: {
-				Conditional:branch(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
+				Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 					self:advance();
 					local Expression is inner: self:parseExpression();
 					self:matchPunct(p: Punctuation:GROUP_CLOSE);
 					return inner;
 				});
 
-				Conditional:branch(check: { self:checkPunct(p: Punctuation:BRACKET_OPEN) }, then: {
+				Conditional:if(check: { self:checkPunct(p: Punctuation:BRACKET_OPEN) }, then: {
 					return self:parseArrayOrMap();
 				});
 
-				Conditional:branch(check: { self:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
+				Conditional:if(check: { self:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 					return self:parseFunctionBlock();
 				});
 
@@ -1146,10 +1097,10 @@ Class is Parser{
 			},
 			iteration: local Function(){
 				local Token is t: self:peekAhead(offset: offset);
-				Conditional:branch(check: { t:getTokenKind() == TokenKind:EOF || t:getValue() == ']' || t:getValue() == ',' || t:getValue() == ';' }, then: {
+				Conditional:if(check: { t:getTokenKind() == TokenKind:EOF || t:getValue() == ']' || t:getValue() == ',' || t:getValue() == ';' }, then: {
 					running: false;
-				}, otherwise: {
-					Conditional:branch(check: { t:getValue() == Keyword:IS:value() }, then: {
+				}, else: {
+					Conditional:if(check: { t:getValue() == Keyword:IS:value() }, then: {
 						foundIs: true;
 						running: false;
 					});
@@ -1175,12 +1126,12 @@ Class is Parser{
 				self:matchKeyword(kw: Keyword:IS);
 				local Token is nameTok: self:advance();
 				local Parameter is p: Parameter:init(name: nameTok:getValue(), paramType: pType);
-				Conditional:branch(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+				Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
 					self:advance();
 					p:setDefault(expr: self:parseExpression());
 				});
 				params:add(item: p);
-				Conditional:branch(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+				Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 					self:advance();
 				});
 			}
@@ -1205,9 +1156,9 @@ Class is Parser{
 				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
 			iteration: local Function(){
-				Conditional:branch(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:IF) && !self:checkKeyword(kw: Keyword:WHEN) && !self:checkKeyword(kw: Keyword:AS) }, then: {
+				Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:WHEN) && !self:checkKeyword(kw: Keyword:AS) }, then: {
 					local Expression is expr: self:parseExpression();
-					Conditional:branch(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+					Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
 						self:advance();
 						local Expression is val: self:parseExpression();
 						self:matchPunct(p: Punctuation:TERMINATOR);
@@ -1215,20 +1166,20 @@ Class is Parser{
 						s:assignTarget: expr;
 						s:assignValue: val;
 						body:add(item: s);
-					}, otherwise: {
-						Conditional:branch(check: { self:checkPunct(p: Punctuation:BLOCK_CLOSE) }, then: {
+					}, else: {
+						Conditional:if(check: { self:checkPunct(p: Punctuation:BLOCK_CLOSE) }, then: {
 							local Statement is retS: Statement:init(kind: StatementKind:RETURN);
 							retS:returnExpr: expr;
 							retS:hasReturnExpr: true;
 							body:add(item: retS);
-						}, otherwise: {
+						}, else: {
 							self:matchPunct(p: Punctuation:TERMINATOR);
 							local Statement is exprS: Statement:init(kind: StatementKind:EXPR);
 							exprS:exprStmt: expr;
 							body:add(item: exprS);
 						});
 					});
-				}, otherwise: {
+				}, else: {
 					body:add(item: self:parseStatement());
 				});
 			}
@@ -1247,17 +1198,17 @@ Class is Parser{
 	##
 	## @return: The ARRAY or MAP node.
 	Function of Expression is parseArrayOrMap(){
-		Conditional:branch(check: { self:isDeclListStart() }, then: {
+		Conditional:if(check: { self:isDeclListStart() }, then: {
 			return self:parseDeclList();
 		});
 		self:advance();
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:BRACKET_CLOSE) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:BRACKET_CLOSE) }, then: {
 			self:advance();
 			local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
 			e:arrayItems: [];
 			return e;
 		});
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:PAIR) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:PAIR) }, then: {
 			self:advance();
 			self:matchPunct(p: Punctuation:BRACKET_CLOSE);
 			local Expression is e: Expression:init(kind: ExpressionKind:MAP);
@@ -1265,12 +1216,12 @@ Class is Parser{
 			return e;
 		});
 		local Expression is firstItem: self:parseExpression();
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:PAIR) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:PAIR) }, then: {
 			self:advance();
 			local Expression is firstVal: self:parseExpression();
 			local Array of Expression is mKeys: [firstItem];
 			local Array of Expression is mVals: [firstVal];
-			Conditional:branch(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+			Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:advance();
 				While:run(loop: MapItemsLoop:init(parser: self, keys: mKeys, values: mVals));
 			});
@@ -1280,7 +1231,7 @@ Class is Parser{
 			return e;
 		});
 		local Array of Expression is items: [firstItem];
-		Conditional:branch(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+		Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:advance();
 			While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
 		});
@@ -1303,7 +1254,7 @@ Class is Parser{
 	## @return: The desugared expression.
 	Function of Expression is expandFancyString(String is raw, Token is originTok, Int is depth){
 		local Expression is plainE: Expression:init(kind: ExpressionKind:STRING);
-		Conditional:branch(check: { depth > 0 }, then: {
+		Conditional:if(check: { depth > 0 }, then: {
 			local FancyEscapeLoop is dEsc: FancyEscapeLoop:init(src: raw);
 			While:run(loop: dEsc);
 			plainE:stringValue: dEsc:res;
@@ -1312,14 +1263,14 @@ Class is Parser{
 		local TemplateSplitLoop is split: TemplateSplitLoop:init(raw: raw);
 		While:run(loop: split);
 		split:lits:add(item: split:lit);
-		Conditional:branch(check: { split:inHole }, then: {
+		Conditional:if(check: { split:inHole }, then: {
 			self:addError(tok: originTok, message: 'Unterminated template hole (missing closing }})');
 			plainE:stringValue: '';
 			return plainE;
 		});
 		local Expression is acc: Expression:init(kind: ExpressionKind:STRING);
 		acc:stringValue: split:lits:get(index: 0);
-		Conditional:branch(check: { split:holes:length() == 0 }, then: {
+		Conditional:if(check: { split:holes:length() == 0 }, then: {
 			return acc;
 		});
 		local TemplateFoldLoop is fold: TemplateFoldLoop:init(parser: self, split: split, acc0: acc);
@@ -1335,20 +1286,20 @@ Class is Parser{
 	## @return: The hole's expression.
 	Function of Expression is parseTemplateExpression(String is text){
 		local Expression is emptyE: Expression:init(kind: ExpressionKind:STRING);
-		Conditional:branch(check: { text:trim():length() == 0 }, then: {
+		Conditional:if(check: { text:trim():length() == 0 }, then: {
 			self:addError(tok: self:peek(), message: 'Empty expression in string template');
 			return emptyE;
 		});
 		local Lexer is subLexer: Lexer:init(source: text);
 		local Array of Token is subTokens: subLexer:tokenize();
-		Conditional:branch(check: { subLexer:hasErrors() }, then: {
+		Conditional:if(check: { subLexer:hasErrors() }, then: {
 			self:addError(tok: self:peek(), message: 'Invalid expression in string template');
 			return emptyE;
 		});
 		local Parser is subParser: Parser:init(tokens: subTokens);
 		subParser:setTemplateDepth(depth: 1);
 		local Expression is e: subParser:parseExpression();
-		Conditional:branch(check: { subParser:hasErrors() || subParser:peek():getTokenKind() != TokenKind:EOF }, then: {
+		Conditional:if(check: { subParser:hasErrors() || subParser:peek():getTokenKind() != TokenKind:EOF }, then: {
 			self:addError(tok: self:peek(), message: 'Invalid expression in string template');
 			return emptyE;
 		});

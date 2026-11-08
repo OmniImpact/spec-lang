@@ -69,12 +69,12 @@ Class is Loader{
 	##
 	## @param filePath: Path to target `.spec` file.
 	Function is loadFile(String is filePath){
-		Conditional:branch(check: { self:loadedFiles:has(key: filePath) }, then: {
+		Conditional:if(check: { self:loadedFiles:has(key: filePath) }, then: {
 			return;
 		});
 		self:loadedFiles:set(key: filePath, value: 'true');
 
-		Conditional:branch(check: { !File:exists(path: filePath) }, then: {
+		Conditional:if(check: { !File:exists(path: filePath) }, then: {
 			self:parseErrors:add(item: '  [LoadError] Module file not found: ' . filePath);
 			return;
 		});
@@ -82,7 +82,7 @@ Class is Loader{
 		local String is src: File:read(path: filePath, default: '');
 		local Lexer is lexer: Lexer:init(source: src);
 		local Array of Token is tokens: lexer:tokenize();
-		Conditional:branch(check: { lexer:hasErrors() }, then: {
+		Conditional:if(check: { lexer:hasErrors() }, then: {
 			local Array of Error is lexErrors: lexer:getErrors();
 			lexErrors:each(action: local Function(Error is err){
 				self:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . err:toString());
@@ -91,7 +91,7 @@ Class is Loader{
 		local Parser is parser: Parser:init(tokens: tokens);
 		parser:setSourceFile(file: filePath);
 		local ProgramNode is prog: parser:parseProgram();
-		Conditional:branch(check: { parser:hasErrors() }, then: {
+		Conditional:if(check: { parser:hasErrors() }, then: {
 			local Array of Error is parseErrs: parser:getErrors();
 			parseErrs:each(action: local Function(Error is err){
 				self:parseErrors:add(item: err:toString());
@@ -101,7 +101,7 @@ Class is Loader{
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is m){
 				m:setSourceFile(file: filePath);
-				Conditional:branch(check: { m:kind == MemberKind:CLASS }, then: {
+				Conditional:if(check: { m:kind == MemberKind:CLASS }, then: {
 					m:nestedClass:setSourceFile(file: filePath);
 				});
 			});
@@ -114,22 +114,22 @@ Class is Loader{
 			local String is qName: c:namespaceJoined() . ':' . c:name;
 			local Boolean is isFloor: c:namespaceJoined():endsWith(suffix: ':sysinternal') || c:namespaceJoined() == 'sysinternal';
 			local Boolean is dup: self:seenClassNames:has(key: qName);
-			Conditional:branch(check: { !isFloor && !dup && self:seenBareNames:has(key: c:name) }, then: {
+			Conditional:if(check: { !isFloor && !dup && self:seenBareNames:has(key: c:name) }, then: {
 				dup: true;
 			});
-			Conditional:branch(check: { !dup }, then: {
+			Conditional:if(check: { !dup }, then: {
 				self:seenClassNames:set(key: qName, value: 'true');
 				self:seenBareNames:set(key: c:name, value: 'true');
 				self:loadedClasses:add(item: c);
-				Conditional:branch(check: { gName != '' && gName != c:name }, then: {
+				Conditional:if(check: { gName != '' && gName != c:name }, then: {
 					self:groupTargets:add(item: gName);
 					self:groupFragments:add(item: c);
 				});
-			}, otherwise: {
-				Conditional:branch(check: { gName == c:name }, then: {
+			}, else: {
+				Conditional:if(check: { gName == c:name }, then: {
 					local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: c:name);
 					While:run(loop: find);
-					Conditional:branch(check: { find:found }, then: {
+					Conditional:if(check: { find:found }, then: {
 						self:mergeFragmentInto(target: find:res, frag: c);
 					});
 				});
@@ -143,11 +143,11 @@ Class is Loader{
 	## @param c: Target [ClassInfo] definition.
 	Function is collectImportsFromClass(ClassInfo is c){
 		c:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:name == 'using' && m:hasInit }, then: {
+			Conditional:if(check: { m:name == 'using' && m:hasInit }, then: {
 				local Expression is initExpr: m:initExpr;
-				Conditional:branch(check: { initExpr:kind == ExpressionKind:ARRAY }, then: {
+				Conditional:if(check: { initExpr:kind == ExpressionKind:ARRAY }, then: {
 					initExpr:arrayItems:each(action: local Function(Expression is item){
-						Conditional:branch(check: { item:kind == ExpressionKind:ARRAY }, then: {
+						Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 							self:loadArrayFormUsing(item: item, c: c);
 							return;
 						});
@@ -193,7 +193,7 @@ Class is Loader{
 		self:packageDirs: Map:init();
 		# 1. The input file's tree (project packages override).
 		local String is inDir: self:dirOf(path: self:rootInputPath);
-		Conditional:branch(check: { inDir != '' }, then: {
+		Conditional:if(check: { inDir != '' }, then: {
 			self:scanTree(dir: inDir, depth: 0);
 		});
 		# 2. The executable's tree — walking UP while the location holds no
@@ -213,7 +213,7 @@ Class is Loader{
 			iteration: local Function of Boolean(){
 				self:scanTree(dir: exeDir, depth: 0);
 				indexed: self:classPaths:keys():length();
-				Conditional:branch(check: { indexed == 0 }, then: {
+				Conditional:if(check: { indexed == 0 }, then: {
 					exeDir: self:dirOf(path: exeDir);
 				});
 				ups: ups + 1;
@@ -235,31 +235,31 @@ Class is Loader{
 	## @param dir: Directory to scan.
 	## @param depth: Current recursion depth.
 	Function is scanTree(String is dir, Int is depth){
-		Conditional:branch(check: { depth > 8 }, then: {
+		Conditional:if(check: { depth > 8 }, then: {
 			return;
 		});
 		local Array of String is entries: Dir:dirList(path: dir);
 		entries:each(action: local Function(String is name){
-			Conditional:branch(check: { name:startsWith(prefix: '.') }, then: {
+			Conditional:if(check: { name:startsWith(prefix: '.') }, then: {
 				return;
 			});
 			local String is child: Buf:stringCopy(b: dir . '/' . name);
-			Conditional:branch(check: { name:endsWith(suffix: '.spec') }, then: {
+			Conditional:if(check: { name:endsWith(suffix: '.spec') }, then: {
 				local String is stem: name:substring(start: 0, end: name:length() - 5);
-				Conditional:branch(check: { self:classPaths:has(key: stem) }, then: {
+				Conditional:if(check: { self:classPaths:has(key: stem) }, then: {
 					self:classPaths:set(key: stem, value: self:classPaths:getString(key: stem, default: '') . ';' . child);
-				}, otherwise: {
+				}, else: {
 					self:classPaths:set(key: stem, value: child);
 				});
-				Conditional:branch(check: { self:packageDirs:has(key: dir) }, then: {
+				Conditional:if(check: { self:packageDirs:has(key: dir) }, then: {
 					self:packageDirs:set(key: dir, value: self:packageDirs:getString(key: dir, default: '') . ';' . name);
-				}, otherwise: {
+				}, else: {
 					self:packageDirs:set(key: dir, value: name);
 				});
 				return;
 			});
 			local Array of String is subEntries: Dir:dirList(path: child);
-			Conditional:branch(check: { subEntries:length() > 0 }, then: {
+			Conditional:if(check: { subEntries:length() > 0 }, then: {
 				self:scanTree(dir: child, depth: depth + 1);
 			});
 		});
@@ -279,8 +279,8 @@ Class is Loader{
 				return i <= joined:length();
 			},
 			iteration: local Function of Boolean(){
-				Conditional:branch(check: { i == joined:length() || joined:charAt(index: i, default: '') == ';' }, then: {
-					Conditional:branch(check: { i > start }, then: {
+				Conditional:if(check: { i == joined:length() || joined:charAt(index: i, default: '') == ';' }, then: {
+					Conditional:if(check: { i > start }, then: {
 						out:add(item: joined:substring(start: start, end: i));
 					});
 					start: i + 1;
@@ -309,15 +309,15 @@ Class is Loader{
 	Function of Boolean is provides(String is nsJoined, String is className){
 		local Boolean is ok: false;
 		self:loadedClasses:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { !ok }, then: {
+			Conditional:if(check: { !ok }, then: {
 				# A package-form request (no class name) accepts any class
 				# declaring the namespace; a class form requires the class.
-				Conditional:branch(check: { className == '' }, then: {
-					Conditional:branch(check: { c:namespaceJoined() == nsJoined }, then: {
+				Conditional:if(check: { className == '' }, then: {
+					Conditional:if(check: { c:namespaceJoined() == nsJoined }, then: {
 						ok: true;
 					});
-				}, otherwise: {
-					Conditional:branch(check: { c:name == className && c:namespaceJoined() == nsJoined }, then: {
+				}, else: {
+					Conditional:if(check: { c:name == className && c:namespaceJoined() == nsJoined }, then: {
 						ok: true;
 					});
 				});
@@ -334,14 +334,14 @@ Class is Loader{
 	## @param termClass: The trailing class identifier.
 	## @param c: The importing class (for diagnostics).
 	Function is resolveImport(Array of String is parts, String is termClass, ClassInfo is c){
-		Conditional:branch(check: { !self:indexBuilt }, then: {
+		Conditional:if(check: { !self:indexBuilt }, then: {
 			self:buildScanIndex();
 		});
 		local String is nsJoined: '';
 		parts:each(action: local Function(String is seg){
-			Conditional:branch(check: { nsJoined == '' }, then: {
+			Conditional:if(check: { nsJoined == '' }, then: {
 				nsJoined: seg;
-			}, otherwise: {
+			}, else: {
 				nsJoined: nsJoined . ':' . seg;
 			});
 		});
@@ -350,11 +350,11 @@ Class is Loader{
 		# Class form: try each candidate file; accept the first whose load
 		# declares the requested class in the requested namespace.
 		local Boolean is resolved: false;
-		Conditional:branch(check: { termClass != '' }, then: {
+		Conditional:if(check: { termClass != '' }, then: {
 			cands:each(action: local Function(String is cand){
-				Conditional:branch(check: { !resolved }, then: {
+				Conditional:if(check: { !resolved }, then: {
 					self:loadFile(filePath: cand);
-					Conditional:branch(check: { self:provides(nsJoined: nsJoined, className: termClass) }, then: {
+					Conditional:if(check: { self:provides(nsJoined: nsJoined, className: termClass) }, then: {
 						resolved: true;
 					});
 				});
@@ -364,14 +364,14 @@ Class is Loader{
 		# The package's directory locates the candidates; the namespace is
 		# the authority. Class form never reaches here — the map is the
 		# whole mechanism, and the convention is one class per named file.
-		Conditional:branch(check: { !resolved && termClass == '' }, then: {
+		Conditional:if(check: { !resolved && termClass == '' }, then: {
 			local String is dirSuffix: '/' . nsJoined:replaceAll(search: ':', replacement: '/');
 			# The keys array is owned (a var-decl init is a consumption
 			# position): nested loadFile calls claim hundreds of pool slots
 			# and would evict a pool-held keys array mid-iteration.
 			local Array of String is allDirs: self:packageDirs:keys();
 			allDirs:each(action: local Function(String is dirPath){
-				Conditional:branch(check: { dirPath:endsWith(suffix: dirSuffix) }, then: {
+				Conditional:if(check: { dirPath:endsWith(suffix: dirSuffix) }, then: {
 					local String is namesJoined: self:packageDirs:getString(key: dirPath, default: '');
 					local Array of String is names: namesJoined:split(delimiter: ';');
 					names:each(action: local Function(String is name){
@@ -379,11 +379,11 @@ Class is Loader{
 					});
 				});
 			});
-			Conditional:branch(check: { self:provides(nsJoined: nsJoined, className: '') }, then: {
+			Conditional:if(check: { self:provides(nsJoined: nsJoined, className: '') }, then: {
 				resolved: true;
 			});
 		});
-		Conditional:branch(check: { !resolved }, then: {
+		Conditional:if(check: { !resolved }, then: {
 			self:parseErrors:add(item: '  [LoadError] Cannot resolve import \'[' . wanted . ']' . '\' declared in class \'' . c:name . '\'.');
 		});
 	}
@@ -394,21 +394,21 @@ Class is Loader{
 	## @param c: The importing class.
 	Function is loadArrayFormUsing(Expression is item, ClassInfo is c){
 		local Array of Expression is segs: item:arrayItems;
-		Conditional:branch(check: { segs:length() == 0 }, then: {
+		Conditional:if(check: { segs:length() == 0 }, then: {
 			return;
 		});
 		local Array of String is parts: [];
 		local String is termClass: '';
 		segs:each(action: local Function(Expression is seg){
-			Conditional:branch(check: { seg:kind == ExpressionKind:IDENT }, then: {
+			Conditional:if(check: { seg:kind == ExpressionKind:IDENT }, then: {
 				termClass: seg:stringValue;
-			}, otherwise: {
-				Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+			}, else: {
+				Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
 					# Instance-import form (INSTANCE.md §2.1): resolves exactly
 					# like the class form; the as-ness stays on the using member
 					# for the checker, generator, and audit.
 					termClass: seg:stringValue;
-				}, otherwise: {
+				}, else: {
 					parts:add(item: seg:stringValue);
 				});
 			});
@@ -420,7 +420,7 @@ Class is Loader{
 	Function of String is dirOf(String is path){
 		local LastSlashLoop is loop: LastSlashLoop:init(src: path);
 		While:run(loop: loop);
-		Conditional:branch(check: { loop:lastIdx < 0 }, then: {
+		Conditional:if(check: { loop:lastIdx < 0 }, then: {
 			return '';
 		});
 		return path:substring(start: 0, end: loop:lastIdx);
@@ -448,7 +448,7 @@ Class is Loader{
 
 		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:src:charAt(index: self:pos, default: '');
-			Conditional:branch(check: { ch == '/' }, then: {
+			Conditional:if(check: { ch == '/' }, then: {
 				self:lastIdx: self:pos;
 			});
 			self:pos: self:pos + 1;
@@ -474,12 +474,12 @@ Class is Loader{
 			},
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);
-				Conditional:branch(check: { m:name == 'group' && m:hasInit }, then: {
+				Conditional:if(check: { m:name == 'group' && m:hasInit }, then: {
 					local Expression is initExpr: m:initExpr;
-					Conditional:branch(check: { initExpr:kind == ExpressionKind:ARRAY }, then: {
-						Conditional:branch(check: { initExpr:arrayItems:length() != 1 }, then: {
+					Conditional:if(check: { initExpr:kind == ExpressionKind:ARRAY }, then: {
+						Conditional:if(check: { initExpr:arrayItems:length() != 1 }, then: {
 							self:parseErrors:add(item: '  [LoadError] ClassInfo \'' . c:name . '\' declares a group with ' . (initExpr:arrayItems:length() as String) . ' entries; exactly one target is required.');
-						}, otherwise: {
+						}, else: {
 							local Expression is firstItem: initExpr:arrayItems:get(index: 0);
 							target: firstItem:stringValue;
 						});
@@ -489,7 +489,7 @@ Class is Loader{
 				return true;
 			}
 		);
-		Conditional:branch(check: { target != '' && c:baseClass != '' }, then: {
+		Conditional:if(check: { target != '' && c:baseClass != '' }, then: {
 			self:parseErrors:add(item: '  [LoadError] Group fragment \'' . c:name . '\' must not declare parent classes.');
 			target: '';
 		});
@@ -522,7 +522,7 @@ Class is Loader{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local ClassInfo is cand: self:list:get(index: self:idx);
 			self:idx: self:idx + 1;
-			Conditional:branch(check: { cand:name == self:target }, then: {
+			Conditional:if(check: { cand:name == self:target }, then: {
 				self:res: cand;
 				self:found: true;
 				return false;
@@ -558,7 +558,7 @@ Class is Loader{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			Conditional:branch(check: { self:target != '' && m:name == self:target }, then: {
+			Conditional:if(check: { self:target != '' && m:name == self:target }, then: {
 				self:res: m;
 				self:found: true;
 				return false;
@@ -575,13 +575,13 @@ Class is Loader{
 	## @param b: Second member.
 	## @return: true when signatures are identical.
 	Function of Boolean is sameSignature(Member is a, Member is b){
-		Conditional:branch(check: { a:kind != b:kind }, then: {
+		Conditional:if(check: { a:kind != b:kind }, then: {
 			return false;
 		});
-		Conditional:branch(check: { a:kind == MemberKind:FIELD }, then: {
+		Conditional:if(check: { a:kind == MemberKind:FIELD }, then: {
 			return a:memberType:name == b:memberType:name;
 		});
-		Conditional:branch(check: { a:params:length() != b:params:length() }, then: {
+		Conditional:if(check: { a:params:length() != b:params:length() }, then: {
 			return false;
 		});
 		local Boolean is same: true;
@@ -591,7 +591,7 @@ Class is Loader{
 			iteration: local Function of Boolean(){
 				local Parameter is pa: a:params:get(index: idx);
 				local Parameter is pb: b:params:get(index: idx);
-				Conditional:branch(check: { pa:name != pb:name || pa:paramType:name != pb:paramType:name }, then: {
+				Conditional:if(check: { pa:name != pb:name || pa:paramType:name != pb:paramType:name }, then: {
 					same: false;
 				});
 				idx: idx + 1;
@@ -611,7 +611,7 @@ Class is Loader{
 	## @param target: Merge destination [ClassInfo].
 	## @param frag: Group fragment [ClassInfo] to merge in.
 	Function is mergeFragmentInto(ClassInfo is target, ClassInfo is frag){
-		Conditional:branch(check: { target:baseClass == 'Enum' }, then: {
+		Conditional:if(check: { target:baseClass == 'Enum' }, then: {
 			self:parseErrors:add(item: '  [LoadError] Group target \'' . target:name . '\' is an Enum; grouping is only supported for classes.');
 			return;
 		});
@@ -624,18 +624,18 @@ Class is Loader{
 			iteration: local Function of Boolean(){
 				local Member is m: fragMembers:get(index: idx);
 				local String is mName: m:name;
-				Conditional:branch(check: { mName != 'using' && mName != 'group' }, then: {
+				Conditional:if(check: { mName != 'using' && mName != 'group' }, then: {
 					local NamedMemberLoop is dup: NamedMemberLoop:init(members: target:members, target: mName);
 					While:run(loop: dup);
-					Conditional:branch(check: { dup:found }, then: {
+					Conditional:if(check: { dup:found }, then: {
 						local Boolean is isSameSig: self:sameSignature(a: m, b: dup:res);
-						Conditional:branch(check: { isSameSig || m:kind != dup:res:kind }, then: {
+						Conditional:if(check: { isSameSig || m:kind != dup:res:kind }, then: {
 						self:parseErrors:add(item: '  [LoadError] Duplicate member \'' . mName . '\' in class \'' . target:name . '\' (' . m:sourceFile . ' conflicts with declaration in ' . dup:res:sourceFile . ').');
-						}, otherwise: {
+						}, else: {
 							# FUNCTIONS.md §I.1: same name, distinct signature — a legal overload.
 							target:members:add(item: m);
 						});
-					}, otherwise: {
+					}, else: {
 						target:members:add(item: m);
 					});
 				});
@@ -647,26 +647,26 @@ Class is Loader{
 		# Union the fragment's `using` entries into the target's `using` array.
 		local NamedMemberLoop is fragUsing: NamedMemberLoop:init(members: frag:members, target: 'using');
 		While:run(loop: fragUsing);
-		Conditional:branch(check: { fragUsing:found }, then: {
+		Conditional:if(check: { fragUsing:found }, then: {
 			local NamedMemberLoop is targetUsing: NamedMemberLoop:init(members: target:members, target: 'using');
 			While:run(loop: targetUsing);
-			Conditional:branch(check: { targetUsing:found }, then: {
+			Conditional:if(check: { targetUsing:found }, then: {
 				local Expression is fragItems: fragUsing:res:initExpr;
 				local Expression is targetItems: targetUsing:res:initExpr;
-				Conditional:branch(check: { fragItems:kind == ExpressionKind:ARRAY && targetItems:kind == ExpressionKind:ARRAY }, then: {
+				Conditional:if(check: { fragItems:kind == ExpressionKind:ARRAY && targetItems:kind == ExpressionKind:ARRAY }, then: {
 					fragItems:arrayItems:each(action: local Function(Expression is item){
 						local Boolean is present: false;
 						targetItems:arrayItems:each(action: local Function(Expression is existing){
-							Conditional:branch(check: { !present && existing:stringValue == item:stringValue }, then: {
+							Conditional:if(check: { !present && existing:stringValue == item:stringValue }, then: {
 								present: true;
 							});
 						});
-						Conditional:branch(check: { !present }, then: {
+						Conditional:if(check: { !present }, then: {
 							targetItems:arrayItems:add(item: item);
 						});
 					});
 				});
-			}, otherwise: {
+			}, else: {
 				target:members:add(item: fragUsing:res);
 			});
 		});
@@ -685,7 +685,7 @@ Class is Loader{
 			},
 			iteration: local Function of Boolean(){
 				local Member is m: mergedMembers:get(index: scan);
-				Conditional:branch(check: { m:name == 'init' }, then: {
+				Conditional:if(check: { m:name == 'init' }, then: {
 					initCount: initCount + 1;
 					initFile: m:sourceFile;
 				});
@@ -693,7 +693,7 @@ Class is Loader{
 				return true;
 			}
 		);
-		Conditional:branch(check: { initCount > 1 }, then: {
+		Conditional:if(check: { initCount > 1 }, then: {
 			self:parseErrors:add(item: '  [LoadError] Multiple init methods in class \'' . target:name . '\' (last declared in ' . initFile . '); a grouped class may declare at most one.');
 		});
 	}
@@ -711,7 +711,7 @@ Class is Loader{
 			},
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);
-				Conditional:branch(check: { m:name == name }, then: {
+				Conditional:if(check: { m:name == name }, then: {
 					members:removeAt(index: idx, default: m);
 				});
 				idx: idx - 1;
@@ -731,7 +731,7 @@ Class is Loader{
 			},
 			iteration: local Function of Boolean(){
 				local ClassInfo is cur: self:loadedClasses:get(index: idx);
-				Conditional:branch(check: { cur == c }, then: {
+				Conditional:if(check: { cur == c }, then: {
 					self:loadedClasses:removeAt(index: idx, default: c);
 					return false;
 				});
@@ -759,12 +759,12 @@ Class is Loader{
 				local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: gName);
 				While:run(loop: find);
 				local ClassInfo is target: find:res;
-				Conditional:branch(check: { !find:found }, then: {
+				Conditional:if(check: { !find:found }, then: {
 					target: ClassInfo:init(name: gName, baseClass: '', members: []);
 					self:loadedClasses:add(item: target);
 				});
-				Conditional:branch(check: { target != frag }, then: {
-					Conditional:branch(check: { target:sourceFile == '' && frag:sourceFile != '' }, then: {
+				Conditional:if(check: { target != frag }, then: {
+					Conditional:if(check: { target:sourceFile == '' && frag:sourceFile != '' }, then: {
 						# A freshly created group target adopts the fragment's
 						# file so the import gate's compilation-unit grant sees it.
 						target:setSourceFile(file: frag:sourceFile);
@@ -809,12 +809,12 @@ Class is Loader{
 			'Any'
 		];
 		preloads:each(action: local Function(String is cls){
-			Conditional:branch(check: { !self:indexBuilt }, then: {
+			Conditional:if(check: { !self:indexBuilt }, then: {
 				self:buildScanIndex();
 			});
 			local Array of String is cands: self:candidatesFor(className: cls);
 			cands:each(action: local Function(String is cand){
-				Conditional:branch(check: { !self:loadedFiles:has(key: cand) }, then: {
+				Conditional:if(check: { !self:loadedFiles:has(key: cand) }, then: {
 					self:loadFile(filePath: cand);
 				});
 			});
@@ -846,11 +846,11 @@ Class is Loader{
 	Function is synthesizeInto(Array of ClassInfo is classes){
 		classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is m){
-				Conditional:branch(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+				Conditional:if(check: { m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 					m:initExpr:arrayItems:each(action: local Function(Expression is item){
-						Conditional:branch(check: { item:kind == ExpressionKind:ARRAY }, then: {
+						Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 							item:arrayItems:each(action: local Function(Expression is seg){
-								Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS }, then: {
+								Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
 									self:synthesizeFor(c: c, asExpr: seg);
 								});
 							});
@@ -859,7 +859,7 @@ Class is Loader{
 				});
 			});
 			c:members:each(action: local Function(Member is m){
-				Conditional:branch(check: { m:kind == MemberKind:CLASS }, then: {
+				Conditional:if(check: { m:kind == MemberKind:CLASS }, then: {
 					local Array of ClassInfo is one: [m:nestedClass];
 					self:synthesizeInto(classes: one);
 				});
@@ -877,10 +877,10 @@ Class is Loader{
 	Function is synthesizeFor(ClassInfo is c, Expression is asExpr){
 		local String is targetName: asExpr:stringValue;
 		local ClassInfo is target: self:findLoadedClass(name: targetName);
-		Conditional:branch(check: { target:name == '' }, then: {
+		Conditional:if(check: { target:name == '' }, then: {
 			return;
 		});
-		Conditional:branch(check: { !self:isFieldFul(c: target) }, then: {
+		Conditional:if(check: { !self:isFieldFul(c: target) }, then: {
 			return;
 		});
 		local String is fieldName: '_import_' . targetName;
@@ -890,7 +890,7 @@ Class is Loader{
 			evaluate: local Function of Boolean(){ return idx < members:length(); },
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);
-				Conditional:branch(check: { m:name == fieldName }, then: {
+				Conditional:if(check: { m:name == fieldName }, then: {
 					self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
 				});
 				idx: idx + 1;
@@ -920,7 +920,7 @@ Class is Loader{
 	Function of Boolean is isFieldFul(ClassInfo is c){
 		local Boolean is found: false;
 		c:members:each(action: local Function(Member is m){
-			Conditional:branch(check: { m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'group' && m:name != 'castable' }, then: {
+			Conditional:if(check: { m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'group' && m:name != 'castable' }, then: {
 				found: true;
 			});
 		});
@@ -935,7 +935,7 @@ Class is Loader{
 	Function of ClassInfo is findLoadedClass(String is name){
 		local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: name);
 		While:run(loop: find);
-		Conditional:branch(check: { find:found }, then: {
+		Conditional:if(check: { find:found }, then: {
 			return find:res;
 		});
 		return ClassInfo:init(name: '', baseClass: '', members: []);
@@ -945,7 +945,7 @@ Class is Loader{
 	## (enums excluded).
 	Function is appendImplicitAny(){
 		self:loadedClasses:each(action: local Function(ClassInfo is c){
-			Conditional:branch(check: { c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' && c:name != 'Stringable' }, then: {
+			Conditional:if(check: { c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' && c:name != 'Stringable' }, then: {
 				c:withBaseClasses(name: c:name, baseClasses: ['Any'], members: c:members);
 			});
 		});

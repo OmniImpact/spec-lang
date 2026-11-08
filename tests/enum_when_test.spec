@@ -49,14 +49,14 @@ Class is EnumWhenTest{
 	testInlineIfElse(){
 		Output:line('--- 1. Testing Inline If/Else Expressions ---');
 		local Int is score: 85;
-		local String is grade: if (score >= 90) 'A' else if (score >= 80) 'B' else 'C';
+		local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { Conditional:if(check: { score >= 80 }, then: { 'B' }, else: { 'C' }) });
 		Output:line('Grade: ' . grade);
 
 		local Boolean is isReady: true;
-		local String is statusText: if (isReady) 'Ready' else 'Not Ready';
+		local String is statusText: Conditional:if(check: { isReady }, then: { 'Ready' }, else: { 'Not Ready' });
 		Output:line('Status: ' . statusText);
 
-		local Int is bonus: if (score > 80) 10 else 0;
+		local Int is bonus: Conditional:if(check: { score > 80 }, then: { 10 }, else: { 0 });
 		Output:line('Bonus: ' . bonus);
 	}
 
@@ -125,9 +125,9 @@ Class is EnumWhenTest{
 
 		# String-backed reverse lookup: the tag maps back to its variant,
 		# no match yields the empty-tag default.
-		Conditional:branch(check: { LogLevel:of(value: 'WRN') == LogLevel:WARN && LogLevel:of(value: 'nope') == LogLevel:NONE }, then: {
+		Conditional:if(check: { LogLevel:of(value: 'WRN') == LogLevel:WARN && LogLevel:of(value: 'nope') == LogLevel:NONE }, then: {
 			Output:line('Reverse lookup of() round-trips and defaults');
-		}, otherwise: {
+		}, else: {
 			Output:line('FAIL: of() lookup');
 		});
 

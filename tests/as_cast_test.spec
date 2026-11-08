@@ -57,26 +57,26 @@ Class is AsCastTest{
 		# Case 1: upcast - dog passed and stored as Animal, dispatch stays virtual.
 		local Dog is dog: Dog:init();
 		local Animal is asAnimal: dog as Animal;
-		Conditional:branch(check: { asAnimal:speak() == 'woof' }, then: {
+		Conditional:if(check: { asAnimal:speak() == 'woof' }, then: {
 			Output:line('[PASS] upcast: virtual dispatch preserved');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] upcast: expected woof');
 		});
 
 		# Case 2: downcast - Animal reference back to Dog, subclass method reachable.
 		local Dog is back: asAnimal as Dog;
-		Conditional:branch(check: { back:fetch() == 'ball' }, then: {
+		Conditional:if(check: { back:fetch() == 'ball' }, then: {
 			Output:line('[PASS] downcast: subclass method reachable');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] downcast: expected ball');
 		});
 
 		# Case 3: numeric casts.
 		local Int is truncated: 3.9 as Int;
 		local Float is widened: 7 as Float;
-		Conditional:branch(check: { truncated == 3 && widened == 7.0 }, then: {
+		Conditional:if(check: { truncated == 3 && widened == 7.0 }, then: {
 			Output:line('[PASS] numeric: 3.9 as Int = 3, 7 as Float = 7.0');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] numeric: ' . truncated . ', ' . widened);
 		});
 
@@ -84,51 +84,51 @@ Class is AsCastTest{
 		local String is hex: 65516 as Hex;
 		local Int is parsed: 'ffec' as Hex;
 		local String is bits: 10 as Bin(8);
-		Conditional:branch(check: { hex == 'ffec' && parsed == 65516 && bits == '00001010' }, then: {
+		Conditional:if(check: { hex == 'ffec' && parsed == 65516 && bits == '00001010' }, then: {
 			Output:line('[PASS] bases: as Hex, as Hex parse, as Bin(8)');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] bases: \'' . hex . '\', ' . parsed . ', \'' . bits . '\'');
 		});
 
 		# Case 5: as Int on String parses base 10.
 		local Int is num: '1234' as Int;
-		Conditional:branch(check: { num == 1234 }, then: {
+		Conditional:if(check: { num == 1234 }, then: {
 			Output:line('[PASS] String as Int: 1234');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] String as Int: ' . num);
 		});
 
 		# Case 6: generated toString - class instances render their class name.
 		local String is label: 'instance: ' . dog;
-		Conditional:branch(check: { label == 'instance: Dog' }, then: {
+		Conditional:if(check: { label == 'instance: Dog' }, then: {
 			Output:line('[PASS] toString: class renders as Dog');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] toString: \'' . label . '\'');
 		});
 
 		# Case 7: enum variants render their variant name.
 		local Color is c: Color:GREEN;
 		local String is colorLine: 'color: ' . c;
-		Conditional:branch(check: { colorLine == 'color: GREEN' }, then: {
+		Conditional:if(check: { colorLine == 'color: GREEN' }, then: {
 			Output:line('[PASS] enum render: variant name GREEN');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] enum render: \'' . colorLine . '\'');
 		});
 
 		# Case 8: explicit String cast matches concat behavior.
 		local String is explicit: dog as String;
-		Conditional:branch(check: { explicit == 'Dog' }, then: {
+		Conditional:if(check: { explicit == 'Dog' }, then: {
 			Output:line('[PASS] as String: Dog');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] as String: \'' . explicit . '\'');
 		});
 
 		# Case 9: checked downcast from Any to Dog
 		local Any is anyDog: Dog:init();
 		local Dog is checkedDog: anyDog as Dog;
-		Conditional:branch(check: { checkedDog:fetch() == 'ball' }, then: {
+		Conditional:if(check: { checkedDog:fetch() == 'ball' }, then: {
 			Output:line('[PASS] checked downcast from Any: fetch = ball');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] checked downcast from Any: expected ball');
 		});
 

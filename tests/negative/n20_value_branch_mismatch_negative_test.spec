@@ -8,7 +8,7 @@ Class is N20ValueBranchMismatch{
 	];
 
 	replace Function is init(Map of String to String is args){
-		local String is x: Conditional:branch(check: { 1 > 0 }, then: { 'text' }, otherwise: { 42 });
+		local String is x: Conditional:if(check: { 1 > 0 }, then: { 'text' }, else: { 42 });
 		Output:line(x);
 	}
 }

@@ -39,7 +39,7 @@ Class is ClassBindings{
 	## @param c: The class.
 	## @return: true when emission-transparent and contract-free.
 	Function of Boolean is isTransparent(ClassInfo is c){
-		Conditional:branch(check: { self:isSysinternal(cls: c) }, then: {
+		Conditional:if(check: { self:isSysinternal(cls: c) }, then: {
 			return true;
 		});
 		# NOTE: names here must be unambiguous across the whole program —
@@ -107,11 +107,11 @@ Class is ClassBindings{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			Conditional:branch(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			Conditional:if(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				local Array of Expression is segs: m:initExpr:arrayItems;
-				Conditional:branch(check: { segs:length() > 0 }, then: {
+				Conditional:if(check: { segs:length() > 0 }, then: {
 					local Expression is last: segs:get(index: segs:length() - 1);
-					Conditional:branch(check: { last:stringValue == 'sysinternal' }, then: {
+					Conditional:if(check: { last:stringValue == 'sysinternal' }, then: {
 						self:isFloor: true;
 					});
 				});

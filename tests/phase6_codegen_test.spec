@@ -41,7 +41,7 @@ Class is Phase6CodegenTest{
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is errors: tc:checkProgram(program: prog);
 		Output:line('Type errors: ' . errors:length());
-		Conditional:branch(check: { errors:length() == 0 }, then: {
+		Conditional:if(check: { errors:length() == 0 }, then: {
 			Output:line('[PASS] Program passed static type checking');
 		});
 
@@ -49,27 +49,27 @@ Class is Phase6CodegenTest{
 		local CodeGenerator is cg: CodeGenerator:init();
 		local String is cCode: cg:generateProgram(program: prog, entryClass: 'HelloCodegen');
 		Output:line('Generated C code bytes: ' . cCode:length());
-		Conditional:branch(check: { cCode:length() > 0 }, then: {
+		Conditional:if(check: { cCode:length() > 0 }, then: {
 			Output:line('[PASS] Emitted complete C11 translation unit');
 		});
 
 		Output:line("\n4. Writing generated C to /tmp/pure_spec_hello.c...");
 		local Boolean is written: File:write(path: '/tmp/pure_spec_hello.c', content: cCode);
-		Conditional:branch(check: { written }, then: {
+		Conditional:if(check: { written }, then: {
 			Output:line('[PASS] Wrote /tmp/pure_spec_hello.c successfully');
 		});
 
 		Output:line("\n5. Compiling /tmp/pure_spec_hello.c with gcc...");
 		local Int is gccCode: Process:execute(command: 'gcc', args: ['-O2', '/tmp/pure_spec_hello.c', '-o', '/tmp/pure_spec_hello']);
 		Output:line('gcc exit status: ' . gccCode);
-		Conditional:branch(check: { gccCode == 0 }, then: {
+		Conditional:if(check: { gccCode == 0 }, then: {
 			Output:line('[PASS] GCC successfully compiled pure-Spec generated C code!');
 		});
 
 		Output:line("\n6. Executing compiled binary /tmp/pure_spec_hello:");
 		local Int is runCode: Process:execute(command: '/tmp/pure_spec_hello', args: []);
 		Output:line('Binary exit status: ' . runCode);
-		Conditional:branch(check: { runCode == 0 }, then: {
+		Conditional:if(check: { runCode == 0 }, then: {
 			Output:line('[PASS] Executed binary successfully!');
 		});
 

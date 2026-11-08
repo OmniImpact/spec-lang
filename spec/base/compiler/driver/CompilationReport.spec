@@ -27,7 +27,7 @@ Class is CompilationReport{
 	## @param total: Total stage count.
 	## @param label: Stage description.
 	Function is stage(Int is n, Int is total, String is label){
-		Conditional:branch(check: { self:quiet }, then: {
+		Conditional:if(check: { self:quiet }, then: {
 			return;
 		});
 		Output:line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
@@ -35,7 +35,7 @@ Class is CompilationReport{
 
 	## One-line progress note inside a stage (no numbering).
 	Function is note(String is label){
-		Conditional:branch(check: { self:quiet }, then: {
+		Conditional:if(check: { self:quiet }, then: {
 			return;
 		});
 		Output:line('  ' . label);
@@ -54,20 +54,20 @@ Class is CompilationReport{
 	## @param peakKb: Process peak memory in KB.
 	## @param binKb: Binary size in KB (-1 when no binary was produced).
 	Function is summary(String is inputPath, String is outputPath, Int is classCount, Int is methodCount, Int is specLines, Int is cLines, Int is totalMs, Int is loadMs, Int is checkMs, Int is genMs, Int is ccMs, Int is peakKb, Int is binKb){
-		Conditional:branch(check: { self:quiet }, then: {
+		Conditional:if(check: { self:quiet }, then: {
 			return;
 		});
 		Output:line('');
 		Output:line('  ' . inputPath . ' -> ' . outputPath);
 		Output:line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of C');
 		local String is times: '  time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
-		Conditional:branch(check: { ccMs >= 0 }, then: {
+		Conditional:if(check: { ccMs >= 0 }, then: {
 			times: times . ' · cc ' . (ccMs as String);
 		});
 		times: times . ')';
 		Output:line(times);
 		local String is last: '  peak memory ' . ((peakKb / 1024) as String) . ' MB';
-		Conditional:branch(check: { binKb >= 0 }, then: {
+		Conditional:if(check: { binKb >= 0 }, then: {
 			last: last . ' · binary ' . ((binKb / 1024) as String) . ' KB';
 		});
 		Output:line(last);

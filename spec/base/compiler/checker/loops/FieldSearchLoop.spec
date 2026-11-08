@@ -31,7 +31,7 @@ Class of Loop is FieldSearchLoop{
 	replace Function of Boolean is iteration(LoopControl is c){
 		local Member is m: self:members:get(index: self:idx);
 		self:idx: self:idx + 1;
-		Conditional:branch(check: { m:kind == MemberKind:FIELD && m:name == self:fieldName }, then: {
+		Conditional:if(check: { m:kind == MemberKind:FIELD && m:name == self:fieldName }, then: {
 			self:res: m;
 			self:found: true;
 			return false;

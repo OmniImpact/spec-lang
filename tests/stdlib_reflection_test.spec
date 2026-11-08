@@ -31,10 +31,10 @@ Class is StdlibReflectionTest{
 		local StackFrame is frame: StackFrame:init(location: loc, className: 'Player', methodName: 'takeDamage');
 		Output:line('Stack Frame: ' . frame:toString());
 
-		Conditional:branch(check: { frame:getClassName() == 'Player' }, then: {
+		Conditional:if(check: { frame:getClassName() == 'Player' }, then: {
 			Output:line('[PASS] StackFrame class name is Player');
 		});
-		Conditional:branch(check: { frame:getMethodName() == 'takeDamage' }, then: {
+		Conditional:if(check: { frame:getMethodName() == 'takeDamage' }, then: {
 			Output:line('[PASS] StackFrame method name is takeDamage');
 		});
 
@@ -56,10 +56,10 @@ Class is StdlibReflectionTest{
 		mapType:params: mapParams;
 		Output:line('Map type: ' . mapType:toString());
 
-		Conditional:branch(check: { arrType:isGeneric() }, then: {
+		Conditional:if(check: { arrType:isGeneric() }, then: {
 			Output:line('[PASS] Array of String is generic');
 		});
-		Conditional:branch(check: { !intType:isGeneric() }, then: {
+		Conditional:if(check: { !intType:isGeneric() }, then: {
 			Output:line('[PASS] Int is not generic');
 		});
 
@@ -85,10 +85,10 @@ Class is StdlibReflectionTest{
 		Output:line('Members count: ' . cls:members:length());
 		Output:line('Method: ' . methodMem:name . ' with ' . methodMem:params:length() . ' parameter(s)');
 
-		Conditional:branch(check: { cls:name == 'Healer' }, then: {
+		Conditional:if(check: { cls:name == 'Healer' }, then: {
 			Output:line('[PASS] ClassInfo name is Healer');
 		});
-		Conditional:branch(check: { methodMem:name == 'heal' }, then: {
+		Conditional:if(check: { methodMem:name == 'heal' }, then: {
 			Output:line('[PASS] Method name is heal');
 		});
 
@@ -104,10 +104,10 @@ Class is StdlibReflectionTest{
 		Output:line('Assign stmt kind: ' . assignStmt:kind:value());
 		Output:line('Num expr kind: ' . numExpr:kind:value());
 
-		Conditional:branch(check: { assignStmt:kind:value() == 'ASSIGN' }, then: {
+		Conditional:if(check: { assignStmt:kind:value() == 'ASSIGN' }, then: {
 			Output:line('[PASS] Statement kind is ASSIGN');
 		});
-		Conditional:branch(check: { numExpr:kind:value() == 'NUMBER' }, then: {
+		Conditional:if(check: { numExpr:kind:value() == 'NUMBER' }, then: {
 			Output:line('[PASS] Expression kind is NUMBER');
 		});
 

@@ -88,33 +88,33 @@ Class is MergeFunctionTest{
 
 		# Case 1: chained forward with adaptation (1+100)+2 = 103.
 		local Int is added: gl:add(a: 1, b: 2);
-		Conditional:branch(check: { added == 103 }, then: {
+		Conditional:if(check: { added == 103 }, then: {
 			Output:line('[PASS] chained forward: add(1, 2) = 103');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] chained forward: expected 103, got ' . added);
 		});
 
 		# Case 2: partial named forward with parent default (7 * 2 = 14).
 		local Int is scaled: gl:scale(n: 7);
-		Conditional:branch(check: { scaled == 14 }, then: {
+		Conditional:if(check: { scaled == 14 }, then: {
 			Output:line('[PASS] partial named forward: scale(7) = 14');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] partial named forward: expected 14, got ' . scaled);
 		});
 
 		# Case 3: merge init chained the parent constructor.
-		Conditional:branch(check: { gl:tag == 'grand' }, then: {
+		Conditional:if(check: { gl:tag == 'grand' }, then: {
 			Output:line('[PASS] merge init chain: tag = grand');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] merge init chain: expected grand, got ' . gl:tag);
 		});
 
 		# Case 4: merge init can also adapt arguments.
 		local ChildLogger is cl: ChildLogger:init(tag: 'x');
 		# ChildLogger inherits LoggerBase:init unchanged; tag round-trips.
-		Conditional:branch(check: { cl:tag == 'x' }, then: {
+		Conditional:if(check: { cl:tag == 'x' }, then: {
 			Output:line('[PASS] inherited init: tag = x');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] inherited init: expected x, got ' . cl:tag);
 		});
 
@@ -122,18 +122,18 @@ Class is MergeFunctionTest{
 		# forward identically to the subclass-typed call (no recursion).
 		local LoggerBase is asBase: gl;
 		local Int is baseResult: asBase:add(a: 1, b: 2);
-		Conditional:branch(check: { baseResult == 103 }, then: {
+		Conditional:if(check: { baseResult == 103 }, then: {
 			Output:line('[PASS] base-typed call: add(1, 2) = 103 (virtual forward)');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] base-typed call: expected 103, got ' . baseResult);
 		});
 
 		# Case 6: subclass-typed call goes through the merge forward.
 		local ChildLogger is asChild: GrandLogger:init(tag: 'c');
 		local Int is childResult: asChild:add(a: 1, b: 2);
-		Conditional:branch(check: { childResult == 103 }, then: {
+		Conditional:if(check: { childResult == 103 }, then: {
 			Output:line('[PASS] subclass-typed call: add(1, 2) = 103 (forward applied)');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] subclass-typed call: expected 103, got ' . childResult);
 		});
 

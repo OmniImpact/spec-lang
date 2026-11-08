@@ -8,7 +8,6 @@ Enum of String is StatementKind {
 	namespace: ['base', 'compiler', 'ast'],
 	VAR_DECL: 'VAR_DECL',
 	ASSIGN: 'ASSIGN',
-	IF: 'IF',
 	RETURN: 'RETURN',
 	CLASS: 'CLASS',
 	EXPR: 'EXPR',

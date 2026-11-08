@@ -23,9 +23,9 @@ Class is WhileLoopTest{
 				i++;
 			}
 		);
-		Conditional:branch(check: { sum1 == 45 }, then: {
+		Conditional:if(check: { sum1 == 45 }, then: {
 			Output:line('[PASS] Scoped variables with named arguments and auto-return predicate');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Scoped variables with named arguments, sum1=' . sum1);
 		});
 
@@ -39,9 +39,9 @@ Class is WhileLoopTest{
 				n: n + 1;
 			}
 		);
-		Conditional:branch(check: { prod2 == 120 }, then: {
+		Conditional:if(check: { prod2 == 120 }, then: {
 			Output:line('[PASS] Positional arguments with function block shorthand');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Positional arguments, prod2=' . prod2);
 		});
 
@@ -57,9 +57,9 @@ Class is WhileLoopTest{
 			}
 		);
 		local Boolean is collectedOk: collected:length() == 5 && collected:get(index: 0, default: 0) == 3 && collected:get(index: 4, default: 0) == 15;
-		Conditional:branch(check: { collectedOk }, then: {
+		Conditional:if(check: { collectedOk }, then: {
 			Output:line('[PASS] Mixed scope: reading outer variables and mutating outer collections');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Mixed scope collection mutation');
 		});
 
@@ -84,9 +84,9 @@ Class is WhileLoopTest{
 		# row 1: 10+11+12+13 = 46
 		# row 2: 20+21+22+23 = 86
 		# total = 138
-		Conditional:branch(check: { gridSum == 138 }, then: {
+		Conditional:if(check: { gridSum == 138 }, then: {
 			Output:line('[PASS] Nested while loops with scoped state');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Nested while loops, gridSum=' . gridSum);
 		});
 
@@ -100,9 +100,9 @@ Class is WhileLoopTest{
 				steps: steps + 1;
 			}
 		);
-		Conditional:branch(check: { countdown == 0 && steps == 5 }, then: {
+		Conditional:if(check: { countdown == 0 && steps == 5 }, then: {
 			Output:line('[PASS] While loop without scoped variables');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] While loop without scoped variables');
 		});
 
@@ -118,9 +118,9 @@ Class is WhileLoopTest{
 			}
 		);
 		local Boolean is mapOk: counts:length() == 4 && counts:getInt(key: 'item_0', default: -1) == 0 && counts:getInt(key: 'item_3', default: -1) == 300;
-		Conditional:branch(check: { mapOk }, then: {
+		Conditional:if(check: { mapOk }, then: {
 			Output:line('[PASS] Mixed scope Map mutations');
-		}, otherwise: {
+		}, else: {
 			Output:line('[FAIL] Mixed scope Map mutations');
 		});
 	}
