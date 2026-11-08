@@ -45,11 +45,7 @@ Class is Loader{
 	local Map of String to String is seenBareNames: Map:init();
 	local Array of String is parseErrors: [];
 
-	## Group targets declared by fragments via the `group` pseudo-field (load order).
-	local Array of String is groupTargets: [];
 
-	## Group fragments corresponding to [groupTargets] (load order).
-	local Array of ClassInfo is groupFragments: [];
 
 	replace Function is init(){
 		self:loadedFiles: Map:init();
@@ -57,8 +53,6 @@ Class is Loader{
 		self:seenClassNames: Map:init();
 		self:seenBareNames: Map:init();
 		self:parseErrors: [];
-		self:groupTargets: [];
-		self:groupFragments: [];
 	}
 
 	Function of Array of String is getParseErrors(){
@@ -105,7 +99,6 @@ Class is Loader{
 					m:nestedClass:setSourceFile(file: filePath);
 				});
 			});
-			local String is gName: self:groupTargetOf(c: c);
 			# Class identity is namespace-qualified: a base:sys wrapper and
 			# its same-name sysinternal floor coexist in one program. A
 			# NON-floor class whose bare name is already registered is a
@@ -121,18 +114,6 @@ Class is Loader{
 				self:seenClassNames:set(key: qName, value: 'true');
 				self:seenBareNames:set(key: c:name, value: 'true');
 				self:loadedClasses:add(item: c);
-				Conditional:if(check: { gName != '' && gName != c:name }, then: {
-					self:groupTargets:add(item: gName);
-					self:groupFragments:add(item: c);
-				});
-			}, else: {
-				Conditional:if(check: { gName == c:name }, then: {
-					local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: c:name);
-					While:run(loop: find);
-					Conditional:if(check: { find:found }, then: {
-						self:mergeFragmentInto(target: find:res, frag: c);
-					});
-				});
 			});
 			self:collectImportsFromClass(c: c);
 		});
@@ -456,46 +437,6 @@ Class is Loader{
 		}
 	}
 
-	## Extracts the load-time group target declared via the `group` pseudo-field.
-	##
-	## The field is optional; when present it must be a single-entry string array
-	## naming the class this fragment merges into. Fragments must not declare
-	## `extends` (enums included). An empty string means "not a fragment".
-	##
-	## @param c: Candidate [ClassInfo] definition.
-	## @return: Group target class name, or empty string when not a fragment.
-	Function of String is groupTargetOf(ClassInfo is c){
-		local Array of Member is members: c:members;
-		local Int is idx: 0;
-		local String is target: '';
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return idx < members:length();
-			},
-			iteration: local Function of Boolean(){
-				local Member is m: members:get(index: idx);
-				Conditional:if(check: { m:name == 'group' && m:hasInit }, then: {
-					local Expression is initExpr: m:initExpr;
-					Conditional:if(check: { initExpr:kind == ExpressionKind:ARRAY }, then: {
-						Conditional:if(check: { initExpr:arrayItems:length() != 1 }, then: {
-							self:parseErrors:add(item: '  [LoadError] ClassInfo \'' . c:name . '\' declares a group with ' . (initExpr:arrayItems:length() as String) . ' entries; exactly one target is required.');
-						}, else: {
-							local Expression is firstItem: initExpr:arrayItems:get(index: 0);
-							target: firstItem:stringValue;
-						});
-					});
-				});
-				idx: idx + 1;
-				return true;
-			}
-		);
-		Conditional:if(check: { target != '' && c:baseClass != '' }, then: {
-			self:parseErrors:add(item: '  [LoadError] Group fragment \'' . c:name . '\' must not declare parent classes.');
-			target: '';
-		});
-		return target;
-	}
-
 	## Finds an already-loaded class by name.
 	Class of Loop is LoadedClassSearchLoop{
 
@@ -601,125 +542,6 @@ Class is Loader{
 		return same;
 	}
 
-	## Merges a group fragment's members into its target class.
-	##
-	## Appends members in fragment order, rejecting duplicate member names with
-	## both source files named. Unions the fragment's `using` entries into the
-	## target's `using` array (or transplants the member when the target has
-	## none), strips `group` declarations, and enforces the single-`init` rule.
-	##
-	## @param target: Merge destination [ClassInfo].
-	## @param frag: Group fragment [ClassInfo] to merge in.
-	Function is mergeFragmentInto(ClassInfo is target, ClassInfo is frag){
-		Conditional:if(check: { target:baseClass == 'Enum' }, then: {
-			self:parseErrors:add(item: '  [LoadError] Group target \'' . target:name . '\' is an Enum; grouping is only supported for classes.');
-			return;
-		});
-		local Array of Member is fragMembers: frag:members;
-		local Int is idx: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return idx < fragMembers:length();
-			},
-			iteration: local Function of Boolean(){
-				local Member is m: fragMembers:get(index: idx);
-				local String is mName: m:name;
-				Conditional:if(check: { mName != 'using' && mName != 'group' }, then: {
-					local NamedMemberLoop is dup: NamedMemberLoop:init(members: target:members, target: mName);
-					While:run(loop: dup);
-					Conditional:if(check: { dup:found }, then: {
-						local Boolean is isSameSig: self:sameSignature(a: m, b: dup:res);
-						Conditional:if(check: { isSameSig || m:kind != dup:res:kind }, then: {
-						self:parseErrors:add(item: '  [LoadError] Duplicate member \'' . mName . '\' in class \'' . target:name . '\' (' . m:sourceFile . ' conflicts with declaration in ' . dup:res:sourceFile . ').');
-						}, else: {
-							# FUNCTIONS.md §I.1: same name, distinct signature — a legal overload.
-							target:members:add(item: m);
-						});
-					}, else: {
-						target:members:add(item: m);
-					});
-				});
-				idx: idx + 1;
-				return true;
-			}
-		);
-
-		# Union the fragment's `using` entries into the target's `using` array.
-		local NamedMemberLoop is fragUsing: NamedMemberLoop:init(members: frag:members, target: 'using');
-		While:run(loop: fragUsing);
-		Conditional:if(check: { fragUsing:found }, then: {
-			local NamedMemberLoop is targetUsing: NamedMemberLoop:init(members: target:members, target: 'using');
-			While:run(loop: targetUsing);
-			Conditional:if(check: { targetUsing:found }, then: {
-				local Expression is fragItems: fragUsing:res:initExpr;
-				local Expression is targetItems: targetUsing:res:initExpr;
-				Conditional:if(check: { fragItems:kind == ExpressionKind:ARRAY && targetItems:kind == ExpressionKind:ARRAY }, then: {
-					fragItems:arrayItems:each(action: local Function(Expression is item){
-						local Boolean is present: false;
-						targetItems:arrayItems:each(action: local Function(Expression is existing){
-							Conditional:if(check: { !present && existing:stringValue == item:stringValue }, then: {
-								present: true;
-							});
-						});
-						Conditional:if(check: { !present }, then: {
-							targetItems:arrayItems:add(item: item);
-						});
-					});
-				});
-			}, else: {
-				target:members:add(item: fragUsing:res);
-			});
-		});
-
-		# Strip the `group` declaration from the merged class.
-		self:stripMemberNamed(target: target, name: 'group');
-
-		# Enforce the single-init rule across the merged class.
-		local Int is initCount: 0;
-		local String is initFile: '';
-		local Array of Member is mergedMembers: target:members;
-		local Int is scan: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return scan < mergedMembers:length();
-			},
-			iteration: local Function of Boolean(){
-				local Member is m: mergedMembers:get(index: scan);
-				Conditional:if(check: { m:name == 'init' }, then: {
-					initCount: initCount + 1;
-					initFile: m:sourceFile;
-				});
-				scan: scan + 1;
-				return true;
-			}
-		);
-		Conditional:if(check: { initCount > 1 }, then: {
-			self:parseErrors:add(item: '  [LoadError] Multiple init methods in class \'' . target:name . '\' (last declared in ' . initFile . '); a grouped class may declare at most one.');
-		});
-	}
-
-	## Removes members with the given name from a class.
-	##
-	## @param target: [ClassInfo] to modify.
-	## @param name: Member name to strip.
-	Function is stripMemberNamed(ClassInfo is target, String is name){
-		local Array of Member is members: target:members;
-		local Int is idx: members:length() - 1;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return idx >= 0;
-			},
-			iteration: local Function of Boolean(){
-				local Member is m: members:get(index: idx);
-				Conditional:if(check: { m:name == name }, then: {
-					members:removeAt(index: idx, default: m);
-				});
-				idx: idx - 1;
-				return true;
-			}
-		);
-	}
-
 	## Removes a class from the loaded registry (used to dissolve fragments).
 	##
 	## @param c: [ClassInfo] to remove.
@@ -741,55 +563,12 @@ Class is Loader{
 		);
 	}
 
-	## Merges every declared group fragment into its target class.
-	##
-	## Runs once after all files are loaded. Fragments whose target class does
-	## not exist yet contribute to a freshly created class named after the
-	## group (a class may live entirely across fragments). Fragments are then
-	## dissolved from the loaded registry.
-	Function is mergeGroups(){
-		local Int is idx: 0;
-		While:condition(
-			evaluate: local Function of Boolean(){
-				return idx < self:groupTargets:length();
-			},
-			iteration: local Function of Boolean(){
-				local String is gName: self:groupTargets:get(index: idx);
-				local ClassInfo is frag: self:groupFragments:get(index: idx);
-				local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: gName);
-				While:run(loop: find);
-				local ClassInfo is target: find:res;
-				Conditional:if(check: { !find:found }, then: {
-					target: ClassInfo:init(name: gName, baseClass: '', members: []);
-					self:loadedClasses:add(item: target);
-				});
-				Conditional:if(check: { target != frag }, then: {
-					Conditional:if(check: { target:sourceFile == '' && frag:sourceFile != '' }, then: {
-						# A freshly created group target adopts the fragment's
-						# file so the import gate's compilation-unit grant sees it.
-						target:setSourceFile(file: frag:sourceFile);
-					});
-					self:mergeFragmentInto(target: target, frag: frag);
-					self:removeClassFromLoaded(c: frag);
-				});
-				idx: idx + 1;
-				return true;
-			}
-		);
-	}
-
-	## Coordinates root file loading and dependency traversal to produce a unified [ProgramNode].
-	##
-	## @param rootPath: Filesystem path to the application entry file.
-	## @return: Merged [ProgramNode] AST containing root and imported classes.
 	Function of ProgramNode is loadProgram(String is rootPath){
 		self:loadedFiles: Map:init();
 		self:loadedClasses: [];
 		self:seenClassNames: Map:init();
 		self:seenBareNames: Map:init();
 		self:parseErrors: [];
-		self:groupTargets: [];
-		self:groupFragments: [];
 
 		# The input path anchors the scan roots before any resolution.
 		self:rootInputPath: rootPath;
@@ -822,7 +601,6 @@ Class is Loader{
 
 		self:loadFile(filePath: rootPath);
 		self:appendImplicitAny();
-		self:mergeGroups();
 		self:synthesizeInstanceImports();
 
 		return ProgramNode:init(classes: self:loadedClasses);
@@ -834,8 +612,7 @@ Class is Loader{
 	## per-instance construction, ARC destroy, and constructor-argument
 	## checking all run through the ordinary field machinery. Field-less
 	## imports synthesize nothing: their methods are self-free and
-	## dispatch stays elided (§2.4). Runs after group merging so fragment
-	## unions are final. Nested classes are included.
+	## dispatch stays elided (§2.4). Nested classes are included.
 	Function is synthesizeInstanceImports(){
 		self:synthesizeInto(classes: self:loadedClasses);
 	}
@@ -920,7 +697,7 @@ Class is Loader{
 	Function of Boolean is isFieldFul(ClassInfo is c){
 		local Boolean is found: false;
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'group' && m:name != 'castable' }, then: {
+			Conditional:if(check: { m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' }, then: {
 				found: true;
 			});
 		});

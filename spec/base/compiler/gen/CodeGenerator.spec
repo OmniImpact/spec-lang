@@ -411,7 +411,7 @@ Class is CodeGenerator{
 	Function of Boolean is isFieldFulClass(ClassInfo is cls){
 		local Boolean is found: false;
 		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'group' && m:name != 'castable' }, then: {
+			Conditional:if(check: { m:kind == MemberKind:FIELD && m:name != 'using' && m:name != 'namespace' && m:name != 'castable' }, then: {
 				found: true;
 			});
 		});

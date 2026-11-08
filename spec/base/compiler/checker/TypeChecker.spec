@@ -1300,13 +1300,6 @@ Class is TypeChecker{
 					return;
 				});
 				c:members:each(action: local Function(Member is m){
-					Conditional:if(check: { !granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
-						m:initExpr:arrayItems:each(action: local Function(Expression is gi){
-							Conditional:if(check: { gi:stringValue == targetName }, then: {
-								granted: true;
-							});
-						});
-					});
 					Conditional:if(check: { !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 						m:initExpr:arrayItems:each(action: local Function(Expression is item){
 							Conditional:if(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
@@ -1369,13 +1362,6 @@ Class is TypeChecker{
 		});
 		local Boolean is granted: false;
 		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !granted && m:name == 'group' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
-				m:initExpr:arrayItems:each(action: local Function(Expression is gi){
-					Conditional:if(check: { gi:stringValue == targetName }, then: {
-						granted: true;
-					});
-				});
-			});
 			Conditional:if(check: { !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
 					Conditional:if(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
@@ -3178,7 +3164,7 @@ Class is TypeChecker{
 				classDef:members:each(action: local Function(Member is subM){
 					# Declarative metadata (namespace/using/group) is per-class
 					# by design and never participates in override matching.
-					Conditional:if(check: { subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:GROUP:value() || subM:name == MetadataField:CASTABLE:value() }, then: {
+					Conditional:if(check: { subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:CASTABLE:value() }, then: {
 						return;
 					});
 					parent:members:each(action: local Function(Member is parentM){
@@ -3335,7 +3321,7 @@ Class is TypeChecker{
 					# initializers may reference classes the using itself
 					# loads, so type validation is skipped.
 					self:validateTypeAccess(t: m:memberType, line: m:line);
-					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value() }, then: {
+					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() }, then: {
 						local String is declaredType: self:formatVarTypeString(t: m:memberType);
 						Conditional:if(check: { m:hasInit }, then: {
 							# Bidirectional: the declared type flows in.

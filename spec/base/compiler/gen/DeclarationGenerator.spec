@@ -134,7 +134,7 @@ Class is DeclarationGenerator{
 					# Declarative metadata (namespace/using/group/castable)
 					# never becomes a struct field.
 					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
-						m:name != MetadataField:GROUP:value() && m:name != MetadataField:CASTABLE:value() }, then: {
+						m:name != MetadataField:CASTABLE:value() }, then: {
 						local Int is existing: self:fieldIndexNamed(list: acc, name: m:name);
 						Conditional:if(check: { existing >= 0 }, then: {
 							acc:set(index: existing, item: m);

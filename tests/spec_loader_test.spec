@@ -1,5 +1,5 @@
 #! Loader port check: multi-file loading, package resolution, the root
-#! lattice preloads, implicit-Any parenting, and group-fragment merging.
+#! lattice preloads and implicit-Any parenting.
 
 Class is SpecLoaderTest{
 	namespace: ['test'];
@@ -84,41 +84,6 @@ Class is LoaderE2E{
 			failures: failures + 1;
 		});
 
-		# --- group fragments merge into their target ---
-		File:write(path: 'tests/.loader_group_a_tmp.spec', content: "Class is Grouped{
-	Function is init(Map of String to String is args){
-	}
-	replace Array of Array of String is group: [
-		'Grouped'
-	];
-}");
-		File:write(path: 'tests/.loader_group_b_tmp.spec', content: "Class is GroupedPart{
-	Function of Int is answer(){
-		return 42;
-	}
-	replace Array of Array of String is group: [
-		'Grouped'
-	];
-}
-Class is GroupMain{
-	replace Function is init(Map of String to String is args){
-	}
-}");
-		local Loader is gloader: Loader:init();
-		local ProgramNode is gprog: gloader:loadProgram(rootPath: 'tests/.loader_group_a_tmp.spec');
-		gloader:loadFile(filePath: 'tests/.loader_group_b_tmp.spec');
-		gloader:mergeGroups();
-		local LoaderE2EHelper is gh: LoaderE2EHelper:init();
-		Conditional:if(check: { gloader:getParseErrors():length() == 0
-			&& gh:hasClass(classes: gprog, name: 'Grouped')
-			&& !gh:hasClass(classes: gprog, name: 'GroupedPart')
-			&& gh:memberCount(classes: gprog, name: 'Grouped') == 2 }, then: {
-			Output:line('[PASS] group fragment merging');
-		}, else: {
-			Output:line('[FAIL] group merge');
-			failures: failures + 1;
-		});
-
 		# --- unresolvable imports are load errors ---
 		File:write(path: 'tests/.loader_bad_tmp.spec', content: "Class is BadImporter{
 	replace Function is init(Map of String to String is args){
@@ -140,8 +105,6 @@ Class is GroupMain{
 		});
 
 		File:remove(path: 'tests/.loader_app_tmp.spec');
-		File:remove(path: 'tests/.loader_group_a_tmp.spec');
-		File:remove(path: 'tests/.loader_group_b_tmp.spec');
 		File:remove(path: 'tests/.loader_bad_tmp.spec');
 
 		Conditional:if(check: { failures == 0 }, then: {

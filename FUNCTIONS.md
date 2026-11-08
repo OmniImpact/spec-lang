@@ -412,6 +412,19 @@ NO outer link — they are same-file classes, nothing more.
    function surface; it grants no fields, no private access, and no
    transitive scope. Only `of`-inheritance merges scope.
 
+### IV.1b — `group:` retired
+
+The `group: [Target]` partial-class mechanism (fragments merging at load
+time) is **removed**. Multi-parent assembly is MI —
+`Class of Greeter, Language, English is EnglishGreeter` — and glue between
+classes is exactly what the child of an MI declaration provides: normal
+access to both parents, both parents independently verifiable. What
+partials uniquely offered — cross-fragment shared fields — was unused
+outside its own test and is unrepresentable under MI by design. The
+loader's fragment machinery, the gating's `group` recognition, and the
+docs surface are gone; N21 asserts a `group:` declaration no longer
+merges.
+
 ### IV.2 The model change: the outer link
 
 - `ClassInfo` gains `outerName: ''` — set by the parser at nesting time

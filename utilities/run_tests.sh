@@ -124,7 +124,7 @@ assert_compile_failure "negative-type-safety" \
 	"'Array:String' to 'Array:Int'" \
 	"'Map:String:String' to 'Map:String:Int'" \
 	"Undefined identifier 'untrackedTotal'" \
-	"Condition in 'if' must be Boolean" \
+	"Method declared return type 'Boolean', but returned 'Int'." \
 	"is read before being initialized" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
 	"Non-exhaustive 'when'"
@@ -200,10 +200,6 @@ assert_compile_failure "instance-model-n11-prefix-field" \
 assert_compile_failure "instance-model-n10-init-on-instance" \
 	"$ROOT/tests/negative/n10_init_on_instance_negative_test.spec" \
 	"'init' is construct-only"
-
-assert_compile_failure "grouping-negative" \
-	"$ROOT/tests/negative/grouping_negative_test.spec" \
-	"Duplicate member 'value' in class 'Merged'"
 
 assert_compile_failure "merge-negative" \
 	"$ROOT/tests/negative/merge_negative_test.spec" \

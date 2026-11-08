@@ -23,7 +23,8 @@
 ## - ArrayElementMismatch:    Array of String is not assignable to Array of Int.
 ## - MapValueMismatch:        Map of String to String is not assignable to Map of String to Int.
 ## - UndefinedIdentifier:     'untrackedTotal' is not a declared variable or field.
-## - NonBooleanConditionControl: if condition must be a Boolean.
+## - NonBooleanConditionControl: a check closure must yield a Boolean
+##   (the Function-of-Boolean enforcement).
 ## - UnassignedFieldRead:     field 'label' is read before being definitely assigned.
 ## - CallArgumentMismatch:    String argument passed to an Int parameter.
 ## - IncompleteWhenBranches:  'when' over an enum missing a variant with no else arm.

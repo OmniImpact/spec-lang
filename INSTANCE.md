@@ -165,7 +165,7 @@ Each item = one checker/loader/parser duty. `E#` referenced by tests (§8).
   synthesize. Generic classes stay deferred (§10). Fields are not
   reachable through a class-name prefix — methods only (§2.3).
 - [ ] **E3 — Uniqueness.** At most one instance import per class name per
-  importing class (post group-merge; fragments' `using` entries union first).
+  importing class).
   Duplicate → compile error.
 - [ ] **E4 — Acyclicity.** The instance-import graph must be a DAG.
   `A` imports `as B()` and `B` imports `as A()` (directly or transitively,
@@ -254,8 +254,8 @@ The lowercase forms are an alias layer over real classes
 - [ ] **Parser** — `using`-array item grammar (E1); carry the `as`-form into
   the `using` member's AST.
 - [ ] **Loader** — resolve `as` entries (existing resolution, plus E2's
-  existence check), record bindings per class, E3 uniqueness (post
-  group-merge), E4 acyclicity DFS. Bindings survive into `ProgramNode`.
+  existence check), record bindings per class, E3 uniqueness,
+  E4 acyclicity DFS. Bindings survive into `ProgramNode`.
 - [ ] **TypeChecker** — per-class provider map (own+inherited via the existing
   ancestor walk; one entry per instance import from the loaded `ClassInfo`);
   bare-call resolution in `inferCall` (E5); prefix resolution to the synthetic

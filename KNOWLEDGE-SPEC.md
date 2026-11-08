@@ -13,7 +13,7 @@ Keywords: `local` `contained` `replace` `merge` `is` `as` `of` `to` `if` `else` 
 Types: `Int` `Byte` `Float` `Boolean` `String` `Function` `Any`.
 Declaration types (not keywords): `Class` `Enum`.
 Conversion targets of `as`: `Hex` `Bin` `Oct`.
-`using` and `group` are Loader-recognized pseudo-fields.
+`using` is a Loader-recognized pseudo-field.
 
 Declaration grammar: `<modifiers> <Type> is <name>`.
 - Class: `Class of Parent1, Parent2 is Name of T { ... }` (pre-name `of` = parents, post-name `of` = generic params).
@@ -57,9 +57,6 @@ Members are callable only through a value of the class's type. The class name it
 - Diamond ambiguity (two unrelated parents declare concrete impls, child doesn't) = compile error.
 - `replace` mandatory on overrides (checked). `merge` on Array fields: concatenates parent items then child items. `merge` on methods: body must contain a forward statement `(args...)` delegating to parent; partial forwards use named args.
 - `replace`/`merge` on non-public ancestor members = error.
-
-## Grouping (Partials)
-Fragment declares `Array of Array of String is group: [Target];`. Loader merges into target; duplicate members = error; at most one `init`; fragments must not declare parents.
 
 ## Control Flow
 ```spec
@@ -108,6 +105,6 @@ Reference counting with scope-end releases; runtime binaries verified leak-free 
 ## Compiler
 - Exit: 0=ok, 1=compile/load/type/gcc error, 2=usage. Diagnostics on stderr.
 - `bin/spec -i file.spec -o binary`; `--lint file.spec`; `--emit-c out.c`; `--gc=boehm`; `--quiet`.
-- Grouping: fragment declares `group: [Target]`; merges at load; duplicate members error.
+
 - Root classes `String` `Buf` `Dir` `Stringable` `Any` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
 - Suite: `bash utilities/run_tests.sh` (70 checks); sanitized: `bash utilities/run_sanitized.sh` (the compiler under ASan).
