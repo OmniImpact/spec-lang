@@ -880,7 +880,9 @@ Class is TypeChecker{
 			});
 		});
 		Conditional:if(check: { acc:length() > 0 }, then: {
-			ownerAcc:add(item: cls:name);
+			# IV.2c: the owner's qualified identity — the bare name of a
+			# nested class is not unique across outers.
+			ownerAcc:add(item: cls:qualifiedName());
 			return;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){

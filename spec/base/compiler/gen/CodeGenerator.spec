@@ -585,7 +585,9 @@ Class is CodeGenerator{
 			});
 		});
 		Conditional:if(check: { acc:length() > 0 }, then: {
-			ownerAcc:add(item: cls:name);
+			# IV.2c: the owner's qualified identity — the bare name of a
+			# nested class is not unique across outers.
+			ownerAcc:add(item: cls:qualifiedName());
 			return;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -2169,6 +2171,14 @@ Class is CodeGenerator{
 
 		# Constructor or static invocation: ClassName:init(...)/ClassName:method(...).
 		Conditional:if(check: { self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC) }, then: {
+			# IV.2c: the C identity of the target — a bare nested-class name
+			# has no C type when the bare alias is absent (the bare name is
+			# not unique); resolve to the qualified symbol form.
+			local String is targetSym: targetC;
+			local ClassInfo is tgtCls: self:findClass(name: targetC);
+			Conditional:if(check: { tgtCls:name != '' }, then: {
+				targetSym: self:utils:cIdent(name: tgtCls:qualifiedName());
+			});
 			local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex);
 			local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex);
 			local String is symOwner: ownerName;
@@ -2201,9 +2211,9 @@ Class is CodeGenerator{
 				newSym: self:utils:cIdent(name: newCls:qualifiedName());
 			});
 			Conditional:if(check: { initCls == '' || initCls == targetC }, then: {
-				return '({ ' . targetC . '* _inst = ' . newSym . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
+				return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
 			});
-			return '({ ' . targetC . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . initCls . '*)_inst' . argsJoined . '); _inst; })';
+			return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . self:utils:cIdent(name: initCls) . '*)_inst' . argsJoined . '); _inst; })';
 		});
 			Conditional:if(check: { mDef:kind == MemberKind:METHOD }, then: {
 				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:overloadIndex);
@@ -2292,15 +2302,18 @@ Class is CodeGenerator{
 			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
 			Conditional:if(check: { vm:kind == MemberKind:METHOD }, then: {
 				local String is retT: self:resolveReturnType(t: vm:memberType);
-				local String is sigC: objType . '*';
+				# IV.2c: the vtable signature's C types qualify (cIdent maps
+				# the qualified identity's colon chain).
+				local String is objCType: self:utils:cIdent(name: objType);
+				local String is sigC: objCType . '*';
 				vm:params:each(action: local Function(Parameter is p){
 					sigC: sigC . ', ' . self:cTypeFor(typeName: p:paramType:name);
 				});
 				local String is slotC: self:methodSlots:getString(key: expr:methodName, default: '0');
 				Conditional:if(check: { targetC == self:names:selfIdent() }, then: {
-					callStr: '(((' . retT . ' (*)(' . sigC . '))self->_vtable[' . slotC . ']))((' . objType . '*)self' . argsC . ')';
+					callStr: '(((' . retT . ' (*)(' . sigC . '))self->_vtable[' . slotC . ']))((' . objCType . '*)self' . argsC . ')';
 				}, else: {
-					callStr: '({ ' . objType . '* _recv = (' . objType . '*)(' . targetC . '); (((' . retT . ' (*)(' . sigC . '))_recv->_vtable[' . slotC . ']))((' . objType . '*)_recv' . argsC . '); })';
+					callStr: '({ ' . objCType . '* _recv = (' . objCType . '*)(' . targetC . '); (((' . retT . ' (*)(' . sigC . '))_recv->_vtable[' . slotC . ']))((' . objCType . '*)_recv' . argsC . '); })';
 				});
 			});
 		});
@@ -2312,7 +2325,9 @@ Class is CodeGenerator{
 			local String is targetExprC: targetC;
 			Conditional:if(check: { dispatchCls != '' && dispatchCls != objType }, then: {
 				objType: dispatchCls;
-				targetExprC: '((' . dispatchCls . '*)' . targetC . ')';
+				# IV.2c: the cast's C type derives from the (possibly
+				# qualified) owner identity.
+				targetExprC: '((' . self:utils:cIdent(name: dispatchCls) . '*)' . targetC . ')';
 			});
 			callStr: self:overloadSymbol(className: objType, methodName: expr:methodName, idx: expr:overloadIndex) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
 		});
@@ -2495,9 +2510,12 @@ Class is CodeGenerator{
 
 		Conditional:if(check: { self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: 'self') }, then: {
 			hasCaptures: true;
-			capFieldDecls: capFieldDecls . '    ' . self:currentClassName . "* self;\n";
-			capFieldBinds: capFieldBinds . '    ' . self:currentClassName . "* self = _env->self;\n    (void)self;\n";
-			capAssigns: capAssigns . '    _env->self = (' . self:currentClassName . "*)spec_retain((void*)self);\n";
+			# IV.2c: the captured self's C type qualifies — the bare name is
+			# not a C identity for nested classes.
+			local String is selfCapType: self:utils:cIdent(name: self:findClass(name: self:currentClassName):qualifiedName());
+			capFieldDecls: capFieldDecls . '    ' . selfCapType . "* self;\n";
+			capFieldBinds: capFieldBinds . '    ' . selfCapType . "* self = _env->self;\n    (void)self;\n";
+			capAssigns: capAssigns . '    _env->self = (' . selfCapType . "*)spec_retain((void*)self);\n";
 			capReleases: capReleases . "    if (_env->self) spec_release((void*)_env->self);\n";
 		});
 
@@ -3185,8 +3203,13 @@ Class is CodeGenerator{
 			self:currentParams:set(key: p:name, value: 'true');
 		});
 
-		local String is selfCType: self:cTypeFor(typeName: classDef:name);
-		local String is header: retType . ' ' . self:overloadSymbol(className: classDef:name, methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
+		# IV.2c: the self parameter's C type qualifies — the bare name is
+		# not a C identity for nested classes.
+		local String is selfCType: self:cTypeFor(typeName: classDef:qualifiedName());
+		# IV.2c: the method's own identity drives its symbol — a bare
+		# inner-class name would first-match whichever same-named class
+		# registered first; classDef IS the declaring class.
+		local String is header: retType . ' ' . self:overloadSymbol(className: classDef:qualifiedName(), methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
 		method:params:each(action: local Function(Parameter is p){
 			header: header . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
 		});
@@ -3431,10 +3454,12 @@ Class is CodeGenerator{
 					});
 				});
 				Conditional:if(check: { !hasToString && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-					local String is cn: c:name;
-					methods: methods . 'String ' . cn . '_toString(' . cn . "* self) {\n";
+					# IV.2c: the synthesized contract symbol and self type
+					# qualify — the bare name is not a C identity for nested
+					# classes.
+					methods: methods . 'String ' . cSym . '_toString(' . cSym . "* self) {\n";
 					methods: methods . "    if (!self) { return spec_string_intern(\"\"); }\n";
-					methods: methods . '    return spec_string_intern("' . cn . '");' . "\n}\n\n";
+					methods: methods . '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n";
 				});
 			});
 		});

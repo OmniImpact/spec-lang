@@ -382,19 +382,28 @@ Class is DeclarationGenerator{
 	Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
 		local String is out: "/* Forward Declarations */\n";
 
-		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-				# FUNCTIONS.md Part IV IV.2c: for nested classes the typedef
-				# ALIASES the bare name to the qualified struct — the C type
-				# spellings (the bare) keep compiling while the symbols and
-				# the struct tag qualify.
-				Conditional:if(check: { c:outerName != '' }, then: {
-					out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
-					out: out . 'typedef struct ' . cSym . ' ' . c:name . ";\n";
-				}, else: {
-					out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
-				});
+			classes:each(action: local Function(ClassInfo is c){
+				Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+					local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+					# FUNCTIONS.md Part IV IV.2c: for nested classes the typedef
+					# ALIASES the bare name to the qualified struct — but only
+					# when the bare name is unique. Two same-named inner
+					# classes under different outers cannot share one C
+					# typedef; their references spell the qualified form.
+					Conditional:if(check: { c:outerName != '' }, then: {
+						local Int is bareCount: 0;
+						classes:each(action: local Function(ClassInfo is oc){
+							Conditional:if(check: { oc:name == c:name }, then: {
+								bareCount: bareCount + 1;
+							});
+						});
+						out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
+						Conditional:if(check: { bareCount == 1 }, then: {
+							out: out . 'typedef struct ' . cSym . ' ' . c:name . ";\n";
+						});
+					}, else: {
+						out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
+					});
 				out: out . cSym . '* ' . cSym . "_new(void);\n";
 				out: out . 'void ' . cSym . "_destroy(void* self);\n";
 				Conditional:if(check: { !self:hasFieldNamed(list: c:members, name: 'init') }, then: {

@@ -458,7 +458,7 @@ merges.
   per target) — the outer's as-imports dispatch on the inner's own
   instances.
 
-### IV.2c — The qualified registry keys (phases 1–2 landed; 3–4 pending)
+### IV.2c — The qualified registry keys (landed)
 
 **The refinement**: inner classes, like functions, are available when
 imported. Like functions, a bare reference that is ambiguous is an error,
@@ -467,35 +467,7 @@ and the user resolves it by prefixing with the imported class
 the functions — the same providers, the same ambiguity rules, the same
 prefix escape.
 
-**Verified gaps** (probed against the current build):
-
-- **Gap A — the as-import does not grant the nested classes.** LibA
-  declares a nested Helper; a consumer instance-importing LibA and
-  referencing `Helper` bare gets the §I.6 error ('Helper' is not
-  imported). The parent's as-import grants the parent's functions but
-  not its nested-class types. *(phase 3 closes this)*
-- **Gap B — the qualified type reference does not parse.** ✅ (phase 2)
-  `local LibA:Helper is h: ...;` parses, resolves, and emits the
-  qualified symbols end-to-end.
-- The ambiguity behavior is unprobeable until A/B land (today the first
-  registration silently wins). *(phase 3 replaces this)*
-
-**The unified resolution model** (what the phases build):
-
-- A nested class is a member of its enclosing class (MemberKind:CLASS ✓
-  already). The as-import of a class brings its nested classes into the
-  importer's scope — the same grant that brings its functions.
-- A bare type reference to a nested-class name resolves through the
-  provider walk — the own nested classes, the as-imported classes'
-  nested classes, the base lattice — the SAME walk the bare function
-  calls use. Exactly one provider → resolve; several → the ambiguity
-  error naming the providers; the user prefixes (`LibA:Helper`).
-- The qualified prefix resolves the member nested class of the named
-  class, in any type position.
-- The registry keys qualify (`Outer:Helper`), and the emitted C symbols
-  follow (`Outer_Helper_init`).
-
-**The phases** (each converges alone; the suite green at each boundary):
+**The phases** (each converged alone; the suite green at each boundary):
 
 1. **The C symbol qualification** ✅ (90495e3) — `qualifiedName()` on
    ClassInfo; the gen's symbol emissions qualify via cIdent (':' → '_').
@@ -511,18 +483,34 @@ prefix escape.
    construction pair (`LibA_Helper_new/_init`) and dispatch symbol
    (`LibA_Helper_value`). The resolved root absorbs the colon chain, so
    the segments are never mistaken for type arguments (container forms
-   like `Array:String` keep the bare root). Until phase 3 this resolves
-   same-file and import-granted nested classes through the file grant.
-3. **The import grant + the provider resolution** — the §I.6 gating
-   counts the as-imported class's nested classes as import-granted; the
-   bare type references resolve through the provider walk (the same
-   providers as the bare function calls); the ambiguity error names the
-   providers. N25's blanket collision error is REPLACED by the
-   ambiguity-at-reference.
-4. **The registry keys qualify** — the loader's seenClassNames and the
-   checker's registry key the qualified name; the same-named inner
-   classes under different outers both register and both resolve in
-   their scopes. The bare-unique fallback serves the top-level names.
+   like `Array:String` keep the bare root).
+3. **The import grant + the provider resolution** ✅ (18ee948) — the
+   per-scope nested-type map (built once per class: own nested classes,
+   the as-imported classes' nested classes, the base lattice; cleared
+   and rebuilt on scope change) resolves the bare nested-class reference
+   with ONE lookup. Exactly one provider rewrites the type to its
+   qualified identity (the parent grant covers it downstream); several
+   collide and the error names the providers — the same rule the bare
+   function calls run. The N25 blanket collision is retired: same-named
+   inners under different outers are legal declarations; the duplicate
+   WITHIN one outer stays the declaration error (keyed by qualified
+   identity).
+4. **The qualified registry keys** ✅ (this commit) — the C identity of
+   a nested class is the qualified symbol everywhere: the bare-alias
+   typedef exists only when the bare name is unique across the program;
+   the synthesized contract symbols (`_toString`), the method
+   definitions' symbols and self types, the `self` capture type, the
+   ctor/dispatch casts, and the overload owners all derive from
+   `qualifiedName()` — the overload-owner accumulator carries the
+   qualified identity so two same-named inners emit distinct symbols
+   (`LibA_Helper_value` / `LibB_Helper_value`).
+
+**Memory discipline** (8cec4eb): the compiler-phase object arena retired
+— every class allocates through ARC; the method-body scope releases
+funnel through a cleanup label on every return path (the trailing
+release list was dead code past any return and leaked every
+early-returning method's locals). The self-compile peak dropped
+964 MB → 791 MB.
 
 **What stays out of scope**: importing a nested class WITHOUT importing
 its enclosing class (the grant rides the parent's as-import); the
