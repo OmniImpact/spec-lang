@@ -21,6 +21,7 @@ Class is ClassBindings{
 	namespace: ['base', 'compiler', 'ast'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', Expression],
@@ -38,9 +39,9 @@ Class is ClassBindings{
 	## @param c: The class.
 	## @return: true when emission-transparent and contract-free.
 	Function of Boolean is isTransparent(ClassInfo is c){
-		if (self:isSysinternal(cls: c)) {
+		Conditional:branch(check: { self:isSysinternal(cls: c) }, then: {
 			return true;
-		}
+		});
 		# NOTE: names here must be unambiguous across the whole program —
 		# a user class sharing a listed name would silently lose its
 		# emission. Common names (Error, Token, ...) stay OFF the list;
@@ -106,15 +107,15 @@ Class is ClassBindings{
 		replace Function of Boolean is iteration(LoopControl is c){
 			local Member is m: self:members:get(index: self:idx);
 			self:idx: self:idx + 1;
-			if (m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+			Conditional:branch(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				local Array of Expression is segs: m:initExpr:arrayItems;
-				if (segs:length() > 0) {
+				Conditional:branch(check: { segs:length() > 0 }, then: {
 					local Expression is last: segs:get(index: segs:length() - 1);
-					if (last:stringValue == 'sysinternal') {
+					Conditional:branch(check: { last:stringValue == 'sysinternal' }, then: {
 						self:isFloor: true;
-					}
-				}
-			}
+					});
+				});
+			});
 			return true;
 		}
 	}

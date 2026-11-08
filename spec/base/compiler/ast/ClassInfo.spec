@@ -60,17 +60,17 @@ Class is ClassInfo{
 	Function of Boolean is instanceImportsAs(String is name){
 		local Boolean is found: false;
 		self:members:each(action: local Function(Member is m){
-			if (!found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+			Conditional:branch(check: { !found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					if (item:kind == ExpressionKind:ARRAY) {
+					Conditional:branch(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
-							if (seg:kind == ExpressionKind:USING_AS && seg:stringValue == name) {
+							Conditional:branch(check: { seg:kind == ExpressionKind:USING_AS && seg:stringValue == name }, then: {
 								found: true;
-							}
+							});
 						});
-					}
+					});
 				});
-			}
+			});
 		});
 		return found;
 	}
@@ -87,18 +87,18 @@ Class is ClassInfo{
 			iteration: local Function of Boolean(){
 				local Member is m: self:members:get(index: idx);
 				idx: idx + 1;
-				if (m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) {
+				Conditional:branch(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
 					local String is joined: '';
 					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
-						if (joined == '') {
+						Conditional:branch(check: { joined == '' }, then: {
 							joined: seg:stringValue;
-						} else {
+						}, otherwise: {
 							joined: joined . ':' . seg:stringValue;
-						}
+						});
 					});
 					self:nsJoined: joined;
 					return false;
-				}
+				});
 				return true;
 			}
 		);

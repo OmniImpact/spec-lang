@@ -54,13 +54,13 @@ Class is Type{
 	##
 	## @return: Canonical type string.
 	replace Function of String is toString(){
-		if (self:params:length() == 0) {
+		Conditional:branch(check: { self:params:length() == 0 }, then: {
 			return self:name;
-		}
-		if (self:params:length() == 1) {
+		});
+		Conditional:branch(check: { self:params:length() == 1 }, then: {
 			local Type is p0: self:params:get(index: 0);
 			return self:name . ' ' . Keyword:OF:value() . ' ' . p0:toString();
-		}
+		});
 		local Type is first: self:params:get(index: 0);
 		local Type is second: self:params:get(index: 1);
 		return self:name . ' ' . Keyword:OF:value() . ' ' . first:toString() . ' ' . Keyword:TO:value() . ' ' . second:toString();
