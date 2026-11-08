@@ -6,6 +6,7 @@ Class is CBackendUtils{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'lexer', Token],
@@ -21,21 +22,21 @@ Class is CBackendUtils{
 	## @param typeName: Spec type name.
 	## @return: C11 type string.
 	Function of String is cTypeFor(String is typeName){
-		if (typeName == 'List' || typeName:startsWith(prefix: 'List of ') || typeName:startsWith(prefix: 'List:')) {
-			if (typeName == 'List:Byte' || typeName == 'List of Byte') {
+		Conditional:branch(check: { typeName == 'List' || typeName:startsWith(prefix: 'List of ') || typeName:startsWith(prefix: 'List:') }, then: {
+			Conditional:branch(check: { typeName == 'List:Byte' || typeName == 'List of Byte' }, then: {
 				return 'SpecByteBuffer*';
-			}
+			});
 			return 'SpecVec*';
-		}
-		if (typeName == 'Array' || typeName:startsWith(prefix: 'Array of ') || typeName:startsWith(prefix: 'Array:')) {
+		});
+		Conditional:branch(check: { typeName == 'Array' || typeName:startsWith(prefix: 'Array of ') || typeName:startsWith(prefix: 'Array:') }, then: {
 			return 'SpecArray*';
-		}
-		if (typeName == 'Map' || typeName:startsWith(prefix: 'Map of ') || typeName:startsWith(prefix: 'Map:')) {
+		});
+		Conditional:branch(check: { typeName == 'Map' || typeName:startsWith(prefix: 'Map of ') || typeName:startsWith(prefix: 'Map:') }, then: {
 			return 'SpecMap*';
-		}
-		if (typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:')) {
+		});
+		Conditional:branch(check: { typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:') }, then: {
 			return 'SpecClosure*';
-		}
+		});
 		when (typeName) {
 			is 'Int': { return 'long long'; }
 			is 'Byte': { return 'unsigned char'; }
@@ -93,13 +94,13 @@ Class is CBackendUtils{
 	## @param t: Declared type descriptor.
 	## @return: C return type string.
 	Function of String is resolveReturnType(Type is t){
-		if (Primitive:of(t:name) == Primitive:FUNCTION) {
-			if (t:params:length() > 0) {
+		Conditional:branch(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
+			Conditional:branch(check: { t:params:length() > 0 }, then: {
 				local Type is ret: t:params:get(index: 0);
 				return self:cTypeFor(typeName: ret:name);
-			}
+			});
 			return 'void';
-		}
+		});
 		return self:cTypeFor(typeName: t:name);
 	}
 
@@ -130,11 +131,11 @@ Class is CBackendUtils{
 			local String is ch: self:src:charAt(index: self:pos, default: '');
 			self:pos: self:pos + 1;
 			local Int is u: self:uppers:indexOf(search: ch, default: -1);
-			if (u >= 0) {
+			Conditional:branch(check: { u >= 0 }, then: {
 				self:res: self:res . '_' . self:lowers:charAt(index: u, default: '');
-			} else {
+			}, otherwise: {
 				self:res: self:res . ch;
-			}
+			});
 			return true;
 		}
 	}
@@ -169,11 +170,11 @@ Class is CBackendUtils{
 				is '"': { self:res: self:res . "\\\""; }
 				is "\\": { self:res: self:res . "\\\\"; }
 				else: {
-					if (ch == String:fromCharCode(code: 27)) {
+					Conditional:branch(check: { ch == String:fromCharCode(code: 27) }, then: {
 						self:res: self:res . "\\033";
-					} else {
+					}, otherwise: {
 						self:res: self:res . ch;
-					}
+					});
 				}
 			}
 			return true;

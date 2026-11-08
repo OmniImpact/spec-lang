@@ -66977,20 +66977,20 @@ String CBackendUtils_cTypeFor(CBackendUtils* self, String typeName) {
     (void)self;
     (void)typeName;
     if (((((spec_string_equals(typeName, spec_string_intern("List"))) || (String_startsWith(typeName, spec_string_intern("List of "))))) || (String_startsWith(typeName, spec_string_intern("List:"))))) {
-        if (((spec_string_equals(typeName, spec_string_intern("List:Byte"))) || (spec_string_equals(typeName, spec_string_intern("List of Byte"))))) {
-        return (String)spec_retain((void*)(spec_string_intern("SpecByteBuffer*")));
-    }
-        return (String)spec_retain((void*)(spec_string_intern("SpecVec*")));
-    }
+	    if (((spec_string_equals(typeName, spec_string_intern("List:Byte"))) || (spec_string_equals(typeName, spec_string_intern("List of Byte"))))) {
+	    return (String)spec_retain((void*)(spec_string_intern("SpecByteBuffer*")));
+	};
+	    return (String)spec_retain((void*)(spec_string_intern("SpecVec*")));
+	};
     if (((((spec_string_equals(typeName, spec_string_intern("Array"))) || (String_startsWith(typeName, spec_string_intern("Array of "))))) || (String_startsWith(typeName, spec_string_intern("Array:"))))) {
-        return (String)spec_retain((void*)(spec_string_intern("SpecArray*")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("SpecArray*")));
+	};
     if (((((spec_string_equals(typeName, spec_string_intern("Map"))) || (String_startsWith(typeName, spec_string_intern("Map of "))))) || (String_startsWith(typeName, spec_string_intern("Map:"))))) {
-        return (String)spec_retain((void*)(spec_string_intern("SpecMap*")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("SpecMap*")));
+	};
     if (((((spec_string_equals(typeName, spec_string_intern("Function"))) || (String_startsWith(typeName, spec_string_intern("Function of "))))) || (String_startsWith(typeName, spec_string_intern("Function:"))))) {
-        return (String)spec_retain((void*)(spec_string_intern("SpecClosure*")));
-    }
+	    return (String)spec_retain((void*)(spec_string_intern("SpecClosure*")));
+	};
     if (spec_string_equals(typeName, spec_string_intern("Int"))) {
         return (String)spec_retain((void*)(spec_string_intern("long long")));
     } else if (spec_string_equals(typeName, spec_string_intern("Byte"))) {
@@ -67048,13 +67048,13 @@ String CBackendUtils_resolveReturnType(CBackendUtils* self, Type* t) {
     (void)self;
     (void)t;
     if (((Primitive_of(t->name)) == (Primitive_FUNCTION))) {
-        if (((spec_array_length(t->params)) > (0))) {
-        SPEC_AUTO Type* ret = (Type*)spec_retain((void*)(spec_array_get(t->params, 0)));
-        return (String)spec_retain((void*)((((String (*)(CBackendUtils*, String))self->_vtable[274]))((CBackendUtils*)self, ret->name)));
+	    if (((spec_array_length(t->params)) > (0))) {
+	    SPEC_AUTO Type* ret = (Type*)spec_retain((void*)(spec_array_get(t->params, 0)));
+	    return (String)spec_retain((void*)((((String (*)(CBackendUtils*, String))self->_vtable[274]))((CBackendUtils*)self, ret->name)));
     if (ret) { spec_release((void*)ret); ret = NULL; }
-    }
-        return (String)spec_retain((void*)(spec_string_intern("void")));
-    }
+	};
+	    return (String)spec_retain((void*)(spec_string_intern("void")));
+	};
     return (String)spec_retain((void*)((((String (*)(CBackendUtils*, String))self->_vtable[274]))((CBackendUtils*)self, t->name)));
 }
 
@@ -67087,10 +67087,10 @@ bool SnakeCaseLoop_iteration(SnakeCaseLoop* self, SpecLoopControl* control) {
     self->pos = ((self->pos) + (1));
     long long u = spec_string_index_of(self->uppers, ch, (-(1)));
     if (((u) >= (0))) {
-        self->res = spec_string_concat(spec_string_concat(self->res, spec_string_intern("_")), ((String)spec_claim_pool((void*)(String_charAt(self->lowers, u, spec_string_intern(""))))));
-    } else {
-        self->res = spec_string_concat(self->res, ch);
-    }
+	    self->res = spec_string_concat(spec_string_concat(self->res, spec_string_intern("_")), String_charAt(self->lowers, u, spec_string_intern("")));
+	} else {
+	    self->res = spec_string_concat(self->res, ch);
+	};
     return true;
     if (ch) { spec_release((void*)ch); ch = NULL; }
 }
@@ -67129,11 +67129,11 @@ bool EscapeLoop_iteration(EscapeLoop* self, SpecLoopControl* control) {
     } else if (spec_string_equals(ch, spec_string_intern("\\"))) {
         self->res = spec_string_concat(self->res, spec_string_intern("\\\\"));
     } else {
-        if (spec_string_equals(ch, ((String)spec_claim_pool((void*)(spec_string_from_char_code(27)))))) {
-        self->res = spec_string_concat(self->res, spec_string_intern("\\033"));
-    } else {
-        self->res = spec_string_concat(self->res, ch);
-    }
+        if (spec_string_equals(ch, spec_string_from_char_code(27))) {
+	    self->res = spec_string_concat(self->res, spec_string_intern("\\033"));
+	} else {
+	    self->res = spec_string_concat(self->res, ch);
+	};
     }
     return true;
     if (ch) { spec_release((void*)ch); ch = NULL; }
