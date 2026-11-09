@@ -11,6 +11,8 @@ Class is CodeGenerator{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', Parallel],
+		['base', 'sys', as Parallel()],
 		['base', 'compiler', 'ast', Type],
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Primitive],
@@ -189,7 +191,6 @@ Class is CodeGenerator{
 		self:cleanupLabel: '';
 		self:cleanupRetVar: '';
 		self:cleanupCounter: 0;
-		self:closureReturnTypeName: '';
 		self:releaseExclusions: Map:init();
 		self:hoistedLocals: Map:init();
 		self:localScopeVars: Map:init();
@@ -1975,6 +1976,68 @@ Class is CodeGenerator{
 	## @param body: The generated closure body.
 	## @param ident: The candidate identifier.
 	## @return: true when [ident] appears as a whole word.
+	## Strips string literals from generated C so the identifier scans
+	## see only code: double-quoted, single-quoted, triple-quoted, and
+	## backtick template spans collapse to empty; backslash escapes and
+	## the template's ${...} expressions (code!) survive.
+	##
+	## @param body: The generated closure body.
+	## @return: The body with literal contents removed.
+	Function of String is stripStringLiterals(String is body){
+		local String is out: Buf:stringCopy(b: '');
+		local String is ch: '';
+		local String is nextCh: '';
+		local String is delim: '';
+		local Int is i: 0;
+		local Int is len: body:length();
+		while(
+			evaluate: local Function of Boolean(){ return i < len; },
+			iteration: local Function of Boolean(){
+				ch: body:charAt(index: i, default: '');
+				Conditional:if(check: { delim == '' }, then: {
+					Conditional:if(check: { ch == '"' || ch == '\'' || ch == '`' }, then: {
+						nextCh: body:charAt(index: i + 1, default: '');
+						Conditional:if(check: { nextCh == ch && body:charAt(index: i + 2, default: '') == ch }, then: {
+							delim: ch;
+							i: i + 3;
+							return true;
+						});
+						delim: ch;
+						i: i + 1;
+						return true;
+					});
+					out: out . ch;
+					i: i + 1;
+					return true;
+				});
+				Conditional:if(check: { ch == '\\' }, then: {
+					i: i + 2;
+					return true;
+				});
+				Conditional:if(check: { delim == '`' && ch == '$' && body:charAt(index: i + 1, default: '') == '{' }, then: {
+					delim: '';
+					out: out . ' ';
+					i: i + 2;
+					return true;
+				});
+				Conditional:if(check: { ch == delim }, then: {
+					nextCh: body:charAt(index: i + 1, default: '');
+					Conditional:if(check: { delim == '\'' && nextCh == '\'' && body:charAt(index: i + 2, default: '') == '\'' }, then: {
+						i: i + 3;
+						delim: '';
+						return true;
+					});
+					delim: '';
+					i: i + 1;
+					return true;
+				});
+				i: i + 1;
+				return true;
+			}
+		);
+		return out;
+	}
+
 	Function of Boolean is containsIdent(String is body, String is ident){
 		Conditional:if(check: { ident == '' || body:length() < ident:length() }, then: {
 			return false;
@@ -2572,6 +2635,13 @@ Class is CodeGenerator{
 		self:inlineReturnLabel: savedRetLbl;
 		self:localVars: savedVars;
 		self:localScopeVars: savedScopeVars;
+		# FUNCTIONS.md Part V: the capture scans run over the body with
+		# its STRING LITERALS stripped — the emitted C's text contains
+		# prose that mentions identifiers ('* self) {'), and a substring
+		# match on the raw body captured variables the closure never
+		# touches (the worker closures' nested callbacks bound the
+		# enclosing method's self and read its empty maps).
+		local String is scanBody: self:stripStringLiterals(body: bodyC);
 
 		local String is envName: '_Env_anon_' . id;
 		local String is destroyEnvName: '_destroy_env_anon_' . id;
@@ -2583,7 +2653,7 @@ Class is CodeGenerator{
 		local Array of String is writebackNames: [];
 		local Boolean is hasCaptures: false;
 
-		Conditional:if(check: { self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && bodyC:contains(needle: 'self') }, then: {
+		Conditional:if(check: { self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && self:containsIdent(body: scanBody, ident: 'self') }, then: {
 			hasCaptures: true;
 			# IV.2c: the captured self's C type qualifies — the bare name is
 			# not a C identity for nested classes.
@@ -2606,7 +2676,7 @@ Class is CodeGenerator{
 		outerKeys:each(action: local Function(String is k){
 			Conditional:if(check: { paramNames:indexOf(search: k, default: -1) < 0 && !bodyLocals:has(key: k) }, then: {
 				local String is cVar: self:utils:cIdent(name: k);
-				Conditional:if(check: { self:containsIdent(body: bodyC, ident: cVar) }, then: {
+				Conditional:if(check: { self:containsIdent(body: scanBody, ident: cVar) }, then: {
 					local String is vType: savedVars:getString(key: k, default: '');
 					local String is vCType: self:cTypeFor(typeName: vType);
 					Conditional:if(check: { vCType != 'void' && vCType != '' }, then: {
@@ -3500,8 +3570,6 @@ Class is CodeGenerator{
 		flattenedClasses:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
 				self:currentClassName: c:name;
-				# FUNCTIONS.md Part IV IV.2c: the C symbol base qualifies for
-				# nested classes (Outer_Helper); the bare name for top-level.
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				self:fieldTypes: Map:init();
 				local Array of Member is allFields: [];
@@ -3520,7 +3588,7 @@ Class is CodeGenerator{
 						is MemberKind:METHOD: {
 							Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 								Conditional:if(check: { m:name == 'init' }, then: {
- hasInit: true;
+									hasInit: true;
 								});
 								Buf:bufAppendBuf(dst: methods, src: self:generateMethod(classDef: c, method: m));
 							});
@@ -3535,20 +3603,16 @@ Class is CodeGenerator{
 				local Boolean is hasToString: false;
 				c:members:each(action: local Function(Member is m){
 					Conditional:if(check: { m:name == 'toString' }, then: {
- hasToString: true;
+						hasToString: true;
 					});
 				});
 				Conditional:if(check: { !hasToString && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-					# IV.2c: the synthesized contract symbol and self type
-					# qualify — the bare name is not a C identity for nested
-					# classes.
 					Buf:bufAppendBuf(dst: methods, src: 'String ' . cSym . '_toString(' . cSym . "* self) {\n");
 					Buf:bufAppendBuf(dst: methods, src: "    if (!self) { return spec_string_intern(\"\"); }\n");
 					Buf:bufAppendBuf(dst: methods, src: '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n");
 				});
 			});
 		});
-
 		local String is mainFn: self:generateMain(entryClass: entryClass);
 
 		local String is cSource: '';
