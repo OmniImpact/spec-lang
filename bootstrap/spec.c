@@ -4429,6 +4429,7 @@ struct CodeGenerator {
     String cleanupLabel;
     String cleanupRetVar;
     long long cleanupCounter;
+    String closureReturnTypeName;
     SpecMap* releaseExclusions;
     SpecMap* hoistedLocals;
     SpecMap* localScopeVars;
@@ -4475,6 +4476,7 @@ struct CodeGenerator_FieldMemberLoop {
     String cleanupLabel;
     String cleanupRetVar;
     long long cleanupCounter;
+    String closureReturnTypeName;
     SpecMap* releaseExclusions;
     SpecMap* hoistedLocals;
     SpecMap* localScopeVars;
@@ -4521,6 +4523,7 @@ struct CodeGenerator_MethodMemberLoop {
     String cleanupLabel;
     String cleanupRetVar;
     long long cleanupCounter;
+    String closureReturnTypeName;
     SpecMap* releaseExclusions;
     SpecMap* hoistedLocals;
     SpecMap* localScopeVars;
@@ -56059,6 +56062,7 @@ void CodeGenerator_destroy(void* self_ptr) {
     if (self->inlineReturnLabel) { spec_release((void*)self->inlineReturnLabel); self->inlineReturnLabel = NULL; }
     if (self->cleanupLabel) { spec_release((void*)self->cleanupLabel); self->cleanupLabel = NULL; }
     if (self->cleanupRetVar) { spec_release((void*)self->cleanupRetVar); self->cleanupRetVar = NULL; }
+    if (self->closureReturnTypeName) { spec_release((void*)self->closureReturnTypeName); self->closureReturnTypeName = NULL; }
     if (self->releaseExclusions) { spec_release((void*)self->releaseExclusions); self->releaseExclusions = NULL; }
     if (self->hoistedLocals) { spec_release((void*)self->hoistedLocals); self->hoistedLocals = NULL; }
     if (self->localScopeVars) { spec_release((void*)self->localScopeVars); self->localScopeVars = NULL; }
@@ -56099,6 +56103,7 @@ CodeGenerator* CodeGenerator_new(void) {
     self->cleanupLabel = (String)spec_retain((void*)(spec_string_intern("")));
     self->cleanupRetVar = (String)spec_retain((void*)(spec_string_intern("")));
     self->cleanupCounter = 0;
+    self->closureReturnTypeName = (String)spec_retain((void*)(spec_string_intern("")));
     self->releaseExclusions = (SpecMap*)spec_retain((void*)(spec_map_new()));
     self->hoistedLocals = (SpecMap*)spec_retain((void*)(spec_map_new()));
     self->localScopeVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
@@ -56140,6 +56145,7 @@ void CodeGenerator_FieldMemberLoop_destroy(void* self_ptr) {
     if (self->inlineReturnLabel) { spec_release((void*)self->inlineReturnLabel); self->inlineReturnLabel = NULL; }
     if (self->cleanupLabel) { spec_release((void*)self->cleanupLabel); self->cleanupLabel = NULL; }
     if (self->cleanupRetVar) { spec_release((void*)self->cleanupRetVar); self->cleanupRetVar = NULL; }
+    if (self->closureReturnTypeName) { spec_release((void*)self->closureReturnTypeName); self->closureReturnTypeName = NULL; }
     if (self->releaseExclusions) { spec_release((void*)self->releaseExclusions); self->releaseExclusions = NULL; }
     if (self->hoistedLocals) { spec_release((void*)self->hoistedLocals); self->hoistedLocals = NULL; }
     if (self->localScopeVars) { spec_release((void*)self->localScopeVars); self->localScopeVars = NULL; }
@@ -56182,6 +56188,7 @@ CodeGenerator_FieldMemberLoop* CodeGenerator_FieldMemberLoop_new(void) {
     self->cleanupLabel = NULL;
     self->cleanupRetVar = NULL;
     self->cleanupCounter = 0;
+    self->closureReturnTypeName = NULL;
     self->releaseExclusions = NULL;
     self->hoistedLocals = NULL;
     self->localScopeVars = NULL;
@@ -56223,6 +56230,7 @@ void CodeGenerator_MethodMemberLoop_destroy(void* self_ptr) {
     if (self->inlineReturnLabel) { spec_release((void*)self->inlineReturnLabel); self->inlineReturnLabel = NULL; }
     if (self->cleanupLabel) { spec_release((void*)self->cleanupLabel); self->cleanupLabel = NULL; }
     if (self->cleanupRetVar) { spec_release((void*)self->cleanupRetVar); self->cleanupRetVar = NULL; }
+    if (self->closureReturnTypeName) { spec_release((void*)self->closureReturnTypeName); self->closureReturnTypeName = NULL; }
     if (self->releaseExclusions) { spec_release((void*)self->releaseExclusions); self->releaseExclusions = NULL; }
     if (self->hoistedLocals) { spec_release((void*)self->hoistedLocals); self->hoistedLocals = NULL; }
     if (self->localScopeVars) { spec_release((void*)self->localScopeVars); self->localScopeVars = NULL; }
@@ -56265,6 +56273,7 @@ CodeGenerator_MethodMemberLoop* CodeGenerator_MethodMemberLoop_new(void) {
     self->cleanupLabel = NULL;
     self->cleanupRetVar = NULL;
     self->cleanupCounter = 0;
+    self->closureReturnTypeName = NULL;
     self->releaseExclusions = NULL;
     self->hoistedLocals = NULL;
     self->localScopeVars = NULL;
@@ -68460,6 +68469,7 @@ void CodeGenerator_init(CodeGenerator* self) {
     spec_assign((void**)&self->cleanupLabel, (void*)(spec_string_intern("")));
     spec_assign((void**)&self->cleanupRetVar, (void*)(spec_string_intern("")));
     self->cleanupCounter = 0;
+    spec_assign((void**)&self->closureReturnTypeName, (void*)(spec_string_intern("")));
     spec_assign((void**)&self->releaseExclusions, (void*)(spec_map_new()));
     spec_assign((void**)&self->hoistedLocals, (void*)(spec_map_new()));
     spec_assign((void**)&self->localScopeVars, (void*)(spec_map_new()));
@@ -71307,6 +71317,7 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     SPEC_AUTO SpecArray* outerKeys = 0;
     SPEC_AUTO SpecMap* bodyLocals = 0;
     SPEC_AUTO String capReleases = 0;
+    SPEC_AUTO String savedClosureRet = 0;
     SPEC_AUTO String savedCleanupRetVar = 0;
     SPEC_AUTO String savedRetLbl = 0;
     SPEC_AUTO String capWritebacks = 0;
@@ -71352,9 +71363,11 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
     savedCleanupLabel = spec_construct_string(self->cleanupLabel);
     savedCleanupRetVar = spec_construct_string(self->cleanupRetVar);
+    savedClosureRet = spec_construct_string(self->closureReturnTypeName);
     savedExclusions = (SpecMap*)spec_retain((void*)(self->releaseExclusions));
     spec_assign((void**)&self->cleanupLabel, (void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("_cleanup_anon_"))), spec_to_string_int(id))));
     spec_assign((void**)&self->cleanupRetVar, (void*)(spec_string_intern("")));
+    spec_assign((void**)&self->closureReturnTypeName, (void*)(expr->anonReturnType->name));
     spec_assign((void**)&self->releaseExclusions, (void*)(spec_map_new()));
     if ((!spec_string_equals(retC, spec_string_intern("void")))) {
 	    spec_assign((void**)&self->cleanupRetVar, (void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("_mret_anon_"))), spec_to_string_int(id))));
@@ -71450,6 +71463,7 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
 	};
 	    spec_assign((void**)&self->cleanupLabel, (void*)(savedCleanupLabel));
 	    spec_assign((void**)&self->cleanupRetVar, (void*)(savedCleanupRetVar));
+	    spec_assign((void**)&self->closureReturnTypeName, (void*)(savedClosureRet));
 	    Buf_bufAppendBuf(NULL, self->helperFunctions, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(envStruct)), destroyEnv), spec_string_intern("static __attribute__((unused)) ")), retC), spec_string_intern(" ")), fnName), spec_string_intern("(")), paramsC), spec_string_intern(") {\n")), retDecl), bindsC), bodyC), cleanupTail), spec_string_intern("}\n\n")));
 	    _mret_491 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ "))), envName), spec_string_intern("* _env = (")), envName), spec_string_intern("*)calloc(1, sizeof(")), envName), spec_string_intern("));\n")), capAssigns), spec_string_intern("    spec_closure_new((void*)")), fnName), spec_string_intern(", (void*)_env, ")), destroyEnvName), spec_string_intern("); })"))));
     goto _cleanup_491;
@@ -71472,6 +71486,7 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
 	};
 	    spec_assign((void**)&self->cleanupLabel, (void*)(savedCleanupLabel));
 	    spec_assign((void**)&self->cleanupRetVar, (void*)(savedCleanupRetVar));
+	    spec_assign((void**)&self->closureReturnTypeName, (void*)(savedClosureRet));
 	    Buf_bufAppendBuf(NULL, self->helperFunctions, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static __attribute__((unused)) "))), retC), spec_string_intern(" ")), fnName), spec_string_intern("(")), paramsC), spec_string_intern(") {\n    (void)_env_ptr;\n")), retDecl), bodyC), cleanupTail), spec_string_intern("}\n\n")));
 	    _mret_491 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_closure_new((void*)"))), fnName), spec_string_intern(", NULL, NULL)"))));
     goto _cleanup_491;
@@ -71491,6 +71506,7 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     if (savedRetLbl) { spec_release((void*)savedRetLbl); savedRetLbl = NULL; }
     if (savedCleanupLabel) { spec_release((void*)savedCleanupLabel); savedCleanupLabel = NULL; }
     if (savedCleanupRetVar) { spec_release((void*)savedCleanupRetVar); savedCleanupRetVar = NULL; }
+    if (savedClosureRet) { spec_release((void*)savedClosureRet); savedClosureRet = NULL; }
     if (savedExclusions) { spec_release((void*)savedExclusions); savedExclusions = NULL; }
     if (bodyC) { spec_release((void*)bodyC); bodyC = NULL; }
     if (envName) { spec_release((void*)envName); envName = NULL; }
@@ -72096,58 +72112,74 @@ String CodeGenerator_emitForward(CodeGenerator* self, Statement* stmt) {
 String CodeGenerator_emitReturn(CodeGenerator* self, Statement* stmt) {
     (void)self;
     (void)stmt;
+    String _mret_503 = 0;
+    SPEC_AUTO String shapeRetType = 0;
     if ((!spec_string_equals(self->inlineReturnLabel, spec_string_intern("")))) {
 	    if (((stmt->hasReturnExpr) && ((!spec_string_equals(self->inlineReturnVar, spec_string_intern("")))))) {
 	    SPEC_AUTO String retC = CodeGenerator_generateExpression(self, stmt->returnExpr) /* inst:CodeGenerator:generateExpression */;
-	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), self->inlineReturnVar), spec_string_intern(" = ")), retC), spec_string_intern("; break;\n"))));
+	    _mret_503 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), self->inlineReturnVar), spec_string_intern(" = ")), retC), spec_string_intern("; break;\n"))));
+    goto _cleanup_503;
     if (retC) { spec_release((void*)retC); retC = NULL; }
 	};
-	    return (String)spec_retain((void*)(spec_string_intern("    break;\n")));
+	    _mret_503 = (String)spec_retain((void*)(spec_string_intern("    break;\n")));
+    goto _cleanup_503;
+	};
+    shapeRetType = spec_construct_string(self->currentMethodReturnType);
+    if ((!spec_string_equals(self->closureReturnTypeName, spec_string_intern("")))) {
+	    spec_assign((void**)&shapeRetType, (void*)(self->closureReturnTypeName));
 	};
     if (stmt->hasReturnExpr) {
 	    ExpressionKind retKind = stmt->returnExpr->kind;
-	    if (((((((retKind) == (ExpressionKind_ARRAY))) || (((retKind) == (ExpressionKind_MAP))))) && (((String_startsWith(self->currentMethodReturnType, spec_string_intern("Array"))) || (String_startsWith(self->currentMethodReturnType, spec_string_intern("Map"))))))) {
-	    CodeGenerator_setContainerHint(self, self->currentMethodReturnType) /* inst:CodeGenerator:setContainerHint */;
+	    if (((((((retKind) == (ExpressionKind_ARRAY))) || (((retKind) == (ExpressionKind_MAP))))) && (((String_startsWith(shapeRetType, spec_string_intern("Array"))) || (String_startsWith(shapeRetType, spec_string_intern("Map"))))))) {
+	    CodeGenerator_setContainerHint(self, shapeRetType) /* inst:CodeGenerator:setContainerHint */;
 	};
 	    bool savedArg = self->argMode;
 	    self->argMode = false;
 	    SPEC_AUTO String retC = CodeGenerator_generateExpression(self, stmt->returnExpr) /* inst:CodeGenerator:generateExpression */;
 	    self->argMode = savedArg;
 	    SPEC_AUTO ClassInfo* curCls = (ClassInfo*)(((((ClassInfo* (*)(CodeGenerator*, String))self->_vtable[146]))((CodeGenerator*)self, self->currentClassName)));
-	    if (((Array_indexOf(curCls->typeParams, self->currentMethodReturnType, (-(1)))) >= (0))) {
+	    if (((Array_indexOf(curCls->typeParams, shapeRetType, (-(1)))) >= (0))) {
 	    spec_assign((void**)&retC, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(void*)(intptr_t)("))), retC), spec_string_intern(")"))));
 	} else {
-	    if (CodeGenerator_isArcType(self, self->currentMethodReturnType) /* inst:CodeGenerator:isArcType */) {
+	    if (CodeGenerator_isArcType(self, shapeRetType) /* inst:CodeGenerator:isArcType */) {
 	    bool ownedLocal = ((((retKind) == (ExpressionKind_IDENT))) && (spec_map_has(self->localScopeVars, stmt->returnExpr->str)));
 	    if (ownedLocal) {
 	    SPEC_AUTO String identC = CBackendUtils_cIdent(self->utils, stmt->returnExpr->str) /* inst:CBackendUtils:cIdent */;
-	    SPEC_AUTO String rtC = (((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, self->currentMethodReturnType);
+	    SPEC_AUTO String rtC = (((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, shapeRetType);
 	    spec_assign((void**)&retC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), rtC), spec_string_intern(")({ ")), rtC), spec_string_intern(" _ret_val = ")), identC), spec_string_intern("; ")), identC), spec_string_intern(" = NULL; _ret_val; })"))));
     if (identC) { spec_release((void*)identC); identC = NULL; }
     if (rtC) { spec_release((void*)rtC); rtC = NULL; }
 	} else {
 	    if (CodeGenerator_isFreshConstructorCall(self, stmt->returnExpr) /* inst:CodeGenerator:isFreshConstructorCall */) {
-	    spec_assign((void**)&retC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, self->currentMethodReturnType))))), spec_string_intern(")(")), retC), spec_string_intern(")"))));
+	    spec_assign((void**)&retC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, shapeRetType))))), spec_string_intern(")(")), retC), spec_string_intern(")"))));
 	} else {
-	    spec_assign((void**)&retC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, self->currentMethodReturnType))))), spec_string_intern(")spec_retain((void*)(")), retC), spec_string_intern("))"))));
+	    spec_assign((void**)&retC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, shapeRetType))))), spec_string_intern(")spec_retain((void*)(")), retC), spec_string_intern("))"))));
 	};
 	};
 	};
 	};
 	    if ((!spec_string_equals(self->cleanupLabel, spec_string_intern("")))) {
 	    if ((!spec_string_equals(self->cleanupRetVar, spec_string_intern("")))) {
-	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), self->cleanupRetVar), spec_string_intern(" = ")), retC), spec_string_intern(";\n    goto ")), self->cleanupLabel), spec_string_intern(";\n"))));
+	    _mret_503 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), self->cleanupRetVar), spec_string_intern(" = ")), retC), spec_string_intern(";\n    goto ")), self->cleanupLabel), spec_string_intern(";\n"))));
+    goto _cleanup_503;
 	};
-	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    goto "))), self->cleanupLabel), spec_string_intern(";\n"))));
+	    _mret_503 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    goto "))), self->cleanupLabel), spec_string_intern(";\n"))));
+    goto _cleanup_503;
 	};
-	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    return "))), retC), spec_string_intern(";\n"))));
+	    _mret_503 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    return "))), retC), spec_string_intern(";\n"))));
+    goto _cleanup_503;
     if (retC) { spec_release((void*)retC); retC = NULL; }
     if (curCls) { spec_release((void*)curCls); curCls = NULL; }
 	};
     if ((!spec_string_equals(self->cleanupLabel, spec_string_intern("")))) {
-	    return (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    goto "))), self->cleanupLabel), spec_string_intern(";\n"))));
+	    _mret_503 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    goto "))), self->cleanupLabel), spec_string_intern(";\n"))));
+    goto _cleanup_503;
 	};
-    return (String)spec_retain((void*)(spec_string_intern("    return;\n")));
+    _mret_503 = (String)spec_retain((void*)(spec_string_intern("    return;\n")));
+    goto _cleanup_503;
+    _cleanup_503: ;
+    if (shapeRetType) { spec_release((void*)shapeRetType); shapeRetType = NULL; }
+    return _mret_503;
 }
 
 String CodeGenerator_emitWhenStatement(CodeGenerator* self, Statement* stmt) {

@@ -130,6 +130,13 @@ Class is CodeGenerator{
 	## Per-method cleanup-label counter (labels are function-scoped).
 	local Int is cleanupCounter: 0;
 
+	## FUNCTIONS.md Part V: the innermost closure's declared return type
+	## name while its body generates ('' outside closures). A closure's
+	## returns shape against ITS type — the enclosing method's return type
+	## is irrelevant there (a scalar-returning closure inside a
+	## String-returning method must not pointer-cast).
+	local String is closureReturnTypeName: '';
+
 	## Locals excluded from the scope-end releases — the closure write-backs
 	## transfer their ownership to the env, so releasing them here would
 	## drop a ref the env owns.
@@ -182,6 +189,7 @@ Class is CodeGenerator{
 		self:cleanupLabel: '';
 		self:cleanupRetVar: '';
 		self:cleanupCounter: 0;
+		self:closureReturnTypeName: '';
 		self:releaseExclusions: Map:init();
 		self:hoistedLocals: Map:init();
 		self:localScopeVars: Map:init();
@@ -2547,9 +2555,11 @@ Class is CodeGenerator{
 		# funnel does not reach into it.
 		local String is savedCleanupLabel: self:cleanupLabel;
 		local String is savedCleanupRetVar: self:cleanupRetVar;
+		local String is savedClosureRet: self:closureReturnTypeName;
 		local Map of String to String is savedExclusions: self:releaseExclusions;
 		self:cleanupLabel: '_cleanup_anon_' . id;
 		self:cleanupRetVar: '';
+		self:closureReturnTypeName: expr:anonReturnType:name;
 		self:releaseExclusions: Map:init();
 		Conditional:if(check: { retC != 'void' }, then: {
 			self:cleanupRetVar: '_mret_anon_' . id;
@@ -2645,6 +2655,7 @@ Class is CodeGenerator{
 			});
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
+			self:closureReturnTypeName: savedClosureRet;
 			Buf:bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . bindsC . bodyC . cleanupTail . "}\n\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, else: {
@@ -2661,6 +2672,7 @@ Class is CodeGenerator{
 			});
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
+			self:closureReturnTypeName: savedClosureRet;
 			Buf:bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . bodyC . cleanupTail . "}\n\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
@@ -3147,30 +3159,38 @@ Class is CodeGenerator{
 			});
 			return "    break;\n";
 		});
+		# FUNCTIONS.md Part V: inside a closure the returns shape against
+		# the CLOSURE's declared return type — the enclosing method's is
+		# irrelevant there (a scalar-returning closure inside a
+		# String-returning method must not pointer-cast).
+		local String is shapeRetType: self:currentMethodReturnType;
+		Conditional:if(check: { self:closureReturnTypeName != '' }, then: {
+			shapeRetType: self:closureReturnTypeName;
+		});
 		Conditional:if(check: { stmt:hasReturnExpr }, then: {
 			local ExpressionKind is retKind: stmt:returnExpr:kind;
-			Conditional:if(check: { (retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (self:currentMethodReturnType:startsWith(prefix: 'Array') || self:currentMethodReturnType:startsWith(prefix: 'Map')) }, then: {
-				self:setContainerHint(t: self:currentMethodReturnType);
+			Conditional:if(check: { (retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (shapeRetType:startsWith(prefix: 'Array') || shapeRetType:startsWith(prefix: 'Map')) }, then: {
+				self:setContainerHint(t: shapeRetType);
 			});
 			local Boolean is savedArg: self:argMode;
 			self:argMode: false;
 			local String is retC: self:generateExpression(expr: stmt:returnExpr);
 			self:argMode: savedArg;
 			local ClassInfo is curCls: self:findClass(name: self:currentClassName);
-			Conditional:if(check: { curCls:typeParams:indexOf(search: self:currentMethodReturnType, default: -1) >= 0 }, then: {
+			Conditional:if(check: { curCls:typeParams:indexOf(search: shapeRetType, default: -1) >= 0 }, then: {
 				retC: '(void*)(intptr_t)(' . retC . ')';
 			}, else: {
-				Conditional:if(check: { self:isArcType(typeName: self:currentMethodReturnType) }, then: {
+				Conditional:if(check: { self:isArcType(typeName: shapeRetType) }, then: {
 					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: stmt:returnExpr:str);
 					Conditional:if(check: { ownedLocal }, then: {
 						local String is identC: self:utils:cIdent(name: stmt:returnExpr:str);
-						local String is rtC: self:cTypeFor(typeName: self:currentMethodReturnType);
+						local String is rtC: self:cTypeFor(typeName: shapeRetType);
 						retC: '(' . rtC . ')({ ' . rtC . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
 					}, else: {
 						Conditional:if(check: { self:isFreshConstructorCall(expr: stmt:returnExpr) }, then: {
-							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')(' . retC . ')';
+							retC: '(' . self:cTypeFor(typeName: shapeRetType) . ')(' . retC . ')';
 						}, else: {
-							retC: '(' . self:cTypeFor(typeName: self:currentMethodReturnType) . ')spec_retain((void*)(' . retC . '))';
+							retC: '(' . self:cTypeFor(typeName: shapeRetType) . ')spec_retain((void*)(' . retC . '))';
 						});
 					});
 				});
