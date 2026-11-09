@@ -14,7 +14,7 @@ Class of Loop is EnumVariantsLoop{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 ,
 		['base', 'compiler', 'ast', Parameter]
 ,
@@ -44,7 +44,7 @@ Class of Loop is EnumVariantsLoop{
 		local Array of Parameter is vParams: [];
 		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:parser:advance();
-			While:run(loop: ParamLoop:init(parser: self:parser, params: vParams));
+			Loops:run(loop: ParamLoop:init(parser: self:parser, params: vParams));
 			self:parser:matchPunct(p: Punctuation:GROUP_CLOSE);
 		});
 		local Expression is valExpr: Expression:init(kind: ExpressionKind:NUMBER);

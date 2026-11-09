@@ -134,7 +134,7 @@ Class is F{ replace Function is init(Map of String to String is args){
 		});
 
 		# 7. Field initializer bidirectional + root contract
-		local Array of String is e7: self:checkOf(src: "Class is G{ replace Array of Array of String is using: [['base', 'iterator', as While()]]; replace Function is init(Map of String to String is args){ local Int is n: 0; While:condition(evaluate: local Function of Boolean(){ return 1; }, iteration: local Function(){ n: n + 1; }); } }");
+		local Array of String is e7: self:checkOf(src: "Class is G{ replace Array of Array of String is using: [['base', 'iterator', as Loops()]]; replace Function is init(Map of String to String is args){ local Int is n: 0; Loops:loop(evaluate: local Function of Boolean(){ return 1; }, iteration: local Function(){ n: n + 1; }); } }");
 		Conditional:if(check: { e7:length() > 0 }, then: {
 			Output:line('[PASS] boolean condition typing (non-Boolean evaluate rejected)');
 		}, else: {

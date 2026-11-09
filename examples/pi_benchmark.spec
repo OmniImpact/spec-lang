@@ -23,7 +23,7 @@ Class is PiBenchmark{
 		['base', 'io', as Output()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -69,10 +69,10 @@ Class is PiBenchmark{
 			local Int is lastHits: 0;
 			local Int is lastDraw: Process:clockMs();
 
-			While(
+			Loops(
 				evaluate: { done < count },
 				iterate: {
-					While(
+					Loops(
 						[Int is b: 0],
 						evaluate: { b < batch && done < count },
 						iterate: {
@@ -119,7 +119,7 @@ Class is PiBenchmark{
 	##
 	## @param threads: Thread count (markers appear as sampling proceeds).
 	local Function is drawDomain(Int is threads){
-		While(
+		Loops(
 			[Int is row: 0],
 			evaluate: { row < self:gridH },
 			iterate: {
@@ -138,7 +138,7 @@ Class is PiBenchmark{
 	## @return: Rendered row string.
 	local Function of String is domainRow(Int is row, Int is threads){
 		local String is buf: '';
-		While(
+		Loops(
 			[Int is col: 0],
 			evaluate: { col < self:gridW },
 			iterate: {
@@ -171,7 +171,7 @@ Class is PiBenchmark{
 	## @return: Thread index, or -1.
 	local Function of Int is markerAt(Int is col, Int is row, Int is threads){
 		local Int is found: -1;
-		While(
+		Loops(
 			[Int is i: 0],
 			evaluate: { i < threads && found < 0 },
 			iterate: {
@@ -262,7 +262,7 @@ Class is PiBenchmark{
 		Conditional:if(check: { pad < 1 }, then: {
 			pad: 1;
 		});
-		While(
+		Loops(
 			[Int is i: 0],
 			evaluate: { i < pad },
 			iterate: {
@@ -279,7 +279,7 @@ Class is PiBenchmark{
 	## @return: Bar string.
 	local Function of String is bar(Int is width){
 		local String is barText: '';
-		While(
+		Loops(
 			[Int is i: 0],
 			evaluate: { i < width },
 			iterate: {

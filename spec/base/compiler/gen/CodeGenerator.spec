@@ -34,7 +34,7 @@ Class is CodeGenerator{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Buf()]
 ,
 		['base', 'compiler', 'ast', StatementKind]
@@ -775,7 +775,7 @@ Class is CodeGenerator{
 	## @return: The descriptor, or an unnamed one when absent.
 	Function of ClassInfo is findClass(String is name){
 		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
-		While:run(loop: s);
+		Loops:run(loop: s);
 		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
@@ -824,7 +824,7 @@ Class is CodeGenerator{
 			return '';
 		});
 		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:members, fieldName: fieldName);
-		While:run(loop: fl);
+		Loops:run(loop: fl);
 		Conditional:if(check: { fl:found }, then: {
 			local String is rawT: self:formatTypeString(t: fl:res:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
@@ -971,7 +971,7 @@ Class is CodeGenerator{
 			return '';
 		});
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
-		While:run(loop: ml);
+		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			local String is rawT: self:formatTypeString(t: ml:res:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
@@ -993,7 +993,7 @@ Class is CodeGenerator{
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:members, fieldName: variantName);
-		While:run(loop: fl);
+		Loops:run(loop: fl);
 		Conditional:if(check: { fl:found }, then: {
 			return fl:res;
 		});
@@ -1119,7 +1119,7 @@ Class is CodeGenerator{
 			return '';
 		});
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
-		While:run(loop: ml);
+		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			Conditional:if(check: { paramCount < 0 || ml:res:params:length() == paramCount }, then: {
 				# FUNCTIONS.md Part IV IV.2c: the IMPLEMENTING class's symbol
@@ -1153,7 +1153,7 @@ Class is CodeGenerator{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
-		While:run(loop: ml);
+		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			return ml:res;
 		});
@@ -1248,7 +1248,7 @@ Class is CodeGenerator{
 				return rootType;
 			});
 			local Int is idx: 1;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){
 					return rootType != '' && idx < segs:length();
 				},
@@ -1825,7 +1825,7 @@ Class is CodeGenerator{
 		local ClassInfo is chainCls: self:findClass(name: root);
 		local Boolean is chainOk: chainCls:name == root;
 		local Int is chainIdx: 1;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
 			iteration: local Function of Boolean(){
 				local String is nextSym: '';
@@ -1863,7 +1863,7 @@ Class is CodeGenerator{
 			});
 			local Int is idx: 1;
 			local String is resC: rootC;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){
 					return idx < segs:length();
 				},
@@ -2104,7 +2104,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional') }, then: {
 				local Boolean is shapeOk: expr:argValue(index: 0):kind == ExpressionKind:ANON_FN;
 				local Int is bi: 1;
-				While:condition(
+				Loops:loop(
 					evaluate: local Function of Boolean(){ return shapeOk && bi < expr:argCount(); },
 					iteration: local Function of Boolean(){
 						Conditional:if(check: { expr:argValue(index: bi):kind != ExpressionKind:ANON_FN }, then: {
@@ -3552,7 +3552,7 @@ Class is CodeGenerator{
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				out: out . 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n";
 				local Int is slot: 0;
-				While:condition(
+				Loops:loop(
 					evaluate: local Function of Boolean(){
 						return slot < self:methodSlotCount;
 					},
@@ -4123,6 +4123,83 @@ Class is CodeGenerator{
 
 		local String is out: "({ " . declsC . "while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n" . loopReleasesC . "})";
 		self:localVars: savedVars;
+		return out;
+	}
+
+	## FUNCTIONS.md II.4: inlines an `until(evaluate:, iteration:)` — the
+	## do-while: the body runs once, then the predicate decides. The body's
+	## returns drive the loop exactly like [generateInlineWhileLoop].
+	##
+	## @param evalExpr: The evaluate ANON_FN.
+	## @param iterExpr: The iteration ANON_FN.
+	## @return: C statement expression.
+	Function of String is generateInlineUntil(Expression is evalExpr, Expression is iterExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local String is evVar: '_ev_' . id;
+		self:inlineReturnVar: evVar;
+		self:inlineReturnLabel: 'break';
+		local String is evalBodyC: '';
+		local Int is evalCount: evalExpr:anonBody:length();
+		local Int is evIdx: 0;
+		evalExpr:anonBody:each(action: local Function(Statement is s){
+			evIdx: evIdx + 1;
+			Conditional:if(check: { s:kind == StatementKind:EXPR && evIdx == evalCount && self:inlineReturnVar != '' }, then: {
+				local String is exprC: self:generateExpression(expr: s:exprStmt);
+				evalBodyC: evalBodyC . '    ' . self:inlineReturnVar . ' = ' . exprC . "; break;\n";
+			}, else: {
+				evalBodyC: evalBodyC . self:generateStatement(stmt: s);
+			});
+		});
+		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
+
+		local String is itVar: '_it_' . id;
+		self:inlineReturnVar: itVar;
+		self:inlineReturnLabel: 'break';
+		local String is iterBodyC: '';
+		iterExpr:anonBody:each(action: local Function(Statement is s){
+			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
+		});
+		iterBodyC: iterBodyC . self:scopeReleases(stmts: iterExpr:anonBody);
+
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+
+		local String is out: "({ while (1) {\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n    }\n})";
+		return out;
+	}
+
+	## FUNCTIONS.md II.4: inlines a `repeat(count:, worker:)` — the body
+	## runs exactly [count] times; the worker's returns drive the loop
+	## (`return true` continues, `return false` stops).
+	##
+	## @param countExpr: The count expression.
+	## @param workerExpr: The worker ANON_FN.
+	## @return: C statement expression.
+	Function of String is generateInlineRepeat(Expression is countExpr, Expression is workerExpr){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+
+		local String is countC: self:generateExpression(expr: countExpr);
+
+		local String is itVar: '_it_' . id;
+		self:inlineReturnVar: itVar;
+		self:inlineReturnLabel: 'break';
+		local String is workerBodyC: '';
+		workerExpr:anonBody:each(action: local Function(Statement is s){
+			workerBodyC: workerBodyC . self:generateStatement(stmt: s);
+		});
+		workerBodyC: workerBodyC . self:scopeReleases(stmts: workerExpr:anonBody);
+
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+
+		local String is out: "({ long long _rn_" . id . " = (long long)(" . countC . "); for (long long _ri_" . id . " = 0; _ri_" . id . " < _rn_" . id . "; _ri_" . id . "++) {\n        bool " . itVar . " = true;\n        do {\n" . workerBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n})";
 		return out;
 	}
 

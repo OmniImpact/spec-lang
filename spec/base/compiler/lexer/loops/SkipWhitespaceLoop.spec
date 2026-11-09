@@ -8,7 +8,7 @@ Class of Loop is SkipWhitespaceLoop{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'lexer', 'loops', SkipCommentLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -29,7 +29,7 @@ Class of Loop is SkipWhitespaceLoop{
 			return true;
 		});
 		Conditional:if(check: { ch == '#' }, then: {
-			While:run(loop: SkipCommentLoop:init(lexer: self:lexer));
+			Loops:run(loop: SkipCommentLoop:init(lexer: self:lexer));
 			return true;
 		});
 		return false;

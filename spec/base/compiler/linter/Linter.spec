@@ -22,7 +22,7 @@ Class is Linter{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'io', as Output()]
 ,
 		['base', 'compiler', 'linter', LintIssue],
@@ -98,7 +98,7 @@ Class is Linter{
 			local String is masked: self:maskLine(line: line);
 			local String is body: masked;
 			local Boolean is trimming: true;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){ return trimming && body:length() > 0; },
 				iteration: local Function(){
 					local String is last: body:charAt(index: body:length() - 1, default: '');
@@ -120,7 +120,7 @@ Class is Linter{
 				});
 			});
 			local Int is ci: 0;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){ return ci < masked:length(); },
 				iteration: local Function(){
 					local String is ch: masked:charAt(index: ci, default: '');
@@ -146,7 +146,7 @@ Class is Linter{
 		local String is out: '';
 		local String is quote: '';
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return i < line:length(); },
 			iteration: local Function(){
 				local String is ch: line:charAt(index: i, default: '');
@@ -271,7 +271,7 @@ Class is Linter{
 				});
 			});
 		});
-		return name == 'While' || name == 'Loops' || name == 'Loop';
+		return name == 'Loops' || name == 'Loop';
 	}
 
 	## True when [target] spells an UpperCamel (class-like) receiver —

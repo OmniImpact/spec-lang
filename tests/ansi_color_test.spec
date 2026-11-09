@@ -11,7 +11,7 @@ Class is AnsiColorTest{
 		['base', 'io'],
 		['base', 'io', as Ansi()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -20,7 +20,7 @@ Class is AnsiColorTest{
 		# 1. Basic 16-color + 256-color blocks using Output:print
 		Output:print(text: 'Standard 16 palette: ');
 		local Int is c: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return c < 16; },
 			iteration: local Function(){
 				Output:print(text: Ansi:fg256(code: c) . '█' . Ansi:reset());
@@ -32,11 +32,11 @@ Class is AnsiColorTest{
 		# 2. 6x6x6 Color Cube (indices 16..231) using special shade blocks
 		Output:print(text: '256-Color Cube slice: ');
 		local Int is g: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return g < 6; },
 			iteration: local Function(){
 				local Int is b: 0;
-				While:condition(
+				Loops:loop(
 					evaluate: local Function of Boolean(){ return b < 6; },
 					iteration: local Function(){
 						local Int is idx: Ansi:cubeIndex(r: 5, g: g, b: b);
@@ -52,7 +52,7 @@ Class is AnsiColorTest{
 		# 3. 24-Step Grayscale Ramp (indices 232..255)
 		Output:print(text: 'Grayscale ramp:      ');
 		local Int is lvl: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return lvl < 24; },
 			iteration: local Function(){
 				local Int is gIdx: Ansi:grayIndex(level: lvl);

@@ -19,7 +19,7 @@ Class is ScopeAsDemo{
 		['base', 'io', as File()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -82,7 +82,7 @@ Class is ScopeAsDemo{
 		local Array of String is roles: [];
 
 		# Parse rows using a scoped loop starting after header (row 1)
-		While(
+		Loops(
 			[Int is row: 1, Int is totalRows: lines:length()],
 			evaluate: { row < totalRows },
 			iterate: {

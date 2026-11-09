@@ -37,7 +37,7 @@ Class is Lexer{
 		['base', 'compiler', ErrorText],
 		['base', 'sys', as Reflection()],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -114,7 +114,7 @@ Class is Lexer{
 	## @return: The token stream.
 	Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
-		While:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
+		Loops:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
 		tokens:add(item: Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col));
 		return tokens;
 	}
@@ -170,7 +170,7 @@ Class is Lexer{
 
 	## Skips whitespace and `#` comment lines before the next token.
 	Function is skipWhitespaceAndComments(){
-		While:run(loop: SkipWhitespaceLoop:init(lexer: self));
+		Loops:run(loop: SkipWhitespaceLoop:init(lexer: self));
 	}
 
 	## Scans an identifier or reserved word into a token. Reserved words
@@ -182,7 +182,7 @@ Class is Lexer{
 		local Int is startCol: self:col;
 		local Int is startPos: self:pos;
 
-		While:run(loop: IdentScanLoop:init(lexer: self));
+		Loops:run(loop: IdentScanLoop:init(lexer: self));
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		local Keyword is kw: Keyword:of(text);
@@ -224,7 +224,7 @@ Class is Lexer{
 				self:advance();
 				self:advance();
 				local BaseDigitsLoop is digitLoop: BaseDigitsLoop:init(lexer: self, base: base);
-				While:run(loop: digitLoop);
+				Loops:run(loop: digitLoop);
 				Conditional:if(check: { digitLoop:hadInvalid }, then: {
 					self:addError(msg: self:errText:errInvalidDigitInBase(base: base));
 				});
@@ -237,11 +237,11 @@ Class is Lexer{
 
 		local Int is startPos: self:pos;
 		local NumberScanLoop is numLoop: NumberScanLoop:init(lexer: self);
-		While:run(loop: numLoop);
+		Loops:run(loop: numLoop);
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		local StripUnderscoresLoop is strip: StripUnderscoresLoop:init(src: text);
-		While:run(loop: strip);
+		Loops:run(loop: strip);
 		text: strip:res;
 
 		local TokenKind is kind: TokenKind:INT;
@@ -252,7 +252,7 @@ Class is Lexer{
 			# A bare leading zero stays decimal in Spec; strip it so C does
 			# not reinterpret the emitted literal as octal.
 			local StripLeadingZerosLoop is zeros: StripLeadingZerosLoop:init(src: text);
-			While:run(loop: zeros);
+			Loops:run(loop: zeros);
 			text: zeros:res;
 		});
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
@@ -272,7 +272,7 @@ Class is Lexer{
 		self:advance();
 
 		local StringScanLoop is loop: StringScanLoop:init(lexer: self, quote: quote);
-		While:run(loop: loop);
+		Loops:run(loop: loop);
 
 		Conditional:if(check: { self:pos < self:length }, then: {
 			self:advance();
@@ -301,7 +301,7 @@ Class is Lexer{
 		});
 
 		local HeredocScanLoop is loop: HeredocScanLoop:init(lexer: self, quote: quote);
-		While:run(loop: loop);
+		Loops:run(loop: loop);
 
 		Conditional:if(check: { !loop:closed }, then: {
 			self:addError(msg: self:errText:errUnterminatedHeredoc(quote: quote));

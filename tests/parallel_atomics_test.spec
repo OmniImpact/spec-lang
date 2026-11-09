@@ -21,7 +21,7 @@ Class is ParallelAtomicsTest{
 		['base', 'io', as Output()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -57,7 +57,7 @@ Class is ParallelAtomicsTest{
 		Process:atomicPut(slot: 41, value: 0);
 		local Function of Int is adder: local Function of Int(Int is threadIndex, Int is count){
 			local Int is j: 0;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){ return j < count; },
 				iteration: local Function(){
 					Process:atomicAdd(slot: 41, value: 1);
@@ -79,7 +79,7 @@ Class is ParallelAtomicsTest{
 		local Int is distinct: 0;
 		local Float is last: -1.0;
 		local Int is k: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return k < 1000; },
 			iteration: local Function(){
 				local Float is r: Math:fastRandom();

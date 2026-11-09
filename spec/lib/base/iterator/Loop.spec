@@ -6,7 +6,7 @@
 ## Encapsulates the continuation condition in [evaluate] and loop body
 ## execution in [iteration]. Terminated when [evaluate] returns `false` or
 ## the run's [LoopControl] is stopped. Every compile-time loop class in a
-## program extends [Loop]; the `While` runners drive it through the runtime's
+## program extends [Loop]; the `Loops` runners drive it through the runtime'
 ## loop protocol.
 
 Class is Loop{

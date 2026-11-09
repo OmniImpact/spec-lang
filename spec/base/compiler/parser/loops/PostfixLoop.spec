@@ -14,7 +14,7 @@ Class of Loop is PostfixLoop{
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', TokenKind],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -54,12 +54,12 @@ Class of Loop is PostfixLoop{
 		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:parser:advance();
 			local Array of NamedArg is args: [];
-			While:run(loop: ArgLoop:init(parser: self:parser, args: args));
+			Loops:run(loop: ArgLoop:init(parser: self:parser, args: args));
 			self:parser:matchPunct(p: Punctuation:GROUP_CLOSE);
 
 			local Expression is callExpr: Expression:init(kind: ExpressionKind:CALL);
 			Conditional:if(check: { self:currentExpr:kind == ExpressionKind:IDENT }, then: {
-				Conditional:if(check: { self:currentExpr:stringValue == 'While' }, then: {
+				Conditional:if(check: { self:currentExpr:stringValue == 'Loops' }, then: {
 					callExpr:methodTarget: self:currentExpr;
 					callExpr:methodName: 'loop';
 				}, else: {
@@ -112,7 +112,7 @@ Class of Loop is PostfixLoop{
 			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 				self:parser:advance();
 				local Array of NamedArg is args: [];
-				While:run(loop: ArgLoop:init(parser: self:parser, args: args));
+				Loops:run(loop: ArgLoop:init(parser: self:parser, args: args));
 				self:parser:matchPunct(p: Punctuation:GROUP_CLOSE);
 
 				local Expression is callExpr: Expression:init(kind: ExpressionKind:CALL);

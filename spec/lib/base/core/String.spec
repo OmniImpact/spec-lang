@@ -14,7 +14,7 @@ Class is String{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Buf()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
 	];
@@ -122,7 +122,7 @@ Class is String{
 		local String is out: '';
 		local Int is pos: 0;
 		local Boolean is running: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return running;
 			},
@@ -153,7 +153,7 @@ Class is String{
 		local Int is dlen: Buf:bufLength(b: delimiter);
 		Conditional:if(check: { dlen == 0 }, then: {
 			local Int is i: 0;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){
 					return i < slen;
 				},
@@ -166,7 +166,7 @@ Class is String{
 		});
 		local Int is pos: 0;
 		local Boolean is running: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return running;
 			},
@@ -195,7 +195,7 @@ Class is String{
 		});
 		local Int is start: 0;
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return i < len;
 			},
@@ -236,7 +236,7 @@ Class is String{
 		});
 		local Int is s: 0;
 		local Boolean is sTrimming: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return sTrimming && (s < len);
 			},
@@ -254,7 +254,7 @@ Class is String{
 		});
 		local Int is e: len;
 		local Boolean is eTrimming: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return eTrimming && (e > s);
 			},
@@ -283,7 +283,7 @@ Class is String{
 		local Int is count: 0;
 		local Int is pos: 0;
 		local Boolean is matching: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return matching && (pos + slen <= blen);
 			},
@@ -309,7 +309,7 @@ Class is String{
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return ok && (i < n);
 			},
@@ -334,7 +334,7 @@ Class is String{
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return ok && (i < n);
 			},
@@ -361,7 +361,7 @@ Class is String{
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return ok && (i < n);
 			},
@@ -428,7 +428,7 @@ Class is String{
 		local Int is i: start;
 		local Boolean is ok: true;
 		local Boolean is anyDigits: false;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return ok && (i < len);
 			},

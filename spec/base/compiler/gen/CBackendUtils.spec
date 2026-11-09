@@ -11,7 +11,7 @@ Class is CBackendUtils{
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	## Maps a Spec type name to its C11 type. Containers accept both
@@ -49,7 +49,7 @@ Class is CBackendUtils{
 			is 'Function': { return 'SpecClosure*'; }
 			is 'InputHandler': { return 'void*'; }
 			is 'LoopControl': { return 'SpecLoopControl*'; }
-			is 'File', 'Process', 'Output', 'Input', 'Math', 'While': { return 'void*'; }
+			is 'File', 'Process', 'Output', 'Input', 'Math', 'Loops': { return 'void*'; }
 			else: { return self:cIdent(name: typeName) . '*'; }
 		}
 	}
@@ -61,7 +61,7 @@ Class is CBackendUtils{
 	## @return: snake_case form.
 	Function of String is snakeCase(String is name){
 		local SnakeCaseLoop is loop: SnakeCaseLoop:init(src: name);
-		While:run(loop: loop);
+		Loops:run(loop: loop);
 		return loop:res;
 	}
 
@@ -91,7 +91,7 @@ Class is CBackendUtils{
 	## @return: C-escaped text.
 	Function of String is escapeString(String is s){
 		local EscapeLoop is escLoop: EscapeLoop:init(src: s);
-		While:run(loop: escLoop);
+		Loops:run(loop: escLoop);
 		return escLoop:res;
 	}
 

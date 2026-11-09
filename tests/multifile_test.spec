@@ -9,7 +9,7 @@ Class is MultiFileTest{
 		['base', 'iterator'],
 		['base', 'math', as Math()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	# Declared variable initialized in init before use
@@ -21,7 +21,7 @@ Class is MultiFileTest{
 		replace Array of Array of String is using: [
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as While()],
+			['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()],
 		];
 		local MultiFileTest is app;
@@ -65,7 +65,7 @@ Class is MultiFileTest{
 
 		# 3. Decoupled Loop and Control
 		Output:line("\n--- Decoupled Iterator Loop ---");
-		While:run(loop: StepCounterLoop:init(app: self));
+		Loops:run(loop: StepCounterLoop:init(app: self));
 		Output:line('Final counter value = ' . self:counter);
 
 		Output:line("\nAll multi-file and pure Spec tests completed successfully.");

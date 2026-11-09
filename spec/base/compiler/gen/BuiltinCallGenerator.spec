@@ -300,7 +300,7 @@ Class is BuiltinCallGenerator{
 
 		# The loop runners — While (the legacy spelling, bridged) and
 		# Loops (FUNCTIONS.md §II.4: the control-flow provider).
-		Conditional:if(check: { (targetC == 'While' || targetC == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
+		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
 			local Expression is loopVal: self:argValue(expr: expr, index: 0);
 			local String is loopC: cg:generateExpressionInner(expr: loopVal);
 			local String is loopClass: cg:inferTargetType(expr: loopVal);
@@ -325,7 +325,36 @@ Class is BuiltinCallGenerator{
 			});
 			return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
 		});
-		Conditional:if(check: { (targetC == 'While' || targetC == 'Loops') && (expr:methodName == 'condition' || expr:methodName == 'loop' || expr:methodName == 'init') }, then: {
+		# Loops:repeat(count:, worker:) — the counting loop, inlined.
+		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'repeat' && expr:argCount() == 2 }, then: {
+			local Expression is repCountExpr;
+			local Expression is repWorkerExpr;
+			local Boolean is repHasCount: false;
+			local Boolean is repHasWorker: false;
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				Conditional:if(check: { arg:name == 'count' }, then: {
+					repCountExpr: arg:value;
+					repHasCount: true;
+				}, else: {
+					Conditional:if(check: { arg:name == 'worker' }, then: {
+						repWorkerExpr: arg:value;
+						repHasWorker: true;
+					});
+				});
+			});
+			Conditional:if(check: { !repHasCount && expr:argCount() == 2 }, then: {
+				repCountExpr: self:argValue(expr: expr, index: 0);
+				repHasCount: true;
+			});
+			Conditional:if(check: { !repHasWorker && expr:argCount() == 2 }, then: {
+				repWorkerExpr: self:argValue(expr: expr, index: 1);
+				repHasWorker: true;
+			});
+			Conditional:if(check: { repHasCount && repHasWorker && repWorkerExpr:kind == ExpressionKind:ANON_FN }, then: {
+				return cg:generateInlineRepeat(countExpr: repCountExpr, workerExpr: repWorkerExpr);
+			});
+		});
+		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && (expr:methodName == 'while' || expr:methodName == 'condition' || expr:methodName == 'until' || expr:methodName == 'loop' || expr:methodName == 'init') }, then: {
 			local Expression is varsExpr;
 			local Expression is evalExpr;
 			local Expression is iterExpr;
@@ -378,6 +407,10 @@ Class is BuiltinCallGenerator{
 				local Array of Parameter is loopVars: [];
 				Conditional:if(check: { hasVars && varsExpr:anonParams:length() > 0 }, then: {
 					loopVars: varsExpr:anonParams;
+				});
+				# II.4: until is the do-while — the body runs once first.
+				Conditional:if(check: { expr:methodName == 'until' }, then: {
+					return cg:generateInlineUntil(evalExpr: evalExpr, iterExpr: iterExpr);
 				});
 				return cg:generateInlineWhileLoop(loopVars: loopVars, evalExpr: evalExpr, iterExpr: iterExpr);
 			});

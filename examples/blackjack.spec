@@ -7,7 +7,7 @@ Class is Blackjack{
 		['base', 'iterator', Loop],
 		['base', 'iterator', LoopControl],
 		['base', 'iterator', LoopCallback],
-		['base', 'iterator', While],
+		['base', 'iterator', Loops],
 		['base', 'io', Output],
 		['base', 'io', Input],
 		['base', 'io', InputHandler],
@@ -15,7 +15,7 @@ Class is Blackjack{
 		['base', 'io', as Input()],
 		['base', 'math', as Math()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	# =========================================================================
@@ -42,7 +42,7 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as While()]
+			['base', 'iterator', as Loops()]
 		];
 		local Blackjack is game;
 
@@ -79,7 +79,7 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as While()]
+			['base', 'iterator', as Loops()]
 		];
 		local Blackjack is game;
 
@@ -103,7 +103,7 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as While()],
+			['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()],
 		];
 		local Blackjack is game;
@@ -202,7 +202,7 @@ Class is Blackjack{
 		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: self);
 		local LoopControl is control: LoopControl:init(onComplete: onComplete);
 
-		While:run(loop: dealerLoop, control: control);
+		Loops:run(loop: dealerLoop, control: control);
 	}
 
 	Function is evaluateRoundOutcome(){
@@ -237,11 +237,11 @@ Class is Blackjack{
 
 		# 1. Build the deck: four suits of each value 1..10.
 		local Int is value: 1;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return value <= 10; },
 			iteration: local Function(){
 				local Int is suit: 0;
-				While:condition(
+				Loops:loop(
 					evaluate: local Function of Boolean(){ return suit < 4; },
 					iteration: local Function(){
 						deck:add(item: value);

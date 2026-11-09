@@ -26,7 +26,7 @@ Class is DeclarationGenerator{
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	## Enum name -> "true" (string-backed enums included).
@@ -109,7 +109,7 @@ Class is DeclarationGenerator{
 	## @return: true when present.
 	Function of Boolean is hasFieldNamed(Array of Member is list, String is name){
 		local HasFieldLoop is loop: HasFieldLoop:init(list: list, name: name);
-		While:run(loop: loop);
+		Loops:run(loop: loop);
 		return loop:found;
 	}
 
@@ -178,7 +178,7 @@ Class is DeclarationGenerator{
 	## @return: The index, or -1.
 	Function of Int is fieldIndexNamed(Array of Member is list, String is name){
 		local FieldIndexLoop is loop: FieldIndexLoop:init(list: list, name: name);
-		While:run(loop: loop);
+		Loops:run(loop: loop);
 		return loop:res;
 	}
 

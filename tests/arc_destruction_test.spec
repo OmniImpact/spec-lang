@@ -2,7 +2,7 @@ Class is Resource{
 
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 	local String is name;
@@ -21,7 +21,7 @@ Class is Container{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 	local Resource is res;
 
@@ -44,7 +44,7 @@ Class is ArcDestructionTest{
 		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -78,7 +78,7 @@ Class is ArcDestructionTest{
 
 		# Case 4: Multiple loop reassignment ensuring no refcount corruptions
 		local Int is count: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return count < 5; },
 			iteration: local Function(){
 				c:setRes(newRes: Resource:init(name: 'Loop_' . count));

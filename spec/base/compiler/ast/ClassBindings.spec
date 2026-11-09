@@ -27,7 +27,7 @@ Class is ClassBindings{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 
 	## True when the backend must not emit a struct, vtable, or constructor
@@ -51,7 +51,7 @@ Class is ClassBindings{
 		# bodies (only the terminal metrics bind to the ioctl floor).
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
-			name == 'While' || name == 'Loops' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
+			name == 'Loops' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
 			name == 'Parallel' ||
 			name == 'List' || name == 'String';
 	}
@@ -63,7 +63,7 @@ Class is ClassBindings{
 	## @return: true when the class is a floor binding.
 	Function of Boolean is isSysinternal(ClassInfo is cls){
 		local SysinternalCheckLoop is check: SysinternalCheckLoop:init(cls: cls);
-		While:run(loop: check);
+		Loops:run(loop: check);
 		return check:isFloor;
 	}
 

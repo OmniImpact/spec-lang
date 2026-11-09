@@ -25,7 +25,7 @@ Class is Loader{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 ,
 		['base', 'compiler', 'ast', Expression]
 ,
@@ -187,7 +187,7 @@ Class is Loader{
 		# keeps climbing while the executable's locations have yielded no
 		# .spec content at all.
 		local Int is indexed: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return ups < 3 && indexed == 0;
 			},
@@ -255,7 +255,7 @@ Class is Loader{
 		local String is joined: self:classPaths:getString(key: className, default: '');
 		local Int is start: 0;
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return i <= joined:length();
 			},
@@ -400,7 +400,7 @@ Class is Loader{
 	## Directory portion of a file path ('' when the path has no slash).
 	Function of String is dirOf(String is path){
 		local LastSlashLoop is loop: LastSlashLoop:init(src: path);
-		While:run(loop: loop);
+		Loops:run(loop: loop);
 		Conditional:if(check: { loop:lastIdx < 0 }, then: {
 			return '';
 		});
@@ -527,7 +527,7 @@ Class is Loader{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
 			iteration: local Function of Boolean(){
 				local Parameter is pa: a:params:get(index: idx);
@@ -547,7 +547,7 @@ Class is Loader{
 	## @param c: [ClassInfo] to remove.
 	Function is removeClassFromLoaded(ClassInfo is c){
 		local Int is idx: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return idx < self:loadedClasses:length();
 			},
@@ -699,7 +699,7 @@ Class is Loader{
 		local Int is idx: 0;
 		local Boolean is already: false;
 		local Array of Member is members: c:members;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return idx < members:length(); },
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);
@@ -758,7 +758,7 @@ Class is Loader{
 	## @return: The [ClassInfo], or an empty-named node when absent.
 	Function of ClassInfo is findLoadedClass(String is name){
 		local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: name);
-		While:run(loop: find);
+		Loops:run(loop: find);
 		Conditional:if(check: { find:found }, then: {
 			return find:res;
 		});

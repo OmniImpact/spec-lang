@@ -12,7 +12,7 @@ Class is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -78,7 +78,7 @@ Class is Array of T{
 			e: len;
 		});
 		local Int is i: s;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return i < e;
 			},
@@ -104,7 +104,7 @@ Class is Array of T{
 		local Int is len: self:length();
 		local Int is i: 0;
 		local Int is found: default;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return found == default && (i < len);
 			},
@@ -172,7 +172,7 @@ Class is Array of T{
 		});
 		local String is out: '';
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return i < len;
 			},

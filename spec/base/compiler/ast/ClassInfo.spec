@@ -8,7 +8,7 @@ Class is ClassInfo{
 		['base', 'compiler', 'ast', Member],
 		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -88,7 +88,7 @@ Class is ClassInfo{
 	## @return: The namespace path, e.g. 'base:sysinternal'.
 	Function of String is namespaceJoined(){
 		local Int is idx: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return idx < self:members:length();
 			},

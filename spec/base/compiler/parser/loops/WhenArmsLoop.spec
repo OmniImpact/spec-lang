@@ -13,7 +13,7 @@ Class of Loop is WhenArmsLoop{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator'],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 ,
 		['base', 'compiler', 'ast', Statement]
 ,
@@ -37,13 +37,13 @@ Class of Loop is WhenArmsLoop{
 		Conditional:if(check: { self:parser:checkKeyword(kw: Keyword:IS) }, then: {
 			self:parser:advance();
 			local Array of Expression is conds: [];
-			While:run(loop: WhenConditionsLoop:init(parser: self:parser, conditions: conds));
+			Loops:run(loop: WhenConditionsLoop:init(parser: self:parser, conditions: conds));
 			self:parser:matchPunct(p: Punctuation:ARM);
 
 			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 				self:parser:advance();
 				local Array of Statement is body: [];
-				While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
+				Loops:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
 				self:parser:matchPunct(p: Punctuation:BLOCK_CLOSE);
 				local WhenArm is arm: WhenArm:init();
 				arm:arm(conditions: conds, body: body);
@@ -67,7 +67,7 @@ Class of Loop is WhenArmsLoop{
 			Conditional:if(check: { self:parser:checkPunct(p: Punctuation:BLOCK_OPEN) }, then: {
 				self:parser:advance();
 				local Array of Statement is body: [];
-				While:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
+				Loops:run(loop: BlockStatementsLoop:init(parser: self:parser, stmts: body));
 				self:parser:matchPunct(p: Punctuation:BLOCK_CLOSE);
 				local WhenArm is arm: WhenArm:init();
 				arm:elseArm(body: body);

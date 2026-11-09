@@ -4,9 +4,9 @@ Class is SyntacticSugarTest{
 		['base', 'io'],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'iterator', While],
+		['base', 'iterator', Loops],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -97,16 +97,16 @@ Class is SyntacticSugarTest{
 		local Issue is fetchedIssue: issueMap:get(key: 'first', default: issue);
 		Output:line('Generic Map Issue line: ' . fetchedIssue:getLine());
 
-		# 7. Test While:condition inline loop
+		# 7. Test the Loops:loop() inline loop
 		local Int is counter: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return counter < 3; },
 			iteration: local Function of Boolean(){
 				counter: counter + 1;
 				return true;
 			}
 		);
-		Output:line('While:condition counter: ' . counter);
+		Output:line('Loops:loop() counter: ' . counter);
 
 		Output:line('=== Syntactic Sugar Test Completed Successfully ===');
 	}
@@ -118,7 +118,7 @@ Class is Issue{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()]
+		['base', 'iterator', as Loops()]
 	];
 	Int is line;
 	String is message;

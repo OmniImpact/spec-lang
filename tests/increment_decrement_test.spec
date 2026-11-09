@@ -5,7 +5,7 @@ Class is IncrementDecrementTest{
 		['base', 'struct', Array],
 		['base', 'iterator'],
 		['base', 'io', as Output()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -53,7 +53,7 @@ Class is IncrementDecrementTest{
 
 		# Case 3: While loop iteration with increment
 		local Int is sum: 0;
-		While(
+		Loops(
 			[Int is i: 0],
 			evaluate: { i < 5 },
 			iterate: {
@@ -69,7 +69,7 @@ Class is IncrementDecrementTest{
 
 		# Case 4: While loop with decrement
 		local Int is steps: 0;
-		While(
+		Loops(
 			[Int is n: 5],
 			evaluate: { n > 0 },
 			iterate: {

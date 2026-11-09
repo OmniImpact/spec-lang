@@ -16,7 +16,7 @@ Class is Mandelbrot{
 		['base', 'math', as Math()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -50,7 +50,7 @@ Class is Mandelbrot{
 		local Float is zi2: 0.0;
 		local Int is iter: 0;
 
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return (iter < maxIter) && ((zr2 + zi2) <= 16.0);
 			},
@@ -155,7 +155,7 @@ Class is Mandelbrot{
 	local Function of String is repeatBar(Int is count){
 		local String is bar: '';
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return i < count; },
 			iteration: local Function(){
 				bar: bar . '═';
@@ -179,13 +179,13 @@ Class is Mandelbrot{
 		local Int is left: pad / 2;
 		local Int is right: pad - left;
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return i < left; },
 			iteration: local Function(){ line: line . ' '; i: i + 1; }
 		);
 		line: line . title;
 		i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return i < right; },
 			iteration: local Function(){ line: line . ' '; i: i + 1; }
 		);
@@ -262,7 +262,7 @@ Class is Mandelbrot{
 		local Float is hFloat: Math:toFloat(value: pixelHeight - 1);
 		local Int is row: 0;
 
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return row < rows; },
 			iteration: local Function(){
 				local Int is yTop: row * 2;
@@ -272,7 +272,7 @@ Class is Mandelbrot{
 
 				local String is lineBuf: '';
 				local Int is col: 0;
-				While:condition(
+				Loops:loop(
 					evaluate: local Function of Boolean(){ return col < width; },
 					iteration: local Function(){
 						local Float is cr: minRe + ((Math:toFloat(value: col) / wFloat) * (maxRe - minRe));
@@ -298,14 +298,14 @@ Class is Mandelbrot{
 		local Float is hFloat: Math:toFloat(value: rows - 1);
 		local Int is row: 0;
 
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return row < rows; },
 			iteration: local Function(){
 				local Float is ci: maxIm - ((Math:toFloat(value: row) / hFloat) * (maxIm - minIm));
 				local String is lineBuf: Ansi:bg256(code: 16);
 				local Int is col: 0;
 
-				While:condition(
+				Loops:loop(
 					evaluate: local Function of Boolean(){ return col < width; },
 					iteration: local Function(){
 						local Float is cr: minRe + ((Math:toFloat(value: col) / wFloat) * (maxRe - minRe));

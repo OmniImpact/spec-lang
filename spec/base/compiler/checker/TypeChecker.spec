@@ -41,7 +41,7 @@ Class is TypeChecker{
 		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
 		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Conditional()]
@@ -263,7 +263,7 @@ Class is TypeChecker{
 	## @return: The descriptor, or an unnamed one when absent.
 	Function of ClassInfo is findClass(String is name){
 		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
-		While:run(loop: s);
+		Loops:run(loop: s);
 		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
@@ -376,7 +376,7 @@ Class is TypeChecker{
 				Conditional:if(check: { tParts:length() > 1 && sParts:length() > 1 }, then: {
 					local Boolean is argsOk: true;
 					local Int is pIdx: 1;
-					While:condition(
+					Loops:loop(
 						evaluate: local Function of Boolean(){
 							return pIdx < tParts:length() && pIdx < sParts:length();
 						},
@@ -436,7 +436,7 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
-		While:run(loop: ml);
+		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			return ml:res;
 		});
@@ -457,7 +457,7 @@ Class is TypeChecker{
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: variantName);
-		While:run(loop: fl);
+		Loops:run(loop: fl);
 		Conditional:if(check: { fl:found }, then: {
 			return fl:res;
 		});
@@ -493,7 +493,7 @@ Class is TypeChecker{
 			return '';
 		});
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: fieldName);
-		While:run(loop: fl);
+		Loops:run(loop: fl);
 		Conditional:if(check: { fl:found }, then: {
 			local Member is foundM: fl:res;
 			local String is rawT: self:formatTypeString(t: foundM:memberType);
@@ -541,7 +541,7 @@ Class is TypeChecker{
 			return '';
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
-		While:run(loop: ml);
+		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			local Member is foundM: ml:res;
 			local String is rawT: self:formatTypeString(t: foundM:memberType);
@@ -573,7 +573,7 @@ Class is TypeChecker{
 		});
 		local Array of String is parts: targetType:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
-		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While' || baseClassName == 'Loops' }, then: {
+		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'Loops' }, then: {
 			return;
 		});
 		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:overloadIndex);
@@ -671,7 +671,7 @@ Class is TypeChecker{
 		Conditional:if(check: { isScoped }, then: {
 			local Array of NamedArg is explicit: [];
 			local Int is ei: 0;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){ return ei < allArgs:length() - 1; },
 				iteration: local Function of Boolean(){
 					explicit:add(item: allArgs:get(index: ei));
@@ -706,11 +706,11 @@ Class is TypeChecker{
 		Conditional:if(check: { allNamed }, then: {
 			local Boolean is dupArg: false;
 			local Int is ai: 0;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){ return !dupArg && ai < args:length(); },
 				iteration: local Function of Boolean(){
 					local Int is aj: ai + 1;
-					While:condition(
+					Loops:loop(
 						evaluate: local Function of Boolean(){ return !dupArg && aj < args:length(); },
 						iteration: local Function of Boolean(){
 							local NamedArg is argA: args:get(index: ai);
@@ -1333,14 +1333,14 @@ Class is TypeChecker{
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			local Array of Member is members: c:members;
 			local Int is i: 0;
-			While:condition(
+			Loops:loop(
 				evaluate: local Function of Boolean(){ return i < members:length(); },
 				iteration: local Function of Boolean(){
 					local Member is m: members:get(index: i);
 					Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 						local Boolean is earlier: false;
 						local Int is j: 0;
-						While:condition(
+						Loops:loop(
 							evaluate: local Function of Boolean(){ return !earlier && j < i; },
 							iteration: local Function of Boolean(){
 								local Member is g: members:get(index: j);
@@ -1354,7 +1354,7 @@ Class is TypeChecker{
 						Conditional:if(check: { !earlier }, then: {
 							local Int is groupSize: 0;
 							local Int is k: 0;
-							While:condition(
+							Loops:loop(
 								evaluate: local Function of Boolean(){ return k < members:length(); },
 								iteration: local Function of Boolean(){
 									local Member is g: members:get(index: k);
@@ -1367,13 +1367,13 @@ Class is TypeChecker{
 							);
 							Conditional:if(check: { groupSize >= 2 }, then: {
 								local Int is a: 0;
-								While:condition(
+								Loops:loop(
 									evaluate: local Function of Boolean(){ return a < members:length(); },
 									iteration: local Function of Boolean(){
 										local Member is ma: members:get(index: a);
 										Conditional:if(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
 											local Int is b: a + 1;
-											While:condition(
+											Loops:loop(
 												evaluate: local Function of Boolean(){ return b < members:length(); },
 												iteration: local Function of Boolean(){
 													local Member is mb: members:get(index: b);
@@ -1391,7 +1391,7 @@ Class is TypeChecker{
 								);
 								local Boolean is nonConcrete: false;
 								local Int is p: 0;
-								While:condition(
+								Loops:loop(
 									evaluate: local Function of Boolean(){ return !nonConcrete && p < members:length(); },
 									iteration: local Function of Boolean(){
 										local Member is g: members:get(index: p);
@@ -1436,7 +1436,7 @@ Class is TypeChecker{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
 			iteration: local Function of Boolean(){
 				local Parameter is pa: a:params:get(index: idx);
@@ -1938,7 +1938,7 @@ Class is TypeChecker{
 											local ClassInfo is chainCls: self:findClass(name: root);
 											local Boolean is chainOk: chainCls:name != '';
 											local Int is chainIdx: 1;
-											While:condition(
+											Loops:loop(
 												evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
 												iteration: local Function of Boolean(){
 													local String is nextType: '';
@@ -1979,7 +1979,7 @@ Class is TypeChecker{
 						});
 					});
 					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType);
-					While:run(loop: pLoop);
+					Loops:run(loop: pLoop);
 					Conditional:if(check: { pLoop:currType != '' }, then: {
 						res: pLoop:currType;
 					});
@@ -2424,40 +2424,85 @@ Class is TypeChecker{
 				expr:resolvedType: '';
 				return '';
 			});
-			Conditional:if(check: { ownOwner == '' }, then: {
-				local String is provider: bsProviders:get(index: 0);
-				# The bare-scope branch runs before arg inference: type the
-				# arguments now so overload selection sees exact types. Branch
-				# closures (args 1+) of a Conditional call keep the enclosing
-				# method's return type (FUNCTIONS.md Part II).
-				local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
-				# FUNCTIONS.md Part IV: the bare form carries the value-yield
-				# semantics exactly like the qualified call.
-				local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
-				local Int is bareIdx: 0;
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { bareIsBranch && bareIdx >= 1 }, then: {
-						self:inBranchClosure: true;
-						self:inValueBranch: bareIsValue;
-						self:currentYieldExpected: '';
-						Conditional:if(check: { bareIsValue }, then: {
-							self:currentYieldExpected: expected;
+				Conditional:if(check: { ownOwner == '' }, then: {
+					local String is provider: bsProviders:get(index: 0);
+					# The bare-scope branch runs before arg inference: type the
+					# arguments now so overload selection sees exact types. Branch
+					# closures (args 1+) of a Conditional call keep the enclosing
+					# method's return type (FUNCTIONS.md Part II).
+					local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
+					# FUNCTIONS.md Part IV: the bare form carries the value-yield
+					# semantics exactly like the qualified call.
+					local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
+					# FUNCTIONS.md II.4: the bare loop constructs — the vars
+					# closure's parameters scope over the closure bodies, so
+					# they bind BEFORE the inference and restore after. The
+					# evaluate closure coerces to Boolean pre-inference, the
+					# same order the qualified machinery runs.
+					local Map of String to String is savedLoopVars;
+					Conditional:if(check: { provider == 'Loops' }, then: {
+						savedLoopVars: Map:init();
+						local Array of String is lvKeys: self:localVars:keys();
+						lvKeys:each(action: local Function(String is k){
+							savedLoopVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+						});
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							Conditional:if(check: { arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, then: {
+								arg:value:anonParams:each(action: local Function(Parameter is p){
+									Conditional:if(check: { p:hasDefault }, then: {
+										self:inferExpressionType(expr: p:defaultExpr);
+									});
+									self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
+								});
+							});
 						});
 					});
-					self:inferExpressionType(expr: arg:value);
-					self:inBranchClosure: false;
-					self:inValueBranch: false;
-					self:currentYieldExpected: '';
-					bareIdx: bareIdx + 1;
-				});
-				self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
-				# FUNCTIONS.md Part IV IV.1: the as-import grants FUNCTIONS
-				# ONLY under the callee's visibility — a `local` member of the
-				# imported class is not callable through the import. The same
-				# check the qualified path runs.
-				local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: expr:methodName, idx: expr:overloadIndex);
-				Conditional:if(check: { bareSelected:name != '' }, then: {
-					self:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: expr:methodName);
+					local Int is bareIdx: 0;
+					Conditional:if(check: { provider == 'Loops' }, then: {
+						# II.4: the loop closures are callbacks, not branch
+						# yields — the enclosing branch's flag must not leak.
+						local Boolean is savedLoopBranch: self:inBranchClosure;
+						self:inBranchClosure: false;
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							Conditional:if(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+								Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+									arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+								});
+							});
+							self:inferExpressionType(expr: arg:value);
+						});
+						self:inBranchClosure: savedLoopBranch;
+					}, else: {
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							Conditional:if(check: { bareIsBranch && bareIdx >= 1 }, then: {
+								self:inBranchClosure: true;
+								self:inValueBranch: bareIsValue;
+								self:currentYieldExpected: '';
+								Conditional:if(check: { bareIsValue }, then: {
+									self:currentYieldExpected: expected;
+								});
+							});
+							self:inferExpressionType(expr: arg:value);
+							self:inBranchClosure: false;
+							self:inValueBranch: false;
+							self:currentYieldExpected: '';
+							bareIdx: bareIdx + 1;
+						});
+					});
+					self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
+					# FUNCTIONS.md Part IV IV.1: the as-import grants FUNCTIONS
+					# ONLY under the callee's visibility — a `local` member of the
+					# imported class is not callable through the import. The same
+					# check the qualified path runs.
+					local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: expr:methodName, idx: expr:overloadIndex);
+					Conditional:if(check: { bareSelected:name != '' }, then: {
+						self:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: expr:methodName);
+					});
+					Conditional:if(check: { provider == 'Loops' }, then: {
+						self:localVars: savedLoopVars;
+						res: 'Void';
+						expr:resolvedType: res;
+						return res;
 				});
 				expr:bareProvider: provider;
 				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
@@ -2521,9 +2566,9 @@ Class is TypeChecker{
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
-		# FUNCTIONS.md II.4: While (the legacy spelling, bridged) and Loops
-			# (the control-flow provider) share the closure-form typing.
-			local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While' || targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'condition' || method == 'while');
+		# FUNCTIONS.md II.4: the Loops provider's closure forms share the
+			# loop typing (while/loop/until inline closures; repeat counts).
+			local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
 		local Map of String to String is savedWhileVars;
 		Conditional:if(check: { isWhileLoop }, then: {
 			savedWhileVars: Map:init();
@@ -2918,7 +2963,7 @@ Class is TypeChecker{
 		# method-only member lookup cannot see it, and ancestor searches skip
 		# the declaring class. Search own members directly.
 		local FieldSearchLoop is castLoop: FieldSearchLoop:init(members: cls:members, fieldName: MetadataField:CASTABLE:value());
-		While:run(loop: castLoop);
+		Loops:run(loop: castLoop);
 		Conditional:if(check: { !castLoop:found }, then: {
 			return '';
 		});
@@ -3116,7 +3161,7 @@ Class is TypeChecker{
 	Function of String is displayType(String is t){
 		local String is out: '';
 		local Int is i: 0;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return i < t:length();
 			},
@@ -3621,7 +3666,7 @@ Class is TypeChecker{
 							(parentM:kind == MemberKind:METHOD && parentM:body:length() == 0);
 						Conditional:if(check: { isAbstract }, then: {
 							local MemberImplementLoop is chk: MemberImplementLoop:init(members: classDef:members, target: parentM);
-							While:run(loop: chk);
+							Loops:run(loop: chk);
 							Conditional:if(check: { !chk:implemented }, then: {
 								local String is msg: 'ClassInfo \'' . classDef:name . '\' does not implement abstract member \'' . parentM:name . '\' required by parent \'' . baseName . '\'.';
 								self:addError(line: classDef:line, msg: msg);
@@ -4049,7 +4094,7 @@ Class is TypeChecker{
 		# work with or without an import (the container branches
 		# were unconditional). When the declaration is loaded its real
 		# signatures apply; when not, calls resolve to the container type.
-		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'While', 'Loops', 'Loop', 'LoopCallback', 'InputHandler'];
+		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'Loops', 'Loop', 'LoopCallback', 'InputHandler'];
 		builtinNames:each(action: local Function(String is bn){
 			self:registeredClasses:set(key: bn, value: bn);
 		});

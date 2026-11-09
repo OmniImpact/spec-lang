@@ -54,7 +54,7 @@ Class is Parser{
 		['base', 'compiler', 'parser', 'loops', TemplateFoldLoop],
 		['base', 'compiler', 'parser', 'loops', FancyEscapeLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as While()],
+		['base', 'iterator', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -261,7 +261,7 @@ Class is Parser{
 	## @return: All top-level class definitions.
 	Function of ProgramNode is parseProgram(){
 		local Array of ClassInfo is classes: [];
-		While:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
+		Loops:run(loop: ProgramParseLoop:init(parser: self, classes: classes));
 		self:linkNestedClasses(classes: classes);
 		return ProgramNode:init(classes: classes);
 	}
@@ -313,7 +313,7 @@ Class is Parser{
 	local Function of Array of WhenArm is parseWhenArms(){
 		self:matchPunct(p: Punctuation:BLOCK_OPEN);
 		local Array of WhenArm is arms: [];
-		While:run(loop: WhenArmsLoop:init(parser: self, arms: arms));
+		Loops:run(loop: WhenArmsLoop:init(parser: self, arms: arms));
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
 		return arms;
 	}
@@ -332,7 +332,7 @@ Class is Parser{
 		local Array of String is baseClasses: [];
 		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
-			While:run(loop: BaseClassesLoop:init(parser: self, bases: baseClasses));
+			Loops:run(loop: BaseClassesLoop:init(parser: self, bases: baseClasses));
 		});
 
 		self:matchKeyword(kw: Keyword:IS);
@@ -354,7 +354,7 @@ Class is Parser{
 
 		self:matchPunct(p: Punctuation:BLOCK_OPEN);
 		local Array of Member is members: [];
-		While:run(loop: ClassMembersLoop:init(parser: self, members: members));
+		Loops:run(loop: ClassMembersLoop:init(parser: self, members: members));
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
 
 		local ClassInfo is c: ClassInfo:init(name: name, baseClass: '', members: members);
@@ -383,7 +383,7 @@ Class is Parser{
 		self:matchPunct(p: Punctuation:BLOCK_OPEN);
 
 		local Array of Member is members: [];
-		While:run(loop: EnumVariantsLoop:init(parser: self, members: members, backingType: backingType));
+		Loops:run(loop: EnumVariantsLoop:init(parser: self, members: members, backingType: backingType));
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
 		Conditional:if(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 			self:advance();
@@ -403,7 +403,7 @@ Class is Parser{
 	Function of Member is parseMember(){
 		local Int is startLine: self:peek():getLine();
 		local Array of String is modifiers: [];
-		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
+		Loops:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
 	Conditional:if(check: { self:atClassHeader() }, then: {
 		local ClassInfo is nested: self:parseClass();
@@ -454,7 +454,7 @@ Class is Parser{
 			self:advance();
 
 			local Array of Parameter is params: [];
-			While:run(loop: ParamLoop:init(parser: self, params: params));
+			Loops:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			local Array of Statement is body: self:parseMethodBody(params: params);
 
@@ -476,7 +476,7 @@ Class is Parser{
 		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:advance();
 			local Array of Parameter is params: [];
-			While:run(loop: ParamLoop:init(parser: self, params: params));
+			Loops:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			# Interface-style declaration: a `;`-terminated signature with no
 			# body — the sysinternal floor-binding form.
@@ -541,7 +541,7 @@ Class is Parser{
 				body:add(item: assignS);
 			});
 		});
-		While:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
+		Loops:run(loop: BlockStatementsLoop:init(parser: self, stmts: body));
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
 		return body;
 	}
@@ -565,7 +565,7 @@ Class is Parser{
 		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
 		# `Outer:Inner` chains consume the glued colon segments into the
 		# type name, so declaration positions can spell the full path.
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				Conditional:if(check: { self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false }, then: {
 					return self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER;
@@ -726,7 +726,7 @@ Class is Parser{
 	local Function of Statement is parseForwardStatement(Int is startLine){
 		self:advance();
 		local Array of NamedArg is args: [];
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
@@ -774,7 +774,7 @@ Class is Parser{
 		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:advance();
 			hasParams: true;
-			While:run(loop: ParamLoop:init(parser: self, params: params));
+			Loops:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 		});
 		local Type is returnType: Type:init(name: self:names:voidName());
@@ -793,7 +793,7 @@ Class is Parser{
 		self:matchPunct(p: Punctuation:TERMINATOR);
 
 		local Array of Statement is closureBody: [];
-		While:run(loop: BlockStatementsLoop:init(parser: self, stmts: closureBody));
+		Loops:run(loop: BlockStatementsLoop:init(parser: self, stmts: closureBody));
 
 		local Expression is anonFn: Expression:init(kind: ExpressionKind:ANON_FN);
 		anonFn:anonReturnType: returnType;
@@ -874,7 +874,7 @@ Class is Parser{
 			left: self:parseLevel(level: next);
 		});
 		local BinaryFoldLoop is fold: BinaryFoldLoop:init(parser: self, expr: left, ops: ops, next: next);
-		While:run(loop: fold);
+		Loops:run(loop: fold);
 		return fold:currentExpr;
 	}
 
@@ -932,7 +932,7 @@ Class is Parser{
 			self:advance();
 			Conditional:if(check: { !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, then: {
 				local Array of NamedArg is args: [];
-				While:run(loop: ArgLoop:init(parser: self, args: args));
+				Loops:run(loop: ArgLoop:init(parser: self, args: args));
 				e:methodArgs: args;
 				args:each(action: local Function(NamedArg is arg){
 					local ExpressionKind is ak: arg:value:kind;
@@ -983,7 +983,7 @@ Class is Parser{
 	Function of Expression is parsePostfix(){
 		local Expression is expr: self:parsePrimary();
 		local PostfixLoop is postLoop: PostfixLoop:init(parser: self, expr: expr);
-		While:run(loop: postLoop);
+		Loops:run(loop: postLoop);
 		return postLoop:currentExpr;
 	}
 
@@ -1015,7 +1015,7 @@ Class is Parser{
 			});
 			self:matchPunct(p: Punctuation:GROUP_OPEN);
 			local Array of Parameter is params: [];
-			While:run(loop: ParamLoop:init(parser: self, params: params));
+			Loops:run(loop: ParamLoop:init(parser: self, params: params));
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			local Array of Statement is body: self:parseMethodBody(params: params);
 
@@ -1125,7 +1125,7 @@ Class is Parser{
 		local Int is offset: 1;
 		local Boolean is running: true;
 		local Boolean is foundIs: false;
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return running;
 			},
@@ -1151,7 +1151,7 @@ Class is Parser{
 	Function of Expression is parseDeclList(){
 		self:matchPunct(p: Punctuation:BRACKET_OPEN);
 		local Array of Parameter is params: [];
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
@@ -1185,7 +1185,7 @@ Class is Parser{
 		local Array of Parameter is params: [];
 		local Type is returnType: Type:init(name: self:names:voidName());
 
-		While:condition(
+		Loops:loop(
 			evaluate: local Function of Boolean(){
 				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
@@ -1257,7 +1257,7 @@ Class is Parser{
 			local Array of Expression is mVals: [firstVal];
 			Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:advance();
-				While:run(loop: MapItemsLoop:init(parser: self, keys: mKeys, values: mVals));
+				Loops:run(loop: MapItemsLoop:init(parser: self, keys: mKeys, values: mVals));
 			});
 			self:matchPunct(p: Punctuation:BRACKET_CLOSE);
 			local Expression is e: Expression:init(kind: ExpressionKind:MAP);
@@ -1267,7 +1267,7 @@ Class is Parser{
 		local Array of Expression is items: [firstItem];
 		Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:advance();
-			While:run(loop: ArrayItemsLoop:init(parser: self, items: items));
+			Loops:run(loop: ArrayItemsLoop:init(parser: self, items: items));
 		});
 		self:matchPunct(p: Punctuation:BRACKET_CLOSE);
 		local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
@@ -1290,12 +1290,12 @@ Class is Parser{
 		local Expression is plainE: Expression:init(kind: ExpressionKind:STRING);
 		Conditional:if(check: { depth > 0 }, then: {
 			local FancyEscapeLoop is dEsc: FancyEscapeLoop:init(src: raw);
-			While:run(loop: dEsc);
+			Loops:run(loop: dEsc);
 			plainE:stringValue: dEsc:res;
 			return plainE;
 		});
 		local TemplateSplitLoop is split: TemplateSplitLoop:init(raw: raw);
-		While:run(loop: split);
+		Loops:run(loop: split);
 		split:lits:add(item: split:lit);
 		Conditional:if(check: { split:inHole }, then: {
 			self:addError(tok: originTok, message: 'Unterminated template hole (missing closing }})');
@@ -1308,7 +1308,7 @@ Class is Parser{
 			return acc;
 		});
 		local TemplateFoldLoop is fold: TemplateFoldLoop:init(parser: self, split: split, acc0: acc);
-		While:run(loop: fold);
+		Loops:run(loop: fold);
 		return fold:acc;
 	}
 
