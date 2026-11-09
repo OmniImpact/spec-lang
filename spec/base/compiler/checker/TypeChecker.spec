@@ -2559,25 +2559,43 @@ Class is TypeChecker{
 		});
 
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
-		expr:methodArgs:each(action: local Function(NamedArg is arg){
-			Conditional:if(check: { isBranchCall && argIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, then: {
-				Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
-					arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
-				});
-			});
-			Conditional:if(check: { isBranchCall && argIdx >= 1 }, then: {
-				self:inBranchClosure: true;
-				self:inValueBranch: isValueBranch;
-				self:currentYieldExpected: '';
-				Conditional:if(check: { isValueBranch }, then: {
-					self:currentYieldExpected: expected;
-				});
-			});
-			self:inferExpressionType(expr: arg:value);
+		# FUNCTIONS.md II.4: the loop constructs' closures are callbacks,
+		# not branch yields — when the call itself sits inside an
+		# enclosing branch closure, that flag must not leak into them
+		# (their returns type against the closure, not the method).
+		Conditional:if(check: { isWhileLoop }, then: {
+			local Boolean is savedLoopBranch: self:inBranchClosure;
 			self:inBranchClosure: false;
-			self:inValueBranch: false;
-			self:currentYieldExpected: '';
-			argIdx: argIdx + 1;
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				Conditional:if(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+					Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+					});
+				});
+				self:inferExpressionType(expr: arg:value);
+			});
+			self:inBranchClosure: savedLoopBranch;
+		}, else: {
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				Conditional:if(check: { isBranchCall && argIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+					Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+					});
+				});
+				Conditional:if(check: { isBranchCall && argIdx >= 1 }, then: {
+					self:inBranchClosure: true;
+					self:inValueBranch: isValueBranch;
+					self:currentYieldExpected: '';
+					Conditional:if(check: { isValueBranch }, then: {
+						self:currentYieldExpected: expected;
+					});
+				});
+				self:inferExpressionType(expr: arg:value);
+				self:inBranchClosure: false;
+				self:inValueBranch: false;
+				self:currentYieldExpected: '';
+				argIdx: argIdx + 1;
+			});
 		});
 
 		Conditional:if(check: { isWhileLoop }, then: {
