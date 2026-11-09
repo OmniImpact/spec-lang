@@ -227,6 +227,38 @@ throughout (the dogfooding is continuous).
 
 ---
 
+## 7b. The `held` proposal (the declaration syntax for this plan)
+
+The static-member feature needs a DECLARATION story; the proposal is a
+new member modifier: **`held`** — the class holds the member (one copy,
+class-scoped lifetime), in contrast to the instance members each object
+carries.
+
+- It slots into the EXISTING modifier system (`local`, `contained`,
+  `replace`, `merge`) — one more modifier, not a new syntactic
+  category. The keyword test passes where if/else failed: it names a
+  real distinction (class-scoped storage/lifetime) the language cannot
+  express today, and the modifier position is established grammar.
+- The prefix rule becomes a RESOLUTION rule: an instance reference
+  reaches exactly the instance members; a class-name prefix reaches
+  exactly the held members. The enum variant access stops being a
+  special exception.
+- The two use cases map directly: the enum variants desugar to held
+  members (`held String is Red: 'Red';`), and the singletons are held
+  + lazy (`held Widget is default: Widget:init();` — the once-pattern,
+  pointer identity forever).
+- The plan's vocabulary tightens: "static members" -> "the held
+  members" throughout (the metadata enumeration, the when
+  exhaustiveness, the values() list all count the HELD members).
+
+Status: PROPOSED, not decided. The specifics to nail on return: the
+held+visibility composition, held functions (the static methods), the
+lazy initialization semantics (the once-pattern, thread-safe), the
+storage shape (the emitted statics with the lazy-init guards), and the
+held-member inheritance rules.
+
+---
+
 ## 8. The open questions
 
 1. **The static-member storage shape**: the class-level slots (the
