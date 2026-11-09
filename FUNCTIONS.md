@@ -646,27 +646,43 @@ pre-check, bootstrap, commit), the full gates green before the next.
 
 ---
 
-## Part V — Memory discipline (planned: the AST slab)
+## Part V — Memory discipline (the AST floor)
 
 The compiler's self-compile peaked at ~960 MB; the ARC flip and the
-cleanup funnel brought it to ~796 MB. The remaining floor is the AST
+cleanup funnel brought it to ~810 MB. The remaining floor is the AST
 itself: ~73 live objects per source line, ~250 bytes per Expression
 node (25 flat fields — most nodes use 3–5), each with a 24-byte
 allocation header.
 
-**The next lever: slab-allocated AST nodes.** The AST's lifetime is
-exactly the compilation — it dies after code generation — so its nodes
-are the ideal tenants of a wholesale-drain slab (the per-scope
-principle at node scale): bump-allocate Expression/Statement/Token
-bodies from big blocks, drop the per-node header entirely, drain the
-slab between the driver's stages. The refcounts become annotations
-(slabs free wholesale); the ARC discipline keeps governing the
-RETAINED graph (ClassInfo trees outlive parse). Sequencing sketch:
-slab Token + Expression first (the highest count, the shortest
-lifetime), measure, then Statement; the checker/gen structures stay
-ARC. The risk is aliasing — anything that escapes the slab (an AST
-node retained into a compiler-phase cache) must move to ARC; the
-sanitized suite is the gate.
+**The slab hypothesis: tested, falsified.** The AST node set
+(base:compiler:ast + Token) was routed through the bump arena —
+refcounts live, release still running the field destructors, blocks
+reclaimed at the wholesale drain. The peak ROSE ~112 MB (809 → 921)
+with no speed change. The premise — the AST's lifetime is exactly the
+compilation — holds for the retained graph but not for the node
+population: a meaningful subset (tokens per file, parse transients,
+discarded expressions) dies mid-compile, and ARC was returning their
+blocks as they died while the slab hoarded every block until the
+drain. The lesson generalizes: a slab only wins where death is staged
+(everything live until a common point); the AST's deaths are
+incremental like everything else's. The mechanism (SPEC_S_ARENA, the
+live-refcount slab object, the wholesale drain) stays in the runtime —
+it is the correct tool for a genuinely staged population, and it is
+how the compiler's exit cleans up after itself.
+
+**The actual levers, in order of measured weight**:
+
+1. **The node count** (~73/line): the parse tree materializes every
+   token-shaped sub-expression as a full node. A flatter parse — the
+   operator folds reusing nodes, pure-parenthesis nodes dropped —
+   shrinks the population itself.
+2. **The per-node strings** (6.2M SpecBuf headers, ~250 MB): the
+   checker's `resolvedType` stamps and the parser's token texts are
+   per-node strings whose headers cost more than their bytes. Interning
+   the stamps (they repeat a small vocabulary) collapses that.
+3. **The Expression struct** (25 flat fields, 246 B): the per-kind
+   layout (the tagged-union shape) is the structural fix — a project,
+   and it rides on (1) landing first.
 
 ---
 
