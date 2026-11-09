@@ -237,11 +237,11 @@ Class is Blackjack{
 
 		# 1. Build the deck: four suits of each value 1..10.
 		local Int is value: 1;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return value <= 10; },
 			iteration: local Function(){
 				local Int is suit: 0;
-				Loops:loop(
+				while(
 					evaluate: local Function of Boolean(){ return suit < 4; },
 					iteration: local Function(){
 						deck:add(item: value);

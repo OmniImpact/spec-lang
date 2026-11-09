@@ -78,7 +78,7 @@ Class is Array of T{
 			e: len;
 		});
 		local Int is i: s;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return i < e;
 			},
@@ -104,7 +104,7 @@ Class is Array of T{
 		local Int is len: self:length();
 		local Int is i: 0;
 		local Int is found: default;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return found == default && (i < len);
 			},
@@ -172,7 +172,7 @@ Class is Array of T{
 		});
 		local String is out: '';
 		local Int is i: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return i < len;
 			},

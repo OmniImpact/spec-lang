@@ -376,7 +376,7 @@ Class is TypeChecker{
 				Conditional:if(check: { tParts:length() > 1 && sParts:length() > 1 }, then: {
 					local Boolean is argsOk: true;
 					local Int is pIdx: 1;
-					Loops:loop(
+					while(
 						evaluate: local Function of Boolean(){
 							return pIdx < tParts:length() && pIdx < sParts:length();
 						},
@@ -671,7 +671,7 @@ Class is TypeChecker{
 		Conditional:if(check: { isScoped }, then: {
 			local Array of NamedArg is explicit: [];
 			local Int is ei: 0;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){ return ei < allArgs:length() - 1; },
 				iteration: local Function of Boolean(){
 					explicit:add(item: allArgs:get(index: ei));
@@ -706,11 +706,11 @@ Class is TypeChecker{
 		Conditional:if(check: { allNamed }, then: {
 			local Boolean is dupArg: false;
 			local Int is ai: 0;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){ return !dupArg && ai < args:length(); },
 				iteration: local Function of Boolean(){
 					local Int is aj: ai + 1;
-					Loops:loop(
+					while(
 						evaluate: local Function of Boolean(){ return !dupArg && aj < args:length(); },
 						iteration: local Function of Boolean(){
 							local NamedArg is argA: args:get(index: ai);
@@ -1333,14 +1333,14 @@ Class is TypeChecker{
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			local Array of Member is members: c:members;
 			local Int is i: 0;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){ return i < members:length(); },
 				iteration: local Function of Boolean(){
 					local Member is m: members:get(index: i);
 					Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 						local Boolean is earlier: false;
 						local Int is j: 0;
-						Loops:loop(
+						while(
 							evaluate: local Function of Boolean(){ return !earlier && j < i; },
 							iteration: local Function of Boolean(){
 								local Member is g: members:get(index: j);
@@ -1354,7 +1354,7 @@ Class is TypeChecker{
 						Conditional:if(check: { !earlier }, then: {
 							local Int is groupSize: 0;
 							local Int is k: 0;
-							Loops:loop(
+							while(
 								evaluate: local Function of Boolean(){ return k < members:length(); },
 								iteration: local Function of Boolean(){
 									local Member is g: members:get(index: k);
@@ -1367,13 +1367,13 @@ Class is TypeChecker{
 							);
 							Conditional:if(check: { groupSize >= 2 }, then: {
 								local Int is a: 0;
-								Loops:loop(
+								while(
 									evaluate: local Function of Boolean(){ return a < members:length(); },
 									iteration: local Function of Boolean(){
 										local Member is ma: members:get(index: a);
 										Conditional:if(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
 											local Int is b: a + 1;
-											Loops:loop(
+											while(
 												evaluate: local Function of Boolean(){ return b < members:length(); },
 												iteration: local Function of Boolean(){
 													local Member is mb: members:get(index: b);
@@ -1391,7 +1391,7 @@ Class is TypeChecker{
 								);
 								local Boolean is nonConcrete: false;
 								local Int is p: 0;
-								Loops:loop(
+								while(
 									evaluate: local Function of Boolean(){ return !nonConcrete && p < members:length(); },
 									iteration: local Function of Boolean(){
 										local Member is g: members:get(index: p);
@@ -1436,7 +1436,7 @@ Class is TypeChecker{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
 			iteration: local Function of Boolean(){
 				local Parameter is pa: a:params:get(index: idx);
@@ -1938,7 +1938,7 @@ Class is TypeChecker{
 											local ClassInfo is chainCls: self:findClass(name: root);
 											local Boolean is chainOk: chainCls:name != '';
 											local Int is chainIdx: 1;
-											Loops:loop(
+											while(
 												evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
 												iteration: local Function of Boolean(){
 													local String is nextType: '';
@@ -3162,7 +3162,7 @@ Class is TypeChecker{
 	Function of String is displayType(String is t){
 		local String is out: '';
 		local Int is i: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return i < t:length();
 			},

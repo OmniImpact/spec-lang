@@ -88,7 +88,7 @@ Class is ClassInfo{
 	## @return: The namespace path, e.g. 'base:sysinternal'.
 	Function of String is namespaceJoined(){
 		local Int is idx: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return idx < self:members:length();
 			},

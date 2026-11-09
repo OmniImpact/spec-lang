@@ -187,7 +187,7 @@ Class is Loader{
 		# keeps climbing while the executable's locations have yielded no
 		# .spec content at all.
 		local Int is indexed: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return ups < 3 && indexed == 0;
 			},
@@ -255,7 +255,7 @@ Class is Loader{
 		local String is joined: self:classPaths:getString(key: className, default: '');
 		local Int is start: 0;
 		local Int is i: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return i <= joined:length();
 			},
@@ -527,7 +527,7 @@ Class is Loader{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
 			iteration: local Function of Boolean(){
 				local Parameter is pa: a:params:get(index: idx);
@@ -547,7 +547,7 @@ Class is Loader{
 	## @param c: [ClassInfo] to remove.
 	Function is removeClassFromLoaded(ClassInfo is c){
 		local Int is idx: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return idx < self:loadedClasses:length();
 			},
@@ -699,7 +699,7 @@ Class is Loader{
 		local Int is idx: 0;
 		local Boolean is already: false;
 		local Array of Member is members: c:members;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return idx < members:length(); },
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);

@@ -97,16 +97,16 @@ Class is SyntacticSugarTest{
 		local Issue is fetchedIssue: issueMap:get(key: 'first', default: issue);
 		Output:line('Generic Map Issue line: ' . fetchedIssue:getLine());
 
-		# 7. Test the Loops:loop() inline loop
+		# 7. Test the while() inline loop
 		local Int is counter: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return counter < 3; },
 			iteration: local Function of Boolean(){
 				counter: counter + 1;
 				return true;
 			}
 		);
-		Output:line('Loops:loop() counter: ' . counter);
+		Output:line('while() counter: ' . counter);
 
 		Output:line('=== Syntactic Sugar Test Completed Successfully ===');
 	}

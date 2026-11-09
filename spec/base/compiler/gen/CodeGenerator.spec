@@ -1248,7 +1248,7 @@ Class is CodeGenerator{
 				return rootType;
 			});
 			local Int is idx: 1;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){
 					return rootType != '' && idx < segs:length();
 				},
@@ -1825,7 +1825,7 @@ Class is CodeGenerator{
 		local ClassInfo is chainCls: self:findClass(name: root);
 		local Boolean is chainOk: chainCls:name == root;
 		local Int is chainIdx: 1;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
 			iteration: local Function of Boolean(){
 				local String is nextSym: '';
@@ -1863,7 +1863,7 @@ Class is CodeGenerator{
 			});
 			local Int is idx: 1;
 			local String is resC: rootC;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){
 					return idx < segs:length();
 				},
@@ -1973,7 +1973,7 @@ Class is CodeGenerator{
 		});
 		local Boolean is found: false;
 		local String is rest: body;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return !found; },
 			iteration: local Function of Boolean(){
 				local Int is hit: rest:indexOf(search: ident, default: -1);
@@ -2158,7 +2158,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional') }, then: {
 				local Boolean is shapeOk: expr:argValue(index: 0):kind == ExpressionKind:ANON_FN;
 				local Int is bi: 1;
-				Loops:loop(
+				while(
 					evaluate: local Function of Boolean(){ return shapeOk && bi < expr:argCount(); },
 					iteration: local Function of Boolean(){
 						Conditional:if(check: { expr:argValue(index: bi):kind != ExpressionKind:ANON_FN }, then: {
@@ -3606,7 +3606,7 @@ Class is CodeGenerator{
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				out: out . 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n";
 				local Int is slot: 0;
-				Loops:loop(
+				while(
 					evaluate: local Function of Boolean(){
 						return slot < self:methodSlotCount;
 					},
@@ -4222,7 +4222,7 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ while (1) {\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n    }\n})";
+		local String is out: "({ while (1) {\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (" . evVar . ") break;\n    }\n})";
 		return out;
 	}
 

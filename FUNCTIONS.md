@@ -355,16 +355,19 @@ a closure, and branch typing goes soft. Instead, the proven
    Function-of-Boolean enforcement through `While:condition` (the
    if-statement rule it used to check no longer exists).
 
-### II.4 — `While` folds into a control-flow provider (planned)
+### II.4 — `While` folded into the `Loops` control-flow provider (landed)
 
 `While` is a standalone class in `base:iterator` (beside `Loop`,
 `LoopControl`, `LoopCallback`); callers import it per-class
 (`as While()`) and spell `While:condition(...)` / `While:run(...)`
-(~124 call sites; ~103 in the compiler/stdlib). The plan: fold the
-control-flow constructors under ONE provider — `Iterator` (matches the
-package) or `Loops` (reads better beside `while`/`loop`/`for`;
-decision open) — so a single as-import serves the constructs bare,
-mirroring `Conditional`'s `if(...)`: `while(evaluate:, iteration:)`.
+(~124 call sites; ~103 in the compiler/stdlib). The provider is
+**`Loops`** (the control-flow umbrella; `Iterator` stays free for a
+lazy-sequence protocol): a single as-import serves the constructs
+bare — `while(evaluate:, iteration:)` mirrors `Conditional`'s
+`if(...)` — plus the new `repeat(count:, worker:)` (exactly N times,
+the worker's false stops) and `until(evaluate:, iteration:)` (the
+do-while; the body runs at least once). tests/loops_test.spec pins all
+of it.
 
 On record for the move:
 
@@ -377,10 +380,13 @@ On record for the move:
   (string/comment-aware, paren/brace-matched, idempotent). **This is
   why the utilities/ folder outlives the if-flip**: it runs once more
   for this rename, then the folder goes.
-- The ratchet applies: a few files per batch, emit→gcc→self-load
-  pre-check, bootstrap, commit; the bootstrap's older generations must
-  parse the new spellings, so the checker/gen carry dual recognition
-  bridges until the flip commit deletes them (the II.3 pattern).
+- The ratchet applied in FOUR prep commits (the II.3 pattern, each
+  converging alone): the dual-recognition keys; the loop-closures-are-
+  callbacks carve-out (the branch-closure flag leaked into the loop
+  closures — their returns typed against the enclosing method); the
+  bare-form plumbing (the bareProvider stamp, the word-boundary capture
+  scan, the bareProvider disjuncts), converged at the qualified
+  `Loops:loop(` spellings; then the final flip to bare `while(...)`.
 - `LoopControl` stays a separately importable TYPE (signature
   positions use it); the provider surfaces only the call forms.
 

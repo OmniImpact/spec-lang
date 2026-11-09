@@ -78,7 +78,7 @@ Class is ArcDestructionTest{
 
 		# Case 4: Multiple loop reassignment ensuring no refcount corruptions
 		local Int is count: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return count < 5; },
 			iteration: local Function(){
 				c:setRes(newRes: Resource:init(name: 'Loop_' . count));

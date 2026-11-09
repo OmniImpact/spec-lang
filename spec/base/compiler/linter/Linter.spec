@@ -98,7 +98,7 @@ Class is Linter{
 			local String is masked: self:maskLine(line: line);
 			local String is body: masked;
 			local Boolean is trimming: true;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){ return trimming && body:length() > 0; },
 				iteration: local Function(){
 					local String is last: body:charAt(index: body:length() - 1, default: '');
@@ -120,7 +120,7 @@ Class is Linter{
 				});
 			});
 			local Int is ci: 0;
-			Loops:loop(
+			while(
 				evaluate: local Function of Boolean(){ return ci < masked:length(); },
 				iteration: local Function(){
 					local String is ch: masked:charAt(index: ci, default: '');
@@ -146,7 +146,7 @@ Class is Linter{
 		local String is out: '';
 		local String is quote: '';
 		local Int is i: 0;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){ return i < line:length(); },
 			iteration: local Function(){
 				local String is ch: line:charAt(index: i, default: '');

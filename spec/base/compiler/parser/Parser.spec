@@ -565,7 +565,7 @@ Class is Parser{
 		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
 		# `Outer:Inner` chains consume the glued colon segments into the
 		# type name, so declaration positions can spell the full path.
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				Conditional:if(check: { self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false }, then: {
 					return self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER;
@@ -726,7 +726,7 @@ Class is Parser{
 	local Function of Statement is parseForwardStatement(Int is startLine){
 		self:advance();
 		local Array of NamedArg is args: [];
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
@@ -1125,7 +1125,7 @@ Class is Parser{
 		local Int is offset: 1;
 		local Boolean is running: true;
 		local Boolean is foundIs: false;
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return running;
 			},
@@ -1151,7 +1151,7 @@ Class is Parser{
 	Function of Expression is parseDeclList(){
 		self:matchPunct(p: Punctuation:BRACKET_OPEN);
 		local Array of Parameter is params: [];
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
@@ -1185,7 +1185,7 @@ Class is Parser{
 		local Array of Parameter is params: [];
 		local Type is returnType: Type:init(name: self:names:voidName());
 
-		Loops:loop(
+		while(
 			evaluate: local Function of Boolean(){
 				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
