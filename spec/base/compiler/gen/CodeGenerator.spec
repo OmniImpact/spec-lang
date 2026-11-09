@@ -1958,6 +1958,60 @@ Class is CodeGenerator{
 		}
 	}
 
+	## True when [body] mentions [ident] as a whole identifier — the
+	## capture scan's word-boundary check. A plain substring match
+	## false-positives on member-access tails ('name' inside
+	## 'nestedClass:name'), capturing a local that is not in scope at
+	## the closure's site.
+	##
+	## @param body: The generated closure body.
+	## @param ident: The candidate identifier.
+	## @return: true when [ident] appears as a whole word.
+	Function of Boolean is containsIdent(String is body, String is ident){
+		Conditional:if(check: { ident == '' || body:length() < ident:length() }, then: {
+			return false;
+		});
+		local Boolean is found: false;
+		local String is rest: body;
+		Loops:loop(
+			evaluate: local Function of Boolean(){ return !found; },
+			iteration: local Function of Boolean(){
+				local Int is hit: rest:indexOf(search: ident, default: -1);
+				Conditional:if(check: { hit < 0 }, then: {
+					return false;
+				});
+				local Boolean is headOk: hit == 0 || !(self:isIdentChar(c: rest:charAt(index: hit - 1, default: '_')));
+				local Int is tail: hit + ident:length();
+				local Boolean is tailOk: tail >= rest:length() || !(self:isIdentChar(c: rest:charAt(index: tail, default: '_')));
+				Conditional:if(check: { headOk && tailOk }, then: {
+					found: true;
+					return true;
+				});
+				rest: rest:substring(start: hit + 1, end: rest:length());
+				return true;
+			}
+		);
+		return found;
+	}
+
+	## True when [c] may appear inside an identifier (a letter, digit, or
+	## underscore).
+	##
+	## @param c: The character.
+	## @return: true when the character continues an identifier.
+	Function of Boolean is isIdentChar(String is c){
+		Conditional:if(check: { c == '' }, then: {
+			return false;
+		});
+		local String is lower: 'abcdefghijklmnopqrstuvwxyz';
+		local String is upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		local String is digits: '0123456789';
+		Conditional:if(check: { lower:contains(needle: c) || upper:contains(needle: c) || digits:contains(needle: c) || c == '_' }, then: {
+			return true;
+		});
+		return false;
+	}
+
 	## Emits an index expression: Map lookups and Array/List element access.
 	##
 	## @param expr: The INDEX expression.
@@ -2542,7 +2596,7 @@ Class is CodeGenerator{
 		outerKeys:each(action: local Function(String is k){
 			Conditional:if(check: { paramNames:indexOf(search: k, default: -1) < 0 && !bodyLocals:has(key: k) }, then: {
 				local String is cVar: self:utils:cIdent(name: k);
-				Conditional:if(check: { bodyC:contains(needle: cVar) }, then: {
+				Conditional:if(check: { self:containsIdent(body: bodyC, ident: cVar) }, then: {
 					local String is vType: savedVars:getString(key: k, default: '');
 					local String is vCType: self:cTypeFor(typeName: vType);
 					Conditional:if(check: { vCType != 'void' && vCType != '' }, then: {

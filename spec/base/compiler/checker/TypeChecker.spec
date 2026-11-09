@@ -2500,6 +2500,7 @@ Class is TypeChecker{
 					});
 					Conditional:if(check: { provider == 'Loops' }, then: {
 						self:localVars: savedLoopVars;
+						expr:bareProvider: provider;
 						res: 'Void';
 						expr:resolvedType: res;
 						return res;
