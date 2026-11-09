@@ -1,5 +1,5 @@
 #! Package ovl:lib
-#! Overload fixture (FUNCTIONS.md §I): arity-distinct, type-distinct,
+#! Overload fixture (§I): arity-distinct, type-distinct,
 #! and constructor overloads on one class.
 
 Class is Over{

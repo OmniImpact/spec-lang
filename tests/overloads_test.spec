@@ -1,4 +1,4 @@
-#! Regression: signature overloads (FUNCTIONS.md Part I). Arity-distinct
+#! Regression: signature overloads (Part I). Arity-distinct
 #! and type-distinct overloads resolve; init overloads construct; bare
 #! calls reach the unique provider.
 

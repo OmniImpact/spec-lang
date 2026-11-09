@@ -1,5 +1,5 @@
 #! N11: fields are not reachable through a class-name prefix — methods
-#! only (INSTANCE.md §2.3).
+#! only (§2.3).
 
 Class is N11PrefixField {
 	replace Array of Array of String is using: [

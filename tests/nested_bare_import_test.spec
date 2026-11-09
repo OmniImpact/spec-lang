@@ -1,4 +1,4 @@
-#! IV.2c phase 3 (FUNCTIONS.md Part IV): the as-import of a class brings
+#! IV.2c phase 3 (Part IV): the as-import of a class brings
 #! its nested classes into the importer's scope. With exactly one
 #! provider the bare nested-class reference resolves through the
 #! per-scope map — the type rewrites to its qualified identity and the

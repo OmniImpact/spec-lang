@@ -1,5 +1,5 @@
 #! Package instimport:counter
-#! Field-ful class for the instance-import regression test (INSTANCE.md E1/E2 full form).
+#! Field-ful class for the instance-import regression test (E1/E2 full form).
 
 Class is StatefulCounter{
 	namespace: ['instimport', 'counter'];

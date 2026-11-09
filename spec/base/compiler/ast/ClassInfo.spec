@@ -15,7 +15,7 @@ Class is ClassInfo{
 	## Class identifier.
 	String is name: '';
 
-	## FUNCTIONS.md Part IV IV.2: the qualified enclosing-class chain for a
+	## the qualified enclosing-class chain for a
 	## nested (inner) class — 'Outer' or 'Outer:Mid'; '' for top-level
 	## classes. The parent link rides baseClasses (the outer's bare name is
 	## appended at parse time), so the standard lattice walks — the bare
@@ -59,7 +59,7 @@ Class is ClassInfo{
 	## @param baseClasses: Parent class names.
 	## @param members: The class members.
 	## True when this class's using declaration instance-imports [name]
-	## via the as-form (INSTANCE.md §2.1): a using entry terminating in
+	## via the as-form (§2.1): a using entry terminating in
 	## `as Name()` materializes an owned instance whose members answer to
 	## the class-name prefix.
 	##
@@ -108,7 +108,7 @@ Class is ClassInfo{
 				return true;
 			}
 		);
-		# FUNCTIONS.md Part V: no memo write — the parallel workers
+		# no memo write — the parallel workers
 		# findClass concurrently, and a shared cache field raced (thread
 		# A's assign freed the string thread B was reading). The walk is
 		# cheap; purity wins. An owned copy: callers ride the claim pool,
@@ -116,10 +116,10 @@ Class is ClassInfo{
 		return Buf:stringCopy(b: joined);
 	}
 
-	## FUNCTIONS.md Part IV IV.2: records the qualified enclosing chain.
+	## records the qualified enclosing chain.
 	##
 	## @param name: 'Outer' or 'Outer:Mid'.
-	## FUNCTIONS.md Part IV IV.2: true when [member] is declared directly
+	## true when [member] is declared directly
 	## by THIS class (identity compare) — as opposed to inherited through
 	## the base lattice. The constructor emission uses it to run the
 	## construction expressions for own fields only; inherited fields
@@ -137,7 +137,7 @@ Class is ClassInfo{
 		return found;
 	}
 
-	## FUNCTIONS.md Part IV IV.2c: the qualified identity — the outer chain
+	## the qualified identity — the outer chain
 	## + the bare name ('Outer:Helper'); the bare name for top-level
 	## classes. The C symbol base and the registry key derive from this.
 	##

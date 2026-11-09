@@ -173,7 +173,7 @@ typedef struct SpecInternEntry {
     String s;
     struct SpecInternEntry* next;
 } SpecInternEntry;
-/* FUNCTIONS.md Part V: the intern table reads LOCK-FREE — the emitted
+/* the intern table reads LOCK-FREE — the emitted
    code interns every string literal on its hottest paths, and four
    worker threads serialized on this mutex (50M lookups per
    self-compile). Entries are immortal and never removed: readers walk
@@ -748,13 +748,13 @@ static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
     if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
 }
 
-/* FUNCTIONS.md Part II: the no-argument closure invoker for the
+/* Part II: the no-argument closure invoker for the
    conditional floor. */
 static inline void spec_call_closure_0(SpecClosure* cls) {
     if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }
 }
 
-/* The conditional floor (FUNCTIONS.md Part II): the single primitive.
+/* The conditional floor (Part II): the single primitive.
    `else` is composed above it as `if(!check, else)`. */
 static inline void spec_branch(SpecClosure* check, SpecClosure* then) {
     if (check && check->fn) {

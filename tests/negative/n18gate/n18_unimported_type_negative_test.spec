@@ -1,5 +1,5 @@
 #! N18: a dependency's dependency is loaded but not yours — type positions
-#! and construction require the import (FUNCTIONS.md §I.6, Option A).
+#! and construction require the import (§I.6, Option A).
 
 Class is N18UnimportedType {
 	replace Array of Array of String is using: [

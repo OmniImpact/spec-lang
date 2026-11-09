@@ -1,5 +1,5 @@
 #! N13: same-arity overloads whose parameters share types are ambiguous
-#! for positional calls (FUNCTIONS.md §I.2).
+#! for positional calls (§I.2).
 
 Class is N13Ambiguous {
 	Function of Int is f(Int is a){

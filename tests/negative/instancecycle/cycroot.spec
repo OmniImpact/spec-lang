@@ -1,4 +1,4 @@
-#! N6: instance-import cycle A -> B -> A must fail to compile (INSTANCE.md E4).
+#! N6: instance-import cycle A -> B -> A must fail to compile (E4).
 
 Class is CycleRoot{
 	replace Array of Array of String is using: [

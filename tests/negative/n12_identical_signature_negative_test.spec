@@ -1,4 +1,4 @@
-#! N12: identical-signature overloads are the duplicate error (FUNCTIONS.md §I.1).
+#! N12: identical-signature overloads are the duplicate error (§I.1).
 
 Class is N12Identical {
 	Function of Int is f(Int is v){

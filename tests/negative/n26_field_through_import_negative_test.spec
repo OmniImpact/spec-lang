@@ -1,6 +1,6 @@
-#! N26 (FUNCTIONS.md Part IV IV.6): the as-import grants FUNCTIONS ONLY —
+#! N26 (Part IV IV.6): the as-import grants FUNCTIONS ONLY —
 #! a public FIELD of the imported class is not reachable through the
-#! class-name prefix. The field wall (INSTANCE.md §2.3).
+#! class-name prefix. The field wall (§2.3).
 
 Class is N26FieldWall{
 	replace Array of Array of String is using: [

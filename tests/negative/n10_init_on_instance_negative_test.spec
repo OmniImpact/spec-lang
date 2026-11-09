@@ -1,4 +1,4 @@
-#! N10: init on an instance is banned; init is construct-only (INSTANCE.md E7).
+#! N10: init on an instance is banned; init is construct-only (E7).
 
 Class is N10InitOnInstance {
 	replace Function is init(Map of String to String is args) {

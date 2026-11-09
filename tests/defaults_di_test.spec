@@ -1,4 +1,4 @@
-#! FUNCTIONS.md Part IV IV.6: the declaration-side defaults are the
+#! Part IV IV.6: the declaration-side defaults are the
 #! dependency-injection surface. A parameter with a default
 #! (`Math2 is m : Math2:init()`) auto-instantiates when the caller omits
 #! it, partially binds by name, or takes a full injection — and the

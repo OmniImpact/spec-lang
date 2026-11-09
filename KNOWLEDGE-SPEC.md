@@ -30,7 +30,7 @@ Base literals: `0xFF` `0b1010` `0o755` `1_000_000` (underscore separators; bare 
 Casts: `value as Target`.
 
 ## Imports & Resolution
-Array-form, pure package segments; the trailing segment names a class, omitting it imports the whole package (wildcard). The instance form `as ClassName()` materializes an owned instance scoped to the importing class — its members answer to the class-name prefix (INSTANCE.md):
+Array-form, pure package segments; the trailing segment names a class, omitting it imports the whole package (wildcard). The instance form `as ClassName()` materializes an owned instance scoped to the importing class — its members answer to the class-name prefix:
 ```spec
 replace Array of Array of String is using: [
 	['base', 'io', as Output()],
@@ -41,7 +41,7 @@ The loader scans two trees — the directory of the `.spec` file being compiled 
 
 ## Call Model (instance-based)
 Members are callable only through a value of the class's type. Methods may be **overloaded**: same name, distinct signatures (arity, parameter names, or types); resolution is arity → named-argument set → exact type match, exactly one survivor, conversions never choose; positional calls with a unique arity match, otherwise named arguments are required. Identical signatures, mixed positional/named calls (except the scoped-region desugaring's trailing callback), and replacing an overloaded method are compile errors.
-Members are callable only through a value of the class's type. The class name itself admits exactly one call: `init` (construction). `['pkg', as ClassName()]` imports materialize an owned, anonymous instance scoped to the importing class (and inherited by subclasses); its members answer to the class-name prefix (`Math:round(...)`) and, where the name has exactly one provider in scope, bare (`round(...)`). Name collisions force qualification; the bare scope is own + inherited members plus direct as-imports, one level deep, methods only. Zero-field classes dispatch with no allocation (methods are self-free by construction); `init` is not callable on instances; a class-name receiver that is not instance-imported is a compile error (INSTANCE.md).
+Members are callable only through a value of the class's type. The class name itself admits exactly one call: `init` (construction). `['pkg', as ClassName()]` imports materialize an owned, anonymous instance scoped to the importing class (and inherited by subclasses); its members answer to the class-name prefix (`Math:round(...)`) and, where the name has exactly one provider in scope, bare (`round(...)`). Name collisions force qualification; the bare scope is own + inherited members plus direct as-imports, one level deep, methods only. Zero-field classes dispatch with no allocation (methods are self-free by construction); `init` is not callable on instances; a class-name receiver that is not instance-imported is a compile error.
 
 ## Visibility
 - No modifier = public: overridable, callable everywhere.
@@ -90,7 +90,7 @@ Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `retu
 - `List of T`: `push appendString get set pop length clear toString` (`[Byte]` is the string-builder floor)
 
 ## Builtins (selected)
-- Runtime-managed classes, instance-imported: `Output:line/print/write` (stdout), `Stderr:line/print` (stderr), `Math:` `round floor ceil toInt toFloat sqrt pow log log2 sin cos tan atan2 random fastRandom abs min max clamp`. The lowercase `output:`/`error:`/`math:` alias spellings are retired (INSTANCE.md R1-R3).
+- Runtime-managed classes, instance-imported: `Output:line/print/write` (stdout), `Stderr:line/print` (stderr), `Math:` `round floor ceil toInt toFloat sqrt pow log log2 sin cos tan atan2 random fastRandom abs min max clamp`. The lowercase `output:`/`error:`/`math:` alias spellings are retired.
 - `Process:` `execute(command:, args:)` `getPid()` `exit(status:)` `sleep(ms:)` `clockMs()` `peakMemoryKb()` `threadCount()` `atomicAdd/Put/Get(slot:, value:)`
 - `File:` `read(path:, default:)` `write(path:, content:)` `readAsync` `writeAsync` `exists(path:)` `remove(path:)`
 - `Int:toBase(base:, digits:)` `String:parseInt(base:, default:)`

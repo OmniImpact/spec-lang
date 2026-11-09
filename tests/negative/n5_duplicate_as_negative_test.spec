@@ -1,4 +1,4 @@
-#! N5: duplicate as-import bindings (INSTANCE.md E3).
+#! N5: duplicate as-import bindings (E3).
 
 Class is N5DuplicateAs {
 	replace Array of Array of String is using: [

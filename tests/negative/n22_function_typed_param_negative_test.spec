@@ -1,4 +1,4 @@
-#! N22 (FUNCTIONS.md Part IV V1): Function assignability is directional.
+#! N22 (Part IV V1): Function assignability is directional.
 #! A void-typed closure cannot feed a Function of Boolean param — the
 #! typed invocation reads garbage through the return-value cast.
 

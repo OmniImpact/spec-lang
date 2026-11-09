@@ -1,4 +1,4 @@
-#! N24 (FUNCTIONS.md Part IV IV.1): the as-import grants functions under the
+#! N24 (Part IV IV.1): the as-import grants functions under the
 #! callee's visibility — a `local` member of the imported class is not
 #! callable through the import. The same check the qualified path runs.
 

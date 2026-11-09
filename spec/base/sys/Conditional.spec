@@ -1,7 +1,6 @@
 #! Package base:sys
 #! The conditional wrapper: every conditional shape composed from the
-#! floor's single primitive — `else` is just `not if` (FUNCTIONS.md
-#! Part II).
+#! floor's single primitive — `else` is just `not if`.
 
 Class is Conditional{
 	namespace: ['base', 'sys'];

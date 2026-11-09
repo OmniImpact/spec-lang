@@ -129,7 +129,7 @@ Class is BuiltinCallGenerator{
 	## @param expr: CALL expression node.
 	## @param targetC: Generated C for the method target.
 	## True when the first argument of a builtin math call is Int-typed
-	## (FUNCTIONS.md §I.4: selects the integer overload's floor).
+	## (§I.4: selects the integer overload's floor).
 	##
 	## @param expr: The call expression.
 	## @param cg: The code generator.
@@ -146,7 +146,7 @@ Class is BuiltinCallGenerator{
 	## @param cg: The code generator.
 	## @return: C call string, or '' when not builtin.
 	Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		# Stderr:line - diagnostics to standard error (INSTANCE.md R3:
+		# Stderr:line - diagnostics to standard error (R3:
 		# the error:/Error routing fiction is deleted).
 		Conditional:if(check: { targetC == 'Stderr' && expr:methodName == 'line' && expr:argCount() > 0 }, then: {
 			local Expression is errArg: self:argValue(expr: expr, index: 0);
@@ -299,7 +299,7 @@ Class is BuiltinCallGenerator{
 		});
 
 		# The loop runners — While (the legacy spelling, bridged) and
-		# Loops (FUNCTIONS.md §II.4: the control-flow provider).
+		# Loops (§II.4: the control-flow provider).
 		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
 			local Expression is loopVal: self:argValue(expr: expr, index: 0);
 			local String is loopC: cg:generateExpressionInner(expr: loopVal);
@@ -308,7 +308,7 @@ Class is BuiltinCallGenerator{
 				local Expression is mt: loopVal:methodTarget;
 				loopClass: cg:generateExpression(expr: mt);
 			});
-			# FUNCTIONS.md Part IV IV.2c: the loop-class symbol qualifies for
+			# the loop-class symbol qualifies for
 			# nested classes — resolve the class and derive the qualified base.
 			local ClassInfo is loopCls: cg:findClass(name: loopClass);
 			Conditional:if(check: { loopCls:name != '' }, then: {
@@ -430,7 +430,7 @@ Class is BuiltinCallGenerator{
 				local Expression is mt: cbVal:methodTarget;
 				cbClass: cg:generateExpression(expr: mt);
 			});
-			# FUNCTIONS.md Part IV IV.2c: the callback-class symbol qualifies
+			# the callback-class symbol qualifies
 			# for nested classes.
 			local ClassInfo is cbCls: cg:findClass(name: cbClass);
 			Conditional:if(check: { cbCls:name != '' }, then: {
@@ -451,7 +451,7 @@ Class is BuiltinCallGenerator{
 				local Expression is mt: handlerExpr:methodTarget;
 				handlerClass: cg:generateExpression(expr: mt);
 			});
-			# FUNCTIONS.md Part IV IV.2c: the handler-class symbol qualifies
+			# the handler-class symbol qualifies
 			# for nested classes.
 			local ClassInfo is handlerCls: cg:findClass(name: handlerClass);
 			Conditional:if(check: { handlerCls:name != '' }, then: {
@@ -638,7 +638,7 @@ Class is BuiltinCallGenerator{
 				is 'floor': { return 'spec_math_floor(' . a0 . ')'; }
 				is 'ceil', 'ceiling': { return 'spec_math_ceil(' . a0 . ')'; }
 				is 'abs': {
-					# FUNCTIONS.md §I.4: type-distinct overloads — the Int
+					# §I.4: type-distinct overloads — the Int
 					# overload routes to the integer floor.
 					Conditional:if(check: { self:absArgIsInt(expr: expr, cg: cg) }, then: {
 						return 'spec_math_abs_int(' . a0 . ')';

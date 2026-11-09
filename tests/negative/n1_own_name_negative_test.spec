@@ -1,5 +1,5 @@
 #! N1/N9: the own-class-name receiver inside the class passes NULL self
-#! (the D1-family trap) and is banned outright (INSTANCE.md §2.2).
+#! (the D1-family trap) and is banned outright (§2.2).
 
 Class is N1SelfRead {
 	local Int is count: 5;

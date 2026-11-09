@@ -179,17 +179,18 @@ Class is Loader{
 		});
 		# 2. The executable's tree — walking UP while the location holds no
 		# .spec content (a bin/-layout install keeps the sources at the
-		# prefix), bounded at three hops and never reaching a filesystem
-		# root's vast subtrees.
+		# prefix). no hop count — `dirOf` is pure
+		# string work, and the walk terminates at the natural boundary:
+		# the filesystem root (`/` yields '' and is never scanned — a
+		# root-level fruitless climb would otherwise walk the whole
+		# machine). Any install depth works.
 		local String is exeDir: Dir:exeDir();
-		local Int is ups: 0;
-		# The walk-up loop tracks how many files the scan has indexed: it
-		# keeps climbing while the executable's locations have yielded no
-		# .spec content at all.
+		# The walk-up loop keeps climbing while the executable's locations
+		# have yielded no .spec content at all.
 		local Int is indexed: 0;
 		while(
 			evaluate: local Function of Boolean(){
-				return ups < 8 && indexed == 0;
+				return indexed == 0 && exeDir != '' && exeDir != '/';
 			},
 			iteration: local Function of Boolean(){
 				self:scanTree(dir: exeDir, depth: 0);
@@ -197,7 +198,6 @@ Class is Loader{
 				Conditional:if(check: { indexed == 0 }, then: {
 					exeDir: self:dirOf(path: exeDir);
 				});
-				ups: ups + 1;
 				return true;
 			}
 		);
@@ -216,8 +216,12 @@ Class is Loader{
 	## @param dir: Directory to scan.
 	## @param depth: Current recursion depth.
 	Function is scanTree(String is dir, Int is depth){
-		# FUNCTIONS.md Part VI: the scan depth is a filesystem-reality
-		# bound, not a language limit — 32 covers any sane package tree.
+		# the depth is the SYMLINK-CYCLE guard — a
+		# cycle of directory symlinks yields a fresh path string per
+		# visit, so no visited set can catch it (the documented exception
+		# to terminate-on-revisit). 32 levels is beyond any legitimate
+		# package tree; a hit means a loop in the filesystem, not a
+		# language limit.
 		Conditional:if(check: { depth > 32 }, then: {
 			return;
 		});
@@ -387,7 +391,7 @@ Class is Loader{
 				termClass: seg:str;
 			}, else: {
 				Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
-					# Instance-import form (INSTANCE.md §2.1): resolves exactly
+					# Instance-import form (§2.1): resolves exactly
 					# like the class form; the as-ness stays on the using member
 					# for the checker, generator, and audit.
 					termClass: seg:str;
@@ -512,7 +516,7 @@ Class is Loader{
 
 	## True when two members declare the same signature — for methods:
 	## parameter count, names, and types all equal; for fields: the declared
-	## type (FUNCTIONS.md §I.1).
+	## type (§I.1).
 	##
 	## @param a: First member.
 	## @param b: Second member.
@@ -608,7 +612,7 @@ Class is Loader{
 		return ProgramNode:init(classes: self:loadedClasses);
 	}
 
-	## INSTANCE.md E1/E2 full form: a field-ful class instance-imported
+	## E1/E2 full form: a field-ful class instance-imported
 	## via `as X(args)` materializes a real hidden field on the importing
 	## class — typed X, initialized `X:init(args)` — so struct layout,
 	## per-instance construction, ARC destroy, and constructor-argument
@@ -643,7 +647,7 @@ Class is Loader{
 					self:synthesizeInto(classes: one);
 				});
 			});
-			# FUNCTIONS.md Part IV IV.2: an inner class inherits the enclosing
+			# an inner class inherits the enclosing
 			# chain's as-imports — its instances carry their own synthesized
 			# fields, so the inherited functions dispatch on the inner.
 			self:synthesizeInheritedImports(cls: c);
@@ -708,7 +712,7 @@ Class is Loader{
 			iteration: local Function of Boolean(){
 				local Member is m: members:get(index: idx);
 				Conditional:if(check: { m:name == fieldName }, then: {
-					# FUNCTIONS.md Part IV IV.2: an inherited-import synthesis
+					# an inherited-import synthesis
 					# finds the field already synthesized from the class's own
 					# using (or a prior ancestor hop) — deduplicate silently. A
 					# DECLARED member with that name is still a collision.

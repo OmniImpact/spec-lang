@@ -150,7 +150,7 @@ Class is Driver{
 			Process:exit(status: 1);
 		});
 
-		# 2.5 Instance-model worklist audit (INSTANCE.md Phase 0.5): with the
+		# 2.5 Instance-model worklist audit (Phase 0.5): with the
 		# full program loaded, report class-name-receiver call sites. Purely
 		# informational; always exits 0.
 		Conditional:if(check: { auditMode }, then: {

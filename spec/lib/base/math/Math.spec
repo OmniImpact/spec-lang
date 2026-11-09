@@ -135,7 +135,7 @@ Class is Math{
 		return value;
 	}
 
-	## Integer absolute value (FUNCTIONS.md §I: type-distinct overload).
+	## Integer absolute value (§I: type-distinct overload).
 	##
 	## @param value: Input integer.
 	## @return: Non-negative magnitude.

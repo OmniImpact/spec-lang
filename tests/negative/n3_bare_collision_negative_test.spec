@@ -1,4 +1,4 @@
-#! N3: bare call with two providers must qualify (INSTANCE.md §2.3).
+#! N3: bare call with two providers must qualify (§2.3).
 
 Class is N3Collision {
 	replace Array of Array of String is using: [

@@ -1,4 +1,4 @@
-#! N29 (FUNCTIONS.md Part IV IV.6): the declaration-side default is
+#! N29 (Part IV IV.6): the declaration-side default is
 #! construction the declaring class bakes in — it gates against the
 #! declaring class's imports. An as-imported type cannot be the default
 #! of a parameter (a single-class file: the file grant does not rescue

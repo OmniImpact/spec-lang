@@ -1,4 +1,4 @@
-#! N14: an Any-typed argument matches no overload exactly (FUNCTIONS.md §I.2).
+#! N14: an Any-typed argument matches no overload exactly (§I.2).
 
 Class is N14NoExact {
 	Function of Int is f(Int is v){

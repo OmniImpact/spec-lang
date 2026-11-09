@@ -1,4 +1,4 @@
-#! FUNCTIONS.md Part IV IV.6: the import walls' grant surface. Each
+#! Part IV IV.6: the import walls' grant surface. Each
 #! parent carries one as-import; the child declares none — the MI
 #! lattice merges BOTH parents' grants bare (functions callable, the
 #! nested-class types referencing), and constructing the parent's

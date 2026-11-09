@@ -1,5 +1,5 @@
 #! Package base:sysinternal
-#! The conditional floor (FUNCTIONS.md Part II): the single control-flow
+#! The conditional floor (Part II): the single control-flow
 #! primitive. `else` is composed above it as `if(!check, else)` — only
 #! this one item binds to C.
 

@@ -126,7 +126,7 @@ Class is DeclarationGenerator{
 		self:collectStructFieldsSplit(c: c, allClasses: allClasses, acc: acc, outerAcc: ignoredOuter, fromOuterLink: false);
 	}
 
-	## FUNCTIONS.md Part IV IV.2: the struct-field collection with the
+	## the struct-field collection with the
 	## outer-link split — the fields reached through the OUTER chain (the
 	## inner-class link) accumulate into [outerAcc]; the declared-of
 	## lattice and the class's own fields into [acc]. The construction
@@ -143,7 +143,7 @@ Class is DeclarationGenerator{
 			target: outerAcc;
 		});
 		c:baseClasses:each(action: local Function(String is baseName){
-			# FUNCTIONS.md Part IV IV.2: the base is the outer-link relation
+			# the base is the outer-link relation
 			# when its name appears in this class's outer chain.
 			local Boolean is baseIsOuter: c:outerName != '' && (c:outerName == baseName || c:outerName:contains(needle: ':' . baseName));
 			allClasses:each(action: local Function(ClassInfo is cand){
@@ -386,7 +386,7 @@ Class is DeclarationGenerator{
 			classes:each(action: local Function(ClassInfo is c){
 				Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 					local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-					# FUNCTIONS.md Part IV IV.2c: for nested classes the typedef
+					# for nested classes the typedef
 					# ALIASES the bare name to the qualified struct — but only
 					# when the bare name is unique. Two same-named inner
 					# classes under different outers cannot share one C

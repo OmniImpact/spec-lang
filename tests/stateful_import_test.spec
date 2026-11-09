@@ -1,4 +1,4 @@
-#! Regression: field-ful as-imports (INSTANCE.md §10). The import
+#! Regression: field-ful as-imports (§10). The import
 #! materializes a hidden field, constructed with the as-form's literal
 #! arguments; state persists across prefixed calls, dispatches through
 #! the field, and bare calls resolve to the same instance.

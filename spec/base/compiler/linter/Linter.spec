@@ -1,9 +1,9 @@
 #! Package base:compiler:linter
 #! Pure-Spec code linter enforcing tab-based indentation, formatting,
-#! and AST idioms, plus the INSTANCE.md Phase 0.5 worklist audit.
+#! and AST idioms, plus the Phase 0.5 worklist audit.
 
 ## Pure-Spec code linter enforcing tab-based indentation, formatting,
-## and AST idioms, plus the INSTANCE.md Phase 0.5 worklist audit.
+## and AST idioms, plus the Phase 0.5 worklist audit.
 Class is Linter{
 	namespace: ['base', 'compiler', 'linter'];
 
@@ -29,7 +29,7 @@ Class is Linter{
 		['base', 'sys', as Conditional()]
 	];
 
-	## Audit name sets (INSTANCE.md Phase 0.5): every enum and class name in
+	## Audit name sets (Phase 0.5): every enum and class name in
 	## the loaded program, nested classes included.
 	local Map of String to String is auditEnums: Map:init();
 	local Map of String to String is auditClasses: Map:init();
@@ -42,17 +42,17 @@ Class is Linter{
 	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: []);
 
 	## Depth of While/Loop callback bodies the standards walk is inside
-	## (INSTANCE.md E10: construction inside a loop body is a hoist hint).
+	## (E10: construction inside a loop body is a hoist hint).
 	local Int is lintLoopDepth: 0;
 
 	## Loaded class nodes by name, for the inherited-import walk.
 	local Map of String to ClassInfo is auditClassNodes: Map:init();
 
-	## Lowercase floor singletons routed by name (INSTANCE.md R1-R3 removes
+	## Lowercase floor singletons routed by name (R1-R3 removes
 	## them, so their call sites belong on the worklist).
 	local Array of String is floorAliases: [];
 
-	## Type-level exempt receivers (INSTANCE.md X3): primitives, base
+	## Type-level exempt receivers (X3): primitives, base
 	## conversion targets, containers.
 	local Array of String is exemptClasses: [];
 
@@ -192,10 +192,10 @@ Class is Linter{
 				local String is method: expr:methodName;
 				local Array of NamedArg is args: expr:methodArgs;
 
-				# INSTANCE.md E10: a constructor call inside a While/Loop
+				# E10: a constructor call inside a While/Loop
 				# callback body allocates per iteration — hoisting hint.
 				Conditional:if(check: { method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget) }, then: {
-					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (INSTANCE.md E10).'));
+					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
 				});
 
 				when (method) {
@@ -411,7 +411,7 @@ Class is Linter{
 		});
 	}
 
-	## INSTANCE.md Phase 0.5 worklist audit: reports every call whose
+	## Phase 0.5 worklist audit: reports every call whose
 	## receiver names a class (or floor alias) with a non-init method,
 	## excluding the exempt strata (§4). Purely informational — the
 	## burn-down metric for the instance-based call model. Requires the
@@ -607,7 +607,7 @@ Class is Linter{
 		}
 	}
 
-	## Classifies one call's receiver (INSTANCE.md §2.2, §4): flags
+	## Classifies one call's receiver (§2.2, §4): flags
 	## class-named and floor-alias receivers invoking non-init members;
 	## skips self, variables and fields, enums, the exempt type-level
 	## strata, and sysinternal floor chains. Unknown uppercase names stay
@@ -660,7 +660,7 @@ Class is Linter{
 			});
 			Conditional:if(check: { self:auditOwnerImportsAs(name: name) }, then: {
 				# Migrated: the owning class (or an ancestor) instance-imports
-				# this class (INSTANCE.md §2.1), so the prefix call is the
+				# this class (§2.1), so the prefix call is the
 				# new model.
 				return;
 			});
@@ -724,7 +724,7 @@ Class is Linter{
 	## True when [name] starts with an uppercase letter (the type naming
 	## convention); variables and fields are lowerCamel. The 26-way match
 	## is deliberate: relational operators on Strings compile to raw
-	## pointer comparison (see INSTANCE.md D5), so `first >= 'A'` is not
+	## pointer comparison (see D5), so `first >= 'A'` is not
 	## a legal test.
 	##
 	## @param name: Identifier to classify.
@@ -752,6 +752,6 @@ Class is Linter{
 		issues:each(action: local Function(LintIssue is issue){
 			Output:line(issue:toString());
 		});
-		Output:line('Instance-model worklist: ' . (issues:length() as String) . ' call site(s) must migrate (INSTANCE.md Phase 0.5).');
+		Output:line('Instance-model worklist: ' . (issues:length() as String) . ' call site(s) must migrate (Phase 0.5).');
 	}
 }

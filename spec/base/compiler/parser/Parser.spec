@@ -266,7 +266,7 @@ Class is Parser{
 		return ProgramNode:init(classes: classes);
 	}
 
-	## FUNCTIONS.md Part IV IV.2: links nested classes to their enclosing
+	## links nested classes to their enclosing
 	## class — the qualified outer chain (outerName) and the parent link
 	## (the outer appended to baseClasses), so the standard lattice walks
 	## serve inner classes. Recurses through the nesting.
@@ -562,7 +562,7 @@ Class is Parser{
 		local Token is baseTok: self:advance();
 		local String is typeName: baseTok:getValue();
 
-		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
+		# the qualified nested-class reference —
 		# `Outer:Inner` chains consume the glued colon segments into the
 		# type name, so declaration positions can spell the full path.
 		while(
@@ -821,7 +821,7 @@ Class is Parser{
 		});
 
 		callExpr:methodArgs:add(item: NamedArg:init(name: '', value: anonFn));
-		# FUNCTIONS.md §as: the remainder is not an argument — it fills the
+		# §as: the remainder is not an argument — it fills the
 		# callable's declared-but-unbound last Function parameter. The
 		# marker keeps it out of overload selection.
 		callExpr:scopedRemainder: true;
@@ -913,8 +913,8 @@ Class is Parser{
 	}
 
 	## Parses the instance-import form `as ClassName(args)` — a using-entry
-	## terminator (INSTANCE.md §2.1). Arguments must be direct literal
-	## values (INSTANCE.md E1); parentheses are required so the form can
+	## terminator (§2.1). Arguments must be direct literal
+	## values (E1); parentheses are required so the form can
 	## never be confused with the postfix cast.
 	##
 	## @return: The USING_AS expression node.
@@ -937,7 +937,7 @@ Class is Parser{
 				args:each(action: local Function(NamedArg is arg){
 					local ExpressionKind is ak: arg:value:kind;
 					Conditional:if(check: { ak != ExpressionKind:STRING && ak != ExpressionKind:NUMBER && ak != ExpressionKind:FLOAT && ak != ExpressionKind:BOOL }, then: {
-						self:addError(tok: clsTok, message: 'Instance-import arguments must be direct literal values (INSTANCE.md E1).');
+						self:addError(tok: clsTok, message: 'Instance-import arguments must be direct literal values (E1).');
 					});
 				});
 			});
@@ -1084,7 +1084,7 @@ Class is Parser{
 			}
 			is TokenKind:KEYWORD: {
 				# Expression-initial `as` is the instance-import form
-				# `as ClassName()` (INSTANCE.md §2.1); `as` never begins any
+				# `as ClassName()` (§2.1); `as` never begins any
 				# other expression (casts are postfix, scoped regions are
 				# statement-initial).
 				Conditional:if(check: { self:checkKeyword(kw: Keyword:AS) }, then: {

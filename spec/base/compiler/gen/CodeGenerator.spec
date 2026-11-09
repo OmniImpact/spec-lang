@@ -59,7 +59,7 @@ Class is CodeGenerator{
 	## Builtin call translator (floor-class spec_* bindings).
 	local BuiltinCallGenerator is builtins: BuiltinCallGenerator:init();
 
-	## FUNCTIONS.md Part V: the worker gens' private copy of the source
+	## the worker gens' private copy of the source
 	## program's flattened class list (the per-class generation walks it;
 	## sharing the live list serialized every read behind its mutex).
 	local Array of ClassInfo is flattenedClasses: [];
@@ -139,7 +139,7 @@ Class is CodeGenerator{
 	## Active inline-return label (closure inlining).
 	local String is inlineReturnLabel: '';
 
-	## FUNCTIONS.md Part IV memory discipline: the active method-level
+	## Part IV memory discipline: the active method-level
 	## cleanup label — returns funnel through it so the scope-end releases
 	## run on every exit path, not only the fall-through one.
 	local String is cleanupLabel: '';
@@ -151,7 +151,7 @@ Class is CodeGenerator{
 	## Per-method cleanup-label counter (labels are function-scoped).
 	local Int is cleanupCounter: 0;
 
-	## FUNCTIONS.md Part V: the innermost closure's declared return type
+	## the innermost closure's declared return type
 	## name while its body generates ('' outside closures). A closure's
 	## returns shape against ITS type — the enclosing method's return type
 	## is irrelevant there (a scalar-returning closure inside a
@@ -163,7 +163,7 @@ Class is CodeGenerator{
 	## drop a ref the env owns.
 	local Map of String to String is releaseExclusions: Map:init();
 
-	## FUNCTIONS.md Part IV memory discipline: the top-level ARC locals
+	## Part IV memory discipline: the top-level ARC locals
 	## hoisted to zero-initialized declarations for the active funnel — a
 	## goto must never jump over an initializer the cleanup releases.
 	local Map of String to String is hoistedLocals: Map:init();
@@ -285,7 +285,7 @@ Class is CodeGenerator{
 		self:allTaggedEnums: Map:init();
 		flattened:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:name, value: 'true');
-			# FUNCTIONS.md Part IV IV.2c: the nested classes register under
+			# the nested classes register under
 			# their qualified identity too — and under the C symbol form,
 			# so the constructor path recognizes the symbol-spelled targets
 			# that emitPath produces.
@@ -429,7 +429,7 @@ Class is CodeGenerator{
 	}
 
 	## True when the class currently being generated instance-imports
-	## [className] via an as-form using entry (INSTANCE.md §2.1) — its
+	## [className] via an as-form using entry (§2.1) — its
 	## class-name calls dispatch on the owned (elided) instance.
 	##
 	## @param className: Receiver class name.
@@ -469,7 +469,7 @@ Class is CodeGenerator{
 
 	## True when [cls] declares real fields (metadata pseudo-members
 	## excluded) — field-ful as-imports dispatch through their synthetic
-	## hidden field instead of the elided NULL path (INSTANCE.md §2.4).
+	## hidden field instead of the elided NULL path (§2.4).
 	##
 	## @param cls: The imported class.
 	## @return: true when field-ful.
@@ -483,7 +483,7 @@ Class is CodeGenerator{
 		return found;
 	}
 
-	## FUNCTIONS.md §I.2: the 0-based overload position of [method]
+	## §I.2: the 0-based overload position of [method]
 	## within its class's same-name METHOD group (identity compare).
 	##
 	## @param classDef: The declaring class.
@@ -504,14 +504,14 @@ Class is CodeGenerator{
 	}
 
 	## The C symbol for a method definition or call: Class_method, with a
-	## declaration-order suffix for overloads (FUNCTIONS.md §I.4).
+	## declaration-order suffix for overloads (§I.4).
 	##
 	## @param className: The declaring class name.
 	## @param methodName: The method name.
 	## @param idx: The overload index.
 	## @return: The C symbol.
 	Function of String is overloadSymbol(String is className, String is methodName, Int is idx){
-		# FUNCTIONS.md Part IV IV.2c: the symbol base qualifies for nested
+		# the symbol base qualifies for nested
 		# classes — the funnel resolves the class and derives the C symbol
 		# from the qualified name, so the definitions and the call sites
 		# agree.
@@ -526,7 +526,7 @@ Class is CodeGenerator{
 		return symBase . '_' . methodName;
 	}
 
-	## FUNCTIONS.md Part IV IV.2c: the member-lookup root for a (possibly
+	## the member-lookup root for a (possibly
 	## qualified) receiver type — the qualified nested-class reference
 	## resolves to the inner class; container forms keep the bare root.
 	##
@@ -543,7 +543,7 @@ Class is CodeGenerator{
 		return root;
 	}
 
-	## FUNCTIONS.md §I.2: the stamped member for a call — the idx-th
+	## §I.2: the stamped member for a call — the idx-th
 	## same-name METHOD member at the nearest declaring ancestor (all
 	## parents walked; idx below zero resolves as the first).
 	##
@@ -811,7 +811,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
-		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
+		# the qualified nested-class reference —
 		# 'Outer:Inner' resolves the class whose qualified identity matches.
 		Conditional:if(check: { name:contains(needle: ':') }, then: {
 			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);
@@ -1154,7 +1154,7 @@ Class is CodeGenerator{
 		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			Conditional:if(check: { paramCount < 0 || ml:res:params:length() == paramCount }, then: {
-				# FUNCTIONS.md Part IV IV.2c: the IMPLEMENTING class's symbol
+				# the IMPLEMENTING class's symbol
 				# base qualifies for nested classes — the vtable entries and
 				# the definitions agree.
 				return self:utils:cIdent(name: cls:qualifiedName());
@@ -1297,7 +1297,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
 				targetType: self:currentClassName;
 			});
-			# INSTANCE.md §2.3: a bare call resolved against the bare scope
+			# §2.3: a bare call resolved against the bare scope
 			# dispatches on its as-imported provider.
 			Conditional:if(check: { expr:bareProvider != '' }, then: {
 				targetType: expr:bareProvider;
@@ -1341,7 +1341,7 @@ Class is CodeGenerator{
 			local String is ret: '';
 			Conditional:if(check: { expr:num > 0 }, then: {
 				# The checker stamped the exact return type for the selected
-				# overload (FUNCTIONS.md §I.2); it is the source of truth.
+				# overload (§I.2); it is the source of truth.
 				local String is rt: expr:resolvedType;
 				Conditional:if(check: { rt != '' && rt != Primitive:ANY:value() }, then: {
 					ret: rt;
@@ -1646,7 +1646,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { self:argMode }, then: {
 				local String is resT: self:inferTargetType(expr: expr);
 				local String is resC: self:cTypeFor(typeName: resT);
-				# FUNCTIONS.md Part VI: the claim is SELF-FRAMING — the
+				# the claim is SELF-FRAMING — the
 				# frame opens before the expression evaluates (its nested
 				# claims push above the mark), the release runs after the
 				# dispatch (the callee has retained what it needs), and
@@ -1854,7 +1854,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { segs:length() == 1 }, then: {
 			return segs:get(index: 0);
 		});
-	# FUNCTIONS.md Part IV IV.2c: the nested-class chain — 'Outer:Inner'
+	# the nested-class chain — 'Outer:Inner'
 	# and the inner-of-inner 'Outer:Mid:Deep' — walks CLASS-kind members
 	# per segment and resolves to the deepest class's qualified C symbol
 	# base.
@@ -1975,7 +1975,7 @@ Class is CodeGenerator{
 				return '((' . leftC . ') != (' . rightC . '))';
 			}
 			is '<', '<=', '>', '>=': {
-				# FUNCTIONS.md hardening (D5): relational operators on String
+				# hardening (D5): relational operators on String
 				# compare lexicographically through the floor — never by
 				# pointer.
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
@@ -2250,7 +2250,7 @@ Class is CodeGenerator{
 			return builtinC;
 		});
 
-		# FUNCTIONS.md Part II: the Conditional inline — statement-form
+		# Part II: the Conditional inline — statement-form
 		# conditionals compile to zero-allocation C if/else (the
 		# While:condition precedent). The wrapper's own floor call arrives
 		# as a qualified PATH receiver and is excluded, so the fallback
@@ -2296,7 +2296,7 @@ Class is CodeGenerator{
 		# Tagged enum variant constructor.
 		Conditional:if(check: { self:allEnumVariants:has(key: expr:methodName) && (self:allTaggedEnums:has(key: targetC) || targetC == self:names:selfIdent()) }, then: {
 			local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: '');
-			# FUNCTIONS.md Part IV IV.2c: the variant symbols qualify for
+			# the variant symbols qualify for
 			# nested tagged enums — the registry lookups stay on the bare
 			# name; the C symbol derives from the qualified identity.
 			local String is eSym: eName;
@@ -2352,7 +2352,7 @@ Class is CodeGenerator{
 			});
 			local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
 			Conditional:if(check: { expr:methodName == 'init' }, then: {
-				# FUNCTIONS.md Part IV IV.2: a qualified inner-class target
+				# a qualified inner-class target
 				# constructs with its OWN _new/default-_init pair — the
 				# enclosing class's entry-point init is not the inner's
 				# construction protocol. The gate: the targetC is a registered
@@ -2368,7 +2368,7 @@ Class is CodeGenerator{
 					symOwnerCls: targetC;
 				});
 			local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:num);
-			# FUNCTIONS.md Part IV IV.2c: the _new symbol qualifies like the
+			# the _new symbol qualifies like the
 			# init symbol — resolve the class's qualified identity.
 			local String is newSym: self:utils:cIdent(name: targetC);
 			local ClassInfo is newCls: self:findClass(name: targetC);
@@ -2383,22 +2383,22 @@ Class is CodeGenerator{
 			Conditional:if(check: { mDef:kind == MemberKind:METHOD }, then: {
 				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:num);
 				Conditional:if(check: { self:isFieldFulClass(cls: self:findClass(name: targetC)) }, then: {
-					# Field-ful instance import (INSTANCE.md E1/E2 full
+					# Field-ful instance import (E1/E2 full
 					# form): dispatch through the synthetic hidden field
 					# the loader materialized; the field borrows as self.
 					return callSymbol . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
 				});
-				# Elided instance import (INSTANCE.md §2.4): under E5 every
+				# Elided instance import (§2.4): under E5 every
 				# non-init class-name call is an instance-imported receiver.
 				# The class is field-less, its methods self-free — a direct
 				# C call with self ignored, void or not. The old unsound
 				# static paths (unguarded NULL self, fresh-instance
-				# discard) are deleted (INSTANCE.md E8).
+				# discard) are deleted (E8).
 				return callSymbol . '(NULL' . argsJoined . ')';
 			});
 		});
 
-		# INSTANCE.md §2.3: bare call resolved to an as-imported provider —
+		# §2.3: bare call resolved to an as-imported provider —
 		# elided dispatch (v1 providers are field-less, self-free).
 		# Runtime-managed providers (Math, Output, Stderr) route through
 		# the builtin table under the provider's name first.
@@ -2451,7 +2451,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { objType:startsWith(prefix: 'Map:') }, then: {
 				objType: 'Map';
 			}, else: {
-				# FUNCTIONS.md Part IV IV.2c: a qualified objType whose root is
+				# a qualified objType whose root is
 				# a registered class is a nested-class reference — the FULL
 				# qualified name stays (overloadSymbol qualifies the symbol);
 				# only container-prefixed types truncate.
@@ -2664,7 +2664,7 @@ Class is CodeGenerator{
 		self:inlineReturnLabel: savedRetLbl;
 		self:localVars: savedVars;
 		self:localScopeVars: savedScopeVars;
-		# FUNCTIONS.md Part V: the capture scans run over the body with
+		# the capture scans run over the body with
 		# its STRING LITERALS stripped — the emitted C's text contains
 		# prose that mentions identifiers ('* self) {'), and a substring
 		# match on the raw body captured variables the closure never
@@ -2718,7 +2718,7 @@ Class is CodeGenerator{
 						}, else: {
 							capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
 						});
-						# FUNCTIONS.md Part II: the closure body may assign a
+						# Part II: the closure body may assign a
 						# captured local — write it back at exit or the
 						# mutation is lost (the callback ran on a copy).
 						Conditional:if(check: { self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, then: {
@@ -2788,7 +2788,7 @@ Class is CodeGenerator{
 		return self:formatCallArgumentsWith(className: className, methodName: methodName, idx: -1, args: args);
 	}
 
-	## FUNCTIONS.md §I.2: binds call arguments against the STAMPED
+	## §I.2: binds call arguments against the STAMPED
 	## overload's parameters (idx below zero resolves as the first —
 	## the legacy single-member shape).
 	##
@@ -3059,7 +3059,7 @@ Class is CodeGenerator{
 		local String is varName: self:utils:cIdent(name: stmt:varName);
 		local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
 		local String is autoPrefix: Conditional:if(check: { isArcVar }, then: { 'SPEC_AUTO ' }, else: { '' });
-		# FUNCTIONS.md Part IV memory discipline: a hoisted local's
+		# Part IV memory discipline: a hoisted local's
 		# declaration lives in the funnel prologue (zero-initialized) — the
 		# statement assigns, so a goto can never skip the initializer.
 		Conditional:if(check: { self:hoistedLocals:has(key: stmt:varName) }, then: {
@@ -3258,7 +3258,7 @@ Class is CodeGenerator{
 			});
 			return "    break;\n";
 		});
-		# FUNCTIONS.md Part V: inside a closure the returns shape against
+		# inside a closure the returns shape against
 		# the CLOSURE's declared return type — the enclosing method's is
 		# irrelevant there (a scalar-returning closure inside a
 		# String-returning method must not pointer-cast).
@@ -3294,7 +3294,7 @@ Class is CodeGenerator{
 					});
 				});
 			});
-			# FUNCTIONS.md Part IV memory discipline: the return funnels
+			# Part IV memory discipline: the return funnels
 			# through the method's cleanup label so the scope releases run
 			# on this exit path too.
 			Conditional:if(check: { self:cleanupLabel != '' }, then: {
@@ -3404,7 +3404,7 @@ Class is CodeGenerator{
 		# per statement would copy the whole body each time (quadratic).
 		local String is bodyC: Buf:stringCopy(b: '');
 
-		# FUNCTIONS.md Part IV memory discipline: the scope-end releases
+		# Part IV memory discipline: the scope-end releases
 		# move under a cleanup label and every return funnels through it —
 		# a trailing release list is dead code after any return, which
 		# leaked every early-returning method's locals. Void methods funnel
@@ -3587,7 +3587,7 @@ Class is CodeGenerator{
 		local String is vt: self:generateVTables(classes: flattenedClasses);
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
-		# FUNCTIONS.md Part V: the per-class generation runs on the thread
+		# the per-class generation runs on the thread
 		# pool — each thread owns a CodeGenerator wired to the shared
 		# read-only registries and generates its contiguous class block
 		# into per-thread owned buffers, merged in fixed thread order.
@@ -3615,7 +3615,7 @@ Class is CodeGenerator{
 		);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
-			# FUNCTIONS.md Part V: the registries are read-only during
+			# the registries are read-only during
 			# generation, but the workers get PRIVATE COPIES of the
 			# list/map registries — sharing them serialized every lookup
 			# behind the container mutexes (the gen DOUBLED). The
@@ -3878,7 +3878,7 @@ Class is CodeGenerator{
 				Buf:bufAppendBuf(dst: out, src: "}\n\n");
 
 				Buf:bufAppendBuf(dst: out, src: cSym . '* ' . cSym . "_new(void) {\n");
-				# FUNCTIONS.md Part IV memory discipline: every class
+				# Part IV memory discipline: every class
 				# allocates through ARC — refcounts drive the frees, so the
 				# parser's tokens, the loop objects, and every transient
 				# reclaim their memory during compilation. The old
@@ -3889,7 +3889,7 @@ Class is CodeGenerator{
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
 					Buf:bufAppendBuf(dst: out, src: '    self->_vtable = ' . cSym . "_vtable;\n");
 				});
-				# FUNCTIONS.md Part IV IV.2: the construction expressions run for
+				# the construction expressions run for
 				# the declared-of + own fields; the OUTER-link fields zero-init
 				# (an inner instance starts with an empty parent-part — the
 				# enclosing class's containers must not allocate per inner
@@ -4145,7 +4145,7 @@ Class is CodeGenerator{
 
 	## Inlines a While loop with optional scoped loop variables:
 	## loop variables are declared at the block scope, and the evaluate/iteration
-	## FUNCTIONS.md Part II: extracts the condition C from a check
+	## Part II: extracts the condition C from a check
 	## closure — the body's last expression statement is the condition
 	## (the Kotlin convention). Earlier statements, if any, are emitted
 		## into a do-block prefix.
@@ -4193,7 +4193,7 @@ Class is CodeGenerator{
 		return self:generateExpression(expr: condExpr);
 	}
 
-	## FUNCTIONS.md Part II: inlines a Conditional branch call as native
+	## Part II: inlines a Conditional branch call as native
 	## C if/else. Branch bodies are inlined into the enclosing function,
 	## so a `return` inside a branch returns from the method (guard
 	## clauses work). The 2-arg form is the primitive; the 3-arg form is
@@ -4205,14 +4205,14 @@ Class is CodeGenerator{
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
-		# FUNCTIONS.md Part II: INHERIT the enclosing inline-return
+		# Part II: INHERIT the enclosing inline-return
 		# context. A branch nested in an inlined loop's iteration keeps the
 		# loop's return protocol (`return false` stops the loop); a branch
 		# at method level sees the empty context and its returns stay real
 		# method returns (guard clauses). Clearing here turned loop-stops
 		# into garbage method returns.
 		self:argMode: false;
-		# FUNCTIONS.md Part II: the value-yielding form — the checker
+		# Part II: the value-yielding form — the checker
 		# stamped the unified yield type; emit a statement expression.
 		local String is resT: expr:resolvedType;
 		local Boolean is valueForm: expr:argCount() == 3 && resT != '' && resT != 'void' && resT != 'Void';
@@ -4273,7 +4273,7 @@ Class is CodeGenerator{
 				local String is retC: self:generateExpression(expr: st:returnExpr);
 				self:argMode: savedArg;
 				Conditional:if(check: { self:isArcType(typeName: yieldT) }, then: {
-					# FUNCTIONS.md Part IV V2: a yield does not end the enclosing
+					# Part IV V2: a yield does not end the enclosing
 					# scope — the source local may be read after the
 					# if-expression, so the yield RETAINS (the ARC-safe copy)
 					# instead of the return path's ownership NULL-swap. A fresh
@@ -4355,7 +4355,7 @@ Class is CodeGenerator{
 		});
 		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
 
-		# FUNCTIONS.md hardening: the iteration closure's returns drive the
+		# hardening: the iteration closure's returns drive the
 		# loop — `return true` continues (skipping the rest of the body),
 		# `return false` stops it, `return <expr>` decides at runtime. The
 		# body is generated with a real return variable; a body without any
@@ -4386,7 +4386,7 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## FUNCTIONS.md II.4: inlines an `until(evaluate:, iteration:)` — the
+	## II.4: inlines an `until(evaluate:, iteration:)` — the
 	## do-while: the body runs once, then the predicate decides. The body's
 	## returns drive the loop exactly like [generateInlineWhileLoop].
 	##
@@ -4432,7 +4432,7 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## FUNCTIONS.md II.4: inlines a `repeat(count:, worker:)` — the body
+	## II.4: inlines a `repeat(count:, worker:)` — the body
 	## runs exactly [count] times; the worker's returns drive the loop
 	## (`return true` continues, `return false` stops).
 	##

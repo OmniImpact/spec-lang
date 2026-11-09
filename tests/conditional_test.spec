@@ -1,4 +1,4 @@
-#! Regression: Conditional (FUNCTIONS.md Part II) — every conditional
+#! Regression: Conditional (Part II) — every conditional
 #! shape composed from the floor's single primitive. Statement forms
 #! inline to zero-allocation C; branches return from the method
 #! (guard clauses work).
@@ -102,8 +102,8 @@ Class is ConditionalTest {
  fail: fail + 1; Output:line('[FAIL] bare call');
 		});
 
-		# Value-yielding branch: the if-expression form (FUNCTIONS.md
-		# Part II). Both branches end in an expression; the yields unify.
+		# Value-yielding branch: the if-expression form. Both branches end
+		# in an expression; the yields unify.
 		local String is picked: Conditional:if(check: { 3 > 2 }, then: { 'big' }, else: { 'small' });
 		local String is picked2: Conditional:if(check: { 3 > 9 }, then: { picked . '!' }, else: { 'tiny' });
 		Conditional:if(check: { picked == 'big' && picked2 == 'tiny' }, then: {
@@ -113,7 +113,7 @@ Class is ConditionalTest {
 		});
 
 		# The scoped region fills the open then-slot: the body becomes the
-		# branch's then-closure (FUNCTIONS.md §as).
+		# branch's then-closure (§as).
 		local Int is scopedHits: 0;
 		as: Conditional:if(check: { 2 > 1; });
 			scopedHits: scopedHits + 1;

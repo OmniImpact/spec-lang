@@ -1,4 +1,4 @@
-#! N25 (FUNCTIONS.md Part IV IV.2c): same-named inner classes under
+#! N25 (Part IV IV.2c): same-named inner classes under
 #! different enclosing classes are legal declarations — the ambiguity
 #! moved to the reference. A bare reference to a nested-class name that
 #! more than one as-import provides names the providers; the user

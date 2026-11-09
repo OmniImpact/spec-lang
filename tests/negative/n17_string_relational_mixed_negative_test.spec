@@ -1,5 +1,5 @@
 #! N17: relational ordering between String and non-String is rejected
-#! (FUNCTIONS.md hardening, D5).
+#! (hardening, D5).
 
 Class is N17StringRelationalMixed {
 	replace Array of Array of String is using: [

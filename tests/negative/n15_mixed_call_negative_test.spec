@@ -1,4 +1,4 @@
-#! N15: mixing positional and named arguments is rejected (FUNCTIONS.md §I.3).
+#! N15: mixing positional and named arguments is rejected (§I.3).
 
 Class is N15Mixed {
 	replace Array of Array of String is using: [

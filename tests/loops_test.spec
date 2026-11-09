@@ -1,4 +1,4 @@
-#! FUNCTIONS.md II.4: the Loops control-flow provider — one as-import
+#! II.4: the Loops control-flow provider — one as-import
 #! serves the loop constructs bare. `while(evaluate:, iteration:)` is
 #! the native-inlined predicate loop; `repeat(count:, worker:)` runs a
 #! body exactly N times; `until(evaluate:, iteration:)` is the do-while

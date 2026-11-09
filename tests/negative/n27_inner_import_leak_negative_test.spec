@@ -1,7 +1,7 @@
-#! N27 (FUNCTIONS.md Part IV IV.3/IV.6): the inner class's OWN as-import
+#! N27 (Part IV IV.3/IV.6): the inner class's OWN as-import
 #! scopes to the inner — it does not leak outward into the enclosing
 #! class or a sibling inner. The outer's bare call to the inner's
-#! imported function is undefined (INSTANCE.md E9).
+#! imported function is undefined (E9).
 
 Class is N27InnerImportLeak{
 	replace Array of Array of String is using: [

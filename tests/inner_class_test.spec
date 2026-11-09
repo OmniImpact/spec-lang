@@ -1,4 +1,4 @@
-#! FUNCTIONS.md Part IV IV.2/IV.3: inner classes inherit their enclosing
+#! Part IV IV.2/IV.3: inner classes inherit their enclosing
 #! class — the members (the parent's methods and fields through the MI
 #! link) and the imports (the outer's as-imports synthesize onto the
 #! inner, so the inherited functions dispatch on the inner). The inner's

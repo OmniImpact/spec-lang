@@ -1,4 +1,4 @@
-#! IV.2c (FUNCTIONS.md Part IV): the qualified nested-class references
+#! IV.2c (Part IV): the qualified nested-class references
 #! across two as-imported providers. Same-named inner classes under
 #! different outers coexist — each qualified reference picks its class,
 #! the C symbols and types stay distinct (LibA_Helper / LibB_Helper).

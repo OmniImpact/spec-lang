@@ -1,4 +1,4 @@
-#! FUNCTIONS.md Part IV V2/V4: the value-yielding branch coverage matrix.
+#! Part IV V2/V4: the value-yielding branch coverage matrix.
 #! Every shape a yield can appear in, plus the use-after-yield ARC
 #! regression (a yielded owned local must stay alive after the branch).
 

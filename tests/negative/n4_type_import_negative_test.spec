@@ -1,4 +1,4 @@
-#! N4: prefix call on a type-imported class, non-init member (INSTANCE.md E5).
+#! N4: prefix call on a type-imported class, non-init member (E5).
 
 Class is N4TypeImport {
 	replace Array of Array of String is using: [

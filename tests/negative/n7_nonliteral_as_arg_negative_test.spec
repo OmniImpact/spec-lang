@@ -1,4 +1,4 @@
-#! N7: non-literal argument in the as-form (INSTANCE.md E1, parser).
+#! N7: non-literal argument in the as-form (E1, parser).
 
 Class is N7NonLiteral {
 	local Int is seed: 3;

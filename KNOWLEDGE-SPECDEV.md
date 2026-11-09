@@ -183,7 +183,67 @@ check, and emit the NEXT generation's sources. Consequences:
 
 ---
 
-## 6. Values and reuse
+## 6. The limits, concurrency contracts, and the falsification ledger
+
+*(Consolidated from FUNCTIONS.md Parts V–VI when the planning docs
+retired, 2026-11.)*
+
+### The falsification ledger (measure, don't assume)
+
+| Lever | Result |
+|---|---|
+| The AST slab (bump-allocated nodes) | FALSIFIED: +112 MB — nodes die incrementally; the slab hoarded them |
+| String interning (tokens) | FALSIFIED: +318 MB, 40% slower — it immortalizes the open vocabulary |
+| String interning (type stamps) | NEUTRAL — kept: the stamps are canonical now |
+| The Expression pointer fusion | ~1% — kept (fewer fields), stages 2–3 cancelled |
+| The Buf accumulators | NEUTRAL — kept: better shaped |
+| The parallel GENERATION | LANDED: gen 1493→811 ms |
+| The parallel LOAD | FALSIFIED: the discovery is inherently serial (the namespace acceptance needs each parse first); the batches lose to spawn overhead |
+
+### The limits table
+
+| Limit | Class | Contract |
+|---|---|---|
+| the lattice walks | — (no limit) | visited SETS, not counts: marked on entry, terminated on revisit |
+| the claim pool | — (no limit) | thread-local STACK, starts at 8, doubles; the SELF-FRAMING claim wrapper releases at the call boundary |
+| `SPEC_INTERN_BUCKETS 4096` | PERF | load factor degrades speed only; rehash when outgrown |
+| Loader scanTree `depth > 32` | GUARD (documented exception) | the symlink-cycle guard: a dir-symlink loop yields a fresh path per visit — no visited set applies. The eventual BUILD SYSTEM deletes this walk |
+| Loader walk-up | BOUNDARY (no count) | climbs while nothing is indexed; terminates at the filesystem root by construction. Also build-system work |
+| `threads > 64` clamp | GUARD | pthread_create budget per call |
+| argv keys | — (fixed) | `spec_string_from_bytes` (sized) — no fixed buffer |
+
+### The concurrency contracts (every parallel stage holds these)
+
+- The claim pool is THREAD-LOCAL: a borrow's validity counts claims on
+  its own thread only.
+- The intern table reads lock-free (append-only atomic chains);
+  insertion takes the mutex with a re-check. Entries are immortal.
+- The AST is READ-ONLY during code generation. No memo writes onto
+  shared AST nodes from workers (`namespaceJoined`'s cache was removed
+  for exactly this).
+- Workers share NOTHING mutable: registries are copied per worker, the
+  per-class results land in pre-sized slots by index, and the merge
+  walks a fixed order. The emission is thread-count-independent — the
+  bootstrap fixed point holds on any machine.
+
+### Deferred and documentation debt
+
+- **docs/ refresh (the last FUNCTIONS.md/INSTANCE.md remainder):**
+  docs/language/README.md (~866 lines) and docs/packages/README.md
+  predate the instance model; STYLE_GUIDE.md/tooling/README.md need the
+  as-import spellings. Content work, do from the code and tests.
+- **E10** (the loop-hoist lint) is LANDED (Linter.spec) — the old
+  checkbox was stale.
+- **Deferred by design:** generic as-imports (`as Box of Int()`);
+  import aliasing (`as X() is alias`); type-differentiated overloads
+  inside generic classes.
+
+**The section-tag legend**: the source comments carry tags like §I.6,
+E10, IV.2c, §as — stable identifiers dating from the design docs
+(FUNCTIONS.md / INSTANCE.md, consolidated here 2026-11). They persist
+as shorthand; the semantics live in the code and its tests.
+
+## 7. Values and reuse
 
 - **Correctness, safety, reliability — in that order.** Speed is
   measured, not assumed: the optimization ledger holds four falsified

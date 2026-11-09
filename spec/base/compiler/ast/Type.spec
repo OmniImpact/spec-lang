@@ -29,7 +29,7 @@ Class is Type{
 
 	## Produces a parameterized generic type descriptor. Self-free
 	## factory: Type is field-ful, so this call never goes through the
-	## elided instance path (INSTANCE.md E2 v1); it constructs explicitly.
+	## elided instance path (E2 v1); it constructs explicitly.
 	##
 	## @param name: Base type name.
 	## @param params: Generic type arguments.

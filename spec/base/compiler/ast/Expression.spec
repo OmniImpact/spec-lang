@@ -32,7 +32,7 @@ Class is Expression{
 
 	## All literal kinds: the literal's text (numbers keep their scanned,
 	## normalized text; strings carry processed content).
-	# FUNCTIONS.md Part V (Path C): the kind-disjoint field groups fuse —
+	# Part V (Path C): the kind-disjoint field groups fuse —
 	# a node is exactly one kind, so the value-string fields share one
 	# slot (IDENT/STRING/PATH text, the CAST target, the BINARY/UNARY
 	# operator) and the scalar fields share another. The CALL's
@@ -69,18 +69,18 @@ Class is Expression{
 	Array of NamedArg is methodArgs: [];
 
 	## CALL: for a bare (self-receiver) call resolved against the bare
-	## scope, the as-imported class providing the member (INSTANCE.md
-	## §2.3); '' when the call is an ordinary own-member dispatch.
+	## scope, the as-imported class providing the member (§2.3); '' when
+	## the call is an ordinary own-member dispatch.
 	String is bareProvider: '';
 
 	## CALL: the scoped-region desugarer appended the remainder as the
-	## last argument (FUNCTIONS.md §as). The remainder never participates
+	## last argument (§as). The remainder never participates
 	## in overload selection — it binds to the selected overload's
 	## declared-but-unbound last Function parameter.
 	Boolean is scopedRemainder: false;
 
 	## CALL: the checker-selected overload's position within the owning
-	## class's same-name member group (FUNCTIONS.md §I.2); -1 when
+	## class's same-name member group (§I.2); -1 when
 	## unstamped (single-member names resolve as index 0).
 
 	## BINARY: the operator and the right operand (the left operand shares

@@ -51,7 +51,7 @@ Class is TypeChecker{
 	## Registered classes: name -> "true".
 	local Map of String to String is registeredClasses: Map:init();
 
-	## FUNCTIONS.md Part IV IV.2c: the per-scope nested-type map — bare
+	## the per-scope nested-type map — bare
 	## nested-class name -> ';'-joined qualified identities visible in
 	## [nestedScopeFor]. Built once per scope (own nested classes, the
 	## as-imported classes' nested classes, the base lattice), cleared and
@@ -94,7 +94,7 @@ Class is TypeChecker{
 
 	## Anonymous-function nesting depth (forwards are top-level only).
 	local Int is anonDepth: 0;
-	# FUNCTIONS.md Part II: inside a Conditional branch-closure argument —
+	# Part II: inside a Conditional branch-closure argument —
 	# its body inlines into the enclosing method, so returns flow to the
 	# method's return type, not the closure's.
 	local Boolean is inBranchClosure: false;
@@ -108,19 +108,19 @@ Class is TypeChecker{
 	## Return type name of the method currently being checked.
 	local String is currentMethodReturnType: '';
 
-	## FUNCTIONS.md Part II: the anon-fn node whose body is being checked
+	## Part II: the anon-fn node whose body is being checked
 	## (the Kotlin write-back target for void-declared closures).
 	local Expression is currentAnonNode: Expression:init(kind: ExpressionKind:UNKNOWN);
 
-	## FUNCTIONS.md Part II: inside a value-yielding branch's then/otherwise
+	## Part II: inside a value-yielding branch's then/otherwise
 	## closure (the call site expects a value).
 	local Boolean is inValueBranch: false;
 
-	## FUNCTIONS.md Part II: checking the last statement of a value-yielding
+	## Part II: checking the last statement of a value-yielding
 	## branch closure — its return establishes the branch's yield type.
 	local Boolean is checkingValueYield: false;
 
-	## FUNCTIONS.md Part II: the expected type of the value-yielding branch
+	## Part II: the expected type of the value-yielding branch
 	## being checked — flows into its yields so nested branch calls type in
 	## context.
 	local String is currentYieldExpected: '';
@@ -211,7 +211,7 @@ Class is TypeChecker{
 		});
 		Conditional:if(check: { t:params:length() == 1 }, then: {
 			local Type is p0: t:params:get(index: 0);
-			# FUNCTIONS.md Part V: the stamp vocabulary repeats — the
+			# the stamp vocabulary repeats — the
 			# interning collapses the retained copies to one object.
 			return Buf:intern(s: baseName . ':' . self:formatTypeString(t: p0));
 		});
@@ -270,7 +270,7 @@ Class is TypeChecker{
 		Conditional:if(check: { s:found }, then: {
 			return s:res;
 		});
-		# FUNCTIONS.md Part IV IV.2c: the qualified nested-class reference —
+		# the qualified nested-class reference —
 		# 'Outer:Inner' resolves the class whose qualified identity matches.
 		Conditional:if(check: { name:contains(needle: ':') }, then: {
 			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);
@@ -325,7 +325,7 @@ Class is TypeChecker{
 		Conditional:if(check: { target == 'Float' && source == Primitive:INT:value() }, then: {
 			return true;
 		});
-		# FUNCTIONS.md Part IV V1: Function assignability is directional. A
+		# Part IV V1: Function assignability is directional. A
 		# typed closure feeds an untyped param (covariance — the callback
 		# idiom); a TYPED param accepts only a closure promising the same
 		# return type. A void or differently-typed closure would read
@@ -404,7 +404,7 @@ Class is TypeChecker{
 		return false;
 	}
 
-	## FUNCTIONS.md Part IV IV.2c: the member-lookup root for a (possibly
+	## the member-lookup root for a (possibly
 	## qualified) receiver type. The qualified nested-class reference
 	## ('Outer:Inner') resolves to the inner class itself; container and
 	## grounded forms ('Array:String', 'Box of Int') resolve no qualified
@@ -593,7 +593,7 @@ Class is TypeChecker{
 		params:each(action: local Function(Parameter is p){
 			local String is pName: p:name;
 			local String is pT: p:paramType:name;
-			# FUNCTIONS.md Part IV V1: a Function-typed param enforces
+			# Part IV V1: a Function-typed param enforces
 			# assignability in the colon form — the raw name would broaden
 			# every Function param to plain Function (the void-into-check
 			# hole).
@@ -641,7 +641,7 @@ Class is TypeChecker{
 		});
 	}
 
-	## FUNCTIONS.md §I.2: resolves one same-name member group to the
+	## §I.2: resolves one same-name member group to the
 	## overload the call selects, stamping expr:num. Candidates
 	## are the same-name METHOD members of the nearest declaring ancestor
 	## (all parents walked, first subtree wins). Stage 1 filters by arity
@@ -664,7 +664,7 @@ Class is TypeChecker{
 		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
-		# FUNCTIONS.md §I.3: no mixed calls — enforced globally, including
+		# §I.3: no mixed calls — enforced globally, including
 		# single-member names. The scoped-region desugaring no longer
 		# produces mixed calls: its remainder binds to the unbound last
 		# Function parameter instead of riding as an argument (§as).
@@ -694,13 +694,13 @@ Class is TypeChecker{
 			});
 		});
 		Conditional:if(check: { !allPos && !allNamed }, then: {
-			self:addError(line: self:currentLine, msg: 'Mixed positional and named arguments are not supported; use one form (FUNCTIONS.md §I.3).');
+			self:addError(line: self:currentLine, msg: 'Mixed positional and named arguments are not supported; use one form (§I.3).');
 			return none;
 		});
 		Conditional:if(check: { group:length() == 1 }, then: {
 			local Member is only: group:get(index: 0);
 			Conditional:if(check: { isScoped && !self:scopeSlotOk(m: only, explicitCount: args:length()) }, then: {
-				self:addError(line: self:currentLine, msg: 'The scoped region requires exactly one unbound Function parameter at the end of \'' . baseName . '.' . methodName . '\' (FUNCTIONS.md §as).');
+				self:addError(line: self:currentLine, msg: 'The scoped region requires exactly one unbound Function parameter at the end of \'' . baseName . '.' . methodName . '\' (§as).');
 				return none;
 			});
 			expr:num: 0;
@@ -735,7 +735,7 @@ Class is TypeChecker{
 			});
 		});
 		local Array of Member is survivors: [];
-		# FUNCTIONS.md §as: a scoped remainder binds to an unbound last
+		# §as: a scoped remainder binds to an unbound last
 		# Function parameter — it never widens the arity. Pass 1: exact
 		# arity on the explicit arguments. Pass 2 (only when pass 1 is
 		# empty and the call is scoped): params == explicit + 1 with the
@@ -798,7 +798,7 @@ Class is TypeChecker{
 		Conditional:if(check: { survivors:length() == 1 }, then: {
 			local Member is sel: survivors:get(index: 0);
 			Conditional:if(check: { isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length()) }, then: {
-				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
+				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (§as).');
 				return none;
 			});
 			expr:num: self:indexOfMember(group: group, m: sel);
@@ -813,7 +813,7 @@ Class is TypeChecker{
 		Conditional:if(check: { exact:length() == 1 }, then: {
 			local Member is sel: exact:get(index: 0);
 			Conditional:if(check: { isScoped && !self:scopeSlotOk(m: sel, explicitCount: args:length()) }, then: {
-				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
+				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (§as).');
 				return none;
 			});
 			expr:num: self:indexOfMember(group: group, m: sel);
@@ -835,7 +835,7 @@ Class is TypeChecker{
 			});
 		});
 		Conditional:if(check: { exact:length() > 1 }, then: {
-			self:addError(line: self:currentLine, msg: 'Ambiguous call to \'' . baseName . '.' . methodName . '\': the arguments match multiple overloads; use named arguments (FUNCTIONS.md §I.2).');
+			self:addError(line: self:currentLine, msg: 'Ambiguous call to \'' . baseName . '.' . methodName . '\': the arguments match multiple overloads; use named arguments (§I.2).');
 			return none;
 		});
 		local String is argTypes: '';
@@ -850,7 +850,7 @@ Class is TypeChecker{
 				argTypes: argTypes . ', ' . at;
 			});
 		});
-		self:addError(line: self:currentLine, msg: 'No exact overload of \'' . baseName . '.' . methodName . '\' for (' . argTypes . '); cast the arguments or give the signatures distinct names (FUNCTIONS.md §I.2).');
+		self:addError(line: self:currentLine, msg: 'No exact overload of \'' . baseName . '.' . methodName . '\' for (' . argTypes . '); cast the arguments or give the signatures distinct names (§I.2).');
 		return none;
 	}
 	## Collects the same-name METHOD members of the nearest declaring
@@ -895,7 +895,7 @@ Class is TypeChecker{
 		});
 	}
 
-	## FUNCTIONS.md §as: true when [m]'s last parameter is the open scope
+	## §as: true when [m]'s last parameter is the open scope
 	## slot — exactly [explicitCount] parameters precede it and the slot is
 	## Function-typed (the remainder is a closure).
 	##
@@ -937,7 +937,7 @@ Class is TypeChecker{
 					found: true;
 				});
 			});
-			# FUNCTIONS.md Part IV V1: a Function-typed param compares in the
+			# Part IV V1: a Function-typed param compares in the
 			# colon form ('Function of Boolean' -> 'Function:Boolean') — the
 			# raw name erases the return type and matches every closure.
 			local String is pT: p:paramType:name;
@@ -1026,7 +1026,7 @@ Class is TypeChecker{
 	}
 	## True when the current class, or any ancestor (all parents,
 	## transitively), instance-imports [className] — as-imports are
-	## inherited like the fields they synthesize (INSTANCE.md §2.1).
+	## inherited like the fields they synthesize (§2.1).
 	##
 	## @param className: Receiver class name.
 	## @return: true when imported somewhere up the chain.
@@ -1062,7 +1062,7 @@ Class is TypeChecker{
 		return viaParent;
 	}
 
-	## FUNCTIONS.md §2.3: collects the as-imported classes providing
+	## §2.3: collects the as-imported classes providing
 	## [methodName] for the bare scope of the current class — own
 	## bindings plus every ancestor's, one level deep. Order-stable
 	## diagnostics; duplicates dropped.
@@ -1118,7 +1118,7 @@ Class is TypeChecker{
 		});
 	}
 
-	## FUNCTIONS.md Part IV IV.2c (phase 3): the per-scope nested-type
+	## Part IV IV.2c (phase 3): the per-scope nested-type
 	## map. Built once for [className] — own nested classes, the
 	## as-imported classes' nested classes, then the base lattice (the
 	## outer link serves the inner-of-inner walk) — so a bare nested
@@ -1342,7 +1342,7 @@ Class is TypeChecker{
 		return viaParent;
 	}
 
-	## FUNCTIONS.md §I.1: validates every class's same-name METHOD groups —
+	## §I.1: validates every class's same-name METHOD groups —
 	## identical signatures are the duplicate error; overload groups must
 	## declare concrete parameter types and must not shadow an inherited
 	## name (the virtual machinery is name-keyed; overloads dispatch
@@ -1397,7 +1397,7 @@ Class is TypeChecker{
 												iteration: local Function of Boolean(){
 													local Member is mb: members:get(index: b);
 													Conditional:if(check: { mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, then: {
-														self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (FUNCTIONS.md §I.1).');
+														self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (§I.1).');
 													});
 													b: b + 1;
 													return true;
@@ -1427,10 +1427,10 @@ Class is TypeChecker{
 									}
 								);
 								Conditional:if(check: { nonConcrete }, then: {
-									self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (FUNCTIONS.md §I.3).');
+									self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
 								});
 								Conditional:if(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name) }, then: {
-									self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (FUNCTIONS.md §I.3).');
+									self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (§I.3).');
 								});
 							});
 						});
@@ -1442,7 +1442,7 @@ Class is TypeChecker{
 		});
 	}
 
-	## FUNCTIONS.md §I.1: signature equality for the legality pass —
+	## §I.1: signature equality for the legality pass —
 	## parameter count, names, and types all equal; type spellings are
 	## canonicalized before comparison.
 	##
@@ -1470,7 +1470,7 @@ Class is TypeChecker{
 		return same;
 	}
 
-	## FUNCTIONS.md §I.6: the import gate. True when [targetName] is
+	## §I.6: the import gate. True when [targetName] is
 	## usable by [className] in type positions and for construction:
 	## the X3 stratum, the class itself, an ancestor, the same source
 	## file, or any using entry of the class or its ancestors (type
@@ -1526,7 +1526,7 @@ Class is TypeChecker{
 										});
 									});
 								});
-								# FUNCTIONS.md Part IV IV.2c: the qualified nested reference
+								# the qualified nested reference
 								# ('Outer:Inner') rides the parent's grant — the terminal
 								# matches the target's root segment. IV.6 strictness: the
 								# as-form grants functions and the qualified nested
@@ -1601,7 +1601,7 @@ Class is TypeChecker{
 								});
 							});
 						});
-						# FUNCTIONS.md Part IV IV.2c: the same root-segment grant for
+						# the same root-segment grant for
 						# the qualified nested reference. IV.6 strictness: the as-form
 						# grants functions and the qualified nested references; the
 						# BARE parent reference (and with it construction) requires
@@ -1631,7 +1631,7 @@ Class is TypeChecker{
 		return viaParent;
 	}
 
-	## FUNCTIONS.md §I.6: gates a declared type — the base name and every
+	## §I.6: gates a declared type — the base name and every
 		## type argument must be accessible from the enclosing class.
 	##
 	## @param t: The declared type.
@@ -1640,7 +1640,7 @@ Class is TypeChecker{
 		Conditional:if(check: { t:name == '' }, then: {
 			return;
 		});
-		# FUNCTIONS.md Part IV IV.2c (phase 3): the bare nested-class
+		# Part IV IV.2c (phase 3): the bare nested-class
 		# reference resolves through the per-scope map — one lookup. Exactly
 		# one provider rewrites the type to its qualified identity (the
 		# parent grant covers it downstream); several collide and force the
@@ -1661,13 +1661,13 @@ Class is TypeChecker{
 							listed: listed . ' and ' . p;
 						});
 					});
-					self:addError(line: line, msg: 'Type \'' . t:name . '\' is provided by ' . listed . '; qualify the reference (FUNCTIONS.md Part IV IV.2c).');
+					self:addError(line: line, msg: 'Type \'' . t:name . '\' is provided by ' . listed . '; qualify the reference (Part IV IV.2c).');
 					return;
 				});
 			});
 		});
 		Conditional:if(check: { self:registeredClasses:has(key: t:name) && !self:classHasAccess(className: self:currentClassName, targetName: t:name) }, then: {
-			self:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration (FUNCTIONS.md §I.6).');
+			self:addError(line: line, msg: '\'' . t:name . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration (§I.6).');
 		});
 		t:params:each(action: local Function(Type is p){
 			self:validateTypeAccess(t: p, line: line);
@@ -1863,7 +1863,7 @@ Class is TypeChecker{
 		local String is res: 'Any';
 
 		Conditional:if(check: { kind == ExpressionKind:USING_AS }, then: {
-			self:addError(line: self:currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (INSTANCE.md E1).');
+			self:addError(line: self:currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (E1).');
 			expr:resolvedType: '';
 			return '';
 		});
@@ -1950,7 +1950,7 @@ Class is TypeChecker{
 								}, else: {
 									Conditional:if(check: { self:registeredClasses:has(key: root) }, then: {
 										rootType: root;
-										# FUNCTIONS.md Part IV IV.2c: the nested-class chain —
+										# the nested-class chain —
 										# 'Outer:Inner' and the inner-of-inner 'Outer:Mid:Deep' —
 										# walks CLASS-kind members per segment and resolves to
 										# the deepest class's qualified identity.
@@ -1985,13 +1985,13 @@ Class is TypeChecker{
 												chainResolved: true;
 											});
 										});
-										# INSTANCE.md §2.3: fields and values are not reachable
+										# §2.3: fields and values are not reachable
 										# through a class-name prefix — methods only. A PATH
 										# rooted at a non-type-level class name with further
 										# segments is a prefixed field access: rejected. The
 										# resolved nested-class chains are exempt.
 										Conditional:if(check: { segs:length() >= 2 && !chainResolved && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
-											self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; call a method on the instance (INSTANCE.md §2.3).');
+											self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; call a method on the instance (§2.3).');
 											rootType: '';
 										});
 									});
@@ -2007,7 +2007,7 @@ Class is TypeChecker{
 				});
 			}
 			is ExpressionKind:BINARY: {
-				# FUNCTIONS.md Part II: the expected type flows into the
+				# Part II: the expected type flows into the
 				# operands so a value-yielding branch call nested in an
 				# expression (e.g. `n + if(...)`) types in context.
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
@@ -2019,7 +2019,7 @@ Class is TypeChecker{
 					}
 					is '==', '!=', 'is', '<', '<=', '>', '>=': {
 						res: Primitive:BOOLEAN:value();
-						# FUNCTIONS.md hardening (D5): relational ordering on
+						# hardening (D5): relational ordering on
 						# String is lexicographic — and only String-to-String.
 						local Boolean is isRel: op == '<' || op == '<=' || op == '>' || op == '>=';
 						local Boolean is leftStr: leftT == 'String';
@@ -2284,14 +2284,14 @@ Class is TypeChecker{
 				local String is savedRet: self:currentMethodReturnType;
 				local Expression is savedAnonNode: self:currentAnonNode;
 				self:currentAnonNode: expr;
-				# FUNCTIONS.md Part II: the yield flag scopes to THIS closure —
+				# Part II: the yield flag scopes to THIS closure —
 				# the enclosing closure's last-statement check must not leak
 				# into nested closures' return typing.
 				local Boolean is savedYieldFlag: self:checkingValueYield;
 				self:checkingValueYield: false;
 
 				Conditional:if(check: { !self:inBranchClosure }, then: {
-					# FUNCTIONS.md Part IV V1: the bidirectional closure typing —
+					# Part IV V1: the bidirectional closure typing —
 					# a closure literal assigned into a `Function of X` context
 					# types its body against X, so its own type comes out
 					# `Function of X` and the narrowed param accepts it.
@@ -2307,7 +2307,7 @@ Class is TypeChecker{
 				local Int is bodyIdx: 0;
 				expr:anonBody:each(action: local Function(Statement is s){
 					self:anonDepth: self:anonDepth + 1;
-					# FUNCTIONS.md Part II: the last statement of a
+					# Part II: the last statement of a
 					# value-yielding branch closure is the branch's yield.
 					Conditional:if(check: { self:inValueBranch && bodyIdx == bodyLen - 1 }, then: {
 						self:checkingValueYield: true;
@@ -2320,7 +2320,7 @@ Class is TypeChecker{
 
 				self:localVars: savedVars;
 				self:currentMethodReturnType: savedRet;
-				# FUNCTIONS.md Part II: the Kotlin convention — the closure
+				# Part II: the Kotlin convention — the closure
 				# body determines the return. Return-site write-backs happened
 				# during the body check (the RETURN arm); here only the
 				# explicit-terminator last-expression form is handled, reading
@@ -2337,7 +2337,7 @@ Class is TypeChecker{
 							});
 						}, else: {
 							Conditional:if(check: { lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, then: {
-								local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\' (FUNCTIONS.md Part II).';
+								local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\' (Part II).';
 								self:addError(line: self:currentLine, msg: msg);
 							});
 						});
@@ -2386,7 +2386,7 @@ Class is TypeChecker{
 			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
 		});
 
-		# INSTANCE.md E5/E7: the call model. A class-name receiver admits
+		# E5/E7: the call model. A class-name receiver admits
 		# only init, unless the enclosing class instance-imports the class
 		# (elided dispatch) or the stratum is type-level by design (enums,
 		# primitives, containers, transparent runtime types). Conversely,
@@ -2403,18 +2403,18 @@ Class is TypeChecker{
 			Conditional:if(check: { !isTypeLevel }, then: {
 				Conditional:if(check: { !self:isAsImportedInherited(className: recvName) }, then: {
 					Conditional:if(check: { recvName == self:currentClassName }, then: {
-						self:addError(line: self:currentLine, msg: 'Cannot call members of \'' . recvName . '\' through the class name inside \'' . recvName . '\' itself; use self (INSTANCE.md §2.2).');
+						self:addError(line: self:currentLine, msg: 'Cannot call members of \'' . recvName . '\' through the class name inside \'' . recvName . '\' itself; use self (§2.2).');
 					}, else: {
-						self:addError(line: self:currentLine, msg: 'Members of \'' . recvName . '\' are callable only through an instance; instance-import it (\'as ' . recvName . '()\') (FUNCTIONS.md §I.6).');
+						self:addError(line: self:currentLine, msg: 'Members of \'' . recvName . '\' are callable only through an instance; instance-import it (\'as ' . recvName . '()\') (§I.6).');
 					});
 				});
 			});
 		});
 		Conditional:if(check: { recvName == '' && expr:methodName == 'init' }, then: {
-			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (INSTANCE.md E7).');
+			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (E7).');
 		});
 
-		# INSTANCE.md §2.3/E9: bare-scope resolution for self-receiver
+		# §2.3/E9: bare-scope resolution for self-receiver
 		# calls. The providers are the enclosing class (own and inherited
 		# members) plus its as-imported classes, one level deep. Exactly
 		# one provider resolves; two or more collide and force
@@ -2436,12 +2436,12 @@ Class is TypeChecker{
 						listed: listed . ' and ' . prov;
 					});
 				});
-				self:addError(line: self:currentLine, msg: 'Function \'' . expr:methodName . '\' is provided by ' . listed . '; qualify the call (' . self:names:selfIdent() . ':' . expr:methodName . ' or the class name) (INSTANCE.md §2.3).');
+				self:addError(line: self:currentLine, msg: 'Function \'' . expr:methodName . '\' is provided by ' . listed . '; qualify the call (' . self:names:selfIdent() . ':' . expr:methodName . ' or the class name) (§2.3).');
 				expr:resolvedType: '';
 				return '';
 			});
 			Conditional:if(check: { providerTotal == 0 }, then: {
-				self:addError(line: self:currentLine, msg: 'Undefined function \'' . expr:methodName . '\' on class \'' . self:currentClassName . '\' (INSTANCE.md E9).');
+				self:addError(line: self:currentLine, msg: 'Undefined function \'' . expr:methodName . '\' on class \'' . self:currentClassName . '\' (E9).');
 				expr:resolvedType: '';
 				return '';
 			});
@@ -2450,12 +2450,12 @@ Class is TypeChecker{
 					# The bare-scope branch runs before arg inference: type the
 					# arguments now so overload selection sees exact types. Branch
 					# closures (args 1+) of a Conditional call keep the enclosing
-					# method's return type (FUNCTIONS.md Part II).
+					# method's return type (Part II).
 					local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
-					# FUNCTIONS.md Part IV: the bare form carries the value-yield
+					# the bare form carries the value-yield
 					# semantics exactly like the qualified call.
 					local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
-					# FUNCTIONS.md II.4: the bare loop constructs — the vars
+					# II.4: the bare loop constructs — the vars
 					# closure's parameters scope over the closure bodies, so
 					# they bind BEFORE the inference and restore after. The
 					# evaluate closure coerces to Boolean pre-inference, the
@@ -2511,7 +2511,7 @@ Class is TypeChecker{
 						});
 					});
 					self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
-					# FUNCTIONS.md Part IV IV.1: the as-import grants FUNCTIONS
+					# Part IV IV.1: the as-import grants FUNCTIONS
 					# ONLY under the callee's visibility — a `local` member of the
 					# imported class is not callable through the import. The same
 					# check the qualified path runs.
@@ -2537,7 +2537,7 @@ Class is TypeChecker{
 					local String is bareThenT: bareThen:anonReturnType:name;
 					local String is bareElseT: bareElse:anonReturnType:name;
 					Conditional:if(check: { self:isVoid(t: bareThenT) || self:isVoid(t: bareElseT) }, then: {
-						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (FUNCTIONS.md Part II).');
+						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (Part II).');
 						res: 'void';
 					}, else: {
 						Conditional:if(check: { !self:isAssignable(target: bareThenT, source: bareElseT) && !self:isAssignable(target: bareElseT, source: bareThenT) }, then: {
@@ -2555,18 +2555,18 @@ Class is TypeChecker{
 				return res;
 			});
 		});
-		# FUNCTIONS.md Part II: is this a Conditional branch call? Branch
+		# Part II: is this a Conditional branch call? Branch
 		# closure bodies (arguments 1+) type-check against the enclosing
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
 		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
-		# FUNCTIONS.md Part II: the value-yielding form — a 3-arg branch
+		# Part II: the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline
 		# literals; their last expressions are the yields.
 		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
-		# FUNCTIONS.md Part II: the value form is structural — BOTH branch
+		# Part II: the value form is structural — BOTH branch
 		# closures must end in a return-expression (the yield). Closures that
 		# end in assignments are statement-style branches even in a
 		# value-typed context; they stay void-routed.
@@ -2588,7 +2588,7 @@ Class is TypeChecker{
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
-		# FUNCTIONS.md II.4: the Loops provider's closure forms share the
+		# II.4: the Loops provider's closure forms share the
 			# loop typing (while/loop/until inline closures; repeat counts).
 			local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
 		local Map of String to String is savedWhileVars;
@@ -2626,7 +2626,7 @@ Class is TypeChecker{
 		});
 
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
-		# FUNCTIONS.md II.4: the loop constructs' closures are callbacks,
+		# II.4: the loop constructs' closures are callbacks,
 		# not branch yields — when the call itself sits inside an
 		# enclosing branch closure, that flag must not leak into them
 		# (their returns type against the closure, not the method).
@@ -2774,13 +2774,13 @@ Class is TypeChecker{
 						res: Primitive:STRING:value();
 					}, else: {
 						Conditional:if(check: { method == 'init' && self:registeredClasses:has(key: targetType) && !self:allEnumNames:has(key: targetType) }, then: {
-							# FUNCTIONS.md §I.2: init overloads are selected and stamped like any member.
+							# §I.2: init overloads are selected and stamped like any member.
 							self:selectOverload(className: targetType, methodName: 'init', expr: expr);
-							# FUNCTIONS.md §I.6: construction requires the import too — the
+							# §I.6: construction requires the import too — the
 							# X3 stratum, the class itself, an ancestor, the same file, or the
 							# class's own using grants it.
 							Conditional:if(check: { !self:classHasAccess(className: self:currentClassName, targetName: targetType:split(delimiter: ':'):get(index: 0)) }, then: {
-								self:addError(line: self:currentLine, msg: '\'' . targetType . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration to construct it (FUNCTIONS.md §I.6).');
+								self:addError(line: self:currentLine, msg: '\'' . targetType . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration to construct it (§I.6).');
 							});
 							res: targetType;
 						}, else: {
@@ -2806,7 +2806,7 @@ Class is TypeChecker{
 								Conditional:if(check: { selected:name != '' }, then: {
 									cRet: self:selectedReturnType(className: targetType, selected: selected);
 								});
-								# FUNCTIONS.md Part IV V3: a LOADED void declaration keeps
+								# Part IV V3: a LOADED void declaration keeps
 								# its void — the fallback below is for UNLOADED classes
 								# only. Resolving a void member as the receiver made
 								# every void call lie about its type.
@@ -2910,7 +2910,7 @@ Class is TypeChecker{
 			});
 		});
 		Conditional:if(check: { isValueBranch }, then: {
-			# FUNCTIONS.md Part II: the value-yielding form — both branch
+			# Part II: the value-yielding form — both branch
 			# closures' established return types must unify. Read from the
 			# nodes (the write-backs happened during the body check); never
 			# re-infer.
@@ -2919,7 +2919,7 @@ Class is TypeChecker{
 			local String is thenT: thenAnon:anonReturnType:name;
 			local String is elseT: elseAnon:anonReturnType:name;
 			Conditional:if(check: { self:isVoid(t: thenT) || self:isVoid(t: elseT) }, then: {
-				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (FUNCTIONS.md Part II).');
+				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (Part II).');
 				res: 'void';
 			}, else: {
 				Conditional:if(check: { !self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT) }, then: {
@@ -3044,7 +3044,7 @@ Class is TypeChecker{
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr, expected: fullType);
 					Conditional:if(check: { !self:isAssignable(target: fullType, source: initType) }, then: {
 						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
-						# FUNCTIONS.md Part IV V3: a void expression consumed as a
+						# Part IV V3: a void expression consumed as a
 						# value explains itself instead of cascading into the
 						# generic mismatch.
 						Conditional:if(check: { self:isVoid(t: initType) }, then: {
@@ -3072,7 +3072,7 @@ Class is TypeChecker{
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
 					Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
 						local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
-						# FUNCTIONS.md Part IV V3: the same for assignments.
+						# Part IV V3: the same for assignments.
 						Conditional:if(check: { self:isVoid(t: valType) }, then: {
 							local String is note: self:voidUseNote(expr: stmt:assignValue);
 							Conditional:if(check: { note != '' }, then: {
@@ -3108,7 +3108,7 @@ Class is TypeChecker{
 						yieldExpected: self:currentYieldExpected;
 					});
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: yieldExpected);
-					# FUNCTIONS.md Part II: the last statement of a
+					# Part II: the last statement of a
 					# value-yielding branch closure establishes the branch's
 					# yield type (the inBranchClosure method-routing does not
 					# apply to it).
@@ -3174,7 +3174,7 @@ Class is TypeChecker{
 		}
 	}
 
-	## FUNCTIONS.md Part IV V5: the diagnostic display form of a type
+	## Part IV V5: the diagnostic display form of a type
 	## name — the internal colon form ('Function:Boolean') renders the way
 	## the language spells it ('Function of Boolean').
 	##
@@ -3201,7 +3201,7 @@ Class is TypeChecker{
 		return out;
 	}
 
-	## FUNCTIONS.md Part IV V3: the void-in-value-context hint. Describes
+	## Part IV V3: the void-in-value-context hint. Describes
 	## WHY an expression computes no value, derived from the CALLEE'S
 	## DECLARATION — the function's name, its void return, and how many of
 	## its declared parameters the call binds. No per-class special cases:
@@ -3231,14 +3231,14 @@ Class is TypeChecker{
 			return '';
 		});
 		local String is note: '\'' . targetT . '.' . expr:methodName . '\' declares no return value';
-		# FUNCTIONS.md Part IV V3: a partially-bound void call — the
+		# Part IV V3: a partially-bound void call — the
 		# unbound parameters' effects are absent. The arity gap is the
 		# general signal (a 2-arg conditional's missing else is one case
 		# of it, not a special one).
 		Conditional:if(check: { expr:argCount() < m:params:length() }, then: {
 			note: note . ' (' . (expr:argCount() as String) . ' of ' . (m:params:length() as String) . ' declared parameters bound)';
 		});
-		# FUNCTIONS.md Part IV V3: a sibling overload binding MORE parameters
+		# Part IV V3: a sibling overload binding MORE parameters
 		# is the general signal that this call's effects are incomplete — a
 		# 2-arg conditional's missing else is one case of it, not a special
 		# one. Name the sibling's parameters so the user sees what to add.
@@ -3380,7 +3380,7 @@ Class is TypeChecker{
 		self:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
 		Conditional:if(check: { mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name) }, then: {
-			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (FUNCTIONS.md §I.3).');
+			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (§I.3).');
 		});
 		Conditional:if(check: { self:currentMethodIsMerge && mergeTarget:name == '' }, then: {
 			self:addError(line: method:line, msg: 'Method \'' . method:name . '\' in class \'' . self:currentClassName . '\' declares \'merge\' but no parent declares a method with that name.');
@@ -3748,7 +3748,7 @@ Class is TypeChecker{
 									});
 									return;
 								});
-								# FUNCTIONS.md Part IV IV.2: constructors are per-class —
+								# constructors are per-class —
 								# they are not polymorphic. An init never enters the
 								# ancestor signature/return compatibility checks at all
 								# (inner classes inherit their enclosing class, whose
@@ -3874,7 +3874,7 @@ Class is TypeChecker{
 					# are loader directives, not checked code: their
 					# initializers may reference classes the using itself
 					# loads, so type validation is skipped. The as-import's
-					# synthesized hidden field (_import_X, INSTANCE.md §10) is
+					# synthesized hidden field (_import_X, §10) is
 					# the as-form's own materialization — its type reference
 					# rides the as-form, not the plain type import.
 					Conditional:if(check: { !m:name:startsWith(prefix: '_import_') }, then: {
@@ -3978,11 +3978,11 @@ Class is TypeChecker{
 
 
 	## Validates one class's instance imports (as-form using entries,
-	## INSTANCE.md §2.1): the target must be a loaded non-enum class, and
+	## §2.1): the target must be a loaded non-enum class, and
 	## v1 restricts the form to field-less classes with no constructor
 	## arguments — the elided dispatch covers the whole known migration
 	## surface; the synthetic-field form is deferred. At most one import
-	## per class name (INSTANCE.md E2, E3).
+	## per class name (E2, E3).
 	##
 	## @param classDef: Class definition.
 	Function is checkInstanceImports(ClassInfo is classDef){
@@ -4006,7 +4006,7 @@ Class is TypeChecker{
 				});
 				local String is asName: asExpr:str;
 				Conditional:if(check: { seen:has(key: asName) }, then: {
-					self:addError(line: m:line, msg: 'Class \'' . classDef:name . '\' instance-imports \'' . asName . '\' more than once (INSTANCE.md E3).');
+					self:addError(line: m:line, msg: 'Class \'' . classDef:name . '\' instance-imports \'' . asName . '\' more than once (E3).');
 					return;
 				});
 				seen:set(key: asName, value: 'true');
@@ -4015,11 +4015,11 @@ Class is TypeChecker{
 					return;
 				});
 				Conditional:if(check: { target:baseClass == self:names:enumHeader() }, then: {
-					self:addError(line: m:line, msg: 'Cannot instance-import enum \'' . asName . '\'; enums are type-level (INSTANCE.md E2).');
+					self:addError(line: m:line, msg: 'Cannot instance-import enum \'' . asName . '\'; enums are type-level (E2).');
 					return;
 				});
 					Conditional:if(check: { target:typeParams:length() > 0 }, then: {
-						self:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (INSTANCE.md §10).');
+						self:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (§10).');
 						return;
 					});
 			});
@@ -4048,7 +4048,7 @@ Class is TypeChecker{
 		return out;
 	}
 
-	## Verifies the instance-import graph is a DAG (INSTANCE.md E4):
+	## Verifies the instance-import graph is a DAG (E4):
 	## A importing as B and B importing as A would recurse construction
 	## forever at first init. DFS with gray/black coloring.
 	Function is checkInstanceImportGraph(){
@@ -4069,7 +4069,7 @@ Class is TypeChecker{
 			return;
 		});
 		Conditional:if(check: { state == 'g' }, then: {
-			self:addError(line: 0, msg: 'Instance import cycle: ' . path . c:name . ' (INSTANCE.md E4); construction would recurse forever.');
+			self:addError(line: 0, msg: 'Instance import cycle: ' . path . c:name . ' (E4); construction would recurse forever.');
 			return;
 		});
 		color:set(key: c:name, value: 'g');
@@ -4089,7 +4089,7 @@ Class is TypeChecker{
 		program:classes:each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattened);
 		});
-		# FUNCTIONS.md Part IV IV.2c (phase 3): the same-named inner classes
+		# Part IV IV.2c (phase 3): the same-named inner classes
 		# under DIFFERENT enclosing classes are distinct by qualified
 		# identity — the ambiguity moves to the reference (the provider
 		# walk names the providers). The duplicate WITHIN one outer stays
@@ -4098,7 +4098,7 @@ Class is TypeChecker{
 		flattened:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { c:outerName != '' }, then: {
 				Conditional:if(check: { innerSeen:has(key: c:qualifiedName()) }, then: {
-					local String is msg: 'Inner class \'' . c:qualifiedName() . '\' is declared more than once in \'' . c:outerName . '\'; rename one (FUNCTIONS.md Part IV IV.2c).';
+					local String is msg: 'Inner class \'' . c:qualifiedName() . '\' is declared more than once in \'' . c:outerName . '\'; rename one (Part IV IV.2c).';
 					self:addError(line: c:line, msg: msg);
 				}, else: {
 					innerSeen:set(key: c:qualifiedName(), value: c:outerName);
@@ -4122,7 +4122,7 @@ Class is TypeChecker{
 		});
 		flattened:each(action: local Function(ClassInfo is c){
 			self:registeredClasses:set(key: c:name, value: c:name);
-			# FUNCTIONS.md Part IV IV.2c: the nested classes register under
+			# the nested classes register under
 			# their qualified identity too — 'Outer:Inner' resolves in the
 			# constructor and static-call paths.
 			Conditional:if(check: { c:outerName != '' }, then: {
@@ -4143,13 +4143,13 @@ Class is TypeChecker{
 			});
 		});
 
-		# INSTANCE.md E2/E3: validate as-form instance imports per class.
+		# E2/E3: validate as-form instance imports per class.
 		flattened:each(action: local Function(ClassInfo is c){
 			self:checkInstanceImports(classDef: c);
 		});
-		# INSTANCE.md E4: the instance-import graph must be a DAG.
+		# E4: the instance-import graph must be a DAG.
 		self:checkInstanceImportGraph();
-		# FUNCTIONS.md §I.1: overload legality across all classes.
+		# §I.1: overload legality across all classes.
 		self:checkOverloadLegality();
 
 		# Pass 1: Inheritance contract validation & type propagation

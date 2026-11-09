@@ -1,4 +1,4 @@
-#! N28 (FUNCTIONS.md Part IV IV.6): construction requires the plain
+#! N28 (Part IV IV.6): construction requires the plain
 #! type-import form. The as-form grants functions, instance dispatch,
 #! and the qualified nested-type references — never the bare parent
 #! type reference, and with it never the construction.

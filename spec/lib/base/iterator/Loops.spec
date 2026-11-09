@@ -1,7 +1,7 @@
 #! Package base:iterator
 #! Decoupled, stateful iteration abstractions and execution runners.
 
-## The control-flow provider (FUNCTIONS.md §II.4): one as-import serves
+## The control-flow provider (§II.4): one as-import serves
 ## the loop constructs bare — `Loops:loop(evaluate:, iteration:)` mirrors
 ## `Conditional`'s `if(...)`. Runtime-managed: every method is
 ## intercepted by the generator — [while]/[loop] inline their closures

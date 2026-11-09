@@ -1,5 +1,5 @@
 #! N16: a parent's overloaded method cannot be replaced — the virtual
-#! machinery is name-keyed (FUNCTIONS.md §I.3).
+#! machinery is name-keyed (§I.3).
 
 Class is N16Parent {
 	Function of Int is f(Int is v){

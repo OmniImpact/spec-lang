@@ -1,4 +1,4 @@
-#! N20 (FUNCTIONS.md Part II): the two yields of a value-yielding branch
+#! N20 (Part II): the two yields of a value-yielding branch
 #! must unify. String and Int cannot both be the branch's value.
 
 Class is N20ValueBranchMismatch{

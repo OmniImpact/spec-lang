@@ -70,7 +70,7 @@ Class is CBackendUtils{
 	## @param name: Spec identifier.
 	## @return: C-compatible identifier.
 	Function of String is cIdent(String is name){
-		# FUNCTIONS.md Part IV IV.2c: the qualified class names
+		# the qualified class names
 		# ('Outer:Helper') map the nesting separator to the C underscore.
 		Conditional:if(check: { name:contains(needle: ':') }, then: {
 			return self:cIdent(name: name:replaceAll(search: ':', replacement: '_'));

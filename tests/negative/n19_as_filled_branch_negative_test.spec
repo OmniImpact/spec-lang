@@ -1,6 +1,6 @@
 #! N19: a scoped region on a Conditional whose parameters are already
 #! bound has no open scope slot — the remainder would silently become
-#! the else branch (FUNCTIONS.md §as).
+#! the else branch (§as).
 
 Class is N19AsFilledBranch {
 	replace Array of Array of String is using: [
