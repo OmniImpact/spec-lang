@@ -88,7 +88,9 @@
         <DetectChar attribute="Comment" context="Comment" char="#"/>
 
         <!-- Strings: "text", 'raw', '''heredoc''', `template` -->
-        <Detect2Chars attribute="String" context="HeredocString" char="&apos;" char1="&apos;" char2="&apos;" />
+        <!-- The ''' heredoc must match BEFORE the plain quote: '' is the
+             valid empty-string literal, not a heredoc opener. -->
+        <Detect3Chars attribute="String" context="HeredocString" char="&apos;" char1="&apos;" char2="&apos;"/>
         <DetectChar attribute="String" context="DoubleQuoteString" char="&quot;"/>
         <DetectChar attribute="String" context="TemplateString" char="`"/>
         <DetectChar attribute="String" context="SingleQuoteString" char="'"/>
