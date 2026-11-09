@@ -298,8 +298,9 @@ Class is BuiltinCallGenerator{
 			return 'spec_string_from_char_code(' . codeC . ')';
 		});
 
-		# While:run / While:condition — the loop runners.
-		Conditional:if(check: { targetC == 'While' && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
+		# The loop runners — While (the legacy spelling, bridged) and
+		# Loops (FUNCTIONS.md §II.4: the control-flow provider).
+		Conditional:if(check: { (targetC == 'While' || targetC == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
 			local Expression is loopVal: self:argValue(expr: expr, index: 0);
 			local String is loopC: cg:generateExpressionInner(expr: loopVal);
 			local String is loopClass: cg:inferTargetType(expr: loopVal);
@@ -324,7 +325,7 @@ Class is BuiltinCallGenerator{
 			});
 			return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
 		});
-		Conditional:if(check: { targetC == 'While' && (expr:methodName == 'condition' || expr:methodName == 'loop' || expr:methodName == 'init') }, then: {
+		Conditional:if(check: { (targetC == 'While' || targetC == 'Loops') && (expr:methodName == 'condition' || expr:methodName == 'loop' || expr:methodName == 'init') }, then: {
 			local Expression is varsExpr;
 			local Expression is evalExpr;
 			local Expression is iterExpr;

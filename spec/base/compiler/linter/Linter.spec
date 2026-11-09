@@ -271,7 +271,7 @@ Class is Linter{
 				});
 			});
 		});
-		return name == 'While' || name == 'Loop';
+		return name == 'While' || name == 'Loops' || name == 'Loop';
 	}
 
 	## True when [target] spells an UpperCamel (class-like) receiver —

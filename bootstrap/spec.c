@@ -62577,7 +62577,7 @@ void TypeChecker_checkCallArguments(TypeChecker* self, Expression* callExpr) {
 	};
     parts = (SpecArray*)((String_split(targetType, spec_string_intern(":"))));
     baseClassName = spec_construct_string(spec_array_get(parts, 0));
-    if (((((spec_string_equals(baseClassName, spec_string_intern(""))) || (spec_string_equals(baseClassName, Primitive_value(Primitive_ANY))))) || (spec_string_equals(baseClassName, spec_string_intern("While"))))) {
+    if (((((((spec_string_equals(baseClassName, spec_string_intern(""))) || (spec_string_equals(baseClassName, Primitive_value(Primitive_ANY))))) || (spec_string_equals(baseClassName, spec_string_intern("While"))))) || (spec_string_equals(baseClassName, spec_string_intern("Loops"))))) {
 	    goto _cleanup_292;
 	};
     m = (Member*)((TypeChecker_lookupOverloadedMember(self, TypeChecker_memberLookupRoot(self, targetType) /* inst:TypeChecker:memberLookupRoot */, callExpr->methodName, callExpr->overloadIndex) /* inst:TypeChecker:lookupOverloadedMember */));
@@ -64892,7 +64892,7 @@ _br_352; })));
     long long argIdx = 0;
     bool savedBranchFlag = self->inBranchClosure;
     self->inBranchClosure = false;
-    bool isWhileLoop = ((((spec_string_equals(targetType, spec_string_intern("While"))) || (spec_string_equals(targetName, spec_string_intern("While"))))) && (((((spec_string_equals(method, spec_string_intern("loop"))) || (spec_string_equals(method, spec_string_intern("init"))))) || (spec_string_equals(method, spec_string_intern("condition"))))));
+    bool isWhileLoop = ((((((((spec_string_equals(targetType, spec_string_intern("While"))) || (spec_string_equals(targetName, spec_string_intern("While"))))) || (spec_string_equals(targetType, spec_string_intern("Loops"))))) || (spec_string_equals(targetName, spec_string_intern("Loops"))))) && (((((((spec_string_equals(method, spec_string_intern("loop"))) || (spec_string_equals(method, spec_string_intern("init"))))) || (spec_string_equals(method, spec_string_intern("condition"))))) || (spec_string_equals(method, spec_string_intern("while"))))));
     savedWhileVars = spec_map_new_object();
     if (isWhileLoop) {
 	    spec_assign((void**)&savedWhileVars, (void*)(spec_map_new()));
@@ -66712,7 +66712,7 @@ SpecArray* TypeChecker_checkProgram(TypeChecker* self, ProgramNode* program) {
     spec_assign((void**)&self->allEnumNames, (void*)(spec_map_new()));
     spec_assign((void**)&self->allEnumVariants, (void*)(spec_map_new()));
     spec_assign((void**)&self->allStringBackedEnums, (void*)(spec_map_new()));
-    builtinNames = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Array"))); spec_array_add(_arr, (void*)(spec_string_intern("Map"))); spec_array_add(_arr, (void*)(spec_string_intern("List"))); spec_array_add(_arr, (void*)(spec_string_intern("String"))); spec_array_add(_arr, (void*)(spec_string_intern("Function"))); spec_array_add(_arr, (void*)(spec_string_intern("LoopControl"))); spec_array_add(_arr, (void*)(spec_string_intern("Output"))); spec_array_add(_arr, (void*)(spec_string_intern("Error"))); spec_array_add(_arr, (void*)(spec_string_intern("Math"))); spec_array_add(_arr, (void*)(spec_string_intern("Process"))); spec_array_add(_arr, (void*)(spec_string_intern("File"))); spec_array_add(_arr, (void*)(spec_string_intern("Input"))); spec_array_add(_arr, (void*)(spec_string_intern("Ansi"))); spec_array_add(_arr, (void*)(spec_string_intern("Parallel"))); spec_array_add(_arr, (void*)(spec_string_intern("While"))); spec_array_add(_arr, (void*)(spec_string_intern("Loop"))); spec_array_add(_arr, (void*)(spec_string_intern("LoopCallback"))); spec_array_add(_arr, (void*)(spec_string_intern("InputHandler"))); _arr; })));
+    builtinNames = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("Array"))); spec_array_add(_arr, (void*)(spec_string_intern("Map"))); spec_array_add(_arr, (void*)(spec_string_intern("List"))); spec_array_add(_arr, (void*)(spec_string_intern("String"))); spec_array_add(_arr, (void*)(spec_string_intern("Function"))); spec_array_add(_arr, (void*)(spec_string_intern("LoopControl"))); spec_array_add(_arr, (void*)(spec_string_intern("Output"))); spec_array_add(_arr, (void*)(spec_string_intern("Error"))); spec_array_add(_arr, (void*)(spec_string_intern("Math"))); spec_array_add(_arr, (void*)(spec_string_intern("Process"))); spec_array_add(_arr, (void*)(spec_string_intern("File"))); spec_array_add(_arr, (void*)(spec_string_intern("Input"))); spec_array_add(_arr, (void*)(spec_string_intern("Ansi"))); spec_array_add(_arr, (void*)(spec_string_intern("Parallel"))); spec_array_add(_arr, (void*)(spec_string_intern("While"))); spec_array_add(_arr, (void*)(spec_string_intern("Loops"))); spec_array_add(_arr, (void*)(spec_string_intern("Loop"))); spec_array_add(_arr, (void*)(spec_string_intern("LoopCallback"))); spec_array_add(_arr, (void*)(spec_string_intern("InputHandler"))); _arr; })));
     ({ SpecArray* _a_586 = builtinNames; if (_a_586) { for (size_t _i_586 = 0; _i_586 < _a_586->length; _i_586++) {
         String bn = (String)(intptr_t)_a_586->items[_i_586];
         do {
@@ -66787,7 +66787,7 @@ bool ClassBindings_isTransparent(ClassBindings* self, ClassInfo* c) {
     goto _cleanup_349;
 	};
     name = spec_construct_string(c->name);
-    _mret_349 = ((((((((((((((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("LoopControl"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Output"))))) || (spec_string_equals(name, spec_string_intern("Input"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("While"))))) || (spec_string_equals(name, spec_string_intern("Loop"))))) || (spec_string_equals(name, spec_string_intern("LoopCallback"))))) || (spec_string_equals(name, spec_string_intern("InputHandler"))))) || (spec_string_equals(name, spec_string_intern("Parallel"))))) || (spec_string_equals(name, spec_string_intern("List"))))) || (spec_string_equals(name, spec_string_intern("String"))));
+    _mret_349 = ((((((((((((((((((((((((((((((spec_string_equals(name, spec_string_intern("Array"))) || (spec_string_equals(name, spec_string_intern("Map"))))) || (spec_string_equals(name, spec_string_intern("File"))))) || (spec_string_equals(name, spec_string_intern("LoopControl"))))) || (spec_string_equals(name, spec_string_intern("Process"))))) || (spec_string_equals(name, spec_string_intern("Output"))))) || (spec_string_equals(name, spec_string_intern("Input"))))) || (spec_string_equals(name, spec_string_intern("Math"))))) || (spec_string_equals(name, spec_string_intern("While"))))) || (spec_string_equals(name, spec_string_intern("Loops"))))) || (spec_string_equals(name, spec_string_intern("Loop"))))) || (spec_string_equals(name, spec_string_intern("LoopCallback"))))) || (spec_string_equals(name, spec_string_intern("InputHandler"))))) || (spec_string_equals(name, spec_string_intern("Parallel"))))) || (spec_string_equals(name, spec_string_intern("List"))))) || (spec_string_equals(name, spec_string_intern("String"))));
     goto _cleanup_349;
     _cleanup_349: ;
     if (name) { spec_release((void*)name); name = NULL; }
@@ -67357,7 +67357,7 @@ bool Linter_isLoopSpell(Linter* self, Expression* target) {
     if (segs) { spec_release((void*)segs); segs = NULL; }
 	};
 	};
-    _mret_376 = ((spec_string_equals(name, spec_string_intern("While"))) || (spec_string_equals(name, spec_string_intern("Loop"))));
+    _mret_376 = ((((spec_string_equals(name, spec_string_intern("While"))) || (spec_string_equals(name, spec_string_intern("Loops"))))) || (spec_string_equals(name, spec_string_intern("Loop"))));
     goto _cleanup_376;
     _cleanup_376: ;
     if (name) { spec_release((void*)name); name = NULL; }
@@ -75056,7 +75056,7 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     if (codeArg) { spec_release((void*)codeArg); codeArg = NULL; }
     if (codeC) { spec_release((void*)codeC); codeC = NULL; }
 	};
-    if (((((spec_string_equals(targetC, spec_string_intern("While"))) && (spec_string_equals(expr->methodName, spec_string_intern("run"))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) > (0))))) {
+    if (((((((spec_string_equals(targetC, spec_string_intern("While"))) || (spec_string_equals(targetC, spec_string_intern("Loops"))))) && (spec_string_equals(expr->methodName, spec_string_intern("run"))))) && (((Expression_argCount(expr) /* inst:Expression:argCount */) > (0))))) {
 	    SPEC_AUTO Expression* loopVal = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[41]))((BuiltinCallGenerator*)self, expr, 0)));
 	    SPEC_AUTO String loopC = CodeGenerator_generateExpressionInner(cg, loopVal) /* inst:CodeGenerator:generateExpressionInner */;
 	    SPEC_AUTO String loopClass = CodeGenerator_inferTargetType(cg, loopVal) /* inst:CodeGenerator:inferTargetType */;
@@ -75088,7 +75088,7 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
     if (ctrlC) { spec_release((void*)ctrlC); ctrlC = NULL; }
     if (freeLoopC) { spec_release((void*)freeLoopC); freeLoopC = NULL; }
 	};
-    if (((spec_string_equals(targetC, spec_string_intern("While"))) && (((((spec_string_equals(expr->methodName, spec_string_intern("condition"))) || (spec_string_equals(expr->methodName, spec_string_intern("loop"))))) || (spec_string_equals(expr->methodName, spec_string_intern("init"))))))) {
+    if (((((spec_string_equals(targetC, spec_string_intern("While"))) || (spec_string_equals(targetC, spec_string_intern("Loops"))))) && (((((spec_string_equals(expr->methodName, spec_string_intern("condition"))) || (spec_string_equals(expr->methodName, spec_string_intern("loop"))))) || (spec_string_equals(expr->methodName, spec_string_intern("init"))))))) {
 	    SPEC_AUTO Expression* varsExpr = 0;
 	    SPEC_AUTO Expression* evalExpr = 0;
 	    SPEC_AUTO Expression* iterExpr = 0;

@@ -51,7 +51,7 @@ Class is ClassBindings{
 		# bodies (only the terminal metrics bind to the ioctl floor).
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
-			name == 'While' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
+			name == 'While' || name == 'Loops' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
 			name == 'Parallel' ||
 			name == 'List' || name == 'String';
 	}

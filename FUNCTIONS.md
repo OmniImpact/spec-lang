@@ -640,6 +640,30 @@ pre-check, bootstrap, commit), the full gates green before the next.
 
 ---
 
+## Part V — Memory discipline (planned: the AST slab)
+
+The compiler's self-compile peaked at ~960 MB; the ARC flip and the
+cleanup funnel brought it to ~796 MB. The remaining floor is the AST
+itself: ~73 live objects per source line, ~250 bytes per Expression
+node (25 flat fields — most nodes use 3–5), each with a 24-byte
+allocation header.
+
+**The next lever: slab-allocated AST nodes.** The AST's lifetime is
+exactly the compilation — it dies after code generation — so its nodes
+are the ideal tenants of a wholesale-drain slab (the per-scope
+principle at node scale): bump-allocate Expression/Statement/Token
+bodies from big blocks, drop the per-node header entirely, drain the
+slab between the driver's stages. The refcounts become annotations
+(slabs free wholesale); the ARC discipline keeps governing the
+RETAINED graph (ClassInfo trees outlive parse). Sequencing sketch:
+slab Token + Expression first (the highest count, the shortest
+lifetime), measure, then Statement; the checker/gen structures stay
+ARC. The risk is aliasing — anything that escapes the slab (an AST
+node retained into a compiler-phase cache) must move to ARC; the
+sanitized suite is the gate.
+
+---
+
 ## Verification discipline
 
 Gates at every step: `bash utilities/run_tests.sh`,

@@ -573,7 +573,7 @@ Class is TypeChecker{
 		});
 		local Array of String is parts: targetType:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
-		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While' }, then: {
+		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'While' || baseClassName == 'Loops' }, then: {
 			return;
 		});
 		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:overloadIndex);
@@ -2521,7 +2521,9 @@ Class is TypeChecker{
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
-		local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While') && (method == 'loop' || method == 'init' || method == 'condition');
+		# FUNCTIONS.md II.4: While (the legacy spelling, bridged) and Loops
+			# (the control-flow provider) share the closure-form typing.
+			local Boolean is isWhileLoop: (targetType == 'While' || targetName == 'While' || targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'condition' || method == 'while');
 		local Map of String to String is savedWhileVars;
 		Conditional:if(check: { isWhileLoop }, then: {
 			savedWhileVars: Map:init();
@@ -4029,7 +4031,7 @@ Class is TypeChecker{
 		# work with or without an import (the container branches
 		# were unconditional). When the declaration is loaded its real
 		# signatures apply; when not, calls resolve to the container type.
-		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'While', 'Loop', 'LoopCallback', 'InputHandler'];
+		local Array of String is builtinNames: ['Array', 'Map', 'List', 'String', 'Function', 'LoopControl', 'Output', 'Error', 'Math', 'Process', 'File', 'Input', 'Ansi', 'Parallel', 'While', 'Loops', 'Loop', 'LoopCallback', 'InputHandler'];
 		builtinNames:each(action: local Function(String is bn){
 			self:registeredClasses:set(key: bn, value: bn);
 		});
