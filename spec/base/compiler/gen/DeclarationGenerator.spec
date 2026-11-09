@@ -11,6 +11,7 @@ Class is DeclarationGenerator{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Primitive],
@@ -204,43 +205,43 @@ Class is DeclarationGenerator{
 					});
 				});
 				Conditional:if(check: { self:allTaggedEnums:has(key: name) }, then: {
-					out: out . "typedef enum {\n";
+					Buf:bufAppendBuf(dst: out, src: "typedef enum {\n");
 					local Int is tIdx: 0;
 					variants:each(action: local Function(Member is m){
-						out: out . '    ' . name . '_TAG_' . self:utils:cIdent(name: m:name) . ' = ' . tIdx . ",\n";
+						Buf:bufAppendBuf(dst: out, src: '    ' . name . '_TAG_' . self:utils:cIdent(name: m:name) . ' = ' . tIdx . ",\n");
 						tIdx: tIdx + 1;
 					});
-					out: out . '} ' . name . "_Tag;\n";
-					out: out . 'typedef struct ' . name . ' ' . name . ";\n\n";
+					Buf:bufAppendBuf(dst: out, src: '} ' . name . "_Tag;\n");
+					Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . name . ' ' . name . ";\n\n");
 				}, else: {
-					out: out . "typedef enum {\n";
+					Buf:bufAppendBuf(dst: out, src: "typedef enum {\n");
 					local Int is idx: 0;
 					variants:each(action: local Function(Member is m){
-						out: out . '    ' . name . '_' . self:utils:cIdent(name: m:name) . ' = ' . idx . ",\n";
+						Buf:bufAppendBuf(dst: out, src: '    ' . name . '_' . self:utils:cIdent(name: m:name) . ' = ' . idx . ",\n");
 						idx: idx + 1;
 					});
-					out: out . '} ' . name . ";\n\n";
+					Buf:bufAppendBuf(dst: out, src: '} ' . name . ";\n\n");
 
-					out: out . 'static __attribute__((unused)) const char* ' . name . "_names[] = {\n";
+					Buf:bufAppendBuf(dst: out, src: 'static __attribute__((unused)) const char* ' . name . "_names[] = {\n");
 					variants:each(action: local Function(Member is m){
-						out: out . '    "' . m:name . "\",\n";
+						Buf:bufAppendBuf(dst: out, src: '    "' . m:name . "\",\n");
 					});
-					out: out . "};\n\n";
+					Buf:bufAppendBuf(dst: out, src: "};\n\n");
 
-					out: out . 'static const ' . name . ' ' . name . "_all_values[] = {\n";
+					Buf:bufAppendBuf(dst: out, src: 'static const ' . name . ' ' . name . "_all_values[] = {\n");
 					variants:each(action: local Function(Member is m){
-						out: out . '    ' . name . '_' . self:utils:cIdent(name: m:name) . ",\n";
+						Buf:bufAppendBuf(dst: out, src: '    ' . name . '_' . self:utils:cIdent(name: m:name) . ",\n");
 					});
-					out: out . "};\n\n";
+					Buf:bufAppendBuf(dst: out, src: "};\n\n");
 
-					out: out . 'static inline String ' . name . '_name(' . name . " self) {\n";
-					out: out . "    (void)self;\n";
-					out: out . "    switch (self) {\n";
+					Buf:bufAppendBuf(dst: out, src: 'static inline String ' . name . '_name(' . name . " self) {\n");
+					Buf:bufAppendBuf(dst: out, src: "    (void)self;\n");
+					Buf:bufAppendBuf(dst: out, src: "    switch (self) {\n");
 					variants:each(action: local Function(Member is m){
-						out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . m:name . '");' . "\n";
+						Buf:bufAppendBuf(dst: out, src: '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . m:name . '");' . "\n");
 					});
-					out: out . "        default: return spec_string_intern(\"UNKNOWN\");\n";
-					out: out . "    }\n}\n\n";
+					Buf:bufAppendBuf(dst: out, src: "        default: return spec_string_intern(\"UNKNOWN\");\n");
+					Buf:bufAppendBuf(dst: out, src: "    }\n}\n\n");
 
 					local Boolean is isStrBacked: false;
 					variants:each(action: local Function(Member is m){
@@ -250,27 +251,27 @@ Class is DeclarationGenerator{
 					});
 
 					Conditional:if(check: { isStrBacked }, then: {
-						out: out . self:emitStringBacking(name: name, cls: c);
+						Buf:bufAppendBuf(dst: out, src: self:emitStringBacking(name: name, cls: c));
 					}, else: {
-						out: out . self:emitIntBacking(name: name, cls: c);
+						Buf:bufAppendBuf(dst: out, src: self:emitIntBacking(name: name, cls: c));
 					});
 
-					out: out . 'static inline long long ' . name . '_ordinal(' . name . " self) {\n";
-					out: out . "    (void)self;\n";
-					out: out . "    switch (self) {\n";
+					Buf:bufAppendBuf(dst: out, src: 'static inline long long ' . name . '_ordinal(' . name . " self) {\n");
+					Buf:bufAppendBuf(dst: out, src: "    (void)self;\n");
+					Buf:bufAppendBuf(dst: out, src: "    switch (self) {\n");
 					local Int is ordIdx: 0;
 					variants:each(action: local Function(Member is m){
-						out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return ' . ordIdx . ";\n";
+						Buf:bufAppendBuf(dst: out, src: '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return ' . ordIdx . ";\n");
 						ordIdx: ordIdx + 1;
 					});
-					out: out . "        default: return -1;\n";
-					out: out . "    }\n}\n\n";
+					Buf:bufAppendBuf(dst: out, src: "        default: return -1;\n");
+					Buf:bufAppendBuf(dst: out, src: "    }\n}\n\n");
 
-					out: out . 'static inline SpecArray* ' . name . "_values(void) {\n";
-					out: out . "    SpecArray* arr = spec_array_new();\n";
-					out: out . '    for (size_t i = 0; i < ' . idx . "; i++) {\n";
-					out: out . '        spec_array_add(arr, (void*)(intptr_t)' . name . "_all_values[i]);\n";
-					out: out . "    }\n    return arr;\n}\n\n";
+					Buf:bufAppendBuf(dst: out, src: 'static inline SpecArray* ' . name . "_values(void) {\n");
+					Buf:bufAppendBuf(dst: out, src: "    SpecArray* arr = spec_array_new();\n");
+					Buf:bufAppendBuf(dst: out, src: '    for (size_t i = 0; i < ' . idx . "; i++) {\n");
+					Buf:bufAppendBuf(dst: out, src: '        spec_array_add(arr, (void*)(intptr_t)' . name . "_all_values[i]);\n");
+					Buf:bufAppendBuf(dst: out, src: "    }\n    return arr;\n}\n\n");
 				});
 			});
 		});
@@ -397,21 +398,21 @@ Class is DeclarationGenerator{
 								bareCount: bareCount + 1;
 							});
 						});
-						out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
+						Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . cSym . ' ' . cSym . ";\n");
 						Conditional:if(check: { bareCount == 1 }, then: {
-							out: out . 'typedef struct ' . cSym . ' ' . c:name . ";\n";
+							Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . cSym . ' ' . c:name . ";\n");
 						});
 					}, else: {
-						out: out . 'typedef struct ' . cSym . ' ' . cSym . ";\n";
+						Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . cSym . ' ' . cSym . ";\n");
 					});
-				out: out . cSym . '* ' . cSym . "_new(void);\n";
-				out: out . 'void ' . cSym . "_destroy(void* self);\n";
+				Buf:bufAppendBuf(dst: out, src: cSym . '* ' . cSym . "_new(void);\n");
+				Buf:bufAppendBuf(dst: out, src: 'void ' . cSym . "_destroy(void* self);\n");
 				Conditional:if(check: { !self:hasFieldNamed(list: c:members, name: 'init') }, then: {
-					out: out . 'void ' . cSym . '_init(' . cSym . "* self);\n";
+					Buf:bufAppendBuf(dst: out, src: 'void ' . cSym . '_init(' . cSym . "* self);\n");
 				});
 			});
 		});
-		out: out . "\n";
+		Buf:bufAppendBuf(dst: out, src: "\n");
 
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader() }, then: {
@@ -440,11 +441,11 @@ Class is DeclarationGenerator{
 								Conditional:if(check: { ovHit > 0 }, then: {
 									symName: symName . '_' . (ovHit + 1) . '';
 								});
-								out: out . retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps) . ' self';
+								Buf:bufAppendBuf(dst: out, src: retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps) . ' self');
 								m:params:each(action: local Function(Parameter is p){
-									out: out . ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name);
+									Buf:bufAppendBuf(dst: out, src: ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
 								});
-								out: out . ");\n";
+								Buf:bufAppendBuf(dst: out, src: ");\n");
 							});
 						}
 						else: {}
@@ -452,7 +453,7 @@ Class is DeclarationGenerator{
 				});
 			});
 		});
-		out: out . "\n";
+		Buf:bufAppendBuf(dst: out, src: "\n");
 		return out;
 	}
 
@@ -468,22 +469,22 @@ Class is DeclarationGenerator{
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local Array of String is tps: c:typeParams;
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-				out: out . 'struct ' . cSym . " {\n";
-				out: out . "    const char* _type_name;\n";
-				out: out . "    void** _vtable;\n";
+				Buf:bufAppendBuf(dst: out, src: 'struct ' . cSym . " {\n");
+				Buf:bufAppendBuf(dst: out, src: "    const char* _type_name;\n");
+				Buf:bufAppendBuf(dst: out, src: "    void** _vtable;\n");
 				local Array of Member is allFields: [];
 				local Array of Member is outerFields: [];
 				self:collectStructFieldsSplit(c: c, allClasses: classes, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
 				allFields:each(action: local Function(Member is m){
-					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
+					Buf:bufAppendBuf(dst: out, src: '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n");
 				});
 				outerFields:each(action: local Function(Member is m){
-					out: out . '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n";
+					Buf:bufAppendBuf(dst: out, src: '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n");
 				});
-				out: out . "};\n\n";
+				Buf:bufAppendBuf(dst: out, src: "};\n\n");
 				}, else: {
 					Conditional:if(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
-						out: out . self:emitTaggedEnumStruct(name: c:qualifiedName(), cls: c);
+						Buf:bufAppendBuf(dst: out, src: self:emitTaggedEnumStruct(name: c:qualifiedName(), cls: c));
 					});
 			});
 		});

@@ -175,7 +175,7 @@ Class is CodeGenerator{
 		self:allStringBackedEnums: Map:init();
 		self:allTaggedEnums: Map:init();
 		self:inMethod: false;
-		self:helperFunctions: '';
+		self:helperFunctions: Buf:stringCopy(b: '');
 		self:anonCounter: 0;
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
@@ -2645,7 +2645,7 @@ Class is CodeGenerator{
 			});
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
-			self:helperFunctions: self:helperFunctions . envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . bindsC . bodyC . cleanupTail . "}\n\n";
+			Buf:bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . bindsC . bodyC . cleanupTail . "}\n\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, else: {
 			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
@@ -2661,7 +2661,7 @@ Class is CodeGenerator{
 			});
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
-			self:helperFunctions: self:helperFunctions . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . bodyC . cleanupTail . "}\n\n";
+			Buf:bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . bodyC . cleanupTail . "}\n\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}
@@ -3502,14 +3502,14 @@ Class is CodeGenerator{
 								Conditional:if(check: { m:name == 'init' }, then: {
  hasInit: true;
 								});
-								methods: methods . self:generateMethod(classDef: c, method: m);
+								Buf:bufAppendBuf(dst: methods, src: self:generateMethod(classDef: c, method: m));
 							});
 						}
 						else: {}
 					}
 				});
 				Conditional:if(check: { !hasInit && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-					methods: methods . 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n";
+					Buf:bufAppendBuf(dst: methods, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
 				});
 
 				local Boolean is hasToString: false;
@@ -3522,9 +3522,9 @@ Class is CodeGenerator{
 					# IV.2c: the synthesized contract symbol and self type
 					# qualify — the bare name is not a C identity for nested
 					# classes.
-					methods: methods . 'String ' . cSym . '_toString(' . cSym . "* self) {\n";
-					methods: methods . "    if (!self) { return spec_string_intern(\"\"); }\n";
-					methods: methods . '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n";
+					Buf:bufAppendBuf(dst: methods, src: 'String ' . cSym . '_toString(' . cSym . "* self) {\n");
+					Buf:bufAppendBuf(dst: methods, src: "    if (!self) { return spec_string_intern(\"\"); }\n");
+					Buf:bufAppendBuf(dst: methods, src: '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n");
 				});
 			});
 		});
@@ -3532,16 +3532,16 @@ Class is CodeGenerator{
 		local String is mainFn: self:generateMain(entryClass: entryClass);
 
 		local String is cSource: '';
-		cSource: cSource . self:generatePrelude();
-		cSource: cSource . enums;
-		cSource: cSource . decls;
-		cSource: cSource . structs;
-		cSource: cSource . vt;
-		cSource: cSource . self:generateTypeHierarchy(classes: flattenedClasses);
-		cSource: cSource . self:helperFunctions;
-		cSource: cSource . ctors;
-		cSource: cSource . methods;
-		cSource: cSource . mainFn;
+		Buf:bufAppendBuf(dst: cSource, src: self:generatePrelude());
+		Buf:bufAppendBuf(dst: cSource, src: enums);
+		Buf:bufAppendBuf(dst: cSource, src: decls);
+		Buf:bufAppendBuf(dst: cSource, src: structs);
+		Buf:bufAppendBuf(dst: cSource, src: vt);
+		Buf:bufAppendBuf(dst: cSource, src: self:generateTypeHierarchy(classes: flattenedClasses));
+		Buf:bufAppendBuf(dst: cSource, src: self:helperFunctions);
+		Buf:bufAppendBuf(dst: cSource, src: ctors);
+		Buf:bufAppendBuf(dst: cSource, src: methods);
+		Buf:bufAppendBuf(dst: cSource, src: mainFn);
 		return cSource;
 	}
 
@@ -3604,7 +3604,7 @@ Class is CodeGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-				out: out . 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n";
+				Buf:bufAppendBuf(dst: out, src: 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n");
 				local Int is slot: 0;
 				while(
 					evaluate: local Function of Boolean(){
@@ -3614,18 +3614,18 @@ Class is CodeGenerator{
 						local String is mName: self:slotNames:get(index: slot);
 						local String is implCls: self:findMethodImplementingClass(className: c:name, methodName: mName, paramCount: -1);
 						Conditional:if(check: { slot > 0 }, then: {
-							out: out . ",\n";
+							Buf:bufAppendBuf(dst: out, src: ",\n");
 						});
 						Conditional:if(check: { implCls == '' }, then: {
-							out: out . '    (void*)0';
+							Buf:bufAppendBuf(dst: out, src: '    (void*)0');
 						}, else: {
-							out: out . '    (void*)' . implCls . '_' . mName;
+							Buf:bufAppendBuf(dst: out, src: '    (void*)' . implCls . '_' . mName);
 						});
 						slot: slot + 1;
 						return true;
 					}
 				);
-				out: out . "\n};\n\n";
+				Buf:bufAppendBuf(dst: out, src: "\n};\n\n");
 			});
 		});
 		return out;
@@ -3654,34 +3654,34 @@ Class is CodeGenerator{
 					self:fieldTypes:set(key: f:name, value: self:formatTypeString(t: f:memberType));
 				});
 
-				out: out . 'void ' . cSym . "_destroy(void* self_ptr) {\n";
-				out: out . '    ' . cSym . '* self = (' . cSym . "*)self_ptr;\n";
-				out: out . "    if (!self) return;\n";
+				Buf:bufAppendBuf(dst: out, src: 'void ' . cSym . "_destroy(void* self_ptr) {\n");
+				Buf:bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . "*)self_ptr;\n");
+				Buf:bufAppendBuf(dst: out, src: "    if (!self) return;\n");
 				allFields:each(action: local Function(Member is m){
 					local String is ft: m:memberType:name;
 					Conditional:if(check: { self:isArcType(typeName: ft) }, then: {
-						out: out . '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n";
+						Buf:bufAppendBuf(dst: out, src: '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n");
 					});
 				});
 				outerFields:each(action: local Function(Member is m){
 					local String is ft: m:memberType:name;
 					Conditional:if(check: { self:isArcType(typeName: ft) }, then: {
-						out: out . '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n";
+						Buf:bufAppendBuf(dst: out, src: '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n");
 					});
 				});
-				out: out . "}\n\n";
+				Buf:bufAppendBuf(dst: out, src: "}\n\n");
 
-				out: out . cSym . '* ' . cSym . "_new(void) {\n";
+				Buf:bufAppendBuf(dst: out, src: cSym . '* ' . cSym . "_new(void) {\n");
 				# FUNCTIONS.md Part IV memory discipline: every class
 				# allocates through ARC — refcounts drive the frees, so the
 				# parser's tokens, the loop objects, and every transient
 				# reclaim their memory during compilation. The old
 				# compiler-phase arena made everything immortal and turned
 				# the peak into total allocation volume.
-				out: out . '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n";
-				out: out . '    self->_type_name = "' . c:qualifiedName() . "\";\n";
+				Buf:bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n");
+				Buf:bufAppendBuf(dst: out, src: '    self->_type_name = "' . c:qualifiedName() . "\";\n");
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
-					out: out . '    self->_vtable = ' . cSym . "_vtable;\n";
+					Buf:bufAppendBuf(dst: out, src: '    self->_vtable = ' . cSym . "_vtable;\n");
 				});
 				# FUNCTIONS.md Part IV IV.2: the construction expressions run for
 				# the declared-of + own fields; the OUTER-link fields zero-init
@@ -3698,17 +3698,17 @@ Class is CodeGenerator{
 						Conditional:if(check: { self:isArcType(typeName: ftn) }, then: {
 							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
 						});
-						out: out . '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n";
+						Buf:bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n");
 					});
 				});
 				outerFields:each(action: local Function(Member is m){
 					Conditional:if(check: { self:isArcType(typeName: m:memberType:name) }, then: {
-						out: out . '    self->' . self:utils:cIdent(name: m:name) . " = NULL;\n";
+						Buf:bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . " = NULL;\n");
 					}, else: {
-						out: out . '    self->' . self:utils:cIdent(name: m:name) . " = 0;\n";
+						Buf:bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . " = 0;\n");
 					});
 				});
-				out: out . "    return self;\n}\n\n";
+				Buf:bufAppendBuf(dst: out, src: "    return self;\n}\n\n");
 			});
 		});
 		return out;

@@ -49931,13 +49931,12 @@ static __attribute__((unused)) void _anon_fn_964(void* _env_ptr, Member* m) {
 	    if (spec_string_equals(m->name, spec_string_intern("init"))) {
 	    hasInit = true;
 	};
-	    methods = spec_string_concat(methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
+	    Buf_bufAppendBuf(NULL, methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
 	};
     } else {
     }
     _cleanup_anon_964: ;
     _env->hasInit = hasInit;
-    _env->methods = methods;
     return;
 }
 
@@ -50014,14 +50013,14 @@ static __attribute__((unused)) void _anon_fn_959(void* _env_ptr, ClassInfo* c) {
 	    if (spec_string_equals(m->name, spec_string_intern("init"))) {
 	    hasInit = true;
 	};
-	    methods = spec_string_concat(methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
+	    Buf_bufAppendBuf(NULL, methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
 	};
     } else {
     }
         } while (0);
     } } });
 	    if ((((((!(hasInit))) && ((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
-	    methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("void ")), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self) {\n    (void)self;\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self) {\n    (void)self;\n}\n\n")));
 	};
 	    bool hasToString = false;
 	    ({ SpecArray* _a_967 = c->members; if (_a_967) { for (size_t _i_967 = 0; _i_967 < _a_967->length; _i_967++) {
@@ -50033,16 +50032,15 @@ static __attribute__((unused)) void _anon_fn_959(void* _env_ptr, ClassInfo* c) {
         } while (0);
     } } });
 	    if ((((((!(hasToString))) && ((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
-	    methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("String ")), cSym), spec_string_intern("_toString(")), cSym), spec_string_intern("* self) {\n"));
-	    methods = spec_string_concat(methods, spec_string_intern("    if (!self) { return spec_string_intern(\"\"); }\n"));
-	    methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("    return spec_string_intern(\"")), ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */), spec_string_intern("\");")), spec_string_intern("\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("String "))), cSym), spec_string_intern("_toString(")), cSym), spec_string_intern("* self) {\n")));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_intern("    if (!self) { return spec_string_intern(\"\"); }\n"));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    return spec_string_intern(\""))), ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */)))), spec_string_intern("\");")), spec_string_intern("\n}\n\n")));
 	};
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
     if (allFields) { spec_release((void*)allFields); allFields = NULL; }
     if (outerFields) { spec_release((void*)outerFields); outerFields = NULL; }
 	};
     _cleanup_anon_959: ;
-    _env->methods = methods;
     return;
 }
 
@@ -50117,13 +50115,12 @@ static __attribute__((unused)) void _anon_fn_973(void* _env_ptr, Member* m) {
 	    if (spec_string_equals(m->name, spec_string_intern("init"))) {
 	    hasInit = true;
 	};
-	    methods = spec_string_concat(methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
+	    Buf_bufAppendBuf(NULL, methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
 	};
     } else {
     }
     _cleanup_anon_973: ;
     _env->hasInit = hasInit;
-    _env->methods = methods;
     return;
 }
 
@@ -50395,7 +50392,7 @@ static __attribute__((unused)) void _anon_fn_989(void* _env_ptr, ClassInfo* c) {
     (void)out;
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(self->utils, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */) /* inst:CBackendUtils:cIdent */;
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static void* ")), cSym), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static void* "))), cSym), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n")));
 	    long long slot = 0;
 	    ({ while (1) {
         bool _ev_990 = false;
@@ -50408,12 +50405,12 @@ static __attribute__((unused)) void _anon_fn_989(void* _env_ptr, ClassInfo* c) {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
     SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, c->name, mName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
     if (((slot) > (0))) {
-	    out = spec_string_concat(out, spec_string_intern(",\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern(",\n"));
 	};
     if (spec_string_equals(implCls, spec_string_intern(""))) {
-	    out = spec_string_concat(out, spec_string_intern("    (void*)0"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    (void*)0"));
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    (void*)")), implCls), spec_string_intern("_")), mName);
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    (void*)"))), implCls), spec_string_intern("_")), mName));
 	};
     slot = ((slot) + (1));
     _it_990 = true; break;
@@ -50423,11 +50420,10 @@ static __attribute__((unused)) void _anon_fn_989(void* _env_ptr, ClassInfo* c) {
         if (!_it_990) break;
     }
 });
-	    out = spec_string_concat(out, spec_string_intern("\n};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("\n};\n\n"));
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
 	};
     _cleanup_anon_989: ;
-    _env->out = out;
     return;
 }
 
@@ -50492,11 +50488,10 @@ static __attribute__((unused)) void _anon_fn_998(void* _env_ptr, Member* m) {
     (void)out;
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     _cleanup_anon_998: ;
     if (ft) { spec_release((void*)ft); ft = NULL; }
-    _env->out = out;
     return;
 }
 
@@ -50521,11 +50516,10 @@ static __attribute__((unused)) void _anon_fn_1000(void* _env_ptr, Member* m) {
     (void)out;
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     _cleanup_anon_1000: ;
     if (ft) { spec_release((void*)ft); ft = NULL; }
-    _env->out = out;
     return;
 }
 
@@ -50557,12 +50551,11 @@ static __attribute__((unused)) void _anon_fn_1002(void* _env_ptr, Member* m) {
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
 	    spec_assign((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, ftn))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
     if (ftn) { spec_release((void*)ftn); ftn = NULL; }
 	};
     _cleanup_anon_1002: ;
-    _env->out = out;
     return;
 }
 
@@ -50586,12 +50579,11 @@ static __attribute__((unused)) void _anon_fn_1004(void* _env_ptr, Member* m) {
     String out = _env->out;
     (void)out;
     if (CodeGenerator_isArcType(self, m->memberType->name) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL;\n")));
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = 0;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = 0;\n")));
 	};
     _cleanup_anon_1004: ;
-    _env->out = out;
     return;
 }
 
@@ -50637,15 +50629,15 @@ static __attribute__((unused)) void _anon_fn_993(void* _env_ptr, ClassInfo* c) {
     spec_map_set(self->fieldTypes, f->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[144]))((CodeGenerator*)self, f->memberType));
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), cSym), spec_string_intern("_destroy(void* self_ptr) {\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)self_ptr;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    if (!self) return;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_destroy(void* self_ptr) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)self_ptr;\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    if (!self) return;\n"));
 	    ({ SpecArray* _a_999 = allFields; if (_a_999) { for (size_t _i_999 = 0; _i_999 < _a_999->length; _i_999++) {
         Member* m = (Member*)(intptr_t)_a_999->items[_i_999];
         do {
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     if (ft) { spec_release((void*)ft); ft = NULL; }
         } while (0);
@@ -50655,17 +50647,17 @@ static __attribute__((unused)) void _anon_fn_993(void* _env_ptr, ClassInfo* c) {
         do {
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     if (ft) { spec_release((void*)ft); ft = NULL; }
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("}\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, cSym), spec_string_intern("* ")), cSym), spec_string_intern("_new(void) {\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)spec_alloc(sizeof(")), cSym), spec_string_intern("), ")), cSym), spec_string_intern("_destroy);\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_type_name = \"")), ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */), spec_string_intern("\";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(cSym)), spec_string_intern("* ")), cSym), spec_string_intern("_new(void) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)spec_alloc(sizeof(")), cSym), spec_string_intern("), ")), cSym), spec_string_intern("_destroy);\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->_type_name = \""))), ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */)))), spec_string_intern("\";\n")));
 	    if (((self->methodSlotCount) > (0))) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_vtable = ")), cSym), spec_string_intern("_vtable;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->_vtable = "))), cSym), spec_string_intern("_vtable;\n")));
 	};
 	    ({ SpecArray* _a_1003 = allFields; if (_a_1003) { for (size_t _i_1003 = 0; _i_1003 < _a_1003->length; _i_1003++) {
         Member* m = (Member*)(intptr_t)_a_1003->items[_i_1003];
@@ -50679,7 +50671,7 @@ static __attribute__((unused)) void _anon_fn_993(void* _env_ptr, ClassInfo* c) {
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
 	    spec_assign((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, ftn))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
     if (ftn) { spec_release((void*)ftn); ftn = NULL; }
 	};
@@ -50689,19 +50681,18 @@ static __attribute__((unused)) void _anon_fn_993(void* _env_ptr, ClassInfo* c) {
         Member* m = (Member*)(intptr_t)_a_1005->items[_i_1005];
         do {
     if (CodeGenerator_isArcType(self, m->memberType->name) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL;\n")));
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = 0;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = 0;\n")));
 	};
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("    return self;\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    return self;\n}\n\n"));
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
     if (allFields) { spec_release((void*)allFields); allFields = NULL; }
     if (outerFields) { spec_release((void*)outerFields); outerFields = NULL; }
 	};
     _cleanup_anon_993: ;
-    _env->out = out;
     return;
 }
 
@@ -50766,11 +50757,10 @@ static __attribute__((unused)) void _anon_fn_1011(void* _env_ptr, Member* m) {
     (void)out;
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     _cleanup_anon_1011: ;
     if (ft) { spec_release((void*)ft); ft = NULL; }
-    _env->out = out;
     return;
 }
 
@@ -50795,11 +50785,10 @@ static __attribute__((unused)) void _anon_fn_1013(void* _env_ptr, Member* m) {
     (void)out;
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     _cleanup_anon_1013: ;
     if (ft) { spec_release((void*)ft); ft = NULL; }
-    _env->out = out;
     return;
 }
 
@@ -50831,12 +50820,11 @@ static __attribute__((unused)) void _anon_fn_1015(void* _env_ptr, Member* m) {
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
 	    spec_assign((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, ftn))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
     if (ftn) { spec_release((void*)ftn); ftn = NULL; }
 	};
     _cleanup_anon_1015: ;
-    _env->out = out;
     return;
 }
 
@@ -50860,12 +50848,11 @@ static __attribute__((unused)) void _anon_fn_1017(void* _env_ptr, Member* m) {
     String out = _env->out;
     (void)out;
     if (CodeGenerator_isArcType(self, m->memberType->name) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL;\n")));
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = 0;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = 0;\n")));
 	};
     _cleanup_anon_1017: ;
-    _env->out = out;
     return;
 }
 
@@ -51659,11 +51646,10 @@ static __attribute__((unused)) void _anon_fn_1068(void* _env_ptr, Member* m) {
     (void)tIdx;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_TAG_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_TAG_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n")));
     tIdx = ((tIdx) + (1));
     _cleanup_anon_1068: ;
     _env->tIdx = tIdx;
-    _env->out = out;
     return;
 }
 
@@ -51693,11 +51679,10 @@ static __attribute__((unused)) void _anon_fn_1070(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n")));
     idx = ((idx) + (1));
     _cleanup_anon_1070: ;
     _env->idx = idx;
-    _env->out = out;
     return;
 }
 
@@ -51720,9 +51705,8 @@ static __attribute__((unused)) void _anon_fn_1072(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    \"")), m->name), spec_string_intern("\",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    \""))), m->name), spec_string_intern("\",\n")));
     _cleanup_anon_1072: ;
-    _env->out = out;
     return;
 }
 
@@ -51749,9 +51733,8 @@ static __attribute__((unused)) void _anon_fn_1074(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(",\n")));
     _cleanup_anon_1074: ;
-    _env->out = out;
     return;
 }
 
@@ -51778,9 +51761,8 @@ static __attribute__((unused)) void _anon_fn_1076(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n")));
     _cleanup_anon_1076: ;
-    _env->out = out;
     return;
 }
 
@@ -51836,11 +51818,10 @@ static __attribute__((unused)) void _anon_fn_1080(void* _env_ptr, Member* m) {
     (void)ordIdx;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n")));
     ordIdx = ((ordIdx) + (1));
     _cleanup_anon_1080: ;
     _env->ordIdx = ordIdx;
-    _env->out = out;
     return;
 }
 
@@ -51875,55 +51856,55 @@ static __attribute__((unused)) void _anon_fn_1065(void* _env_ptr, ClassInfo* c) 
         } while (0);
     } } });
 	    if (spec_map_has(self->allTaggedEnums, name)) {
-	    out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("typedef enum {\n"));
 	    long long tIdx = 0;
 	    ({ SpecArray* _a_1069 = variants; if (_a_1069) { for (size_t _i_1069 = 0; _i_1069 < _a_1069->length; _i_1069++) {
         Member* m = (Member*)(intptr_t)_a_1069->items[_i_1069];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_TAG_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_TAG_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n")));
     tIdx = ((tIdx) + (1));
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("} ")), name), spec_string_intern("_Tag;\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), name), spec_string_intern(" ")), name), spec_string_intern(";\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("} "))), name), spec_string_intern("_Tag;\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), name), spec_string_intern(" ")), name), spec_string_intern(";\n\n")));
 	} else {
-	    out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("typedef enum {\n"));
 	    long long idx = 0;
 	    ({ SpecArray* _a_1071 = variants; if (_a_1071) { for (size_t _i_1071 = 0; _i_1071 < _a_1071->length; _i_1071++) {
         Member* m = (Member*)(intptr_t)_a_1071->items[_i_1071];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n")));
     idx = ((idx) + (1));
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("} ")), name), spec_string_intern(";\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static __attribute__((unused)) const char* ")), name), spec_string_intern("_names[] = {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("} "))), name), spec_string_intern(";\n\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static __attribute__((unused)) const char* "))), name), spec_string_intern("_names[] = {\n")));
 	    ({ SpecArray* _a_1073 = variants; if (_a_1073) { for (size_t _i_1073 = 0; _i_1073 < _a_1073->length; _i_1073++) {
         Member* m = (Member*)(intptr_t)_a_1073->items[_i_1073];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    \"")), m->name), spec_string_intern("\",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    \""))), m->name), spec_string_intern("\",\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("};\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static const ")), name), spec_string_intern(" ")), name), spec_string_intern("_all_values[] = {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static const "))), name), spec_string_intern(" ")), name), spec_string_intern("_all_values[] = {\n")));
 	    ({ SpecArray* _a_1075 = variants; if (_a_1075) { for (size_t _i_1075 = 0; _i_1075 < _a_1075->length; _i_1075++) {
         Member* m = (Member*)(intptr_t)_a_1075->items[_i_1075];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(",\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("};\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline String ")), name), spec_string_intern("_name(")), name), spec_string_intern(" self) {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static inline String "))), name), spec_string_intern("_name(")), name), spec_string_intern(" self) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    (void)self;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    switch (self) {\n"));
 	    ({ SpecArray* _a_1077 = variants; if (_a_1077) { for (size_t _i_1077 = 0; _i_1077 < _a_1077->length; _i_1077++) {
         Member* m = (Member*)(intptr_t)_a_1077->items[_i_1077];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("        default: return spec_string_intern(\"UNKNOWN\");\n"));
-	    out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("        default: return spec_string_intern(\"UNKNOWN\");\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    }\n}\n\n"));
 	    bool isStrBacked = false;
 	    ({ SpecArray* _a_1079 = variants; if (_a_1079) { for (size_t _i_1079 = 0; _i_1079 < _a_1079->length; _i_1079++) {
         Member* m = (Member*)(intptr_t)_a_1079->items[_i_1079];
@@ -51934,34 +51915,33 @@ static __attribute__((unused)) void _anon_fn_1065(void* _env_ptr, ClassInfo* c) 
         } while (0);
     } } });
 	    if (isStrBacked) {
-	    out = spec_string_concat(out, DeclarationGenerator_emitStringBacking(self, name, c) /* inst:DeclarationGenerator:emitStringBacking */);
+	    Buf_bufAppendBuf(NULL, out, DeclarationGenerator_emitStringBacking(self, name, c) /* inst:DeclarationGenerator:emitStringBacking */);
 	} else {
-	    out = spec_string_concat(out, DeclarationGenerator_emitIntBacking(self, name, c) /* inst:DeclarationGenerator:emitIntBacking */);
+	    Buf_bufAppendBuf(NULL, out, DeclarationGenerator_emitIntBacking(self, name, c) /* inst:DeclarationGenerator:emitIntBacking */);
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline long long ")), name), spec_string_intern("_ordinal(")), name), spec_string_intern(" self) {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static inline long long "))), name), spec_string_intern("_ordinal(")), name), spec_string_intern(" self) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    (void)self;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    switch (self) {\n"));
 	    long long ordIdx = 0;
 	    ({ SpecArray* _a_1081 = variants; if (_a_1081) { for (size_t _i_1081 = 0; _i_1081 < _a_1081->length; _i_1081++) {
         Member* m = (Member*)(intptr_t)_a_1081->items[_i_1081];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n")));
     ordIdx = ((ordIdx) + (1));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("        default: return -1;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline SpecArray* ")), name), spec_string_intern("_values(void) {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    SpecArray* arr = spec_array_new();\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    for (size_t i = 0; i < ")), spec_to_string_int(idx)), spec_string_intern("; i++) {\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        spec_array_add(arr, (void*)(intptr_t)")), name), spec_string_intern("_all_values[i]);\n"));
-	    out = spec_string_concat(out, spec_string_intern("    }\n    return arr;\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("        default: return -1;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    }\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static inline SpecArray* "))), name), spec_string_intern("_values(void) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    SpecArray* arr = spec_array_new();\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    for (size_t i = 0; i < "))), spec_to_string_int(idx)), spec_string_intern("; i++) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        spec_array_add(arr, (void*)(intptr_t)"))), name), spec_string_intern("_all_values[i]);\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    }\n    return arr;\n}\n\n"));
 	};
     if (name) { spec_release((void*)name); name = NULL; }
     if (variants) { spec_release((void*)variants); variants = NULL; }
 	};
     _cleanup_anon_1065: ;
-    _env->out = out;
     return;
 }
 
@@ -52013,11 +51993,10 @@ static __attribute__((unused)) void _anon_fn_1085(void* _env_ptr, Member* m) {
     (void)tIdx;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_TAG_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_TAG_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n")));
     tIdx = ((tIdx) + (1));
     _cleanup_anon_1085: ;
     _env->tIdx = tIdx;
-    _env->out = out;
     return;
 }
 
@@ -52047,11 +52026,10 @@ static __attribute__((unused)) void _anon_fn_1087(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n")));
     idx = ((idx) + (1));
     _cleanup_anon_1087: ;
     _env->idx = idx;
-    _env->out = out;
     return;
 }
 
@@ -52074,9 +52052,8 @@ static __attribute__((unused)) void _anon_fn_1089(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    \"")), m->name), spec_string_intern("\",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    \""))), m->name), spec_string_intern("\",\n")));
     _cleanup_anon_1089: ;
-    _env->out = out;
     return;
 }
 
@@ -52103,9 +52080,8 @@ static __attribute__((unused)) void _anon_fn_1091(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(",\n")));
     _cleanup_anon_1091: ;
-    _env->out = out;
     return;
 }
 
@@ -52132,9 +52108,8 @@ static __attribute__((unused)) void _anon_fn_1093(void* _env_ptr, Member* m) {
     (void)name;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n")));
     _cleanup_anon_1093: ;
-    _env->out = out;
     return;
 }
 
@@ -52190,11 +52165,10 @@ static __attribute__((unused)) void _anon_fn_1097(void* _env_ptr, Member* m) {
     (void)ordIdx;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n")));
     ordIdx = ((ordIdx) + (1));
     _cleanup_anon_1097: ;
     _env->ordIdx = ordIdx;
-    _env->out = out;
     return;
 }
 
@@ -52418,22 +52392,21 @@ static __attribute__((unused)) void _anon_fn_1109(void* _env_ptr, ClassInfo* c) 
 	};
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n")));
 	    if (((bareCount) == (1))) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), cSym), spec_string_intern(" ")), c->name), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), cSym), spec_string_intern(" ")), c->name), spec_string_intern(";\n")));
 	};
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n")));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, cSym), spec_string_intern("* ")), cSym), spec_string_intern("_new(void);\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), cSym), spec_string_intern("_destroy(void* self);\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(cSym)), spec_string_intern("* ")), cSym), spec_string_intern("_new(void);\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_destroy(void* self);\n")));
 	    if ((!(DeclarationGenerator_hasFieldNamed(self, c->members, spec_string_intern("init")) /* inst:DeclarationGenerator:hasFieldNamed */))) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self);\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self);\n")));
 	};
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
 	};
     _cleanup_anon_1109: ;
-    _env->out = out;
     return;
 }
 
@@ -52519,9 +52492,8 @@ static __attribute__((unused)) void _anon_fn_1119(void* _env_ptr, Parameter* p) 
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
     _cleanup_anon_1119: ;
-    _env->out = out;
     return;
 }
 
@@ -52577,21 +52549,20 @@ static __attribute__((unused)) void _anon_fn_1116(void* _env_ptr, Member* m) {
 	    if (((ovHit) > (0))) {
 	    symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), DeclarationGenerator_cTypeForClass(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" self"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(retType)), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */))), tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self")));
 	    ({ SpecArray* _a_1120 = m->params; if (_a_1120) { for (size_t _i_1120 = 0; _i_1120 < _a_1120->length; _i_1120++) {
         Parameter* p = (Parameter*)(intptr_t)_a_1120->items[_i_1120];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern(");\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern(");\n"));
     if (retType) { spec_release((void*)retType); retType = NULL; }
     if (symName) { spec_release((void*)symName); symName = NULL; }
 	};
     } else {
     }
     _cleanup_anon_1116: ;
-    _env->out = out;
     return;
 }
 
@@ -52651,9 +52622,8 @@ static __attribute__((unused)) void _anon_fn_1124(void* _env_ptr, Parameter* p) 
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
     _cleanup_anon_1124: ;
-    _env->out = out;
     return;
 }
 
@@ -52706,14 +52676,14 @@ static __attribute__((unused)) void _anon_fn_1115(void* _env_ptr, ClassInfo* c) 
 	    if (((ovHit) > (0))) {
 	    symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), DeclarationGenerator_cTypeForClass(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" self"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(retType)), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */))), tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self")));
 	    ({ SpecArray* _a_1125 = m->params; if (_a_1125) { for (size_t _i_1125 = 0; _i_1125 < _a_1125->length; _i_1125++) {
         Parameter* p = (Parameter*)(intptr_t)_a_1125->items[_i_1125];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern(");\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern(");\n"));
     if (retType) { spec_release((void*)retType); retType = NULL; }
     if (symName) { spec_release((void*)symName); symName = NULL; }
 	};
@@ -52724,7 +52694,6 @@ static __attribute__((unused)) void _anon_fn_1115(void* _env_ptr, ClassInfo* c) 
     if (tps) { spec_release((void*)tps); tps = NULL; }
 	};
     _cleanup_anon_1115: ;
-    _env->out = out;
     return;
 }
 
@@ -52784,9 +52753,8 @@ static __attribute__((unused)) void _anon_fn_1130(void* _env_ptr, Parameter* p) 
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
     _cleanup_anon_1130: ;
-    _env->out = out;
     return;
 }
 
@@ -52842,21 +52810,20 @@ static __attribute__((unused)) void _anon_fn_1127(void* _env_ptr, Member* m) {
 	    if (((ovHit) > (0))) {
 	    symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), DeclarationGenerator_cTypeForClass(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" self"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(retType)), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */))), tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self")));
 	    ({ SpecArray* _a_1131 = m->params; if (_a_1131) { for (size_t _i_1131 = 0; _i_1131 < _a_1131->length; _i_1131++) {
         Parameter* p = (Parameter*)(intptr_t)_a_1131->items[_i_1131];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern(");\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern(");\n"));
     if (retType) { spec_release((void*)retType); retType = NULL; }
     if (symName) { spec_release((void*)symName); symName = NULL; }
 	};
     } else {
     }
     _cleanup_anon_1127: ;
-    _env->out = out;
     return;
 }
 
@@ -52916,9 +52883,8 @@ static __attribute__((unused)) void _anon_fn_1135(void* _env_ptr, Parameter* p) 
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
     _cleanup_anon_1135: ;
-    _env->out = out;
     return;
 }
 
@@ -52945,9 +52911,8 @@ static __attribute__((unused)) void _anon_fn_1138(void* _env_ptr, Member* m) {
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
     _cleanup_anon_1138: ;
-    _env->out = out;
     return;
 }
 
@@ -52974,9 +52939,8 @@ static __attribute__((unused)) void _anon_fn_1140(void* _env_ptr, Member* m) {
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
     _cleanup_anon_1140: ;
-    _env->out = out;
     return;
 }
 
@@ -53006,36 +52970,35 @@ static __attribute__((unused)) void _anon_fn_1137(void* _env_ptr, ClassInfo* c) 
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
 	    SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(self->utils, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */) /* inst:CBackendUtils:cIdent */;
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("struct ")), cSym), spec_string_intern(" {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    const char* _type_name;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    void** _vtable;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("struct "))), cSym), spec_string_intern(" {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    const char* _type_name;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    void** _vtable;\n"));
 	    SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
 	    SPEC_AUTO SpecArray* outerFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
 	    DeclarationGenerator_collectStructFieldsSplit(self, c, classes, allFields, outerFields, false) /* inst:DeclarationGenerator:collectStructFieldsSplit */;
 	    ({ SpecArray* _a_1139 = allFields; if (_a_1139) { for (size_t _i_1139 = 0; _i_1139 < _a_1139->length; _i_1139++) {
         Member* m = (Member*)(intptr_t)_a_1139->items[_i_1139];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
         } while (0);
     } } });
 	    ({ SpecArray* _a_1141 = outerFields; if (_a_1141) { for (size_t _i_1141 = 0; _i_1141 < _a_1141->length; _i_1141++) {
         Member* m = (Member*)(intptr_t)_a_1141->items[_i_1141];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("};\n\n"));
     if (tps) { spec_release((void*)tps); tps = NULL; }
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
     if (allFields) { spec_release((void*)allFields); allFields = NULL; }
     if (outerFields) { spec_release((void*)outerFields); outerFields = NULL; }
 	} else {
 	    if (((spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)) && (spec_map_has(self->allTaggedEnums, c->name)))) {
-	    out = spec_string_concat(out, DeclarationGenerator_emitTaggedEnumStruct(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, c) /* inst:DeclarationGenerator:emitTaggedEnumStruct */);
+	    Buf_bufAppendBuf(NULL, out, DeclarationGenerator_emitTaggedEnumStruct(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, c) /* inst:DeclarationGenerator:emitTaggedEnumStruct */);
 	};
 	};
     _cleanup_anon_1137: ;
-    _env->out = out;
     return;
 }
 
@@ -53062,9 +53025,8 @@ static __attribute__((unused)) void _anon_fn_1143(void* _env_ptr, Member* m) {
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
     _cleanup_anon_1143: ;
-    _env->out = out;
     return;
 }
 
@@ -53091,9 +53053,8 @@ static __attribute__((unused)) void _anon_fn_1145(void* _env_ptr, Member* m) {
     (void)tps;
     String out = _env->out;
     (void)out;
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
     _cleanup_anon_1145: ;
-    _env->out = out;
     return;
 }
 
@@ -68492,7 +68453,7 @@ void CodeGenerator_init(CodeGenerator* self) {
     spec_assign((void**)&self->allStringBackedEnums, (void*)(spec_map_new()));
     spec_assign((void**)&self->allTaggedEnums, (void*)(spec_map_new()));
     self->inMethod = false;
-    spec_assign((void**)&self->helperFunctions, (void*)(spec_string_intern("")));
+    spec_assign((void**)&self->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
     self->anonCounter = 0;
     spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
@@ -71489,7 +71450,7 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
 	};
 	    spec_assign((void**)&self->cleanupLabel, (void*)(savedCleanupLabel));
 	    spec_assign((void**)&self->cleanupRetVar, (void*)(savedCleanupRetVar));
-	    self->helperFunctions = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(self->helperFunctions, envStruct), destroyEnv), spec_string_intern("static __attribute__((unused)) ")), retC), spec_string_intern(" ")), fnName), spec_string_intern("(")), paramsC), spec_string_intern(") {\n")), retDecl), bindsC), bodyC), cleanupTail), spec_string_intern("}\n\n"));
+	    Buf_bufAppendBuf(NULL, self->helperFunctions, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(envStruct)), destroyEnv), spec_string_intern("static __attribute__((unused)) ")), retC), spec_string_intern(" ")), fnName), spec_string_intern("(")), paramsC), spec_string_intern(") {\n")), retDecl), bindsC), bodyC), cleanupTail), spec_string_intern("}\n\n")));
 	    _mret_491 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("({ "))), envName), spec_string_intern("* _env = (")), envName), spec_string_intern("*)calloc(1, sizeof(")), envName), spec_string_intern("));\n")), capAssigns), spec_string_intern("    spec_closure_new((void*)")), fnName), spec_string_intern(", (void*)_env, ")), destroyEnvName), spec_string_intern("); })"))));
     goto _cleanup_491;
     if (envStruct) { spec_release((void*)envStruct); envStruct = NULL; }
@@ -71511,7 +71472,7 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
 	};
 	    spec_assign((void**)&self->cleanupLabel, (void*)(savedCleanupLabel));
 	    spec_assign((void**)&self->cleanupRetVar, (void*)(savedCleanupRetVar));
-	    self->helperFunctions = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(self->helperFunctions, spec_string_intern("static __attribute__((unused)) ")), retC), spec_string_intern(" ")), fnName), spec_string_intern("(")), paramsC), spec_string_intern(") {\n    (void)_env_ptr;\n")), retDecl), bodyC), cleanupTail), spec_string_intern("}\n\n"));
+	    Buf_bufAppendBuf(NULL, self->helperFunctions, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static __attribute__((unused)) "))), retC), spec_string_intern(" ")), fnName), spec_string_intern("(")), paramsC), spec_string_intern(") {\n    (void)_env_ptr;\n")), retDecl), bodyC), cleanupTail), spec_string_intern("}\n\n")));
 	    _mret_491 = (String)spec_retain((void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_closure_new((void*)"))), fnName), spec_string_intern(", NULL, NULL)"))));
     goto _cleanup_491;
     if (cleanupTail) { spec_release((void*)cleanupTail); cleanupTail = NULL; }
@@ -72549,14 +72510,14 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
 	    if (spec_string_equals(m->name, spec_string_intern("init"))) {
 	    hasInit = true;
 	};
-	    methods = spec_string_concat(methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
+	    Buf_bufAppendBuf(NULL, methods, CodeGenerator_generateMethod(self, c, m) /* inst:CodeGenerator:generateMethod */);
 	};
     } else {
     }
         } while (0);
     } } });
 	    if ((((((!(hasInit))) && ((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
-	    methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("void ")), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self) {\n    (void)self;\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self) {\n    (void)self;\n}\n\n")));
 	};
 	    bool hasToString = false;
 	    ({ SpecArray* _a_976 = c->members; if (_a_976) { for (size_t _i_976 = 0; _i_976 < _a_976->length; _i_976++) {
@@ -72568,9 +72529,9 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
         } while (0);
     } } });
 	    if ((((((!(hasToString))) && ((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
-	    methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("String ")), cSym), spec_string_intern("_toString(")), cSym), spec_string_intern("* self) {\n"));
-	    methods = spec_string_concat(methods, spec_string_intern("    if (!self) { return spec_string_intern(\"\"); }\n"));
-	    methods = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(methods, spec_string_intern("    return spec_string_intern(\"")), ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */), spec_string_intern("\");")), spec_string_intern("\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("String "))), cSym), spec_string_intern("_toString(")), cSym), spec_string_intern("* self) {\n")));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_intern("    if (!self) { return spec_string_intern(\"\"); }\n"));
+	    Buf_bufAppendBuf(NULL, methods, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    return spec_string_intern(\""))), ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */)))), spec_string_intern("\");")), spec_string_intern("\n}\n\n")));
 	};
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
     if (allFields) { spec_release((void*)allFields); allFields = NULL; }
@@ -72580,16 +72541,16 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     } } });
     mainFn = CodeGenerator_generateMain(self, entryClass) /* inst:CodeGenerator:generateMain */;
     cSource = spec_construct_string(spec_string_intern(""));
-    cSource = spec_string_concat(cSource, ((String)spec_claim_pool((void*)(CodeGenerator_generatePrelude(self) /* inst:CodeGenerator:generatePrelude */))));
-    cSource = spec_string_concat(cSource, enums);
-    cSource = spec_string_concat(cSource, decls);
-    cSource = spec_string_concat(cSource, structs);
-    cSource = spec_string_concat(cSource, vt);
-    cSource = spec_string_concat(cSource, ((String)spec_claim_pool((void*)(CodeGenerator_generateTypeHierarchy(self, flattenedClasses) /* inst:CodeGenerator:generateTypeHierarchy */))));
-    cSource = spec_string_concat(cSource, self->helperFunctions);
-    cSource = spec_string_concat(cSource, ctors);
-    cSource = spec_string_concat(cSource, methods);
-    cSource = spec_string_concat(cSource, mainFn);
+    Buf_bufAppendBuf(NULL, cSource, ((String)spec_claim_pool((void*)(CodeGenerator_generatePrelude(self) /* inst:CodeGenerator:generatePrelude */))));
+    Buf_bufAppendBuf(NULL, cSource, enums);
+    Buf_bufAppendBuf(NULL, cSource, decls);
+    Buf_bufAppendBuf(NULL, cSource, structs);
+    Buf_bufAppendBuf(NULL, cSource, vt);
+    Buf_bufAppendBuf(NULL, cSource, ((String)spec_claim_pool((void*)(CodeGenerator_generateTypeHierarchy(self, flattenedClasses) /* inst:CodeGenerator:generateTypeHierarchy */))));
+    Buf_bufAppendBuf(NULL, cSource, self->helperFunctions);
+    Buf_bufAppendBuf(NULL, cSource, ctors);
+    Buf_bufAppendBuf(NULL, cSource, methods);
+    Buf_bufAppendBuf(NULL, cSource, mainFn);
     _mret_510 = (String)({ String _ret_val = cSource; cSource = NULL; _ret_val; });
     goto _cleanup_510;
     _cleanup_510: ;
@@ -72687,7 +72648,7 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
         do {
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(self->utils, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */) /* inst:CBackendUtils:cIdent */;
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static void* ")), cSym), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static void* "))), cSym), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n")));
 	    long long slot = 0;
 	    ({ while (1) {
         bool _ev_992 = false;
@@ -72700,12 +72661,12 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
     SPEC_AUTO String implCls = CodeGenerator_findMethodImplementingClass(self, c->name, mName, (-(1))) /* inst:CodeGenerator:findMethodImplementingClass */;
     if (((slot) > (0))) {
-	    out = spec_string_concat(out, spec_string_intern(",\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern(",\n"));
 	};
     if (spec_string_equals(implCls, spec_string_intern(""))) {
-	    out = spec_string_concat(out, spec_string_intern("    (void*)0"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    (void*)0"));
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    (void*)")), implCls), spec_string_intern("_")), mName);
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    (void*)"))), implCls), spec_string_intern("_")), mName));
 	};
     slot = ((slot) + (1));
     _it_992 = true; break;
@@ -72715,7 +72676,7 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
         if (!_it_992) break;
     }
 });
-	    out = spec_string_concat(out, spec_string_intern("\n};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("\n};\n\n"));
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
 	};
         } while (0);
@@ -72755,15 +72716,15 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
     spec_map_set(self->fieldTypes, f->name, (((String (*)(CodeGenerator*, Type*))self->_vtable[144]))((CodeGenerator*)self, f->memberType));
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), cSym), spec_string_intern("_destroy(void* self_ptr) {\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)self_ptr;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    if (!self) return;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_destroy(void* self_ptr) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)self_ptr;\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    if (!self) return;\n"));
 	    ({ SpecArray* _a_1012 = allFields; if (_a_1012) { for (size_t _i_1012 = 0; _i_1012 < _a_1012->length; _i_1012++) {
         Member* m = (Member*)(intptr_t)_a_1012->items[_i_1012];
         do {
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     if (ft) { spec_release((void*)ft); ft = NULL; }
         } while (0);
@@ -72773,17 +72734,17 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
         do {
     SPEC_AUTO String ft = spec_construct_string(m->memberType->name);
     if (CodeGenerator_isArcType(self, ft) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    if (self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(") { spec_release((void*)self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern("); self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL; }\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    if (self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(") { spec_release((void*)self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern("); self->")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL; }\n")));
 	};
     if (ft) { spec_release((void*)ft); ft = NULL; }
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("}\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, cSym), spec_string_intern("* ")), cSym), spec_string_intern("_new(void) {\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)spec_alloc(sizeof(")), cSym), spec_string_intern("), ")), cSym), spec_string_intern("_destroy);\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_type_name = \"")), ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */), spec_string_intern("\";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(cSym)), spec_string_intern("* ")), cSym), spec_string_intern("_new(void) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), cSym), spec_string_intern("* self = (")), cSym), spec_string_intern("*)spec_alloc(sizeof(")), cSym), spec_string_intern("), ")), cSym), spec_string_intern("_destroy);\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->_type_name = \""))), ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */)))), spec_string_intern("\";\n")));
 	    if (((self->methodSlotCount) > (0))) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->_vtable = ")), cSym), spec_string_intern("_vtable;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->_vtable = "))), cSym), spec_string_intern("_vtable;\n")));
 	};
 	    ({ SpecArray* _a_1016 = allFields; if (_a_1016) { for (size_t _i_1016 = 0; _i_1016 < _a_1016->length; _i_1016++) {
         Member* m = (Member*)(intptr_t)_a_1016->items[_i_1016];
@@ -72797,7 +72758,7 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
 	    spec_assign((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), ((String)spec_claim_pool((void*)((((String (*)(CodeGenerator*, String))self->_vtable[283]))((CodeGenerator*)self, ftn))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
     if (ftn) { spec_release((void*)ftn); ftn = NULL; }
 	};
@@ -72807,13 +72768,13 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
         Member* m = (Member*)(intptr_t)_a_1018->items[_i_1018];
         do {
     if (CodeGenerator_isArcType(self, m->memberType->name) /* inst:CodeGenerator:isArcType */) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = NULL;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = NULL;\n")));
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    self->")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = 0;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = 0;\n")));
 	};
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("    return self;\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    return self;\n}\n\n"));
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
     if (allFields) { spec_release((void*)allFields); allFields = NULL; }
     if (outerFields) { spec_release((void*)outerFields); outerFields = NULL; }
@@ -74051,55 +74012,55 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
         } while (0);
     } } });
 	    if (spec_map_has(self->allTaggedEnums, name)) {
-	    out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("typedef enum {\n"));
 	    long long tIdx = 0;
 	    ({ SpecArray* _a_1086 = variants; if (_a_1086) { for (size_t _i_1086 = 0; _i_1086 < _a_1086->length; _i_1086++) {
         Member* m = (Member*)(intptr_t)_a_1086->items[_i_1086];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_TAG_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_TAG_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(tIdx)), spec_string_intern(",\n")));
     tIdx = ((tIdx) + (1));
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("} ")), name), spec_string_intern("_Tag;\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), name), spec_string_intern(" ")), name), spec_string_intern(";\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("} "))), name), spec_string_intern("_Tag;\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), name), spec_string_intern(" ")), name), spec_string_intern(";\n\n")));
 	} else {
-	    out = spec_string_concat(out, spec_string_intern("typedef enum {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("typedef enum {\n"));
 	    long long idx = 0;
 	    ({ SpecArray* _a_1088 = variants; if (_a_1088) { for (size_t _i_1088 = 0; _i_1088 < _a_1088->length; _i_1088++) {
         Member* m = (Member*)(intptr_t)_a_1088->items[_i_1088];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(" = ")), spec_to_string_int(idx)), spec_string_intern(",\n")));
     idx = ((idx) + (1));
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("} ")), name), spec_string_intern(";\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static __attribute__((unused)) const char* ")), name), spec_string_intern("_names[] = {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("} "))), name), spec_string_intern(";\n\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static __attribute__((unused)) const char* "))), name), spec_string_intern("_names[] = {\n")));
 	    ({ SpecArray* _a_1090 = variants; if (_a_1090) { for (size_t _i_1090 = 0; _i_1090 < _a_1090->length; _i_1090++) {
         Member* m = (Member*)(intptr_t)_a_1090->items[_i_1090];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    \"")), m->name), spec_string_intern("\",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    \""))), m->name), spec_string_intern("\",\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("};\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static const ")), name), spec_string_intern(" ")), name), spec_string_intern("_all_values[] = {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static const "))), name), spec_string_intern(" ")), name), spec_string_intern("_all_values[] = {\n")));
 	    ({ SpecArray* _a_1092 = variants; if (_a_1092) { for (size_t _i_1092 = 0; _i_1092 < _a_1092->length; _i_1092++) {
         Member* m = (Member*)(intptr_t)_a_1092->items[_i_1092];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(",\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(",\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("};\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline String ")), name), spec_string_intern("_name(")), name), spec_string_intern(" self) {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static inline String "))), name), spec_string_intern("_name(")), name), spec_string_intern(" self) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    (void)self;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    switch (self) {\n"));
 	    ({ SpecArray* _a_1094 = variants; if (_a_1094) { for (size_t _i_1094 = 0; _i_1094 < _a_1094->length; _i_1094++) {
         Member* m = (Member*)(intptr_t)_a_1094->items[_i_1094];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return spec_string_intern(\"")), m->name), spec_string_intern("\");")), spec_string_intern("\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("        default: return spec_string_intern(\"UNKNOWN\");\n"));
-	    out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("        default: return spec_string_intern(\"UNKNOWN\");\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    }\n}\n\n"));
 	    bool isStrBacked = false;
 	    ({ SpecArray* _a_1096 = variants; if (_a_1096) { for (size_t _i_1096 = 0; _i_1096 < _a_1096->length; _i_1096++) {
         Member* m = (Member*)(intptr_t)_a_1096->items[_i_1096];
@@ -74110,28 +74071,28 @@ String DeclarationGenerator_generateEnums(DeclarationGenerator* self, SpecArray*
         } while (0);
     } } });
 	    if (isStrBacked) {
-	    out = spec_string_concat(out, DeclarationGenerator_emitStringBacking(self, name, c) /* inst:DeclarationGenerator:emitStringBacking */);
+	    Buf_bufAppendBuf(NULL, out, DeclarationGenerator_emitStringBacking(self, name, c) /* inst:DeclarationGenerator:emitStringBacking */);
 	} else {
-	    out = spec_string_concat(out, DeclarationGenerator_emitIntBacking(self, name, c) /* inst:DeclarationGenerator:emitIntBacking */);
+	    Buf_bufAppendBuf(NULL, out, DeclarationGenerator_emitIntBacking(self, name, c) /* inst:DeclarationGenerator:emitIntBacking */);
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline long long ")), name), spec_string_intern("_ordinal(")), name), spec_string_intern(" self) {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    (void)self;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    switch (self) {\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static inline long long "))), name), spec_string_intern("_ordinal(")), name), spec_string_intern(" self) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    (void)self;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    switch (self) {\n"));
 	    long long ordIdx = 0;
 	    ({ SpecArray* _a_1098 = variants; if (_a_1098) { for (size_t _i_1098 = 0; _i_1098 < _a_1098->length; _i_1098++) {
         Member* m = (Member*)(intptr_t)_a_1098->items[_i_1098];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        case ")), name), spec_string_intern("_")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        case "))), name), spec_string_intern("_")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(": return ")), spec_to_string_int(ordIdx)), spec_string_intern(";\n")));
     ordIdx = ((ordIdx) + (1));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("        default: return -1;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    }\n}\n\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("static inline SpecArray* ")), name), spec_string_intern("_values(void) {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    SpecArray* arr = spec_array_new();\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    for (size_t i = 0; i < ")), spec_to_string_int(idx)), spec_string_intern("; i++) {\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("        spec_array_add(arr, (void*)(intptr_t)")), name), spec_string_intern("_all_values[i]);\n"));
-	    out = spec_string_concat(out, spec_string_intern("    }\n    return arr;\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("        default: return -1;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    }\n}\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static inline SpecArray* "))), name), spec_string_intern("_values(void) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    SpecArray* arr = spec_array_new();\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    for (size_t i = 0; i < "))), spec_to_string_int(idx)), spec_string_intern("; i++) {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("        spec_array_add(arr, (void*)(intptr_t)"))), name), spec_string_intern("_all_values[i]);\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    }\n    return arr;\n}\n\n"));
 	};
     if (name) { spec_release((void*)name); name = NULL; }
     if (variants) { spec_release((void*)variants); variants = NULL; }
@@ -74287,23 +74248,23 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
 	};
         } while (0);
     } } });
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n")));
 	    if (((bareCount) == (1))) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), cSym), spec_string_intern(" ")), c->name), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), cSym), spec_string_intern(" ")), c->name), spec_string_intern(";\n")));
 	};
 	} else {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("typedef struct ")), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("typedef struct "))), cSym), spec_string_intern(" ")), cSym), spec_string_intern(";\n")));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, cSym), spec_string_intern("* ")), cSym), spec_string_intern("_new(void);\n"));
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), cSym), spec_string_intern("_destroy(void* self);\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(cSym)), spec_string_intern("* ")), cSym), spec_string_intern("_new(void);\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_destroy(void* self);\n")));
 	    if ((!(DeclarationGenerator_hasFieldNamed(self, c->members, spec_string_intern("init")) /* inst:DeclarationGenerator:hasFieldNamed */))) {
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("void ")), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self);\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("void "))), cSym), spec_string_intern("_init(")), cSym), spec_string_intern("* self);\n")));
 	};
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
 	};
         } while (0);
     } } });
-    out = spec_string_concat(out, spec_string_intern("\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_intern("\n"));
     ({ SpecArray* _a_1126 = classes; if (_a_1126) { for (size_t _i_1126 = 0; _i_1126 < _a_1126->length; _i_1126++) {
         ClassInfo* c = (ClassInfo*)(intptr_t)_a_1126->items[_i_1126];
         do {
@@ -74337,14 +74298,14 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
 	    if (((ovHit) > (0))) {
 	    symName = spec_string_concat(spec_string_concat(spec_string_concat(symName, spec_string_intern("_")), spec_to_string_int(((ovHit) + (1)))), spec_string_intern(""));
 	};
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, retType), spec_string_intern(" ")), symName), spec_string_intern("(")), DeclarationGenerator_cTypeForClass(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" self"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(retType)), spec_string_intern(" ")), symName), spec_string_intern("(")), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, ((String)spec_claim_pool((void*)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */))), tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" self")));
 	    ({ SpecArray* _a_1136 = m->params; if (_a_1136) { for (size_t _i_1136 = 0; _i_1136 < _a_1136->length; _i_1136++) {
         Parameter* p = (Parameter*)(intptr_t)_a_1136->items[_i_1136];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern(", ")), DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */);
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern(", "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, p->paramType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, p->name) /* inst:CBackendUtils:cIdent */)))));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern(");\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern(");\n"));
     if (retType) { spec_release((void*)retType); retType = NULL; }
     if (symName) { spec_release((void*)symName); symName = NULL; }
 	};
@@ -74356,7 +74317,7 @@ String DeclarationGenerator_generateForwardDeclarations(DeclarationGenerator* se
 	};
         } while (0);
     } } });
-    out = spec_string_concat(out, spec_string_intern("\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_intern("\n"));
     _mret_559 = (String)({ String _ret_val = out; out = NULL; _ret_val; });
     goto _cleanup_559;
     _cleanup_559: ;
@@ -74376,32 +74337,32 @@ String DeclarationGenerator_generateStructs(DeclarationGenerator* self, SpecArra
     if ((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[211]))((EmissionPolicy*)_recv, c); })))) && ((!spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */))))) {
 	    SPEC_AUTO SpecArray* tps = (SpecArray*)spec_retain((void*)(c->typeParams));
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(self->utils, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */) /* inst:CBackendUtils:cIdent */;
-	    out = spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("struct ")), cSym), spec_string_intern(" {\n"));
-	    out = spec_string_concat(out, spec_string_intern("    const char* _type_name;\n"));
-	    out = spec_string_concat(out, spec_string_intern("    void** _vtable;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("struct "))), cSym), spec_string_intern(" {\n")));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    const char* _type_name;\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("    void** _vtable;\n"));
 	    SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
 	    SPEC_AUTO SpecArray* outerFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
 	    DeclarationGenerator_collectStructFieldsSplit(self, c, classes, allFields, outerFields, false) /* inst:DeclarationGenerator:collectStructFieldsSplit */;
 	    ({ SpecArray* _a_1144 = allFields; if (_a_1144) { for (size_t _i_1144 = 0; _i_1144 < _a_1144->length; _i_1144++) {
         Member* m = (Member*)(intptr_t)_a_1144->items[_i_1144];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
         } while (0);
     } } });
 	    ({ SpecArray* _a_1146 = outerFields; if (_a_1146) { for (size_t _i_1146 = 0; _i_1146 < _a_1146->length; _i_1146++) {
         Member* m = (Member*)(intptr_t)_a_1146->items[_i_1146];
         do {
-    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, spec_string_intern("    ")), DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */), spec_string_intern(" ")), CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */), spec_string_intern(";\n"));
+    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    "))), ((String)spec_claim_pool((void*)(DeclarationGenerator_cTypeForClass(self, m->memberType->name, tps) /* inst:DeclarationGenerator:cTypeForClass */)))), spec_string_intern(" ")), ((String)spec_claim_pool((void*)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */)))), spec_string_intern(";\n")));
         } while (0);
     } } });
-	    out = spec_string_concat(out, spec_string_intern("};\n\n"));
+	    Buf_bufAppendBuf(NULL, out, spec_string_intern("};\n\n"));
     if (tps) { spec_release((void*)tps); tps = NULL; }
     if (cSym) { spec_release((void*)cSym); cSym = NULL; }
     if (allFields) { spec_release((void*)allFields); allFields = NULL; }
     if (outerFields) { spec_release((void*)outerFields); outerFields = NULL; }
 	} else {
 	    if (((spec_string_equals(c->baseClass, WellKnown_enumHeader(self->names) /* inst:WellKnown:enumHeader */)) && (spec_map_has(self->allTaggedEnums, c->name)))) {
-	    out = spec_string_concat(out, DeclarationGenerator_emitTaggedEnumStruct(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, c) /* inst:DeclarationGenerator:emitTaggedEnumStruct */);
+	    Buf_bufAppendBuf(NULL, out, DeclarationGenerator_emitTaggedEnumStruct(self, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */, c) /* inst:DeclarationGenerator:emitTaggedEnumStruct */);
 	};
 	};
         } while (0);
