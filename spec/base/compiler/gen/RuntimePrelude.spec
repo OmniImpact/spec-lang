@@ -264,6 +264,10 @@ String spec_to_string_float(double v) {
 String spec_to_string_bool(bool v) {
     return spec_string_intern(v ? "true" : "false");
 }
+String spec_intern(String s) {
+    if (!s) return spec_string_intern("");
+    return spec_string_intern(spec_buf_to_cstring(s));
+}
 String spec_string_from_char_code(long long code) {
     if (code < 0 || code > 255) return spec_string_intern("");
     char one[2] = { (char)code, '\0' };
