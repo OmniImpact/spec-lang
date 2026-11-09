@@ -111,7 +111,7 @@ Class is ClassBindings{
 				local Array of Expression is segs: m:initExpr:arrayItems;
 				Conditional:if(check: { segs:length() > 0 }, then: {
 					local Expression is last: segs:get(index: segs:length() - 1);
-					Conditional:if(check: { last:stringValue == 'sysinternal' }, then: {
+					Conditional:if(check: { last:str == 'sysinternal' }, then: {
 						self:isFloor: true;
 					});
 				});

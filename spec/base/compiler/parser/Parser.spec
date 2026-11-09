@@ -804,13 +804,13 @@ Class is Parser{
 			local Expression is c: Expression:init(kind: ExpressionKind:CALL);
 			Conditional:if(check: { callExpr:kind == ExpressionKind:FIELD_ACCESS }, then: {
 				c:methodTarget: callExpr:leftExpr;
-				c:methodName: callExpr:stringValue;
+				c:methodName: callExpr:str;
 			}, else: {
 				Conditional:if(check: { callExpr:kind == ExpressionKind:IDENT }, then: {
 					local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
-					selfTarget:stringValue: self:names:selfIdent();
+					selfTarget:str: self:names:selfIdent();
 					c:methodTarget: selfTarget;
-					c:methodName: callExpr:stringValue;
+					c:methodName: callExpr:str;
 				}, else: {
 					c:methodTarget: callExpr;
 					c:methodName: '';
@@ -907,7 +907,7 @@ Class is Parser{
 		self:advance();
 		local Expression is expr: self:parseUnary();
 		local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
-		u:unaryOp: op;
+		u:str: op;
 		u:unaryExpr: expr;
 		return u;
 	}
@@ -927,7 +927,7 @@ Class is Parser{
 		});
 		self:advance();
 		local Expression is e: Expression:init(kind: ExpressionKind:USING_AS);
-		e:stringValue: clsTok:getValue();
+		e:str: clsTok:getValue();
 		Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 			self:advance();
 			Conditional:if(check: { !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, then: {
@@ -943,7 +943,7 @@ Class is Parser{
 			});
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 		}, else: {
-			self:addError(tok: clsTok, message: "Instance import requires parentheses: 'as " . e:stringValue . "()'.");
+			self:addError(tok: clsTok, message: "Instance import requires parentheses: 'as " . e:str . "()'.");
 		});
 		return e;
 	}
@@ -1044,13 +1044,13 @@ Class is Parser{
 			is TokenKind:STRING: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
-				e:stringValue: tok:getValue();
+				e:str: tok:getValue();
 				return e;
 			}
 			is TokenKind:RAWSTRING: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
-				e:stringValue: tok:getValue();
+				e:str: tok:getValue();
 				return e;
 			}
 			is TokenKind:TEMPLATESTRING: {
@@ -1060,26 +1060,26 @@ Class is Parser{
 			is TokenKind:INT: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:NUMBER);
-				e:stringValue: tok:getValue();
+				e:str: tok:getValue();
 				return e;
 			}
 			is TokenKind:FLOAT: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:FLOAT);
-				e:stringValue: tok:getValue();
+				e:str: tok:getValue();
 				return e;
 			}
 			is TokenKind:BOOL: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:BOOL);
-				e:boolValue: tok:getValue() == self:names:boolTrue();
-				e:stringValue: tok:getValue();
+				e:num: Conditional:if(check: { tok:getValue() == self:names:boolTrue() }, then: { 1 }, else: { 0 });
+				e:str: tok:getValue();
 				return e;
 			}
 			is TokenKind:IDENTIFIER: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:IDENT);
-				e:stringValue: tok:getValue();
+				e:str: tok:getValue();
 				return e;
 			}
 			is TokenKind:KEYWORD: {
@@ -1291,7 +1291,7 @@ Class is Parser{
 		Conditional:if(check: { depth > 0 }, then: {
 			local FancyEscapeLoop is dEsc: FancyEscapeLoop:init(src: raw);
 			Loops:run(loop: dEsc);
-			plainE:stringValue: dEsc:res;
+			plainE:str: dEsc:res;
 			return plainE;
 		});
 		local TemplateSplitLoop is split: TemplateSplitLoop:init(raw: raw);
@@ -1299,11 +1299,11 @@ Class is Parser{
 		split:lits:add(item: split:lit);
 		Conditional:if(check: { split:inHole }, then: {
 			self:addError(tok: originTok, message: 'Unterminated template hole (missing closing }})');
-			plainE:stringValue: '';
+			plainE:str: '';
 			return plainE;
 		});
 		local Expression is acc: Expression:init(kind: ExpressionKind:STRING);
-		acc:stringValue: split:lits:get(index: 0);
+		acc:str: split:lits:get(index: 0);
 		Conditional:if(check: { split:holes:length() == 0 }, then: {
 			return acc;
 		});

@@ -1200,7 +1200,7 @@ Class is CodeGenerator{
 	Function of String is inferTargetType(Expression is expr){
 		local ExpressionKind is kind: expr:kind;
 		Conditional:if(check: { kind == ExpressionKind:IDENT }, then: {
-			local String is name: expr:stringValue;
+			local String is name: expr:str;
 			Conditional:if(check: { name == self:names:selfIdent() }, then: {
 				return self:currentClassName;
 			});
@@ -1307,7 +1307,7 @@ Class is CodeGenerator{
 				return 'String';
 			});
 			local String is ret: '';
-			Conditional:if(check: { expr:overloadIndex > 0 }, then: {
+			Conditional:if(check: { expr:num > 0 }, then: {
 				# The checker stamped the exact return type for the selected
 				# overload (FUNCTIONS.md §I.2); it is the source of truth.
 				local String is rt: expr:resolvedType;
@@ -1328,7 +1328,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { leftT == '' || leftT == Primitive:ANY:value() }, then: {
 				return '';
 			});
-			return self:lookupFieldType(className: leftT, fieldName: expr:stringValue);
+			return self:lookupFieldType(className: leftT, fieldName: expr:str);
 		});
 		Conditional:if(check: { kind == ExpressionKind:INDEX }, then: {
 			# Indexing a container yields its element type (both spellings).
@@ -1377,15 +1377,15 @@ Class is CodeGenerator{
 		Conditional:if(check: { kind == ExpressionKind:MAP }, then: {
 			return 'Map';
 		});
-		Conditional:if(check: { kind == ExpressionKind:BINARY && expr:binaryOp == '.' }, then: {
+		Conditional:if(check: { kind == ExpressionKind:BINARY && expr:str == '.' }, then: {
 			# String concatenation chains produce a String.
 			return 'String';
 		});
 		Conditional:if(check: { kind == ExpressionKind:CAST }, then: {
-			return expr:castTarget;
+			return expr:str;
 		});
 		Conditional:if(check: { kind == ExpressionKind:UNARY }, then: {
-			Conditional:if(check: { expr:unaryOp == '!' }, then: {
+			Conditional:if(check: { expr:str == '!' }, then: {
 				return 'Boolean';
 			});
 			return self:inferTargetType(expr: expr:unaryExpr);
@@ -1414,7 +1414,7 @@ Class is CodeGenerator{
 			return true;
 		});
 		Conditional:if(check: { kind == ExpressionKind:BINARY }, then: {
-			return expr:binaryOp == '.';
+			return expr:str == '.';
 		});
 		Conditional:if(check: { kind == ExpressionKind:CALL }, then: {
 			local String is resT: self:inferTargetType(expr: expr);
@@ -1496,7 +1496,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { kind == ExpressionKind:STRING }, then: {
 			return true;
 		});
-		Conditional:if(check: { kind == ExpressionKind:BINARY && expr:binaryOp == '.' }, then: {
+		Conditional:if(check: { kind == ExpressionKind:BINARY && expr:str == '.' }, then: {
 			return true;
 		});
 		return false;
@@ -1512,7 +1512,7 @@ Class is CodeGenerator{
 	Function of String is wrapToString(Expression is expr, String is exprC){
 		local ExpressionKind is kind: expr:kind;
 		Conditional:if(check: { kind == ExpressionKind:STRING }, then: {
-			return 'spec_string_intern("' . self:utils:escapeString(s: expr:stringValue) . '")';
+			return 'spec_string_intern("' . self:utils:escapeString(s: expr:str) . '")';
 		});
 		Conditional:if(check: { kind == ExpressionKind:NUMBER }, then: {
 			return 'spec_to_string_int(' . exprC . ')';
@@ -1524,7 +1524,7 @@ Class is CodeGenerator{
 			return 'spec_to_string_bool(' . exprC . ')';
 		});
 		Conditional:if(check: { kind == ExpressionKind:BINARY }, then: {
-			local String is op: expr:binaryOp;
+			local String is op: expr:str;
 			Conditional:if(check: { op == '+' || op == '-' || op == '*' || op == '/' || op == '%' || op == '&' || op == '|' || op == '^' || op == '<<' || op == '>>' }, then: {
 				return 'spec_to_string_int(' . exprC . ')';
 			});
@@ -1534,7 +1534,7 @@ Class is CodeGenerator{
 			return exprC;
 		});
 		Conditional:if(check: { kind == ExpressionKind:UNARY }, then: {
-			Conditional:if(check: { expr:unaryOp == '!' }, then: {
+			Conditional:if(check: { expr:str == '!' }, then: {
 				return 'spec_to_string_bool(' . exprC . ')';
 			});
 			return 'spec_to_string_int(' . exprC . ')';
@@ -1598,7 +1598,7 @@ Class is CodeGenerator{
 			});
 		}, else: {
 			Conditional:if(check: { kind == ExpressionKind:BINARY }, then: {
-				claim: expr:binaryOp == '.';
+				claim: expr:str == '.';
 			}, else: {
 				Conditional:if(check: { kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP }, then: {
 					claim: true;
@@ -1636,22 +1636,22 @@ Class is CodeGenerator{
 			}
 			is ExpressionKind:STRING: {
 				# Raw strings collapse into STRING upstream; one intern path.
-				return 'spec_string_intern("' . self:utils:escapeString(s: expr:stringValue) . '")';
+				return 'spec_string_intern("' . self:utils:escapeString(s: expr:str) . '")';
 			}
 			is ExpressionKind:NUMBER: {
-				Conditional:if(check: { expr:stringValue != '' }, then: {
-					return expr:stringValue;
+				Conditional:if(check: { expr:str != '' }, then: {
+					return expr:str;
 				});
 				return '0';
 			}
 			is ExpressionKind:FLOAT: {
-				Conditional:if(check: { expr:stringValue != '' }, then: {
-					return expr:stringValue;
+				Conditional:if(check: { expr:str != '' }, then: {
+					return expr:str;
 				});
 				return '0.0';
 			}
 			is ExpressionKind:BOOL: {
-				return Conditional:if(check: { expr:boolValue }, then: { 'true' }, else: { 'false' });
+				return Conditional:if(check: { expr:num == 1 }, then: { 'true' }, else: { 'false' });
 			}
 			is ExpressionKind:IDENT: {
 				return self:emitIdent(expr: expr);
@@ -1670,26 +1670,26 @@ Class is CodeGenerator{
 			}
 			is ExpressionKind:UNARY: {
 				local String is innerC: self:generateExpression(expr: expr:unaryExpr);
-				Conditional:if(check: { expr:unaryOp == 'post++' }, then: {
+				Conditional:if(check: { expr:str == 'post++' }, then: {
 					return '((' . innerC . ')++)';
 				});
-				Conditional:if(check: { expr:unaryOp == 'post--' }, then: {
+				Conditional:if(check: { expr:str == 'post--' }, then: {
 					return '((' . innerC . ')--)';
 				});
-				Conditional:if(check: { expr:unaryOp == '++' }, then: {
+				Conditional:if(check: { expr:str == '++' }, then: {
 					return '(++(' . innerC . '))';
 				});
-				Conditional:if(check: { expr:unaryOp == '--' }, then: {
+				Conditional:if(check: { expr:str == '--' }, then: {
 					return '(--(' . innerC . '))';
 				});
-				return '(' . expr:unaryOp . '(' . innerC . '))';
+				return '(' . expr:str . '(' . innerC . '))';
 			}
 			is ExpressionKind:CALL: {
 				return self:emitCall(expr: expr);
 			}
 			is ExpressionKind:FIELD_ACCESS: {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				return '(' . leftC . ')->' . self:utils:cIdent(name: expr:stringValue);
+				return '(' . leftC . ')->' . self:utils:cIdent(name: expr:str);
 			}
 			is ExpressionKind:WHEN: {
 				return self:emitWhenExpression(expr: expr);
@@ -1787,7 +1787,7 @@ Class is CodeGenerator{
 	## @param expr: The IDENT expression.
 	## @return: C identifier expression.
 	Function of String is emitIdent(Expression is expr){
-		local String is name: expr:stringValue;
+		local String is name: expr:str;
 		Conditional:if(check: { name == self:names:selfIdent() || name == 'true' || name == 'false' }, then: {
 			return name;
 		});
@@ -1891,7 +1891,7 @@ Class is CodeGenerator{
 	## @param expr: The BINARY expression.
 	## @return: C expression.
 	Function of String is emitBinary(Expression is expr){
-		local String is op: expr:binaryOp;
+		local String is op: expr:str;
 		when (op) {
 			is '.': {
 				local String is leftC: self:generateExpressionInner(expr: expr:leftExpr);
@@ -2054,7 +2054,7 @@ Class is CodeGenerator{
 	## @return: C expression.
 	Function of String is emitCast(Expression is expr){
 		local String is innerC: self:generateExpression(expr: expr:leftExpr);
-		local String is target: expr:castTarget;
+		local String is target: expr:str;
 		local String is srcT: self:inferTargetType(expr: expr:leftExpr);
 		local String is digitsC: '0';
 		Conditional:if(check: { expr:castArgs:length() > 0 }, then: {
@@ -2244,13 +2244,13 @@ Class is CodeGenerator{
 			Conditional:if(check: { tgtCls:name != '' }, then: {
 				targetSym: self:utils:cIdent(name: tgtCls:qualifiedName());
 			});
-			local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex);
-			local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex);
+			local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: expr:methodName, idx: expr:num);
+			local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: expr:methodName, idx: expr:num);
 			local String is symOwner: ownerName;
 			Conditional:if(check: { symOwner == '' }, then: {
 				symOwner: targetC;
 			});
-			local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
+			local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
 			Conditional:if(check: { expr:methodName == 'init' }, then: {
 				# FUNCTIONS.md Part IV IV.2: a qualified inner-class target
 				# constructs with its OWN _new/default-_init pair — the
@@ -2262,12 +2262,12 @@ Class is CodeGenerator{
 					local String is innerInitSym: targetC . '_init';
 					return '({ ' . targetC . '* _inst = ' . innerNewSym . '_new(); ' . innerInitSym . '(_inst' . argsJoined . '); _inst; })';
 				});
-				local String is initCls: self:overloadOwnerNameGen(className: targetC, methodName: 'init', idx: expr:overloadIndex);
+				local String is initCls: self:overloadOwnerNameGen(className: targetC, methodName: 'init', idx: expr:num);
 				local String is symOwnerCls: initCls;
 				Conditional:if(check: { symOwnerCls == '' }, then: {
 					symOwnerCls: targetC;
 				});
-			local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:overloadIndex);
+			local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:num);
 			# FUNCTIONS.md Part IV IV.2c: the _new symbol qualifies like the
 			# init symbol — resolve the class's qualified identity.
 			local String is newSym: self:utils:cIdent(name: targetC);
@@ -2281,7 +2281,7 @@ Class is CodeGenerator{
 			return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . self:utils:cIdent(name: initCls) . '*)_inst' . argsJoined . '); _inst; })';
 		});
 			Conditional:if(check: { mDef:kind == MemberKind:METHOD }, then: {
-				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:overloadIndex);
+				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:num);
 				Conditional:if(check: { self:isFieldFulClass(cls: self:findClass(name: targetC)) }, then: {
 					# Field-ful instance import (INSTANCE.md E1/E2 full
 					# form): dispatch through the synthetic hidden field
@@ -2307,8 +2307,8 @@ Class is CodeGenerator{
 			Conditional:if(check: { bpBuiltin != '' }, then: {
 				return bpBuiltin;
 			});
-			local String is bpArgs: self:formatCallArgumentsWith(className: expr:bareProvider, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
-			local String is bpSymbol: self:overloadSymbol(className: expr:bareProvider, methodName: expr:methodName, idx: expr:overloadIndex);
+			local String is bpArgs: self:formatCallArgumentsWith(className: expr:bareProvider, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
+			local String is bpSymbol: self:overloadSymbol(className: expr:bareProvider, methodName: expr:methodName, idx: expr:num);
 			Conditional:if(check: { self:isFieldFulClass(cls: self:findClass(name: expr:bareProvider)) }, then: {
 				return bpSymbol . '((' . expr:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . expr:bareProvider) . ')' . bpArgs . ')';
 			});
@@ -2361,7 +2361,7 @@ Class is CodeGenerator{
 				});
 			});
 		});
-		local String is argsC: self:formatCallArgumentsWith(className: fullObjType, methodName: expr:methodName, idx: expr:overloadIndex, args: expr:methodArgs);
+		local String is argsC: self:formatCallArgumentsWith(className: fullObjType, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
 		local String is callStr: '';
 		Conditional:if(check: { self:overriddenMethods:has(key: expr:methodName) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:policy:isTransparent(c: self:findClass(name: objType)) && self:methodSlots:has(key: expr:methodName) }, then: {
 			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
@@ -2383,7 +2383,7 @@ Class is CodeGenerator{
 			});
 		});
 		Conditional:if(check: { callStr == '' }, then: {
-			local String is dispatchCls: self:overloadOwnerNameGen(className: objType, methodName: expr:methodName, idx: expr:overloadIndex);
+			local String is dispatchCls: self:overloadOwnerNameGen(className: objType, methodName: expr:methodName, idx: expr:num);
 			Conditional:if(check: { dispatchCls == '' }, then: {
 				dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
 			});
@@ -2394,9 +2394,9 @@ Class is CodeGenerator{
 				# qualified) owner identity.
 				targetExprC: '((' . self:utils:cIdent(name: dispatchCls) . '*)' . targetC . ')';
 			});
-			callStr: self:overloadSymbol(className: objType, methodName: expr:methodName, idx: expr:overloadIndex) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
+			callStr: self:overloadSymbol(className: objType, methodName: expr:methodName, idx: expr:num) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
 		});
-		local Member is targetM: self:lookupOverloadedMemberGen(className: objType, methodName: expr:methodName, idx: expr:overloadIndex);
+		local Member is targetM: self:lookupOverloadedMemberGen(className: objType, methodName: expr:methodName, idx: expr:num);
 		local ClassInfo is targetCls: self:findClass(name: objType);
 		Conditional:if(check: { targetM:kind == MemberKind:METHOD && targetCls:typeParams:length() > 0 }, then: {
 			local String is rawRet: self:formatTypeString(t: targetM:memberType);
@@ -2461,7 +2461,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { found }, then: {
 				return;
 			});
-			Conditional:if(check: { s:kind == StatementKind:ASSIGN && s:assignTarget:kind == ExpressionKind:IDENT && s:assignTarget:stringValue == name }, then: {
+			Conditional:if(check: { s:kind == StatementKind:ASSIGN && s:assignTarget:kind == ExpressionKind:IDENT && s:assignTarget:str == name }, then: {
 				found: true;
 			}, else: {
 				Conditional:if(check: { s:kind == StatementKind:WHEN }, then: {
@@ -2781,10 +2781,10 @@ Class is CodeGenerator{
 				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:methodName) . ')';
 			});
 		});
-		Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:stringValue) }, then: {
-			local String is eName: self:allEnumVariants:getString(key: c:stringValue, default: '');
+		Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:str) }, then: {
+			local String is eName: self:allEnumVariants:getString(key: c:str, default: '');
 			Conditional:if(check: { self:allTaggedEnums:has(key: eName) }, then: {
-				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:stringValue) . ')';
+				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:str) . ')';
 			});
 		});
 		Conditional:if(check: { c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && self:allTaggedEnums:has(key: c:pathSegments:get(index: 0)) }, then: {
@@ -2818,7 +2818,7 @@ Class is CodeGenerator{
 							local Expression is av: arg:value;
 							Conditional:if(check: { av:kind == ExpressionKind:IDENT }, then: {
 								local Parameter is pDef: vMem:params:get(index: idx);
-								local String is bindName: av:stringValue;
+								local String is bindName: av:str;
 								self:localVars:set(key: bindName, value: self:formatTypeString(t: pDef:paramType));
 								local String is pCType: self:cTypeFor(typeName: pDef:paramType:name);
 								binds: binds . '        ' . pCType . ' ' . self:utils:cIdent(name: bindName) . ' = (' . subjC . ')->' . vNameC . '_' . self:utils:cIdent(name: pDef:name) . ";\n";
@@ -2838,13 +2838,13 @@ Class is CodeGenerator{
 	## @return: C lvalue string, or '' when complex.
 	Function of String is tryGenerateTargetOnly(Expression is expr){
 		Conditional:if(check: { expr:kind == ExpressionKind:IDENT }, then: {
-			Conditional:if(check: { self:localVars:has(key: expr:stringValue) }, then: {
-				return self:utils:cIdent(name: expr:stringValue);
+			Conditional:if(check: { self:localVars:has(key: expr:str) }, then: {
+				return self:utils:cIdent(name: expr:str);
 			});
-			Conditional:if(check: { self:inMethod && self:fieldTypes:has(key: expr:stringValue) }, then: {
-				return 'self->' . self:utils:cIdent(name: expr:stringValue);
+			Conditional:if(check: { self:inMethod && self:fieldTypes:has(key: expr:str) }, then: {
+				return 'self->' . self:utils:cIdent(name: expr:str);
 			});
-			return self:utils:cIdent(name: expr:stringValue);
+			return self:utils:cIdent(name: expr:str);
 		});
 		Conditional:if(check: { expr:kind == ExpressionKind:PATH && expr:pathSegments:length() == 2 && expr:pathSegments:get(index: 0) == self:names:selfIdent() }, then: {
 			return 'self->' . self:utils:cIdent(name: expr:pathSegments:get(index: 1));
@@ -2861,7 +2861,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { targetC == '' }, then: {
 			return '';
 		});
-		Conditional:if(check: { expr:kind == ExpressionKind:BINARY && expr:binaryOp == '.' }, then: {
+		Conditional:if(check: { expr:kind == ExpressionKind:BINARY && expr:str == '.' }, then: {
 			local String is leftTarget: self:tryGenerateTargetOnly(expr: expr:leftExpr);
 			Conditional:if(check: { leftTarget == targetC }, then: {
 				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
@@ -3099,7 +3099,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { isArcLhs }, then: {
 			# Parameters are borrows: overwriting one retains the new value
 			# but must not release the caller's argument.
-			Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:IDENT && self:currentParams:has(key: stmt:assignTarget:stringValue) }, then: {
+			Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:IDENT && self:currentParams:has(key: stmt:assignTarget:str) }, then: {
 				return '    spec_retain((void*)(' . valC . ')); ' . targetC . ' = ' . valC . ";\n";
 			});
 			return '    spec_assign((void**)&' . targetC . ', (void*)(' . valC . "));\n";
@@ -3161,9 +3161,9 @@ Class is CodeGenerator{
 				retC: '(void*)(intptr_t)(' . retC . ')';
 			}, else: {
 				Conditional:if(check: { self:isArcType(typeName: self:currentMethodReturnType) }, then: {
-					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: stmt:returnExpr:stringValue);
+					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: stmt:returnExpr:str);
 					Conditional:if(check: { ownedLocal }, then: {
-						local String is identC: self:utils:cIdent(name: stmt:returnExpr:stringValue);
+						local String is identC: self:utils:cIdent(name: stmt:returnExpr:str);
 						local String is rtC: self:cTypeFor(typeName: self:currentMethodReturnType);
 						retC: '(' . rtC . ')({ ' . rtC . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
 					}, else: {

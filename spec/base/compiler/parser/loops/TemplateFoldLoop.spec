@@ -34,13 +34,13 @@ Class of Loop is TemplateFoldLoop{
 	replace Function of Boolean is iteration(LoopControl is control){
 		local Expression is holeE: self:parser:parseTemplateExpression(text: self:split:holes:get(index: self:k));
 		local Expression is withHole: Expression:init(kind: ExpressionKind:BINARY);
-		withHole:binaryOp: '.';
+		withHole:str: '.';
 		withHole:leftExpr: self:acc;
 		withHole:rightExpr: holeE;
 		local Expression is litE: Expression:init(kind: ExpressionKind:STRING);
-		litE:stringValue: self:split:lits:get(index: self:k + 1);
+		litE:str: self:split:lits:get(index: self:k + 1);
 		local Expression is withLit: Expression:init(kind: ExpressionKind:BINARY);
-		withLit:binaryOp: '.';
+		withLit:str: '.';
 		withLit:leftExpr: withHole;
 		withLit:rightExpr: litE;
 		self:acc: withLit;

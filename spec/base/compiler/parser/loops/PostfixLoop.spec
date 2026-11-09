@@ -59,15 +59,15 @@ Class of Loop is PostfixLoop{
 
 			local Expression is callExpr: Expression:init(kind: ExpressionKind:CALL);
 			Conditional:if(check: { self:currentExpr:kind == ExpressionKind:IDENT }, then: {
-				Conditional:if(check: { self:currentExpr:stringValue == 'Loops' }, then: {
+				Conditional:if(check: { self:currentExpr:str == 'Loops' }, then: {
 					callExpr:methodTarget: self:currentExpr;
 					callExpr:methodName: 'loop';
 				}, else: {
 					# A bare identifier followed by '(' calls self.
 					local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
-					selfTarget:stringValue: self:names:selfIdent();
+					selfTarget:str: self:names:selfIdent();
 					callExpr:methodTarget: selfTarget;
-					callExpr:methodName: self:currentExpr:stringValue;
+					callExpr:methodName: self:currentExpr:str;
 				});
 			}, else: {
 				callExpr:methodTarget: self:currentExpr;
@@ -91,7 +91,7 @@ Class of Loop is PostfixLoop{
 		Conditional:if(check: { self:parser:checkSymbol(value: '++') }, then: {
 			self:parser:advance();
 			local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
-			u:unaryOp: 'post++';
+			u:str: 'post++';
 			u:unaryExpr: self:currentExpr;
 			self:currentExpr: u;
 			return true;
@@ -99,7 +99,7 @@ Class of Loop is PostfixLoop{
 		Conditional:if(check: { self:parser:checkSymbol(value: '--') }, then: {
 			self:parser:advance();
 			local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
-			u:unaryOp: 'post--';
+			u:str: 'post--';
 			u:unaryExpr: self:currentExpr;
 			self:currentExpr: u;
 			return true;
@@ -129,7 +129,7 @@ Class of Loop is PostfixLoop{
 			Conditional:if(check: { self:currentExpr:kind != ExpressionKind:PATH && self:currentExpr:kind != ExpressionKind:IDENT }, then: {
 				local Expression is fa: Expression:init(kind: ExpressionKind:FIELD_ACCESS);
 				fa:leftExpr: self:currentExpr;
-				fa:stringValue: method;
+				fa:str: method;
 				self:currentExpr: fa;
 				return true;
 			});
@@ -140,13 +140,13 @@ Class of Loop is PostfixLoop{
 				});
 			}, else: {
 				Conditional:if(check: { self:currentExpr:kind == ExpressionKind:IDENT }, then: {
-					segs:add(item: self:currentExpr:stringValue);
+					segs:add(item: self:currentExpr:str);
 				});
 			});
 			segs:add(item: method);
 			local Expression is pathExpr: Expression:init(kind: ExpressionKind:PATH);
 			pathExpr:pathSegments: segs;
-			pathExpr:stringValue: self:currentExpr:stringValue . ':' . method;
+			pathExpr:str: self:currentExpr:str . ':' . method;
 			self:currentExpr: pathExpr;
 			return true;
 		});

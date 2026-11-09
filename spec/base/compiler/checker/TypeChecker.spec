@@ -579,7 +579,7 @@ Class is TypeChecker{
 		Conditional:if(check: { baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'Loops' }, then: {
 			return;
 		});
-		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:overloadIndex);
+		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:num);
 		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
 			return;
 		});
@@ -642,7 +642,7 @@ Class is TypeChecker{
 	}
 
 	## FUNCTIONS.md §I.2: resolves one same-name member group to the
-	## overload the call selects, stamping expr:overloadIndex. Candidates
+	## overload the call selects, stamping expr:num. Candidates
 	## are the same-name METHOD members of the nearest declaring ancestor
 	## (all parents walked, first subtree wins). Stage 1 filters by arity
 	## (all-positional) or name-set (all-named) — mixed calls are
@@ -703,7 +703,7 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'The scoped region requires exactly one unbound Function parameter at the end of \'' . baseName . '.' . methodName . '\' (FUNCTIONS.md §as).');
 				return none;
 			});
-			expr:overloadIndex: 0;
+			expr:num: 0;
 			return only;
 		});
 		Conditional:if(check: { allNamed }, then: {
@@ -783,7 +783,7 @@ Class is TypeChecker{
 			});
 			Conditional:if(check: { slots:length() == 1 }, then: {
 				local Member is sel: slots:get(index: 0);
-				expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+				expr:num: self:indexOfMember(group: group, m: sel);
 				return sel;
 			});
 		});
@@ -801,7 +801,7 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
 				return none;
 			});
-			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+			expr:num: self:indexOfMember(group: group, m: sel);
 			return sel;
 		});
 		local Array of Member is exact: [];
@@ -816,7 +816,7 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (FUNCTIONS.md §as).');
 				return none;
 			});
-			expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+			expr:num: self:indexOfMember(group: group, m: sel);
 			return sel;
 		});
 		Conditional:if(check: { isScoped && exact:length() == 0 }, then: {
@@ -830,7 +830,7 @@ Class is TypeChecker{
 			});
 			Conditional:if(check: { slots:length() == 1 }, then: {
 				local Member is sel: slots:get(index: 0);
-				expr:overloadIndex: self:indexOfMember(group: group, m: sel);
+				expr:num: self:indexOfMember(group: group, m: sel);
 				return sel;
 			});
 		});
@@ -1091,7 +1091,7 @@ Class is TypeChecker{
 					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
 							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
-								local String is prov: seg:stringValue;
+								local String is prov: seg:str;
 								local Boolean is already: false;
 								acc:each(action: local Function(String is got){
 									Conditional:if(check: { got == prov }, then: {
@@ -1159,7 +1159,7 @@ Class is TypeChecker{
 					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
 							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
-								local ClassInfo is provCls: self:findClass(name: seg:stringValue);
+								local ClassInfo is provCls: self:findClass(name: seg:str);
 								Conditional:if(check: { provCls:name != '' }, then: {
 									provCls:members:each(action: local Function(Member is nm){
 										Conditional:if(check: { nm:kind == MemberKind:CLASS }, then: {
@@ -1500,13 +1500,13 @@ Class is TypeChecker{
 								local String is nsJoined: '';
 								item:arrayItems:each(action: local Function(Expression is seg){
 									Conditional:if(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
-										terminal: seg:stringValue;
+										terminal: seg:str;
 										terminalAs: seg:kind == ExpressionKind:USING_AS;
 									}, else: {
 										Conditional:if(check: { nsJoined == '' }, then: {
-											nsJoined: seg:stringValue;
+											nsJoined: seg:str;
 										}, else: {
-											nsJoined: nsJoined . ':' . seg:stringValue;
+											nsJoined: nsJoined . ':' . seg:str;
 										});
 									});
 								});
@@ -1573,13 +1573,13 @@ Class is TypeChecker{
 						local String is nsJoined: '';
 						item:arrayItems:each(action: local Function(Expression is seg){
 							Conditional:if(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
-								terminal: seg:stringValue;
+								terminal: seg:str;
 								terminalAs: seg:kind == ExpressionKind:USING_AS;
 							}, else: {
 								Conditional:if(check: { nsJoined == '' }, then: {
-									nsJoined: seg:stringValue;
+									nsJoined: seg:str;
 								}, else: {
-									nsJoined: nsJoined . ':' . seg:stringValue;
+									nsJoined: nsJoined . ':' . seg:str;
 								});
 							});
 						});
@@ -1680,8 +1680,8 @@ Class is TypeChecker{
 				Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: '') == subjectType }, then: {
 					variantName: c:methodName;
 				}, else: {
-					Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:stringValue) && self:allEnumVariants:getString(key: c:stringValue, default: '') == subjectType }, then: {
-						variantName: c:stringValue;
+					Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:str) && self:allEnumVariants:getString(key: c:str, default: '') == subjectType }, then: {
+						variantName: c:str;
 					}, else: {
 						Conditional:if(check: { c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1)) }, then: {
 							variantName: c:pathSegments:get(index: 1);
@@ -1725,7 +1725,7 @@ Class is TypeChecker{
 						local Expression is av: arg:value;
 						Conditional:if(check: { av:kind == ExpressionKind:IDENT }, then: {
 							local Parameter is pDef: vMem:params:get(index: idx);
-							self:localVars:set(key: av:stringValue, value: self:formatVarTypeString(t: pDef:paramType));
+							self:localVars:set(key: av:str, value: self:formatVarTypeString(t: pDef:paramType));
 						});
 					});
 					idx: idx + 1;
@@ -1864,7 +1864,7 @@ Class is TypeChecker{
 				res: Primitive:BOOLEAN:value();
 			}
 			is ExpressionKind:IDENT: {
-				local String is name: expr:stringValue;
+				local String is name: expr:str;
 				Conditional:if(check: { name == self:names:selfIdent() }, then: {
 					res: self:currentClassName;
 				}, else: {
@@ -1994,7 +1994,7 @@ Class is TypeChecker{
 				# expression (e.g. `n + if(...)`) types in context.
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
 				local String is rightT: self:inferExpressionType(expr: expr:rightExpr, expected: expected);
-				local String is op: expr:binaryOp;
+				local String is op: expr:str;
 				when (op) {
 					is '.': {
 						res: Primitive:STRING:value();
@@ -2031,7 +2031,7 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:CAST: {
 				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
-				local String is target: expr:castTarget;
+				local String is target: expr:str;
 				local String is src: Conditional:if(check: { innerT != '' }, then: { innerT }, else: { Primitive:ANY:value() });
 				local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
 				# Every non-format cast takes no arguments.
@@ -2091,15 +2091,15 @@ Class is TypeChecker{
 			}
 			is ExpressionKind:UNARY: {
 				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
-				Conditional:if(check: { expr:unaryOp == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
+				Conditional:if(check: { expr:str == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
 					local String is msg: 'Bitwise complement \'~\' requires an Int operand (got \'' . innerT . '\').';
 					self:addError(line: self:currentLine, msg: msg);
 				});
-				Conditional:if(check: { (expr:unaryOp == '++' || expr:unaryOp == '--' || expr:unaryOp == 'post++' || expr:unaryOp == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
-					local String is msg: 'Operator \'' . expr:unaryOp . '\' requires an Int operand (got \'' . innerT . '\').';
+				Conditional:if(check: { (expr:str == '++' || expr:str == '--' || expr:str == 'post++' || expr:str == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
+					local String is msg: 'Operator \'' . expr:str . '\' requires an Int operand (got \'' . innerT . '\').';
 					self:addError(line: self:currentLine, msg: msg);
 				});
-				Conditional:if(check: { expr:unaryOp == '!' }, then: {
+				Conditional:if(check: { expr:str == '!' }, then: {
 					res: Primitive:BOOLEAN:value();
 				}, else: {
 					res: innerT;
@@ -2202,7 +2202,7 @@ Class is TypeChecker{
 				}, else: {
 					local Array of String is faParts: leftT:split(delimiter: ':');
 					local String is faBase: faParts:get(index: 0);
-					local String is fName: expr:stringValue;
+					local String is fName: expr:str;
 					local String is fOwner: self:findMemberOwnerClass(className: faBase, memberName: fName);
 					Conditional:if(check: { fOwner != '' }, then: {
 						self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: faBase, memberName: fName), memberName: fName);
@@ -2363,7 +2363,7 @@ Class is TypeChecker{
 		local String is method: expr:methodName;
 		local String is res: 'Any';
 
-		local String is targetName: expr:methodTarget:stringValue;
+		local String is targetName: expr:methodTarget:str;
 		Conditional:if(check: { targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, then: {
 			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
 		});
@@ -2402,7 +2402,7 @@ Class is TypeChecker{
 		# one provider resolves; two or more collide and force
 		# qualification; zero is an error — the old behavior silently
 		# invented CurrentClass_method and died in gcc.
-		Conditional:if(check: { recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:localVars:has(key: expr:methodName) && !self:fieldTypes:has(key: expr:methodName) }, then: {
+		Conditional:if(check: { recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:localVars:has(key: expr:methodName) && !self:fieldTypes:has(key: expr:methodName) }, then: {
 			local String is ownOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: expr:methodName);
 			local Array of String is bsProviders: self:bareScopeProviders(methodName: expr:methodName);
 			local Int is providerTotal: bsProviders:length() + Conditional:if(check: { ownOwner != '' }, then: { 1 }, else: { 0 });
@@ -2497,7 +2497,7 @@ Class is TypeChecker{
 					# ONLY under the callee's visibility — a `local` member of the
 					# imported class is not callable through the import. The same
 					# check the qualified path runs.
-					local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: expr:methodName, idx: expr:overloadIndex);
+					local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: expr:methodName, idx: expr:num);
 					Conditional:if(check: { bareSelected:name != '' }, then: {
 						self:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: expr:methodName);
 					});
@@ -2542,7 +2542,7 @@ Class is TypeChecker{
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
-		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
+		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
 		# FUNCTIONS.md Part II: the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline
@@ -2716,7 +2716,7 @@ Class is TypeChecker{
 		});
 
 		local String is fnVarT: '';
-		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:stringValue == self:names:selfIdent() }, then: {
+		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() }, then: {
 			fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ''));
 		});
 		Conditional:if(check: { targetType == 'Parallel' && method == 'run' }, then: {
@@ -2980,8 +2980,8 @@ Class is TypeChecker{
 			Conditional:if(check: { found == '' && entry:kind == ExpressionKind:ARRAY && entry:arrayItems:length() == 2 }, then: {
 				local Expression is tExpr: entry:arrayItems:get(index: 0);
 				local Expression is fExpr: entry:arrayItems:get(index: 1);
-				local String is entryTarget: tExpr:stringValue;
-				local String is entryFn: fExpr:stringValue;
+				local String is entryTarget: tExpr:str;
+				local String is entryFn: fExpr:str;
 				Conditional:if(check: { entryTarget == target }, then: {
 					local String is fnRet: self:lookupMethodReturnType(className: srcType, methodName: entryFn);
 					Conditional:if(check: { fnRet != target }, then: {
@@ -3047,7 +3047,7 @@ Class is TypeChecker{
 					});
 				}, else: {
 					Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:IDENT }, then: {
-						self:unassignedFields:remove(key: stmt:assignTarget:stringValue);
+						self:unassignedFields:remove(key: stmt:assignTarget:str);
 					});
 				});
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
@@ -3204,7 +3204,7 @@ Class is TypeChecker{
 		Conditional:if(check: { tc:name == '' }, then: {
 			return '';
 		});
-		local Member is m: self:lookupOverloadedMember(className: targetT, methodName: expr:methodName, idx: expr:overloadIndex);
+		local Member is m: self:lookupOverloadedMember(className: targetT, methodName: expr:methodName, idx: expr:num);
 		Conditional:if(check: { m:name == '' }, then: {
 			return '';
 		});
@@ -3983,10 +3983,10 @@ Class is TypeChecker{
 						asExpr: seg;
 					});
 				});
-				Conditional:if(check: { asExpr:stringValue == '' }, then: {
+				Conditional:if(check: { asExpr:str == '' }, then: {
 					return;
 				});
-				local String is asName: asExpr:stringValue;
+				local String is asName: asExpr:str;
 				Conditional:if(check: { seen:has(key: asName) }, then: {
 					self:addError(line: m:line, msg: 'Class \'' . classDef:name . '\' instance-imports \'' . asName . '\' more than once (INSTANCE.md E3).');
 					return;
@@ -4020,7 +4020,7 @@ Class is TypeChecker{
 					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
 							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
-								out:add(item: seg:stringValue);
+								out:add(item: seg:str);
 							});
 						});
 					});

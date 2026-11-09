@@ -32,16 +32,21 @@ Class is Expression{
 
 	## All literal kinds: the literal's text (numbers keep their scanned,
 	## normalized text; strings carry processed content).
-	String is stringValue: '';
+	# FUNCTIONS.md Part V (Path C): the kind-disjoint field groups fuse —
+	# a node is exactly one kind, so the value-string fields share one
+	# slot (IDENT/STRING/PATH text, the CAST target, the BINARY/UNARY
+	# operator) and the scalar fields share another. The CALL's
+	# methodName/bareProvider stay separate (they co-populate on bare
+	# calls).
+	String is str: '';
 
 	## NUMBER: the integer value.
-	Int is intValue: 0;
+	Int is num: 0;
 
 	## FLOAT: the floating-point value.
 	Float is floatValue: 0.0;
 
 	## BOOL: the boolean value.
-	Boolean is boolValue: false;
 
 	## PATH: the colon-delimited segments.
 	Array of String is pathSegments: [];
@@ -56,7 +61,6 @@ Class is Expression{
 	## CAST: the cast operand, target type name, and optional width args
 	## (e.g. the digit width of Hex(8)).
 	Expression is leftExpr;
-	String is castTarget: '';
 	Array of Expression is castArgs: [];
 
 	## CALL: the receiver, method name, and arguments.
@@ -78,15 +82,12 @@ Class is Expression{
 	## CALL: the checker-selected overload's position within the owning
 	## class's same-name member group (FUNCTIONS.md §I.2); -1 when
 	## unstamped (single-member names resolve as index 0).
-	Int is overloadIndex: -1;
 
 	## BINARY: the operator and the right operand (the left operand shares
 	## leftExpr with CAST).
-	String is binaryOp: '';
 	Expression is rightExpr;
 
 	## UNARY: the operator and inner operand.
-	String is unaryOp: '';
 	Expression is unaryExpr;
 
 	## IF_ELSE: condition and branches.
@@ -112,7 +113,7 @@ Class is Expression{
 	## @param name: Identifier name.
 	Function is makeIdent(String is name){
 		self:kind: ExpressionKind:IDENT;
-		self:stringValue: name;
+		self:str: name;
 	}
 
 	## Configures this node as a colon-delimited path.
@@ -141,7 +142,7 @@ Class is Expression{
 	Function is makeCast(Expression is inner, String is target, Array of Expression is args){
 		self:kind: ExpressionKind:CAST;
 		self:leftExpr: inner;
-		self:castTarget: target;
+		self:str: target;
 		self:castArgs: args;
 	}
 

@@ -343,11 +343,11 @@ Class is DeclarationGenerator{
 			local String is valNum: '' . vIdx;
 			Conditional:if(check: { m:hasInit }, then: {
 				local Expression is initE: m:initExpr;
-				Conditional:if(check: { initE:kind == ExpressionKind:NUMBER && initE:stringValue != '' }, then: {
-					valNum: initE:stringValue;
+				Conditional:if(check: { initE:kind == ExpressionKind:NUMBER && initE:str != '' }, then: {
+					valNum: initE:str;
 				}, else: {
-					Conditional:if(check: { initE:kind == ExpressionKind:UNARY && initE:unaryOp == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER }, then: {
-						valNum: '-' . initE:unaryExpr:stringValue;
+					Conditional:if(check: { initE:kind == ExpressionKind:UNARY && initE:str == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER }, then: {
+						valNum: '-' . initE:unaryExpr:str;
 					});
 				});
 			});
@@ -368,7 +368,7 @@ Class is DeclarationGenerator{
 		Conditional:if(check: { m:hasInit }, then: {
 			local Expression is initE: m:initExpr;
 			Conditional:if(check: { initE:kind == ExpressionKind:STRING }, then: {
-				return initE:stringValue;
+				return initE:str;
 			});
 		});
 		return m:name;

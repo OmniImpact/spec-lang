@@ -690,9 +690,19 @@ how the compiler's exit cleans up after itself.
    at zero measured cost. The retained-string population lives in the
    AST's per-use NAME fields — which only the node-count lever
    addresses.
-3. **The Expression struct** (25 flat fields, 246 B): the per-kind
-   layout (the tagged-union shape) is the structural fix — a project,
-   and it rides on (1) landing first.
+3. **The Expression struct** (25 flat fields, 246 B): **the pointer
+   fusion was implemented and measured — the ceiling is ~4%.** The
+   kind-disjoint groups fused cleanly (six string/scalar fields into
+   `str` + `num`; 137 lines renamed, one convergence, 112/112 green)
+   but the peak moved 809 → 807 — inside run-to-run noise. The
+   estimate's error: it used the TOTAL-ALLOCATED node volume; the LIVE
+   node mass is ~231k Expressions / 57 MB (plus ~30 MB of Statements),
+   so fusing 40 B of pointers saved ~9 MB. The nodes' mass lives in the
+   strings and arrays they REFERENCE — pointer fusion cannot touch it.
+   The struct stays fused (fewer fields, green, zero cost); stages
+   2–3 (the array and node-pointer groups) are not worth their churn
+   at the same ~4% ceiling. The true structural fix remains (1): fewer
+   nodes, each dragging fewer per-use strings.
 
 ---
 

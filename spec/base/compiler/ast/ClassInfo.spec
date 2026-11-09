@@ -72,7 +72,7 @@ Class is ClassInfo{
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
 					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
 						item:arrayItems:each(action: local Function(Expression is seg){
-							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS && seg:stringValue == name }, then: {
+							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS && seg:str == name }, then: {
 								found: true;
 							});
 						});
@@ -99,9 +99,9 @@ Class is ClassInfo{
 					local String is joined: '';
 					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
 						Conditional:if(check: { joined == '' }, then: {
-							joined: seg:stringValue;
+							joined: seg:str;
 						}, else: {
-							joined: joined . ':' . seg:stringValue;
+							joined: joined . ':' . seg:str;
 						});
 					});
 					self:nsJoined: joined;

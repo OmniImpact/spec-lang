@@ -55,8 +55,8 @@ Class of Loop is EnumVariantsLoop{
 			hasInit: true;
 		}, else: {
 			# Untagged variant: its ordinal is the value.
-			valExpr:stringValue: '' . self:count;
-			valExpr:intValue: self:count;
+			valExpr:str: '' . self:count;
+			valExpr:num: self:count;
 			hasInit: true;
 		});
 		self:count: self:count + 1;

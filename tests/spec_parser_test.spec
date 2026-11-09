@@ -54,7 +54,7 @@ Class is SpecParserTest{
 		local Member is go: cls:members:get(index: 0);
 		local Statement is vd: go:body:get(index: 0);
 		local Expression is init: vd:initExpr;
-		Conditional:if(check: { !p:hasErrors() && vd:kind == StatementKind:VAR_DECL && init:kind == ExpressionKind:BINARY && init:binaryOp == '+' && init:rightExpr:binaryOp == '*' }, then: {
+		Conditional:if(check: { !p:hasErrors() && vd:kind == StatementKind:VAR_DECL && init:kind == ExpressionKind:BINARY && init:str == '+' && init:rightExpr:str == '*' }, then: {
 			Output:line('[PASS] precedence folding (additive over multiplicative)');
 		}, else: {
 			Output:line('[FAIL] precedence folding');
@@ -69,7 +69,7 @@ Class is SpecParserTest{
 		local Member is m2: cls2:members:get(index: 0);
 		local Statement is vd2: m2:body:get(index: 0);
 		local Expression is s2: vd2:initExpr;
-		Conditional:if(check: { !p2:hasErrors() && s2:kind == ExpressionKind:BINARY && s2:binaryOp == '.' && s2:leftExpr:rightExpr:kind == ExpressionKind:BINARY }, then: {
+		Conditional:if(check: { !p2:hasErrors() && s2:kind == ExpressionKind:BINARY && s2:str == '.' && s2:leftExpr:rightExpr:kind == ExpressionKind:BINARY }, then: {
 			Output:line('[PASS] template desugars to concat chain');
 		}, else: {
 			Output:line('[FAIL] template desugar');

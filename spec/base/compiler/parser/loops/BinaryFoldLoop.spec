@@ -58,7 +58,7 @@ Class of Loop is BinaryFoldLoop{
 			right: self:parser:parseLevel(level: self:next);
 		});
 		local Expression is binExpr: Expression:init(kind: ExpressionKind:BINARY);
-		binExpr:binaryOp: op;
+		binExpr:str: op;
 		binExpr:leftExpr: self:currentExpr;
 		binExpr:rightExpr: right;
 		self:currentExpr: binExpr;

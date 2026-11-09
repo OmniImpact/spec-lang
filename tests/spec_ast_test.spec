@@ -28,10 +28,10 @@ Class is SpecAstTest{
 		local Expression is rhs: Expression:init(kind: ExpressionKind:IDENT);
 		rhs:makeIdent(name: 'b');
 		local Expression is bin: Expression:init(kind: ExpressionKind:BINARY);
-		bin:binaryOp: '+';
+		bin:str: '+';
 		bin:leftExpr: lhs;
 		bin:rightExpr: rhs;
-		Conditional:if(check: { bin:kind == ExpressionKind:BINARY && bin:leftExpr:stringValue == 'a' && bin:rightExpr:stringValue == 'b' }, then: {
+		Conditional:if(check: { bin:kind == ExpressionKind:BINARY && bin:leftExpr:str == 'a' && bin:rightExpr:str == 'b' }, then: {
 			Output:line('[PASS] expression records cross-reference');
 		}, else: {
 			Output:line('[FAIL] expression records cross-reference');

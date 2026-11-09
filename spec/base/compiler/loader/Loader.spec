@@ -382,15 +382,15 @@ Class is Loader{
 		local String is termClass: '';
 		segs:each(action: local Function(Expression is seg){
 			Conditional:if(check: { seg:kind == ExpressionKind:IDENT }, then: {
-				termClass: seg:stringValue;
+				termClass: seg:str;
 			}, else: {
 				Conditional:if(check: { seg:kind == ExpressionKind:USING_AS }, then: {
 					# Instance-import form (INSTANCE.md §2.1): resolves exactly
 					# like the class form; the as-ness stays on the using member
 					# for the checker, generator, and audit.
-					termClass: seg:stringValue;
+					termClass: seg:str;
 				}, else: {
-					parts:add(item: seg:stringValue);
+					parts:add(item: seg:str);
 				});
 			});
 		});
@@ -687,7 +687,7 @@ Class is Loader{
 	## @param c: The importing class.
 	## @param asExpr: The USING_AS expression node.
 	Function is synthesizeFor(ClassInfo is c, Expression is asExpr){
-		local String is targetName: asExpr:stringValue;
+		local String is targetName: asExpr:str;
 		local ClassInfo is target: self:findLoadedClass(name: targetName);
 		Conditional:if(check: { target:name == '' }, then: {
 			return;
@@ -726,7 +726,7 @@ Class is Loader{
 		field:memberType: Type:init(name: targetName);
 		local Expression is ctor: Expression:init(kind: ExpressionKind:CALL);
 		local Expression is recv: Expression:init(kind: ExpressionKind:IDENT);
-		recv:stringValue: targetName;
+		recv:str: targetName;
 		ctor:methodTarget: recv;
 		ctor:methodName: 'init';
 		ctor:methodArgs: asExpr:methodArgs;

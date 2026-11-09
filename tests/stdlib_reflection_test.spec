@@ -95,7 +95,7 @@ Class is StdlibReflectionTest{
 		# 4. Test Meta AST Expression & Statement
 		Output:line("\n--- 4. Meta AST Expression & Statement ---");
 		local Expression is numExpr: Expression:init(kind: ExpressionKind:NUMBER);
-		numExpr:stringValue: '100';
+		numExpr:str: '100';
 		local Expression is identExpr: Expression:init(kind: ExpressionKind:IDENT);
 		identExpr:makeIdent(name: 'health');
 

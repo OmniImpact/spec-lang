@@ -262,7 +262,7 @@ Class is Linter{
 	Function of Boolean is isLoopSpell(Expression is target){
 		local String is name: '';
 		Conditional:if(check: { target:kind == ExpressionKind:IDENT }, then: {
-			name: target:stringValue;
+			name: target:str;
 		}, else: {
 			Conditional:if(check: { target:kind == ExpressionKind:PATH }, then: {
 				local Array of String is segs: target:pathSegments;
@@ -282,7 +282,7 @@ Class is Linter{
 	Function of Boolean is isClassSpell(Expression is target){
 		local String is name: '';
 		Conditional:if(check: { target:kind == ExpressionKind:IDENT }, then: {
-			name: target:stringValue;
+			name: target:str;
 		}, else: {
 			Conditional:if(check: { target:kind == ExpressionKind:PATH }, then: {
 				local Array of String is segs: target:pathSegments;
@@ -619,7 +619,7 @@ Class is Linter{
 		local String is name: '';
 		local Boolean is isFloorChain: false;
 		Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:IDENT }, then: {
-			name: callExpr:methodTarget:stringValue;
+			name: callExpr:methodTarget:str;
 		}, else: {
 			Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:PATH }, then: {
 				local Array of String is segs: callExpr:methodTarget:pathSegments;
