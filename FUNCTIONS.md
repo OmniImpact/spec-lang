@@ -535,6 +535,15 @@ still an error).
   as-imported class are unreachable, and the as-import never exposes
   fields. The elided-dispatch call on a field-ful import keeps the
   synthesized `_import_X` field on the CALLING class (unchanged).
+- **The as/using split (strict)**: the PLAIN terminal (`'ns', X`) is the
+  type import — it grants the bare type reference and, with it,
+  construction. The as-form terminal (`'ns', as X()`) grants functions,
+  instance dispatch, and the qualified nested-type references
+  (`X:Inner`) — never the bare parent type, never construction. The
+  declaration-side defaults (`Math2 is m : Math2:init()`) are the
+  dependency-injection surface: the default auto-instantiates on
+  omission, binds partially by name, and gates against the DECLARING
+  class's imports exactly like a body expression.
 
 ### IV.4 The gen side
 

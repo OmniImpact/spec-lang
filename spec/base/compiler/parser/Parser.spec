@@ -405,21 +405,25 @@ Class is Parser{
 		local Array of String is modifiers: [];
 		While:run(loop: ModifierLoop:init(parser: self, mods: modifiers));
 
-		Conditional:if(check: { self:atClassHeader() }, then: {
-			local ClassInfo is nested: self:parseClass();
-			local Member is m: Member:init(kind: MemberKind:CLASS);
-			m:setLine(line: startLine);
-			m:nestedClass: nested;
-			return m;
-		});
+	Conditional:if(check: { self:atClassHeader() }, then: {
+		local ClassInfo is nested: self:parseClass();
+		local Member is m: Member:init(kind: MemberKind:CLASS);
+		m:setLine(line: startLine);
+		# IV.2c: the member identifies its class — the unnamed member
+		# matched other unnamed members in the override and registry walks.
+		m:name: nested:name;
+		m:nestedClass: nested;
+		return m;
+	});
 
-		Conditional:if(check: { self:atEnumHeader() }, then: {
-			local ClassInfo is edef: self:parseEnum();
-			local Member is m: Member:init(kind: MemberKind:CLASS);
-			m:setLine(line: startLine);
-			m:nestedClass: edef;
-			return m;
-		});
+	Conditional:if(check: { self:atEnumHeader() }, then: {
+		local ClassInfo is edef: self:parseEnum();
+		local Member is m: Member:init(kind: MemberKind:CLASS);
+		m:setLine(line: startLine);
+		m:name: edef:name;
+		m:nestedClass: edef;
+		return m;
+	});
 
 		# Shorthand metadata property: `name: <expr>;` — the namespace/using
 		# declaration form (an untyped field with an initializer).

@@ -62,6 +62,42 @@ Class is InnerClassTest{
 		}
 	}
 
+	## The shadowing rule: the inner's own member wins silently over the
+	## same-named parent member (the closer scope).
+	Function of Int is shadowed(){
+		return 1;
+	}
+
+	## The inner-of-inner chain: the qualified identity is three-deep and
+	## the member walk goes all the way out (Mid and InnerClassTest both serve
+	## members to Deep).
+	Class is Mid{
+		Function of Int is midValue(){
+			return 20;
+		}
+
+		## Shadows both Mid's and InnerClassTest's same-named member.
+		Function of Int is shadowed(){
+			return 3;
+		}
+
+		Class is Deep{
+			Function of Int is all(){
+				return self:doubled(5) + self:midValue() + self:shadowed();
+			}
+
+			Function of Int is shadowPick(){
+				return self:shadowed();
+			}
+
+			replace Function is init(){
+			}
+		}
+
+		replace Function is init(){
+		}
+	}
+
 	replace Function is init(Map of String to String is args){
 		Output:line('=== Inner Classes ===');
 		local Int is pass: 0;
@@ -100,6 +136,30 @@ Class is InnerClassTest{
 		}, else: {
 			fail: fail + 1;
 			Output:line('[FAIL] own import: ' . (mu:halved(8.0) as String));
+		});
+
+		# 5. The shadowing rule: the inner's own member wins.
+		Conditional:if(check: { h:shadowed() == 1 && mu:shadowed() == 1 }, then: {
+			pass: pass + 1;
+		}, else: {
+			fail: fail + 1;
+			Output:line('[FAIL] parent-level shadowing');
+		});
+
+		# 6. The inner-of-inner chain: the three-deep qualified reference
+		# resolves, the member walk goes all the way out, and the deepest
+		# shadow wins.
+		local InnerClassTest:Mid:Deep is d: InnerClassTest:Mid:Deep:init();
+		Conditional:if(check: { d:all() == 33 }, then: {			pass: pass + 1;
+		}, else: {
+			fail: fail + 1;
+			Output:line('[FAIL] inner-of-inner chain: ' . (d:all() as String));
+		});
+		Conditional:if(check: { d:shadowPick() == 3 }, then: {
+			pass: pass + 1;
+		}, else: {
+			fail: fail + 1;
+			Output:line('[FAIL] deepest shadow: ' . (d:shadowPick() as String));
 		});
 
 		Conditional:if(check: { fail == 0 }, then: {

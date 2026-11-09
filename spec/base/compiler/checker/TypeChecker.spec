@@ -1929,25 +1929,47 @@ Class is TypeChecker{
 								}, else: {
 									Conditional:if(check: { self:registeredClasses:has(key: root) }, then: {
 										rootType: root;
-										# FUNCTIONS.md Part IV IV.2c: a nested-class reference
-										# through the enclosing class's name — 'Outer:Inner' —
-										# resolves the inner class's qualified identity. The
-										# second segment names a CLASS-kind member.
-										Conditional:if(check: { segs:length() == 2 }, then: {
-											local ClassInfo is outerCls: self:findClass(name: root);
-											Conditional:if(check: { outerCls:name != '' }, then: {
-												outerCls:members:each(action: local Function(Member is m){
-													Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: 1) }, then: {
-														rootType: outerCls:qualifiedName() . ':' . segs:get(index: 1);
+										# FUNCTIONS.md Part IV IV.2c: the nested-class chain —
+										# 'Outer:Inner' and the inner-of-inner 'Outer:Mid:Deep' —
+										# walks CLASS-kind members per segment and resolves to
+										# the deepest class's qualified identity.
+										local Boolean is chainResolved: false;
+										Conditional:if(check: { segs:length() >= 2 }, then: {
+											local ClassInfo is chainCls: self:findClass(name: root);
+											local Boolean is chainOk: chainCls:name != '';
+											local Int is chainIdx: 1;
+											While:condition(
+												evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
+												iteration: local Function of Boolean(){
+													local String is nextType: '';
+													chainCls:members:each(action: local Function(Member is m){
+														Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
+															nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
+														});
 													});
-												});
+													Conditional:if(check: { nextType != '' }, then: {
+														chainCls: self:findClass(name: nextType);
+														Conditional:if(check: { chainCls:name == '' }, then: {
+															chainOk: false;
+														});
+														chainIdx: chainIdx + 1;
+													}, else: {
+														chainOk: false;
+													});
+													return true;
+												}
+											);
+											Conditional:if(check: { chainOk && chainIdx == segs:length() }, then: {
+												rootType: chainCls:qualifiedName();
+												chainResolved: true;
 											});
 										});
 										# INSTANCE.md §2.3: fields and values are not reachable
 										# through a class-name prefix — methods only. A PATH
 										# rooted at a non-type-level class name with further
-										# segments is a prefixed field access: rejected.
-										Conditional:if(check: { segs:length() >= 2 && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' && rootType != root . ':' . segs:get(index: 1) }, then: {
+										# segments is a prefixed field access: rejected. The
+										# resolved nested-class chains are exempt.
+										Conditional:if(check: { segs:length() >= 2 && !chainResolved && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
 											self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; call a method on the instance (INSTANCE.md §2.3).');
 											rootType: '';
 										});
@@ -3563,14 +3585,17 @@ Class is TypeChecker{
 
 		classDef:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is parent: self:findClass(name: baseName);
-			Conditional:if(check: { parent:name == baseName }, then: {
+			# The outer-link relation is an ACCESS scope, not an is-a
+			# contract: the enclosing class's members surface to the inner
+			# through the walk, and the inner's own same-named members
+			# SHADOW them silently — no abstract obligation, no replace
+			# requirement, no signature merge (IV.2).
+			Conditional:if(check: { parent:name == baseName && !(classDef:outerName != '' && (classDef:outerName == baseName || classDef:outerName:contains(needle: ':' . baseName))) }, then: {
 				# 1. Enforce abstract member implementation on concrete classes
 				# with init. The implicit root Any is exempt: its members carry
-				# concrete defaults. The outer-link relation is exempt too: the
-				# inner-class link is an ACCESS scope, not an is-a contract —
-				# the enclosing class's unimplemented members are not the
-				# inner's obligation.
-				Conditional:if(check: { hasInit && baseName != Primitive:ANY:value() && !(classDef:outerName != '' && (classDef:outerName == baseName || classDef:outerName:contains(needle: ':' . baseName))) }, then: {
+				# concrete defaults. (The outer-link relation is exempt by the
+				# gate above — the inner-class link is an access scope.)
+				Conditional:if(check: { hasInit && baseName != Primitive:ANY:value() }, then: {
 					parent:members:each(action: local Function(Member is parentM){
 						local Boolean is isAbstract: (parentM:kind == MemberKind:FIELD && !parentM:hasInit) ||
 							(parentM:kind == MemberKind:METHOD && parentM:body:length() == 0);
@@ -3587,12 +3612,20 @@ Class is TypeChecker{
 
 				# 2. Strict replace check & method signature matching on overrides
 				classDef:members:each(action: local Function(Member is subM){
+					# IV.2c: the nested-class members are declarations of
+					# types, not overrides of the ancestor's surface.
+					Conditional:if(check: { subM:kind == MemberKind:CLASS }, then: {
+						return;
+					});
 					# Declarative metadata (namespace/using/group) is per-class
 					# by design and never participates in override matching.
 					Conditional:if(check: { subM:name == MetadataField:NAMESPACE:value() || subM:name == MetadataField:USING:value() || subM:name == MetadataField:CASTABLE:value() }, then: {
 						return;
 					});
 					parent:members:each(action: local Function(Member is parentM){
+						Conditional:if(check: { parentM:kind == MemberKind:CLASS }, then: {
+							return;
+						});
 						Conditional:if(check: { subM:name == parentM:name }, then: {
 							Conditional:if(check: { parentM:hasModifier(kw: Keyword:LOCAL) || parentM:hasModifier(kw: Keyword:CONTAINED) }, then: {
 								local String is vis: Conditional:if(check: { parentM:hasModifier(kw: Keyword:LOCAL) }, then: { 'local' }, else: { 'contained' });

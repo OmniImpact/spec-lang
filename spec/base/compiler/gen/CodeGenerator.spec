@@ -1816,28 +1816,39 @@ Class is CodeGenerator{
 		Conditional:if(check: { segs:length() == 1 }, then: {
 			return segs:get(index: 0);
 		});
-		# FUNCTIONS.md Part IV IV.2c: the nested-class chain — 'Outer:Inner'
-		# resolves to the inner class's qualified C symbol base.
-		Conditional:if(check: { segs:length() == 2 }, then: {
-			local String is root: segs:get(index: 0);
-			local ClassInfo is outerCls: self:findClass(name: root);
-			Conditional:if(check: { outerCls:name == root }, then: {
-				local String is innerRes: '';
-				outerCls:members:each(action: local Function(Member is m){
-					Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: 1) }, then: {
-						local String is innerSym: self:utils:cIdent(name: outerCls:qualifiedName() . ':' . segs:get(index: 1));
-						Conditional:if(check: { self:allTaggedEnums:has(key: root) }, then: {
-							innerRes: innerSym . '_' . self:utils:cIdent(name: segs:get(index: 1)) . '_ctor()';
-						}, else: {
-							innerRes: innerSym;
-						});
+	# FUNCTIONS.md Part IV IV.2c: the nested-class chain — 'Outer:Inner'
+	# and the inner-of-inner 'Outer:Mid:Deep' — walks CLASS-kind members
+	# per segment and resolves to the deepest class's qualified C symbol
+	# base.
+	Conditional:if(check: { segs:length() >= 2 && !self:allEnumNames:has(key: segs:get(index: 0)) }, then: {
+		local String is root: segs:get(index: 0);
+		local ClassInfo is chainCls: self:findClass(name: root);
+		local Boolean is chainOk: chainCls:name == root;
+		local Int is chainIdx: 1;
+		While:condition(
+			evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
+			iteration: local Function of Boolean(){
+				local String is nextSym: '';
+				local ClassInfo is nextCls: ClassInfo:init(name: '', baseClass: '', members: []);
+				chainCls:members:each(action: local Function(Member is m){
+					Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
+						nextSym: self:utils:cIdent(name: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx));
+						nextCls: m:nestedClass;
 					});
 				});
-				Conditional:if(check: { innerRes != '' }, then: {
-					return innerRes;
+				Conditional:if(check: { nextSym != '' }, then: {
+					chainCls: nextCls;
+					chainIdx: chainIdx + 1;
+				}, else: {
+					chainOk: false;
 				});
-			});
+				return true;
+			}
+		);
+		Conditional:if(check: { chainOk && chainIdx == segs:length() }, then: {
+			return self:utils:cIdent(name: chainCls:qualifiedName());
 		});
+	});
 		Conditional:if(check: { segs:length() >= 2 }, then: {
 			local String is root: segs:get(index: 0);
 			Conditional:if(check: { self:allEnumNames:has(key: root) }, then: {
