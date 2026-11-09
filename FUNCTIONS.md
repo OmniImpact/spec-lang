@@ -676,10 +676,20 @@ how the compiler's exit cleans up after itself.
    token-shaped sub-expression as a full node. A flatter parse — the
    operator folds reusing nodes, pure-parenthesis nodes dropped —
    shrinks the population itself.
-2. **The per-node strings** (6.2M SpecBuf headers, ~250 MB): the
-   checker's `resolvedType` stamps and the parser's token texts are
-   per-node strings whose headers cost more than their bytes. Interning
-   the stamps (they repeat a small vocabulary) collapses that.
+2. **The per-node strings** (6.2M SpecBuf headers, ~250 MB):
+   **interning tested, falsified both ways.** Interning the TOKEN texts
+   (the open vocabulary — every identifier and literal, mostly
+   transient) made them immortal in the intern table: the peak ROSE
+   ~318 MB (484 → 802) and the compile slowed ~40% (the lookups over a
+   growing table). Interning ONLY the type-stamp producers
+   (formatTypeString's joins) measured NEUTRAL — the stamp vocabulary
+   was already effectively interned via the primitive constants and
+   literal returns. What survived: the `Buf:intern` floor (the
+   `spec_intern` runtime shim) as a primitive, and the stamp interning
+   (it makes the stamp vocabulary canonical — one object per spelling)
+   at zero measured cost. The retained-string population lives in the
+   AST's per-use NAME fields — which only the node-count lever
+   addresses.
 3. **The Expression struct** (25 flat fields, 246 B): the per-kind
    layout (the tagged-union shape) is the structural fix — a project,
    and it rides on (1) landing first.

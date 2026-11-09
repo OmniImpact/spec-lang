@@ -44,6 +44,7 @@ Class is TypeChecker{
 		['base', 'iterator', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'io', as Output()],
+		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()]
 ];
 
@@ -210,12 +211,14 @@ Class is TypeChecker{
 		});
 		Conditional:if(check: { t:params:length() == 1 }, then: {
 			local Type is p0: t:params:get(index: 0);
-			return baseName . ':' . self:formatTypeString(t: p0);
+			# FUNCTIONS.md Part V: the stamp vocabulary repeats — the
+			# interning collapses the retained copies to one object.
+			return Buf:intern(s: baseName . ':' . self:formatTypeString(t: p0));
 		});
 		Conditional:if(check: { t:params:length() >= 2 }, then: {
 			local Type is p0: t:params:get(index: 0);
 			local Type is p1: t:params:get(index: 1);
-			return baseName . ':' . self:formatTypeString(t: p0) . ':' . self:formatTypeString(t: p1);
+			return Buf:intern(s: baseName . ':' . self:formatTypeString(t: p0) . ':' . self:formatTypeString(t: p1));
 		});
 		return baseName;
 	}

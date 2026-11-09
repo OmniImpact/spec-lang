@@ -40,6 +40,15 @@ Class is Buf{
 		return base:sysinternal:Buf:stringCopy(b: b);
 	}
 
+	## Returns the process-interned form of [s]: equal contents yield
+	## the SAME string object. Interned strings are immortal.
+	##
+	## @param s: The string.
+	## @return: The interned string.
+	Function of String is intern(String is s){
+		return base:sysinternal:Buf:intern(b: s);
+	}
+
 	## Bytes [start] (inclusive) to [end] (exclusive) of buffer [b].
 	##
 	## @param b: The buffer.

@@ -30,6 +30,12 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: An owned copy sharing no storage with [b].
 	Function of String is stringCopy(String is b);
+	## Returns the process-interned form of [b]: equal contents yield
+	## the SAME string object. Interned strings are immortal.
+	##
+	## @param b: The string.
+	## @return: The interned string.
+	Function of String is intern(String is b);
 
 	## Bytes [start] (inclusive) to [end] (exclusive) of buffer [b].
 	##
