@@ -355,6 +355,35 @@ a closure, and branch typing goes soft. Instead, the proven
    Function-of-Boolean enforcement through `While:condition` (the
    if-statement rule it used to check no longer exists).
 
+### II.4 — `While` folds into a control-flow provider (planned)
+
+`While` is a standalone class in `base:iterator` (beside `Loop`,
+`LoopControl`, `LoopCallback`); callers import it per-class
+(`as While()`) and spell `While:condition(...)` / `While:run(...)`
+(~124 call sites; ~103 in the compiler/stdlib). The plan: fold the
+control-flow constructors under ONE provider — `Iterator` (matches the
+package) or `Loops` (reads better beside `while`/`loop`/`for`;
+decision open) — so a single as-import serves the constructs bare,
+mirroring `Conditional`'s `if(...)`: `while(evaluate:, iteration:)`.
+
+On record for the move:
+
+- The gen intercepts `While`'s `run`/`condition`/`init` by receiver
+  name (`targetC == 'While'` in BuiltinCallGenerator; both bodies are
+  runtime-managed — neither is emitted). The interception re-keys onto
+  the provider move, or the provider's methods keep the class identity.
+- The call-site rewrite is mechanical — `While:condition(` → `while(`
+  — the exact shape `utilities/migrate_if.py` handled for the if-flip
+  (string/comment-aware, paren/brace-matched, idempotent). **This is
+  why the utilities/ folder outlives the if-flip**: it runs once more
+  for this rename, then the folder goes.
+- The ratchet applies: a few files per batch, emit→gcc→self-load
+  pre-check, bootstrap, commit; the bootstrap's older generations must
+  parse the new spellings, so the checker/gen carry dual recognition
+  bridges until the flip commit deletes them (the II.3 pattern).
+- `LoopControl` stays a separately importable TYPE (signature
+  positions use it); the provider surfaces only the call forms.
+
 ---
 
 ## Part III — Carried from INSTANCE.md

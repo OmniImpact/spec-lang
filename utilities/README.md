@@ -1,8 +1,11 @@
 # Migration utilities (FUNCTIONS.md Part II — temporary)
 
 Tools for the `if` → `Conditional:branch` statement migration. These are
-one-shot scaffolding: **remove this folder after the flip lands** (they stay
-in the commit history if we ever need to reference or rerun them).
+one-shot scaffolding: they **stay for one more job** — the planned
+`While` → control-flow-provider rename (FUNCTIONS.md §II.4 reuses
+migrate_if.py's scanner for the `While:condition(` → `while(` sweep) —
+and **this folder is removed after that lands** (they stay in the commit
+history if we ever need to reference or rerun them).
 
 ## migrate_if.py
 
