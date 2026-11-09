@@ -1703,6 +1703,18 @@ String spec_type_name(const void* obj) {
     return spec_string_intern(*((const char**)obj));
 }
 
+/* Identity hash: a stable per-object value derived from the address
+   (mixed so neighboring allocations differ). The default toString's
+   hash component. */
+long long spec_object_hash(const void* obj) {
+    if (!obj) return 0;
+    unsigned long long h = (unsigned long long)(intptr_t)obj;
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccdULL;
+    h ^= h >> 33;
+    return (long long)h;
+}
+
 /* Clock & Memory Metrics */
 long long spec_clock_ms(void) {
     struct timespec ts;

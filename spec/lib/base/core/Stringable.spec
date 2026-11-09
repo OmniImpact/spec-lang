@@ -3,17 +3,17 @@
 
 ## Contract supplying a textual representation.
 ##
-## Composed into the root class `Any` via inheritance; every class therefore
-## satisfies this contract. Override `toString` with `replace` to customize;
-## overrides dispatch virtually through the root contract's vtable slot.
+## An interface and a ClassLoadable (of Loadable — the machinery comes
+## with it): declares the `toString` contract ABSTRACT (no body — an
+## interface method). [Class] provides the default implementation
+## (`TypeName@hash`); classes override with `replace` to customize;
+## overrides dispatch virtually through the contract's vtable slot.
 
-Class is Stringable{
+Class of Loadable is Stringable{
 	namespace: ['base', 'core'];
 
 	## Renders this object as text.
 	##
 	## @return: Textual representation.
-	replace Function of String is toString(){
-		return '';
-	}
+	Function of String is toString();
 }

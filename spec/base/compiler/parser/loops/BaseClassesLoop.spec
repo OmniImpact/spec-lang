@@ -9,6 +9,7 @@ Class of Loop is BaseClassesLoop{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'iterator']
 ,
+		['base', 'iterator', as Loops()],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'sys', as Conditional()]
 	];
@@ -27,7 +28,19 @@ Class of Loop is BaseClassesLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local Token is tok: self:parser:advance();
-		self:bases:add(item: tok:getValue());
+		# FUNCTIONS.md Part VI: the parents may be QUALIFIED — the
+		# glued-colon path ('base:sys:Loadable') consumes as one parent,
+		# the same spelling the type references use.
+		local String is base: tok:getValue();
+		while(
+			evaluate: local Function of Boolean(){ return self:parser:checkPunct(p: Punctuation:DEFAULT); },
+			iteration: local Function of Boolean(){
+				self:parser:advance();
+				base: base . ':' . self:parser:advance():getValue();
+				return true;
+			}
+		);
+		self:bases:add(item: base);
 		Conditional:if(check: { self:parser:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:parser:advance();
 			return true;

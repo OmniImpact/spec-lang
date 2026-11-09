@@ -69,15 +69,18 @@ Class is LoaderE2E{
 			failures: failures + 1;
 		});
 
-		# --- root lattice preloads + implicit Any ---
+		# --- root lattice preloads + implicit Class ---
 		local Loader is probe: Loader:init();
 		local ProgramNode is classes: probe:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 		local LoaderE2EHelper is h: LoaderE2EHelper:init();
 		Conditional:if(check: { h:hasClass(classes: classes, name: 'String')
 			&& h:hasClass(classes: classes, name: 'Any')
-			&& h:hasClass(classes: classes, name: 'Any')
+			&& h:hasClass(classes: classes, name: 'Class')
 			&& h:baseOf(classes: classes, name: 'LoudGreeter') == 'Greeter'
-			&& h:baseOf(classes: classes, name: 'Greeter') == 'Any' }, then: {
+			&& h:baseOf(classes: classes, name: 'Greeter') == 'Class'
+			&& h:baseOf(classes: classes, name: 'Class') == 'Stringable'
+			&& h:baseOf(classes: classes, name: 'Stringable') == 'Loadable'
+			&& h:baseOf(classes: classes, name: 'Loadable') == 'Any' }, then: {
 			Output:line('[PASS] root lattice and implicit Any');
 		}, else: {
 			Output:line('[FAIL] lattice');

@@ -585,13 +585,16 @@ Class is Loader{
 		# using-imports pull the sysinternal floor in transitively, so the
 		# floor is never loaded except behind its wrapper.
 		local Array of String is preloads: [
+			'Any',
+			'Loadable',
+			'Stringable',
+			'Class',
+			'Enum',
 			'String',
 			'Array',
 			'Map',
 			'Buf',
-			'Dir',
-			'Stringable',
-			'Any'
+			'Dir'
 		];
 		preloads:each(action: local Function(String is cls){
 			Conditional:if(check: { !self:indexBuilt }, then: {
@@ -606,7 +609,7 @@ Class is Loader{
 		});
 
 		self:loadFile(filePath: rootPath);
-		self:appendImplicitAny();
+		self:appendImplicitClass();
 		self:synthesizeInstanceImports();
 
 		return ProgramNode:init(classes: self:loadedClasses);
@@ -773,12 +776,18 @@ Class is Loader{
 		return ClassInfo:init(name: '', baseClass: '', members: []);
 	}
 
-	## Appends `Any` as the parent of every class without explicit parents
-	## (enums excluded).
-	Function is appendImplicitAny(){
+	## Appends `Class` as the parent of every class without explicit parents
+	## (enums excluded). FUNCTIONS.md Part VI: the implicit parent is
+	## `Class` (the declaration root) so the machinery and the default
+	## rendering reach every class; "at the lowest level, anything is
+	## Any" holds transitively (Class -> Stringable -> Loadable -> Any).
+	## `Any` is the one root and is skipped (a rootless Any plus the
+	## implicit Class would cycle). Enum keeps its own root per the
+	## enumHeader contract.
+	Function is appendImplicitClass(){
 		self:loadedClasses:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' && c:name != 'Stringable' }, then: {
-				c:withBaseClasses(name: c:name, baseClasses: ['Any'], members: c:members);
+			Conditional:if(check: { c:baseClass != 'Enum' && c:baseClasses:length() == 0 && c:name != 'Any' }, then: {
+				c:withBaseClasses(name: c:name, baseClasses: ['Class'], members: c:members);
 			});
 		});
 	}

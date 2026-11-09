@@ -3694,17 +3694,9 @@ Class is CodeGenerator{
 						Conditional:if(check: { !hasInit && !wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader() }, then: {
 							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
 						});
-						local Boolean is hasToString: false;
-						c:members:each(action: local Function(Member is m){
-							Conditional:if(check: { m:name == 'toString' }, then: {
-								hasToString: true;
-							});
-						});
-						Conditional:if(check: { !hasToString && !wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader() }, then: {
-							Buf:bufAppendBuf(dst: classC, src: 'String ' . cSym . '_toString(' . cSym . "* self) {\n");
-							Buf:bufAppendBuf(dst: classC, src: "    if (!self) { return spec_string_intern(\"\"); }\n");
-							Buf:bufAppendBuf(dst: classC, src: '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n");
-						});
+						# FUNCTIONS.md Part VI: the default toString lives on
+						# `Class` (the declaration root) — the vtable dispatch
+						# finds it through the lattice; no per-class synthesis.
 						classChunks:set(index: ci, item: classC);
 						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
