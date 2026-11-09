@@ -168,12 +168,18 @@ String spec_string_from_chars(const char* c) {
     if (!c) c = "";
     return spec_string_from_bytes(c, strlen(c));
 }
-#define SPEC_INTERN_BUCKETS 256
+#define SPEC_INTERN_BUCKETS 4096
 typedef struct SpecInternEntry {
     String s;
     struct SpecInternEntry* next;
 } SpecInternEntry;
-static SpecInternEntry* _spec_intern[SPEC_INTERN_BUCKETS];
+/* FUNCTIONS.md Part V: the intern table reads LOCK-FREE — the emitted
+   code interns every string literal on its hottest paths, and four
+   worker threads serialized on this mutex (50M lookups per
+   self-compile). Entries are immortal and never removed: readers walk
+   the atomic bucket chains without the lock; only insertion takes it
+   (with a re-check). */
+static _Atomic(SpecInternEntry*) _spec_intern[SPEC_INTERN_BUCKETS];
 static pthread_mutex_t _spec_intern_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static inline size_t spec_intern_bucket(const char* c) {
@@ -186,8 +192,16 @@ String spec_string_intern(const char* c) {
     if (!c) c = "";
     size_t b = spec_intern_bucket(c);
     size_t n = strlen(c);
+    /* Lock-free read: the chains are append-only and the head swap is a
+       release, so an acquire load sees every entry fully built. */
+    SpecInternEntry* e = atomic_load_explicit(&_spec_intern[b], memory_order_acquire);
+    while (e) {
+        String es = (String)e->s;
+        if (spec_string_bytes_equal(es, c, n)) return es;
+        e = e->next;
+    }
     pthread_mutex_lock(&_spec_intern_lock);
-    SpecInternEntry* e = _spec_intern[b];
+    e = atomic_load_explicit(&_spec_intern[b], memory_order_relaxed);
     while (e) {
         String es = (String)e->s;
         if (spec_string_bytes_equal(es, c, n)) { pthread_mutex_unlock(&_spec_intern_lock); return es; }
@@ -197,28 +211,28 @@ String spec_string_intern(const char* c) {
     atomic_fetch_or_explicit(&SPEC_HEADER(s)->sflags, SPEC_S_IMMORTAL, memory_order_relaxed);
     e = (SpecInternEntry*)malloc(sizeof(SpecInternEntry));
     e->s = s;
-    e->next = _spec_intern[b];
-    _spec_intern[b] = e;
+    e->next = atomic_load_explicit(&_spec_intern[b], memory_order_relaxed);
+    atomic_store_explicit(&_spec_intern[b], e, memory_order_release);
     pthread_mutex_unlock(&_spec_intern_lock);
     return s;
 }
 /* Claim pool: adopts ownership claims in read positions (call arguments,
    conditions, chain targets) and recycles them on eviction. A borrowed
-   pointer stays valid until 32 further pool claims are made, which is
-   far more than any single statement evaluates. */
+   pointer stays valid until 32 further pool claims are made on the SAME
+   thread, which is far more than any single statement evaluates. The
+   pool is THREAD-LOCAL: a global pool let concurrent compilers' claims
+   evict each other's borrows mid-statement (four workers narrowed the
+   validity to ~8 statements each). */
 #define SPEC_POOL_SLOTS 32
-static void* _spec_pool[SPEC_POOL_SLOTS];
-static size_t _spec_pool_next = 0;
-static pthread_mutex_t _spec_pool_lock = PTHREAD_MUTEX_INITIALIZER;
+static __thread void* _spec_pool[SPEC_POOL_SLOTS];
+static __thread size_t _spec_pool_next = 0;
 
 void* spec_claim_pool(void* obj) {
     if (!obj) return NULL;
-    pthread_mutex_lock(&_spec_pool_lock);
     size_t slot = _spec_pool_next;
     _spec_pool_next = (slot + 1) % SPEC_POOL_SLOTS;
     void* old = _spec_pool[slot];
     _spec_pool[slot] = obj;
-    pthread_mutex_unlock(&_spec_pool_lock);
     if (old) spec_release(old);
     return obj;
 }

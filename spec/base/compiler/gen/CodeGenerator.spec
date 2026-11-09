@@ -13,6 +13,8 @@ Class is CodeGenerator{
 	replace Array of Array of String is using: [
 		['base', 'sys', Parallel],
 		['base', 'sys', as Parallel()],
+		['base', 'sys', as Process()],
+		['base', 'io', as File()],
 		['base', 'compiler', 'ast', Type],
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Primitive],
@@ -56,6 +58,23 @@ Class is CodeGenerator{
 
 	## Builtin call translator (floor-class spec_* bindings).
 	local BuiltinCallGenerator is builtins: BuiltinCallGenerator:init();
+
+	## FUNCTIONS.md Part V: the worker gens' private copy of the source
+	## program's flattened class list (the per-class generation walks it;
+	## sharing the live list serialized every read behind its mutex).
+	local Array of ClassInfo is flattenedClasses: [];
+
+	## Copies a string-keyed registry map for a worker gen.
+	##
+	## @param source: The map to copy.
+	## @return: A new map with the same bindings.
+	Function of Map of String to String is copyRegistryMap(Map of String to String is source){
+		local Map of String to String is copy: Map:init();
+		source:keys():each(action: local Function(String is k){
+			copy:set(key: k, value: source:getString(key: k, default: ''));
+		});
+		return copy;
+	}
 
 	## Class currently being generated.
 	local String is currentClassName: '';
@@ -3566,53 +3585,154 @@ Class is CodeGenerator{
 		local String is vt: self:generateVTables(classes: flattenedClasses);
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
-		local String is methods: '';
-		flattenedClasses:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
-				self:currentClassName: c:name;
-				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-				self:fieldTypes: Map:init();
-				local Array of Member is allFields: [];
-				local Array of Member is outerFields: [];
-				self:declGen:collectStructFieldsSplit(c: c, allClasses: flattenedClasses, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
-				allFields:each(action: local Function(Member is m){
-					self:fieldTypes:set(key: m:name, value: self:formatTypeString(t: m:memberType));
-				});
-				outerFields:each(action: local Function(Member is m){
-					self:fieldTypes:set(key: m:name, value: self:formatTypeString(t: m:memberType));
-				});
+		# FUNCTIONS.md Part V: the per-class generation runs on the thread
+		# pool — each thread owns a CodeGenerator wired to the shared
+		# read-only registries and generates its contiguous class block
+		# into per-thread owned buffers, merged in fixed thread order.
+		# The split and the merge are deterministic, so the emitted C is
+		# byte-stable for a given class list (the fixed point holds).
+		local Int is genThreads: 4;
+		# One owned chunk slot and one helper slot PER CLASS: the workers
+		# set by index (no shared-append races, no nested-array concat
+		# trap — Array:add on array items concatenates), and the merge
+		# walks plain class order, so the emission is byte-stable and
+		# thread-count-independent.
+		local Int is classTotal: flattenedClasses:length();
 
-				local Boolean is hasInit: false;
-				c:members:each(action: local Function(Member is m){
-					when (m:kind) {
-						is MemberKind:METHOD: {
-							Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
-								Conditional:if(check: { m:name == 'init' }, then: {
-									hasInit: true;
-								});
-								Buf:bufAppendBuf(dst: methods, src: self:generateMethod(classDef: c, method: m));
-							});
-						}
-						else: {}
-					}
-				});
-				Conditional:if(check: { !hasInit && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-					Buf:bufAppendBuf(dst: methods, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
-				});
-
-				local Boolean is hasToString: false;
-				c:members:each(action: local Function(Member is m){
-					Conditional:if(check: { m:name == 'toString' }, then: {
-						hasToString: true;
-					});
-				});
-				Conditional:if(check: { !hasToString && !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
-					Buf:bufAppendBuf(dst: methods, src: 'String ' . cSym . '_toString(' . cSym . "* self) {\n");
-					Buf:bufAppendBuf(dst: methods, src: "    if (!self) { return spec_string_intern(\"\"); }\n");
-					Buf:bufAppendBuf(dst: methods, src: '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n");
-				});
+		local Array of String is classChunks: [];
+		local Array of String is classHelpers: [];
+		local Int is gt: 0;
+		while(
+			evaluate: local Function of Boolean(){ return gt < classTotal; },
+			iteration: local Function of Boolean(){
+				classChunks:add(item: Buf:stringCopy(b: ''));
+				classHelpers:add(item: Buf:stringCopy(b: ''));
+				gt: gt + 1;
+				return true;
+			}
+		);
+		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
+			local CodeGenerator is wg: CodeGenerator:init();
+			# FUNCTIONS.md Part V: the registries are read-only during
+			# generation, but the workers get PRIVATE COPIES of the
+			# list/map registries — sharing them serialized every lookup
+			# behind the container mutexes (the gen DOUBLED). The
+			# ClassInfo objects the copies reference stay shared: their
+			# reads are plain field loads with atomic refcounts. The
+			# stateless sub-objects (policy/utils/declGen/builtins/names)
+			# share directly.
+			wg:methodSlots: self:copyRegistryMap(source: self:methodSlots);
+			wg:overriddenMethods: self:copyRegistryMap(source: self:overriddenMethods);
+			wg:classesWithToString: self:copyRegistryMap(source: self:classesWithToString);
+			wg:programClasses: [];
+			self:programClasses:each(action: local Function(ClassInfo is c){
+				wg:programClasses:add(item: c);
 			});
+			wg:allClassNames: self:copyRegistryMap(source: self:allClassNames);
+			wg:allEnumNames: self:copyRegistryMap(source: self:allEnumNames);
+			wg:allEnumVariants: self:copyRegistryMap(source: self:allEnumVariants);
+			wg:allStringBackedEnums: self:copyRegistryMap(source: self:allStringBackedEnums);
+			wg:allTaggedEnums: self:copyRegistryMap(source: self:allTaggedEnums);
+			wg:methodSlotCount: self:methodSlotCount;
+			wg:names: self:names;
+			wg:policy: self:policy;
+			wg:utils: self:utils;
+			wg:declGen: self:declGen;
+			wg:builtins: self:builtins;
+			wg:flattenedClasses: [];
+			flattenedClasses:each(action: local Function(ClassInfo is c){
+				wg:flattenedClasses:add(item: c);
+			});
+			# The symbol suffixes (_anon_fn_N and friends) are file-scoped:
+			# the per-thread counter bases keep them unique across threads
+			# and deterministic run to run.
+			wg:anonCounter: threadIndex * 100000;
+			wg:cleanupCounter: threadIndex * 100000;
+			# The round-robin stride: the class sizes vary 10x (a 3.4k-line
+			# checker beside 10-line enums), so the contiguous split
+			# imbalanced the pool; interleaving averages the load while
+			# the per-class slots keep the merge order fixed.
+			local Int is ci: threadIndex;
+			while(
+				evaluate: local Function of Boolean(){ return ci < classTotal; },
+				iteration: local Function of Boolean(){
+					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
+					Conditional:if(check: { !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
+						wg:currentClassName: c:name;
+						# The helpers attribute per class: the worker's buffer
+						# resets before each class so the slot holds only its
+						# own anon-fn text.
+						wg:helperFunctions: Buf:stringCopy(b: '');
+						local String is cSym: wg:utils:cIdent(name: c:qualifiedName());
+						wg:fieldTypes: Map:init();
+						local Array of Member is allFields: [];
+						local Array of Member is outerFields: [];
+						wg:declGen:collectStructFieldsSplit(c: c, allClasses: wg:flattenedClasses, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
+						allFields:each(action: local Function(Member is m){
+							wg:fieldTypes:set(key: m:name, value: wg:formatTypeString(t: m:memberType));
+						});
+						outerFields:each(action: local Function(Member is m){
+							wg:fieldTypes:set(key: m:name, value: wg:formatTypeString(t: m:memberType));
+						});
+						local String is classC: Buf:stringCopy(b: '');
+						local Boolean is hasInit: false;
+						c:members:each(action: local Function(Member is m){
+							when (m:kind) {
+								is MemberKind:METHOD: {
+									Conditional:if(check: { !wg:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
+										Conditional:if(check: { m:name == 'init' }, then: {
+											hasInit: true;
+										});
+										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
+									});
+								}
+								else: {}
+							}
+						});
+						Conditional:if(check: { !hasInit && !wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader() }, then: {
+							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
+						});
+						local Boolean is hasToString: false;
+						c:members:each(action: local Function(Member is m){
+							Conditional:if(check: { m:name == 'toString' }, then: {
+								hasToString: true;
+							});
+						});
+						Conditional:if(check: { !hasToString && !wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader() }, then: {
+							Buf:bufAppendBuf(dst: classC, src: 'String ' . cSym . '_toString(' . cSym . "* self) {\n");
+							Buf:bufAppendBuf(dst: classC, src: "    if (!self) { return spec_string_intern(\"\"); }\n");
+							Buf:bufAppendBuf(dst: classC, src: '    return spec_string_intern("' . c:qualifiedName() . '");' . "\n}\n\n");
+						});
+						classChunks:set(index: ci, item: classC);
+						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
+					});
+					ci: ci + genThreads;
+					return true;
+				}
+			);
+			return count;
 		});
+		local String is methods: Buf:stringCopy(b: '');
+		local Int is mt: 0;
+		while(
+			evaluate: local Function of Boolean(){ return mt < classTotal; },
+			iteration: local Function of Boolean(){
+				Buf:bufAppendBuf(dst: methods, src: classChunks:get(index: mt));
+				mt: mt + 1;
+				return true;
+			}
+		);
+		local String is allHelpers: Buf:stringCopy(b: '');
+		local Int is ht: 0;
+		while(
+			evaluate: local Function of Boolean(){ return ht < classTotal; },
+			iteration: local Function of Boolean(){
+				Buf:bufAppendBuf(dst: allHelpers, src: classHelpers:get(index: ht));
+				ht: ht + 1;
+				return true;
+			}
+		);
+
 		local String is mainFn: self:generateMain(entryClass: entryClass);
 
 		local String is cSource: '';
@@ -3622,7 +3742,7 @@ Class is CodeGenerator{
 		Buf:bufAppendBuf(dst: cSource, src: structs);
 		Buf:bufAppendBuf(dst: cSource, src: vt);
 		Buf:bufAppendBuf(dst: cSource, src: self:generateTypeHierarchy(classes: flattenedClasses));
-		Buf:bufAppendBuf(dst: cSource, src: self:helperFunctions);
+		Buf:bufAppendBuf(dst: cSource, src: allHelpers);
 		Buf:bufAppendBuf(dst: cSource, src: ctors);
 		Buf:bufAppendBuf(dst: cSource, src: methods);
 		Buf:bufAppendBuf(dst: cSource, src: mainFn);

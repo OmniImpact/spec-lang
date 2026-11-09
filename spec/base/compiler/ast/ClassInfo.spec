@@ -87,16 +87,16 @@ Class is ClassInfo{
 	##
 	## @return: The namespace path, e.g. 'base:sysinternal'.
 	Function of String is namespaceJoined(){
+		local String is joined: '';
 		local Int is idx: 0;
 		while(
 			evaluate: local Function of Boolean(){
-				return idx < self:members:length();
+				return joined == '' && idx < self:members:length();
 			},
 			iteration: local Function of Boolean(){
 				local Member is m: self:members:get(index: idx);
 				idx: idx + 1;
 				Conditional:if(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
-					local String is joined: '';
 					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
 						Conditional:if(check: { joined == '' }, then: {
 							joined: seg:str;
@@ -104,20 +104,17 @@ Class is ClassInfo{
 							joined: joined . ':' . seg:str;
 						});
 					});
-					self:nsJoined: joined;
-					return false;
 				});
 				return true;
 			}
 		);
-		# An owned copy: callers ride the claim pool, and pool eviction
-		# releases what it holds — returning the cached field itself would
-		# let that release free the cache while this class still owns it.
-		return Buf:stringCopy(b: self:nsJoined);
+		# FUNCTIONS.md Part V: no memo write — the parallel workers
+		# findClass concurrently, and a shared cache field raced (thread
+		# A's assign freed the string thread B was reading). The walk is
+		# cheap; purity wins. An owned copy: callers ride the claim pool,
+		# and pool eviction releases what it holds.
+		return Buf:stringCopy(b: joined);
 	}
-
-	## Cached [namespaceJoined] result.
-	local String is nsJoined: '';
 
 	## FUNCTIONS.md Part IV IV.2: records the qualified enclosing chain.
 	##
