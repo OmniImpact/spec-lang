@@ -5,6 +5,9 @@
 Class is OverloadsTest {
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
+		# IV.6 strictness: the plain form grants construction; the as-form
+		# grants the bare function calls (Over:twice).
+		['ovl', 'lib', Over],
 		['ovl', 'lib', as Over()],
 		['base', 'sys', as Conditional()]
 	];

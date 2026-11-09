@@ -38405,6 +38405,7 @@ static __attribute__((unused)) void _anon_fn_241(void* _env_ptr, Parameter* pp) 
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_247;
@@ -38425,12 +38426,15 @@ static __attribute__((unused)) void _anon_fn_247(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38439,6 +38443,7 @@ static __attribute__((unused)) void _anon_fn_247(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_247: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -38476,12 +38481,14 @@ static __attribute__((unused)) void _anon_fn_246(void* _env_ptr, Expression* ite
     (void)m;
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_248 = item->arrayItems; if (_a_248) { for (size_t _i_248 = 0; _i_248 < _a_248->length; _i_248++) {
         Expression* seg = (Expression*)(intptr_t)_a_248->items[_i_248];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38493,7 +38500,9 @@ static __attribute__((unused)) void _anon_fn_246(void* _env_ptr, Expression* ite
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -38510,6 +38519,7 @@ static __attribute__((unused)) void _anon_fn_246(void* _env_ptr, Expression* ite
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_250;
@@ -38530,12 +38540,15 @@ static __attribute__((unused)) void _anon_fn_250(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38544,6 +38557,7 @@ static __attribute__((unused)) void _anon_fn_250(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_250: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -38581,12 +38595,14 @@ static __attribute__((unused)) void _anon_fn_245(void* _env_ptr, Member* m) {
         do {
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_251 = item->arrayItems; if (_a_251) { for (size_t _i_251 = 0; _i_251 < _a_251->length; _i_251++) {
         Expression* seg = (Expression*)(intptr_t)_a_251->items[_i_251];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38598,7 +38614,9 @@ static __attribute__((unused)) void _anon_fn_245(void* _env_ptr, Member* m) {
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -38618,6 +38636,7 @@ static __attribute__((unused)) void _anon_fn_245(void* _env_ptr, Member* m) {
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_254;
@@ -38638,12 +38657,15 @@ static __attribute__((unused)) void _anon_fn_254(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38652,6 +38674,7 @@ static __attribute__((unused)) void _anon_fn_254(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_254: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -38689,12 +38712,14 @@ static __attribute__((unused)) void _anon_fn_253(void* _env_ptr, Expression* ite
     (void)m;
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_255 = item->arrayItems; if (_a_255) { for (size_t _i_255 = 0; _i_255 < _a_255->length; _i_255++) {
         Expression* seg = (Expression*)(intptr_t)_a_255->items[_i_255];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38706,7 +38731,9 @@ static __attribute__((unused)) void _anon_fn_253(void* _env_ptr, Expression* ite
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -38723,6 +38750,7 @@ static __attribute__((unused)) void _anon_fn_253(void* _env_ptr, Expression* ite
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_257;
@@ -38743,12 +38771,15 @@ static __attribute__((unused)) void _anon_fn_257(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38757,6 +38788,7 @@ static __attribute__((unused)) void _anon_fn_257(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_257: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -38802,12 +38834,14 @@ static __attribute__((unused)) void _anon_fn_244(void* _env_ptr, ClassInfo* c) {
         do {
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_258 = item->arrayItems; if (_a_258) { for (size_t _i_258 = 0; _i_258 < _a_258->length; _i_258++) {
         Expression* seg = (Expression*)(intptr_t)_a_258->items[_i_258];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38819,7 +38853,9 @@ static __attribute__((unused)) void _anon_fn_244(void* _env_ptr, ClassInfo* c) {
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -38842,6 +38878,7 @@ static __attribute__((unused)) void _anon_fn_244(void* _env_ptr, ClassInfo* c) {
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_262;
@@ -38862,12 +38899,15 @@ static __attribute__((unused)) void _anon_fn_262(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38876,6 +38916,7 @@ static __attribute__((unused)) void _anon_fn_262(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_262: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -38913,12 +38954,14 @@ static __attribute__((unused)) void _anon_fn_261(void* _env_ptr, Expression* ite
     (void)m;
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_263 = item->arrayItems; if (_a_263) { for (size_t _i_263 = 0; _i_263 < _a_263->length; _i_263++) {
         Expression* seg = (Expression*)(intptr_t)_a_263->items[_i_263];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38930,7 +38973,9 @@ static __attribute__((unused)) void _anon_fn_261(void* _env_ptr, Expression* ite
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -38947,6 +38992,7 @@ static __attribute__((unused)) void _anon_fn_261(void* _env_ptr, Expression* ite
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_265;
@@ -38967,12 +39013,15 @@ static __attribute__((unused)) void _anon_fn_265(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -38981,6 +39030,7 @@ static __attribute__((unused)) void _anon_fn_265(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_265: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -39018,12 +39068,14 @@ static __attribute__((unused)) void _anon_fn_260(void* _env_ptr, Member* m) {
         do {
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_266 = item->arrayItems; if (_a_266) { for (size_t _i_266 = 0; _i_266 < _a_266->length; _i_266++) {
         Expression* seg = (Expression*)(intptr_t)_a_266->items[_i_266];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39035,7 +39087,9 @@ static __attribute__((unused)) void _anon_fn_260(void* _env_ptr, Member* m) {
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -39055,6 +39109,7 @@ static __attribute__((unused)) void _anon_fn_260(void* _env_ptr, Member* m) {
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_269;
@@ -39075,12 +39130,15 @@ static __attribute__((unused)) void _anon_fn_269(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39089,6 +39147,7 @@ static __attribute__((unused)) void _anon_fn_269(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_269: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -39126,12 +39185,14 @@ static __attribute__((unused)) void _anon_fn_268(void* _env_ptr, Expression* ite
     (void)m;
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_270 = item->arrayItems; if (_a_270) { for (size_t _i_270 = 0; _i_270 < _a_270->length; _i_270++) {
         Expression* seg = (Expression*)(intptr_t)_a_270->items[_i_270];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39143,7 +39204,9 @@ static __attribute__((unused)) void _anon_fn_268(void* _env_ptr, Expression* ite
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -39160,6 +39223,7 @@ static __attribute__((unused)) void _anon_fn_268(void* _env_ptr, Expression* ite
 typedef struct {
     ClassInfo* c;
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_272;
@@ -39180,12 +39244,15 @@ static __attribute__((unused)) void _anon_fn_272(void* _env_ptr, Expression* seg
     (void)c;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39194,6 +39261,7 @@ static __attribute__((unused)) void _anon_fn_272(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_272: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -39201,6 +39269,7 @@ static __attribute__((unused)) void _anon_fn_272(void* _env_ptr, Expression* seg
 
 typedef struct {
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_276;
@@ -39218,12 +39287,15 @@ static __attribute__((unused)) void _anon_fn_276(void* _env_ptr, Expression* seg
     _Env_anon_276* _env = (_Env_anon_276*)_env_ptr;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39232,6 +39304,7 @@ static __attribute__((unused)) void _anon_fn_276(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_276: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -39265,12 +39338,14 @@ static __attribute__((unused)) void _anon_fn_275(void* _env_ptr, Expression* ite
     (void)m;
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_277 = item->arrayItems; if (_a_277) { for (size_t _i_277 = 0; _i_277 < _a_277->length; _i_277++) {
         Expression* seg = (Expression*)(intptr_t)_a_277->items[_i_277];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39282,7 +39357,9 @@ static __attribute__((unused)) void _anon_fn_275(void* _env_ptr, Expression* ite
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -39298,6 +39375,7 @@ static __attribute__((unused)) void _anon_fn_275(void* _env_ptr, Expression* ite
 
 typedef struct {
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_279;
@@ -39315,12 +39393,15 @@ static __attribute__((unused)) void _anon_fn_279(void* _env_ptr, Expression* seg
     _Env_anon_279* _env = (_Env_anon_279*)_env_ptr;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39329,6 +39410,7 @@ static __attribute__((unused)) void _anon_fn_279(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_279: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -39362,12 +39444,14 @@ static __attribute__((unused)) void _anon_fn_274(void* _env_ptr, Member* m) {
         do {
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_280 = item->arrayItems; if (_a_280) { for (size_t _i_280 = 0; _i_280 < _a_280->length; _i_280++) {
         Expression* seg = (Expression*)(intptr_t)_a_280->items[_i_280];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39379,7 +39463,9 @@ static __attribute__((unused)) void _anon_fn_274(void* _env_ptr, Member* m) {
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -39398,6 +39484,7 @@ static __attribute__((unused)) void _anon_fn_274(void* _env_ptr, Member* m) {
 
 typedef struct {
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_283;
@@ -39415,12 +39502,15 @@ static __attribute__((unused)) void _anon_fn_283(void* _env_ptr, Expression* seg
     _Env_anon_283* _env = (_Env_anon_283*)_env_ptr;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39429,6 +39519,7 @@ static __attribute__((unused)) void _anon_fn_283(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_283: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -39462,12 +39553,14 @@ static __attribute__((unused)) void _anon_fn_282(void* _env_ptr, Expression* ite
     (void)m;
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_284 = item->arrayItems; if (_a_284) { for (size_t _i_284 = 0; _i_284 < _a_284->length; _i_284++) {
         Expression* seg = (Expression*)(intptr_t)_a_284->items[_i_284];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39479,7 +39572,9 @@ static __attribute__((unused)) void _anon_fn_282(void* _env_ptr, Expression* ite
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -39495,6 +39590,7 @@ static __attribute__((unused)) void _anon_fn_282(void* _env_ptr, Expression* ite
 
 typedef struct {
     Member* m;
+    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_286;
@@ -39512,12 +39608,15 @@ static __attribute__((unused)) void _anon_fn_286(void* _env_ptr, Expression* seg
     _Env_anon_286* _env = (_Env_anon_286*)_env_ptr;
     Member* m = _env->m;
     (void)m;
+    bool terminalAs = _env->terminalAs;
+    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
     (void)terminal;
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -39526,6 +39625,7 @@ static __attribute__((unused)) void _anon_fn_286(void* _env_ptr, Expression* seg
 	};
 	};
     _cleanup_anon_286: ;
+    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -41304,6 +41404,9 @@ static __attribute__((unused)) void _anon_fn_404(void* _env_ptr, Parameter* p) {
     Member* method = _env->method;
     (void)method;
     TypeChecker_validateTypeAccess(self, p->paramType, method->line) /* inst:TypeChecker:validateTypeAccess */;
+    if (p->hasDefault) {
+	    TypeChecker_inferExpressionType(self, p->defaultExpr, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */;
+	};
     _cleanup_anon_404: ;
     return;
 }
@@ -43581,8 +43684,10 @@ static __attribute__((unused)) void _anon_fn_520(void* _env_ptr, Member* m) {
         if ((!spec_string_equals(m->sourceFile, spec_string_intern("")))) {
 	    spec_assign((void**)&self->currentSourceFile, (void*)(m->sourceFile));
 	};
-        TypeChecker_validateTypeAccess(self, m->memberType, m->line) /* inst:TypeChecker:validateTypeAccess */;
-        if ((((((!spec_string_equals(m->name, MetadataField_value(MetadataField_USING)))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_NAMESPACE)))))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_CASTABLE)))))) {
+        if ((!(String_startsWith(m->name, spec_string_intern("_import_"))))) {
+	    TypeChecker_validateTypeAccess(self, m->memberType, m->line) /* inst:TypeChecker:validateTypeAccess */;
+	};
+        if ((((((((!spec_string_equals(m->name, MetadataField_value(MetadataField_USING)))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_NAMESPACE)))))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_CASTABLE)))))) && ((!(String_startsWith(m->name, spec_string_intern("_import_"))))))) {
 	    SPEC_AUTO String declaredType = (((String (*)(TypeChecker*, Type*))self->_vtable[142]))((TypeChecker*)self, m->memberType);
 	    if (m->hasInit) {
 	    SPEC_AUTO String initType = TypeChecker_inferExpressionType(self, m->initExpr, declaredType) /* inst:TypeChecker:inferExpressionType */;
@@ -63624,12 +63729,14 @@ bool TypeChecker_fileGrants(TypeChecker* self, String sourceFile, String targetN
         do {
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_273 = item->arrayItems; if (_a_273) { for (size_t _i_273 = 0; _i_273 < _a_273->length; _i_273++) {
         Expression* seg = (Expression*)(intptr_t)_a_273->items[_i_273];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -63641,7 +63748,9 @@ bool TypeChecker_fileGrants(TypeChecker* self, String sourceFile, String targetN
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -63704,12 +63813,14 @@ bool TypeChecker_accessInClass(TypeChecker* self, String className, String targe
         do {
     if ((((!(granted))) && (((item->kind) == (ExpressionKind_ARRAY))))) {
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
+	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_287 = item->arrayItems; if (_a_287) { for (size_t _i_287 = 0; _i_287 < _a_287->length; _i_287++) {
         Expression* seg = (Expression*)(intptr_t)_a_287->items[_i_287];
         do {
     if (((((seg->kind) == (ExpressionKind_IDENT))) || (((seg->kind) == (ExpressionKind_USING_AS))))) {
 	    spec_assign((void**)&terminal, (void*)(seg->stringValue));
+	    terminalAs = ((seg->kind) == (ExpressionKind_USING_AS));
 	} else {
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
 	    spec_assign((void**)&nsJoined, (void*)(seg->stringValue));
@@ -63721,7 +63832,9 @@ bool TypeChecker_accessInClass(TypeChecker* self, String className, String targe
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get(String_split(targetName, spec_string_intern(":")), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
+	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    granted = true;
+	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":")))))))) {
 	    granted = true;
@@ -65614,6 +65727,9 @@ void TypeChecker_checkMethod(TypeChecker* self, Member* method) {
         Parameter* p = (Parameter*)(intptr_t)_a_405->items[_i_405];
         do {
     TypeChecker_validateTypeAccess(self, p->paramType, method->line) /* inst:TypeChecker:validateTypeAccess */;
+    if (p->hasDefault) {
+	    TypeChecker_inferExpressionType(self, p->defaultExpr, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */;
+	};
         } while (0);
     } } });
     TypeChecker_validateTypeAccess(self, method->memberType, method->line) /* inst:TypeChecker:validateTypeAccess */;
@@ -66238,8 +66354,10 @@ void TypeChecker_checkClass(TypeChecker* self, ClassInfo* classDef) {
         if ((!spec_string_equals(m->sourceFile, spec_string_intern("")))) {
 	    spec_assign((void**)&self->currentSourceFile, (void*)(m->sourceFile));
 	};
-        TypeChecker_validateTypeAccess(self, m->memberType, m->line) /* inst:TypeChecker:validateTypeAccess */;
-        if ((((((!spec_string_equals(m->name, MetadataField_value(MetadataField_USING)))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_NAMESPACE)))))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_CASTABLE)))))) {
+        if ((!(String_startsWith(m->name, spec_string_intern("_import_"))))) {
+	    TypeChecker_validateTypeAccess(self, m->memberType, m->line) /* inst:TypeChecker:validateTypeAccess */;
+	};
+        if ((((((((!spec_string_equals(m->name, MetadataField_value(MetadataField_USING)))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_NAMESPACE)))))) && ((!spec_string_equals(m->name, MetadataField_value(MetadataField_CASTABLE)))))) && ((!(String_startsWith(m->name, spec_string_intern("_import_"))))))) {
 	    SPEC_AUTO String declaredType = (((String (*)(TypeChecker*, Type*))self->_vtable[142]))((TypeChecker*)self, m->memberType);
 	    if (m->hasInit) {
 	    SPEC_AUTO String initType = TypeChecker_inferExpressionType(self, m->initExpr, declaredType) /* inst:TypeChecker:inferExpressionType */;

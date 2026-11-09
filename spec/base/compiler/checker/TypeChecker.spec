@@ -1493,10 +1493,12 @@ Class is TypeChecker{
 						m:initExpr:arrayItems:each(action: local Function(Expression is item){
 							Conditional:if(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
 								local String is terminal: '';
+								local Boolean is terminalAs: false;
 								local String is nsJoined: '';
 								item:arrayItems:each(action: local Function(Expression is seg){
 									Conditional:if(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
 										terminal: seg:stringValue;
+										terminalAs: seg:kind == ExpressionKind:USING_AS;
 									}, else: {
 										Conditional:if(check: { nsJoined == '' }, then: {
 											nsJoined: seg:stringValue;
@@ -1507,10 +1509,15 @@ Class is TypeChecker{
 								});
 								# FUNCTIONS.md Part IV IV.2c: the qualified nested reference
 								# ('Outer:Inner') rides the parent's grant — the terminal
-								# matches the target's root segment.
+								# matches the target's root segment. IV.6 strictness: the
+								# as-form grants functions and the qualified nested
+								# references; the BARE parent reference (and with it
+								# construction) requires the plain type import.
 								local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
 								Conditional:if(check: { terminal == targetName || terminal == targetRoot }, then: {
-									granted: true;
+									Conditional:if(check: { !terminalAs || targetName:contains(needle: ':') }, then: {
+										granted: true;
+									});
 								});
 								Conditional:if(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
 									granted: true;
@@ -1559,10 +1566,12 @@ Class is TypeChecker{
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
 					Conditional:if(check: { !granted && item:kind == ExpressionKind:ARRAY }, then: {
 						local String is terminal: '';
+						local Boolean is terminalAs: false;
 						local String is nsJoined: '';
 						item:arrayItems:each(action: local Function(Expression is seg){
 							Conditional:if(check: { seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, then: {
 								terminal: seg:stringValue;
+								terminalAs: seg:kind == ExpressionKind:USING_AS;
 							}, else: {
 								Conditional:if(check: { nsJoined == '' }, then: {
 									nsJoined: seg:stringValue;
@@ -1572,10 +1581,15 @@ Class is TypeChecker{
 							});
 						});
 						# FUNCTIONS.md Part IV IV.2c: the same root-segment grant for
-						# the qualified nested reference.
+						# the qualified nested reference. IV.6 strictness: the as-form
+						# grants functions and the qualified nested references; the
+						# BARE parent reference (and with it construction) requires
+						# the plain type import.
 						local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
 						Conditional:if(check: { terminal == targetName || terminal == targetRoot2 }, then: {
-							granted: true;
+							Conditional:if(check: { !terminalAs || targetName:contains(needle: ':') }, then: {
+								granted: true;
+							});
 						});
 						Conditional:if(check: { terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, then: {
 							granted: true;
@@ -3247,6 +3261,12 @@ Class is TypeChecker{
 		self:currentMethodIsMerge: method:hasModifier(kw: Keyword:MERGE);
 		method:params:each(action: local Function(Parameter is p){
 			self:validateTypeAccess(t: p:paramType, line: method:line);
+			# IV.6 strictness: the declaration-side default is construction
+			# the declaring class bakes in — it gates against the declaring
+			# class's imports exactly like a body expression.
+			Conditional:if(check: { p:hasDefault }, then: {
+				self:inferExpressionType(expr: p:defaultExpr);
+			});
 		});
 		self:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
@@ -3733,9 +3753,14 @@ Class is TypeChecker{
 					# Declarative metadata properties (using, namespace, group)
 					# are loader directives, not checked code: their
 					# initializers may reference classes the using itself
-					# loads, so type validation is skipped.
-					self:validateTypeAccess(t: m:memberType, line: m:line);
-					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() }, then: {
+					# loads, so type validation is skipped. The as-import's
+					# synthesized hidden field (_import_X, INSTANCE.md §10) is
+					# the as-form's own materialization — its type reference
+					# rides the as-form, not the plain type import.
+					Conditional:if(check: { !m:name:startsWith(prefix: '_import_') }, then: {
+						self:validateTypeAccess(t: m:memberType, line: m:line);
+					});
+					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() && m:name != MetadataField:CASTABLE:value() && !m:name:startsWith(prefix: '_import_') }, then: {
 						local String is declaredType: self:formatVarTypeString(t: m:memberType);
 						Conditional:if(check: { m:hasInit }, then: {
 							# Bidirectional: the declared type flows in.

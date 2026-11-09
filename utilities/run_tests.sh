@@ -141,6 +141,14 @@ assert_compile_failure "inner-import-leak-wall" \
 	"$ROOT/tests/negative/n27_inner_import_leak_negative_test.spec" \
 	"Undefined function 'floor' on class 'N27InnerImportLeak'"
 
+assert_compile_failure "as-form-construction-wall" \
+	"$ROOT/tests/negative/n28_as_form_construction_negative_test.spec" \
+	"'Math2' is not imported by 'N28AsFormConstruction'; add it to the using declaration"
+
+assert_compile_failure "as-form-default-wall" \
+	"$ROOT/tests/negative/n29_as_form_default_negative_test.spec" \
+	"'Math2' is not imported by 'N29AsFormDefault'; add it to the using declaration to construct it"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"
