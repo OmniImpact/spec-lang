@@ -1646,7 +1646,13 @@ Class is CodeGenerator{
 			Conditional:if(check: { self:argMode }, then: {
 				local String is resT: self:inferTargetType(expr: expr);
 				local String is resC: self:cTypeFor(typeName: resT);
-				return '((' . resC . ')spec_claim_pool((void*)(' . c . ')))';
+				# FUNCTIONS.md Part VI: the claim is SELF-FRAMING — the
+				# frame opens before the expression evaluates (its nested
+				# claims push above the mark), the release runs after the
+				# dispatch (the callee has retained what it needs), and
+				# only then does the pool adopt the value. No eviction
+				# window: every claim dies exactly at its own boundary.
+				return '(((' . resC . ')spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); ' . resC . ' _v = (' . resC . ')(' . c . '); spec_pool_release_to(_pf); _v; }))))';
 			});
 		});
 		return c;

@@ -217,28 +217,37 @@ String spec_string_intern(const char* c) {
     return s;
 }
 /* Claim pool: adopts ownership claims in read positions (call arguments,
-   conditions, chain targets) and recycles them on eviction. A borrowed
-   pointer stays valid until 32 further pool claims are made on the SAME
-   thread, which is far more than any single statement evaluates. The
-   pool is THREAD-LOCAL: a global pool let concurrent compilers' claims
-   evict each other's borrows mid-statement (four workers narrowed the
-   validity to ~8 statements each). */
-/* 256 slots: the eviction window is a HEURISTIC (a statement's live
-   borrows must fit within it) — 256 gives user expressions 8x the
-   headroom at 2 KB per thread. The structured fix (per-statement
-   frames releasing on every exit path) is scoped in FUNCTIONS.md
-   Part VI. */
-#define SPEC_POOL_SLOTS 256
-static __thread void* _spec_pool[SPEC_POOL_SLOTS];
-static __thread size_t _spec_pool_next = 0;
+   conditions, chain targets). The pool is a THREAD-LOCAL STACK that
+   starts low and grows: spec_pool_frame marks the depth,
+   spec_pool_release_to releases everything above it, and the generated
+   code frames each claimed call (mark before the arguments, release
+   after the dispatch) so transients die exactly at the call boundary —
+   no eviction window, no heuristic tail. */
+static __thread void** _spec_pool_stack = NULL;
+static __thread size_t _spec_pool_top = 0;
+static __thread size_t _spec_pool_cap = 0;
+
+size_t spec_pool_frame(void) {
+    return _spec_pool_top;
+}
+
+void spec_pool_release_to(size_t mark) {
+    while (_spec_pool_top > mark) {
+        void* obj = _spec_pool_stack[--_spec_pool_top];
+        if (obj) spec_release(obj);
+    }
+}
 
 void* spec_claim_pool(void* obj) {
     if (!obj) return NULL;
-    size_t slot = _spec_pool_next;
-    _spec_pool_next = (slot + 1) % SPEC_POOL_SLOTS;
-    void* old = _spec_pool[slot];
-    _spec_pool[slot] = obj;
-    if (old) spec_release(old);
+    if (_spec_pool_top == _spec_pool_cap) {
+        size_t ncap = _spec_pool_cap == 0 ? 8 : _spec_pool_cap * 2;
+        void** grown = (void**)realloc(_spec_pool_stack, sizeof(void*) * ncap);
+        if (!grown) spec_panic("Out of memory");
+        _spec_pool_stack = grown;
+        _spec_pool_cap = ncap;
+    }
+    _spec_pool_stack[_spec_pool_top++] = obj;
     return obj;
 }
 
