@@ -739,11 +739,24 @@ parallel stage must too):
   walks plain class order (the emission is thread-count-independent —
   the bootstrap fixed point holds on any machine).
 
-**Scoped follow-up — the claim-pool frames**: the eviction window is a
-heuristic; the structured fix is per-statement frames (mark at the
-statement start, release-to-mark on every exit path — the cleanup-funnel
-machinery already exists) plus per-iteration frames in the inlined
-loops. That removes the window's tail entirely.
+**The claim-pool frames: landed.** The pool is a thread-local stack
+that starts at 8 slots and doubles; the claim wrapper is self-framing
+(mark before the claimed expression evaluates, release after the
+dispatch, adopt the value last). Every claim dies exactly at its own
+boundary — the window and its tail are gone.
+
+**The parallel load: tested, falsified.** The parse was pushed onto the
+pool three ways (per-import candidate batches, an index-wide prefetch,
+the parse cache) and every variant measured WORSE than the serial load
+(676 → 807 ms) while ballooning the memory (the index-wide prefetch
+holds every scanned file's AST — including the intentionally-broken
+negative tests) and crashing on shared-map writes from the workers. The
+finding: the load's discovery is INHERENTLY serial — the namespace
+acceptance test needs each file parsed before the next import resolves,
+so the batches are 1–2 files and lose to thread-spawn overhead; and a
+parse cache holding unused files' ASTs is a leak by another name. The
+load stays serial at 683 ms; the claim-pool frames and the parse-cache
+idea are recorded for the record.
 
 ---
 
