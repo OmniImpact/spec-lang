@@ -691,7 +691,7 @@ Class is Linter{
 	## @param name: Receiver class name.
 	## @return: true when imported somewhere up the chain.
 	Function of Boolean is auditOwnerImportsAs(String is name){
-		return self:auditImportsAsAnywhere(clsName: self:auditOwner:name, targetName: name, hops: 0);
+		return self:auditImportsAsAnywhere(clsName: self:auditOwner:name, targetName: name);
 	}
 
 	## Recursive import search over the audit's ancestor lattice.
@@ -700,10 +700,11 @@ Class is Linter{
 	## @param targetName: The imported class name sought.
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
-	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, then: {
 			return false;
 		});
+		visited:set(key: clsName, value: 'true');
 		local ClassInfo is cls: self:auditClassNodes:get(key: clsName, default: self:auditOwner);
 		Conditional:if(check: { cls:name != clsName }, then: {
 			return false;
@@ -713,7 +714,7 @@ Class is Linter{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});

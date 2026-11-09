@@ -706,6 +706,47 @@ how the compiler's exit cleans up after itself.
 
 ---
 
+## Part VI — Limits and concurrency contracts
+
+The compiler's fixed numbers, audited. Each carries its class: a
+CORRECTNESS limit breaks (or silently misbehaves) on legit programs and
+must be raised or made dynamic; a PERF limit degrades gracefully and is
+a tuning knob; a GUARD bounds recursion against a cyclic bug.
+
+| Limit | Where | Class | Contract |
+|---|---|---|---|
+| `hops >= 256` × 11 | the checker/gen lattice walks | GUARD | bounds recursion if a `baseClasses` cycle ever forms; 256 is beyond any real chain |
+| `SPEC_POOL_SLOTS 256` | the claim pool (thread-local) | CORRECTNESS (tail) | a statement's live borrows must fit the window; the per-statement frame design (below) removes the tail |
+| `SPEC_INTERN_BUCKETS 4096` | the intern table | PERF | load factor degrades lookup speed only; rehash when the self-compile's intern set outgrows it |
+| Loader `depth > 32`, `ups < 8` | the package scan | CORRECTNESS | the project tree depth / install-prefix walk; raise with the filesystem, never silently shrink |
+| `threads > 64` clamp | Parallel:run | GUARD | pthread_create budget per call |
+
+**The argv keys** ride `spec_string_from_bytes` (sized) — no fixed
+buffer.
+
+**The concurrency contracts** (the parallel gen holds these; every new
+parallel stage must too):
+
+- The claim pool is THREAD-LOCAL: a borrow's validity counts claims on
+  its own thread only.
+- The intern table reads lock-free (append-only atomic chains);
+  insertion takes the mutex with a re-check. Entries are immortal.
+- The AST is READ-ONLY during code generation. Any memo written onto a
+  shared AST node from a worker is a race — `namespaceJoined`'s cache
+  was removed for exactly this.
+- Workers share NOTHING mutable: the registries are copied per worker,
+  the per-class results land in pre-sized slots by index, and the merge
+  walks plain class order (the emission is thread-count-independent —
+  the bootstrap fixed point holds on any machine).
+
+**Scoped follow-up — the claim-pool frames**: the eviction window is a
+heuristic; the structured fix is per-statement frames (mark at the
+statement start, release-to-mark on every exit path — the cleanup-funnel
+machinery already exists) plus per-iteration frames in the inlined
+loops. That removes the window's tail entirely.
+
+---
+
 ## Verification discipline
 
 Gates at every step: `bash utilities/run_tests.sh`,

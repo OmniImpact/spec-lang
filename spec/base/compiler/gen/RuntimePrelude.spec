@@ -223,7 +223,12 @@ String spec_string_intern(const char* c) {
    pool is THREAD-LOCAL: a global pool let concurrent compilers' claims
    evict each other's borrows mid-statement (four workers narrowed the
    validity to ~8 statements each). */
-#define SPEC_POOL_SLOTS 32
+/* 256 slots: the eviction window is a HEURISTIC (a statement's live
+   borrows must fit within it) — 256 gives user expressions 8x the
+   headroom at 2 KB per thread. The structured fix (per-statement
+   frames releasing on every exit path) is scoped in FUNCTIONS.md
+   Part VI. */
+#define SPEC_POOL_SLOTS 256
 static __thread void* _spec_pool[SPEC_POOL_SLOTS];
 static __thread size_t _spec_pool_next = 0;
 

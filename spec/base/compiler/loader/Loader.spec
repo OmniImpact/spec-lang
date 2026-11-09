@@ -189,7 +189,7 @@ Class is Loader{
 		local Int is indexed: 0;
 		while(
 			evaluate: local Function of Boolean(){
-				return ups < 3 && indexed == 0;
+				return ups < 8 && indexed == 0;
 			},
 			iteration: local Function of Boolean(){
 				self:scanTree(dir: exeDir, depth: 0);
@@ -216,7 +216,9 @@ Class is Loader{
 	## @param dir: Directory to scan.
 	## @param depth: Current recursion depth.
 	Function is scanTree(String is dir, Int is depth){
-		Conditional:if(check: { depth > 8 }, then: {
+		# FUNCTIONS.md Part VI: the scan depth is a filesystem-reality
+		# bound, not a language limit — 32 covers any sane package tree.
+		Conditional:if(check: { depth > 32 }, then: {
 			return;
 		});
 		local Array of String is entries: Dir:dirList(path: dir);
@@ -644,7 +646,7 @@ Class is Loader{
 			# FUNCTIONS.md Part IV IV.2: an inner class inherits the enclosing
 			# chain's as-imports — its instances carry their own synthesized
 			# fields, so the inherited functions dispatch on the inner.
-			self:synthesizeInheritedImports(cls: c, hops: 0);
+			self:synthesizeInheritedImports(cls: c);
 		});
 	}
 
@@ -653,11 +655,13 @@ Class is Loader{
 	## check in synthesizeFor).
 	##
 	## @param cls: The class receiving the inherited imports.
-	## @param hops: Recursion budget guard.
-	Function is synthesizeInheritedImports(ClassInfo is cls, Int is hops){
-		Conditional:if(check: { hops >= 16 }, then: {
+	## @param visited: The visited-class set — the walk marks on entry and
+	## terminates on revisit (any depth, cycles included).
+	Function is synthesizeInheritedImports(ClassInfo is cls, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { visited:has(key: cls:name) }, then: {
 			return;
 		});
+		visited:set(key: cls:name, value: 'true');
 		cls:baseClasses:each(action: local Function(String is baseName){
 			local ClassInfo is base: self:findLoadedClass(name: baseName);
 			Conditional:if(check: { base:name != '' }, then: {
@@ -674,7 +678,7 @@ Class is Loader{
 						});
 					});
 				});
-				self:synthesizeInheritedImports(cls: base, hops: hops + 1);
+				self:synthesizeInheritedImports(cls: base, visited: visited);
 			});
 		});
 	}

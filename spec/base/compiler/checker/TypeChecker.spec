@@ -660,7 +660,7 @@ Class is TypeChecker{
 		local String is baseName: self:memberLookupRoot(className: className);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroup(className: baseName, methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroup(className: baseName, methodName: methodName, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
@@ -860,13 +860,15 @@ Class is TypeChecker{
 	##
 	## @param className: The class to start from.
 	## @param methodName: The member name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @param acc: The collected group (nearest-declaration semantics).
 	## @param ownerAcc: The declaring class name accumulator (reference).
-	Function is collectOverloadGroup(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
-		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64 }, then: {
+	Function is collectOverloadGroup(String is className, String is methodName, Map of String to String is visited: Map:init(), Array of Member is acc, Array of String is ownerAcc){
+		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || visited:has(key: className) }, then: {
 			return;
 		});
+		visited:set(key: className, value: 'true');
 		# IV.2c: the qualified nested-class name walks the inner class
 		# itself; container forms don't resolve qualified and fall back to
 		# the bare root.
@@ -889,7 +891,7 @@ Class is TypeChecker{
 			return;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
-			self:collectOverloadGroup(className: baseName, methodName: methodName, hops: hops + 1, acc: acc, ownerAcc: ownerAcc);
+			self:collectOverloadGroup(className: baseName, methodName: methodName, visited: visited, acc: acc, ownerAcc: ownerAcc);
 		});
 	}
 
@@ -977,7 +979,7 @@ Class is TypeChecker{
 		local String is baseName: self:memberLookupRoot(className: className);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroup(className: baseName, methodName: selected:name, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroup(className: baseName, methodName: selected:name, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() <= 1 || ownerAcc:length() == 0 }, then: {
 			return self:lookupMethodReturnType(className: className, methodName: selected:name);
 		});
@@ -1008,7 +1010,7 @@ Class is TypeChecker{
 		local Member is none: Member:init(kind: MemberKind:METHOD);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroup(className: self:memberLookupRoot(className: className), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroup(className: self:memberLookupRoot(className: className), methodName: methodName, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
@@ -1029,19 +1031,21 @@ Class is TypeChecker{
 	## @param className: Receiver class name.
 	## @return: true when imported somewhere up the chain.
 	Function of Boolean is isAsImportedInherited(String is className){
-		return self:importsAsAnywhere(clsName: self:currentClassName, targetName: className, hops: 0);
+		return self:importsAsAnywhere(clsName: self:currentClassName, targetName: className);
 	}
 
 	## Recursive import search over the ancestor lattice.
 	##
 	## @param clsName: Class being visited.
 	## @param targetName: The imported class name sought.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when found on this class or an ancestor.
-	Function of Boolean is importsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is importsAsAnywhere(String is clsName, String is targetName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, then: {
 			return false;
 		});
+		visited:set(key: clsName, value: 'true');
 		local ClassInfo is cls: self:findClass(name: clsName);
 		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
@@ -1051,7 +1055,7 @@ Class is TypeChecker{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:importsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:importsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1067,7 +1071,7 @@ Class is TypeChecker{
 	## @return: Provider class names in walk order.
 	Function of Array of String is bareScopeProviders(String is methodName){
 		local Array of String is out: [];
-		self:collectBareProviders(clsName: self:currentClassName, methodName: methodName, hops: 0, acc: out);
+		self:collectBareProviders(clsName: self:currentClassName, methodName: methodName, acc: out);
 		return out;
 	}
 
@@ -1075,12 +1079,14 @@ Class is TypeChecker{
 	##
 	## @param clsName: Class being visited.
 	## @param methodName: The bare-called function name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @param acc: The provider accumulator.
-	Function is collectBareProviders(String is clsName, String is methodName, Int is hops, Array of String is acc){
-		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+	Function is collectBareProviders(String is clsName, String is methodName, Map of String to String is visited: Map:init(), Array of String is acc){
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, then: {
 			return;
 		});
+		visited:set(key: clsName, value: 'true');
 		local ClassInfo is cls: self:findClass(name: clsName);
 		Conditional:if(check: { cls:name == '' }, then: {
 			return;
@@ -1108,7 +1114,7 @@ Class is TypeChecker{
 			});
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
-			self:collectBareProviders(clsName: baseName, methodName: methodName, hops: hops + 1, acc: acc);
+			self:collectBareProviders(clsName: baseName, methodName: methodName, visited: visited, acc: acc);
 		});
 	}
 
@@ -1127,7 +1133,7 @@ Class is TypeChecker{
 		Conditional:if(check: { self:nestedScopeFor != className }, then: {
 			self:nestedScopeMap: Map:init();
 			self:nestedScopeFor: className;
-			self:collectNestedScopeEntries(clsName: className, hops: 0);
+			self:collectNestedScopeEntries(clsName: className);
 		});
 		return self:nestedScopeMap:getString(key: typeName, default: '');
 	}
@@ -1137,11 +1143,13 @@ Class is TypeChecker{
 	## nested classes to [nestedScopeMap].
 	##
 	## @param clsName: Class being visited.
-	## @param hops: Recursion budget guard.
-	Function is collectNestedScopeEntries(String is clsName, Int is hops){
-		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
+	Function is collectNestedScopeEntries(String is clsName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, then: {
 			return;
 		});
+		visited:set(key: clsName, value: 'true');
 		local ClassInfo is cls: self:findClass(name: clsName);
 		Conditional:if(check: { cls:name == '' }, then: {
 			return;
@@ -1174,7 +1182,7 @@ Class is TypeChecker{
 			});
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
-			self:collectNestedScopeEntries(clsName: baseName, hops: hops + 1);
+			self:collectNestedScopeEntries(clsName: baseName, visited: visited);
 		});
 	}
 
@@ -1208,12 +1216,14 @@ Class is TypeChecker{
 	##
 	## @param className: The class whose ancestors are walked.
 	## @param methodName: The member name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when an ancestor declares the name.
-	Function of Boolean is ancestorDeclares(String is className, String is methodName, Int is hops){
-		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is ancestorDeclares(String is className, String is methodName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { className == '' || className == 'Any' || visited:has(key: className) }, then: {
 			return false;
 		});
+		visited:set(key: className, value: 'true');
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
 		Conditional:if(check: { cls:name == '' }, then: {
@@ -1221,7 +1231,7 @@ Class is TypeChecker{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1233,12 +1243,14 @@ Class is TypeChecker{
 	##
 	## @param className: Class being visited.
 	## @param methodName: The member name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when declared here or inherited.
-	Function of Boolean is declaresOrInherits(String is className, String is methodName, Int is hops){
-		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is declaresOrInherits(String is className, String is methodName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { className == '' || className == 'Any' || visited:has(key: className) }, then: {
 			return false;
 		});
+		visited:set(key: className, value: 'true');
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
 		Conditional:if(check: { cls:name == '' }, then: {
@@ -1255,7 +1267,7 @@ Class is TypeChecker{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:declaresOrInherits(className: baseName, methodName: methodName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1269,12 +1281,14 @@ Class is TypeChecker{
 	##
 	## @param className: The class whose ancestors are walked.
 	## @param methodName: The member name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when the inherited name is overloaded.
-	Function of Boolean is ancestorOverloaded(String is className, String is methodName, Int is hops){
-		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is ancestorOverloaded(String is className, String is methodName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { className == '' || className == 'Any' || visited:has(key: className) }, then: {
 			return false;
 		});
+		visited:set(key: className, value: 'true');
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
 		Conditional:if(check: { cls:name == '' }, then: {
@@ -1282,7 +1296,7 @@ Class is TypeChecker{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1294,12 +1308,14 @@ Class is TypeChecker{
 	##
 	## @param className: Class being visited.
 	## @param methodName: The member name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when the nearest declaration is overloaded.
-	Function of Boolean is nearestGroupOverloaded(String is className, String is methodName, Int is hops){
-		Conditional:if(check: { className == '' || className == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is nearestGroupOverloaded(String is className, String is methodName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { className == '' || className == 'Any' || visited:has(key: className) }, then: {
 			return false;
 		});
+		visited:set(key: className, value: 'true');
 		local Array of String is parts: className:split(delimiter: ':');
 		local ClassInfo is cls: self:findClass(name: parts:get(index: 0));
 		Conditional:if(check: { cls:name == '' }, then: {
@@ -1319,7 +1335,7 @@ Class is TypeChecker{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:nearestGroupOverloaded(className: baseName, methodName: methodName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -1413,7 +1429,7 @@ Class is TypeChecker{
 								Conditional:if(check: { nonConcrete }, then: {
 									self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (FUNCTIONS.md §I.3).');
 								});
-								Conditional:if(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name, hops: 0) }, then: {
+								Conditional:if(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name) }, then: {
 									self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (FUNCTIONS.md §I.3).');
 								});
 							});
@@ -1467,7 +1483,7 @@ Class is TypeChecker{
 		Conditional:if(check: { targetName == '' || self:isPrimitive(t: targetName) || targetName == 'Array' || targetName == 'Map' || targetName == 'List' || targetName == 'String' || targetName == 'Function' || targetName == 'LoopControl' }, then: {
 			return true;
 		});
-		return self:accessInClass(className: className, targetName: targetName, hops: 0);
+		return self:accessInClass(className: className, targetName: targetName);
 	}
 
 	## The compilation-unit grant: any class declared in [sourceFile] is
@@ -1538,12 +1554,14 @@ Class is TypeChecker{
 	##
 	## @param className: Class being visited.
 	## @param targetName: The referenced class name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when access is granted at this level or above.
-	Function of Boolean is accessInClass(String is className, String is targetName, Int is hops){
-		Conditional:if(check: { hops >= 64 || className == '' }, then: {
+	Function of Boolean is accessInClass(String is className, String is targetName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { visited:has(key: className) || className == '' }, then: {
 			return false;
 		});
+		visited:set(key: className, value: 'true');
 		Conditional:if(check: { className == targetName }, then: {
 			return true;
 		});
@@ -1606,7 +1624,7 @@ Class is TypeChecker{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:accessInClass(className: baseName, targetName: targetName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:accessInClass(className: baseName, targetName: targetName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -3226,7 +3244,7 @@ Class is TypeChecker{
 		# one. Name the sibling's parameters so the user sees what to add.
 		local Array of Member is group: [];
 		local Array of String is groupOwners: [];
-		self:collectOverloadGroup(className: targetT, methodName: expr:methodName, hops: 0, acc: group, ownerAcc: groupOwners);
+		self:collectOverloadGroup(className: targetT, methodName: expr:methodName, acc: group, ownerAcc: groupOwners);
 		local Int is maxParams: m:params:length();
 		group:each(action: local Function(Member is g){
 			Conditional:if(check: { g:params:length() > maxParams }, then: {
@@ -3361,7 +3379,7 @@ Class is TypeChecker{
 		});
 		self:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
-		Conditional:if(check: { mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name, hops: 0) }, then: {
+		Conditional:if(check: { mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name) }, then: {
 			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (FUNCTIONS.md §I.3).');
 		});
 		Conditional:if(check: { self:currentMethodIsMerge && mergeTarget:name == '' }, then: {

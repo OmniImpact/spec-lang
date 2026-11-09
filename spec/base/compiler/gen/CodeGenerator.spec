@@ -435,7 +435,7 @@ Class is CodeGenerator{
 	## @param className: Receiver class name.
 	## @return: true when instance-imported by the current class.
 	Function of Boolean is isAsImportedReceiver(String is className){
-		return self:genImportsAsAnywhere(clsName: self:currentClassName, targetName: className, hops: 0);
+		return self:genImportsAsAnywhere(clsName: self:currentClassName, targetName: className);
 	}
 
 	## Recursive import search over the ancestor lattice (the emitted
@@ -443,12 +443,14 @@ Class is CodeGenerator{
 	##
 	## @param clsName: Class being visited.
 	## @param targetName: The imported class name sought.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @return: true when found on this class or an ancestor.
-	Function of Boolean is genImportsAsAnywhere(String is clsName, String is targetName, Int is hops){
-		Conditional:if(check: { clsName == '' || clsName == 'Any' || hops >= 64 }, then: {
+	Function of Boolean is genImportsAsAnywhere(String is clsName, String is targetName, Map of String to String is visited: Map:init()){
+		Conditional:if(check: { clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, then: {
 			return false;
 		});
+		visited:set(key: clsName, value: 'true');
 		local ClassInfo is cls: self:findClass(name: clsName);
 		Conditional:if(check: { cls:name == '' }, then: {
 			return false;
@@ -458,7 +460,7 @@ Class is CodeGenerator{
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:genImportsAsAnywhere(clsName: baseName, targetName: targetName, hops: hops + 1) }, then: {
+			Conditional:if(check: { !viaParent && self:genImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, then: {
 				viaParent: true;
 			});
 		});
@@ -553,7 +555,7 @@ Class is CodeGenerator{
 		local Member is none: Member:init(kind: MemberKind:FIELD);
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroupGen(className: self:memberLookupRootGen(className: className), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroupGen(className: self:memberLookupRootGen(className: className), methodName: methodName, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 }, then: {
 			return none;
 		});
@@ -578,7 +580,7 @@ Class is CodeGenerator{
 	Function of String is overloadOwnerNameGen(String is className, String is methodName, Int is idx){
 		local Array of Member is group: [];
 		local Array of String is ownerAcc: [];
-		self:collectOverloadGroupGen(className: self:memberLookupRootGen(className: className), methodName: methodName, hops: 0, acc: group, ownerAcc: ownerAcc);
+		self:collectOverloadGroupGen(className: self:memberLookupRootGen(className: className), methodName: methodName, acc: group, ownerAcc: ownerAcc);
 		Conditional:if(check: { group:length() == 0 || ownerAcc:length() == 0 }, then: {
 			return '';
 		});
@@ -591,12 +593,14 @@ Class is CodeGenerator{
 	##
 	## @param className: Class being visited.
 	## @param methodName: The member name.
-	## @param hops: Recursion budget guard.
+	## @param visited: The visited-class set — the walk marks on entry
+## and terminates on revisit (any depth, cycles included).
 	## @param acc: The collected group.
-	Function is collectOverloadGroupGen(String is className, String is methodName, Int is hops, Array of Member is acc, Array of String is ownerAcc){
-		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || hops >= 64 }, then: {
+	Function is collectOverloadGroupGen(String is className, String is methodName, Map of String to String is visited: Map:init(), Array of Member is acc, Array of String is ownerAcc){
+		Conditional:if(check: { ownerAcc:length() > 0 || acc:length() > 0 || className == '' || className == 'Any' || visited:has(key: className) }, then: {
 			return;
 		});
+		visited:set(key: className, value: 'true');
 		# IV.2c: the qualified nested-class name walks the inner class
 		# itself; container forms don't resolve qualified and fall back to
 		# the bare root.
@@ -619,7 +623,7 @@ Class is CodeGenerator{
 			return;
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
-			self:collectOverloadGroupGen(className: baseName, methodName: methodName, hops: hops + 1, acc: acc, ownerAcc: ownerAcc);
+			self:collectOverloadGroupGen(className: baseName, methodName: methodName, visited: visited, acc: acc, ownerAcc: ownerAcc);
 		});
 	}
 
@@ -3486,11 +3490,7 @@ Class is CodeGenerator{
 		m: m . "            const char* eq = strchr(argv[i] + 2, '=');\n";
 		m: m . "            if (eq) {\n";
 		m: m . "                int klen = (int)(eq - (argv[i] + 2));\n";
-		m: m . "                char kbuf[128];\n";
-		m: m . "                if (klen >= 128) klen = 127;\n";
-		m: m . "                strncpy(kbuf, argv[i] + 2, klen);\n";
-		m: m . "                kbuf[klen] = 0;\n";
-		m: m . "                spec_map_set(args, spec_string_from_chars(kbuf), spec_string_from_chars(eq + 1));\n";
+		m: m . "                spec_map_set(args, spec_string_from_bytes(argv[i] + 2, klen), spec_string_from_chars(eq + 1));\n";
 		m: m . "            } else {\n";
 		m: m . "                const char* key = argv[i] + 2;\n";
 		m: m . "                const char* val = \"true\";\n";
@@ -3503,11 +3503,7 @@ Class is CodeGenerator{
 		m: m . "            const char* eq = strchr(argv[i] + 1, '=');\n";
 		m: m . "            if (eq) {\n";
 		m: m . "                int klen = (int)(eq - (argv[i] + 1));\n";
-		m: m . "                char kbuf[128];\n";
-		m: m . "                if (klen >= 128) klen = 127;\n";
-		m: m . "                strncpy(kbuf, argv[i] + 1, klen);\n";
-		m: m . "                kbuf[klen] = 0;\n";
-		m: m . "                spec_map_set(args, spec_string_from_chars(kbuf), spec_string_from_chars(eq + 1));\n";
+		m: m . "                spec_map_set(args, spec_string_from_bytes(argv[i] + 1, klen), spec_string_from_chars(eq + 1));\n";
 		m: m . "            } else {\n";
 		m: m . "                const char* key = argv[i] + 1;\n";
 		m: m . "                const char* val = \"true\";\n";
