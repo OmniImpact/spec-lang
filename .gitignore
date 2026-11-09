@@ -19,3 +19,4 @@
 # Editor project files
 *.kdev4
 .kdev4/
+/AGENTS.md
