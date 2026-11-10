@@ -1,5 +1,5 @@
 ##
-# Example and test suite for Spec Enums, Cases:match dispatch, and inline 'if/else'
+# Example and test suite for Spec Enums, Conditional:match dispatch, and inline 'if/else'
 ##
 
 Enum is TokenKind2 {
@@ -33,7 +33,7 @@ Class is EnumWhenTest{
 		['base', 'io', Output],
 		['base', 'io', as Output()],
 		['base', 'sys', as Conditional()],
-		['base', 'cases', as Cases()]
+
 	];
 
 	replace init(Map of String to String is args){
@@ -85,7 +85,7 @@ Class is EnumWhenTest{
 		Output:line('--- 3. Testing Match Statement ---');
 		local HttpStatus is status: HttpStatus:OK;
 
-		Cases:match(on: status, when: [
+		Conditional:match(on: status, when: [
 			[HttpStatus:OK, HttpStatus:CREATED]: {
 				Output:line('Status category: Success');
 			},
@@ -98,7 +98,7 @@ Class is EnumWhenTest{
 		]);
 
 		local String is method: 'POST';
-		Cases:match(on: method, when: [
+		Conditional:match(on: method, when: [
 			'GET': {
 				Output:line('HTTP Method: Read');
 			},
@@ -115,7 +115,7 @@ Class is EnumWhenTest{
 		Output:line('--- 4. Testing Match Expression ---');
 		local TokenKind2 is tok: TokenKind2:IDENTIFIER;
 
-		local String is tokDescription: Cases:match(on: tok, when: [
+		local String is tokDescription: Conditional:match(on: tok, when: [
 			TokenKind2:KEYWORD: { 'Reserved Keyword' },
 			TokenKind2:IDENTIFIER: { 'Variable/Type Identifier' },
 			TokenKind2:NUMBER: { 'Numeric Constant' },
@@ -133,14 +133,14 @@ Class is EnumWhenTest{
 		});
 
 		local HttpStatus is status: HttpStatus:SERVER_ERROR;
-		local Boolean is canRetry: Cases:match(on: status, when: [
+		local Boolean is canRetry: Conditional:match(on: status, when: [
 			HttpStatus:SERVER_ERROR: { true },
 			HttpStatus:NOT_FOUND: { false },
 			else: { false }
 		]);
 		Output:line('Can retry: ' . canRetry);
 
-		local Int is priority: Cases:match(on: LogLevel:ERROR, when: [
+		local Int is priority: Conditional:match(on: LogLevel:ERROR, when: [
 			LogLevel:NONE: { 0 },
 			LogLevel:DEBUG: { 1 },
 			LogLevel:INFO: { 2 },

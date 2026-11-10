@@ -40,7 +40,6 @@ Class is TypeChecker{
 		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
 		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
 		['base', 'iterator'],
-		['base', 'cases', as Cases()],
 		['base', 'iterator', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'io', as Output()],
@@ -584,7 +583,7 @@ Class is TypeChecker{
 		return inherited;
 	}
 
-	## Type-checks a Cases:match arm table (PLAN-ENUM Stage 3): keys
+	## Type-checks a Conditional:match arm table (PLAN-ENUM Stage 3): keys
 	## resolve against the subject class's held members (an array key
 	## matches several), `else` names the fallback, and the arm closures
 	## unify into the match's type. Exhaustiveness keys on the Enum
@@ -605,7 +604,7 @@ Class is TypeChecker{
 			subjT: subjT:split(delimiter: ':'):get(index: 0);
 		});
 		Conditional:if(check: { subjT == '' || subjT == Primitive:ANY:value() || !self:registeredClasses:has(key: subjT) }, then: {
-			self:addError(line: self:currentLine, msg: 'Cases:match subjects must be class-typed values; \'' . subjT . '\' cannot be matched.');
+			self:addError(line: self:currentLine, msg: 'Conditional:match subjects must be class-typed values; \'' . subjT . '\' cannot be matched.');
 			return 'Any';
 		});
 		# Match is identity dispatch over class instances: a
@@ -2093,7 +2092,7 @@ Class is TypeChecker{
 			return '';
 		});
 
-		Cases:match(on: kind, when: [
+		Conditional:match(on: kind, when: [
 			ExpressionKind:STRING: {
 				res: Primitive:STRING:value();
 			},
@@ -2323,7 +2322,7 @@ Class is TypeChecker{
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
 				local String is rightT: self:inferExpressionType(expr: expr:rightExpr, expected: expected);
 				local String is op: expr:str;
-				Cases:match(on: op, when: [
+				Conditional:match(on: op, when: [
 					'.': {
 						res: Primitive:STRING:value();
 					},
@@ -2366,7 +2365,7 @@ Class is TypeChecker{
 				Conditional:if(check: { expr:castArgs:length() > 0 && !isFormat }, then: {
 					self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
 				});
-				Cases:match(on: target, when: [
+				Conditional:match(on: target, when: [
 					['Hex', 'Bin', 'Oct']: {
 						Conditional:if(check: { expr:castArgs:length() > 1 }, then: {
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
@@ -2752,12 +2751,12 @@ Class is TypeChecker{
 			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (E7).');
 		});
 
-		# Cases:match (PLAN-ENUM Stage 3): the arm-table recognizer —
+		# Conditional:match (PLAN-ENUM Stage 3): the arm-table recognizer —
 		# BEFORE the generic argument inference, which would type the
 		# table's keys as ordinary expressions (the else key is not one).
 		# Keys resolve against the subject's class's held members,
 		# exhaustiveness keys on the Enum root, arm closures type here.
-		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Cases' || targetType == 'Cases') }, then: {
+		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional') }, then: {
 			local Expression is matchSubj: Expression:init(kind: ExpressionKind:UNKNOWN);
 			local Expression is matchArms: Expression:init(kind: ExpressionKind:UNKNOWN);
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -2773,7 +2772,7 @@ Class is TypeChecker{
 				expr:resolvedType: matchRes;
 				return matchRes;
 			});
-			self:addError(line: self:currentLine, msg: 'Cases:match takes (on: <subject>, when: [key: { body }, ...]) with a literal arm table.');
+			self:addError(line: self:currentLine, msg: 'Conditional:match takes (on: <subject>, when: [key: { body }, ...]) with a literal arm table.');
 			expr:resolvedType: Primitive:ANY:value();
 			return Primitive:ANY:value();
 		});
@@ -3220,7 +3219,7 @@ Class is TypeChecker{
 									# with element types from the type string.
 									res: targetType;
 									local Array of String is scParts: targetType:split(delimiter: ':');
-									Cases:match(on: method, when: [
+									Conditional:match(on: method, when: [
 										'toString': { res: Primitive:STRING:value(); },
 										'length': { res: Primitive:INT:value(); },
 										'isEmpty': { res: Primitive:BOOLEAN:value(); },
@@ -3275,7 +3274,7 @@ Class is TypeChecker{
 										});
 									}, else: {
 										Conditional:if(check: { self:allEnumNames:has(key: targetType) }, then: {
-											Cases:match(on: method, when: [
+											Conditional:match(on: method, when: [
 												'name': { res: Primitive:STRING:value(); },
 												'ordinal': { res: Primitive:INT:value(); },
 												'values': { res: 'Array:' . targetType; },
@@ -3423,7 +3422,7 @@ Class is TypeChecker{
 		});
 		local StatementKind is kind: stmt:kind;
 
-		Cases:match(on: kind, when: [
+		Conditional:match(on: kind, when: [
 			StatementKind:VAR_DECL: {
 				local String is varName: stmt:varName;
 				# IV.2c phase 3: the access gate resolves the bare nested
@@ -4491,7 +4490,7 @@ Class is TypeChecker{
 		self:collectClassFieldTypes(classDef: classDef);
 
 		classDef:members:each(action: local Function(Member is m){
-			Cases:match(on: m:kind, when: [
+			Conditional:match(on: m:kind, when: [
 				MemberKind:FIELD: {
 					self:currentLine: m:line;
 					Conditional:if(check: { m:sourceFile != '' }, then: {
@@ -4532,7 +4531,7 @@ Class is TypeChecker{
 		});
 
 		classDef:members:each(action: local Function(Member is m){
-			Cases:match(on: m:kind, when: [
+			Conditional:match(on: m:kind, when: [
 				MemberKind:METHOD: {
 					self:unassignedFields: Map:init();
 					Conditional:if(check: { m:name == ContractMethod:INIT:value() }, then: {
@@ -4585,7 +4584,7 @@ Class is TypeChecker{
 	## @param stmt: The statement to walk.
 	## @param acc: Output array.
 	Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
-		Cases:match(on: stmt:kind, when: [
+		Conditional:match(on: stmt:kind, when: [
 			StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
 			}
@@ -4599,7 +4598,7 @@ Class is TypeChecker{
 	Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:members:each(action: local Function(Member is m){
-			Cases:match(on: m:kind, when: [
+			Conditional:match(on: m:kind, when: [
 				MemberKind:CLASS: {
 					self:collectClasses(c: m:nestedClass, acc: acc);
 				},

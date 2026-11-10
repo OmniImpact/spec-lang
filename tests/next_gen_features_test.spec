@@ -93,7 +93,7 @@ Class is NextGenFeaturesTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'io', as Output()],
-		['base', 'cases', as Cases()]
+		['base', 'sys', as Conditional()]
 	];
 
 	## Helper method demonstrating default parameter values and call-site reordering.
@@ -274,21 +274,21 @@ Class is NextGenFeaturesTest{
 		self:inspectResult(res: resPending);
 
 		# When expression destructuring
-		local String is descOk: Cases:match(on: resOk, when: [
+		local String is descOk: Conditional:match(on: resOk, when: [
 			Result:Ok: local Function(String is d){ return 'Handled OK -> ' . d; },
 			Result:Err: local Function(Int is c, String is m){ return 'Handled ERR ' . c . ': ' . m; },
 			Result:Pending: { 'Awaiting resolution' }
 		]);
 		Output:line('descOk: ' . descOk);
 
-		local String is descErr: Cases:match(on: resErr, when: [
+		local String is descErr: Conditional:match(on: resErr, when: [
 			Result:Ok: local Function(String is d){ return 'Handled OK -> ' . d; },
 			Result:Err: local Function(Int is c, String is m){ return 'Handled ERR ' . c . ': ' . m; },
 			Result:Pending: { 'Awaiting resolution' }
 		]);
 		Output:line('descErr: ' . descErr);
 
-		local String is descPending: Cases:match(on: resPending, when: [
+		local String is descPending: Conditional:match(on: resPending, when: [
 			Result:Ok: local Function(String is d){ return 'Handled OK -> ' . d; },
 			Result:Err: local Function(Int is c, String is m){ return 'Handled ERR ' . c . ': ' . m; },
 			Result:Pending: { 'Awaiting resolution' }
@@ -299,13 +299,13 @@ Class is NextGenFeaturesTest{
 		local Option is someVal: Option:Some(value: 42);
 		local Option is noneVal: Option:None;
 
-		local Int is extracted: Cases:match(on: someVal, when: [
+		local Int is extracted: Conditional:match(on: someVal, when: [
 			Option:Some: local Function(Int is v){ return v; },
 			Option:None: { 0 }
 		]);
 		Output:line('Option:Some extracted: ' . extracted);
 
-		local Int is extractedNone: Cases:match(on: noneVal, when: [
+		local Int is extractedNone: Conditional:match(on: noneVal, when: [
 			Option:Some: local Function(Int is v){ return v; },
 			Option:None: { -1 }
 		]);
@@ -316,7 +316,7 @@ Class is NextGenFeaturesTest{
 	##
 	## @param res: Target Result instance to inspect.
 	local Function is inspectResult(Result is res){
-		Cases:match(on: res, when: [
+		Conditional:match(on: res, when: [
 			Result:Ok: local Function(String is d){
 				Output:line('  [match] Result:Ok with data: ' . d);
 			},

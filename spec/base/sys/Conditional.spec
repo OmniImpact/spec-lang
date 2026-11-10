@@ -39,4 +39,18 @@ Class is Conditional{
 		self:if(check: { return !check(); }, then: else);
 		finally();
 	}
+
+	## Dispatches [on] over the arm table [when] — the match construct.
+	## Runtime-managed: intercepted by the compiler — the arm table
+	## resolves against the subject's class's held members at compile
+	## time and inlines into a comparison chain — so no body is emitted.
+	## The arm table is a map literal whose keys are held-member
+	## references (an array key matches several), `else` names the
+	## fallback arm, and the closures are the arm bodies (a closure's
+	## last expression is the arm's value).
+	##
+	## @param on: The subject value.
+	## @param when: The arm table.
+	Function is match(Any is on, Map of Any to Any is when){
+	}
 }

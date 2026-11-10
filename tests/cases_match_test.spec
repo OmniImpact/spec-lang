@@ -42,7 +42,7 @@ Class is CasesMatchTest{
 		# Exhaustive over an Enum-rooted subject: no else needed.
 		# Bare and qualified keys mix; the match yields String.
 		local MachineState is s: MachineState:running;
-		local String is label: Cases:match(on: s, when: [
+		local String is label: Conditional:match(on: s, when: [
 			idle:   { 'waiting' },
 			MachineState:running: { 'go' },
 			MachineState:failed: { 'down' }
@@ -55,7 +55,7 @@ Class is CasesMatchTest{
 
 		# Identity: a different variant takes a different arm; the
 		# subject may be a held path directly.
-		local String is label2: Cases:match(on: MachineState:failed, when: [
+		local String is label2: Conditional:match(on: MachineState:failed, when: [
 			idle:   { 'waiting' },
 			running: { 'go' },
 			failed: { 'down' }
@@ -67,7 +67,7 @@ Class is CasesMatchTest{
 		});
 
 		# Array keys: several cases, one body — the subject is failed.
-		local String is label3: Cases:match(on: MachineState:failed, when: [
+		local String is label3: Conditional:match(on: MachineState:failed, when: [
 			[idle, failed]: { 'not-going' },
 			running: { 'go' }
 		]);
@@ -80,7 +80,7 @@ Class is CasesMatchTest{
 		# else arm over an Enum-rooted subject is legal: a fresh
 		# instance matches no held singleton.
 		local MachineState is ghost: MachineState:init();
-		local String is label4: Cases:match(on: ghost, when: [
+		local String is label4: Conditional:match(on: ghost, when: [
 			idle: { 'waiting' },
 			running: { 'go' },
 			failed: { 'down' },
@@ -94,7 +94,7 @@ Class is CasesMatchTest{
 
 		# Non-Enum subject, value form: else required, and present.
 		local JobKind is j: JobKind:async;
-		local String is kind: Cases:match(on: j, when: [
+		local String is kind: Conditional:match(on: j, when: [
 			JobKind:sync: { 'blocking' },
 			JobKind:async: { 'queued' },
 			else: { 'mixed' }
@@ -128,7 +128,7 @@ Class is CasesMatchTest{
 
 		# The bridge: a today's-enum subject (tag comparison).
 		local Legacy is lv: Legacy:B;
-		local String is bl: Cases:match(on: lv, when: [
+		local String is bl: Conditional:match(on: lv, when: [
 			Legacy:A: { 'ay' },
 			B: { 'bee' }
 		]);
@@ -139,7 +139,7 @@ Class is CasesMatchTest{
 		});
 
 		# String-literal keys over a String subject (value equality).
-		local String is esc: Cases:match(on: 'n', when: [
+		local String is esc: Conditional:match(on: 'n', when: [
 			'r': { 'carriage' },
 			'n': { 'newline' },
 			else: { 'plain' }
@@ -160,6 +160,6 @@ Class is CasesMatchTest{
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
 		['base', 'sys', as Conditional()],
-		['base', 'cases', as Cases()]
+
 	];
 }

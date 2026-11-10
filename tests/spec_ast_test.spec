@@ -16,7 +16,7 @@ Class is SpecAstTest{
 		['base', 'io', Output],
 		['base', 'io', as Output()],
 		['base', 'sys', as Conditional()],
-		['base', 'cases', as Cases()]
+
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -41,7 +41,7 @@ Class is SpecAstTest{
 
 		# Enum dispatch on the kind (the style contract's string-tag removal).
 		local String is tag: '';
-		Cases:match(on: bin:kind, when: [
+		Conditional:match(on: bin:kind, when: [
 			ExpressionKind:BINARY: { tag: 'binary'; },
 			ExpressionKind:CALL: { tag: 'call'; },
 			else: { tag: 'other'; }
@@ -72,7 +72,7 @@ Class is SpecAstTest{
 		local String is found: '';
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is mem){
-				Cases:match(on: mem:kind, when: [
+				Conditional:match(on: mem:kind, when: [
 					MemberKind:METHOD: { found: mem:name; }
 				]);
 			});

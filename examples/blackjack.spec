@@ -2,7 +2,6 @@ Class is Blackjack{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'cases', as Cases()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator', Loop],
@@ -119,7 +118,7 @@ Class is Blackjack{
 				game:roundActive: false;
 				return;
 			});
-			Cases:match(on: action, when: [
+			Conditional:match(on: action, when: [
 				['h', 'hit']: {
 					local Int is card: game:drawCard();
 					game:playerHand:add(item: card);
