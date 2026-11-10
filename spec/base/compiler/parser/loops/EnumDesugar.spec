@@ -25,12 +25,127 @@ Class is EnumDesugar{
 		['base', 'sys', as Conditional()]
 	];
 
-	## Rewrites a parsed value-enum into its class-model form, in place.
+	## Rewrites a parsed enum into its class-model form, in place.
+	## Value enums (payload-less variants) desugar to held members; tagged
+	## enums (variants with parameters) desugar to nested subclasses —
+	## the payload fields are real fields, the base carries the tag
+	## machinery, and the variant constructors resolve as nested-class
+	## construction shorthand (`Result:Ok(data: 'x')`).
 	##
 	## @param c: The parsed enum ClassInfo (baseClass stays the enum root).
 	## @param backingType: The sugar's `of` type (Int when unspelled).
 	## @return: The same ClassInfo, desugared.
 	Function of ClassInfo is desugar(ClassInfo is c, String is backingType){
+		local Boolean is isTagged: false;
+		c:members:each(action: local Function(Member is m){
+			Conditional:if(check: { m:params:length() > 0 }, then: {
+				isTagged: true;
+			});
+		});
+		Conditional:if(check: { isTagged }, then: {
+			return self:desugarTagged(c: c);
+		});
+		return self:desugarValue(c: c, backingType: backingType);
+	}
+
+	## The tagged desugaring: the base carries the tag machinery, each
+	## variant becomes a nested subclass with real payload fields.
+	##
+	## @param c: The parsed enum ClassInfo.
+	## @return: The same ClassInfo, desugared.
+	Function of ClassInfo is desugarTagged(ClassInfo is c){
+		local String is name: c:name;
+		local Array of Member is out: [];
+		local Array of Member is variants: [];
+		c:members:each(action: local Function(Member is m){
+			Conditional:if(check: { m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, then: {
+				out:add(item: m);
+			}, else: {
+				variants:add(item: m);
+			});
+		});
+
+		# The tag machinery: the base's fields and the reflective readers.
+		local Member is tagField: Member:init(kind: MemberKind:FIELD);
+		tagField:memberType: Type:init(name: 'Int');
+		tagField:name: '_tag';
+		out:add(item: tagField);
+		local Member is vnameField: Member:init(kind: MemberKind:FIELD);
+		vnameField:memberType: Type:init(name: 'String');
+		vnameField:name: '_variant_name';
+		out:add(item: vnameField);
+		local Member is nameFn: Member:init(kind: MemberKind:METHOD);
+		nameFn:memberType: Type:init(name: 'String');
+		nameFn:name: 'name';
+		local Array of Statement is nameBody: [];
+		nameBody:add(item: self:tailReturn(expr: self:selfPath(member: '_variant_name')));
+		nameFn:body: nameBody;
+		out:add(item: nameFn);
+		local Member is ordFn: Member:init(kind: MemberKind:METHOD);
+		ordFn:memberType: Type:init(name: 'Int');
+		ordFn:name: 'ordinal';
+		local Array of Statement is ordBody: [];
+		ordBody:add(item: self:tailReturn(expr: self:selfPath(member: '_tag')));
+		ordFn:body: ordBody;
+		out:add(item: ordFn);
+
+		# The variants: nested subclasses carrying real payload fields,
+		# their constructors stamping the tag and the variant name.
+		local Int is idx: 0;
+		variants:each(action: local Function(Member is m){
+			local ClassInfo is sub: ClassInfo:init(name: m:name, baseClass: name, members: []);
+			sub:setLine(line: m:line);
+			sub:setSourceFile(file: c:sourceFile);
+			local Array of Member is subMembers: [];
+			m:params:each(action: local Function(Parameter is p){
+				local Member is pf: Member:init(kind: MemberKind:FIELD);
+				pf:memberType: Type:init(name: p:paramType:name);
+				pf:name: p:name;
+				subMembers:add(item: pf);
+			});
+			local Member is subInit: Member:init(kind: MemberKind:METHOD);
+			subInit:memberType: Type:init(name: '');
+			subInit:name: 'init';
+			subInit:params: m:params;
+			local Array of Statement is initBody: [];
+			m:params:each(action: local Function(Parameter is p){
+				local Statement is a: Statement:init(kind: StatementKind:ASSIGN);
+				a:assignTarget: self:selfPath(member: p:name);
+				a:assignValue: self:ident(name: p:name);
+				initBody:add(item: a);
+			});
+			local Expression is tagNum: Expression:init(kind: ExpressionKind:NUMBER);
+			tagNum:str: '' . idx;
+			tagNum:num: idx;
+			local Statement is tagAssign: Statement:init(kind: StatementKind:ASSIGN);
+			tagAssign:assignTarget: self:selfPath(member: '_tag');
+			tagAssign:assignValue: tagNum;
+			initBody:add(item: tagAssign);
+			local Statement is vnameAssign: Statement:init(kind: StatementKind:ASSIGN);
+			vnameAssign:assignTarget: self:selfPath(member: '_variant_name');
+			vnameAssign:assignValue: self:strLit(text: m:name);
+			initBody:add(item: vnameAssign);
+			subInit:body: initBody;
+			subMembers:add(item: subInit);
+			sub:members: subMembers;
+			local Member is nest: Member:init(kind: MemberKind:CLASS);
+			nest:name: m:name;
+			nest:nestedClass: sub;
+			nest:line: m:line;
+			out:add(item: nest);
+			idx: idx + 1;
+		});
+
+		c:members: out;
+		return c;
+	}
+
+	## The value-enum desugaring (PLAN-ENUM Stage 4).
+	##
+	## @param c: The parsed enum ClassInfo.
+	## @param backingType: The sugar's `of` type (Int when unspelled).
+	## @return: The same ClassInfo, desugared.
+	Function of ClassInfo is desugarValue(ClassInfo is c, String is backingType){
 		local String is name: c:name;
 		local Array of Member is out: [];
 		local Array of Member is variants: [];

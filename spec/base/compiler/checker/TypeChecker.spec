@@ -697,6 +697,18 @@ Class is TypeChecker{
 								Conditional:if(check: { variantFound }, then: {
 									owner: subjT;
 								});
+							}, else: {
+								# The class-model bridge (PLAN-ENUM Stage 5): a
+								# desugared TAGGED enum's variants are its nested
+								# subclasses — the key admits when one matches.
+								Conditional:if(check: { self:bindings:isClassModelEnum(c: self:findClass(name: subjT)) }, then: {
+									local ClassInfo is cmCls: self:findClass(name: subjT);
+									cmCls:members:each(action: local Function(Member is m){
+										Conditional:if(check: { owner == '' && m:kind == MemberKind:CLASS && m:nestedClass:name == keyName }, then: {
+											owner: subjT;
+										});
+									});
+								});
 							});
 							Conditional:if(check: { owner == '' }, then: {
 								self:addError(line: self:currentLine, msg: 'Match key \'' . keyName . '\' is not a held member of \'' . subjT . '\'.');
@@ -714,11 +726,25 @@ Class is TypeChecker{
 										# variant's constructor payloads — type them
 										# from the variant's declared parameters.
 										Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 }, then: {
-											local ClassInfo is pvCls: self:findClass(name: owner);
+											# The variant's parameter surface: the legacy
+											# member (today's enums) or the desugared
+											# nested subclass's init (Stage 5).
 											local Member is pvMem: Member:init(kind: MemberKind:FIELD);
-											pvCls:members:each(action: local Function(Member is m){
-												Conditional:if(check: { pvMem:name == '' && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
-													pvMem: m;
+											Conditional:if(check: { self:allEnumNames:has(key: owner) }, then: {
+												local ClassInfo is pvCls: self:findClass(name: owner);
+												pvCls:members:each(action: local Function(Member is m){
+													Conditional:if(check: { pvMem:name == '' && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+														pvMem: m;
+													});
+												});
+											}, else: {
+												local ClassInfo is subCls: self:findClass(name: owner . ':' . keyName);
+												Conditional:if(check: { subCls:name != '' }, then: {
+													subCls:members:each(action: local Function(Member is m){
+														Conditional:if(check: { pvMem:name == '' && m:kind == MemberKind:METHOD && m:name == 'init' }, then: {
+															pvMem: m;
+														});
+													});
 												});
 											});
 											local Int is pbi: 0;
@@ -2665,6 +2691,29 @@ Class is TypeChecker{
 		local String is targetName: expr:methodTarget:str;
 		Conditional:if(check: { targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, then: {
 			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
+		});
+
+		# Nested-construction shorthand (PLAN-ENUM Stage 5): a class-name
+		# receiver naming a nested class constructs it —
+		# `Result:Ok(data: 'x')` ≡ `Result:Ok:init(data: 'x')`. The call
+		# rewrites in place and falls through to the init path.
+		Conditional:if(check: { (expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH) && method != 'init' && self:registeredClasses:has(key: targetName) && !self:localVars:has(key: targetName) && !self:fieldTypes:has(key: targetName) }, then: {
+			local ClassInfo is ncCls: self:findClass(name: targetName);
+			local Boolean is hasNested: false;
+			Conditional:if(check: { ncCls:name != '' }, then: {
+				ncCls:members:each(action: local Function(Member is m){
+					Conditional:if(check: { !hasNested && m:kind == MemberKind:CLASS && m:nestedClass:name == method }, then: {
+						hasNested: true;
+					});
+				});
+			});
+			Conditional:if(check: { hasNested }, then: {
+				local Array of String is segs: [targetName, method];
+				expr:methodTarget: Expression:init(kind: ExpressionKind:PATH);
+				expr:methodTarget:makePath(segments: segs);
+				expr:methodName: 'init';
+				targetType: self:inferExpressionType(expr: expr:methodTarget);
+			});
 		});
 
 		# E5/E7: the call model. A class-name receiver admits

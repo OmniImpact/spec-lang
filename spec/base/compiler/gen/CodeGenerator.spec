@@ -4706,6 +4706,9 @@ Class is CodeGenerator{
 				# Payload arms (the Stage-5 form pulled forward): an arm
 				# closure with parameters binds the tagged variant's
 				# constructor payloads as locals before the body runs.
+				# The legacy tagged form binds through the flat payload
+				# fields; the desugared form (Stage 5) casts the subject
+				# to the nested subclass and reads its real fields.
 				Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 && self:allTaggedEnums:has(key: subjT) }, then: {
 					local Member is pvMem: self:lookupEnumVariant(enumName: subjT, variantName: self:matchKeyName(key: key, subjT: subjT));
 					Conditional:if(check: { pvMem:name != '' }, then: {
@@ -4720,6 +4723,25 @@ Class is CodeGenerator{
 								self:localVars:set(key: bp:name, value: self:formatVarTypeString(t: vp:paramType));
 							});
 							pbi: pbi + 1;
+						});
+					});
+				});
+				Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 && !self:allTaggedEnums:has(key: subjT) && !self:allEnumNames:has(key: subjT) }, then: {
+					local String is cmKey: self:matchKeyName(key: key, subjT: subjT);
+					Conditional:if(check: { cmKey != '' }, then: {
+						local String is subSym: self:utils:cIdent(name: subjT . ':' . cmKey);
+						local ClassInfo is subCls: self:findClass(name: subjT . ':' . cmKey);
+						Conditional:if(check: { subCls:name != '' }, then: {
+							local Int is pbi2: 0;
+							val:anonParams:each(action: local Function(Parameter is bp){
+								Conditional:if(check: { pbi2 < val:anonParams:length() }, then: {
+									local Parameter is srcP: val:anonParams:get(index: pbi2);
+									local String is pCType2: self:cTypeFor(typeName: srcP:paramType:name);
+									out: out . '        ' . pCType2 . ' ' . self:utils:cIdent(name: bp:name) . " = ((" . subSym . "*)(" . subjC . "))->" . self:utils:cIdent(name: bp:name) . ";\n";
+									self:localVars:set(key: bp:name, value: self:formatVarTypeString(t: srcP:paramType));
+								});
+								pbi2: pbi2 + 1;
+							});
 						});
 					});
 				});
@@ -4841,6 +4863,30 @@ Class is CodeGenerator{
 						joined: joined . ' || ';
 					});
 					joined: joined . oneC;
+				}, else: {
+					# The class-model tagged bridge (PLAN-ENUM Stage 5): a
+					# desugared tagged enum's variants are its nested
+					# subclasses — the compare reads the instance's _tag
+					# against the variant's declaration-order index.
+					local ClassInfo is cmCls: self:findClass(name: subjT);
+					local Boolean is cmTagged: false;
+					local Int is cmIdx: 0;
+					local Int is mi: 0;
+					Conditional:if(check: { cmCls:name != '' && cmCls:baseClass == 'Enum' }, then: {
+						cmCls:members:each(action: local Function(Member is m){
+							Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == keyName }, then: {
+								cmTagged: true;
+								cmIdx: mi;
+							});
+							mi: mi + 1;
+						});
+					});
+					Conditional:if(check: { cmTagged }, then: {
+						Conditional:if(check: { joined != '' }, then: {
+							joined: joined . ' || ';
+						});
+						joined: joined . '(' . subjC . ')->_tag == (' . (cmIdx as String) . ')';
+					});
 				});
 			});
 		});

@@ -101,6 +101,11 @@ Class is ClassBindings{
 			Conditional:if(check: { !found && m:hasModifier(kw: Keyword:HELD) }, then: {
 				found: true;
 			});
+			# The tagged desugaring (PLAN-ENUM Stage 5): the variants are
+			# nested subclasses — the base carries the tag machinery.
+			Conditional:if(check: { !found && m:kind == MemberKind:CLASS && m:nestedClass:name != '' }, then: {
+				found: true;
+			});
 		});
 		return found;
 	}
