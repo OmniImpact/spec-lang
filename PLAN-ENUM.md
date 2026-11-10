@@ -200,10 +200,13 @@ Class of Enum is Color {                    # of Enum: the enum root parent
 
 ## 7. The migration staging
 
-1. **Stage 1 — the foundations.** The static member access (read-only)
-   + the runtime class metadata + the Introspection exposure. No enum
-   changes; the features land as general language features with their
-   own tests.
+1. **Stage 1 — the foundations. DONE.** The held members (fields +
+   functions, read-only, lazy once-guards) + the runtime class
+   metadata + the Introspection exposure — landed 2026-11; see §7b.
+   No enum changes; the features landed as general language features
+   with their own tests (tests/held_members_test.spec,
+   tests/held_methods_test.spec, tests/held_metadata_test.spec,
+   negative n30/n31).
 2. **Stage 2 — the lazy statics + the resolution hook.** The
    initialization semantics + the userspace extension point. Still
    enum-free.
@@ -227,35 +230,49 @@ throughout (the dogfooding is continuous).
 
 ---
 
-## 7b. The `held` proposal (the declaration syntax for this plan)
+## 7b. The `held` modifier — DECIDED and LANDED (Stage 1)
 
-The static-member feature needs a DECLARATION story; the proposal is a
-new member modifier: **`held`** — the class holds the member (one copy,
-class-scoped lifetime), in contrast to the instance members each object
-carries.
+The declaration syntax for this plan: the member modifier **`held`** —
+the class holds the member (one copy, class-scoped lifetime), in
+contrast to the instance members each object carries. LANDED 2026-11
+(commits: held fields, held functions, the metadata floor).
 
-- It slots into the EXISTING modifier system (`local`, `contained`,
-  `replace`, `merge`) — one more modifier, not a new syntactic
-  category. The keyword test passes where if/else failed: it names a
-  real distinction (class-scoped storage/lifetime) the language cannot
-  express today, and the modifier position is established grammar.
-- The prefix rule becomes a RESOLUTION rule: an instance reference
-  reaches exactly the instance members; a class-name prefix reaches
-  exactly the held members. The enum variant access stops being a
-  special exception.
-- The two use cases map directly: the enum variants desugar to held
-  members (`held String is Red: 'Red';`), and the singletons are held
-  + lazy (`held Widget is default: Widget:init();` — the once-pattern,
-  pointer identity forever).
-- The plan's vocabulary tightens: "static members" -> "the held
-  members" throughout (the metadata enumeration, the when
-  exhaustiveness, the values() list all count the HELD members).
+The specifics, as decided:
 
-Status: PROPOSED, not decided. The specifics to nail on return: the
-held+visibility composition, held functions (the static methods), the
-lazy initialization semantics (the once-pattern, thread-safe), the
-storage shape (the emitted statics with the lazy-init guards), and the
-held-member inheritance rules.
+1. **Visibility composition**: `held` composes with `local`/`contained`
+   (the access check reuses checkMemberVisibility; `held local` is
+   class-private, `held contained` admits subclasses). `held` alone is
+   public. `held`+`replace`/`merge` is a checker error (single-copy,
+   cannot be overridden); held loader directives are rejected.
+2. **Held functions**: landed WITH fields (not deferred) —
+   `held Function of T is name(params)` is a receiver-free class-scoped
+   function dispatched by the class-name prefix. Not root-contract
+   members (no vtable slot), no overloads, parameter defaults work;
+   bodies have no instance (no self, no instance fields), but sibling
+   held members resolve through the class name on demand.
+3. **Lazy initialization**: full-expression initializers from day one —
+   the CAS once-guard (acquire load, compare-exchange 0->2, release
+   store 1, loser spins on acquire). Pointer identity forever. A held
+   INITIALIZER may not reference held members of its own class (the
+   mutual guards would deadlock — checker-enforced); cross-class chains
+   resolve (independent guards), and held FUNCTION bodies are
+   unrestricted (the call triggers construction on demand).
+4. **Storage shape**: file-scope slot + atomic once-flag + `__ensure()`
+   accessor per held field; `_held_`-infixed receiver-free C functions
+   per held function. Held members never enter the instance struct.
+5. **Inheritance**: the held lookup walks the lattice, nearest
+   declaration wins (same rule as methods); a subclass name reaches
+   ancestors' held members. The metadata tables report each DECLARING
+   class's own held surface.
+6. **Read-only**: assignment through the class-name prefix is rejected;
+   an instance reference reaches exactly the instance members (the
+   strict resolution rule — FieldSearchLoop/MethodSearchLoop go
+   held-blind), so `obj:held` and `self:held` are pointed errors.
+
+Stage 1 is complete: static member access + held functions + the
+runtime metadata (Introspection: heldCount/heldName/hasHeld over the
+emitted per-class name tables). Stage 2 (the resolution hook — when
+`Class:member` matches no declared held member) is the next build step.
 
 ---
 

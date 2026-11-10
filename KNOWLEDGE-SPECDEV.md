@@ -28,15 +28,16 @@ check, and emit the NEXT generation's sources. Consequences:
    deletes the old key. (Pattern: the if→`Conditional:if` flip, the
    `While`→`Loops` fold.)
 2. **The two-part landing** — the runtime prelude is a string the
-   binary emits verbatim. A new runtime function and its first consumer
-   cannot ride one convergence: the old binary's emitted runtime lacks
-   the symbol, and the drifted seed references it. Land the runtime
-   text alone (inert — no consumer), converge, then land the consumers.
-   (Pattern: `spec_intern`, the thread-local claim pool.)
-   Note: a runtime *body* change with no signature change converges in
-   one run — but its behavior goes live only on the SECOND bootstrap
-   after the drift (the text rides as data first). Run the bootstrap
-   twice and don't touch the seed between runs.
+   binary emits verbatim (it rides BAKED INTO the compiled binary;
+   the floor-binding side reads the floor ClassInfo live from source).
+   A new runtime function and its first consumer cannot ride one
+   convergence: the old binary's baked runtime lacks the symbol while
+   its live source parse admits the call — the drifted seed references
+   a symbol its own prelude never declares. Land the runtime text
+   alone (inert — no consumer), converge, then land the consumers.
+   (Pattern: `spec_intern`, the thread-local claim pool, the held
+   metadata floor — `spec_held_count` landed a commit ahead of its
+   Introspection wrappers.)
 3. **The interim-spelling sweep** — land the change at a spelling the
    old binary handles, converge, then sweep to the final spelling.
    (Pattern: the `Loops:loop(` qualified hop between the worker
@@ -180,6 +181,16 @@ check, and emit the NEXT generation's sources. Consequences:
   tail.
 - String literals in generated C leak identifier-shaped text into any
   substring scan of the body — the capture scans strip literals first.
+- A new compiler KEYWORD instantly outlaws that spelling as an
+  identifier everywhere (locals, members) — the converged binary
+  rejects what the seed binary accepted. Grep self-source for the
+  spelling BEFORE adding the enum entry (the `held` local in
+  generateProgram died to this).
+- The held once-guard (PLAN-ENUM Stage 1): CAS 0->2 under acq_rel,
+  release-store 1, losers spin on acquire. A held INITIALIZER may not
+  reference same-class held members (mutual guards deadlock);
+  cross-class chains and held-function bodies are unrestricted —
+  checker-enforced, tests n30/n31.
 
 ---
 
