@@ -712,7 +712,7 @@ local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, els
 ```
 
 #### Matching with `Conditional:match`
-`Conditional:match` is the match construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`) like `if`. The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation.
+`Conditional:match` is the match construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`) like `if`. The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation. That lowering is the fast path — and the only path that can bind payload arms and match identity/array keys. A table that is NOT a literal (a Map built with `set()`) flows to the runtime dispatch — the wrapper's held scan: string keys against String subjects, `else` as the fallback arm, first match wins.
 
 ```spec
 local String is label: Conditional:match(on: state, when: [
@@ -798,11 +798,13 @@ Loops:run(loop: CounterLoop:init(), control: LoopControl:init());
 ```
 
 ### The `Loops` Provider
-One as-import (`['base', 'iterator', as Loops()]`) serves the loop constructs bare:
-- `while(evaluate:, iteration:)` — the predicate loop; inlined into a native C11 `while` with zero closure allocation.
+One as-import (`['base', 'iterator', as Loops()]`) serves the loop constructs bare. Like the conditionals, the constructs are **real wrapper implementations** — composed in `base:iterator:Loops` from the iteration floor's single `while` primitive (`base:sysinternal:Loops`, the loop-shape counterpart of the conditional floor's `branch`) — with the compiler inlining the literal-closure forms as native C11 loops (zero closure allocation) as the fast path. A call whose closures are not inline literals (Function variables, callbacks held as values) flows to the runtime body:
+- `while(evaluate:, iteration:)` — the predicate loop; inlined into a native C11 `while` with zero closure allocation for literal closures.
 - `Loops:repeat(count:, worker:)` — the counting loop.
 - `Loops:until(evaluate:, iteration:)` — the body-always-runs-once form (do-while).
 - `Loops:run(loop:, control:)` — drives the `Loop` protocol directly.
+
+The two tiers' capture semantics: the literal closures inline into the enclosing frame and share its locals (the counter idiom — a local mutated by both closures — is theirs). The runtime closures capture by value with per-closure write-back, so shared mutable state rides the instance (`self:` fields), not a frame local. A `[vars]` loop form requires inline literal closures: the variables were built before the loop's parameters existed and cannot capture them.
 
 ```spec
 local Int is total: 0;
