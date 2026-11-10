@@ -2,7 +2,7 @@
 #! The match provider (PLAN-ENUM Stage 3): `when` without the keyword.
 
 ## One as-import serves the match construct bare —
-## `match(on: subject, arms: [key: { body }, ...])` mirrors
+## `match(on: subject, when: [key: { body }, ...])` mirrors
 ## `Conditional`'s `if(...)`. Runtime-managed: [match] is intercepted
 ## by the compiler — the arm table resolves against the subject's
 ## class's held members at compile time and inlines into a comparison
@@ -17,8 +17,8 @@ Class is Cases{
 	## Dispatches [on] over the arm table [arms].
 	##
 	## @param on: The subject value.
-	## @param arms: The arm table: held-member keys (an array key
+	## @param when: The arm table: held-member keys (an array key
 	## matches several), `else` for the fallback, closures as bodies.
-	Function is match(Any is on, Map of Any to Any is arms){
+	Function is match(Any is on, Map of Any to Any is when){
 	}
 }

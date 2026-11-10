@@ -124,7 +124,7 @@ Class is SpecCheckerTest{
 		local Array of String is e6: self:checkOf(src: "Enum of String is Level { NONE: '', ERR: 'E' }
 Class is F{ replace Array of Array of String is using: [['base', 'cases', as Cases()]]; replace Function is init(Map of String to String is args){
 	local Level is lv: Level:ERR;
-	local String is tag: Cases:match(on: lv, arms: [
+	local String is tag: Cases:match(on: lv, when: [
 		Level:ERR: { 'e' }
 	]);
 } }");

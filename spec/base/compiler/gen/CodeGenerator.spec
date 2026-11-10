@@ -1595,7 +1595,7 @@ Class is CodeGenerator{
 				Conditional:if(check: { expr:methodName == 'get' }, then: {
 					return targetT:startsWith(prefix: 'Map');
 				});
-				return Cases:match(on: expr:methodName, arms: [
+				return Cases:match(on: expr:methodName, when: [
 					['pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
 					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt']: {
 						true
@@ -1779,7 +1779,7 @@ Class is CodeGenerator{
 	Function of String is generateExpressionInner(Expression is expr){
 		local ExpressionKind is kind: expr:kind;
 
-		return Cases:match(on: kind, arms: [
+		return Cases:match(on: kind, when: [
 			ExpressionKind:ARRAY: {
 				self:emitArrayLiteral(expr: expr)
 			},
@@ -2079,7 +2079,7 @@ Class is CodeGenerator{
 	## @return: C expression.
 	Function of String is emitBinary(Expression is expr){
 		local String is op: expr:str;
-		return Cases:match(on: op, arms: [
+		return Cases:match(on: op, when: [
 			'.': {
 				local String is leftC: self:generateExpressionInner(expr: expr:leftExpr);
 				local ExpressionKind is leftKind: expr:leftExpr:kind;
@@ -2310,7 +2310,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { expr:castArgs:length() > 0 }, then: {
 			digitsC: self:generateExpression(expr: expr:castArgs:get(index: 0));
 		});
-		return Cases:match(on: target, arms: [
+		return Cases:match(on: target, when: [
 			'Hex': {
 				local String is hexC: 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
 				Conditional:if(check: { srcT == 'String' }, then: {
@@ -2442,7 +2442,7 @@ Class is CodeGenerator{
 				Conditional:if(check: { arg:name == 'on' }, then: {
 					matchSubjC: arg:value;
 				});
-				Conditional:if(check: { arg:name == 'arms' }, then: {
+				Conditional:if(check: { arg:name == 'when' }, then: {
 					matchArmsC: arg:value;
 				});
 			});
@@ -3131,7 +3131,7 @@ Class is CodeGenerator{
 		});
 		local StatementKind is kind: stmt:kind;
 
-		return Cases:match(on: kind, arms: [
+		return Cases:match(on: kind, when: [
 			StatementKind:VAR_DECL: {
 				self:emitVarDecl(stmt: stmt)
 			},
@@ -3626,7 +3626,7 @@ Class is CodeGenerator{
 
 	## Collects nested classes from a statement tree.
 	Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
-		Cases:match(on: stmt:kind, arms: [
+		Cases:match(on: stmt:kind, when: [
 			StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
 			}
@@ -3637,7 +3637,7 @@ Class is CodeGenerator{
 	Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:members:each(action: local Function(Member is m){
-			Cases:match(on: m:kind, arms: [
+			Cases:match(on: m:kind, when: [
 				MemberKind:CLASS: {
 					self:collectClasses(c: m:nestedClass, acc: acc);
 				},
@@ -3989,7 +3989,7 @@ Class is CodeGenerator{
 						local String is classC: Buf:stringCopy(b: '');
 						local Boolean is hasInit: false;
 						c:members:each(action: local Function(Member is m){
-							Cases:match(on: m:kind, arms: [
+							Cases:match(on: m:kind, when: [
 								MemberKind:METHOD: {
 									Conditional:if(check: { !wg:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 										Conditional:if(check: { m:name == 'init' }, then: {

@@ -16,7 +16,7 @@ Class is TemplateEscapes{
 	## @param escaped: The character after the backslash.
 	## @return: Its expansion.
 	Function of String is expand(String is escaped){
-		return Cases:match(on: escaped, arms: [
+		return Cases:match(on: escaped, when: [
 			'n': { "\n" },
 			't': { "\t" },
 			'r': { "\r" },

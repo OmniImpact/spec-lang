@@ -635,7 +635,7 @@ Class is BuiltinCallGenerator{
 			});
 			# Single-operand functions: the match yields the C call; the
 			# empty else lets the two-operand section run.
-			local String is oneC: Cases:match(on: m, arms: [
+			local String is oneC: Cases:match(on: m, when: [
 				'round': { 'spec_math_round(' . a0 . ')' },
 				'floor': { 'spec_math_floor(' . a0 . ')' },
 				['ceil', 'ceiling']: { 'spec_math_ceil(' . a0 . ')' },
@@ -1190,7 +1190,7 @@ Class is BuiltinCallGenerator{
 		Conditional:if(check: { expr:argCount() > 1 }, then: {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		});
-		return Cases:match(on: m, arms: [
+		return Cases:match(on: m, when: [
 			'length': { 'spec_string_length(' . targetC . ')' },
 			'charAt': { 'String_charAt(' . targetC . ', ' . a0 . ', ' . a1 . ')' },
 			'substring': { 'spec_string_substring(' . targetC . ', ' . a0 . ', ' . a1 . ')' },

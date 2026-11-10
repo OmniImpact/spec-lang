@@ -41,7 +41,7 @@ Class is SpecAstTest{
 
 		# Enum dispatch on the kind (the style contract's string-tag removal).
 		local String is tag: '';
-		Cases:match(on: bin:kind, arms: [
+		Cases:match(on: bin:kind, when: [
 			ExpressionKind:BINARY: { tag: 'binary'; },
 			ExpressionKind:CALL: { tag: 'call'; },
 			else: { tag: 'other'; }
@@ -72,7 +72,7 @@ Class is SpecAstTest{
 		local String is found: '';
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is mem){
-				Cases:match(on: mem:kind, arms: [
+				Cases:match(on: mem:kind, when: [
 					MemberKind:METHOD: { found: mem:name; }
 				]);
 			});

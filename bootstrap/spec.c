@@ -3526,7 +3526,7 @@ void TemplateSplitLoop_init(TemplateSplitLoop* self, String raw);
 bool TemplateSplitLoop_evaluate(TemplateSplitLoop* self);
 bool TemplateSplitLoop_iteration(TemplateSplitLoop* self, SpecLoopControl* control);
 String TemplateEscapes_expand(TemplateEscapes* self, String escaped);
-void Cases_match(Cases* self, Any* on, SpecMap* arms);
+void Cases_match(Cases* self, Any* on, SpecMap* when);
 void TemplateFoldLoop_init(TemplateFoldLoop* self, Parser* parser, TemplateSplitLoop* split, Expression* acc0);
 bool TemplateFoldLoop_evaluate(TemplateFoldLoop* self);
 bool TemplateFoldLoop_iteration(TemplateFoldLoop* self, SpecLoopControl* control);
@@ -42621,7 +42621,7 @@ static __attribute__((unused)) void _anon_fn_200272(void* _env_ptr, NamedArg* ar
     if (spec_string_equals(arg->name, spec_string_intern("on"))) {
 	    spec_assign((void**)&matchSubj, (void*)(arg->value));
 	};
-    if (spec_string_equals(arg->name, spec_string_intern("arms"))) {
+    if (spec_string_equals(arg->name, spec_string_intern("when"))) {
 	    spec_assign((void**)&matchArms, (void*)(arg->value));
 	};
     _cleanup_anon_200272: ;
@@ -50806,7 +50806,7 @@ static __attribute__((unused)) void _anon_fn_98(void* _env_ptr, NamedArg* arg) {
     if (spec_string_equals(arg->name, spec_string_intern("on"))) {
 	    spec_assign((void**)&matchSubjC, (void*)(arg->value));
 	};
-    if (spec_string_equals(arg->name, spec_string_intern("arms"))) {
+    if (spec_string_equals(arg->name, spec_string_intern("when"))) {
 	    spec_assign((void**)&matchArmsC, (void*)(arg->value));
 	};
     _cleanup_anon_98: ;
@@ -64187,10 +64187,10 @@ void TemplateEscapes_init(TemplateEscapes* self) {
     (void)self;
 }
 
-void Cases_match(Cases* self, Any* on, SpecMap* arms) {
+void Cases_match(Cases* self, Any* on, SpecMap* when) {
     (void)self;
     (void)on;
-    (void)arms;
+    (void)when;
 }
 
 void Cases_init(Cases* self) {
@@ -67268,7 +67268,7 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     if (spec_string_equals(arg->name, spec_string_intern("on"))) {
 	    spec_assign((void**)&matchSubj, (void*)(arg->value));
 	};
-    if (spec_string_equals(arg->name, spec_string_intern("arms"))) {
+    if (spec_string_equals(arg->name, spec_string_intern("when"))) {
 	    spec_assign((void**)&matchArms, (void*)(arg->value));
 	};
         } while (0);
@@ -67280,7 +67280,7 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     goto _cleanup_200090;
     if (matchRes) { spec_release((void*)matchRes); matchRes = NULL; }
 	};
-	    (((void (*)(TypeChecker*, long long, String))self->_vtable[49]))((TypeChecker*)self, self->currentLine, spec_string_intern("Cases:match takes (on: <subject>, arms: [key: { body }, ...]) with a literal arm table."));
+	    (((void (*)(TypeChecker*, long long, String))self->_vtable[49]))((TypeChecker*)self, self->currentLine, spec_string_intern("Cases:match takes (on: <subject>, when: [key: { body }, ...]) with a literal arm table."));
 	    spec_assign((void**)&expr->resolvedType, (void*)(Primitive_value(Primitive_ANY)));
 	    _mret_200090 = (String)spec_retain((void*)(Primitive_value(Primitive_ANY)));
     goto _cleanup_200090;
@@ -74345,7 +74345,7 @@ String CodeGenerator_emitCall(CodeGenerator* self, Expression* expr) {
     if (spec_string_equals(arg->name, spec_string_intern("on"))) {
 	    spec_assign((void**)&matchSubjC, (void*)(arg->value));
 	};
-    if (spec_string_equals(arg->name, spec_string_intern("arms"))) {
+    if (spec_string_equals(arg->name, spec_string_intern("when"))) {
 	    spec_assign((void**)&matchArmsC, (void*)(arg->value));
 	};
         } while (0);

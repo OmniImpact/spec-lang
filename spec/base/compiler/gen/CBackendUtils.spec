@@ -38,7 +38,7 @@ Class is CBackendUtils{
 		Conditional:if(check: { typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:') }, then: {
 			return 'SpecClosure*';
 		});
-		return Cases:match(on: typeName, arms: [
+		return Cases:match(on: typeName, when: [
 			'Int': { 'long long' },
 			'Byte': { 'unsigned char' },
 			'Float': { 'double' },
@@ -76,7 +76,7 @@ Class is CBackendUtils{
 		Conditional:if(check: { name:contains(needle: ':') }, then: {
 			return self:cIdent(name: name:replaceAll(search: ':', replacement: '_'));
 		});
-		return Cases:match(on: name, arms: [
+		return Cases:match(on: name, when: [
 			'EOF': { '_EOF' },
 			['default', 'case', 'switch', 'struct', 'union', 'enum', 'register',
 			'static', 'extern', 'inline', 'const', 'volatile', 'auto', 'signed',
@@ -171,7 +171,7 @@ Class is CBackendUtils{
 		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:src:charAt(index: self:pos, default: '');
 			self:pos: self:pos + 1;
-			Cases:match(on: ch, arms: [
+			Cases:match(on: ch, when: [
 				"\n": { self:res: self:res . "\\n"; },
 				"\t": { self:res: self:res . "\\t"; },
 				"\r": { self:res: self:res . "\\r"; },

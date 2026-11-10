@@ -155,7 +155,7 @@ Class is DeclarationGenerator{
 			});
 		});
 		c:members:each(action: local Function(Member is m){
-			Cases:match(on: m:kind, arms: [
+			Cases:match(on: m:kind, when: [
 				MemberKind:FIELD: {
 					# Declarative metadata (namespace/using/castable)
 					# never becomes a struct field; neither do HELD members
@@ -421,7 +421,7 @@ Class is DeclarationGenerator{
 			Conditional:if(check: { (self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local Array of String is tps: c:typeParams;
 				c:members:each(action: local Function(Member is m){
-					Cases:match(on: m:kind, arms: [
+					Cases:match(on: m:kind, when: [
 					MemberKind:METHOD: {
 						Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 							local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);

@@ -26,44 +26,44 @@ Class is N33CasesWalls{
 	replace Function is init(Map of String to String is args){
 		# 1. a key from another class is not a held member of the subject.
 		local N33Sink is s: N33Sink:file;
-		local String is wrong: Cases:match(on: s, arms: [
+		local String is wrong: Cases:match(on: s, when: [
 			N33Mode:on: { 'x' },
 			else: { 'y' }
 		]);
 
 		# 2. duplicate keys.
-		local String is dup: Cases:match(on: s, arms: [
+		local String is dup: Cases:match(on: s, when: [
 			N33Sink:file: { 'a' },
 			file: { 'b' },
 			else: { 'c' }
 		]);
 
 		# 3. Enum-rooted subjects must be exhaustive without else.
-		local String is partial: Cases:match(on: N33Mode:on, arms: [
+		local String is partial: Cases:match(on: N33Mode:on, when: [
 			N33Mode:on: { 'on' }
 		]);
 
 		# 4. value-yielding match over a non-Enum class requires else.
-		local String is needsElse: Cases:match(on: s, arms: [
+		local String is needsElse: Cases:match(on: s, when: [
 			N33Sink:file: { 'f' }
 		]);
 
 		# 5. mixed arm bodies.
-		local String is mixed: Cases:match(on: s, arms: [
+		local String is mixed: Cases:match(on: s, when: [
 			N33Sink:file: { 'f' },
 			N33Sink:level: { },
 			else: { 'e' }
 		]);
 
 		# 6. arms after else are unreachable.
-		local String is late: Cases:match(on: s, arms: [
+		local String is late: Cases:match(on: s, when: [
 			else: { 'e' },
 			N33Sink:file: { 'f' }
 		]);
 
 		# 7. match is identity dispatch over class instances: a
 		#    primitive-typed subject carries no owner association.
-		local String is prim: Cases:match(on: 5, arms: [
+		local String is prim: Cases:match(on: 5, when: [
 			else: { 'e' }
 		]);
 	}
