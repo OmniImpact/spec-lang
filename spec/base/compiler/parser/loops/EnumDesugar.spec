@@ -2,10 +2,12 @@
 #! Desugars a VALUE enum (variants without payloads) into the class
 #! model (PLAN-ENUM Stage 4): the variants become HELD members holding
 #! enum instances constructed with their tags, the backing value rides
-#! a synthesized instance field, and the contract methods
-#! (name/ordinal/value/of/values) are synthesized as plain Spec
-#! members. The tagged shape (variants with parameters) desugars to
-#! nested subclasses with real payload fields.
+#! a synthesized instance field, and the per-enum contract methods
+#! (value/of/values/toString) are synthesized as plain Spec members.
+#! name/ordinal are NOT synthesized — the Enum root implements the
+#! identity scan reflectively over the held metadata. The tagged shape
+#! (variants with parameters) desugars to nested subclasses whose
+#! field-reader name/ordinal replace the root's reflective scan.
 
 Class is EnumDesugar{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
@@ -75,6 +77,7 @@ Class is EnumDesugar{
 		vnameField:name: '_variant_name';
 		out:add(item: vnameField);
 		local Member is nameFn: Member:init(kind: MemberKind:METHOD);
+		nameFn:modifiers: ['replace'];
 		nameFn:memberType: Type:init(name: 'String');
 		nameFn:name: 'name';
 		local Array of Statement is nameBody: [];
@@ -82,6 +85,7 @@ Class is EnumDesugar{
 		nameFn:body: nameBody;
 		out:add(item: nameFn);
 		local Member is ordFn: Member:init(kind: MemberKind:METHOD);
+		ordFn:modifiers: ['replace'];
 		ordFn:memberType: Type:init(name: 'Int');
 		ordFn:name: 'ordinal';
 		local Array of Statement is ordBody: [];
@@ -217,8 +221,10 @@ Class is EnumDesugar{
 		});
 
 		# The contract methods, synthesized from the variant list.
-		out:add(item: self:synthName(name: name, variants: variants));
-		out:add(item: self:synthOrdinal(name: name, variants: variants));
+		# name/ordinal are NOT synthesized: the Enum root implements the
+		# identity scan reflectively over the held metadata (the variants
+		# are the held fields in declaration order), and every desugared
+		# enum inherits it.
 		out:add(item: self:synthValue(backingType: backingType));
 		out:add(item: self:synthOf(name: name, backingType: backingType, variants: variants));
 		out:add(item: self:synthValues(name: name, variants: variants));

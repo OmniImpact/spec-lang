@@ -33,7 +33,7 @@
    - [Value-Yielding Branch Calls](#value-yielding-branch-calls)
    - [String Inspection Primitives](#string-inspection-primitives)
 5. [Control Flow & Branching](#control-flow--branching)
-   - [Conditionals & Matching (`Conditional:if`, `Cases:match`)](#conditionals--matching)
+   - [Conditionals & Matching (`Conditional:if`, `Conditional:match`)](#conditionals--matching)
    - [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)
 6. [Compiler Error Recovery & Multi-File Provenance](#compiler-error-recovery--multi-file-provenance)
 7. [Unblockable Concurrency & Iteration Model](#unblockable-concurrency--iteration-model)
@@ -347,13 +347,17 @@ Enum of String is LogLevel {
 ```
 
 #### Enum Reflection & Methods
-Every enum synthesizes its inspection surface as real methods:
-- `Enum:values() -> Array of Name`: All variants in declaration order (held function).
-- `Name:of(value) -> Name`: The reverse lookup over the backing values; the first variant is the no-match default (held function).
-- `instance:name() -> String`: The variant's identifier name (e.g. `"NOT_FOUND"`).
-- `instance:value() -> Value`: The backing value (or the ordinal integer if unbacked).
-- `instance:ordinal() -> Int`: The 0-indexed declaration-order position.
-- `instance:toString() -> String`: Renders the variant's name.
+The enum contract splits by where it lives:
+- On the **Enum root** (`spec/lib/base/core/Enum.spec`), implemented once, reflectively, over the Introspection metadata floor — the desugared variants are held singletons in declaration order, so a runtime identity scan (`Introspection:heldIndexOf`) answers both:
+  - `instance:name() -> String`: The variant's identifier name (e.g. `"NOT_FOUND"`).
+  - `instance:ordinal() -> Int`: The 0-indexed declaration-order position.
+- Synthesized **per enum** by the desugarer (they need the variant types and the backing field):
+  - `Enum:values() -> Array of Name`: All variants in declaration order (held function).
+  - `Name:of(value) -> Name`: The reverse lookup over the backing values; the first variant is the no-match default (held function).
+  - `instance:value() -> Value`: The backing value (or the ordinal integer if unbacked).
+  - `instance:toString() -> String`: Renders the variant's name.
+
+Tagged enums (payload variants) override `name`/`ordinal` with field readers over the tag machinery — also synthesized.
 
 #### Tagged Union Enums (Algebraic Data Types)
 Variants with parameters become nested subclasses carrying real payload fields:
@@ -382,7 +386,7 @@ local Option is opt1: Option:Some(value: 42);
 local Option is opt2: Option:None;
 ```
 
-Payload variants are matched and destructured with `Cases:match` (see [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)).
+Payload variants are matched and destructured with `Conditional:match` (see [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)).
 
 #### The Resolution Hook (`resolveHeld`)
 A class declaring `held Function of <T> is resolveHeld(String is name, Function of <T> is missing)` admits ANY undeclared name through its class-name prefix: the runtime resolves it on first access and caches it (pointer identity forever). The second parameter is the runtime-provided safe failure branch — the default panics with context; the resolver invokes it when it gives up. Declared members always win; without the hook, an undeclared name stays a compile error:
@@ -707,11 +711,11 @@ Conditional:if(check: { score is 21 }, then: {
 local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
 ```
 
-#### Matching with `Cases:match`
-`Cases:match` is the match construct — a provider class (like `Loops` for loops), served bare through the as-import (`['base', 'cases', as Cases()]`). The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation.
+#### Matching with `Conditional:match`
+`Conditional:match` is the match construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`) like `if`. The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation.
 
 ```spec
-local String is label: Cases:match(on: state, when: [
+local String is label: Conditional:match(on: state, when: [
 	idle:   { 'waiting' },
 	MachineState:running: {
 		ticks: ticks + 1;
@@ -733,13 +737,13 @@ The rules:
 An arm closure with parameters binds the tagged variant's payload fields — the parameters pair by index with the variant's declared payload fields:
 
 ```spec
-local String is statusSummary: Cases:match(on: res, when: [
+local String is statusSummary: Conditional:match(on: res, when: [
 	Result:Ok: local Function(String is data){ return 'Done: ' . data; },
 	Result:Err: local Function(Int is code, String is msg){ return 'Failed (' . code . '): ' . msg; },
 	Result:Pending: { 'In Progress' }
 ]);
 
-Cases:match(on: res, when: [
+Conditional:match(on: res, when: [
 	Result:Ok: local Function(String is data){
 		Output:line('Success: ' . data);
 	},

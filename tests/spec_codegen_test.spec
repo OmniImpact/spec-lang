@@ -87,14 +87,21 @@ Enum of String is Level {
 		cg:assignVirtualSlots(classes: prog:classes);
 
 		# --- virtual slots: first-seen order, overrides flagged ---
+		# PLAN-ENUM: name/ordinal live on the Enum root reflectively —
+		# the desugared enum no longer declares them, so they leave the
+		# slot map; value/toString (still synthesized per enum) stay.
 		Conditional:if(check: { cg:methodSlots:getString(key: 'describe', default: '?') == '0'
 			&& cg:methodSlots:getString(key: 'init', default: '?') == '1'
 			&& cg:methodSlots:getString(key: 'grow', default: '?') == '2'
-			&& cg:methodSlotCount == 7
+			&& cg:methodSlots:getString(key: 'value', default: '?') == '3'
+			&& cg:methodSlots:getString(key: 'toString', default: '?') == '4'
+			&& cg:methodSlotCount == 5
+			&& !cg:methodSlots:has(key: 'name')
+			&& !cg:methodSlots:has(key: 'ordinal')
 			&& cg:overriddenMethods:has(key: 'describe')
 			&& !cg:overriddenMethods:has(key: 'grow')
 			&& cg:slotNames:get(index: 0) == 'describe' }, then: {
-			Output:line('[PASS] virtual slots in first-seen order (the desugared enum\'s instance methods follow)');
+			Output:line('[PASS] virtual slots in first-seen order (the desugared enum\'s value/toString follow; name/ordinal are the root\'s)');
 		}, else: {
 			Output:line('[FAIL] virtual slots');
 			failures: failures + 1;

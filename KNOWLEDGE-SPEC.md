@@ -60,28 +60,31 @@ Members are callable only through a value of the class's type. The class name it
 
 ## Control Flow
 ```spec
-if (cond) { ... } else { ... }
-local String is s: if (cond) "A" else "B";
-Cases:match(on: value, when: [
+Conditional:if(check: { cond }, then: { ... }, else: { ... });
+local String is s: Conditional:if(check: { cond }, then: { "A" }, else: { "B" });
+Conditional:match(on: value, when: [
 	'a': { ... },
 	'b': { ... },
 	else: { ... }
 ]);
-local Int is x: Cases:match(on: e, when: [
+local Int is x: Conditional:match(on: e, when: [
 	Variant: { v.field },
 	else: { 0 }
 ]);
 ```
-`Cases:match` on enums: exhaustiveness enforced for value-yielding matches over enum-rooted subjects (`else` closes the table); payload arms are closures whose parameters bind the variant's fields.
+`Conditional:match` on enums: exhaustiveness enforced for value-yielding matches over enum-rooted subjects (`else` closes the table); payload arms are closures whose parameters bind the variant's fields.
 
 Enums:
 ```spec
 Enum is Status { ACTIVE, INACTIVE }
 Enum of Int is Code { OK: 200 }
 Enum is Result { Ok(String is data), Err(Int is code) }
-# Methods (synthesized on the desugared class): .name() .ordinal() .value() .of(v) .values()
+# Identity contract (name/ordinal) implemented ONCE on the Enum root,
+# reflectively over the Introspection metadata floor:
+#   .name() .ordinal()
+# Per-enum remainder synthesized by the desugarer: .value() .of(v) .values() .toString()
 # Payload constructors: Result:Ok(data: "x") — nested-class construction shorthand
-# Payload destructuring: Cases:match(on: r, when: [Result:Ok: local Function(String is data){ ... }])
+# Payload destructuring: Conditional:match(on: r, when: [Result:Ok: local Function(String is data){ ... }])
 # The resolution hook: held Function of T is resolveHeld(String is name, Function of T is missing)
 ```
 

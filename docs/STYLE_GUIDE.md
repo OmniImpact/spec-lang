@@ -85,8 +85,8 @@ Spec follows the **One True Brace Style (OTBS)**:
 
 | Entity | Casing | Examples | Notes |
 |---|---|---|---|
-| **Classes & Types** | `PascalCase` | `Player`, `SourceLocation`, `Cases` | Distinct from primitive keywords |
-| **Methods** | `camelCase` | `getName()`, `parseClass()`, `isAlive()` | Action-oriented verbs |
+| **Classes & Types** | `PascalCase` | `Player`, `SourceLocation`, `Conditional` | Distinct from primitive keywords |
+| **Methods** | `camelCase` | `parseClass()`, `isAlive()`, `heldIndexOf()` | Action-oriented verbs |
 | **Fields** | `camelCase` | `health`, `stringValue`, `params` | Direct nouns describing state |
 | **Local Variables** | `camelCase` | `playerClass`, `numExpr`, `tokenList` | Clear, expressive names |
 | **Parameters** | `camelCase` | `source`, `defaultVal`, `maxCount` | Required or named arguments |

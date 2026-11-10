@@ -72,7 +72,7 @@ Conditional:if(check: { score is 21 }, then: {
 
 local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
 
-Cases:match(on: state, when: [
+Conditional:match(on: state, when: [
 	idle:   { 'waiting' },
 	running: { 'go' },
 	[idle, failed]: { 'not-going' },   # array keys match several cases
@@ -80,7 +80,7 @@ Cases:match(on: state, when: [
 ]);
 ```
 
-Enums are first-class — payload variants, synthesized reflection methods, and exhaustiveness-checked matching:
+Enums are first-class — payload variants, a reflective identity contract on the shared root, and exhaustiveness-checked matching:
 
 ```spec
 Enum is Result {

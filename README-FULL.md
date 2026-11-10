@@ -30,7 +30,7 @@ compares to the languages it draws on.
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
 - **Ultra-Lean Compiler**: The entire grammar is the ten-keyword table in the overview, plus the six primitive types. Structural conventions such as `using` are Loader-recognized pseudo-fields, not keywords.
-- **Userland Implementation**: Rich language features live in the standard library (`spec/lib/`) written in pure Spec — including dynamic collections (`Array`, `Map`, `List`), filesystem operations (`File`), process management (`Process`), match tables (`Cases`), and concurrency runners (`Loops`, `Loop`, `Parallel`).
+- **Userland Implementation**: Rich language features live in the standard library (`spec/lib/`) written in pure Spec — including dynamic collections (`Array`, `Map`, `List`), filesystem operations (`File`), process management (`Process`), the conditional provider (`Conditional` — branching and match tables), and concurrency runners (`Loops`, `Loop`, `Parallel`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 
 ### 2. Classes and Functions as First-Class Types (Uniform Declarations)
@@ -149,9 +149,9 @@ replace Array of Array of String is using: [
   }
   ```
 
-- **`Cases:match` with Payload Destructuring**: Match any value against held-member keys (array keys match several cases at once); payload arms are closures whose parameters bind the variant's fields:
+- **`Conditional:match` with Payload Destructuring**: Match any value against held-member keys (array keys match several cases at once); payload arms are closures whose parameters bind the variant's fields:
   ```spec
-  Cases:match(on: res, when: [
+  Conditional:match(on: res, when: [
   	Result:Ok: local Function(String is data){ Output:line("Success: " . data); },
   	Result:Err: local Function(Int is code, String is msg){ Output:line("Error " . code . ": " . msg); },
   	Result:Pending: { Output:line("Pending..."); }
@@ -263,7 +263,7 @@ inlines them into native C branches with zero closure allocation.
   ```spec
   local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
   ```
-- **Match tables**: `Cases:match(on: value, when: [key: { body }, ...])` — the arm-table form with held-member keys, array keys for multiple matching, `else` as a plain identifier key, and payload arms whose closure parameters bind a tagged variant's fields. See the [Language Guide](docs/language/README.md#matching-with-casesmatch).
+- **Match tables**: `Conditional:match(on: value, when: [key: { body }, ...])` — the arm-table form with held-member keys, array keys for multiple matching, `else` as a plain identifier key, and payload arms whose closure parameters bind a tagged variant's fields. See the [Language Guide](docs/language/README.md#matching-with-conditionalmatch).
 
 ---
 
@@ -311,7 +311,7 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and enum contract methods dispatch through the class name | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
-| **Enums & matching** | Algebraic enums with payloads (desugared to real classes); `Cases:match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
+| **Enums & matching** | Algebraic enums with payloads (desugared to real classes); `Conditional:match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
 | **Iteration & scopes** | Loop keywords retired; the `Loops` provider's `while` inlines to C11 statement expressions with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |

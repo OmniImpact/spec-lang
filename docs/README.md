@@ -11,7 +11,7 @@ Comprehensive reference for the Spec language syntax, typing rules, and executio
 - **[Syntax & Structure](language/README.md#language-syntax--structure)**: Classes, entrypoints, variable declarations, generic classes (`class Box of T`), default parameter values, capturing closures, and `using` imports.
 - **[Types & Literals](language/README.md#types--literals)**: `Int`, `Float`, `String` (double vs single quote), `Boolean`, `Any`, generic collections (`Array of T`, `Map of K to V`), map literals (`["k": v]`), and algebraic tagged union `Enum`s.
 - **[Never Null Philosophy](language/README.md#the-never-null-standard)**: Why `null` values do not exist in Spec, deferred initialization, and default fallbacks.
-- **[Control Flow & Iteration](language/README.md#control-flow--branching)**: `if`/`else` branching, `Cases:match` with payload destructuring, and the decoupled iterator model (`Loops`).
+- **[Control Flow & Iteration](language/README.md#control-flow--branching)**: `if`/`else` branching, `Conditional:match` with payload destructuring, and the decoupled iterator model (`Loops`).
 - **[Unblockable Concurrency Model](language/README.md#unblockable-concurrency--iteration-model)**: Decoupled iterators (`Loop`, `LoopControl`) and event-driven I/O (`InputHandler`).
 
 ---

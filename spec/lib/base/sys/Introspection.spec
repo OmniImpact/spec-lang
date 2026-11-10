@@ -50,4 +50,18 @@ Class is Introspection{
 	Function of Boolean is hasHeld(Any is obj, String is name){
 		return base:sysinternal:Introspection:hasHeld(obj: obj, name: name);
 	}
+
+	## The ordinal scan: the first held-FIELD index whose lazily
+	## constructed instance is the object itself. The desugared enum
+	## variants are held singletons in declaration order, so this is
+	## the variant's ordinal (the Enum root's name/ordinal call it).
+	## The scan initializes the class's held singletons (the
+	## once-guards are idempotent); a class with no held fields
+	## yields -1.
+	##
+	## @param obj: The object.
+	## @return: The held-field index, -1 when the object is not one.
+	Function of Int is heldIndexOf(Any is obj){
+		return base:sysinternal:Introspection:heldIndexOf(obj: obj);
+	}
 }
