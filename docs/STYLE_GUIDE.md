@@ -35,7 +35,7 @@ This document establishes the official code style conventions, architectural idi
 
 1. **Minimalist Grammar**: Spec relies on only **12 keywords** (`local`, `contained`, `replace`, `merge`, `is`, `as`, `of`, `to`, `if`, `else`, `return`, `when`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). All capabilities belong in the standard library.
 2. **Never Null**: Null does not exist in Spec grammar or runtime. Every potentially fallible lookup, query, or extraction accepts a caller-provided `default` fallback or returns an empty representation.
-3. **Decoupled Iteration**: Spec does not have primitive `while`, `for`, or `break` keywords. Iteration is encapsulated in reusable `Loop` subclasses evaluated by runners such as `While:run`.
+3. **Decoupled Iteration**: Spec has no primitive `while`, `for`, or `break` keywords. Iteration is encapsulated in reusable `Loop` subclasses evaluated by `Loops:run`, or inlined through the `Loops` provider's bare `while(evaluate:, iteration:)`.
 4. **Declarative & English-Like**: Code reads as explicit statements of intent: `local String is name: "Hero";`, `Function of Boolean is isAlive()`.
 
 ---
@@ -85,7 +85,7 @@ Spec follows the **One True Brace Style (OTBS)**:
 
 | Entity | Casing | Examples | Notes |
 |---|---|---|---|
-| **Classes & Types** | `PascalCase` | `Player`, `SourceLocation`, `While` | Distinct from primitive keywords |
+| **Classes & Types** | `PascalCase` | `Player`, `SourceLocation`, `Cases` | Distinct from primitive keywords |
 | **Methods** | `camelCase` | `getName()`, `parseClass()`, `isAlive()` | Action-oriented verbs |
 | **Fields** | `camelCase` | `health`, `stringValue`, `params` | Direct nouns describing state |
 | **Local Variables** | `camelCase` | `playerClass`, `numExpr`, `tokenList` | Clear, expressive names |
@@ -145,7 +145,7 @@ of Loop is CountLoop{
 }
 
 # Run the loop
-While:run(loop: CountLoop:init());
+Loops:run(loop: CountLoop:init());
 ```
 
 ### Imports & Package Structure

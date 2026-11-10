@@ -30,11 +30,10 @@
    - [String Concatenation](#string-concatenation)
    - [Member Access & Method Calls](#member-access--method-calls)
    - [Bracket Indexing & Assignment (`arr[i]`, `map[k]`)](#bracket-indexing--assignment)
-   - [Inline Conditional Expressions (`if` / `else`)](#inline-conditional-expressions)
+   - [Value-Yielding Branch Calls](#value-yielding-branch-calls)
    - [String Inspection Primitives](#string-inspection-primitives)
 5. [Control Flow & Branching](#control-flow--branching)
-   - [Conditionals (`if` / `else`)](#conditionals)
-   - [Matching with `Cases:match` (Statements & Expressions)](#matching-with-casesmatch)
+   - [Conditionals & Matching (`Conditional:if`, `Cases:match`)](#conditionals--matching)
    - [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)
 6. [Compiler Error Recovery & Multi-File Provenance](#compiler-error-recovery--multi-file-provenance)
 7. [Unblockable Concurrency & Iteration Model](#unblockable-concurrency--iteration-model)
@@ -430,7 +429,7 @@ replace Array of Array of String is using: [
 	['base', 'math', as Math()],
 	['base', 'io', as Output()],
 	['base', 'sys', as Process()],
-	['base', 'iterator', as While()]
+	['base', 'iterator', as Loops()]
 ];
 ```
 Imports map directly to `.spec` files in the standard library (`lib/`) or project directory.
@@ -669,12 +668,12 @@ local String is first: languages[0]; # "C"
 languages[1]: "Spec C11"; # Replaces "Java"
 ```
 
-### Inline Conditional Expressions
-Spec provides inline `if (...) expr else expr` conditionals without punctuation ambiguity (`?:`). Both branches are required to uphold Spec's "Never Null" standard:
+### Value-Yielding Branch Calls
+The `Conditional:if` call doubles as the conditional expression: both branches are required (upholding Spec's "Never Null" standard), the arms' yields unify into the call's type, and nested branch calls type in context:
 
 ```spec
-local String is status: if (isReady) "Ready" else "Pending";
-local String is grade: if (score >= 90) "A" else if (score >= 80) "B" else "C";
+local String is status: Conditional:if(check: { isReady }, then: { 'Ready' }, else: { 'Pending' });
+local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { Conditional:if(check: { score >= 80 }, then: { 'B' }, else: { 'C' }) });
 ```
 
 ### String Inspection Primitives
@@ -690,24 +689,25 @@ local String is grade: if (score >= 90) "A" else if (score >= 80) "B" else "C";
 
 ## Control Flow & Branching
 
-### Conditionals
-Standard `if`, `else if`, and `else` blocks with boolean comparisons (`==`, `is`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`):
-
-The `is` keyword can be used interchangeably with `==` for expressive, natural equality checks:
+### Conditionals & Matching
+Conditionals are calls to the `Conditional` provider — no `if`/`else` keywords. The check closure returns `Boolean`; the branch closures may read and mutate the enclosing scope. Comparisons (`==`, `is`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`) work as expected, and the `is` keyword reads as equality for expressive checks:
 
 ```spec
-if (score is 21) {
+Conditional:if(check: { score is 21 }, then: {
 	Output:line("Blackjack!");
-} else if (status is "ERROR") {
-	Output:line("Failed!");
-} else if (score > 21) {
-	Output:line("Bust!");
-} else {
-	Output:line("Continue play");
-}
+}, else: {
+	Conditional:if(check: { score > 21 }, then: {
+		Output:line("Bust!");
+	}, else: {
+		Output:line("Continue play");
+	});
+});
+
+# The value form: both branches yield, and the call's type is the unified yield.
+local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
 ```
 
-### Matching with `Cases:match`
+#### Matching with `Cases:match`
 `Cases:match` is the match construct — a provider class (like `Loops` for loops), served bare through the as-import (`['base', 'cases', as Cases()]`). The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation.
 
 ```spec

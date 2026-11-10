@@ -21,7 +21,7 @@ Reference manual for the standard library implemented in Spec (`spec/lib/`):
 - **[`base:io`](packages/README.md#1-baseio)**: Console output (`Output:line`), asynchronous input prompt (`Input:prompt`), and filesystem I/O (`File:read`, `File:write`, `File:exists`).
 - **[`base:math`](packages/README.md#2-basemath)**: Trigonometry, rounding, random generation, and pure Spec helpers (`abs`, `min`, `max`, `clamp`).
 - **[`base:struct`](packages/README.md#3-basestruct)**: Dynamic array containers (`Array` with `map`, `fold`, `filter`, `each`) and 64-bucket hash tables (`Map` with `each`, literals, and bracket indexing).
-- **[`base:iterator`](packages/README.md#4-baseiterator)**: Decoupled loop execution engine (`Loop`, `LoopControl`, `While:run`, `While:condition`).
+- **[`base:iterator`](packages/README.md#4-baseiterator)**: Decoupled loop execution engine (`Loop`, `LoopControl`, the `Loops` provider).
 - **[`base:sys`](packages/README.md#5-basesys)**: Subprocess execution, source locations, and operating system dispatch (`Process:execute`).
 
 ---

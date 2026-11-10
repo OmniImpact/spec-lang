@@ -13,7 +13,7 @@ This document details the standard library packages available in the Spec runtim
 | **`base:io`** | `Output:line/print/write`, `Stderr:line/print`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
 | **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
 | **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` · `List` — `push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString` | Thread-safe collections with functional combinators. |
-| **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `While:run`, `While:condition` | Decoupled loop engine and inline closure iteration. |
+| **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `Loops` (`while`, `repeat`, `until`, `run`) | Decoupled loop engine and inline closure iteration. |
 | **`base:sys`** | `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | Processes, timing, memory/thread introspection, atomics, parallel fan-out. |
 | **`base:core`** | `Any`, `Stringable`, `String` | The root class lattice and the string type over the `base:sysinternal` floor. |
 
@@ -34,7 +34,7 @@ Full API reference by package below.
 4. [`base:iterator`](#4-baseiterator)
    - [`base:iterator:Loop`](#baseiteratorloop)
    - [`base:iterator:LoopControl`](#baseiteratorloopcontrol)
-   - [`base:iterator:While`](#baseiteratorwhile)
+   - [`base:iterator:Loops`](#baseiteratorloops)
 5. [`base:sys`](#5-basesys)
    - [`base:sys:Process`](#basesysprocess)
    - [`base:sys:SourceLocation`](#basesyssourcelocation-libbasesyssourcelocationspec)
@@ -417,10 +417,12 @@ Base class for iterator implementations:
 Controls loop continuation and completion triggers:
 - **`stop()`**: Halts iteration.
 
-### `base:iterator:While` (`lib/base/iterator/While.spec`)
-- **`While(vars, evaluate, iterate)` / `While([Type is name: init, ...], evaluate: { ... }, iterate: { ... })`**: Inline scoped loop runner with function block shorthands. Binds typed loop variables at block scope and inlines directly to a C11 statement expression with zero closures and zero heap allocations.
-- **`While:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
-- **`While:condition(Function of Boolean is evaluate, Function of Boolean is iteration)`**: Executes an inline loop using `evaluate` and `iteration` closures without requiring a separate `Loop` subclass.
+### `base:iterator:Loops` (`lib/base/iterator/Loops.spec`)
+- **`while(evaluate:, iteration:)`**: The bare predicate loop (via the as-import); inlines directly to a C11 statement expression with zero closures and zero heap allocations.
+- **`Loops:repeat(count:, worker:)`**: Executes the worker exactly `count` times.
+- **`Loops:until(evaluate:, iteration:)`**: The body-always-runs-once form (do-while).
+- **`Loops:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
+- **`Loops:loop(Any is vars, Function is evaluate, Function is iterate)`**: The scoped-variable form — binds typed loop variables at block scope.
 
 ---
 
