@@ -291,14 +291,21 @@ The decisions:
    enums migrated AUTOMATICALLY — their sources keep the sugar; the
    Keyword hot path included. The variant registries retire for value
    enums (the held registries carry them).
-5. **Stage 5 — the tagged enums migrate.** The subtype-variant pattern
-   (`Red of Color` with the payload fields); match payload arms are
-   closure parameters. The compiler's tagged enums (`ExpressionKind`?
-   — audit which carry payloads) migrate.
-6. **Stage 6 — the special-casing dies.** The parser's enum parse
-   becomes pure sugar-desugaring; the registries, the enum emission,
-   and the enum branches in the checker/gen delete. The compiler's enum
-   concept is gone.
+5. **Stage 5 — the tagged enums migrate. DONE (2026-11).** The tagged
+   sugar desugars to nested subclasses: the base carries the tag
+   machinery (_tag + _variant_name, name()/ordinal() reading them),
+   each variant is a nested subclass with real payload fields, the
+   ctor surface resolves as nested-class construction shorthand
+   ('Result:Ok(data: x)' = 'Result:Ok:init(...)'), nullary variants
+   construct through the PATH emission, and the match payload arms
+   bind the subclass's real fields (the base-cast fix keeps the base
+   fields in acc so the offsets align).
+6. **Stage 6 — the special-casing dies. DONE (2026-11).** The legacy
+   emission (generateEnums, the tag structs, the backing helpers), the
+   registry setters/fields, and the checker/gen enum branches delete.
+   The enum concept is PURELY the sugar: parseEnum desugars, the class
+   model carries everything. (The two landings shared the tree at
+   commit time — Stages 5-6 ride together.)
 
 Every stage: converge, gates, commit. The compiler compiles itself
 throughout (the dogfooding is continuous).
