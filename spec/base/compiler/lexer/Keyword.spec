@@ -12,6 +12,7 @@ Enum of String is Keyword {
 	CONTAINED: 'contained',
 	REPLACE: 'replace',
 	MERGE: 'merge',
+	HELD: 'held',
 	IS: 'is',
 	AS: 'as',
 	OF: 'of',

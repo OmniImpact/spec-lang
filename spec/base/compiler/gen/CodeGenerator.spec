@@ -29,6 +29,7 @@ Class is CodeGenerator{
 		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', WellKnown],
+		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'checker', 'loops', ClassSearchLoop],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
@@ -63,6 +64,19 @@ Class is CodeGenerator{
 	## program's flattened class list (the per-class generation walks it;
 	## sharing the live list serialized every read behind its mutex).
 	local Array of ClassInfo is flattenedClasses: [];
+
+	## Held members (PLAN-ENUM Stage 1): key 'Class:member' -> the OWNING
+	## class name. Registered per class over its whole ancestor chain, so
+	## a subclass name reaches inherited held members; the own class
+	## registers last, so the nearest declaration wins (the same rule the
+	## checker's lattice walk applies). Access sites emit the owner's
+	## once-guard accessor symbol.
+	local Map of String to String is heldFields: Map:init();
+
+	## Held member declared types: key 'Class:member' -> the formatted
+	## type, the emission-side mirror of the checker's
+	## lookupHeldFieldType (call dispatch and casts infer through it).
+	local Map of String to String is heldFieldTypes: Map:init();
 
 	## Copies a string-keyed registry map for a worker gen.
 	##
@@ -283,6 +297,8 @@ Class is CodeGenerator{
 		self:allEnumVariants: Map:init();
 		self:allStringBackedEnums: Map:init();
 		self:allTaggedEnums: Map:init();
+		self:heldFields: Map:init();
+		self:heldFieldTypes: Map:init();
 		flattened:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:name, value: 'true');
 			# the nested classes register under
@@ -308,6 +324,31 @@ Class is CodeGenerator{
 					Conditional:if(check: { m:memberType:name == Primitive:STRING:value() }, then: {
 						self:allStringBackedEnums:set(key: c:name, value: 'true');
 					});
+				});
+			});
+		});
+		# Held members (PLAN-ENUM Stage 1): the ancestors first, the own
+		# class last — the nearest declaration wins on lookup.
+		flattened:each(action: local Function(ClassInfo is c){
+			local Array of String is ancestors: [];
+			self:collectAncestors(c: c, allClasses: flattened, acc: ancestors);
+			ancestors:each(action: local Function(String is baseName){
+				local ClassInfo is baseCls: self:findClass(name: baseName);
+				Conditional:if(check: { baseCls:name != '' }, then: {
+					baseCls:members:each(action: local Function(Member is m){
+						Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
+							Conditional:if(check: { !self:heldFields:has(key: c:name . ':' . m:name) }, then: {
+								self:heldFields:set(key: c:name . ':' . m:name, value: baseCls:name);
+								self:heldFieldTypes:set(key: c:name . ':' . m:name, value: self:formatTypeString(t: m:memberType));
+							});
+						});
+					});
+				});
+			});
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
+					self:heldFields:set(key: c:name . ':' . m:name, value: c:name);
+					self:heldFieldTypes:set(key: c:name . ':' . m:name, value: self:formatTypeString(t: m:memberType));
 				});
 			});
 		});
@@ -1266,13 +1307,33 @@ Class is CodeGenerator{
 					Conditional:if(check: { self:fieldTypes:has(key: root) }, then: {
 						rootType: self:fieldTypes:getString(key: root, default: '');
 					}, else: {
-						Conditional:if(check: { self:allEnumNames:has(key: root) }, then: {
-							return root;
-						}, else: {
-							Conditional:if(check: { self:allClassNames:has(key: root) }, then: {
+							Conditional:if(check: { self:allEnumNames:has(key: root) }, then: {
 								return root;
+							}, else: {
+								Conditional:if(check: { self:allClassNames:has(key: root) }, then: {
+									# Held member as segment 1 (PLAN-ENUM Stage 1):
+									# the class-name prefix reaches exactly the held
+									# members; the target type is the held field's
+									# type, with later segments chaining as instance
+									# fields on its value.
+									Conditional:if(check: { segs:length() >= 2 }, then: {
+										local String is heldT: self:heldFieldTypes:getString(key: root . ':' . segs:get(index: 1), default: '');
+										Conditional:if(check: { heldT != '' }, then: {
+											local Int is heldIdx: 2;
+											while(
+												evaluate: local Function of Boolean(){ return heldT != '' && heldIdx < segs:length(); },
+												iteration: local Function of Boolean(){
+													heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
+													heldIdx: heldIdx + 1;
+													return true;
+												}
+											);
+											return heldT;
+										});
+									});
+									return root;
+								});
 							});
-						});
 					});
 				});
 			});
@@ -1894,6 +1955,26 @@ Class is CodeGenerator{
 					return root . '_' . self:utils:cIdent(name: segs:get(index: 1)) . '_ctor()';
 				});
 				return root . '_' . self:utils:cIdent(name: segs:get(index: 1));
+			});
+			# Held members (PLAN-ENUM Stage 1): the class-name prefix
+			# reaches exactly the held members. The access emits the
+			# owner's once-guard accessor; later segments chain as
+			# instance fields on the value. Instance scopes (locals,
+			# fields) shadow the class name — the checker's resolution
+			# order mirrored.
+			local String is heldOwner: self:heldFields:getString(key: root . ':' . segs:get(index: 1), default: '');
+			Conditional:if(check: { heldOwner != '' && !self:localVars:has(key: root) && !self:fieldTypes:has(key: root) }, then: {
+				local String is heldC: self:utils:cIdent(name: heldOwner) . '_' . self:utils:cIdent(name: segs:get(index: 1)) . '__ensure()';
+				local Int is heldIdx: 2;
+				while(
+					evaluate: local Function of Boolean(){ return heldIdx < segs:length(); },
+					iteration: local Function of Boolean(){
+						heldC: '(' . heldC . ')->' . self:utils:cIdent(name: segs:get(index: heldIdx));
+						heldIdx: heldIdx + 1;
+						return true;
+					}
+				);
+				return heldC;
 			});
 			local String is rootC: self:utils:cIdent(name: root);
 			Conditional:if(check: { !self:localVars:has(key: root) && self:fieldTypes:has(key: root) }, then: {
@@ -3563,6 +3644,115 @@ Class is CodeGenerator{
 		});
 	}
 
+	## Emits the held-member storage (PLAN-ENUM Stage 1): one file-scope
+	## slot, once-flag, and once-guard accessor per held field. The guard
+	## is the CAS once-pattern — the winner constructs under an acq_rel
+	## exchange and releases; losers spin on acquire until the store is
+	## visible — so the first access constructs, caches, and the value's
+	## identity holds forever. Prototypes emit first: a held initializer
+	## may reference another class's held member whose accessor is defined
+	## later in the pass. Runs single-threaded before the pool: the init
+	## expressions are tiny and the pass keeps the emission fixed-order.
+	##
+	## @param classes: Flattened program classes.
+	## @return: C source text (empty when no class holds members).
+	Function of String is generateHeldMembers(Array of ClassInfo is classes){
+		local Array of Member is heldAll: [];
+		local Array of String is ownerSyms: [];
+		local Array of String is ownerClsNames: [];
+		local Array of String is declaredTypes: [];
+		classes:each(action: local Function(ClassInfo is c){
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) && m:hasInit }, then: {
+					heldAll:add(item: m);
+					ownerSyms:add(item: self:utils:cIdent(name: c:qualifiedName()));
+					ownerClsNames:add(item: c:name);
+					declaredTypes:add(item: self:formatTypeString(t: m:memberType));
+				});
+			});
+		});
+		Conditional:if(check: { heldAll:length() == 0 }, then: {
+			return '';
+		});
+		local String is out: "/* Held Members */\n";
+		# Anonymous closures inside held initializers emit their bodies
+		# into helperFunctions; the pass collects them and appends after
+		# the definitions (the assembly places this section before the
+		# methods, so every use is preceded by its definition).
+		local String is helpersAcc: Buf:stringCopy(b: '');
+		# Prototypes first: cross-class held references in init
+		# expressions call accessors defined later in the pass.
+		local Int is pi: 0;
+		while(
+			evaluate: local Function of Boolean(){ return pi < heldAll:length(); },
+			iteration: local Function of Boolean(){
+				local Member is pm: heldAll:get(index: pi);
+				local String is pSym: ownerSyms:get(index: pi) . '_' . self:utils:cIdent(name: pm:name);
+				Buf:bufAppendBuf(dst: out, src: self:cTypeFor(typeName: declaredTypes:get(index: pi)) . ' ' . pSym . "__ensure(void);\n");
+				pi: pi + 1;
+				return true;
+			}
+		);
+		Buf:bufAppendBuf(dst: out, src: "\n");
+		local Int is di: 0;
+		while(
+			evaluate: local Function of Boolean(){ return di < heldAll:length(); },
+			iteration: local Function of Boolean(){
+				local Member is m: heldAll:get(index: di);
+				local String is declaredT: declaredTypes:get(index: di);
+				local String is typeC: self:cTypeFor(typeName: declaredT);
+				local String is mSym: ownerSyms:get(index: di) . '_' . self:utils:cIdent(name: m:name);
+				# The init expression has no instance scope: the checker
+				# already rejected self and instance-field references.
+				local Map of String to String is savedFields: self:fieldTypes;
+				local Map of String to String is savedLocals: self:localVars;
+				local String is savedClass: self:currentClassName;
+				local String is savedRet: self:currentMethodReturnType;
+				self:fieldTypes: Map:init();
+				self:localVars: Map:init();
+				self:currentClassName: ownerClsNames:get(index: di);
+				self:currentMethodReturnType: declaredT;
+				Conditional:if(check: { (m:initExpr:kind == ExpressionKind:ARRAY || m:initExpr:kind == ExpressionKind:MAP) && (declaredT:startsWith(prefix: 'Array') || declaredT:startsWith(prefix: 'Map')) }, then: {
+					self:setContainerHint(t: declaredT);
+				});
+				local Boolean is savedArg: self:argMode;
+				self:argMode: false;
+				self:helperFunctions: Buf:stringCopy(b: '');
+				local String is initC: self:generateExpression(expr: m:initExpr);
+				self:argMode: savedArg;
+				Buf:bufAppendBuf(dst: helpersAcc, src: self:helperFunctions);
+				self:fieldTypes: savedFields;
+				self:localVars: savedLocals;
+				self:currentClassName: savedClass;
+				self:currentMethodReturnType: savedRet;
+				# The store transfers ownership into the class-held slot;
+				# the accessor hands the caller a +1 reference, the same
+				# contract a method return follows.
+				local String is retC: '(' . typeC . ')(' . mSym . ')';
+				Conditional:if(check: { self:isArcType(typeName: declaredT) }, then: {
+					retC: '(' . typeC . ')spec_retain((void*)(' . mSym . '))';
+				});
+				Buf:bufAppendBuf(dst: out, src: typeC . ' ' . mSym . ";\n");
+				Buf:bufAppendBuf(dst: out, src: 'atomic_int ' . mSym . "_once;\n\n");
+				Buf:bufAppendBuf(dst: out, src: typeC . ' ' . mSym . "__ensure(void) {\n");
+				Buf:bufAppendBuf(dst: out, src: '    if (atomic_load_explicit(&' . mSym . "_once, memory_order_acquire) == 0) {\n");
+				Buf:bufAppendBuf(dst: out, src: "        int expected = 0;\n");
+				Buf:bufAppendBuf(dst: out, src: '        if (atomic_compare_exchange_strong_explicit(&' . mSym . "_once, &expected, 2, memory_order_acq_rel, memory_order_acquire)) {\n");
+				Buf:bufAppendBuf(dst: out, src: '            ' . mSym . ' = ' . initC . ";\n");
+				Buf:bufAppendBuf(dst: out, src: '            atomic_store_explicit(&' . mSym . "_once, 1, memory_order_release);\n");
+				Buf:bufAppendBuf(dst: out, src: "        } else {\n");
+				Buf:bufAppendBuf(dst: out, src: '            while (atomic_load_explicit(&' . mSym . "_once, memory_order_acquire) != 1) { }\n");
+				Buf:bufAppendBuf(dst: out, src: "        }\n");
+				Buf:bufAppendBuf(dst: out, src: "    }\n");
+				Buf:bufAppendBuf(dst: out, src: '    return ' . retC . ";\n}\n\n");
+				di: di + 1;
+				return true;
+			}
+		);
+		Buf:bufAppendBuf(dst: out, src: helpersAcc);
+		return out;
+	}
+
 	## Translates a complete parsed program into a standalone C11 file.
 	##
 	## @param program: The parsed program.
@@ -3585,6 +3775,7 @@ Class is CodeGenerator{
 		local String is decls: self:declGen:generateForwardDeclarations(classes: flattenedClasses);
 		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
 		local String is vt: self:generateVTables(classes: flattenedClasses);
+		local String is heldSrc: self:generateHeldMembers(classes: flattenedClasses);
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
 		# the per-class generation runs on the thread
@@ -3635,6 +3826,8 @@ Class is CodeGenerator{
 			wg:allEnumVariants: self:copyRegistryMap(source: self:allEnumVariants);
 			wg:allStringBackedEnums: self:copyRegistryMap(source: self:allStringBackedEnums);
 			wg:allTaggedEnums: self:copyRegistryMap(source: self:allTaggedEnums);
+			wg:heldFields: self:copyRegistryMap(source: self:heldFields);
+			wg:heldFieldTypes: self:copyRegistryMap(source: self:heldFieldTypes);
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;
@@ -3737,6 +3930,10 @@ Class is CodeGenerator{
 		Buf:bufAppendBuf(dst: cSource, src: vt);
 		Buf:bufAppendBuf(dst: cSource, src: self:generateTypeHierarchy(classes: flattenedClasses));
 		Buf:bufAppendBuf(dst: cSource, src: allHelpers);
+		# held members after the anon-fn helpers: a held initializer's
+		# closure bodies land in the helpers section, and the accessor
+		# definitions reference them.
+		Buf:bufAppendBuf(dst: cSource, src: heldSrc);
 		Buf:bufAppendBuf(dst: cSource, src: ctors);
 		Buf:bufAppendBuf(dst: cSource, src: methods);
 		Buf:bufAppendBuf(dst: cSource, src: mainFn);

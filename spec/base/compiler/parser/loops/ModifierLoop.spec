@@ -1,6 +1,6 @@
 #! Package base:compiler:parser:loops
 #! Consumes the modifier run preceding a member declaration
-## (local, contained, replace, merge).
+## (local, contained, replace, merge, held).
 
 Class of Loop is ModifierLoop{
 	namespace: ['base', 'compiler', 'parser', 'loops'];
@@ -23,7 +23,8 @@ Class of Loop is ModifierLoop{
 
 	replace Function of Boolean is evaluate(){
 		return self:parser:checkKeyword(kw: Keyword:LOCAL) || self:parser:checkKeyword(kw: Keyword:CONTAINED) ||
-			self:parser:checkKeyword(kw: Keyword:REPLACE) || self:parser:checkKeyword(kw: Keyword:MERGE);
+			self:parser:checkKeyword(kw: Keyword:REPLACE) || self:parser:checkKeyword(kw: Keyword:MERGE) ||
+			self:parser:checkKeyword(kw: Keyword:HELD);
 	}
 
 	replace Function of Boolean is iteration(LoopControl is control){

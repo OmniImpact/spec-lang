@@ -149,6 +149,16 @@ assert_compile_failure "as-form-default-wall" \
 	"$ROOT/tests/negative/n29_as_form_default_negative_test.spec" \
 	"'Math2' is not imported by 'N29AsFormDefault'; add it to the using declaration to construct it"
 
+assert_compile_failure "held-members-walls" \
+	"$ROOT/tests/negative/n30_held_members_negative_test.spec" \
+	"is read-only: held members are class-scoped single copies" \
+	"combines 'held' with 'replace'/'merge'" \
+	"'self' is not available" \
+	"of the same class; the once-guards would deadlock" \
+	"reach it through the class name, not an instance" \
+	"is local to class 'N30HeldWalls' and cannot be accessed from 'N30HeldProbe'" \
+	"requires an initializer"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"

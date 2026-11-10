@@ -23,6 +23,7 @@ Class is DeclarationGenerator{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', MetadataField],
 		['base', 'compiler', 'ast', ContractMethod],
+		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
@@ -156,9 +157,11 @@ Class is DeclarationGenerator{
 			when (m:kind) {
 				is MemberKind:FIELD: {
 					# Declarative metadata (namespace/using/castable)
-					# never becomes a struct field.
+					# never becomes a struct field; neither do HELD members
+					# (PLAN-ENUM Stage 1) — held storage is the file-scope
+					# once-guard slot, not a per-instance field.
 					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
-						m:name != MetadataField:CASTABLE:value() }, then: {
+						m:name != MetadataField:CASTABLE:value() && !m:hasModifier(kw: Keyword:HELD) }, then: {
 						local Int is existing: self:fieldIndexNamed(list: target, name: m:name);
 						Conditional:if(check: { existing >= 0 }, then: {
 							target:set(index: existing, item: m);
