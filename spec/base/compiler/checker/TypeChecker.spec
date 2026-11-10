@@ -1339,6 +1339,22 @@ Class is TypeChecker{
 		return self:importsAsAnywhere(clsName: self:currentClassName, targetName: className);
 	}
 
+	## Whether a local or field named [name] shadows the bare-call
+	## resolution (E9). Only a Function-typed binding does: the bare
+	## `name(...)` form is a call, and a call resolves to a callable —
+	## a non-Function local that happens to share the name (a String
+	## `line` beside an imported Output:line) must not silence the
+	## provider. The parser normalizes every bare call to the
+	## self-receiver shape, so this guard is what keeps ordinary
+	## variable names out of the call's way.
+	##
+	## @param name: The bare call's method name.
+	## @return: true when a Function-typed local or field holds the name.
+	Function of Boolean is shadowsAsFunction(String is name){
+		local String is t: self:localVars:getString(key: name, default: self:fieldTypes:getString(key: name, default: ''));
+		return t:startsWith(prefix: 'Function');
+	}
+
 	## Recursive import search over the ancestor lattice.
 	##
 	## @param clsName: Class being visited.
@@ -2783,7 +2799,7 @@ Class is TypeChecker{
 		# one provider resolves; two or more collide and force
 		# qualification; zero is an error — the old behavior silently
 		# invented CurrentClass_method and died in gcc.
-		Conditional:if(check: { recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:localVars:has(key: expr:methodName) && !self:fieldTypes:has(key: expr:methodName) }, then: {
+		Conditional:if(check: { recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:shadowsAsFunction(name: expr:methodName) }, then: {
 			local String is ownOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: expr:methodName);
 			local Array of String is bsProviders: self:bareScopeProviders(methodName: expr:methodName);
 			local Int is providerTotal: bsProviders:length() + Conditional:if(check: { ownOwner != '' }, then: { 1 }, else: { 0 });

@@ -4,8 +4,8 @@
 #! enum instances constructed with their tags, the backing value rides
 #! a synthesized instance field, and the contract methods
 #! (name/ordinal/value/of/values) are synthesized as plain Spec
-#! members. The tagged shape (variants with parameters) stays on the
-## legacy path until Stage 5.
+#! members. The tagged shape (variants with parameters) desugars to
+#! nested subclasses with real payload fields.
 
 Class is EnumDesugar{
 	namespace: ['base', 'compiler', 'parser', 'loops'];

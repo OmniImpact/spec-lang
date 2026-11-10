@@ -41,13 +41,26 @@ Class is Conditional{
 	}
 
 	## Dispatches [on] over the arm table [when] — the match construct.
-	## Runtime-managed: intercepted by the compiler — the arm table
-	## resolves against the subject's class's held members at compile
-	## time and inlines into a comparison chain — so no body is emitted.
-	## The arm table is a map literal whose keys are held-member
-	## references (an array key matches several), `else` names the
-	## fallback arm, and the closures are the arm bodies (a closure's
-	## last expression is the arm's value).
+	##
+	## THE CONTRACT, IN THIS FILE: the arm table is a map literal whose
+	## keys are held-member references of the subject's class (an array
+	## key matches several), `else` names the fallback arm, and the
+	## values are the arm bodies — a closure whose last expression is
+	## the arm's value. A payload arm's closure parameters bind the
+	## variant's payload fields, in declaration order.
+	##
+	## THE IMPLEMENTATION IS COMPILE-TIME, and this body is therefore
+	## never emitted: the checker recognizes the call
+	## (TypeChecker.spec — the match recognizer and checkMatchArms:
+	## key resolution against the subject class's held members, payload
+	## typing from the variant's init parameters, exhaustiveness for
+	## value-form subjects over Enum-rooted classes) and the backend
+	## lowers the table (CodeGenerator.spec — generateMatch: the arm
+	## closures inline as statement blocks, the keys compile to
+	## identity compares for class-typed held members, string equality
+	## for literal keys, == for numeric subjects, the else arm as the
+	## chain's tail). Nothing runs at runtime except the chosen arm —
+	## there is no table object and no dispatch loop to hide here.
 	##
 	## @param on: The subject value.
 	## @param when: The arm table.

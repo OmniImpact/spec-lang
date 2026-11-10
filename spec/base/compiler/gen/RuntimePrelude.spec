@@ -1717,13 +1717,15 @@ long long spec_object_hash(const void* obj) {
 
 /* Held-member metadata (PLAN-ENUM Stage 1): per-class held-member name
    tables, registered by the emitted Held Metadata section (the tables
-   preserve declaration order — the ordinal index). The tentative array
-   definition is completed by the generated registry, which always
-   carries the {0,0,0} terminator. */
+   preserve declaration order — the ordinal index). Field slots carry
+   the once-guard accessor's address; function slots are NULL. The
+   tentative array definition is completed by the generated registry,
+   which always carries the {0,0,0,0} terminator. */
 typedef struct SpecHeldEntry {
     const char* type_name;
     const char* const* names;
     int count;
+    void* (*const* getters)(void);
 } SpecHeldEntry;
 static const SpecHeldEntry spec_held_registry[];
 
@@ -1755,6 +1757,26 @@ bool spec_has_held(const void* obj, String name) {
         if (spec_string_equals(spec_string_intern(e->names[i]), name)) return true;
     }
     return false;
+}
+
+/* The ordinal scan (PLAN-ENUM): the first held-FIELD index whose
+   lazily-constructed instance is the object itself. The desugared
+   enum variants are held singletons in declaration order, so this is
+   the variant's ordinal. Calling it initializes the class's held
+   singletons (the once-guards are idempotent). -1 when the class
+   holds no fields or the object is not one of them. */
+long long spec_held_index_of(const void* obj) {
+    const SpecHeldEntry* e = spec_held_entry_of(obj);
+    if (!e || !e->getters) return -1;
+    for (int i = 0; i < e->count; i++) {
+        if (e->getters[i]) {
+            void* inst = e->getters[i]();
+            bool hit = (inst == (void*)obj);
+            spec_release(inst);
+            if (hit) return (long long)i;
+        }
+    }
+    return -1;
 }
 
 /* Clock & Memory Metrics */

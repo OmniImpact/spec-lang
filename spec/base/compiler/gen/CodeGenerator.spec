@@ -3861,7 +3861,9 @@ Class is CodeGenerator{
 
 	## Emits the held-member metadata (PLAN-ENUM Stage 1): one name
 	## table per class declaring held members (fields and functions,
-	## declaration order — the ordinal index), and the program-wide
+	## declaration order — the ordinal index), the matching getter
+	## table (a held FIELD's slot carries its once-guard accessor's
+	## address; a held FUNCTION's slot is NULL), and the program-wide
 	## registry the Introspection floor scans. The registry ALWAYS
 	## emits (the terminator alone when no class holds members): the
 	## prelude's tentative definition needs the completion. Runs
@@ -3876,9 +3878,15 @@ Class is CodeGenerator{
 		local Int is entryCount: 0;
 		classes:each(action: local Function(ClassInfo is c){
 			local Array of String is names: [];
+			local Array of String is getters: [];
 			c:members:each(action: local Function(Member is m){
 				Conditional:if(check: { (m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD) && m:hasModifier(kw: Keyword:HELD) }, then: {
 					names:add(item: m:name);
+					Conditional:if(check: { m:kind == MemberKind:FIELD }, then: {
+						getters:add(item: self:utils:cIdent(name: c:qualifiedName()) . '_' . self:utils:cIdent(name: m:name) . '__ensure');
+					}, else: {
+						getters:add(item: 'NULL');
+					});
 				});
 			});
 			Conditional:if(check: { names:length() > 0 }, then: {
@@ -3894,13 +3902,24 @@ Class is CodeGenerator{
 					}
 				);
 				Buf:bufAppendBuf(dst: out, src: "};\n");
-				Buf:bufAppendBuf(dst: entries, src: '    { "' . c:qualifiedName() . '", ' . cSym . '_held_names, ' . (names:length() as String) . " },\n");
+				Buf:bufAppendBuf(dst: out, src: 'static void* (*const ' . cSym . "_held_getters[])(void) = {\n");
+				local Int is gi: 0;
+				while(
+					evaluate: local Function of Boolean(){ return gi < getters:length(); },
+					iteration: local Function of Boolean(){
+						Buf:bufAppendBuf(dst: out, src: '    ' . getters:get(index: gi) . ",\n");
+						gi: gi + 1;
+						return true;
+					}
+				);
+				Buf:bufAppendBuf(dst: out, src: "};\n");
+				Buf:bufAppendBuf(dst: entries, src: '    { "' . c:qualifiedName() . '", ' . cSym . '_held_names, ' . (names:length() as String) . ', ' . cSym . "_held_getters },\n");
 				entryCount: entryCount + 1;
 			});
 		});
 		Buf:bufAppendBuf(dst: out, src: "static const SpecHeldEntry spec_held_registry[] = {\n");
 		Buf:bufAppendBuf(dst: out, src: entries);
-		Buf:bufAppendBuf(dst: out, src: "    { 0, 0, 0 }\n};\n\n");
+		Buf:bufAppendBuf(dst: out, src: "    { 0, 0, 0, 0 }\n};\n\n");
 		return out;
 	}
 
