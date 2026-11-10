@@ -19,7 +19,7 @@ Class is ScopeAsDemo{
 		['base', 'io', as File()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

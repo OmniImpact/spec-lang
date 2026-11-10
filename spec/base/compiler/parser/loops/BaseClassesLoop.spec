@@ -9,7 +9,7 @@ Class of Loop is BaseClassesLoop{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'iterator']
 ,
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'sys', as Conditional()]
 	];

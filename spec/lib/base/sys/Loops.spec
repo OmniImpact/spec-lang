@@ -1,17 +1,17 @@
-#! Package base:iterator
-#! Decoupled, stateful iteration abstractions and execution runners.
+#! Package base:sys
+#! The control-flow providers: the conditional and the loop constructs,
+#! same-name wrappers over their sysinternal floors.
 
-## The control-flow provider (§II.4): one as-import serves
-## the loop constructs bare — `Loops:loop(evaluate:, iteration:)` mirrors
-## `Conditional`'s `if(...)`. THE IMPLEMENTATION LIVES HERE, composed
-## from the iteration floor's single primitive
-## (base:sysinternal:Loops:while — the loop-shape counterpart of the
-## conditional floor's branch). The compiler additionally inlines the
-## literal-closure forms as native C loops (zero allocation) — the
-## same two-tier shape as Conditional:if: the inline is the fast path
-## for inline literals, and THIS body is the runtime path a call
-## follows when its closures are not inline literals (Function
-## variables, callbacks held as values).
+## The loop-control provider: one as-import serves the loop constructs
+## bare — `Loops:loop(evaluate:, iteration:)` mirrors `Conditional`'s
+## `if(...)`. THE IMPLEMENTATION LIVES HERE, composed from the
+## iteration floor's single primitive (base:sysinternal:Loops:while —
+## the loop-shape counterpart of the conditional floor's branch). The
+## compiler additionally inlines the literal-closure forms as native C
+## loops (zero allocation) — the same two-tier shape as Conditional:if:
+## the inline is the fast path for inline literals, and THIS body is
+## the runtime path a call follows when its closures are not inline
+## literals (Function variables, callbacks held as values).
 ##
 ## THE TWO TIERS' CAPTURE SEMANTICS: the literal closures inline into
 ## the enclosing frame and SHARE its locals — the counter idiom
@@ -23,7 +23,7 @@
 ## reference), not a frame local.
 
 Class is Loops{
-	namespace: ['base', 'iterator'];
+	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
 		['base', 'iterator', Loop],

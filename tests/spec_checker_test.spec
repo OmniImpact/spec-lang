@@ -30,7 +30,7 @@ Class is SpecCheckerTest{
 		# G7's Loader does this; here the driver parses them directly so the
 		# checker resolves their methods from SPEC declarations.
 		local Array of ClassInfo is all: [];
-		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/base/sys/Conditional.spec'];
+		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/lib/base/sys/Conditional.spec'];
 		preloads:each(action: local Function(String is path){
 			local Lexer is plex: Lexer:init(source: File:read(path: path, default: ''));
 			local Parser is ppar: Parser:init(tokens: plex:tokenize());
@@ -136,7 +136,7 @@ Class is F{ replace Array of Array of String is using: [['base', 'sys', as Condi
 		});
 
 		# 7. Field initializer bidirectional + root contract
-		local Array of String is e7: self:checkOf(src: "Class is G{ replace Array of Array of String is using: [['base', 'iterator', as Loops()]]; replace Function is init(Map of String to String is args){ local Int is n: 0; while(evaluate: local Function of Boolean(){ return 1; }, iteration: local Function(){ n: n + 1; }); } }");
+		local Array of String is e7: self:checkOf(src: "Class is G{ replace Array of Array of String is using: [['base', 'sys', as Loops()]]; replace Function is init(Map of String to String is args){ local Int is n: 0; while(evaluate: local Function of Boolean(){ return 1; }, iteration: local Function(){ n: n + 1; }); } }");
 		Conditional:if(check: { e7:length() > 0 }, then: {
 			Output:line('[PASS] boolean condition typing (non-Boolean evaluate rejected)');
 		}, else: {

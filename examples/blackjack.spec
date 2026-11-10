@@ -7,7 +7,7 @@ Class is Blackjack{
 		['base', 'iterator', Loop],
 		['base', 'iterator', LoopControl],
 		['base', 'iterator', LoopCallback],
-		['base', 'iterator', Loops],
+		['base', 'sys', Loops],
 		['base', 'io', Output],
 		['base', 'io', Input],
 		['base', 'io', InputHandler],
@@ -15,7 +15,7 @@ Class is Blackjack{
 		['base', 'io', as Input()],
 		['base', 'math', as Math()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 	];
 
 	# =========================================================================
@@ -42,7 +42,7 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as Loops()]
+			['base', 'sys', as Loops()]
 		];
 		local Blackjack is game;
 
@@ -79,7 +79,7 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as Loops()]
+			['base', 'sys', as Loops()]
 		];
 		local Blackjack is game;
 
@@ -103,7 +103,7 @@ Class is Blackjack{
 			['base', 'io', as Input()],
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as Loops()],
+			['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 		];
 		local Blackjack is game;

@@ -28,7 +28,7 @@ Class is ClassBindings{
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 	];
 
 	## True when the backend must not emit a struct, vtable, or constructor

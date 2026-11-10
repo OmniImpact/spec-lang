@@ -7,7 +7,7 @@
 
 Class is LoopsTest{
 	replace Array of Array of String is using: [
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];

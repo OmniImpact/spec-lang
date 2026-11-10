@@ -37,7 +37,7 @@ Class is Lexer{
 		['base', 'compiler', ErrorText],
 		['base', 'sys', as Reflection()],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

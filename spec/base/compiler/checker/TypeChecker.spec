@@ -40,7 +40,7 @@ Class is TypeChecker{
 		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
 		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'io', as Output()],
 		['base', 'sys', as Buf()],
@@ -3132,17 +3132,17 @@ Class is TypeChecker{
 			});
 			Conditional:if(check: { qJoined:contains(needle: ':sysinternal:') }, then: {
 				local ClassInfo is callerCls: self:findClass(name: self:currentClassName);
-				local String is callerNs: callerCls:namespaceJoined();
 				# The sysinternal discipline: the floor is reachable from
-				# the base:sys wrappers, and from the SAME-NAME wrapper in
-				# any base package (base:iterator:Loops wraps
-				# base:sysinternal:Loops, as base:sys:Conditional wraps
-				# base:sysinternal:Conditional).
-				local Array of String is floorParts: qJoined:split(delimiter: ':');
-				local String is floorName: floorParts:get(index: floorParts:length() - 1);
-				local Boolean is sameNameWrapper: callerCls:name == floorName && callerNs:startsWith(prefix: 'base:');
-				Conditional:if(check: { callerNs != 'base:sys' && !sameNameWrapper }, then: {
-					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers or the same-name base package wrapper; call the wrapper instead (call from \'' . callerNs . '\').');
+				# the base:sys wrappers — structurally: the caller's
+				# namespace segment array begins ['base', 'sys', ...] (the
+				# sub-packages included). Segment comparison is what
+				# separates the wrapper package from the floor's own
+				# base:sysinternal; a prefix test on the joined string
+				# would conflate them.
+				local Array of String is callerSegs: callerCls:namespaceSegments();
+				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' && callerSegs:get(index: 1) == 'sys';
+				Conditional:if(check: { !sysWrapper }, then: {
+					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers; call the base:sys wrapper instead (call from \'' . callerCls:namespaceJoined() . '\').');
 				});
 				res: self:lookupMethodReturnType(className: qJoined, methodName: method);
 				expr:resolvedType: res;

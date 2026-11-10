@@ -12,7 +12,7 @@ Class is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

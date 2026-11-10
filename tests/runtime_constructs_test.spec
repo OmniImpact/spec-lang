@@ -20,7 +20,7 @@ Class is RuntimeConstructsTest{
 	replace Array of Array of String is using: [
 		['base', 'io', Output],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

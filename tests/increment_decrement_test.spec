@@ -5,7 +5,7 @@ Class is IncrementDecrementTest{
 		['base', 'struct', Array],
 		['base', 'iterator'],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

@@ -14,7 +14,7 @@ Class of Loop is EnumVariantsLoop{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 ,
 		['base', 'compiler', 'ast', Parameter]
 ,

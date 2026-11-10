@@ -21,7 +21,7 @@ Class is ParallelAtomicsTest{
 		['base', 'io', as Output()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

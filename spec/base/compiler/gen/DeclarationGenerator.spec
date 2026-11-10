@@ -29,7 +29,7 @@ Class is DeclarationGenerator{
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 
 	];
 

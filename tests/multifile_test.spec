@@ -9,7 +9,7 @@ Class is MultiFileTest{
 		['base', 'iterator'],
 		['base', 'math', as Math()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 	];
 
 	# Declared variable initialized in init before use
@@ -21,7 +21,7 @@ Class is MultiFileTest{
 		replace Array of Array of String is using: [
 			['base', 'math', as Math()],
 			['base', 'io', as Output()],
-			['base', 'iterator', as Loops()],
+			['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 		];
 		local MultiFileTest is app;

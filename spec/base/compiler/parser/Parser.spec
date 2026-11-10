@@ -53,7 +53,7 @@ Class is Parser{
 		['base', 'compiler', 'parser', 'loops', TemplateFoldLoop],
 		['base', 'compiler', 'parser', 'loops', FancyEscapeLoop],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 
 	];

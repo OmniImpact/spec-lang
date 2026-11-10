@@ -6,7 +6,7 @@ Class is WhileLoopTest{
 		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 

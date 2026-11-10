@@ -25,7 +25,7 @@ Class is Loader{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 ,
 		['base', 'compiler', 'ast', Expression]
 ,

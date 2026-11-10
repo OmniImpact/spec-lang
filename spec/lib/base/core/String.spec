@@ -14,7 +14,7 @@ Class is String{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Buf()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
 	];

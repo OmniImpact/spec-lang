@@ -11,7 +11,7 @@ Class is AnsiColorTest{
 		['base', 'io'],
 		['base', 'io', as Ansi()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function is init(Map of String to String is args){

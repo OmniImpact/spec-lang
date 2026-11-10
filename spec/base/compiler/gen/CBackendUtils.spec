@@ -11,7 +11,7 @@ Class is CBackendUtils{
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 
 	];
 

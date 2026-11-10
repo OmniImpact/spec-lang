@@ -38,7 +38,7 @@ Class is CodeGenerator{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', StatementKind]
 	];

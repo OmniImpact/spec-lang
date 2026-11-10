@@ -21,7 +21,7 @@ Class is Linter{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'io', as Output()],
 		['base', 'compiler', 'linter', LintIssue],
 		['base', 'sys', as Conditional()]

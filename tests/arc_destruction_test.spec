@@ -2,7 +2,7 @@ Class is Resource{
 
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
 	local String is name;
@@ -21,7 +21,7 @@ Class is Container{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 	];
 	local Resource is res;
 
@@ -44,7 +44,7 @@ Class is ArcDestructionTest{
 		['base', 'sys', as Conditional()],
 		['base', 'io', Output],
 		['base', 'io', as Output()],
-		['base', 'iterator', as Loops()]
+		['base', 'sys', as Loops()]
 	];
 
 	replace Function is init(Map of String to String is args){
