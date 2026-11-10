@@ -76407,8 +76407,11 @@ _br_200307; })));
 	    if (String_contains(qJoined, spec_string_intern(":sysinternal:"))) {
 	    SPEC_AUTO ClassInfo* callerCls = (ClassInfo*)(((((ClassInfo* (*)(TypeChecker*, String))self->_vtable[166]))((TypeChecker*)self, self->currentClassName)));
 	    SPEC_AUTO String callerNs = ClassInfo_namespaceJoined(callerCls) /* inst:ClassInfo:namespaceJoined */;
-	    if ((!spec_string_equals(callerNs, spec_string_intern("base:sys")))) {
-	    (((void (*)(TypeChecker*, long long, String))self->_vtable[54]))((TypeChecker*)self, self->currentLine, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("The sysinternal floor is only accessible from base:sys wrappers; call the base:sys wrapper instead (call from '"))), callerNs), spec_string_intern("').")));
+	    SPEC_AUTO SpecArray* floorParts = (SpecArray*)((String_split(qJoined, spec_string_intern(":"))));
+	    SPEC_AUTO String floorName = spec_construct_string(spec_array_get(floorParts, ((spec_array_length(floorParts)) - (1))));
+	    bool sameNameWrapper = ((spec_string_equals(callerCls->name, floorName)) && (String_startsWith(callerNs, spec_string_intern("base:"))));
+	    if ((((!spec_string_equals(callerNs, spec_string_intern("base:sys")))) && ((!(sameNameWrapper))))) {
+	    (((void (*)(TypeChecker*, long long, String))self->_vtable[54]))((TypeChecker*)self, self->currentLine, spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("The sysinternal floor is only accessible from base:sys wrappers or the same-name base package wrapper; call the wrapper instead (call from '"))), callerNs), spec_string_intern("').")));
 	};
 	    spec_assign((void**)&res, (void*)((((String (*)(TypeChecker*, String, String))self->_vtable[173]))((TypeChecker*)self, qJoined, method)));
 	    spec_assign((void**)&expr->resolvedType, (void*)(res));
@@ -76416,6 +76419,8 @@ _br_200307; })));
     goto _cleanup_200116;
     if (callerCls) { spec_release((void*)callerCls); callerCls = NULL; }
     if (callerNs) { spec_release((void*)callerNs); callerNs = NULL; }
+    if (floorParts) { spec_release((void*)floorParts); floorParts = NULL; }
+    if (floorName) { spec_release((void*)floorName); floorName = NULL; }
 	};
     if (qJoined) { spec_release((void*)qJoined); qJoined = NULL; }
 	};

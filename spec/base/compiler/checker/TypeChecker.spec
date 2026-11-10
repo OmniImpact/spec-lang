@@ -3105,8 +3105,16 @@ Class is TypeChecker{
 			Conditional:if(check: { qJoined:contains(needle: ':sysinternal:') }, then: {
 				local ClassInfo is callerCls: self:findClass(name: self:currentClassName);
 				local String is callerNs: callerCls:namespaceJoined();
-				Conditional:if(check: { callerNs != 'base:sys' }, then: {
-					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers; call the base:sys wrapper instead (call from \'' . callerNs . '\').');
+				# The sysinternal discipline: the floor is reachable from
+				# the base:sys wrappers, and from the SAME-NAME wrapper in
+				# any base package (base:iterator:Loops wraps
+				# base:sysinternal:Loops, as base:sys:Conditional wraps
+				# base:sysinternal:Conditional).
+				local Array of String is floorParts: qJoined:split(delimiter: ':');
+				local String is floorName: floorParts:get(index: floorParts:length() - 1);
+				local Boolean is sameNameWrapper: callerCls:name == floorName && callerNs:startsWith(prefix: 'base:');
+				Conditional:if(check: { callerNs != 'base:sys' && !sameNameWrapper }, then: {
+					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers or the same-name base package wrapper; call the wrapper instead (call from \'' . callerNs . '\').');
 				});
 				res: self:lookupMethodReturnType(className: qJoined, methodName: method);
 				expr:resolvedType: res;
