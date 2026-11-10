@@ -159,6 +159,15 @@ assert_compile_failure "held-members-walls" \
 	"is local to class 'N30HeldWalls' and cannot be accessed from 'N30HeldProbe'" \
 	"requires an initializer"
 
+assert_compile_failure "held-function-walls" \
+	"$ROOT/tests/negative/n31_held_functions_negative_test.spec" \
+	"is class-scoped: call it through the class name, not an instance" \
+	"must be called; bare references to held functions are not supported" \
+	"cannot be a root-contract member" \
+	"held functions do not overload" \
+	"A held member body has no instance: 'self' is not available" \
+	"use self (§2.2)"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"

@@ -78,6 +78,16 @@ Class is CodeGenerator{
 	## lookupHeldFieldType (call dispatch and casts infer through it).
 	local Map of String to String is heldFieldTypes: Map:init();
 
+	## Held functions: key 'Class:method' -> the OWNING class name, the
+	## same lattice fold as heldFields (nearest declaration wins). The
+	## call site emits the owner's _held_ symbol; the definitions are
+	## receiver-free C functions.
+	local Map of String to String is heldMethods: Map:init();
+
+	## True while generateMethod emits a HELD function: no self
+	## parameter, the _held_ symbol infix, no vtable involvement.
+	local Boolean is emittingHeld: false;
+
 	## Copies a string-keyed registry map for a worker gen.
 	##
 	## @param source: The map to copy.
@@ -266,7 +276,9 @@ Class is CodeGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
 				c:members:each(action: local Function(Member is m){
-					Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
+					# Held functions (PLAN-ENUM Stage 1) are receiver-free:
+					# they take no vtable slot and never dispatch dynamically.
+					Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) }, then: {
 						Conditional:if(check: { self:methodSlots:has(key: m:name) }, then: {
 							self:overriddenMethods:set(key: m:name, value: 'true');
 						}, else: {
@@ -299,6 +311,7 @@ Class is CodeGenerator{
 		self:allTaggedEnums: Map:init();
 		self:heldFields: Map:init();
 		self:heldFieldTypes: Map:init();
+		self:heldMethods: Map:init();
 		flattened:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:name, value: 'true');
 			# the nested classes register under
@@ -349,6 +362,9 @@ Class is CodeGenerator{
 				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
 					self:heldFields:set(key: c:name . ':' . m:name, value: c:name);
 					self:heldFieldTypes:set(key: c:name . ':' . m:name, value: self:formatTypeString(t: m:memberType));
+				});
+				Conditional:if(check: { m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, then: {
+					self:heldMethods:set(key: c:name . ':' . m:name, value: c:name);
 				});
 			});
 		});
@@ -653,7 +669,9 @@ Class is CodeGenerator{
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
+			# Instance dispatch is held-blind (PLAN-ENUM Stage 1): the
+			# class-name prefix reaches exactly the held members.
+			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName && !m:hasModifier(kw: Keyword:HELD) }, then: {
 				acc:add(item: m);
 			});
 		});
@@ -2425,6 +2443,27 @@ Class is CodeGenerator{
 			Conditional:if(check: { tgtCls:name != '' }, then: {
 				targetSym: self:utils:cIdent(name: tgtCls:qualifiedName());
 			});
+			# Held functions (PLAN-ENUM Stage 1): the class-name prefix
+			# dispatches the class-scoped function — a direct C call with
+			# no receiver, no vtable. The registry folds the lattice, so a
+			# subclass name reaches the inherited held function.
+			local String is heldOwner: self:heldMethods:getString(key: targetC . ':' . expr:methodName, default: '');
+			Conditional:if(check: { heldOwner != '' && expr:methodName != 'init' }, then: {
+				local Member is heldFn: self:heldMethodMemberOf(ownerName: heldOwner, methodName: expr:methodName);
+				local String is heldOwnerSym: self:utils:cIdent(name: heldOwner);
+				local ClassInfo is heldOwnerCls: self:findClass(name: heldOwner);
+				Conditional:if(check: { heldOwnerCls:name == heldOwner }, then: {
+					heldOwnerSym: self:utils:cIdent(name: heldOwnerCls:qualifiedName());
+				});
+				local String is heldArgs: self:formatCallArgumentsForMember(m: heldFn, className: heldOwner, args: expr:methodArgs);
+				# The argument list is joined with leading ', ' — the
+				# separator after an instance call's self parameter. The
+				# held form has no self: strip it.
+				Conditional:if(check: { heldArgs:startsWith(prefix: ', ') }, then: {
+					heldArgs: heldArgs:substring(start: 2, end: heldArgs:length());
+				});
+				return heldOwnerSym . '_held_' . self:utils:cIdent(name: expr:methodName) . '(' . heldArgs . ')';
+			});
 			local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: expr:methodName, idx: expr:num);
 			local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: expr:methodName, idx: expr:num);
 			local String is symOwner: ownerName;
@@ -2878,11 +2917,51 @@ Class is CodeGenerator{
 	## @param idx: The stamped overload index.
 	## @param args: The call's arguments.
 	## @return: The C argument list.
+	## Finds a held function's member node by its owning class and name
+	## (the heldMethods registry stores the owner; the AST holds the
+	## signature).
+	##
+	## @param ownerName: The declaring class name.
+	## @param methodName: The held function name.
+	## @return: The member, or an empty-named one when absent.
+	Function of Member is heldMethodMemberOf(String is ownerName, String is methodName){
+		local ClassInfo is cls: self:findClass(name: ownerName);
+		local Member is res: Member:init(kind: MemberKind:METHOD);
+		Conditional:if(check: { cls:name == ownerName }, then: {
+			cls:members:each(action: local Function(Member is m){
+				Conditional:if(check: { res:name == '' && m:kind == MemberKind:METHOD && m:name == methodName && m:hasModifier(kw: Keyword:HELD) }, then: {
+					res: m;
+				});
+			});
+		});
+		return res;
+	}
+
 	Function of String is formatCallArgumentsWith(String is className, String is methodName, Int is idx, Array of NamedArg is args){
 		local Member is m: self:lookupOverloadedMemberGen(className: className, methodName: methodName, idx: idx);
 		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
 			m: self:lookupMethodMember(className: className, methodName: methodName);
 		});
+		Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
+			return self:formatCallArgumentsForMember(m: m, className: className, args: args);
+		});
+		local String is joined: '';
+		args:each(action: local Function(NamedArg is a){
+			joined: joined . ', ' . self:generateExpression(expr: a:value);
+		});
+		return joined;
+	}
+
+	## Formats call arguments against an explicit signature member —
+	## named arguments match by parameter name, positional by index,
+	## defaults fill the rest. Shared by the instance and the held
+	## dispatch paths (PLAN-ENUM Stage 1).
+	##
+	## @param m: The signature member.
+	## @param className: The declaring class (its type params ground to void*).
+	## @param args: The call's named arguments.
+	## @return: The joined C argument list (leading comma included).
+	Function of String is formatCallArgumentsForMember(Member is m, String is className, Array of NamedArg is args){
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
@@ -3474,9 +3553,22 @@ Class is CodeGenerator{
 		# IV.2c: the method's own identity drives its symbol — a bare
 		# inner-class name would first-match whichever same-named class
 		# registered first; classDef IS the declaring class.
-		local String is header: retType . ' ' . self:overloadSymbol(className: classDef:qualifiedName(), methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
+		local String is header: '';
+		Conditional:if(check: { self:emittingHeld }, then: {
+			# Held function (PLAN-ENUM Stage 1): receiver-free — no self
+			# parameter, the _held_ symbol infix, direct C linkage.
+			header: retType . ' ' . self:utils:cIdent(name: classDef:qualifiedName()) . '_held_' . self:utils:cIdent(name: method:name) . '(';
+		}, else: {
+			header: retType . ' ' . self:overloadSymbol(className: classDef:qualifiedName(), methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
+		});
+		local Boolean is firstParam: self:emittingHeld;
 		method:params:each(action: local Function(Parameter is p){
-			header: header . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
+			Conditional:if(check: { firstParam }, then: {
+				header: header . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
+				firstParam: false;
+			}, else: {
+				header: header . ', ' . self:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
+			});
 		});
 		header: header . ") {\n";
 
@@ -3552,7 +3644,10 @@ Class is CodeGenerator{
 		# Unused-parameter suppressions: the (void) cast is legal on used
 		# params too, and substring use-checks false-positive on names
 		# appearing inside string literals. Emit for every param always.
-		local String is suppressions: "    (void)self;\n";
+		local String is suppressions: '';
+		Conditional:if(check: { !self:emittingHeld }, then: {
+			suppressions: "    (void)self;\n";
+		});
 		method:params:each(action: local Function(Parameter is p){
 			suppressions: suppressions . '    (void)' . self:utils:cIdent(name: p:name) . ";\n";
 		});
@@ -3828,6 +3923,7 @@ Class is CodeGenerator{
 			wg:allTaggedEnums: self:copyRegistryMap(source: self:allTaggedEnums);
 			wg:heldFields: self:copyRegistryMap(source: self:heldFields);
 			wg:heldFieldTypes: self:copyRegistryMap(source: self:heldFieldTypes);
+			wg:heldMethods: self:copyRegistryMap(source: self:heldMethods);
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;
@@ -3878,7 +3974,12 @@ Class is CodeGenerator{
 										Conditional:if(check: { m:name == 'init' }, then: {
 											hasInit: true;
 										});
+										# Held functions (PLAN-ENUM Stage 1): the
+										# receiver-free definition — same body pipeline,
+										# no self parameter, the _held_ symbol.
+										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
 										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
+										wg:emittingHeld: false;
 									});
 								}
 								else: {}

@@ -422,35 +422,51 @@ Class is DeclarationGenerator{
 				local Array of String is tps: c:typeParams;
 				c:members:each(action: local Function(Member is m){
 					when (m:kind) {
-						is MemberKind:METHOD: {
-							Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
-								local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
-								Conditional:if(check: { retType == 'void' }, then: {
-									Conditional:if(check: { m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() }, then: {
-										retType: 'bool';
-									});
+					is MemberKind:METHOD: {
+						Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
+							local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
+							Conditional:if(check: { retType == 'void' }, then: {
+								Conditional:if(check: { m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() }, then: {
+									retType: 'bool';
 								});
-								local Int is ovIdx: 0;
-								local Int is ovHit: 0;
-								c:members:each(action: local Function(Member is g){
-									Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
-										Conditional:if(check: { g == m }, then: {
-											ovHit: ovIdx;
-										});
-										ovIdx: ovIdx + 1;
-									});
-								});
-								local String is symName: self:utils:cIdent(name: c:qualifiedName()) . '_' . m:name;
-								Conditional:if(check: { ovHit > 0 }, then: {
-									symName: symName . '_' . (ovHit + 1) . '';
-								});
-								Buf:bufAppendBuf(dst: out, src: retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps) . ' self');
+							});
+							# Held functions (PLAN-ENUM Stage 1): receiver-free
+							# prototypes with the _held_ symbol infix.
+							Conditional:if(check: { m:hasModifier(kw: Keyword:HELD) }, then: {
+								Buf:bufAppendBuf(dst: out, src: retType . ' ' . self:utils:cIdent(name: c:qualifiedName()) . '_held_' . self:utils:cIdent(name: m:name) . '(');
+								local Boolean is heldFirst: true;
 								m:params:each(action: local Function(Parameter is p){
-									Buf:bufAppendBuf(dst: out, src: ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
+									Conditional:if(check: { heldFirst }, then: {
+										Buf:bufAppendBuf(dst: out, src: self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
+										heldFirst: false;
+									}, else: {
+										Buf:bufAppendBuf(dst: out, src: ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
+									});
 								});
 								Buf:bufAppendBuf(dst: out, src: ");\n");
+								return;
 							});
-						}
+							local Int is ovIdx: 0;
+							local Int is ovHit: 0;
+							c:members:each(action: local Function(Member is g){
+								Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+									Conditional:if(check: { g == m }, then: {
+										ovHit: ovIdx;
+									});
+									ovIdx: ovIdx + 1;
+								});
+							});
+							local String is symName: self:utils:cIdent(name: c:qualifiedName()) . '_' . m:name;
+							Conditional:if(check: { ovHit > 0 }, then: {
+								symName: symName . '_' . (ovHit + 1) . '';
+							});
+							Buf:bufAppendBuf(dst: out, src: retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps) . ' self');
+							m:params:each(action: local Function(Parameter is p){
+								Buf:bufAppendBuf(dst: out, src: ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
+							});
+							Buf:bufAppendBuf(dst: out, src: ");\n");
+						});
+					}
 						else: {}
 					}
 				});

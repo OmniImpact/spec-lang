@@ -92,6 +92,12 @@ Class is TypeChecker{
 	## once-guards (PLAN-ENUM Stage 1).
 	local Boolean is inHeldInit: false;
 
+	## Whether a held function's body is being checked: the same
+	## no-instance rule as held initializers, but same-class held
+	## references are fine (the call triggers the other member's lazy
+	## construction on demand — no deadlock).
+	local Boolean is inHeldFunction: false;
+
 	## Name of the method being checked (forward resolution).
 	local String is currentMethodName: '';
 
@@ -445,6 +451,8 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
+		# Instance lookups are held-blind (PLAN-ENUM Stage 1).
+		ml:setSkipHeld(v: true);
 		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			return ml:res;
@@ -553,6 +561,8 @@ Class is TypeChecker{
 			return '';
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
+		# Instance lookups are held-blind (PLAN-ENUM Stage 1).
+		ml:setSkipHeld(v: true);
 		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
 			local Member is foundM: ml:res;
@@ -589,14 +599,43 @@ Class is TypeChecker{
 			return;
 		});
 		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:num);
+		local String is sigDisplay: baseClassName;
+		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
+			# No instance method (PLAN-ENUM Stage 1): the receiver shape
+			# may still reach a held function — a bare class-name root,
+			# never self or an instance-typed name.
+			Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:IDENT || callExpr:methodTarget:kind == ExpressionKind:PATH }, then: {
+				local String is sigRoot: callExpr:methodTarget:str;
+				Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:PATH && callExpr:methodTarget:pathSegments:length() > 0 }, then: {
+					sigRoot: callExpr:methodTarget:pathSegments:get(index: 0);
+				});
+				Conditional:if(check: { sigRoot != '' && sigRoot != self:names:selfIdent() && !self:localVars:has(key: sigRoot) && !self:fieldTypes:has(key: sigRoot) && self:registeredClasses:has(key: sigRoot) }, then: {
+					m: self:findHeldMethod(className: sigRoot, methodName: callExpr:methodName);
+					Conditional:if(check: { m:name != '' }, then: {
+						sigDisplay: sigRoot;
+					});
+				});
+			});
+		});
 		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
 			return;
 		});
-		local Array of Parameter is params: m:params;
+		self:validateArgsAgainstSignature(callExpr: callExpr, params: m:params, recvCls: self:findClass(name: baseClassName), displayTarget: sigDisplay);
+	}
+
+	## Validates a call's arguments against an explicit parameter list:
+	## named arguments match by parameter name, positional by index,
+	## defaults fill the rest. Shared by the instance and the held
+	## dispatch paths (PLAN-ENUM Stage 1).
+	##
+	## @param callExpr: The CALL expression.
+	## @param params: The signature's parameters.
+	## @param recvCls: The declaring class (its type params are exempt).
+	## @param displayTarget: The display spelling for diagnostics.
+	Function is validateArgsAgainstSignature(Expression is callExpr, Array of Parameter is params, ClassInfo is recvCls, String is displayTarget){
 		Conditional:if(check: { params:length() == 0 }, then: {
 			return;
 		});
-		local ClassInfo is recvCls: self:findClass(name: baseClassName);
 		local Array of String is recvTypeParams: recvCls:typeParams;
 		local Int is pIdx: 0;
 		params:each(action: local Function(Parameter is p){
@@ -633,7 +672,7 @@ Class is TypeChecker{
 					local String is argT: matchedValue:resolvedType;
 					Conditional:if(check: { argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pTF, source: argT) }, then: {
 						local String is label: Conditional:if(check: { pName != '' }, then: { pName }, else: { 'position ' . (pIdx + 1) });
-						local String is msg: 'Argument \'' . label . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . self:displayType(t: pTF) . '\'.';
+						local String is msg: 'Argument \'' . label . '\' for \'' . displayTarget . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . self:displayType(t: pTF) . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				}, else: {
@@ -641,7 +680,7 @@ Class is TypeChecker{
 						# Binding declarations (sysinternal + runtime-managed)
 						# sketch API surface, not call contracts — their C
 						# implementations carry optional/variadic semantics.
-						local String is msg: 'Missing argument \'' . pName . '\' for \'' . baseClassName . '.' . callExpr:methodName . '\'.';
+						local String is msg: 'Missing argument \'' . pName . '\' for \'' . displayTarget . '.' . callExpr:methodName . '\'.';
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				});
@@ -889,7 +928,9 @@ Class is TypeChecker{
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName }, then: {
+			# Instance overloads are held-blind (PLAN-ENUM Stage 1): the
+			# class-name prefix reaches exactly the held members.
+			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName && !m:hasModifier(kw: Keyword:HELD) }, then: {
 				acc:add(item: m);
 			});
 		});
@@ -1893,9 +1934,9 @@ Class is TypeChecker{
 			is ExpressionKind:IDENT: {
 				local String is name: expr:str;
 				Conditional:if(check: { name == self:names:selfIdent() }, then: {
-					# A held initializer has no instance (PLAN-ENUM Stage 1).
-					Conditional:if(check: { self:inHeldInit }, then: {
-						self:addError(line: self:currentLine, msg: 'A held initializer has no instance: \'self\' is not available.');
+					# A held member body has no instance (PLAN-ENUM Stage 1).
+					Conditional:if(check: { self:inHeldInit || self:inHeldFunction }, then: {
+						self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'self\' is not available.');
 					});
 					res: self:currentClassName;
 				}, else: {
@@ -1946,9 +1987,9 @@ Class is TypeChecker{
 					# PathResolveLoop then consumes it via lookupHeldFieldType.
 					local Boolean is heldAdmitted: false;
 					Conditional:if(check: { root == self:names:selfIdent() }, then: {
-						# A held initializer has no instance (PLAN-ENUM Stage 1).
-						Conditional:if(check: { self:inHeldInit }, then: {
-							self:addError(line: self:currentLine, msg: 'A held initializer has no instance: \'self\' is not available.');
+						# A held member body has no instance (PLAN-ENUM Stage 1).
+						Conditional:if(check: { self:inHeldInit || self:inHeldFunction }, then: {
+							self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'self\' is not available.');
 						});
 						rootType: self:currentClassName;
 						Conditional:if(check: { segs:length() >= 2 && self:unassignedFields:has(key: segs:get(index: 1)) }, then: {
@@ -2044,8 +2085,8 @@ Class is TypeChecker{
 											self:checkMemberVisibility(ownerClass: heldOwner, member: heldM, memberName: heldM:name);
 											heldAdmitted: true;
 										}, else: {
-											Conditional:if(check: { heldM:name != '' }, then: {
-												self:addError(line: self:currentLine, msg: 'Held function \'' . root . ':' . heldM:name . '\' is not yet supported (PLAN-ENUM Stage 2); held members are fields in this stage.');
+											Conditional:if(check: { self:findHeldMethod(className: root, methodName: segs:get(index: 1)):name != '' }, then: {
+												self:addError(line: self:currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
 												rootType: '';
 											}, else: {
 												Conditional:if(check: { segs:length() >= 2 && !chainResolved && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
@@ -2478,6 +2519,12 @@ Class is TypeChecker{
 		});
 		Conditional:if(check: { recvName != '' && expr:methodName != 'init' }, then: {
 			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl';
+			# Held functions (PLAN-ENUM Stage 1): the class-name prefix IS
+			# their dispatch — the call is type-level by design, inside
+			# the class and out.
+			Conditional:if(check: { self:findHeldMethod(className: recvName, methodName: expr:methodName):name != '' }, then: {
+				isTypeLevel: true;
+			});
 			Conditional:if(check: { !isTypeLevel }, then: {
 				Conditional:if(check: { !self:isAsImportedInherited(className: recvName) }, then: {
 					Conditional:if(check: { recvName == self:currentClassName }, then: {
@@ -2751,10 +2798,41 @@ Class is TypeChecker{
 
 		Conditional:if(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
 			targetType: self:currentClassName;
-			# A held initializer has no instance: implicit-self and self
+			# A held member body has no instance: implicit-self and self
 			# calls are not available from it (PLAN-ENUM Stage 1).
-			Conditional:if(check: { self:inHeldInit }, then: {
-				self:addError(line: self:currentLine, msg: 'A held initializer has no instance: \'' . method . '\' cannot be called on \'self\' from it.');
+			Conditional:if(check: { self:inHeldInit || self:inHeldFunction }, then: {
+				self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'' . method . '\' cannot be called on \'self\' from it.');
+			});
+		});
+
+		# Held functions (PLAN-ENUM Stage 1): a bare class-name target
+		# with a held member dispatches the class-scoped call — a
+		# receiver-free C function, no vtable.
+		local Member is heldCallFn: Member:init(kind: MemberKind:METHOD);
+		local String is heldRoot: '';
+		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH }, then: {
+			heldRoot: expr:methodTarget:str;
+			Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, then: {
+				heldRoot: expr:methodTarget:pathSegments:get(index: 0);
+			});
+			Conditional:if(check: { heldRoot != '' && heldRoot != self:names:selfIdent() && !self:localVars:has(key: heldRoot) && !self:fieldTypes:has(key: heldRoot) && self:registeredClasses:has(key: heldRoot) }, then: {
+				Conditional:if(check: { method != 'init' }, then: {
+					heldCallFn: self:findHeldMethod(className: heldRoot, methodName: method);
+				});
+			});
+		});
+		Conditional:if(check: { heldCallFn:name != '' }, then: {
+			self:checkMemberVisibility(ownerClass: self:findHeldMethodOwner(className: heldRoot, methodName: method), member: heldCallFn, memberName: method);
+			local String is heldRet: self:resolveReturnType(t: heldCallFn:memberType);
+			expr:resolvedType: heldRet;
+			return heldRet;
+		});
+		# Strict held resolution (PLAN-ENUM Stage 1): an instance
+		# receiver never reaches a held function.
+		Conditional:if(check: { targetType != '' && targetType != Primitive:ANY:value() && !self:allEnumNames:has(key: targetType) && heldCallFn:name == '' }, then: {
+			local String is iBase: targetType:split(delimiter: ':'):get(index: 0);
+			Conditional:if(check: { self:registeredClasses:has(key: iBase) && self:lookupMethodReturnType(className: iBase, methodName: method) == '' && self:findHeldMethod(className: iBase, methodName: method):name != '' }, then: {
+				self:addError(line: self:currentLine, msg: 'Held function \'' . iBase . ':' . method . '\' is class-scoped: call it through the class name, not an instance.');
 			});
 		});
 
@@ -3627,7 +3705,7 @@ Class is TypeChecker{
 	}
 
 	## Finds the nearest class (self, then ancestors) declaring a HELD
-	## member with the name (PLAN-ENUM Stage 1). The class-name prefix
+	## FIELD with the name (PLAN-ENUM Stage 1). The class-name prefix
 	## reaches exactly these members.
 	##
 	## @param className: Starting class whose bases are searched.
@@ -3643,7 +3721,7 @@ Class is TypeChecker{
 		});
 		local String is owner: '';
 		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { owner == '' && m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, then: {
+			Conditional:if(check: { owner == '' && m:name == memberName && m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
 				owner: cls:name;
 			});
 		});
@@ -3658,7 +3736,7 @@ Class is TypeChecker{
 		return owner;
 	}
 
-	## Finds the nearest HELD member declaration (own, then ancestors).
+	## Finds the nearest HELD FIELD declaration (own, then ancestors).
 	##
 	## @param className: Starting class whose bases are searched.
 	## @param memberName: Member name to locate.
@@ -3671,11 +3749,72 @@ Class is TypeChecker{
 		local ClassInfo is cls: self:findClass(name: owner);
 		local Member is res: Member:init(kind: MemberKind:FIELD);
 		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { res:name == '' && m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, then: {
+			Conditional:if(check: { res:name == '' && m:name == memberName && m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
 				res: m;
 			});
 		});
 		return res;
+	}
+
+	## Finds the nearest HELD FUNCTION declaration (own, then ancestors).
+	##
+	## @param className: Starting class whose bases are searched.
+	## @param methodName: Held function name to locate.
+	## @return: The member, or an empty-named one when absent.
+	Function of Member is findHeldMethod(String is className, String is methodName){
+		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
+			return Member:init(kind: MemberKind:METHOD);
+		});
+		local ClassInfo is cls: self:findClass(name: className);
+		Conditional:if(check: { cls:name == '' }, then: {
+			return Member:init(kind: MemberKind:METHOD);
+		});
+		local Member is res: Member:init(kind: MemberKind:METHOD);
+		cls:members:each(action: local Function(Member is m){
+			Conditional:if(check: { res:name == '' && m:name == methodName && m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, then: {
+				res: m;
+			});
+		});
+		Conditional:if(check: { res:name != '' }, then: {
+			return res;
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			Conditional:if(check: { res:name == '' }, then: {
+				res: self:findHeldMethod(className: baseName, methodName: methodName);
+			});
+		});
+		return res;
+	}
+
+	## Finds the nearest class declaring a HELD FUNCTION with the name
+	## (nearest declaration wins).
+	##
+	## @param className: Starting class whose bases are searched.
+	## @param methodName: Held function name to locate.
+	## @return: The declaring class\'s name, or '' when absent.
+	Function of String is findHeldMethodOwner(String is className, String is methodName){
+		Conditional:if(check: { className == '' || className == Primitive:ANY:value() }, then: {
+			return '';
+		});
+		local ClassInfo is cls: self:findClass(name: className);
+		Conditional:if(check: { cls:name == '' }, then: {
+			return '';
+		});
+		local String is owner: '';
+		cls:members:each(action: local Function(Member is m){
+			Conditional:if(check: { owner == '' && m:name == methodName && m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, then: {
+				owner: cls:name;
+			});
+		});
+		Conditional:if(check: { owner != '' }, then: {
+			return owner;
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			Conditional:if(check: { owner == '' }, then: {
+				owner: self:findHeldMethodOwner(className: baseName, methodName: methodName);
+			});
+		});
+		return owner;
 	}
 
 	## Looks up a held field's static type through the class lattice.
@@ -3789,7 +3928,22 @@ Class is TypeChecker{
 				return;
 			});
 			Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
-				self:addError(line: m:line, msg: '\'held\' functions are not yet supported: member \'' . m:name . '\' in class \'' . classDef:name . '\' declares one (PLAN-ENUM Stage 2).');
+				# Held functions: class-scoped, receiver-free. They are not
+				# root-contract members (no vtable involvement) and do not
+				# overload — one name, one signature, one symbol.
+				Conditional:if(check: { m:name == ContractMethod:INIT:value() || m:name == ContractMethod:EVALUATE:value() || m:name == ContractMethod:ITERATION:value() || m:name == ContractMethod:TO_STRING:value() }, then: {
+					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be a root-contract member; held functions take no receiver and never dispatch dynamically.');
+					return;
+				});
+				local Boolean is dupHeld: false;
+				classDef:members:each(action: local Function(Member is g){
+					Conditional:if(check: { g != m && g:kind == MemberKind:METHOD && g:name == m:name && g:hasModifier(kw: Keyword:HELD) }, then: {
+						dupHeld: true;
+					});
+				});
+				Conditional:if(check: { dupHeld }, then: {
+					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' in class \'' . classDef:name . '\' is declared more than once; held functions do not overload.');
+				});
 				return;
 			});
 			Conditional:if(check: { !m:hasInit }, then: {
@@ -4105,13 +4259,24 @@ Class is TypeChecker{
 				is MemberKind:METHOD: {
 					self:unassignedFields: Map:init();
 					Conditional:if(check: { m:name == ContractMethod:INIT:value() }, then: {
-					classDef:members:each(action: local Function(Member is fm){
-						Conditional:if(check: { fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != ContractMethod:USING:value() && !fm:hasModifier(kw: Keyword:HELD) }, then: {
-							self:unassignedFields:set(key: fm:name, value: 'true');
+						classDef:members:each(action: local Function(Member is fm){
+							Conditional:if(check: { fm:kind == MemberKind:FIELD && !fm:hasInit && fm:name != ContractMethod:USING:value() && !fm:hasModifier(kw: Keyword:HELD) }, then: {
+								self:unassignedFields:set(key: fm:name, value: 'true');
+							});
 						});
 					});
+					# Held functions (PLAN-ENUM Stage 1): no instance context
+					# — fieldTypes cleared, so bare instance-field names do
+					# not resolve; the no-instance checks reject self.
+					local Boolean is savedHeldFn: self:inHeldFunction;
+					local Map of String to String is savedFnFields: self:fieldTypes;
+					Conditional:if(check: { m:hasModifier(kw: Keyword:HELD) }, then: {
+						self:inHeldFunction: true;
+						self:fieldTypes: Map:init();
 					});
 					self:checkMethod(method: m);
+					self:inHeldFunction: savedHeldFn;
+					self:fieldTypes: savedFnFields;
 					self:unassignedFields: Map:init();
 				}
 				is MemberKind:CLASS: {
