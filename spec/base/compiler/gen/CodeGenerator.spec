@@ -279,7 +279,7 @@ Class is CodeGenerator{
 		self:methodSlotCount: 0;
 		self:slotNames: [];
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				c:members:each(action: local Function(Member is m){
 					# Held functions (PLAN-ENUM Stage 1) are receiver-free:
 					# they take no vtable slot and never dispatch dynamically.
@@ -328,7 +328,7 @@ Class is CodeGenerator{
 				self:allClassNames:set(key: c:qualifiedName(), value: 'true');
 				self:allClassNames:set(key: self:utils:cIdent(name: c:qualifiedName()), value: 'true');
 			});
-			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
+			Conditional:if(check: { c:baseClass == self:names:enumHeader() && !self:policy:isClassModelEnum(c: c) }, then: {
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
 					# The namespace declaration is metadata, not a variant.
@@ -2401,6 +2401,27 @@ Class is CodeGenerator{
 				});
 			});
 
+		# Cases:match (PLAN-ENUM Stage 3): the arm table lowers into a
+		# comparison chain — identity for class-typed held members,
+		# spec_string_equals for String, == for the numeric primitives —
+		# with the arm closures inlined as statement blocks (no
+		# per-arm closure allocation, the generateInlineBranch protocol).
+		Conditional:if(check: { expr:methodName == 'match' && (expr:bareProvider == 'Cases' || targetType == 'Cases') }, then: {
+			local Expression is matchSubjC: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is matchArmsC: Expression:init(kind: ExpressionKind:UNKNOWN);
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				Conditional:if(check: { arg:name == 'on' }, then: {
+					matchSubjC: arg:value;
+				});
+				Conditional:if(check: { arg:name == 'arms' }, then: {
+					matchArmsC: arg:value;
+				});
+			});
+			Conditional:if(check: { matchSubjC:kind != ExpressionKind:UNKNOWN && matchArmsC:kind == ExpressionKind:MAP }, then: {
+				return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC);
+			});
+		});
+
 		# Function variable or field invocation: fnVar(args).
 		Conditional:if(check: { targetC == self:names:selfIdent() && (self:localVars:has(key: expr:methodName) || self:fieldTypes:has(key: expr:methodName)) }, then: {
 			local String is fnVarT: self:localVars:getString(key: expr:methodName, default: self:fieldTypes:getString(key: expr:methodName, default: ''));
@@ -4124,7 +4145,7 @@ Class is CodeGenerator{
 								else: {}
 							}
 						});
-						Conditional:if(check: { !hasInit && !wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader() }, then: {
+						Conditional:if(check: { !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, then: {
 							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
 						});
 						# FUNCTIONS.md Part VI: the default toString lives on
@@ -4207,7 +4228,7 @@ Class is CodeGenerator{
 		out: out . "    if (strcmp(actual, target) == 0) return true;\n";
 		out: out . "    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n";
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local Array of String is ancestors: [];
 				self:collectAncestors(c: c, allClasses: classes, acc: ancestors);
 				Conditional:if(check: { ancestors:length() > 0 }, then: {
@@ -4239,7 +4260,7 @@ Class is CodeGenerator{
 			return out;
 		});
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				Buf:bufAppendBuf(dst: out, src: 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n");
 				local Int is slot: 0;
@@ -4277,7 +4298,7 @@ Class is CodeGenerator{
 		local String is out: "/* Constructor Implementations */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				self:currentClassName: c:name;
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				self:fieldTypes: Map:init();
@@ -4736,6 +4757,146 @@ Class is CodeGenerator{
 		});
 		bodyC: bodyC . self:scopeReleases(stmts: anonFn:anonBody);
 		return bodyC;
+	}
+
+	## Lowers a Cases:match arm table into an if/else-if comparison
+	## chain (PLAN-ENUM Stage 3). Value-form matches emit as a
+	## statement-expression with a yield variable (the
+	## generateInlineBranch protocol); statement forms emit the bare
+	## chain. Key comparisons shape by the held member's type: identity
+	## for class-typed members (the once-guard singletons make pointer
+	## equality THE identity), spec_string_equals for String, == for
+	## the numeric primitives. The held slots are process-immortal, so
+	## the accessors' +1 references need no claim/release here.
+	##
+	## @param callExpr: The match call (carries the stamped yield type).
+	## @param subjArg: The `on:` subject expression.
+	## @param armsArg: The literal arm table (a MAP expression).
+	## @return: C expression/statement text.
+	Function of String is generateMatch(Expression is callExpr, Expression is subjArg, Expression is armsArg){
+		local String is savedVar: self:inlineReturnVar;
+		local String is savedLbl: self:inlineReturnLabel;
+		local Boolean is savedArg: self:argMode;
+		self:argMode: false;
+		local String is subjC: self:generateExpression(expr: subjArg);
+		local String is subjT: self:inferTargetType(expr: subjArg);
+		Conditional:if(check: { subjT:contains(needle: ' of ') }, then: {
+			subjT: subjT:substring(start: 0, end: subjT:indexOf(search: ' of ', default: 0));
+		});
+		Conditional:if(check: { subjT:contains(needle: ':') }, then: {
+			subjT: subjT:split(delimiter: ':'):get(index: 0);
+		});
+		local String is resT: callExpr:resolvedType;
+		local Boolean is valueForm: resT != '' && resT != 'void' && resT != 'Void';
+		local String is out: '';
+		Conditional:if(check: { valueForm }, then: {
+			self:anonCounter: self:anonCounter + 1;
+			out: '({ ' . self:cTypeFor(typeName: resT) . ' _mt_' . (self:anonCounter as String) . ";\n";
+		});
+		local Int is keyTotal: armsArg:mapKeys:length();
+		local Int is ki: 0;
+		local Boolean is firstCond: true;
+		while(
+			evaluate: local Function of Boolean(){ return ki < keyTotal; },
+			iteration: local Function of Boolean(){
+				local Expression is key: armsArg:mapKeys:get(index: ki);
+				local Expression is val: armsArg:mapValues:get(index: ki);
+				ki: ki + 1;
+				local Boolean is elseArm: key:kind == ExpressionKind:IDENT && key:str == 'else';
+				Conditional:if(check: { !elseArm }, then: {
+					local String is condC: self:matchCondC(subjT: subjT, subjC: subjC, key: key);
+					Conditional:if(check: { firstCond }, then: {
+						out: out . 'if (' . condC . ") {\n";
+						firstCond: false;
+					}, else: {
+						out: out . '} else if (' . condC . ") {\n";
+					});
+				}, else: {
+					Conditional:if(check: { firstCond }, then: {
+						out: out . "if (1) {\n";
+						firstCond: false;
+					}, else: {
+						out: out . "} else {\n";
+					});
+				});
+				Conditional:if(check: { valueForm }, then: {
+					out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: '_mt_' . (self:anonCounter as String), yieldT: resT) . "\t";
+				}, else: {
+					out: out . self:inlineBranchBody(anonFn: val) . "\t";
+				});
+				return true;
+			}
+		);
+		Conditional:if(check: { !firstCond }, then: {
+			out: out . "}\n";
+		});
+		Conditional:if(check: { valueForm }, then: {
+			out: out . '_mt_' . (self:anonCounter as String) . "; })";
+		});
+		self:inlineReturnVar: savedVar;
+		self:inlineReturnLabel: savedLbl;
+		self:argMode: savedArg;
+		return out;
+	}
+
+	## Builds one match arm's comparison C (an array key ORs its
+	## elements). Bare keys resolve against the subject class; a
+	## qualified key resolves against its own root.
+	##
+	## @param subjT: The subject's base class name.
+	## @param subjC: The subject's C expression.
+	## @param key: The key expression.
+	## @return: C boolean expression.
+	Function of String is matchCondC(String is subjT, String is subjC, Expression is key){
+		local Array of Expression is keyTargets: [];
+		Conditional:if(check: { key:kind == ExpressionKind:ARRAY }, then: {
+			keyTargets: key:arrayItems;
+		}, else: {
+			keyTargets: [key];
+		});
+		local String is joined: '';
+		keyTargets:each(action: local Function(Expression is one){
+			local String is keyName: '';
+			local String is lookupCls: subjT;
+			Conditional:if(check: { one:kind == ExpressionKind:IDENT }, then: {
+				keyName: one:str;
+			}, else: {
+				Conditional:if(check: { one:kind == ExpressionKind:PATH && one:pathSegments:length() >= 2 }, then: {
+					keyName: one:pathSegments:get(index: one:pathSegments:length() - 1);
+					lookupCls: one:pathSegments:get(index: 0);
+				}, else: {
+					Conditional:if(check: { one:kind == ExpressionKind:PATH && one:pathSegments:length() > 0 }, then: {
+						keyName: one:pathSegments:get(index: 0);
+					});
+				});
+			});
+			local String is owner: self:heldFields:getString(key: lookupCls . ':' . keyName, default: '');
+			Conditional:if(check: { owner == '' }, then: {
+				owner: self:heldFields:getString(key: subjT . ':' . keyName, default: '');
+			});
+			Conditional:if(check: { owner != '' }, then: {
+				local String is keyT: self:heldFieldTypes:getString(key: owner . ':' . keyName, default: '');
+				local String is accessor: self:utils:cIdent(name: owner) . '_' . self:utils:cIdent(name: keyName) . '__ensure()';
+				local String is oneC: '';
+				Conditional:if(check: { keyT == Primitive:STRING:value() }, then: {
+					oneC: 'spec_string_equals(' . subjC . ', ' . accessor . ')';
+				}, else: {
+					Conditional:if(check: { keyT == Primitive:INT:value() || keyT == Primitive:FLOAT:value() || keyT == Primitive:BOOLEAN:value() || keyT == 'Byte' }, then: {
+						oneC: '(' . subjC . ') == (' . accessor . ')';
+					}, else: {
+						oneC: '(void*)(' . subjC . ') == (void*)(' . accessor . ')';
+					});
+				});
+				Conditional:if(check: { joined != '' }, then: {
+					joined: joined . ' || ';
+				});
+				joined: joined . oneC;
+			});
+		});
+		Conditional:if(check: { joined == '' }, then: {
+			joined: '0';
+		});
+		return joined;
 	}
 
 	## anon function bodies become the loop's condition and body.

@@ -197,7 +197,7 @@ Class is DeclarationGenerator{
 		local String is out: "/* Enum Definitions */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
+			Conditional:if(check: { c:baseClass == self:names:enumHeader() && !self:policy:isClassModelEnum(c: c) }, then: {
 				local String is name: c:name;
 				# The namespace declaration is metadata inside the body —
 				# filter it out of the variant surface once, up front.
@@ -387,7 +387,7 @@ Class is DeclarationGenerator{
 		local String is out: "/* Forward Declarations */\n";
 
 			classes:each(action: local Function(ClassInfo is c){
-				Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+				Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 					local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 					# for nested classes the typedef
 					# ALIASES the bare name to the qualified struct — but only
@@ -418,7 +418,7 @@ Class is DeclarationGenerator{
 		Buf:bufAppendBuf(dst: out, src: "\n");
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { (self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local Array of String is tps: c:typeParams;
 				c:members:each(action: local Function(Member is m){
 					when (m:kind) {
@@ -485,7 +485,7 @@ Class is DeclarationGenerator{
 		local String is out: "/* Struct Layouts */\n";
 
 		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { !self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader() }, then: {
+			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local Array of String is tps: c:typeParams;
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				Buf:bufAppendBuf(dst: out, src: 'struct ' . cSym . " {\n");

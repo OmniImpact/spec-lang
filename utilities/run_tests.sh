@@ -175,6 +175,16 @@ assert_compile_failure "held-resolver-walls" \
 	"only held members are (§2.3)" \
 	"is read-only: resolution-hook values are cached single copies"
 
+assert_compile_failure "cases-match-walls" \
+	"$ROOT/tests/negative/n33_cases_match_negative_test.spec" \
+	"is not a held member of 'N33Sink'" \
+	"Duplicate match key 'file'" \
+	"Non-exhaustive match: missing held member(s) N33Mode:off" \
+	"A value-yielding match requires an else arm" \
+	"The match arms mix value-yielding and void closures" \
+	"Match arms after else are unreachable" \
+	"Match subjects are class instances"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"

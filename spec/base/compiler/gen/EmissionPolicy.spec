@@ -58,4 +58,15 @@ Class is EmissionPolicy{
 	Function of Boolean is emitsPrototypes(ClassInfo is c){
 		return !self:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map';
 	}
+
+	## True when an Enum-rooted class is CLASS-MODEL (PLAN-ENUM Stage 3):
+	## held members make the variants class instances — every today's-
+	## enum emission path must leave it alone. Delegates to the shared
+	## classification the checker reads too.
+	##
+	## @param c: The class.
+	## @return: true when Enum-rooted with held members.
+	Function of Boolean is isClassModelEnum(ClassInfo is c){
+		return self:bindings:isClassModelEnum(c: c);
+	}
 }

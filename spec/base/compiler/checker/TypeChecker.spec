@@ -584,6 +584,156 @@ Class is TypeChecker{
 		return inherited;
 	}
 
+	## Type-checks a Cases:match arm table (PLAN-ENUM Stage 3): keys
+	## resolve against the subject class's held members (an array key
+	## matches several), `else` names the fallback, and the arm closures
+	## unify into the match's type. Exhaustiveness keys on the Enum
+	## root: an Enum-rooted subject requires full coverage of its held
+	## fields or an else arm; a value-yielding match over any other
+	## class requires else (the subject may match no key).
+	##
+	## @param subj: The `on:` subject expression.
+	## @param arms: The literal arm table (a MAP expression).
+	## @return: The unified yield type, or Void.
+	Function of String is checkMatchArms(Expression is subj, Expression is arms){
+		local String is subjT: self:inferExpressionType(expr: subj);
+		# Strip container/generic spellings to the base class name.
+		Conditional:if(check: { subjT:contains(needle: ' of ') }, then: {
+			subjT: subjT:substring(start: 0, end: subjT:indexOf(search: ' of ', default: 0));
+		});
+		Conditional:if(check: { subjT:contains(needle: ':') }, then: {
+			subjT: subjT:split(delimiter: ':'):get(index: 0);
+		});
+		Conditional:if(check: { subjT == '' || subjT == Primitive:ANY:value() || !self:registeredClasses:has(key: subjT) }, then: {
+			self:addError(line: self:currentLine, msg: 'Cases:match subjects must be class-typed values; \'' . subjT . '\' cannot be matched.');
+			return 'Any';
+		});
+		# Match is identity dispatch over class instances: a
+		# primitive-typed held constant carries no association with its
+		# owner class, so it is not a match subject.
+		Conditional:if(check: { self:isPrimitive(t: subjT) }, then: {
+			self:addError(line: self:currentLine, msg: 'Match subjects are class instances; primitive-typed held constants are compared directly with == or spec_string_equals.');
+			return 'Any';
+		});
+		local Boolean is rooted: self:isSubclassOf(subName: subjT, baseName: self:names:enumHeader());
+		local Array of String is covered: [];
+		local Boolean is hasElse: false;
+		local Boolean is anyValue: false;
+		local Boolean is anyVoid: false;
+		local String is resT: '';
+		local Boolean is bad: false;
+		local Int is keyTotal: arms:mapKeys:length();
+		local Int is ki: 0;
+		while(
+			evaluate: local Function of Boolean(){ return ki < keyTotal; },
+			iteration: local Function of Boolean(){
+				local Expression is key: arms:mapKeys:get(index: ki);
+				local Expression is val: arms:mapValues:get(index: ki);
+				ki: ki + 1;
+				# The else arm closes the table: arms after it are dead.
+				Conditional:if(check: { hasElse && !(key:kind == ExpressionKind:IDENT && key:str == 'else') }, then: {
+					self:addError(line: self:currentLine, msg: 'Match arms after else are unreachable; move else last.');
+					bad: true;
+				});
+				Conditional:if(check: { key:kind == ExpressionKind:IDENT && key:str == 'else' }, then: {
+					Conditional:if(check: { hasElse }, then: {
+						self:addError(line: self:currentLine, msg: 'Duplicate else arm in the match table.');
+					});
+					hasElse: true;
+				}, else: {
+					local Array of Expression is keyTargets: [];
+					Conditional:if(check: { key:kind == ExpressionKind:ARRAY }, then: {
+						keyTargets: key:arrayItems;
+					}, else: {
+						keyTargets: [key];
+					});
+					keyTargets:each(action: local Function(Expression is one){
+						local String is keyName: '';
+						Conditional:if(check: { one:kind == ExpressionKind:IDENT }, then: {
+							keyName: one:str;
+						}, else: {
+							Conditional:if(check: { one:kind == ExpressionKind:PATH && one:pathSegments:length() > 0 }, then: {
+								keyName: one:pathSegments:get(index: one:pathSegments:length() - 1);
+							});
+						});
+						Conditional:if(check: { keyName == '' }, then: {
+							self:addError(line: self:currentLine, msg: 'Match keys must be held-member references.');
+							bad: true;
+						}, else: {
+							local String is owner: self:findHeldOwnerClass(className: subjT, memberName: keyName);
+							Conditional:if(check: { owner == '' }, then: {
+								self:addError(line: self:currentLine, msg: 'Match key \'' . keyName . '\' is not a held member of \'' . subjT . '\'.');
+								bad: true;
+							}, else: {
+								local String is target: owner . ':' . keyName;
+								Conditional:if(check: { covered:indexOf(search: target, default: -1) >= 0 }, then: {
+									self:addError(line: self:currentLine, msg: 'Duplicate match key \'' . keyName . '\'.');
+									bad: true;
+								}, else: {
+									covered:add(item: target);
+									self:checkMemberVisibility(ownerClass: owner, member: self:findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
+								});
+							});
+						});
+					});
+				});
+				Conditional:if(check: { val:kind != ExpressionKind:ANON_FN }, then: {
+					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
+					bad: true;
+				}, else: {
+					self:inferExpressionType(expr: val);
+					local String is valT: val:resolvedType;
+					Conditional:if(check: { valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, then: {
+						local String is yieldT: valT:substring(start: 9, end: valT:length());
+						Conditional:if(check: { self:isVoid(t: yieldT) }, then: {
+							anyVoid: true;
+						}, else: {
+							anyValue: true;
+							Conditional:if(check: { resT == '' }, then: {
+								resT: yieldT;
+							}, else: {
+								Conditional:if(check: { !self:isAssignable(target: resT, source: yieldT) && !self:isAssignable(target: yieldT, source: resT) }, then: {
+									self:addError(line: self:currentLine, msg: 'The match arms yield incompatible types (\'' . resT . '\' and \'' . yieldT . '\').');
+									bad: true;
+								});
+							});
+						});
+					}, else: {
+						anyVoid: true;
+					});
+				});
+				return true;
+			}
+		);
+		Conditional:if(check: { bad }, then: {
+			return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
+		});
+		Conditional:if(check: { anyValue && anyVoid }, then: {
+			self:addError(line: self:currentLine, msg: 'The match arms mix value-yielding and void closures.');
+		});
+		Conditional:if(check: { rooted }, then: {
+			local ClassInfo is subjCls: self:findClass(name: subjT);
+			local String is missing: '';
+			subjCls:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
+					Conditional:if(check: { covered:indexOf(search: subjT . ':' . m:name, default: -1) < 0 }, then: {
+						Conditional:if(check: { missing != '' }, then: {
+							missing: missing . ', ';
+						});
+						missing: missing . subjT . ':' . m:name;
+					});
+				});
+			});
+			Conditional:if(check: { missing != '' && !hasElse }, then: {
+				self:addError(line: self:currentLine, msg: 'Non-exhaustive match: missing held member(s) ' . missing . ' of \'' . subjT . '\'; add arms or an else.');
+			});
+		});
+		Conditional:if(check: { anyValue && !hasElse && !rooted }, then: {
+			self:addError(line: self:currentLine, msg: 'A value-yielding match requires an else arm (the subject may match no key).');
+		});
+		return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
+	}
+
 	## Validates call-site argument types against the resolved signature.
 	##
 	## Named arguments match by parameter name; unmatched named arguments
@@ -2574,6 +2724,32 @@ Class is TypeChecker{
 		});
 		Conditional:if(check: { recvName == '' && expr:methodName == 'init' }, then: {
 			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (E7).');
+		});
+
+		# Cases:match (PLAN-ENUM Stage 3): the arm-table recognizer —
+		# BEFORE the generic argument inference, which would type the
+		# table's keys as ordinary expressions (the else key is not one).
+		# Keys resolve against the subject's class's held members,
+		# exhaustiveness keys on the Enum root, arm closures type here.
+		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Cases' || targetType == 'Cases') }, then: {
+			local Expression is matchSubj: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is matchArms: Expression:init(kind: ExpressionKind:UNKNOWN);
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				Conditional:if(check: { arg:name == 'on' }, then: {
+					matchSubj: arg:value;
+				});
+				Conditional:if(check: { arg:name == 'arms' }, then: {
+					matchArms: arg:value;
+				});
+			});
+			Conditional:if(check: { matchSubj:kind != ExpressionKind:UNKNOWN && matchArms:kind == ExpressionKind:MAP }, then: {
+				local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms);
+				expr:resolvedType: matchRes;
+				return matchRes;
+			});
+			self:addError(line: self:currentLine, msg: 'Cases:match takes (on: <subject>, arms: [key: { body }, ...]) with a literal arm table.');
+			expr:resolvedType: Primitive:ANY:value();
+			return Primitive:ANY:value();
 		});
 
 		# §2.3/E9: bare-scope resolution for self-receiver
@@ -4582,7 +4758,7 @@ Class is TypeChecker{
 			Conditional:if(check: { c:outerName != '' }, then: {
 				self:registeredClasses:set(key: c:qualifiedName(), value: c:qualifiedName());
 			});
-			Conditional:if(check: { c:baseClass == self:names:enumHeader() }, then: {
+			Conditional:if(check: { c:baseClass == self:names:enumHeader() && !self:bindings:isClassModelEnum(c: c) }, then: {
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
 					# The namespace declaration is metadata, not a variant.

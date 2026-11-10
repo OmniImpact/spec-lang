@@ -26,6 +26,7 @@ Class is ClassBindings{
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator'],
 		['base', 'iterator', as Loops()]
 	];
@@ -77,6 +78,31 @@ Class is ClassBindings{
 	Function of Boolean is isArenaType(ClassInfo is c){
 		local String is ns: c:namespaceJoined();
 		return ns == 'base:compiler:ast';
+	}
+
+	## True when an Enum-rooted class is CLASS-MODEL (PLAN-ENUM Stage 3):
+	## it declares held members — the variants are class instances, not
+	## int tags — so every today's-enum path (the int-enum emission, the
+	## variant registries, the tag accessors) must leave it alone and
+	## the class paths (struct, vtable, constructor, held slots) apply.
+	## The marker is held members: the sugar's variants carry the
+	## hardcoded ['static','local'] tags and can never be held. The
+	## base class is compared by name (the checker's enumHeader()) —
+	## an 'Enum' class declaration is the only route to it.
+	##
+	## @param c: The class.
+	## @return: true when Enum-rooted with held members.
+	Function of Boolean is isClassModelEnum(ClassInfo is c){
+		Conditional:if(check: { c:baseClass != 'Enum' }, then: {
+			return false;
+		});
+		local Boolean is found: false;
+		c:members:each(action: local Function(Member is m){
+			Conditional:if(check: { !found && m:hasModifier(kw: Keyword:HELD) }, then: {
+				found: true;
+			});
+		});
+		return found;
 	}
 
 	## Walks a class's members looking for the namespace declaration and
