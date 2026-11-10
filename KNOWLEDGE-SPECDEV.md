@@ -191,6 +191,17 @@ check, and emit the NEXT generation's sources. Consequences:
   reference same-class held members (mutual guards deadlock);
   cross-class chains and held-function bodies are unrestricted —
   checker-enforced, tests n30/n31.
+- Keyword retirement (the when removal, Stage 3c): the DELETE rides
+  one convergence (the old binary parses the keyword-less source
+  fine — unused grammar is harmless), but the RENAME that reuses the
+  freed identifier rides the NEXT one: the old binary's compiled
+  surfaces (lexer maps, arg-name picks) still bind the spelling.
+  Patch the seed's compiled picks for the rename convergence; the
+  source supersedes on landing.
+- The match's last-expression rule covers TERMINATED trailing
+  expressions too (the explicit-terminator form): a statement-form
+  match arm must not END with a value-yielding call — bind it to a
+  local or the arm silently types as the yield.
 
 ---
 

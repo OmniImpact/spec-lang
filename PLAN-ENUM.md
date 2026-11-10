@@ -264,15 +264,20 @@ The decisions:
    see §5.4. Still enum-free. Tests: tests/held_resolver_test.spec,
    tests/negative/n32, tests/negative/byte_held_resolver_panic_
    test.spec.
-3. **Stage 3 — the Cases stage (SUPERSEDES the `when` generalization).**
-   The `when` keyword retires in favor of `Cases:match` — see §5.5.
-   Land the provider + the shape recognizer (key resolution through the
-   held lookup AND today's enum-variant registry — the interim bridge),
-   the exhaustiveness policy, and the inline lowering; migrate the
-   compiler's own `when` sites; then delete the `when` machinery
-   (parser grammar, WHEN kinds, checkWhenExhaustive,
-   bindWhenPatternVars, emitWhenStatement). Still enum-free at first;
-   the enum-variant key path retires with Stage 4.
+3. **Stage 3 — the Cases stage. DONE (2026-11).** The `when` keyword
+   retires in favor of `Cases:match` — see §5.5. Three landings:
+   (3a) the provider + the shape recognizer + the inline lowering;
+   (3b) the bridge (enum keys via the subject's OWN member list —
+   the variant REGISTRY is never consulted, its names collide across
+   enums) + all 36 of the compiler's own `when` sites migrated;
+   (3c) the machinery deletes (grammar, WHEN kinds, WhenArm,
+   checkWhenExhaustive, bindWhenPatternVars, emitWhen*) and the
+   identifier frees — the match parameter renames `arms:` → `when:`.
+   Payload arms PULLED FORWARD from Stage 5: an arm closure with
+   parameters binds a tagged variant's constructor payloads as
+   locals; tagged conditions compare the subject's _tag. Exhaustive-
+   ness binds the VALUE form; void forms fall through freely. The
+   enum-variant key path retires with Stage 4.
 4. **Stage 4 — the value enums migrate.** The `Enum of String is X`
    sugar desugars to the class + the held members. The compiler's own
    String-backed enums (`ContractMethod`, `MetadataField` — the small
