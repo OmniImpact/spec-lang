@@ -144,16 +144,28 @@ Class of Enum is Color {                    # of Enum: the enum root parent
   initialization needs the atomic guard (the once-semantics: the double-
   checked store, or the mutex — the same pattern as the intern table).
 
-### 5.4 The resolution hook
+### 5.4 The resolution hook — LANDED (Stage 2, 2026-11)
 
-- The checker: when `Class:member` matches no declared member AND the
-  class (or its lattice) implements the resolver contract, admit the
-  reference with the resolver's declared return type.
-- The runtime: the resolver constructs, caches, returns — the same lazy
-  path as the declared statics.
-- The contract: the resolver lives on the root (`Enum` implements it;
-  the users can too). The signature to nail: `resolve(name) → Variant?`
-  — the null result = the error (as today).
+- The contract: exactly
+  `held Function of <T> is resolveHeld(String is name, Function of <T> is missing)`
+  — one held function; the SECOND argument is the runtime-provided
+  safe failure branch, and it must return the SAME type the resolver
+  searches for (checker-enforced). Declared members always win; the
+  default without the hook stays a compile error.
+- The typing: the admitted reference carries the resolver's declared
+  return type (not loose Any).
+- The failure path: Never Null — the default missing branch panics
+  with context; the resolver invokes it when it gives up, and the
+  hook invokes it itself if the resolver returns without resolving.
+  A hook-resolved name compiles for any spelling, so the failure
+  callback is part of the contract, never an afterthought.
+- The runtime: per-class name cache under a mutex (starts at 8,
+  doubles), pointer identity forever; the hook folds the lattice.
+- The recursion guard: inside the hook body, an undeclared name
+  through its own class prefix is a compile error.
+- Open question 2 (the checker story) resolved by the typed
+  admission above; the CALL form (`Class:name(args)`) stays
+  unhoked — it is the Stage-5 subtype-variant path.
 
 ### 5.5 The `when` generalization
 
@@ -207,9 +219,12 @@ Class of Enum is Color {                    # of Enum: the enum root parent
    with their own tests (tests/held_members_test.spec,
    tests/held_methods_test.spec, tests/held_metadata_test.spec,
    negative n30/n31).
-2. **Stage 2 — the lazy statics + the resolution hook.** The
-   initialization semantics + the userspace extension point. Still
-   enum-free.
+2. **Stage 2 — the lazy statics + the resolution hook. DONE.** The
+   lazy statics landed with Stage 1 (the CAS once-guards, full
+   expression initializers); the resolution hook landed 2026-11 —
+   see §5.4. Still enum-free. Tests: tests/held_resolver_test.spec,
+   tests/negative/n32, tests/negative/byte_held_resolver_panic_
+   test.spec.
 3. **Stage 3 — the `when` generalization.** The static-member
    exhaustiveness + the subtype arms. Still enum-free.
 4. **Stage 4 — the value enums migrate.** The `Enum of String is X`
