@@ -278,10 +278,19 @@ The decisions:
    locals; tagged conditions compare the subject's _tag. Exhaustive-
    ness binds the VALUE form; void forms fall through freely. The
    enum-variant key path retires with Stage 4.
-4. **Stage 4 — the value enums migrate.** The `Enum of String is X`
-   sugar desugars to the class + the held members. The compiler's own
-   String-backed enums (`ContractMethod`, `MetadataField` — the small
-   ones) migrate first; `Keyword` last (the hottest).
+4. **Stage 4 — the value enums migrate. DONE (2026-11).** The sugar
+   desugars IN THE PARSER (EnumDesugar): variants become held members
+   holding instances constructed with their tags, a synthesized
+   _backing field + constructor carry the value, and the contract
+   methods synthesize as plain Spec members (name/ordinal as identity
+   scans, value reading the backing, of() the reverse lookup with the
+   first variant as the default, values() in declaration order,
+   toString rendering the variant name). of()/values() are HELD
+   functions (receiver-free class-name dispatch); the E5 wall admits
+   class-model enums as type-level receivers. The compiler's own
+   enums migrated AUTOMATICALLY — their sources keep the sugar; the
+   Keyword hot path included. The variant registries retire for value
+   enums (the held registries carry them).
 5. **Stage 5 — the tagged enums migrate.** The subtype-variant pattern
    (`Red of Color` with the payload fields); match payload arms are
    closure parameters. The compiler's tagged enums (`ExpressionKind`?
