@@ -875,6 +875,10 @@ Class is TypeChecker{
 						self:addError(line: self:currentLine, msg: 'Predicate match keys must be closures: `{ condition }`.');
 						bad: true;
 					}, else: {
+						Conditional:if(check: { key:anonParams:length() > 0 }, then: {
+							self:addError(line: self:currentLine, msg: 'Predicate match keys take no parameters.');
+							bad: true;
+						});
 						Conditional:if(check: { key:anonReturnType:name == '' || key:anonReturnType:name == self:names:voidName() }, then: {
 							key:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
 						});
@@ -885,6 +889,10 @@ Class is TypeChecker{
 					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
 					bad: true;
 				}, else: {
+					Conditional:if(check: { val:anonParams:length() > 0 }, then: {
+						self:addError(line: self:currentLine, msg: 'Predicate match arms take no parameters (there is no subject to bind).');
+						bad: true;
+					});
 					self:inferExpressionType(expr: val);
 					local String is valT: val:resolvedType;
 					Conditional:if(check: { valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, then: {

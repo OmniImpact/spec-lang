@@ -217,7 +217,10 @@ Class is Driver{
 
 		local String is tempCPath: emitCPath;
 		Conditional:if(check: { tempCPath == '' }, then: {
-			tempCPath: '/tmp/_spec_stage_' . (Process:getPid() as String) . '.c';
+			tempCPath: fileTemp(template: '/tmp/_spec_stage_XXXXXX.c');
+			Conditional:if(check: { tempCPath == '' }, then: {
+				tempCPath: '/tmp/_spec_stage_' . (Process:getPid() as String) . '.c';
+			});
 		});
 		local Boolean is written: fileWrite(path: tempCPath, content: cCode);
 		Conditional:if(check: { !written }, then: {

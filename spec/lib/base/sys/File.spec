@@ -74,4 +74,12 @@ Class is File{
 	Function of Boolean is fileRemove(String is path){
 		return base:sysinternal:File:file_remove(path: path);
 	}
+
+	## Creates a unique temporary file securely and returns its path.
+	##
+	## @param template: Path template ending in XXXXXX (defaults to '/tmp/spec_XXXXXX.c').
+	## @return: Created file path, or empty string on failure.
+	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c'){
+		return base:sysinternal:File:file_temp(template: template);
+	}
 }

@@ -189,6 +189,10 @@ assert_compile_failure "predicate-table-literal-wall" \
 	"$ROOT/tests/negative/n35_predicate_table_literal_negative_test.spec" \
 	"predicate match table is compile-time" \
 
+assert_compile_failure "predicate-params-wall" \
+	"$ROOT/tests/negative/n36_predicate_params_negative_test.spec" \
+	"Predicate match arms take no parameters" \
+
 assert_compile_failure "loop-vars-literals-wall" \
 	"$ROOT/tests/negative/n34_loop_vars_literals_negative_test.spec" \
 	"requires inline literal closures"

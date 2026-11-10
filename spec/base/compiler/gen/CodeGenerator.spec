@@ -2965,7 +2965,7 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			Buf:bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . bindsC . bodyC . cleanupTail . "}\n\n");
+			Buf:bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . bodyC . cleanupTail . "}\n\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, else: {
 			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
@@ -2982,7 +2982,7 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			Buf:bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . bodyC . cleanupTail . "}\n\n");
+			Buf:bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bodyC . cleanupTail . "}\n\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}
@@ -3203,16 +3203,13 @@ Class is CodeGenerator{
 				self:emitReturn(stmt: stmt)
 			},
 			StatementKind:EXPR: {
-				# Claim-yielding results go to the pool (released on
-				# eviction). A CALL that yields no claim but returns an
-				# ARC type is the blanket-RETURN-retain case: the callee
-				# retained its result for this caller and nobody consumes
-				# it, so the statement releases it. Everything else
-				# (idents, fields) is a borrow — leave it alone.
+				# Any CALL that returns an ARC type and is evaluated as an
+				# unconsumed expression statement is released so it does not leak.
+				# Idents and fields are borrows — leave them alone.
 				local String is exprC: self:generateExpression(expr: stmt:exprStmt);
 				local String is resT: self:inferTargetType(expr: stmt:exprStmt);
 				local String is stmtC: '    ' . exprC . ";\n";
-				Conditional:if(check: { stmt:exprStmt:kind == ExpressionKind:CALL && !self:yieldsClaim(expr: stmt:exprStmt) && self:isArcType(typeName: resT) }, then: {
+				Conditional:if(check: { stmt:exprStmt:kind == ExpressionKind:CALL && self:isArcType(typeName: resT) }, then: {
 					stmtC: '    spec_release((void*)(' . exprC . "));\n";
 				});
 				stmtC
@@ -3394,6 +3391,9 @@ Class is CodeGenerator{
 			# but must not release the caller's argument.
 			Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:IDENT && self:currentParams:has(key: stmt:assignTarget:str) }, then: {
 				return '    spec_retain((void*)(' . valC . ')); ' . targetC . ' = ' . valC . ";\n";
+			});
+			Conditional:if(check: { self:yieldsClaim(expr: stmt:assignValue) }, then: {
+				return '    spec_assign_transfer((void**)&' . targetC . ', (void*)(' . valC . "));\n";
 			});
 			return '    spec_assign((void**)&' . targetC . ', (void*)(' . valC . "));\n";
 		});
@@ -3588,6 +3588,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { self:cleanupRetVar != '' }, then: {
 			Buf:bufAppendBuf(dst: bodyC, src: '    ' . retType . ' ' . self:cleanupRetVar . " = 0;\n");
 		});
+		Buf:bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
 		self:hoistedLocals:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
 			Buf:bufAppendBuf(dst: bodyC, src: '    SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
@@ -4521,7 +4522,7 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: '({ SpecMap* ' . mapVar . ' = ' . targetC . '; if (' . mapVar . ') { for (size_t ' . bVar . ' = 0; ' . bVar . ' < SPEC_MAP_BUCKETS; ' . bVar . '++) { for (SpecMapEntry* ' . eVar . ' = ' . mapVar . '->buckets[' . bVar . ']; ' . eVar . '; ' . eVar . ' = ' . eVar . "->next) {\n";
+		local String is out: '({ SpecMap* ' . mapVar . ' = ' . targetC . '; if (' . mapVar . ') { for (size_t ' . bVar . ' = 0; ' . bVar . ' < ' . mapVar . '->nbuckets; ' . bVar . '++) { for (SpecMapEntry* ' . eVar . ' = ' . mapVar . '->buckets[' . bVar . ']; ' . eVar . '; ' . eVar . ' = ' . eVar . "->next) {\n";
 		out: out . paramDecl . "            do {\n" . bodyC . "            } while (0);\n        } } } })";
 		return out;
 	}
@@ -4646,14 +4647,16 @@ Class is CodeGenerator{
 		local Int is bodyLen: anonFn:anonBody:length();
 		local Int is bi: 0;
 		anonFn:anonBody:each(action: local Function(Statement is st){
-			Conditional:if(check: { bi == bodyLen - 1 && st:kind == StatementKind:RETURN && st:hasReturnExpr }, then: {
-				local ExpressionKind is retKind: st:returnExpr:kind;
+			local Boolean is isYieldStmt: bi == bodyLen - 1 && ((st:kind == StatementKind:RETURN && st:hasReturnExpr) || st:kind == StatementKind:EXPR);
+			Conditional:if(check: { isYieldStmt }, then: {
+				local Expression is yieldExpr: Conditional:if(check: { st:kind == StatementKind:RETURN }, then: { st:returnExpr }, else: { st:exprStmt });
+				local ExpressionKind is retKind: yieldExpr:kind;
 				Conditional:if(check: { (retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (yieldT:startsWith(prefix: 'Array') || yieldT:startsWith(prefix: 'Map')) }, then: {
 					self:setContainerHint(t: yieldT);
 				});
 				local Boolean is savedArg: self:argMode;
 				self:argMode: false;
-				local String is retC: self:generateExpression(expr: st:returnExpr);
+				local String is retC: self:generateExpression(expr: yieldExpr);
 				self:argMode: savedArg;
 				Conditional:if(check: { self:isArcType(typeName: yieldT) }, then: {
 					# a yield does not end the enclosing
@@ -4661,7 +4664,7 @@ Class is CodeGenerator{
 					# if-expression, so the yield RETAINS (the ARC-safe copy)
 					# instead of the return path's ownership NULL-swap. A fresh
 					# allocation flows unclaimed into the result variable.
-					Conditional:if(check: { self:isFreshConstructorCall(expr: st:returnExpr) }, then: {
+					Conditional:if(check: { self:isFreshConstructorCall(expr: yieldExpr) }, then: {
 						retC: '(' . yieldCType . ')(' . retC . ')';
 					}, else: {
 						retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
@@ -4847,6 +4850,7 @@ Class is CodeGenerator{
 		local Boolean is valueForm: resT != '' && resT != 'void' && resT != 'Void';
 		local String is out: '';
 		local String is yieldVar: '';
+		local String is tail: "}\n";
 		Conditional:if(check: { valueForm }, then: {
 			self:anonCounter: self:anonCounter + 1;
 			yieldVar: '_mt_' . (self:anonCounter as String);
@@ -4864,18 +4868,29 @@ Class is CodeGenerator{
 				local Boolean is elseArm: key:kind == ExpressionKind:IDENT && key:str == 'else';
 				Conditional:if(check: { !elseArm && key:kind == ExpressionKind:ANON_FN }, then: {
 					# The key closure inlines into the frame: its leading
-					# statements emit before the `if`, its last expression
-					# is the condition (the branch inline's check rule).
+					# statements run only once the earlier keys have failed
+					# (never inside a previous arm's block), and its last
+					# expression is the condition (the branch inline's
+					# check rule).
 					local Array of String is condPrefix: [];
 					local String is condC: self:checkConditionC(checkAnon: key, prefixOut: condPrefix);
-					condPrefix:each(action: local Function(String is st){
-						out: out . st . "\n";
-					});
 					Conditional:if(check: { firstCond }, then: {
+						condPrefix:each(action: local Function(String is st){
+							out: out . st . "\n";
+						});
 						out: out . 'if (' . condC . ") {\n";
 						firstCond: false;
 					}, else: {
-						out: out . '} else if (' . condC . ") {\n";
+						Conditional:if(check: { condPrefix:length() > 0 }, then: {
+							out: out . "} else {\n";
+							condPrefix:each(action: local Function(String is st){
+								out: out . st . "\n";
+							});
+							out: out . 'if (' . condC . ") {\n";
+							tail: tail . "}\n";
+						}, else: {
+							out: out . '} else if (' . condC . ") {\n";
+						});
 					});
 				}, else: {
 					# The else arm: the chain's tail.
@@ -4897,7 +4912,7 @@ Class is CodeGenerator{
 			}
 		);
 		Conditional:if(check: { !firstCond }, then: {
-			out: out . "}\n";
+			out: out . tail;
 		});
 		Conditional:if(check: { valueForm }, then: {
 			out: out . yieldVar . "; })";

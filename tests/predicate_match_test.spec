@@ -82,6 +82,23 @@ Class is PredicateMatchTest{
 		});
 	}
 
+	## Verifies a multi-statement key: its leading statements run only
+	## after the earlier keys fail, in scope of its own condition.
+	local Function is testKeyPrefix(){
+		local Int is n: 5;
+		local Int is hits: 0;
+		match(when: [
+			{ n > 100 }: { hits: hits + 1; },
+			{ local Int is t: n * 2; t > 8 }: { hits: hits + 10; },
+			else: { hits: hits + 100; }
+		]);
+		Conditional:if(check: { hits == 10 }, then: {
+			Output:line('[PASS] predicate match: multi-statement key evaluates lazily in scope');
+		}, else: {
+			Output:line('[FAIL] predicate match key prefix: hits=' . (hits as String));
+		});
+	}
+
 	## Entry point.
 	##
 	## @param args: Unused CLI arguments map.
@@ -91,6 +108,7 @@ Class is PredicateMatchTest{
 		self:testStatementForm();
 		self:testElseAndFallthrough();
 		self:testBareForm();
+		self:testKeyPrefix();
 		Output:line('=== done ===');
 	}
 }
