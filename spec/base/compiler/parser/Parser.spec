@@ -55,7 +55,8 @@ Class is Parser{
 		['base', 'compiler', 'parser', 'loops', FancyEscapeLoop],
 		['base', 'iterator'],
 		['base', 'iterator', as Loops()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'cases', as Cases()]
 	];
 
 	local Array of Token is tokens: [];
@@ -844,20 +845,20 @@ Class is Parser{
 	## @param level: The level to fold.
 	## @return: The folded expression.
 	Function of Expression is parseLevel(PrecedenceLevel is level){
-		when (level) {
-			is PrecedenceLevel:MULTIPLICATIVE: { return self:foldBinary(ops: ['*', '/', '%'], next: PrecedenceLevel:NONE); }
-			is PrecedenceLevel:ADDITIVE: { return self:foldBinary(ops: ['+', '-'], next: PrecedenceLevel:MULTIPLICATIVE); }
-			is PrecedenceLevel:SHIFT: { return self:foldBinary(ops: ['<<', '>>'], next: PrecedenceLevel:ADDITIVE); }
-			is PrecedenceLevel:CONCAT: { return self:foldBinary(ops: ['.'], next: PrecedenceLevel:SHIFT); }
-			is PrecedenceLevel:RELATIONAL: { return self:foldBinary(ops: ['<', '<=', '>', '>='], next: PrecedenceLevel:CONCAT); }
-			is PrecedenceLevel:EQUALITY: { return self:foldBinary(ops: ['==', '!=', 'is'], next: PrecedenceLevel:RELATIONAL); }
-			is PrecedenceLevel:BIT_AND: { return self:foldBinary(ops: ['&'], next: PrecedenceLevel:EQUALITY); }
-			is PrecedenceLevel:BIT_XOR: { return self:foldBinary(ops: ['^'], next: PrecedenceLevel:BIT_AND); }
-			is PrecedenceLevel:BIT_OR: { return self:foldBinary(ops: ['|'], next: PrecedenceLevel:BIT_XOR); }
-			is PrecedenceLevel:LOGICAL_AND: { return self:foldBinary(ops: ['&&'], next: PrecedenceLevel:BIT_OR); }
-			is PrecedenceLevel:LOGICAL_OR: { return self:foldBinary(ops: ['||'], next: PrecedenceLevel:LOGICAL_AND); }
-			else: { return self:parseUnary(); }
-		}
+		return Cases:match(on: level, arms: [
+			PrecedenceLevel:MULTIPLICATIVE: { self:foldBinary(ops: ['*', '/', '%'], next: PrecedenceLevel:NONE) },
+			PrecedenceLevel:ADDITIVE: { self:foldBinary(ops: ['+', '-'], next: PrecedenceLevel:MULTIPLICATIVE) },
+			PrecedenceLevel:SHIFT: { self:foldBinary(ops: ['<<', '>>'], next: PrecedenceLevel:ADDITIVE) },
+			PrecedenceLevel:CONCAT: { self:foldBinary(ops: ['.'], next: PrecedenceLevel:SHIFT) },
+			PrecedenceLevel:RELATIONAL: { self:foldBinary(ops: ['<', '<=', '>', '>='], next: PrecedenceLevel:CONCAT) },
+			PrecedenceLevel:EQUALITY: { self:foldBinary(ops: ['==', '!=', 'is'], next: PrecedenceLevel:RELATIONAL) },
+			PrecedenceLevel:BIT_AND: { self:foldBinary(ops: ['&'], next: PrecedenceLevel:EQUALITY) },
+			PrecedenceLevel:BIT_XOR: { self:foldBinary(ops: ['^'], next: PrecedenceLevel:BIT_AND) },
+			PrecedenceLevel:BIT_OR: { self:foldBinary(ops: ['|'], next: PrecedenceLevel:BIT_XOR) },
+			PrecedenceLevel:LOGICAL_AND: { self:foldBinary(ops: ['&&'], next: PrecedenceLevel:BIT_OR) },
+			PrecedenceLevel:LOGICAL_OR: { self:foldBinary(ops: ['||'], next: PrecedenceLevel:LOGICAL_AND) },
+			else: { self:parseUnary() }
+		]);
 	}
 
 	## Folds one level: parse the next-lower level for the left operand,
@@ -1040,49 +1041,49 @@ Class is Parser{
 
 		local Token is tok: self:peek();
 
-		when (tok:getTokenKind()) {
-			is TokenKind:STRING: {
+		return Cases:match(on: tok:getTokenKind(), arms: [
+			TokenKind:STRING: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
 				e:str: tok:getValue();
-				return e;
-			}
-			is TokenKind:RAWSTRING: {
+				e
+			},
+			TokenKind:RAWSTRING: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
 				e:str: tok:getValue();
-				return e;
-			}
-			is TokenKind:TEMPLATESTRING: {
+				e
+			},
+			TokenKind:TEMPLATESTRING: {
 				self:advance();
-				return self:expandFancyString(raw: tok:getValue(), originTok: tok, depth: self:templateDepth);
-			}
-			is TokenKind:INT: {
+				self:expandFancyString(raw: tok:getValue(), originTok: tok, depth: self:templateDepth)
+			},
+			TokenKind:INT: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:NUMBER);
 				e:str: tok:getValue();
-				return e;
-			}
-			is TokenKind:FLOAT: {
+				e
+			},
+			TokenKind:FLOAT: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:FLOAT);
 				e:str: tok:getValue();
-				return e;
-			}
-			is TokenKind:BOOL: {
+				e
+			},
+			TokenKind:BOOL: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:BOOL);
 				e:num: Conditional:if(check: { tok:getValue() == self:names:boolTrue() }, then: { 1 }, else: { 0 });
 				e:str: tok:getValue();
-				return e;
-			}
-			is TokenKind:IDENTIFIER: {
+				e
+			},
+			TokenKind:IDENTIFIER: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:IDENT);
 				e:str: tok:getValue();
-				return e;
-			}
-			is TokenKind:KEYWORD: {
+				e
+			},
+			TokenKind:KEYWORD: {
 				# Expression-initial `as` is the instance-import form
 				# `as ClassName()` (§2.1); `as` never begins any
 				# other expression (casts are postfix, scoped regions are
@@ -1092,8 +1093,8 @@ Class is Parser{
 				});
 				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
 				self:advance();
-				return Expression:init(kind: ExpressionKind:UNKNOWN);
-			}
+				Expression:init(kind: ExpressionKind:UNKNOWN)
+			},
 			else: {
 				Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 					self:advance();
@@ -1112,17 +1113,23 @@ Class is Parser{
 
 				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
 				self:advance();
-				return Expression:init(kind: ExpressionKind:UNKNOWN);
+				Expression:init(kind: ExpressionKind:UNKNOWN)
 			}
-		}
+		]);
 	}
 
 	## True when the current bracketed sequence begins a typed declaration
 	## list `[Type is name: init, ...]` rather than a value array.
+	## The scan is depth-aware: tokens inside balanced `(`/`[`/`{` groups
+	## are skipped, so the `is` of a nested closure body
+	## (`[key: { local X is v: ...; v }]`) never misfires the detector —
+	## only a depth-0 `is` (the decl-list form) or a depth-0 terminator
+	## (`]`, `,`, `;`) decides.
 	##
 	## @return: true when declaration list.
 	Function of Boolean is isDeclListStart(){
 		local Int is offset: 1;
+		local Int is depth: 0;
 		local Boolean is running: true;
 		local Boolean is foundIs: false;
 		while(
@@ -1131,14 +1138,27 @@ Class is Parser{
 			},
 			iteration: local Function(){
 				local Token is t: self:peekAhead(offset: offset);
-				Conditional:if(check: { t:getTokenKind() == TokenKind:EOF || t:getValue() == ']' || t:getValue() == ',' || t:getValue() == ';' }, then: {
+				local String is v: t:getValue();
+				Conditional:if(check: { t:getTokenKind() == TokenKind:EOF }, then: {
 					running: false;
 				}, else: {
-					Conditional:if(check: { t:getValue() == Keyword:IS:value() }, then: {
-						foundIs: true;
+					Conditional:if(check: { depth == 0 && (v == ']' || v == ',' || v == ';') }, then: {
 						running: false;
+					}, else: {
+						Conditional:if(check: { v == '(' || v == '[' || v == '{' }, then: {
+							depth: depth + 1;
+						}, else: {
+							Conditional:if(check: { v == ')' || v == ']' || v == '}' }, then: {
+								depth: depth - 1;
+							}, else: {
+								Conditional:if(check: { depth == 0 && t:getTokenKind() == TokenKind:KEYWORD && v == Keyword:IS:value() }, then: {
+									foundIs: true;
+									running: false;
+								});
+							});
+						});
+						offset: offset + 1;
 					});
-					offset: offset + 1;
 				});
 			}
 		);

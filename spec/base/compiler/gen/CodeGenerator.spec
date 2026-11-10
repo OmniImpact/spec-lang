@@ -40,6 +40,7 @@ Class is CodeGenerator{
 		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'iterator', as Loops()],
+		['base', 'cases', as Cases()],
 		['base', 'sys', as Buf()]
 ,
 		['base', 'compiler', 'ast', StatementKind]
@@ -1574,15 +1575,13 @@ Class is CodeGenerator{
 				Conditional:if(check: { expr:methodName == 'get' }, then: {
 					return targetT:startsWith(prefix: 'Map');
 				});
-				when (expr:methodName) {
-					is 'pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
-					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt': {
-						return true;
-					}
-					else: {
-						return false;
-					}
-				}
+				return Cases:match(on: expr:methodName, arms: [
+					['pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
+					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt']: {
+						true
+					},
+					else: { false }
+				]);
 			});
 			return true;
 		});
@@ -1760,80 +1759,85 @@ Class is CodeGenerator{
 	Function of String is generateExpressionInner(Expression is expr){
 		local ExpressionKind is kind: expr:kind;
 
-		when (kind) {
-			is ExpressionKind:ARRAY: {
-				return self:emitArrayLiteral(expr: expr);
-			}
-			is ExpressionKind:MAP: {
-				return self:emitMapLiteral(expr: expr);
-			}
-			is ExpressionKind:STRING: {
+		return Cases:match(on: kind, arms: [
+			ExpressionKind:ARRAY: {
+				self:emitArrayLiteral(expr: expr)
+			},
+			ExpressionKind:MAP: {
+				self:emitMapLiteral(expr: expr)
+			},
+			ExpressionKind:STRING: {
 				# Raw strings collapse into STRING upstream; one intern path.
-				return 'spec_string_intern("' . self:utils:escapeString(s: expr:str) . '")';
-			}
-			is ExpressionKind:NUMBER: {
+				'spec_string_intern("' . self:utils:escapeString(s: expr:str) . '")'
+			},
+			ExpressionKind:NUMBER: {
+				local String is numC: '0';
 				Conditional:if(check: { expr:str != '' }, then: {
-					return expr:str;
+					numC: expr:str;
 				});
-				return '0';
-			}
-			is ExpressionKind:FLOAT: {
+				numC
+			},
+			ExpressionKind:FLOAT: {
+				local String is floatC: '0.0';
 				Conditional:if(check: { expr:str != '' }, then: {
-					return expr:str;
+					floatC: expr:str;
 				});
-				return '0.0';
-			}
-			is ExpressionKind:BOOL: {
-				return Conditional:if(check: { expr:num == 1 }, then: { 'true' }, else: { 'false' });
-			}
-			is ExpressionKind:IDENT: {
-				return self:emitIdent(expr: expr);
-			}
-			is ExpressionKind:PATH: {
-				return self:emitPath(expr: expr);
-			}
-			is ExpressionKind:BINARY: {
-				return self:emitBinary(expr: expr);
-			}
-			is ExpressionKind:INDEX: {
-				return self:emitIndex(expr: expr);
-			}
-			is ExpressionKind:CAST: {
-				return self:emitCast(expr: expr);
-			}
-			is ExpressionKind:UNARY: {
+				floatC
+			},
+			ExpressionKind:BOOL: {
+				local String is boolC: 'false';
+				Conditional:if(check: { expr:num == 1 }, then: {
+					boolC: 'true';
+				});
+				boolC
+			},
+			ExpressionKind:IDENT: {
+				self:emitIdent(expr: expr)
+			},
+			ExpressionKind:PATH: {
+				self:emitPath(expr: expr)
+			},
+			ExpressionKind:BINARY: {
+				self:emitBinary(expr: expr)
+			},
+			ExpressionKind:INDEX: {
+				self:emitIndex(expr: expr)
+			},
+			ExpressionKind:CAST: {
+				self:emitCast(expr: expr)
+			},
+			ExpressionKind:UNARY: {
 				local String is innerC: self:generateExpression(expr: expr:unaryExpr);
+				local String is uC: '(' . expr:str . '(' . innerC . '))';
 				Conditional:if(check: { expr:str == 'post++' }, then: {
-					return '((' . innerC . ')++)';
+					uC: '((' . innerC . ')++)';
 				});
 				Conditional:if(check: { expr:str == 'post--' }, then: {
-					return '((' . innerC . ')--)';
+					uC: '((' . innerC . ')--)';
 				});
 				Conditional:if(check: { expr:str == '++' }, then: {
-					return '(++(' . innerC . '))';
+					uC: '(++(' . innerC . '))';
 				});
 				Conditional:if(check: { expr:str == '--' }, then: {
-					return '(--(' . innerC . '))';
+					uC: '(--(' . innerC . '))';
 				});
-				return '(' . expr:str . '(' . innerC . '))';
-			}
-			is ExpressionKind:CALL: {
-				return self:emitCall(expr: expr);
-			}
-			is ExpressionKind:FIELD_ACCESS: {
+				uC
+			},
+			ExpressionKind:CALL: {
+				self:emitCall(expr: expr)
+			},
+			ExpressionKind:FIELD_ACCESS: {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				return '(' . leftC . ')->' . self:utils:cIdent(name: expr:str);
-			}
-			is ExpressionKind:WHEN: {
-				return self:emitWhenExpression(expr: expr);
-			}
-			is ExpressionKind:ANON_FN: {
-				return self:emitAnonFn(expr: expr);
-			}
-			else: {
-				return '0';
-			}
-		}
+				'(' . leftC . ')->' . self:utils:cIdent(name: expr:str)
+			},
+			ExpressionKind:WHEN: {
+				self:emitWhenExpression(expr: expr)
+			},
+			ExpressionKind:ANON_FN: {
+				self:emitAnonFn(expr: expr)
+			},
+			else: { '0' }
+		]);
 	}
 
 	## Emits an array/list literal from the container hint or the first
@@ -2058,8 +2062,8 @@ Class is CodeGenerator{
 	## @return: C expression.
 	Function of String is emitBinary(Expression is expr){
 		local String is op: expr:str;
-		when (op) {
-			is '.': {
+		return Cases:match(on: op, arms: [
+			'.': {
 				local String is leftC: self:generateExpressionInner(expr: expr:leftExpr);
 				local ExpressionKind is leftKind: expr:leftExpr:kind;
 				local String is leftT: self:inferTargetType(expr: expr:leftExpr);
@@ -2084,44 +2088,45 @@ Class is CodeGenerator{
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
 				self:argMode: savedArgR;
 				local String is rightWrap: self:wrapToString(expr: expr:rightExpr, exprC: rightC);
-				return 'spec_string_concat(' . leftWrap . ', ' . rightWrap . ')';
-			}
-			is 'is', '==': {
+				'spec_string_concat(' . leftWrap . ', ' . rightWrap . ')'
+			},
+			['is', '==']: {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				local String is eqC: '((' . leftC . ') == (' . rightC . '))';
 				Conditional:if(check: { self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, then: {
-					return 'spec_string_equals(' . leftC . ', ' . rightC . ')';
+					eqC: 'spec_string_equals(' . leftC . ', ' . rightC . ')';
 				});
-				return '((' . leftC . ') == (' . rightC . '))';
-			}
-			is '!=': {
+				eqC
+			},
+			'!=': {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				local String is neC: '((' . leftC . ') != (' . rightC . '))';
 				Conditional:if(check: { self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, then: {
-					return '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
+					neC: '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
 				});
-				return '((' . leftC . ') != (' . rightC . '))';
-			}
-			is '<', '<=', '>', '>=': {
+				neC
+			},
+			['<', '<=', '>', '>=']: {
 				# hardening (D5): relational operators on String
 				# compare lexicographically through the floor — never by
 				# pointer.
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
+				local String is relC: '((' . leftC . ') ' . op . ' (' . rightC . '))';
 				Conditional:if(check: { self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, then: {
-					return '(spec_string_compare(' . leftC . ', ' . rightC . ') ' . op . ' 0)';
+					relC: '(spec_string_compare(' . leftC . ', ' . rightC . ') ' . op . ' 0)';
 				});
-				return '((' . leftC . ') ' . op . ' (' . rightC . '))';
-			}
-			is '+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>': {
+				relC
+			},
+			['+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>']: {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
-				return '((' . leftC . ') ' . op . ' (' . rightC . '))';
-			}
-			else: {
-				return '0';
-			}
-		}
+				'((' . leftC . ') ' . op . ' (' . rightC . '))'
+			},
+			else: { '0' }
+		]);
 	}
 
 	## True when [body] mentions [ident] as a whole identifier — the
@@ -2288,70 +2293,77 @@ Class is CodeGenerator{
 		Conditional:if(check: { expr:castArgs:length() > 0 }, then: {
 			digitsC: self:generateExpression(expr: expr:castArgs:get(index: 0));
 		});
-		when (target) {
-			is 'Hex': {
+		return Cases:match(on: target, arms: [
+			'Hex': {
+				local String is hexC: 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
 				Conditional:if(check: { srcT == 'String' }, then: {
-					return 'String_parseInt(' . innerC . ', 16, 0)';
+					hexC: 'String_parseInt(' . innerC . ', 16, 0)';
 				});
-				return 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
-			}
-			is 'Bin': {
+				hexC
+			},
+			'Bin': {
+				local String is binC: 'spec_int_to_base(' . innerC . ', 2, ' . digitsC . ')';
 				Conditional:if(check: { srcT == 'String' }, then: {
-					return 'String_parseInt(' . innerC . ', 2, 0)';
+					binC: 'String_parseInt(' . innerC . ', 2, 0)';
 				});
-				return 'spec_int_to_base(' . innerC . ', 2, ' . digitsC . ')';
-			}
-			is 'Oct': {
+				binC
+			},
+			'Oct': {
+				local String is octC: 'spec_int_to_base(' . innerC . ', 8, ' . digitsC . ')';
 				Conditional:if(check: { srcT == 'String' }, then: {
-					return 'String_parseInt(' . innerC . ', 8, 0)';
+					octC: 'String_parseInt(' . innerC . ', 8, 0)';
 				});
-				return 'spec_int_to_base(' . innerC . ', 8, ' . digitsC . ')';
-			}
-			is 'Any': {
-				return innerC;
-			}
-			is 'Int': {
+				octC
+			},
+			'Any': {
+				innerC
+			},
+			'Int': {
+				local String is intC: innerC;
 				Conditional:if(check: { srcT == 'String' }, then: {
-					return 'String_parseInt(' . innerC . ', 10, 0)';
+					intC: 'String_parseInt(' . innerC . ', 10, 0)';
 				});
 				Conditional:if(check: { srcT == 'Float' || srcT == 'Byte' }, then: {
-					return '((long long)(' . innerC . '))';
+					intC: '((long long)(' . innerC . '))';
 				});
-				return innerC;
-			}
-			is 'Float': {
-				return '((double)(' . innerC . '))';
-			}
-			is 'Byte': {
+				intC
+			},
+			'Float': {
+				'((double)(' . innerC . '))'
+			},
+			'Byte': {
+				local String is byteC: '({ long long _bv = (long long)(' . innerC . '); if (_bv < 0 || _bv > 255) { spec_panic_byte_range(_bv); } ((unsigned char)_bv); })';
 				Conditional:if(check: { srcT == 'Byte' }, then: {
-					return innerC;
+					byteC: innerC;
 				});
-				return '({ long long _bv = (long long)(' . innerC . '); if (_bv < 0 || _bv > 255) { spec_panic_byte_range(_bv); } ((unsigned char)_bv); })';
-			}
-			is 'String': {
+				byteC
+			},
+			'String': {
+				local String is strC: self:wrapToString(expr: expr:leftExpr, exprC: innerC);
 				Conditional:if(check: { srcT == Primitive:INT:value() }, then: {
-					return 'spec_to_string_int(' . innerC . ')';
+					strC: 'spec_to_string_int(' . innerC . ')';
 				});
 				Conditional:if(check: { srcT == 'Float' }, then: {
-					return 'spec_to_string_float(' . innerC . ')';
+					strC: 'spec_to_string_float(' . innerC . ')';
 				});
 				Conditional:if(check: { srcT == 'Boolean' }, then: {
-					return 'spec_to_string_bool(' . innerC . ')';
+					strC: 'spec_to_string_bool(' . innerC . ')';
 				});
 				Conditional:if(check: { self:allClassNames:has(key: srcT) && !self:allEnumNames:has(key: srcT) && !self:policy:isTransparent(c: self:findClass(name: srcT)) }, then: {
-					return 'spec_type_name(' . innerC . ')';
+					strC: 'spec_type_name(' . innerC . ')';
 				});
 				# Unknown or computed sources (arithmetic binaries, calls with
-				# unresolved types) route through the string-wrap policy.
-				return self:wrapToString(expr: expr:leftExpr, exprC: innerC);
-			}
+				# unresolved types) keep the string-wrap policy default.
+				strC
+			},
 			else: {
+				local String is castC: innerC;
 				Conditional:if(check: { self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:policy:isTransparent(c: self:findClass(name: target)) }, then: {
-					return '((' . target . '*)spec_cast_check(' . innerC . ', "' . target . '"))';
+					castC: '((' . target . '*)spec_cast_check(' . innerC . ', "' . target . '"))';
 				});
-				return innerC;
+				castC
 			}
-		}
+		]);
 	}
 
 	## Emits a CALL expression: builtins, constructors, tagged variant
@@ -3213,23 +3225,23 @@ Class is CodeGenerator{
 		});
 		local StatementKind is kind: stmt:kind;
 
-		when (kind) {
-			is StatementKind:VAR_DECL: {
-				return self:emitVarDecl(stmt: stmt);
-			}
-			is StatementKind:ASSIGN: {
-				return self:emitAssign(stmt: stmt);
-			}
-			is StatementKind:FORWARD: {
-				return self:emitForward(stmt: stmt);
-			}
-			is StatementKind:RETURN: {
-				return self:emitReturn(stmt: stmt);
-			}
-			is StatementKind:WHEN: {
-				return self:emitWhenStatement(stmt: stmt);
-			}
-			is StatementKind:EXPR: {
+		return Cases:match(on: kind, arms: [
+			StatementKind:VAR_DECL: {
+				self:emitVarDecl(stmt: stmt)
+			},
+			StatementKind:ASSIGN: {
+				self:emitAssign(stmt: stmt)
+			},
+			StatementKind:FORWARD: {
+				self:emitForward(stmt: stmt)
+			},
+			StatementKind:RETURN: {
+				self:emitReturn(stmt: stmt)
+			},
+			StatementKind:WHEN: {
+				self:emitWhenStatement(stmt: stmt)
+			},
+			StatementKind:EXPR: {
 				# Claim-yielding results go to the pool (released on
 				# eviction). A CALL that yields no claim but returns an
 				# ARC type is the blanket-RETURN-retain case: the callee
@@ -3238,18 +3250,17 @@ Class is CodeGenerator{
 				# (idents, fields) is a borrow — leave it alone.
 				local String is exprC: self:generateExpression(expr: stmt:exprStmt);
 				local String is resT: self:inferTargetType(expr: stmt:exprStmt);
+				local String is stmtC: '    ' . exprC . ";\n";
 				Conditional:if(check: { stmt:exprStmt:kind == ExpressionKind:CALL && !self:yieldsClaim(expr: stmt:exprStmt) && self:isArcType(typeName: resT) }, then: {
-					return '    spec_release((void*)(' . exprC . "));\n";
+					stmtC: '    spec_release((void*)(' . exprC . "));\n";
 				});
-				return '    ' . exprC . ";\n";
-			}
-			is StatementKind:CLASS: {
-				return '';
-			}
-			else: {
-				return '';
-			}
-		}
+				stmtC
+			},
+			StatementKind:CLASS: {
+				''
+			},
+			else: { '' }
+		]);
 	}
 
 	## Emits a variable declaration with the typed constructor.
@@ -3756,36 +3767,34 @@ Class is CodeGenerator{
 
 	## Collects nested classes from a statement tree.
 	Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
-		when (stmt:kind) {
-			is StatementKind:CLASS: {
+		Cases:match(on: stmt:kind, arms: [
+			StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
-			}
-			is StatementKind:WHEN: {
+			},
+			StatementKind:WHEN: {
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					arm:body:each(action: local Function(Statement is s){
 						self:collectClassesFromStatement(stmt: s, acc: acc);
 					});
 				});
 			}
-			else: {}
-		}
+		]);
 	}
 
 	## Collects a class and all nested definitions.
 	Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:CLASS: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:CLASS: {
 					self:collectClasses(c: m:nestedClass, acc: acc);
-				}
-				is MemberKind:METHOD: {
+				},
+				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
 						self:collectClassesFromStatement(stmt: s, acc: acc);
 					});
 				}
-				else: {}
-			}
+			]);
 		});
 	}
 
@@ -4128,8 +4137,8 @@ Class is CodeGenerator{
 						local String is classC: Buf:stringCopy(b: '');
 						local Boolean is hasInit: false;
 						c:members:each(action: local Function(Member is m){
-							when (m:kind) {
-								is MemberKind:METHOD: {
+							Cases:match(on: m:kind, arms: [
+								MemberKind:METHOD: {
 									Conditional:if(check: { !wg:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 										Conditional:if(check: { m:name == 'init' }, then: {
 											hasInit: true;
@@ -4142,8 +4151,7 @@ Class is CodeGenerator{
 										wg:emittingHeld: false;
 									});
 								}
-								else: {}
-							}
+							]);
 						});
 						Conditional:if(check: { !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, then: {
 							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
@@ -4789,9 +4797,14 @@ Class is CodeGenerator{
 		local String is resT: callExpr:resolvedType;
 		local Boolean is valueForm: resT != '' && resT != 'void' && resT != 'Void';
 		local String is out: '';
+		# The yield variable is numbered ONCE, before any arm body is
+		# generated: nested inlines inside arm bodies advance anonCounter,
+		# and a per-arm recompute would assign an undeclared variable.
+		local String is yieldVar: '';
 		Conditional:if(check: { valueForm }, then: {
 			self:anonCounter: self:anonCounter + 1;
-			out: '({ ' . self:cTypeFor(typeName: resT) . ' _mt_' . (self:anonCounter as String) . ";\n";
+			yieldVar: '_mt_' . (self:anonCounter as String);
+			out: '({ ' . self:cTypeFor(typeName: resT) . ' ' . yieldVar . ";\n";
 		});
 		local Int is keyTotal: armsArg:mapKeys:length();
 		local Int is ki: 0;
@@ -4820,7 +4833,7 @@ Class is CodeGenerator{
 					});
 				});
 				Conditional:if(check: { valueForm }, then: {
-					out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: '_mt_' . (self:anonCounter as String), yieldT: resT) . "\t";
+					out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: yieldVar, yieldT: resT) . "\t";
 				}, else: {
 					out: out . self:inlineBranchBody(anonFn: val) . "\t";
 				});
@@ -4831,7 +4844,7 @@ Class is CodeGenerator{
 			out: out . "}\n";
 		});
 		Conditional:if(check: { valueForm }, then: {
-			out: out . '_mt_' . (self:anonCounter as String) . "; })";
+			out: out . yieldVar . "; })";
 		});
 		self:inlineReturnVar: savedVar;
 		self:inlineReturnLabel: savedLbl;
@@ -4856,6 +4869,16 @@ Class is CodeGenerator{
 		});
 		local String is joined: '';
 		keyTargets:each(action: local Function(Expression is one){
+			# String-literal keys compare by value (the bridge for the
+			# string-subject matches).
+			Conditional:if(check: { one:kind == ExpressionKind:STRING }, then: {
+				local String is litC: self:generateExpression(expr: one);
+				Conditional:if(check: { joined != '' }, then: {
+					joined: joined . ' || ';
+				});
+				joined: joined . 'spec_string_equals(' . subjC . ', ' . litC . ')';
+				return;
+			});
 			local String is keyName: '';
 			local String is lookupCls: subjT;
 			Conditional:if(check: { one:kind == ExpressionKind:IDENT }, then: {
@@ -4891,6 +4914,35 @@ Class is CodeGenerator{
 					joined: joined . ' || ';
 				});
 				joined: joined . oneC;
+			}, else: {
+				# The interim bridge (PLAN-ENUM Stage 3b): today's enum
+				# variants compare by their int tag — the variant resolved
+				# against the SUBJECT ENUM'S OWN member list (the global
+				# variant registry collides on names shared across enums).
+				local String is enumName: '';
+				Conditional:if(check: { self:allEnumNames:has(key: lookupCls) }, then: {
+					enumName: lookupCls;
+				}, else: {
+					Conditional:if(check: { self:allEnumNames:has(key: subjT) }, then: {
+						enumName: subjT;
+					});
+				});
+				local Boolean is variantOk: false;
+				Conditional:if(check: { enumName != '' }, then: {
+					local ClassInfo is enumCls: self:findClass(name: enumName);
+					enumCls:members:each(action: local Function(Member is m){
+						Conditional:if(check: { !variantOk && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+							variantOk: true;
+						});
+					});
+				});
+				Conditional:if(check: { variantOk }, then: {
+					local String is oneC: '(' . subjC . ') == (' . enumName . '_' . self:utils:cIdent(name: keyName) . ')';
+					Conditional:if(check: { joined != '' }, then: {
+						joined: joined . ' || ';
+					});
+					joined: joined . oneC;
+				});
 			});
 		});
 		Conditional:if(check: { joined == '' }, then: {

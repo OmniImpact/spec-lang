@@ -25,6 +25,14 @@ Class is JobKind{
 	held String is label: 'jobs';
 }
 
+## The interim bridge (Stage 3b): a today's-enum subject matches by
+## its int tag until the sugar migrates (Stage 4).
+Enum of String is Legacy{
+	namespace: ['test'],
+	A: 'a',
+	B: 'b'
+}
+
 Class is CasesMatchTest{
 	namespace: ['test'];
 
@@ -115,6 +123,30 @@ Class is CasesMatchTest{
 		Conditional:if(check: { hits == 1 }, then: {
 		}, else: {
 			Output:line('[FAIL] matched statement arm must run: ' . (hits as String));
+			failures: failures + 1;
+		});
+
+		# The bridge: a today's-enum subject (tag comparison).
+		local Legacy is lv: Legacy:B;
+		local String is bl: Cases:match(on: lv, arms: [
+			Legacy:A: { 'ay' },
+			B: { 'bee' }
+		]);
+		Conditional:if(check: { bl == 'bee' }, then: {
+		}, else: {
+			Output:line('[FAIL] today\'s-enum bridge match: ' . bl);
+			failures: failures + 1;
+		});
+
+		# String-literal keys over a String subject (value equality).
+		local String is esc: Cases:match(on: 'n', arms: [
+			'r': { 'carriage' },
+			'n': { 'newline' },
+			else: { 'plain' }
+		]);
+		Conditional:if(check: { esc == 'newline' }, then: {
+		}, else: {
+			Output:line('[FAIL] string-literal key match: ' . esc);
 			failures: failures + 1;
 		});
 

@@ -29,7 +29,8 @@ Class is BuiltinCallGenerator{
 		['base', 'iterator']
 ,
 		['base', 'compiler', 'gen', CodeGenerator],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'cases', as Cases()]
 	];
 
 	local CBackendUtils is utils: CBackendUtils:init();
@@ -632,28 +633,33 @@ Class is BuiltinCallGenerator{
 			Conditional:if(check: { expr:argCount() > 0 }, then: {
 				a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
 			});
-			# Single-operand functions.
-			when (m) {
-				is 'round': { return 'spec_math_round(' . a0 . ')'; }
-				is 'floor': { return 'spec_math_floor(' . a0 . ')'; }
-				is 'ceil', 'ceiling': { return 'spec_math_ceil(' . a0 . ')'; }
-				is 'abs': {
+			# Single-operand functions: the match yields the C call; the
+			# empty else lets the two-operand section run.
+			local String is oneC: Cases:match(on: m, arms: [
+				'round': { 'spec_math_round(' . a0 . ')' },
+				'floor': { 'spec_math_floor(' . a0 . ')' },
+				['ceil', 'ceiling']: { 'spec_math_ceil(' . a0 . ')' },
+				'abs': {
 					# §I.4: type-distinct overloads — the Int
 					# overload routes to the integer floor.
+					local String is absC: 'spec_math_abs(' . a0 . ')';
 					Conditional:if(check: { self:absArgIsInt(expr: expr, cg: cg) }, then: {
-						return 'spec_math_abs_int(' . a0 . ')';
+						absC: 'spec_math_abs_int(' . a0 . ')';
 					});
-					return 'spec_math_abs(' . a0 . ')';
-				}
-				is 'sqrt': { return 'spec_math_sqrt(' . a0 . ')'; }
-				is 'sin': { return 'spec_math_sin(' . a0 . ')'; }
-				is 'cos': { return 'spec_math_cos(' . a0 . ')'; }
-				is 'tan': { return 'spec_math_tan(' . a0 . ')'; }
-				is 'log': { return 'spec_math_log(' . a0 . ')'; }
-				is 'log2': { return 'spec_math_log2(' . a0 . ')'; }
-				is 'fastRandom': { return 'spec_fast_random()'; }
-				else: {}
-			}
+					absC
+				},
+				'sqrt': { 'spec_math_sqrt(' . a0 . ')' },
+				'sin': { 'spec_math_sin(' . a0 . ')' },
+				'cos': { 'spec_math_cos(' . a0 . ')' },
+				'tan': { 'spec_math_tan(' . a0 . ')' },
+				'log': { 'spec_math_log(' . a0 . ')' },
+				'log2': { 'spec_math_log2(' . a0 . ')' },
+				'fastRandom': { 'spec_fast_random()' },
+				else: { '' }
+			]);
+			Conditional:if(check: { oneC != '' }, then: {
+				return oneC;
+			});
 			# Two-operand functions: a + b, or named value/min/max.
 			local String is a1: '0.0';
 			Conditional:if(check: { expr:argCount() > 1 }, then: {
@@ -1184,23 +1190,23 @@ Class is BuiltinCallGenerator{
 		Conditional:if(check: { expr:argCount() > 1 }, then: {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		});
-		when (m) {
-			is 'length': { return 'spec_string_length(' . targetC . ')'; }
-			is 'charAt': { return 'String_charAt(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-			is 'substring': { return 'spec_string_substring(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-			is 'indexOf': { return 'spec_string_index_of(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-			is 'trim': { return 'String_trim(' . targetC . ')'; }
-			is 'isDigit': { return 'String_isDigit(' . targetC . ')'; }
-			is 'isAlpha': { return 'String_isAlpha(' . targetC . ')'; }
-			is 'isWhitespace': { return 'String_isWhitespace(' . targetC . ')'; }
-			is 'countLeading': { return 'String_countLeading(' . targetC . ', ' . a0 . ')'; }
-			is 'split': { return 'String_split(' . targetC . ', ' . a0 . ')'; }
-			is 'lines': { return 'String_lines(' . targetC . ')'; }
-			is 'contains': { return 'String_contains(' . targetC . ', ' . a0 . ')'; }
-			is 'startsWith': { return 'String_startsWith(' . targetC . ', ' . a0 . ')'; }
-			is 'endsWith': { return 'String_endsWith(' . targetC . ', ' . a0 . ')'; }
-			is 'replaceAll': { return 'String_replaceAll(' . targetC . ', ' . a0 . ', ' . a1 . ')'; }
-			is 'parseInt': {
+		return Cases:match(on: m, arms: [
+			'length': { 'spec_string_length(' . targetC . ')' },
+			'charAt': { 'String_charAt(' . targetC . ', ' . a0 . ', ' . a1 . ')' },
+			'substring': { 'spec_string_substring(' . targetC . ', ' . a0 . ', ' . a1 . ')' },
+			'indexOf': { 'spec_string_index_of(' . targetC . ', ' . a0 . ', ' . a1 . ')' },
+			'trim': { 'String_trim(' . targetC . ')' },
+			'isDigit': { 'String_isDigit(' . targetC . ')' },
+			'isAlpha': { 'String_isAlpha(' . targetC . ')' },
+			'isWhitespace': { 'String_isWhitespace(' . targetC . ')' },
+			'countLeading': { 'String_countLeading(' . targetC . ', ' . a0 . ')' },
+			'split': { 'String_split(' . targetC . ', ' . a0 . ')' },
+			'lines': { 'String_lines(' . targetC . ')' },
+			'contains': { 'String_contains(' . targetC . ', ' . a0 . ')' },
+			'startsWith': { 'String_startsWith(' . targetC . ', ' . a0 . ')' },
+			'endsWith': { 'String_endsWith(' . targetC . ', ' . a0 . ')' },
+			'replaceAll': { 'String_replaceAll(' . targetC . ', ' . a0 . ', ' . a1 . ')' },
+			'parseInt': {
 				local String is baseC: '10';
 				local String is defC: '-1';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -1211,9 +1217,9 @@ Class is BuiltinCallGenerator{
  defC: cg:generateExpression(expr: arg:value);
 					});
 				});
-				return 'String_parseInt(' . targetC . ', ' . baseC . ', ' . defC . ')';
-			}
-			else: { return ''; }
-		}
+				'String_parseInt(' . targetC . ', ' . baseC . ', ' . defC . ')'
+			},
+			else: { '' }
+		]);
 	}
 }

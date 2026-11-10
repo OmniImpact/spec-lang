@@ -63,7 +63,7 @@ Class is N33CasesWalls{
 
 		# 7. match is identity dispatch over class instances: a
 		#    primitive-typed subject carries no owner association.
-		local String is prim: Cases:match(on: 'plain', arms: [
+		local String is prim: Cases:match(on: 5, arms: [
 			else: { 'e' }
 		]);
 	}

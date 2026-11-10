@@ -7,21 +7,25 @@
 Class is TemplateEscapes{
 	namespace: ['base', 'compiler', 'parser'];
 
+	replace Array of Array of String is using: [
+		['base', 'cases', as Cases()]
+	];
+
 	## Expands one escaped character.
 	##
 	## @param escaped: The character after the backslash.
 	## @return: Its expansion.
 	Function of String is expand(String is escaped){
-		when (escaped) {
-			is 'n': { return "\n"; }
-			is 't': { return "\t"; }
-			is 'r': { return "\r"; }
-			is 'e': { return String:fromCharCode(code: 27); }
-			is '"': { return "\""; }
-			is "\\": { return "\\"; }
-			is '`': { return "`"; }
-			is '{': { return "{"; }
-			else: { return escaped; }
-		}
+		return Cases:match(on: escaped, arms: [
+			'n': { "\n" },
+			't': { "\t" },
+			'r': { "\r" },
+			'e': { String:fromCharCode(code: 27) },
+			'"': { "\"" },
+			"\\": { "\\" },
+			'`': { "`" },
+			'{': { "{" },
+			else: { escaped }
+		]);
 	}
 }

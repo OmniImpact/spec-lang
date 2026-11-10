@@ -179,11 +179,11 @@ assert_compile_failure "cases-match-walls" \
 	"$ROOT/tests/negative/n33_cases_match_negative_test.spec" \
 	"is not a held member of 'N33Sink'" \
 	"Duplicate match key 'file'" \
-	"Non-exhaustive match: missing held member(s) N33Mode:off" \
+	"Non-exhaustive match: missing arm(s) N33Mode:off" \
 	"A value-yielding match requires an else arm" \
 	"The match arms mix value-yielding and void closures" \
 	"Match arms after else are unreachable" \
-	"Match subjects are class instances"
+	"'Int' cannot be matched"
 
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \

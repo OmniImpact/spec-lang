@@ -41,6 +41,7 @@ Class is TypeChecker{
 		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
 		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
 		['base', 'iterator'],
+		['base', 'cases', as Cases()],
 		['base', 'iterator', as Loops()],
 		['base', 'sys', as Reflection()],
 		['base', 'io', as Output()],
@@ -610,8 +611,10 @@ Class is TypeChecker{
 		});
 		# Match is identity dispatch over class instances: a
 		# primitive-typed held constant carries no association with its
-		# owner class, so it is not a match subject.
-		Conditional:if(check: { self:isPrimitive(t: subjT) }, then: {
+		# owner class, so it is not a match subject — EXCEPT String,
+		# whose string-literal keys compare by value (the CBackendUtils/
+		# TemplateEscapes shape).
+		Conditional:if(check: { self:isPrimitive(t: subjT) && subjT != Primitive:STRING:value() }, then: {
 			self:addError(line: self:currentLine, msg: 'Match subjects are class instances; primitive-typed held constants are compared directly with == or spec_string_equals.');
 			return 'Any';
 		});
@@ -648,6 +651,22 @@ Class is TypeChecker{
 						keyTargets: [key];
 					});
 					keyTargets:each(action: local Function(Expression is one){
+						# String-literal keys match String subjects by value.
+						Conditional:if(check: { one:kind == ExpressionKind:STRING }, then: {
+							Conditional:if(check: { subjT != Primitive:STRING:value() }, then: {
+								self:addError(line: self:currentLine, msg: 'String-literal match keys match String subjects; \'' . subjT . '\' is not one.');
+								bad: true;
+							}, else: {
+								local String is target: 'str:' . one:str;
+								Conditional:if(check: { covered:indexOf(search: target, default: -1) >= 0 }, then: {
+									self:addError(line: self:currentLine, msg: 'Duplicate match key \'' . one:str . '\'.');
+									bad: true;
+								}, else: {
+									covered:add(item: target);
+								});
+							});
+							return;
+						});
 						local String is keyName: '';
 						Conditional:if(check: { one:kind == ExpressionKind:IDENT }, then: {
 							keyName: one:str;
@@ -660,7 +679,26 @@ Class is TypeChecker{
 							self:addError(line: self:currentLine, msg: 'Match keys must be held-member references.');
 							bad: true;
 						}, else: {
+							# Held members first; the variant registry is the
+							# interim bridge (PLAN-ENUM Stage 3b) — today's enum
+							# variants match until the sugar migrates (Stage 4).
 							local String is owner: self:findHeldOwnerClass(className: subjT, memberName: keyName);
+							Conditional:if(check: { owner == '' && self:allEnumNames:has(key: subjT) }, then: {
+								# The interim bridge (PLAN-ENUM Stage 3b): today's
+								# enum variants ARE the subject enum's own member
+								# list — resolved directly, no global registry
+								# (variant names collide across enums).
+								local ClassInfo is enumCls: self:findClass(name: subjT);
+								local Boolean is variantFound: false;
+								enumCls:members:each(action: local Function(Member is m){
+									Conditional:if(check: { !variantFound && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+										variantFound: true;
+									});
+								});
+								Conditional:if(check: { variantFound }, then: {
+									owner: subjT;
+								});
+							});
 							Conditional:if(check: { owner == '' }, then: {
 								self:addError(line: self:currentLine, msg: 'Match key \'' . keyName . '\' is not a held member of \'' . subjT . '\'.');
 								bad: true;
@@ -671,7 +709,10 @@ Class is TypeChecker{
 									bad: true;
 								}, else: {
 									covered:add(item: target);
-									self:checkMemberVisibility(ownerClass: owner, member: self:findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
+									Conditional:if(check: { self:allEnumNames:has(key: owner) }, then: {
+									}, else: {
+										self:checkMemberVisibility(ownerClass: owner, member: self:findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
+									});
 								});
 							});
 						});
@@ -711,11 +752,20 @@ Class is TypeChecker{
 		Conditional:if(check: { anyValue && anyVoid }, then: {
 			self:addError(line: self:currentLine, msg: 'The match arms mix value-yielding and void closures.');
 		});
-		Conditional:if(check: { rooted }, then: {
+		Conditional:if(check: { rooted && anyValue }, then: {
 			local ClassInfo is subjCls: self:findClass(name: subjT);
+			local Boolean is todayEnum: self:allEnumNames:has(key: subjT);
 			local String is missing: '';
 			subjCls:members:each(action: local Function(Member is m){
-				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, then: {
+				# Class-model: the held fields are the closed set.
+				# Today's enum: the variants are (the namespace array is
+				# metadata, not a variant — the registry's own convention).
+				local Boolean is variantMember: Conditional:if(check: { todayEnum }, then: {
+					!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)
+				}, else: {
+					m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD)
+				});
+				Conditional:if(check: { variantMember }, then: {
 					Conditional:if(check: { covered:indexOf(search: subjT . ':' . m:name, default: -1) < 0 }, then: {
 						Conditional:if(check: { missing != '' }, then: {
 							missing: missing . ', ';
@@ -725,8 +775,12 @@ Class is TypeChecker{
 				});
 			});
 			Conditional:if(check: { missing != '' && !hasElse }, then: {
-				self:addError(line: self:currentLine, msg: 'Non-exhaustive match: missing held member(s) ' . missing . ' of \'' . subjT . '\'; add arms or an else.');
+				self:addError(line: self:currentLine, msg: 'Non-exhaustive match: missing arm(s) ' . missing . ' of \'' . subjT . '\'; add arms or an else.');
 			});
+			# Void-form matches fall through freely: the closed-set demand
+			# binds the VALUE form only (a statement match's uncovered
+			# subjects simply run nothing — the old `else: {}` was empty
+			# by the same reasoning).
 		});
 		Conditional:if(check: { anyValue && !hasElse && !rooted }, then: {
 			self:addError(line: self:currentLine, msg: 'A value-yielding match requires an else arm (the subject may match no key).');
@@ -2074,20 +2128,20 @@ Class is TypeChecker{
 			return '';
 		});
 
-		when (kind) {
-			is ExpressionKind:STRING: {
+		Cases:match(on: kind, arms: [
+			ExpressionKind:STRING: {
 				res: Primitive:STRING:value();
-			}
-			is ExpressionKind:NUMBER: {
+			},
+			ExpressionKind:NUMBER: {
 				res: Primitive:INT:value();
-			}
-			is ExpressionKind:FLOAT: {
+			},
+			ExpressionKind:FLOAT: {
 				res: Primitive:FLOAT:value();
-			}
-			is ExpressionKind:BOOL: {
+			},
+			ExpressionKind:BOOL: {
 				res: Primitive:BOOLEAN:value();
-			}
-			is ExpressionKind:IDENT: {
+			},
+			ExpressionKind:IDENT: {
 				local String is name: expr:str;
 				Conditional:if(check: { name == self:names:selfIdent() }, then: {
 					# A held member body has no instance (PLAN-ENUM Stage 1)
@@ -2134,8 +2188,8 @@ Class is TypeChecker{
 						});
 					});
 				});
-			}
-			is ExpressionKind:PATH: {
+			},
+			ExpressionKind:PATH: {
 				local Array of String is segs: expr:pathSegments;
 				Conditional:if(check: { segs:length() > 0 }, then: {
 					local String is root: segs:get(index: 0);
@@ -2296,19 +2350,19 @@ Class is TypeChecker{
 						});
 					});
 				});
-			}
-			is ExpressionKind:BINARY: {
+			},
+			ExpressionKind:BINARY: {
 				# Part II: the expected type flows into the
 				# operands so a value-yielding branch call nested in an
 				# expression (e.g. `n + if(...)`) types in context.
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
 				local String is rightT: self:inferExpressionType(expr: expr:rightExpr, expected: expected);
 				local String is op: expr:str;
-				when (op) {
-					is '.': {
+				Cases:match(on: op, arms: [
+					'.': {
 						res: Primitive:STRING:value();
-					}
-					is '==', '!=', 'is', '<', '<=', '>', '>=': {
+					},
+					['==', '!=', 'is', '<', '<=', '>', '>=']: {
 						res: Primitive:BOOLEAN:value();
 						# hardening (D5): relational ordering on
 						# String is lexicographic — and only String-to-String.
@@ -2318,27 +2372,27 @@ Class is TypeChecker{
 						Conditional:if(check: { isRel && (leftStr || rightStr) && !(leftStr && rightStr) }, then: {
 							self:addError(line: self:currentLine, msg: 'Relational operator \'' . op . '\' requires two String operands (got \'' . leftT . '\' and \'' . rightT . '\').');
 						});
-					}
-					is '&&', '||': {
+					},
+					['&&', '||']: {
 						res: Primitive:BOOLEAN:value();
-					}
-					is '+', '-', '*', '/', '%': {
+					},
+					['+', '-', '*', '/', '%']: {
 						res: Conditional:if(check: { leftT == 'Float' || rightT == 'Float' }, then: { 'Float' }, else: { Primitive:INT:value() });
-					}
-					is '&', '|', '^', '<<', '>>': {
+					},
+					['&', '|', '^', '<<', '>>']: {
 						res: Primitive:INT:value();
 						Conditional:if(check: { (leftT != '' && leftT != 'Any' && leftT != Primitive:INT:value()) ||
 							(rightT != '' && rightT != 'Any' && rightT != Primitive:INT:value()) }, then: {
 							local String is msg: 'Bitwise operator \'' . op . '\' requires Int operands (got \'' . leftT . '\' and \'' . rightT . '\').';
 							self:addError(line: self:currentLine, msg: msg);
 						});
-					}
+					},
 					else: {
 						res: Primitive:INT:value();
 					}
-				}
-			}
-			is ExpressionKind:CAST: {
+				]);
+			},
+			ExpressionKind:CAST: {
 				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
 				local String is target: expr:str;
 				local String is src: Conditional:if(check: { innerT != '' }, then: { innerT }, else: { Primitive:ANY:value() });
@@ -2347,8 +2401,8 @@ Class is TypeChecker{
 				Conditional:if(check: { expr:castArgs:length() > 0 && !isFormat }, then: {
 					self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
 				});
-				when (target) {
-					is 'Hex', 'Bin', 'Oct': {
+				Cases:match(on: target, arms: [
+					['Hex', 'Bin', 'Oct']: {
 						Conditional:if(check: { expr:castArgs:length() > 1 }, then: {
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
 						});
@@ -2356,7 +2410,7 @@ Class is TypeChecker{
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' requires an Int or String operand (got \'' . src . '\').');
 						});
 						res: Conditional:if(check: { src == 'String' }, then: { Primitive:INT:value() }, else: { 'String' });
-					}
+					},
 					else: {
 						Conditional:if(check: { self:allEnumNames:has(key: target) }, then: {
 							self:addError(line: self:currentLine, msg: 'Cannot cast to enum \'' . target . '\'; construct a variant instead.');
@@ -2396,9 +2450,9 @@ Class is TypeChecker{
 							});
 						});
 					}
-				}
-			}
-			is ExpressionKind:UNARY: {
+				]);
+			},
+			ExpressionKind:UNARY: {
 				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
 				Conditional:if(check: { expr:str == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, then: {
 					local String is msg: 'Bitwise complement \'~\' requires an Int operand (got \'' . innerT . '\').';
@@ -2413,8 +2467,8 @@ Class is TypeChecker{
 				}, else: {
 					res: innerT;
 				});
-			}
-			is ExpressionKind:ARRAY: {
+			},
+			ExpressionKind:ARRAY: {
 				# Bidirectional: a container expectation from the declaration
 				# site types the literal directly — no hint state. The
 				# elements must still be assignable to the declared element
@@ -2451,8 +2505,8 @@ Class is TypeChecker{
 						res: 'Array';
 					});
 				});
-			}
-			is ExpressionKind:MAP: {
+			},
+			ExpressionKind:MAP: {
 				Conditional:if(check: { expected != '' && expected:startsWith(prefix: 'Map') }, then: {
 					# Value type from the expectation ('Map of K to V' both
 					# spellings); values must be assignable to it.
@@ -2503,8 +2557,8 @@ Class is TypeChecker{
 						res: 'Map';
 					});
 				});
-			}
-			is ExpressionKind:FIELD_ACCESS: {
+			},
+			ExpressionKind:FIELD_ACCESS: {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
 				Conditional:if(check: { leftT == '' || leftT == 'Any' || self:isPrimitive(t: leftT) }, then: {
 					res: 'Any';
@@ -2526,8 +2580,8 @@ Class is TypeChecker{
 						});
 					res: Conditional:if(check: { fT != '' }, then: { fT }, else: { 'Any' });
 				});
-			}
-			is ExpressionKind:INDEX: {
+			},
+			ExpressionKind:INDEX: {
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
 				self:inferExpressionType(expr: expr:rightExpr);
 				# Element extraction accepts both container spellings.
@@ -2554,8 +2608,8 @@ Class is TypeChecker{
 						});
 					});
 				});
-			}
-			is ExpressionKind:WHEN: {
+			},
+			ExpressionKind:WHEN: {
 				local String is subjectType: self:inferExpressionType(expr: expr:whenSubject);
 				local String is armType: 'Any';
 				expr:whenArms:each(action: local Function(WhenArm is arm){
@@ -2572,8 +2626,8 @@ Class is TypeChecker{
 				});
 				self:checkWhenExhaustive(subjectType: subjectType, arms: expr:whenArms, line: self:currentLine);
 				res: armType;
-			}
-			is ExpressionKind:ANON_FN: {
+			},
+			ExpressionKind:ANON_FN: {
 				local Map of String to String is savedVars: Map:init();
 				local Array of String is existingKeys: self:localVars:keys();
 				existingKeys:each(action: local Function(String is k){
@@ -2649,14 +2703,14 @@ Class is TypeChecker{
 				}, else: {
 					res: 'Function';
 				});
-			}
-			is ExpressionKind:CALL: {
+			},
+			ExpressionKind:CALL: {
 				res: self:inferCall(expr: expr, expected: expected);
-			}
+			},
 			else: {
 				res: 'Any';
 			}
-		}
+		]);
 
 		Conditional:if(check: { kind == ExpressionKind:CALL }, then: {
 			self:checkCallArguments(callExpr: expr);
@@ -3194,28 +3248,28 @@ Class is TypeChecker{
 									# with element types from the type string.
 									res: targetType;
 									local Array of String is scParts: targetType:split(delimiter: ':');
-									when (method) {
-										is 'toString': { res: Primitive:STRING:value(); }
-										is 'length': { res: Primitive:INT:value(); }
-										is 'isEmpty': { res: Primitive:BOOLEAN:value(); }
-										is 'count': { res: Primitive:INT:value(); }
-										is 'any': { res: Primitive:BOOLEAN:value(); }
-										is 'has': { res: Primitive:BOOLEAN:value(); }
-										is 'getString': { res: Primitive:STRING:value(); }
-										is 'getInt': { res: Primitive:INT:value(); }
-										is 'getFloat': { res: Primitive:FLOAT:value(); }
-										is 'getBool': { res: Primitive:BOOLEAN:value(); }
-										is 'indexOf': { res: Primitive:INT:value(); }
-										is 'join': { res: Primitive:STRING:value(); }
-										is 'keys': { res: 'Array of String'; }
-										is 'add': { res: 'void'; }
-										is 'set': { res: 'void'; }
-										is 'clear': { res: 'void'; }
-										is 'each': { res: 'void'; }
-										is 'push': { res: 'void'; }
-										is 'remove': { res: Primitive:BOOLEAN:value(); }
+									Cases:match(on: method, arms: [
+										'toString': { res: Primitive:STRING:value(); },
+										'length': { res: Primitive:INT:value(); },
+										'isEmpty': { res: Primitive:BOOLEAN:value(); },
+										'count': { res: Primitive:INT:value(); },
+										'any': { res: Primitive:BOOLEAN:value(); },
+										'has': { res: Primitive:BOOLEAN:value(); },
+										'getString': { res: Primitive:STRING:value(); },
+										'getInt': { res: Primitive:INT:value(); },
+										'getFloat': { res: Primitive:FLOAT:value(); },
+										'getBool': { res: Primitive:BOOLEAN:value(); },
+										'indexOf': { res: Primitive:INT:value(); },
+										'join': { res: Primitive:STRING:value(); },
+										'keys': { res: 'Array of String'; },
+										'add': { res: 'void'; },
+										'set': { res: 'void'; },
+										'clear': { res: 'void'; },
+										'each': { res: 'void'; },
+										'push': { res: 'void'; },
+										'remove': { res: Primitive:BOOLEAN:value(); },
 										else: {}
-									}
+									]);
 									Conditional:if(check: { res == targetType }, then: {
 										Conditional:if(check: { (targetType:startsWith(prefix: 'Array') || targetType:startsWith(prefix: 'List')) && scParts:length() > 1 && (method == 'get' || method == 'pop' || method == 'removeAt') }, then: {
 											res: scParts:get(index: 1);
@@ -3249,16 +3303,16 @@ Class is TypeChecker{
 										});
 									}, else: {
 										Conditional:if(check: { self:allEnumNames:has(key: targetType) }, then: {
-											when (method) {
-												is 'name': { res: Primitive:STRING:value(); }
-												is 'ordinal': { res: Primitive:INT:value(); }
-												is 'values': { res: 'Array:' . targetType; }
-												is 'of': { res: targetType; }
-												is 'value': {
+											Cases:match(on: method, arms: [
+												'name': { res: Primitive:STRING:value(); },
+												'ordinal': { res: Primitive:INT:value(); },
+												'values': { res: 'Array:' . targetType; },
+												'of': { res: targetType; },
+												'value': {
 													res: Conditional:if(check: { self:allStringBackedEnums:has(key: targetType) }, then: { 'String' }, else: { Primitive:INT:value() });
-												}
+												},
 												else: { res: 'Any'; }
-											}
+											]);
 										}, else: {
 											Conditional:if(check: { targetType == Primitive:INT:value() && method == 'toBase' }, then: {
 												# Int:toBase is a floor binding (spec_int_to_base) returning a
@@ -3397,8 +3451,8 @@ Class is TypeChecker{
 		});
 		local StatementKind is kind: stmt:kind;
 
-		when (kind) {
-			is StatementKind:VAR_DECL: {
+		Cases:match(on: kind, arms: [
+			StatementKind:VAR_DECL: {
 				local String is varName: stmt:varName;
 				# IV.2c phase 3: the access gate resolves the bare nested
 				# reference BEFORE the scope map stamps it — the checker and
@@ -3430,8 +3484,8 @@ Class is TypeChecker{
 						self:addError(line: stmt:line, msg: msg);
 					});
 				});
-			}
-			is StatementKind:ASSIGN: {
+			},
+			StatementKind:ASSIGN: {
 				# Held members are read-only (PLAN-ENUM Stage 1): a
 				# class-name prefix target resolves to the shared held
 				# slot, and assignment through it is rejected. Stage 2:
@@ -3462,7 +3516,7 @@ Class is TypeChecker{
 				});
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
-					Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
+				Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
 						local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
 						# Part IV V3: the same for assignments.
 						Conditional:if(check: { self:isVoid(t: valType) }, then: {
@@ -3473,8 +3527,8 @@ Class is TypeChecker{
 						});
 						self:addError(line: stmt:line, msg: msg);
 					});
-			}
-			is StatementKind:WHEN: {
+			},
+			StatementKind:WHEN: {
 				local String is stmtSubjectType: self:inferExpressionType(expr: stmt:whenSubject);
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					self:bindWhenPatternVars(arm: arm);
@@ -3486,11 +3540,11 @@ Class is TypeChecker{
 					});
 				});
 				self:checkWhenExhaustive(subjectType: stmtSubjectType, arms: stmt:whenArms, line: stmt:line);
-			}
-			is StatementKind:FORWARD: {
+			},
+			StatementKind:FORWARD: {
 				self:checkForward(stmt: stmt);
-			}
-			is StatementKind:RETURN: {
+			},
+			StatementKind:RETURN: {
 				Conditional:if(check: { stmt:hasReturnExpr }, then: {
 					# Bidirectional: the declared return type flows in — and a
 					# value-yielding branch's yield takes the branch's own
@@ -3531,11 +3585,14 @@ Class is TypeChecker{
 						self:addError(line: stmt:line, msg: msg);
 					});
 				});
-			}
-			is StatementKind:EXPR: {
-				self:inferExpressionType(expr: stmt:exprStmt);
-			}
-			is StatementKind:CLASS: {
+			},
+			StatementKind:EXPR: {
+				# Bound so the arm stays void: a trailing value-yielding
+				# expression statement IS the arm's yield (the Kotlin
+				# last-expression rule), and this arm is statement-form.
+				local String is exprT: self:inferExpressionType(expr: stmt:exprStmt);
+			},
+			StatementKind:CLASS: {
 				local String is savedClass: self:currentClassName;
 				local String is savedRet: self:currentMethodReturnType;
 				local Map of String to String is savedVars: Map:init();
@@ -3561,9 +3618,9 @@ Class is TypeChecker{
 				self:localVars: savedVars;
 				self:fieldTypes: savedFields;
 				self:unassignedFields: savedUnassigned;
-			}
+			},
 			else: {}
-		}
+		]);
 	}
 
 	## Part IV V5: the diagnostic display form of a type
@@ -4475,8 +4532,8 @@ Class is TypeChecker{
 		self:collectClassFieldTypes(classDef: classDef);
 
 		classDef:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:FIELD: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:FIELD: {
 					self:currentLine: m:line;
 					Conditional:if(check: { m:sourceFile != '' }, then: {
 						self:currentSourceFile: m:sourceFile;
@@ -4510,14 +4567,14 @@ Class is TypeChecker{
 							});
 						});
 					});
-				}
+				},
 				else: {}
-			}
+			]);
 		});
 
 		classDef:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:METHOD: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:METHOD: {
 					self:unassignedFields: Map:init();
 					Conditional:if(check: { m:name == ContractMethod:INIT:value() }, then: {
 						classDef:members:each(action: local Function(Member is fm){
@@ -4539,8 +4596,8 @@ Class is TypeChecker{
 					self:inHeldFunction: savedHeldFn;
 					self:fieldTypes: savedFnFields;
 					self:unassignedFields: Map:init();
-				}
-				is MemberKind:CLASS: {
+				},
+				MemberKind:CLASS: {
 					local String is savedClass: self:currentClassName;
 					local Map of String to String is savedFields: Map:init();
 					local Array of String is fKeys: self:fieldTypes:keys();
@@ -4558,9 +4615,9 @@ Class is TypeChecker{
 					self:currentClassName: savedClass;
 					self:fieldTypes: savedFields;
 					self:unassignedFields: savedUnassigned;
-				}
+				},
 				else: {}
-			}
+			]);
 		});
 	}
 
@@ -4569,19 +4626,19 @@ Class is TypeChecker{
 	## @param stmt: The statement to walk.
 	## @param acc: Output array.
 	Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
-		when (stmt:kind) {
-			is StatementKind:CLASS: {
+		Cases:match(on: stmt:kind, arms: [
+			StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
-			}
-			is StatementKind:WHEN: {
+			},
+			StatementKind:WHEN: {
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					arm:body:each(action: local Function(Statement is s){
 						self:collectClassesFromStatement(stmt: s, acc: acc);
 					});
 				});
-			}
+			},
 			else: {}
-		}
+		]);
 	}
 
 	## Collects a class and all nested definitions into the flat registry.
@@ -4591,17 +4648,17 @@ Class is TypeChecker{
 	Function is collectClasses(ClassInfo is c, Array of ClassInfo is acc){
 		acc:add(item: c);
 		c:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:CLASS: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:CLASS: {
 					self:collectClasses(c: m:nestedClass, acc: acc);
-				}
-				is MemberKind:METHOD: {
+				},
+				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
 						self:collectClassesFromStatement(stmt: s, acc: acc);
 					});
-				}
+				},
 				else: {}
-			}
+			]);
 		});
 	}
 

@@ -22,6 +22,7 @@ Class is Linter{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
+		['base', 'cases', as Cases()],
 		['base', 'iterator', as Loops()],
 		['base', 'io', as Output()]
 ,
@@ -187,8 +188,8 @@ Class is Linter{
 	Function is lintExpression(Expression is expr, Array of LintIssue is issues){
 		local ExpressionKind is kind: expr:kind;
 
-		when (kind) {
-			is ExpressionKind:CALL: {
+		Cases:match(on: kind, arms: [
+			ExpressionKind:CALL: {
 				local String is method: expr:methodName;
 				local Array of NamedArg is args: expr:methodArgs;
 
@@ -198,8 +199,8 @@ Class is Linter{
 					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
 				});
 
-				when (method) {
-					is 'getString': {
+				Cases:match(on: method, arms: [
+					'getString': {
 						local Boolean is hasDefault: false;
 						args:each(action: local Function(NamedArg is arg){
 							Conditional:if(check: { arg:name == 'default' }, then: {
@@ -209,16 +210,15 @@ Class is Linter{
 						Conditional:if(check: { hasDefault }, then: {
 							issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
 						});
-					}
-					is 'random': {
+					},
+					'random': {
 						local String is msg: 'Method call \'math:random\' provides optional min/max range parameters.';
 						Conditional:if(check: { args:length() == 0 }, then: {
 							msg: 'Method call \'math:random\' omits optional min/max parameters (using default [0.0, 1.0)).';
 						});
 						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 					}
-					else: {}
-				}
+				]);
 
 				self:lintExpression(expr: expr:methodTarget, issues: issues);
 				local Boolean is isLoopDriver: self:isLoopSpell(target: expr:methodTarget);
@@ -232,26 +232,25 @@ Class is Linter{
 						self:lintExpression(expr: arg:value, issues: issues);
 					});
 				});
-			}
-			is ExpressionKind:BINARY: {
+			},
+			ExpressionKind:BINARY: {
 				self:lintExpression(expr: expr:leftExpr, issues: issues);
 				self:lintExpression(expr: expr:rightExpr, issues: issues);
-			}
-			is ExpressionKind:UNARY: {
+			},
+			ExpressionKind:UNARY: {
 				self:lintExpression(expr: expr:unaryExpr, issues: issues);
-			}
-			is ExpressionKind:ARRAY: {
+			},
+			ExpressionKind:ARRAY: {
 				expr:arrayItems:each(action: local Function(Expression is item){
 					self:lintExpression(expr: item, issues: issues);
 				});
-			}
-			is ExpressionKind:ANON_FN: {
+			},
+			ExpressionKind:ANON_FN: {
 				expr:anonBody:each(action: local Function(Statement is st){
 					self:lintStatement(stmt: st, issues: issues);
 				});
 			}
-			else: {}
-		}
+		]);
 	}
 
 	## True when [target] spells a loop driver — a While/Loop class-name
@@ -301,29 +300,28 @@ Class is Linter{
 	Function is lintStatement(Statement is stmt, Array of LintIssue is issues){
 		local StatementKind is kind: stmt:kind;
 
-		when (kind) {
-			is StatementKind:VAR_DECL: {
+		Cases:match(on: kind, arms: [
+			StatementKind:VAR_DECL: {
 				Conditional:if(check: { stmt:hasInit }, then: {
 					self:lintExpression(expr: stmt:initExpr, issues: issues);
 				});
-			}
-			is StatementKind:ASSIGN: {
+			},
+			StatementKind:ASSIGN: {
 				self:lintExpression(expr: stmt:assignTarget, issues: issues);
 				self:lintExpression(expr: stmt:assignValue, issues: issues);
-			}
-			is StatementKind:RETURN: {
+			},
+			StatementKind:RETURN: {
 				Conditional:if(check: { stmt:hasReturnExpr }, then: {
 					self:lintExpression(expr: stmt:returnExpr, issues: issues);
 				});
-			}
-			is StatementKind:CLASS: {
+			},
+			StatementKind:CLASS: {
 				self:lintClass(classDef: stmt:nestedClass, issues: issues);
-			}
-			is StatementKind:EXPR: {
+			},
+			StatementKind:EXPR: {
 				self:lintExpression(expr: stmt:exprStmt, issues: issues);
 			}
-			else: {}
-		}
+		]);
 	}
 
 	## Inspects all members of a class definition.
@@ -332,17 +330,16 @@ Class is Linter{
 	## @param issues: Destination issues array.
 	Function is lintClass(ClassInfo is classDef, Array of LintIssue is issues){
 		classDef:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:METHOD: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
 						self:lintStatement(stmt: s, issues: issues);
 					});
-				}
-				is MemberKind:CLASS: {
+				},
+				MemberKind:CLASS: {
 					self:lintClass(classDef: m:nestedClass, issues: issues);
 				}
-				else: {}
-			}
+			]);
 		});
 	}
 
@@ -468,17 +465,16 @@ Class is Linter{
 		local ClassInfo is savedOwner: self:auditOwner;
 		self:auditOwner: classDef;
 		classDef:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:METHOD: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
 						self:auditStatement(stmt: s, file: m:sourceFile);
 					});
-				}
-				is MemberKind:CLASS: {
+				},
+				MemberKind:CLASS: {
 					self:auditClass(classDef: m:nestedClass);
 				}
-				else: {}
-			}
+			]);
 		});
 		self:auditOwner: savedOwner;
 	}
@@ -489,40 +485,39 @@ Class is Linter{
 	## @param stmt: [Statement] AST node.
 	## @param file: Source file the statement lives in.
 	Function is auditStatement(Statement is stmt, String is file){
-		when (stmt:kind) {
-			is StatementKind:VAR_DECL: {
+		Cases:match(on: stmt:kind, arms: [
+			StatementKind:VAR_DECL: {
 				Conditional:if(check: { stmt:hasInit }, then: {
 					self:auditExpression(expr: stmt:initExpr, file: file);
 				});
-			}
-			is StatementKind:ASSIGN: {
+			},
+			StatementKind:ASSIGN: {
 				self:auditExpression(expr: stmt:assignTarget, file: file);
 				self:auditExpression(expr: stmt:assignValue, file: file);
-			}
-			is StatementKind:RETURN: {
+			},
+			StatementKind:RETURN: {
 				Conditional:if(check: { stmt:hasReturnExpr }, then: {
 					self:auditExpression(expr: stmt:returnExpr, file: file);
 				});
-			}
-			is StatementKind:CLASS: {
+			},
+			StatementKind:CLASS: {
 				self:auditClass(classDef: stmt:nestedClass);
-			}
-			is StatementKind:EXPR: {
+			},
+			StatementKind:EXPR: {
 				self:auditExpression(expr: stmt:exprStmt, file: file);
-			}
-			is StatementKind:WHEN: {
+			},
+			StatementKind:WHEN: {
 				self:auditExpression(expr: stmt:whenSubject, file: file);
 				stmt:whenArms:each(action: local Function(WhenArm is arm){
 					self:auditWhenArm(arm: arm, file: file);
 				});
-			}
-			is StatementKind:FORWARD: {
+			},
+			StatementKind:FORWARD: {
 				stmt:forwardArgs:each(action: local Function(NamedArg is arg){
 					self:auditExpression(expr: arg:value, file: file);
 				});
 			}
-			else: {}
-		}
+		]);
 	}
 
 	## Audits one when arm: guard conditions, statement body, or value
@@ -549,62 +544,61 @@ Class is Linter{
 	## @param expr: [Expression] AST node.
 	## @param file: Source file the expression lives in.
 	Function is auditExpression(Expression is expr, String is file){
-		when (expr:kind) {
-			is ExpressionKind:CALL: {
+		Cases:match(on: expr:kind, arms: [
+			ExpressionKind:CALL: {
 				self:auditReceiver(callExpr: expr, file: file);
 				self:auditExpression(expr: expr:methodTarget, file: file);
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					self:auditExpression(expr: arg:value, file: file);
 				});
-			}
-			is ExpressionKind:BINARY: {
+			},
+			ExpressionKind:BINARY: {
 				self:auditExpression(expr: expr:leftExpr, file: file);
 				self:auditExpression(expr: expr:rightExpr, file: file);
-			}
-			is ExpressionKind:UNARY: {
+			},
+			ExpressionKind:UNARY: {
 				self:auditExpression(expr: expr:unaryExpr, file: file);
-			}
-			is ExpressionKind:ARRAY: {
+			},
+			ExpressionKind:ARRAY: {
 				expr:arrayItems:each(action: local Function(Expression is item){
 					self:auditExpression(expr: item, file: file);
 				});
-			}
-			is ExpressionKind:MAP: {
+			},
+			ExpressionKind:MAP: {
 				expr:mapKeys:each(action: local Function(Expression is k){
 					self:auditExpression(expr: k, file: file);
 				});
 				expr:mapValues:each(action: local Function(Expression is v){
 					self:auditExpression(expr: v, file: file);
 				});
-			}
-			is ExpressionKind:CAST: {
+			},
+			ExpressionKind:CAST: {
 				self:auditExpression(expr: expr:leftExpr, file: file);
 				expr:castArgs:each(action: local Function(Expression is a){
 					self:auditExpression(expr: a, file: file);
 				});
-			}
-			is ExpressionKind:FIELD_ACCESS: {
+			},
+			ExpressionKind:FIELD_ACCESS: {
 				self:auditExpression(expr: expr:leftExpr, file: file);
-			}
-			is ExpressionKind:INDEX: {
+			},
+			ExpressionKind:INDEX: {
 				self:auditExpression(expr: expr:leftExpr, file: file);
 				expr:castArgs:each(action: local Function(Expression is a){
 					self:auditExpression(expr: a, file: file);
 				});
-			}
-			is ExpressionKind:WHEN: {
+			},
+			ExpressionKind:WHEN: {
 				self:auditExpression(expr: expr:whenSubject, file: file);
 				expr:whenArms:each(action: local Function(WhenArm is arm){
 					self:auditWhenArm(arm: arm, file: file);
 				});
-			}
-			is ExpressionKind:ANON_FN: {
+			},
+			ExpressionKind:ANON_FN: {
 				expr:anonBody:each(action: local Function(Statement is s){
 					self:auditStatement(stmt: s, file: file);
 				});
 			}
-			else: {}
-		}
+		]);
 	}
 
 	## Classifies one call's receiver (§2.2, §4): flags
@@ -734,13 +728,11 @@ Class is Linter{
 			return false;
 		});
 		local String is first: name:charAt(index: 0, default: '');
-		when (first) {
-			is 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M':
-				{ return true; }
-			is 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
-				{ return true; }
-			else: { return false; }
-		}
+		return Cases:match(on: first, arms: [
+			['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']: { true },
+			['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']: { true },
+			else: { false }
+		]);
 	}
 
 	## Prints the audit worklist: per-site lines, then the total count.

@@ -28,7 +28,8 @@ Class is DeclarationGenerator{
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()]
+		['base', 'iterator', as Loops()],
+		['base', 'cases', as Cases()]
 	];
 
 	## Enum name -> "true" (string-backed enums included).
@@ -154,8 +155,8 @@ Class is DeclarationGenerator{
 			});
 		});
 		c:members:each(action: local Function(Member is m){
-			when (m:kind) {
-				is MemberKind:FIELD: {
+			Cases:match(on: m:kind, arms: [
+				MemberKind:FIELD: {
 					# Declarative metadata (namespace/using/castable)
 					# never becomes a struct field; neither do HELD members
 					# (PLAN-ENUM Stage 1) — held storage is the file-scope
@@ -170,8 +171,7 @@ Class is DeclarationGenerator{
 						});
 					});
 				}
-				else: {}
-			}
+			]);
 		});
 	}
 
@@ -421,8 +421,8 @@ Class is DeclarationGenerator{
 			Conditional:if(check: { (self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local Array of String is tps: c:typeParams;
 				c:members:each(action: local Function(Member is m){
-					when (m:kind) {
-					is MemberKind:METHOD: {
+					Cases:match(on: m:kind, arms: [
+					MemberKind:METHOD: {
 						Conditional:if(check: { !self:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
 							local String is retType: self:resolveReturnTypeForClass(t: m:memberType, typeParams: tps);
 							Conditional:if(check: { retType == 'void' }, then: {
@@ -467,8 +467,7 @@ Class is DeclarationGenerator{
 							Buf:bufAppendBuf(dst: out, src: ");\n");
 						});
 					}
-						else: {}
-					}
+					]);
 				});
 			});
 		});

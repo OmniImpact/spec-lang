@@ -11,7 +11,8 @@ Class is CBackendUtils{
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'iterator'],
-		['base', 'iterator', as Loops()]
+		['base', 'iterator', as Loops()],
+		['base', 'cases', as Cases()]
 	];
 
 	## Maps a Spec type name to its C11 type. Containers accept both
@@ -37,21 +38,21 @@ Class is CBackendUtils{
 		Conditional:if(check: { typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:') }, then: {
 			return 'SpecClosure*';
 		});
-		when (typeName) {
-			is 'Int': { return 'long long'; }
-			is 'Byte': { return 'unsigned char'; }
-			is 'Float': { return 'double'; }
-			is 'Boolean': { return 'bool'; }
-			is 'String': { return 'String'; }
-			is 'Void', 'void', '': { return 'void'; }
-			is 'Array': { return 'SpecArray*'; }
-			is 'Map': { return 'SpecMap*'; }
-			is 'Function': { return 'SpecClosure*'; }
-			is 'InputHandler': { return 'void*'; }
-			is 'LoopControl': { return 'SpecLoopControl*'; }
-			is 'File', 'Process', 'Output', 'Input', 'Math', 'Loops': { return 'void*'; }
-			else: { return self:cIdent(name: typeName) . '*'; }
-		}
+		return Cases:match(on: typeName, arms: [
+			'Int': { 'long long' },
+			'Byte': { 'unsigned char' },
+			'Float': { 'double' },
+			'Boolean': { 'bool' },
+			'String': { 'String' },
+			['Void', 'void', '']: { 'void' },
+			'Array': { 'SpecArray*' },
+			'Map': { 'SpecMap*' },
+			'Function': { 'SpecClosure*' },
+			'InputHandler': { 'void*' },
+			'LoopControl': { 'SpecLoopControl*' },
+			['File', 'Process', 'Output', 'Input', 'Math', 'Loops']: { 'void*' },
+			else: { self:cIdent(name: typeName) . '*' }
+		]);
 	}
 
 	## Converts a lowerCamel name to snake_case for C floor binding
@@ -75,14 +76,14 @@ Class is CBackendUtils{
 		Conditional:if(check: { name:contains(needle: ':') }, then: {
 			return self:cIdent(name: name:replaceAll(search: ':', replacement: '_'));
 		});
-		return when (name) {
-			is 'EOF': '_EOF';
-			is 'default', 'case', 'switch', 'struct', 'union', 'enum', 'register',
-				'static', 'extern', 'inline', 'const', 'volatile', 'auto', 'signed',
-				'unsigned', 'short', 'long', 'sizeof', 'typedef', 'if', 'else',
-				'for', 'while', 'do', 'return', 'goto', 'break', 'continue': '_' . name;
-			else: name;
-		};
+		return Cases:match(on: name, arms: [
+			'EOF': { '_EOF' },
+			['default', 'case', 'switch', 'struct', 'union', 'enum', 'register',
+			'static', 'extern', 'inline', 'const', 'volatile', 'auto', 'signed',
+			'unsigned', 'short', 'long', 'sizeof', 'typedef', 'if', 'else',
+			'for', 'while', 'do', 'return', 'goto', 'break', 'continue']: { '_' . name },
+			else: { name }
+		]);
 	}
 
 	## Escapes string content for a C string literal.
@@ -150,7 +151,8 @@ Class is CBackendUtils{
 	Class of Loop is EscapeLoop{
 
 		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'cases', as Cases()]
 		];
 		local String is src;
 		local Int is pos: 0;
@@ -169,12 +171,12 @@ Class is CBackendUtils{
 		replace Function of Boolean is iteration(LoopControl is control){
 			local String is ch: self:src:charAt(index: self:pos, default: '');
 			self:pos: self:pos + 1;
-			when (ch) {
-				is "\n": { self:res: self:res . "\\n"; }
-				is "\t": { self:res: self:res . "\\t"; }
-				is "\r": { self:res: self:res . "\\r"; }
-				is '"': { self:res: self:res . "\\\""; }
-				is "\\": { self:res: self:res . "\\\\"; }
+			Cases:match(on: ch, arms: [
+				"\n": { self:res: self:res . "\\n"; },
+				"\t": { self:res: self:res . "\\t"; },
+				"\r": { self:res: self:res . "\\r"; },
+				'"': { self:res: self:res . "\\\""; },
+				"\\": { self:res: self:res . "\\\\"; },
 				else: {
 					Conditional:if(check: { ch == String:fromCharCode(code: 27) }, then: {
 						self:res: self:res . "\\033";
@@ -182,7 +184,7 @@ Class is CBackendUtils{
 						self:res: self:res . ch;
 					});
 				}
-			}
+			]);
 			return true;
 		}
 	}
