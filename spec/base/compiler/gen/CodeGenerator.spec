@@ -3848,6 +3848,51 @@ Class is CodeGenerator{
 		return out;
 	}
 
+	## Emits the held-member metadata (PLAN-ENUM Stage 1): one name
+	## table per class declaring held members (fields and functions,
+	## declaration order — the ordinal index), and the program-wide
+	## registry the Introspection floor scans. The registry ALWAYS
+	## emits (the terminator alone when no class holds members): the
+	## prelude's tentative definition needs the completion. Runs
+	## single-threaded before the pool; the fixed class order keeps the
+	## emission deterministic.
+	##
+	## @param classes: Flattened program classes.
+	## @return: C source text.
+	Function of String is generateHeldMetadata(Array of ClassInfo is classes){
+		local String is out: "/* Held Metadata */\n";
+		local String is entries: '';
+		local Int is entryCount: 0;
+		classes:each(action: local Function(ClassInfo is c){
+			local Array of String is names: [];
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { (m:kind == MemberKind:FIELD || m:kind == MemberKind:METHOD) && m:hasModifier(kw: Keyword:HELD) }, then: {
+					names:add(item: m:name);
+				});
+			});
+			Conditional:if(check: { names:length() > 0 }, then: {
+				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+				Buf:bufAppendBuf(dst: out, src: 'static const char* ' . cSym . "_held_names[] = {\n");
+				local Int is ni: 0;
+				while(
+					evaluate: local Function of Boolean(){ return ni < names:length(); },
+					iteration: local Function of Boolean(){
+						Buf:bufAppendBuf(dst: out, src: '    "' . names:get(index: ni) . "\",\n");
+						ni: ni + 1;
+						return true;
+					}
+				);
+				Buf:bufAppendBuf(dst: out, src: "};\n");
+				Buf:bufAppendBuf(dst: entries, src: '    { "' . c:qualifiedName() . '", ' . cSym . '_held_names, ' . (names:length() as String) . " },\n");
+				entryCount: entryCount + 1;
+			});
+		});
+		Buf:bufAppendBuf(dst: out, src: "static const SpecHeldEntry spec_held_registry[] = {\n");
+		Buf:bufAppendBuf(dst: out, src: entries);
+		Buf:bufAppendBuf(dst: out, src: "    { 0, 0, 0 }\n};\n\n");
+		return out;
+	}
+
 	## Translates a complete parsed program into a standalone C11 file.
 	##
 	## @param program: The parsed program.
@@ -3871,6 +3916,7 @@ Class is CodeGenerator{
 		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
 		local String is vt: self:generateVTables(classes: flattenedClasses);
 		local String is heldSrc: self:generateHeldMembers(classes: flattenedClasses);
+		local String is heldMeta: self:generateHeldMetadata(classes: flattenedClasses);
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
 		# the per-class generation runs on the thread
@@ -4033,8 +4079,10 @@ Class is CodeGenerator{
 		Buf:bufAppendBuf(dst: cSource, src: allHelpers);
 		# held members after the anon-fn helpers: a held initializer's
 		# closure bodies land in the helpers section, and the accessor
-		# definitions reference them.
+		# definitions reference them. The metadata registry follows (it
+		# completes the prelude's tentative definition).
 		Buf:bufAppendBuf(dst: cSource, src: heldSrc);
+		Buf:bufAppendBuf(dst: cSource, src: heldMeta);
 		Buf:bufAppendBuf(dst: cSource, src: ctors);
 		Buf:bufAppendBuf(dst: cSource, src: methods);
 		Buf:bufAppendBuf(dst: cSource, src: mainFn);

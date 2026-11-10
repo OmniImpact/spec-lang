@@ -1715,6 +1715,48 @@ long long spec_object_hash(const void* obj) {
     return (long long)h;
 }
 
+/* Held-member metadata (PLAN-ENUM Stage 1): per-class held-member name
+   tables, registered by the emitted Held Metadata section (the tables
+   preserve declaration order — the ordinal index). The tentative array
+   definition is completed by the generated registry, which always
+   carries the {0,0,0} terminator. */
+typedef struct SpecHeldEntry {
+    const char* type_name;
+    const char* const* names;
+    int count;
+} SpecHeldEntry;
+static const SpecHeldEntry spec_held_registry[];
+
+static const SpecHeldEntry* spec_held_entry_of(const void* obj) {
+    if (!obj) return 0;
+    const char* tn = *((const char**)obj);
+    if (!tn) return 0;
+    for (int i = 0; spec_held_registry[i].type_name; i++) {
+        if (strcmp(spec_held_registry[i].type_name, tn) == 0) return &spec_held_registry[i];
+    }
+    return 0;
+}
+
+long long spec_held_count(const void* obj) {
+    const SpecHeldEntry* e = spec_held_entry_of(obj);
+    return e ? (long long)e->count : 0;
+}
+
+String spec_held_name(const void* obj, long long index) {
+    const SpecHeldEntry* e = spec_held_entry_of(obj);
+    if (!e || index < 0 || index >= (long long)e->count) return spec_string_intern("");
+    return spec_string_intern(e->names[index]);
+}
+
+bool spec_has_held(const void* obj, String name) {
+    const SpecHeldEntry* e = spec_held_entry_of(obj);
+    if (!e) return false;
+    for (int i = 0; i < e->count; i++) {
+        if (spec_string_equals(spec_string_intern(e->names[i]), name)) return true;
+    }
+    return false;
+}
+
 /* Clock & Memory Metrics */
 long long spec_clock_ms(void) {
     struct timespec ts;
