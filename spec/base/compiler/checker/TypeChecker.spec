@@ -2756,7 +2756,7 @@ Class is TypeChecker{
 		# table's keys as ordinary expressions (the else key is not one).
 		# Keys resolve against the subject's class's held members,
 		# exhaustiveness keys on the Enum root, arm closures type here.
-		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional') }, then: {
+		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'match' && self:isAsImportedInherited(className: 'Conditional'))) }, then: {
 			local Expression is matchSubj: Expression:init(kind: ExpressionKind:UNKNOWN);
 			local Expression is matchArms: Expression:init(kind: ExpressionKind:UNKNOWN);
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -2923,7 +2923,7 @@ Class is TypeChecker{
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
-		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional');
+		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'if' && self:isAsImportedInherited(className: 'Conditional')));
 		# Part II: the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline

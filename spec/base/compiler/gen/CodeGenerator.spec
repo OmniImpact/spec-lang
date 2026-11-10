@@ -2472,7 +2472,7 @@ Class is CodeGenerator{
 		# spec_string_equals for String, == for the numeric primitives —
 		# with the arm closures inlined as statement blocks (no
 		# per-arm closure allocation, the generateInlineBranch protocol).
-		Conditional:if(check: { expr:methodName == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional') }, then: {
+		Conditional:if(check: { expr:methodName == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'match')) }, then: {
 			local Expression is matchSubjC: Expression:init(kind: ExpressionKind:UNKNOWN);
 			local Expression is matchArmsC: Expression:init(kind: ExpressionKind:UNKNOWN);
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
