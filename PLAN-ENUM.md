@@ -167,18 +167,57 @@ Class of Enum is Color {                    # of Enum: the enum root parent
   admission above; the CALL form (`Class:name(args)`) stays
   unhoked — it is the Stage-5 subtype-variant path.
 
-### 5.5 The `when` generalization
+### 5.5 The match mechanism — SUPERSEDES the `when` generalization (2026-11)
 
-- Exhaustive over the declared static members of the subject's class —
-  the checker enumerates exactly as the enum version does today.
-- The lowering: the ordinal jump table (the reflective index), not the
-  identity-comparison chain — the big enums (the state machines) stay
-  O(1).
-- The subtype arms (the payload enums): `is Red:` — the instance-of
-  check + the field bindings. The ordering/duplication rules: the same
-  as the enum arms today.
-- The dynamic (hook-resolved) subjects: NOT exhaustive — `else`
-  required. The rule, stated.
+The `when` KEYWORD retires. `if`/`while` were replaced by class-based
+calls with closure arguments (`Conditional:if(check:, then:, else:)`,
+`Loops:while(evaluate:, iteration:)`); `when` joins them. The
+replacement is **`Cases:match`** — a provider class with a bare
+as-import spelling, whose shape the checker recognizes and the gen
+inlines. The grammar needed ZERO parser changes: map literals are
+square brackets (`[key: value, ...]`), braces are closures, so every
+contested site was pre-decided by the existing delimiter split.
+
+```spec
+local String is label: Cases:match(on: state, when: [
+    [Machine:idle, Machine:paused]: { 'holding' },   # array key = multiple matching
+    Machine:running: {
+        ticks: ticks + 1;
+        'running (' . (ticks as String) . ')'
+    },
+    else: { 'unknown' }
+]);
+```
+
+The decisions:
+
+- **Keys are expressions resolved against the SUBJECT'S CLASS** through
+  the held lookup (`findHeldMember`): bare keys (`Red:`) for
+  Enum-rooted subjects, qualified keys (`Machine:idle:`) always legal.
+  A key naming a member of the wrong class is a pointed error.
+- **Array keys = multiple matching** (`[A, B]: body`) — the direct
+  replacement for today's `arm:conditions`; single-element arrays are
+  legal but warn.
+- **Values are closures** — laziness free, statement bodies and the
+  last-expression yield rule shared with `Conditional`; the payload
+  arms of Stage 5 are just closure parameters (the subtype-variant
+  payload becomes the closure's arguments).
+- **`else` is a plain identifier key** (the keyword is gone); `[:]` is
+  the empty match.
+- **Exhaustiveness keys on the ENUM ROOT**: an Enum-rooted subject
+  requires full key coverage or `else`; other classes get partial
+  coverage — statement context falls through freely, expression
+  context (the match yields a value) requires `else`. Hook-resolved
+  subjects are never exhaustive.
+- **The lowering**: comparison chains at first (identity for
+  class-typed held members, `spec_string_equals` for String, `==` for
+  the numeric primitives). The ordinal jump table defers until the
+  Enum root carries ordinals (Stage 4/5) — measure, don't assume.
+- **Sequencing**: the parameter is `arms:` until the `when` keyword
+  retires; the keyword deletion frees `when` as the parameter name.
+  The interim bridge: the recognizer resolves keys through BOTH the
+  held lookup AND today's enum-variant registry, so the compiler's
+  own `when` sites migrate before the enum sugar does.
 
 ---
 
@@ -225,16 +264,23 @@ Class of Enum is Color {                    # of Enum: the enum root parent
    see §5.4. Still enum-free. Tests: tests/held_resolver_test.spec,
    tests/negative/n32, tests/negative/byte_held_resolver_panic_
    test.spec.
-3. **Stage 3 — the `when` generalization.** The static-member
-   exhaustiveness + the subtype arms. Still enum-free.
+3. **Stage 3 — the Cases stage (SUPERSEDES the `when` generalization).**
+   The `when` keyword retires in favor of `Cases:match` — see §5.5.
+   Land the provider + the shape recognizer (key resolution through the
+   held lookup AND today's enum-variant registry — the interim bridge),
+   the exhaustiveness policy, and the inline lowering; migrate the
+   compiler's own `when` sites; then delete the `when` machinery
+   (parser grammar, WHEN kinds, checkWhenExhaustive,
+   bindWhenPatternVars, emitWhenStatement). Still enum-free at first;
+   the enum-variant key path retires with Stage 4.
 4. **Stage 4 — the value enums migrate.** The `Enum of String is X`
-   sugar desugars to the class + the static members. The compiler's own
+   sugar desugars to the class + the held members. The compiler's own
    String-backed enums (`ContractMethod`, `MetadataField` — the small
    ones) migrate first; `Keyword` last (the hottest).
 5. **Stage 5 — the tagged enums migrate.** The subtype-variant pattern
-   (`Red of Color` with the payload fields) + the subtype `when` arms.
-   The compiler's tagged enums (`ExpressionKind`? — audit which carry
-   payloads) migrate.
+   (`Red of Color` with the payload fields); match payload arms are
+   closure parameters. The compiler's tagged enums (`ExpressionKind`?
+   — audit which carry payloads) migrate.
 6. **Stage 6 — the special-casing dies.** The parser's enum parse
    becomes pure sugar-desugaring; the registries, the enum emission,
    and the enum branches in the checker/gen delete. The compiler's enum
