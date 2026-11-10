@@ -763,6 +763,15 @@ static inline void spec_branch(SpecClosure* check, SpecClosure* then) {
         }
     }
 }
+
+/* The iteration floor (Part II): the single loop primitive.
+   `until` composes above it (run once, then while !evaluate); repeat
+   counts; run drives the Loop protocol. */
+static inline void spec_while(SpecClosure* evaluate, SpecClosure* iterate) {
+    while (evaluate && evaluate->fn && ((bool (*)(void*))evaluate->fn)(evaluate->env)) {
+        spec_call_closure_0(iterate);
+    }
+}
 static inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {
     if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }
 }
@@ -1713,6 +1722,13 @@ long long spec_object_hash(const void* obj) {
     h *= 0xff51afd7ed558ccdULL;
     h ^= h >> 33;
     return (long long)h;
+}
+
+/* Reference identity (the Introspection floor): pointer equality —
+   the runtime's identity notion (held singletons and enum variants
+   are distinct live instances, so address equality is the test). */
+static inline bool spec_same_ref(const void* a, const void* b) {
+    return a == b;
 }
 
 /* Held-member metadata (PLAN-ENUM Stage 1): per-class held-member name
