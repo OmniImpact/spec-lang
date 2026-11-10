@@ -62,7 +62,7 @@ Class is Blackjack{
 			game:dealerHand:add(item: card);
 
 			local Int is newScore: game:handValue(hand: game:dealerHand);
-			Output:line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
+			line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
 
 			return true; # Step completed normally; engine will call evaluate() next
 		}
@@ -88,7 +88,7 @@ Class is Blackjack{
 		}
 
 		replace Function is onComplete(LoopControl is control){
-			Output:line("\nDealer stands or busts.");
+			line("\nDealer stands or busts.");
 			game:evaluateRoundOutcome();
 		}
 	}
@@ -114,7 +114,7 @@ Class is Blackjack{
 
 		replace Function is onInput(String is action){
 			Conditional:if(check: { action == '' }, then: {
-				Output:line("\nInput closed. Thanks for playing!");
+				line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
 				return;
 			});
@@ -122,17 +122,17 @@ Class is Blackjack{
 				['h', 'hit']: {
 					local Int is card: game:drawCard();
 					game:playerHand:add(item: card);
-					Output:line('You drew: ' . card);
+					line('You drew: ' . card);
 
 					local Int is score: game:handValue(hand: game:playerHand);
-					Output:line('Your total is now: ' . score);
+					line('Your total is now: ' . score);
 
 					Conditional:if(check: { score > 21 }, then: {
-						Output:line('Bust! You lose.');
+						line('Bust! You lose.');
 						game:roundActive: false;
 					}, else: {
 						Conditional:if(check: { score == 21 }, then: {
-							Output:line('21! Standing automatically.');
+							line('21! Standing automatically.');
 							game:startDealerTurn();
 						}, else: {
 							game:promptPlayerAction();
@@ -140,11 +140,11 @@ Class is Blackjack{
 					});
 				},
 				['s', 'stand']: {
-					Output:line('You stand with total: ' . game:handValue(hand: game:playerHand));
+					line('You stand with total: ' . game:handValue(hand: game:playerHand));
 					game:startDealerTurn();
 				},
 				else: {
-					Output:line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
+					line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
 					game:promptPlayerAction();
 				}
 			]);
@@ -190,13 +190,13 @@ Class is Blackjack{
 	}
 
 	Function is promptPlayerAction(){
-		Output:line('Would you like to (h)it or (s)tand?');
+		line('Would you like to (h)it or (s)tand?');
 		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
 		Input:prompt(handler: handler);
 	}
 
 	Function is startDealerTurn(){
-		Output:line("\n--- Starting Dealer's Turn ---");
+		line("\n--- Starting Dealer's Turn ---");
 
 		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: self);
 		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: self);
@@ -209,19 +209,19 @@ Class is Blackjack{
 		local Int is playerScore: handValue(hand: playerHand);
 		local Int is dealerScore: handValue(hand: dealerHand);
 
-		Output:line("\n=== Final Results ===");
-		Output:line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
+		line("\n=== Final Results ===");
+		line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
 
 		Conditional:if(check: { dealerScore > 21 }, then: {
-			Output:line('Dealer busts! You win!');
+			line('Dealer busts! You win!');
 		}, else: {
 			Conditional:if(check: { playerScore > dealerScore }, then: {
-				Output:line('You beat the dealer! You win!');
+				line('You beat the dealer! You win!');
 			}, else: {
 				Conditional:if(check: { dealerScore > playerScore }, then: {
-					Output:line('Dealer wins!');
+					line('Dealer wins!');
 				}, else: {
-					Output:line('Push (Tie)!');
+					line('Push (Tie)!');
 				});
 			});
 		});
@@ -231,9 +231,9 @@ Class is Blackjack{
 	# Application Entry Point
 	# =========================================================================
 	replace Function is init(Map of String to String is args){
-		Output:line('======================================');
-		Output:line('         Welcome to SpecJack          ');
-		Output:line("======================================\n");
+		line('======================================');
+		line('         Welcome to SpecJack          ');
+		line("======================================\n");
 
 		# 1. Build the deck: four suits of each value 1..10.
 		local Int is value: 1;
@@ -258,12 +258,12 @@ Class is Blackjack{
 		dealerHand:add(item: drawCard());
 		dealerHand:add(item: drawCard());
 
-		Output:line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
-		Output:line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
+		line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
+		line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
 		# 3. Check natural 21
 		Conditional:if(check: { handValue(hand: playerHand) == 21 }, then: {
-			Output:line('Natural Blackjack! You win!');
+			line('Natural Blackjack! You win!');
 			return;
 		});
 

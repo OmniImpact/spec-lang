@@ -13,7 +13,7 @@ Class is HelloWorld{
 
 	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
-		Output:line(greeting . ' ' . name);
+		Output:line(greeting . ' ' . name);   # Output:line or bare line() — the as-import merges both into scope
 	}
 
 }

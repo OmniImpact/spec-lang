@@ -17,7 +17,7 @@ Class is HelloWorld{
 		local String is name: args:getString(key:'name', default:'User');
 
 		# in io: package
-		Output:line(greeting.' '.name);
+		line(greeting . ' ' . name);
 	}
 
 }

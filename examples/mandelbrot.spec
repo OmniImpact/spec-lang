@@ -145,14 +145,14 @@ Class is Mandelbrot{
 		local Int is elapsedSec: elapsedMs / 1000;
 		local String is bar: self:repeatBar(count: width);
 
-		Output:line('');
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Statistics ' . self:repeatBar(count: width - 14) . '╗'));
-		Output:line(Ansi:color256(code: 51, text: '║ Resolution: ' . width . ' x ' . height . ', maxIter ' . maxIter));
-		Output:line(Ansi:color256(code: 51, text: '║ Points sampled: ' . self:pointsRendered));
-		Output:line(Ansi:color256(code: 51, text: '║ Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)'));
-		Output:line(Ansi:color256(code: 51, text: '║ Peak memory: ' . peakKb . ' KB (' . peakMb . ' MB)'));
-		Output:line(Ansi:color256(code: 51, text: '║ Threads used: ' . Process:threadCount()));
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . bar . '╝'));
+		line('');
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Statistics ' . self:repeatBar(count: width - 14) . '╗'));
+		line(Ansi:color256(code: 51, text: '║ Resolution: ' . width . ' x ' . height . ', maxIter ' . maxIter));
+		line(Ansi:color256(code: 51, text: '║ Points sampled: ' . self:pointsRendered));
+		line(Ansi:color256(code: 51, text: '║ Render time: ' . elapsedMs . ' ms (' . elapsedSec . ' s)'));
+		line(Ansi:color256(code: 51, text: '║ Peak memory: ' . peakKb . ' KB (' . peakMb . ' MB)'));
+		line(Ansi:color256(code: 51, text: '║ Threads used: ' . Process:threadCount()));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . bar . '╝'));
 	}
 
 	## Builds a horizontal box bar of the given length.
@@ -227,12 +227,12 @@ Class is Mandelbrot{
 			});
 		});
 
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔' . self:repeatBar(count: width) . '╗'));
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:repeatBar(count: width) . '╝'));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╔' . self:repeatBar(count: width) . '╗'));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: self:centerTitle(title: 'Spec 256-Color Mandelbrot Set Renderer', width: width)));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:repeatBar(count: width) . '╝'));
 
 		Conditional:if(check: { mode == 'both' || mode == 'shaded' }, then: {
-			Output:line(Ansi:color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
+			line(Ansi:color256(code: 220, text: '▸ Mode 1: Multi-Glyph Shaded (\'█▓▒░\') 256-Color Full Mandelbrot Set [-2.4..1.0, -1.25..1.25]'));
 			self:renderShaded(
 				width: width,
 				rows: height,
@@ -245,8 +245,8 @@ Class is Mandelbrot{
 		});
 
 		Conditional:if(check: { mode == 'both' || mode == 'halfblock' }, then: {
-			Output:line('');
-			Output:line(Ansi:color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
+			line('');
+			line(Ansi:color256(code: 213, text: '▸ Mode 2: Sub-Pixel Half-Block (\'▀\') 256-Color Seahorse Valley Zoom [-0.82..-0.70, 0.05..0.17]'));
 			self:renderHalfBlock(
 				width: width,
 				rows: height / 2,
@@ -293,7 +293,7 @@ Class is Mandelbrot{
 						col: col + 1;
 					}
 				);
-				Output:line(lineBuf);
+				line(lineBuf);
 				row: row + 1;
 			}
 		);
@@ -325,7 +325,7 @@ Class is Mandelbrot{
 					}
 				);
 				lineBuf: lineBuf . Ansi:reset();
-				Output:line(lineBuf);
+				line(lineBuf);
 				row: row + 1;
 			}
 		);

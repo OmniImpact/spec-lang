@@ -52,11 +52,11 @@ Class is PiBenchmark{
  threads: 16;
 		});
 
-		Output:line(Ansi:clearScreen() . Ansi:moveTo(row: 1, col: 1) . Ansi:hideCursor());
+		line(Ansi:clearScreen() . Ansi:moveTo(row: 1, col: 1) . Ansi:hideCursor());
 		local String is title: 'Monte Carlo Pi Benchmark';
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ ' . title . ' ' . self:bar(width: 76 - title:length() - 5) . '╗'));
-		Output:line(Ansi:color256(code: 51, text: self:boxed(inner: 'Threads: ' . threads . '   Points: ' . points . '   Refresh: ' . refreshMs . 'ms', width: 76)));
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:bar(width: 74) . '╝'));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ ' . title . ' ' . self:bar(width: 76 - title:length() - 5) . '╗'));
+		line(Ansi:color256(code: 51, text: self:boxed(inner: 'Threads: ' . threads . '   Points: ' . points . '   Refresh: ' . refreshMs . 'ms', width: 76)));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:bar(width: 74) . '╝'));
 
 		self:drawDomain(threads: threads);
 
@@ -111,7 +111,7 @@ Class is PiBenchmark{
 		local Int is elapsedMs: Process:clockMs() - startedAtMs;
 
 		self:drawProgress(threads: threads);
-		Output:line(Ansi:showCursor());
+		line(Ansi:showCursor());
 		self:printStats(totalHits: totalHits, points: points, elapsedMs: elapsedMs, threads: threads);
 	}
 
@@ -123,11 +123,11 @@ Class is PiBenchmark{
 			[Int is row: 0],
 			evaluate: { row < self:gridH },
 			iterate: {
-				Output:line(self:domainRow(row: row, threads: threads));
+				line(self:domainRow(row: row, threads: threads));
 				row++;
 			}
 		);
-		Output:line('');
+		line('');
 	}
 
 	## Builds one domain row: circle interior/exterior shading plus any live
@@ -190,7 +190,7 @@ Class is PiBenchmark{
 	##
 	## @param threads: Thread count.
 	local Function is drawProgress(Int is threads){
-		Output:line(Ansi:moveTo(row: 4, col: 1));
+		line(Ansi:moveTo(row: 4, col: 1));
 		self:drawDomain(threads: threads);
 
 		local Int is samples: Process:atomicGet(slot: 0);
@@ -199,7 +199,7 @@ Class is PiBenchmark{
 		Conditional:if(check: { samples > 0 }, then: {
 			pi: (4.0 * Math:toFloat(value: hits)) / Math:toFloat(value: samples);
 		});
-		Output:line(Ansi:color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . self:piText(value: pi) . '  threads: ' . threads));
+		line(Ansi:color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . self:piText(value: pi) . '  threads: ' . threads));
 	}
 
 	## Prints the final statistics block.
@@ -216,12 +216,12 @@ Class is PiBenchmark{
 			perSec: (points * 1000) / elapsedMs;
 		});
 
-		Output:line('');
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Results ' . self:bar(width: 64) . '╗'));
-		Output:line(Ansi:color256(code: 51, text: '║ Pi ≈ ' . self:piText(value: pi) . '  (error ' . self:piText(value: err) . ')'));
-		Output:line(Ansi:color256(code: 51, text: '║ Points: ' . points . '  Hits: ' . totalHits . '  Threads: ' . threads));
-		Output:line(Ansi:color256(code: 51, text: '║ Time: ' . elapsedMs . ' ms  Throughput: ' . perSec . ' points/sec'));
-		Output:line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:bar(width: 74) . '╝'));
+		line('');
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╔═ Results ' . self:bar(width: 64) . '╗'));
+		line(Ansi:color256(code: 51, text: '║ Pi ≈ ' . self:piText(value: pi) . '  (error ' . self:piText(value: err) . ')'));
+		line(Ansi:color256(code: 51, text: '║ Points: ' . points . '  Hits: ' . totalHits . '  Threads: ' . threads));
+		line(Ansi:color256(code: 51, text: '║ Time: ' . elapsedMs . ' ms  Throughput: ' . perSec . ' points/sec'));
+		line(Ansi:bold() . Ansi:color256(code: 51, text: '╚' . self:bar(width: 74) . '╝'));
 	}
 
 	## Formats a float with three decimal places (fixed-width approximation).
