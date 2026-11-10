@@ -98,6 +98,12 @@ Class is TypeChecker{
 	## construction on demand — no deadlock).
 	local Boolean is inHeldFunction: false;
 
+	## True while a held body infers the TARGET of a function-variable
+	## invocation (self:missing()): the closure call never touches the
+	## instance, so the no-instance error does not apply (PLAN-ENUM
+	## Stage 2 — the resolution hook's missing branch).
+	local Boolean is inHeldFnVarTarget: false;
+
 	## Name of the method being checked (forward resolution).
 	local String is currentMethodName: '';
 
@@ -1934,8 +1940,10 @@ Class is TypeChecker{
 			is ExpressionKind:IDENT: {
 				local String is name: expr:str;
 				Conditional:if(check: { name == self:names:selfIdent() }, then: {
-					# A held member body has no instance (PLAN-ENUM Stage 1).
-					Conditional:if(check: { self:inHeldInit || self:inHeldFunction }, then: {
+					# A held member body has no instance (PLAN-ENUM Stage 1)
+					# — except a function-variable call target: the closure
+					# invocation never touches the instance.
+					Conditional:if(check: { (self:inHeldInit || self:inHeldFunction) && !self:inHeldFnVarTarget }, then: {
 						self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'self\' is not available.');
 					});
 					res: self:currentClassName;
@@ -2089,10 +2097,31 @@ Class is TypeChecker{
 												self:addError(line: self:currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
 												rootType: '';
 											}, else: {
-												Conditional:if(check: { segs:length() >= 2 && !chainResolved && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' }, then: {
+												# The resolution hook (PLAN-ENUM Stage 2): a name
+												# matching no declared member resolves through the
+												# class's 'resolveHeld' contract — declared members
+												# always win, so an instance member through the
+												# prefix keeps its rejection.
+												local Member is resolver: self:findHeldMethod(className: root, methodName: ContractMethod:RESOLVE_HELD:value());
+												local Boolean is declaredInstance: self:lookupFieldType(className: root, fieldName: segs:get(index: 1)) != '' || self:lookupAnyMember(className: root, methodName: segs:get(index: 1)):kind == MemberKind:METHOD;
+												Conditional:if(check: { segs:length() >= 2 && !chainResolved && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, then: {
 													self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
 													rootType: '';
-												});
+													}, else: {
+														Conditional:if(check: { resolver:name != '' && !declaredInstance }, then: {
+															# The hook admits — the reference types as the
+															# resolver's declared return type (PLAN-ENUM
+															# §5.4). Anti-recursion: inside the hook body,
+															# an unknown name through its own class prefix
+															# would recurse forever.
+															Conditional:if(check: { self:inHeldFunction && self:currentMethodName == ContractMethod:RESOLVE_HELD:value() && root == self:currentClassName }, then: {
+																self:addError(line: self:currentLine, msg: 'The resolution hook cannot resolve through its own class prefix (\'' . root . ':' . segs:get(index: 1) . '\'); declare the member, or return it from the resolver directly.');
+															});
+															self:checkMemberVisibility(ownerClass: self:findHeldMethodOwner(className: root, methodName: ContractMethod:RESOLVE_HELD:value()), member: resolver, memberName: ContractMethod:RESOLVE_HELD:value());
+															res: self:formatTypeString(t: resolver:memberType);
+															heldAdmitted: true;
+														});
+													});
 											});
 										});
 									});
@@ -2496,7 +2525,15 @@ Class is TypeChecker{
 	## @param expected: Contextual type ('' when none).
 	## @return: Resolved type name string.
 	Function of String is inferCall(Expression is expr, String is expected: ''){
+		# A function-variable invocation (self:missing()) inside a held
+		# body infers its target through the IDENT arm — exempt the
+		# no-instance error for exactly that shape.
+		local Boolean is savedFnVarTarget: self:inHeldFnVarTarget;
+		Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:localVars:getString(key: expr:methodName, default: ''):startsWith(prefix: 'Function') }, then: {
+			self:inHeldFnVarTarget: true;
+		});
 		local String is targetType: self:inferExpressionType(expr: expr:methodTarget);
+		self:inHeldFnVarTarget: savedFnVarTarget;
 		local String is method: expr:methodName;
 		local String is res: 'Any';
 
@@ -3221,12 +3258,20 @@ Class is TypeChecker{
 			is StatementKind:ASSIGN: {
 				# Held members are read-only (PLAN-ENUM Stage 1): a
 				# class-name prefix target resolves to the shared held
-				# slot, and assignment through it is rejected.
+				# slot, and assignment through it is rejected. Stage 2:
+				# a resolution-hook name is a cached single copy too.
 				Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:PATH && stmt:assignTarget:pathSegments:length() >= 2 }, then: {
 					local Array of String is hSegs: stmt:assignTarget:pathSegments;
 					local String is hRoot: hSegs:get(index: 0);
-					Conditional:if(check: { hRoot != self:names:selfIdent() && !self:localVars:has(key: hRoot) && !self:fieldTypes:has(key: hRoot) && self:findHeldMember(className: hRoot, memberName: hSegs:get(index: 1)):name != '' }, then: {
-						self:addError(line: stmt:line, msg: 'Held member \'' . hRoot . ':' . hSegs:get(index: 1) . '\' is read-only: held members are class-scoped single copies, assigned once by their initializer.');
+					local String is hName: hSegs:get(index: 1);
+					local Boolean is hReadOnly: self:findHeldMember(className: hRoot, memberName: hName):name != '';
+					local Boolean is hHooked: false;
+					Conditional:if(check: { !hReadOnly && self:findHeldMethod(className: hRoot, methodName: ContractMethod:RESOLVE_HELD:value()):name != '' }, then: {
+						hHooked: self:lookupFieldType(className: hRoot, fieldName: hName) == '' && self:lookupAnyMember(className: hRoot, methodName: hName):kind != MemberKind:METHOD && self:findHeldMethod(className: hRoot, methodName: hName):name == '';
+					});
+					Conditional:if(check: { hRoot != self:names:selfIdent() && !self:localVars:has(key: hRoot) && !self:fieldTypes:has(key: hRoot) && (hReadOnly || hHooked) }, then: {
+						local String is hMsg: Conditional:if(check: { hReadOnly }, then: { 'Held member \'' . hRoot . ':' . hName . '\' is read-only: held members are class-scoped single copies, assigned once by their initializer.' }, else: { 'Resolved member \'' . hRoot . ':' . hName . '\' is read-only: resolution-hook values are cached single copies.' });
+						self:addError(line: stmt:line, msg: hMsg);
 					});
 				});
 				Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:PATH }, then: {
@@ -3913,6 +3958,12 @@ Class is TypeChecker{
 	Function is checkHeldMembers(ClassInfo is classDef){
 		classDef:members:each(action: local Function(Member is m){
 			Conditional:if(check: { !m:hasModifier(kw: Keyword:HELD) }, then: {
+				# The resolution hook spelling is reserved: a plain method
+				# named 'resolveHeld' would silently never hook (PLAN-ENUM
+				# Stage 2).
+				Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == ContractMethod:RESOLVE_HELD:value() }, then: {
+					self:addError(line: m:line, msg: 'The resolution hook \'' . m:name . '\' in class \'' . classDef:name . '\' must be held: declare it \'held Function of Any is resolveHeld(String is name)\'.');
+				});
 				return;
 			});
 			Conditional:if(check: { m:hasModifier(kw: Keyword:REPLACE) || m:hasModifier(kw: Keyword:MERGE) }, then: {
@@ -3935,6 +3986,40 @@ Class is TypeChecker{
 					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be a root-contract member; held functions take no receiver and never dispatch dynamically.');
 					return;
 				});
+				# The resolution hook (PLAN-ENUM Stage 2): exactly
+				# 'held Function of <T> is resolveHeld(String is name,
+				# Function of <T> is missing)' — the SECOND argument is the
+				# runtime-provided safe failure branch, and it must return
+				# the SAME type the resolver searches for. Never Null: the
+				# default branch panics with context; the resolver invokes
+				# it when the name cannot be resolved. A hook-resolved name
+				# compiles for any spelling, so the failure path is part of
+				# the contract, not an afterthought. The non-held spelling
+				# is a pointed error too (a plain method by that name would
+				# silently never hook).
+				Conditional:if(check: { m:name == ContractMethod:RESOLVE_HELD:value() }, then: {
+					# The resolver's return: a method's memberType is the full
+					# Function type with the return in params[0] (the direct
+					# spelling 'HE is resolveHeld(...)' is also accepted).
+					local String is resRetName: m:memberType:name;
+					Conditional:if(check: { m:memberType:name == 'Function' && m:memberType:params:length() > 0 }, then: {
+						local Type is resRetT: m:memberType:params:get(index: 0);
+						resRetName: resRetT:name;
+					});
+					local Boolean is sigOk: false;
+					Conditional:if(check: { m:params:length() == 2 }, then: {
+						local Parameter is nameP: m:params:get(index: 0);
+						local Parameter is missP: m:params:get(index: 1);
+						local Type is missT: missP:paramType;
+						local Type is missRet: missT:params:get(index: 0);
+						Conditional:if(check: { nameP:paramType:name == Primitive:STRING:value() && missT:name == 'Function' && missT:params:length() > 0 }, then: {
+							sigOk: missRet:name == resRetName && resRetName != '' && !self:isVoid(t: resRetName);
+						});
+					});
+					Conditional:if(check: { !sigOk }, then: {
+						self:addError(line: m:line, msg: 'The resolution hook \'' . m:name . '\' in class \'' . classDef:name . '\' must be declared exactly \'held Function of <T> is resolveHeld(String is name, Function of <T> is missing)\'; the missing branch is provided by the runtime and must return the same type the resolver searches for.');
+					});
+				});
 				local Boolean is dupHeld: false;
 				classDef:members:each(action: local Function(Member is g){
 					Conditional:if(check: { g != m && g:kind == MemberKind:METHOD && g:name == m:name && g:hasModifier(kw: Keyword:HELD) }, then: {
@@ -3942,7 +4027,7 @@ Class is TypeChecker{
 					});
 				});
 				Conditional:if(check: { dupHeld }, then: {
-					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' in class \'' . classDef:name . '\' is declared more than once; held functions do not overload.');
+					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' is declared more than once; held functions do not overload.');
 				});
 				return;
 			});

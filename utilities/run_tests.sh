@@ -168,6 +168,13 @@ assert_compile_failure "held-function-walls" \
 	"A held member body has no instance: 'self' is not available" \
 	"use self (§2.2)"
 
+assert_compile_failure "held-resolver-walls" \
+	"$ROOT/tests/negative/n32_held_resolver_negative_test.spec" \
+	"must be declared exactly 'held Function of <T> is resolveHeld(String is name, Function of <T> is missing)'" \
+	"The resolution hook cannot resolve through its own class prefix" \
+	"only held members are (§2.3)" \
+	"is read-only: resolution-hook values are cached single copies"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"
@@ -349,6 +356,10 @@ assert_runtime_panic "byte-range-panic" \
 	"$ROOT/tests/negative/byte_range_panic_test.spec" \
 	"[Spec Runtime Panic]" \
 	"Byte cast out of range: 300"
+
+assert_runtime_panic "held-resolver-missing-branch" \
+	"$ROOT/tests/negative/byte_held_resolver_panic_test.spec" \
+	"No held member 'phantom' on HeldPanicRegistry"
 
 # -----------------------------------------------------------------------------
 # 3. Compiler exit-code semantics

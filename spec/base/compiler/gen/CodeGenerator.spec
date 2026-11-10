@@ -84,6 +84,11 @@ Class is CodeGenerator{
 	## receiver-free C functions.
 	local Map of String to String is heldMethods: Map:init();
 
+	## Resolution-hook classes (PLAN-ENUM Stage 2): key 'Class' -> the
+	## OWNING class name of its 'resolveHeld' contract. Access sites for
+	## undeclared names emit the owner's _held_resolve cache-hook.
+	local Map of String to String is heldResolvers: Map:init();
+
 	## True while generateMethod emits a HELD function: no self
 	## parameter, the _held_ symbol infix, no vtable involvement.
 	local Boolean is emittingHeld: false;
@@ -312,6 +317,7 @@ Class is CodeGenerator{
 		self:heldFields: Map:init();
 		self:heldFieldTypes: Map:init();
 		self:heldMethods: Map:init();
+		self:heldResolvers: Map:init();
 		flattened:each(action: local Function(ClassInfo is c){
 			self:allClassNames:set(key: c:name, value: 'true');
 			# the nested classes register under
@@ -341,7 +347,9 @@ Class is CodeGenerator{
 			});
 		});
 		# Held members (PLAN-ENUM Stage 1): the ancestors first, the own
-		# class last — the nearest declaration wins on lookup.
+		# class last — the nearest declaration wins on lookup. The
+		# resolution hook folds the same way (Stage 2): a subclass name
+		# reaches its ancestor's resolver.
 		flattened:each(action: local Function(ClassInfo is c){
 			local Array of String is ancestors: [];
 			self:collectAncestors(c: c, allClasses: flattened, acc: ancestors);
@@ -355,6 +363,11 @@ Class is CodeGenerator{
 								self:heldFieldTypes:set(key: c:name . ':' . m:name, value: self:formatTypeString(t: m:memberType));
 							});
 						});
+						Conditional:if(check: { m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) && m:name == ContractMethod:RESOLVE_HELD:value() }, then: {
+							Conditional:if(check: { !self:heldResolvers:has(key: c:name) }, then: {
+								self:heldResolvers:set(key: c:name, value: baseCls:name);
+							});
+						});
 					});
 				});
 			});
@@ -365,6 +378,9 @@ Class is CodeGenerator{
 				});
 				Conditional:if(check: { m:kind == MemberKind:METHOD && m:hasModifier(kw: Keyword:HELD) }, then: {
 					self:heldMethods:set(key: c:name . ':' . m:name, value: c:name);
+					Conditional:if(check: { m:name == ContractMethod:RESOLVE_HELD:value() }, then: {
+						self:heldResolvers:set(key: c:name, value: c:name);
+					});
 				});
 			});
 		});
@@ -1993,6 +2009,19 @@ Class is CodeGenerator{
 					}
 				);
 				return heldC;
+			});
+			# The resolution hook (PLAN-ENUM Stage 2): the class-name prefix
+			# for an undeclared name dispatches the owner's cache-hook — the
+			# runtime resolves, caches, and the identity holds. The name
+			# travels as an interned literal.
+			local String is hookOwner: self:heldResolvers:getString(key: root, default: '');
+			Conditional:if(check: { hookOwner != '' && !self:localVars:has(key: root) && !self:fieldTypes:has(key: root) }, then: {
+				local String is hookSym: self:utils:cIdent(name: hookOwner) . '_held_resolve';
+				local ClassInfo is hookCls: self:findClass(name: hookOwner);
+				Conditional:if(check: { hookCls:name == hookOwner }, then: {
+					hookSym: self:utils:cIdent(name: hookCls:qualifiedName()) . '_held_resolve';
+				});
+				return hookSym . '(spec_string_intern("' . segs:get(index: 1) . '"))';
 			});
 			local String is rootC: self:utils:cIdent(name: root);
 			Conditional:if(check: { !self:localVars:has(key: root) && self:fieldTypes:has(key: root) }, then: {
@@ -3756,6 +3785,7 @@ Class is CodeGenerator{
 		local Array of String is ownerSyms: [];
 		local Array of String is ownerClsNames: [];
 		local Array of String is declaredTypes: [];
+		local Array of ClassInfo is resolverCls: [];
 		classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is m){
 				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) && m:hasInit }, then: {
@@ -3765,8 +3795,13 @@ Class is CodeGenerator{
 					declaredTypes:add(item: self:formatTypeString(t: m:memberType));
 				});
 			});
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == ContractMethod:RESOLVE_HELD:value() && m:hasModifier(kw: Keyword:HELD) }, then: {
+					resolverCls:add(item: c);
+				});
+			});
 		});
-		Conditional:if(check: { heldAll:length() == 0 }, then: {
+		Conditional:if(check: { heldAll:length() == 0 && resolverCls:length() == 0 }, then: {
 			return '';
 		});
 		local String is out: "/* Held Members */\n";
@@ -3789,6 +3824,21 @@ Class is CodeGenerator{
 			}
 		);
 		Buf:bufAppendBuf(dst: out, src: "\n");
+		# Resolution-hook prototypes (PLAN-ENUM Stage 2): the resolver
+		# and the cache-hook — spelled exactly as the definitions below
+		# and in the methods section (cTypeFor drives both).
+		resolverCls:each(action: local Function(ClassInfo is c){
+			local String is rSym: self:utils:cIdent(name: c:qualifiedName());
+			local Member is rm: Member:init(kind: MemberKind:METHOD);
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == ContractMethod:RESOLVE_HELD:value() && m:hasModifier(kw: Keyword:HELD) }, then: {
+					rm: m;
+				});
+			});
+			local String is resRet: self:resolveReturnType(t: rm:memberType);
+			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . '_held_resolveHeld(' . self:cTypeFor(typeName: Primitive:STRING:value()) . ' name, ' . self:cTypeFor(typeName: 'Function') . ' missing);' . "\n");
+			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . "_held_resolve(" . self:cTypeFor(typeName: Primitive:STRING:value()) . " name);\n");
+		});
 		local Int is di: 0;
 		while(
 			evaluate: local Function of Boolean(){ return di < heldAll:length(); },
@@ -3844,6 +3894,48 @@ Class is CodeGenerator{
 				return true;
 			}
 		);
+		# The resolution-hook machinery (PLAN-ENUM Stage 2): per resolver
+		# class, the runtime-provided missing branch (Never Null — it
+		# panics with context) and the cache-hook. The cache starts at 8
+		# entries and doubles; the mutex covers check+insert. The hook
+		# hands the caller a +1 reference like the declared accessors.
+		resolverCls:each(action: local Function(ClassInfo is c){
+			local String is rSym: self:utils:cIdent(name: c:qualifiedName());
+			local Member is rm: Member:init(kind: MemberKind:METHOD);
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == ContractMethod:RESOLVE_HELD:value() && m:hasModifier(kw: Keyword:HELD) }, then: {
+					rm: m;
+				});
+			});
+			local String is resRet: self:resolveReturnType(t: rm:memberType);
+			local String is resTName: self:formatTypeString(t: rm:memberType);
+			Buf:bufAppendBuf(dst: out, src: 'static ' . resRet . ' ' . rSym . "_held_missing_fn(void* env) {\n");
+			Buf:bufAppendBuf(dst: out, src: '    ' . self:cTypeFor(typeName: Primitive:STRING:value()) . ' name = (' . self:cTypeFor(typeName: Primitive:STRING:value()) . ")env;\n");
+			Buf:bufAppendBuf(dst: out, src: '    spec_panic(spec_buf_to_cstring((SpecBuf*)(spec_string_concat(spec_string_concat(spec_string_intern("No held member \'"), name), spec_string_intern("\' on ' . c:qualifiedName() . '")))));' . "\n");
+			Buf:bufAppendBuf(dst: out, src: '    return (' . resRet . ")0;\n}\n\n");
+			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . '_held_resolve(' . self:cTypeFor(typeName: Primitive:STRING:value()) . " name) {\n");
+			Buf:bufAppendBuf(dst: out, src: "    static String* _names = 0;\n    static void** _vals = 0;\n    static int _len = 0;\n    static int _cap = 0;\n");
+			Buf:bufAppendBuf(dst: out, src: "    static pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;\n");
+			Buf:bufAppendBuf(dst: out, src: "    void* found = 0;\n    pthread_mutex_lock(&_lock);\n");
+			Buf:bufAppendBuf(dst: out, src: "    for (int _i = 0; _i < _len; _i++) {\n");
+			Buf:bufAppendBuf(dst: out, src: "        if (spec_string_equals(_names[_i], name)) { found = _vals[_i]; break; }\n    }\n");
+			Buf:bufAppendBuf(dst: out, src: "    if (!found) {\n");
+			Buf:bufAppendBuf(dst: out, src: '        SpecClosure* _missing = spec_closure_new((void*)' . rSym . "_held_missing_fn, (void*)name, NULL);\n");
+			Buf:bufAppendBuf(dst: out, src: '        found = (void*)' . rSym . "_held_resolveHeld(name, _missing);\n");
+			Buf:bufAppendBuf(dst: out, src: "        if (!found) {\n            pthread_mutex_unlock(&_lock);\n");
+			Buf:bufAppendBuf(dst: out, src: '            ((' . resRet . " (*)(void*))_missing->fn)(_missing->env);\n");
+			Buf:bufAppendBuf(dst: out, src: "            spec_panic(\"resolution hook failed\");\n        }\n");
+			Buf:bufAppendBuf(dst: out, src: "        if (_len == _cap) {\n            _cap = _cap ? _cap * 2 : 8;\n");
+			Buf:bufAppendBuf(dst: out, src: "            _names = (String*)realloc(_names, sizeof(String) * _cap);\n");
+			Buf:bufAppendBuf(dst: out, src: "            _vals = (void**)realloc(_vals, sizeof(void*) * _cap);\n        }\n");
+			Buf:bufAppendBuf(dst: out, src: "        _names[_len] = name;\n        _vals[_len] = found;\n        _len++;\n");
+			Buf:bufAppendBuf(dst: out, src: "    }\n    pthread_mutex_unlock(&_lock);\n");
+			Conditional:if(check: { self:isArcType(typeName: resTName) }, then: {
+				Buf:bufAppendBuf(dst: out, src: '    return (' . resRet . ")spec_retain(found);\n}\n\n");
+			}, else: {
+				Buf:bufAppendBuf(dst: out, src: '    return (' . resRet . ")found;\n}\n\n");
+			});
+		});
 		Buf:bufAppendBuf(dst: out, src: helpersAcc);
 		return out;
 	}
@@ -3970,6 +4062,7 @@ Class is CodeGenerator{
 			wg:heldFields: self:copyRegistryMap(source: self:heldFields);
 			wg:heldFieldTypes: self:copyRegistryMap(source: self:heldFieldTypes);
 			wg:heldMethods: self:copyRegistryMap(source: self:heldMethods);
+			wg:heldResolvers: self:copyRegistryMap(source: self:heldResolvers);
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;

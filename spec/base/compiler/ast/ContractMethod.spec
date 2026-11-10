@@ -10,5 +10,6 @@ Enum of String is ContractMethod {
 	TO_STRING: 'toString',
 	TYPE_NAME: 'typeName',
 	EVALUATE: 'evaluate',
-	ITERATION: 'iteration'
+	ITERATION: 'iteration',
+	RESOLVE_HELD: 'resolveHeld'
 }
