@@ -1,8 +1,9 @@
 # KNOWLEDGE-SPECDEV.md — Development Discipline for the Spec Compiler
 
 Practices learned the hard way, kept where the next contributor (human
-or agent) will find them. FUNCTIONS.md holds the language's design;
-this file holds how to change it safely.
+or agent) will find them. The language's design lives in the docs tree
+and KNOWLEDGE-SPEC.md; this file holds how to change the compiler
+safely.
 
 ---
 
@@ -142,8 +143,14 @@ check, and emit the NEXT generation's sources. Consequences:
 ### The sysinternal floor
 
 - `base:sysinternal:X` is the FLOOR: C-level implementations bound by
-  the naming convention `spec_<snake_case(method)>`. Only the same-name
+  the naming convention `spec_<snake_case(method)>`. Only the
   `base:sys` wrapper may call it (the checker enforces the wall).
+- The gate is structural: the caller's namespace segment array must
+  begin `['base', 'sys', ...]` — `base:sys` itself or a base:sys
+  sub-package. Segment comparison separates `base:sys` from
+  `base:sysinternal` exactly; a prefix test on the joined string would
+  conflate them. The control-flow providers (Conditional, Loops) live
+  in base:sys and wrap their same-name floors.
 - User code calls `base:sys:X`; the wrapper's methods intercept to the
   floor. Adding a floor function: the C shim in RuntimePrelude.spec
   (land it ahead of its consumers — the two-part landing), the
@@ -151,6 +158,37 @@ check, and emit the NEXT generation's sources. Consequences:
 - Runtime-managed classes (transparent): no struct/vtable emitted; the
   methods are intercepted by the generator. The transparent set lives
   in ClassBindings.isTransparent.
+- Wrapper bodies are SELF-FREE under the elided dispatch (the call
+  passes no receiver): state must ride parameters, held functions, or
+  reference cells, never `self:`. And the runtime closures capture by
+  value with per-closure write-back — two closures cannot share a
+  frame local; shared mutable state rides the instance or a reference
+  cell. The compiler's literal-closure inlines are the exception: they
+  inline into the frame and share its locals.
+
+### Compiler design posture: data structures, not known names
+
+The language's design philosophy — keep the compiler minimal and build
+the language in the standard library — has a compiler-internal
+counterpart:
+
+- The compiler should dispatch on STRUCTURAL properties — declared
+  namespaces, contracts, modifiers, metadata — rather than hardcoded
+  class names or keyword lists. Every name-keyed special case
+  (the transparency list, the builtin table's class gates, the
+  bare-construct parse's name checks) is a debt marker: the structural
+  version is a declared annotation the machinery reads. When touching
+  one of these sites, prefer moving the decision onto a declaration.
+- Existing examples of the structural form: the sysinternal wall
+  (namespace segments), the class-model-enum classification (Enum
+  root + held members, not a name list), the held-member registries
+  (built from declarations, not hardcoded surfaces).
+- The control-flow constructs are the model for the whole standard
+  library: a minimal floor primitive in base:sysinternal, a real
+  same-name wrapper implementation in base:sys composed from it, and
+  the compiler's inline lowering as the fast path for the literal
+  shapes. Nothing in the language is a compiler special case that
+  isn't also inspectable Spec code.
 
 ### How `as` works — and what it grants
 
@@ -158,7 +196,7 @@ check, and emit the NEXT generation's sources. Consequences:
   - bare function calls resolved through the provider walk,
   - instance dispatch (elided, or field-ful through the synthesized
     `_import_X` field when X has fields),
-  - the qualified NESTED-type references (`X:Inner`) — IV.2c.
+  - the qualified NESTED-type references (`X:Inner`).
 - It does NOT grant the bare parent-type reference, and never
   construction. `['ns', X]` (the plain form) is the type import: type
   references and construction. The two coexist in one using list.
@@ -166,7 +204,7 @@ check, and emit the NEXT generation's sources. Consequences:
   DECLARING class bakes in; they gate against the declaring class's
   imports like a body expression.
 - Edge cases on record: a duplicate as-import of one class is an error
-  (INSTANCE.md E3); the as-form's `_import_X` field rides the as-grant
+  (E3); the as-form's `_import_X` field rides the as-grant
   (exempt from the plain-form construction gate); any same-file class's
   using grants the file (the compilation-unit convenience — a sibling's
   plain import admits what yours alone would not).
@@ -177,7 +215,7 @@ check, and emit the NEXT generation's sources. Consequences:
   — pushing an array into an array-of-arrays silently adds zero
   elements. Use indexed `set` on pre-sized slots.
 - The claim pool is thread-local and its eviction is a heuristic window
-  (see Part VI); the structured per-statement frame design removes the
+  the structured per-statement frame design removes the
   tail.
 - String literals in generated C leak identifier-shaped text into any
   substring scan of the body — the capture scans strip literals first.
@@ -186,12 +224,12 @@ check, and emit the NEXT generation's sources. Consequences:
   rejects what the seed binary accepted. Grep self-source for the
   spelling BEFORE adding the enum entry (the `held` local in
   generateProgram died to this).
-- The held once-guard (PLAN-ENUM Stage 1): CAS 0->2 under acq_rel,
+- The held once-guard : CAS 0->2 under acq_rel,
   release-store 1, losers spin on acquire. A held INITIALIZER may not
   reference same-class held members (mutual guards deadlock);
   cross-class chains and held-function bodies are unrestricted —
   checker-enforced, tests n30/n31.
-- Keyword retirement (the when removal, Stage 3c): the DELETE rides
+- Keyword retirement (the when removal): the DELETE rides
   one convergence (the old binary parses the keyword-less source
   fine — unused grammar is harmless), but the RENAME that reuses the
   freed identifier rides the NEXT one: the old binary's compiled
@@ -207,8 +245,7 @@ check, and emit the NEXT generation's sources. Consequences:
 
 ## 6. The limits, concurrency contracts, and the falsification ledger
 
-*(Consolidated from FUNCTIONS.md Parts V–VI when the planning docs
-retired, 2026-11.)*
+*(Absorbed from the retired planning docs, 2026-11.)*
 
 ### The falsification ledger (measure, don't assume)
 
@@ -250,20 +287,19 @@ retired, 2026-11.)*
 
 ### Deferred and documentation debt
 
-- **docs/ refresh (the last FUNCTIONS.md/INSTANCE.md remainder):**
-  docs/language/README.md (~866 lines) and docs/packages/README.md
-  predate the instance model; STYLE_GUIDE.md/tooling/README.md need the
-  as-import spellings. Content work, do from the code and tests.
-- **E10** (the loop-hoist lint) is LANDED (Linter.spec) — the old
-  checkbox was stale.
+- **docs/ refresh:** docs/packages/README.md needs the package moves
+  (the control-flow providers in base:sys); the language guide's
+  runtime-dispatch sections should stay in step with the wrapper
+  bodies. Content work, do from the code and tests.
 - **Deferred by design:** generic as-imports (`as Box of Int()`);
   import aliasing (`as X() is alias`); type-differentiated overloads
   inside generic classes.
 
-**The section-tag legend**: the source comments carry tags like §I.6,
-E10, IV.2c, §as — stable identifiers dating from the design docs
-(FUNCTIONS.md / INSTANCE.md, consolidated here 2026-11). They persist
-as shorthand; the semantics live in the code and its tests.
+**The section-tag legend**: the user-facing diagnostics carry §- and
+E-codes (§2.3, E9, E10 — stable shorthand; the semantics live in the
+code and its tests). The retired planning docs' progress tags (the
+Part/Stage/section numbers) are stripped from the source comments; do
+not reintroduce them.
 
 ## 7. Values and reuse
 

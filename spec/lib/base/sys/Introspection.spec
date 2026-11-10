@@ -34,7 +34,7 @@ Class is Introspection{
 	}
 
 	## The number of HELD members the object's class declares
-	## (PLAN-ENUM Stage 1) — the declaring class's own held surface, in
+	## The declaring class's own held surface, in
 	## declaration order (the ordinal index).
 	##
 	## @param obj: The object.

@@ -377,7 +377,7 @@ Class is Parser{
 			self:advance();
 		});
 
-		# PLAN-ENUM Stages 4–5: every enum desugars to the class model —
+		# every enum desugars to the class model —
 		# value enums to held variants + the synthesized contract methods;
 		# tagged enums to nested subclasses with real payload fields (the
 		# desugar branches on the variant shapes).
@@ -406,7 +406,7 @@ Class is Parser{
 		local ClassInfo is nested: self:parseClass();
 		local Member is m: Member:init(kind: MemberKind:CLASS);
 		m:setLine(line: startLine);
-		# IV.2c: the member identifies its class — the unnamed member
+		# the member identifies its class — the unnamed member
 		# matched other unnamed members in the override and registry walks.
 		m:name: nested:name;
 		m:nestedClass: nested;

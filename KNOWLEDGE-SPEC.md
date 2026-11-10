@@ -3,13 +3,13 @@
 Strictly typed, class-based, compiles to C11 via `gcc`. Written in itself: the compiler is Spec source (`spec/base/compiler/`), bootstrapped from the canonical C seed `bootstrap/spec.c`, with the self-hosting fixed point (the compiler recompiles its own sources to byte-identical C) verified on every `./bootstrap.sh`. Never-null (no null; fallible reads require `default:`). Tabs for indentation.
 
 ## Layout
-- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String), `io`, `math`, `struct` (Array/Map/List), `iterator`, `sys`. The declared namespace IS the package; directories are organization only.
-- `spec/base/sysinternal/` — the C floor (Buf, Dir, Reflection): body-less declarations bound to C by the `spec_<snake(method)>` naming convention. Only same-name wrappers in `base:sys` may call the floor; the checker enforces it.
+- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String/Enum), `io`, `math`, `struct` (Array/Map/List), `iterator` (Loop/LoopControl/LoopCallback), `sys` (the control-flow providers Conditional and Loops, Process, Parallel, Introspection, Buf, Dir). The declared namespace IS the package; directories are organization only.
+- `spec/base/sysinternal/` — the C floor (Buf, Dir, Reflection, Introspection, Conditional, Loops): body-less declarations bound to C by the `spec_<snake(method)>` naming convention. Only the `base:sys` wrappers may call the floor; the checker enforces it structurally (the caller's namespace segments begin `['base', 'sys', ...]`).
 - `spec/base/compiler/` — the compiler: lexer, parser, checker, gen (CodeGenerator/BuiltinCallGenerator/DeclarationGenerator/RuntimePrelude), loader, linter, driver.
 - `bootstrap/spec.c` — the canonical seed. `bin/spec` — the built compiler.
 
 ## Grammar
-Keywords: `local` `contained` `replace` `merge` `held` `is` `as` `of` `to` `if` `else` `return`.
+Keywords: `local` `contained` `replace` `merge` `held` `is` `as` `of` `to` `return`.
 Types: `Int` `Byte` `Float` `Boolean` `String` `Function` `Any`.
 Declaration types (not keywords): `Class` `Enum`.
 Conversion targets of `as`: `Hex` `Bin` `Oct`.

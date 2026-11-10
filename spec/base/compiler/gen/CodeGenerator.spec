@@ -63,7 +63,7 @@ Class is CodeGenerator{
 	## sharing the live list serialized every read behind its mutex).
 	local Array of ClassInfo is flattenedClasses: [];
 
-	## Held members (PLAN-ENUM Stage 1): key 'Class:member' -> the OWNING
+	## Held members: key 'Class:member' -> the OWNING
 	## class name. Registered per class over its whole ancestor chain, so
 	## a subclass name reaches inherited held members; the own class
 	## registers last, so the nearest declaration wins (the same rule the
@@ -82,7 +82,7 @@ Class is CodeGenerator{
 	## receiver-free C functions.
 	local Map of String to String is heldMethods: Map:init();
 
-	## Resolution-hook classes (PLAN-ENUM Stage 2): key 'Class' -> the
+	## Resolution-hook classes: key 'Class' -> the
 	## OWNING class name of its 'resolveHeld' contract. Access sites for
 	## undeclared names emit the owner's _held_resolve cache-hook.
 	local Map of String to String is heldResolvers: Map:init();
@@ -279,7 +279,7 @@ Class is CodeGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				c:members:each(action: local Function(Member is m){
-					# Held functions (PLAN-ENUM Stage 1) are receiver-free:
+					# Held functions are receiver-free:
 					# they take no vtable slot and never dispatch dynamically.
 					Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) }, then: {
 						Conditional:if(check: { self:methodSlots:has(key: m:name) }, then: {
@@ -344,9 +344,9 @@ Class is CodeGenerator{
 				});
 			});
 		});
-		# Held members (PLAN-ENUM Stage 1): the ancestors first, the own
+		# Held members: the ancestors first, the own
 		# class last — the nearest declaration wins on lookup. The
-		# resolution hook folds the same way (Stage 2): a subclass name
+		# resolution hook folds the same way : a subclass name
 		# reaches its ancestor's resolver.
 		flattened:each(action: local Function(ClassInfo is c){
 			local Array of String is ancestors: [];
@@ -672,7 +672,7 @@ Class is CodeGenerator{
 			return;
 		});
 		visited:set(key: className, value: 'true');
-		# IV.2c: the qualified nested-class name walks the inner class
+		# the qualified nested-class name walks the inner class
 		# itself; container forms don't resolve qualified and fall back to
 		# the bare root.
 		local ClassInfo is cls: self:findClass(name: className);
@@ -683,14 +683,14 @@ Class is CodeGenerator{
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			# Instance dispatch is held-blind (PLAN-ENUM Stage 1): the
+			# Instance dispatch is held-blind: the
 			# class-name prefix reaches exactly the held members.
 			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName && !m:hasModifier(kw: Keyword:HELD) }, then: {
 				acc:add(item: m);
 			});
 		});
 		Conditional:if(check: { acc:length() > 0 }, then: {
-			# IV.2c: the owner's qualified identity — the bare name of a
+			# the owner's qualified identity — the bare name of a
 			# nested class is not unique across outers.
 			ownerAcc:add(item: cls:qualifiedName());
 			return;
@@ -911,7 +911,7 @@ Class is CodeGenerator{
 		});
 		local String is baseClassName: self:memberLookupRootGen(className: className);
 		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# The resolved qualified root absorbs the colon chain ; bare
 		# colon forms ground their segments as type arguments.
 		Conditional:if(check: { baseClassName != className }, then: {
 			local Array of String is parts: className:split(delimiter: ':');
@@ -954,7 +954,7 @@ Class is CodeGenerator{
 		});
 		local String is baseClassName: self:memberLookupRootGen(className: className);
 		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# The resolved qualified root absorbs the colon chain ; bare
 		# colon forms ground their segments as type arguments.
 		Conditional:if(check: { baseClassName != className }, then: {
 			local Array of String is parts: className:split(delimiter: ':');
@@ -1364,7 +1364,7 @@ Class is CodeGenerator{
 								return root;
 							}, else: {
 								Conditional:if(check: { self:allClassNames:has(key: root) }, then: {
-									# Held member as segment 1 (PLAN-ENUM Stage 1):
+									# Held member as segment 1:
 									# the class-name prefix reaches exactly the held
 									# members; the target type is the held field's
 									# type, with later segments chaining as instance
@@ -1710,7 +1710,7 @@ Class is CodeGenerator{
 		Conditional:if(check: { t != '' && self:allEnumNames:has(key: t) && !self:allTaggedEnums:has(key: t) }, then: {
 			return t . '_name(' . exprC . ')';
 		});
-		# Desugared enums (PLAN-ENUM Stage 4): the class declares its own
+		# Desugared enums: the class declares its own
 		# toString (the variant-name synthesis) — dispatch it virtually.
 		# A plain class without its own toString keeps spec_type_name.
 		Conditional:if(check: { t != '' && self:allClassNames:has(key: t) && self:methodSlots:has(key: 'toString') && !self:allEnumNames:has(key: t) }, then: {
@@ -2017,7 +2017,7 @@ Class is CodeGenerator{
 			}
 		);
 		Conditional:if(check: { chainOk && chainIdx == segs:length() }, then: {
-			# Enum-root variants (PLAN-ENUM Stage 5): the nullary variant's
+			# Enum-root variants: the nullary variant's
 			# value IS the zero-arg construction of its nested subclass —
 			# a payload variant (init takes params) keeps the bare symbol,
 			# so the init path (the construction shorthand's target)
@@ -2048,7 +2048,7 @@ Class is CodeGenerator{
 				});
 				return root . '_' . self:utils:cIdent(name: segs:get(index: 1));
 			});
-			# Held members (PLAN-ENUM Stage 1): the class-name prefix
+			# Held members: the class-name prefix
 			# reaches exactly the held members. The access emits the
 			# owner's once-guard accessor; later segments chain as
 			# instance fields on the value. Instance scopes (locals,
@@ -2068,7 +2068,7 @@ Class is CodeGenerator{
 				);
 				return heldC;
 			});
-			# The resolution hook (PLAN-ENUM Stage 2): the class-name prefix
+			# The resolution hook: the class-name prefix
 			# for an undeclared name dispatches the owner's cache-hook — the
 			# runtime resolves, caches, and the identity holds. The name
 			# travels as an interned literal.
@@ -2444,7 +2444,7 @@ Class is CodeGenerator{
 			return builtinC;
 		});
 
-		# Part II: the Conditional inline — statement-form
+		# the Conditional inline — statement-form
 		# conditionals compile to zero-allocation C if/else (the
 		# While:condition precedent). The wrapper's own floor call arrives
 		# as a qualified PATH receiver and is excluded, so the fallback
@@ -2473,7 +2473,7 @@ Class is CodeGenerator{
 				return self:overloadSymbol(className: 'Conditional', methodName: expr:methodName, idx: expr:num) . '(NULL' . rtArgs . ')';
 			});
 
-		# Conditional:match (PLAN-ENUM Stage 3): the arm table lowers into a
+		# Conditional:match: the arm table lowers into a
 		# comparison chain — identity for class-typed held members,
 		# spec_string_equals for String, == for the numeric primitives —
 		# with the arm closures inlined as statement blocks (no
@@ -2567,7 +2567,7 @@ Class is CodeGenerator{
 
 		# Constructor or static invocation: ClassName:init(...)/ClassName:method(...).
 		Conditional:if(check: { self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC) }, then: {
-			# IV.2c: the C identity of the target — a bare nested-class name
+			# the C identity of the target — a bare nested-class name
 			# has no C type when the bare alias is absent (the bare name is
 			# not unique); resolve to the qualified symbol form.
 			local String is targetSym: targetC;
@@ -2575,7 +2575,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { tgtCls:name != '' }, then: {
 				targetSym: self:utils:cIdent(name: tgtCls:qualifiedName());
 			});
-			# Held functions (PLAN-ENUM Stage 1): the class-name prefix
+			# Held functions: the class-name prefix
 			# dispatches the class-scoped function — a direct C call with
 			# no receiver, no vtable. The registry folds the lattice, so a
 			# subclass name reaches the inherited held function.
@@ -2719,7 +2719,7 @@ Class is CodeGenerator{
 			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
 			Conditional:if(check: { vm:kind == MemberKind:METHOD }, then: {
 				local String is retT: self:resolveReturnType(t: vm:memberType);
-				# IV.2c: the vtable signature's C types qualify (cIdent maps
+				# the vtable signature's C types qualify (cIdent maps
 				# the qualified identity's colon chain).
 				local String is objCType: self:utils:cIdent(name: objType);
 				local String is sigC: objCType . '*';
@@ -2742,7 +2742,7 @@ Class is CodeGenerator{
 			local String is targetExprC: targetC;
 			Conditional:if(check: { dispatchCls != '' && dispatchCls != objType }, then: {
 				objType: dispatchCls;
-				# IV.2c: the cast's C type derives from the (possibly
+				# the cast's C type derives from the (possibly
 				# qualified) owner identity.
 				targetExprC: '((' . self:utils:cIdent(name: dispatchCls) . '*)' . targetC . ')';
 			});
@@ -2889,7 +2889,7 @@ Class is CodeGenerator{
 
 		Conditional:if(check: { self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && self:containsIdent(body: scanBody, ident: 'self') }, then: {
 			hasCaptures: true;
-			# IV.2c: the captured self's C type qualifies — the bare name is
+			# the captured self's C type qualifies — the bare name is
 			# not a C identity for nested classes.
 			local String is selfCapType: self:utils:cIdent(name: self:findClass(name: self:currentClassName):qualifiedName());
 			capFieldDecls: capFieldDecls . '    ' . selfCapType . "* self;\n";
@@ -2923,7 +2923,7 @@ Class is CodeGenerator{
 						}, else: {
 							capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
 						});
-						# Part II: the closure body may assign a
+						# the closure body may assign a
 						# captured local — write it back at exit or the
 						# mutation is lost (the callback ran on a copy).
 						Conditional:if(check: { self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, then: {
@@ -3040,7 +3040,7 @@ Class is CodeGenerator{
 	## Formats call arguments against an explicit signature member —
 	## named arguments match by parameter name, positional by index,
 	## defaults fill the rest. Shared by the instance and the held
-	## dispatch paths (PLAN-ENUM Stage 1).
+	## dispatch paths.
 	##
 	## @param m: The signature member.
 	## @param className: The declaring class (its type params ground to void*).
@@ -3520,15 +3520,15 @@ Class is CodeGenerator{
 			self:currentParams:set(key: p:name, value: 'true');
 		});
 
-		# IV.2c: the self parameter's C type qualifies — the bare name is
+		# the self parameter's C type qualifies — the bare name is
 		# not a C identity for nested classes.
 		local String is selfCType: self:cTypeFor(typeName: classDef:qualifiedName());
-		# IV.2c: the method's own identity drives its symbol — a bare
+		# the method's own identity drives its symbol — a bare
 		# inner-class name would first-match whichever same-named class
 		# registered first; classDef IS the declaring class.
 		local String is header: '';
 		Conditional:if(check: { self:emittingHeld }, then: {
-			# Held function (PLAN-ENUM Stage 1): receiver-free — no self
+			# Held function: receiver-free — no self
 			# parameter, the _held_ symbol infix, direct C linkage.
 			header: retType . ' ' . self:utils:cIdent(name: classDef:qualifiedName()) . '_held_' . self:utils:cIdent(name: method:name) . '(';
 		}, else: {
@@ -3703,7 +3703,7 @@ Class is CodeGenerator{
 		});
 	}
 
-	## Emits the held-member storage (PLAN-ENUM Stage 1): one file-scope
+	## Emits the held-member storage: one file-scope
 	## slot, once-flag, and once-guard accessor per held field. The guard
 	## is the CAS once-pattern — the winner constructs under an acq_rel
 	## exchange and releases; losers spin on acquire until the store is
@@ -3759,7 +3759,7 @@ Class is CodeGenerator{
 			}
 		);
 		Buf:bufAppendBuf(dst: out, src: "\n");
-		# Resolution-hook prototypes (PLAN-ENUM Stage 2): the resolver
+		# Resolution-hook prototypes: the resolver
 		# and the cache-hook — spelled exactly as the definitions below
 		# and in the methods section (cTypeFor drives both).
 		resolverCls:each(action: local Function(ClassInfo is c){
@@ -3829,7 +3829,7 @@ Class is CodeGenerator{
 				return true;
 			}
 		);
-		# The resolution-hook machinery (PLAN-ENUM Stage 2): per resolver
+		# The resolution-hook machinery: per resolver
 		# class, the runtime-provided missing branch (Never Null — it
 		# panics with context) and the cache-hook. The cache starts at 8
 		# entries and doubles; the mutex covers check+insert. The hook
@@ -3875,7 +3875,7 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## Emits the held-member metadata (PLAN-ENUM Stage 1): one name
+	## Emits the held-member metadata: one name
 	## table per class declaring held members (fields and functions,
 	## declaration order — the ordinal index), the matching getter
 	## table (a held FIELD's slot carries its once-guard accessor's
@@ -4062,7 +4062,7 @@ Class is CodeGenerator{
 										Conditional:if(check: { m:name == 'init' }, then: {
 											hasInit: true;
 										});
-										# Held functions (PLAN-ENUM Stage 1): the
+										# Held functions: the
 										# receiver-free definition — same body pipeline,
 										# no self parameter, the _held_ symbol.
 										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
@@ -4075,7 +4075,7 @@ Class is CodeGenerator{
 						Conditional:if(check: { !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, then: {
 							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
 						});
-						# FUNCTIONS.md Part VI: the default toString lives on
+						# The default toString lives on
 						# `Class` (the declaration root) — the vtable dispatch
 						# finds it through the lattice; no per-class synthesis.
 						classChunks:set(index: ci, item: classC);
@@ -4523,7 +4523,7 @@ Class is CodeGenerator{
 
 	## Inlines a While loop with optional scoped loop variables:
 	## loop variables are declared at the block scope, and the evaluate/iteration
-	## Part II: extracts the condition C from a check
+	## extracts the condition C from a check
 	## closure — the body's last expression statement is the condition
 	## (the Kotlin convention). Earlier statements, if any, are emitted
 		## into a do-block prefix.
@@ -4571,7 +4571,7 @@ Class is CodeGenerator{
 		return self:generateExpression(expr: condExpr);
 	}
 
-	## Part II: inlines a Conditional branch call as native
+	## inlines a Conditional branch call as native
 	## C if/else. Branch bodies are inlined into the enclosing function,
 	## so a `return` inside a branch returns from the method (guard
 	## clauses work). The 2-arg form is the primitive; the 3-arg form is
@@ -4583,14 +4583,14 @@ Class is CodeGenerator{
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
-		# Part II: INHERIT the enclosing inline-return
+		# INHERIT the enclosing inline-return
 		# context. A branch nested in an inlined loop's iteration keeps the
 		# loop's return protocol (`return false` stops the loop); a branch
 		# at method level sees the empty context and its returns stay real
 		# method returns (guard clauses). Clearing here turned loop-stops
 		# into garbage method returns.
 		self:argMode: false;
-		# Part II: the value-yielding form — the checker
+		# the value-yielding form — the checker
 		# stamped the unified yield type; emit a statement expression.
 		local String is resT: expr:resolvedType;
 		local Boolean is valueForm: expr:argCount() == 3 && resT != '' && resT != 'void' && resT != 'Void';
@@ -4651,7 +4651,7 @@ Class is CodeGenerator{
 				local String is retC: self:generateExpression(expr: st:returnExpr);
 				self:argMode: savedArg;
 				Conditional:if(check: { self:isArcType(typeName: yieldT) }, then: {
-					# Part IV V2: a yield does not end the enclosing
+					# a yield does not end the enclosing
 					# scope — the source local may be read after the
 					# if-expression, so the yield RETAINS (the ARC-safe copy)
 					# instead of the return path's ownership NULL-swap. A fresh
@@ -4686,7 +4686,7 @@ Class is CodeGenerator{
 	}
 
 	## Lowers a Conditional:match arm table into an if/else-if comparison
-	## chain (PLAN-ENUM Stage 3). Value-form matches emit as a
+	## chain. Value-form matches emit as a
 	## statement-expression with a yield variable (the
 	## generateInlineBranch protocol); statement forms emit the bare
 	## chain. Key comparisons shape by the held member's type: identity
@@ -4754,7 +4754,7 @@ Class is CodeGenerator{
 				# closure with parameters binds the tagged variant's
 				# constructor payloads as locals before the body runs.
 				# The legacy tagged form binds through the flat payload
-				# fields; the desugared form (Stage 5) casts the subject
+				# fields; the desugared form  casts the subject
 				# to the nested subclass and reads its real fields.
 				Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 && self:allTaggedEnums:has(key: subjT) }, then: {
 					local Member is pvMem: self:lookupEnumVariant(enumName: subjT, variantName: self:matchKeyName(key: key, subjT: subjT));
@@ -4884,7 +4884,7 @@ Class is CodeGenerator{
 				});
 				joined: joined . oneC;
 			}, else: {
-				# The interim bridge (PLAN-ENUM Stage 3b): today's enum
+				# The interim bridge: today's enum
 				# variants compare by their int tag — the variant resolved
 				# against the SUBJECT ENUM'S OWN member list (the global
 				# variant registry collides on names shared across enums).
@@ -4920,7 +4920,7 @@ Class is CodeGenerator{
 					});
 					joined: joined . oneC;
 				}, else: {
-					# The class-model tagged bridge (PLAN-ENUM Stage 5): a
+					# The class-model tagged bridge: a
 					# desugared tagged enum's variants are its nested
 					# subclasses — the compare reads the instance's _tag
 					# against the variant's declaration-order index.
@@ -5033,7 +5033,7 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## II.4: inlines an `until(evaluate:, iteration:)` — the
+	## inlines an `until(evaluate:, iteration:)` — the
 	## do-while: the body runs once, then the predicate decides. The body's
 	## returns drive the loop exactly like [generateInlineWhileLoop].
 	##
@@ -5079,7 +5079,7 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## II.4: inlines a `repeat(count:, worker:)` — the body
+	## inlines a `repeat(count:, worker:)` — the body
 	## runs exactly [count] times; the worker's returns drive the loop
 	## (`return true` continues, `return false` stops).
 	##

@@ -59,7 +59,7 @@ Class is HelloWorld{
 	];
 
 	replace Function is init(Map of String to String is args){
-		Output:line("Hello, World!");
+		line("Hello, World!");
 	}
 
 }
@@ -227,7 +227,7 @@ Function of Int is add(Int is a, Int is b){
 
 # Void return type
 Function is logMessage(String is msg){
-	Output:line(msg);
+	line(msg);
 }
 ```
 
@@ -252,7 +252,7 @@ Functions can be passed inline as first-class expressions using keyword-based an
 ```spec
 # Anonymous function expression
 words:each(action: local Function(word){
-	Output:line(word);
+	line(word);
 });
 
 # Anonymous function with explicit return type
@@ -393,7 +393,7 @@ A class declaring `held Function of <T> is resolveHeld(String is name, Function 
 
 ```spec
 held Function of HeldEntry is resolveHeld(String is name, Function of HeldEntry is missing){
-	Conditional:if(check: { name == 'phantom' }, then: {
+	if(check: { name == 'phantom' }, then: {
 		return missing();
 	});
 	return HeldEntry:init(n: name);
@@ -424,16 +424,17 @@ Class is HeldRegistry{
 Packages are imported via the class `using` property. Each entry names the
 package segments plus the class to load; an entry ending at the package
 imports the whole package (the wildcard). A trailing **`as ClassName()`**
-materializes an owned instance of the class scoped to the importing class —
-its members answer to the class-name prefix (`Output:line(...)`) and, where
-the name is unambiguous in scope, bare (`round(...)`):
+instance-imports the class — its members answer to the class-name prefix
+and, where the name is unambiguous in scope, **bare**: `as Output()`
+serves `line(...)`, `as Conditional()` serves `if(...)` and `match(...)`,
+`as Loops()` serves the loop constructs, `as Math()` serves `round(...)`:
 ```spec
 replace Array of Array of String is using: [
 	['base', 'struct', Array],
 	['base', 'math', as Math()],
 	['base', 'io', as Output()],
 	['base', 'sys', as Process()],
-	['base', 'iterator', as Loops()]
+	['base', 'sys', as Loops()]
 ];
 ```
 Imports map directly to `.spec` files in the standard library (`lib/`) or project directory.
@@ -553,7 +554,7 @@ local Function of String to Boolean is validator;
 
 # Passing a function as a parameter
 replace Function is execute(Function is callback){
-	Output:line("Executing callback...");
+	line("Executing callback...");
 }
 ```
 
@@ -640,13 +641,13 @@ local Int is b: ++count;  # expression: 'count' becomes 2, 'b' receives 2
 ### String Concatenation
 The dot operator (`.`) concatenates strings and automatically formats numeric primitives:
 ```spec
-Output:line("Total score: " . score . " points");
+line("Total score: " . score . " points");
 ```
 
 ### Member Access & Method Calls
 The colon (`:`) invokes methods and traverses namespaces:
 ```spec
-Output:line("Log text");
+line("Log text");
 local Float is r: Math:round(value: 3.7);
 ```
 
@@ -676,8 +677,8 @@ languages[1]: "Spec C11"; # Replaces "Java"
 The `Conditional:if` call doubles as the conditional expression: both branches are required (upholding Spec's "Never Null" standard), the arms' yields unify into the call's type, and nested branch calls type in context:
 
 ```spec
-local String is status: Conditional:if(check: { isReady }, then: { 'Ready' }, else: { 'Pending' });
-local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { Conditional:if(check: { score >= 80 }, then: { 'B' }, else: { 'C' }) });
+local String is status: if(check: { isReady }, then: { 'Ready' }, else: { 'Pending' });
+local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { if(check: { score >= 80 }, then: { 'B' }, else: { 'C' }) });
 ```
 
 ### String Inspection Primitives
@@ -697,25 +698,25 @@ local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, els
 Conditionals are calls to the `Conditional` provider — no `if`/`else` keywords. The check closure returns `Boolean`; the branch closures may read and mutate the enclosing scope. Comparisons (`==`, `is`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`) work as expected, and the `is` keyword reads as equality for expressive checks:
 
 ```spec
-Conditional:if(check: { score is 21 }, then: {
-	Output:line("Blackjack!");
+if(check: { score is 21 }, then: {
+	line("Blackjack!");
 }, else: {
-	Conditional:if(check: { score > 21 }, then: {
-		Output:line("Bust!");
+	if(check: { score > 21 }, then: {
+		line("Bust!");
 	}, else: {
-		Output:line("Continue play");
+		line("Continue play");
 	});
 });
 
 # The value form: both branches yield, and the call's type is the unified yield.
-local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
+local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
 ```
 
 #### Matching with `Conditional:match`
 `Conditional:match` is the match construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`) like `if`. The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation. That lowering is the fast path — and the only path that can bind payload arms and match identity/array keys. A table that is NOT a literal (a Map built with `set()`) flows to the runtime dispatch — the wrapper's held scan: string keys against String subjects, `else` as the fallback arm, first match wins.
 
 ```spec
-local String is label: Conditional:match(on: state, when: [
+local String is label: match(on: state, when: [
 	idle:   { 'waiting' },
 	MachineState:running: {
 		ticks: ticks + 1;
@@ -737,21 +738,21 @@ The rules:
 An arm closure with parameters binds the tagged variant's payload fields — the parameters pair by index with the variant's declared payload fields:
 
 ```spec
-local String is statusSummary: Conditional:match(on: res, when: [
+local String is statusSummary: match(on: res, when: [
 	Result:Ok: local Function(String is data){ return 'Done: ' . data; },
 	Result:Err: local Function(Int is code, String is msg){ return 'Failed (' . code . '): ' . msg; },
 	Result:Pending: { 'In Progress' }
 ]);
 
-Conditional:match(on: res, when: [
+match(on: res, when: [
 	Result:Ok: local Function(String is data){
-		Output:line('Success: ' . data);
+		line('Success: ' . data);
 	},
 	Result:Err: local Function(Int is code, String is msg){
-		Output:line('Error code ' . code . ': ' . msg);
+		line('Error code ' . code . ': ' . msg);
 	},
 	Result:Pending: {
-		Output:line('Operation pending...');
+		line('Operation pending...');
 	}
 ]);
 ```
@@ -789,7 +790,7 @@ of Loop is CounterLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		count: count + 1;
-		Output:line("Step: " . count);
+		line("Step: " . count);
 		return true;
 	}
 }
@@ -798,7 +799,7 @@ Loops:run(loop: CounterLoop:init(), control: LoopControl:init());
 ```
 
 ### The `Loops` Provider
-One as-import (`['base', 'iterator', as Loops()]`) serves the loop constructs bare. Like the conditionals, the constructs are **real wrapper implementations** — composed in `base:iterator:Loops` from the iteration floor's single `while` primitive (`base:sysinternal:Loops`, the loop-shape counterpart of the conditional floor's `branch`) — with the compiler inlining the literal-closure forms as native C11 loops (zero closure allocation) as the fast path. A call whose closures are not inline literals (Function variables, callbacks held as values) flows to the runtime body:
+One as-import (`['base', 'sys', as Loops()]`) serves the loop constructs bare. Like the conditionals, the constructs are **real wrapper implementations** — composed in `base:iterator:Loops` from the iteration floor's single `while` primitive (`base:sysinternal:Loops`, the loop-shape counterpart of the conditional floor's `branch`) — with the compiler inlining the literal-closure forms as native C11 loops (zero closure allocation) as the fast path. A call whose closures are not inline literals (Function variables, callbacks held as values) flows to the runtime body:
 - `while(evaluate:, iteration:)` — the predicate loop; inlined into a native C11 `while` with zero closure allocation for literal closures.
 - `Loops:repeat(count:, worker:)` — the counting loop.
 - `Loops:until(evaluate:, iteration:)` — the body-always-runs-once form (do-while).
@@ -816,8 +817,8 @@ while(
 	}
 );
 
-Loops:repeat(count: 10, worker: local Function of Boolean(){
-	Output:line('step');
+repeat(count: 10, worker: local Function of Boolean(){
+	line('step');
 	return true;
 });
 ```
@@ -836,13 +837,13 @@ log:add("reading line 2");
 
 # With parameter bindings: typed or untyped
 as (String is text): self:readFile("config.json");
-Output:line("Loaded: " . text);
+line("Loaded: " . text);
 
 # Linear nested pipelines without rightward drift:
 as (Int is a): self:stepOne();
 as (Int is b): self:stepTwo(a);
 as (Int is c): self:stepThree(b);
-Output:line("Final result: " . c);
+line("Final result: " . c);
 
 # Returning results from scoped regions:
 return as of Int: self:computeWith(base: 2);
@@ -873,7 +874,7 @@ Interactive console I/O delegates to event handlers rather than freezing thread 
 ```spec
 of InputHandler is ActionHandler{
 	replace Function is onInput(String is action){
-		Output:line("User chose: " . action);
+		line("User chose: " . action);
 	}
 }
 

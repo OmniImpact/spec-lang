@@ -87,7 +87,7 @@ as: self:withTransaction(name: "OrderProcessing");
 as (String is path): self:withTempFile(path: "/tmp/data.csv", content: rawData);
 
 # Clean, linear pipeline — path is in scope, zero indentation drift!
-Output:line("Processing: " . path);
+line("Processing: " . path);
 ```
 - **Zero New Keywords**: Reuses `as` unambiguously at statement start.
 - **Guaranteed LIFO Unwinding**: Nested `as` statements unwind in reverse stack order on exit, matching RAII, Python `with`, and Go `defer` with zero runtime machinery.
@@ -151,10 +151,10 @@ replace Array of Array of String is using: [
 
 - **`Conditional:match` with Payload Destructuring**: Match any value against held-member keys (array keys match several cases at once); payload arms are closures whose parameters bind the variant's fields:
   ```spec
-  Conditional:match(on: res, when: [
-  	Result:Ok: local Function(String is data){ Output:line("Success: " . data); },
-  	Result:Err: local Function(Int is code, String is msg){ Output:line("Error " . code . ": " . msg); },
-  	Result:Pending: { Output:line("Pending..."); }
+  match(on: res, when: [
+  	Result:Ok: local Function(String is data){ line("Success: " . data); },
+  	Result:Err: local Function(Int is code, String is msg){ line("Error " . code . ": " . msg); },
+  	Result:Pending: { line("Pending..."); }
   ]);
   ```
 
@@ -172,7 +172,7 @@ replace Array of Array of String is using: [
   log:add(item: "processing data");
 
   as (String is text): self:readFile(path: "config.json");
-  Output:line("Loaded: " . text);
+  line("Loaded: " . text);
   ```
 
 - **Default Parameter Values & Call-Site Reordering**: Functions declare optional parameters with default values; call sites may omit defaults and pass named arguments in any order:
@@ -216,7 +216,7 @@ replace Array of Array of String is using: [
 - **Root Contract**: `Any`-typed references may only invoke root members (`toString`, `typeName`, `init`); everything else requires a cast:
   ```spec
   local Any is obj: getUnknownObject();
-  Output:line(obj:toString());
+  line(obj:toString());
   local Greeter is g: obj as Greeter;
   g:greet();
   ```
@@ -258,12 +258,12 @@ The **`Conditional` provider** replaces `if`/`else` keywords the same way
 `Loops` replaces loop keywords: conditionals are calls, and the compiler
 inlines them into native C branches with zero closure allocation.
 
-- **Statement form**: `Conditional:if(check: { ... }, then: { ... }, else: { ... })` — the check closure returns `Boolean`; the branch bodies are statements that may read and mutate the enclosing scope.
+- **Statement form**: `if(check: { ... }, then: { ... }, else: { ... })` — served bare through the as-import — the check closure returns `Boolean`; the branch bodies are statements that may read and mutate the enclosing scope.
 - **Value form**: omitting `else` is fine for statements; a value-yielding call supplies both branches, and the arms' yields unify into the call's type:
   ```spec
-  local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
+  local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
   ```
-- **Match tables**: `Conditional:match(on: value, when: [key: { body }, ...])` — the arm-table form with held-member keys, array keys for multiple matching, `else` as a plain identifier key, and payload arms whose closure parameters bind a tagged variant's fields. See the [Language Guide](docs/language/README.md#matching-with-conditionalmatch).
+- **Match tables**: `match(on: value, when: [key: { body }, ...])` — the arm-table form with held-member keys, array keys for multiple matching, `else` as a plain identifier key, and payload arms whose closure parameters bind a tagged variant's fields. See the [Language Guide](docs/language/README.md#matching-with-conditionalmatch).
 
 ---
 
@@ -309,13 +309,13 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
 | **Memory** | Reference counting with scope-end releases; binaries verified leak-free under ASan/LSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
-| **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and enum contract methods dispatch through the class name | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
+| **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
 | **Enums & matching** | Algebraic enums with payloads (desugared to real classes); `Conditional:match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
 | **Iteration & scopes** | Loop keywords retired; the `Loops` provider's `while` inlines to C11 statement expressions with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
-| **Conditionals** | `Conditional:if(check:, then:, else:)` calls, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
+| **Conditionals** | `if(check:, then:, else:)` and `match(on:, when:)` calls through the `Conditional` as-import, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
 | **Concurrency** | pthreads; mutex-protected collections; atomics; parallel fan-out | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
 | **Build model** | Transpiles to one C translation unit; `gcc` links; the compiler is written in Spec and bootstraps from a single canonical C file whose fixed point is verified on every build | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |

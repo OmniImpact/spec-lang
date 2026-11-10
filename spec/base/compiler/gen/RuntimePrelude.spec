@@ -753,13 +753,13 @@ static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
     if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
 }
 
-/* Part II: the no-argument closure invoker for the
+/* the no-argument closure invoker for the
    conditional floor. */
 static inline void spec_call_closure_0(SpecClosure* cls) {
     if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }
 }
 
-/* The conditional floor (Part II): the single primitive.
+/* The conditional floor: the single primitive.
    `else` is composed above it as `if(!check, else)`. */
 static inline void spec_branch(SpecClosure* check, SpecClosure* then) {
     if (check && check->fn) {
@@ -769,7 +769,7 @@ static inline void spec_branch(SpecClosure* check, SpecClosure* then) {
     }
 }
 
-/* The iteration floor (Part II): the single loop primitive.
+/* The iteration floor: the single loop primitive.
    `until` composes above it (run once, then while !evaluate); repeat
    counts; run drives the Loop protocol. */
 static inline void spec_while(SpecClosure* evaluate, SpecClosure* iterate) {
@@ -1736,7 +1736,7 @@ static inline bool spec_same_ref(const void* a, const void* b) {
     return a == b;
 }
 
-/* Held-member metadata (PLAN-ENUM Stage 1): per-class held-member name
+/* Held-member metadata: per-class held-member name
    tables, registered by the emitted Held Metadata section (the tables
    preserve declaration order — the ordinal index). Field slots carry
    the once-guard accessor's address; function slots are NULL. The
@@ -1780,7 +1780,7 @@ bool spec_has_held(const void* obj, String name) {
     return false;
 }
 
-/* The ordinal scan (PLAN-ENUM): the first held-FIELD index whose
+/* The ordinal scan : the first held-FIELD index whose
    lazily-constructed instance is the object itself. The desugared
    enum variants are held singletons in declaration order, so this is
    the variant's ordinal. Calling it initializes the class's held

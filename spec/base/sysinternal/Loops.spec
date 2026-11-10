@@ -1,5 +1,5 @@
 #! Package base:sysinternal
-#! The iteration floor (Part II): the single loop primitive. Every
+#! The iteration floor: the single loop primitive. Every
 #! loop shape composes above it — `until` runs the body once and then
 #! negates the predicate, `repeat` counts, `run` drives the Loop
 #! protocol — only this one item binds to C.

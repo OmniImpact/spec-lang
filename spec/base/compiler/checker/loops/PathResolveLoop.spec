@@ -2,7 +2,7 @@
 #! Resolves a field-access path segment by segment, walking field types
 ## through the class hierarchy. Stops when the current type is an enum
 ## (variants are not fields) or a segment resolves to nothing.
-#! PLAN-ENUM Stage 1: when the root was a class name, the FIRST segment
+#! when the root was a class name, the FIRST segment
 ## resolves as a held member (the class-name prefix reaches exactly the
 ## held members); later segments chain as instance fields on its value.
 

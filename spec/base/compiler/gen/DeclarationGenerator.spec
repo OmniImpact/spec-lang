@@ -124,7 +124,7 @@ Class is DeclarationGenerator{
 		c:baseClasses:each(action: local Function(String is baseName){
 			# the base is the outer-link relation
 			# when its name appears in this class's outer chain — unless the
-			# base is a class-model enum (PLAN-ENUM Stage 5): the desugared
+			# base is a class-model enum: the desugared
 			# variants INHERIT the base's tag fields, so they stay in acc at
 			# the base's offsets (the base-cast reads them).
 			local Boolean is baseIsOuter: c:outerName != '' && (c:outerName == baseName || c:outerName:contains(needle: ':' . baseName));
@@ -142,7 +142,7 @@ Class is DeclarationGenerator{
 				MemberKind:FIELD: {
 					# Declarative metadata (namespace/using/castable)
 					# never becomes a struct field; neither do HELD members
-					# (PLAN-ENUM Stage 1) — held storage is the file-scope
+					# — held storage is the file-scope
 					# once-guard slot, not a per-instance field.
 					Conditional:if(check: { m:name != MetadataField:USING:value() && m:name != MetadataField:NAMESPACE:value() &&
 						m:name != MetadataField:CASTABLE:value() && !m:hasModifier(kw: Keyword:HELD) }, then: {
@@ -200,7 +200,7 @@ Class is DeclarationGenerator{
 					}, else: {
 						Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . cSym . ' ' . cSym . ";\n");
 					});
-					# Held member prototypes (PLAN-ENUM): hoisted here so the
+					# Held member prototypes : hoisted here so the
 					# anon-fn helper closures (which may read held accessors)
 					# precede their definitions.
 					c:members:each(action: local Function(Member is m){
@@ -230,7 +230,7 @@ Class is DeclarationGenerator{
 									retType: 'bool';
 								});
 							});
-							# Held functions (PLAN-ENUM Stage 1): receiver-free
+							# Held functions: receiver-free
 							# prototypes with the _held_ symbol infix.
 							Conditional:if(check: { m:hasModifier(kw: Keyword:HELD) }, then: {
 								Buf:bufAppendBuf(dst: out, src: retType . ' ' . self:utils:cIdent(name: c:qualifiedName()) . '_held_' . self:utils:cIdent(name: m:name) . '(');

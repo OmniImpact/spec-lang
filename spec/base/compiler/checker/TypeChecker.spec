@@ -88,7 +88,7 @@ Class is TypeChecker{
 	## Whether a held field's initializer is being checked: no instance
 	## context exists (no self, no instance fields, no implicit-self
 	## calls), and same-class held references would deadlock the
-	## once-guards (PLAN-ENUM Stage 1).
+	## once-guards.
 	local Boolean is inHeldInit: false;
 
 	## Whether a held function's body is being checked: the same
@@ -99,8 +99,8 @@ Class is TypeChecker{
 
 	## True while a held body infers the TARGET of a function-variable
 	## invocation (self:missing()): the closure call never touches the
-	## instance, so the no-instance error does not apply (PLAN-ENUM
-	## Stage 2 — the resolution hook's missing branch).
+	## instance, so the no-instance error does not apply
+	## The resolution hook's missing branch.
 	local Boolean is inHeldFnVarTarget: false;
 
 	## Name of the method being checked (forward resolution).
@@ -111,7 +111,7 @@ Class is TypeChecker{
 
 	## Anonymous-function nesting depth (forwards are top-level only).
 	local Int is anonDepth: 0;
-	# Part II: inside a Conditional branch-closure argument —
+	# inside a Conditional branch-closure argument —
 	# its body inlines into the enclosing method, so returns flow to the
 	# method's return type, not the closure's.
 	local Boolean is inBranchClosure: false;
@@ -125,19 +125,19 @@ Class is TypeChecker{
 	## Return type name of the method currently being checked.
 	local String is currentMethodReturnType: '';
 
-	## Part II: the anon-fn node whose body is being checked
+	## the anon-fn node whose body is being checked
 	## (the Kotlin write-back target for void-declared closures).
 	local Expression is currentAnonNode: Expression:init(kind: ExpressionKind:UNKNOWN);
 
-	## Part II: inside a value-yielding branch's then/otherwise
+	## inside a value-yielding branch's then/otherwise
 	## closure (the call site expects a value).
 	local Boolean is inValueBranch: false;
 
-	## Part II: checking the last statement of a value-yielding
+	## checking the last statement of a value-yielding
 	## branch closure — its return establishes the branch's yield type.
 	local Boolean is checkingValueYield: false;
 
-	## Part II: the expected type of the value-yielding branch
+	## the expected type of the value-yielding branch
 	## being checked — flows into its yields so nested branch calls type in
 	## context.
 	local String is currentYieldExpected: '';
@@ -342,7 +342,7 @@ Class is TypeChecker{
 		Conditional:if(check: { target == 'Float' && source == Primitive:INT:value() }, then: {
 			return true;
 		});
-		# Part IV V1: Function assignability is directional. A
+		# Function assignability is directional. A
 		# typed closure feeds an untyped param (covariance — the callback
 		# idiom); a TYPED param accepts only a closure promising the same
 		# return type. A void or differently-typed closure would read
@@ -456,7 +456,7 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
-		# Instance lookups are held-blind (PLAN-ENUM Stage 1).
+		# Instance lookups are held-blind.
 		ml:setSkipHeld(v: true);
 		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
@@ -497,7 +497,7 @@ Class is TypeChecker{
 		});
 		local String is baseClassName: self:memberLookupRoot(className: className);
 		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# The resolved qualified root absorbs the colon chain ; bare
 		# colon forms ground their segments as type arguments.
 		Conditional:if(check: { baseClassName != className }, then: {
 			local Array of String is parts: className:split(delimiter: ':');
@@ -515,7 +515,7 @@ Class is TypeChecker{
 			return '';
 		});
 		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: fieldName);
-		# Instance lookups are held-blind (PLAN-ENUM Stage 1): the
+		# Instance lookups are held-blind: the
 		# class-name prefix reaches exactly the held members.
 		fl:setSkipHeld(v: true);
 		Loops:run(loop: fl);
@@ -566,7 +566,7 @@ Class is TypeChecker{
 			return '';
 		});
 		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
-		# Instance lookups are held-blind (PLAN-ENUM Stage 1).
+		# Instance lookups are held-blind.
 		ml:setSkipHeld(v: true);
 		Loops:run(loop: ml);
 		Conditional:if(check: { ml:found }, then: {
@@ -583,7 +583,7 @@ Class is TypeChecker{
 		return inherited;
 	}
 
-	## Type-checks a Conditional:match arm table (PLAN-ENUM Stage 3): keys
+	## Type-checks a Conditional:match arm table: keys
 	## resolve against the subject class's held members (an array key
 	## matches several), `else` names the fallback, and the arm closures
 	## unify into the match's type. Exhaustiveness keys on the Enum
@@ -678,11 +678,11 @@ Class is TypeChecker{
 							bad: true;
 						}, else: {
 							# Held members first; the variant registry is the
-							# interim bridge (PLAN-ENUM Stage 3b) — today's enum
-							# variants match until the sugar migrates (Stage 4).
+							# interim bridge — today's enum
+							# variants match until the sugar migrates.
 							local String is owner: self:findHeldOwnerClass(className: subjT, memberName: keyName);
 							Conditional:if(check: { owner == '' && self:allEnumNames:has(key: subjT) }, then: {
-								# The interim bridge (PLAN-ENUM Stage 3b): today's
+								# The interim bridge: today's
 								# enum variants ARE the subject enum's own member
 								# list — resolved directly, no global registry
 								# (variant names collide across enums).
@@ -697,7 +697,7 @@ Class is TypeChecker{
 									owner: subjT;
 								});
 							}, else: {
-								# The class-model bridge (PLAN-ENUM Stage 5): a
+								# The class-model bridge: a
 								# desugared TAGGED enum's variants are its nested
 								# subclasses — the key admits when one matches.
 								Conditional:if(check: { self:bindings:isClassModelEnum(c: self:findClass(name: subjT)) }, then: {
@@ -727,7 +727,7 @@ Class is TypeChecker{
 										Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 }, then: {
 											# The variant's parameter surface: the legacy
 											# member (today's enums) or the desugared
-											# nested subclass's init (Stage 5).
+											# nested subclass's init.
 											local Member is pvMem: Member:init(kind: MemberKind:FIELD);
 											Conditional:if(check: { self:allEnumNames:has(key: owner) }, then: {
 												local ClassInfo is pvCls: self:findClass(name: owner);
@@ -856,7 +856,7 @@ Class is TypeChecker{
 		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:num);
 		local String is sigDisplay: baseClassName;
 		Conditional:if(check: { m:kind != MemberKind:METHOD }, then: {
-			# No instance method (PLAN-ENUM Stage 1): the receiver shape
+			# No instance method: the receiver shape
 			# may still reach a held function — a bare class-name root,
 			# never self or an instance-typed name.
 			Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:IDENT || callExpr:methodTarget:kind == ExpressionKind:PATH }, then: {
@@ -881,7 +881,7 @@ Class is TypeChecker{
 	## Validates a call's arguments against an explicit parameter list:
 	## named arguments match by parameter name, positional by index,
 	## defaults fill the rest. Shared by the instance and the held
-	## dispatch paths (PLAN-ENUM Stage 1).
+	## dispatch paths.
 	##
 	## @param callExpr: The CALL expression.
 	## @param params: The signature's parameters.
@@ -896,7 +896,7 @@ Class is TypeChecker{
 		params:each(action: local Function(Parameter is p){
 			local String is pName: p:name;
 			local String is pT: p:paramType:name;
-			# Part IV V1: a Function-typed param enforces
+			# a Function-typed param enforces
 			# assignability in the colon form — the raw name would broaden
 			# every Function param to plain Function (the void-into-check
 			# hole).
@@ -1172,7 +1172,7 @@ Class is TypeChecker{
 			return;
 		});
 		visited:set(key: className, value: 'true');
-		# IV.2c: the qualified nested-class name walks the inner class
+		# the qualified nested-class name walks the inner class
 		# itself; container forms don't resolve qualified and fall back to
 		# the bare root.
 		local ClassInfo is cls: self:findClass(name: className);
@@ -1183,14 +1183,14 @@ Class is TypeChecker{
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			# Instance overloads are held-blind (PLAN-ENUM Stage 1): the
+			# Instance overloads are held-blind: the
 			# class-name prefix reaches exactly the held members.
 			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == methodName && !m:hasModifier(kw: Keyword:HELD) }, then: {
 				acc:add(item: m);
 			});
 		});
 		Conditional:if(check: { acc:length() > 0 }, then: {
-			# IV.2c: the owner's qualified identity — the bare name of a
+			# the owner's qualified identity — the bare name of a
 			# nested class is not unique across outers.
 			ownerAcc:add(item: cls:qualifiedName());
 			return;
@@ -1242,7 +1242,7 @@ Class is TypeChecker{
 					found: true;
 				});
 			});
-			# Part IV V1: a Function-typed param compares in the
+			# a Function-typed param compares in the
 			# colon form ('Function of Boolean' -> 'Function:Boolean') — the
 			# raw name erases the return type and matches every closure.
 			local String is pT: p:paramType:name;
@@ -1294,7 +1294,7 @@ Class is TypeChecker{
 			return '';
 		});
 		local Array of String is typeArgs: [];
-		# The resolved qualified root absorbs the colon chain (IV.2c); bare
+		# The resolved qualified root absorbs the colon chain ; bare
 		# colon forms ground their segments as type arguments.
 		Conditional:if(check: { baseName != className }, then: {
 			local Array of String is parts: className:split(delimiter: ':');
@@ -1439,7 +1439,7 @@ Class is TypeChecker{
 		});
 	}
 
-	## Part IV IV.2c (phase 3): the per-scope nested-type
+	## the per-scope nested-type
 	## map. Built once for [className] — own nested classes, the
 	## as-imported classes' nested classes, then the base lattice (the
 	## outer link serves the inner-of-inner walk) — so a bare nested
@@ -1821,7 +1821,7 @@ Class is TypeChecker{
 		local Boolean is granted: false;
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { !granted && c:sourceFile == sourceFile }, then: {
-				# IV.2c: the flattened nested classes match their qualified
+				# the flattened nested classes match their qualified
 				# identity too — the outer's own rewritten references
 				# ('LibA:Helper') grant as the bare declaration does.
 				Conditional:if(check: { c:name == targetName || c:qualifiedName() == targetName }, then: {
@@ -1961,7 +1961,7 @@ Class is TypeChecker{
 		Conditional:if(check: { t:name == '' }, then: {
 			return;
 		});
-		# Part IV IV.2c (phase 3): the bare nested-class
+		# the bare nested-class
 		# reference resolves through the per-scope map — one lookup. Exactly
 		# one provider rewrites the type to its qualified identity (the
 		# parent grant covers it downstream); several collide and force the
@@ -1982,7 +1982,7 @@ Class is TypeChecker{
 							listed: listed . ' and ' . p;
 						});
 					});
-					self:addError(line: line, msg: 'Type \'' . t:name . '\' is provided by ' . listed . '; qualify the reference (Part IV IV.2c).');
+					self:addError(line: line, msg: 'Type \'' . t:name . '\' is provided by ' . listed . '; qualify the reference.');
 					return;
 				});
 			});
@@ -2124,7 +2124,7 @@ Class is TypeChecker{
 			ExpressionKind:IDENT: {
 				local String is name: expr:str;
 				Conditional:if(check: { name == self:names:selfIdent() }, then: {
-					# A held member body has no instance (PLAN-ENUM Stage 1)
+					# A held member body has no instance
 					# — except a function-variable call target: the closure
 					# invocation never touches the instance.
 					Conditional:if(check: { (self:inHeldInit || self:inHeldFunction) && !self:inHeldFnVarTarget }, then: {
@@ -2137,7 +2137,7 @@ Class is TypeChecker{
 					}, else: {
 						Conditional:if(check: { self:fieldTypes:has(key: name) }, then: {
 							# A held initializer has no instance: instance fields
-							# are not reachable from it (PLAN-ENUM Stage 1).
+							# are not reachable from it.
 							Conditional:if(check: { self:inHeldInit }, then: {
 								self:addError(line: self:currentLine, msg: 'A held initializer has no instance: field \'' . name . '\' is not reachable from it.');
 							});
@@ -2174,12 +2174,12 @@ Class is TypeChecker{
 				Conditional:if(check: { segs:length() > 0 }, then: {
 					local String is root: segs:get(index: 0);
 					local String is rootType: '';
-					# Held admission (PLAN-ENUM Stage 1): the first segment
+					# Held admission: the first segment
 					# after a class-name root resolved as a held field — the
 					# PathResolveLoop then consumes it via lookupHeldFieldType.
 					local Boolean is heldAdmitted: false;
 					Conditional:if(check: { root == self:names:selfIdent() }, then: {
-						# A held member body has no instance (PLAN-ENUM Stage 1).
+						# A held member body has no instance.
 						Conditional:if(check: { self:inHeldInit || self:inHeldFunction }, then: {
 							self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'self\' is not available.');
 						});
@@ -2189,7 +2189,7 @@ Class is TypeChecker{
 						});
 						Conditional:if(check: { segs:length() >= 2 }, then: {
 							local String is fName: segs:get(index: 1);
-							# Strict held resolution (PLAN-ENUM Stage 1): the
+							# Strict held resolution: the
 							# instance lookup is the truth — a held name through
 							# self is the class-scoped slot reached by its
 							# class-name prefix, never by an instance.
@@ -2254,7 +2254,7 @@ Class is TypeChecker{
 												chainResolved: true;
 											});
 										});
-										# §2.3, generalized by PLAN-ENUM Stage 1: the
+										# §2.3, generalized by the
 										# class-name prefix reaches exactly the HELD members —
 										# an instance reference reaches exactly the instance
 										# members. The first segment after a class root resolves
@@ -2267,7 +2267,7 @@ Class is TypeChecker{
 										});
 										Conditional:if(check: { heldM:name != '' && heldM:kind == MemberKind:FIELD }, then: {
 											local String is heldOwner: self:findHeldOwnerClass(className: root, memberName: heldM:name);
-											# Stage 1 cycle rule: a held initializer may not
+											# The held cycle rule: a held initializer may not
 											# reference a held member of its own class — the
 											# mutual once-guards would deadlock. Ancestors'
 											# held members initialize independently.
@@ -2281,7 +2281,7 @@ Class is TypeChecker{
 												self:addError(line: self:currentLine, msg: 'Held function \'' . root . ':' . segs:get(index: 1) . '\' must be called; bare references to held functions are not supported (the call form is ' . root . ':' . segs:get(index: 1) . '(...)).');
 												rootType: '';
 											}, else: {
-												# The resolution hook (PLAN-ENUM Stage 2): a name
+												# The resolution hook: a name
 												# matching no declared member resolves through the
 												# class's 'resolveHeld' contract — declared members
 												# always win, so an instance member through the
@@ -2294,7 +2294,7 @@ Class is TypeChecker{
 													}, else: {
 														Conditional:if(check: { resolver:name != '' && !declaredInstance }, then: {
 															# The hook admits — the reference types as the
-															# resolver's declared return type (PLAN-ENUM
+															# resolver's declared return type
 															# §5.4). Anti-recursion: inside the hook body,
 															# an unknown name through its own class prefix
 															# would recurse forever.
@@ -2318,7 +2318,7 @@ Class is TypeChecker{
 					Conditional:if(check: { pLoop:currType != '' }, then: {
 						res: pLoop:currType;
 					}, else: {
-						# Strict held resolution (PLAN-ENUM Stage 1): an
+						# Strict held resolution: an
 						# instance-typed receiver (a local, a field) whose
 						# segment 1 is a held member gets the pointed
 						# diagnostic instead of a silent Any.
@@ -2332,7 +2332,7 @@ Class is TypeChecker{
 				});
 			},
 			ExpressionKind:BINARY: {
-				# Part II: the expected type flows into the
+				# the expected type flows into the
 				# operands so a value-yielding branch call nested in an
 				# expression (e.g. `n + if(...)`) types in context.
 				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
@@ -2551,7 +2551,7 @@ Class is TypeChecker{
 							self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: faBase, memberName: fName), memberName: fName);
 						});
 						local String is fT: self:lookupFieldType(className: leftT, fieldName: fName);
-						# Strict held resolution (PLAN-ENUM Stage 1): the
+						# Strict held resolution: the
 						# class-name prefix reaches exactly the held members;
 						# an instance receiver reaches exactly the instance
 						# members.
@@ -2598,14 +2598,14 @@ Class is TypeChecker{
 				local String is savedRet: self:currentMethodReturnType;
 				local Expression is savedAnonNode: self:currentAnonNode;
 				self:currentAnonNode: expr;
-				# Part II: the yield flag scopes to THIS closure —
+				# the yield flag scopes to THIS closure —
 				# the enclosing closure's last-statement check must not leak
 				# into nested closures' return typing.
 				local Boolean is savedYieldFlag: self:checkingValueYield;
 				self:checkingValueYield: false;
 
 				Conditional:if(check: { !self:inBranchClosure }, then: {
-					# Part IV V1: the bidirectional closure typing —
+					# the bidirectional closure typing —
 					# a closure literal assigned into a `Function of X` context
 					# types its body against X, so its own type comes out
 					# `Function of X` and the narrowed param accepts it.
@@ -2621,7 +2621,7 @@ Class is TypeChecker{
 				local Int is bodyIdx: 0;
 				expr:anonBody:each(action: local Function(Statement is s){
 					self:anonDepth: self:anonDepth + 1;
-					# Part II: the last statement of a
+					# the last statement of a
 					# value-yielding branch closure is the branch's yield.
 					Conditional:if(check: { self:inValueBranch && bodyIdx == bodyLen - 1 }, then: {
 						self:checkingValueYield: true;
@@ -2634,7 +2634,7 @@ Class is TypeChecker{
 
 				self:localVars: savedVars;
 				self:currentMethodReturnType: savedRet;
-				# Part II: the Kotlin convention — the closure
+				# the Kotlin convention — the closure
 				# body determines the return. Return-site write-backs happened
 				# during the body check (the RETURN arm); here only the
 				# explicit-terminator last-expression form is handled, reading
@@ -2651,7 +2651,7 @@ Class is TypeChecker{
 							});
 						}, else: {
 							Conditional:if(check: { lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, then: {
-								local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\' (Part II).';
+								local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\'.';
 								self:addError(line: self:currentLine, msg: msg);
 							});
 						});
@@ -2708,7 +2708,7 @@ Class is TypeChecker{
 			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
 		});
 
-		# Nested-construction shorthand (PLAN-ENUM Stage 5): a class-name
+		# Nested-construction shorthand: a class-name
 		# receiver naming a nested class constructs it —
 		# `Result:Ok(data: 'x')` ≡ `Result:Ok:init(data: 'x')`. The call
 		# rewrites in place and falls through to the init path.
@@ -2745,9 +2745,9 @@ Class is TypeChecker{
 		});
 		Conditional:if(check: { recvName != '' && expr:methodName != 'init' }, then: {
 			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || self:bindings:isClassModelEnum(c: self:findClass(name: recvName));
-			# Desugared enums (PLAN-ENUM Stage 4) are type-level by design:
+			# Desugared enums are type-level by design:
 			# their contract methods dispatch through the class name.
-			# Held functions (PLAN-ENUM Stage 1): the class-name prefix IS
+			# Held functions: the class-name prefix IS
 			# their dispatch — the call is type-level by design, inside
 			# the class and out.
 			Conditional:if(check: { self:findHeldMethod(className: recvName, methodName: expr:methodName):name != '' }, then: {
@@ -2767,7 +2767,7 @@ Class is TypeChecker{
 			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (E7).');
 		});
 
-		# Conditional:match (PLAN-ENUM Stage 3): the arm-table recognizer —
+		# Conditional:match: the arm-table recognizer —
 		# BEFORE the generic argument inference, which would type the
 		# table's keys as ordinary expressions (the else key is not one).
 		# Keys resolve against the subject's class's held members,
@@ -2832,12 +2832,12 @@ Class is TypeChecker{
 					# The bare-scope branch runs before arg inference: type the
 					# arguments now so overload selection sees exact types. Branch
 					# closures (args 1+) of a Conditional call keep the enclosing
-					# method's return type (Part II).
+					# method's return type.
 					local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
 					# the bare form carries the value-yield
 					# semantics exactly like the qualified call.
 					local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
-					# II.4: the bare loop constructs — the vars
+					# the bare loop constructs — the vars
 					# closure's parameters scope over the closure bodies, so
 					# they bind BEFORE the inference and restore after. The
 					# evaluate closure coerces to Boolean pre-inference, the
@@ -2861,7 +2861,7 @@ Class is TypeChecker{
 								});
 							});
 						});
-						# II.4: the [vars] parameters scope the closures at
+						# the [vars] parameters scope the closures at
 						# the call site — compile-time only. A closure held
 						# as a variable was built before these parameters
 						# existed and cannot capture them.
@@ -2869,14 +2869,14 @@ Class is TypeChecker{
 						expr:methodArgs:each(action: local Function(NamedArg is arg){
 							local Boolean is bareClosureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || (arg:name == '' && barePos > 0);
 							Conditional:if(check: { bareHasLoopVars && bareClosureSlot && arg:value:kind != ExpressionKind:ANON_FN }, then: {
-								self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures (II.4).');
+								self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures.');
 							});
 							barePos: barePos + 1;
 						});
 					});
 					local Int is bareIdx: 0;
 					Conditional:if(check: { provider == 'Loops' }, then: {
-						# II.4: the loop closures are callbacks, not branch
+						# the loop closures are callbacks, not branch
 						# yields — the enclosing branch's flag must not leak.
 						local Boolean is savedLoopBranch: self:inBranchClosure;
 						self:inBranchClosure: false;
@@ -2907,7 +2907,7 @@ Class is TypeChecker{
 						});
 					});
 					self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
-					# Part IV IV.1: the as-import grants FUNCTIONS
+					# the as-import grants FUNCTIONS
 					# ONLY under the callee's visibility — a `local` member of the
 					# imported class is not callable through the import. The same
 					# check the qualified path runs.
@@ -2933,7 +2933,7 @@ Class is TypeChecker{
 					local String is bareThenT: bareThen:anonReturnType:name;
 					local String is bareElseT: bareElse:anonReturnType:name;
 					Conditional:if(check: { self:isVoid(t: bareThenT) || self:isVoid(t: bareElseT) }, then: {
-						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (Part II).');
+						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression.');
 						res: 'void';
 					}, else: {
 						Conditional:if(check: { !self:isAssignable(target: bareThenT, source: bareElseT) && !self:isAssignable(target: bareElseT, source: bareThenT) }, then: {
@@ -2951,18 +2951,18 @@ Class is TypeChecker{
 				return res;
 			});
 		});
-		# Part II: is this a Conditional branch call? Branch
+		# is this a Conditional branch call? Branch
 		# closure bodies (arguments 1+) type-check against the enclosing
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
 		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'if' && self:isAsImportedInherited(className: 'Conditional')));
-		# Part II: the value-yielding form — a 3-arg branch
+		# the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline
 		# literals; their last expressions are the yields.
 		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
-		# Part II: the value form is structural — BOTH branch
+		# the value form is structural — BOTH branch
 		# closures must end in a return-expression (the yield). Closures that
 		# end in assignments are statement-style branches even in a
 		# value-typed context; they stay void-routed.
@@ -2984,7 +2984,7 @@ Class is TypeChecker{
 		local Int is argIdx: 0;
 		local Boolean is savedBranchFlag: self:inBranchClosure;
 		self:inBranchClosure: false;
-		# II.4: the Loops provider's closure forms share the
+		# the Loops provider's closure forms share the
 			# loop typing (while/loop/until inline closures; repeat counts).
 			local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
 		local Map of String to String is savedWhileVars;
@@ -3006,14 +3006,14 @@ Class is TypeChecker{
 						self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 					});
 				});
-				# II.4: the [vars] parameters scope the closures at the
+				# the [vars] parameters scope the closures at the
 				# call site — compile-time only. A closure held as a
 				# variable was built before these parameters existed and
 				# cannot capture them: reject the combination instead of
 				# running it with free identifiers.
 				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && (posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2)));
 				Conditional:if(check: { hasLoopVars && closureSlot && arg:value:kind != ExpressionKind:ANON_FN }, then: {
-					self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures (II.4).');
+					self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures.');
 				});
 				Conditional:if(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
 					Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
@@ -3033,7 +3033,7 @@ Class is TypeChecker{
 		});
 
 		self:bindContainerCallbackParams(targetType: targetType, method: method, expr: expr);
-		# II.4: the loop constructs' closures are callbacks,
+		# the loop constructs' closures are callbacks,
 		# not branch yields — when the call itself sits inside an
 		# enclosing branch closure, that flag must not leak into them
 		# (their returns type against the closure, not the method).
@@ -3081,13 +3081,13 @@ Class is TypeChecker{
 		Conditional:if(check: { targetType == self:names:selfIdent() || targetType == '' }, then: {
 			targetType: self:currentClassName;
 			# A held member body has no instance: implicit-self and self
-			# calls are not available from it (PLAN-ENUM Stage 1).
+			# calls are not available from it.
 			Conditional:if(check: { self:inHeldInit || self:inHeldFunction }, then: {
 				self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'' . method . '\' cannot be called on \'self\' from it.');
 			});
 		});
 
-		# Held functions (PLAN-ENUM Stage 1): a bare class-name target
+		# Held functions: a bare class-name target
 		# with a held member dispatches the class-scoped call — a
 		# receiver-free C function, no vtable.
 		local Member is heldCallFn: Member:init(kind: MemberKind:METHOD);
@@ -3109,7 +3109,7 @@ Class is TypeChecker{
 			expr:resolvedType: heldRet;
 			return heldRet;
 		});
-		# Strict held resolution (PLAN-ENUM Stage 1): an instance
+		# Strict held resolution: an instance
 		# receiver never reaches a held function.
 		Conditional:if(check: { targetType != '' && targetType != Primitive:ANY:value() && !self:allEnumNames:has(key: targetType) && heldCallFn:name == '' }, then: {
 			local String is iBase: targetType:split(delimiter: ':'):get(index: 0);
@@ -3257,7 +3257,7 @@ Class is TypeChecker{
 								Conditional:if(check: { selected:name != '' }, then: {
 									cRet: self:selectedReturnType(className: targetType, selected: selected);
 								});
-								# Part IV V3: a LOADED void declaration keeps
+								# a LOADED void declaration keeps
 								# its void — the fallback below is for UNLOADED classes
 								# only. Resolving a void member as the receiver made
 								# every void call lie about its type.
@@ -3361,7 +3361,7 @@ Class is TypeChecker{
 			});
 		});
 		Conditional:if(check: { isValueBranch }, then: {
-			# Part II: the value-yielding form — both branch
+			# the value-yielding form — both branch
 			# closures' established return types must unify. Read from the
 			# nodes (the write-backs happened during the body check); never
 			# re-infer.
@@ -3370,7 +3370,7 @@ Class is TypeChecker{
 			local String is thenT: thenAnon:anonReturnType:name;
 			local String is elseT: elseAnon:anonReturnType:name;
 			Conditional:if(check: { self:isVoid(t: thenT) || self:isVoid(t: elseT) }, then: {
-				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression (Part II).');
+				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression.');
 				res: 'void';
 			}, else: {
 				Conditional:if(check: { !self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT) }, then: {
@@ -3477,7 +3477,7 @@ Class is TypeChecker{
 		Conditional:match(on: kind, when: [
 			StatementKind:VAR_DECL: {
 				local String is varName: stmt:varName;
-				# IV.2c phase 3: the access gate resolves the bare nested
+				# the access gate resolves the bare nested
 				# reference BEFORE the scope map stamps it — the checker and
 				# the gen agree on the qualified identity.
 				self:validateTypeAccess(t: stmt:varType, line: stmt:line);
@@ -3495,7 +3495,7 @@ Class is TypeChecker{
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr, expected: fullType);
 					Conditional:if(check: { !self:isAssignable(target: fullType, source: initType) }, then: {
 						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
-						# Part IV V3: a void expression consumed as a
+						# a void expression consumed as a
 						# value explains itself instead of cascading into the
 						# generic mismatch.
 						Conditional:if(check: { self:isVoid(t: initType) }, then: {
@@ -3509,9 +3509,9 @@ Class is TypeChecker{
 				});
 			},
 			StatementKind:ASSIGN: {
-				# Held members are read-only (PLAN-ENUM Stage 1): a
+				# Held members are read-only: a
 				# class-name prefix target resolves to the shared held
-				# slot, and assignment through it is rejected. Stage 2:
+				# slot, and assignment through it is rejected.
 				# a resolution-hook name is a cached single copy too.
 				Conditional:if(check: { stmt:assignTarget:kind == ExpressionKind:PATH && stmt:assignTarget:pathSegments:length() >= 2 }, then: {
 					local Array of String is hSegs: stmt:assignTarget:pathSegments;
@@ -3541,7 +3541,7 @@ Class is TypeChecker{
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
 				Conditional:if(check: { !self:isAssignable(target: targetType, source: valType) }, then: {
 						local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
-						# Part IV V3: the same for assignments.
+						# the same for assignments.
 						Conditional:if(check: { self:isVoid(t: valType) }, then: {
 							local String is note: self:voidUseNote(expr: stmt:assignValue);
 							Conditional:if(check: { note != '' }, then: {
@@ -3564,7 +3564,7 @@ Class is TypeChecker{
 						yieldExpected: self:currentYieldExpected;
 					});
 					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: yieldExpected);
-					# Part II: the last statement of a
+					# the last statement of a
 					# value-yielding branch closure establishes the branch's
 					# yield type (the inBranchClosure method-routing does not
 					# apply to it).
@@ -3633,7 +3633,7 @@ Class is TypeChecker{
 		]);
 	}
 
-	## Part IV V5: the diagnostic display form of a type
+	## the diagnostic display form of a type
 	## name — the internal colon form ('Function:Boolean') renders the way
 	## the language spells it ('Function of Boolean').
 	##
@@ -3660,7 +3660,7 @@ Class is TypeChecker{
 		return out;
 	}
 
-	## Part IV V3: the void-in-value-context hint. Describes
+	## the void-in-value-context hint. Describes
 	## WHY an expression computes no value, derived from the CALLEE'S
 	## DECLARATION — the function's name, its void return, and how many of
 	## its declared parameters the call binds. No per-class special cases:
@@ -3690,14 +3690,14 @@ Class is TypeChecker{
 			return '';
 		});
 		local String is note: '\'' . targetT . '.' . expr:methodName . '\' declares no return value';
-		# Part IV V3: a partially-bound void call — the
+		# a partially-bound void call — the
 		# unbound parameters' effects are absent. The arity gap is the
 		# general signal (a 2-arg conditional's missing else is one case
 		# of it, not a special one).
 		Conditional:if(check: { expr:argCount() < m:params:length() }, then: {
 			note: note . ' (' . (expr:argCount() as String) . ' of ' . (m:params:length() as String) . ' declared parameters bound)';
 		});
-		# Part IV V3: a sibling overload binding MORE parameters
+		# a sibling overload binding MORE parameters
 		# is the general signal that this call's effects are incomplete — a
 		# 2-arg conditional's missing else is one case of it, not a special
 		# one. Name the sibling's parameters so the user sees what to add.
@@ -3993,7 +3993,7 @@ Class is TypeChecker{
 	}
 
 	## Finds the nearest class (self, then ancestors) declaring a HELD
-	## FIELD with the name (PLAN-ENUM Stage 1). The class-name prefix
+	## FIELD with the name. The class-name prefix
 	## reaches exactly these members.
 	##
 	## @param className: Starting class whose bases are searched.
@@ -4191,19 +4191,19 @@ Class is TypeChecker{
 		});
 	}
 
-	## Validates a class's held members (PLAN-ENUM Stage 1): `held`
+	## Validates a class's held members: `held`
 	## composes with the visibility modifiers but not with `replace`/
 	## `merge` (held members are single-copy and cannot be overridden);
 	## held fields require initializers (the lazy once-pattern constructs
-	## them); held functions are not yet supported (Stage 2).
+	## them); held functions are not yet supported.
 	##
 	## @param classDef: Class to validate.
 	Function is checkHeldMembers(ClassInfo is classDef){
 		classDef:members:each(action: local Function(Member is m){
 			Conditional:if(check: { !m:hasModifier(kw: Keyword:HELD) }, then: {
 				# The resolution hook spelling is reserved: a plain method
-				# named 'resolveHeld' would silently never hook (PLAN-ENUM
-				# Stage 2).
+				# named 'resolveHeld' would silently never hook
+				# .
 				Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == ContractMethod:RESOLVE_HELD:value() }, then: {
 					self:addError(line: m:line, msg: 'The resolution hook \'' . m:name . '\' in class \'' . classDef:name . '\' must be held: declare it \'held Function of Any is resolveHeld(String is name)\'.');
 				});
@@ -4229,7 +4229,7 @@ Class is TypeChecker{
 					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' in class \'' . classDef:name . '\' cannot be a root-contract member; held functions take no receiver and never dispatch dynamically.');
 					return;
 				});
-				# The resolution hook (PLAN-ENUM Stage 2): exactly
+				# The resolution hook: exactly
 				# 'held Function of <T> is resolveHeld(String is name,
 				# Function of <T> is missing)' — the SECOND argument is the
 				# runtime-provided safe failure branch, and it must return
@@ -4374,7 +4374,7 @@ Class is TypeChecker{
 
 				# 2. Strict replace check & method signature matching on overrides
 				classDef:members:each(action: local Function(Member is subM){
-					# IV.2c: the nested-class members are declarations of
+					# the nested-class members are declarations of
 					# types, not overrides of the ancestor's surface.
 					Conditional:if(check: { subM:kind == MemberKind:CLASS }, then: {
 						return;
@@ -4523,8 +4523,8 @@ Class is TypeChecker{
 		});
 		classDef:members:each(action: local Function(Member is m){
 			# Metadata members carry no type and are not fields of the
-			# generated struct; HELD members are class-scoped (PLAN-ENUM
-			# Stage 1) — an instance reference reaches exactly the
+			# generated struct; HELD members are class-scoped
+			#  — an instance reference reaches exactly the
 			# instance members, so held names stay out of fieldTypes.
 			Conditional:if(check: { m:kind == MemberKind:FIELD && m:memberType:name != '' && !m:hasModifier(kw: Keyword:HELD) }, then: {
 				self:fieldTypes:set(key: m:name, value: self:formatVarTypeString(t: m:memberType));
@@ -4562,8 +4562,8 @@ Class is TypeChecker{
 						local String is declaredType: self:formatVarTypeString(t: m:memberType);
 						Conditional:if(check: { m:hasInit }, then: {
 							# Bidirectional: the declared type flows in.
-							# A HELD initializer has no instance scope (PLAN-ENUM
-							# Stage 1): the flag rejects self, instance fields,
+							# A HELD initializer has no instance scope
+							# : the flag rejects self, instance fields,
 							# and implicit-self calls inside it.
 							local Boolean is savedHeldInit: self:inHeldInit;
 							Conditional:if(check: { m:hasModifier(kw: Keyword:HELD) }, then: {
@@ -4593,7 +4593,7 @@ Class is TypeChecker{
 							});
 						});
 					});
-					# Held functions (PLAN-ENUM Stage 1): no instance context
+					# Held functions: no instance context
 					# — fieldTypes cleared, so bare instance-field names do
 					# not resolve; the no-instance checks reject self.
 					local Boolean is savedHeldFn: self:inHeldFunction;
@@ -4778,7 +4778,7 @@ Class is TypeChecker{
 		program:classes:each(action: local Function(ClassInfo is c){
 			self:collectClasses(c: c, acc: flattened);
 		});
-		# Part IV IV.2c (phase 3): the same-named inner classes
+		# the same-named inner classes
 		# under DIFFERENT enclosing classes are distinct by qualified
 		# identity — the ambiguity moves to the reference (the provider
 		# walk names the providers). The duplicate WITHIN one outer stays
@@ -4787,7 +4787,7 @@ Class is TypeChecker{
 		flattened:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { c:outerName != '' }, then: {
 				Conditional:if(check: { innerSeen:has(key: c:qualifiedName()) }, then: {
-					local String is msg: 'Inner class \'' . c:qualifiedName() . '\' is declared more than once in \'' . c:outerName . '\'; rename one (Part IV IV.2c).';
+					local String is msg: 'Inner class \'' . c:qualifiedName() . '\' is declared more than once in \'' . c:outerName . '\'; rename one.';
 					self:addError(line: c:line, msg: msg);
 				}, else: {
 					innerSeen:set(key: c:qualifiedName(), value: c:outerName);

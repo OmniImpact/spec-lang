@@ -1,6 +1,6 @@
 #! Package base:compiler:checker:loops
 #! Finds a field member by name in a member list.
-#! PLAN-ENUM Stage 1: with skipHeld set, HELD members are invisible —
+#! with skipHeld set, HELD members are invisible —
 #! an instance-field lookup reaches exactly the instance members.
 
 Class of Loop is FieldSearchLoop{

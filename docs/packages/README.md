@@ -13,8 +13,8 @@ This document details the standard library packages available in the Spec runtim
 | **`base:io`** | `Output:line/print/write`, `Stderr:line/print`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
 | **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
 | **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` · `List` — `push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString` | Thread-safe collections with functional combinators. |
-| **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback`, `Loops` (`while`, `repeat`, `until`, `run`) | Decoupled loop engine and inline closure iteration. |
-| **`base:sys`** | `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | Processes, timing, memory/thread introspection, atomics, parallel fan-out. |
+| **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback` | The decoupled iteration abstractions the runners drive. |
+| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | The control-flow providers (over the `base:sysinternal` floors), processes, timing, memory/thread introspection, atomics, parallel fan-out. |
 | **`base:core`** | `Any`, `Stringable`, `String` | The root class lattice and the string type over the `base:sysinternal` floor. |
 
 Full API reference by package below.
@@ -34,8 +34,9 @@ Full API reference by package below.
 4. [`base:iterator`](#4-baseiterator)
    - [`base:iterator:Loop`](#baseiteratorloop)
    - [`base:iterator:LoopControl`](#baseiteratorloopcontrol)
-   - [`base:iterator:Loops`](#baseiteratorloops)
 5. [`base:sys`](#5-basesys)
+   - [`base:sys:Conditional`](#basesysconditional-libbasesysconditionalspec)
+   - [`base:sys:Loops`](#basesysloops-libbasesysloopsspec)
    - [`base:sys:Process`](#basesysprocess)
    - [`base:sys:SourceLocation`](#basesyssourcelocation-libbasesyssourcelocationspec)
    - [`base:sys:StackFrame`](#basesysstackframe-libbasesysstackframespec)
@@ -72,8 +73,8 @@ replace Array of Array of String is using: [
 Writes a string representation of an expression to standard output followed by a newline:
 
 ```spec
-Output:line("Text message");
-Output:line("Result: " . (10 + 20));
+line("Text message");
+line("Result: " . (10 + 20));
 ```
 
 ### `Input:prompt`
@@ -83,7 +84,7 @@ Provides non-blocking, event-driven user input prompts via `InputHandler`:
 Class is InputExample{
 	replace Function is init(Map of String to String is args){
 		Input:prompt("Enter your name: ", local Function(String is response){
-			Output:line("Hello, " . response . "!");
+			line("Hello, " . response . "!");
 		});
 	}
 }
@@ -262,7 +263,7 @@ local Array of Int is primes: [2, 3, 5, 7];
   Iterates through each element in the array, invoking `action` with the item.
   ```spec
   fruits:each(action: local Function(item){
-  	Output:line(item);
+  	line(item);
   });
   ```
 
@@ -391,7 +392,7 @@ scores["alice"]: 98;   # Updates existing entry
   Iterates through each entry in the map, invoking `action` with `(key, value)`.
   ```spec
   scores:each(action: local Function(String is name, Int is score){
-  	Output:line("Student: " . name . " => " . score);
+  	line("Student: " . name . " => " . score);
   });
   ```
 
@@ -406,7 +407,7 @@ replace Array of Array of String is using: [
 ];
 ```
 
-The iterator package decouples iteration state and termination logic from loop execution bodies.
+The iterator package decouples iteration state and termination logic from loop execution bodies. The loop CONSTRUCTS (the `Loops` provider) live in `base:sys` beside the conditional — see package 5.
 
 ### `base:iterator:Loop` (`lib/base/iterator/Loop.spec`)
 Base class for iterator implementations:
@@ -416,13 +417,8 @@ Base class for iterator implementations:
 ### `base:iterator:LoopControl` (`lib/base/iterator/LoopControl.spec`)
 Controls loop continuation and completion triggers:
 - **`stop()`**: Halts iteration.
-
-### `base:iterator:Loops` (`lib/base/iterator/Loops.spec`)
-- **`while(evaluate:, iteration:)`**: The bare predicate loop (via the as-import); inlines directly to a C11 statement expression with zero closures and zero heap allocations.
-- **`Loops:repeat(count:, worker:)`**: Executes the worker exactly `count` times.
-- **`Loops:until(evaluate:, iteration:)`**: The body-always-runs-once form (do-while).
-- **`Loops:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
-- **`Loops:loop(Any is vars, Function is evaluate, Function is iterate)`**: The scoped-variable form — binds typed loop variables at block scope.
+- **`isStopped() -> Boolean`**: Whether a halt was requested.
+- **`complete()`**: Fires the completion callback registered at init.
 
 ---
 
@@ -434,6 +430,23 @@ replace Array of Array of String is using: [
 	['base', 'sys']
 ];
 ```
+
+The system package: the control-flow providers (the conditional and the loop constructs — same-name wrappers over their `base:sysinternal` floors), process execution, timing, and parallelism.
+
+### `base:sys:Conditional` (`lib/base/sys/Conditional.spec`)
+The conditional provider — served bare through the as-import (`['base', 'sys', as Conditional()]`):
+- **`if(check:, then:)`**: Runs [then] when [check] holds.
+- **`if(check:, then:, else:)`**: The two-branch form; also the value-yielding form (the branches' last expressions unify into the call's type).
+- **`if(check:, then:, else:, finally:)`**: Runs [finally] either way.
+- **`match(on:, when:)`**: The arm-table dispatch — a map literal whose keys are held-member references (an array key matches several) and whose values are the arm bodies; `else` names the fallback. Literal tables lower at compile time (exhaustiveness-checked for value-yielding matches over enum subjects); a runtime-built Map flows to the held dispatch scan (string keys, `else` fallback).
+
+### `base:sys:Loops` (`lib/base/sys/Loops.spec`)
+The loop provider — served bare through the as-import (`['base', 'sys', as Loops()]`):
+- **`while(evaluate:, iteration:)`**: The bare predicate loop; inlines directly to a C11 statement expression with zero closures and zero heap allocations for literal closures.
+- **`Loops:repeat(count:, worker:)`**: Executes the worker exactly `count` times.
+- **`Loops:until(evaluate:, iteration:)`**: The body-always-runs-once form (do-while).
+- **`Loops:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
+- **`Loops:loop(Any is vars, Function is evaluate, Function is iterate)`**: The scoped-variable form — binds typed loop variables at block scope.
 
 ### `base:sys:Process` (`lib/base/sys/Process.spec`)
 Provides external process execution and operating system invocation:

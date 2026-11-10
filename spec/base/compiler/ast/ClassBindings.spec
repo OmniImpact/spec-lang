@@ -84,7 +84,7 @@ Class is ClassBindings{
 		return ns == 'base:compiler:ast';
 	}
 
-	## True when an Enum-rooted class is CLASS-MODEL (PLAN-ENUM Stage 3):
+	## True when an Enum-rooted class is CLASS-MODEL:
 	## it declares held members — the variants are class instances, not
 	## int tags — so every today's-enum path (the int-enum emission, the
 	## variant registries, the tag accessors) must leave it alone and
@@ -105,7 +105,7 @@ Class is ClassBindings{
 			Conditional:if(check: { !found && m:hasModifier(kw: Keyword:HELD) }, then: {
 				found: true;
 			});
-			# The tagged desugaring (PLAN-ENUM Stage 5): the variants are
+			# The tagged desugaring: the variants are
 			# nested subclasses — the base carries the tag machinery.
 			Conditional:if(check: { !found && m:kind == MemberKind:CLASS && m:nestedClass:name != '' }, then: {
 				found: true;

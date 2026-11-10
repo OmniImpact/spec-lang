@@ -59,7 +59,7 @@ Class is EmissionPolicy{
 		return !self:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map';
 	}
 
-	## True when an Enum-rooted class is CLASS-MODEL (PLAN-ENUM Stage 3):
+	## True when an Enum-rooted class is CLASS-MODEL:
 	## held members make the variants class instances — every today's-
 	## enum emission path must leave it alone. Delegates to the shared
 	## classification the checker reads too.

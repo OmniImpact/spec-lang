@@ -114,7 +114,7 @@ Spec follows the **One True Brace Style (OTBS)**:
 ### String Concatenation
 * Use the **dot operator (`.`)** for string concatenation:
   ```spec
-  Output:line("Player " . name . " has " . health . " HP");
+  line("Player " . name . " has " . health . " HP");
   ```
 
 ### The "Never Null" Principle
@@ -138,7 +138,7 @@ of Loop is CountLoop{
 	}
 
 	replace Function of Boolean is iteration(LoopControl is control){
-		Output:line("Count: " . count);
+		line("Count: " . count);
 		self:count: count + 1;
 		return true;
 	}

@@ -1,6 +1,6 @@
 #! Package base:compiler:parser:loops
 #! Desugars a VALUE enum (variants without payloads) into the class
-#! model (PLAN-ENUM Stage 4): the variants become HELD members holding
+#! model: the variants become HELD members holding
 #! enum instances constructed with their tags, the backing value rides
 #! a synthesized instance field, and the per-enum contract methods
 #! (value/of/values/toString) are synthesized as plain Spec members.
@@ -144,7 +144,7 @@ Class is EnumDesugar{
 		return c;
 	}
 
-	## The value-enum desugaring (PLAN-ENUM Stage 4).
+	## The value-enum desugaring.
 	##
 	## @param c: The parsed enum ClassInfo.
 	## @param backingType: The sugar's `of` type (Int when unspelled).
@@ -367,7 +367,7 @@ Class is EnumDesugar{
 
 	## of(v): the reverse lookup over the tags; the first variant is the
 	## no-match default (the sugar's historical empty-tag default).
-	## HELD: the class-name dispatch is receiver-free (Stage 1).
+	## HELD: the class-name dispatch is receiver-free.
 	Function of Member is synthOf(String is name, String is backingType, Array of Member is variants){
 		local Member is m: Member:init(kind: MemberKind:METHOD);
 		m:modifiers: ['held'];

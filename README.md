@@ -7,13 +7,12 @@ Class is HelloWorld{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Map],
-		['base', 'io'],
 		['base', 'io', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
-		Output:line(greeting . ' ' . name);   # Output:line or bare line() — the as-import merges both into scope
+		line(greeting . ' ' . name);   # the as-import merges Output's line() into scope
 	}
 
 }
@@ -61,18 +60,18 @@ Members without a visibility modifier are **public by default**: overridable via
 
 ## A Taste of Spec
 
-Conditionals are calls to the `Conditional` provider — statement form, value-yielding branches, and match tables all share one call shape:
+The as-import merges a provider's functions into scope — `as Conditional()` serves `if` and `match` bare, the same way `as Output()` serves `line`:
 
 ```spec
-Conditional:if(check: { score is 21 }, then: {
-	Output:line(text: 'Blackjack!');
+if(check: { score is 21 }, then: {
+	line(text: 'Blackjack!');
 }, else: {
-	Output:line(text: 'Continue play');
+	line(text: 'Continue play');
 });
 
-local String is grade: Conditional:if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
+local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
 
-Conditional:match(on: state, when: [
+match(on: state, when: [
 	idle:   { 'waiting' },
 	running: { 'go' },
 	[idle, failed]: { 'not-going' },   # array keys match several cases
@@ -90,7 +89,7 @@ Enum is Result {
 }
 
 local Result is res: Result:Ok(data: 'Payload verified');
-Output:line(text: res:name());          # 'Ok'
+line(text: res:name());               # 'Ok'
 ```
 
 Collections, closures, and combinators:
@@ -106,7 +105,7 @@ local Function of Int is multiplier: local Function of Int(Int is x){
 local Int is doubled: numbers:map(action: local Function of Int(Int is n){ return n * factor; });
 ```
 
-Loops are providers too — no primitive `while`, zero-allocation inlining:
+Loops are providers too — `as Loops()` serves the constructs bare, zero-allocation inlining:
 
 ```spec
 local Int is total: 0;

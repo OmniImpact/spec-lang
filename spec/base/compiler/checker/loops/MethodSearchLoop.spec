@@ -1,6 +1,6 @@
 #! Package base:compiler:checker:loops
 #! Finds a method member by name in a member list.
-#! PLAN-ENUM Stage 1: with skipHeld set, HELD members are invisible —
+#! with skipHeld set, HELD members are invisible —
 #! an instance-method lookup reaches exactly the instance methods.
 
 Class of Loop is MethodSearchLoop{

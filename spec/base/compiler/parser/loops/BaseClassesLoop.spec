@@ -28,7 +28,7 @@ Class of Loop is BaseClassesLoop{
 
 	replace Function of Boolean is iteration(LoopControl is control){
 		local Token is tok: self:parser:advance();
-		# FUNCTIONS.md Part VI: the parents may be QUALIFIED — the
+		# The parents may be QUALIFIED — the
 		# glued-colon path ('base:sys:Loadable') consumes as one parent,
 		# the same spelling the type references use.
 		local String is base: tok:getValue();

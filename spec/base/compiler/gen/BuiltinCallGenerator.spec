@@ -288,7 +288,7 @@ Class is BuiltinCallGenerator{
 		});
 
 		# The loop runners — While (the legacy spelling, bridged) and
-		# Loops (§II.4: the control-flow provider).
+		# Loops (§the control-flow provider).
 		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
 			local Expression is loopVal: self:argValue(expr: expr, index: 0);
 			local String is loopC: cg:generateExpressionInner(expr: loopVal);
@@ -402,7 +402,7 @@ Class is BuiltinCallGenerator{
 				Conditional:if(check: { hasVars && varsExpr:anonParams:length() > 0 }, then: {
 					loopVars: varsExpr:anonParams;
 				});
-				# II.4: until is the do-while — the body runs once first.
+				# until is the do-while — the body runs once first.
 				Conditional:if(check: { expr:methodName == 'until' }, then: {
 					return cg:generateInlineUntil(evalExpr: evalExpr, iterExpr: iterExpr);
 				});

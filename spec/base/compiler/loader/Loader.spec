@@ -777,7 +777,7 @@ Class is Loader{
 	}
 
 	## Appends `Class` as the parent of every class without explicit parents
-	## (enums excluded). FUNCTIONS.md Part VI: the implicit parent is
+	## (enums excluded). The implicit parent is
 	## `Class` (the declaration root) so the machinery and the default
 	## rendering reach every class; "at the lowest level, anything is
 	## Any" holds transitively (Class -> Stringable -> Loadable -> Any).
