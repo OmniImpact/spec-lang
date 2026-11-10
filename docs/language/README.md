@@ -14,7 +14,8 @@
    - [Functions & Methods](#functions--methods)
    - [Default Parameter Values & Named-Argument Reordering](#default-parameter-values--named-argument-reordering)
    - [First-Class Capturing Closures & Direct Invocation](#first-class-capturing-closures--direct-invocation)
-   - [First-Class Enums (`Enum`, `Enum of Type`, & Tagged Unions)](#first-class-enums)
+   - [Enums (`Enum`, `Enum of Type`, & Tagged Unions)](#enums)
+   - [Held Members (Class-Scoped State)](#held-members)
    - [Imports & `using`](#imports--using)
 2. [Types & Literals](#types--literals)
    - [Primitives](#primitives)
@@ -33,12 +34,12 @@
    - [String Inspection Primitives](#string-inspection-primitives)
 5. [Control Flow & Branching](#control-flow--branching)
    - [Conditionals (`if` / `else`)](#conditionals)
-   - [Branching with `when` (`when` Statements & Expressions)](#branching-with-when)
-   - [Pattern Destructuring with `when`](#pattern-destructuring-with-when)
+   - [Matching with `Cases:match` (Statements & Expressions)](#matching-with-casesmatch)
+   - [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)
 6. [Compiler Error Recovery & Multi-File Provenance](#compiler-error-recovery--multi-file-provenance)
 7. [Unblockable Concurrency & Iteration Model](#unblockable-concurrency--iteration-model)
-   - [Pure Loop Decoupling (`Loop`, `While:run`)](#pure-loop-decoupling)
-   - [Concise Scoped Loops (`While`)](#concise-scoped-loops-while)
+   - [Pure Loop Decoupling (`Loop`, `Loops:run`)](#pure-loop-decoupling)
+   - [The `Loops` Provider (`while`, `repeat`, `until`)](#the-loops-provider)
    - [Scoped Region Desugaring (`as`)](#scoped-region-desugaring-as)
    - [Terminating Iterations (No `break` Keyword)](#terminating-iterations-no-break-keyword)
    - [Event-Driven Non-Blocking Input](#event-driven-non-blocking-input)
@@ -146,10 +147,11 @@ Members are **public by default** — overridable and callable from anywhere.
 | *(none)* — public | yes (`replace`/`merge`) | everywhere |
 | `local` | no | the declaring class only |
 | `contained` | no | the declaring class and its subclasses |
+| `held` | no (single copy) | everywhere — through the class-name prefix only |
 
 Declaring a member with the same name as a `local` or `contained` ancestor member
 is a compile error: private members cannot be shadowed — rename, or make the
-ancestor public and use `replace`/`merge`.
+ancestor public and use `replace`/`merge`. See [Held Members](#held-members-class-scoped-state) for the held specifics.
 
 ### Declaring Classes (`Class is Name`)
 Classes are declared with the same binder grammar as enums and variables — `Type is Name`:
@@ -314,8 +316,8 @@ local Function of String is logMsg: local Function of String(String is text){
 local String is formatted: logMsg(text: "Ready"); # "[INFO] Ready"
 ```
 
-### First-Class Enums
-Enums in Spec are defined using the `Enum` type, modeled directly after `Function`. Enums can be discrete (unbacked) or explicitly backed by a primitive type like `Int` or `String`:
+### Enums
+The `Enum` sugar declares a closed set of named variants. Every enum **desugars to a class**: value variants become held members holding shared instances; tagged (payload) variants become nested subclasses with real payload fields. The compact syntax survives; the class model carries everything.
 
 #### Discrete Enum
 ```spec
@@ -346,15 +348,16 @@ Enum of String is LogLevel {
 ```
 
 #### Enum Reflection & Methods
-Every enum type provides built-in reflection and inspection methods:
-- `Enum:values() -> Array`: Returns an array containing all variants of the enum.
-- `instance:name() -> String`: Returns the identifier name of the variant (e.g. `"NOT_FOUND"`).
-- `instance:value() -> Value`: Returns the backing value (or ordinal integer if unbacked).
-- `instance:ordinal() -> Int`: Returns the 0-indexed discrete ordinal position.
-- `instance:toString() -> String`: Formats the enum variant for display.
+Every enum synthesizes its inspection surface as real methods:
+- `Enum:values() -> Array of Name`: All variants in declaration order (held function).
+- `Name:of(value) -> Name`: The reverse lookup over the backing values; the first variant is the no-match default (held function).
+- `instance:name() -> String`: The variant's identifier name (e.g. `"NOT_FOUND"`).
+- `instance:value() -> Value`: The backing value (or the ordinal integer if unbacked).
+- `instance:ordinal() -> Int`: The 0-indexed declaration-order position.
+- `instance:toString() -> String`: Renders the variant's name.
 
 #### Tagged Union Enums (Algebraic Data Types)
-Spec supports algebraic data types where enum variants carry strongly typed payloads:
+Variants with parameters become nested subclasses carrying real payload fields:
 
 ```spec
 Enum is Result {
@@ -370,7 +373,7 @@ Enum is Option {
 ```
 
 ##### Constructing Variants
-Payload variants are constructed like constructors on the enum type:
+Payload variants construct through the nested-class construction shorthand — a class-name receiver naming a nested class constructs it:
 ```spec
 local Result is r1: Result:Ok(data: "Payload verified");
 local Result is r2: Result:Err(code: 404, msg: "Endpoint not found");
@@ -380,7 +383,39 @@ local Option is opt1: Option:Some(value: 42);
 local Option is opt2: Option:None;
 ```
 
-Payload variants are matched and destructured using Spec's `when` syntax (see [Pattern Destructuring with `when`](#pattern-destructuring-with-when)).
+Payload variants are matched and destructured with `Cases:match` (see [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)).
+
+#### The Resolution Hook (`resolveHeld`)
+A class declaring `held Function of <T> is resolveHeld(String is name, Function of <T> is missing)` admits ANY undeclared name through its class-name prefix: the runtime resolves it on first access and caches it (pointer identity forever). The second parameter is the runtime-provided safe failure branch — the default panics with context; the resolver invokes it when it gives up. Declared members always win; without the hook, an undeclared name stays a compile error:
+
+```spec
+held Function of HeldEntry is resolveHeld(String is name, Function of HeldEntry is missing){
+	Conditional:if(check: { name == 'phantom' }, then: {
+		return missing();
+	});
+	return HeldEntry:init(n: name);
+}
+```
+
+### Held Members (Class-Scoped State)
+The `held` modifier declares a member the CLASS holds — one copy, class-scoped lifetime — in contrast to the instance members each object carries. The resolution rule is strict: **a class-name prefix reaches exactly the held members; an instance reference reaches exactly the instance members.**
+
+```spec
+Class is HeldRegistry{
+	held String is appName: 'HeldApp';        # one shared copy, lazily constructed
+	held contained Int is family: 5;          # held composes with local/contained
+	held Function of Int is triple(Int is n){ # held functions: receiver-free
+		return n * HeldRegistry:scale;
+	}
+	held Int is scale: 3;
+}
+```
+
+- **Lazy once-guard initialization**: a held field constructs on first access — a CAS once-guard constructs, caches, and guarantees pointer identity forever. Cross-class references inside held initializers resolve through independent guards; same-class references are rejected (the mutual guards would deadlock).
+- **Read-only**: assignment through the class-name prefix is a compile error.
+- **Inheritance**: held members resolve up the lattice, nearest declaration wins; a subclass name reaches the ancestors' held members.
+- **Held functions** are receiver-free (no `self`, no vtable) and dispatched by the class-name prefix; they cannot be root-contract members and do not overload.
+- **Held + visibility**: `held local` is class-private, `held contained` admits subclasses, `held` alone is public. `held` + `replace`/`merge` is rejected (single-copy cannot be overridden).
 
 ### Imports & `using`
 Packages are imported via the class `using` property. Each entry names the
@@ -559,7 +594,7 @@ local Int is back: "ffec" as Hex;       # parse: 65516 (invalid input yields 0)
 
 `as Int` on a String parses base 10 (fallback 0); `parseInt(default:)` remains the
 explicit form for fallible parsing. Casting between unrelated classes is a compile
-error; casting to an enum is rejected (construct a variant instead).
+error; enum types are classes (an upcast to the enum root is an ordinary class cast).
 
 ### String Rendering
 Concatenation and `as String` render every value type: primitives via their
@@ -672,66 +707,49 @@ if (score is 21) {
 }
 ```
 
-### Branching with `when`
-The `when` keyword provides isolated branch matching for both statements and expressions without fallthrough (no `break` required). Branches match using the `is` operator, can match multiple candidates via comma separation (`is A, B:`), and conclude with an optional or required `else:` fallback.
+### Matching with `Cases:match`
+`Cases:match` is the match construct — a provider class (like `Loops` for loops), served bare through the as-import (`['base', 'cases', as Cases()]`). The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation.
 
-#### `when` Statement
 ```spec
-when (status) {
-	is OK, CREATED: {
-		Output:line("Success");
-	}
-	is NOT_FOUND: {
-		Output:line("Resource not found");
-	}
-	else: {
-		Output:line("Other error");
-	}
-}
+local String is label: Cases:match(on: state, when: [
+	idle:   { 'waiting' },
+	MachineState:running: {
+		ticks: ticks + 1;
+		'running (' . (ticks as String) . ')'
+	},
+	[idle, failed]: { 'not-going' },        # array key = several cases, one body
+	else:   { '?' }
+]);
 ```
 
-#### `when` Expression
-When used as an expression, `when` returns a value. For `Enum` subjects, the compiler verifies full exhaustiveness at compile time—if all variants are covered, `else:` may be omitted:
+The rules:
+- **Keys resolve against the subject's class**: bare keys for enum variants, qualified keys (`Machine:idle:`) always legal, string-literal keys for `String` subjects. A key naming a member of another class is a compile error.
+- **Match is identity dispatch over class instances**: class-typed held members compare by pointer (the lazy singletons make pointer equality the identity); enum variants compare their tags.
+- **Values are closures** — statement bodies mutate the enclosing scope; a closure's last expression is the arm's value (the value form unifies the arms' types).
+- **`else` is a plain identifier key** and closes the table (arms after it are unreachable — a compile error).
+- **Exhaustiveness keys on the Enum root**: an enum-rooted subject requires full coverage of its variants or an `else` arm in the value-yielding form; statement-form matches fall through freely. A value-yielding match over any other class requires `else`.
+
+#### Payload Destructuring in Match Arms
+An arm closure with parameters binds the tagged variant's payload fields — the parameters pair by index with the variant's declared payload fields:
 
 ```spec
-local String is description: when (tok) {
-	is KEYWORD: "Reserved Keyword";
-	is IDENTIFIER: "Type or Variable Name";
-	is NUMBER: "Numeric Literal";
-	is STRING: "String Constant";
-	is EOF: "End of Input";
-};
-```
+local String is statusSummary: Cases:match(on: res, when: [
+	Result:Ok: local Function(String is data){ return 'Done: ' . data; },
+	Result:Err: local Function(Int is code, String is msg){ return 'Failed (' . code . '): ' . msg; },
+	Result:Pending: { 'In Progress' }
+]);
 
-If an enum variant is missing, the compiler enforces an explicit `else:` fallback or raises a compile-time exhaustiveness error. For open types (such as `Int` or `String`), `else:` is strictly required.
-
-### Pattern Destructuring with `when`
-When pattern matching over tagged union enums, `when` arms can destructure variant payloads into newly bound local variables for both statements and expressions:
-
-#### Destructuring in `when` Statements
-```spec
-local Result is res: Result:Ok(data: "Connection established");
-
-when (res) {
-	is Ok(d): {
-		Output:line("Success: " . d);
+Cases:match(on: res, when: [
+	Result:Ok: local Function(String is data){
+		Output:line('Success: ' . data);
+	},
+	Result:Err: local Function(Int is code, String is msg){
+		Output:line('Error code ' . code . ': ' . msg);
+	},
+	Result:Pending: {
+		Output:line('Operation pending...');
 	}
-	is Err(c, m): {
-		Output:line("Error code " . c . ": " . m);
-	}
-	is Pending: {
-		Output:line("Operation pending...");
-	}
-}
-```
-
-#### Destructuring in `when` Expressions
-```spec
-local String is statusSummary: when (res) {
-	is Ok(d): "Done: " . d;
-	is Err(c, m): "Failed (" . c . "): " . m;
-	is Pending: "In Progress";
-};
+]);
 ```
 
 ---
@@ -753,7 +771,7 @@ The Spec compiler coordinates multi-file compilation with precise diagnostics:
 
 ## Unblockable Concurrency & Iteration Model
 
-Spec does not include primitive `while` or `break` keywords in its grammar. Instead, all looping is decoupled into explicit state-machine lifecycle contracts driven by the standard library (`base:iterator:*`).
+Spec's looping is decoupled into explicit state-machine lifecycle contracts driven by the `Loops` provider (`base:iterator`), served bare through the as-import like `Conditional`.
 
 ### Pure Loop Decoupling
 Loops in Spec are non-blocking, decoupled state machines:
@@ -772,26 +790,32 @@ of Loop is CounterLoop{
 	}
 }
 
-While:run(loop: CounterLoop:init(), control: LoopControl:init());
+Loops:run(loop: CounterLoop:init(), control: LoopControl:init());
 ```
 
-### Concise Scoped Loops (`While`)
-For local iterations that do not require an independent `Loop` subclass, Spec provides the concise `While` runner with scoped variable declarations `[Type is name: init, ...]` and anonymous function block shorthands `{ ... }`:
+### The `Loops` Provider
+One as-import (`['base', 'iterator', as Loops()]`) serves the loop constructs bare:
+- `while(evaluate:, iteration:)` — the predicate loop; inlined into a native C11 `while` with zero closure allocation.
+- `Loops:repeat(count:, worker:)` — the counting loop.
+- `Loops:until(evaluate:, iteration:)` — the body-always-runs-once form (do-while).
+- `Loops:run(loop:, control:)` — drives the `Loop` protocol directly.
 
 ```spec
-local Int is sum: 0;
-While(
-	[Int is i: 0, Int is max: 10],
-	evaluate: { i < max },
-	iterate: {
-		sum: sum + i;
-		i: i + 1;
+local Int is total: 0;
+while(
+	evaluate: local Function of Boolean(){ return total < 5; },
+	iteration: local Function of Boolean(){
+		total: total + 1;
+		return true;
 	}
 );
+
+Loops:repeat(count: 10, worker: local Function of Boolean(){
+	Output:line('step');
+	return true;
+});
 ```
 
-- **Scoped State**: Variables defined in `[Type is name: init, ...]` exist strictly within the loop and are inaccessible outside.
-- **Mixed Scope**: Loop bodies can read and mutate variables and collections declared in the outer scope (e.g. `sum`).
 - **Zero Overhead**: Inlined directly by the compiler into native C11 statement expressions `({ ... while (1) { ... } ... })` with zero heap allocations, zero closure wrappers, and pure register loop performance.
 - **Function Block Shorthand**: `{ ... }` acts as an anonymous function argument, auto-returning single-expression bodies `{ i < max }`.
 

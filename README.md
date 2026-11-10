@@ -37,7 +37,7 @@ Spec is architected with a strict philosophy: **keep the compiler minimal, and b
 | `to` | Second generic parameter (`Map of K to V`, `Function of A to B`) |
 | `if` / `else` | Conditionals — statement form and inline expression form |
 | `return` | Return from a method |
-| `when` | Pattern matching with compile-time exhaustiveness on enums |
+| `held` | Class-scoped members: one copy, reached through the class-name prefix |
 
 Members without a visibility modifier are **public by default**: overridable via
 `replace`/`merge` and callable from anywhere.
@@ -172,13 +172,13 @@ Spec includes modern, expressive language capabilities designed for type safety 
   }
   ```
 
-- **Destructuring `when` Branching**: Destructure and extract tagged enum payloads in both `when` statements and `when` expressions:
+- **`Cases:match` with Payload Destructuring**: Match any value against held-member keys (array keys match several cases at once); payload arms are closures whose parameters bind the variant's fields:
   ```spec
-  when (res) {
-  	is Result:Ok(data): { output:line("Success: " . data); }
-  	is Result:Err(code, msg): { output:line("Error " . code . ": " . msg); }
-  	is Result:Pending: { output:line("Pending..."); }
-  }
+  Cases:match(on: res, when: [
+  	Result:Ok: local Function(String is data){ output:line("Success: " . data); },
+  	Result:Err: local Function(Int is code, String is msg){ output:line("Error " . code . ": " . msg); },
+  	Result:Pending: { output:line("Pending..."); }
+  ]);
   ```
 
 - **Scoped Region Desugaring (`as`)**: Linearizes nested callbacks into sequential blocks without rightward drift:
@@ -358,7 +358,7 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; three-tier visibility (public / `local` / `contained`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
-| **Enums & matching** | Algebraic enums with payloads; `when` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
+| **Enums & matching** | Algebraic enums with payloads; `Cases:match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
 | **Iteration & scopes** | No loop keywords; zero-allocation scoped `While` inlines to C11 statement expressions; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |

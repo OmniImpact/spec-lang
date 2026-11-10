@@ -9,7 +9,7 @@ Strictly typed, class-based, compiles to C11 via `gcc`. Written in itself: the c
 - `bootstrap/spec.c` — the canonical seed. `bin/spec` — the built compiler.
 
 ## Grammar
-Keywords: `local` `contained` `replace` `merge` `is` `as` `of` `to` `if` `else` `return` `when`.
+Keywords: `local` `contained` `replace` `merge` `held` `is` `as` `of` `to` `if` `else` `return`.
 Types: `Int` `Byte` `Float` `Boolean` `String` `Function` `Any`.
 Declaration types (not keywords): `Class` `Enum`.
 Conversion targets of `as`: `Hex` `Bin` `Oct`.
@@ -62,25 +62,30 @@ Members are callable only through a value of the class's type. The class name it
 ```spec
 if (cond) { ... } else { ... }
 local String is s: if (cond) "A" else "B";
-when (value) {
-	is "a", "b": { ... }
-	is Pattern(Param p): { ... p ... }
+Cases:match(on: value, when: [
+	'a': { ... },
+	'b': { ... },
 	else: { ... }
-}
-local Int is x: when (e) { is Variant(v): v.field; else: 0; };
+]);
+local Int is x: Cases:match(on: e, when: [
+	Variant: { v.field },
+	else: { 0 }
+]);
 ```
-`when` on enums: exhaustiveness enforced; `else:` required for non-exhaustive coverage.
+`Cases:match` on enums: exhaustiveness enforced for value-yielding matches over enum-rooted subjects (`else` closes the table); payload arms are closures whose parameters bind the variant's fields.
 
 Enums:
 ```spec
 Enum is Status { ACTIVE, INACTIVE }
 Enum of Int is Code { OK: 200 }
 Enum is Result { Ok(String is data), Err(Int is code) }
-# Methods: .name() .ordinal() .value() .values()
-# Payload constructors: Result:Ok(data: "x"); destructuring: is Result:Ok(data): { ... }
+# Methods (synthesized on the desugared class): .name() .ordinal() .value() .of(v) .values()
+# Payload constructors: Result:Ok(data: "x") — nested-class construction shorthand
+# Payload destructuring: Cases:match(on: r, when: [Result:Ok: local Function(String is data){ ... }])
+# The resolution hook: held Function of T is resolveHeld(String is name, Function of T is missing)
 ```
 
-Loops (no `while`/`for` keywords): scoped inline `While([Int is i: 0], evaluate: { i < max }, iterate: { ... })` with function block shorthand `{ ... }` (inlines to zero-allocation C11 statement expression); `Loop` subclass + `While:run(loop:, control:)`; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
+Loops: the `Loops` provider serves them bare — `while(evaluate:, iteration:)` (inlined to zero-allocation C11 statement expression), `Loops:repeat(count:, worker:)`, `Loops:until(...)`, `Loops:run(loop:, control:)` over a `Loop` subclass; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
 
 Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `return as of Type: call(...)`) desugars the remainder of the enclosing block into an anonymous callback passed as the trailing positional argument to the call, linearizing nested callback pyramids without rightward drift.
 
