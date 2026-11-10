@@ -1,8 +1,8 @@
 ##
-# Example and test suite for Spec Enums, 'when' branching, and inline 'if/else'
+# Example and test suite for Spec Enums, Cases:match dispatch, and inline 'if/else'
 ##
 
-Enum is TokenKind {
+Enum is TokenKind2 {
 	KEYWORD,
 	IDENTIFIER,
 	NUMBER,
@@ -32,18 +32,19 @@ Class is EnumWhenTest{
 		['base', 'struct', Map],
 		['base', 'io', Output],
 		['base', 'io', as Output()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'cases', as Cases()]
 	];
 
 	replace init(Map of String to String is args){
-		Output:line('=== Testing Enum, When, and Inline If/Else ===');
+		Output:line('=== Testing Enum, Match, and Inline If/Else ===');
 
 		self:testInlineIfElse();
 		self:testEnumBasics();
-		self:testWhenStatement();
-		self:testWhenExpression();
+		self:testMatchStatement();
+		self:testMatchExpression();
 
-		Output:line('=== All Enum, When, and If/Else Tests Passed Successfully ===');
+		Output:line('=== All Enum, Match, and If/Else Tests Passed Successfully ===');
 	}
 
 	testInlineIfElse(){
@@ -62,7 +63,7 @@ Class is EnumWhenTest{
 
 	testEnumBasics(){
 		Output:line('--- 2. Testing Enum Reflection & Properties ---');
-		local TokenKind is tok: TokenKind:KEYWORD;
+		local TokenKind2 is tok: TokenKind2:KEYWORD;
 		Output:line('Token name: ' . tok:name());
 		Output:line('Token ordinal: ' . tok:ordinal());
 
@@ -76,51 +77,51 @@ Class is EnumWhenTest{
 		Output:line('Level value: ' . level:value());
 		Output:line('Level ordinal: ' . level:ordinal());
 
-		local Array is allTokens: TokenKind:values();
+		local Array is allTokens: TokenKind2:values();
 		Output:line('TokenKind variant count: ' . allTokens:length());
 	}
 
-	testWhenStatement(){
-		Output:line('--- 3. Testing When Statement ---');
+	testMatchStatement(){
+		Output:line('--- 3. Testing Match Statement ---');
 		local HttpStatus is status: HttpStatus:OK;
 
-		when (status) {
-			is OK, CREATED: {
+		Cases:match(on: status, arms: [
+			[HttpStatus:OK, HttpStatus:CREATED]: {
 				Output:line('Status category: Success');
-			}
-			is NOT_FOUND: {
+			},
+			HttpStatus:NOT_FOUND: {
 				Output:line('Status category: Client Error');
-			}
+			},
 			else: {
 				Output:line('Status category: Other');
 			}
-		}
+		]);
 
 		local String is method: 'POST';
-		when (method) {
-			is 'GET': {
+		Cases:match(on: method, arms: [
+			'GET': {
 				Output:line('HTTP Method: Read');
-			}
-			is 'POST', 'PUT': {
+			},
+			['POST', 'PUT']: {
 				Output:line('HTTP Method: Write');
-			}
+			},
 			else: {
 				Output:line('HTTP Method: Unknown');
 			}
-		}
+		]);
 	}
 
-	testWhenExpression(){
-		Output:line('--- 4. Testing When Expression ---');
-		local TokenKind is tok: TokenKind:IDENTIFIER;
+	testMatchExpression(){
+		Output:line('--- 4. Testing Match Expression ---');
+		local TokenKind2 is tok: TokenKind2:IDENTIFIER;
 
-		local String is tokDescription: when (tok) {
-			is KEYWORD: 'Reserved Keyword';
-			is IDENTIFIER: 'Variable/Type Identifier';
-			is NUMBER: 'Numeric Constant';
-			is STRING: 'String Literal';
-			is EOF: 'End of File';
-		};
+		local String is tokDescription: Cases:match(on: tok, arms: [
+			TokenKind2:KEYWORD: { 'Reserved Keyword' },
+			TokenKind2:IDENTIFIER: { 'Variable/Type Identifier' },
+			TokenKind2:NUMBER: { 'Numeric Constant' },
+			TokenKind2:STRING: { 'String Literal' },
+			TokenKind2:EOF: { 'End of File' }
+		]);
 		Output:line('Token description: ' . tokDescription);
 
 		# String-backed reverse lookup: the tag maps back to its variant,
@@ -132,20 +133,20 @@ Class is EnumWhenTest{
 		});
 
 		local HttpStatus is status: HttpStatus:SERVER_ERROR;
-		local Boolean is canRetry: when (status) {
-			is SERVER_ERROR: true;
-			is NOT_FOUND: false;
-			else: false;
-		};
+		local Boolean is canRetry: Cases:match(on: status, arms: [
+			HttpStatus:SERVER_ERROR: { true },
+			HttpStatus:NOT_FOUND: { false },
+			else: { false }
+		]);
 		Output:line('Can retry: ' . canRetry);
 
-		local Int is priority: when (LogLevel:ERROR) {
-			is NONE: 0;
-			is DEBUG: 1;
-			is INFO: 2;
-			is WARN: 3;
-			is ERROR: 4;
-		};
+		local Int is priority: Cases:match(on: LogLevel:ERROR, arms: [
+			LogLevel:NONE: { 0 },
+			LogLevel:DEBUG: { 1 },
+			LogLevel:INFO: { 2 },
+			LogLevel:WARN: { 3 },
+			LogLevel:ERROR: { 4 }
+		]);
 		Output:line('Error priority: ' . priority);
 	}
 }

@@ -11,6 +11,5 @@ Enum of String is StatementKind {
 	RETURN: 'RETURN',
 	CLASS: 'CLASS',
 	EXPR: 'EXPR',
-	WHEN: 'WHEN',
 	FORWARD: 'FORWARD'
 }

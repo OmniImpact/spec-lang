@@ -15,7 +15,8 @@ Class is SpecAstTest{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'io', Output],
 		['base', 'io', as Output()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'cases', as Cases()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -40,13 +41,13 @@ Class is SpecAstTest{
 
 		# Enum dispatch on the kind (the style contract's string-tag removal).
 		local String is tag: '';
-		when (bin:kind) {
-			is BINARY: { tag: 'binary'; }
-			is CALL: { tag: 'call'; }
+		Cases:match(on: bin:kind, arms: [
+			ExpressionKind:BINARY: { tag: 'binary'; },
+			ExpressionKind:CALL: { tag: 'call'; },
 			else: { tag: 'other'; }
-		}
+		]);
 		Conditional:if(check: { tag == 'binary' }, then: {
-			Output:line('[PASS] when-dispatch on ExpressionKind');
+			Output:line('[PASS] match-dispatch on ExpressionKind');
 		}, else: {
 			Output:line('[FAIL] when-dispatch on ExpressionKind');
 			failures: failures + 1;
@@ -71,10 +72,9 @@ Class is SpecAstTest{
 		local String is found: '';
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is mem){
-				when (mem:kind) {
-					is METHOD: { found: mem:name; }
-					else: {}
-				}
+				Cases:match(on: mem:kind, arms: [
+					MemberKind:METHOD: { found: mem:name; }
+				]);
 			});
 		});
 		# (Implicit-Any parenting is the loader's appendImplicitAny job, not

@@ -30,7 +30,6 @@ Class is Parser{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', Error],
 		['base', 'sys', as Reflection()],
@@ -41,7 +40,6 @@ Class is Parser{
 		['base', 'compiler', 'parser', 'loops', ArgLoop],
 		['base', 'compiler', 'parser', 'loops', ParamLoop],
 		['base', 'compiler', 'parser', 'loops', WhenConditionsLoop],
-		['base', 'compiler', 'parser', 'loops', WhenArmsLoop],
 		['base', 'compiler', 'parser', 'loops', ArrayItemsLoop],
 		['base', 'compiler', 'parser', 'loops', MapItemsLoop],
 		['base', 'compiler', 'parser', 'loops', BlockStatementsLoop],
@@ -307,18 +305,6 @@ Class is Parser{
 	}
 
 	## Parses the shared `when` arm block (between the braces). Used by both
-	## the statement and expression forms, which differ only in their result
-	## node.
-	##
-	## @return: The parsed arms.
-	local Function of Array of WhenArm is parseWhenArms(){
-		self:matchPunct(p: Punctuation:BLOCK_OPEN);
-		local Array of WhenArm is arms: [];
-		Loops:run(loop: WhenArmsLoop:init(parser: self, arms: arms));
-		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
-		return arms;
-	}
-
 	## Parses one class declaration: `Class of Parent is Name` with optional
 	## post-name generic parameters.
 	##
@@ -631,18 +617,14 @@ Class is Parser{
 			return s;
 		});
 
-		Conditional:if(check: { self:checkKeyword(kw: Keyword:WHEN) }, then: {
-			self:advance();
-			self:matchPunct(p: Punctuation:GROUP_OPEN);
-			local Expression is subject: self:parseExpression();
-			self:matchPunct(p: Punctuation:GROUP_CLOSE);
-			local Array of WhenArm is arms: self:parseWhenArms();
-
-			local Statement is s: Statement:init(kind: StatementKind:WHEN);
+		Conditional:if(check: { self:atEnumHeader() }, then: {
+			local ClassInfo is edef: self:parseEnum();
+			local Statement is s: Statement:init(kind: StatementKind:CLASS);
 			s:setLine(line: startLine);
-			s:whenStmt(subject: subject, arms: arms);
+			s:nestedClass: edef;
 			return s;
 		});
+
 
 		Conditional:if(check: { self:checkKeyword(kw: Keyword:RETURN) }, then: {
 			self:advance();
@@ -1027,17 +1009,6 @@ Class is Parser{
 			return e;
 		});
 
-		Conditional:if(check: { self:checkKeyword(kw: Keyword:WHEN) }, then: {
-			self:advance();
-			self:matchPunct(p: Punctuation:GROUP_OPEN);
-			local Expression is subject: self:parseExpression();
-			self:matchPunct(p: Punctuation:GROUP_CLOSE);
-			local Array of WhenArm is arms: self:parseWhenArms();
-
-			local Expression is e: Expression:init(kind: ExpressionKind:WHEN);
-			e:makeWhen(subject: subject, arms: arms);
-			return e;
-		});
 
 		local Token is tok: self:peek();
 
@@ -1210,7 +1181,7 @@ Class is Parser{
 				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
 			},
 			iteration: local Function(){
-				Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:WHEN) && !self:checkKeyword(kw: Keyword:AS) }, then: {
+				Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:AS) }, then: {
 					local Expression is expr: self:parseExpression();
 					Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
 						self:advance();

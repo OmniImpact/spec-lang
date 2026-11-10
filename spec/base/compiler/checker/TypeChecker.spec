@@ -26,7 +26,6 @@ Class is TypeChecker{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', ClassBindings],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'ast', ContractMethod],
@@ -710,6 +709,27 @@ Class is TypeChecker{
 								}, else: {
 									covered:add(item: target);
 									Conditional:if(check: { self:allEnumNames:has(key: owner) }, then: {
+										# Payload arms (the Stage-5 form pulled forward):
+										# an arm closure's parameters bind the tagged
+										# variant's constructor payloads — type them
+										# from the variant's declared parameters.
+										Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 }, then: {
+											local ClassInfo is pvCls: self:findClass(name: owner);
+											local Member is pvMem: Member:init(kind: MemberKind:FIELD);
+											pvCls:members:each(action: local Function(Member is m){
+												Conditional:if(check: { pvMem:name == '' && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
+													pvMem: m;
+												});
+											});
+											local Int is pbi: 0;
+											val:anonParams:each(action: local Function(Parameter is bp){
+												Conditional:if(check: { pbi < pvMem:params:length() }, then: {
+													local Parameter is vp: pvMem:params:get(index: pbi);
+													bp:paramType: Type:init(name: vp:paramType:name);
+												});
+												pbi: pbi + 1;
+											});
+										});
 									}, else: {
 										self:checkMemberVisibility(ownerClass: owner, member: self:findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
 									});
@@ -1934,87 +1954,6 @@ Class is TypeChecker{
 		});
 	}
 
-	## Enforces compile-time exhaustiveness of `when` over an enum subject.
-	##
-	## Conditions may reference variants as bare identifiers, payload calls,
-	## or qualified paths. With any variant uncovered and no else arm, a
-	## compile error is raised.
-	##
-	## @param subjectType: Static type of the when subject.
-	## @param arms: The when arms.
-	## @param line: Source line for diagnostics.
-	Function is checkWhenExhaustive(String is subjectType, Array of WhenArm is arms, Int is line){
-		Conditional:if(check: { subjectType == '' || !self:allEnumNames:has(key: subjectType) }, then: {
-			return;
-		});
-		local Map of String to String is covered: Map:init();
-		local Boolean is hasElse: false;
-		arms:each(action: local Function(WhenArm is arm){
-			Conditional:if(check: { arm:isElse }, then: {
-				hasElse: true;
-			});
-			arm:conditions:each(action: local Function(Expression is c){
-				local String is variantName: '';
-				Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) && self:allEnumVariants:getString(key: c:methodName, default: '') == subjectType }, then: {
-					variantName: c:methodName;
-				}, else: {
-					Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:str) && self:allEnumVariants:getString(key: c:str, default: '') == subjectType }, then: {
-						variantName: c:str;
-					}, else: {
-						Conditional:if(check: { c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && c:pathSegments:get(index: 0) == subjectType && self:allEnumVariants:has(key: c:pathSegments:get(index: 1)) }, then: {
-							variantName: c:pathSegments:get(index: 1);
-						});
-					});
-				});
-				Conditional:if(check: { variantName != '' }, then: {
-					covered:set(key: variantName, value: 'true');
-				});
-			});
-		});
-		Conditional:if(check: { hasElse }, then: {
-			return;
-		});
-		local ClassInfo is enumCls: self:findClass(name: subjectType);
-		local Array of String is missing: [];
-		enumCls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !covered:has(key: m:name) }, then: {
-				missing:add(item: m:name);
-			});
-		});
-		Conditional:if(check: { missing:length() > 0 }, then: {
-			local String is msg: 'Non-exhaustive \'when\': enum \'' . subjectType . '\' variant(s) not covered (e.g. \'' . missing:get(index: 0) . '\'). Add matching arm(s) or an \'else:\' fallback.';
-			self:addError(line: line, msg: msg);
-		});
-	}
-
-	## Binds payload-carrying variant conditions (is Value:Num(n)) into the
-	## local scope, typing each bound identifier from the variant's declared
-	## parameters.
-	##
-	## @param arm: The when arm.
-	Function is bindWhenPatternVars(WhenArm is arm){
-		arm:conditions:each(action: local Function(Expression is c){
-			Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) }, then: {
-				local String is enumName: self:allEnumVariants:getString(key: c:methodName, default: '');
-				local Member is vMem: self:lookupEnumVariant(enumName: enumName, variantName: c:methodName);
-				local Int is idx: 0;
-				c:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { idx < vMem:params:length() }, then: {
-						local Expression is av: arg:value;
-						Conditional:if(check: { av:kind == ExpressionKind:IDENT }, then: {
-							local Parameter is pDef: vMem:params:get(index: idx);
-							self:localVars:set(key: av:str, value: self:formatVarTypeString(t: pDef:paramType));
-						});
-					});
-					idx: idx + 1;
-				});
-				c:resolvedType: enumName;
-			}, else: {
-				self:inferExpressionType(expr: c);
-			});
-		});
-	}
-
 	## Types anonymous-function callback parameters for the container
 	## higher-order methods whose signatures the string type format cannot
 	## express (fold's accumulator+element, Map each's key+value). One table
@@ -2608,24 +2547,6 @@ Class is TypeChecker{
 						});
 					});
 				});
-			},
-			ExpressionKind:WHEN: {
-				local String is subjectType: self:inferExpressionType(expr: expr:whenSubject);
-				local String is armType: 'Any';
-				expr:whenArms:each(action: local Function(WhenArm is arm){
-					self:bindWhenPatternVars(arm: arm);
-					Conditional:if(check: { arm:hasValueExpr }, then: {
-						local String is vt: self:inferExpressionType(expr: arm:valueExpr);
-						Conditional:if(check: { armType == Primitive:ANY:value() && vt != '' && vt != Primitive:ANY:value() }, then: {
-							armType: vt;
-						});
-					});
-					arm:body:each(action: local Function(Statement is s){
-						self:checkStatement(stmt: s);
-					});
-				});
-				self:checkWhenExhaustive(subjectType: subjectType, arms: expr:whenArms, line: self:currentLine);
-				res: armType;
 			},
 			ExpressionKind:ANON_FN: {
 				local Map of String to String is savedVars: Map:init();
@@ -3527,19 +3448,6 @@ Class is TypeChecker{
 						});
 						self:addError(line: stmt:line, msg: msg);
 					});
-			},
-			StatementKind:WHEN: {
-				local String is stmtSubjectType: self:inferExpressionType(expr: stmt:whenSubject);
-				stmt:whenArms:each(action: local Function(WhenArm is arm){
-					self:bindWhenPatternVars(arm: arm);
-					Conditional:if(check: { arm:hasValueExpr }, then: {
-						self:inferExpressionType(expr: arm:valueExpr);
-					});
-					arm:body:each(action: local Function(Statement is s){
-						self:checkStatement(stmt: s);
-					});
-				});
-				self:checkWhenExhaustive(subjectType: stmtSubjectType, arms: stmt:whenArms, line: stmt:line);
 			},
 			StatementKind:FORWARD: {
 				self:checkForward(stmt: stmt);
@@ -4629,15 +4537,7 @@ Class is TypeChecker{
 		Cases:match(on: stmt:kind, arms: [
 			StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
-			},
-			StatementKind:WHEN: {
-				stmt:whenArms:each(action: local Function(WhenArm is arm){
-					arm:body:each(action: local Function(Statement is s){
-						self:collectClassesFromStatement(stmt: s, acc: acc);
-					});
-				});
-			},
-			else: {}
+			}
 		]);
 	}
 

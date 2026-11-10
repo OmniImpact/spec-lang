@@ -30,7 +30,7 @@ Class is SpecCheckerTest{
 		# G7's Loader does this; here the driver parses them directly so the
 		# checker resolves their methods from SPEC declarations.
 		local Array of ClassInfo is all: [];
-		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec'];
+		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/lib/base/cases/Cases.spec'];
 		preloads:each(action: local Function(String is path){
 			local Lexer is plex: Lexer:init(source: File:read(path: path, default: ''));
 			local Parser is ppar: Parser:init(tokens: plex:tokenize());
@@ -120,16 +120,18 @@ Class is SpecCheckerTest{
 			failures: failures + 1;
 		});
 
-		# 6. Non-exhaustive when
+		# 6. Non-exhaustive match over an enum-rooted subject
 		local Array of String is e6: self:checkOf(src: "Enum of String is Level { NONE: '', ERR: 'E' }
-Class is F{ replace Function is init(Map of String to String is args){
+Class is F{ replace Array of Array of String is using: [['base', 'cases', as Cases()]]; replace Function is init(Map of String to String is args){
 	local Level is lv: Level:ERR;
-	local String is tag: when (lv) { is ERR: 'e'; };
+	local String is tag: Cases:match(on: lv, arms: [
+		Level:ERR: { 'e' }
+	]);
 } }");
-		Conditional:if(check: { e6:length() >= 1 && e6:get(index: 0):contains(needle: "Non-exhaustive 'when'") }, then: {
-			Output:line('[PASS] non-exhaustive when diagnostic');
+		Conditional:if(check: { e6:length() >= 1 && e6:get(index: 0):contains(needle: 'Non-exhaustive match') }, then: {
+			Output:line('[PASS] non-exhaustive match diagnostic');
 		}, else: {
-			Output:line('[FAIL] non-exhaustive when: ' . e6:join(separator: ' | '));
+			Output:line('[FAIL] non-exhaustive match: ' . e6:join(separator: ' | '));
 			failures: failures + 1;
 		});
 

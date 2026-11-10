@@ -92,7 +92,8 @@ Class is NextGenFeaturesTest{
 		['base', 'io'],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', as Output()]
+		['base', 'io', as Output()],
+		['base', 'cases', as Cases()]
 	];
 
 	## Helper method demonstrating default parameter values and call-site reordering.
@@ -267,47 +268,47 @@ Class is NextGenFeaturesTest{
 		local Result is resPending: Result:Pending;
 
 		# When statement destructuring
-		Output:line('Destructuring in when statement:');
+		Output:line('Destructuring in match statement:');
 		self:inspectResult(res: resOk);
 		self:inspectResult(res: resErr);
 		self:inspectResult(res: resPending);
 
 		# When expression destructuring
-		local String is descOk: when (resOk) {
-			is Ok(d): 'Handled OK -> ' . d;
-			is Err(c, m): 'Handled ERR ' . c . ': ' . m;
-			is Pending: 'Awaiting resolution';
-		};
+		local String is descOk: Cases:match(on: resOk, arms: [
+			Result:Ok: local Function(String is d){ return 'Handled OK -> ' . d; },
+			Result:Err: local Function(Int is c, String is m){ return 'Handled ERR ' . c . ': ' . m; },
+			Result:Pending: { 'Awaiting resolution' }
+		]);
 		Output:line('descOk: ' . descOk);
 
-		local String is descErr: when (resErr) {
-			is Ok(d): 'Handled OK -> ' . d;
-			is Err(c, m): 'Handled ERR ' . c . ': ' . m;
-			is Pending: 'Awaiting resolution';
-		};
+		local String is descErr: Cases:match(on: resErr, arms: [
+			Result:Ok: local Function(String is d){ return 'Handled OK -> ' . d; },
+			Result:Err: local Function(Int is c, String is m){ return 'Handled ERR ' . c . ': ' . m; },
+			Result:Pending: { 'Awaiting resolution' }
+		]);
 		Output:line('descErr: ' . descErr);
 
-		local String is descPending: when (resPending) {
-			is Ok(d): 'Handled OK -> ' . d;
-			is Err(c, m): 'Handled ERR ' . c . ': ' . m;
-			is Pending: 'Awaiting resolution';
-		};
+		local String is descPending: Cases:match(on: resPending, arms: [
+			Result:Ok: local Function(String is d){ return 'Handled OK -> ' . d; },
+			Result:Err: local Function(Int is c, String is m){ return 'Handled ERR ' . c . ': ' . m; },
+			Result:Pending: { 'Awaiting resolution' }
+		]);
 		Output:line('descPending: ' . descPending);
 
 		# Option tagged enum testing
 		local Option is someVal: Option:Some(value: 42);
 		local Option is noneVal: Option:None;
 
-		local Int is extracted: when (someVal) {
-			is Some(v): v;
-			is None: 0;
-		};
+		local Int is extracted: Cases:match(on: someVal, arms: [
+			Option:Some: local Function(Int is v){ return v; },
+			Option:None: { 0 }
+		]);
 		Output:line('Option:Some extracted: ' . extracted);
 
-		local Int is extractedNone: when (noneVal) {
-			is Some(v): v;
-			is None: -1;
-		};
+		local Int is extractedNone: Cases:match(on: noneVal, arms: [
+			Option:Some: local Function(Int is v){ return v; },
+			Option:None: { -1 }
+		]);
 		Output:line('Option:None extracted: ' . extractedNone);
 	}
 
@@ -315,17 +316,17 @@ Class is NextGenFeaturesTest{
 	##
 	## @param res: Target Result instance to inspect.
 	local Function is inspectResult(Result is res){
-		when (res) {
-			is Ok(d): {
-				Output:line('  [when stmt] Result:Ok with data: ' . d);
+		Cases:match(on: res, arms: [
+			Result:Ok: local Function(String is d){
+				Output:line('  [match] Result:Ok with data: ' . d);
+			},
+			Result:Err: local Function(Int is c, String is m){
+				Output:line('  [match] Result:Err with code ' . c . ', msg: ' . m);
+			},
+			Result:Pending: {
+				Output:line('  [match] Result:Pending variant');
 			}
-			is Err(c, m): {
-				Output:line('  [when stmt] Result:Err with code ' . c . ', msg: ' . m);
-			}
-			is Pending: {
-				Output:line('  [when stmt] Result:Pending variant');
-			}
-		}
+		]);
 	}
 
 	## Entry point executing all verification tests.

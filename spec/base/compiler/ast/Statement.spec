@@ -16,7 +16,6 @@ Class is Statement{
 		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ClassInfo]
 	];
 
@@ -51,9 +50,6 @@ Class is Statement{
 	## EXPR: an expression evaluated for effect.
 	Expression is exprStmt;
 
-	## WHEN: the subject and arms.
-	Expression is whenSubject;
-	Array of WhenArm is whenArms: [];
 
 	## FORWARD: merge-forward delegation arguments.
 	Array of NamedArg is forwardArgs: [];
@@ -79,12 +75,6 @@ Class is Statement{
 	##
 	## @param subject: Subject being matched.
 	## @param arms: The branches.
-	Function is whenStmt(Expression is subject, Array of WhenArm is arms){
-		self:kind: StatementKind:WHEN;
-		self:whenSubject: subject;
-		self:whenArms: arms;
-	}
-
 	## Sets the one-based source line.
 	##
 	## @param line: Source line number.

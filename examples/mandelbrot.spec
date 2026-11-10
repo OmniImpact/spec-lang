@@ -107,12 +107,19 @@ Class is Mandelbrot{
 			return ' ';
 		});
 		local Int is band: Math:toInt(value: mu * 2.0) % 4;
-		return when (band) {
-			is 0: '░';
-			is 1: '▒';
-			is 2: '▓';
-			else: '█';
-		};
+		return Conditional:if(check: { band == 0 }, then: {
+			'░'
+		}, else: {
+			Conditional:if(check: { band == 1 }, then: {
+				'▒'
+			}, else: {
+				Conditional:if(check: { band == 2 }, then: {
+					'▓'
+				}, else: {
+					'█'
+				})
+			})
+		});
 	}
 
 	## Clamps a float `v` into `[lo, hi]`.

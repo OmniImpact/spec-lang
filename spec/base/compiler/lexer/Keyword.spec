@@ -17,6 +17,5 @@ Enum of String is Keyword {
 	AS: 'as',
 	OF: 'of',
 	TO: 'to',
-	RETURN: 'return',
-	WHEN: 'when'
+	RETURN: 'return'
 }

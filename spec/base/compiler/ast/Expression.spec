@@ -16,7 +16,6 @@ Class is Expression{
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter]
 	];
@@ -92,9 +91,6 @@ Class is Expression{
 
 	## IF_ELSE: condition and branches.
 
-	## WHEN: the subject and arms.
-	Expression is whenSubject;
-	Array of WhenArm is whenArms: [];
 
 	## ANON_FN: return type, parameters, and body.
 	Type is anonReturnType;
@@ -150,12 +146,6 @@ Class is Expression{
 	##
 	## @param subject: Subject being matched.
 	## @param arms: The branches.
-	Function is makeWhen(Expression is subject, Array of WhenArm is arms){
-		self:kind: ExpressionKind:WHEN;
-		self:whenSubject: subject;
-		self:whenArms: arms;
-	}
-
 	## Sets the checker-resolved type name.
 	##
 	## @param t: Resolved type name.

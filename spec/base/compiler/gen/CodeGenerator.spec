@@ -26,7 +26,6 @@ Class is CodeGenerator{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'compiler', 'ast', WhenArm],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'lexer', Keyword],
@@ -1098,6 +1097,27 @@ Class is CodeGenerator{
 	## @param enumName: Parent enum name.
 	## @param variantName: Variant name.
 	## @return: The variant member, or an empty-named one.
+	## Extracts a match key's member name (the last segment of an IDENT or
+	## qualified PATH key) — the gen-side mirror of the checker's key
+	## resolution.
+	##
+	## @param key: The key expression.
+	## @param subjT: The subject's base class (the bare-key fallback).
+	## @return: The member name, or '' when the key spells neither.
+	Function of String is matchKeyName(Expression is key, String is subjT){
+		Conditional:if(check: { key:kind == ExpressionKind:IDENT }, then: {
+			return key:str;
+		});
+		Conditional:if(check: { key:kind == ExpressionKind:PATH && key:pathSegments:length() > 0 }, then: {
+			return key:pathSegments:get(index: key:pathSegments:length() - 1);
+		});
+		Conditional:if(check: { key:kind == ExpressionKind:ARRAY && key:arrayItems:length() > 0 }, then: {
+			local Expression is first: key:arrayItems:get(index: 0);
+			return self:matchKeyName(key: first, subjT: subjT);
+		});
+		return '';
+	}
+
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:members, fieldName: variantName);
@@ -1829,9 +1849,6 @@ Class is CodeGenerator{
 			ExpressionKind:FIELD_ACCESS: {
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				'(' . leftC . ')->' . self:utils:cIdent(name: expr:str)
-			},
-			ExpressionKind:WHEN: {
-				self:emitWhenExpression(expr: expr)
 			},
 			ExpressionKind:ANON_FN: {
 				self:emitAnonFn(expr: expr)
@@ -2693,45 +2710,6 @@ Class is CodeGenerator{
 		return callStr;
 	}
 
-	## Emits a `when` expression as a nested ternary chain.
-	##
-	## @param expr: The WHEN expression.
-	## @return: C expression.
-	Function of String is emitWhenExpression(Expression is expr){
-		local String is subjC: self:generateExpression(expr: expr:whenSubject);
-		local String is chain: '0';
-		expr:whenArms:each(action: local Function(WhenArm is arm){
-			Conditional:if(check: { arm:isElse && arm:hasValueExpr }, then: {
-				chain: self:generateExpression(expr: arm:valueExpr);
-			});
-		});
-		expr:whenArms:each(action: local Function(WhenArm is arm){
-			Conditional:if(check: { !arm:isElse && arm:hasValueExpr }, then: {
-				local String is bindsC: self:generateWhenBindings(subjC: subjC, arm: arm);
-				local String is armVal: self:generateExpression(expr: arm:valueExpr);
-				Conditional:if(check: { bindsC != '' }, then: {
-					armVal: '({ ' . bindsC . ' ' . armVal . '; })';
-				});
-				local String is condOr: '';
-				arm:conditions:each(action: local Function(Expression is c){
-					local String is cmp: self:generateWhenCondition(subjExpr: expr:whenSubject, subjC: subjC, c: c);
-					Conditional:if(check: { condOr == '' }, then: {
-						condOr: cmp;
-					}, else: {
-						condOr: condOr . ' || ' . cmp;
-					});
-				});
-				chain: '((' . condOr . ') ? (' . armVal . ') : (' . chain . '))';
-			});
-		});
-		return chain;
-	}
-
-	## True when any statement in [stmts] (recursively through if/when
-	## branches AND the closure arguments of calls the gen inlines —
-	## branch calls, While loops, container callbacks) assigns the named
-	## local. Fully-materialized nested closures mutate their own env
-	## copies, but the over-approximation is harmless (the writeback
 	## stores an unchanged value).
 	##
 	## @param name: The local's Spec name.
@@ -2746,22 +2724,14 @@ Class is CodeGenerator{
 			Conditional:if(check: { s:kind == StatementKind:ASSIGN && s:assignTarget:kind == ExpressionKind:IDENT && s:assignTarget:str == name }, then: {
 				found: true;
 			}, else: {
-				Conditional:if(check: { s:kind == StatementKind:WHEN }, then: {
-					s:whenArms:each(action: local Function(WhenArm is arm){
-						Conditional:if(check: { !found && self:bodyAssignsLocal(name: name, stmts: arm:body) }, then: {
-							found: true;
-						});
+				Conditional:if(check: { s:kind == StatementKind:EXPR }, then: {
+					Conditional:if(check: { self:assignsViaCall(name: name, expr: s:exprStmt) }, then: {
+						found: true;
 					});
 				}, else: {
-					Conditional:if(check: { s:kind == StatementKind:EXPR }, then: {
-						Conditional:if(check: { self:assignsViaCall(name: name, expr: s:exprStmt) }, then: {
+					Conditional:if(check: { s:kind == StatementKind:RETURN && s:hasReturnExpr }, then: {
+						Conditional:if(check: { self:assignsViaCall(name: name, expr: s:returnExpr) }, then: {
 							found: true;
-						});
-					}, else: {
-						Conditional:if(check: { s:kind == StatementKind:RETURN && s:hasReturnExpr }, then: {
-							Conditional:if(check: { self:assignsViaCall(name: name, expr: s:returnExpr) }, then: {
-								found: true;
-							});
 						});
 					});
 				});
@@ -3101,70 +3071,6 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## Generates the when-condition comparison for one arm condition.
-	##
-	## @param subjExpr: The when subject expression.
-	## @param subjC: The subject's C.
-	## @param c: The condition expression.
-	## @return: C boolean expression.
-	Function of String is generateWhenCondition(Expression is subjExpr, String is subjC, Expression is c){
-		Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) }, then: {
-			local String is eName: self:allEnumVariants:getString(key: c:methodName, default: '');
-			Conditional:if(check: { self:allTaggedEnums:has(key: eName) }, then: {
-				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:methodName) . ')';
-			});
-		});
-		Conditional:if(check: { c:kind == ExpressionKind:IDENT && self:allEnumVariants:has(key: c:str) }, then: {
-			local String is eName: self:allEnumVariants:getString(key: c:str, default: '');
-			Conditional:if(check: { self:allTaggedEnums:has(key: eName) }, then: {
-				return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: c:str) . ')';
-			});
-		});
-		Conditional:if(check: { c:kind == ExpressionKind:PATH && c:pathSegments:length() >= 2 && self:allTaggedEnums:has(key: c:pathSegments:get(index: 0)) }, then: {
-			local String is eName: c:pathSegments:get(index: 0);
-			local String is vName: c:pathSegments:get(index: 1);
-			return '((' . subjC . ') && (' . subjC . ')->_tag == ' . eName . '_TAG_' . self:utils:cIdent(name: vName) . ')';
-		});
-		local String is cVal: self:generateExpression(expr: c);
-		Conditional:if(check: { self:isStringExpr(expr: subjExpr, exprC: subjC) }, then: {
-			return 'spec_string_equals(' . subjC . ', ' . cVal . ')';
-		});
-		return '((' . subjC . ') == (' . cVal . '))';
-	}
-
-	## Generates variable bindings for tagged-variant pattern payloads.
-	##
-	## @param subjC: The subject's C.
-	## @param arm: The when arm.
-	## @return: C variable declarations.
-	Function of String is generateWhenBindings(String is subjC, WhenArm is arm){
-		local String is binds: '';
-		arm:conditions:each(action: local Function(Expression is c){
-			Conditional:if(check: { c:kind == ExpressionKind:CALL && self:allEnumVariants:has(key: c:methodName) }, then: {
-				local String is eName: self:allEnumVariants:getString(key: c:methodName, default: '');
-				Conditional:if(check: { self:allTaggedEnums:has(key: eName) }, then: {
-					local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: c:methodName);
-					local String is vNameC: self:utils:cIdent(name: c:methodName);
-					local Int is idx: 0;
-					c:methodArgs:each(action: local Function(NamedArg is arg){
-						Conditional:if(check: { idx < vMem:params:length() }, then: {
-							local Expression is av: arg:value;
-							Conditional:if(check: { av:kind == ExpressionKind:IDENT }, then: {
-								local Parameter is pDef: vMem:params:get(index: idx);
-								local String is bindName: av:str;
-								self:localVars:set(key: bindName, value: self:formatTypeString(t: pDef:paramType));
-								local String is pCType: self:cTypeFor(typeName: pDef:paramType:name);
-								binds: binds . '        ' . pCType . ' ' . self:utils:cIdent(name: bindName) . ' = (' . subjC . ')->' . vNameC . '_' . self:utils:cIdent(name: pDef:name) . ";\n";
-							});
-						});
-						idx: idx + 1;
-					});
-				});
-			});
-		});
-		return binds;
-	}
-
 	## Resolves a simple local or self-field target to its C lvalue.
 	##
 	## @param expr: The target expression.
@@ -3237,9 +3143,6 @@ Class is CodeGenerator{
 			},
 			StatementKind:RETURN: {
 				self:emitReturn(stmt: stmt)
-			},
-			StatementKind:WHEN: {
-				self:emitWhenStatement(stmt: stmt)
 			},
 			StatementKind:EXPR: {
 				# Claim-yielding results go to the pool (released on
@@ -3532,50 +3435,6 @@ Class is CodeGenerator{
 		return "    return;\n";
 	}
 
-	## Emits a when statement as an if/else-if chain.
-	##
-	## @param stmt: The WHEN statement.
-	## @return: C if/else chain.
-	Function of String is emitWhenStatement(Statement is stmt){
-		local String is subjC: self:generateExpression(expr: stmt:whenSubject);
-		local String is out: '';
-		local Boolean is first: true;
-		stmt:whenArms:each(action: local Function(WhenArm is arm){
-			Conditional:if(check: { arm:isElse }, then: {
-				out: out . "    } else {\n";
-			}, else: {
-				local String is condOr: '';
-				arm:conditions:each(action: local Function(Expression is c){
-					local String is cmp: self:generateWhenCondition(subjExpr: stmt:whenSubject, subjC: subjC, c: c);
-					Conditional:if(check: { condOr == '' }, then: {
-						condOr: cmp;
-					}, else: {
-						condOr: condOr . ' || ' . cmp;
-					});
-				});
-				local String is bindsC: self:generateWhenBindings(subjC: subjC, arm: arm);
-				Conditional:if(check: { first }, then: {
-					out: out . '    if (' . condOr . ") {\n";
-					first: false;
-				}, else: {
-					out: out . '    } else if (' . condOr . ") {\n";
-				});
-				out: out . bindsC;
-			});
-			arm:body:each(action: local Function(Statement is s){
-				out: out . '    ' . self:generateStatement(stmt: s);
-			});
-			out: out . self:scopeReleases(stmts: arm:body);
-		});
-		out: out . "    }\n";
-		return out;
-	}
-
-	## Generates a C method implementation.
-	##
-	## @param classDef: The enclosing class.
-	## @param method: The method member.
-	## @return: C method implementation.
 	## True when the class's namespace ends with sysinternal — the
 	## structural C-floor annotation (the namespace is the annotation).
 	##
@@ -3770,13 +3629,6 @@ Class is CodeGenerator{
 		Cases:match(on: stmt:kind, arms: [
 			StatementKind:CLASS: {
 				self:collectClasses(c: stmt:nestedClass, acc: acc);
-			},
-			StatementKind:WHEN: {
-				stmt:whenArms:each(action: local Function(WhenArm is arm){
-					arm:body:each(action: local Function(Statement is s){
-						self:collectClassesFromStatement(stmt: s, acc: acc);
-					});
-				});
 			}
 		]);
 	}
@@ -4832,6 +4684,26 @@ Class is CodeGenerator{
 						out: out . "} else {\n";
 					});
 				});
+				# Payload arms (the Stage-5 form pulled forward): an arm
+				# closure with parameters binds the tagged variant's
+				# constructor payloads as locals before the body runs.
+				Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 && self:allTaggedEnums:has(key: subjT) }, then: {
+					local Member is pvMem: self:lookupEnumVariant(enumName: subjT, variantName: self:matchKeyName(key: key, subjT: subjT));
+					Conditional:if(check: { pvMem:name != '' }, then: {
+						local Int is pbi: 0;
+						val:anonParams:each(action: local Function(Parameter is bp){
+							Conditional:if(check: { pbi < pvMem:params:length() }, then: {
+								local Parameter is vp: pvMem:params:get(index: pbi);
+								local String is pCType: self:cTypeFor(typeName: vp:paramType:name);
+								out: out . '        ' . pCType . ' ' . self:utils:cIdent(name: bp:name) . ' = (' . subjC . ')->' . self:utils:cIdent(name: pvMem:name) . '_' . self:utils:cIdent(name: vp:name) . ";\n";
+								# Register the binding: expression generation
+								# (String-concat wrapping) must see its type.
+								self:localVars:set(key: bp:name, value: self:formatVarTypeString(t: vp:paramType));
+							});
+							pbi: pbi + 1;
+						});
+					});
+				});
 				Conditional:if(check: { valueForm }, then: {
 					out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: yieldVar, yieldT: resT) . "\t";
 				}, else: {
@@ -4937,7 +4809,15 @@ Class is CodeGenerator{
 					});
 				});
 				Conditional:if(check: { variantOk }, then: {
-					local String is oneC: '(' . subjC . ') == (' . enumName . '_' . self:utils:cIdent(name: keyName) . ')';
+					# Tagged enums carry the variant in the _tag field —
+					# the compare reads the tag against the TAG constant;
+					# plain int enums compare the variant constant directly.
+					local String is oneC: '';
+					Conditional:if(check: { self:allTaggedEnums:has(key: enumName) }, then: {
+						oneC: '(' . subjC . ')->_tag == (' . enumName . '_TAG_' . self:utils:cIdent(name: keyName) . ')';
+					}, else: {
+						oneC: '(' . subjC . ') == (' . enumName . '_' . self:utils:cIdent(name: keyName) . ')';
+					});
 					Conditional:if(check: { joined != '' }, then: {
 						joined: joined . ' || ';
 					});

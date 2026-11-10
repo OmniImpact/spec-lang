@@ -17,7 +17,6 @@ Class is Linter{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'compiler', 'ast', WhenArm],
 		['base', 'io', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
@@ -506,35 +505,12 @@ Class is Linter{
 			StatementKind:EXPR: {
 				self:auditExpression(expr: stmt:exprStmt, file: file);
 			},
-			StatementKind:WHEN: {
-				self:auditExpression(expr: stmt:whenSubject, file: file);
-				stmt:whenArms:each(action: local Function(WhenArm is arm){
-					self:auditWhenArm(arm: arm, file: file);
-				});
-			},
 			StatementKind:FORWARD: {
 				stmt:forwardArgs:each(action: local Function(NamedArg is arg){
 					self:auditExpression(expr: arg:value, file: file);
 				});
 			}
 		]);
-	}
-
-	## Audits one when arm: guard conditions, statement body, or value
-	## expression.
-	##
-	## @param arm: [WhenArm] AST node.
-	## @param file: Source file the arm lives in.
-	Function is auditWhenArm(WhenArm is arm, String is file){
-		arm:conditions:each(action: local Function(Expression is cond){
-			self:auditExpression(expr: cond, file: file);
-		});
-		Conditional:if(check: { arm:hasValueExpr }, then: {
-			self:auditExpression(expr: arm:valueExpr, file: file);
-		});
-		arm:body:each(action: local Function(Statement is s){
-			self:auditStatement(stmt: s, file: file);
-		});
 	}
 
 	## Walks one expression, auditing calls it contains — through casts,
@@ -585,12 +561,6 @@ Class is Linter{
 				self:auditExpression(expr: expr:leftExpr, file: file);
 				expr:castArgs:each(action: local Function(Expression is a){
 					self:auditExpression(expr: a, file: file);
-				});
-			},
-			ExpressionKind:WHEN: {
-				self:auditExpression(expr: expr:whenSubject, file: file);
-				expr:whenArms:each(action: local Function(WhenArm is arm){
-					self:auditWhenArm(arm: arm, file: file);
 				});
 			},
 			ExpressionKind:ANON_FN: {

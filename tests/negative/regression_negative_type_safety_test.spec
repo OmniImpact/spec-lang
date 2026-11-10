@@ -44,6 +44,7 @@ Class is NarrowFloatField{
 
 	replace Array of Array of String is using: [
 		['base', 'io', as Output()],
+		['base', 'cases', as Cases()],
 		['base', 'sys', as Conditional()]
 	];
 	## Violation 1: Float literal silently narrowed into an Int field.
@@ -137,11 +138,11 @@ Class is IncompleteWhenBranches{
 		['base', 'sys', as Conditional()],
 		['base', 'io', as Output()]
 	];
-	## Violation 8: 'when' over enum TransportMode covers only CAR and omits
+	## Violation 8: a match over enum TransportMode covers only CAR and omits
 	## BIKE with no else arm. Exhaustiveness must be enforced at compile time.
 	replace Function of String is describe(TransportMode is mode){
-		return when (mode) {
-			is CAR: 'drives';
-		};
+		return Cases:match(on: mode, arms: [
+			TransportMode:CAR: { 'drives' }
+		]);
 	}
 }

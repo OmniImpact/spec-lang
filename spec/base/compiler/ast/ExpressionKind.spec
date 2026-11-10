@@ -20,7 +20,6 @@ Enum of String is ExpressionKind {
 	CALL: 'CALL',
 	BINARY: 'BINARY',
 	UNARY: 'UNARY',
-	WHEN: 'WHEN',
 	ANON_FN: 'ANON_FN',
 	USING_AS: 'USING_AS',
 	UNKNOWN: 'UNKNOWN'

@@ -2,6 +2,7 @@ Class is Blackjack{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
+		['base', 'cases', as Cases()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator', Loop],
@@ -118,36 +119,36 @@ Class is Blackjack{
 				game:roundActive: false;
 				return;
 			});
-			when (action) {
-				is 'h', 'hit': {
-				local Int is card: game:drawCard();
-				game:playerHand:add(item: card);
-				Output:line('You drew: ' . card);
+			Cases:match(on: action, arms: [
+				['h', 'hit']: {
+					local Int is card: game:drawCard();
+					game:playerHand:add(item: card);
+					Output:line('You drew: ' . card);
 
-				local Int is score: game:handValue(hand: game:playerHand);
-				Output:line('Your total is now: ' . score);
+					local Int is score: game:handValue(hand: game:playerHand);
+					Output:line('Your total is now: ' . score);
 
-				Conditional:if(check: { score > 21 }, then: {
-					Output:line('Bust! You lose.');
-					game:roundActive: false;
-				}, else: {
-					Conditional:if(check: { score == 21 }, then: {
-						Output:line('21! Standing automatically.');
-						game:startDealerTurn();
+					Conditional:if(check: { score > 21 }, then: {
+						Output:line('Bust! You lose.');
+						game:roundActive: false;
 					}, else: {
-						game:promptPlayerAction();
+						Conditional:if(check: { score == 21 }, then: {
+							Output:line('21! Standing automatically.');
+							game:startDealerTurn();
+						}, else: {
+							game:promptPlayerAction();
+						});
 					});
-				});
-			}
-			is 's', 'stand': {
-				Output:line('You stand with total: ' . game:handValue(hand: game:playerHand));
-				game:startDealerTurn();
-			}
-			else: {
-				Output:line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
-				game:promptPlayerAction();
-			}
-		}
+				},
+				['s', 'stand']: {
+					Output:line('You stand with total: ' . game:handValue(hand: game:playerHand));
+					game:startDealerTurn();
+				},
+				else: {
+					Output:line('Invalid command. Please enter \'h\' (hit) or \'s\' (stand).');
+					game:promptPlayerAction();
+				}
+			]);
 		}
 	}
 
