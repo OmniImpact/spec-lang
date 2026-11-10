@@ -20,3 +20,6 @@
 *.kdev4
 .kdev4/
 /AGENTS.md
+
+# ZCode session artifacts
+.zcode/
