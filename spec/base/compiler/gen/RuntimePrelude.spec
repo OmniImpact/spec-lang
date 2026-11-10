@@ -700,6 +700,11 @@ typedef struct SpecLoopControl {
 
 typedef struct SpecLoopControl LoopControl;
 
+/* The decoupled loop object: instances are runtime-managed state
+   machines; the type is the opaque handle the runner signatures
+   reference. */
+typedef struct Loop Loop;
+
 SpecLoopControl* LoopControl_new(void) {
     SpecLoopControl* c = (SpecLoopControl*)spec_alloc(sizeof(SpecLoopControl), NULL);
     if (c) {

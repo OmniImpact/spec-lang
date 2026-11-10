@@ -2788,9 +2788,12 @@ Class is TypeChecker{
 				expr:resolvedType: matchRes;
 				return matchRes;
 			});
-			self:addError(line: self:currentLine, msg: 'Conditional:match takes (on: <subject>, when: [key: { body }, ...]) with a literal arm table.');
-			expr:resolvedType: Primitive:ANY:value();
-			return Primitive:ANY:value();
+			# A non-literal table — a Map built at runtime, arms held as
+			# Function values — flows to the runtime dispatch: the
+			# Conditional wrapper's match body serves it (string keys,
+			# array keys, identity over the held singletons, else as the
+			# fallback). The ordinary call machinery below checks the
+			# argument types; payload arms are compile-time by design.
 		});
 
 		# §2.3/E9: bare-scope resolution for self-receiver
@@ -2846,8 +2849,10 @@ Class is TypeChecker{
 						lvKeys:each(action: local Function(String is k){
 							savedLoopVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 						});
+						local Boolean is bareHasLoopVars: false;
 						expr:methodArgs:each(action: local Function(NamedArg is arg){
 							Conditional:if(check: { arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, then: {
+								bareHasLoopVars: true;
 								arg:value:anonParams:each(action: local Function(Parameter is p){
 									Conditional:if(check: { p:hasDefault }, then: {
 										self:inferExpressionType(expr: p:defaultExpr);
@@ -2855,6 +2860,18 @@ Class is TypeChecker{
 									self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 								});
 							});
+						});
+						# II.4: the [vars] parameters scope the closures at
+						# the call site — compile-time only. A closure held
+						# as a variable was built before these parameters
+						# existed and cannot capture them.
+						local Int is barePos: 0;
+						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							local Boolean is bareClosureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || (arg:name == '' && barePos > 0);
+							Conditional:if(check: { bareHasLoopVars && bareClosureSlot && arg:value:kind != ExpressionKind:ANON_FN }, then: {
+								self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures (II.4).');
+							});
+							barePos: barePos + 1;
 						});
 					});
 					local Int is bareIdx: 0;
@@ -2978,14 +2995,25 @@ Class is TypeChecker{
 				savedWhileVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 			});
 			local Int is posIdx: 0;
+			local Boolean is hasLoopVars: false;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				Conditional:if(check: { arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, then: {
+					hasLoopVars: true;
 					arg:value:anonParams:each(action: local Function(Parameter is p){
 						Conditional:if(check: { p:hasDefault }, then: {
 							self:inferExpressionType(expr: p:defaultExpr);
 						});
 						self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 					});
+				});
+				# II.4: the [vars] parameters scope the closures at the
+				# call site — compile-time only. A closure held as a
+				# variable was built before these parameters existed and
+				# cannot capture them: reject the combination instead of
+				# running it with free identifiers.
+				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && (posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2)));
+				Conditional:if(check: { hasLoopVars && closureSlot && arg:value:kind != ExpressionKind:ANON_FN }, then: {
+					self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures (II.4).');
 				});
 				Conditional:if(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
 					Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {

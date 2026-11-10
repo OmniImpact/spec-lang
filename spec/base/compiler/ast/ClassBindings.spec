@@ -50,9 +50,13 @@ Class is ClassBindings{
 		local String is name: c:name;
 		# Ansi is NOT transparent: its sequence builders are real Spec
 		# bodies (only the terminal metrics bind to the ioctl floor).
+		# Loops and Loop are NOT transparent either: Loops's methods are
+		# the real wrapper bodies composed from the iteration floor, and
+		# Loop's evaluate/iteration are the protocol defaults the
+		# runtime run() drives — their prototypes and definitions emit.
 		return name == 'Array' || name == 'Map' || name == 'File' || name == 'LoopControl' ||
 			name == 'Process' || name == 'Output' || name == 'Input' || name == 'Math' ||
-			name == 'Loops' || name == 'Loop' || name == 'LoopCallback' || name == 'InputHandler' ||
+			name == 'LoopCallback' || name == 'InputHandler' ||
 			name == 'Parallel' ||
 			name == 'List' || name == 'String';
 	}

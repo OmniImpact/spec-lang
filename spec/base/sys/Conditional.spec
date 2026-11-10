@@ -42,28 +42,78 @@ Class is Conditional{
 
 	## Dispatches [on] over the arm table [when] — the match construct.
 	##
-	## THE CONTRACT, IN THIS FILE: the arm table is a map literal whose
-	## keys are held-member references of the subject's class (an array
-	## key matches several), `else` names the fallback arm, and the
-	## values are the arm bodies — a closure whose last expression is
-	## the arm's value. A payload arm's closure parameters bind the
-	## variant's payload fields, in declaration order.
+	## TWO IMPLEMENTATIONS, ONE CONTRACT:
 	##
-	## THE IMPLEMENTATION IS COMPILE-TIME, and this body is therefore
-	## never emitted: the checker recognizes the call
-	## (TypeChecker.spec — the match recognizer and checkMatchArms:
-	## key resolution against the subject class's held members, payload
-	## typing from the variant's init parameters, exhaustiveness for
-	## value-form subjects over Enum-rooted classes) and the backend
-	## lowers the table (CodeGenerator.spec — generateMatch: the arm
-	## closures inline as statement blocks, the keys compile to
-	## identity compares for class-typed held members, string equality
-	## for literal keys, == for numeric subjects, the else arm as the
-	## chain's tail). Nothing runs at runtime except the chosen arm —
-	## there is no table object and no dispatch loop to hide here.
+	## The literal-table form (keys are held-member references or string
+	## literals, arms are inline closures) is COMPILE-TIME: the checker
+	## resolves the keys against the subject's class's held members,
+	## types payload arms and checks exhaustiveness, and the backend
+	## inlines the table into a comparison chain with zero allocation
+	## (TypeChecker.spec: the match recognizer and checkMatchArms;
+	## CodeGenerator.spec: generateMatch). That lowering is the fast
+	## path — and the only path that can bind PAYLOAD arms, whose
+	## closure parameters receive the variant's fields, something no
+	## runtime dispatcher can extract.
 	##
-	## @param on: The subject value.
+	## THIS BODY IS THE RUNTIME PATH — the if(...) precedent: the
+	## wrapper implements the construct over the floor primitives, and
+	## the compiler inlines the literal shape. A table that is NOT a
+	## literal at the call site — a Map built with set() — flows here.
+	## The runtime surface is STRING-KEYED (the runtime map's keys are
+	## strings): the scan walks the key array recursively (state rides
+	## the parameters — the runtime closures capture by value, so no
+	## dispatch flag can live in a frame), firing the first arm whose
+	## key equals a String subject; `else` is the fallback arm, fired
+	## when the scan is exhausted. The wrapper's members are self-free
+	## (the elided dispatch passes no receiver), so the scan is a held
+	## function. Identity/array keys and payload arms belong to the
+	## compile-time lowering, which never builds a runtime map.
+	##
+	## @param on: The subject value (a String for the runtime path).
 	## @param when: The arm table.
 	Function is match(Any is on, Map of Any to Any is when){
+		Conditional:dispatchScan(when: when, on: on, index: 0);
+	}
+
+	## The recursive runtime dispatch scan (held: receiver-free — the
+	## elided dispatch passes no receiver). One level per table key:
+	## a key matching a String subject fires its arm; the sentinel
+	## `else` never matches a value; the exhausted scan fires the
+	## fallback arm when the table carries one. The floor's branch is
+	## the two-argument primitive — the continue/else pair composes as
+	## two branches, the second guarding on the negated condition (the
+	## wrapper's own if(...) pattern).
+	##
+	## @param when: The arm table.
+	## @param on: The subject value (a String for the runtime path).
+	## @param index: The scan position over the table's key array.
+	held Function is dispatchScan(Map of Any to Any is when, Any is on, Int is index){
+		local Array of String is ks: when:keys();
+		base:sysinternal:Conditional:branch(
+			check: { return index < ks:length(); },
+			then: {
+				local String is k: ks:get(index: index, default: '');
+				base:sysinternal:Conditional:branch(
+					check: { return k != 'else' && k == on; },
+					then: {
+						local Function is body: when:get(key: k, default: '') as Function;
+						body();
+					}
+				);
+				base:sysinternal:Conditional:branch(
+					check: { return !(k != 'else' && k == on); },
+					then: {
+						Conditional:dispatchScan(when: when, on: on, index: index + 1);
+					}
+				);
+			}
+		);
+		base:sysinternal:Conditional:branch(
+			check: { return index >= ks:length() && when:has(key: 'else'); },
+			then: {
+				local Function is body: when:get(key: 'else', default: '') as Function;
+				body();
+			}
+		);
 	}
 }

@@ -22,4 +22,23 @@ Class is LoopControl{
 	## Requests an immediate halt of loop execution.
 	Function is stop(){
 	}
+
+	## Whether a halt was requested on this controller.
+	##
+	## The query the runtime loop runners compose from: the compile-time
+	## loop inlines read the runtime's control state directly, and the
+	## `Loops:run` wrapper polls this between iterations. Safe on an
+	## omitted (null) control: answers false.
+	##
+	## @return: true when [stop] was requested.
+	Function of Boolean is isStopped(){
+	}
+
+	## Fires the completion callback registered at [init], if any.
+	##
+	## The runtime `Loops:run` calls this after the loop ends — the
+	## same tail the compile-time inlines emit. No callback
+	## registered: nothing happens.
+	Function is complete(){
+	}
 }

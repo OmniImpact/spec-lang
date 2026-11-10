@@ -21,6 +21,18 @@ Class is Introspection{
 		return base:sysinternal:Introspection:objectHash(obj: obj);
 	}
 
+	## Reference identity: whether [a] and [b] are the same object.
+	## Pointer equality — the runtime's identity notion (the held
+	## singletons and the enum variants are distinct live instances, so
+	## address equality is the identity test).
+	##
+	## @param a: The first reference.
+	## @param b: The second reference.
+	## @return: true when both refer to the same object.
+	Function of Boolean is sameRef(Any is a, Any is b){
+		return base:sysinternal:Introspection:sameRef(a: a, b: b);
+	}
+
 	## The number of HELD members the object's class declares
 	## (PLAN-ENUM Stage 1) — the declaring class's own held surface, in
 	## declaration order (the ordinal index).

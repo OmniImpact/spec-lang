@@ -2465,6 +2465,12 @@ Class is CodeGenerator{
 				Conditional:if(check: { shapeOk }, then: {
 					return self:generateInlineBranch(expr: expr);
 				});
+				# The runtime dispatch: the branch closures are not inline
+				# literals (Function variables, callbacks held as values) —
+				# the Conditional wrapper's if body (the floor branch)
+				# serves them, the same two-tier shape as match.
+				local String is rtArgs: self:formatCallArgumentsWith(className: 'Conditional', methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
+				return self:overloadSymbol(className: 'Conditional', methodName: expr:methodName, idx: expr:num) . '(NULL' . rtArgs . ')';
 			});
 
 		# Conditional:match (PLAN-ENUM Stage 3): the arm table lowers into a
@@ -2485,6 +2491,16 @@ Class is CodeGenerator{
 			});
 			Conditional:if(check: { matchSubjC:kind != ExpressionKind:UNKNOWN && matchArmsC:kind == ExpressionKind:MAP }, then: {
 				return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC);
+			});
+			# The runtime dispatch: the arm table is not a literal — a Map
+			# built at runtime or a literal assigned to a variable — the
+			# Conditional wrapper's match body serves it (string keys,
+			# array keys, identity over the held singletons, else as the
+			# fallback). Payload arms are compile-time by design.
+			Conditional:if(check: { matchSubjC:kind != ExpressionKind:UNKNOWN && matchArmsC:kind != ExpressionKind:UNKNOWN }, then: {
+				local String is rtSubj: self:generateExpression(expr: matchSubjC);
+				local String is rtArms: self:generateExpression(expr: matchArmsC);
+				return self:overloadSymbol(className: 'Conditional', methodName: 'match', idx: expr:num) . '(NULL, ' . rtSubj . ', ' . rtArms . ')';
 			});
 		});
 

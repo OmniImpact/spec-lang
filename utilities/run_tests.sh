@@ -185,6 +185,10 @@ assert_compile_failure "cases-match-walls" \
 	"Match arms after else are unreachable" \
 	"'Int' cannot be matched"
 
+assert_compile_failure "loop-vars-literals-wall" \
+	"$ROOT/tests/negative/n34_loop_vars_literals_negative_test.spec" \
+	"requires inline literal closures"
+
 assert_compile_failure "import-local-member-wall" \
 	"$ROOT/tests/negative/n24_import_local_member_negative_test.spec" \
 	"is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'"

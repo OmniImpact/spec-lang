@@ -312,7 +312,12 @@ Class is BuiltinCallGenerator{
 			Conditional:if(check: { loopVal:kind == ExpressionKind:CALL && loopVal:methodName == 'init' }, then: {
 				freeLoopC: ' spec_release(_lp);';
 			});
-			return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
+			# The protocol inline needs the loop's static class for the
+			# direct evaluate/iteration calls; an unresolved receiver (a
+			# Loop held as Any) falls through to the runtime run body.
+			Conditional:if(check: { loopClass != '' }, then: {
+				return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
+			});
 		});
 		# Loops:repeat(count:, worker:) — the counting loop, inlined.
 		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'repeat' && expr:argCount() == 2 }, then: {
@@ -429,6 +434,19 @@ Class is BuiltinCallGenerator{
 		});
 		Conditional:if(check: { expr:methodName == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
 			return 'LoopControl_stop(' . targetC . ')';
+		});
+		# LoopControl:isStopped — the halt query the runtime run()
+		# composes from (the compile-time inlines read the C struct
+		# directly; the wrapper needs the public surface). Null-safe:
+		# an omitted control drives without a halt query.
+		Conditional:if(check: { expr:methodName == 'isStopped' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
+			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); _lc ? (bool)_lc->stopped : false; })';
+		});
+		# LoopControl:complete — fires the completion callback the
+		# runtime run() owes after the loop ends (the inline protocol's
+		# on_complete tail). No callback registered: nothing fires.
+		Conditional:if(check: { expr:methodName == 'complete' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
+			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); if (_lc && _lc->on_complete) { _lc->on_complete(_lc->callback, _lc); } })';
 		});
 
 		# Input:prompt — inline getline driving the handler's onInput.
