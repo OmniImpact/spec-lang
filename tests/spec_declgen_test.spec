@@ -39,17 +39,14 @@ Class is Widget{
 		local Parser is p: Parser:init(tokens: lx:tokenize());
 		local ProgramNode is prog: p:parseProgram();
 		local DeclarationGenerator is dg: DeclarationGenerator:init();
-		local Map of String to String is enums: Map:init();
-		enums:set(key: 'Level', value: 'true');
-		dg:setEnumNames(names: enums);
-		local String is enumsC: dg:generateEnums(classes: prog:classes);
 		local String is fwdC: dg:generateForwardDeclarations(classes: prog:classes);
 		local String is structsC: dg:generateStructs(classes: prog:classes);
 
-		# PLAN-ENUM Stage 4: Level desugars to the class model — no C
-		# enum tables; the held accessors and the backing field carry it.
-		Conditional:if(check: { !enumsC:contains(needle: 'Level_NONE = 0') && fwdC:contains(needle: 'Level_NONE__ensure(void);') && structsC:contains(needle: 'String _backing;') }, then: {
-			Output:line('[PASS] enum as class model (no tables, held accessors, backing field)');
+		# PLAN-ENUM Stage 4: Level desugars to the class model — the held
+		# accessors and the backing field carry it (the C enum tables
+		# retired with the legacy emission in Stage 6).
+		Conditional:if(check: { fwdC:contains(needle: 'Level_NONE__ensure(void);') && structsC:contains(needle: 'String _backing;') }, then: {
+			Output:line('[PASS] enum as class model (held accessors, backing field)');
 		}, else: {
 			Output:line('[FAIL] enum emission');
 			failures: failures + 1;

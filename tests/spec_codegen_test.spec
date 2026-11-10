@@ -271,13 +271,9 @@ Enum of String is Level {
 
 		# --- builtin call bindings ---
 		local BuiltinCallGenerator is bcg: BuiltinCallGenerator:init();
-		local Map of String to String is enumNames: Map:init();
-		enumNames:set(key: 'Level', value: 'true');
-		bcg:setEnumNames(names: enumNames);
 		Conditional:if(check: { bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg):contains(needle: 'printf("%s\\n", spec_buf_to_cstring((SpecBuf*)(')
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 's:length()'), targetC: 's', targetType: 'String', cg: eg) == 'spec_string_length(s)'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg) == 'spec_math_sqrt(n)'
-			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Level:of(name: \'E\')'), targetC: 'Level', targetType: '', cg: eg) == 'Level_of(spec_string_intern("E"))'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'xs:length()'), targetC: 'xs', targetType: 'Array of Int', cg: eg) == 'spec_array_length(xs)' }, then: {
 			Output:line('[PASS] builtin call bindings');
 		}, else: {

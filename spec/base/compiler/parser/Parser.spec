@@ -377,22 +377,14 @@ Class is Parser{
 			self:advance();
 		});
 
-		# PLAN-ENUM Stage 4: VALUE enums (no variant payloads) desugar to
-		# the class model — held variants, a backing field, and the
-		# synthesized contract methods. Tagged enums stay on the legacy
-		# path until Stage 5.
-		local Boolean is tagged: false;
-		members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:params:length() > 0 }, then: {
-				tagged: true;
-			});
-		});
-		Conditional:if(check: { !tagged }, then: {
-			local EnumDesugar is ds: EnumDesugar:init();
-			local ClassInfo is dc: ClassInfo:init(name: name, baseClass: self:names:enumHeader(), members: members);
-			local ClassInfo is desugared: ds:desugar(c: dc, backingType: backingType);
-			members: desugared:members;
-		});
+		# PLAN-ENUM Stages 4–5: every enum desugars to the class model —
+		# value enums to held variants + the synthesized contract methods;
+		# tagged enums to nested subclasses with real payload fields (the
+		# desugar branches on the variant shapes).
+		local EnumDesugar is ds: EnumDesugar:init();
+		local ClassInfo is dc: ClassInfo:init(name: name, baseClass: self:names:enumHeader(), members: members);
+		local ClassInfo is desugared: ds:desugar(c: dc, backingType: backingType);
+		members: desugared:members;
 
 		local ClassInfo is c: ClassInfo:init(name: name, baseClass: self:names:enumHeader(), members: members);
 		c:setLine(line: nameTok:getLine());

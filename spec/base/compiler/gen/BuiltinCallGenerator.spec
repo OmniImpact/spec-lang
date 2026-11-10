@@ -35,18 +35,6 @@ Class is BuiltinCallGenerator{
 
 	local CBackendUtils is utils: CBackendUtils:init();
 	local EmissionPolicy is policy: EmissionPolicy:init();
-	local Map of String to String is allEnumNames: Map:init();
-
-	replace Function is init(){
-		self:allEnumNames: Map:init();
-	}
-
-	## Receives the enum registry gathered by the checker.
-	##
-	## @param names: All enum names.
-	Function is setEnumNames(Map of String to String is names){
-		self:allEnumNames: names;
-	}
 
 	## Binds a sysinternal floor call to its C function per the naming
 	## convention: spec_ + snake_case(method). Arguments match the declared
@@ -232,7 +220,7 @@ Class is BuiltinCallGenerator{
 		});
 
 		# Type name introspection on class instances.
-		Conditional:if(check: { expr:methodName == 'typeName' && targetType != '' && !self:policy:isTransparent(c: cg:findClass(name: targetType)) && !self:allEnumNames:has(key: targetType) }, then: {
+		Conditional:if(check: { expr:methodName == 'typeName' && targetType != '' && !self:policy:isTransparent(c: cg:findClass(name: targetType)) }, then: {
 			return 'spec_type_name(' . targetC . ')';
 		});
 
@@ -737,26 +725,6 @@ Class is BuiltinCallGenerator{
 			local String is ddC: self:bindStringDirect(expr: expr, targetC: targetC, cg: cg);
 			Conditional:if(check: { ddC != '' }, then: {
 				return ddC;
-			});
-		});
-
-		# Enum values()/of()/name()/value()/ordinal().
-		Conditional:if(check: { self:allEnumNames:has(key: targetC) && expr:methodName == 'values' }, then: {
-			return targetC . '_values()';
-		});
-		Conditional:if(check: { self:allEnumNames:has(key: targetC) && expr:methodName == 'of' && expr:argCount() > 0 }, then: {
-			local Expression is vArg: self:argValue(expr: expr, index: 0);
-			return targetC . '_of(' . cg:generateExpression(expr: vArg) . ')';
-		});
-		Conditional:if(check: { self:allEnumNames:has(key: targetType) }, then: {
-			Conditional:if(check: { expr:methodName == 'name' }, then: {
-				return targetType . '_name(' . targetC . ')';
-			});
-			Conditional:if(check: { expr:methodName == 'value' }, then: {
-				return targetType . '_value(' . targetC . ')';
-			});
-			Conditional:if(check: { expr:methodName == 'ordinal' }, then: {
-				return targetType . '_ordinal(' . targetC . ')';
 			});
 		});
 

@@ -14,6 +14,7 @@ Class is DeclarationGenerator{
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Type],
+		['base', 'compiler', 'ast', ClassBindings],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
@@ -32,14 +33,11 @@ Class is DeclarationGenerator{
 		['base', 'cases', as Cases()]
 	];
 
-	## Enum name -> "true" (string-backed enums included).
-	local Map of String to String is allEnumNames: Map:init();
-
-	## Tagged-union enum names -> "true".
-	local Map of String to String is allTaggedEnums: Map:init();
-
 	## Well-known names.
 	local WellKnown is names: WellKnown:init();
+
+	## The shared floor-class classification (the class-model gate).
+	local ClassBindings is bindings: ClassBindings:init();
 
 	## Backend utilities.
 	local CBackendUtils is utils: CBackendUtils:init();
@@ -48,22 +46,6 @@ Class is DeclarationGenerator{
 	local EmissionPolicy is policy: EmissionPolicy:init();
 
 	replace Function is init(){
-		self:allEnumNames: Map:init();
-		self:allTaggedEnums: Map:init();
-	}
-
-	## Receives the enum registries gathered by the checker.
-	##
-	## @param names: All enum names.
-	Function is setEnumNames(Map of String to String is names){
-		self:allEnumNames: names;
-	}
-
-	## Receives the tagged-enum registry.
-	##
-	## @param names: Tagged enum names.
-	Function is setTaggedEnums(Map of String to String is names){
-		self:allTaggedEnums: names;
 	}
 
 	## Maps a type name to its C type, grounding the class's own generic
@@ -80,11 +62,6 @@ Class is DeclarationGenerator{
 		Conditional:if(check: { base:contains(needle: ':') }, then: {
 			local Array of String is parts: base:split(delimiter: ':');
 			base: parts:get(index: 0);
-		});
-		# Enum types pass by value in prototypes, matching the definitions
-		# the method emitter produces (tagged unions are pointers).
-		Conditional:if(check: { self:allEnumNames:has(key: base) && !self:allTaggedEnums:has(key: base) }, then: {
-			return base;
 		});
 		return self:utils:cTypeFor(typeName: typeName);
 	}
@@ -146,10 +123,16 @@ Class is DeclarationGenerator{
 		});
 		c:baseClasses:each(action: local Function(String is baseName){
 			# the base is the outer-link relation
-			# when its name appears in this class's outer chain.
+			# when its name appears in this class's outer chain — unless the
+			# base is a class-model enum (PLAN-ENUM Stage 5): the desugared
+			# variants INHERIT the base's tag fields, so they stay in acc at
+			# the base's offsets (the base-cast reads them).
 			local Boolean is baseIsOuter: c:outerName != '' && (c:outerName == baseName || c:outerName:contains(needle: ':' . baseName));
 			allClasses:each(action: local Function(ClassInfo is cand){
 				Conditional:if(check: { cand:name == baseName }, then: {
+					Conditional:if(check: { self:bindings:isClassModelEnum(c: cand) }, then: {
+						baseIsOuter: false;
+					});
 					self:collectStructFieldsSplit(c: cand, allClasses: allClasses, acc: acc, outerAcc: outerAcc, fromOuterLink: baseIsOuter);
 				});
 			});
@@ -184,198 +167,6 @@ Class is DeclarationGenerator{
 		local FieldIndexLoop is loop: FieldIndexLoop:init(list: list, name: name);
 		Loops:run(loop: loop);
 		return loop:res;
-	}
-
-	## Emits the C enum definitions for every enum in the program:
-	## tagged-union enums get tag structs and variant constructors;
-	## plain enums get names/value/ordinal/values tables plus value() and
-	## of() lookups for string-backed variants.
-	##
-	## @param classes: Program classes.
-	## @return: C source text.
-	Function of String is generateEnums(Array of ClassInfo is classes){
-		local String is out: "/* Enum Definitions */\n";
-
-		classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { c:baseClass == self:names:enumHeader() && !self:policy:isClassModelEnum(c: c) }, then: {
-				local String is name: c:name;
-				# The namespace declaration is metadata inside the body —
-				# filter it out of the variant surface once, up front.
-				local Array of Member is variants: [];
-				c:members:each(action: local Function(Member is m){
-					Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
-						variants:add(item: m);
-					});
-				});
-				Conditional:if(check: { self:allTaggedEnums:has(key: name) }, then: {
-					Buf:bufAppendBuf(dst: out, src: "typedef enum {\n");
-					local Int is tIdx: 0;
-					variants:each(action: local Function(Member is m){
-						Buf:bufAppendBuf(dst: out, src: '    ' . name . '_TAG_' . self:utils:cIdent(name: m:name) . ' = ' . tIdx . ",\n");
-						tIdx: tIdx + 1;
-					});
-					Buf:bufAppendBuf(dst: out, src: '} ' . name . "_Tag;\n");
-					Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . name . ' ' . name . ";\n\n");
-				}, else: {
-					Buf:bufAppendBuf(dst: out, src: "typedef enum {\n");
-					local Int is idx: 0;
-					variants:each(action: local Function(Member is m){
-						Buf:bufAppendBuf(dst: out, src: '    ' . name . '_' . self:utils:cIdent(name: m:name) . ' = ' . idx . ",\n");
-						idx: idx + 1;
-					});
-					Buf:bufAppendBuf(dst: out, src: '} ' . name . ";\n\n");
-
-					Buf:bufAppendBuf(dst: out, src: 'static __attribute__((unused)) const char* ' . name . "_names[] = {\n");
-					variants:each(action: local Function(Member is m){
-						Buf:bufAppendBuf(dst: out, src: '    "' . m:name . "\",\n");
-					});
-					Buf:bufAppendBuf(dst: out, src: "};\n\n");
-
-					Buf:bufAppendBuf(dst: out, src: 'static const ' . name . ' ' . name . "_all_values[] = {\n");
-					variants:each(action: local Function(Member is m){
-						Buf:bufAppendBuf(dst: out, src: '    ' . name . '_' . self:utils:cIdent(name: m:name) . ",\n");
-					});
-					Buf:bufAppendBuf(dst: out, src: "};\n\n");
-
-					Buf:bufAppendBuf(dst: out, src: 'static inline String ' . name . '_name(' . name . " self) {\n");
-					Buf:bufAppendBuf(dst: out, src: "    (void)self;\n");
-					Buf:bufAppendBuf(dst: out, src: "    switch (self) {\n");
-					variants:each(action: local Function(Member is m){
-						Buf:bufAppendBuf(dst: out, src: '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . m:name . '");' . "\n");
-					});
-					Buf:bufAppendBuf(dst: out, src: "        default: return spec_string_intern(\"UNKNOWN\");\n");
-					Buf:bufAppendBuf(dst: out, src: "    }\n}\n\n");
-
-					local Boolean is isStrBacked: false;
-					variants:each(action: local Function(Member is m){
-						Conditional:if(check: { m:memberType:name == Primitive:STRING:value() }, then: {
-							isStrBacked: true;
-						});
-					});
-
-					Conditional:if(check: { isStrBacked }, then: {
-						Buf:bufAppendBuf(dst: out, src: self:emitStringBacking(name: name, cls: c));
-					}, else: {
-						Buf:bufAppendBuf(dst: out, src: self:emitIntBacking(name: name, cls: c));
-					});
-
-					Buf:bufAppendBuf(dst: out, src: 'static inline long long ' . name . '_ordinal(' . name . " self) {\n");
-					Buf:bufAppendBuf(dst: out, src: "    (void)self;\n");
-					Buf:bufAppendBuf(dst: out, src: "    switch (self) {\n");
-					local Int is ordIdx: 0;
-					variants:each(action: local Function(Member is m){
-						Buf:bufAppendBuf(dst: out, src: '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return ' . ordIdx . ";\n");
-						ordIdx: ordIdx + 1;
-					});
-					Buf:bufAppendBuf(dst: out, src: "        default: return -1;\n");
-					Buf:bufAppendBuf(dst: out, src: "    }\n}\n\n");
-
-					Buf:bufAppendBuf(dst: out, src: 'static inline SpecArray* ' . name . "_values(void) {\n");
-					Buf:bufAppendBuf(dst: out, src: "    SpecArray* arr = spec_array_new();\n");
-					Buf:bufAppendBuf(dst: out, src: '    for (size_t i = 0; i < ' . idx . "; i++) {\n");
-					Buf:bufAppendBuf(dst: out, src: '        spec_array_add(arr, (void*)(intptr_t)' . name . "_all_values[i]);\n");
-					Buf:bufAppendBuf(dst: out, src: "    }\n    return arr;\n}\n\n");
-				});
-			});
-		});
-
-		return out;
-	}
-
-	## Emits the string-backed helpers: value() (variant -> tag) and of()
-	## (tag -> variant; no match yields the empty-tag variant, else -1).
-	##
-	## @param name: Enum name.
-	## @param cls: The enum class.
-	## @return: C source text.
-	Function of String is emitStringBacking(String is name, ClassInfo is cls){
-		local String is out: '';
-		# Metadata (the namespace declaration) is not a variant.
-		local Array of Member is variants: [];
-		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
-				variants:add(item: m);
-			});
-		});
-		out: out . 'static inline String ' . name . '_value(' . name . " self) {\n";
-		out: out . "    (void)self;\n";
-					out: out . "    switch (self) {\n";
-		variants:each(action: local Function(Member is m){
-			out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return spec_string_intern("' . self:variantTag(m: m) . '");' . "\n";
-		});
-		out: out . "        default: return spec_string_intern(\"\");\n";
-		out: out . "    }\n}\n\n";
-
-		local String is emptyVariant: '';
-		out: out . 'static inline ' . name . ' ' . name . '_of(String v) {' . "\n";
-		variants:each(action: local Function(Member is m){
-			local String is valStr: self:variantTag(m: m);
-			Conditional:if(check: { valStr == '' }, then: {
-				emptyVariant: m:name;
-			});
-			out: out . '    if (spec_string_equals(v, spec_string_intern("' . valStr . '"))) return ' . name . '_' . self:utils:cIdent(name: m:name) . ";\n";
-		});
-		Conditional:if(check: { emptyVariant != '' }, then: {
-			out: out . '    return ' . name . '_' . self:utils:cIdent(name: emptyVariant) . ";\n";
-		}, else: {
-			out: out . '    return (' . name . ")-1;\n";
-		});
-		out: out . "}\n\n";
-		return out;
-	}
-
-	## Emits the integer-backed helper: value() (variant -> declared or
-	## ordinal integer).
-	##
-	## @param name: Enum name.
-	## @param cls: The enum class.
-	## @return: C source text.
-	Function of String is emitIntBacking(String is name, ClassInfo is cls){
-		local String is out: '';
-		# Metadata (the namespace declaration) is not a variant.
-		local Array of Member is variants: [];
-		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
-				variants:add(item: m);
-			});
-		});
-		out: out . 'static inline long long ' . name . '_value(' . name . " self) {\n";
-		out: out . "    (void)self;\n";
-					out: out . "    switch (self) {\n";
-		local Int is vIdx: 0;
-		variants:each(action: local Function(Member is m){
-			local String is valNum: '' . vIdx;
-			Conditional:if(check: { m:hasInit }, then: {
-				local Expression is initE: m:initExpr;
-				Conditional:if(check: { initE:kind == ExpressionKind:NUMBER && initE:str != '' }, then: {
-					valNum: initE:str;
-				}, else: {
-					Conditional:if(check: { initE:kind == ExpressionKind:UNARY && initE:str == '-' && initE:unaryExpr:kind == ExpressionKind:NUMBER }, then: {
-						valNum: '-' . initE:unaryExpr:str;
-					});
-				});
-			});
-			out: out . '        case ' . name . '_' . self:utils:cIdent(name: m:name) . ': return ' . valNum . "LL;\n";
-			vIdx: vIdx + 1;
-		});
-		out: out . "        default: return 0LL;\n";
-		out: out . "    }\n}\n\n";
-		return out;
-	}
-
-	## Resolves a variant's string tag: the declared `: 'tag'` value, or the
-	## variant name when untagged.
-	##
-	## @param m: The variant member.
-	## @return: The tag string.
-	Function of String is variantTag(Member is m){
-		Conditional:if(check: { m:hasInit }, then: {
-			local Expression is initE: m:initExpr;
-			Conditional:if(check: { initE:kind == ExpressionKind:STRING }, then: {
-				return initE:str;
-			});
-		});
-		return m:name;
 	}
 
 	## Emits forward declarations (typedefs, constructors, destructors) for
@@ -509,73 +300,8 @@ Class is DeclarationGenerator{
 					Buf:bufAppendBuf(dst: out, src: '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n");
 				});
 				Buf:bufAppendBuf(dst: out, src: "};\n\n");
-				}, else: {
-					Conditional:if(check: { c:baseClass == self:names:enumHeader() && self:allTaggedEnums:has(key: c:name) }, then: {
-						Buf:bufAppendBuf(dst: out, src: self:emitTaggedEnumStruct(name: c:qualifiedName(), cls: c));
-					});
-			});
-		});
-		return out;
-	}
-
-	## Emits a tagged enum's struct, variant constructors, and accessors.
-	##
-	## @param name: Enum name.
-	## @param cls: The enum class.
-	## @return: C source text.
-	Function of String is emitTaggedEnumStruct(String is name, ClassInfo is cls){
-		local String is out: '';
-		# Metadata (the namespace declaration) is not a variant.
-		local Array of Member is variants: [];
-		cls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, then: {
-				variants:add(item: m);
-			});
-		});
-		out: out . 'struct ' . name . " {\n";
-		out: out . '    ' . name . "_Tag _tag;\n";
-		out: out . "    const char* _variant_name;\n";
-		variants:each(action: local Function(Member is m){
-			local String is vName: self:utils:cIdent(name: m:name);
-			m:params:each(action: local Function(Parameter is p){
-				out: out . '    ' . self:utils:cTypeFor(typeName: p:paramType:name) . ' ' . vName . '_' . self:utils:cIdent(name: p:name) . ";\n";
-			});
-		});
-		out: out . "};\n\n";
-
-		variants:each(action: local Function(Member is m){
-			local String is vName: self:utils:cIdent(name: m:name);
-			Conditional:if(check: { m:params:length() == 0 }, then: {
-				out: out . 'static inline ' . name . '* ' . name . '_' . vName . "_ctor(void) {\n";
-				out: out . '    ' . name . '* _e = (' . name . '*)spec_alloc(sizeof(' . name . "), NULL);\n";
-				out: out . '    _e->_tag = ' . name . '_TAG_' . vName . ";\n";
-				out: out . '    _e->_variant_name = "' . m:name . "\";\n";
-				out: out . "    return _e;\n}\n\n";
-			}, else: {
-				out: out . 'static inline ' . name . '* ' . name . '_' . vName . '(';
-				local Boolean is firstP: true;
-				m:params:each(action: local Function(Parameter is p){
-					Conditional:if(check: { !firstP }, then: {
- out: out . ', ';
-					});
-					out: out . self:utils:cTypeFor(typeName: p:paramType:name) . ' ' . self:utils:cIdent(name: p:name);
-					firstP: false;
 				});
-				out: out . ") {\n";
-				out: out . '    ' . name . '* _e = (' . name . '*)spec_alloc(sizeof(' . name . "), NULL);\n";
-				out: out . '    _e->_tag = ' . name . '_TAG_' . vName . ";\n";
-				out: out . '    _e->_variant_name = "' . m:name . "\";\n";
-				m:params:each(action: local Function(Parameter is p){
-					out: out . '    _e->' . vName . '_' . self:utils:cIdent(name: p:name) . ' = ' . self:utils:cIdent(name: p:name) . ";\n";
-				});
-				out: out . "    return _e;\n}\n\n";
-			});
 		});
-
-		out: out . 'static inline String ' . name . '_name(' . name . "* self) {\n";
-		out: out . "    return self ? spec_string_from_chars(self->_variant_name) : spec_string_intern(\"UNKNOWN\");\n}\n\n";
-		out: out . 'static inline long long ' . name . '_ordinal(' . name . "* self) {\n";
-		out: out . "    return self ? (long long)self->_tag : -1;\n}\n\n";
 		return out;
 	}
 

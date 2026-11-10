@@ -2019,6 +2019,26 @@ Class is CodeGenerator{
 			}
 		);
 		Conditional:if(check: { chainOk && chainIdx == segs:length() }, then: {
+			# Enum-root variants (PLAN-ENUM Stage 5): the nullary variant's
+			# value IS the zero-arg construction of its nested subclass —
+			# a payload variant (init takes params) keeps the bare symbol,
+			# so the init path (the construction shorthand's target)
+			# resolves it.
+			Conditional:if(check: { self:allClassNames:has(key: chainCls:baseClass) }, then: {
+				local ClassInfo is pvEnum: self:findClass(name: chainCls:baseClass);
+				Conditional:if(check: { pvEnum:name != '' && pvEnum:baseClass == 'Enum' }, then: {
+					local Int is vParamCount: 0;
+					chainCls:members:each(action: local Function(Member is m){
+						Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == 'init' }, then: {
+							vParamCount: m:params:length();
+						});
+					});
+					Conditional:if(check: { vParamCount == 0 }, then: {
+						local String is vSym: self:utils:cIdent(name: chainCls:qualifiedName());
+						return '({ ' . vSym . '* _inst = ' . vSym . "_new(); " . vSym . "_init(_inst); _inst; })";
+					});
+				});
+			});
 			return self:utils:cIdent(name: chainCls:qualifiedName());
 		});
 	});
@@ -3900,11 +3920,6 @@ Class is CodeGenerator{
 		# by the driver; this method's emission loop iterates only the source
 		# program's classes.
 		self:assignVirtualSlots(classes: flattenedClasses);
-		self:declGen:setEnumNames(names: self:allEnumNames);
-		self:declGen:setTaggedEnums(names: self:allTaggedEnums);
-		self:builtins:setEnumNames(names: self:allEnumNames);
-
-		local String is enums: self:declGen:generateEnums(classes: flattenedClasses);
 		local String is decls: self:declGen:generateForwardDeclarations(classes: flattenedClasses);
 		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
 		local String is vt: self:generateVTables(classes: flattenedClasses);
@@ -4064,7 +4079,6 @@ Class is CodeGenerator{
 
 		local String is cSource: '';
 		Buf:bufAppendBuf(dst: cSource, src: self:generatePrelude());
-		Buf:bufAppendBuf(dst: cSource, src: enums);
 		Buf:bufAppendBuf(dst: cSource, src: decls);
 		Buf:bufAppendBuf(dst: cSource, src: structs);
 		Buf:bufAppendBuf(dst: cSource, src: vt);
@@ -4732,12 +4746,21 @@ Class is CodeGenerator{
 						local String is subSym: self:utils:cIdent(name: subjT . ':' . cmKey);
 						local ClassInfo is subCls: self:findClass(name: subjT . ':' . cmKey);
 						Conditional:if(check: { subCls:name != '' }, then: {
+							# The field names come from the subclass's INIT
+							# params (the real payload fields); the closure's
+							# params are the LOCAL bindings, paired by index.
+							local Array of Parameter is fieldParams: [];
+							subCls:members:each(action: local Function(Member is m){
+								Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == 'init' }, then: {
+									fieldParams: m:params;
+								});
+							});
 							local Int is pbi2: 0;
 							val:anonParams:each(action: local Function(Parameter is bp){
-								Conditional:if(check: { pbi2 < val:anonParams:length() }, then: {
-									local Parameter is srcP: val:anonParams:get(index: pbi2);
+								Conditional:if(check: { pbi2 < fieldParams:length() }, then: {
+									local Parameter is srcP: fieldParams:get(index: pbi2);
 									local String is pCType2: self:cTypeFor(typeName: srcP:paramType:name);
-									out: out . '        ' . pCType2 . ' ' . self:utils:cIdent(name: bp:name) . " = ((" . subSym . "*)(" . subjC . "))->" . self:utils:cIdent(name: bp:name) . ";\n";
+									out: out . '        ' . pCType2 . ' ' . self:utils:cIdent(name: bp:name) . " = ((" . subSym . "*)(" . subjC . "))->" . self:utils:cIdent(name: srcP:name) . ";\n";
 									self:localVars:set(key: bp:name, value: self:formatVarTypeString(t: srcP:paramType));
 								});
 								pbi2: pbi2 + 1;
@@ -4874,11 +4897,13 @@ Class is CodeGenerator{
 					local Int is mi: 0;
 					Conditional:if(check: { cmCls:name != '' && cmCls:baseClass == 'Enum' }, then: {
 						cmCls:members:each(action: local Function(Member is m){
-							Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == keyName }, then: {
-								cmTagged: true;
-								cmIdx: mi;
+							Conditional:if(check: { m:kind == MemberKind:CLASS }, then: {
+								Conditional:if(check: { m:nestedClass:name == keyName }, then: {
+									cmTagged: true;
+									cmIdx: mi;
+								});
+								mi: mi + 1;
 							});
-							mi: mi + 1;
 						});
 					});
 					Conditional:if(check: { cmTagged }, then: {
