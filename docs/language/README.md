@@ -55,7 +55,7 @@ Class is HelloWorld{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Map],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -426,13 +426,14 @@ package segments plus the class to load; an entry ending at the package
 imports the whole package (the wildcard). A trailing **`as ClassName()`**
 instance-imports the class — its members answer to the class-name prefix
 and, where the name is unambiguous in scope, **bare**: `as Output()`
-serves `line(...)`, `as Conditional()` serves `if(...)` and `match(...)`,
-`as Loops()` serves the loop constructs, `as Math()` serves `round(...)`:
+serves `line(...)` and `consOut(...)`, `as Conditional()` serves `if(...)`
+and `match(...)`, `as Loops()` serves the loop constructs, `as Math()`
+serves `round(...)`:
 ```spec
 replace Array of Array of String is using: [
 	['base', 'struct', Array],
 	['base', 'math', as Math()],
-	['base', 'io', as Output()],
+	['base', 'sys', as Output()],
 	['base', 'sys', as Process()],
 	['base', 'sys', as Loops()]
 ];
@@ -574,7 +575,7 @@ Spec eliminates null reference bugs by making `null` nonexistent as a runtime va
    local String is val: map:getString(key: "username", default: "Guest");
    local String is popped: array:pop(default: "EMPTY");
    local String is char: text:charAt(index: 5, default: " ");
-   local String is fileText: File:read(path: "config.cfg", default: "{}");
+   local String is fileText: fileRead(path: "config.cfg", default: "{}");
    ```
 5. **No Null Return Keyword or Type**: Void methods are declared simply as `Function is <name>(...)` without any `of null` clause.
 

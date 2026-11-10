@@ -33,7 +33,7 @@ Full API reference by package below.
    - [`base:sys:Conditional`](#basesysconditional-libbasesysconditionalspec)
    - [`base:sys:Loops`](#basesysloops-libbasesysloopsspec)
    - [Console Output (`Output:line` / `Output:consOut`)](#outputline)
-   - [Interactive Input (`Input:consIn`)](#inputprompt)
+   - [Interactive Input (`Input:consIn`)](#inputconsin)
    - [File Operations (`File`)](#file-operations)
    - [`base:sys:Process`](#basesysprocess)
    - [`base:sys:SourceLocation`](#basesyssourcelocation-libbasesyssourcelocationspec)

@@ -113,7 +113,7 @@ replace Array of Array of String is using: [
 	['base', 'struct', Array],
 	['base', 'struct', Map],
 	['base', 'math', Math],
-	['base', 'io', Output],
+	['base', 'sys', Output],
 	['base', 'iterator', Loops]
 ];
 ```

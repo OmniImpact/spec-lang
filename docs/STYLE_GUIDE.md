@@ -123,7 +123,7 @@ Every API that retrieves an item by index, key, or path must require a fallback 
 # Correct: Requires explicit fallback
 local String is first: list:get(index: 0, default: "");
 local String is host: config:getString(key: "host", default: "localhost");
-local String is content: File:read(path: "save.dat", default: "");
+local String is content: fileRead(path: "save.dat", default: "");
 ```
 
 ### Decoupled Iteration
@@ -154,7 +154,7 @@ Loops:run(loop: CountLoop:init());
   Class is MyModule{
 
   	replace Array of Array of String is using: [
-  		['base', 'io', as Output()],
+  		['base', 'sys', as Output()],
   		['base', 'struct', Array]
   	];
 

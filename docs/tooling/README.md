@@ -59,7 +59,7 @@ Leak detection is off by default: the ARC engine reclaims the compiler's object 
 - **`1`** — compile failure: syntax errors, load errors (`[LoadError]`: missing module files, unresolvable imports, invalid class grouping), type errors, or backend `gcc` failure.
 - **`2`** — usage error (missing input or output path).
 
-All compiler diagnostics are written to **stderr** (via `Stderr:line`); programs write normal output to stdout via `Output:line` — both runtime-managed classes from `base:io`, instance-imported as `['base', 'io', as Output()]` / `as Stderr()`. A program can terminate itself with an explicit status via `Process:exit(status: N)`. This makes the compiler safe to drive from scripts and CI:
+All compiler diagnostics are written to **stderr** (via `Stderr:line`); programs write normal output to stdout via `Output:line` — both console wrappers in `base:sys`, instance-imported as `['base', 'sys', as Output()]` / `as Stderr()`. A program can terminate itself with an explicit status via `Process:exit(status: N)`. This makes the compiler safe to drive from scripts and CI:
 ```bash
 ./spec -i app.spec -o app 2>compile.log || exit 1
 ```
@@ -91,7 +91,7 @@ Spec automatically resolves imports specified in the class's `using` header:
 ```spec
 replace Array of Array of String is using: [
 	['base', 'struct', Array],
-	['base', 'io', as File()]
+	['base', 'sys', as File()]
 ];
 ```
 
@@ -168,7 +168,7 @@ The syntax definition provides:
 - **File Matching**: Automatically activates for all `*.spec` files.
 - **Keywords**: Highlights `local`, `contained`, `replace`, `merge`, `held`, `is`, `as`, `of`, `to`, `if`, `else`, `return`.
 - **Types**: Highlights primitive and object types (`Int`, `Float`, `String`, `Boolean`, `Function`, `Any`, `Array`, `Map`).
-- **Packages**: Context-aware coloring for package paths (`base:io`, `base:math`, `base:struct`, `base:iterator`, `base:sys`).
+- **Packages**: Context-aware coloring for package paths (`base:math`, `base:struct`, `base:iterator`, `base:sys`).
 - **Comments**: Highlights single-line `#` comments.
 - **String Literals**: Supports double-quoted escape sequences and single-quoted raw expressions.
 
