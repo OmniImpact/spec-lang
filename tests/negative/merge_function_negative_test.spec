@@ -25,7 +25,7 @@
 Class is FwdBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of Int is double(Int is n){
 		return n * 2;
@@ -46,7 +46,7 @@ Class is FwdBase{
 Class of FwdBase is FwdChild{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is plainCall(){
@@ -73,8 +73,8 @@ Class of FwdBase is FwdChild{
 Class is FwdNegativeTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

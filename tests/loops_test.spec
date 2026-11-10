@@ -9,7 +9,7 @@ Class is LoopsTest{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

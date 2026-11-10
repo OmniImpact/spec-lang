@@ -13,8 +13,8 @@ Class is SpecAstTest{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'io', Output],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()],
 
 	];

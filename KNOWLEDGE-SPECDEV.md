@@ -151,13 +151,27 @@ check, and emit the NEXT generation's sources. Consequences:
   `base:sysinternal` exactly; a prefix test on the joined string would
   conflate them. The control-flow providers (Conditional, Loops) live
   in base:sys and wrap their same-name floors.
-- User code calls `base:sys:X`; the wrapper's methods intercept to the
+- **What C calls things and what WE call things are not necessarily
+  the same — that is what this pattern is for.** Expose from C with
+  recognizable C names (so the internal provenance is obvious:
+  `spec_file_read`, `spec_print_line`, `spec_error_line`), then
+  immediately wrap them into a Spec class with the names WE want
+  (`fileRead`, `consOut`, `line`). The builtin/floor binding follows
+  the C name; the Spec-side name is ours to change. When this is done
+  right, renaming a Spec-side function edits ONLY the wrapper — the
+  builtin table stops being touched for renames entirely. The console
+  and file surfaces are the model: `base:sysinternal:Console` /
+  `base:sysinternal:File` carry the C names, `base:sys:Output` /
+  `base:sys:File` carry ours.
+- User code calls the wrapper; the wrapper's methods delegate to the
   floor. Adding a floor function: the C shim in RuntimePrelude.spec
   (land it ahead of its consumers — the two-part landing), the
-  sysinternal declaration, the base:sys wrapper.
+  sysinternal declaration, the wrapper delegation.
 - Runtime-managed classes (transparent): no struct/vtable emitted; the
   methods are intercepted by the generator. The transparent set lives
-  in ClassBindings.isTransparent.
+  in ClassBindings.isTransparent — and a transparent-listed class
+  whose methods gain REAL bodies must leave the list (the bodies must
+  emit; the non-empty-body rule carries the bridge).
 - Wrapper bodies are SELF-FREE under the elided dispatch (the call
   passes no receiver): state must ride parameters, held functions, or
   reference cells, never `self:`. And the runtime closures capture by
@@ -287,10 +301,17 @@ counterpart:
 
 ### Deferred and documentation debt
 
-- **docs/ refresh:** docs/packages/README.md needs the package moves
-  (the control-flow providers in base:sys); the language guide's
-  runtime-dispatch sections should stay in step with the wrapper
-  bodies. Content work, do from the code and tests.
+- **The floor pattern's remaining application:** Parallel, LoopControl,
+  Math, and the containers (Array/Map/List/String) still bind through
+  the builtin table keyed on their Spec-side names — renaming them
+  touches the table. The console/file/terminal/process surfaces are
+  the converted model (base:sysinternal floors carrying the C names,
+  base:sys wrappers carrying ours); the rest follow when their
+  packaging lands (Math's wrapper is base:math, the containers' are
+  base:struct — the gate question is open).
+- **docs/ refresh:** the language guide's runtime-dispatch sections
+  should stay in step with the wrapper bodies. Content work, do from
+  the code and tests.
 - **Deferred by design:** generic as-imports (`as Box of Int()`);
   import aliasing (`as X() is alias`); type-differentiated overloads
   inside generic classes.

@@ -14,7 +14,7 @@
 Class is LayoutBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 	local Int is baseField: 11;
@@ -32,7 +32,7 @@ Class of LayoutBase is LayoutMid{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is midField: 22;
 
@@ -45,7 +45,7 @@ Class of LayoutMid is LayoutLeaf{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is leafField: 33;
 
@@ -58,7 +58,7 @@ Class is MiaFeature{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	Function of String is label(){
 		return 'mia';
@@ -69,7 +69,7 @@ Class is MibFeature{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	Function of String is tag(){
 		return 'mib';
@@ -80,7 +80,7 @@ Class of MiaFeature, MibFeature is MiChild{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of String is label(){
 		return 'child-mia';
@@ -91,8 +91,8 @@ Class is VtableDispatchTest{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

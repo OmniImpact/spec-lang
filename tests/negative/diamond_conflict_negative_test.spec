@@ -22,7 +22,7 @@
 Class is DiamondA{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of Int is value(){
 		return 1;
@@ -32,7 +32,7 @@ Class is DiamondA{
 Class is DiamondB{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of Int is value(){
 		return 2;
@@ -42,7 +42,7 @@ Class is DiamondB{
 Class of DiamondA, DiamondB is DiamondBadChild{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		Output:line('unreachable');
@@ -52,7 +52,7 @@ Class of DiamondA, DiamondB is DiamondBadChild{
 Class is SharedBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of Int is shared(){
 		return 7;
@@ -62,21 +62,21 @@ Class is SharedBase{
 Class of SharedBase is SharedLeft{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 }
 
 Class of SharedBase is SharedRight{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 }
 
 Class of SharedLeft, SharedRight is DiamondSharedChild{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		Output:line('shared ok');

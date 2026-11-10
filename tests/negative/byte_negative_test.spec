@@ -1,8 +1,8 @@
 Class is ByteNegativeTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

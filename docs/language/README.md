@@ -878,7 +878,7 @@ of InputHandler is ActionHandler{
 	}
 }
 
-Input:prompt(ActionHandler:init());
+consIn(ActionHandler:init());
 ```
 
 ---

@@ -1,7 +1,6 @@
 Class is StdlibReflectionTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io'],
 		['base', 'struct', Array],
 		['base', 'sys', SourceLocation],
 		['base', 'sys', StackFrame],
@@ -14,7 +13,7 @@ Class is StdlibReflectionTest{
 		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 

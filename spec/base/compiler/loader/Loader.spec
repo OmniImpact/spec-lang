@@ -13,7 +13,7 @@ Class is Loader{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as File()],
+		['base', 'sys', as File()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
@@ -68,12 +68,12 @@ Class is Loader{
 		});
 		self:loadedFiles:set(key: filePath, value: 'true');
 
-		Conditional:if(check: { !File:exists(path: filePath) }, then: {
+		Conditional:if(check: { !fileExists(path: filePath) }, then: {
 			self:parseErrors:add(item: '  [LoadError] Module file not found: ' . filePath);
 			return;
 		});
 
-		local String is src: File:read(path: filePath, default: '');
+		local String is src: fileRead(path: filePath, default: '');
 		local Lexer is lexer: Lexer:init(source: src);
 		local Array of Token is tokens: lexer:tokenize();
 		Conditional:if(check: { lexer:hasErrors() }, then: {

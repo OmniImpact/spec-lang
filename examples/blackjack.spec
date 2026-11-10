@@ -1,21 +1,20 @@
 Class is Blackjack{
 
+	# The as-imports merge the providers into scope: line(), if(), match(),
+	# run(), consIn(), random(), floor() answer bare. The plain imports are
+	# the type references (Loop/LoopControl/LoopCallback/InputHandler).
 	replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator', Loop],
 		['base', 'iterator', LoopControl],
 		['base', 'iterator', LoopCallback],
-		['base', 'sys', Loops],
-		['base', 'io', Output],
-		['base', 'io', Input],
-		['base', 'io', InputHandler],
-		['base', 'math'],
-		['base', 'io', as Input()],
+		['base', 'sys', InputHandler],
+		['base', 'sys', as Input()],
 		['base', 'math', as Math()],
-		['base', 'io', as Output()],
-		['base', 'sys', as Loops()]
+		['base', 'sys', as Output()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Conditional()]
 	];
 
 	# =========================================================================
@@ -38,11 +37,7 @@ Class is Blackjack{
 	Class of Loop is DealerTurnLoop{
 
 		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()],
-			['base', 'io', as Input()],
-			['base', 'math', as Math()],
-			['base', 'io', as Output()],
-			['base', 'sys', as Loops()]
+			['base', 'sys', as Output()]
 		];
 		local Blackjack is game;
 
@@ -75,11 +70,7 @@ Class is Blackjack{
 	Class of LoopCallback is DealerTurnCompleteCallback{
 
 		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()],
-			['base', 'io', as Input()],
-			['base', 'math', as Math()],
-			['base', 'io', as Output()],
-			['base', 'sys', as Loops()]
+			['base', 'sys', as Output()]
 		];
 		local Blackjack is game;
 
@@ -100,11 +91,8 @@ Class is Blackjack{
 	Class of InputHandler is PlayerTurnHandler{
 
 		replace Array of Array of String is using: [
-			['base', 'io', as Input()],
-			['base', 'math', as Math()],
-			['base', 'io', as Output()],
-			['base', 'sys', as Loops()],
-		['base', 'sys', as Conditional()],
+			['base', 'sys', as Output()],
+			['base', 'sys', as Conditional()]
 		];
 		local Blackjack is game;
 
@@ -113,12 +101,12 @@ Class is Blackjack{
 		}
 
 		replace Function is onInput(String is action){
-			Conditional:if(check: { action == '' }, then: {
+			if(check: { action == '' }, then: {
 				line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
 				return;
 			});
-			Conditional:match(on: action, when: [
+			match(on: action, when: [
 				['h', 'hit']: {
 					local Int is card: game:drawCard();
 					game:playerHand:add(item: card);
@@ -127,11 +115,11 @@ Class is Blackjack{
 					local Int is score: game:handValue(hand: game:playerHand);
 					line('Your total is now: ' . score);
 
-					Conditional:if(check: { score > 21 }, then: {
+					if(check: { score > 21 }, then: {
 						line('Bust! You lose.');
 						game:roundActive: false;
 					}, else: {
-						Conditional:if(check: { score == 21 }, then: {
+						if(check: { score == 21 }, then: {
 							line('21! Standing automatically.');
 							game:startDealerTurn();
 						}, else: {
@@ -155,8 +143,8 @@ Class is Blackjack{
 	# Helper Functions
 	# =========================================================================
 	Function of Int is drawCard(){
-		local Float is roll: Math:random(min: 1.0, max: 11.0);
-		return Math:floor(value: roll) as Int;
+		local Float is roll: random(min: 1.0, max: 11.0);
+		return floor(value: roll) as Int;
 	}
 
 	## Computes the best blackjack value of a hand: aces count 11, downgraded
@@ -168,7 +156,7 @@ Class is Blackjack{
 		local Int is total: hand:fold(
 			initial: 0,
 			accumulate: local Function of Int(Int is acc, Int is card){
-				return acc + Conditional:if(check: { card == 1 }, then: { 11 }, else: { card });
+				return acc + if(check: { card == 1 }, then: { 11 }, else: { card });
 			}
 		);
 		local Int is aceCount: hand:count(
@@ -180,9 +168,9 @@ Class is Blackjack{
 		# Each ace can absorb 10 points of excess; compute how many must downgrade.
 		local Int is excess: total - 21;
 		local Int is downgrades: 0;
-		Conditional:if(check: { excess > 0 }, then: {
+		if(check: { excess > 0 }, then: {
 			downgrades: (excess + 9) / 10;
-			Conditional:if(check: { downgrades > aceCount }, then: {
+			if(check: { downgrades > aceCount }, then: {
 				downgrades: aceCount;
 			});
 		});
@@ -192,7 +180,7 @@ Class is Blackjack{
 	Function is promptPlayerAction(){
 		line('Would you like to (h)it or (s)tand?');
 		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
-		Input:prompt(handler: handler);
+		consIn(handler: handler);
 	}
 
 	Function is startDealerTurn(){
@@ -202,7 +190,7 @@ Class is Blackjack{
 		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: self);
 		local LoopControl is control: LoopControl:init(onComplete: onComplete);
 
-		Loops:run(loop: dealerLoop, control: control);
+		run(loop: dealerLoop, control: control);
 	}
 
 	Function is evaluateRoundOutcome(){
@@ -212,13 +200,13 @@ Class is Blackjack{
 		line("\n=== Final Results ===");
 		line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
 
-		Conditional:if(check: { dealerScore > 21 }, then: {
+		if(check: { dealerScore > 21 }, then: {
 			line('Dealer busts! You win!');
 		}, else: {
-			Conditional:if(check: { playerScore > dealerScore }, then: {
+			if(check: { playerScore > dealerScore }, then: {
 				line('You beat the dealer! You win!');
 			}, else: {
-				Conditional:if(check: { dealerScore > playerScore }, then: {
+				if(check: { dealerScore > playerScore }, then: {
 					line('Dealer wins!');
 				}, else: {
 					line('Push (Tie)!');
@@ -262,7 +250,7 @@ Class is Blackjack{
 		line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
 		# 3. Check natural 21
-		Conditional:if(check: { handValue(hand: playerHand) == 21 }, then: {
+		if(check: { handValue(hand: playerHand) == 21 }, then: {
 			line('Natural Blackjack! You win!');
 			return;
 		});

@@ -3,7 +3,7 @@
 
 Class is N2UndefinedBare {
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args) {

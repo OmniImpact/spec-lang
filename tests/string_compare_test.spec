@@ -4,7 +4,7 @@
 
 Class is StringCompareTest {
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 

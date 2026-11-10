@@ -14,7 +14,7 @@ Class is CodeGenerator{
 		['base', 'sys', Parallel],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
-		['base', 'io', as File()],
+		['base', 'sys', as File()],
 		['base', 'compiler', 'ast', Type],
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Primitive],

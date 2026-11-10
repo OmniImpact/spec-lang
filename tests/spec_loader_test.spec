@@ -8,10 +8,10 @@ Class is SpecLoaderTest{
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
-		['base', 'io', Output],
-		['base', 'io', File],
-		['base', 'io', as File()],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', File],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -33,8 +33,8 @@ Class of Greeter is LoudGreeter{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()]
 	];
 	replace Function of String is toString(){
 		return 'LOUD ' . self:greeting;
@@ -47,12 +47,12 @@ Class is LoaderE2E{
 	}
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()]
 	];
 }";
-		File:write(path: 'tests/.loader_app_tmp.spec', content: src);
+		fileWrite(path: 'tests/.loader_app_tmp.spec', content: src);
 
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
@@ -88,14 +88,14 @@ Class is LoaderE2E{
 		});
 
 		# --- unresolvable imports are load errors ---
-		File:write(path: 'tests/.loader_bad_tmp.spec', content: "Class is BadImporter{
+		fileWrite(path: 'tests/.loader_bad_tmp.spec', content: "Class is BadImporter{
 	replace Function is init(Map of String to String is args){
 	}
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
 		['no', 'such', 'Package'],
-		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()]
 	];
 }");
 		local Loader is bloader: Loader:init();
@@ -107,8 +107,8 @@ Class is LoaderE2E{
 			failures: failures + 1;
 		});
 
-		File:remove(path: 'tests/.loader_app_tmp.spec');
-		File:remove(path: 'tests/.loader_bad_tmp.spec');
+		fileRemove(path: 'tests/.loader_app_tmp.spec');
+		fileRemove(path: 'tests/.loader_bad_tmp.spec');
 
 		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec loader test complete');
@@ -127,8 +127,8 @@ Class is LoaderE2EHelper{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'iterator'],
-		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()]
 	];
 
 	Function of Boolean is hasClass(ProgramNode is classes, String is name){

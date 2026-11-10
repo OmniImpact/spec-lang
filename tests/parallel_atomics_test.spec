@@ -13,12 +13,12 @@
 Class is ParallelAtomicsTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
+		['base', 'sys', Output],
 		['base', 'sys', Process],
 		['base', 'sys', Parallel],
 		['base', 'math', Math],
 		['base', 'math', as Math()],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Loops()],

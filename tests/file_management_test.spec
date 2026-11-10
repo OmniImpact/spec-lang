@@ -3,9 +3,9 @@ Class is FileManagementTest{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', File],
-		['base', 'io', as File()],
-		['base', 'io', as Output()]
+		['base', 'sys', File],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -19,7 +19,7 @@ Class is FileManagementTest{
 		# 1. Test Write with Callbacks
 		Output:line('1. Testing File:write with onSuccess and onError callbacks...');
 		local Boolean is writeHandled: false;
-		File:write(
+		fileWrite(
 			path: testFile,
 			content: testContent,
 			onSuccess: local Function(Int is bytes){
@@ -32,7 +32,7 @@ Class is FileManagementTest{
 
 		# 2. Test Read with Callbacks
 		Output:line("\n2. Testing File:read with onSuccess and onError callbacks...");
-		File:read(
+		fileRead(
 			path: testFile,
 			onSuccess: local Function(String is content){
 				Output:line('[PASS] File:read onSuccess callback executed! Content length: ' . content:length());
@@ -46,7 +46,7 @@ Class is FileManagementTest{
 		# 3. Test Error Handling on Non-Existent File
 		Output:line("\n3. Testing File:read on non-existent file for error callback...");
 		local String is nonExistent: '/tmp/non_existent_spec_file_xyz123.txt';
-		File:read(
+		fileRead(
 			path: nonExistent,
 			onSuccess: local Function(String is content){
 				Output:line('[FAIL] File:read should not succeed on non-existent file!');
@@ -59,7 +59,7 @@ Class is FileManagementTest{
 		# 4. Test Error Handling on Invalid Write Path
 		Output:line("\n4. Testing File:write on invalid directory path...");
 		local String is invalidPath: '/non_existent_directory_xyz/file.txt';
-		File:write(
+		fileWrite(
 			path: invalidPath,
 			content: 'data',
 			onSuccess: local Function(Int is bytes){

@@ -18,7 +18,7 @@ Enum is Option {
 Class is Box of T{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	## Stored value of generic type T.
@@ -51,7 +51,7 @@ Class is Box of T{
 Class is Pair of A to B{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	## First item in pair.
@@ -89,10 +89,9 @@ Class is Pair of A to B{
 Class is NextGenFeaturesTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io'],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 

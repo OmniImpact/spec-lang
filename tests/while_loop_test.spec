@@ -1,11 +1,11 @@
 Class is WhileLoopTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
+		['base', 'sys', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];

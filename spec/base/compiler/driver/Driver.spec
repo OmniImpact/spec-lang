@@ -11,8 +11,8 @@ Class is Driver{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
-		['base', 'io', as File()],
-		['base', 'io', Output],
+		['base', 'sys', as File()],
+		['base', 'sys', Output],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
 		['base', 'sysinternal', as Arena()],
@@ -31,8 +31,8 @@ Class is Driver{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'io', as Output()],
-		['base', 'io', as Stderr()]
+		['base', 'sys', as Output()],
+		['base', 'sys', as Stderr()]
 ,
 		['base', 'compiler', Error]
 ,
@@ -65,7 +65,7 @@ Class is Driver{
 			Process:exit(status: 2);
 		});
 
-		Conditional:if(check: { !File:exists(path: inputPath) }, then: {
+		Conditional:if(check: { !fileExists(path: inputPath) }, then: {
 			Stderr:line('Error: Source file not found: ' . inputPath);
 			Process:exit(status: 1);
 		});
@@ -75,7 +75,7 @@ Class is Driver{
 		# never activate it and stay refcounted.
 		Arena:activateProcessArena();
 
-		local String is source: File:read(path: inputPath, default: '');
+		local String is source: fileRead(path: inputPath, default: '');
 		local Int is specLines: source:lines():length();
 		local Int is t0: Process:clockMs();
 		local Int is loadMs: 0;
@@ -219,7 +219,7 @@ Class is Driver{
 		Conditional:if(check: { tempCPath == '' }, then: {
 			tempCPath: '/tmp/_spec_stage_' . (Process:getPid() as String) . '.c';
 		});
-		local Boolean is written: File:write(path: tempCPath, content: cCode);
+		local Boolean is written: fileWrite(path: tempCPath, content: cCode);
 		Conditional:if(check: { !written }, then: {
 			Stderr:line('Error: Failed to write intermediate C code to ' . tempCPath);
 			Process:exit(status: 1);
@@ -236,7 +236,7 @@ Class is Driver{
 		local Int is gccStatus: Process:execute(command: 'gcc', args: gccArgs);
 		ccMs: Process:clockMs() - ccT0;
 		Conditional:if(check: { emitCPath == '' }, then: {
-			File:remove(path: tempCPath);
+			fileRemove(path: tempCPath);
 		});
 		Conditional:if(check: { gccStatus != 0 }, then: {
 			Stderr:line('Error: Backend C compiler (gcc) failed with exit status ' . (gccStatus as String));

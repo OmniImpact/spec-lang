@@ -5,7 +5,6 @@
 Class is Phase6CodegenTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io'],
 		['base', 'sys', Process],
 		['base', 'struct', Array],
 		['base', 'iterator'],
@@ -14,8 +13,8 @@ Class is Phase6CodegenTest{
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'checker', TypeChecker],
 		['base', 'compiler', 'gen', CodeGenerator],
-		['base', 'io', as File()],
-		['base', 'io', as Output()],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Process()]
 ,
 		['base', 'compiler', 'ast', ProgramNode],
@@ -54,7 +53,7 @@ Class is Phase6CodegenTest{
 		});
 
 		Output:line("\n4. Writing generated C to /tmp/pure_spec_hello.c...");
-		local Boolean is written: File:write(path: '/tmp/pure_spec_hello.c', content: cCode);
+		local Boolean is written: fileWrite(path: '/tmp/pure_spec_hello.c', content: cCode);
 		Conditional:if(check: { written }, then: {
 			Output:line('[PASS] Wrote /tmp/pure_spec_hello.c successfully');
 		});

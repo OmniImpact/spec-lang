@@ -23,7 +23,7 @@
 Class is VisBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Function of Int is secret(){
 		return 1;
@@ -37,7 +37,7 @@ Class is VisBase{
 Class is VisBreaker{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		local VisBase is b: VisBase:init();
@@ -48,7 +48,7 @@ Class is VisBreaker{
 Class is VisUnrelated{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		local VisBase is b: VisBase:init();
@@ -59,7 +59,7 @@ Class is VisUnrelated{
 Class of VisBase is VisOverrideAttempt{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of Int is secret(){
 		return 9;
@@ -69,7 +69,7 @@ Class of VisBase is VisOverrideAttempt{
 Class is ShadowedLocal{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is counter: 0;
 }
@@ -77,7 +77,7 @@ Class is ShadowedLocal{
 Class of ShadowedLocal is ShadowChild{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is counter: 1;
 }
@@ -85,7 +85,7 @@ Class of ShadowedLocal is ShadowChild{
 Class is ContradictoryModifiers{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace local Function of Int is broken(){
 		return 1;

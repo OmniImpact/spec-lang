@@ -5,7 +5,7 @@
 
 Class is StatefulImportTest {
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['instimport', 'counter', as StatefulCounter(label: 'owned')],
 		['base', 'sys', as Conditional()]
 	];

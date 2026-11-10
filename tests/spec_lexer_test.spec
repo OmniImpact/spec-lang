@@ -9,8 +9,8 @@ Class is SpecLexerTest{
 		['base', 'compiler', 'lexer', TokenKind],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 ,
 		['base', 'compiler', Error],
 		['base', 'sys', as Conditional()]

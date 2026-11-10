@@ -74,7 +74,7 @@ Class is HeldMetadataTest{
 	}
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Introspection()]
 	];

@@ -10,37 +10,35 @@ This document details the standard library packages available in the Spec runtim
 
 | Package | Key Types & Functions | Description |
 |---|---|---|
-| **`base:io`** | `Output:line/print/write`, `Stderr:line/print`, `Input:prompt`, `InputHandler`, `File:read/write/readAsync/writeAsync/exists/remove`, `Ansi` (256-color, RGB, cursor, terminal size) | Terminal I/O, stderr diagnostics, filesystem access, ANSI escapes. |
 | **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
 | **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` · `List` — `push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString` | Thread-safe collections with functional combinators. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback` | The decoupled iteration abstractions the runners drive. |
-| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | The control-flow providers (over the `base:sysinternal` floors), processes, timing, memory/thread introspection, atomics, parallel fan-out. |
+| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Output:line/consOut`, `Stderr:line`, `Input:consIn`, `File:fileRead/fileWrite/fileExists/fileRemove` (+ the async pair), `Ansi` (256-color, RGB, cursor, terminal size), `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | The control-flow providers and the console/file/terminal/process surfaces — all same-name wrappers over the `base:sysinternal` floors. The console pair `consOut`/`consIn` keeps the generic verbs (`read`/`write`) unambiguous for File under the merged as-import scope. |
 | **`base:core`** | `Any`, `Stringable`, `String` | The root class lattice and the string type over the `base:sysinternal` floor. |
 
 Full API reference by package below.
 
 ## Table of Contents
-1. [`base:io`](#1-baseio)
-   - [Console Output (`Output:line`)](#outputline)
-   - [Interactive Input (`Input:prompt`)](#inputprompt)
-   - [File Operations (`File`)](#file-operations)
-2. [`base:math`](#2-basemath)
+1. [`base:math`](#2-basemath)
    - [Rounding & Flooring](#rounding--flooring)
    - [Random Number Generation](#random-number-generation)
    - [Pure Spec Math Primitives](#pure-spec-math-primitives)
-3. [`base:struct`](#3-basestruct)
+2. [`base:struct`](#3-basestruct)
    - [`base:struct:Array`](#basestructarray)
    - [`base:struct:Map`](#basestructmap)
-4. [`base:iterator`](#4-baseiterator)
+3. [`base:iterator`](#4-baseiterator)
    - [`base:iterator:Loop`](#baseiteratorloop)
    - [`base:iterator:LoopControl`](#baseiteratorloopcontrol)
-5. [`base:sys`](#5-basesys)
+4. [`base:sys`](#5-basesys)
    - [`base:sys:Conditional`](#basesysconditional-libbasesysconditionalspec)
    - [`base:sys:Loops`](#basesysloops-libbasesysloopsspec)
+   - [Console Output (`Output:line` / `Output:consOut`)](#outputline)
+   - [Interactive Input (`Input:consIn`)](#inputprompt)
+   - [File Operations (`File`)](#file-operations)
    - [`base:sys:Process`](#basesysprocess)
    - [`base:sys:SourceLocation`](#basesyssourcelocation-libbasesyssourcelocationspec)
    - [`base:sys:StackFrame`](#basesysstackframe-libbasesysstackframespec)
-6. [String Inspection Primitives](#8-string-inspection-primitives)
+5. [String Inspection Primitives](#8-string-inspection-primitives)
 
 ---
 
@@ -60,67 +58,6 @@ API decides which they should use:
   with literal constructor arguments (`as Connection(host: "db")`); each
   importing-class instance then owns one. Design `init` for it.
 
-## 1. `base:io`
-
-Importing:
-```spec
-replace Array of Array of String is using: [
-	['base', 'io']
-];
-```
-
-### `Output:line`
-Writes a string representation of an expression to standard output followed by a newline:
-
-```spec
-line("Text message");
-line("Result: " . (10 + 20));
-```
-
-### `Input:prompt`
-Provides non-blocking, event-driven user input prompts via `InputHandler`:
-
-```spec
-Class is InputExample{
-	replace Function is init(Map of String to String is args){
-		Input:prompt("Enter your name: ", local Function(String is response){
-			line("Hello, " . response . "!");
-		});
-	}
-}
-```
-
-### File Operations
-Available via `base:io:File` (`lib/base/io/File.spec`):
-
-- **`File:read(path: String, default: String) -> String`**:
-  Reads the full contents of the file at `path`. If reading fails or the file does not exist, returns `default`.
-  ```spec
-  local String is content: File:read(path: "main.spec", default: "");
-  ```
-- **`File:write(path: String, content: String) -> Boolean`**:
-  Writes string content to disk at `path`. Returns `true` on success, `false` on failure.
-  ```spec
-  local Boolean is ok: File:write(path: "out.c", content: generatedCode);
-  ```
-- **`File:exists(path: String) -> Boolean`**:
-  Checks if a file exists on disk.
-  ```spec
-  local Boolean is exists: File:exists(path: "main.spec");
-  ```
-- **`File:remove(path: String) -> Boolean`**:
-  Deletes the file at `path` from disk. Returns `true` on success, `false` otherwise.
-  ```spec
-  local Boolean is removed: File:remove(path: "/tmp/temp.c");
-  ```
-
----
-
-### `Ansi:terminalWidth` / `Ansi:terminalHeight`
-- `Ansi:terminalWidth() -> Int` — console width in columns; `0` when stdout is not a terminal.
-- `Ansi:terminalHeight() -> Int` — console height in rows; `0` when stdout is not a terminal.
-
-Detection order: `ioctl(TIOCGWINSZ)`, then the `COLUMNS`/`LINES` environment variables, then built-in defaults (78/24). The zero-when-piped contract lets programs fall back to explicit defaults under redirection and in CI.
 
 ## 2. `base:math`
 
@@ -431,7 +368,7 @@ replace Array of Array of String is using: [
 ];
 ```
 
-The system package: the control-flow providers (the conditional and the loop constructs — same-name wrappers over their `base:sysinternal` floors), process execution, timing, and parallelism.
+The system package: the control-flow providers (the conditional and the loop constructs — same-name wrappers over their `base:sysinternal` floors), the console/file/terminal surfaces, process execution, timing, and parallelism.
 
 ### `base:sys:Conditional` (`lib/base/sys/Conditional.spec`)
 The conditional provider — served bare through the as-import (`['base', 'sys', as Conditional()]`):
@@ -447,6 +384,56 @@ The loop provider — served bare through the as-import (`['base', 'sys', as Loo
 - **`Loops:until(evaluate:, iteration:)`**: The body-always-runs-once form (do-while).
 - **`Loops:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
 - **`Loops:loop(Any is vars, Function is evaluate, Function is iterate)`**: The scoped-variable form — binds typed loop variables at block scope.
+
+### `Output:line` / `Output:consOut`
+Writes a string representation of an expression to standard output: `line` follows it with a newline; `consOut` writes inline and flushes. The console functions are named `consOut`/`consIn` so the generic I/O verbs (`read`/`write`) stay unambiguous for File under the merged as-import scope:
+
+```spec
+line("Text message");
+line("Result: " . (10 + 20));
+consOut("no newline");
+```
+
+### `Input:consIn`
+Registers an input handler for interactive console entries — the console-in half of the console I/O pair (`consOut`/`consIn`):
+
+```spec
+Class is InputExample{
+	replace Function is init(Map of String to String is args){
+		consIn(handler);
+	}
+}
+```
+
+### File Operations
+Available via `base:sys:File` (`lib/base/sys/File.spec`):
+
+- **`File:fileRead(path: String, default: String) -> String`**:
+  Reads the full contents of the file at `path`. If reading fails or the file does not exist, returns `default`.
+  ```spec
+  local String is content: fileRead(path: "main.spec", default: "");
+  ```
+- **`File:fileWrite(path: String, content: String) -> Boolean`**:
+  Writes string content to disk at `path`. Returns `true` on success, `false` on failure.
+  ```spec
+  local Boolean is ok: fileWrite(path: "out.c", content: generatedCode);
+  ```
+- **`File:fileExists(path: String) -> Boolean`**:
+  Checks if a file exists on disk.
+  ```spec
+  local Boolean is exists: fileExists(path: "main.spec");
+  ```
+- **`File:fileRemove(path: String) -> Boolean`**:
+  Deletes the file at `path` from disk. Returns `true` on success, `false` otherwise.
+  ```spec
+  local Boolean is removed: fileRemove(path: "/tmp/temp.c");
+  ```
+
+### `Ansi:terminalWidth` / `Ansi:terminalHeight`
+- `Ansi:terminalWidth() -> Int` — console width in columns; `0` when stdout is not a terminal.
+- `Ansi:terminalHeight() -> Int` — console height in rows; `0` when stdout is not a terminal.
+
+Detection order: `ioctl(TIOCGWINSZ)`, then the `COLUMNS`/`LINES` environment variables, then built-in defaults (78/24). The zero-when-piped contract lets programs fall back to explicit defaults under redirection and in CI.
 
 ### `base:sys:Process` (`lib/base/sys/Process.spec`)
 Provides external process execution and operating system invocation:

@@ -6,7 +6,7 @@
 Class is N27InnerImportLeak{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	Class is MathUser{

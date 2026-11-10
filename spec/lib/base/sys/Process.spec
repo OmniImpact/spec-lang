@@ -1,16 +1,17 @@
 #! Package base:sys
-#! System interaction, process execution, and execution frames.
+#! The process wrapper: the Spec-side names over the process floor's
+#! C names (spec_process_execute and friends).
 
-## Dispatches external system commands and manages operating system subprocesses.
-##
-## Runtime-managed: every method binds to the
-## runtime's process/syscall floor; the declaration is the API surface.
+## Dispatches external system commands, timing, memory and thread
+## introspection, and lock-free atomic slots. Every method delegates
+## to the process floor.
 
 Class is Process{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['base', 'struct', Array]
+		['base', 'struct', Array],
+		['base', 'sysinternal', Process]
 	];
 
 	## Spawns a child process executing [command] with [args], waiting for completion.
@@ -23,28 +24,28 @@ Class is Process{
 	## local Int is code: Process:execute(command: 'ls', args: ['-la']);
 	## ```
 	Function of Int is execute(String is command, Array of String is args){
+		return base:sysinternal:Process:process_execute(command: command, args: args);
 	}
 
 	## Suspends execution of the current process for the specified duration.
 	##
 	## @param milliseconds: Duration to sleep in milliseconds.
-	## @example:
-	## ```spec
-	## Process:sleep(milliseconds: 100);
-	## ```
 	Function is sleep(Int is milliseconds){
+		base:sysinternal:Process:process_sleep(milliseconds: milliseconds);
 	}
 
-	## Returns the operating system process identifier (PID) of the current process.
+	## Returns the current process ID.
 	##
 	## @return: Current process ID.
 	Function of Int is getPid(){
+		return base:sysinternal:Process:process_get_pid();
 	}
 
 	## Terminates the current process with the given exit status.
 	##
 	## @param status: Process exit code (0 = success).
 	Function is exit(Int is status){
+		base:sysinternal:Process:process_exit(status: status);
 	}
 
 	## Returns monotonic wall-clock milliseconds since an arbitrary epoch.
@@ -53,40 +54,45 @@ Class is Process{
 	##
 	## @return: Monotonic clock reading in milliseconds.
 	Function of Int is clockMs(){
+		return base:sysinternal:Process:clock_ms();
 	}
 
-	## Returns the peak resident set size of the current process.
+	## Returns the peak resident memory used by this process, in kilobytes.
 	##
-	## @return: Peak memory usage in kilobytes, or 0 when unavailable.
+	## @return: Peak memory in KB.
 	Function of Int is peakMemoryKb(){
+		return base:sysinternal:Process:mem_peak_kb();
 	}
 
-	## Returns the number of OS threads currently owned by the process.
+	## Returns the number of hardware threads available to the runtime.
 	##
-	## @return: Live thread count, or 1 when unavailable.
+	## @return: Hardware thread count.
 	Function of Int is threadCount(){
+		return base:sysinternal:Process:thread_count();
 	}
 
-	## Atomically adds [value] to the shared slot and returns the new total.
+	## Atomically adds [value] to the slot at [slot] and returns the previous value.
 	##
-	## @param slot: Slot index (0..63).
-	## @param value: Amount to add.
-	## @return: The slot's new value.
+	## @param slot: Atomic slot index.
+	## @param value: Addend.
+	## @return: Previous slot value.
 	Function of Int is atomicAdd(Int is slot, Int is value){
+		return base:sysinternal:Process:atomic_add(slot: slot, value: value);
 	}
 
-	## Atomically stores [value] into the shared slot (last writer wins).
+	## Atomically writes [value] into the slot at [slot].
 	##
-	## @param slot: Slot index (0..63).
-	## @param value: Value to store.
-	## @return: The stored value.
-	Function of Int is atomicPut(Int is slot, Int is value){
+	## @param slot: Atomic slot index.
+	## @param value: Value to write.
+	Function is atomicPut(Int is slot, Int is value){
+		base:sysinternal:Process:atomic_put(slot: slot, value: value);
 	}
 
-	## Atomically reads the shared slot's current value.
+	## Atomically reads the slot at [slot].
 	##
-	## @param slot: Slot index (0..63).
-	## @return: The slot's current value.
+	## @param slot: Atomic slot index.
+	## @return: Slot value.
 	Function of Int is atomicGet(Int is slot){
+		return base:sysinternal:Process:atomic_get(slot: slot);
 	}
 }

@@ -1,14 +1,16 @@
-#! Package base:io
-#! Terminal console output, interactive prompts, and file operations.
+#! Package base:sys
+#! The terminal presentation wrapper: the escape builders are plain
+#! Spec; the size queries delegate to the terminal-metric floor.
 
 ## ANSI escape sequences for 16-color, 256-color, and 24-bit TrueColor
 ## output, plus terminal cursor control.
-##
-## Runtime-managed: the terminal-metric calls bind
-## to the runtime's ioctl floor; the sequence builders are plain Spec.
 
 Class is Ansi{
-	namespace: ['base', 'io'];
+	namespace: ['base', 'sys'];
+
+	replace Array of Array of String is using: [
+		['base', 'sysinternal', Terminal]
+	];
 
 	## Returns the raw ASCII ESC character.
 	##
@@ -21,12 +23,14 @@ Class is Ansi{
 	##
 	## @return: Width in columns.
 	Function of Int is terminalWidth(){
+		return base:sysinternal:Terminal:term_width();
 	}
 
 	## Returns the console height in rows, or 0 when stdout is not a terminal.
 	##
 	## @return: Height in rows.
 	Function of Int is terminalHeight(){
+		return base:sysinternal:Terminal:term_height();
 	}
 
 	## Returns the ANSI sequence to reset all terminal colors and attributes.

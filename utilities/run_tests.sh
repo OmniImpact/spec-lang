@@ -382,7 +382,7 @@ echo "== Exit codes =="
 cat > "$WORK/valid.spec" <<'EOF'
 Class is ValidApp{
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		Output:line("valid");

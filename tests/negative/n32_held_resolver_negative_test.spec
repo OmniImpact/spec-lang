@@ -44,7 +44,7 @@ Class is N32Shadow{
 	}
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(){

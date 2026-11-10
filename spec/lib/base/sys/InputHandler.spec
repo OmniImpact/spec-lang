@@ -1,10 +1,10 @@
-#! Package base:io
+#! Package base:sys
 #! Terminal console output, interactive prompts, and file operations.
 
 ## Callback interface for handling interactive user console input from [Input:prompt].
 
 Class is InputHandler{
-	namespace: ['base', 'io'];
+	namespace: ['base', 'sys'];
 
 	## Invoked when a line of user input is received.
 	##

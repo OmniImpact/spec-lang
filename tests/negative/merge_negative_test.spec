@@ -19,7 +19,7 @@
 Class is MergeBadBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function of Int is signal(){
@@ -32,7 +32,7 @@ Class is MergeBadBase{
 Class of MergeBadBase is MergeBadChild{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	# No forward statement: merge methods must delegate explicitly.
@@ -51,8 +51,8 @@ Class of MergeBadBase is MergeBadChild{
 Class is MergeNegativeTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

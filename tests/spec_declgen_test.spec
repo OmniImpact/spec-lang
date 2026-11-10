@@ -10,9 +10,9 @@ Class is SpecDeclGenTest{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'io', Output],
-		['base', 'io', File],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', File],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -27,7 +27,7 @@ Class is SpecDeclGenTest{
 Class is Widget{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is size: 0;
 	local String is label;

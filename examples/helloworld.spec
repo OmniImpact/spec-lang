@@ -6,8 +6,7 @@ Class is HelloWorld{
 	# Imports: "using" is a native ClassInfo array property overridden using "replace"
 	replace Array of Array of String is using: [
 		['base', 'struct', Map],
-		['base', 'io'],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	# Entrypoint init method using the Function type

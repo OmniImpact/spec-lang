@@ -9,7 +9,7 @@ Class is NestedImportTest{
 		['wallprobe', 'liba', as LibA()],
 		['wallprobe', 'libb', as LibB()],
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

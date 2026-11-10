@@ -2,7 +2,7 @@
 
 Class is N15Mixed {
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	Function of Int is f(Int is a, Int is b){

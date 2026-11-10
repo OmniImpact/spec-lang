@@ -4,7 +4,7 @@
 
 Class is N21GroupFragment{
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	Array of String is group: [N21GroupTarget];
@@ -15,7 +15,7 @@ Class is N21GroupFragment{
 
 Class is N21GroupCaller{
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

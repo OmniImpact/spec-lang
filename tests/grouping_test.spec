@@ -5,7 +5,7 @@
 Class is CalcArithmetic{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -18,7 +18,7 @@ Class is CalcText{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	Function of String is shout(String is msg){
@@ -31,7 +31,7 @@ Class of CalcArithmetic, CalcText is Calc{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 }
 
@@ -40,7 +40,7 @@ Class is Accumulator{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	local Int is total: 0;
@@ -58,8 +58,8 @@ Class is GroupingTest{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

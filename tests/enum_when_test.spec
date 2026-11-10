@@ -30,8 +30,8 @@ Class is EnumWhenTest{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', Output],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()],
 
 	];

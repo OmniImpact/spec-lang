@@ -5,8 +5,8 @@
 Class is ValueYieldTest{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	# Guard clause inside a value branch: the mid-body return leaves the

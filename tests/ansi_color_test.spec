@@ -8,9 +8,8 @@ Class is AnsiColorTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
-		['base', 'io'],
-		['base', 'io', as Ansi()],
-		['base', 'io', as Output()],
+		['base', 'sys', as Ansi()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()]
 	];
 
@@ -18,19 +17,19 @@ Class is AnsiColorTest{
 		Output:line('=== Spec ANSI 256-Color & Special Character Test ===');
 
 		# 1. Basic 16-color + 256-color blocks using Output:print
-		Output:print(text: 'Standard 16 palette: ');
+		Output:consOut(text: 'Standard 16 palette: ');
 		local Int is c: 0;
 		while(
 			evaluate: local Function of Boolean(){ return c < 16; },
 			iteration: local Function(){
-				Output:print(text: Ansi:fg256(code: c) . '█' . Ansi:reset());
+				Output:consOut(text: Ansi:fg256(code: c) . '█' . Ansi:reset());
 				c: c + 1;
 			}
 		);
 		Output:line('');
 
 		# 2. 6x6x6 Color Cube (indices 16..231) using special shade blocks
-		Output:print(text: '256-Color Cube slice: ');
+		Output:consOut(text: '256-Color Cube slice: ');
 		local Int is g: 0;
 		while(
 			evaluate: local Function of Boolean(){ return g < 6; },
@@ -40,7 +39,7 @@ Class is AnsiColorTest{
 					evaluate: local Function of Boolean(){ return b < 6; },
 					iteration: local Function(){
 						local Int is idx: Ansi:cubeIndex(r: 5, g: g, b: b);
-						Output:print(text: Ansi:color256(code: idx, text: '▓'));
+						Output:consOut(text: Ansi:color256(code: idx, text: '▓'));
 						b: b + 1;
 					}
 				);
@@ -50,13 +49,13 @@ Class is AnsiColorTest{
 		Output:line('');
 
 		# 3. 24-Step Grayscale Ramp (indices 232..255)
-		Output:print(text: 'Grayscale ramp:      ');
+		Output:consOut(text: 'Grayscale ramp:      ');
 		local Int is lvl: 0;
 		while(
 			evaluate: local Function of Boolean(){ return lvl < 24; },
 			iteration: local Function(){
 				local Int is gIdx: Ansi:grayIndex(level: lvl);
-				Output:print(text: Ansi:paint256(fg: gIdx, bg: 16, text: '▒'));
+				Output:consOut(text: Ansi:paint256(fg: gIdx, bg: 16, text: '▒'));
 				lvl: lvl + 1;
 			}
 		);

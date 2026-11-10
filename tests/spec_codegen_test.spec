@@ -16,10 +16,10 @@ Class is SpecCodegenTest{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'lexer', Lexer],
-		['base', 'io', Output],
+		['base', 'sys', Output],
 		['base', 'struct', Map],
 		['base', 'math', as Math()],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -55,7 +55,7 @@ Class is SpecCodegenTest{
 
 	replace Array of Array of String is using: [
 		['base', 'math', as Math()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is weight: 0;
 	replace Function of String is describe(){
@@ -66,7 +66,7 @@ Class of Animal is Dog{
 
 	replace Array of Array of String is using: [
 		['base', 'math', as Math()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local String is name;
 	replace Function of Dog is init(Map of String to String is args){
@@ -278,7 +278,7 @@ Enum of String is Level {
 
 		# --- builtin call bindings ---
 		local BuiltinCallGenerator is bcg: BuiltinCallGenerator:init();
-		Conditional:if(check: { bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg):contains(needle: 'printf("%s\\n", spec_buf_to_cstring((SpecBuf*)(')
+		Conditional:if(check: { bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg) == ''
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 's:length()'), targetC: 's', targetType: 'String', cg: eg) == 'spec_string_length(s)'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg) == 'spec_math_sqrt(n)'
 			&& bcg:generateBuiltinCall(expr: self:exprOf(src: 'xs:length()'), targetC: 'xs', targetType: 'Array of Int', cg: eg) == 'spec_array_length(xs)' }, then: {
@@ -305,7 +305,7 @@ Class is CodegenE2E{
 
 	replace Array of Array of String is using: [
 		['base', 'math', as Math()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function is init(Map of String to String is args){
 		local Counter is c: Counter:init();

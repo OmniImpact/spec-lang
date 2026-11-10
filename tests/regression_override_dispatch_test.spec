@@ -22,8 +22,8 @@ Class is RegressionOverrideDispatchTest{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
-		['base', 'io', Output],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -80,7 +80,7 @@ Class is Animal{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	Function of String is speak(){
 		return '...';
@@ -92,7 +92,7 @@ Class of Animal is Dog{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of String is speak(){
 		return 'woof';
@@ -104,7 +104,7 @@ Class of Dog is Puppy{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Boolean is isYoung: true;
 }
@@ -114,7 +114,7 @@ Class of Dog is Lab{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local String is breed: 'labrador';
 }

@@ -20,7 +20,7 @@ Enum is Color {
 Class is Animal{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 	Function of String is speak(){
@@ -32,7 +32,7 @@ Class of Animal is Dog{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of String is speak(){
 		return 'woof';
@@ -47,8 +47,8 @@ Class is AsCastTest{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

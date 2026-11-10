@@ -3,10 +3,9 @@ Class is Phase1Test{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io'],
 		['base', 'sys'],
-		['base', 'io', as File()],
-		['base', 'io', as Output()],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Process()]
 	];
 
@@ -44,14 +43,14 @@ Class is Phase1Test{
 		local String is testFilePath: '/tmp/spec_phase1_output.tmp';
 		local String is fileData: "Self-Hosting Spec Stage 1 Bootstrap Data\nLine 2";
 
-		local Boolean is writeOk: File:write(path: testFilePath, content: fileData);
+		local Boolean is writeOk: fileWrite(path: testFilePath, content: fileData);
 		Output:line('File:write returned: ' . writeOk);
-		Output:line('File:exists(testFilePath): ' . File:exists(path: testFilePath));
+		Output:line('fileExists(testFilePath): ' . fileExists(path: testFilePath));
 
-		local String is readContent: File:read(path: testFilePath, default: 'NOT_FOUND');
+		local String is readContent: fileRead(path: testFilePath, default: 'NOT_FOUND');
 		Output:line("File:read content:\n" . readContent);
 
-		local String is missingContent: File:read(path: 'non_existent_file.tmp', default: 'FALLBACK_DEFAULT');
+		local String is missingContent: fileRead(path: 'non_existent_file.tmp', default: 'FALLBACK_DEFAULT');
 		Output:line('File:read missing fallback: ' . missingContent);
 
 		# 3. Process Execution

@@ -7,8 +7,8 @@
 Class is InnerClassTest{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	## The parent's member: the inner calls it through the link.

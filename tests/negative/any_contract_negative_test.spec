@@ -16,7 +16,7 @@
 Class is StrictAnimal{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	Function of String is speak(){
 		return '...';
@@ -26,7 +26,7 @@ Class is StrictAnimal{
 Class of StrictAnimal is StrictDog{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of String is speak(){
 		return 'woof';
@@ -40,8 +40,8 @@ Class of StrictAnimal is StrictDog{
 Class is StrictNegativeTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

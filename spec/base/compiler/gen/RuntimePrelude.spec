@@ -1830,6 +1830,37 @@ void spec_error_line(String s) {
     const char* cs = s ? spec_buf_to_cstring((SpecBuf*)s) : "";
     fprintf(stderr, "%s\n", cs);
 }
+
+/* The console floor (the sysinternal binding targets): the wrappers
+   name these consOut/consIn/line on the Spec side; the C names are
+   the internal provenance. */
+void spec_print_line(String s) {
+    printf("%s\n", s ? spec_buf_to_cstring((SpecBuf*)s) : "");
+}
+
+void spec_print(String s) {
+    printf("%s", s ? spec_buf_to_cstring((SpecBuf*)s) : "");
+    fflush(stdout);
+}
+
+/* Reads one line from stdin (the trailing newline stripped) and hands
+   it to the on-line closure; at end of input nothing is handed over. */
+void spec_read_line(SpecClosure* on_line) {
+    char* _line = NULL;
+    size_t _cap = 0;
+    ssize_t _n = getline(&_line, &_cap, stdin);
+    if (_n >= 0) {
+        if (_n > 0 && _line[_n - 1] == '\n') _line[_n - 1] = '\0';
+        String text = spec_string_from_chars(_line);
+        spec_call_closure_str(on_line, text);
+    }
+    free(_line);
+}
+
+/* Terminates the current process with the given exit status. */
+void spec_process_exit(long long status) {
+    exit((int)status);
+}
 ''';
 		return p;
 	}

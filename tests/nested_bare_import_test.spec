@@ -9,7 +9,7 @@ Class is NestedBareImportTest{
 	replace Array of Array of String is using: [
 		['wallprobe', 'liba', as LibA()],
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

@@ -1,9 +1,9 @@
 Class is StringInspectionTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
+		['base', 'sys', Output],
 		['base', 'struct', Array],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 

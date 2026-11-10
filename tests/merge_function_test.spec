@@ -18,7 +18,7 @@
 Class is LoggerBase{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 	local String is tag;
@@ -40,7 +40,7 @@ Class of LoggerBase is ChildLogger{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	# Adapted forward: derive arguments before delegating.
@@ -59,7 +59,7 @@ Class of ChildLogger is GrandLogger{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	# Chained forward: delegates to ChildLogger, which delegates to LoggerBase.
@@ -77,8 +77,8 @@ Class is MergeFunctionTest{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

@@ -7,7 +7,7 @@
 Class is N29AsFormDefault{
 	replace Array of Array of String is using: [
 		['dimath', as Math2()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Math2 is m : Math2:init()){

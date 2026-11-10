@@ -8,7 +8,7 @@
 Class is DiService{
 	replace Array of Array of String is using: [
 		['dimath', Math2],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	Math2 is dep;
@@ -28,7 +28,7 @@ Class is DefaultsDiTest{
 	replace Array of Array of String is using: [
 		['dimath', Math2],
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

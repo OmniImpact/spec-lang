@@ -2,7 +2,7 @@
 
 Class is N3Collision {
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'math', as Math()]
 	];
 

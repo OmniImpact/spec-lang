@@ -7,49 +7,47 @@
 ## - Timing and audit wrappers (`as: measure(...)`)
 ## - Dynamic resource parameter binding (`as (path): withTempFile(...)`)
 ## - Scoped inline loops (`While`) parsing data within the managed region
-Class is ScopeAsDemo{
+	Class is ScopeAsDemo{
 
-	replace Array of Array of String is using: [
-		['base', 'struct', Array],
-		['base', 'struct', Map],
-		['base', 'io', Output],
-		['base', 'io', File],
-		['base', 'iterator'],
-		['base', 'sys', Process],
-		['base', 'io', as File()],
-		['base', 'io', as Output()],
-		['base', 'sys', as Process()],
-		['base', 'sys', as Loops()],
-		['base', 'sys', as Conditional()]
-	];
+		replace Array of Array of String is using: [
+			['base', 'struct', Array],
+			['base', 'struct', Map],
+			['base', 'sys', as File()],
+			['base', 'sys', as Output()],
+			['base', 'sys', as Process()],
+			['base', 'sys', as Loops()],
+			['base', 'sys', as Conditional()]
+		];
 
-	## Measures and prints elapsed execution time for an arbitrary block.
-	##
-	## @param label: Description of the timed operation.
-	## @param block: The code region to execute and measure.
-	Function is measure(String is label, Function is block){
-		line("[Timer] Starting: " . label);
-		local Int is start: Process:clockMs();
-		block();
-		local Int is elapsed: Process:clockMs() - start;
-		line("[Timer] Finished: " . label . " (" . elapsed . " ms elapsed)\n");
-	}
+		## Measures and prints elapsed execution time for an arbitrary block.
+		##
+		## @param label: Description of the timed operation.
+		## @param block: The code region to execute and measure.
+		Function is measure(String is label, Function is block){
+			line("[Timer] Starting: " . label);
+			local Int is start: clockMs();
+			block();
+			local Int is elapsed: clockMs() - start;
+			line("[Timer] Finished: " . label . " (" . elapsed . " ms elapsed)\n");
+		}
 
-	## Creates a temporary file, provides its path to the callback, and
-	## guarantees file deletion upon block completion.
-	##
-	## @param path: Path to create the temporary file at.
-	## @param content: Initial file data.
-	## @param block: Callback receiving the temporary file's path.
-	Function is withTempFile(String is path, String is content, Function is block){
-		line("[File] Creating managed resource: " . path);
-		File:write(path: path, content: content);
-		block(path);
-		Conditional:if(check: { File:exists(path) }, then: {
-			File:remove(path);
-			line("[File] Cleaned up managed resource: " . path);
-		});
-	}
+		## Creates a temporary file, provides its path to the callback, and
+		## guarantees file deletion upon block completion. The console
+		## functions are named consOut/consIn, so the generic I/O verbs
+		## (`write`, `read`, `exists`, `remove`) answer bare for File.
+		##
+		## @param path: Path to create the temporary file at.
+		## @param content: Initial file data.
+		## @param block: Callback receiving the temporary file's path.
+		Function is withTempFile(String is path, String is content, Function is block){
+			line("[File] Creating managed resource: " . path);
+			fileWrite(path: path, content: content);
+			block(path);
+			if(check: { fileExists(path) }, then: {
+				fileRemove(path);
+				line("[File] Cleaned up managed resource: " . path);
+			});
+		}
 
 	## Entry point demonstrating linear `as` scopes.
 	##
@@ -74,7 +72,7 @@ Class is ScopeAsDemo{
 
 		# Inner workflow: Read file and process records sequentially
 		line("[Task] Reading records from " . path . "...");
-		local String is raw: File:read(path: path, default: "");
+		local String is raw: fileRead(path: path, default: "");
 		local Array of String is lines: raw:lines();
 		line("[Task] Total lines read: " . lines:length());
 
@@ -88,7 +86,7 @@ Class is ScopeAsDemo{
 			iterate: {
 				local String is line: lines:get(index: row);
 				local Array of String is fields: line:split(delimiter: ",");
-				Conditional:if(check: { fields:length() >= 4 }, then: {
+				if(check: { fields:length() >= 4 }, then: {
 					names:add(item: fields:get(index: 1));
 					roles:add(item: fields:get(index: 2));
 					line("  -> User #" . fields:get(index: 0) . ": " . fields:get(index: 1) . " (" . fields:get(index: 2) . ")");

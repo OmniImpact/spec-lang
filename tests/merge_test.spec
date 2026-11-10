@@ -12,7 +12,7 @@
 Class is MergeBase{
 
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
-	merge Array of Array of String is using: [['base', 'io', Output], ['base', 'io', as Output()], ['base', 'sys', as Conditional()]] ;
+	merge Array of Array of String is using: [['base', 'sys', Output], ['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
 
 	Array of String is tags: ['core'];
 
@@ -24,7 +24,7 @@ Class is MergeBase{
 Class of MergeBase is MergeChild{
 
 	## Folds onto MergeBase's using: Output + Array both load.
-	merge Array of Array of String is using: [['base', 'struct', Array], ['base', 'io', as Output()] ];
+	merge Array of Array of String is using: [['base', 'struct', Array], ['base', 'sys', as Output()] ];
 
 	## Folds onto ["core"]: result is ["core", "extended"].
 	merge Array of String is tags: ['extended'];
@@ -38,7 +38,7 @@ Class is MergeTest{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

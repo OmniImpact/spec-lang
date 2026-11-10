@@ -5,10 +5,9 @@ Class is MultiFileTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'math'],
-		['base', 'io'],
 		['base', 'iterator'],
 		['base', 'math', as Math()],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()]
 	];
 
@@ -20,7 +19,7 @@ Class is MultiFileTest{
 
 		replace Array of Array of String is using: [
 			['base', 'math', as Math()],
-			['base', 'io', as Output()],
+			['base', 'sys', as Output()],
 			['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 		];

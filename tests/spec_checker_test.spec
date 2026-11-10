@@ -12,12 +12,12 @@ Class is SpecCheckerTest{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'io', Output],
-		['base', 'io', File],
+		['base', 'sys', Output],
+		['base', 'sys', File],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', as File()],
-		['base', 'io', as Output()],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -32,7 +32,7 @@ Class is SpecCheckerTest{
 		local Array of ClassInfo is all: [];
 		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/lib/base/sys/Conditional.spec'];
 		preloads:each(action: local Function(String is path){
-			local Lexer is plex: Lexer:init(source: File:read(path: path, default: ''));
+			local Lexer is plex: Lexer:init(source: fileRead(path: path, default: ''));
 			local Parser is ppar: Parser:init(tokens: plex:tokenize());
 			local ProgramNode is pprog: ppar:parseProgram();
 			pprog:classes:each(action: local Function(ClassInfo is c){

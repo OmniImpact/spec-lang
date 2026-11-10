@@ -15,8 +15,8 @@ Class is SpecParserTest{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'io', Output],
-		['base', 'io', as Output()]
+		['base', 'sys', Output],
+		['base', 'sys', as Output()]
 ,
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', Error],
@@ -81,7 +81,7 @@ Class is SpecParserTest{
 Class is Box of T{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	replace Function of T is get(){ return self:item; }
 	local T is item;

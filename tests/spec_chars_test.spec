@@ -6,8 +6,8 @@ Class is SpecCharsTest{
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'utils', Chars],
-		['base', 'io', Output],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 

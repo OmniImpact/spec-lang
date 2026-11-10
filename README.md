@@ -125,7 +125,7 @@ while(
 - 📖 **[README-FULL.md](README-FULL.md)**: The full breakdown — design philosophies, the complete feature list, module resolution, editor support, and the language comparison table.
 - 📚 **[Documentation Portal](docs/README.md)**: Main documentation index.
 - 📖 **[Language Guide](docs/language/README.md)**: Syntax, typing system, Never Null standard, held members, matching, and the iteration model.
-- 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:core`, `base:io`, `base:math`, `base:struct`, `base:iterator`, and `base:sys`.
+- 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:core`, `base:math`, `base:struct`, `base:iterator`, and `base:sys` (the control-flow providers and the console/file/terminal/process surfaces).
 - 📜 **[Code Style & SpecDoc Guide](docs/STYLE_GUIDE.md)**: Official code style conventions, architectural idioms, and the SpecDoc documentation standard.
 - 🛠️ **[Tooling & Compiler Guide](docs/tooling/README.md)**: Compiler CLI, module loader, tab linter, and Kate editor integration.
 
@@ -164,10 +164,10 @@ bin/spec --lint examples/blackjack.spec
 
 ## Standard Library
 
-The standard library lives in `spec/lib/` — six packages covering the root
-lattice (`base:core`), terminal and file I/O (`base:io`), math (`base:math`),
-collections (`base:struct`), iteration (`base:iterator`), and process control
-and parallelism (`base:sys`) — all written in Spec over the `base:sysinternal`
+The standard library lives in `spec/lib/` — five packages covering the root
+lattice (`base:core`), math (`base:math`), collections (`base:struct`),
+iteration (`base:iterator`), and the control-flow, console, file, and process
+surfaces (`base:sys`) — all written in Spec over the `base:sysinternal`
 C floor. A summary table of every package and its functions lives in the
 **[Standard Library Reference](docs/packages/README.md)**.
 

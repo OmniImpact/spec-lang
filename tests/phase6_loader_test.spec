@@ -9,7 +9,7 @@ Class is Phase6LoaderTest{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'loader', Loader],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 ,
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'checker', TypeError],

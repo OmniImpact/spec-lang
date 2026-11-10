@@ -8,8 +8,8 @@ Class is SpecTokenTest{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'lexer', Operator],
 		['base', 'compiler', 'lexer', Token],
-		['base', 'io', Output],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 

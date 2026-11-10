@@ -17,12 +17,12 @@ Class is Linter{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
-		['base', 'io', Output],
+		['base', 'sys', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'compiler', 'linter', LintIssue],
 		['base', 'sys', as Conditional()]
 	];

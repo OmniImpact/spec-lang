@@ -4,9 +4,8 @@ Class is FeaturesTest{
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'math'],
-		['base', 'io'],
 		['base', 'math', as Math()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

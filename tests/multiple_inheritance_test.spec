@@ -12,7 +12,7 @@
 Class is NamedContract{
 
 	replace Array of Array of String is using: [
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 	String is name;
@@ -25,7 +25,7 @@ Class is IdentifiableContract{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	Int is id;
 
@@ -37,7 +37,7 @@ Class of NamedContract, IdentifiableContract is ServiceAccount{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace String is name: 'AdminService';

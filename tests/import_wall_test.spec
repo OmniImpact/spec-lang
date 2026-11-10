@@ -32,7 +32,7 @@ Class is WallParentB{
 Class of WallParentA, WallParentB is ImportWallTest{
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 
 	replace Function is init(Map of String to String is args){

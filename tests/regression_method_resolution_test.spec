@@ -19,8 +19,8 @@
 Class is RegressionMethodResolutionTest{
 
 	replace Array of Array of String is using: [
-		['base', 'io', Output],
-		['base', 'io', as Output()],
+		['base', 'sys', Output],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -66,7 +66,7 @@ Class is UserRecord{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is identifier: 42;
 
@@ -86,7 +86,7 @@ Class is LogStore{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'io', as Output()]
+		['base', 'sys', as Output()]
 	];
 	local Int is maxEntries: 7;
 

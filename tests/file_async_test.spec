@@ -3,10 +3,10 @@ Class is FileAsyncTest{
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'io', File],
+		['base', 'sys', File],
 		['base', 'sys', Process],
-		['base', 'io', as File()],
-		['base', 'io', as Output()],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Process()]
 	];
 
@@ -19,7 +19,7 @@ Class is FileAsyncTest{
 		local String is content: 'Async write data from background worker!';
 
 		Output:line('1. Initiating File:writeAsync on worker thread...');
-		File:writeAsync(
+		fileWriteAsync(
 			path: asyncFile,
 			content: content,
 			onSuccess: local Function(Int is bytes){
@@ -34,7 +34,7 @@ Class is FileAsyncTest{
 		Process:execute(command: 'sleep', args: ['0.1']);
 
 		Output:line("\n2. Initiating File:readAsync on worker thread...");
-		File:readAsync(
+		fileReadAsync(
 			path: asyncFile,
 			onSuccess: local Function(String is data){
 				Output:line('[PASS] Background File:readAsync completed! Content: \'' . data . '\'');

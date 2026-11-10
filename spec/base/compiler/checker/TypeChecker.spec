@@ -42,7 +42,7 @@ Class is TypeChecker{
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
-		['base', 'io', as Output()],
+		['base', 'sys', as Output()],
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()]
 ];
@@ -2772,7 +2772,14 @@ Class is TypeChecker{
 		# table's keys as ordinary expressions (the else key is not one).
 		# Keys resolve against the subject's class's held members,
 		# exhaustiveness keys on the Enum root, arm closures type here.
-		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'match' && self:isAsImportedInherited(className: 'Conditional'))) }, then: {
+		# The bare form (self-receiver, the parser's bare-call shape)
+		# is recognized here too — the recognizer returns before the
+		# bare-scope branch runs, so the bareProvider stamp happens
+		# HERE: the backend's match interceptor keys on it.
+		Conditional:if(check: { method == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && ((expr:methodTarget:str == 'match' && self:isAsImportedInherited(className: 'Conditional')) || (expr:methodTarget:str == self:names:selfIdent() && self:isAsImportedInherited(className: 'Conditional'))))) }, then: {
+			Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() }, then: {
+				expr:bareProvider: 'Conditional';
+			});
 			local Expression is matchSubj: Expression:init(kind: ExpressionKind:UNKNOWN);
 			local Expression is matchArms: Expression:init(kind: ExpressionKind:UNKNOWN);
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -2890,7 +2897,20 @@ Class is TypeChecker{
 						});
 						self:inBranchClosure: savedLoopBranch;
 					}, else: {
+						# the branch closures type against the branch, not
+						# the enclosing frame — the enclosing branch's flag
+						# must not leak into the check closure (the same
+						# entry reset the qualified branch call makes).
+						self:inBranchClosure: false;
 						expr:methodArgs:each(action: local Function(NamedArg is arg){
+							Conditional:if(check: { bareIsBranch && bareIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+								# the check closure coerces to Boolean
+								# before its body check (the qualified
+								# branch call's arg-0 rule).
+								Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
+									arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+								});
+							});
 							Conditional:if(check: { bareIsBranch && bareIdx >= 1 }, then: {
 								self:inBranchClosure: true;
 								self:inValueBranch: bareIsValue;
@@ -3584,7 +3604,7 @@ Class is TypeChecker{
 							self:currentMethodReturnType: retType;
 						}, else: {
 							Conditional:if(check: { !self:isAssignable(target: self:currentMethodReturnType, source: retType) }, then: {
-								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\'.';
+								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\' (method ' . self:currentMethodName . ' of ' . self:currentClassName . ', stmt line ' . (stmt:line as String) . ', depth ' . (self:anonDepth as String) . ', inBranch ' . (self:inBranchClosure as String) . ', expr kind ' . (stmt:returnExpr:kind as String) . ', expr str \'' . stmt:returnExpr:str . '\').';
 								self:addError(line: stmt:line, msg: msg);
 							});
 						});
