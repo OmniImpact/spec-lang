@@ -200,19 +200,12 @@ Class is Blackjack{
 		line("\n=== Final Results ===");
 		line('Player: ' . playerScore . ' | Dealer: ' . dealerScore);
 
-		if(check: { dealerScore > 21 }, then: {
-			line('Dealer busts! You win!');
-		}, else: {
-			if(check: { playerScore > dealerScore }, then: {
-				line('You beat the dealer! You win!');
-			}, else: {
-				if(check: { dealerScore > playerScore }, then: {
-					line('Dealer wins!');
-				}, else: {
-					line('Push (Tie)!');
-				});
-			});
-		});
+		match(when: [
+			{ dealerScore > 21 }:          { line('Dealer busts! You win!'); },
+			{ playerScore > dealerScore }: { line('You beat the dealer! You win!'); },
+			{ dealerScore > playerScore }: { line('Dealer wins!'); },
+			else:                          { line('Push (Tie)!'); }
+		]);
 	}
 
 	# =========================================================================

@@ -40,34 +40,41 @@ Class is Conditional{
 		finally();
 	}
 
-	## Dispatches [on] over the arm table [when] — the match construct.
+	## Dispatches an arm table — the match construct. TWO KEY KINDS:
 	##
-	## TWO IMPLEMENTATIONS, ONE CONTRACT:
+	## - `match(on:, when:)` — the SUBJECT form: the keys are
+	##   held-member references (an array key matches several) or
+	##   string literals, compared against [on].
+	## - `match(when:)` — the PREDICATE form: no subject, the keys are
+	##   closures, and the first that holds runs its arm — the else-if
+	##   ladder without the pyramid.
 	##
-	## The literal-table form (keys are held-member references or string
-	## literals, arms are inline closures) is COMPILE-TIME: the checker
-	## resolves the keys against the subject's class's held members,
-	## types payload arms and checks exhaustiveness, and the backend
-	## inlines the table into a comparison chain with zero allocation
-	## (TypeChecker.spec: the match recognizer and checkMatchArms;
-	## CodeGenerator.spec: generateMatch). That lowering is the fast
-	## path — and the only path that can bind PAYLOAD arms, whose
-	## closure parameters receive the variant's fields, something no
-	## runtime dispatcher can extract.
+	## The literal tables are COMPILE-TIME: the checker resolves the
+	## keys (against the subject's class's held members, or as Boolean
+	## predicates), types payload arms and checks exhaustiveness, and
+	## the backend inlines the table into a comparison chain with zero
+	## allocation (TypeChecker.spec: the match recognizer,
+	## checkMatchArms, checkPredicateArms; CodeGenerator.spec:
+	## generateMatch, generatePredicateMatch). That lowering is the
+	## fast path — and the only path that can bind PAYLOAD arms (a
+	## payload arm's closure parameters receive the variant's fields)
+	## and match identity/array/predicate keys.
 	##
-	## THIS BODY IS THE RUNTIME PATH — the if(...) precedent: the
-	## wrapper implements the construct over the floor primitives, and
-	## the compiler inlines the literal shape. A table that is NOT a
-	## literal at the call site — a Map built with set() — flows here.
-	## The runtime surface is STRING-KEYED (the runtime map's keys are
-	## strings): the scan walks the key array recursively (state rides
-	## the parameters — the runtime closures capture by value, so no
-	## dispatch flag can live in a frame), firing the first arm whose
-	## key equals a String subject; `else` is the fallback arm, fired
-	## when the scan is exhausted. The wrapper's members are self-free
-	## (the elided dispatch passes no receiver), so the scan is a held
-	## function. Identity/array keys and payload arms belong to the
-	## compile-time lowering, which never builds a runtime map.
+	## THIS BODY IS THE RUNTIME PATH for the subject form — the
+	## if(...) precedent: the wrapper implements the construct over
+	## the floor primitives, and the compiler inlines the literal
+	## shape. A table that is NOT a literal at the call site — a Map
+	## built with set() — flows here. The runtime surface is
+	## STRING-KEYED (the runtime map's keys are strings): the scan
+	## walks the key array recursively (state rides the parameters —
+	## the runtime closures capture by value, so no dispatch flag can
+	## live in a frame), firing the first arm whose key equals a
+	## String subject; `else` is the fallback arm, fired when the scan
+	## is exhausted. The wrapper's members are self-free (the elided
+	## dispatch passes no receiver), so the scan is a held function.
+	## The PREDICATE form has no runtime path: a runtime map can
+	## neither preserve scan order nor carry closure keys — the
+	## checker rejects non-literal predicate tables outright.
 	##
 	## @param on: The subject value (a String for the runtime path).
 	## @param when: The arm table.

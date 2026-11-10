@@ -2492,6 +2492,11 @@ Class is CodeGenerator{
 			Conditional:if(check: { matchSubjC:kind != ExpressionKind:UNKNOWN && matchArmsC:kind == ExpressionKind:MAP }, then: {
 				return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC);
 			});
+			# The PREDICATE form: no subject — the keys are the closures,
+			# the first that holds runs its arm (the else-if ladder).
+			Conditional:if(check: { matchSubjC:kind == ExpressionKind:UNKNOWN && matchArmsC:kind == ExpressionKind:MAP }, then: {
+				return self:generatePredicateMatch(callExpr: expr, armsArg: matchArmsC);
+			});
 			# The runtime dispatch: the arm table is not a literal — a Map
 			# built at runtime or a literal assigned to a variable — the
 			# Conditional wrapper's match body serves it (string keys,
@@ -4805,6 +4810,88 @@ Class is CodeGenerator{
 					out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: yieldVar, yieldT: resT) . "\t";
 				}, else: {
 					out: out . self:inlineBranchBody(anonFn: val) . "\t";
+				});
+				return true;
+			}
+		);
+		Conditional:if(check: { !firstCond }, then: {
+			out: out . "}\n";
+		});
+		Conditional:if(check: { valueForm }, then: {
+			out: out . yieldVar . "; })";
+		});
+		self:inlineReturnVar: savedVar;
+		self:inlineReturnLabel: savedLbl;
+		self:argMode: savedArg;
+		return out;
+	}
+
+	## Lowers the PREDICATE arm table — the subject-less match — into
+	## a zero-allocation comparison chain: each key closure inlines
+	## into the enclosing frame (the check-closure rule the branch
+	## inline uses), the first that holds runs its arm, `else` is the
+	## chain's tail. Compile-time only: a runtime map can neither
+	## preserve scan order nor carry closure keys, so the checker
+	## rejects non-literal predicate tables before this runs.
+	##
+	## @param callExpr: The match CALL expression (its resolvedType
+	##                  decides the value form).
+	## @param armsArg: The literal arm table (a MAP expression).
+	## @return: C expression/statement text.
+	Function of String is generatePredicateMatch(Expression is callExpr, Expression is armsArg){
+		local String is savedVar: self:inlineReturnVar;
+		local String is savedLbl: self:inlineReturnLabel;
+		local Boolean is savedArg: self:argMode;
+		self:argMode: false;
+		local String is resT: callExpr:resolvedType;
+		local Boolean is valueForm: resT != '' && resT != 'void' && resT != 'Void';
+		local String is out: '';
+		local String is yieldVar: '';
+		Conditional:if(check: { valueForm }, then: {
+			self:anonCounter: self:anonCounter + 1;
+			yieldVar: '_mt_' . (self:anonCounter as String);
+			out: '({ ' . self:cTypeFor(typeName: resT) . ' ' . yieldVar . ";\n";
+		});
+		local Int is keyTotal: armsArg:mapKeys:length();
+		local Int is ki: 0;
+		local Boolean is firstCond: true;
+		while(
+			evaluate: local Function of Boolean(){ return ki < keyTotal; },
+			iteration: local Function of Boolean(){
+				local Expression is key: armsArg:mapKeys:get(index: ki);
+				local Expression is val: armsArg:mapValues:get(index: ki);
+				ki: ki + 1;
+				local Boolean is elseArm: key:kind == ExpressionKind:IDENT && key:str == 'else';
+				Conditional:if(check: { !elseArm && key:kind == ExpressionKind:ANON_FN }, then: {
+					# The key closure inlines into the frame: its leading
+					# statements emit before the `if`, its last expression
+					# is the condition (the branch inline's check rule).
+					local Array of String is condPrefix: [];
+					local String is condC: self:checkConditionC(checkAnon: key, prefixOut: condPrefix);
+					condPrefix:each(action: local Function(String is st){
+						out: out . st . "\n";
+					});
+					Conditional:if(check: { firstCond }, then: {
+						out: out . 'if (' . condC . ") {\n";
+						firstCond: false;
+					}, else: {
+						out: out . '} else if (' . condC . ") {\n";
+					});
+				}, else: {
+					# The else arm: the chain's tail.
+					Conditional:if(check: { firstCond }, then: {
+						out: out . "if (1) {\n";
+						firstCond: false;
+					}, else: {
+						out: out . "} else {\n";
+					});
+				});
+				Conditional:if(check: { val:kind == ExpressionKind:ANON_FN && val:anonParams:length() == 0 }, then: {
+					Conditional:if(check: { valueForm }, then: {
+						out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: yieldVar, yieldT: resT) . "\t";
+					}, else: {
+						out: out . self:inlineBranchBody(anonFn: val) . "\t";
+					});
 				});
 				return true;
 			}

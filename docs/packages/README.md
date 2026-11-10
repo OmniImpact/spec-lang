@@ -376,6 +376,7 @@ The conditional provider — served bare through the as-import (`['base', 'sys',
 - **`if(check:, then:, else:)`**: The two-branch form; also the value-yielding form (the branches' last expressions unify into the call's type).
 - **`if(check:, then:, else:, finally:)`**: Runs [finally] either way.
 - **`match(on:, when:)`**: The arm-table dispatch — a map literal whose keys are held-member references (an array key matches several) and whose values are the arm bodies; `else` names the fallback. Literal tables lower at compile time (exhaustiveness-checked for value-yielding matches over enum subjects); a runtime-built Map flows to the held dispatch scan (string keys, `else` fallback).
+- **`match(when:)` — the predicate table** (no `on:`): the keys are closures and the first that holds runs its arm — the else-if ladder without the pyramid. The value form requires `else`; compile-time only (a runtime map can neither preserve scan order nor carry closure keys).
 
 ### `base:sys:Loops` (`lib/base/sys/Loops.spec`)
 The loop provider — served bare through the as-import (`['base', 'sys', as Loops()]`):

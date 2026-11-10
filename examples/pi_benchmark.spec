@@ -226,15 +226,12 @@ Class is PiBenchmark{
 		local Int is thousandths: toInt(value: round(value: value * 1000.0));
 		local Int is whole: thousandths / 1000;
 		local Int is frac: thousandths % 1000;
-		local String is fracText: '' . frac;
-		if(check: { frac < 10 }, then: {
-			fracText: '00' . fracText;
-		}, else: {
-			if(check: { frac < 100 }, then: {
-				fracText: '0' . fracText;
-			});
-		});
-		return '' . whole . '.' . fracText;
+		local String is padded: match(when: [
+			{ frac < 10 }:  { '00' . (frac as String); },
+			{ frac < 100 }: { '0' . (frac as String); },
+			else:           { '' . frac }
+		]);
+		return '' . whole . '.' . padded;
 	}
 
 	## Maps a thread index to a distinct 256-color code.

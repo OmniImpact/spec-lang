@@ -185,6 +185,10 @@ assert_compile_failure "cases-match-walls" \
 	"Match arms after else are unreachable" \
 	"'Int' cannot be matched"
 
+assert_compile_failure "predicate-table-literal-wall" \
+	"$ROOT/tests/negative/n35_predicate_table_literal_negative_test.spec" \
+	"predicate match table is compile-time" \
+
 assert_compile_failure "loop-vars-literals-wall" \
 	"$ROOT/tests/negative/n34_loop_vars_literals_negative_test.spec" \
 	"requires inline literal closures"

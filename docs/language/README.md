@@ -716,6 +716,26 @@ local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
 #### Matching with `Conditional:match`
 `Conditional:match` is the match construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`) like `if`. The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation. That lowering is the fast path — and the only path that can bind payload arms and match identity/array keys. A table that is NOT a literal (a Map built with `set()`) flows to the runtime dispatch — the wrapper's held scan: string keys against String subjects, `else` as the fallback arm, first match wins.
 
+##### The Predicate Table (no `on:`)
+Dropping `on:` turns the keys into **closures** — a self-contained predicate per arm, the first that holds runs its arm. This is the else-if ladder without the pyramid, sharing the arm-table contract (first match wins, `else` is the fallback, the value form's yields unify):
+
+```spec
+local String is grade: match(when: [
+	{ score >= 90 }: { 'A' },
+	{ score >= 80 }: { 'B' },
+	{ score >= 70 }: { 'C' },
+	else: { 'F' }
+]);
+
+match(when: [
+	{ x > 10 }: { line('big'); },
+	{ x > 5 }:  { line('mid'); },
+	else:       { line('small'); }
+]);
+```
+
+The keys coerce to Boolean before their bodies check, and the table lowers to the zero-allocation else-if ladder — each key closure inlines into the enclosing frame. The value form requires `else` (no exhaustive-predicate notion exists to prove coverage); the statement form falls through freely when nothing holds. The predicate table is **compile-time only** — a runtime map can neither preserve scan order nor carry closure keys — so a non-literal predicate table is a compile error rather than silent garbage.
+
 ```spec
 local String is label: match(on: state, when: [
 	idle:   { 'waiting' },

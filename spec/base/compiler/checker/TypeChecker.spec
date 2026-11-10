@@ -833,6 +833,94 @@ Class is TypeChecker{
 		return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
 	}
 
+	## Validates the PREDICATE arm table — the subject-less match
+	## (`match(when: [...])` with no `on:`). The keys are closures: the
+	## first that holds runs its arm, `else` names the fallback. No
+	## held resolution and no enum coverage apply (there is no subject
+	## to close a set over), so the value form requires `else` — Never
+	## Null holds the same way the unrooted subject matches do. The
+	## keys coerce to Boolean before their bodies check (the branch
+	## call's check-closure rule). Compile-time only: the runtime
+	## dispatch serves the string-keyed subject tables, and a runtime
+	## map can neither preserve scan order nor carry closure keys.
+	##
+	## @param arms: The literal arm table (a MAP expression).
+	## @return: The unified arm-yield type ('Void' when none yields).
+	Function of String is checkPredicateArms(Expression is arms){
+		local Boolean is hasElse: false;
+		local Boolean is anyValue: false;
+		local Boolean is anyVoid: false;
+		local String is resT: '';
+		local Boolean is bad: false;
+		local Int is keyTotal: arms:mapKeys:length();
+		local Int is ki: 0;
+		while(
+			evaluate: local Function of Boolean(){ return ki < keyTotal; },
+			iteration: local Function of Boolean(){
+				local Expression is key: arms:mapKeys:get(index: ki);
+				local Expression is val: arms:mapValues:get(index: ki);
+				ki: ki + 1;
+				# The else arm closes the table: arms after it are dead.
+				Conditional:if(check: { hasElse && !(key:kind == ExpressionKind:IDENT && key:str == 'else') }, then: {
+					self:addError(line: self:currentLine, msg: 'Match arms after else are unreachable; move else last.');
+					bad: true;
+				});
+				Conditional:if(check: { key:kind == ExpressionKind:IDENT && key:str == 'else' }, then: {
+					Conditional:if(check: { hasElse }, then: {
+						self:addError(line: self:currentLine, msg: 'Duplicate else arm in the match table.');
+					});
+					hasElse: true;
+				}, else: {
+					Conditional:if(check: { key:kind != ExpressionKind:ANON_FN }, then: {
+						self:addError(line: self:currentLine, msg: 'Predicate match keys must be closures: `{ condition }`.');
+						bad: true;
+					}, else: {
+						Conditional:if(check: { key:anonReturnType:name == '' || key:anonReturnType:name == self:names:voidName() }, then: {
+							key:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+						});
+						self:inferExpressionType(expr: key);
+					});
+				});
+				Conditional:if(check: { val:kind != ExpressionKind:ANON_FN }, then: {
+					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
+					bad: true;
+				}, else: {
+					self:inferExpressionType(expr: val);
+					local String is valT: val:resolvedType;
+					Conditional:if(check: { valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, then: {
+						local String is yieldT: valT:substring(start: 9, end: valT:length());
+						Conditional:if(check: { self:isVoid(t: yieldT) }, then: {
+							anyVoid: true;
+						}, else: {
+							anyValue: true;
+							Conditional:if(check: { resT == '' }, then: {
+								resT: yieldT;
+							}, else: {
+								Conditional:if(check: { !self:isAssignable(target: resT, source: yieldT) && !self:isAssignable(target: yieldT, source: resT) }, then: {
+									self:addError(line: self:currentLine, msg: 'The match arms yield incompatible types (\'' . resT . '\' and \'' . yieldT . '\').');
+									bad: true;
+								});
+							});
+						});
+					}, else: {
+						anyVoid: true;
+					});
+				});
+				return true;
+			}
+		);
+		Conditional:if(check: { bad }, then: {
+			return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
+		});
+		Conditional:if(check: { anyValue && anyVoid }, then: {
+			self:addError(line: self:currentLine, msg: 'The match arms mix value-yielding and void closures.');
+		});
+		Conditional:if(check: { anyValue && !hasElse }, then: {
+			self:addError(line: self:currentLine, msg: 'A value-yielding predicate match requires an else arm (no key may hold).');
+		});
+		return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
+	}
+
 	## Validates call-site argument types against the resolved signature.
 	##
 	## Named arguments match by parameter name; unmatched named arguments
@@ -2790,10 +2878,18 @@ Class is TypeChecker{
 					matchArms: arg:value;
 				});
 			});
-			Conditional:if(check: { matchSubj:kind != ExpressionKind:UNKNOWN && matchArms:kind == ExpressionKind:MAP }, then: {
-				local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms);
-				expr:resolvedType: matchRes;
-				return matchRes;
+			Conditional:if(check: { matchArms:kind == ExpressionKind:MAP }, then: {
+				Conditional:if(check: { matchSubj:kind != ExpressionKind:UNKNOWN }, then: {
+					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms);
+					expr:resolvedType: matchRes;
+					return matchRes;
+				}, else: {
+					# The PREDICATE form: no subject — the keys are the
+					# closures, the first that holds runs its arm.
+					local String is predRes: self:checkPredicateArms(arms: matchArms);
+					expr:resolvedType: predRes;
+					return predRes;
+				});
 			});
 			# A non-literal table — a Map built at runtime, arms held as
 			# Function values — flows to the runtime dispatch: the
@@ -2801,6 +2897,15 @@ Class is TypeChecker{
 			# array keys, identity over the held singletons, else as the
 			# fallback). The ordinary call machinery below checks the
 			# argument types; payload arms are compile-time by design.
+			# The PREDICATE form has no runtime path at all — a runtime
+			# map can neither preserve scan order nor carry closure
+			# keys — so a non-literal predicate table is a pointed
+			# error instead of silent garbage.
+			Conditional:if(check: { matchSubj:kind == ExpressionKind:UNKNOWN && matchArms:kind != ExpressionKind:UNKNOWN }, then: {
+				self:addError(line: self:currentLine, msg: 'A predicate match table is compile-time: the keys are closures and the scan order matters — write the arm table as a literal.');
+				expr:resolvedType: Primitive:ANY:value();
+				return Primitive:ANY:value();
+			});
 		});
 
 		# §2.3/E9: bare-scope resolution for self-receiver
