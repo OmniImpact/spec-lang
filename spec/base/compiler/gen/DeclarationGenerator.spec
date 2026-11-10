@@ -389,6 +389,7 @@ Class is DeclarationGenerator{
 			classes:each(action: local Function(ClassInfo is c){
 				Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 					local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+					local Array of String is tps: c:typeParams;
 					# for nested classes the typedef
 					# ALIASES the bare name to the qualified struct — but only
 					# when the bare name is unique. Two same-named inner
@@ -407,6 +408,14 @@ Class is DeclarationGenerator{
 						});
 					}, else: {
 						Buf:bufAppendBuf(dst: out, src: 'typedef struct ' . cSym . ' ' . cSym . ";\n");
+					});
+					# Held member prototypes (PLAN-ENUM): hoisted here so the
+					# anon-fn helper closures (which may read held accessors)
+					# precede their definitions.
+					c:members:each(action: local Function(Member is m){
+						Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) && m:hasInit }, then: {
+							Buf:bufAppendBuf(dst: out, src: self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . cSym . '_' . self:utils:cIdent(name: m:name) . "__ensure(void);\n");
+						});
 					});
 				Buf:bufAppendBuf(dst: out, src: cSym . '* ' . cSym . "_new(void);\n");
 				Buf:bufAppendBuf(dst: out, src: 'void ' . cSym . "_destroy(void* self);\n");

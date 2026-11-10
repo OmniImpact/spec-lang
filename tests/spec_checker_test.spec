@@ -30,7 +30,7 @@ Class is SpecCheckerTest{
 		# G7's Loader does this; here the driver parses them directly so the
 		# checker resolves their methods from SPEC declarations.
 		local Array of ClassInfo is all: [];
-		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/lib/base/cases/Cases.spec'];
+		local Array of String is preloads: ['lib/base/core/Any.spec', 'lib/base/core/Stringable.spec', 'lib/base/sysinternal/Buf.spec', 'lib/base/core/String.spec', 'lib/base/struct/Array.spec', 'lib/base/struct/List.spec', 'lib/base/struct/Map.spec', 'spec/lib/base/cases/Cases.spec', 'spec/base/sys/Conditional.spec'];
 		preloads:each(action: local Function(String is path){
 			local Lexer is plex: Lexer:init(source: File:read(path: path, default: ''));
 			local Parser is ppar: Parser:init(tokens: plex:tokenize());

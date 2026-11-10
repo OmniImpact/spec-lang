@@ -1712,6 +1712,25 @@ Class is CodeGenerator{
 		Conditional:if(check: { t != '' && self:allEnumNames:has(key: t) && !self:allTaggedEnums:has(key: t) }, then: {
 			return t . '_name(' . exprC . ')';
 		});
+		# Desugared enums (PLAN-ENUM Stage 4): the class declares its own
+		# toString (the variant-name synthesis) — dispatch it virtually.
+		# A plain class without its own toString keeps spec_type_name.
+		Conditional:if(check: { t != '' && self:allClassNames:has(key: t) && self:methodSlots:has(key: 'toString') && !self:allEnumNames:has(key: t) }, then: {
+			local ClassInfo is tsCls: self:findClass(name: t);
+			local Boolean is ownToString: false;
+			Conditional:if(check: { tsCls:name != '' }, then: {
+				tsCls:members:each(action: local Function(Member is m){
+					Conditional:if(check: { !ownToString && m:kind == MemberKind:METHOD && m:name == 'toString' }, then: {
+						ownToString: true;
+					});
+				});
+			});
+			Conditional:if(check: { ownToString }, then: {
+				local String is slotC: self:methodSlots:getString(key: 'toString', default: '0');
+				local String is tsType: self:cTypeFor(typeName: t);
+				return '((String (*)(void*))((' . tsType . ')(' . exprC . '))->_vtable[' . slotC . '])((void*)(' . exprC . '))';
+			});
+		});
 		Conditional:if(check: { t != '' && t != Primitive:ANY:value() && self:allClassNames:has(key: t) && !self:allEnumNames:has(key: t) && !self:policy:isTransparent(c: self:findClass(name: t)) }, then: {
 			return 'spec_type_name(' . exprC . ') /* wrap:' . t . ' */';
 		});

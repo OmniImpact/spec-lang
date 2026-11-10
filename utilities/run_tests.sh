@@ -287,7 +287,7 @@ assert_compile_failure "visibility-negative" \
 assert_compile_failure "as-cast-negative" \
 	"$ROOT/tests/negative/as_cast_negative_test.spec" \
 	"Cannot cast 'Cat' to unrelated class 'Dog'" \
-	"Cannot cast to enum 'Color'" \
+	"Cannot cast 'Dog' to unrelated class 'Color'" \
 	"Cast 'as Hex' requires an Int or String operand" \
 	"Unknown cast target 'Hexadecimal'"
 

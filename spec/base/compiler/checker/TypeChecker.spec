@@ -2680,7 +2680,9 @@ Class is TypeChecker{
 			});
 		});
 		Conditional:if(check: { recvName != '' && expr:methodName != 'init' }, then: {
-			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl';
+			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || self:bindings:isClassModelEnum(c: self:findClass(name: recvName));
+			# Desugared enums (PLAN-ENUM Stage 4) are type-level by design:
+			# their contract methods dispatch through the class name.
 			# Held functions (PLAN-ENUM Stage 1): the class-name prefix IS
 			# their dispatch — the call is type-level by design, inside
 			# the class and out.

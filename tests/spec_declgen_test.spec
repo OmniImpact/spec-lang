@@ -46,8 +46,10 @@ Class is Widget{
 		local String is fwdC: dg:generateForwardDeclarations(classes: prog:classes);
 		local String is structsC: dg:generateStructs(classes: prog:classes);
 
-		Conditional:if(check: { enumsC:contains(needle: 'Level_NONE = 0') && enumsC:contains(needle: 'Level_of(String v)') && enumsC:contains(needle: 'return Level_NONE;') }, then: {
-			Output:line('[PASS] enum tables with of() and NONE default');
+		# PLAN-ENUM Stage 4: Level desugars to the class model — no C
+		# enum tables; the held accessors and the backing field carry it.
+		Conditional:if(check: { !enumsC:contains(needle: 'Level_NONE = 0') && fwdC:contains(needle: 'Level_NONE__ensure(void);') && structsC:contains(needle: 'String _backing;') }, then: {
+			Output:line('[PASS] enum as class model (no tables, held accessors, backing field)');
 		}, else: {
 			Output:line('[FAIL] enum emission');
 			failures: failures + 1;

@@ -51,11 +51,7 @@ Class is SpecCodegenTest{
 		Output:line('=== Spec Codegen Test (step 1) ===');
 		local Int is failures: 0;
 
-		local ProgramNode is prog: self:parseOf(src: "Enum of String is Level {
-	NONE: '',
-	ERR: 'E'
-}
-Class is Animal{
+		local ProgramNode is prog: self:parseOf(src: "Class is Animal{
 
 	replace Array of Array of String is using: [
 		['base', 'math', as Math()],
@@ -81,6 +77,10 @@ Class of Animal is Dog{
 	replace Function of String is describe(){
 		return 'dog';
 	}
+}
+Enum of String is Level {
+	NONE: '',
+	ERR: 'E'
 }");
 		local CodeGenerator is cg: CodeGenerator:init();
 		cg:registerProgram(classes: prog:classes);
@@ -90,21 +90,24 @@ Class of Animal is Dog{
 		Conditional:if(check: { cg:methodSlots:getString(key: 'describe', default: '?') == '0'
 			&& cg:methodSlots:getString(key: 'init', default: '?') == '1'
 			&& cg:methodSlots:getString(key: 'grow', default: '?') == '2'
-			&& cg:methodSlotCount == 3
+			&& cg:methodSlotCount == 7
 			&& cg:overriddenMethods:has(key: 'describe')
 			&& !cg:overriddenMethods:has(key: 'grow')
 			&& cg:slotNames:get(index: 0) == 'describe' }, then: {
-			Output:line('[PASS] virtual slots in first-seen order');
+			Output:line('[PASS] virtual slots in first-seen order (the desugared enum\'s instance methods follow)');
 		}, else: {
 			Output:line('[FAIL] virtual slots');
 			failures: failures + 1;
 		});
 
 		# --- registries: classes, enums, variants ---
+		# PLAN-ENUM Stage 4: Level desugars to the class model — the
+		# variant registries retire; the held-member registries carry it.
 		Conditional:if(check: { cg:allClassNames:has(key: 'Dog')
-			&& cg:allEnumNames:has(key: 'Level')
-			&& cg:allEnumVariants:getString(key: 'ERR', default: '?') == 'Level'
-			&& cg:allStringBackedEnums:has(key: 'Level') }, then: {
+			&& cg:allClassNames:has(key: 'Level')
+			&& !cg:allEnumNames:has(key: 'Level')
+			&& cg:heldFields:has(key: 'Level:ERR')
+			&& cg:heldFieldTypes:getString(key: 'Level:ERR', default: '?') == 'Level' }, then: {
 			Output:line('[PASS] program registries');
 		}, else: {
 			Output:line('[FAIL] program registries');
@@ -114,7 +117,7 @@ Class of Animal is Dog{
 		# --- ownership policy: isArcType ---
 		Conditional:if(check: { cg:isArcType(typeName: 'String')
 			&& !cg:isArcType(typeName: 'Int')
-			&& !cg:isArcType(typeName: 'Level')
+			&& cg:isArcType(typeName: 'Level')
 			&& cg:isArcType(typeName: 'Animal')
 			&& cg:isArcType(typeName: 'Array of Int')
 			&& cg:isArcType(typeName: 'Map of String to Int')
