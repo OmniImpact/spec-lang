@@ -1538,7 +1538,15 @@ Class is CodeGenerator{
 			});
 			local String is targetT0: self:inferTargetType(expr: expr:methodTarget);
 			local String is targetT: targetT0;
-			Conditional:if(check: { targetT == '' && expr:bareProvider != '' }, then: {
+			# A bare call parses with a self receiver: the methodTarget
+			# infers to the ENCLOSING class, so the bareProvider override
+			# must replace it outright — the same rule inferTargetType's
+			# CALL branch runs. Filling only an empty target left bare
+			# as-imported calls classified against the wrong class, and a
+			# bare value-if missed the branch exclusion below: its owned
+			# branch result was treated as a borrow, retained a second
+			# time, and the branch's own reference leaked (LSan-proven).
+			Conditional:if(check: { expr:bareProvider != '' }, then: {
 				targetT: expr:bareProvider;
 			});
 			Conditional:if(check: { targetT:contains(needle: ':') }, then: {

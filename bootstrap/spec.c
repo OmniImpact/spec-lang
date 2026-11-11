@@ -49119,7 +49119,7 @@ static __attribute__((unused)) long long _anon_fn_563(void* _env_ptr, long long 
     SPEC_AUTO ClassInfo* c = (ClassInfo*)spec_retain((void*)(spec_array_get(wg->flattenedClasses, ci)));
     if ((((((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(wg->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[287]))((EmissionPolicy*)_recv, c); })))) || (spec_string_equals(c->name, spec_string_intern("String"))))) || (spec_string_equals(c->name, spec_string_intern("Array"))))) || (spec_string_equals(c->name, spec_string_intern("Map"))))) {
 	    spec_assign((void**)&wg->currentClassName, (void*)(c->name));
-	    spec_assign((void**)&wg->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+	    spec_assign_transfer((void**)&wg->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(wg->utils, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */); spec_pool_release_to(_pf); _v; }))))) /* inst:CBackendUtils:cIdent */;
 	    spec_assign_transfer((void**)&wg->fieldTypes, (void*)(spec_map_new()));
 	    SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
@@ -49139,7 +49139,7 @@ static __attribute__((unused)) long long _anon_fn_563(void* _env_ptr, long long 
     spec_map_set(wg->fieldTypes, m->name, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(({ CodeGenerator* _recv = (CodeGenerator*)(wg); (((String (*)(CodeGenerator*, Type*))_recv->_vtable[207]))((CodeGenerator*)_recv, m->memberType); })); spec_pool_release_to(_pf); _v; })))));
         } while (0);
     } } });
-	    SPEC_AUTO String classC = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+	    SPEC_AUTO String classC = Buf_stringCopy(NULL, spec_string_intern(""));
 	    bool hasInit = false;
 	    ({ SpecArray* _a_570 = c->members; if (_a_570) { for (size_t _i_570 = 0; _i_570 < _a_570->length; _i_570++) {
         SPEC_POOL_AUTO;
@@ -49405,7 +49405,7 @@ static __attribute__((unused)) long long _anon_fn_578(void* _env_ptr, long long 
     SPEC_AUTO ClassInfo* c = (ClassInfo*)spec_retain((void*)(spec_array_get(wg->flattenedClasses, ci)));
     if ((((((((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(wg->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[287]))((EmissionPolicy*)_recv, c); })))) || (spec_string_equals(c->name, spec_string_intern("String"))))) || (spec_string_equals(c->name, spec_string_intern("Array"))))) || (spec_string_equals(c->name, spec_string_intern("Map"))))) {
 	    spec_assign((void**)&wg->currentClassName, (void*)(c->name));
-	    spec_assign((void**)&wg->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+	    spec_assign_transfer((void**)&wg->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(wg->utils, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */); spec_pool_release_to(_pf); _v; }))))) /* inst:CBackendUtils:cIdent */;
 	    spec_assign_transfer((void**)&wg->fieldTypes, (void*)(spec_map_new()));
 	    SPEC_AUTO SpecArray* allFields = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
@@ -49425,7 +49425,7 @@ static __attribute__((unused)) long long _anon_fn_578(void* _env_ptr, long long 
     spec_map_set(wg->fieldTypes, m->name, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(({ CodeGenerator* _recv = (CodeGenerator*)(wg); (((String (*)(CodeGenerator*, Type*))_recv->_vtable[207]))((CodeGenerator*)_recv, m->memberType); })); spec_pool_release_to(_pf); _v; })))));
         } while (0);
     } } });
-	    SPEC_AUTO String classC = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+	    SPEC_AUTO String classC = Buf_stringCopy(NULL, spec_string_intern(""));
 	    bool hasInit = false;
 	    ({ SpecArray* _a_585 = c->members; if (_a_585) { for (size_t _i_585 = 0; _i_585 < _a_585->length; _i_585++) {
         SPEC_POOL_AUTO;
@@ -57985,7 +57985,7 @@ void Driver_init(Driver* self, SpecMap* args) {
 	    Stderr_line(NULL, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Error: Source file not found: "))), inputPath)); spec_pool_release_to(_pf); _v; })))));
 	    Process_exit(NULL, 1);
 	};
-    source = spec_construct_string(File_fileRead(NULL, inputPath, 0, 0, spec_string_intern("")));
+    source = File_fileRead(NULL, inputPath, 0, 0, spec_string_intern(""));
     long long specLines = spec_array_length(String_lines(source));
     Process_monitorStart(NULL);
     long long t0 = Process_clockMs(NULL);
@@ -58180,7 +58180,7 @@ void Driver_init(Driver* self, SpecMap* args) {
 	};
     tempCPath = spec_construct_string(emitCPath);
     if (spec_string_equals(tempCPath, spec_string_intern(""))) {
-	    spec_assign((void**)&tempCPath, (void*)(File_fileTemp(NULL, spec_string_intern("/tmp/_spec_stage_XXXXXX.c"))));
+	    spec_assign_transfer((void**)&tempCPath, (void*)(File_fileTemp(NULL, spec_string_intern("/tmp/_spec_stage_XXXXXX.c"))));
 	    if (spec_string_equals(tempCPath, spec_string_intern(""))) {
 	    spec_assign_transfer((void**)&tempCPath, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("/tmp/_spec_stage_"))), spec_to_string_int(Process_getPid(NULL))), spec_string_intern(".c"))));
 	};
@@ -61897,7 +61897,7 @@ Expression* Parser_parseLevel(Parser* self, PrecedenceLevel* level) {
     (void)self;
     (void)level;
     SPEC_POOL_AUTO;
-    return (Expression*)spec_retain((void*)(({ Expression* _mt_118;
+    return (Expression*)(({ Expression* _mt_118;
 if ((void*)(level) == (void*)(PrecedenceLevel_MULTIPLICATIVE__ensure())) {
 	_mt_118 = (Expression*)(Parser_foldBinary(self, (((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("*"))); spec_array_add(_arr, (void*)(spec_string_intern("/"))); spec_array_add(_arr, (void*)(spec_string_intern("%"))); _arr; })); spec_pool_release_to(_pf); _v; })))), PrecedenceLevel_NONE__ensure()) /* inst:Parser:foldBinary */);
 	} else if ((void*)(level) == (void*)(PrecedenceLevel_ADDITIVE__ensure())) {
@@ -61923,7 +61923,7 @@ if ((void*)(level) == (void*)(PrecedenceLevel_MULTIPLICATIVE__ensure())) {
 	} else {
 	_mt_118 = (Expression*)(Parser_parseUnary(self) /* inst:Parser:parseUnary */);
 	}
-_mt_118; })));
+_mt_118; }));
 }
 
 Expression* Parser_foldBinary(Parser* self, SpecArray* ops, PrecedenceLevel* next) {
@@ -62290,7 +62290,7 @@ Expression* Parser_parsePrimary(Parser* self) {
     if (e) { spec_release((void*)e); e = NULL; }
 	};
     tok = (Token*)((Parser_peek(self) /* inst:Parser:peek */));
-    _mret_145 = (Expression*)spec_retain((void*)(({ Expression* _mt_125;
+    _mret_145 = (Expression*)(({ Expression* _mt_125;
 if ((void*)((((TokenKind*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); TokenKind* _v = (TokenKind*)(Token_getTokenKind(tok) /* inst:Token:getTokenKind */); spec_pool_release_to(_pf); _v; }))))) == (void*)(TokenKind_STRING__ensure())) {
 	    (((Token*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); Token* _v = (Token*)((((Token* (*)(Parser*))self->_vtable[100]))((Parser*)self)); spec_pool_release_to(_pf); _v; }))));
 	    SPEC_AUTO Expression* e = (Expression*)((({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_STRING__ensure()); _inst; })));
@@ -62366,7 +62366,7 @@ _br_126; });
 	    (((Token*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); Token* _v = (Token*)((((Token* (*)(Parser*))self->_vtable[100]))((Parser*)self)); spec_pool_release_to(_pf); _v; }))));
 	_mt_125 = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN__ensure()); _inst; }));
 	}
-_mt_125; })));
+_mt_125; }));
     goto _cleanup_145;
     _cleanup_145: ;
     if (tok) { spec_release((void*)tok); tok = NULL; }
@@ -63172,7 +63172,7 @@ String TemplateEscapes_expand(TemplateEscapes* self, String escaped) {
     (void)self;
     (void)escaped;
     SPEC_POOL_AUTO;
-    return (String)spec_retain((void*)(({ String _mt_100021;
+    return (String)(({ String _mt_100021;
 if (spec_string_equals(escaped, spec_string_intern("n"))) {
 	_mt_100021 = (String)spec_retain((void*)(spec_string_intern("\n")));
 	} else if (spec_string_equals(escaped, spec_string_intern("t"))) {
@@ -63192,7 +63192,7 @@ if (spec_string_equals(escaped, spec_string_intern("n"))) {
 	} else {
 	_mt_100021 = (String)spec_retain((void*)(escaped));
 	}
-_mt_100021; })));
+_mt_100021; }));
 }
 
 void TemplateEscapes_init(TemplateEscapes* self) {
@@ -71346,7 +71346,7 @@ void Loader_loadFile(Loader* self, String filePath) {
 	    spec_array_add_owned(self->parseErrors, (void*)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("  [LoadError] Module file not found: "))), filePath)));
 	    goto _cleanup_210;
 	};
-    src = spec_construct_string(File_fileRead(NULL, filePath, 0, 0, spec_string_intern("")));
+    src = File_fileRead(NULL, filePath, 0, 0, spec_string_intern(""));
     lexer = (Lexer*)((({ Lexer* _inst = Lexer_new(); Lexer_init(_inst, src); _inst; })));
     parser = (Parser*)((({ Parser* _inst = Parser_new(); Parser_init(_inst, (((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; })); spec_pool_release_to(_pf); _v; }))))); _inst; })));
     Parser_setLexer(parser, lexer) /* inst:Parser:setLexer */;
@@ -72234,7 +72234,7 @@ void CodeGenerator_init(CodeGenerator* self) {
     spec_assign_transfer((void**)&self->allStringBackedEnums, (void*)(spec_map_new()));
     spec_assign_transfer((void**)&self->allTaggedEnums, (void*)(spec_map_new()));
     self->inMethod = false;
-    spec_assign((void**)&self->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+    spec_assign_transfer((void**)&self->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
     self->anonCounter = 0;
     spec_assign((void**)&self->inlineReturnVar, (void*)(spec_string_intern("")));
     spec_assign((void**)&self->inlineReturnLabel, (void*)(spec_string_intern("")));
@@ -73189,7 +73189,7 @@ String CodeGenerator_lookupMethodReturnType(CodeGenerator* self, String classNam
 	};
 	};
 	};
-	    SPEC_AUTO String knownRet = spec_construct_string(({ String _mt_400;
+	    SPEC_AUTO String knownRet = ({ String _mt_400;
 if (((((((spec_string_equals(methodName, spec_string_intern("length"))) || (spec_string_equals(methodName, spec_string_intern("count"))))) || (spec_string_equals(methodName, spec_string_intern("indexOf"))))) || (spec_string_equals(methodName, spec_string_intern("getInt"))))) {
 	_mt_400 = (String)(({ Primitive* _recv = (Primitive*)(Primitive_INT__ensure()); (((String (*)(Primitive*))_recv->_vtable[81]))((Primitive*)_recv); }));
 	} else if (((((spec_string_equals(methodName, spec_string_intern("isEmpty"))) || (spec_string_equals(methodName, spec_string_intern("has"))))) || (spec_string_equals(methodName, spec_string_intern("any"))))) {
@@ -73203,7 +73203,7 @@ if (((((((spec_string_equals(methodName, spec_string_intern("length"))) || (spec
 	} else {
 	_mt_400 = (String)spec_retain((void*)(spec_string_intern("")));
 	}
-_mt_400; }));
+_mt_400; });
 	    if ((!spec_string_equals(knownRet, spec_string_intern("")))) {
 	    _mret_262 = (String)({ String _ret_val = knownRet; knownRet = NULL; _ret_val; });
     goto _cleanup_262;
@@ -73599,7 +73599,7 @@ String CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr) {
 	    _mret_268 = (String)({ String _ret_val = root; root = NULL; _ret_val; });
     goto _cleanup_268;
 	};
-	    SPEC_AUTO String rootType = spec_construct_string(({ String _mt_418;
+	    SPEC_AUTO String rootType = ({ String _mt_418;
 if (spec_string_equals(root, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(WellKnown_selfIdent(self->names) /* inst:WellKnown:selfIdent */); spec_pool_release_to(_pf); _v; })))))) {
 	_mt_418 = (String)spec_retain((void*)(self->currentClassName));
 	} else if (spec_map_has(self->localVars, root)) {
@@ -73609,7 +73609,7 @@ if (spec_string_equals(root, (((String)spec_claim_pool((void*)({ size_t _pf = sp
 	} else {
 	_mt_418 = (String)spec_retain((void*)(spec_string_intern("")));
 	}
-_mt_418; }));
+_mt_418; });
 	    if (spec_string_equals(rootType, spec_string_intern(""))) {
 	    _mret_268 = (String)({ String _ret_val = rootType; rootType = NULL; _ret_val; });
     goto _cleanup_268;
@@ -73838,7 +73838,7 @@ bool CodeGenerator_yieldsClaim(CodeGenerator* self, Expression* expr) {
 	};
 	    SPEC_AUTO String targetT0 = CodeGenerator_inferTargetType(self, expr->methodTarget) /* inst:CodeGenerator:inferTargetType */;
 	    SPEC_AUTO String targetT = spec_construct_string(targetT0);
-	    if (((spec_string_equals(targetT, spec_string_intern(""))) && ((!spec_string_equals(expr->bareProvider, spec_string_intern("")))))) {
+	    if ((!spec_string_equals(expr->bareProvider, spec_string_intern("")))) {
 	    spec_assign((void**)&targetT, (void*)(expr->bareProvider));
 	};
 	    if (String_contains(targetT, spec_string_intern(":"))) {
@@ -74126,7 +74126,7 @@ String CodeGenerator_generateExpressionInner(CodeGenerator* self, Expression* ex
     SPEC_POOL_AUTO;
     SPEC_AUTO ExpressionKind* kind = 0;
     kind = (ExpressionKind*)spec_retain((void*)(expr->kind));
-    _mret_275 = (String)spec_retain((void*)(({ String _mt_423;
+    _mret_275 = (String)(({ String _mt_423;
 if ((void*)(kind) == (void*)(ExpressionKind_ARRAY__ensure())) {
 	_mt_423 = (String)(CodeGenerator_emitArrayLiteral(self, expr) /* inst:CodeGenerator:emitArrayLiteral */);
 	} else if ((void*)(kind) == (void*)(ExpressionKind_MAP__ensure())) {
@@ -74166,7 +74166,7 @@ if ((void*)(kind) == (void*)(ExpressionKind_ARRAY__ensure())) {
 	_mt_423 = (String)(CodeGenerator_emitCast(self, expr) /* inst:CodeGenerator:emitCast */);
 	} else if ((void*)(kind) == (void*)(ExpressionKind_UNARY__ensure())) {
 	    SPEC_AUTO String innerC = CodeGenerator_generateExpression(self, expr->unaryExpr) /* inst:CodeGenerator:generateExpression */;
-	    SPEC_AUTO String uC = spec_construct_string(({ String _mt_424;
+	    SPEC_AUTO String uC = ({ String _mt_424;
 if (spec_string_equals(expr->str, spec_string_intern("post++"))) {
 	_mt_424 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(("))), innerC), spec_string_intern(")++)")));
 	} else if (spec_string_equals(expr->str, spec_string_intern("post--"))) {
@@ -74178,7 +74178,7 @@ if (spec_string_equals(expr->str, spec_string_intern("post++"))) {
 	} else {
 	_mt_424 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), expr->str), spec_string_intern("(")), innerC), spec_string_intern("))")));
 	}
-_mt_424; }));
+_mt_424; });
 	_mt_423 = (String)spec_retain((void*)(uC));
     if (innerC) { spec_release((void*)innerC); innerC = NULL; }
     if (uC) { spec_release((void*)uC); uC = NULL; }
@@ -74193,7 +74193,7 @@ _mt_424; }));
 	} else {
 	_mt_423 = (String)spec_retain((void*)(spec_string_intern("0")));
 	}
-_mt_423; })));
+_mt_423; }));
     goto _cleanup_275;
     _cleanup_275: ;
     if (kind) { spec_release((void*)kind); kind = NULL; }
@@ -74576,7 +74576,7 @@ String CodeGenerator_emitBinary(CodeGenerator* self, Expression* expr) {
     SPEC_POOL_AUTO;
     SPEC_AUTO String op = 0;
     op = spec_construct_string(expr->str);
-    _mret_280 = (String)spec_retain((void*)(({ String _mt_445;
+    _mret_280 = (String)(({ String _mt_445;
 if (spec_string_equals(op, spec_string_intern("."))) {
 	    SPEC_AUTO String leftC = CodeGenerator_generateExpressionInner(self, expr->leftExpr) /* inst:CodeGenerator:generateExpressionInner */;
 	    SPEC_AUTO ExpressionKind* leftKind = (ExpressionKind*)spec_retain((void*)(expr->leftExpr->kind));
@@ -74584,7 +74584,7 @@ if (spec_string_equals(op, spec_string_intern("."))) {
 	    bool leftPrim = ((((((spec_string_equals(leftT, ({ Primitive* _recv = (Primitive*)(Primitive_INT__ensure()); (((String (*)(Primitive*))_recv->_vtable[81]))((Primitive*)_recv); }))) || (spec_string_equals(leftT, spec_string_intern("Byte"))))) || (spec_string_equals(leftT, spec_string_intern("Float"))))) || (spec_string_equals(leftT, spec_string_intern("Boolean"))));
 	    bool leftClaimKind = ((((((((leftKind) == (ExpressionKind_CALL__ensure()))) || (((leftKind) == (ExpressionKind_BINARY__ensure()))))) || (((leftKind) == (ExpressionKind_ARRAY__ensure()))))) || (((leftKind) == (ExpressionKind_MAP__ensure()))));
 	    bool leftArc = CodeGenerator_isArcType(self, leftT) /* inst:CodeGenerator:isArcType */;
-	    SPEC_AUTO String leftClaim = spec_construct_string(({ String _mt_446;
+	    SPEC_AUTO String leftClaim = ({ String _mt_446;
 if (((leftArc) && ((!(CodeGenerator_yieldsClaim(self, expr->leftExpr) /* inst:CodeGenerator:yieldsClaim */))))) {
 	_mt_446 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(void*)spec_retain((void*)("))), leftC), spec_string_intern("))")));
 	} else if (((leftPrim) || (leftClaimKind))) {
@@ -74592,7 +74592,7 @@ if (((leftArc) && ((!(CodeGenerator_yieldsClaim(self, expr->leftExpr) /* inst:Co
 	} else {
 	_mt_446 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_from_chars("))), leftC), spec_string_intern(")")));
 	}
-_mt_446; }));
+_mt_446; });
 	    SPEC_AUTO String leftWrap = spec_construct_string(leftClaim);
 	    if (leftPrim) {
 	    spec_assign_transfer((void**)&leftWrap, (void*)(CodeGenerator_wrapToString(self, expr->leftExpr, leftClaim) /* inst:CodeGenerator:wrapToString */));
@@ -74652,7 +74652,7 @@ _mt_446; }));
 	} else {
 	_mt_445 = (String)spec_retain((void*)(spec_string_intern("0")));
 	}
-_mt_445; })));
+_mt_445; }));
     goto _cleanup_280;
     _cleanup_280: ;
     if (op) { spec_release((void*)op); op = NULL; }
@@ -74668,7 +74668,7 @@ String CodeGenerator_stripStringLiterals(CodeGenerator* self, String body) {
     SPEC_AUTO String ch = 0;
     SPEC_AUTO String nextCh = 0;
     SPEC_AUTO String out = 0;
-    out = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+    out = Buf_stringCopy(NULL, spec_string_intern(""));
     ch = spec_construct_string(spec_string_intern(""));
     nextCh = spec_construct_string(spec_string_intern(""));
     delim = spec_construct_string(spec_string_intern(""));
@@ -74817,7 +74817,7 @@ String CodeGenerator_emitIndex(CodeGenerator* self, Expression* expr) {
 	    if (String_startsWith(targetType, spec_string_intern("Map:"))) {
 	    spec_assign_transfer((void**)&valType, (void*)(CodeGenerator_elemOfType(self, targetType) /* inst:CodeGenerator:elemOfType */));
 	};
-	    _mret_284 = (String)spec_retain((void*)(({ String _mt_449;
+	    _mret_284 = (String)(({ String _mt_449;
 if (spec_string_equals(valType, spec_string_intern("String"))) {
 	_mt_449 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("((String)spec_map_get("))), targetC), spec_string_intern(", ")), indexC), spec_string_intern(", spec_string_intern(\"\")))")));
 	} else if (spec_string_equals(valType, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(({ Primitive* _recv = (Primitive*)(Primitive_INT__ensure()); (((String (*)(Primitive*))_recv->_vtable[81]))((Primitive*)_recv); })); spec_pool_release_to(_pf); _v; })))))) {
@@ -74829,7 +74829,7 @@ if (spec_string_equals(valType, spec_string_intern("String"))) {
 	} else {
 	_mt_449 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[361]))((CodeGenerator*)self, valType)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")(intptr_t)spec_map_get(")), targetC), spec_string_intern(", ")), indexC), spec_string_intern(", NULL))")));
 	}
-_mt_449; })));
+_mt_449; }));
     goto _cleanup_284;
     if (valType) { spec_release((void*)valType); valType = NULL; }
 	};
@@ -74866,7 +74866,7 @@ String CodeGenerator_emitCast(CodeGenerator* self, Expression* expr) {
     if (((spec_array_length(expr->castArgs)) > (0))) {
 	    spec_assign_transfer((void**)&digitsC, (void*)(CodeGenerator_generateExpression(self, spec_array_get(expr->castArgs, 0)) /* inst:CodeGenerator:generateExpression */));
 	};
-    _mret_285 = (String)spec_retain((void*)(({ String _mt_450;
+    _mret_285 = (String)(({ String _mt_450;
 if (spec_string_equals(target, spec_string_intern("Hex"))) {
 	    SPEC_AUTO String hexC = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_int_to_base("))), innerC), spec_string_intern(", 16, ")), digitsC), spec_string_intern(")"));
 	    if (spec_string_equals(srcT, spec_string_intern("String"))) {
@@ -74933,7 +74933,7 @@ if (spec_string_equals(target, spec_string_intern("Hex"))) {
 	_mt_450 = (String)spec_retain((void*)(castC));
     if (castC) { spec_release((void*)castC); castC = NULL; }
 	}
-_mt_450; })));
+_mt_450; }));
     goto _cleanup_285;
     _cleanup_285: ;
     if (innerC) { spec_release((void*)innerC); innerC = NULL; }
@@ -75924,7 +75924,7 @@ String CodeGenerator_generateStatement(CodeGenerator* self, Statement* stmt) {
     SPEC_AUTO String stmtOut = 0;
     SPEC_AUTO StatementKind* kind = 0;
     kind = (StatementKind*)spec_retain((void*)(stmt->kind));
-    stmtOut = spec_construct_string(({ String _mt_500;
+    stmtOut = ({ String _mt_500;
 if ((void*)(kind) == (void*)(StatementKind_VAR_DECL__ensure())) {
 	_mt_500 = (String)(CodeGenerator_emitVarDecl(self, stmt) /* inst:CodeGenerator:emitVarDecl */);
 	} else if ((void*)(kind) == (void*)(StatementKind_ASSIGN__ensure())) {
@@ -75949,7 +75949,7 @@ if ((void*)(kind) == (void*)(StatementKind_VAR_DECL__ensure())) {
 	} else {
 	_mt_500 = (String)spec_retain((void*)(spec_string_intern("")));
 	}
-_mt_500; }));
+_mt_500; });
     if (((((self->policy->debugEmission) && (((stmt->line) > (0))))) && ((!spec_string_equals(self->currentSourceFile, spec_string_intern("")))))) {
 	    spec_assign_transfer((void**)&stmtOut, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("#line "))), spec_to_string_int(stmt->line)), spec_string_intern(" \"")), self->currentSourceFile), spec_string_intern("\"\n")), stmtOut)));
 	};
@@ -76416,7 +76416,7 @@ String CodeGenerator_generateMethod(CodeGenerator* self, ClassInfo* classDef, Me
         } while (0);
     } } });
     header = spec_string_concat(header, spec_string_intern(") {\n"));
-    bodyC = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+    bodyC = Buf_stringCopy(NULL, spec_string_intern(""));
     self->cleanupCounter = ((self->cleanupCounter) + (1));
     releasesC = CodeGenerator_scopeReleases(self, method->body) /* inst:CodeGenerator:scopeReleases */;
     if (((spec_string_length(releasesC)) > (0))) {
@@ -76656,7 +76656,7 @@ String CodeGenerator_generateHeldMembers(CodeGenerator* self, SpecArray* classes
     goto _cleanup_308;
 	};
     out = spec_construct_string(spec_string_intern("/* Held Members */\n"));
-    helpersAcc = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+    helpersAcc = Buf_stringCopy(NULL, spec_string_intern(""));
     long long pi = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
@@ -76728,7 +76728,7 @@ String CodeGenerator_generateHeldMembers(CodeGenerator* self, SpecArray* classes
 	};
     bool savedArg = self->argMode;
     self->argMode = false;
-    spec_assign((void**)&self->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+    spec_assign_transfer((void**)&self->helperFunctions, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
     SPEC_AUTO String initC = CodeGenerator_generateExpression(self, m->initExpr) /* inst:CodeGenerator:generateExpression */;
     self->argMode = savedArg;
     Buf_bufAppendBuf(NULL, helpersAcc, self->helperFunctions);
@@ -76945,8 +76945,8 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
         SPEC_POOL_AUTO;
         bool _it_562 = true;
         do {
-    spec_array_add_object(classChunks, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
-    spec_array_add_object(classHelpers, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+    spec_array_add_owned(classChunks, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+    spec_array_add_owned(classHelpers, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
         } while (0);
         if (!_it_562) break;
     }
@@ -76960,7 +76960,7 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     _env->classTotal = classTotal;
     _env->classChunks = (SpecArray*)spec_retain((void*)classChunks);
     spec_closure_new((void*)_anon_fn_563, (void*)_env, _destroy_env_anon_563); })));
-    methods = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+    methods = Buf_stringCopy(NULL, spec_string_intern(""));
     ({ SpecArray* _a_572 = classChunks; if (_a_572) { for (size_t _i_572 = 0; _i_572 < _a_572->length; _i_572++) {
         SPEC_POOL_AUTO;
         String chunk = (String)(intptr_t)_a_572->items[_i_572];
@@ -76968,7 +76968,7 @@ String CodeGenerator_generateProgram(CodeGenerator* self, ProgramNode* program, 
     Buf_bufAppendBuf(NULL, methods, chunk);
         } while (0);
     } } });
-    allHelpers = spec_construct_string(Buf_stringCopy(NULL, spec_string_intern("")));
+    allHelpers = Buf_stringCopy(NULL, spec_string_intern(""));
     ({ SpecArray* _a_574 = classHelpers; if (_a_574) { for (size_t _i_574 = 0; _i_574 < _a_574->length; _i_574++) {
         SPEC_POOL_AUTO;
         String helper = (String)(intptr_t)_a_574->items[_i_574];
@@ -77088,8 +77088,8 @@ long long CodeGenerator_generateProgramToFile(CodeGenerator* self, ProgramNode* 
         SPEC_POOL_AUTO;
         bool _it_577 = true;
         do {
-    spec_array_add_object(classChunks, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
-    spec_array_add_object(classHelpers, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+    spec_array_add_owned(classChunks, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
+    spec_array_add_owned(classHelpers, (void*)(Buf_stringCopy(NULL, spec_string_intern(""))));
         } while (0);
         if (!_it_577) break;
     }
@@ -78659,7 +78659,7 @@ String CBackendUtils_cTypeFor(CBackendUtils* self, String typeName) {
     if (((((spec_string_equals(typeName, spec_string_intern("Function"))) || (String_startsWith(typeName, spec_string_intern("Function of "))))) || (String_startsWith(typeName, spec_string_intern("Function:"))))) {
 	    return (String)spec_retain((void*)(spec_string_intern("SpecClosure*")));
 	};
-    return (String)spec_retain((void*)(({ String _mt_692;
+    return (String)(({ String _mt_692;
 if (spec_string_equals(typeName, spec_string_intern("Int"))) {
 	_mt_692 = (String)spec_retain((void*)(spec_string_intern("long long")));
 	} else if (spec_string_equals(typeName, spec_string_intern("Byte"))) {
@@ -78687,7 +78687,7 @@ if (spec_string_equals(typeName, spec_string_intern("Int"))) {
 	} else {
 	_mt_692 = (String)(spec_string_concat(CBackendUtils_cIdent(self, typeName) /* inst:CBackendUtils:cIdent */, spec_string_intern("*")));
 	}
-_mt_692; })));
+_mt_692; }));
 }
 
 String CBackendUtils_snakeCase(CBackendUtils* self, String name) {
@@ -78741,7 +78741,7 @@ String CBackendUtils_cIdent(CBackendUtils* self, String name) {
     if (String_contains(name, spec_string_intern(":"))) {
 	    return (String)(CBackendUtils_cIdent(self, String_replaceAll(name, spec_string_intern(":"), spec_string_intern("_"))) /* inst:CBackendUtils:cIdent */);
 	};
-    return (String)spec_retain((void*)(({ String _mt_694;
+    return (String)(({ String _mt_694;
 if (spec_string_equals(name, spec_string_intern("EOF"))) {
 	_mt_694 = (String)spec_retain((void*)(spec_string_intern("_EOF")));
 	} else if (spec_string_equals(name, spec_string_intern("default")) || spec_string_equals(name, spec_string_intern("case")) || spec_string_equals(name, spec_string_intern("switch")) || spec_string_equals(name, spec_string_intern("struct")) || spec_string_equals(name, spec_string_intern("union")) || spec_string_equals(name, spec_string_intern("enum")) || spec_string_equals(name, spec_string_intern("register")) || spec_string_equals(name, spec_string_intern("static")) || spec_string_equals(name, spec_string_intern("extern")) || spec_string_equals(name, spec_string_intern("inline")) || spec_string_equals(name, spec_string_intern("const")) || spec_string_equals(name, spec_string_intern("volatile")) || spec_string_equals(name, spec_string_intern("auto")) || spec_string_equals(name, spec_string_intern("signed")) || spec_string_equals(name, spec_string_intern("unsigned")) || spec_string_equals(name, spec_string_intern("short")) || spec_string_equals(name, spec_string_intern("long")) || spec_string_equals(name, spec_string_intern("sizeof")) || spec_string_equals(name, spec_string_intern("typedef")) || spec_string_equals(name, spec_string_intern("if")) || spec_string_equals(name, spec_string_intern("else")) || spec_string_equals(name, spec_string_intern("for")) || spec_string_equals(name, spec_string_intern("while")) || spec_string_equals(name, spec_string_intern("do")) || spec_string_equals(name, spec_string_intern("return")) || spec_string_equals(name, spec_string_intern("goto")) || spec_string_equals(name, spec_string_intern("break")) || spec_string_equals(name, spec_string_intern("continue"))) {
@@ -78749,7 +78749,7 @@ if (spec_string_equals(name, spec_string_intern("EOF"))) {
 	} else {
 	_mt_694 = (String)spec_retain((void*)(name));
 	}
-_mt_694; })));
+_mt_694; }));
 }
 
 String CBackendUtils_escapeString(CBackendUtils* self, String s) {
@@ -79690,7 +79690,7 @@ String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expr
 	    if (((Expression_argCount(expr) /* inst:Expression:argCount */) > (0))) {
 	    spec_assign_transfer((void**)&a0, (void*)(CodeGenerator_generateExpression(cg, (((Expression*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); Expression* _v = (Expression*)((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[90]))((BuiltinCallGenerator*)self, expr, 0)); spec_pool_release_to(_pf); _v; }))))) /* inst:CodeGenerator:generateExpression */));
 	};
-	    SPEC_AUTO String oneC = spec_construct_string(({ String _mt_100647;
+	    SPEC_AUTO String oneC = ({ String _mt_100647;
 if (spec_string_equals(m, spec_string_intern("round"))) {
 	_mt_100647 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_math_round("))), a0), spec_string_intern(")")));
 	} else if (spec_string_equals(m, spec_string_intern("floor"))) {
@@ -79721,7 +79721,7 @@ if (spec_string_equals(m, spec_string_intern("round"))) {
 	} else {
 	_mt_100647 = (String)spec_retain((void*)(spec_string_intern("")));
 	}
-_mt_100647; }));
+_mt_100647; });
 	    if ((!spec_string_equals(oneC, spec_string_intern("")))) {
 	    _mret_100240 = (String)({ String _ret_val = oneC; oneC = NULL; _ret_val; });
     goto _cleanup_100240;
@@ -80438,7 +80438,7 @@ String BuiltinCallGenerator_bindStringDirect(BuiltinCallGenerator* self, Express
     if (((Expression_argCount(expr) /* inst:Expression:argCount */) > (1))) {
 	    spec_assign_transfer((void**)&a1, (void*)(CodeGenerator_generateExpression(cg, (((Expression*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); Expression* _v = (Expression*)((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[90]))((BuiltinCallGenerator*)self, expr, 1)); spec_pool_release_to(_pf); _v; }))))) /* inst:CodeGenerator:generateExpression */));
 	};
-    _mret_100243 = (String)spec_retain((void*)(({ String _mt_100689;
+    _mret_100243 = (String)(({ String _mt_100689;
 if (spec_string_equals(m, spec_string_intern("length"))) {
 	_mt_100689 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_length("))), targetC), spec_string_intern(")")));
 	} else if (spec_string_equals(m, spec_string_intern("charAt"))) {
@@ -80490,7 +80490,7 @@ if (spec_string_equals(m, spec_string_intern("length"))) {
 	} else {
 	_mt_100689 = (String)spec_retain((void*)(spec_string_intern("")));
 	}
-_mt_100689; })));
+_mt_100689; }));
     goto _cleanup_100243;
     _cleanup_100243: ;
     if (m) { spec_release((void*)m); m = NULL; }
