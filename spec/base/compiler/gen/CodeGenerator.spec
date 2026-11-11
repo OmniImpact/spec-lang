@@ -36,7 +36,6 @@ Class is CodeGenerator{
 		['base', 'compiler', 'gen', RuntimePrelude],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', StatementKind]
@@ -990,10 +989,14 @@ Class is CodeGenerator{
 		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
-		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:members, fieldName: fieldName);
-		Loops:run(loop: fl);
-		Conditional:if(check: { fl:found }, then: {
-			local String is rawT: self:formatTypeString(t: fl:res:memberType);
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && m:kind == MemberKind:FIELD && m:name == fieldName }, {
+				foundM: m;
+			});
+		});
+		if({ foundM:name != '' }, {
+			local String is rawT: self:formatTypeString(t: foundM:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		});
 		local String is inherited: '';
@@ -1137,10 +1140,14 @@ Class is CodeGenerator{
 			});
 			return '';
 		});
-		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
-		Loops:run(loop: ml);
-		Conditional:if(check: { ml:found }, then: {
-			local String is rawT: self:formatTypeString(t: ml:res:memberType);
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && m:kind == MemberKind:METHOD && m:name == methodName }, {
+				foundM: m;
+			});
+		});
+		if({ foundM:name != '' }, {
+			local String is rawT: self:formatTypeString(t: foundM:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		});
 		local String is inherited: '';
@@ -1180,10 +1187,14 @@ Class is CodeGenerator{
 
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
-		local FieldMemberLoop is fl: FieldMemberLoop:init(members: cls:members, fieldName: variantName);
-		Loops:run(loop: fl);
-		Conditional:if(check: { fl:found }, then: {
-			return fl:res;
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && m:kind == MemberKind:FIELD && m:name == variantName }, {
+				foundM: m;
+			});
+		});
+		if({ foundM:name != '' }, {
+			return foundM;
 		});
 		return Member:init(kind: MemberKind:FIELD);
 	}
@@ -1205,10 +1216,14 @@ Class is CodeGenerator{
 		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
-		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
-		Loops:run(loop: ml);
-		Conditional:if(check: { ml:found }, then: {
-			Conditional:if(check: { paramCount < 0 || ml:res:params:length() == paramCount }, then: {
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && m:kind == MemberKind:METHOD && m:name == methodName }, {
+				foundM: m;
+			});
+		});
+		if({ foundM:name != '' }, {
+			if({ paramCount < 0 || foundM:params:length() == paramCount }, {
 				# the IMPLEMENTING class's symbol
 				# base qualifies for nested classes — the vtable entries and
 				# the definitions agree.
@@ -1239,10 +1254,14 @@ Class is CodeGenerator{
 		Conditional:if(check: { cls:name == '' }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
-		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
-		Loops:run(loop: ml);
-		Conditional:if(check: { ml:found }, then: {
-			return ml:res;
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && m:kind == MemberKind:METHOD && m:name == methodName }, {
+				foundM: m;
+			});
+		});
+		if({ foundM:name != '' }, {
+			return foundM;
 		});
 		local Member is inherited: Member:init(kind: MemberKind:FIELD);
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -5344,76 +5363,6 @@ Class is CodeGenerator{
 	## @return: C statement expression.
 	Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
 		return self:generateInlineWhileLoop(loopVars: [], evalExpr: evalExpr, iterExpr: iterExpr);
-	}
-
-	## Scans a member list for a field by name.
-	Class of Loop is FieldMemberLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local Array of Member is members;
-		local String is fieldName;
-		local Int is idx: 0;
-		local Member is res;
-		local Boolean is found: false;
-
-		replace Function is init(Array of Member is members, String is fieldName){
-			self:members: members;
-			self:fieldName: fieldName;
-			self:idx: 0;
-			self:found: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:found && self:idx < self:members:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:members:get(index: self:idx);
-			self:idx: self:idx + 1;
-			Conditional:if(check: { m:kind == MemberKind:FIELD && m:name == self:fieldName }, then: {
-				self:res: m;
-				self:found: true;
-				return false;
-			});
-			return true;
-		}
-	}
-
-	## Scans a member list for a method by name.
-	Class of Loop is MethodMemberLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local Array of Member is members;
-		local String is methodName;
-		local Int is idx: 0;
-		local Member is res;
-		local Boolean is found: false;
-
-		replace Function is init(Array of Member is members, String is methodName){
-			self:members: members;
-			self:methodName: methodName;
-			self:idx: 0;
-			self:found: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:found && self:idx < self:members:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:members:get(index: self:idx);
-			self:idx: self:idx + 1;
-			Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == self:methodName }, then: {
-				self:res: m;
-				self:found: true;
-				return false;
-			});
-			return true;
-		}
 	}
 
 }
