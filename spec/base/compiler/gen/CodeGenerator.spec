@@ -4429,9 +4429,10 @@ Class is CodeGenerator{
 				# Part IV memory discipline: every class
 				# allocates through ARC — refcounts drive the frees, so the
 				# parser's tokens, the loop objects, and every transient
-				# reclaim their memory during compilation. The old
-				# compiler-phase arena made everything immortal and turned
-				# the peak into total allocation volume.
+				# reclaim their memory during compilation. Bump arena routing
+				# for AST nodes was measured and falsified (+154 MB): nodes
+				# die incrementally and ARC returns their blocks to glibc's
+				# tcache, while a bump arena hoards them until drain.
 				Buf:bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n");
 				Buf:bufAppendBuf(dst: out, src: '    self->_type_name = "' . c:qualifiedName() . "\";\n");
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
