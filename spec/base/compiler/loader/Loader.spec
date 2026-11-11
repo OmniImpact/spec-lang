@@ -414,113 +414,23 @@ Class is Loader{
 
 	## Directory portion of a file path ('' when the path has no slash).
 	Function of String is dirOf(String is path){
-		local LastSlashLoop is loop: LastSlashLoop:init(src: path);
-		Loops:run(loop: loop);
-		Conditional:if(check: { loop:lastIdx < 0 }, then: {
+		local Int is lastIdx: -1;
+		local Int is len: path:length();
+		Loops(
+			[Int is pos: 0],
+			{ pos < len },
+			{
+				local String is ch: path:charAt(index: pos, default: '');
+				if({ ch == '/' }, {
+					lastIdx: pos;
+				});
+				pos++;
+			}
+		);
+		if({ lastIdx < 0 }, {
 			return '';
 		});
-		return path:substring(start: 0, end: loop:lastIdx);
-	}
-
-	## Walks a path tracking the final slash index.
-	Class of Loop is LastSlashLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local String is src;
-		local Int is pos: 0;
-		local Int is lastIdx: -1;
-
-		replace Function is init(String is src){
-			self:src: src;
-			self:pos: 0;
-			self:lastIdx: -1;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return self:pos < self:src:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:src:charAt(index: self:pos, default: '');
-			Conditional:if(check: { ch == '/' }, then: {
-				self:lastIdx: self:pos;
-			});
-			self:pos: self:pos + 1;
-			return true;
-		}
-	}
-
-	## Finds an already-loaded class by name.
-	Class of Loop is LoadedClassSearchLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local Array of ClassInfo is list;
-		local String is target;
-		local Int is idx: 0;
-		local ClassInfo is res;
-		local Boolean is found: false;
-
-		replace Function is init(Array of ClassInfo is list, String is target){
-			self:list: list;
-			self:target: target;
-			self:idx: 0;
-			self:found: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:found && self:idx < self:list:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local ClassInfo is cand: self:list:get(index: self:idx);
-			self:idx: self:idx + 1;
-			Conditional:if(check: { cand:name == self:target }, then: {
-				self:res: cand;
-				self:found: true;
-				return false;
-			});
-			return true;
-		}
-	}
-
-	## Finds a named member on a class (nested-class members have no name
-	## and never match).
-	Class of Loop is NamedMemberLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local Array of Member is members;
-		local String is target;
-		local Int is idx: 0;
-		local Member is res;
-		local Boolean is found: false;
-
-		replace Function is init(Array of Member is members, String is target){
-			self:members: members;
-			self:target: target;
-			self:idx: 0;
-			self:found: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:found && self:idx < self:members:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:members:get(index: self:idx);
-			self:idx: self:idx + 1;
-			Conditional:if(check: { self:target != '' && m:name == self:target }, then: {
-				self:res: m;
-				self:found: true;
-				return false;
-			});
-			return true;
-		}
+		return path:substring(start: 0, end: lastIdx);
 	}
 
 	## True when two members declare the same signature — for methods:
@@ -777,12 +687,22 @@ Class is Loader{
 	## @param name: Class name.
 	## @return: The [ClassInfo], or an empty-named node when absent.
 	Function of ClassInfo is findLoadedClass(String is name){
-		local LoadedClassSearchLoop is find: LoadedClassSearchLoop:init(list: self:loadedClasses, target: name);
-		Loops:run(loop: find);
-		Conditional:if(check: { find:found }, then: {
-			return find:res;
-		});
-		return ClassInfo:init(name: '', baseClass: '', members: []);
+		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
+		local Boolean is found: false;
+		local Int is count: self:loadedClasses:length();
+		Loops(
+			[Int is idx: 0],
+			{ !found && idx < count },
+			{
+				local ClassInfo is cand: self:loadedClasses:get(index: idx);
+				idx++;
+				if({ cand:name == name }, {
+					res: cand;
+					found: true;
+				});
+			}
+		);
+		return res;
 	}
 
 	## Appends `Class` as the parent of every class without explicit parents

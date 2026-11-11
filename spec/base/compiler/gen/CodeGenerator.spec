@@ -29,7 +29,6 @@ Class is CodeGenerator{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'compiler', 'checker', 'loops', ClassSearchLoop],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
 		['base', 'compiler', 'gen', DeclarationGenerator],
@@ -902,25 +901,45 @@ Class is CodeGenerator{
 	## @param name: Target class name.
 	## @return: The descriptor, or an unnamed one when absent.
 	Function of ClassInfo is findClass(String is name){
-		local ClassSearchLoop is s: ClassSearchLoop:init(list: self:programClasses, target: name);
-		Loops:run(loop: s);
-		Conditional:if(check: { s:found }, then: {
-			return s:res;
+		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
+		local Boolean is found: false;
+		local Int is count: self:programClasses:length();
+		local Boolean is hasColon: name:contains(needle: ':');
+		Loops(
+			[Int is idx: 0],
+			{ !found && idx < count },
+			{
+				local ClassInfo is cand: self:programClasses:get(index: idx);
+				idx++;
+				if({ cand:name == name }, {
+					res: cand;
+					found: true;
+				}, {
+					if({ hasColon }, {
+						local String is candQ: cand:namespaceJoined() . ':' . cand:name;
+						if({ candQ == name }, {
+							res: cand;
+							found: true;
+						});
+					});
+				});
+			}
+		);
+		if({ found }, {
+			return res;
 		});
-		# the qualified nested-class reference —
-		# 'Outer:Inner' resolves the class whose qualified identity matches.
-		Conditional:if(check: { name:contains(needle: ':') }, then: {
+		if({ hasColon }, {
 			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);
 			self:programClasses:each(action: local Function(ClassInfo is c){
-				Conditional:if(check: { qMatch:name == '' && c:qualifiedName() == name }, then: {
+				if({ qMatch:name == '' && c:qualifiedName() == name }, {
 					qMatch: c;
 				});
 			});
-			Conditional:if(check: { qMatch:name != '' }, then: {
+			if({ qMatch:name != '' }, {
 				return qMatch;
 			});
 		});
-		return ClassInfo:init(name: '', baseClass: '', members: []);
+		return res;
 	}
 
 	## Looks up a field's static type on a class and its ancestors.
