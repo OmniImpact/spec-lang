@@ -120,6 +120,40 @@ Class is Lexer{
 		return tokens;
 	}
 
+	## Scans and returns the next token from the source stream.
+	## When the end of source is reached, returns an EOF token.
+	##
+	## @return: The next Token.
+	Function of Token is nextToken(){
+		self:skipWhitespaceAndComments();
+		Conditional:if(check: { self:pos >= self:length }, then: {
+			return Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col);
+		});
+
+		local String is ch: self:source:charAt(index: self:pos, default: '');
+		Conditional:if(check: { ch == '"' || ch == '\'' }, then: {
+			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+			Conditional:if(check: { triple == "'''" }, then: {
+				return self:readTriple(quote: "'''", kind: TokenKind:RAWSTRING);
+			});
+			return self:readString(quote: ch);
+		});
+		Conditional:if(check: { ch == '`' }, then: {
+			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+			Conditional:if(check: { triple == "```" }, then: {
+				return self:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING);
+			});
+			return self:readSymbol();
+		});
+		Conditional:if(check: { ch:isDigit() }, then: {
+			return self:readNumber();
+		});
+		Conditional:if(check: { self:isIdentifierStart(ch: ch) }, then: {
+			return self:readIdentifierOrKeyword();
+		});
+		return self:readSymbol();
+	}
+
 	## Maps a hexadecimal digit character to its value (0..15), or -1.
 	##
 	## @param ch: Digit character.
@@ -252,7 +286,7 @@ Class is Lexer{
 		Conditional:if(check: { text == self:names:boolTrue() || text == 'false' }, then: {
 			kind: TokenKind:BOOL;
 		});
-		local Token is t: Token:init(kind: kind, value: text, line: startLine, col: startCol);
+		local Token is t: Token:init(kind: kind, value: Buf:intern(s: text), line: startLine, col: startCol);
 		Conditional:if(check: { kw != Keyword:NONE }, then: {
 			t:setKeyword(kw: kw);
 		});
@@ -382,11 +416,11 @@ Class is Lexer{
 		local Operator is op: Operator:of(pair);
 		Conditional:if(check: { op != Operator:NONE }, then: {
 			self:advance();
-			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: pair, line: startLine, col: startCol);
+			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: Buf:intern(s: pair), line: startLine, col: startCol);
 			t:setOperator(op: op);
 			return t;
 		});
-		return Token:init(kind: TokenKind:SYMBOL, value: ch, line: startLine, col: startCol);
+		return Token:init(kind: TokenKind:SYMBOL, value: Buf:intern(s: ch), line: startLine, col: startCol);
 	}
 
 }

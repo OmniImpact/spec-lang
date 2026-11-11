@@ -84,16 +84,16 @@ Class is Loader{
 
 		local String is src: fileRead(path: filePath, default: '');
 		local Lexer is lexer: Lexer:init(source: src);
-		local Array of Token is tokens: lexer:tokenize();
+		local Parser is parser: Parser:init(tokens: []);
+		parser:setLexer(lexer: lexer);
+		parser:setSourceFile(file: filePath);
+		local ProgramNode is prog: parser:parseProgram();
 		Conditional:if(check: { lexer:hasErrors() }, then: {
 			local Array of Error is lexErrors: lexer:getErrors();
 			lexErrors:each(action: local Function(Error is err){
 				self:parseErrors:add(item: '  [LexError] [' . filePath . '] ' . err:toString());
 			});
 		});
-		local Parser is parser: Parser:init(tokens: tokens);
-		parser:setSourceFile(file: filePath);
-		local ProgramNode is prog: parser:parseProgram();
 		Conditional:if(check: { parser:hasErrors() }, then: {
 			local Array of Error is parseErrs: parser:getErrors();
 			parseErrs:each(action: local Function(Error is err){

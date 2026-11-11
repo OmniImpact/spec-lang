@@ -64,6 +64,10 @@ Class is Parser{
 	local String is sourceFile: '';
 	local Array of Error is errors: [];
 
+	local Lexer is lexer;
+	local Array of Token is lookahead: [];
+	local Boolean is streaming: false;
+
 	# Nesting depth of template desugaring: 0 at statement level, >= 1
 	# inside a template hole (inner strings stay plain — no nested
 	# template expansion).
@@ -82,6 +86,17 @@ Class is Parser{
 		self:sourceFile: '';
 		self:errors: [];
 		self:templateDepth: 0;
+		self:streaming: false;
+		self:lookahead: [];
+	}
+
+	## Configures the parser to stream tokens on-demand from a lexer.
+	##
+	## @param lexer: The active lexer instance.
+	Function is setLexer(Lexer is lexer){
+		self:lexer: lexer;
+		self:streaming: true;
+		self:lookahead: [];
 	}
 
 	## Attaches the declaring file for provenance.
@@ -127,6 +142,9 @@ Class is Parser{
 	##
 	## @return: The current token; EOF past the end.
 	Function of Token is peek(){
+		Conditional:if(check: { self:streaming }, then: {
+			return self:peekAhead(offset: 0);
+		});
 		Conditional:if(check: { self:pos < self:length }, then: {
 			return self:tokens:get(index: self:pos);
 		});
@@ -138,6 +156,26 @@ Class is Parser{
 	## @param offset: Lookahead distance.
 	## @return: The token; EOF past the end.
 	Function of Token is peekAhead(Int is offset){
+		Conditional:if(check: { self:streaming }, then: {
+			local Boolean is pulling: true;
+			while(
+				evaluate: local Function of Boolean(){
+					return pulling && self:lookahead:length() <= offset;
+				},
+				iteration: local Function of Boolean(){
+					local Token is tok: self:lexer:nextToken();
+					self:lookahead:add(item: tok);
+					Conditional:if(check: { tok:getTokenKind() == TokenKind:EOF }, then: {
+						pulling: false;
+					});
+					return true;
+				}
+			);
+			Conditional:if(check: { offset < self:lookahead:length() }, then: {
+				return self:lookahead:get(index: offset);
+			});
+			return Token:init(kind: TokenKind:EOF, value: '', line: 0, col: 0);
+		});
 		local Int is idx: self:pos + offset;
 		Conditional:if(check: { idx < self:length }, then: {
 			return self:tokens:get(index: idx);
@@ -149,6 +187,11 @@ Class is Parser{
 	##
 	## @return: The consumed token.
 	Function of Token is advance(){
+		Conditional:if(check: { self:streaming }, then: {
+			local Token is tok: self:peekAhead(offset: 0);
+			self:lookahead:removeAt(index: 0, default: tok);
+			return tok;
+		});
 		local Token is tok: self:peek();
 		Conditional:if(check: { self:pos < self:length }, then: {
 			self:pos: self:pos + 1;

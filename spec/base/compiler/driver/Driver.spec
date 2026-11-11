@@ -98,7 +98,10 @@ Class is Driver{
 		# 1. Lint mode: scan, parse, report standards issues; no emission.
 		Conditional:if(check: { lintMode }, then: {
 			local Lexer is lexer: Lexer:init(source: source);
-			local Array of Token is tokens: lexer:tokenize();
+			local Parser is parser: Parser:init(tokens: []);
+			parser:setLexer(lexer: lexer);
+			parser:setSourceFile(file: inputPath);
+			local ProgramNode is lintProgram: parser:parseProgram();
 			Conditional:if(check: { lexer:hasErrors() }, then: {
 				Stderr:line('Lexical errors encountered during linting:');
 				local Array of Error is lexErrors: lexer:getErrors();
@@ -107,9 +110,6 @@ Class is Driver{
 				});
 				Process:exit(status: 1);
 			});
-			local Parser is parser: Parser:init(tokens: tokens);
-			parser:setSourceFile(file: inputPath);
-			local ProgramNode is lintProgram: parser:parseProgram();
 			Conditional:if(check: { parser:hasErrors() }, then: {
 				Stderr:line('Syntax errors encountered during linting:');
 				local Array of Error is parseErrs: parser:getErrors();
