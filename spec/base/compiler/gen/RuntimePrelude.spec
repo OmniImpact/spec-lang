@@ -328,6 +328,16 @@ static inline void spec_pool_auto_cleanup(size_t* pmark) {
 }
 #define SPEC_POOL_AUTO size_t _spec_pool_mark __attribute__((cleanup(spec_pool_auto_cleanup))) = spec_pool_frame()
 
+static inline void spec_pool_thread_cleanup(void) {
+    if (_spec_pool_stack) {
+        spec_pool_release_to(0);
+        free(_spec_pool_stack);
+        _spec_pool_stack = NULL;
+        _spec_pool_top = 0;
+        _spec_pool_cap = 0;
+    }
+}
+
 void* spec_claim_pool(void* obj) {
     if (!obj) return NULL;
     if (_spec_pool_top == _spec_pool_cap) {
@@ -473,8 +483,16 @@ void spec_array_add_array(SpecArray* a, SpecArray* other) {
     if (a == other) {
         pthread_mutex_lock(&a->lock);
         size_t n = a->length;
+        if (a->length + n > a->capacity) {
+            size_t ncap = a->capacity ? a->capacity * 2 : 8;
+            while (ncap < a->length + n) ncap *= 2;
+            a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
+            a->capacity = ncap;
+        }
         for (size_t i = 0; i < n; i++) {
-            spec_array_add(a, a->items[i]);
+            void* item = a->items[i];
+            if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
+            a->items[a->length++] = item;
         }
         pthread_mutex_unlock(&a->lock);
         return;
@@ -487,8 +505,16 @@ void spec_array_add_array(SpecArray* a, SpecArray* other) {
         pthread_mutex_lock(&a->lock);
     }
     size_t n = other->length;
+    if (a->length + n > a->capacity) {
+        size_t ncap = a->capacity ? a->capacity * 2 : 8;
+        while (ncap < a->length + n) ncap *= 2;
+        a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
+        a->capacity = ncap;
+    }
     for (size_t i = 0; i < n; i++) {
-        spec_array_add(a, other->items[i]);
+        void* item = other->items[i];
+        if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
+        a->items[a->length++] = item;
     }
     pthread_mutex_unlock(&a->lock);
     pthread_mutex_unlock(&other->lock);
@@ -1157,6 +1183,14 @@ void spec_buf_append_bytes(SpecBuf* b, const char* s) {
 void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src) {
     if (!dst || !src || src->length == 0) return;
     if (dst->elem_size != 1 || src->elem_size != 1) return;
+    if (dst == src) {
+        size_t n = dst->length;
+        spec_buf_grow(dst, n);
+        memcpy((unsigned char*)dst->data + n, dst->data, n);
+        dst->length += n;
+        ((unsigned char*)dst->data)[dst->length] = 0;
+        return;
+    }
     spec_buf_grow(dst, src->length);
     memcpy((unsigned char*)dst->data + dst->length, src->data, src->length);
     dst->length += src->length;
@@ -1328,15 +1362,12 @@ String spec_string_concat(String a, String b) {
     return res;
 }
 String spec_string_substring(String b, long long start, long long end) {
-    String res = spec_buf_new(1, 0);
-    if (!b) return res;
+    if (!b) return spec_string_from_bytes("", 0);
     long long len = (long long)b->length;
     long long s = start < 0 ? 0 : start;
     long long e = end > len ? len : end;
-    for (long long i = s; i < e; i++) {
-        spec_buf_push_byte(res, (long long)((unsigned char*)b->data)[i]);
-    }
-    return res;
+    if (s >= e) return spec_string_from_bytes("", 0);
+    return spec_string_from_bytes((const char*)b->data + s, (size_t)(e - s));
 }
 
 long long spec_string_index_of(String b, String needle, long long def) {
@@ -1345,15 +1376,15 @@ long long spec_string_index_of(String b, String needle, long long def) {
 
 long long spec_string_index_of_from(String b, String needle, long long from, long long def) {
     if (!b || !needle) return def;
-    if (needle->length == 0) return (from >= 0 && from <= (long long)b->length) ? from : def;
+    if (from < 0) from = 0;
+    if (needle->length == 0) return (from <= (long long)b->length) ? from : def;
     long long slen = (long long)b->length;
     long long nlen = (long long)needle->length;
+    if (from + nlen > slen) return def;
+    const unsigned char* haystack = (const unsigned char*)b->data;
+    const unsigned char* nd = (const unsigned char*)needle->data;
     for (long long i = from; i + nlen <= slen; i++) {
-        bool match = true;
-        for (long long j = 0; j < nlen; j++) {
-            if (((unsigned char*)b->data)[i+j] != ((unsigned char*)needle->data)[j]) { match = false; break; }
-        }
-        if (match) return i;
+        if (haystack[i] == nd[0] && memcmp(haystack + i, nd, (size_t)nlen) == 0) return i;
     }
     return def;
 }
@@ -1622,12 +1653,14 @@ bool spec_file_write(String path, String content, SpecClosure* on_success, SpecC
 }
 static void* spec_file_read_worker(void* arg) {
     SpecFileTask* task = (SpecFileTask*)arg;
-    spec_file_read(task->path, task->def, task->on_success_read, task->on_error);
+    String res = spec_file_read(task->path, task->def, task->on_success_read, task->on_error);
+    if (res) spec_release(res);
     if (task->path) spec_release(task->path);
     if (task->def) spec_release(task->def);
     if (task->on_success_read) spec_release(task->on_success_read);
     if (task->on_error) spec_release(task->on_error);
     free(task);
+    spec_pool_thread_cleanup();
     spec_async_task_finished();
     return NULL;
 }
@@ -1656,6 +1689,7 @@ static void* spec_file_write_worker(void* arg) {
     if (task->on_success_write) spec_release(task->on_success_write);
     if (task->on_error) spec_release(task->on_error);
     free(task);
+    spec_pool_thread_cleanup();
     spec_async_task_finished();
     return NULL;
 }
@@ -1927,6 +1961,7 @@ static void* spec_parallel_worker(void* arg) {
     spec_fast_random_seed(t->idx);
     long long r = t->fn(t->env, t->idx, t->count);
     free(t);
+    spec_pool_thread_cleanup();
     return (void*)(intptr_t)r;
 }
 
@@ -2103,6 +2138,7 @@ void spec_read_line(SpecClosure* on_line) {
         if (_n > 0 && _line[_n - 1] == '\n') _line[_n - 1] = '\0';
         String text = spec_string_from_chars(_line);
         spec_call_closure_str(on_line, text);
+        spec_release(text);
     }
     free(_line);
 }
