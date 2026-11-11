@@ -125,4 +125,14 @@ Class is Process{
 	Function of Int is monitorPeakCpuPct(){
 		return base:sysinternal:Process:monitor_peak_cpu_pct();
 	}
+
+	## Freezes a map for lock-free concurrent reads across worker threads.
+	Function is mapFreeze(Any is m){
+		base:sysinternal:Process:map_freeze(m: m);
+	}
+
+	## Freezes an array for lock-free concurrent reads across worker threads.
+	Function is arrayFreeze(Any is a){
+		base:sysinternal:Process:array_freeze(a: a);
+	}
 }

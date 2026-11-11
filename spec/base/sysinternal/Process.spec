@@ -94,4 +94,12 @@ Class is Process{
 	## @param slot: The atomic slot index.
 	## @return: The slot value.
 	Function of Int is atomic_get(Int is slot);
+
+	## Marks a Map as frozen for lock-free concurrent reads.
+	## Bound to `spec_map_freeze`.
+	Function is map_freeze(Any is m);
+
+	## Marks an Array as frozen for lock-free concurrent reads.
+	## Bound to `spec_array_freeze`.
+	Function is array_freeze(Any is a);
 }

@@ -151,7 +151,7 @@ Class is Driver{
 				});
 			});
 		});
-		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes');
+		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 		Conditional:if(check: { loader:getParseErrors():length() > 0 }, then: {
 			Stderr:line('Compilation errors encountered during loading:');
 			local Array of String is loadErrors: loader:getParseErrors();
@@ -178,7 +178,7 @@ Class is Driver{
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is typeErrors: tc:checkProgram(program: program);
 		checkMs: Process:clockMs() - checkT0;
-		report:stage(n: 2, total: 4, label: 'type checking · ' . (typeErrors:length() as String) . ' errors');
+		report:stage(n: 2, total: 4, label: 'type checking · ' . (typeErrors:length() as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 		Conditional:if(check: { typeErrors:length() > 0 }, then: {
 			Stderr:line('Type errors encountered during compilation:');
 			typeErrors:each(action: local Function(TypeError is err){
@@ -239,7 +239,7 @@ Class is Driver{
 			Stderr:line('Error: Failed to write intermediate C code to ' . tempCPath);
 			Process:exit(status: 1);
 		});
-		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines');
+		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
 		Conditional:if(check: { outputPath == '' }, then: {
 			Process:monitorStop();

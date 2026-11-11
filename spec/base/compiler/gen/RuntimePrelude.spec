@@ -410,6 +410,7 @@ typedef struct {
     size_t length;
     size_t capacity;
     int elem_kind;
+    bool frozen;
     pthread_mutex_t lock;
 } SpecArray;
 
@@ -433,6 +434,7 @@ static SpecArray* spec_array_new_kind(int kind) {
     a->length = 0;
     a->capacity = 0;
     a->elem_kind = kind;
+    a->frozen = false;
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -451,6 +453,7 @@ SpecArray* spec_array_new_object(void) {
 
 void spec_array_add(SpecArray* a, void* item) {
     if (!a) return;
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     pthread_mutex_lock(&a->lock);
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
@@ -469,6 +472,7 @@ void spec_array_add_object(SpecArray* a, void* item) {
 
 void spec_array_add_owned(SpecArray* a, void* item) {
     if (!a) return;
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     pthread_mutex_lock(&a->lock);
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
@@ -481,6 +485,7 @@ void spec_array_add_owned(SpecArray* a, void* item) {
 
 void spec_array_add_array(SpecArray* a, SpecArray* other) {
     if (!a || !other) return;
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     if (a == other) {
         pthread_mutex_lock(&a->lock);
         size_t n = a->length;
@@ -523,6 +528,7 @@ void spec_array_add_array(SpecArray* a, SpecArray* other) {
 
 long long spec_array_length(SpecArray* a) {
     if (!a) return 0;
+    if (a->frozen) return (long long)a->length;
     pthread_mutex_lock(&a->lock);
     long long len = (long long)a->length;
     pthread_mutex_unlock(&a->lock);
@@ -531,6 +537,18 @@ long long spec_array_length(SpecArray* a) {
 
 void* spec_array_get(SpecArray* a, long long idx) {
     if (!a) spec_panic("Null pointer access on uninitialized Array");
+    if (a->frozen) {
+        if (idx < 0 || (size_t)idx >= a->length) {
+            spec_panic_bounds("Array", idx, a->length);
+            return NULL;
+        }
+        void* val = a->items[idx];
+        if (a->elem_kind == SPEC_ELEM_OBJECT && val) {
+            spec_retain(val);
+            spec_claim_pool(val);
+        }
+        return val;
+    }
     pthread_mutex_lock(&a->lock);
     if (idx < 0 || (size_t)idx >= a->length) {
         size_t len = a->length;
@@ -549,6 +567,7 @@ void* spec_array_get(SpecArray* a, long long idx) {
 
 void spec_array_set(SpecArray* a, long long idx, void* item) {
     if (!a) spec_panic("Null pointer access on uninitialized Array");
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     pthread_mutex_lock(&a->lock);
     if (idx < 0 || (size_t)idx >= a->length) {
         size_t len = a->length;
@@ -566,6 +585,7 @@ void spec_array_set(SpecArray* a, long long idx, void* item) {
 
 void* spec_array_pop(SpecArray* a, void* def) {
     if (!a) return def;
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return def; }
     pthread_mutex_lock(&a->lock);
     void* val = def;
     if (a->length > 0) {
@@ -579,6 +599,7 @@ void* spec_array_pop(SpecArray* a, void* def) {
 
 void* spec_array_remove_at(SpecArray* a, long long idx, void* def) {
     if (!a || idx < 0) return def;
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return def; }
     pthread_mutex_lock(&a->lock);
     void* removed = def;
     if ((size_t)idx < a->length) {
@@ -596,12 +617,20 @@ void* spec_array_remove_at(SpecArray* a, long long idx, void* def) {
 
 void spec_array_clear(SpecArray* a) {
     if (!a) return;
+    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     pthread_mutex_lock(&a->lock);
     for (size_t i = 0; i < a->length; i++) {
         if (!a->items[i]) continue;
         if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);
     }
     a->length = 0;
+    pthread_mutex_unlock(&a->lock);
+}
+
+void spec_array_freeze(SpecArray* a) {
+    if (!a) return;
+    pthread_mutex_lock(&a->lock);
+    a->frozen = true;
     pthread_mutex_unlock(&a->lock);
 }
 
@@ -619,6 +648,7 @@ typedef struct {
     size_t nbuckets;
     size_t length;
     int val_kind;
+    bool frozen;
     pthread_mutex_t lock;
 } SpecMap;
 
@@ -676,6 +706,7 @@ void spec_map_destroy(void* self) {
 static SpecMap* spec_map_new_kind(int kind) {
     SpecMap* m = (SpecMap*)spec_alloc(sizeof(SpecMap), spec_map_destroy);
     m->val_kind = kind;
+    m->frozen = false;
     m->nbuckets = SPEC_MAP_INITIAL_BUCKETS;
     m->buckets = (SpecMapEntry**)spec_xmalloc(sizeof(SpecMapEntry*) * m->nbuckets);
     memset(m->buckets, 0, sizeof(SpecMapEntry*) * m->nbuckets);
@@ -697,6 +728,7 @@ SpecMap* spec_map_new_object(void) {
 
 void spec_map_set(SpecMap* m, String key, String val) {
     if (!m || !key) return;
+    if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return; }
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
     const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;
     pthread_mutex_lock(&m->lock);
@@ -727,6 +759,7 @@ void spec_map_set(SpecMap* m, String key, String val) {
 
 void spec_map_set_any(SpecMap* m, String key, void* val) {
     if (!m || !key) return;
+    if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return; }
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
     pthread_mutex_lock(&m->lock);
     size_t idx = spec_hash_key(ck, m->nbuckets);
@@ -758,6 +791,7 @@ void spec_map_set_any(SpecMap* m, String key, void* val) {
 
 void spec_map_set_any_transfer(SpecMap* m, String key, void* val) {
     if (!m || !key) return;
+    if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return; }
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
     pthread_mutex_lock(&m->lock);
     size_t idx = spec_hash_key(ck, m->nbuckets);
@@ -788,6 +822,20 @@ void spec_map_set_any_transfer(SpecMap* m, String key, void* val) {
 void* spec_map_get(SpecMap* m, String key, void* _default) {
     if (!m || !key) return _default;
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
+    if (m->frozen) {
+        size_t idx = spec_hash_key(ck, m->nbuckets);
+        SpecMapEntry* curr = m->buckets[idx];
+        while (curr) {
+            if (strcmp(curr->key, ck) == 0) {
+                void* res = curr->value;
+                if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : "");
+                else if (m->val_kind == SPEC_ELEM_OBJECT && res) spec_retain(res);
+                return res;
+            }
+            curr = curr->next;
+        }
+        return _default;
+    }
     pthread_mutex_lock(&m->lock);
     size_t idx = spec_hash_key(ck, m->nbuckets);
     SpecMapEntry* curr = m->buckets[idx];
@@ -808,6 +856,15 @@ void* spec_map_get(SpecMap* m, String key, void* _default) {
 bool spec_map_has(SpecMap* m, String key) {
     if (!m || !key) return false;
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
+    if (m->frozen) {
+        size_t idx = spec_hash_key(ck, m->nbuckets);
+        SpecMapEntry* curr = m->buckets[idx];
+        while (curr) {
+            if (strcmp(curr->key, ck) == 0) return true;
+            curr = curr->next;
+        }
+        return false;
+    }
     pthread_mutex_lock(&m->lock);
     size_t idx = spec_hash_key(ck, m->nbuckets);
     SpecMapEntry* curr = m->buckets[idx];
@@ -824,6 +881,7 @@ bool spec_map_has(SpecMap* m, String key) {
 
 bool spec_map_remove(SpecMap* m, String key) {
     if (!m || !key) return false;
+    if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return false; }
     const char* ck = spec_buf_to_cstring((SpecBuf*)key);
     pthread_mutex_lock(&m->lock);
     size_t idx = spec_hash_key(ck, m->nbuckets);
@@ -850,6 +908,7 @@ bool spec_map_remove(SpecMap* m, String key) {
 
 long long spec_map_length(SpecMap* m) {
     if (!m) return 0;
+    if (m->frozen) return (long long)m->length;
     pthread_mutex_lock(&m->lock);
     long long cnt = (long long)m->length;
     pthread_mutex_unlock(&m->lock);
@@ -859,6 +918,16 @@ long long spec_map_length(SpecMap* m) {
 SpecArray* spec_map_keys(SpecMap* m) {
     SpecArray* a = spec_array_new_object();
     if (!m) return a;
+    if (m->frozen) {
+        for (size_t i = 0; i < m->nbuckets; i++) {
+            SpecMapEntry* curr = m->buckets[i];
+            while (curr) {
+                spec_array_add_owned(a, (void*)spec_string_from_chars(curr->key));
+                curr = curr->next;
+            }
+        }
+        return a;
+    }
     pthread_mutex_lock(&m->lock);
     for (size_t i = 0; i < m->nbuckets; i++) {
         SpecMapEntry* curr = m->buckets[i];
@@ -869,6 +938,13 @@ SpecArray* spec_map_keys(SpecMap* m) {
     }
     pthread_mutex_unlock(&m->lock);
     return a;
+}
+
+void spec_map_freeze(SpecMap* m) {
+    if (!m) return;
+    pthread_mutex_lock(&m->lock);
+    m->frozen = true;
+    pthread_mutex_unlock(&m->lock);
 }
 
 /* Spec Loop Control Intrinsic */

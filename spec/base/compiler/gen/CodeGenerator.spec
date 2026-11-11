@@ -106,6 +106,26 @@ Class is CodeGenerator{
 		return copy;
 	}
 
+	## Freezes all read-only registries before parallel generation fan-out.
+	##
+	## @param classes: The flattened program classes to freeze alongside the registries.
+	Function is freezeRegistries(Array of ClassInfo is classes){
+		Process:mapFreeze(m: self:methodSlots);
+		Process:mapFreeze(m: self:overriddenMethods);
+		Process:mapFreeze(m: self:classesWithToString);
+		Process:mapFreeze(m: self:allClassNames);
+		Process:mapFreeze(m: self:allEnumNames);
+		Process:mapFreeze(m: self:allEnumVariants);
+		Process:mapFreeze(m: self:allStringBackedEnums);
+		Process:mapFreeze(m: self:allTaggedEnums);
+		Process:mapFreeze(m: self:heldFields);
+		Process:mapFreeze(m: self:heldFieldTypes);
+		Process:mapFreeze(m: self:heldMethods);
+		Process:mapFreeze(m: self:heldResolvers);
+		Process:arrayFreeze(a: self:programClasses);
+		Process:arrayFreeze(a: classes);
+	}
+
 	## Class currently being generated.
 	local String is currentClassName: '';
 
@@ -3998,42 +4018,32 @@ Class is CodeGenerator{
 				return true;
 			}
 		);
+		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
-			# the registries are read-only during
-			# generation, but the workers get PRIVATE COPIES of the
-			# list/map registries — sharing them serialized every lookup
-			# behind the container mutexes (the gen DOUBLED). The
-			# ClassInfo objects the copies reference stay shared: their
-			# reads are plain field loads with atomic refcounts. The
-			# stateless sub-objects (policy/utils/declGen/builtins/names)
-			# share directly.
-			wg:methodSlots: self:copyRegistryMap(source: self:methodSlots);
-			wg:overriddenMethods: self:copyRegistryMap(source: self:overriddenMethods);
-			wg:classesWithToString: self:copyRegistryMap(source: self:classesWithToString);
-			wg:programClasses: [];
-			self:programClasses:each(action: local Function(ClassInfo is c){
-				wg:programClasses:add(item: c);
-			});
-			wg:allClassNames: self:copyRegistryMap(source: self:allClassNames);
-			wg:allEnumNames: self:copyRegistryMap(source: self:allEnumNames);
-			wg:allEnumVariants: self:copyRegistryMap(source: self:allEnumVariants);
-			wg:allStringBackedEnums: self:copyRegistryMap(source: self:allStringBackedEnums);
-			wg:allTaggedEnums: self:copyRegistryMap(source: self:allTaggedEnums);
-			wg:heldFields: self:copyRegistryMap(source: self:heldFields);
-			wg:heldFieldTypes: self:copyRegistryMap(source: self:heldFieldTypes);
-			wg:heldMethods: self:copyRegistryMap(source: self:heldMethods);
-			wg:heldResolvers: self:copyRegistryMap(source: self:heldResolvers);
+			# The registries are frozen for lock-free concurrent reads: workers
+			# share the map and list registries directly without serialization
+			# or copying overhead.
+			wg:methodSlots: self:methodSlots;
+			wg:overriddenMethods: self:overriddenMethods;
+			wg:classesWithToString: self:classesWithToString;
+			wg:programClasses: self:programClasses;
+			wg:allClassNames: self:allClassNames;
+			wg:allEnumNames: self:allEnumNames;
+			wg:allEnumVariants: self:allEnumVariants;
+			wg:allStringBackedEnums: self:allStringBackedEnums;
+			wg:allTaggedEnums: self:allTaggedEnums;
+			wg:heldFields: self:heldFields;
+			wg:heldFieldTypes: self:heldFieldTypes;
+			wg:heldMethods: self:heldMethods;
+			wg:heldResolvers: self:heldResolvers;
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;
 			wg:utils: self:utils;
 			wg:declGen: self:declGen;
 			wg:builtins: self:builtins;
-			wg:flattenedClasses: [];
-			flattenedClasses:each(action: local Function(ClassInfo is c){
-				wg:flattenedClasses:add(item: c);
-			});
+			wg:flattenedClasses: flattenedClasses;
 			# The symbol suffixes (_anon_fn_N and friends) are file-scoped:
 			# the per-thread counter bases keep them unique across threads
 			# and deterministic run to run.
@@ -4176,34 +4186,32 @@ Class is CodeGenerator{
 				return true;
 			}
 		);
+		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
-			wg:methodSlots: self:copyRegistryMap(source: self:methodSlots);
-			wg:overriddenMethods: self:copyRegistryMap(source: self:overriddenMethods);
-			wg:classesWithToString: self:copyRegistryMap(source: self:classesWithToString);
-			wg:programClasses: [];
-			self:programClasses:each(action: local Function(ClassInfo is c){
-				wg:programClasses:add(item: c);
-			});
-			wg:allClassNames: self:copyRegistryMap(source: self:allClassNames);
-			wg:allEnumNames: self:copyRegistryMap(source: self:allEnumNames);
-			wg:allEnumVariants: self:copyRegistryMap(source: self:allEnumVariants);
-			wg:allStringBackedEnums: self:copyRegistryMap(source: self:allStringBackedEnums);
-			wg:allTaggedEnums: self:copyRegistryMap(source: self:allTaggedEnums);
-			wg:heldFields: self:copyRegistryMap(source: self:heldFields);
-			wg:heldFieldTypes: self:copyRegistryMap(source: self:heldFieldTypes);
-			wg:heldMethods: self:copyRegistryMap(source: self:heldMethods);
-			wg:heldResolvers: self:copyRegistryMap(source: self:heldResolvers);
+			# The registries are frozen for lock-free concurrent reads: workers
+			# share the map and list registries directly without serialization
+			# or copying overhead.
+			wg:methodSlots: self:methodSlots;
+			wg:overriddenMethods: self:overriddenMethods;
+			wg:classesWithToString: self:classesWithToString;
+			wg:programClasses: self:programClasses;
+			wg:allClassNames: self:allClassNames;
+			wg:allEnumNames: self:allEnumNames;
+			wg:allEnumVariants: self:allEnumVariants;
+			wg:allStringBackedEnums: self:allStringBackedEnums;
+			wg:allTaggedEnums: self:allTaggedEnums;
+			wg:heldFields: self:heldFields;
+			wg:heldFieldTypes: self:heldFieldTypes;
+			wg:heldMethods: self:heldMethods;
+			wg:heldResolvers: self:heldResolvers;
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;
 			wg:utils: self:utils;
 			wg:declGen: self:declGen;
 			wg:builtins: self:builtins;
-			wg:flattenedClasses: [];
-			flattenedClasses:each(action: local Function(ClassInfo is c){
-				wg:flattenedClasses:add(item: c);
-			});
+			wg:flattenedClasses: flattenedClasses;
 			wg:anonCounter: threadIndex * 100000;
 			wg:cleanupCounter: threadIndex * 100000;
 			local Int is ci: threadIndex;
