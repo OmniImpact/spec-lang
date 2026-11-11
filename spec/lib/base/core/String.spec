@@ -226,6 +226,25 @@ Class is String{
 		return res;
 	}
 
+	## Count occurrences of [byteVal] in this string.
+	Function of Int is countByte(Int is byteVal){
+		return Buf:bufCountByte(b: self, byteVal: byteVal);
+	}
+
+	## Total number of lines in this string without allocating line arrays.
+	Function of Int is lineCount(){
+		local Int is len: Buf:bufLength(b: self);
+		Conditional:if(check: { len == 0 }, then: {
+			return 0;
+		});
+		local Int is nl: Buf:bufCountByte(b: self, byteVal: 10);
+		local Int is lastByte: Buf:bufGetByte(b: self, idx: len - 1, def: -1);
+		Conditional:if(check: { lastByte != 10 }, then: {
+			nl: nl + 1;
+		});
+		return nl;
+	}
+
 	## Whitespace-trimmed copy (' ', '\t', '\n', '\r').
 	##
 	## @return: The trimmed copy.

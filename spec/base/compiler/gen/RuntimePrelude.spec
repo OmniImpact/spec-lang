@@ -36,6 +36,7 @@ void spec_buf_append_bytes(SpecBuf* b, const char* s);
 void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src);
 const char* spec_buf_to_cstring(SpecBuf* b);
 long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def);
+long long spec_buf_count_byte(SpecBuf* b, long long byte_val);
 String spec_string_from_bytes(const char* data, size_t n);
 String spec_string_copy(String b);
 bool spec_string_bytes_equal(String b, const char* c, size_t n);
@@ -1211,6 +1212,22 @@ long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {
     if (idx < 0 || (size_t)idx >= b->length) return def;
     return (long long)((unsigned char*)b->data)[idx];
 }
+long long spec_buf_count_byte(SpecBuf* b, long long byte_val) {
+    if (!b || b->length == 0) return 0;
+    unsigned char target = (unsigned char)byte_val;
+    const unsigned char* p = (const unsigned char*)b->data;
+    size_t len = b->length;
+    long long count = 0;
+    while (len > 0) {
+        const unsigned char* found = (const unsigned char*)memchr(p, target, len);
+        if (!found) break;
+        count++;
+        size_t offset = (size_t)(found - p) + 1;
+        p += offset;
+        len -= offset;
+    }
+    return count;
+}
 
 void spec_buf_set_byte(SpecBuf* b, long long idx, long long v, SpecClosure* error) {
     if (!b) { spec_buf_report(error, "buffer is uninitialized"); return; }
@@ -1638,6 +1655,32 @@ bool spec_file_write(String path, String content, SpecClosure* on_success, SpecC
     size_t len = content ? ((SpecBuf*)content)->length : 0;
     const char* cc = len ? (const char*)((SpecBuf*)content)->data : "";
     FILE* f = fopen(pc, "wb");
+    if (!f) {
+        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
+        return false;
+    }
+    size_t written = fwrite(cc, 1, len, f);
+    if (fclose(f) != 0) written = (size_t)-1;
+    if (written != len) {
+        if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
+        return false;
+    }
+    if (on_success) spec_call_closure_int(on_success, (long long)written);
+    return true;
+}
+bool spec_file_append(String path, String content, SpecClosure* on_success, SpecClosure* on_error) {
+    if (!path || path->length == 0) {
+        if (on_error) spec_call_closure_str(on_error, spec_string_intern("File error: Empty or invalid file path provided"));
+        return false;
+    }
+    const char* pc = spec_buf_to_cstring((SpecBuf*)path);
+    size_t len = content ? ((SpecBuf*)content)->length : 0;
+    if (len == 0) {
+        if (on_success) spec_call_closure_int(on_success, 0);
+        return true;
+    }
+    const char* cc = (const char*)((SpecBuf*)content)->data;
+    FILE* f = fopen(pc, "ab");
     if (!f) {
         if (on_error) spec_call_closure_str(on_error, spec_string_from_bytes(strerror(errno), strlen(strerror(errno))));
         return false;

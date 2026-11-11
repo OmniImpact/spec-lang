@@ -4135,6 +4135,190 @@ Class is CodeGenerator{
 		return cSource;
 	}
 
+	## Streams the complete C11 program directly to a file on disk,
+	## chunk by chunk, reclaiming intermediate string buffers as they
+	## are emitted. Returns the total line count, or -1 on write failure.
+	Function of Int is generateProgramToFile(ProgramNode is program, String is entryClass, String is filePath){
+		local Array of ClassInfo is flattenedClasses: [];
+		program:classes:each(action: local Function(ClassInfo is c){
+			self:collectClasses(c: c, acc: flattenedClasses);
+		});
+		self:assignVirtualSlots(classes: flattenedClasses);
+		local String is decls: self:declGen:generateForwardDeclarations(classes: flattenedClasses);
+		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
+		local String is vt: self:generateVTables(classes: flattenedClasses);
+		local String is heldSrc: self:generateHeldMembers(classes: flattenedClasses);
+		local String is heldMeta: self:generateHeldMetadata(classes: flattenedClasses);
+		local String is ctors: self:generateConstructors(classes: flattenedClasses);
+
+		local Int is genThreads: 4;
+		local Int is classTotal: flattenedClasses:length();
+
+		local Array of String is classChunks: [];
+		local Array of String is classHelpers: [];
+		local Int is gt: 0;
+		while(
+			evaluate: local Function of Boolean(){ return gt < classTotal; },
+			iteration: local Function of Boolean(){
+				classChunks:add(item: Buf:stringCopy(b: ''));
+				classHelpers:add(item: Buf:stringCopy(b: ''));
+				gt: gt + 1;
+				return true;
+			}
+		);
+		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
+			local CodeGenerator is wg: CodeGenerator:init();
+			wg:methodSlots: self:copyRegistryMap(source: self:methodSlots);
+			wg:overriddenMethods: self:copyRegistryMap(source: self:overriddenMethods);
+			wg:classesWithToString: self:copyRegistryMap(source: self:classesWithToString);
+			wg:programClasses: [];
+			self:programClasses:each(action: local Function(ClassInfo is c){
+				wg:programClasses:add(item: c);
+			});
+			wg:allClassNames: self:copyRegistryMap(source: self:allClassNames);
+			wg:allEnumNames: self:copyRegistryMap(source: self:allEnumNames);
+			wg:allEnumVariants: self:copyRegistryMap(source: self:allEnumVariants);
+			wg:allStringBackedEnums: self:copyRegistryMap(source: self:allStringBackedEnums);
+			wg:allTaggedEnums: self:copyRegistryMap(source: self:allTaggedEnums);
+			wg:heldFields: self:copyRegistryMap(source: self:heldFields);
+			wg:heldFieldTypes: self:copyRegistryMap(source: self:heldFieldTypes);
+			wg:heldMethods: self:copyRegistryMap(source: self:heldMethods);
+			wg:heldResolvers: self:copyRegistryMap(source: self:heldResolvers);
+			wg:methodSlotCount: self:methodSlotCount;
+			wg:names: self:names;
+			wg:policy: self:policy;
+			wg:utils: self:utils;
+			wg:declGen: self:declGen;
+			wg:builtins: self:builtins;
+			wg:flattenedClasses: [];
+			flattenedClasses:each(action: local Function(ClassInfo is c){
+				wg:flattenedClasses:add(item: c);
+			});
+			wg:anonCounter: threadIndex * 100000;
+			wg:cleanupCounter: threadIndex * 100000;
+			local Int is ci: threadIndex;
+			while(
+				evaluate: local Function of Boolean(){ return ci < classTotal; },
+				iteration: local Function of Boolean(){
+					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
+					Conditional:if(check: { !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
+						wg:currentClassName: c:name;
+						wg:helperFunctions: Buf:stringCopy(b: '');
+						local String is cSym: wg:utils:cIdent(name: c:qualifiedName());
+						wg:fieldTypes: Map:init();
+						local Array of Member is allFields: [];
+						local Array of Member is outerFields: [];
+						wg:declGen:collectStructFieldsSplit(c: c, allClasses: wg:flattenedClasses, acc: allFields, outerAcc: outerFields, fromOuterLink: false);
+						allFields:each(action: local Function(Member is m){
+							wg:fieldTypes:set(key: m:name, value: wg:formatTypeString(t: m:memberType));
+						});
+						outerFields:each(action: local Function(Member is m){
+							wg:fieldTypes:set(key: m:name, value: wg:formatTypeString(t: m:memberType));
+						});
+						local String is classC: Buf:stringCopy(b: '');
+						local Boolean is hasInit: false;
+						c:members:each(action: local Function(Member is m){
+							Conditional:match(on: m:kind, when: [
+								MemberKind:METHOD: {
+									Conditional:if(check: { !wg:policy:isTransparent(c: c) || m:body:length() > 0 }, then: {
+										Conditional:if(check: { m:name == 'init' }, then: {
+											hasInit: true;
+										});
+										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
+										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
+										wg:emittingHeld: false;
+									});
+								}
+							]);
+						});
+						Conditional:if(check: { !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, then: {
+							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
+						});
+						classChunks:set(index: ci, item: classC);
+						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
+					});
+					ci: ci + genThreads;
+					return true;
+				}
+			);
+			return count;
+		});
+
+		local Int is lineCount: 0;
+		local String is prelude: self:generatePrelude();
+		lineCount: lineCount + Buf:bufCountByte(b: prelude, byteVal: 10);
+		local Boolean is ok: fileWrite(path: filePath, content: prelude);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		lineCount: lineCount + Buf:bufCountByte(b: decls, byteVal: 10);
+		ok: fileAppend(path: filePath, content: decls);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		lineCount: lineCount + Buf:bufCountByte(b: structs, byteVal: 10);
+		ok: fileAppend(path: filePath, content: structs);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		lineCount: lineCount + Buf:bufCountByte(b: vt, byteVal: 10);
+		ok: fileAppend(path: filePath, content: vt);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		local String is hierarchy: self:generateTypeHierarchy(classes: flattenedClasses);
+		lineCount: lineCount + Buf:bufCountByte(b: hierarchy, byteVal: 10);
+		ok: fileAppend(path: filePath, content: hierarchy);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		local Int is ht: 0;
+		while(
+			evaluate: local Function of Boolean(){ return ht < classTotal; },
+			iteration: local Function of Boolean(){
+				local String is hChunk: classHelpers:get(index: ht);
+				Conditional:if(check: { hChunk != '' }, then: {
+					lineCount: lineCount + Buf:bufCountByte(b: hChunk, byteVal: 10);
+					ok: fileAppend(path: filePath, content: hChunk);
+					classHelpers:set(index: ht, item: '');
+				});
+				ht: ht + 1;
+				return ok;
+			}
+		);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		lineCount: lineCount + Buf:bufCountByte(b: heldSrc, byteVal: 10);
+		ok: fileAppend(path: filePath, content: heldSrc);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		lineCount: lineCount + Buf:bufCountByte(b: heldMeta, byteVal: 10);
+		ok: fileAppend(path: filePath, content: heldMeta);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		lineCount: lineCount + Buf:bufCountByte(b: ctors, byteVal: 10);
+		ok: fileAppend(path: filePath, content: ctors);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		local Int is mt: 0;
+		while(
+			evaluate: local Function of Boolean(){ return mt < classTotal; },
+			iteration: local Function of Boolean(){
+				local String is mChunk: classChunks:get(index: mt);
+				Conditional:if(check: { mChunk != '' }, then: {
+					lineCount: lineCount + Buf:bufCountByte(b: mChunk, byteVal: 10);
+					ok: fileAppend(path: filePath, content: mChunk);
+					classChunks:set(index: mt, item: '');
+				});
+				mt: mt + 1;
+				return ok;
+			}
+		);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		local String is mainFn: self:generateMain(entryClass: entryClass);
+		lineCount: lineCount + Buf:bufCountByte(b: mainFn, byteVal: 10);
+		ok: fileAppend(path: filePath, content: mainFn);
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		return lineCount;
+	}
+
 	## Collects all ancestor class names transitively.
 	Function is collectAncestors(ClassInfo is c, Array of ClassInfo is allClasses, Array of String is acc){
 		c:baseClasses:each(action: local Function(String is baseName){

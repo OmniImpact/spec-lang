@@ -25,6 +25,13 @@ Class is Buf{
 	## @return: The byte value, or [def].
 	Function of Int is bufGetByte(String is b, Int is idx, Int is def);
 
+	## Count occurrences of [byteVal] in buffer [b].
+	##
+	## @param b: The buffer.
+	## @param byteVal: Target byte value.
+	## @return: Occurrence count.
+	Function of Int is bufCountByte(String is b, Int is byteVal);
+
 	## Refcounted copy of buffer [b].
 	##
 	## @param b: The buffer.

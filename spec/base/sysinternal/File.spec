@@ -36,6 +36,15 @@ Class is File{
 	## @return: `true` if the write succeeded, `false` otherwise.
 	Function of Boolean is file_write(String is path, String is content, Function is on_success, Function is on_error);
 
+	## Appends string content to a file. Bound to `spec_file_append`.
+	##
+	## @param path: Filesystem path of the destination file.
+	## @param content: String data to append.
+	## @param on_success: Optional callback executed on success.
+	## @param on_error: Optional callback receiving the error description.
+	## @return: `true` if the append succeeded, `false` otherwise.
+	Function of Boolean is file_append(String is path, String is content, Function is on_success, Function is on_error);
+
 	## Writes string content to a file asynchronously. Bound to
 	## `spec_file_write_async`.
 	##

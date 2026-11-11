@@ -49,6 +49,17 @@ Class is File{
 		return base:sysinternal:File:file_write(path: path, content: content, on_success: onSuccess, on_error: onError);
 	}
 
+	## Appends string content to a file with optional success and error callback handlers.
+	##
+	## @param path: Filesystem path of the destination file.
+	## @param content: String data to append.
+	## @param onSuccess: Optional callback executed on successful write: `Function(Int is bytesWritten)`.
+	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
+	## @return: `true` if append succeeded, `false` otherwise.
+	Function of Boolean is fileAppend(String is path, String is content, Function is onSuccess, Function is onError){
+		return base:sysinternal:File:file_append(path: path, content: content, on_success: onSuccess, on_error: onError);
+	}
+
 	## Writes string content to a file asynchronously on a background worker thread.
 	##
 	## @param path: Filesystem path of the destination file.

@@ -206,15 +206,6 @@ Class is Driver{
 			entryName: firstClass:name;
 		});
 
-		# 5. C11 code generation over the FULL loaded class set.
-		local CodeGenerator is cg: CodeGenerator:init();
-		cg:registerProgram(classes: program:classes);
-		local Int is genT0: Process:clockMs();
-		local String is cCode: cg:generateProgram(program: program, entryClass: entryName);
-		genMs: Process:clockMs() - genT0;
-		local Int is cLines: cCode:lines():length();
-		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines');
-
 		local String is tempCPath: emitCPath;
 		Conditional:if(check: { tempCPath == '' }, then: {
 			tempCPath: fileTemp(template: '/tmp/_spec_stage_XXXXXX.c');
@@ -222,11 +213,18 @@ Class is Driver{
 				tempCPath: '/tmp/_spec_stage_' . (Process:getPid() as String) . '.c';
 			});
 		});
-		local Boolean is written: fileWrite(path: tempCPath, content: cCode);
-		Conditional:if(check: { !written }, then: {
+
+		# 5. C11 code generation over the FULL loaded class set streamed to disk.
+		local CodeGenerator is cg: CodeGenerator:init();
+		cg:registerProgram(classes: program:classes);
+		local Int is genT0: Process:clockMs();
+		local Int is cLines: cg:generateProgramToFile(program: program, entryClass: entryName, filePath: tempCPath);
+		genMs: Process:clockMs() - genT0;
+		Conditional:if(check: { cLines < 0 }, then: {
 			Stderr:line('Error: Failed to write intermediate C code to ' . tempCPath);
 			Process:exit(status: 1);
 		});
+		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines');
 
 		Conditional:if(check: { outputPath == '' }, then: {
 			report:summary(inputPath: inputPath, outputPath: emitCPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:peakMemoryKb(), binKb: -1);

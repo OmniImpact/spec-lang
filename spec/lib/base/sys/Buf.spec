@@ -32,6 +32,15 @@ Class is Buf{
 		return base:sysinternal:Buf:bufGetByte(b: b, idx: idx, def: def);
 	}
 
+	## Count occurrences of [byteVal] in buffer [b].
+	##
+	## @param b: The buffer.
+	## @param byteVal: Target byte value.
+	## @return: Occurrence count.
+	Function of Int is bufCountByte(String is b, Int is byteVal){
+		return base:sysinternal:Buf:bufCountByte(b: b, byteVal: byteVal);
+	}
+
 	## Refcounted copy of buffer [b].
 	##
 	## @param b: The buffer.
