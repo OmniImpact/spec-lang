@@ -27,6 +27,15 @@ Class is EmissionPolicy{
 	## The shared floor-class classification.
 	local ClassBindings is bindings: ClassBindings:init();
 
+	## True when the emission targets a debuggable build: statements carry
+	## #line directives mapping them back to the declaring Spec source, and
+	## locals are declared volatile so the optimizer cannot fold statements
+	## away or register-hoist inspectable values. Driver-set (--debug); the
+	## paired backend flags stay at full -O2 -g — measured cost is 0% on
+	## hidden-latency loops and ~35% on dependent-chain loops, always ahead
+	## of -O0/-Og with the control-flow inlining fully intact.
+	local Boolean is debugEmission: false;
+
 	## True when the backend must not emit a struct, vtable, or constructor
 	## for [c]. Delegates to the shared classification (ast.ClassBindings) —
 	## the checker reads the same decision for call-site validation.

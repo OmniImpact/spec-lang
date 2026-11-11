@@ -1434,6 +1434,10 @@ Class is Parser{
 	}
 
 	## Parses a function block shorthand `{ ... }` as an anonymous function.
+	## Statements built here carry their source line: the shorthand bodies
+	## are where user code actually lives (loop/branch arms), and both the
+	## checker's diagnostics and the debug emission's #line directives
+	## read Statement:line.
 	##
 	## @return: The ANON_FN expression.
 	Function of Expression is parseFunctionBlock(){
@@ -1443,6 +1447,7 @@ Class is Parser{
 		local Type is returnType: Type:init(name: self:names:voidName());
 
 		while({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+			local Int is stmtLine: self:peek():getLine();
 			Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:AS) }, then: {
 				local Expression is expr: self:parseExpression();
 				Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
@@ -1450,18 +1455,21 @@ Class is Parser{
 					local Expression is val: self:parseExpression();
 					self:matchPunct(p: Punctuation:TERMINATOR);
 					local Statement is s: Statement:init(kind: StatementKind:ASSIGN);
+					s:setLine(line: stmtLine);
 					s:assignTarget: expr;
 					s:assignValue: val;
 					body:add(item: s);
 				}, else: {
 					Conditional:if(check: { self:checkPunct(p: Punctuation:BLOCK_CLOSE) }, then: {
 						local Statement is retS: Statement:init(kind: StatementKind:RETURN);
+						retS:setLine(line: stmtLine);
 						retS:returnExpr: expr;
 						retS:hasReturnExpr: true;
 						body:add(item: retS);
 					}, else: {
 						self:matchPunct(p: Punctuation:TERMINATOR);
 						local Statement is exprS: Statement:init(kind: StatementKind:EXPR);
+						exprS:setLine(line: stmtLine);
 						exprS:exprStmt: expr;
 						body:add(item: exprS);
 					});

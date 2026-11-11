@@ -393,6 +393,19 @@ assert_runtime_panic "held-resolver-missing-branch" \
 	"No held member 'phantom' on HeldPanicRegistry"
 
 # -----------------------------------------------------------------------------
+# 2c. Debug emission: --debug compiles with #line + volatile locals and
+#     -O2 -g; the binary must build and behave like its release twin.
+# -----------------------------------------------------------------------------
+echo "== Debug emission =="
+dbg_status=0
+dbg_out="$($SPEC --quiet --debug -i "$ROOT/examples/helloworld.spec" -o "$WORK/hello_dbg" 2>&1)" || dbg_status=$?
+if [ $dbg_status -eq 0 ] && [ "$("$WORK/hello_dbg")" = "Hello User" ]; then
+	ok "--debug build compiles and runs (-O2 -g, #line + volatile emission)"
+else
+	bad "--debug build failed: $dbg_out"
+fi
+
+# -----------------------------------------------------------------------------
 # 3. Compiler exit-code semantics
 # -----------------------------------------------------------------------------
 echo "== Exit codes =="

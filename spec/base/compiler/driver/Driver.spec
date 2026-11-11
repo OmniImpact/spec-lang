@@ -75,6 +75,7 @@ Class is Driver{
 		});
 		local Boolean is lintMode: args:has(key: 'lint');
 		local Boolean is auditMode: args:has(key: 'audit');
+		local Boolean is debugMode: args:has(key: 'debug');
 		local Boolean is quiet: args:has(key: 'quiet');
 		local String is threadsStr: args:getString(key: 'threads', default: '');
 		Conditional:if(check: { threadsStr == '' }, then: {
@@ -89,7 +90,7 @@ Class is Driver{
 		});
 		Conditional:if(check: { inputPath == '' }, then: {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--debug] [--quiet]');
 			Process:exit(status: 2);
 		});
 
@@ -280,6 +281,11 @@ Class is Driver{
 		# 5. C11 code generation over the FULL loaded class set streamed to disk.
 		local CodeGenerator is cg: CodeGenerator:init();
 		cg:genThreads: threadCount;
+		# --debug: statements carry #line directives to their Spec source,
+		# locals stay volatile so the optimizer cannot fold or hoist them,
+		# and the backend compiles -O2 -g — full speed with inspectable
+		# values, Spec-line breakpoints and stepping under gdb.
+		cg:policy:debugEmission: debugMode;
 		cg:entryInitOwner: self:entryInitOwner;
 		cg:entryInitOverloadIndex: self:entryInitOverloadIndex;
 		cg:entryInitTakesArgs: self:entryInitTakesMap;
@@ -301,6 +307,11 @@ Class is Driver{
 
 		# 6. GCC backend compile.
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
+		Conditional:if(check: { debugMode }, then: {
+			# Debug info rides full optimization: -g costs nothing, and the
+			# volatile-locals emission already keeps values inspectable.
+			gccArgs:add(item: '-g');
+		});
 		local Int is ccT0: Process:clockMs();
 		local Int is gccStatus: Process:execute(command: 'gcc', args: gccArgs);
 		ccMs: Process:clockMs() - ccT0;

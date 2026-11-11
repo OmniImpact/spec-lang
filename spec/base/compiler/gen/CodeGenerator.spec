@@ -145,6 +145,12 @@ Class is CodeGenerator{
 	## Class currently being generated.
 	local String is currentClassName: '';
 
+	## Declaring source file of the method currently being generated
+	## (Member:sourceFile, stamped per loaded file). Drives the debug
+	## emission's #line directives: every statement's directive points
+	## here, so gdb resolves Spec file:line for breakpoints and stepping.
+	local String is currentSourceFile: '';
+
 	## Return type name of the method currently being generated.
 	local String is currentMethodReturnType: '';
 
@@ -2741,6 +2747,13 @@ Class is CodeGenerator{
 		local Int is id: self:anonCounter;
 		local String is fnName: '_anon_fn_' . id;
 		local String is retC: self:cTypeFor(typeName: expr:anonReturnType:name);
+		# Debug emission: after each closure definition, demarcate the end
+		# of the mapped body — the next helper or method reports as
+		# unmapped runtime text instead of inheriting this body's mapping.
+		local String is lineResetC: '';
+		Conditional:if(check: { self:policy:debugEmission }, then: {
+			lineResetC: "#line 1 \"<spec-runtime>\"\n";
+		});
 
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
@@ -2882,7 +2895,7 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . bodyC . cleanupTail . "}\n\n");
+			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, else: {
 			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
@@ -2899,7 +2912,7 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bodyC . cleanupTail . "}\n\n");
+			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}
@@ -3114,12 +3127,9 @@ Class is CodeGenerator{
 	## @param stmt: The statement node.
 	## @return: C statement code.
 	Function of String is generateStatement(Statement is stmt){
-		Conditional:if(check: { stmt:line > 0 }, then: {
-
-		});
 		local StatementKind is kind: stmt:kind;
 
-		return match(on: kind, when: [
+		local String is stmtOut: match(on: kind, when: [
 			StatementKind:VAR_DECL: {
 				self:emitVarDecl(stmt: stmt)
 			},
@@ -3150,12 +3160,34 @@ Class is CodeGenerator{
 			},
 			else: { '' }
 		]);
+		# Debug emission: map this statement to its declaring Spec source
+		# line. gdb resolves file:line from the dense directive stream —
+		# breakpoints, stepping, and backtraces all land on Spec source.
+		# Unmapped statements (line 0: synthesized) emit no directive.
+		Conditional:if(check: { self:policy:debugEmission && stmt:line > 0 && self:currentSourceFile != '' }, then: {
+			stmtOut: "#line " . (stmt:line as String) . " \"" . self:currentSourceFile . "\"\n" . stmtOut;
+		});
+		return stmtOut;
 	}
 
 	## Emits a variable declaration with the typed constructor.
 	##
 	## @param stmt: The VAR_DECL statement.
 	## @return: C declaration.
+	## Debug emission's volatile prefix for local declarations: every
+	## read/write becomes an observable memory op, so the optimizer cannot
+	## fold statements away, eliminate locals, or hide values in registers
+	## while the rest of -O2 stays on. Release emission returns '' — the
+	## output stays byte-identical to the un-debug shape.
+	##
+	## @return: 'volatile ' in debug emission, '' otherwise.
+	Function of String is debugVolatile(){
+		Conditional:if(check: { self:policy:debugEmission }, then: {
+			return 'volatile ';
+		});
+		return '';
+	}
+
 	Function of String is emitVarDecl(Statement is stmt){
 		self:localVars:set(key: stmt:varName, value: self:formatVarTypeString(t: stmt:varType));
 		self:localScopeVars:set(key: stmt:varName, value: stmt:varType:name);
@@ -3167,6 +3199,7 @@ Class is CodeGenerator{
 			cType: self:cTypeFor(typeName: vTypeName);
 		});
 		local String is varName: self:utils:cIdent(name: stmt:varName);
+		local String is vPrefix: self:debugVolatile();
 		local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
 		local String is autoPrefix: Conditional:if(check: { isArcVar }, then: { 'SPEC_AUTO ' }, else: { '' });
 		# Part IV memory discipline: a hoisted local's
@@ -3236,10 +3269,10 @@ Class is CodeGenerator{
 			self:setContainerHint(t: '');
 			local Boolean is claims: self:yieldsClaim(expr: stmt:initExpr);
 			initC: self:generateTypedConstructor(typeName: vTypeName, valueC: initC, cType: cType, claims: claims);
-			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . initC . ";\n";
+			return '    ' . vPrefix . autoPrefix . cType . ' ' . varName . ' = ' . initC . ";\n";
 		});
 		Conditional:if(check: { vTypeName == 'String' }, then: {
-			return '    ' . cType . ' ' . varName . " = \"\";\n";
+			return '    ' . vPrefix . cType . ' ' . varName . " = \"\";\n";
 		});
 		Conditional:if(check: { vTypeName == 'Array' }, then: {
 			local String is elemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
@@ -3247,7 +3280,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { elemKind == 'object' || elemKind == 'string' }, then: {
 				newCall: 'spec_array_new_object()';
 			});
-			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+			return '    ' . vPrefix . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
 		});
 		Conditional:if(check: { vTypeName == 'List' }, then: {
 			local String is fullT: self:formatTypeString(t: stmt:varType);
@@ -3264,16 +3297,16 @@ Class is CodeGenerator{
 					});
 				});
 			});
-			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+			return '    ' . vPrefix . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
 		});
 		Conditional:if(check: { vTypeName == 'Map' }, then: {
 			local String is newCall: 'spec_map_new()';
 			Conditional:if(check: { self:containerElemIsArc(containerType: self:formatTypeString(t: stmt:varType)) }, then: {
 				newCall: 'spec_map_new_object()';
 			});
-			return '    ' . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
+			return '    ' . vPrefix . autoPrefix . cType . ' ' . varName . ' = ' . newCall . ";\n";
 		});
-		return '    ' . autoPrefix . cType . ' ' . varName . " = 0;\n";
+		return '    ' . vPrefix . autoPrefix . cType . ' ' . varName . " = 0;\n";
 	}
 
 	## Emits an assignment: container stores, concat-chain optimization,
@@ -3443,6 +3476,7 @@ Class is CodeGenerator{
 	Function of String is generateMethod(ClassInfo is classDef, Member is method){
 		self:inMethod: true;
 		self:currentMethodName: method:name;
+		self:currentSourceFile: method:sourceFile;
 		self:currentMethodReturnType: self:formatTypeString(t: method:memberType);
 		local String is retType: self:resolveReturnType(t: method:memberType);
 		Conditional:if(check: { retType == 'void' }, then: {
@@ -3525,7 +3559,7 @@ Class is CodeGenerator{
 		bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
 		self:hoistedLocals:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
-			bufAppendBuf(dst: bodyC, src: '    SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
+			bufAppendBuf(dst: bodyC, src: '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
 		});
 		method:body:each(action: local Function(Statement is stmt){
 			local String is stmtC: self:generateStatement(stmt: stmt);
@@ -3567,6 +3601,13 @@ Class is CodeGenerator{
 
 		self:hoistedLocals: Map:init();
 		self:inMethod: false;
+		# Debug emission: demarcate the end of the mapped method body —
+		# everything following (suppress-free trailing lines, the next
+		# function) reports as unmapped runtime text instead of inheriting
+		# the last statement's source mapping.
+		Conditional:if(check: { self:policy:debugEmission }, then: {
+			bodyC: bodyC . "#line 1 \"<spec-runtime>\"\n";
+		});
 		return header . suppressions . bodyC . "}\n\n";
 	}
 
@@ -4302,6 +4343,11 @@ Class is CodeGenerator{
 	## @return: C source text.
 	Function of String is generateConstructors(Array of ClassInfo is classes){
 		local String is out: "/* Constructor Implementations */\n";
+		# Debug emission: constructors follow the mapped method chunks —
+		# demarcate the region so ctor/main code reports as unmapped.
+		Conditional:if(check: { self:policy:debugEmission }, then: {
+			out: out . "#line 1 \"<spec-runtime>\"\n";
+		});
 
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
