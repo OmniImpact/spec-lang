@@ -1726,6 +1726,49 @@ Class is CodeGenerator{
 		return arg:value;
 	}
 
+	## The claim decision for an expression's value: a claim hands
+	## ownership to the consumer. Statement-form conditionals yield no
+	## value and no claim.
+	##
+	## @param expr: The expression node.
+	## @return: true when the value transfers ownership.
+	Function of Boolean is claimStatus(Expression is expr){
+		local ExpressionKind is kind: expr:kind;
+		if({ kind == ExpressionKind:CALL }, {
+			local Boolean is claim: self:yieldsClaim(expr: expr);
+			if({ (expr:methodName == 'if' || expr:methodName == 'branch') && (expr:argCount() != 3 || expr:resolvedType == '' || self:isVoidType(t: expr:resolvedType)) }, {
+				claim: false;
+			});
+			return claim;
+		});
+		if({ kind == ExpressionKind:BINARY }, {
+			return expr:str == '.';
+		});
+		if({ kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP }, {
+			return true;
+		});
+		if({ kind == ExpressionKind:INDEX }, {
+			local String is tgt: self:inferTargetType(expr: expr:leftExpr);
+			return (tgt:startsWith(prefix: 'Map') && self:inferTargetType(expr: expr) == 'String');
+		});
+		return false;
+	}
+
+	## Wraps a claim-yielding value in the self-framing claim pool
+	## wrapper: the frame opens before the expression evaluates (its
+	## nested claims push above the mark), the release runs after the
+	## dispatch (the callee has retained what it needs), and only then
+	## does the pool adopt the value. No eviction window: every claim
+	## dies exactly at its own boundary.
+	##
+	## @param typeName: The value's type name.
+	## @param valueC: The generated value expression.
+	## @return: The pooled C expression.
+	Function of String is claimWrapped(String is typeName, String is valueC){
+		local String is resC: self:cTypeFor(typeName: typeName);
+		return '(((' . resC . ')spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); ' . resC . ' _v = (' . resC . ')(' . valueC . '); spec_pool_release_to(_pf); _v; }))))';
+	}
+
 	## Generates C for an expression, wrapping claim-yielding results
 	## for read positions (the claim pool takes ownership).
 	##
@@ -1733,39 +1776,8 @@ Class is CodeGenerator{
 	## @return: C expression string.
 	Function of String is generateExpression(Expression is expr){
 		local String is c: self:generateExpressionInner(expr: expr);
-		local ExpressionKind is kind: expr:kind;
-		local Boolean is claim: false;
-		if({ kind == ExpressionKind:CALL }, {
-			claim: self:yieldsClaim(expr: expr);
-			if({ (expr:methodName == 'if' || expr:methodName == 'branch') && (expr:argCount() != 3 || expr:resolvedType == '' || self:isVoidType(t: expr:resolvedType)) }, {
-				claim: false;
-			});
-		}, {
-			if({ kind == ExpressionKind:BINARY }, {
-				claim: expr:str == '.';
-			}, {
-				if({ kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP }, {
-					claim: true;
-				}, {
-					if({ kind == ExpressionKind:INDEX }, {
-						local String is tgt: self:inferTargetType(expr: expr:leftExpr);
-						claim: (tgt:startsWith(prefix: 'Map') && self:inferTargetType(expr: expr) == 'String');
-					});
-				});
-			});
-		});
-		if({ claim }, {
-			if({ self:argMode }, {
-				local String is resT: self:inferTargetType(expr: expr);
-				local String is resC: self:cTypeFor(typeName: resT);
-				# the claim is SELF-FRAMING — the
-				# frame opens before the expression evaluates (its nested
-				# claims push above the mark), the release runs after the
-				# dispatch (the callee has retained what it needs), and
-				# only then does the pool adopt the value. No eviction
-				# window: every claim dies exactly at its own boundary.
-				return '(((' . resC . ')spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); ' . resC . ' _v = (' . resC . ')(' . c . '); spec_pool_release_to(_pf); _v; }))))';
-			});
+		if({ self:claimStatus(expr: expr) && self:argMode }, {
+			return self:claimWrapped(typeName: self:inferTargetType(expr: expr), valueC: c);
 		});
 		return c;
 	}
@@ -2380,7 +2392,19 @@ Class is CodeGenerator{
 	## @param expr: The CALL expression.
 	## @return: C expression.
 	Function of String is emitCall(Expression is expr){
-		local String is targetC: self:generateExpression(expr: expr:methodTarget);
+		# The receiver is a READ position for every dispatched call: the
+		# intercepted builtins and the vtable bodies read it and return,
+		# and nothing takes ownership. A claim-yielding receiver (a fresh
+		# call result feeding a member call) would otherwise be dropped by
+		# its consumer when the ambient argMode is false (assignment RHS,
+		# decl-init) — the pool adopts it here, exactly once, regardless
+		# of the ambient mode. Argument positions keep generateExpression's
+		# argMode wrap; this is the one canonical receiver site.
+		local Expression is targetExpr: expr:methodTarget;
+		local String is targetC: self:generateExpressionInner(expr: targetExpr);
+		if({ self:claimStatus(expr: targetExpr) }, {
+			targetC: self:claimWrapped(typeName: self:inferTargetType(expr: targetExpr), valueC: targetC);
+		});
 		local String is targetType: self:inferTargetType(expr: expr:methodTarget);
 		local String is fieldKey: targetC;
 		if({ targetC:startsWith(prefix: 'self->') }, {
