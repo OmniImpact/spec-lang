@@ -59,6 +59,15 @@ Class is EmissionPolicy{
 		return !self:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map';
 	}
 
+	## True when [c]'s instances are compilation-phase data: the AST
+	## classes (base:compiler:ast).
+	##
+	## @param c: The class.
+	## @return: true when arena-allocated.
+	Function of Boolean is isArenaType(ClassInfo is c){
+		return self:bindings:isArenaType(c: c);
+	}
+
 	## True when an Enum-rooted class is CLASS-MODEL:
 	## held members make the variants class instances — every today's-
 	## enum emission path must leave it alone. Delegates to the shared

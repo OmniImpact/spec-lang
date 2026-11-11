@@ -152,9 +152,16 @@ static inline void spec_release(void* obj) {
     if (!obj) return;
     SpecHeader* h = SPEC_HEADER(obj);
     if (atomic_load_explicit(&h->sflags, memory_order_relaxed) & SPEC_S_IMMORTAL) return;
-    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) { if (h->destroy) h->destroy(obj); return; }
+    if (atomic_load_explicit(&h->ref_count, memory_order_relaxed) == 0) {
+        void (*d)(void*) = h->destroy;
+        h->destroy = NULL;
+        if (d) d(obj);
+        return;
+    }
     if (atomic_fetch_sub_explicit(&h->ref_count, 1, memory_order_acq_rel) == 1) {
-        if (h->destroy) h->destroy(obj);
+        void (*d)(void*) = h->destroy;
+        h->destroy = NULL;
+        if (d) d(obj);
         /* Arena-owned headers live in arena blocks: run the destructor
            (freeing the object's malloc'd data) but never free(h) — the
            wholesale drain reclaims the block. */
@@ -1103,15 +1110,15 @@ typedef struct SpecArena {
     size_t used;
 } SpecArena;
 
-#define ARENA_BLOCK_SIZE (64 * 1024)
+#define ARENA_BLOCK_SIZE (2 * 1024 * 1024)
 
 static ArenaBlock* arena_block_new(size_t cap) {
-    ArenaBlock* b = (ArenaBlock*)calloc(1, sizeof(ArenaBlock));
+    ArenaBlock* b = (ArenaBlock*)malloc(sizeof(ArenaBlock) + cap);
     if (!b) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
-    b->data = (char*)calloc(1, cap);
-    if (!b->data) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
+    b->data = (char*)(b + 1);
     b->cap = cap;
     b->used = 0;
+    b->next = NULL;
     return b;
 }
 
@@ -1139,7 +1146,6 @@ void spec_arena_drain(SpecArena* a) {
     ArenaBlock* b = a->head;
     while (b) {
         ArenaBlock* next = b->next;
-        free(b->data);
         free(b);
         b = next;
     }
@@ -1155,6 +1161,7 @@ typedef struct ArenaFinalizer {
     SpecHeader* header;
 } ArenaFinalizer;
 
+static pthread_mutex_t _spec_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
 static ArenaFinalizer* _spec_object_arena_finalizers = NULL;
 static SpecArena _spec_object_arena = { NULL, 0 };
 
@@ -1162,6 +1169,7 @@ void spec_arena_drain_objects(void);
 
 void* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {
     static int drain_registered = 0;
+    pthread_mutex_lock(&_spec_arena_mutex);
     if (!drain_registered) {
         atexit(spec_arena_drain_objects);
         drain_registered = 1;
@@ -1179,17 +1187,24 @@ void* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {
     f->next = _spec_object_arena_finalizers;
     f->header = h;
     _spec_object_arena_finalizers = f;
+    pthread_mutex_unlock(&_spec_arena_mutex);
     return (void*)(mem + sizeof(SpecHeader));
 }
 
 void spec_arena_drain_objects(void) {
+    pthread_mutex_lock(&_spec_arena_mutex);
     ArenaFinalizer* f = _spec_object_arena_finalizers;
     while (f) {
-        if (f->header->destroy) f->header->destroy((void*)(f->header + 1));
+        if (f->header->destroy) {
+            void (*d)(void*) = f->header->destroy;
+            f->header->destroy = NULL;
+            d((void*)(f->header + 1));
+        }
         f = f->next;
     }
     _spec_object_arena_finalizers = NULL;
     spec_arena_drain(&_spec_object_arena);
+    pthread_mutex_unlock(&_spec_arena_mutex);
 }
 
 long long spec_arena_used(SpecArena* a) {
