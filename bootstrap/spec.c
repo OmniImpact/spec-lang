@@ -60954,16 +60954,6 @@ Statement* Parser_parseStatement(Parser* self) {
     if (edef) { spec_release((void*)edef); edef = NULL; }
     if (s) { spec_release((void*)s); s = NULL; }
 	};
-    if (Parser_atEnumHeader(self) /* inst:Parser:atEnumHeader */) {
-	    SPEC_AUTO ClassInfo* edef = (ClassInfo*)((Parser_parseEnum(self) /* inst:Parser:parseEnum */));
-	    s = (Statement*)((({ Statement* _inst = Statement_new(); Statement_init(_inst, StatementKind_CLASS__ensure()); _inst; })));
-	    ({ Statement* _recv = (Statement*)(s); (((void (*)(Statement*, long long))_recv->_vtable[76]))((Statement*)_recv, startLine); });
-	    spec_assign((void**)&s->nestedClass, (void*)(edef));
-	    _mret_100161 = (Statement*)({ Statement* _ret_val = s; s = NULL; _ret_val; });
-    goto _cleanup_100161;
-    if (edef) { spec_release((void*)edef); edef = NULL; }
-    if (s) { spec_release((void*)s); s = NULL; }
-	};
     if (Parser_checkKeyword(self, Keyword_RETURN__ensure()) /* inst:Parser:checkKeyword */) {
 	    spec_release((void*)((((Token* (*)(Parser*))self->_vtable[99]))((Parser*)self)));
 	    if (Parser_checkKeyword(self, Keyword_AS__ensure()) /* inst:Parser:checkKeyword */) {

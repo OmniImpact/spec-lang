@@ -796,14 +796,6 @@ Class is Parser{
 			return s;
 		});
 
-		Conditional:if(check: { self:atEnumHeader() }, then: {
-			local ClassInfo is edef: self:parseEnum();
-			local Statement is s: Statement:init(kind: StatementKind:CLASS);
-			s:setLine(line: startLine);
-			s:nestedClass: edef;
-			return s;
-		});
-
 
 		Conditional:if(check: { self:checkKeyword(kw: Keyword:RETURN) }, then: {
 			self:advance();
