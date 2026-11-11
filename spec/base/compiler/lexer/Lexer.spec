@@ -24,13 +24,6 @@ Class is Lexer{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'lexer', Operator],
-		['base', 'compiler', 'lexer', 'loops', TokenizeLoop],
-		['base', 'compiler', 'lexer', 'loops', SkipWhitespaceLoop],
-		['base', 'compiler', 'lexer', 'loops', IdentScanLoop],
-		['base', 'compiler', 'lexer', 'loops', BaseDigitsLoop],
-		['base', 'compiler', 'lexer', 'loops', NumberScanLoop],
-		['base', 'compiler', 'lexer', 'loops', StringScanLoop],
-		['base', 'compiler', 'lexer', 'loops', HeredocScanLoop],
 		['base', 'compiler', Error],
 		['base', 'compiler', ErrorText],
 		['base', 'sys', as Reflection()],
@@ -113,7 +106,39 @@ Class is Lexer{
 	## @return: The token stream.
 	Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
-		Loops:run(loop: TokenizeLoop:init(lexer: self, tokens: tokens));
+		Loops({ self:pos < self:length }, {
+			self:skipWhitespaceAndComments();
+			if({ self:pos < self:length }, {
+				local String is ch: self:source:charAt(index: self:pos, default: '');
+				if({ ch == '"' || ch == '\'' }, {
+					local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+					if({ triple == "'''" }, {
+						tokens:add(item: self:readTriple(quote: "'''", kind: TokenKind:RAWSTRING));
+					}, {
+						tokens:add(item: self:readString(quote: ch));
+					});
+				}, {
+					if({ ch == '`' }, {
+						local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+						if({ triple == "```" }, {
+							tokens:add(item: self:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING));
+						}, {
+							tokens:add(item: self:readSymbol());
+						});
+					}, {
+						if({ ch:isDigit() }, {
+							tokens:add(item: self:readNumber());
+						}, {
+							if({ self:isIdentifierStart(ch: ch) }, {
+								tokens:add(item: self:readIdentifierOrKeyword());
+							}, {
+								tokens:add(item: self:readSymbol());
+							});
+						});
+					});
+				});
+			});
+		});
 		tokens:add(item: Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col));
 		return tokens;
 	}
@@ -310,27 +335,76 @@ Class is Lexer{
 				});
 				self:advance();
 				self:advance();
-				local BaseDigitsLoop is digitLoop: BaseDigitsLoop:init(lexer: self, base: base);
-				Loops:run(loop: digitLoop);
-				Conditional:if(check: { digitLoop:hadInvalid }, then: {
+				local Int is val: 0;
+				local Int is digitCount: 0;
+				local Boolean is hadInvalid: false;
+				local Boolean is keepGoing: true;
+				Loops({ keepGoing && self:pos < self:length }, {
+					local String is dch: self:source:charAt(index: self:pos, default: '');
+					if({ dch == '_' }, {
+						self:advance();
+					}, {
+						local Int is d: self:digitValue(ch: dch);
+						if({ d >= 0 && d < base }, {
+							val: (val * base) + d;
+							digitCount: digitCount + 1;
+							self:advance();
+						}, {
+							if({ self:chars:isIdentifierContinue(ch: dch) }, {
+								hadInvalid: true;
+								self:advance();
+							}, {
+								keepGoing: false;
+							});
+						});
+					});
+				});
+				if({ hadInvalid }, {
 					self:addError(msg: self:errText:errInvalidDigitInBase(base: base));
 				});
-				Conditional:if(check: { digitLoop:digitCount == 0 }, then: {
+				if({ digitCount == 0 }, {
 					self:addError(msg: self:errText:errMissingDigitsAfterPrefix());
 				});
-				return Token:init(kind: TokenKind:INT, value: '' . digitLoop:value, line: startLine, col: startCol);
+				return Token:init(kind: TokenKind:INT, value: '' . val, line: startLine, col: startCol);
 			});
 		});
 
 		local Int is startPos: self:pos;
-		local NumberScanLoop is numLoop: NumberScanLoop:init(lexer: self);
-		Loops:run(loop: numLoop);
+		local Boolean is isFloat: false;
+		local Boolean is keepScanning: true;
+		Loops({ keepScanning && self:pos < self:length }, {
+			local String is dch: self:source:charAt(index: self:pos, default: '');
+			if({ dch == '_' }, {
+				local String is nextD: self:source:charAt(index: self:pos + 1, default: '');
+				if({ nextD:isDigit() }, {
+					self:advance();
+				}, {
+					keepScanning: false;
+				});
+			}, {
+				if({ dch:isDigit() }, {
+					self:advance();
+				}, {
+					if({ dch == '.' && !isFloat }, {
+						local String is nextD: self:source:charAt(index: self:pos + 1, default: '');
+						if({ nextD:isDigit() }, {
+							isFloat: true;
+							self:advance();
+						}, {
+							keepScanning: false;
+						});
+					}, {
+						keepScanning: false;
+					});
+				});
+			});
+		});
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		text: text:replaceAll(search: '_', replacement: '');
 
 		local TokenKind is kind: TokenKind:INT;
-		if({ numLoop:isFloat }, {
+		if({ isFloat }, {
 			kind: TokenKind:FLOAT;
 		});
 		if({ kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0' }, {
@@ -359,16 +433,46 @@ Class is Lexer{
 		local Int is startCol: self:col;
 		self:advance();
 
-		local StringScanLoop is loop: StringScanLoop:init(lexer: self, quote: quote);
-		Loops:run(loop: loop);
+		local String is res: '';
+		local Boolean is keepScanning: true;
+		Loops({ keepScanning && self:pos < self:length }, {
+			local String is sch: self:source:charAt(index: self:pos, default: '');
+			if({ sch == quote }, {
+				keepScanning: false;
+			}, {
+				if({ sch == "\\" }, {
+					if({ quote == '\'' }, {
+						self:advance();
+						if({ self:pos < self:length }, {
+							local String is nextCh: self:advance();
+							if({ nextCh == '\'' || nextCh == "\\" }, {
+								res: res . nextCh;
+							}, {
+								res: res . "\\" . nextCh;
+							});
+						});
+					}, {
+						res: res . "\\";
+						self:advance();
+						if({ self:pos < self:length }, {
+							local String is nextCh: self:advance();
+							res: res . nextCh;
+						});
+					});
+				}, {
+					res: res . sch;
+					self:advance();
+				});
+			});
+		});
 
-		Conditional:if(check: { self:pos < self:length }, then: {
+		if({ self:pos < self:length }, {
 			self:advance();
 		});
-		Conditional:if(check: { quote == '"' }, then: {
-			return Token:init(kind: TokenKind:TEMPLATESTRING, value: loop:res, line: startLine, col: startCol);
+		if({ quote == '"' }, {
+			return Token:init(kind: TokenKind:TEMPLATESTRING, value: res, line: startLine, col: startCol);
 		});
-		return Token:init(kind: TokenKind:STRING, value: loop:res, line: startLine, col: startCol);
+		return Token:init(kind: TokenKind:STRING, value: res, line: startLine, col: startCol);
 	}
 
 	## Scans a triple-delimiter heredoc. The delimiter line's own newline is
@@ -384,17 +488,28 @@ Class is Lexer{
 		self:advance();
 		self:advance();
 		self:advance();
-		Conditional:if(check: { self:pos < self:length && self:source:charAt(index: self:pos, default: '') == "\n" }, then: {
+		if({ self:pos < self:length && self:source:charAt(index: self:pos, default: '') == "\n" }, {
 			self:advance();
 		});
 
-		local HeredocScanLoop is loop: HeredocScanLoop:init(lexer: self, quote: quote);
-		Loops:run(loop: loop);
+		local String is res: '';
+		local Boolean is closed: false;
+		Loops({ !closed && self:pos < self:length }, {
+			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
+			if({ triple == quote }, {
+				self:advance();
+				self:advance();
+				self:advance();
+				closed: true;
+			}, {
+				res: res . self:advance();
+			});
+		});
 
-		Conditional:if(check: { !loop:closed }, then: {
+		if({ !closed }, {
 			self:addError(msg: self:errText:errUnterminatedHeredoc(quote: quote));
 		});
-		return Token:init(kind: kind, value: loop:res, line: startLine, col: startCol);
+		return Token:init(kind: kind, value: res, line: startLine, col: startCol);
 	}
 
 	## Scans one symbol token: two-character operators take precedence over
