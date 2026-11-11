@@ -278,6 +278,7 @@ replace Array of Array of String is using: [
   ```
 
 - **High-Efficiency C11 Runtime & Memory Model**: Amortized $O(1)$ growable string buffers (`spec_str_append`), zero-allocation character table lookups, cached $O(1)$ string length queries, lazy `SpecArray` buffer allocation, and automatic deallocation of transient `Loop` instances.
+- **One Uniform Memory Path — ARC with Claim Pools, Compiler Included**: Memory is atomic reference counting; every function's temporaries register on a thread-local claim pool drained at scope exit (the Objective-C autorelease-pool shape). There is no garbage collector and **no separate compiler arena**: the compiler runs on exactly the ARC machinery it generates for user programs. A bump-arena experiment for compiler-phase AST nodes was measured at **+154 MB peak** — nodes die incrementally and ARC returns their blocks to glibc's tcache, while an arena hoards them until drain — and was removed as a falsified dead path; the dormant arena floor remains in the runtime prelude with nothing activating it.
 
 - **Scope-Merged Imports (`as ClassName()`)**: Instance imports materialize an owned singleton instance scoped to the declaring class, merging its methods directly into bare scope with zero global namespace pollution:
   ```spec
@@ -383,7 +384,7 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 |---|---|---|---|---|
 | **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness, root-contract calls) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
-| **Memory** | Reference counting with scope-end releases; binaries verified leak-free under ASan/LSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
+| **Memory** | Reference counting with per-scope claim pools; the compiler runs on the same ARC as its generated programs — no separate compiler arena; verified crash-free under ASan/UBSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |

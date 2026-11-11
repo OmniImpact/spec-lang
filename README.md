@@ -1,6 +1,6 @@
 # Spec Programming Language
 
-**Spec** is an elegant, concurrent-first, unblockable programming language that compiles directly to optimized C11 — and it is fully self-hosted: the compiler is written in Spec and reproduces its own C seed byte-for-byte on every build.
+**Spec** is an elegant, concurrent-first, unblockable programming language that compiles directly to optimized C11 — and it is fully self-hosted: the compiler is written in Spec and reproduces its own C seed byte-for-byte on every build. Memory is automatic reference counting over per-scope claim pools — no garbage collector, no GC pauses — and the compiler itself runs on the exact same ARC machinery its generated programs use.
 
 ```spec
 Class is HelloWorld{
