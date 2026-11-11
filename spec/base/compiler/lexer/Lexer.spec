@@ -36,6 +36,7 @@ Class is Lexer{
 		['base', 'compiler', Error],
 		['base', 'compiler', ErrorText],
 		['base', 'sys', as Reflection()],
+		['base', 'sys', as Buf()],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
@@ -141,15 +142,16 @@ Class is Lexer{
 	##
 	## @return: The consumed character ('' at end of source).
 	Function of String is advance(){
-		local String is ch: self:source:charAt(index: self:pos, default: '');
+		local Int is b: Buf:bufGetByte(b: self:source, idx: self:pos, def: -1);
+		Conditional:if(check: { b < 0 }, then: { return ''; });
 		self:pos: self:pos + 1;
-		Conditional:if(check: { ch == "\n" }, then: {
+		Conditional:if(check: { b == 10 }, then: {
 			self:line: self:line + 1;
 			self:col: 1;
 		}, else: {
 			self:col: self:col + 1;
 		});
-		return ch;
+		return String:fromCharCode(code: b);
 	}
 
 	## True when [ch] may begin an identifier.
@@ -170,7 +172,46 @@ Class is Lexer{
 
 	## Skips whitespace and `#` comment lines before the next token.
 	Function is skipWhitespaceAndComments(){
-		Loops:run(loop: SkipWhitespaceLoop:init(lexer: self));
+		local Int is p: self:pos;
+		local Int is len: self:length;
+		local Boolean is skipping: true;
+		while(
+			evaluate: local Function of Boolean(){ return skipping && p < len; },
+			iteration: local Function of Boolean(){
+				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
+				Conditional:if(check: { b == 32 || b == 9 || b == 13 }, then: {
+					p: p + 1;
+					self:col: self:col + 1;
+				}, else: {
+					Conditional:if(check: { b == 10 }, then: {
+						p: p + 1;
+						self:line: self:line + 1;
+						self:col: 1;
+					}, else: {
+						Conditional:if(check: { b == 35 }, then: {
+							p: p + 1;
+							local Boolean is inComment: true;
+							while(
+								evaluate: local Function of Boolean(){ return inComment && p < len; },
+								iteration: local Function of Boolean(){
+									local Int is cb: Buf:bufGetByte(b: self:source, idx: p, def: -1);
+									Conditional:if(check: { cb == 10 }, then: {
+										inComment: false;
+									}, else: {
+										p: p + 1;
+									});
+									return true;
+								}
+							);
+						}, else: {
+							skipping: false;
+						});
+					});
+				});
+				return true;
+			}
+		);
+		self:pos: p;
 	}
 
 	## Scans an identifier or reserved word into a token. Reserved words
@@ -182,7 +223,24 @@ Class is Lexer{
 		local Int is startCol: self:col;
 		local Int is startPos: self:pos;
 
-		Loops:run(loop: IdentScanLoop:init(lexer: self));
+		local Int is p: self:pos;
+		local Int is len: self:length;
+		local Boolean is scanning: true;
+		while(
+			evaluate: local Function of Boolean(){ return scanning && p < len; },
+			iteration: local Function of Boolean(){
+				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
+				local Boolean is isId: (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57) || b == 95;
+				Conditional:if(check: { isId }, then: {
+					p: p + 1;
+					self:col: self:col + 1;
+				}, else: {
+					scanning: false;
+				});
+				return true;
+			}
+		);
+		self:pos: p;
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		local Keyword is kw: Keyword:of(text);

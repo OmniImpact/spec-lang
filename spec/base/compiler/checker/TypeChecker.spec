@@ -4986,4 +4986,18 @@ Class is TypeChecker{
 
 		return self:errors;
 	}
+
+	## Releases semantic maps, scopes, and caches after type checking completes.
+	Function is cleanup(){
+		self:registeredClasses: Map:init();
+		self:nestedScopeMap: Map:init();
+		self:allEnumNames: Map:init();
+		self:allEnumVariants: Map:init();
+		self:allStringBackedEnums: Map:init();
+		self:programClasses: [];
+		self:localVars: Map:init();
+		self:fieldTypes: Map:init();
+		self:unassignedFields: Map:init();
+		self:errors: [];
+	}
 }

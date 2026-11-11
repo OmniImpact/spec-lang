@@ -67,6 +67,11 @@ Class is Member{
 		self:sourceFile: file;
 	}
 
+	## Releases statement and expression nodes once method emission finishes.
+	Function is clearBody(){
+		self:body: [];
+	}
+
 	## True when the member carries the given modifier. Modifiers are
 	## keywords ([Keyword:LOCAL], [Keyword:CONTAINED], [Keyword:REPLACE],
 	## [Keyword:MERGE]).

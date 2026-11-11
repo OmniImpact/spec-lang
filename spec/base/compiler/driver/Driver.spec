@@ -59,9 +59,20 @@ Class is Driver{
 		local Boolean is lintMode: args:has(key: 'lint');
 		local Boolean is auditMode: args:has(key: 'audit');
 		local Boolean is quiet: args:has(key: 'quiet');
+		local String is threadsStr: args:getString(key: 'threads', default: '');
+		Conditional:if(check: { threadsStr == '' }, then: {
+			threadsStr: args:getString(key: 'j', default: '');
+		});
+		local Int is threadCount: 2;
+		Conditional:if(check: { threadsStr != '' }, then: {
+			threadCount: threadsStr:parseInt(base: 10, default: 2);
+			Conditional:if(check: { threadCount < 1 }, then: {
+				threadCount: 1;
+			});
+		});
 		Conditional:if(check: { inputPath == '' }, then: {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--lint] [--audit] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--quiet]');
 			Process:exit(status: 2);
 		});
 
@@ -149,6 +160,7 @@ Class is Driver{
 			Stderr:line('Compilation aborted due to syntax or load errors.');
 			Process:exit(status: 1);
 		});
+		loader:cleanup();
 
 		# 2.5 Instance-model worklist audit (Phase 0.5): with the
 		# full program loaded, report class-name-receiver call sites. Purely
@@ -174,6 +186,7 @@ Class is Driver{
 			Stderr:line('Compilation aborted due to type errors.');
 			Process:exit(status: 1);
 		});
+		tc:cleanup();
 
 		# 4. Entry class: the first with a Map-parameter init, else the
 		# first non-enum, else the first class.
@@ -216,6 +229,7 @@ Class is Driver{
 
 		# 5. C11 code generation over the FULL loaded class set streamed to disk.
 		local CodeGenerator is cg: CodeGenerator:init();
+		cg:genThreads: threadCount;
 		cg:registerProgram(classes: program:classes);
 		local Int is genT0: Process:clockMs();
 		local Int is cLines: cg:generateProgramToFile(program: program, entryClass: entryName, filePath: tempCPath);

@@ -91,6 +91,9 @@ Class is CodeGenerator{
 	## parameter, the _held_ symbol infix, no vtable involvement.
 	local Boolean is emittingHeld: false;
 
+	## Number of worker threads for parallel class code generation.
+	Int is genThreads: 2;
+
 	## Copies a string-keyed registry map for a worker gen.
 	##
 	## @param source: The map to copy.
@@ -3972,7 +3975,10 @@ Class is CodeGenerator{
 		# into per-thread owned buffers, merged in fixed thread order.
 		# The split and the merge are deterministic, so the emitted C is
 		# byte-stable for a given class list (the fixed point holds).
-		local Int is genThreads: 4;
+		local Int is genThreads: self:genThreads;
+		Conditional:if(check: { genThreads < 1 }, then: {
+			genThreads: 1;
+		});
 		# One owned chunk slot and one helper slot PER CLASS: the workers
 		# set by index (no shared-append races, no nested-array concat
 		# trap — Array:add on array items concatenates), and the merge
@@ -4074,6 +4080,7 @@ Class is CodeGenerator{
 										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
 										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
 										wg:emittingHeld: false;
+										m:clearBody();
 									});
 								}
 							]);
@@ -4151,7 +4158,10 @@ Class is CodeGenerator{
 		local String is heldMeta: self:generateHeldMetadata(classes: flattenedClasses);
 		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 
-		local Int is genThreads: 4;
+		local Int is genThreads: self:genThreads;
+		Conditional:if(check: { genThreads < 1 }, then: {
+			genThreads: 1;
+		});
 		local Int is classTotal: flattenedClasses:length();
 
 		local Array of String is classChunks: [];
@@ -4227,6 +4237,7 @@ Class is CodeGenerator{
 										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
 										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
 										wg:emittingHeld: false;
+										m:clearBody();
 									});
 								}
 							]);

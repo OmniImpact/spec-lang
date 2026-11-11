@@ -59,6 +59,15 @@ Class is Loader{
 		return self:parseErrors;
 	}
 
+	## Releases loaded class lists and tracking maps after program assembly.
+	Function is cleanup(){
+		self:loadedFiles: Map:init();
+		self:loadedClasses: [];
+		self:seenClassNames: Map:init();
+		self:seenBareNames: Map:init();
+		self:parseErrors: [];
+	}
+
 	## Recursively reads, tokenizes, and parses a source file and its transitive dependencies.
 	##
 	## @param filePath: Path to target `.spec` file.
