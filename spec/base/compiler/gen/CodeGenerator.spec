@@ -93,6 +93,18 @@ Class is CodeGenerator{
 	## Number of worker threads for parallel class code generation.
 	Int is genThreads: 2;
 
+	## The entry init the driver resolved: the name of the class whose C
+	## `_init` main must call ('' = no init anywhere on the entry's
+	## lattice; main calls the entry's own synthesized zero-arg default),
+	## and whether that init takes the argv Map as a second argument.
+	## The driver owns entry policy — selection, lattice resolution, the
+	## non-constructible-signature diagnostic — the generator only
+	## emits the resolved shape. An inherited init is called at its
+	## owner's C symbol: inherited inits are not flattened into the
+	## child, so ChildApp_init would be the empty synthesized stub.
+	String is entryInitOwner: '';
+	Boolean is entryInitTakesArgs: false;
+
 	## Copies a string-keyed registry map for a worker gen.
 	##
 	## @param source: The map to copy.
@@ -3682,8 +3694,18 @@ Class is CodeGenerator{
 		m: m . "            }\n";
 		m: m . "        }\n";
 		m: m . "    }\n";
+		# The driver resolved the entry init: main constructs the entry
+		# class but calls the OWNING class's _init with its true arity —
+		# zero parameters, or the argv Map. main never passes the argv
+		# Map to a zero-arg init: that mismatch is what surfaced as raw
+		# gcc output on init-less and lattice-fallback entry classes.
+		local String is initSym: Conditional:if(check: { self:entryInitOwner == '' }, then: { entryClass }, else: { self:entryInitOwner });
 		m: m . '    SPEC_AUTO ' . entryClass . '* app = ' . entryClass . "_new();\n";
-		m: m . '    ' . entryClass . "_init(app, args);\n";
+		Conditional:if(check: { self:entryInitTakesArgs }, then: {
+			m: m . '    ' . initSym . "_init(app, args);\n";
+		}, else: {
+			m: m . '    ' . initSym . "_init(app);\n";
+		});
 		m: m . "    spec_drain_async_tasks();\n";
 		m: m . "    return 0;\n";
 		m: m . "}\n";

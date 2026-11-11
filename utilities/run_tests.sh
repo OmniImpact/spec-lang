@@ -343,6 +343,14 @@ assert_compile_failure "list-guard-negative" \
 	"Bare List type requires" \
 	"requires a 'default:' argument"
 
+assert_compile_failure "entry-init-signature-wall" \
+	"$ROOT/tests/negative/n37_entry_init_params_negative_test.spec" \
+	"init must take no parameters or a single 'Map of String to String'"
+
+assert_compile_failure "entry-enum-only-wall" \
+	"$ROOT/tests/negative/n38_entry_enum_only_negative_test.spec" \
+	"No entry class found in"
+
 # -----------------------------------------------------------------------------
 # 2b. Runtime panics: must compile, must exit non-zero with required diagnostics
 # -----------------------------------------------------------------------------

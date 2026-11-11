@@ -44,6 +44,15 @@ Class is Driver{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Entry-init probe results (resolveEntryInit): the name of the
+	## class owning the nearest init on the entry's lattice ('' when no
+	## init exists anywhere up the chain), the init's parameter count,
+	## and its first parameter's type name. main's construction call is
+	## emitted from exactly this shape.
+	local String is entryInitOwner: '';
+	local Int is entryInitParams: 0;
+	local String is entryInitFirstParam: '';
+
 	replace Function is init(Map of String to String is args){
 		local String is inputPath: args:getString(key: 'i', default: '');
 		Conditional:if(check: { inputPath == '' }, then: {
@@ -190,35 +199,65 @@ Class is Driver{
 			Process:exit(status: 1);
 		});
 
-		# 4. Entry class: the first with a Map-parameter init, else the
-		# first non-enum, else the first class.
+		# 4. Entry class — scoped to the ROOT FILE's classes. The loader
+		# preloads the root lattice (Any, Loadable, String, ...) into the
+		# program set ahead of user code, so an unscoped fallback would
+		# select a lattice class and emit a main that constructs Any.
+		# The parser stamps every loaded class with its declaring file,
+		# and the root file is this compile's input path.
 		Conditional:if(check: { classCount == 0 }, then: {
 			Stderr:line('Error: No class definitions found in source file.');
 			Process:exit(status: 1);
 		});
-		local String is entryName: '';
+		local Array of ClassInfo is rootClasses: [];
 		program:classes:each(action: local Function(ClassInfo is c){
+			Conditional:if(check: { c:sourceFile == inputPath }, then: {
+				rootClasses:add(item: c);
+			});
+		});
+		Conditional:if(check: { rootClasses:length() == 0 }, then: {
+			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+			Process:exit(status: 1);
+		});
+		local String is entryName: '';
+		local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
+		rootClasses:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { entryName == '' }, then: {
 				c:members:each(action: local Function(Member is m){
 					Conditional:if(check: { entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, then: {
 						local Parameter is p: m:params:get(index: 0);
 						Conditional:if(check: { p:paramType:name == 'Map' }, then: {
 							entryName: c:name;
+							entryClassInfo: c;
 						});
 					});
 				});
 			});
 		});
 		Conditional:if(check: { entryName == '' }, then: {
-			program:classes:each(action: local Function(ClassInfo is c){
+			rootClasses:each(action: local Function(ClassInfo is c){
 				Conditional:if(check: { entryName == '' && c:baseClass != 'Enum' }, then: {
 					entryName: c:name;
+					entryClassInfo: c;
 				});
 			});
 		});
 		Conditional:if(check: { entryName == '' }, then: {
-			local ClassInfo is firstClass: program:classes:get(index: 0);
-			entryName: firstClass:name;
+			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+			Process:exit(status: 1);
+		});
+
+		# The entry init must be constructible from argv: zero parameters,
+		# or exactly one Map of String to String. Any other signature is a
+		# compile-time diagnostic here — never a raw backend-C failure.
+		self:entryInitOwner: '';
+		self:entryInitParams: 0;
+		self:entryInitFirstParam: '';
+		local Array of String is latticeVisited: [];
+		self:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
+		Conditional:if(check: { self:entryInitOwner != '' && !(self:entryInitParams == 0 || (self:entryInitParams == 1 && self:entryInitFirstParam == 'Map')) }, then: {
+			Stderr:line("Error: Entry class '" . entryName . "' init must take no parameters or a single 'Map of String to String'.");
+			Process:exit(status: 1);
 		});
 
 		local String is tempCPath: emitCPath;
@@ -232,6 +271,8 @@ Class is Driver{
 		# 5. C11 code generation over the FULL loaded class set streamed to disk.
 		local CodeGenerator is cg: CodeGenerator:init();
 		cg:genThreads: threadCount;
+		cg:entryInitOwner: self:entryInitOwner;
+		cg:entryInitTakesArgs: self:entryInitParams == 1;
 		cg:registerProgram(classes: program:classes);
 		local Int is genT0: Process:clockMs();
 		local Int is cLines: cg:generateProgramToFile(program: program, entryClass: entryName, filePath: tempCPath);
@@ -266,5 +307,43 @@ Class is Driver{
 		report:stage(n: 4, total: 4, label: 'compiling (gcc) · ' . (ccMs as String) . 'ms');
 		Process:monitorStop();
 		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
+	}
+
+	## Walks the inheritance lattice from [c] to the nearest init
+	## declaration, recording the owning class name, its parameter
+	## count, and its first parameter's type name into the driver's
+	## entry-init probe fields. Depth-first over baseClasses in
+	## declaration order, with a visited set as the cycle guard: a
+	## revisit terminates the branch, never a depth count.
+	##
+	## @param c: The class to probe (the entry class).
+	## @param all: The full loaded class set (lattice preloads included).
+	## @param visited: Names already probed on this walk.
+	Function is resolveEntryInit(ClassInfo is c, Array of ClassInfo is all, Array of String is visited){
+		Conditional:if(check: { visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitOwner != '' }, then: {
+			return;
+		});
+		visited:add(item: c:name);
+		local Boolean is found: false;
+		c:members:each(action: local Function(Member is m){
+			Conditional:if(check: { !found && m:name == 'init' && m:kind == MemberKind:METHOD }, then: {
+				found: true;
+				self:entryInitOwner: c:name;
+				self:entryInitParams: m:params:length();
+				Conditional:if(check: { self:entryInitParams == 1 }, then: {
+					local Parameter is p: m:params:get(index: 0);
+					self:entryInitFirstParam: p:paramType:name;
+				});
+			});
+		});
+		Conditional:if(check: { !found }, then: {
+			c:baseClasses:each(action: local Function(String is baseName){
+				all:each(action: local Function(ClassInfo is cand){
+					Conditional:if(check: { self:entryInitOwner == '' && cand:name == baseName }, then: {
+						self:resolveEntryInit(c: cand, all: all, visited: visited);
+					});
+				});
+			});
+		});
 	}
 }
