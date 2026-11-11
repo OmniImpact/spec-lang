@@ -127,7 +127,8 @@ assert_compile_failure "negative-type-safety" \
 	"Method declared return type 'Boolean', but returned 'Int'." \
 	"is read before being initialized" \
 	"Argument 'n' for 'CallArgumentMismatch.double'" \
-	"Non-exhaustive match"
+	"Non-exhaustive match" \
+	"Incompatible array element types: 'Int' and 'String'"
 
 assert_compile_failure "nested-ambiguity-at-reference" \
 	"$ROOT/tests/negative/n25_inner_name_collision_negative_test.spec" \

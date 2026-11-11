@@ -208,6 +208,42 @@ Class is N{ replace Function is init(Map of String to String is args){ local M i
 			failures: failures + 1;
 		});
 
+		# 14. Array with mixed primitive types is rejected.
+		local Array of String is e14: self:checkOf(src: "Class is O{ replace Function is init(Map of String to String is args){ local Int is len: [1, 'two']:length(); } }");
+		Conditional:if(check: { e14:length() >= 1 && e14:get(index: 0):contains(needle: "Incompatible array element types: 'Int' and 'String'") }, then: {
+			Output:line('[PASS] mixed primitive array rejected');
+		}, else: {
+			Output:line('[FAIL] mixed primitive array: ' . e14:join(separator: ' | '));
+			failures: failures + 1;
+		});
+
+		# 15. Array with unrelated classes is rejected.
+		local Array of String is e15: self:checkOf(src: "Class is Cat{ }
+Class is Car{ }
+Class is P{ replace Function is init(Map of String to String is args){ local Int is len: [Cat:init(), Car:init()]:length(); } }");
+		Conditional:if(check: { e15:length() >= 1 && e15:get(index: 0):contains(needle: "Incompatible array element types: 'Cat' and 'Car'") }, then: {
+			Output:line('[PASS] unrelated class array rejected');
+		}, else: {
+			Output:line('[FAIL] unrelated class array: ' . e15:join(separator: ' | '));
+			failures: failures + 1;
+		});
+
+		# 16. Array of classes sharing a parent class via multiple inheritance succeeds.
+		local Array of String is e16: self:checkOf(src: "Class is Flyable{ }
+Class is Swimmable{ Function of String is swim(){ return 'ok'; } }
+Class of Flyable, Swimmable is Duck{ }
+Class of Swimmable is Fish{ }
+Class is Q{ replace Function is init(Map of String to String is args){
+	local Array of Swimmable is swimmers: [Duck:init(), Fish:init()];
+	local String is s: [Duck:init(), Fish:init()]:get(index: 0, default: Fish:init()):swim();
+} }");
+		Conditional:if(check: { e16:length() == 0 }, then: {
+			Output:line('[PASS] array of classes sharing parent via MI accepted');
+		}, else: {
+			Output:line('[FAIL] MI shared-parent array: ' . e16:join(separator: ' | '));
+			failures: failures + 1;
+		});
+
 		Conditional:if(check: { failures == 0 }, then: {
 			Output:line('[PASS] spec checker test complete');
 		}, else: {

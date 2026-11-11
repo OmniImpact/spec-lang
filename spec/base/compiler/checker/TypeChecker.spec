@@ -343,6 +343,201 @@ Class is TypeChecker{
 		return matched;
 	}
 
+	## True when [name] is part of the implicit root declaration spine
+	## (`Class -> Stringable -> Loadable -> base:sysinternal:Loadable -> Any`
+	## or `Enum`). Every class inherits these implicitly, so they do not
+	## count as a shared user parent class when unifying array element types.
+	##
+	## @param name: Class name.
+	## @return: true when [name] is an implicit root class.
+	Function of Boolean is isImplicitRootClass(String is name){
+		return name == 'Any' || name == 'Class' || name == 'Stringable' || name == 'Loadable' || name == 'base:sysinternal:Loadable' || name == 'Enum';
+	}
+
+	## Collects all non-implicit-root ancestor classes of [className] in
+	## declaration order across single and multiple inheritance.
+	##
+	## @param className: Starting class name.
+	## @param visited: Cycle/revisit guard map.
+	## @param acc: Output array of ancestor class names.
+	Function is collectUserAncestors(String is className, Map of String to String is visited: Map:init(), Array of String is acc){
+		if({ className == '' || self:isImplicitRootClass(name: className) || visited:has(key: className) }, {
+			return;
+		});
+		visited:set(key: className, value: 'true');
+		local ClassInfo is cls: self:findClass(name: className);
+		if({ cls:name == '' }, {
+			return;
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			if({ !self:isImplicitRootClass(name: baseName) && !visited:has(key: baseName) }, {
+				local Boolean is present: false;
+				acc:each(action: local Function(String is existing){
+					if({ existing == baseName }, {
+						present: true;
+					});
+				});
+				if({ !present }, {
+					acc:add(item: baseName);
+				});
+			});
+		});
+		cls:baseClasses:each(action: local Function(String is baseName){
+			self:collectUserAncestors(className: baseName, visited: visited, acc: acc);
+		});
+	}
+
+	## Normalizes 'of' and 'to' container type spellings ('Array of String',
+	## 'Map of String to Int') to the canonical colon form ('Array:String',
+	## 'Map:String:Int').
+	##
+	## @param t: Type name.
+	## @return: Normalized type name.
+	Function of String is normalizeContainerType(String is t){
+		local String is norm: t;
+		local Int is ofIdx: norm:indexOf(search: ' of ', default: -1);
+		while({ ofIdx > 0 }, {
+			norm: norm:substring(start: 0, end: ofIdx) . ':' . norm:substring(start: ofIdx + 4, end: norm:length());
+			ofIdx: norm:indexOf(search: ' of ', default: -1);
+		});
+		local Int is toIdx: norm:indexOf(search: ' to ', default: -1);
+		while({ toIdx > 0 }, {
+			norm: norm:substring(start: 0, end: toIdx) . ':' . norm:substring(start: toIdx + 4, end: norm:length());
+			toIdx: norm:indexOf(search: ' to ', default: -1);
+		});
+		return norm;
+	}
+
+	## Validates that all element types in an array are mutually compatible:
+	## either all the same primitive type, all the same class/container type,
+	## or all sharing a user parent class via single or multiple inheritance.
+	## Emits a diagnostic and returns '' when incompatible.
+	##
+	## @param elemTypes: Inferred types of the array's elements.
+	## @return: The unified element type, or '' when empty or incompatible.
+	Function of String is unifyArrayElementTypes(Array of String is elemTypes){
+		local Array of String is concrete: [];
+		elemTypes:each(action: local Function(String is rawT){
+			if({ rawT != '' && rawT != Primitive:ANY:value() }, {
+				concrete:add(item: self:normalizeContainerType(t: rawT));
+			});
+		});
+		if({ concrete:length() == 0 }, {
+			return '';
+		});
+		local String is firstT: concrete:get(index: 0);
+		if({ concrete:length() == 1 }, {
+			return firstT;
+		});
+		local Boolean is allSame: true;
+		concrete:each(action: local Function(String is ct){
+			if({ ct != firstT }, {
+				allSame: false;
+			});
+		});
+		if({ allSame }, {
+			return firstT;
+		});
+		# Function references / closures.
+		if({ firstT:startsWith(prefix: 'Function') }, {
+			local String is badFn: '';
+			concrete:each(action: local Function(String is ct){
+				if({ badFn == '' && !ct:startsWith(prefix: 'Function') }, {
+					badFn: ct;
+				});
+			});
+			if({ badFn != '' }, {
+				self:addError(line: self:currentLine, msg: "Incompatible array element types: '" . firstT . "' and '" . badFn . "' (array elements must all be the same primitive type, the same class type, or share a parent class).");
+				return '';
+			});
+			return 'Function';
+		});
+		# Primitive types must all be the exact same primitive type.
+		if({ self:isPrimitive(t: firstT) }, {
+			local String is badPrim: '';
+			concrete:each(action: local Function(String is ct){
+				if({ badPrim == '' && ct != firstT }, {
+					badPrim: ct;
+				});
+			});
+			self:addError(line: self:currentLine, msg: "Incompatible array element types: '" . firstT . "' and '" . badPrim . "' (array elements must all be the same primitive type, the same class type, or share a parent class).");
+			return '';
+		});
+		# Nested container types (Array, List, Map).
+		if({ firstT == 'Array' || firstT:startsWith(prefix: 'Array:') || firstT == 'List' || firstT:startsWith(prefix: 'List:') || firstT == 'Map' || firstT:startsWith(prefix: 'Map:') }, {
+			local String is firstBase: firstT:split(delimiter: ':'):get(index: 0);
+			local String is badCont: '';
+			concrete:each(action: local Function(String is ct){
+				if({ badCont == '' && ct:split(delimiter: ':'):get(index: 0) != firstBase }, {
+					badCont: ct;
+				});
+			});
+			if({ badCont != '' }, {
+				self:addError(line: self:currentLine, msg: "Incompatible array element types: '" . firstT . "' and '" . badCont . "' (array elements must all be the same primitive type, the same class type, or share a parent class).");
+				return '';
+			});
+			if({ firstBase == 'Array' || firstBase == 'List' }, {
+				local Array of String is innerTypes: [];
+				concrete:each(action: local Function(String is ct){
+					if({ ct:length() > firstBase:length() + 1 }, {
+						innerTypes:add(item: ct:substring(start: firstBase:length() + 1, end: ct:length()));
+					});
+				});
+				if({ innerTypes:length() == 0 }, {
+					return firstBase;
+				});
+				local String is innerU: self:unifyArrayElementTypes(elemTypes: innerTypes);
+				if({ innerU == '' }, {
+					return '';
+				});
+				return firstBase . ':' . innerU;
+			});
+			return firstT;
+		});
+		# Class / enum types: check that none of the remaining elements are
+		# primitives, containers, or distinct traditional enums.
+		local String is mismatchT: '';
+		concrete:each(action: local Function(String is ct){
+			if({ mismatchT == '' && ct != firstT }, {
+				if({ self:isPrimitive(t: ct) || ct:startsWith(prefix: 'Function') || ct == 'Array' || ct:startsWith(prefix: 'Array:') || ct == 'List' || ct:startsWith(prefix: 'List:') || ct == 'Map' || ct:startsWith(prefix: 'Map:') || self:allEnumNames:has(key: firstT) || self:allEnumNames:has(key: ct) }, {
+					mismatchT: ct;
+				});
+			});
+		});
+		if({ mismatchT != '' }, {
+			self:addError(line: self:currentLine, msg: "Incompatible array element types: '" . firstT . "' and '" . mismatchT . "' (array elements must all be the same primitive type, the same class type, or share a parent class).");
+			return '';
+		});
+		# Search for a shared user parent class across single and multiple inheritance.
+		local Array of String is candidates: [firstT];
+		self:collectUserAncestors(className: firstT, acc: candidates);
+		local String is sharedParent: '';
+		candidates:each(action: local Function(String is cand){
+			if({ sharedParent == '' && !self:isImplicitRootClass(name: cand) }, {
+				local Boolean is allMatch: true;
+				concrete:each(action: local Function(String is ct){
+					if({ allMatch && !self:isSubclassOf(subName: ct, baseName: cand) }, {
+						allMatch: false;
+					});
+				});
+				if({ allMatch }, {
+					sharedParent: cand;
+				});
+			});
+		});
+		if({ sharedParent != '' }, {
+			return sharedParent;
+		});
+		local String is badCls: '';
+		concrete:each(action: local Function(String is ct){
+			if({ badCls == '' && ct != firstT }, {
+				badCls: ct;
+			});
+		});
+		self:addError(line: self:currentLine, msg: "Incompatible array element types: '" . firstT . "' and '" . badCls . "' (array elements must all be the same primitive type, the same class type, or share a parent class).");
+		return '';
+	}
+
 	## Determines whether a source type is assignable to a target type.
 	##
 	## @param target: Target type name.
@@ -2531,37 +2726,55 @@ Class is TypeChecker{
 			ExpressionKind:ARRAY: {
 				# Bidirectional: a container expectation from the declaration
 				# site types the literal directly — no hint state. The
-				# elements must still be assignable to the declared element
-				# type ('Array of Int is flags: ['on']' is a compile error).
-				Conditional:if(check: { expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List')) }, then: {
-					local String is elemT: '';
+				# elements must all be mutually compatible (same primitive
+				# type, same class type, or sharing a parent class via
+				# inheritance) and assignable to any declared element type.
+				local Boolean is hasExpectedContainer: expected != '' && (expected:startsWith(prefix: 'Array') || expected:startsWith(prefix: 'List'));
+				local String is elemT: '';
+				if({ hasExpectedContainer }, {
 					local Int is eColon: expected:indexOf(search: ':', default: -1);
 					local Int is eOf: expected:indexOf(search: ' of ', default: -1);
-					Conditional:if(check: { eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, then: {
+					if({ eColon >= 0 && (expected:startsWith(prefix: 'Array:') || expected:startsWith(prefix: 'List:')) }, {
 						elemT: expected:substring(start: eColon + 1, end: expected:length());
-					}, else: {
-						Conditional:if(check: { eOf >= 0 }, then: {
+					}, {
+						if({ eOf >= 0 }, {
 							elemT: expected:substring(start: eOf + 4, end: expected:length());
 						});
 					});
-					expr:arrayItems:each(action: local Function(Expression is item){
-						local String is itemT: self:inferExpressionType(expr: item);
-						Conditional:if(check: { elemT != '' && itemT != '' && itemT != Primitive:ANY:value() && !self:isAssignable(target: elemT, source: itemT) }, then: {
-							self:addError(line: self:currentLine, msg: "Cannot assign 'Array:" . itemT . "' to 'Array:" . elemT . "'.");
+				});
+				local Array of String is itemTypes: [];
+				expr:arrayItems:each(action: local Function(Expression is item){
+					local String is itemT: self:inferExpressionType(expr: item, expected: elemT);
+					if({ self:isVoid(t: itemT) }, {
+						self:addError(line: self:currentLine, msg: 'Array elements cannot be void.');
+					}, {
+						if({ itemT != '' && itemT != Primitive:ANY:value() }, {
+							itemTypes:add(item: itemT);
 						});
 					});
-					res: expected;
-				}, else: {
-					local String is firstElemType: '';
-					expr:arrayItems:each(action: local Function(Expression is item){
-						local String is itemT: self:inferExpressionType(expr: item);
-						Conditional:if(check: { firstElemType == '' && itemT != '' && itemT != Primitive:ANY:value() }, then: {
-							firstElemType: itemT;
+				});
+				local String is unifiedElemType: self:unifyArrayElementTypes(elemTypes: itemTypes);
+				if({ hasExpectedContainer }, {
+					if({ elemT != '' && elemT != Primitive:ANY:value() }, {
+						itemTypes:each(action: local Function(String is itemT){
+							local Boolean is elemOk: self:isAssignable(target: elemT, source: itemT);
+							if({ self:isPrimitive(t: elemT) && !elemT:startsWith(prefix: 'Function') && itemT != elemT }, {
+								elemOk: false;
+							});
+							if({ !elemOk }, {
+								self:addError(line: self:currentLine, msg: "Cannot assign 'Array:" . itemT . "' to 'Array:" . elemT . "'.");
+							});
 						});
 					});
-					Conditional:if(check: { firstElemType != '' }, then: {
-						res: 'Array:' . firstElemType;
-					}, else: {
+					if({ elemT == '' && expected == 'Array' && unifiedElemType != '' }, {
+						res: 'Array:' . unifiedElemType;
+					}, {
+						res: expected;
+					});
+				}, {
+					if({ unifiedElemType != '' }, {
+						res: 'Array:' . unifiedElemType;
+					}, {
 						res: 'Array';
 					});
 				});

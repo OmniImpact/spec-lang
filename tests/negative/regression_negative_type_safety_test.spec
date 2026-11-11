@@ -145,3 +145,13 @@ Class is IncompleteWhenBranches{
 		]);
 	}
 }
+
+Class is IncompatibleArrayElements{
+	replace Array of Array of String is using: [
+		['base', 'struct', Array]
+	];
+	## Violation 9: array literal containing incompatible element types.
+	replace Function is init(Map of String to String is args){
+		local Int is n: [1, 'mixed']:length();
+	}
+}
