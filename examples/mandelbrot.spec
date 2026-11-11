@@ -36,10 +36,10 @@ Class is Mandelbrot{
 
 		# Cardioid and period-2 bulb quick rejection test
 		local Float is q: ((cr - 0.25) * (cr - 0.25)) + (ci * ci);
-		if(check: { (q * (q + (cr - 0.25))) <= (0.25 * ci * ci) }, then: {
+		if({ (q * (q + (cr - 0.25))) <= (0.25 * ci * ci) }, {
 			return -1.0;
 		});
-		if(check: { ((cr + 1.0) * (cr + 1.0)) + (ci * ci) <= 0.0625 }, then: {
+		if({ ((cr + 1.0) * (cr + 1.0)) + (ci * ci) <= 0.0625 }, {
 			return -1.0;
 		});
 
@@ -49,27 +49,22 @@ Class is Mandelbrot{
 		local Float is zi2: 0.0;
 		local Int is iter: 0;
 
-		while(
-			evaluate: local Function of Boolean(){
-				return (iter < maxIter) && ((zr2 + zi2) <= 16.0);
-			},
-			iteration: local Function(){
-				zi: (2.0 * zr * zi) + ci;
-				zr: (zr2 - zi2) + cr;
-				zr2: zr * zr;
-				zi2: zi * zi;
-				iter: iter + 1;
-			}
-		);
+		while({ (iter < maxIter) && ((zr2 + zi2) <= 16.0) }, {
+			zi: (2.0 * zr * zi) + ci;
+			zr: (zr2 - zi2) + cr;
+			zr2: zr * zr;
+			zi2: zi * zi;
+			iter: iter + 1;
+		});
 
-		if(check: { iter >= maxIter }, then: {
+		if({ iter >= maxIter }, {
 			return -1.0;
 		});
 
 		local Float is mag: sqrt(value: zr2 + zi2);
 		local Float is logMag: log(value: mag);
 		local Float is nu: 0.0;
-		if(check: { logMag > 0.0 }, then: {
+		if({ logMag > 0.0 }, {
 			nu: log2(value: logMag);
 		});
 		return (toFloat(value: iter) + 1.0) - nu;
@@ -83,7 +78,7 @@ Class is Mandelbrot{
 	## @param mu: Smooth iteration count (`< 0.0` if inside the set).
 	## @return: 256-color palette code (16..231).
 	local Function of Int is palette256(Float is mu){
-		if(check: { mu < 0.0 }, then: {
+		if({ mu < 0.0 }, {
 			return 16;
 		});
 		local Float is t: mu * 0.18;
@@ -102,34 +97,25 @@ Class is Mandelbrot{
 	## @param mu: Smooth iteration count (`< 0.0` if inside the set).
 	## @return: Single Unicode shade block character (` `, `░`, `▒`, `▓`, `█`).
 	local Function of String is shadeGlyph(Float is mu){
-		if(check: { mu < 0.0 }, then: {
+		if({ mu < 0.0 }, {
 			return ' ';
 		});
 		local Int is band: toInt(value: mu * 2.0) % 4;
-		return if(check: { band == 0 }, then: {
-			'░'
-		}, else: {
-			if(check: { band == 1 }, then: {
-				'▒'
-			}, else: {
-				if(check: { band == 2 }, then: {
-					'▓'
-				}, else: {
-					'█'
-				})
-			})
-		});
+		return match(when: [
+			{ band == 0 }: { '░' },
+			{ band == 1 }: { '▒' },
+			{ band == 2 }: { '▓' },
+			else:          { '█' }
+		]);
 	}
 
 	## Clamps a float `v` into `[lo, hi]`.
 	local Function of Float is clampFloat(Float is v, Float is lo, Float is hi){
-		if(check: { v < lo }, then: {
-		return lo;
-		});
-		if(check: { v > hi }, then: {
-		return hi;
-		});
-		return v;
+		return match(when: [
+			{ v < lo }: { lo },
+			{ v > hi }: { hi },
+			else:       { v }
+		]);
 	}
 
 	## Prints the render statistics block: points sampled, elapsed time, peak memory.
@@ -160,14 +146,9 @@ Class is Mandelbrot{
 	## @return: Bar string.
 	local Function of String is repeatBar(Int is count){
 		local String is bar: '';
-		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){ return i < count; },
-			iteration: local Function(){
-				bar: bar . '═';
-				i: i + 1;
-			}
-		);
+		repeat(count: count, worker: {
+			bar: bar . '═';
+		});
 		return bar;
 	}
 
@@ -179,22 +160,14 @@ Class is Mandelbrot{
 	local Function of String is centerTitle(String is title, Int is width){
 		local String is line: '║';
 		local Int is pad: width - 2 - title:length();
-		if(check: { pad < 1 }, then: {
+		if({ pad < 1 }, {
 			pad: 1;
 		});
 		local Int is left: pad / 2;
 		local Int is right: pad - left;
-		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){ return i < left; },
-			iteration: local Function(){ line: line . ' '; i: i + 1; }
-		);
+		repeat(count: left, worker: { line: line . ' '; });
 		line: line . title;
-		i: 0;
-		while(
-			evaluate: local Function of Boolean(){ return i < right; },
-			iteration: local Function(){ line: line . ' '; i: i + 1; }
-		);
+		repeat(count: right, worker: { line: line . ' '; });
 		return line . '║';
 	}
 
@@ -208,20 +181,20 @@ Class is Mandelbrot{
 		local String is mode: args:getString(key: 'mode', default: 'both');
 		local Int is startedAtMs: clockMs();
 
-		if(check: { width <= 0 }, then: {
+		if({ width <= 0 }, {
 			width: terminalWidth();
-			if(check: { width <= 0 }, then: {
+			if({ width <= 0 }, {
 				width: 78;
 			});
 			width: width - 1;
 		});
-		if(check: { height <= 0 }, then: {
+		if({ height <= 0 }, {
 			height: terminalHeight();
-			if(check: { height <= 0 }, then: {
+			if({ height <= 0 }, {
 				height: 28;
 			});
 			height: height - 8;
-			if(check: { height < 12 }, then: {
+			if({ height < 12 }, {
 				height: 12;
 			});
 		});
@@ -268,34 +241,28 @@ Class is Mandelbrot{
 		local Float is hFloat: toFloat(value: pixelHeight - 1);
 		local Int is row: 0;
 
-		while(
-			evaluate: local Function of Boolean(){ return row < rows; },
-			iteration: local Function(){
-				local Int is yTop: row * 2;
-				local Int is yBot: yTop + 1;
-				local Float is ciTop: maxIm - ((toFloat(value: yTop) / hFloat) * (maxIm - minIm));
-				local Float is ciBot: maxIm - ((toFloat(value: yBot) / hFloat) * (maxIm - minIm));
+		while({ row < rows }, {
+			local Int is yTop: row * 2;
+			local Int is yBot: yTop + 1;
+			local Float is ciTop: maxIm - ((toFloat(value: yTop) / hFloat) * (maxIm - minIm));
+			local Float is ciBot: maxIm - ((toFloat(value: yBot) / hFloat) * (maxIm - minIm));
 
-				local String is lineBuf: '';
-				local Int is col: 0;
-				while(
-					evaluate: local Function of Boolean(){ return col < width; },
-					iteration: local Function(){
-						local Float is cr: minRe + ((toFloat(value: col) / wFloat) * (maxRe - minRe));
-						local Float is muTop: self:smoothEscape(cr: cr, ci: ciTop, maxIter: maxIter);
-						local Float is muBot: self:smoothEscape(cr: cr, ci: ciBot, maxIter: maxIter);
+			local String is lineBuf: '';
+			local Int is col: 0;
+			while({ col < width }, {
+				local Float is cr: minRe + ((toFloat(value: col) / wFloat) * (maxRe - minRe));
+				local Float is muTop: self:smoothEscape(cr: cr, ci: ciTop, maxIter: maxIter);
+				local Float is muBot: self:smoothEscape(cr: cr, ci: ciBot, maxIter: maxIter);
 
-						local Int is fgCode: self:palette256(mu: muTop);
-						local Int is bgCode: self:palette256(mu: muBot);
+				local Int is fgCode: self:palette256(mu: muTop);
+				local Int is bgCode: self:palette256(mu: muBot);
 
-						lineBuf: lineBuf . paint256(fg: fgCode, bg: bgCode, text: '▀');
-						col: col + 1;
-					}
-				);
-				line(lineBuf);
-				row: row + 1;
-			}
-		);
+				lineBuf: lineBuf . paint256(fg: fgCode, bg: bgCode, text: '▀');
+				col: col + 1;
+			});
+			line(lineBuf);
+			row: row + 1;
+		});
 	}
 
 	## Renders the complex plane using textured shade glyphs (`█`, `▓`, `▒`, `░`, ` `) and 256-color foregrounds.
@@ -304,30 +271,24 @@ Class is Mandelbrot{
 		local Float is hFloat: toFloat(value: rows - 1);
 		local Int is row: 0;
 
-		while(
-			evaluate: local Function of Boolean(){ return row < rows; },
-			iteration: local Function(){
-				local Float is ci: maxIm - ((toFloat(value: row) / hFloat) * (maxIm - minIm));
-				local String is lineBuf: bg256(code: 16);
-				local Int is col: 0;
+		while({ row < rows }, {
+			local Float is ci: maxIm - ((toFloat(value: row) / hFloat) * (maxIm - minIm));
+			local String is lineBuf: bg256(code: 16);
+			local Int is col: 0;
 
-				while(
-					evaluate: local Function of Boolean(){ return col < width; },
-					iteration: local Function(){
-						local Float is cr: minRe + ((toFloat(value: col) / wFloat) * (maxRe - minRe));
-						local Float is mu: self:smoothEscape(cr: cr, ci: ci, maxIter: maxIter);
-						local Int is fgCode: self:palette256(mu: mu);
-						local String is glyph: self:shadeGlyph(mu: mu);
+			while({ col < width }, {
+				local Float is cr: minRe + ((toFloat(value: col) / wFloat) * (maxRe - minRe));
+				local Float is mu: self:smoothEscape(cr: cr, ci: ci, maxIter: maxIter);
+				local Int is fgCode: self:palette256(mu: mu);
+				local String is glyph: self:shadeGlyph(mu: mu);
 
-						lineBuf: lineBuf . fg256(code: fgCode) . glyph;
-						col: col + 1;
-					}
-				);
-				lineBuf: lineBuf . reset();
-				line(lineBuf);
-				row: row + 1;
-			}
-		);
+				lineBuf: lineBuf . fg256(code: fgCode) . glyph;
+				col: col + 1;
+			});
+			lineBuf: lineBuf . reset();
+			line(lineBuf);
+			row: row + 1;
+		});
 	}
 
 }

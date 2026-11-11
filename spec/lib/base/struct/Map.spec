@@ -40,7 +40,7 @@ Class is Map of K to V{
 	## @return: Mapped value, or [default].
 	Function of Int is getInt(String is key, Int is default){
 		local String is s: self:getString(key: key, default: '');
-		Conditional:if(check: { s:length() > 0 }, then: {
+		if({ s:length() > 0 }, {
 			return s:parseInt(base: 10, default: default);
 		});
 		return default;
@@ -61,13 +61,11 @@ Class is Map of K to V{
 	## @return: Mapped value, or [default].
 	Function of Boolean is getBool(String is key, Boolean is default){
 		local String is s: self:getString(key: key, default: '');
-		Conditional:if(check: { s == 'true' }, then: {
-			return true;
-		});
-		Conditional:if(check: { s == 'false' }, then: {
-			return false;
-		});
-		return default;
+		return match(on: s, when: [
+			'true': { true },
+			'false': { false },
+			else: { default }
+		]);
 	}
 
 	## Inserts or updates an entry in the map.

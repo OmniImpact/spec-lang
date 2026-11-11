@@ -63,40 +63,33 @@ Class is PiBenchmark{
 			local Int is lastHits: 0;
 			local Int is lastDraw: clockMs();
 
-			Loops(
-				evaluate: { done < count },
-				iterate: {
-					Loops(
-						[Int is b: 0],
-						evaluate: { b < batch && done < count },
-						iterate: {
-							local Float is x: fastRandom();
-							local Float is y: fastRandom();
-							if(check: { (x * x + y * y) <= 1.0 }, then: {
-								hits++;
-							});
-							lastX: toInt(value: x * 1000.0);
-							lastY: toInt(value: y * 1000.0);
-							done++;
-							b++;
-						}
-					);
-					atomicAdd(slot: 0, value: batch);
-					atomicAdd(slot: 1, value: hits - lastHits);
-					lastHits: hits;
-					atomicPut(slot: threadIndex * 2 + 2, value: lastX);
-					atomicPut(slot: threadIndex * 2 + 3, value: lastY);
-
-					# Thread 0 doubles as the display thread.
-					if(check: { threadIndex == 0 }, then: {
-						local Int is now: clockMs();
-						if(check: { now - lastDraw >= refreshMs }, then: {
-							self:drawProgress(threads: threads);
-							lastDraw: now;
-						});
+			while({ done < count }, {
+				while([Int is b: 0], { b < batch && done < count }, {
+					local Float is x: fastRandom();
+					local Float is y: fastRandom();
+					if({ (x * x + y * y) <= 1.0 }, {
+						hits++;
 					});
-				}
-			);
+					lastX: toInt(value: x * 1000.0);
+					lastY: toInt(value: y * 1000.0);
+					done++;
+					b++;
+				});
+				atomicAdd(slot: 0, value: batch);
+				atomicAdd(slot: 1, value: hits - lastHits);
+				lastHits: hits;
+				atomicPut(slot: threadIndex * 2 + 2, value: lastX);
+				atomicPut(slot: threadIndex * 2 + 3, value: lastY);
+
+				# Thread 0 doubles as the display thread.
+				if({ threadIndex == 0 }, {
+					local Int is now: clockMs();
+					if({ now - lastDraw >= refreshMs }, {
+						self:drawProgress(threads: threads);
+						lastDraw: now;
+					});
+				});
+			});
 			return hits;
 		};
 
@@ -113,10 +106,10 @@ Class is PiBenchmark{
 	##
 	## @param threads: Thread count (markers appear as sampling proceeds).
 	local Function is drawDomain(Int is threads){
-		Loops(
+		while(
 			[Int is row: 0],
-			evaluate: { row < self:gridH },
-			iterate: {
+			{ row < self:gridH },
+			{
 				line(self:domainRow(row: row, threads: threads));
 				row++;
 			}
@@ -132,24 +125,26 @@ Class is PiBenchmark{
 	## @return: Rendered row string.
 	local Function of String is domainRow(Int is row, Int is threads){
 		local String is buf: '';
-		Loops(
+		while(
 			[Int is col: 0],
-			evaluate: { col < self:gridW },
-			iterate: {
+			{ col < self:gridW },
+			{
 				local Float is cx: ((toFloat(value: col) + 0.5) / toFloat(value: self:gridW)) * 2.0 - 1.0;
 				local Float is cy: ((toFloat(value: row) + 0.5) / toFloat(value: self:gridH)) * 2.0 - 1.0;
 				local Float is dist: sqrt(value: cx * cx + cy * cy);
 
 				local Int is marker: self:markerAt(col: col, row: row, threads: threads);
-				if(check: { marker >= 0 }, then: {
-					buf: buf . color256(code: self:threadColor(index: marker), text: '●');
-				}, else: {
-					if(check: { dist <= 1.0 }, then: {
+				match(when: [
+					{ marker >= 0 }: {
+						buf: buf . color256(code: self:threadColor(index: marker), text: '●');
+					},
+					{ dist <= 1.0 }: {
 						buf: buf . color256(code: 236, text: '·');
-					}, else: {
+					},
+					else: {
 						buf: buf . ' ';
-					});
-				});
+					}
+				]);
 				col++;
 			}
 		);
@@ -165,13 +160,13 @@ Class is PiBenchmark{
 	## @return: Thread index, or -1.
 	local Function of Int is markerAt(Int is col, Int is row, Int is threads){
 		local Int is found: -1;
-		Loops(
+		while(
 			[Int is i: 0],
-			evaluate: { i < threads && found < 0 },
-			iterate: {
+			{ i < threads && found < 0 },
+			{
 				local Int is gx: (atomicGet(slot: i * 2 + 2) * self:gridW) / 1000;
 				local Int is gy: (atomicGet(slot: i * 2 + 3) * self:gridH) / 1000;
-				if(check: { gx == col && gy == row }, then: {
+				if({ gx == col && gy == row }, {
 					found: i;
 				});
 				i++;
@@ -250,17 +245,12 @@ Class is PiBenchmark{
 	local Function of String is boxed(String is inner, Int is width){
 		local String is line: '║ ' . inner;
 		local Int is pad: width - 2 - inner:length();
-		if(check: { pad < 1 }, then: {
+		if({ pad < 1 }, {
 			pad: 1;
 		});
-		Loops(
-			[Int is i: 0],
-			evaluate: { i < pad },
-			iterate: {
-				line: line . ' ';
-				i++;
-			}
-		);
+		repeat(count: pad, worker: {
+			line: line . ' ';
+		});
 		return line . '║';
 	}
 
@@ -270,14 +260,9 @@ Class is PiBenchmark{
 	## @return: Bar string.
 	local Function of String is bar(Int is width){
 		local String is barText: '';
-		Loops(
-			[Int is i: 0],
-			evaluate: { i < width },
-			iterate: {
-				barText: barText . '═';
-				i++;
-			}
-		);
+		repeat(count: width, worker: {
+			barText: barText . '═';
+		});
 		return barText;
 	}
 

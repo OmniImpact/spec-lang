@@ -43,7 +43,7 @@
 			line("[File] Creating managed resource: " . path);
 			fileWrite(path: path, content: content);
 			block(path);
-			if(check: { fileExists(path) }, then: {
+			if({ fileExists(path) }, {
 				fileRemove(path);
 				line("[File] Cleaned up managed resource: " . path);
 			});
@@ -80,13 +80,13 @@
 		local Array of String is roles: [];
 
 		# Parse rows using a scoped loop starting after header (row 1)
-		Loops(
+		while(
 			[Int is row: 1, Int is totalRows: lines:length()],
-			evaluate: { row < totalRows },
-			iterate: {
+			{ row < totalRows },
+			{
 				local String is line: lines:get(index: row);
 				local Array of String is fields: line:split(delimiter: ",");
-				if(check: { fields:length() >= 4 }, then: {
+				if({ fields:length() >= 4 }, {
 					names:add(item: fields:get(index: 1));
 					roles:add(item: fields:get(index: 2));
 					line("  -> User #" . fields:get(index: 0) . ": " . fields:get(index: 1) . " (" . fields:get(index: 2) . ")");

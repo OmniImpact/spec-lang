@@ -101,7 +101,7 @@ Class is Blackjack{
 		}
 
 		replace Function is onInput(String is action){
-			if(check: { action == '' }, then: {
+			if({ action == '' }, {
 				line("\nInput closed. Thanks for playing!");
 				game:roundActive: false;
 				return;
@@ -115,17 +115,19 @@ Class is Blackjack{
 					local Int is score: game:handValue(hand: game:playerHand);
 					line('Your total is now: ' . score);
 
-					if(check: { score > 21 }, then: {
-						line('Bust! You lose.');
-						game:roundActive: false;
-					}, else: {
-						if(check: { score == 21 }, then: {
+					match(when: [
+						{ score > 21 }: {
+							line('Bust! You lose.');
+							game:roundActive: false;
+						},
+						{ score == 21 }: {
 							line('21! Standing automatically.');
 							game:startDealerTurn();
-						}, else: {
+						},
+						else: {
 							game:promptPlayerAction();
-						});
-					});
+						}
+					]);
 				},
 				['s', 'stand']: {
 					line('You stand with total: ' . game:handValue(hand: game:playerHand));
@@ -156,7 +158,7 @@ Class is Blackjack{
 		local Int is total: hand:fold(
 			initial: 0,
 			accumulate: local Function of Int(Int is acc, Int is card){
-				return acc + if(check: { card == 1 }, then: { 11 }, else: { card });
+				return acc + if({ card == 1 }, { 11 }, { card });
 			}
 		);
 		local Int is aceCount: hand:count(
@@ -168,9 +170,9 @@ Class is Blackjack{
 		# Each ace can absorb 10 points of excess; compute how many must downgrade.
 		local Int is excess: total - 21;
 		local Int is downgrades: 0;
-		if(check: { excess > 0 }, then: {
+		if({ excess > 0 }, {
 			downgrades: (excess + 9) / 10;
-			if(check: { downgrades > aceCount }, then: {
+			if({ downgrades > aceCount }, {
 				downgrades: aceCount;
 			});
 		});
@@ -218,20 +220,12 @@ Class is Blackjack{
 
 		# 1. Build the deck: four suits of each value 1..10.
 		local Int is value: 1;
-		while(
-			evaluate: local Function of Boolean(){ return value <= 10; },
-			iteration: local Function(){
-				local Int is suit: 0;
-				while(
-					evaluate: local Function of Boolean(){ return suit < 4; },
-					iteration: local Function(){
-						deck:add(item: value);
-						suit: suit + 1;
-					}
-				);
-				value: value + 1;
-			}
-		);
+		while({ value <= 10 }, {
+			repeat(count: 4, worker: {
+				deck:add(item: value);
+			});
+			value: value + 1;
+		});
 
 		# 2. Initial deal
 		playerHand:add(item: drawCard());
@@ -243,7 +237,7 @@ Class is Blackjack{
 		line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
 		# 3. Check natural 21
-		if(check: { handValue(hand: playerHand) == 21 }, then: {
+		if({ handValue(hand: playerHand) == 21 }, {
 			line('Natural Blackjack! You win!');
 			return;
 		});

@@ -69,14 +69,14 @@ Class is Array of T{
 	Function of Array of T is slice(Int is start, Int is end){
 		local Array of T is res: [];
 		local Int is len: self:length();
-		local Int is s: start;
-		local Int is e: end;
-		Conditional:if(check: { s < 0 }, then: {
-			s: 0;
-		});
-		Conditional:if(check: { e > len }, then: {
-			e: len;
-		});
+		local Int is s: match(when: [
+			{ start < 0 }: { 0 },
+			else:          { start }
+		]);
+		local Int is e: match(when: [
+			{ end > len }: { len },
+			else:          { end }
+		]);
 		local Int is i: s;
 		while({ i < e }, {
 			res:add(item: self:get(index: i, default: ''));
@@ -101,7 +101,7 @@ Class is Array of T{
 		local Int is found: default;
 		while({ found == default && i < len }, {
 			local String is item: self:get(index: i, default: '') as String;
-			Conditional:if(check: { item == search }, then: {
+			if({ item == search }, {
 				found: i;
 			});
 			i: i + 1;
@@ -157,13 +157,13 @@ Class is Array of T{
 	## @return: Joined string.
 	Function of String is join(String is separator){
 		local Int is len: self:length();
-		Conditional:if(check: { len == 0 }, then: {
+		if({ len == 0 }, {
 			return '';
 		});
 		local String is out: '';
 		local Int is i: 0;
 		repeat(count: len, worker: {
-			Conditional:if(check: { i > 0 }, then: {
+			if({ i > 0 }, {
 				out: out . separator;
 			});
 			out: out . (self:get(index: i, default: '') as String);

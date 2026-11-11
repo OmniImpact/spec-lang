@@ -57,11 +57,11 @@ Class is StackFrame{
 	## @return: "Class:method (file:line:col)" form, omitting absent parts.
 	replace Function of String is toString(){
 		local String is locStr: '';
-		Conditional:if(check: { self:location:getLine() > 0 }, then: {
+		if({ self:location:getLine() > 0 }, {
 			locStr: ' (' . self:location:toString() . ')';
 		});
 		local String is cn: self:className;
-		Conditional:if(check: { cn:length() > 0 }, then: {
+		if({ cn:length() > 0 }, {
 			return cn . ':' . self:methodName . locStr;
 		});
 		return self:methodName . locStr;

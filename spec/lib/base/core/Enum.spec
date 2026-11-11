@@ -31,7 +31,7 @@ Class of Loadable is Enum{
 	## @return: The variant name; '' when the receiver is not a variant.
 	Function of String is name(){
 		local Int is idx: Introspection:heldIndexOf(obj: self);
-		Conditional:if(check: { idx >= 0 }, then: {
+		if({ idx >= 0 }, {
 			return Introspection:heldName(obj: self, index: idx);
 		});
 		return '';
