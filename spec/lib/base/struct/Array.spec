@@ -78,15 +78,10 @@ Class is Array of T{
 			e: len;
 		});
 		local Int is i: s;
-		while(
-			evaluate: local Function of Boolean(){
-				return i < e;
-			},
-			iteration: local Function(){
-				res:add(item: self:get(index: i, default: ''));
-				i: i + 1;
-			}
-		);
+		while({ i < e }, {
+			res:add(item: self:get(index: i, default: ''));
+			i: i + 1;
+		});
 		return res;
 	}
 
@@ -104,18 +99,13 @@ Class is Array of T{
 		local Int is len: self:length();
 		local Int is i: 0;
 		local Int is found: default;
-		while(
-			evaluate: local Function of Boolean(){
-				return found == default && (i < len);
-			},
-			iteration: local Function(){
-				local String is item: self:get(index: i, default: '') as String;
-				Conditional:if(check: { item == search }, then: {
-					found: i;
-				});
-				i: i + 1;
-			}
-		);
+		while({ found == default && i < len }, {
+			local String is item: self:get(index: i, default: '') as String;
+			Conditional:if(check: { item == search }, then: {
+				found: i;
+			});
+			i: i + 1;
+		});
 		return found;
 	}
 
@@ -172,18 +162,13 @@ Class is Array of T{
 		});
 		local String is out: '';
 		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return i < len;
-			},
-			iteration: local Function(){
-				Conditional:if(check: { i > 0 }, then: {
-					out: out . separator;
-				});
-				out: out . (self:get(index: i, default: '') as String);
-				i: i + 1;
-			}
-		);
+		repeat(count: len, worker: {
+			Conditional:if(check: { i > 0 }, then: {
+				out: out . separator;
+			});
+			out: out . (self:get(index: i, default: '') as String);
+			i: i + 1;
+		});
 		return out;
 	}
 

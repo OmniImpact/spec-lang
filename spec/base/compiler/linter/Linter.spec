@@ -150,16 +150,18 @@ Class is Linter{
 					});
 				});
 			}, else: {
-				Conditional:if(check: { ch == '"' || ch == '\'' }, then: {
-					quote: ch;
-					out: out . ' ';
-				}, else: {
-					Conditional:if(check: { ch == '#' }, then: {
+				match(on: ch, when: [
+					['"', '\'']: {
+						quote: ch;
+						out: out . ' ';
+					},
+					'#': {
 						i: line:length();
-					}, else: {
+					},
+					else: {
 						out: out . ch;
-					});
-				});
+					}
+				]);
 			});
 			i: i + 1;
 		});

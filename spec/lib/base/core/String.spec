@@ -122,20 +122,15 @@ Class is String{
 		local String is out: '';
 		local Int is pos: 0;
 		local Boolean is running: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return running;
-			},
-			iteration: local Function(){
-				local Int is idx: Buf:stringIndexOfFrom(b: self, needle: search, from: pos, def: -1);
-				Conditional:if(check: { idx < 0 }, then: {
-					running: false;
-				}, else: {
-					out: out . self:substring(start: pos, end: idx) . replacement;
-					pos: idx + slen;
-				});
-			}
-		);
+		while({ running }, {
+			local Int is idx: Buf:stringIndexOfFrom(b: self, needle: search, from: pos, def: -1);
+			Conditional:if(check: { idx < 0 }, then: {
+				running: false;
+			}, else: {
+				out: out . self:substring(start: pos, end: idx) . replacement;
+				pos: idx + slen;
+			});
+		});
 		out: out . self:substring(start: pos, end: total);
 		return out;
 	}
@@ -153,33 +148,23 @@ Class is String{
 		local Int is dlen: Buf:bufLength(b: delimiter);
 		Conditional:if(check: { dlen == 0 }, then: {
 			local Int is i: 0;
-			while(
-				evaluate: local Function of Boolean(){
-					return i < slen;
-				},
-				iteration: local Function(){
-					res:add(item: self:substring(start: i, end: i + 1));
-					i: i + 1;
-				}
-			);
+			repeat(count: slen, worker: {
+				res:add(item: self:substring(start: i, end: i + 1));
+				i: i + 1;
+			});
 			return res;
 		});
 		local Int is pos: 0;
 		local Boolean is running: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return running;
-			},
-			iteration: local Function(){
-				local Int is idx: Buf:stringIndexOfFrom(b: self, needle: delimiter, from: pos, def: -1);
-				Conditional:if(check: { idx < 0 }, then: {
-					running: false;
-				}, else: {
-					res:add(item: self:substring(start: pos, end: idx));
-					pos: idx + dlen;
-				});
-			}
-		);
+		while({ running }, {
+			local Int is idx: Buf:stringIndexOfFrom(b: self, needle: delimiter, from: pos, def: -1);
+			Conditional:if(check: { idx < 0 }, then: {
+				running: false;
+			}, else: {
+				res:add(item: self:substring(start: pos, end: idx));
+				pos: idx + dlen;
+			});
+		});
 		res:add(item: self:substring(start: pos, end: slen));
 		return res;
 	}
@@ -195,26 +180,21 @@ Class is String{
 		});
 		local Int is start: 0;
 		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return i < len;
-			},
-			iteration: local Function(){
-				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:if(check: { b == 10 }, then: {
-					local Int is endIdx: i;
-					Conditional:if(check: { endIdx > start }, then: {
-						local Int is prev: Buf:bufGetByte(b: self, idx: endIdx - 1, def: -1);
-						Conditional:if(check: { prev == 13 }, then: {
-							endIdx: endIdx - 1;
-						});
+		repeat(count: len, worker: {
+			local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
+			Conditional:if(check: { b == 10 }, then: {
+				local Int is endIdx: i;
+				Conditional:if(check: { endIdx > start }, then: {
+					local Int is prev: Buf:bufGetByte(b: self, idx: endIdx - 1, def: -1);
+					Conditional:if(check: { prev == 13 }, then: {
+						endIdx: endIdx - 1;
 					});
-					res:add(item: self:substring(start: start, end: endIdx));
-					start: i + 1;
 				});
-				i: i + 1;
-			}
-		);
+				res:add(item: self:substring(start: start, end: endIdx));
+				start: i + 1;
+			});
+			i: i + 1;
+		});
 		Conditional:if(check: { start < len }, then: {
 			local Int is endIdx: len;
 			local Int is prev: Buf:bufGetByte(b: self, idx: endIdx - 1, def: -1);
@@ -255,37 +235,27 @@ Class is String{
 		});
 		local Int is s: 0;
 		local Boolean is sTrimming: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return sTrimming && (s < len);
-			},
-			iteration: local Function(){
-				local Int is b: Buf:bufGetByte(b: self, idx: s, def: -1);
-				Conditional:if(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
-					s: s + 1;
-				}, else: {
-					sTrimming: false;
-				});
-			}
-		);
+		while({ sTrimming && (s < len) }, {
+			local Int is b: Buf:bufGetByte(b: self, idx: s, def: -1);
+			Conditional:if(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
+				s: s + 1;
+			}, else: {
+				sTrimming: false;
+			});
+		});
 		Conditional:if(check: { s >= len }, then: {
 			return '';
 		});
 		local Int is e: len;
 		local Boolean is eTrimming: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return eTrimming && (e > s);
-			},
-			iteration: local Function(){
-				local Int is b: Buf:bufGetByte(b: self, idx: e - 1, def: -1);
-				Conditional:if(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
-					e: e - 1;
-				}, else: {
-					eTrimming: false;
-				});
-			}
-		);
+		while({ eTrimming && (e > s) }, {
+			local Int is b: Buf:bufGetByte(b: self, idx: e - 1, def: -1);
+			Conditional:if(check: { b == 32 || b == 9 || b == 10 || b == 13 }, then: {
+				e: e - 1;
+			}, else: {
+				eTrimming: false;
+			});
+		});
 		return self:substring(start: s, end: e);
 	}
 
@@ -302,19 +272,14 @@ Class is String{
 		local Int is count: 0;
 		local Int is pos: 0;
 		local Boolean is matching: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return matching && (pos + slen <= blen);
-			},
-			iteration: local Function(){
-				Conditional:if(check: { Buf:stringSubstring(b: self, start: pos, end: pos + slen) == search }, then: {
-					count: count + 1;
-					pos: pos + slen;
-				}, else: {
-					matching: false;
-				});
-			}
-		);
+		while({ matching && (pos + slen <= blen) }, {
+			Conditional:if(check: { Buf:stringSubstring(b: self, start: pos, end: pos + slen) == search }, then: {
+				count: count + 1;
+				pos: pos + slen;
+			}, else: {
+				matching: false;
+			});
+		});
 		return count;
 	}
 
@@ -328,18 +293,13 @@ Class is String{
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return ok && (i < n);
-			},
-			iteration: local Function(){
-				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:if(check: { b < 48 || b > 57 }, then: {
-					ok: false;
-				});
-				i: i + 1;
-			}
-		);
+		while({ ok && (i < n) }, {
+			local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
+			Conditional:if(check: { b < 48 || b > 57 }, then: {
+				ok: false;
+			});
+			i: i + 1;
+		});
 		return ok;
 	}
 
@@ -353,20 +313,15 @@ Class is String{
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return ok && (i < n);
-			},
-			iteration: local Function(){
-				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				local Boolean is isUpper: (b >= 65 && b <= 90);
-				local Boolean is isLower: (b >= 97 && b <= 122);
-				Conditional:if(check: { !isUpper && !isLower }, then: {
-					ok: false;
-				});
-				i: i + 1;
-			}
-		);
+		while({ ok && (i < n) }, {
+			local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
+			local Boolean is isUpper: (b >= 65 && b <= 90);
+			local Boolean is isLower: (b >= 97 && b <= 122);
+			Conditional:if(check: { !isUpper && !isLower }, then: {
+				ok: false;
+			});
+			i: i + 1;
+		});
 		return ok;
 	}
 
@@ -380,18 +335,13 @@ Class is String{
 		});
 		local Int is i: 0;
 		local Boolean is ok: true;
-		while(
-			evaluate: local Function of Boolean(){
-				return ok && (i < n);
-			},
-			iteration: local Function(){
-				local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:if(check: { b != 32 && b != 9 && b != 10 && b != 13 && b != 11 && b != 12 }, then: {
-					ok: false;
-				});
-				i: i + 1;
-			}
-		);
+		while({ ok && (i < n) }, {
+			local Int is b: Buf:bufGetByte(b: self, idx: i, def: -1);
+			Conditional:if(check: { b != 32 && b != 9 && b != 10 && b != 13 && b != 11 && b != 12 }, then: {
+				ok: false;
+			});
+			i: i + 1;
+		});
 		return ok;
 	}
 
@@ -447,35 +397,30 @@ Class is String{
 		local Int is i: start;
 		local Boolean is ok: true;
 		local Boolean is anyDigits: false;
-		while(
-			evaluate: local Function of Boolean(){
-				return ok && (i < len);
-			},
-			iteration: local Function(){
-				local Int is ch: Buf:bufGetByte(b: self, idx: i, def: -1);
-				Conditional:if(check: { ch != 95 }, then: {
-					local Int is digit: -1;
-					Conditional:if(check: { ch >= 48 && ch <= 57 }, then: {
-						digit: ch - 48;
+		while({ ok && (i < len) }, {
+			local Int is ch: Buf:bufGetByte(b: self, idx: i, def: -1);
+			Conditional:if(check: { ch != 95 }, then: {
+				local Int is digit: -1;
+				Conditional:if(check: { ch >= 48 && ch <= 57 }, then: {
+					digit: ch - 48;
+				}, else: {
+					Conditional:if(check: { ch >= 97 && ch <= 122 }, then: {
+						digit: ch - 97 + 10;
 					}, else: {
-						Conditional:if(check: { ch >= 97 && ch <= 122 }, then: {
-							digit: ch - 97 + 10;
-						}, else: {
-							Conditional:if(check: { ch >= 65 && ch <= 90 }, then: {
-								digit: ch - 65 + 10;
-							});
+						Conditional:if(check: { ch >= 65 && ch <= 90 }, then: {
+							digit: ch - 65 + 10;
 						});
 					});
-					Conditional:if(check: { digit < 0 || digit >= b }, then: {
-						ok: false;
-					}, else: {
-						val: (val * b) + digit;
-						anyDigits: true;
-					});
 				});
-				i: i + 1;
-			}
-		);
+				Conditional:if(check: { digit < 0 || digit >= b }, then: {
+					ok: false;
+				}, else: {
+					val: (val * b) + digit;
+					anyDigits: true;
+				});
+			});
+			i: i + 1;
+		});
 		Conditional:if(check: { !ok || !anyDigits }, then: {
 			return default;
 		});

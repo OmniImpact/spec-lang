@@ -1693,7 +1693,7 @@ Class is Parser{
 		});
 
 		local Int is k: 0;
-		while({ k < holes:length() }, {
+		repeat(count: holes:length(), worker: {
 			local Expression is holeE: self:parseTemplateExpression(text: holes:get(index: k));
 			local Expression is withHole: Expression:init(kind: ExpressionKind:BINARY);
 			withHole:str: '.';

@@ -4331,7 +4331,7 @@ Class is CodeGenerator{
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				Buf:bufAppendBuf(dst: out, src: 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n");
 				local Int is slot: 0;
-				while({ slot < self:methodSlotCount }, {
+				repeat(count: self:methodSlotCount, worker: {
 					local String is mName: self:slotNames:get(index: slot);
 					local String is implCls: self:findMethodImplementingClass(className: c:name, methodName: mName, paramCount: -1);
 					Conditional:if(check: { slot > 0 }, then: {
@@ -4864,7 +4864,7 @@ Class is CodeGenerator{
 		local Int is keyTotal: armsArg:mapKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
-		while({ ki < keyTotal }, {
+		repeat(count: keyTotal, worker: {
 				local Expression is key: armsArg:mapKeys:get(index: ki);
 				local Expression is val: armsArg:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -4984,7 +4984,7 @@ Class is CodeGenerator{
 		local Int is keyTotal: armsArg:mapKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
-		while({ ki < keyTotal }, {
+		repeat(count: keyTotal, worker: {
 				local Expression is key: armsArg:mapKeys:get(index: ki);
 				local Expression is val: armsArg:mapValues:get(index: ki);
 				ki: ki + 1;

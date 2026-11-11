@@ -49024,12 +49024,7 @@ static __attribute__((unused)) void _anon_fn_100521(void* _env_ptr, ClassInfo* c
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(self->utils, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */) /* inst:CBackendUtils:cIdent */;
 	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static void* "))), cSym), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n")));
 	    long long slot = 0;
-	    ({ while (1) {
-        bool _ev_100522 = false;
-        do {
-    _ev_100522 = ((slot) < (self->methodSlotCount)); break;
-        } while (0);
-        if (!_ev_100522) break;
+	    ({ long long _rn_100522 = (long long)(self->methodSlotCount); for (long long _ri_100522 = 0; _ri_100522 < _rn_100522; _ri_100522++) {
         bool _it_100522 = true;
         do {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
@@ -56563,12 +56558,7 @@ SpecArray* String_split(String self, String delimiter) {
     long long dlen = Buf_bufLength(NULL, delimiter);
     if (((dlen) == (0))) {
 	    long long i = 0;
-	    ({ while (1) {
-        bool _ev_12 = false;
-        do {
-    _ev_12 = ((i) < (slen)); break;
-        } while (0);
-        if (!_ev_12) break;
+	    ({ long long _rn_12 = (long long)(slen); for (long long _ri_12 = 0; _ri_12 < _rn_12; _ri_12++) {
         bool _it_12 = true;
         do {
     spec_array_add_object(res, (void*)(spec_string_substring(self, i, ((i) + (1)))));
@@ -56622,12 +56612,7 @@ SpecArray* String_lines(String self) {
 	};
     long long start = 0;
     long long i = 0;
-    ({ while (1) {
-        bool _ev_14 = false;
-        do {
-    _ev_14 = ((i) < (len)); break;
-        } while (0);
-        if (!_ev_14) break;
+    ({ long long _rn_14 = (long long)(len); for (long long _ri_14 = 0; _ri_14 < _rn_14; _ri_14++) {
         bool _it_14 = true;
         do {
     long long b = Buf_bufGetByte(NULL, self, i, (-(1)));
@@ -57263,12 +57248,7 @@ String Array_join(SpecArray* self, String separator) {
 	};
     out = spec_construct_string(spec_string_intern(""));
     long long i = 0;
-    ({ while (1) {
-        bool _ev_24 = false;
-        do {
-    _ev_24 = ((i) < (len)); break;
-        } while (0);
-        if (!_ev_24) break;
+    ({ long long _rn_24 = (long long)(len); for (long long _ri_24 = 0; _ri_24 < _rn_24; _ri_24++) {
         bool _it_24 = true;
         do {
     if (((i) > (0))) {
@@ -62104,12 +62084,7 @@ Expression* Parser_expandFancyString(Parser* self, String raw, Token* originTok,
     goto _cleanup_100177;
 	};
     long long k = 0;
-    ({ while (1) {
-        bool _ev_100069 = false;
-        do {
-    _ev_100069 = ((k) < (spec_array_length(holes))); break;
-        } while (0);
-        if (!_ev_100069) break;
+    ({ long long _rn_100069 = (long long)(spec_array_length(holes)); for (long long _ri_100069 = 0; _ri_100069 < _rn_100069; _ri_100069++) {
         bool _it_100069 = true;
         do {
     SPEC_AUTO Expression* holeE = (Expression*)((Parser_parseTemplateExpression(self, spec_array_get(holes, k)) /* inst:Parser:parseTemplateExpression */));
@@ -69381,16 +69356,15 @@ String Linter_maskLine(Linter* self, String line) {
 	};
 	};
 	} else {
-	    if (((spec_string_equals(ch, spec_string_intern("\""))) || (spec_string_equals(ch, spec_string_intern("'"))))) {
+	    if (spec_string_equals(ch, spec_string_intern("\"")) || spec_string_equals(ch, spec_string_intern("'"))) {
 	    spec_assign((void**)&quote, (void*)(ch));
 	    out = spec_string_concat(out, spec_string_intern(" "));
-	} else {
-	    if (spec_string_equals(ch, spec_string_intern("#"))) {
+	} else if (spec_string_equals(ch, spec_string_intern("#"))) {
 	    i = spec_string_length(line);
 	} else {
 	    out = spec_string_concat(out, ch);
-	};
-	};
+	}
+;
 	};
     i = ((i) + (1));
     if (ch) { spec_release((void*)ch); ch = NULL; }
@@ -75961,12 +75935,7 @@ String CodeGenerator_generateVTables(CodeGenerator* self, SpecArray* classes) {
 	    SPEC_AUTO String cSym = CBackendUtils_cIdent(self->utils, ClassInfo_qualifiedName(c) /* inst:ClassInfo:qualifiedName */) /* inst:CBackendUtils:cIdent */;
 	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("static void* "))), cSym), spec_string_intern("_vtable[")), spec_to_string_int(self->methodSlotCount)), spec_string_intern("] = {\n")));
 	    long long slot = 0;
-	    ({ while (1) {
-        bool _ev_100524 = false;
-        do {
-    _ev_100524 = ((slot) < (self->methodSlotCount)); break;
-        } while (0);
-        if (!_ev_100524) break;
+	    ({ long long _rn_100524 = (long long)(self->methodSlotCount); for (long long _ri_100524 = 0; _ri_100524 < _rn_100524; _ri_100524++) {
         bool _it_100524 = true;
         do {
     SPEC_AUTO String mName = spec_construct_string(spec_array_get(self->slotNames, slot));
@@ -76662,12 +76631,7 @@ String CodeGenerator_generateMatch(CodeGenerator* self, Expression* callExpr, Ex
     long long keyTotal = spec_array_length(armsArg->mapKeys);
     long long ki = 0;
     bool firstCond = true;
-    ({ while (1) {
-        bool _ev_100575 = false;
-        do {
-    _ev_100575 = ((ki) < (keyTotal)); break;
-        } while (0);
-        if (!_ev_100575) break;
+    ({ long long _rn_100575 = (long long)(keyTotal); for (long long _ri_100575 = 0; _ri_100575 < _rn_100575; _ri_100575++) {
         bool _it_100575 = true;
         do {
     SPEC_AUTO Expression* key = (Expression*)spec_retain((void*)(spec_array_get(armsArg->mapKeys, ki)));
@@ -76811,12 +76775,7 @@ String CodeGenerator_generatePredicateMatch(CodeGenerator* self, Expression* cal
     long long keyTotal = spec_array_length(armsArg->mapKeys);
     long long ki = 0;
     bool firstCond = true;
-    ({ while (1) {
-        bool _ev_100582 = false;
-        do {
-    _ev_100582 = ((ki) < (keyTotal)); break;
-        } while (0);
-        if (!_ev_100582) break;
+    ({ long long _rn_100582 = (long long)(keyTotal); for (long long _ri_100582 = 0; _ri_100582 < _rn_100582; _ri_100582++) {
         bool _it_100582 = true;
         do {
     SPEC_AUTO Expression* key = (Expression*)spec_retain((void*)(spec_array_get(armsArg->mapKeys, ki)));
