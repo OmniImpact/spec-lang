@@ -2873,14 +2873,28 @@ Class is CodeGenerator{
 		local Array of String is writebackNames: [];
 		local Boolean is hasCaptures: false;
 
-		if({ self:inMethod && self:currentClassName != '' && !self:policy:isTransparent(c: self:findClass(name: self:currentClassName)) && !self:allEnumNames:has(key: self:currentClassName) && self:containsIdent(body: scanBody, ident: 'self') }, {
+		if({ self:inMethod && self:currentClassName != '' && !self:allEnumNames:has(key: self:currentClassName) && self:containsIdent(body: scanBody, ident: 'self') }, {
 			hasCaptures: true;
-			# the captured self's C type qualifies — the bare name is
-			# not a C identity for nested classes.
-			local String is selfCapType: self:utils:cIdent(name: self:findClass(name: self:currentClassName):qualifiedName());
-			capFieldDecls: capFieldDecls . '    ' . selfCapType . "* self;\n";
-			capFieldBinds: capFieldBinds . '    ' . selfCapType . "* self = _env->self;\n    (void)self;\n";
-			capAssigns: capAssigns . '    _env->self = (' . selfCapType . "*)spec_retain((void*)self);\n";
+			# The captured self's C type is the value type the enclosing
+			# method's own signature spells. Transparent classes (String,
+			# the containers) carry raw buffer pointers there — the old
+			# spelling skipped their capture entirely because it always
+			# built a struct pointer, and gcc rejects the resulting
+			# standalone closure the moment its body reads self.
+			local ClassInfo is selfCls: self:findClass(name: self:currentClassName);
+			if({ self:policy:isTransparent(c: selfCls) }, {
+				local String is selfValType: self:cTypeFor(typeName: self:currentClassName);
+				capFieldDecls: capFieldDecls . '    ' . selfValType . " self;\n";
+				capFieldBinds: capFieldBinds . '    ' . selfValType . " self = _env->self;\n    (void)self;\n";
+				capAssigns: capAssigns . "    _env->self = spec_retain((void*)self);\n";
+			}, {
+				# the captured self's C type qualifies — the bare name is
+				# not a C identity for nested classes.
+				local String is selfCapType: self:utils:cIdent(name: selfCls:qualifiedName());
+				capFieldDecls: capFieldDecls . '    ' . selfCapType . "* self;\n";
+				capFieldBinds: capFieldBinds . '    ' . selfCapType . "* self = _env->self;\n    (void)self;\n";
+				capAssigns: capAssigns . '    _env->self = (' . selfCapType . "*)spec_retain((void*)self);\n";
+			});
 			capReleases: capReleases . "    if (_env->self) spec_release((void*)_env->self);\n";
 		});
 

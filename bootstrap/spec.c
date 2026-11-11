@@ -75881,14 +75881,24 @@ String CodeGenerator_emitAnonFn(CodeGenerator* self, Expression* expr) {
     capWritebacks = spec_construct_string(spec_string_intern(""));
     writebackNames = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
     bool hasCaptures = false;
-    if (((((((((self->inMethod) && ((!spec_string_equals(self->currentClassName, spec_string_intern("")))))) && ((!(({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[287]))((EmissionPolicy*)_recv, (((ClassInfo*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); ClassInfo* _v = (ClassInfo*)((((ClassInfo* (*)(CodeGenerator*, String))self->_vtable[209]))((CodeGenerator*)self, self->currentClassName)); spec_pool_release_to(_pf); _v; }))))); })))))) && ((!(spec_map_has(self->allEnumNames, self->currentClassName)))))) && (CodeGenerator_containsIdent(self, scanBody, spec_string_intern("self")) /* inst:CodeGenerator:containsIdent */))) {
+    if (((((((self->inMethod) && ((!spec_string_equals(self->currentClassName, spec_string_intern("")))))) && ((!(spec_map_has(self->allEnumNames, self->currentClassName)))))) && (CodeGenerator_containsIdent(self, scanBody, spec_string_intern("self")) /* inst:CodeGenerator:containsIdent */))) {
 	    hasCaptures = true;
-	    SPEC_AUTO String selfCapType = CBackendUtils_cIdent(self->utils, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(ClassInfo_qualifiedName((((ClassInfo*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); ClassInfo* _v = (ClassInfo*)((((ClassInfo* (*)(CodeGenerator*, String))self->_vtable[209]))((CodeGenerator*)self, self->currentClassName)); spec_pool_release_to(_pf); _v; }))))) /* inst:ClassInfo:qualifiedName */); spec_pool_release_to(_pf); _v; }))))) /* inst:CBackendUtils:cIdent */;
+	    SPEC_AUTO ClassInfo* selfCls = (ClassInfo*)(((((ClassInfo* (*)(CodeGenerator*, String))self->_vtable[209]))((CodeGenerator*)self, self->currentClassName)));
+	    if (({ EmissionPolicy* _recv = (EmissionPolicy*)(self->policy); (((bool (*)(EmissionPolicy*, ClassInfo*))_recv->_vtable[287]))((EmissionPolicy*)_recv, selfCls); })) {
+	    SPEC_AUTO String selfValType = (((String (*)(CodeGenerator*, String))self->_vtable[361]))((CodeGenerator*)self, self->currentClassName);
+	    capFieldDecls = spec_string_concat(spec_string_concat(spec_string_concat(capFieldDecls, spec_string_intern("    ")), selfValType), spec_string_intern(" self;\n"));
+	    capFieldBinds = spec_string_concat(spec_string_concat(spec_string_concat(capFieldBinds, spec_string_intern("    ")), selfValType), spec_string_intern(" self = _env->self;\n    (void)self;\n"));
+	    capAssigns = spec_string_concat(capAssigns, spec_string_intern("    _env->self = spec_retain((void*)self);\n"));
+    if (selfValType) { spec_release((void*)selfValType); selfValType = NULL; }
+	} else {
+	    SPEC_AUTO String selfCapType = CBackendUtils_cIdent(self->utils, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(ClassInfo_qualifiedName(selfCls) /* inst:ClassInfo:qualifiedName */); spec_pool_release_to(_pf); _v; }))))) /* inst:CBackendUtils:cIdent */;
 	    capFieldDecls = spec_string_concat(spec_string_concat(spec_string_concat(capFieldDecls, spec_string_intern("    ")), selfCapType), spec_string_intern("* self;\n"));
 	    capFieldBinds = spec_string_concat(spec_string_concat(spec_string_concat(capFieldBinds, spec_string_intern("    ")), selfCapType), spec_string_intern("* self = _env->self;\n    (void)self;\n"));
 	    capAssigns = spec_string_concat(spec_string_concat(spec_string_concat(capAssigns, spec_string_intern("    _env->self = (")), selfCapType), spec_string_intern("*)spec_retain((void*)self);\n"));
-	    capReleases = spec_string_concat(capReleases, spec_string_intern("    if (_env->self) spec_release((void*)_env->self);\n"));
     if (selfCapType) { spec_release((void*)selfCapType); selfCapType = NULL; }
+	};
+	    capReleases = spec_string_concat(capReleases, spec_string_intern("    if (_env->self) spec_release((void*)_env->self);\n"));
+    if (selfCls) { spec_release((void*)selfCls); selfCls = NULL; }
 	};
     bodyLocals = (SpecMap*)((spec_map_new()));
     ({ SpecArray* _a_481 = expr->anonBody; if (_a_481) { for (size_t _i_481 = 0; _i_481 < _a_481->length; _i_481++) {
