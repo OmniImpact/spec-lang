@@ -106,7 +106,7 @@ Class is Lexer{
 	## @return: The token stream.
 	Function of Array of Token is tokenize(){
 		local Array of Token is tokens: [];
-		Loops({ self:pos < self:length }, {
+		while({ self:pos < self:length }, {
 			self:skipWhitespaceAndComments();
 			if({ self:pos < self:length }, {
 				local String is ch: self:source:charAt(index: self:pos, default: '');
@@ -232,7 +232,7 @@ Class is Lexer{
 		local Int is p: self:pos;
 		local Int is len: self:length;
 		local Boolean is skipping: true;
-		Loops(
+		while(
 			{ skipping && p < len },
 			{
 				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
@@ -248,7 +248,7 @@ Class is Lexer{
 						if({ b == 35 }, {
 							p++;
 							local Boolean is inComment: true;
-							Loops(
+							while(
 								{ inComment && p < len },
 								{
 									local Int is cb: Buf:bufGetByte(b: self:source, idx: p, def: -1);
@@ -281,7 +281,7 @@ Class is Lexer{
 		local Int is p: self:pos;
 		local Int is len: self:length;
 		local Boolean is scanning: true;
-		Loops(
+		while(
 			{ scanning && p < len },
 			{
 				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
@@ -339,7 +339,7 @@ Class is Lexer{
 				local Int is digitCount: 0;
 				local Boolean is hadInvalid: false;
 				local Boolean is keepGoing: true;
-				Loops({ keepGoing && self:pos < self:length }, {
+				while({ keepGoing && self:pos < self:length }, {
 					local String is dch: self:source:charAt(index: self:pos, default: '');
 					if({ dch == '_' }, {
 						self:advance();
@@ -372,7 +372,7 @@ Class is Lexer{
 		local Int is startPos: self:pos;
 		local Boolean is isFloat: false;
 		local Boolean is keepScanning: true;
-		Loops({ keepScanning && self:pos < self:length }, {
+		while({ keepScanning && self:pos < self:length }, {
 			local String is dch: self:source:charAt(index: self:pos, default: '');
 			if({ dch == '_' }, {
 				local String is nextD: self:source:charAt(index: self:pos + 1, default: '');
@@ -410,7 +410,7 @@ Class is Lexer{
 		if({ kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0' }, {
 			# A bare leading zero stays decimal in Spec; strip it so C does
 			# not reinterpret the emitted literal as octal.
-			Loops(
+			while(
 				{ text:length() > 1 && text:charAt(index: 0, default: '') == '0' },
 				{
 					text: text:substring(start: 1, end: text:length());
@@ -435,7 +435,7 @@ Class is Lexer{
 
 		local String is res: '';
 		local Boolean is keepScanning: true;
-		Loops({ keepScanning && self:pos < self:length }, {
+		while({ keepScanning && self:pos < self:length }, {
 			local String is sch: self:source:charAt(index: self:pos, default: '');
 			if({ sch == quote }, {
 				keepScanning: false;
@@ -494,7 +494,7 @@ Class is Lexer{
 
 		local String is res: '';
 		local Boolean is closed: false;
-		Loops({ !closed && self:pos < self:length }, {
+		while({ !closed && self:pos < self:length }, {
 			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
 			if({ triple == quote }, {
 				self:advance();

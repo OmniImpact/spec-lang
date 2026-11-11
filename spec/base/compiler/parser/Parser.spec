@@ -147,7 +147,7 @@ Class is Parser{
 	Function of Token is peekAhead(Int is offset){
 		Conditional:if(check: { self:streaming }, then: {
 			local Boolean is pulling: true;
-			Loops({ pulling && self:lookahead:length() <= offset }, {
+			while({ pulling && self:lookahead:length() <= offset }, {
 				local Token is tok: self:lexer:nextToken();
 				self:lookahead:add(item: tok);
 				Conditional:if(check: { tok:getTokenKind() == TokenKind:EOF }, then: {
@@ -286,7 +286,7 @@ Class is Parser{
 	Function of Array of NamedArg is parseArgs(){
 		local Array of NamedArg is args: [];
 		local Boolean is keepGoing: true;
-		Loops({ keepGoing && !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ keepGoing && !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			local String is argName: '';
 			local Token is tok0: self:peekAhead(offset: 0);
 			Conditional:if(check: { tok0:getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
@@ -323,7 +323,7 @@ Class is Parser{
 	Function of Array of Parameter is parseParams(){
 		local Array of Parameter is params: [];
 		local Boolean is keepGoing: true;
-		Loops({ keepGoing && !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ keepGoing && !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			# `self: field` declares a receiver field parameter.
 			Conditional:if(check: { self:peek():getValue() == self:names:selfIdent() && self:peekAhead(offset: 1):getValue() == ':' }, then: {
 				self:advance();
@@ -376,7 +376,7 @@ Class is Parser{
 	## @return: All top-level class definitions.
 	Function of ProgramNode is parseProgram(){
 		local Array of ClassInfo is classes: [];
-		Loops({ !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ !self:check(kind: TokenKind:EOF, value: '') }, {
 			Conditional:if(check: { self:atEnumHeader() }, then: {
 				classes:add(item: self:parseEnum());
 			}, else: {
@@ -442,10 +442,10 @@ Class is Parser{
 		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
 			local Boolean is keepGoing: true;
-			Loops({ keepGoing && !self:checkPunct(p: Punctuation:BLOCK_OPEN) && !self:check(kind: TokenKind:EOF, value: '') }, {
+			while({ keepGoing && !self:checkPunct(p: Punctuation:BLOCK_OPEN) && !self:check(kind: TokenKind:EOF, value: '') }, {
 				local Token is tok: self:advance();
 				local String is base: tok:getValue();
-				Loops({ self:checkPunct(p: Punctuation:DEFAULT) }, {
+				while({ self:checkPunct(p: Punctuation:DEFAULT) }, {
 					self:advance();
 					base: base . ':' . self:advance():getValue();
 				});
@@ -477,7 +477,7 @@ Class is Parser{
 
 		self:matchPunct(p: Punctuation:BLOCK_OPEN);
 		local Array of Member is members: [];
-		Loops({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			members:add(item: self:parseMember());
 		});
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
@@ -510,7 +510,7 @@ Class is Parser{
 		local Array of Member is members: [];
 		local Int is count: 0;
 		local Boolean is keepGoing: true;
-		Loops({ keepGoing && !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ keepGoing && !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			local Token is vTok: self:advance();
 			local String is vName: vTok:getValue();
 			local Array of Parameter is vParams: [];
@@ -575,7 +575,7 @@ Class is Parser{
 	Function of Member is parseMember(){
 		local Int is startLine: self:peek():getLine();
 		local Array of String is modifiers: [];
-		Loops({ self:checkKeyword(kw: Keyword:LOCAL) || self:checkKeyword(kw: Keyword:CONTAINED) || self:checkKeyword(kw: Keyword:REPLACE) || self:checkKeyword(kw: Keyword:MERGE) || self:checkKeyword(kw: Keyword:HELD) }, {
+		while({ self:checkKeyword(kw: Keyword:LOCAL) || self:checkKeyword(kw: Keyword:CONTAINED) || self:checkKeyword(kw: Keyword:REPLACE) || self:checkKeyword(kw: Keyword:MERGE) || self:checkKeyword(kw: Keyword:HELD) }, {
 			local Token is tok: self:advance();
 			modifiers:add(item: tok:getValue());
 		});
@@ -714,7 +714,7 @@ Class is Parser{
 				body:add(item: assignS);
 			});
 		});
-		Loops({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			body:add(item: self:parseStatement());
 		});
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
@@ -740,7 +740,7 @@ Class is Parser{
 		# the qualified nested-class reference —
 		# `Outer:Inner` chains consume the glued colon segments into the
 		# type name, so declaration positions can spell the full path.
-		Loops({ self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false && self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER }, {
+		while({ self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false && self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER }, {
 			self:advance();
 			local Token is segTok: self:advance();
 			typeName: typeName . ':' . segTok:getValue();
@@ -934,7 +934,7 @@ Class is Parser{
 		self:matchPunct(p: Punctuation:TERMINATOR);
 
 		local Array of Statement is closureBody: [];
-		Loops({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			closureBody:add(item: self:parseStatement());
 		});
 
@@ -1016,7 +1016,7 @@ Class is Parser{
 		}, else: {
 			left: self:parseLevel(level: next);
 		});
-		Loops({ ops:indexOf(search: self:peek():getValue(), default: -1) >= 0 }, {
+		while({ ops:indexOf(search: self:peek():getValue(), default: -1) >= 0 }, {
 			local Token is opTok: self:advance();
 			local String is op: opTok:getValue();
 			Conditional:if(check: { op == Keyword:IS:value() }, then: {
@@ -1156,7 +1156,7 @@ Class is Parser{
 	## @return: The expression node.
 	Function of Expression is parsePostfix(){
 		local Expression is currentExpr: self:parsePrimary();
-		Loops({ self:atPostfix() }, {
+		while({ self:atPostfix() }, {
 			Conditional:if(check: { self:checkPunct(p: Punctuation:GROUP_OPEN) }, then: {
 				self:advance();
 				local Array of NamedArg is args: self:parseArgs();
@@ -1384,7 +1384,7 @@ Class is Parser{
 		local Int is depth: 0;
 		local Boolean is running: true;
 		local Boolean is foundIs: false;
-		Loops({ running }, {
+		while({ running }, {
 			local Token is t: self:peekAhead(offset: offset);
 			local String is v: t:getValue();
 			Conditional:if(check: { t:getTokenKind() == TokenKind:EOF }, then: {
@@ -1419,7 +1419,7 @@ Class is Parser{
 		self:matchPunct(p: Punctuation:BRACKET_OPEN);
 		local Array of Parameter is params: [];
 		local Boolean is keepGoing: true;
-		Loops({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			local Type is pType: self:parseType();
 			self:matchKeyword(kw: Keyword:IS);
 			local Token is nameTok: self:advance();
@@ -1450,7 +1450,7 @@ Class is Parser{
 		local Array of Parameter is params: [];
 		local Type is returnType: Type:init(name: self:names:voidName());
 
-		Loops({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+		while({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 			Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:AS) }, then: {
 				local Expression is expr: self:parseExpression();
 				Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
@@ -1518,7 +1518,7 @@ Class is Parser{
 			Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 				self:advance();
 				local Boolean is keepGoing: true;
-				Loops({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+				while({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 					local Expression is k: self:parseExpression();
 					self:matchPunct(p: Punctuation:PAIR);
 					local Expression is v: self:parseExpression();
@@ -1540,7 +1540,7 @@ Class is Parser{
 		Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 			self:advance();
 			local Boolean is keepGoing: true;
-			Loops({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+			while({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
 				items:add(item: self:parseExpression());
 				Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
 					self:advance();
@@ -1572,7 +1572,7 @@ Class is Parser{
 			local String is dRes: '';
 			local Int is dPos: 0;
 			local TemplateEscapes is esc: TemplateEscapes:init();
-			Loops({ dPos < raw:length() }, {
+			while({ dPos < raw:length() }, {
 				local String is ch: raw:charAt(index: dPos, default: '');
 				dPos: dPos + 1;
 				Conditional:if(check: { ch == "\\" }, then: {
@@ -1601,7 +1601,7 @@ Class is Parser{
 		local Int is braceDepth: 0;
 		local TemplateEscapes is esc: TemplateEscapes:init();
 
-		Loops({ sPos < raw:length() }, {
+		while({ sPos < raw:length() }, {
 			local String is ch: raw:charAt(index: sPos, default: '');
 			Conditional:if(check: { !inHole }, then: {
 				Conditional:if(check: { ch == "{" && sPos + 1 < raw:length() && raw:charAt(index: sPos + 1, default: '') == "{" }, then: {
@@ -1693,7 +1693,7 @@ Class is Parser{
 		});
 
 		local Int is k: 0;
-		Loops({ k < holes:length() }, {
+		while({ k < holes:length() }, {
 			local Expression is holeE: self:parseTemplateExpression(text: holes:get(index: k));
 			local Expression is withHole: Expression:init(kind: ExpressionKind:BINARY);
 			withHole:str: '.';

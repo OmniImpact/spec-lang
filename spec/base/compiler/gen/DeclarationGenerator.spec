@@ -90,7 +90,7 @@ Class is DeclarationGenerator{
 	Function of Boolean is hasFieldNamed(Array of Member is list, String is name){
 		local Boolean is found: false;
 		local Int is count: list:length();
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
@@ -177,7 +177,7 @@ Class is DeclarationGenerator{
 	Function of Int is fieldIndexNamed(Array of Member is list, String is name){
 		local Int is res: -1;
 		local Int is count: list:length();
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ res < 0 && idx < count },
 			{

@@ -70,7 +70,7 @@ Class is ClassBindings{
 		local Boolean is isFloor: false;
 		local Array of Member is members: cls:members;
 		local Int is count: members:length();
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ !isFloor && idx < count },
 			{

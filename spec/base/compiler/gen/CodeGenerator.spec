@@ -905,7 +905,7 @@ Class is CodeGenerator{
 		local Boolean is found: false;
 		local Int is count: self:programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
@@ -1415,14 +1415,10 @@ Class is CodeGenerator{
 										local String is heldT: self:heldFieldTypes:getString(key: root . ':' . segs:get(index: 1), default: '');
 										Conditional:if(check: { heldT != '' }, then: {
 											local Int is heldIdx: 2;
-											while(
-												evaluate: local Function of Boolean(){ return heldT != '' && heldIdx < segs:length(); },
-												iteration: local Function of Boolean(){
-													heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
-													heldIdx: heldIdx + 1;
-													return true;
-												}
-											);
+											while({ heldT != '' && heldIdx < segs:length() }, {
+												heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
+												heldIdx: heldIdx + 1;
+											});
 											return heldT;
 										});
 									});
@@ -1436,16 +1432,10 @@ Class is CodeGenerator{
 				return rootType;
 			});
 			local Int is idx: 1;
-			while(
-				evaluate: local Function of Boolean(){
-					return rootType != '' && idx < segs:length();
-				},
-				iteration: local Function of Boolean(){
-					rootType: self:lookupFieldType(className: rootType, fieldName: segs:get(index: idx));
-					idx: idx + 1;
-					return true;
-				}
-			);
+			while({ rootType != '' && idx < segs:length() }, {
+				rootType: self:lookupFieldType(className: rootType, fieldName: segs:get(index: idx));
+				idx: idx + 1;
+			});
 			return rootType;
 		});
 		Conditional:if(check: { kind == ExpressionKind:CALL }, then: {

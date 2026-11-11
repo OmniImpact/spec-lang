@@ -65,7 +65,7 @@ Class is CBackendUtils{
 		local String is uppers: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 		local String is lowers: 'abcdefghijklmnopqrstuvwxyz';
 		local Int is len: name:length();
-		Loops(
+		while(
 			[Int is pos: 0],
 			{ pos < len },
 			{
@@ -109,7 +109,7 @@ Class is CBackendUtils{
 	Function of String is escapeString(String is s){
 		local String is res: '';
 		local Int is len: s:length();
-		Loops(
+		while(
 			[Int is pos: 0],
 			{ pos < len },
 			{

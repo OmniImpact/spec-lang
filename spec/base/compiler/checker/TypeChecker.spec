@@ -281,7 +281,7 @@ Class is TypeChecker{
 		local Boolean is found: false;
 		local Int is count: self:programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
@@ -411,7 +411,7 @@ Class is TypeChecker{
 				Conditional:if(check: { tParts:length() > 1 && sParts:length() > 1 }, then: {
 					local Boolean is argsOk: true;
 					local Int is pIdx: 1;
-					Loops({ argsOk && pIdx < tParts:length() && pIdx < sParts:length() }, {
+					while({ argsOk && pIdx < tParts:length() && pIdx < sParts:length() }, {
 						local String is tp: tParts:get(index: pIdx);
 						local String is sp: sParts:get(index: pIdx);
 						Conditional:if(check: { !self:isAssignable(target: tp, source: sp) }, then: {
@@ -466,7 +466,7 @@ Class is TypeChecker{
 		});
 		local Member is res: Member:init(kind: MemberKind:FIELD);
 		local Int is idx: 0;
-		Loops({ res:name == '' && idx < cls:members:length() }, {
+		while({ res:name == '' && idx < cls:members:length() }, {
 			local Member is m: cls:members:get(index: idx);
 			idx: idx + 1;
 			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
@@ -494,7 +494,7 @@ Class is TypeChecker{
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local Member is res: Member:init(kind: MemberKind:FIELD);
 		local Int is idx: 0;
-		Loops({ res:name == '' && idx < cls:members:length() }, {
+		while({ res:name == '' && idx < cls:members:length() }, {
 			local Member is m: cls:members:get(index: idx);
 			idx: idx + 1;
 			if({ m:kind == MemberKind:FIELD && m:name == variantName }, {
@@ -534,7 +534,7 @@ Class is TypeChecker{
 		});
 		local Member is foundM: Member:init(kind: MemberKind:FIELD);
 		local Int is idx: 0;
-		Loops({ foundM:name == '' && idx < cls:members:length() }, {
+		while({ foundM:name == '' && idx < cls:members:length() }, {
 			local Member is m: cls:members:get(index: idx);
 			idx: idx + 1;
 			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:FIELD && m:name == fieldName }, {
@@ -588,7 +588,7 @@ Class is TypeChecker{
 		});
 		local Member is foundM: Member:init(kind: MemberKind:FIELD);
 		local Int is idx: 0;
-		Loops({ foundM:name == '' && idx < cls:members:length() }, {
+		while({ foundM:name == '' && idx < cls:members:length() }, {
 			local Member is m: cls:members:get(index: idx);
 			idx: idx + 1;
 			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
@@ -650,7 +650,7 @@ Class is TypeChecker{
 		local Boolean is bad: false;
 		local Int is keyTotal: arms:mapKeys:length();
 		local Int is ki: 0;
-		Loops({ ki < keyTotal }, {
+		while({ ki < keyTotal }, {
 			local Expression is key: arms:mapKeys:get(index: ki);
 				local Expression is val: arms:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -875,7 +875,7 @@ Class is TypeChecker{
 		local Boolean is bad: false;
 		local Int is keyTotal: arms:mapKeys:length();
 		local Int is ki: 0;
-		Loops({ ki < keyTotal }, {
+		while({ ki < keyTotal }, {
 			local Expression is key: arms:mapKeys:get(index: ki);
 				local Expression is val: arms:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -1090,7 +1090,7 @@ Class is TypeChecker{
 		Conditional:if(check: { isScoped }, then: {
 			local Array of NamedArg is explicit: [];
 			local Int is ei: 0;
-			Loops({ ei < allArgs:length() - 1 }, {
+			while({ ei < allArgs:length() - 1 }, {
 				explicit:add(item: allArgs:get(index: ei));
 				ei: ei + 1;
 			});
@@ -1121,9 +1121,9 @@ Class is TypeChecker{
 		Conditional:if(check: { allNamed }, then: {
 			local Boolean is dupArg: false;
 			local Int is ai: 0;
-			Loops({ !dupArg && ai < args:length() }, {
+			while({ !dupArg && ai < args:length() }, {
 				local Int is aj: ai + 1;
-				Loops({ !dupArg && aj < args:length() }, {
+				while({ !dupArg && aj < args:length() }, {
 					local NamedArg is argA: args:get(index: ai);
 					local NamedArg is argB: args:get(index: aj);
 					Conditional:if(check: { argA:name == argB:name }, then: {
@@ -1774,12 +1774,12 @@ Class is TypeChecker{
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			local Array of Member is members: c:members;
 			local Int is i: 0;
-			Loops({ i < members:length() }, {
+			while({ i < members:length() }, {
 				local Member is m: members:get(index: i);
 				Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 					local Boolean is earlier: false;
 					local Int is j: 0;
-					Loops({ !earlier && j < i }, {
+					while({ !earlier && j < i }, {
 						local Member is g: members:get(index: j);
 						Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
 							earlier: true;
@@ -1789,7 +1789,7 @@ Class is TypeChecker{
 					Conditional:if(check: { !earlier }, then: {
 						local Int is groupSize: 0;
 						local Int is k: 0;
-						Loops({ k < members:length() }, {
+						while({ k < members:length() }, {
 							local Member is g: members:get(index: k);
 							Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
 								groupSize: groupSize + 1;
@@ -1798,11 +1798,11 @@ Class is TypeChecker{
 						});
 						Conditional:if(check: { groupSize >= 2 }, then: {
 							local Int is a: 0;
-							Loops({ a < members:length() }, {
+							while({ a < members:length() }, {
 								local Member is ma: members:get(index: a);
 								Conditional:if(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
 									local Int is b: a + 1;
-									Loops({ b < members:length() }, {
+									while({ b < members:length() }, {
 										local Member is mb: members:get(index: b);
 										Conditional:if(check: { mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, then: {
 											self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (§I.1).');
@@ -1814,7 +1814,7 @@ Class is TypeChecker{
 							});
 							local Boolean is nonConcrete: false;
 							local Int is p: 0;
-							Loops({ !nonConcrete && p < members:length() }, {
+							while({ !nonConcrete && p < members:length() }, {
 								local Member is g: members:get(index: p);
 								Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
 									g:params:each(action: local Function(Parameter is pp){
@@ -1853,7 +1853,7 @@ Class is TypeChecker{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		Loops({ same && idx < a:params:length() }, {
+		while({ same && idx < a:params:length() }, {
 			local Parameter is pa: a:params:get(index: idx);
 			local Parameter is pb: b:params:get(index: idx);
 			Conditional:if(check: { pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType) }, then: {
@@ -2301,7 +2301,7 @@ Class is TypeChecker{
 											local ClassInfo is chainCls: self:findClass(name: root);
 											local Boolean is chainOk: chainCls:name != '';
 											local Int is chainIdx: 1;
-											Loops({ chainOk && chainIdx < segs:length() }, {
+											while({ chainOk && chainIdx < segs:length() }, {
 												local String is nextType: '';
 												chainCls:members:each(action: local Function(Member is m){
 													Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
@@ -2384,7 +2384,7 @@ Class is TypeChecker{
 					});
 					local String is currType: rootType;
 					local Int is pIdx: 1;
-					Loops({ currType != '' && pIdx < segs:length() }, {
+					while({ currType != '' && pIdx < segs:length() }, {
 						local String is seg: segs:get(index: pIdx);
 						pIdx: pIdx + 1;
 						Conditional:if(check: { !self:allEnumNames:has(key: currType) }, then: {
@@ -3557,7 +3557,7 @@ Class is TypeChecker{
 		local Member is castM: Member:init(kind: MemberKind:FIELD);
 		local Int is castIdx: 0;
 		local String is castTargetName: MetadataField:CASTABLE:value();
-		Loops({ castM:name == '' && castIdx < cls:members:length() }, {
+		while({ castM:name == '' && castIdx < cls:members:length() }, {
 			local Member is m: cls:members:get(index: castIdx);
 			castIdx: castIdx + 1;
 			if({ m:kind == MemberKind:FIELD && m:name == castTargetName }, {
@@ -3768,7 +3768,7 @@ Class is TypeChecker{
 	Function of String is displayType(String is t){
 		local String is out: '';
 		local Int is i: 0;
-		Loops({ i < t:length() }, {
+		while({ i < t:length() }, {
 			Conditional:if(check: { i + 9 <= t:length() && t:substring(start: i, end: i + 9) == 'Function:' }, then: {
 				out: out . 'Function of ';
 				i: i + 9;
@@ -4484,7 +4484,7 @@ Class is TypeChecker{
 						Conditional:if(check: { isAbstract }, then: {
 							local Boolean is isImplemented: false;
 							local Int is mIdx: 0;
-							Loops({ !isImplemented && mIdx < classDef:members:length() }, {
+							while({ !isImplemented && mIdx < classDef:members:length() }, {
 								local Member is subM: classDef:members:get(index: mIdx);
 								mIdx: mIdx + 1;
 								Conditional:if(check: { subM:name == parentM:name }, then: {

@@ -72287,7 +72287,6 @@ String CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr) {
         do {
     spec_assign_transfer((void**)&heldT, (void*)((((String (*)(CodeGenerator*, String, String))self->_vtable[214]))((CodeGenerator*)self, heldT, spec_array_get(segs, heldIdx))));
     heldIdx = ((heldIdx) + (1));
-    _it_100341 = true; break;
         } while (0);
         if (!_it_100341) break;
     }
@@ -72319,7 +72318,6 @@ String CodeGenerator_inferTargetType(CodeGenerator* self, Expression* expr) {
         do {
     spec_assign_transfer((void**)&rootType, (void*)((((String (*)(CodeGenerator*, String, String))self->_vtable[214]))((CodeGenerator*)self, rootType, spec_array_get(segs, idx))));
     idx = ((idx) + (1));
-    _it_100342 = true; break;
         } while (0);
         if (!_it_100342) break;
     }

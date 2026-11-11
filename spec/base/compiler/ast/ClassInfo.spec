@@ -89,7 +89,7 @@ Class is ClassInfo{
 	Function of String is namespaceJoined(){
 		local String is joined: '';
 		local Int is count: self:members:length();
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ joined == '' && idx < count },
 			{
@@ -119,7 +119,7 @@ Class is ClassInfo{
 	Function of Array of String is namespaceSegments(){
 		local Array of String is segs: [];
 		local Int is count: self:members:length();
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ segs:length() == 0 && idx < count },
 			{

@@ -96,7 +96,7 @@ Class is Linter{
 			local String is masked: self:maskLine(line: line);
 			local String is body: masked;
 			local Boolean is trimming: true;
-			Loops({ trimming && body:length() > 0 }, {
+			while({ trimming && body:length() > 0 }, {
 				local String is last: body:charAt(index: body:length() - 1, default: '');
 				Conditional:if(check: { last == ' ' || last == "\t" }, then: {
 					body: body:substring(start: 0, end: body:length() - 1);
@@ -115,7 +115,7 @@ Class is Linter{
 				});
 			});
 			local Int is ci: 0;
-			Loops({ ci < masked:length() }, {
+			while({ ci < masked:length() }, {
 				local String is ch: masked:charAt(index: ci, default: '');
 				Conditional:if(check: { ch == '{' }, then: {
 					depth: depth + 1;
@@ -138,7 +138,7 @@ Class is Linter{
 		local String is out: '';
 		local String is quote: '';
 		local Int is i: 0;
-		Loops({ i < line:length() }, {
+		while({ i < line:length() }, {
 			local String is ch: line:charAt(index: i, default: '');
 			Conditional:if(check: { quote != '' }, then: {
 				Conditional:if(check: { ch == "\\" }, then: {

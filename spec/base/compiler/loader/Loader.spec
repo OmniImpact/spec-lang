@@ -197,7 +197,7 @@ Class is Loader{
 		# The walk-up loop keeps climbing while the executable's locations
 		# have yielded no .spec content at all.
 		local Int is indexed: 0;
-		Loops({ indexed == 0 && exeDir != '' && exeDir != '/' }, {
+		while({ indexed == 0 && exeDir != '' && exeDir != '/' }, {
 			self:scanTree(dir: exeDir, depth: 0);
 			indexed: self:classPaths:keys():length();
 			Conditional:if(check: { indexed == 0 }, then: {
@@ -264,7 +264,7 @@ Class is Loader{
 		local String is joined: self:classPaths:getString(key: className, default: '');
 		local Int is start: 0;
 		local Int is i: 0;
-		Loops({ i <= joined:length() }, {
+		while({ i <= joined:length() }, {
 			Conditional:if(check: { i == joined:length() || joined:charAt(index: i, default: '') == ';' }, then: {
 				Conditional:if(check: { i > start }, then: {
 					out:add(item: joined:substring(start: start, end: i));
@@ -404,7 +404,7 @@ Class is Loader{
 	Function of String is dirOf(String is path){
 		local Int is lastIdx: -1;
 		local Int is len: path:length();
-		Loops(
+		while(
 			[Int is pos: 0],
 			{ pos < len },
 			{
@@ -440,7 +440,7 @@ Class is Loader{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		Loops({ same && idx < a:params:length() }, {
+		while({ same && idx < a:params:length() }, {
 			local Parameter is pa: a:params:get(index: idx);
 			local Parameter is pb: b:params:get(index: idx);
 			Conditional:if(check: { pa:name != pb:name || pa:paramType:name != pb:paramType:name }, then: {
@@ -457,7 +457,7 @@ Class is Loader{
 	Function is removeClassFromLoaded(ClassInfo is c){
 		local Int is idx: 0;
 		local Boolean is found: false;
-		Loops({ !found && idx < self:loadedClasses:length() }, {
+		while({ !found && idx < self:loadedClasses:length() }, {
 			local ClassInfo is cur: self:loadedClasses:get(index: idx);
 			Conditional:if(check: { cur == c }, then: {
 				self:loadedClasses:removeAt(index: idx, default: c);
@@ -609,7 +609,7 @@ Class is Loader{
 		local Int is idx: 0;
 		local Boolean is already: false;
 		local Array of Member is members: c:members;
-		Loops({ !already && idx < members:length() }, {
+		while({ !already && idx < members:length() }, {
 			local Member is m: members:get(index: idx);
 			Conditional:if(check: { m:name == fieldName }, then: {
 				# an inherited-import synthesis
@@ -666,7 +666,7 @@ Class is Loader{
 		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
 		local Boolean is found: false;
 		local Int is count: self:loadedClasses:length();
-		Loops(
+		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
