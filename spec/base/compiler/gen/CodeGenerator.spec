@@ -93,16 +93,21 @@ Class is CodeGenerator{
 	## Number of worker threads for parallel class code generation.
 	Int is genThreads: 2;
 
-	## The entry init the driver resolved: the name of the class whose C
-	## `_init` main must call ('' = no init anywhere on the entry's
-	## lattice; main calls the entry's own synthesized zero-arg default),
-	## and whether that init takes the argv Map as a second argument.
-	## The driver owns entry policy — selection, lattice resolution, the
+	## The entry init the driver resolved: the QUALIFIED name of the
+	## class whose `_init` main must call ('' = no init anywhere on the
+	## entry's lattice; main calls the entry's own synthesized zero-arg
+	## default), the chosen overload's declaration-order index among the
+	## owner's init overloads (the C symbol suffix), and whether that
+	## init takes the argv Map as a second argument. The driver owns
+	## entry policy — selection, lattice resolution, the
 	## non-constructible-signature diagnostic — the generator only
-	## emits the resolved shape. An inherited init is called at its
-	## owner's C symbol: inherited inits are not flattened into the
-	## child, so ChildApp_init would be the empty synthesized stub.
+	## emits the resolved shape, through the same overloadSymbol funnel
+	## the call sites use: overloaded inits contend for the owner's
+	## base symbol (first-declared unsuffixed), so an entry chosen by
+	## preference must be called at ITS overload's symbol, not the
+	## owner's base one.
 	String is entryInitOwner: '';
+	Int is entryInitOverloadIndex: 0;
 	Boolean is entryInitTakesArgs: false;
 
 	## Copies a string-keyed registry map for a worker gen.
@@ -3695,16 +3700,24 @@ Class is CodeGenerator{
 		m: m . "        }\n";
 		m: m . "    }\n";
 		# The driver resolved the entry init: main constructs the entry
-		# class but calls the OWNING class's _init with its true arity —
-		# zero parameters, or the argv Map. main never passes the argv
-		# Map to a zero-arg init: that mismatch is what surfaced as raw
-		# gcc output on init-less and lattice-fallback entry classes.
-		local String is initSym: Conditional:if(check: { self:entryInitOwner == '' }, then: { entryClass }, else: { self:entryInitOwner });
+		# class but calls the OWNING class's init overload with its true
+		# arity — zero parameters, or the argv Map. The symbol goes
+		# through the same overload funnel as every call site, which
+		# returns the COMPLETE method symbol (Class_init, Class_init_2,
+		# ...): an overload past the first is suffixed, so a preference-
+		# chosen overload must not be called at the owner's base symbol.
+		# main never passes the argv Map to a zero-arg init: that
+		# mismatch is what surfaced as raw gcc output on init-less and
+		# lattice-fallback entry classes.
+		local String is initSym: entryClass . '_init';
+		Conditional:if(check: { self:entryInitOwner != '' }, then: {
+			initSym: self:overloadSymbol(className: self:entryInitOwner, methodName: 'init', idx: self:entryInitOverloadIndex);
+		});
 		m: m . '    SPEC_AUTO ' . entryClass . '* app = ' . entryClass . "_new();\n";
 		Conditional:if(check: { self:entryInitTakesArgs }, then: {
-			m: m . '    ' . initSym . "_init(app, args);\n";
+			m: m . '    ' . initSym . "(app, args);\n";
 		}, else: {
-			m: m . '    ' . initSym . "_init(app);\n";
+			m: m . '    ' . initSym . "(app);\n";
 		});
 		m: m . "    spec_drain_async_tasks();\n";
 		m: m . "    return 0;\n";

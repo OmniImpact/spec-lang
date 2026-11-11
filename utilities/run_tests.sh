@@ -345,7 +345,7 @@ assert_compile_failure "list-guard-negative" \
 
 assert_compile_failure "entry-init-signature-wall" \
 	"$ROOT/tests/negative/n37_entry_init_params_negative_test.spec" \
-	"init must take no parameters or a single 'Map of String to String'"
+	"requires an init that takes 'Map of String to String' or an empty init"
 
 assert_compile_failure "entry-enum-only-wall" \
 	"$ROOT/tests/negative/n38_entry_enum_only_negative_test.spec" \

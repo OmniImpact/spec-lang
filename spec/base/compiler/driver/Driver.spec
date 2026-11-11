@@ -44,14 +44,23 @@ Class is Driver{
 		['base', 'sys', as Conditional()]
 	];
 
-	## Entry-init probe results (resolveEntryInit): the name of the
-	## class owning the nearest init on the entry's lattice ('' when no
-	## init exists anywhere up the chain), the init's parameter count,
-	## and its first parameter's type name. main's construction call is
-	## emitted from exactly this shape.
+	## Entry-init probe results (resolveEntryInit): the QUALIFIED name of
+	## the class owning the CHOSEN init ('' when none was chosen — the
+	## entry constructs through its synthesized zero-arg default), the
+	## chosen init's parameter count, its first parameter's type name,
+	## its declaration-order index among the owner's init overloads
+	## (the C symbol suffix the generator must emit), whether the
+	## chosen init takes the command-line Map, and whether the lattice
+	## declared any init overload at all. The entry rule: feed the args
+	## when an init can take them, fall back to an empty init, and only
+	## error when the lattice declares overloads but neither form
+	## exists.
 	local String is entryInitOwner: '';
 	local Int is entryInitParams: 0;
 	local String is entryInitFirstParam: '';
+	local Int is entryInitOverloadIndex: 0;
+	local Boolean is entryInitTakesMap: false;
+	local Boolean is entryInitSawAny: false;
 
 	replace Function is init(Map of String to String is args){
 		local String is inputPath: args:getString(key: 'i', default: '');
@@ -247,16 +256,22 @@ Class is Driver{
 			Process:exit(status: 1);
 		});
 
-		# The entry init must be constructible from argv: zero parameters,
-		# or exactly one Map of String to String. Any other signature is a
-		# compile-time diagnostic here — never a raw backend-C failure.
+		# The entry rule: feed the command-line args when an init can
+		# take them (the argv Map), else construct through an empty
+		# init, else — only when the lattice declares overloads but
+		# neither form exists — a compile-time diagnostic, never a raw
+		# backend-C failure. An entry with no init at all constructs
+		# through its synthesized zero-arg default and is fine.
 		self:entryInitOwner: '';
 		self:entryInitParams: 0;
 		self:entryInitFirstParam: '';
+		self:entryInitOverloadIndex: 0;
+		self:entryInitTakesMap: false;
+		self:entryInitSawAny: false;
 		local Array of String is latticeVisited: [];
 		self:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
-		Conditional:if(check: { self:entryInitOwner != '' && !(self:entryInitParams == 0 || (self:entryInitParams == 1 && self:entryInitFirstParam == 'Map')) }, then: {
-			Stderr:line("Error: Entry class '" . entryName . "' init must take no parameters or a single 'Map of String to String'.");
+		Conditional:if(check: { self:entryInitOwner == '' && self:entryInitSawAny }, then: {
+			Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
 			Process:exit(status: 1);
 		});
 
@@ -272,7 +287,8 @@ Class is Driver{
 		local CodeGenerator is cg: CodeGenerator:init();
 		cg:genThreads: threadCount;
 		cg:entryInitOwner: self:entryInitOwner;
-		cg:entryInitTakesArgs: self:entryInitParams == 1;
+		cg:entryInitOverloadIndex: self:entryInitOverloadIndex;
+		cg:entryInitTakesArgs: self:entryInitTakesMap;
 		cg:registerProgram(classes: program:classes);
 		local Int is genT0: Process:clockMs();
 		local Int is cLines: cg:generateProgramToFile(program: program, entryClass: entryName, filePath: tempCPath);
@@ -309,37 +325,64 @@ Class is Driver{
 		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
 	}
 
-	## Walks the inheritance lattice from [c] to the nearest init
-	## declaration, recording the owning class name, its parameter
-	## count, and its first parameter's type name into the driver's
-	## entry-init probe fields. Depth-first over baseClasses in
-	## declaration order, with a visited set as the cycle guard: a
-	## revisit terminates the branch, never a depth count.
+	## Walks the inheritance lattice from [c] and classifies every init
+	## overload the entry could construct through. Preference: an init
+	## that takes the command-line 'Map of String to String' wins over
+	## an empty init wherever each sits on the lattice; within a
+	## preference class the first in visit order wins. Overloads that
+	## are neither — any other required parameters — are not
+	## constructible from the command line and are skipped. Depth-first
+	## over baseClasses in declaration order, with a visited set as the
+	## cycle guard: a revisit terminates the branch, never a depth
+	## count. Results land in the driver's entry-init probe fields.
 	##
 	## @param c: The class to probe (the entry class).
 	## @param all: The full loaded class set (lattice preloads included).
 	## @param visited: Names already probed on this walk.
 	Function is resolveEntryInit(ClassInfo is c, Array of ClassInfo is all, Array of String is visited){
-		Conditional:if(check: { visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitOwner != '' }, then: {
+		Conditional:if(check: { visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitTakesMap }, then: {
 			return;
 		});
 		visited:add(item: c:name);
-		local Boolean is found: false;
+		local Int is initSeen: 0;
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !found && m:name == 'init' && m:kind == MemberKind:METHOD }, then: {
-				found: true;
-				self:entryInitOwner: c:name;
-				self:entryInitParams: m:params:length();
-				Conditional:if(check: { self:entryInitParams == 1 }, then: {
+			Conditional:if(check: { m:name == 'init' && m:kind == MemberKind:METHOD }, then: {
+				self:entryInitSawAny: true;
+				local Int is arity: m:params:length();
+				local String is first: '';
+				Conditional:if(check: { arity == 1 }, then: {
 					local Parameter is p: m:params:get(index: 0);
-					self:entryInitFirstParam: p:paramType:name;
+					first: p:paramType:name;
 				});
+				Conditional:if(check: { arity == 1 && first == 'Map' && !self:entryInitTakesMap }, then: {
+					# The argv-capable form: overrides any empty choice.
+					self:entryInitOwner: c:qualifiedName();
+					self:entryInitParams: arity;
+					self:entryInitFirstParam: first;
+					self:entryInitOverloadIndex: initSeen;
+					self:entryInitTakesMap: true;
+				}, else: {
+					Conditional:if(check: { arity == 0 && self:entryInitOwner == '' }, then: {
+						# Empty fallback: provisional until an argv-capable
+						# init appears further along the lattice.
+						self:entryInitOwner: c:qualifiedName();
+						self:entryInitParams: arity;
+						self:entryInitFirstParam: first;
+						self:entryInitOverloadIndex: initSeen;
+					});
+				});
+				# The declaration-order index among the owner's init
+				# overloads rides the chosen member: the C symbol for an
+				# overload is the owner's base symbol with an (idx+1)
+				# suffix, first overload unsuffixed — the generator's
+				# overloadIndexOf counts exactly this order.
+				initSeen: initSeen + 1;
 			});
 		});
-		Conditional:if(check: { !found }, then: {
+		Conditional:if(check: { !self:entryInitTakesMap }, then: {
 			c:baseClasses:each(action: local Function(String is baseName){
 				all:each(action: local Function(ClassInfo is cand){
-					Conditional:if(check: { self:entryInitOwner == '' && cand:name == baseName }, then: {
+					Conditional:if(check: { !self:entryInitTakesMap && cand:name == baseName }, then: {
 						self:resolveEntryInit(c: cand, all: all, visited: visited);
 					});
 				});
