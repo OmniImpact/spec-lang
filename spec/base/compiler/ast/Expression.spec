@@ -103,7 +103,7 @@ Class is Expression{
 	## @param kind: Node category.
 	replace Function is init(ExpressionKind is kind){
 		self:kind: kind;
-		Conditional:match(on: kind, when: [
+		match(on: kind, when: [
 			ExpressionKind:CALL: {
 				self:methodArgs: [];
 			},

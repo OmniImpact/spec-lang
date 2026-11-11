@@ -175,7 +175,7 @@ Class is Linter{
 	Function is lintExpression(Expression is expr, Array of LintIssue is issues){
 		local ExpressionKind is kind: expr:kind;
 
-		Conditional:match(on: kind, when: [
+		match(on: kind, when: [
 			ExpressionKind:CALL: {
 				local String is method: expr:methodName;
 				local Array of NamedArg is args: expr:methodArgs;
@@ -186,7 +186,7 @@ Class is Linter{
 					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
 				});
 
-				Conditional:match(on: method, when: [
+				match(on: method, when: [
 					'getString': {
 						local Boolean is hasDefault: false;
 						args:each(action: local Function(NamedArg is arg){
@@ -247,7 +247,7 @@ Class is Linter{
 	## @return: true when the receiver names While or Loop.
 	Function of Boolean is isLoopSpell(Expression is target){
 		local String is name: '';
-		Conditional:match(on: target:kind, when: [
+		match(on: target:kind, when: [
 			ExpressionKind:IDENT: {
 				name: target:str;
 			},
@@ -268,7 +268,7 @@ Class is Linter{
 	## @return: true when the receiver is class-spelled.
 	Function of Boolean is isClassSpell(Expression is target){
 		local String is name: '';
-		Conditional:match(on: target:kind, when: [
+		match(on: target:kind, when: [
 			ExpressionKind:IDENT: {
 				name: target:str;
 			},
@@ -289,7 +289,7 @@ Class is Linter{
 	Function is lintStatement(Statement is stmt, Array of LintIssue is issues){
 		local StatementKind is kind: stmt:kind;
 
-		Conditional:match(on: kind, when: [
+		match(on: kind, when: [
 			StatementKind:VAR_DECL: {
 				Conditional:if(check: { stmt:hasInit }, then: {
 					self:lintExpression(expr: stmt:initExpr, issues: issues);
@@ -319,7 +319,7 @@ Class is Linter{
 	## @param issues: Destination issues array.
 	Function is lintClass(ClassInfo is classDef, Array of LintIssue is issues){
 		classDef:members:each(action: local Function(Member is m){
-			Conditional:match(on: m:kind, when: [
+			match(on: m:kind, when: [
 				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
 						self:lintStatement(stmt: s, issues: issues);
@@ -454,7 +454,7 @@ Class is Linter{
 		local ClassInfo is savedOwner: self:auditOwner;
 		self:auditOwner: classDef;
 		classDef:members:each(action: local Function(Member is m){
-			Conditional:match(on: m:kind, when: [
+			match(on: m:kind, when: [
 				MemberKind:METHOD: {
 					m:body:each(action: local Function(Statement is s){
 						self:auditStatement(stmt: s, file: m:sourceFile);
@@ -474,7 +474,7 @@ Class is Linter{
 	## @param stmt: [Statement] AST node.
 	## @param file: Source file the statement lives in.
 	Function is auditStatement(Statement is stmt, String is file){
-		Conditional:match(on: stmt:kind, when: [
+		match(on: stmt:kind, when: [
 			StatementKind:VAR_DECL: {
 				Conditional:if(check: { stmt:hasInit }, then: {
 					self:auditExpression(expr: stmt:initExpr, file: file);
@@ -510,7 +510,7 @@ Class is Linter{
 	## @param expr: [Expression] AST node.
 	## @param file: Source file the expression lives in.
 	Function is auditExpression(Expression is expr, String is file){
-		Conditional:match(on: expr:kind, when: [
+		match(on: expr:kind, when: [
 			ExpressionKind:CALL: {
 				self:auditReceiver(callExpr: expr, file: file);
 				self:auditExpression(expr: expr:methodTarget, file: file);
@@ -688,7 +688,7 @@ Class is Linter{
 			return false;
 		});
 		local String is first: name:charAt(index: 0, default: '');
-		return Conditional:match(on: first, when: [
+		return match(on: first, when: [
 			['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M']: { true },
 			['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']: { true },
 			else: { false }

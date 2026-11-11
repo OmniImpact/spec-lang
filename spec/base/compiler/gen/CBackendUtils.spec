@@ -38,7 +38,7 @@ Class is CBackendUtils{
 		Conditional:if(check: { typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:') }, then: {
 			return 'SpecClosure*';
 		});
-		return Conditional:match(on: typeName, when: [
+		return match(on: typeName, when: [
 			'Int': { 'long long' },
 			'Byte': { 'unsigned char' },
 			'Float': { 'double' },

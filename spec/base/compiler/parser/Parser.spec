@@ -979,7 +979,7 @@ Class is Parser{
 	## @param level: The level to fold.
 	## @return: The folded expression.
 	Function of Expression is parseLevel(PrecedenceLevel is level){
-		return Conditional:match(on: level, when: [
+		return match(on: level, when: [
 			PrecedenceLevel:MULTIPLICATIVE: { self:foldBinary(ops: ['*', '/', '%'], next: PrecedenceLevel:NONE) },
 			PrecedenceLevel:ADDITIVE: { self:foldBinary(ops: ['+', '-'], next: PrecedenceLevel:MULTIPLICATIVE) },
 			PrecedenceLevel:SHIFT: { self:foldBinary(ops: ['<<', '>>'], next: PrecedenceLevel:ADDITIVE) },
@@ -1285,7 +1285,7 @@ Class is Parser{
 
 		local Token is tok: self:peek();
 
-		return Conditional:match(on: tok:getTokenKind(), when: [
+		return match(on: tok:getTokenKind(), when: [
 			TokenKind:STRING: {
 				self:advance();
 				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
