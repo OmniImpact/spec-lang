@@ -88,9 +88,20 @@ Class is DeclarationGenerator{
 	## @param name: Member name.
 	## @return: true when present.
 	Function of Boolean is hasFieldNamed(Array of Member is list, String is name){
-		local HasFieldLoop is loop: HasFieldLoop:init(list: list, name: name);
-		Loops:run(loop: loop);
-		return loop:found;
+		local Boolean is found: false;
+		local Int is count: list:length();
+		Loops(
+			[Int is idx: 0],
+			{ !found && idx < count },
+			{
+				local Member is m: list:get(index: idx);
+				idx++;
+				if({ m:name == name }, {
+					found: true;
+				});
+			}
+		);
+		return found;
 	}
 
 	## Collects a class's struct fields: base fields first (ancestor casts
@@ -164,9 +175,20 @@ Class is DeclarationGenerator{
 	## @param name: Field name.
 	## @return: The index, or -1.
 	Function of Int is fieldIndexNamed(Array of Member is list, String is name){
-		local FieldIndexLoop is loop: FieldIndexLoop:init(list: list, name: name);
-		Loops:run(loop: loop);
-		return loop:res;
+		local Int is res: -1;
+		local Int is count: list:length();
+		Loops(
+			[Int is idx: 0],
+			{ res < 0 && idx < count },
+			{
+				local Member is m: list:get(index: idx);
+				if({ m:name == name }, {
+					res: idx;
+				});
+				idx++;
+			}
+		);
+		return res;
 	}
 
 	## Emits forward declarations (typedefs, constructors, destructors) for
@@ -303,70 +325,5 @@ Class is DeclarationGenerator{
 				});
 		});
 		return out;
-	}
-
-	## True when [list] has a member with the name (scan state).
-	Class of Loop is HasFieldLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local Array of Member is list;
-		local String is name;
-		local Int is idx: 0;
-		local Boolean is found: false;
-
-		replace Function is init(Array of Member is list, String is name){
-			self:list: list;
-			self:name: name;
-			self:idx: 0;
-			self:found: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:found && self:idx < self:list:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:list:get(index: self:idx);
-			self:idx: self:idx + 1;
-			Conditional:if(check: { m:name == self:name }, then: {
-				self:found: true;
-				return false;
-			});
-			return true;
-		}
-	}
-
-	## Walks a field accumulator tracking a name's index.
-	Class of Loop is FieldIndexLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local Array of Member is list;
-		local String is name;
-		local Int is idx: 0;
-		local Int is res: -1;
-
-		replace Function is init(Array of Member is list, String is name){
-			self:list: list;
-			self:name: name;
-			self:idx: 0;
-			self:res: -1;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return self:res < 0 && self:idx < self:list:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:list:get(index: self:idx);
-			Conditional:if(check: { m:name == self:name }, then: {
-				self:res: self:idx;
-			});
-			self:idx: self:idx + 1;
-			return true;
-		}
 	}
 }

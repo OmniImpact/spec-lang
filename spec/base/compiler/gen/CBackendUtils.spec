@@ -61,9 +61,25 @@ Class is CBackendUtils{
 	## @param name: lowerCamel name.
 	## @return: snake_case form.
 	Function of String is snakeCase(String is name){
-		local SnakeCaseLoop is loop: SnakeCaseLoop:init(src: name);
-		Loops:run(loop: loop);
-		return loop:res;
+		local String is res: '';
+		local String is uppers: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		local String is lowers: 'abcdefghijklmnopqrstuvwxyz';
+		local Int is len: name:length();
+		Loops(
+			[Int is pos: 0],
+			{ pos < len },
+			{
+				local String is ch: name:charAt(index: pos, default: '');
+				pos++;
+				local Int is u: uppers:indexOf(search: ch, default: -1);
+				if({ u >= 0 }, {
+					res: res . '_' . lowers:charAt(index: u, default: '');
+				}, {
+					res: res . ch;
+				});
+			}
+		);
+		return res;
 	}
 
 	## Sanitizes a Spec identifier against C reserved keywords.
@@ -73,10 +89,10 @@ Class is CBackendUtils{
 	Function of String is cIdent(String is name){
 		# the qualified class names
 		# ('Outer:Helper') map the nesting separator to the C underscore.
-		Conditional:if(check: { name:contains(needle: ':') }, then: {
+		if({ name:contains(needle: ':') }, {
 			return self:cIdent(name: name:replaceAll(search: ':', replacement: '_'));
 		});
-		return Conditional:match(on: name, when: [
+		return match(on: name, when: [
 			'EOF': { '_EOF' },
 			['default', 'case', 'switch', 'struct', 'union', 'enum', 'register',
 			'static', 'extern', 'inline', 'const', 'volatile', 'auto', 'signed',
@@ -91,9 +107,31 @@ Class is CBackendUtils{
 	## @param s: Raw text.
 	## @return: C-escaped text.
 	Function of String is escapeString(String is s){
-		local EscapeLoop is escLoop: EscapeLoop:init(src: s);
-		Loops:run(loop: escLoop);
-		return escLoop:res;
+		local String is res: '';
+		local Int is len: s:length();
+		Loops(
+			[Int is pos: 0],
+			{ pos < len },
+			{
+				local String is ch: s:charAt(index: pos, default: '');
+				pos++;
+				match(on: ch, when: [
+					"\n": { res: res . "\\n"; },
+					"\t": { res: res . "\\t"; },
+					"\r": { res: res . "\\r"; },
+					'"': { res: res . "\\\""; },
+					"\\": { res: res . "\\\\"; },
+					else: {
+						if({ ch == String:fromCharCode(code: 27) }, {
+							res: res . "\\033";
+						}, {
+							res: res . ch;
+						});
+					}
+				]);
+			}
+		);
+		return res;
 	}
 
 	## Resolves the C return type of a method signature descriptor.
@@ -101,91 +139,13 @@ Class is CBackendUtils{
 	## @param t: Declared type descriptor.
 	## @return: C return type string.
 	Function of String is resolveReturnType(Type is t){
-		Conditional:if(check: { Primitive:of(t:name) == Primitive:FUNCTION }, then: {
-			Conditional:if(check: { t:params:length() > 0 }, then: {
+		if({ Primitive:of(t:name) == Primitive:FUNCTION }, {
+			if({ t:params:length() > 0 }, {
 				local Type is ret: t:params:get(index: 0);
 				return self:cTypeFor(typeName: ret:name);
 			});
 			return 'void';
 		});
 		return self:cTypeFor(typeName: t:name);
-	}
-
-	## Character walk for snakeCase: inserts '_' before each uppercase and
-	## lowercases it.
-	Class of Loop is SnakeCaseLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local String is src;
-		local Int is pos: 0;
-		local String is res: '';
-		local String is uppers: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-		local String is lowers: 'abcdefghijklmnopqrstuvwxyz';
-
-		replace Function is init(String is src){
-			self:src: src;
-			self:pos: 0;
-			self:res: '';
-		}
-
-		replace Function of Boolean is evaluate(){
-			return self:pos < self:src:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:src:charAt(index: self:pos, default: '');
-			self:pos: self:pos + 1;
-			local Int is u: self:uppers:indexOf(search: ch, default: -1);
-			Conditional:if(check: { u >= 0 }, then: {
-				self:res: self:res . '_' . self:lowers:charAt(index: u, default: '');
-			}, else: {
-				self:res: self:res . ch;
-			});
-			return true;
-		}
-	}
-
-	## Character walk for escapeString.
-	Class of Loop is EscapeLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()],
-
-		];
-		local String is src;
-		local Int is pos: 0;
-		local String is res: '';
-
-		replace Function is init(String is src){
-			self:src: src;
-			self:pos: 0;
-			self:res: '';
-		}
-
-		replace Function of Boolean is evaluate(){
-			return self:pos < self:src:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is control){
-			local String is ch: self:src:charAt(index: self:pos, default: '');
-			self:pos: self:pos + 1;
-			Conditional:match(on: ch, when: [
-				"\n": { self:res: self:res . "\\n"; },
-				"\t": { self:res: self:res . "\\t"; },
-				"\r": { self:res: self:res . "\\r"; },
-				'"': { self:res: self:res . "\\\""; },
-				"\\": { self:res: self:res . "\\\\"; },
-				else: {
-					Conditional:if(check: { ch == String:fromCharCode(code: 27) }, then: {
-						self:res: self:res . "\\033";
-					}, else: {
-						self:res: self:res . ch;
-					});
-				}
-			]);
-			return true;
-		}
 	}
 }

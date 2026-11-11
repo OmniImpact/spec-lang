@@ -9,7 +9,6 @@ Class is CompilationReport{
 	namespace: ['base', 'compiler', 'driver'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];
@@ -27,18 +26,18 @@ Class is CompilationReport{
 	## @param total: Total stage count.
 	## @param label: Stage description.
 	Function is stage(Int is n, Int is total, String is label){
-		Conditional:if(check: { self:quiet }, then: {
+		if({ self:quiet }, {
 			return;
 		});
-		Output:line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
+		line('  [' . (n as String) . '/' . (total as String) . '] ' . label);
 	}
 
 	## One-line progress note inside a stage (no numbering).
 	Function is note(String is label){
-		Conditional:if(check: { self:quiet }, then: {
+		if({ self:quiet }, {
 			return;
 		});
-		Output:line('  ' . label);
+		line('  ' . label);
 	}
 
 	## Prints the end-of-run summary: paths, counts, time breakdown.
@@ -57,24 +56,24 @@ Class is CompilationReport{
 	## @param peakCpuPct: Process peak interval CPU usage percentage.
 	## @param binKb: Binary size in KB (-1 when no binary was produced).
 	Function is summary(String is inputPath, String is outputPath, Int is classCount, Int is methodCount, Int is specLines, Int is cLines, Int is totalMs, Int is loadMs, Int is checkMs, Int is genMs, Int is ccMs, Int is peakKb, Int is avgMemKb, Int is avgCpuPct, Int is peakCpuPct, Int is binKb){
-		Conditional:if(check: { self:quiet }, then: {
+		if({ self:quiet }, {
 			return;
 		});
-		Output:line('');
-		Output:line('  ' . inputPath . ' -> ' . outputPath);
-		Output:line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of C');
+		line('');
+		line('  ' . inputPath . ' -> ' . outputPath);
+		line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of C');
 		local String is times: '  time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
-		Conditional:if(check: { ccMs >= 0 }, then: {
+		if({ ccMs >= 0 }, {
 			times: times . ' · cc ' . (ccMs as String);
 		});
 		times: times . ')';
-		Output:line(times);
+		line(times);
 		local String is memLine: '  memory ' . ((avgMemKb / 1024) as String) . ' MB avg · ' . ((peakKb / 1024) as String) . ' MB peak';
-		Conditional:if(check: { binKb >= 0 }, then: {
+		if({ binKb >= 0 }, {
 			memLine: memLine . ' · binary ' . ((binKb / 1024) as String) . ' KB';
 		});
-		Output:line(memLine);
+		line(memLine);
 		local String is cpuLine: '  cpu ' . (avgCpuPct as String) . '% avg · ' . (peakCpuPct as String) . '% peak';
-		Output:line(cpuLine);
+		line(cpuLine);
 	}
 }
