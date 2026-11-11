@@ -4161,12 +4161,37 @@ Class is CodeGenerator{
 			self:collectClasses(c: c, acc: flattenedClasses);
 		});
 		self:assignVirtualSlots(classes: flattenedClasses);
+
+		local Int is lineCount: 0;
+		local String is prelude: self:generatePrelude();
+		lineCount: lineCount + Buf:bufCountByte(b: prelude, byteVal: 10);
+		local Boolean is ok: fileWrite(path: filePath, content: prelude);
+		prelude: '';
+		Conditional:if(check: { !ok }, then: { return -1; });
+
 		local String is decls: self:declGen:generateForwardDeclarations(classes: flattenedClasses);
+		lineCount: lineCount + Buf:bufCountByte(b: decls, byteVal: 10);
+		ok: fileAppend(path: filePath, content: decls);
+		decls: '';
+		Conditional:if(check: { !ok }, then: { return -1; });
+
 		local String is structs: self:declGen:generateStructs(classes: flattenedClasses);
+		lineCount: lineCount + Buf:bufCountByte(b: structs, byteVal: 10);
+		ok: fileAppend(path: filePath, content: structs);
+		structs: '';
+		Conditional:if(check: { !ok }, then: { return -1; });
+
 		local String is vt: self:generateVTables(classes: flattenedClasses);
-		local String is heldSrc: self:generateHeldMembers(classes: flattenedClasses);
-		local String is heldMeta: self:generateHeldMetadata(classes: flattenedClasses);
-		local String is ctors: self:generateConstructors(classes: flattenedClasses);
+		lineCount: lineCount + Buf:bufCountByte(b: vt, byteVal: 10);
+		ok: fileAppend(path: filePath, content: vt);
+		vt: '';
+		Conditional:if(check: { !ok }, then: { return -1; });
+
+		local String is hierarchy: self:generateTypeHierarchy(classes: flattenedClasses);
+		lineCount: lineCount + Buf:bufCountByte(b: hierarchy, byteVal: 10);
+		ok: fileAppend(path: filePath, content: hierarchy);
+		hierarchy: '';
+		Conditional:if(check: { !ok }, then: { return -1; });
 
 		local Int is genThreads: self:genThreads;
 		Conditional:if(check: { genThreads < 1 }, then: {
@@ -4263,29 +4288,6 @@ Class is CodeGenerator{
 			return count;
 		});
 
-		local Int is lineCount: 0;
-		local String is prelude: self:generatePrelude();
-		lineCount: lineCount + Buf:bufCountByte(b: prelude, byteVal: 10);
-		local Boolean is ok: fileWrite(path: filePath, content: prelude);
-		Conditional:if(check: { !ok }, then: { return -1; });
-
-		lineCount: lineCount + Buf:bufCountByte(b: decls, byteVal: 10);
-		ok: fileAppend(path: filePath, content: decls);
-		Conditional:if(check: { !ok }, then: { return -1; });
-
-		lineCount: lineCount + Buf:bufCountByte(b: structs, byteVal: 10);
-		ok: fileAppend(path: filePath, content: structs);
-		Conditional:if(check: { !ok }, then: { return -1; });
-
-		lineCount: lineCount + Buf:bufCountByte(b: vt, byteVal: 10);
-		ok: fileAppend(path: filePath, content: vt);
-		Conditional:if(check: { !ok }, then: { return -1; });
-
-		local String is hierarchy: self:generateTypeHierarchy(classes: flattenedClasses);
-		lineCount: lineCount + Buf:bufCountByte(b: hierarchy, byteVal: 10);
-		ok: fileAppend(path: filePath, content: hierarchy);
-		Conditional:if(check: { !ok }, then: { return -1; });
-
 		local Int is ht: 0;
 		while(
 			evaluate: local Function of Boolean(){ return ht < classTotal; },
@@ -4302,16 +4304,22 @@ Class is CodeGenerator{
 		);
 		Conditional:if(check: { !ok }, then: { return -1; });
 
+		local String is heldSrc: self:generateHeldMembers(classes: flattenedClasses);
 		lineCount: lineCount + Buf:bufCountByte(b: heldSrc, byteVal: 10);
 		ok: fileAppend(path: filePath, content: heldSrc);
+		heldSrc: '';
 		Conditional:if(check: { !ok }, then: { return -1; });
 
+		local String is heldMeta: self:generateHeldMetadata(classes: flattenedClasses);
 		lineCount: lineCount + Buf:bufCountByte(b: heldMeta, byteVal: 10);
 		ok: fileAppend(path: filePath, content: heldMeta);
+		heldMeta: '';
 		Conditional:if(check: { !ok }, then: { return -1; });
 
+		local String is ctors: self:generateConstructors(classes: flattenedClasses);
 		lineCount: lineCount + Buf:bufCountByte(b: ctors, byteVal: 10);
 		ok: fileAppend(path: filePath, content: ctors);
+		ctors: '';
 		Conditional:if(check: { !ok }, then: { return -1; });
 
 		local Int is mt: 0;

@@ -72911,17 +72911,9 @@ Expression* Expression_new(void) {
     self->str = (String)spec_retain((void*)(spec_string_intern("")));
     self->num = 0;
     self->floatValue = 0.0;
-    self->pathSegments = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->arrayItems = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->mapKeys = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->mapValues = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->castArgs = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
     self->methodName = (String)spec_retain((void*)(spec_string_intern("")));
-    self->methodArgs = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
     self->bareProvider = (String)spec_retain((void*)(spec_string_intern("")));
     self->scopedRemainder = false;
-    self->anonParams = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->anonBody = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
     return self;
 }
 
@@ -75793,8 +75785,10 @@ void Driver_init(Driver* self, SpecMap* args) {
     tc = (TypeChecker*)((({ TypeChecker* _inst = TypeChecker_new(); TypeChecker_init(_inst); _inst; })));
     typeErrors = (SpecArray*)((TypeChecker_checkProgram(tc, program) /* inst:TypeChecker:checkProgram */));
     checkMs = ((Process_clockMs(NULL)) - (checkT0));
-    CompilationReport_stage(report, 2, 4, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("type checking · "))), spec_to_string_int(spec_array_length(typeErrors))), spec_string_intern(" errors · ")), spec_to_string_int(((Process_peakMemoryKb(NULL)) / (1024)))), spec_string_intern(" MB"))); spec_pool_release_to(_pf); _v; }))))) /* inst:CompilationReport:stage */;
-    if (((spec_array_length(typeErrors)) > (0))) {
+    long long errCount = spec_array_length(typeErrors);
+    ({ TypeChecker* _recv = (TypeChecker*)(tc); (((void (*)(TypeChecker*))_recv->_vtable[278]))((TypeChecker*)_recv); });
+    CompilationReport_stage(report, 2, 4, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("type checking · "))), spec_to_string_int(errCount)), spec_string_intern(" errors · ")), spec_to_string_int(((Process_peakMemoryKb(NULL)) / (1024)))), spec_string_intern(" MB"))); spec_pool_release_to(_pf); _v; }))))) /* inst:CompilationReport:stage */;
+    if (((errCount) > (0))) {
 	    Stderr_line(NULL, spec_string_intern("Type errors encountered during compilation:"));
 	    ({ SpecArray* _a_38 = typeErrors; if (_a_38) { for (size_t _i_38 = 0; _i_38 < _a_38->length; _i_38++) {
         TypeError* err = (TypeError*)(intptr_t)_a_38->items[_i_38];
@@ -75805,7 +75799,6 @@ void Driver_init(Driver* self, SpecMap* args) {
 	    Stderr_line(NULL, spec_string_intern("Compilation aborted due to type errors."));
 	    Process_exit(NULL, 1);
 	};
-    ({ TypeChecker* _recv = (TypeChecker*)(tc); (((void (*)(TypeChecker*))_recv->_vtable[278]))((TypeChecker*)_recv); });
     if (((classCount) == (0))) {
 	    Stderr_line(NULL, spec_string_intern("Error: No class definitions found in source file."));
 	    Process_exit(NULL, 1);
@@ -76615,6 +76608,22 @@ void Expression_init(Expression* self, ExpressionKind* kind) {
     (void)kind;
     SPEC_POOL_AUTO;
     spec_assign((void**)&self->kind, (void*)(kind));
+    if ((void*)(kind) == (void*)(ExpressionKind_CALL__ensure())) {
+	    spec_assign_transfer((void**)&self->methodArgs, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	} else if ((void*)(kind) == (void*)(ExpressionKind_ARRAY__ensure())) {
+	    spec_assign_transfer((void**)&self->arrayItems, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	} else if ((void*)(kind) == (void*)(ExpressionKind_MAP__ensure())) {
+	    spec_assign_transfer((void**)&self->mapKeys, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	    spec_assign_transfer((void**)&self->mapValues, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	} else if ((void*)(kind) == (void*)(ExpressionKind_PATH__ensure())) {
+	    spec_assign_transfer((void**)&self->pathSegments, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	} else if ((void*)(kind) == (void*)(ExpressionKind_CAST__ensure())) {
+	    spec_assign_transfer((void**)&self->castArgs, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	} else if ((void*)(kind) == (void*)(ExpressionKind_ANON_FN__ensure())) {
+	    spec_assign_transfer((void**)&self->anonParams, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	    spec_assign_transfer((void**)&self->anonBody, (void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+	}
+;
 }
 
 void Expression_makeIdent(Expression* self, String name) {
@@ -94699,8 +94708,8 @@ long long CodeGenerator_generateProgramToFile(CodeGenerator* self, ProgramNode* 
     SPEC_AUTO String structs = 0;
     SPEC_AUTO SpecArray* classChunks = 0;
     SPEC_AUTO String decls = 0;
-    SPEC_AUTO String hierarchy = 0;
     SPEC_AUTO String ctors = 0;
+    SPEC_AUTO String hierarchy = 0;
     SPEC_AUTO String heldSrc = 0;
     SPEC_AUTO String prelude = 0;
     flattenedClasses = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
@@ -94711,12 +94720,47 @@ long long CodeGenerator_generateProgramToFile(CodeGenerator* self, ProgramNode* 
         } while (0);
     } } });
     CodeGenerator_assignVirtualSlots(self, flattenedClasses) /* inst:CodeGenerator:assignVirtualSlots */;
+    long long lineCount = 0;
+    prelude = CodeGenerator_generatePrelude(self) /* inst:CodeGenerator:generatePrelude */;
+    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, prelude, 10)));
+    bool ok = File_fileWrite(NULL, filePath, prelude, 0, 0);
+    spec_assign((void**)&prelude, (void*)(spec_string_intern("")));
+    if ((!(ok))) {
+	    _mret_349 = (-(1));
+    goto _cleanup_349;
+	};
     decls = DeclarationGenerator_generateForwardDeclarations(self->declGen, flattenedClasses) /* inst:DeclarationGenerator:generateForwardDeclarations */;
+    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, decls, 10)));
+    ok = File_fileAppend(NULL, filePath, decls, 0, 0);
+    spec_assign((void**)&decls, (void*)(spec_string_intern("")));
+    if ((!(ok))) {
+	    _mret_349 = (-(1));
+    goto _cleanup_349;
+	};
     structs = DeclarationGenerator_generateStructs(self->declGen, flattenedClasses) /* inst:DeclarationGenerator:generateStructs */;
+    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, structs, 10)));
+    ok = File_fileAppend(NULL, filePath, structs, 0, 0);
+    spec_assign((void**)&structs, (void*)(spec_string_intern("")));
+    if ((!(ok))) {
+	    _mret_349 = (-(1));
+    goto _cleanup_349;
+	};
     vt = CodeGenerator_generateVTables(self, flattenedClasses) /* inst:CodeGenerator:generateVTables */;
-    heldSrc = CodeGenerator_generateHeldMembers(self, flattenedClasses) /* inst:CodeGenerator:generateHeldMembers */;
-    heldMeta = CodeGenerator_generateHeldMetadata(self, flattenedClasses) /* inst:CodeGenerator:generateHeldMetadata */;
-    ctors = CodeGenerator_generateConstructors(self, flattenedClasses) /* inst:CodeGenerator:generateConstructors */;
+    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, vt, 10)));
+    ok = File_fileAppend(NULL, filePath, vt, 0, 0);
+    spec_assign((void**)&vt, (void*)(spec_string_intern("")));
+    if ((!(ok))) {
+	    _mret_349 = (-(1));
+    goto _cleanup_349;
+	};
+    hierarchy = CodeGenerator_generateTypeHierarchy(self, flattenedClasses) /* inst:CodeGenerator:generateTypeHierarchy */;
+    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, hierarchy, 10)));
+    ok = File_fileAppend(NULL, filePath, hierarchy, 0, 0);
+    spec_assign((void**)&hierarchy, (void*)(spec_string_intern("")));
+    if ((!(ok))) {
+	    _mret_349 = (-(1));
+    goto _cleanup_349;
+	};
     long long genThreads = self->genThreads;
     if (((genThreads) < (1))) {
 	    genThreads = 1;
@@ -94750,39 +94794,6 @@ long long CodeGenerator_generateProgramToFile(CodeGenerator* self, ProgramNode* 
     _env->classTotal = classTotal;
     _env->classChunks = (SpecArray*)spec_retain((void*)classChunks);
     spec_closure_new((void*)_anon_fn_848, (void*)_env, _destroy_env_anon_848); })));
-    long long lineCount = 0;
-    prelude = CodeGenerator_generatePrelude(self) /* inst:CodeGenerator:generatePrelude */;
-    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, prelude, 10)));
-    bool ok = File_fileWrite(NULL, filePath, prelude, 0, 0);
-    if ((!(ok))) {
-	    _mret_349 = (-(1));
-    goto _cleanup_349;
-	};
-    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, decls, 10)));
-    ok = File_fileAppend(NULL, filePath, decls, 0, 0);
-    if ((!(ok))) {
-	    _mret_349 = (-(1));
-    goto _cleanup_349;
-	};
-    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, structs, 10)));
-    ok = File_fileAppend(NULL, filePath, structs, 0, 0);
-    if ((!(ok))) {
-	    _mret_349 = (-(1));
-    goto _cleanup_349;
-	};
-    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, vt, 10)));
-    ok = File_fileAppend(NULL, filePath, vt, 0, 0);
-    if ((!(ok))) {
-	    _mret_349 = (-(1));
-    goto _cleanup_349;
-	};
-    hierarchy = CodeGenerator_generateTypeHierarchy(self, flattenedClasses) /* inst:CodeGenerator:generateTypeHierarchy */;
-    lineCount = ((lineCount) + (Buf_bufCountByte(NULL, hierarchy, 10)));
-    ok = File_fileAppend(NULL, filePath, hierarchy, 0, 0);
-    if ((!(ok))) {
-	    _mret_349 = (-(1));
-    goto _cleanup_349;
-	};
     long long ht = 0;
     ({ while (1) {
         bool _ev_856 = false;
@@ -94809,20 +94820,26 @@ long long CodeGenerator_generateProgramToFile(CodeGenerator* self, ProgramNode* 
 	    _mret_349 = (-(1));
     goto _cleanup_349;
 	};
+    heldSrc = CodeGenerator_generateHeldMembers(self, flattenedClasses) /* inst:CodeGenerator:generateHeldMembers */;
     lineCount = ((lineCount) + (Buf_bufCountByte(NULL, heldSrc, 10)));
     ok = File_fileAppend(NULL, filePath, heldSrc, 0, 0);
+    spec_assign((void**)&heldSrc, (void*)(spec_string_intern("")));
     if ((!(ok))) {
 	    _mret_349 = (-(1));
     goto _cleanup_349;
 	};
+    heldMeta = CodeGenerator_generateHeldMetadata(self, flattenedClasses) /* inst:CodeGenerator:generateHeldMetadata */;
     lineCount = ((lineCount) + (Buf_bufCountByte(NULL, heldMeta, 10)));
     ok = File_fileAppend(NULL, filePath, heldMeta, 0, 0);
+    spec_assign((void**)&heldMeta, (void*)(spec_string_intern("")));
     if ((!(ok))) {
 	    _mret_349 = (-(1));
     goto _cleanup_349;
 	};
+    ctors = CodeGenerator_generateConstructors(self, flattenedClasses) /* inst:CodeGenerator:generateConstructors */;
     lineCount = ((lineCount) + (Buf_bufCountByte(NULL, ctors, 10)));
     ok = File_fileAppend(NULL, filePath, ctors, 0, 0);
+    spec_assign((void**)&ctors, (void*)(spec_string_intern("")));
     if ((!(ok))) {
 	    _mret_349 = (-(1));
     goto _cleanup_349;
@@ -94864,16 +94881,16 @@ long long CodeGenerator_generateProgramToFile(CodeGenerator* self, ProgramNode* 
     goto _cleanup_349;
     _cleanup_349: ;
     if (flattenedClasses) { spec_release((void*)flattenedClasses); flattenedClasses = NULL; }
+    if (prelude) { spec_release((void*)prelude); prelude = NULL; }
     if (decls) { spec_release((void*)decls); decls = NULL; }
     if (structs) { spec_release((void*)structs); structs = NULL; }
     if (vt) { spec_release((void*)vt); vt = NULL; }
+    if (hierarchy) { spec_release((void*)hierarchy); hierarchy = NULL; }
+    if (classChunks) { spec_release((void*)classChunks); classChunks = NULL; }
+    if (classHelpers) { spec_release((void*)classHelpers); classHelpers = NULL; }
     if (heldSrc) { spec_release((void*)heldSrc); heldSrc = NULL; }
     if (heldMeta) { spec_release((void*)heldMeta); heldMeta = NULL; }
     if (ctors) { spec_release((void*)ctors); ctors = NULL; }
-    if (classChunks) { spec_release((void*)classChunks); classChunks = NULL; }
-    if (classHelpers) { spec_release((void*)classHelpers); classHelpers = NULL; }
-    if (prelude) { spec_release((void*)prelude); prelude = NULL; }
-    if (hierarchy) { spec_release((void*)hierarchy); hierarchy = NULL; }
     if (mainFn) { spec_release((void*)mainFn); mainFn = NULL; }
     return _mret_349;
 }

@@ -17,7 +17,8 @@ Class is Expression{
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', Statement],
-		['base', 'compiler', 'ast', Parameter]
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'sys', as Conditional()]
 	];
 
 	## Node category for enum dispatch.
@@ -48,24 +49,24 @@ Class is Expression{
 	## BOOL: the boolean value.
 
 	## PATH: the colon-delimited segments.
-	Array of String is pathSegments: [];
+	Array of String is pathSegments;
 
 	## ARRAY: the element expressions.
-	Array of Expression is arrayItems: [];
+	Array of Expression is arrayItems;
 
 	## MAP: the key and value expressions (parallel arrays).
-	Array of Expression is mapKeys: [];
-	Array of Expression is mapValues: [];
+	Array of Expression is mapKeys;
+	Array of Expression is mapValues;
 
 	## CAST: the cast operand, target type name, and optional width args
 	## (e.g. the digit width of Hex(8)).
 	Expression is leftExpr;
-	Array of Expression is castArgs: [];
+	Array of Expression is castArgs;
 
 	## CALL: the receiver, method name, and arguments.
 	Expression is methodTarget;
 	String is methodName: '';
-	Array of NamedArg is methodArgs: [];
+	Array of NamedArg is methodArgs;
 
 	## CALL: for a bare (self-receiver) call resolved against the bare
 	## scope, the as-imported class providing the member (§2.3); '' when
@@ -94,14 +95,36 @@ Class is Expression{
 
 	## ANON_FN: return type, parameters, and body.
 	Type is anonReturnType;
-	Array of Parameter is anonParams: [];
-	Array of Statement is anonBody: [];
+	Array of Parameter is anonParams;
+	Array of Statement is anonBody;
 
 	## Initializes an expression node with its kind.
 	##
 	## @param kind: Node category.
 	replace Function is init(ExpressionKind is kind){
 		self:kind: kind;
+		Conditional:match(on: kind, when: [
+			ExpressionKind:CALL: {
+				self:methodArgs: [];
+			},
+			ExpressionKind:ARRAY: {
+				self:arrayItems: [];
+			},
+			ExpressionKind:MAP: {
+				self:mapKeys: [];
+				self:mapValues: [];
+			},
+			ExpressionKind:PATH: {
+				self:pathSegments: [];
+			},
+			ExpressionKind:CAST: {
+				self:castArgs: [];
+			},
+			ExpressionKind:ANON_FN: {
+				self:anonParams: [];
+				self:anonBody: [];
+			}
+		]);
 	}
 
 	## Configures this node as an identifier reference.

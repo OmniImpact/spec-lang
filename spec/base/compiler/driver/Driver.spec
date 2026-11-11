@@ -178,8 +178,10 @@ Class is Driver{
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is typeErrors: tc:checkProgram(program: program);
 		checkMs: Process:clockMs() - checkT0;
-		report:stage(n: 2, total: 4, label: 'type checking · ' . (typeErrors:length() as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-		Conditional:if(check: { typeErrors:length() > 0 }, then: {
+		local Int is errCount: typeErrors:length();
+		tc:cleanup();
+		report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+		Conditional:if(check: { errCount > 0 }, then: {
 			Stderr:line('Type errors encountered during compilation:');
 			typeErrors:each(action: local Function(TypeError is err){
 				Stderr:line(err:toString());
@@ -187,7 +189,6 @@ Class is Driver{
 			Stderr:line('Compilation aborted due to type errors.');
 			Process:exit(status: 1);
 		});
-		tc:cleanup();
 
 		# 4. Entry class: the first with a Map-parameter init, else the
 		# first non-enum, else the first class.
