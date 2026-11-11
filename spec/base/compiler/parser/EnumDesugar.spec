@@ -1,4 +1,4 @@
-#! Package base:compiler:parser:loops
+#! Package base:compiler:parser
 #! Desugars a VALUE enum (variants without payloads) into the class
 #! model: the variants become HELD members holding
 #! enum instances constructed with their tags, the backing value rides
@@ -10,7 +10,7 @@
 #! field-reader name/ordinal replace the root's reflective scan.
 
 Class is EnumDesugar{
-	namespace: ['base', 'compiler', 'parser', 'loops'];
+	namespace: ['base', 'compiler', 'parser'];
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', ClassInfo],

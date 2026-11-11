@@ -10,7 +10,7 @@
 ## which held slot is the receiver answers both name and ordinal for
 ## every enum at once. The per-enum remainder (value, of, values, the
 ## toString render) is synthesized by the compiler's EnumDesugar
-## (spec/base/compiler/parser/loops/EnumDesugar.spec) from the variant
+## (spec/base/compiler/parser/EnumDesugar.spec) from the variant
 ## list — it needs the variant types and the backing field, which only
 ## the desugared class has. Tagged enums (payload variants) override
 ## name/ordinal with their field readers, also synthesized.
