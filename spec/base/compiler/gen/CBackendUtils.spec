@@ -23,19 +23,19 @@ Class is CBackendUtils{
 	## @param typeName: Spec type name.
 	## @return: C11 type string.
 	Function of String is cTypeFor(String is typeName){
-		Conditional:if(check: { typeName == 'List' || typeName:startsWith(prefix: 'List of ') || typeName:startsWith(prefix: 'List:') }, then: {
-			Conditional:if(check: { typeName == 'List:Byte' || typeName == 'List of Byte' }, then: {
+		if({ typeName == 'List' || typeName:startsWith(prefix: 'List of ') || typeName:startsWith(prefix: 'List:') }, {
+			if({ typeName == 'List:Byte' || typeName == 'List of Byte' }, {
 				return 'SpecByteBuffer*';
 			});
 			return 'SpecVec*';
 		});
-		Conditional:if(check: { typeName == 'Array' || typeName:startsWith(prefix: 'Array of ') || typeName:startsWith(prefix: 'Array:') }, then: {
+		if({ typeName == 'Array' || typeName:startsWith(prefix: 'Array of ') || typeName:startsWith(prefix: 'Array:') }, {
 			return 'SpecArray*';
 		});
-		Conditional:if(check: { typeName == 'Map' || typeName:startsWith(prefix: 'Map of ') || typeName:startsWith(prefix: 'Map:') }, then: {
+		if({ typeName == 'Map' || typeName:startsWith(prefix: 'Map of ') || typeName:startsWith(prefix: 'Map:') }, {
 			return 'SpecMap*';
 		});
-		Conditional:if(check: { typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:') }, then: {
+		if({ typeName == 'Function' || typeName:startsWith(prefix: 'Function of ') || typeName:startsWith(prefix: 'Function:') }, {
 			return 'SpecClosure*';
 		});
 		return match(on: typeName, when: [
