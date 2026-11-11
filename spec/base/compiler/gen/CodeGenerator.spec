@@ -1504,6 +1504,12 @@ Class is CodeGenerator{
 				ret: self:lookupMethodReturnType(className: targetType, methodName: expr:methodName);
 			});
 			Conditional:if(check: { ret == '' || self:isVoidType(t: ret) }, then: {
+				Conditional:if(check: { expr:methodName == 'if' || expr:methodName == 'branch' || expr:methodName == 'match' }, then: {
+					local String is rtFallback: expr:resolvedType;
+					Conditional:if(check: { rtFallback != '' && rtFallback != Primitive:ANY:value() && !self:isVoidType(t: rtFallback) }, then: {
+						return rtFallback;
+					});
+				});
 				return '';
 			});
 			return ret;
@@ -1617,7 +1623,7 @@ Class is CodeGenerator{
 			});
 			Conditional:if(check: { self:allClassNames:has(key: targetT) && !self:allEnumNames:has(key: targetT) }, then: {
 				local String is mRet: self:lookupMethodReturnType(className: targetT, methodName: expr:methodName);
-				Conditional:if(check: { mRet == '' || self:isVoidType(t: mRet) }, then: {
+				Conditional:if(check: { (mRet == '' || self:isVoidType(t: mRet)) && !(targetT == 'Conditional' && (expr:methodName == 'if' || expr:methodName == 'branch' || expr:methodName == 'match')) }, then: {
 					return false;
 				});
 				Conditional:if(check: { mRet == targetT && expr:methodName != 'init' && expr:methodName != targetT && !self:policy:isTransparent(c: self:findClass(name: targetT)) }, then: {
@@ -1799,7 +1805,7 @@ Class is CodeGenerator{
 		local Boolean is claim: false;
 		Conditional:if(check: { kind == ExpressionKind:CALL }, then: {
 			claim: self:yieldsClaim(expr: expr);
-			Conditional:if(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 }, then: {
+			Conditional:if(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && (expr:argCount() != 3 || expr:resolvedType == '' || self:isVoidType(t: expr:resolvedType)) }, then: {
 				claim: false;
 			});
 		}, else: {
@@ -2148,8 +2154,8 @@ Class is CodeGenerator{
 				local Boolean is leftClaimKind: leftKind == ExpressionKind:CALL || leftKind == ExpressionKind:BINARY || leftKind == ExpressionKind:ARRAY || leftKind == ExpressionKind:MAP;
 				local Boolean is leftArc: self:isArcType(typeName: leftT);
 				local String is leftClaim: match(when: [
+					{ leftArc && !self:yieldsClaim(expr: expr:leftExpr) }: { '(void*)spec_retain((void*)(' . leftC . '))' },
 					{ leftPrim || leftClaimKind }: { leftC },
-					{ leftArc }: { '(void*)spec_retain((void*)(' . leftC . '))' },
 					else: { 'spec_string_from_chars(' . leftC . ')' }
 				]);
 				local String is leftWrap: leftClaim;
@@ -3481,7 +3487,7 @@ Class is CodeGenerator{
 						local String is rtC: self:cTypeFor(typeName: shapeRetType);
 						retC: '(' . rtC . ')({ ' . rtC . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
 					}, else: {
-						Conditional:if(check: { self:isFreshConstructorCall(expr: stmt:returnExpr) }, then: {
+						Conditional:if(check: { self:isFreshConstructorCall(expr: stmt:returnExpr) || (self:yieldsClaim(expr: stmt:returnExpr) && !(retKind == ExpressionKind:CALL && (stmt:returnExpr:methodName == 'get' || stmt:returnExpr:methodName == 'getString'))) }, then: {
 							retC: '(' . self:cTypeFor(typeName: shapeRetType) . ')(' . retC . ')';
 						}, else: {
 							retC: '(' . self:cTypeFor(typeName: shapeRetType) . ')spec_retain((void*)(' . retC . '))';
@@ -4822,7 +4828,7 @@ Class is CodeGenerator{
 					# if-expression, so the yield RETAINS (the ARC-safe copy)
 					# instead of the return path's ownership NULL-swap. A fresh
 					# allocation flows unclaimed into the result variable.
-					Conditional:if(check: { self:isFreshConstructorCall(expr: yieldExpr) }, then: {
+					Conditional:if(check: { self:isFreshConstructorCall(expr: yieldExpr) || (self:yieldsClaim(expr: yieldExpr) && !(retKind == ExpressionKind:CALL && (yieldExpr:methodName == 'get' || yieldExpr:methodName == 'getString'))) }, then: {
 						retC: '(' . yieldCType . ')(' . retC . ')';
 					}, else: {
 						retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
