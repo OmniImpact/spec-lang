@@ -197,19 +197,13 @@ Class is Loader{
 		# The walk-up loop keeps climbing while the executable's locations
 		# have yielded no .spec content at all.
 		local Int is indexed: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return indexed == 0 && exeDir != '' && exeDir != '/';
-			},
-			iteration: local Function of Boolean(){
-				self:scanTree(dir: exeDir, depth: 0);
-				indexed: self:classPaths:keys():length();
-				Conditional:if(check: { indexed == 0 }, then: {
-					exeDir: self:dirOf(path: exeDir);
-				});
-				return true;
-			}
-		);
+		Loops({ indexed == 0 && exeDir != '' && exeDir != '/' }, {
+			self:scanTree(dir: exeDir, depth: 0);
+			indexed: self:classPaths:keys():length();
+			Conditional:if(check: { indexed == 0 }, then: {
+				exeDir: self:dirOf(path: exeDir);
+			});
+		});
 		# 3. The working directory: for a compiler invoked from a project
 		# whose packages sit at the cwd, or a stage binary run from the
 		# repository root during bootstrap.
@@ -270,21 +264,15 @@ Class is Loader{
 		local String is joined: self:classPaths:getString(key: className, default: '');
 		local Int is start: 0;
 		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return i <= joined:length();
-			},
-			iteration: local Function of Boolean(){
-				Conditional:if(check: { i == joined:length() || joined:charAt(index: i, default: '') == ';' }, then: {
-					Conditional:if(check: { i > start }, then: {
-						out:add(item: joined:substring(start: start, end: i));
-					});
-					start: i + 1;
+		Loops({ i <= joined:length() }, {
+			Conditional:if(check: { i == joined:length() || joined:charAt(index: i, default: '') == ';' }, then: {
+				Conditional:if(check: { i > start }, then: {
+					out:add(item: joined:substring(start: start, end: i));
 				});
-				i: i + 1;
-				return true;
-			}
-		);
+				start: i + 1;
+			});
+			i: i + 1;
+		});
 		return out;
 	}
 
@@ -452,18 +440,14 @@ Class is Loader{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		while(
-			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
-			iteration: local Function of Boolean(){
-				local Parameter is pa: a:params:get(index: idx);
-				local Parameter is pb: b:params:get(index: idx);
-				Conditional:if(check: { pa:name != pb:name || pa:paramType:name != pb:paramType:name }, then: {
-					same: false;
-				});
-				idx: idx + 1;
-				return true;
-			}
-		);
+		Loops({ same && idx < a:params:length() }, {
+			local Parameter is pa: a:params:get(index: idx);
+			local Parameter is pb: b:params:get(index: idx);
+			Conditional:if(check: { pa:name != pb:name || pa:paramType:name != pb:paramType:name }, then: {
+				same: false;
+			});
+			idx: idx + 1;
+		});
 		return same;
 	}
 
@@ -472,20 +456,16 @@ Class is Loader{
 	## @param c: [ClassInfo] to remove.
 	Function is removeClassFromLoaded(ClassInfo is c){
 		local Int is idx: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return idx < self:loadedClasses:length();
-			},
-			iteration: local Function of Boolean(){
-				local ClassInfo is cur: self:loadedClasses:get(index: idx);
-				Conditional:if(check: { cur == c }, then: {
-					self:loadedClasses:removeAt(index: idx, default: c);
-					return false;
-				});
+		local Boolean is found: false;
+		Loops({ !found && idx < self:loadedClasses:length() }, {
+			local ClassInfo is cur: self:loadedClasses:get(index: idx);
+			Conditional:if(check: { cur == c }, then: {
+				self:loadedClasses:removeAt(index: idx, default: c);
+				found: true;
+			}, else: {
 				idx: idx + 1;
-				return true;
-			}
-		);
+			});
+		});
 	}
 
 	Function of ProgramNode is loadProgram(String is rootPath){
@@ -629,25 +609,21 @@ Class is Loader{
 		local Int is idx: 0;
 		local Boolean is already: false;
 		local Array of Member is members: c:members;
-		while(
-			evaluate: local Function of Boolean(){ return idx < members:length(); },
-			iteration: local Function of Boolean(){
-				local Member is m: members:get(index: idx);
-				Conditional:if(check: { m:name == fieldName }, then: {
-					# an inherited-import synthesis
-					# finds the field already synthesized from the class's own
-					# using (or a prior ancestor hop) — deduplicate silently. A
-					# DECLARED member with that name is still a collision.
-					Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasInit && m:initExpr:kind == ExpressionKind:CALL }, then: {
-						already: true;
-					}, else: {
-						self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
-					});
+		Loops({ !already && idx < members:length() }, {
+			local Member is m: members:get(index: idx);
+			Conditional:if(check: { m:name == fieldName }, then: {
+				# an inherited-import synthesis
+				# finds the field already synthesized from the class's own
+				# using (or a prior ancestor hop) — deduplicate silently. A
+				# DECLARED member with that name is still a collision.
+				Conditional:if(check: { m:kind == MemberKind:FIELD && m:hasInit && m:initExpr:kind == ExpressionKind:CALL }, then: {
+					already: true;
+				}, else: {
+					self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
 				});
-				idx: idx + 1;
-				return true;
-			}
-		);
+			});
+			idx: idx + 1;
+		});
 		Conditional:if(check: { already }, then: {
 			return;
 		});

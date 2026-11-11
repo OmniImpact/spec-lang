@@ -96,17 +96,14 @@ Class is Linter{
 			local String is masked: self:maskLine(line: line);
 			local String is body: masked;
 			local Boolean is trimming: true;
-			while(
-				evaluate: local Function of Boolean(){ return trimming && body:length() > 0; },
-				iteration: local Function(){
-					local String is last: body:charAt(index: body:length() - 1, default: '');
-					Conditional:if(check: { last == ' ' || last == "\t" }, then: {
-						body: body:substring(start: 0, end: body:length() - 1);
-					}, else: {
-						trimming: false;
-					});
-				}
-			);
+			Loops({ trimming && body:length() > 0 }, {
+				local String is last: body:charAt(index: body:length() - 1, default: '');
+				Conditional:if(check: { last == ' ' || last == "\t" }, then: {
+					body: body:substring(start: 0, end: body:length() - 1);
+				}, else: {
+					trimming: false;
+				});
+			});
 			Conditional:if(check: { body:length() > 0 && body:charAt(index: 0, default: '') == '}' }, then: {
 				local Int is expectedTabs: depth - 1;
 				Conditional:if(check: { expectedTabs < 0 }, then: {
@@ -118,20 +115,17 @@ Class is Linter{
 				});
 			});
 			local Int is ci: 0;
-			while(
-				evaluate: local Function of Boolean(){ return ci < masked:length(); },
-				iteration: local Function(){
-					local String is ch: masked:charAt(index: ci, default: '');
-					Conditional:if(check: { ch == '{' }, then: {
-						depth: depth + 1;
-					}, else: {
-						Conditional:if(check: { ch == '}' }, then: {
-							depth: depth - 1;
-						});
+			Loops({ ci < masked:length() }, {
+				local String is ch: masked:charAt(index: ci, default: '');
+				Conditional:if(check: { ch == '{' }, then: {
+					depth: depth + 1;
+				}, else: {
+					Conditional:if(check: { ch == '}' }, then: {
+						depth: depth - 1;
 					});
-					ci: ci + 1;
-				}
-			);
+				});
+				ci: ci + 1;
+			});
 		});
 	}
 
@@ -144,37 +138,34 @@ Class is Linter{
 		local String is out: '';
 		local String is quote: '';
 		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){ return i < line:length(); },
-			iteration: local Function(){
-				local String is ch: line:charAt(index: i, default: '');
-				Conditional:if(check: { quote != '' }, then: {
-					Conditional:if(check: { ch == "\\" }, then: {
-						out: out . '  ';
-						i: i + 1;
-					}, else: {
-						Conditional:if(check: { ch == quote }, then: {
-							quote: '';
-							out: out . ' ';
-						}, else: {
-							out: out . ' ';
-						});
-					});
+		Loops({ i < line:length() }, {
+			local String is ch: line:charAt(index: i, default: '');
+			Conditional:if(check: { quote != '' }, then: {
+				Conditional:if(check: { ch == "\\" }, then: {
+					out: out . '  ';
+					i: i + 1;
 				}, else: {
-					Conditional:if(check: { ch == '"' || ch == '\'' }, then: {
-						quote: ch;
+					Conditional:if(check: { ch == quote }, then: {
+						quote: '';
 						out: out . ' ';
 					}, else: {
-						Conditional:if(check: { ch == '#' }, then: {
-							i: line:length();
-						}, else: {
-							out: out . ch;
-						});
+						out: out . ' ';
 					});
 				});
-				i: i + 1;
-			}
-		);
+			}, else: {
+				Conditional:if(check: { ch == '"' || ch == '\'' }, then: {
+					quote: ch;
+					out: out . ' ';
+				}, else: {
+					Conditional:if(check: { ch == '#' }, then: {
+						i: line:length();
+					}, else: {
+						out: out . ch;
+					});
+				});
+			});
+			i: i + 1;
+		});
 		return out;
 	}
 

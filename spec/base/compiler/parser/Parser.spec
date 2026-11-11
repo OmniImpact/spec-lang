@@ -147,19 +147,13 @@ Class is Parser{
 	Function of Token is peekAhead(Int is offset){
 		Conditional:if(check: { self:streaming }, then: {
 			local Boolean is pulling: true;
-			while(
-				evaluate: local Function of Boolean(){
-					return pulling && self:lookahead:length() <= offset;
-				},
-				iteration: local Function of Boolean(){
-					local Token is tok: self:lexer:nextToken();
-					self:lookahead:add(item: tok);
-					Conditional:if(check: { tok:getTokenKind() == TokenKind:EOF }, then: {
-						pulling: false;
-					});
-					return true;
-				}
-			);
+			Loops({ pulling && self:lookahead:length() <= offset }, {
+				local Token is tok: self:lexer:nextToken();
+				self:lookahead:add(item: tok);
+				Conditional:if(check: { tok:getTokenKind() == TokenKind:EOF }, then: {
+					pulling: false;
+				});
+			});
 			Conditional:if(check: { offset < self:lookahead:length() }, then: {
 				return self:lookahead:get(index: offset);
 			});
@@ -746,20 +740,11 @@ Class is Parser{
 		# the qualified nested-class reference —
 		# `Outer:Inner` chains consume the glued colon segments into the
 		# type name, so declaration positions can spell the full path.
-		while(
-			evaluate: local Function of Boolean(){
-				Conditional:if(check: { self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false }, then: {
-					return self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER;
-				});
-				return false;
-			},
-			iteration: local Function(){
-				self:advance();
-				local Token is segTok: self:advance();
-				typeName: typeName . ':' . segTok:getValue();
-				return true;
-			}
-		);
+		Loops({ self:checkPunct(p: Punctuation:ACCESSOR) && self:hasWhitespaceAfter(offset: 0) == false && self:peekAhead(offset: 1):getTokenKind() == TokenKind:IDENTIFIER }, {
+			self:advance();
+			local Token is segTok: self:advance();
+			typeName: typeName . ':' . segTok:getValue();
+		});
 
 		Conditional:if(check: { self:checkKeyword(kw: Keyword:OF) }, then: {
 			self:advance();
@@ -902,28 +887,7 @@ Class is Parser{
 	## @return: The FORWARD statement.
 	local Function of Statement is parseForwardStatement(Int is startLine){
 		self:advance();
-		local Array of NamedArg is args: [];
-		while(
-			evaluate: local Function of Boolean(){
-				return !self:checkPunct(p: Punctuation:GROUP_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
-			},
-			iteration: local Function of Boolean(){
-				local String is argName: '';
-				local Token is tok0: self:peekAhead(offset: 0);
-				Conditional:if(check: { tok0:getTokenKind() == TokenKind:IDENTIFIER && self:peekAhead(offset: 1):getValue() == Punctuation:NAMED_ARG:value() }, then: {
-					argName: tok0:getValue();
-					self:advance();
-					self:advance();
-				});
-				local Expression is val: self:parseExpression();
-				args:add(item: NamedArg:init(name: argName, value: val));
-				Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
-					self:advance();
-					return true;
-				});
-				return false;
-			}
-		);
+		local Array of NamedArg is args: self:parseArgs();
 		self:matchPunct(p: Punctuation:GROUP_CLOSE);
 		Conditional:if(check: { self:checkPunct(p: Punctuation:TERMINATOR) }, then: {
 			self:advance();
@@ -1420,36 +1384,31 @@ Class is Parser{
 		local Int is depth: 0;
 		local Boolean is running: true;
 		local Boolean is foundIs: false;
-		while(
-			evaluate: local Function of Boolean(){
-				return running;
-			},
-			iteration: local Function(){
-				local Token is t: self:peekAhead(offset: offset);
-				local String is v: t:getValue();
-				Conditional:if(check: { t:getTokenKind() == TokenKind:EOF }, then: {
+		Loops({ running }, {
+			local Token is t: self:peekAhead(offset: offset);
+			local String is v: t:getValue();
+			Conditional:if(check: { t:getTokenKind() == TokenKind:EOF }, then: {
+				running: false;
+			}, else: {
+				Conditional:if(check: { depth == 0 && (v == ']' || v == ',' || v == ';') }, then: {
 					running: false;
 				}, else: {
-					Conditional:if(check: { depth == 0 && (v == ']' || v == ',' || v == ';') }, then: {
-						running: false;
+					Conditional:if(check: { v == '(' || v == '[' || v == '{' }, then: {
+						depth: depth + 1;
 					}, else: {
-						Conditional:if(check: { v == '(' || v == '[' || v == '{' }, then: {
-							depth: depth + 1;
+						Conditional:if(check: { v == ')' || v == ']' || v == '}' }, then: {
+							depth: depth - 1;
 						}, else: {
-							Conditional:if(check: { v == ')' || v == ']' || v == '}' }, then: {
-								depth: depth - 1;
-							}, else: {
-								Conditional:if(check: { depth == 0 && t:getTokenKind() == TokenKind:KEYWORD && v == Keyword:IS:value() }, then: {
-									foundIs: true;
-									running: false;
-								});
+							Conditional:if(check: { depth == 0 && t:getTokenKind() == TokenKind:KEYWORD && v == Keyword:IS:value() }, then: {
+								foundIs: true;
+								running: false;
 							});
 						});
-						offset: offset + 1;
 					});
+					offset: offset + 1;
 				});
-			}
-		);
+			});
+		});
 		return foundIs;
 	}
 
@@ -1459,25 +1418,23 @@ Class is Parser{
 	Function of Expression is parseDeclList(){
 		self:matchPunct(p: Punctuation:BRACKET_OPEN);
 		local Array of Parameter is params: [];
-		while(
-			evaluate: local Function of Boolean(){
-				return !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
-			},
-			iteration: local Function(){
-				local Type is pType: self:parseType();
-				self:matchKeyword(kw: Keyword:IS);
-				local Token is nameTok: self:advance();
-				local Parameter is p: Parameter:init(name: nameTok:getValue(), paramType: pType);
-				Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
-					self:advance();
-					p:setDefault(expr: self:parseExpression());
-				});
-				params:add(item: p);
-				Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
-					self:advance();
-				});
-			}
-		);
+		local Boolean is keepGoing: true;
+		Loops({ keepGoing && !self:checkPunct(p: Punctuation:BRACKET_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+			local Type is pType: self:parseType();
+			self:matchKeyword(kw: Keyword:IS);
+			local Token is nameTok: self:advance();
+			local Parameter is p: Parameter:init(name: nameTok:getValue(), paramType: pType);
+			Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+				self:advance();
+				p:setDefault(expr: self:parseExpression());
+			});
+			params:add(item: p);
+			Conditional:if(check: { self:checkPunct(p: Punctuation:SEPARATOR) }, then: {
+				self:advance();
+			}, else: {
+				keepGoing: false;
+			});
+		});
 		self:matchPunct(p: Punctuation:BRACKET_CLOSE);
 		local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
 		e:anonParams: params;
@@ -1493,39 +1450,34 @@ Class is Parser{
 		local Array of Parameter is params: [];
 		local Type is returnType: Type:init(name: self:names:voidName());
 
-		while(
-			evaluate: local Function of Boolean(){
-				return !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '');
-			},
-			iteration: local Function(){
-				Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:AS) }, then: {
-					local Expression is expr: self:parseExpression();
-					Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
-						self:advance();
-						local Expression is val: self:parseExpression();
-						self:matchPunct(p: Punctuation:TERMINATOR);
-						local Statement is s: Statement:init(kind: StatementKind:ASSIGN);
-						s:assignTarget: expr;
-						s:assignValue: val;
-						body:add(item: s);
-					}, else: {
-						Conditional:if(check: { self:checkPunct(p: Punctuation:BLOCK_CLOSE) }, then: {
-							local Statement is retS: Statement:init(kind: StatementKind:RETURN);
-							retS:returnExpr: expr;
-							retS:hasReturnExpr: true;
-							body:add(item: retS);
-						}, else: {
-							self:matchPunct(p: Punctuation:TERMINATOR);
-							local Statement is exprS: Statement:init(kind: StatementKind:EXPR);
-							exprS:exprStmt: expr;
-							body:add(item: exprS);
-						});
-					});
+		Loops({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+			Conditional:if(check: { !self:checkKeyword(kw: Keyword:RETURN) && !self:checkKeyword(kw: Keyword:LOCAL) && !self:checkKeyword(kw: Keyword:AS) }, then: {
+				local Expression is expr: self:parseExpression();
+				Conditional:if(check: { self:checkPunct(p: Punctuation:ASSIGN) }, then: {
+					self:advance();
+					local Expression is val: self:parseExpression();
+					self:matchPunct(p: Punctuation:TERMINATOR);
+					local Statement is s: Statement:init(kind: StatementKind:ASSIGN);
+					s:assignTarget: expr;
+					s:assignValue: val;
+					body:add(item: s);
 				}, else: {
-					body:add(item: self:parseStatement());
+					Conditional:if(check: { self:checkPunct(p: Punctuation:BLOCK_CLOSE) }, then: {
+						local Statement is retS: Statement:init(kind: StatementKind:RETURN);
+						retS:returnExpr: expr;
+						retS:hasReturnExpr: true;
+						body:add(item: retS);
+					}, else: {
+						self:matchPunct(p: Punctuation:TERMINATOR);
+						local Statement is exprS: Statement:init(kind: StatementKind:EXPR);
+						exprS:exprStmt: expr;
+						body:add(item: exprS);
+					});
 				});
-			}
-		);
+			}, else: {
+				body:add(item: self:parseStatement());
+			});
+		});
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
 
 		local Expression is e: Expression:init(kind: ExpressionKind:ANON_FN);
