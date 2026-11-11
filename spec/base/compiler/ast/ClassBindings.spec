@@ -40,7 +40,7 @@ Class is ClassBindings{
 	## @param c: The class.
 	## @return: true when emission-transparent and contract-free.
 	Function of Boolean is isTransparent(ClassInfo is c){
-		Conditional:if(check: { self:isSysinternal(cls: c) }, then: {
+		if({ self:isSysinternal(cls: c) }, {
 			return true;
 		});
 		# NOTE: names here must be unambiguous across the whole program —
@@ -115,17 +115,17 @@ Class is ClassBindings{
 	## @param c: The class.
 	## @return: true when Enum-rooted with held members.
 	Function of Boolean is isClassModelEnum(ClassInfo is c){
-		Conditional:if(check: { c:baseClass != 'Enum' }, then: {
+		if({ c:baseClass != 'Enum' }, {
 			return false;
 		});
 		local Boolean is found: false;
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !found && m:hasModifier(kw: Keyword:HELD) }, then: {
+			if({ !found && m:hasModifier(kw: Keyword:HELD) }, {
 				found: true;
 			});
 			# The tagged desugaring: the variants are
 			# nested subclasses — the base carries the tag machinery.
-			Conditional:if(check: { !found && m:kind == MemberKind:CLASS && m:nestedClass:name != '' }, then: {
+			if({ !found && m:kind == MemberKind:CLASS && m:nestedClass:name != '' }, {
 				found: true;
 			});
 		});

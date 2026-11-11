@@ -84,11 +84,11 @@ Class is Linter{
 			local Int is tabs: line:countLeading(search: "\t");
 			local String is rest: line:substring(start: tabs, end: line:length());
 			local Int is spaces: rest:countLeading(search: ' ');
-			Conditional:if(check: { spaces > 0 }, then: {
+			if({ spaces > 0 }, {
 				local String is msg: 'Space-based indentation detected (' . (spaces as String) . ' space(s)). Spec standard requires tabs.';
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 			});
-			Conditional:if(check: { line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, then: {
+			if({ line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, {
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
 			});
 
@@ -98,18 +98,18 @@ Class is Linter{
 			local Boolean is trimming: true;
 			while({ trimming && body:length() > 0 }, {
 				local String is last: body:charAt(index: body:length() - 1, default: '');
-				Conditional:if(check: { last == ' ' || last == "\t" }, then: {
+				if({ last == ' ' || last == "\t" }, {
 					body: body:substring(start: 0, end: body:length() - 1);
-				}, else: {
+				}, {
 					trimming: false;
 				});
 			});
-			Conditional:if(check: { body:length() > 0 && body:charAt(index: 0, default: '') == '}' }, then: {
+			if({ body:length() > 0 && body:charAt(index: 0, default: '') == '}' }, {
 				local Int is expectedTabs: depth - 1;
-				Conditional:if(check: { expectedTabs < 0 }, then: {
+				if({ expectedTabs < 0 }, {
 					expectedTabs: 0;
 				});
-				Conditional:if(check: { tabs != expectedTabs }, then: {
+				if({ tabs != expectedTabs }, {
 					local String is msg: 'Closing brace indented at ' . (tabs as String) . ' tab(s); nesting depth expects ' . (expectedTabs as String) . '.';
 					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 				});
@@ -137,19 +137,19 @@ Class is Linter{
 		local Int is i: 0;
 		while({ i < line:length() }, {
 			local String is ch: line:charAt(index: i, default: '');
-			Conditional:if(check: { quote != '' }, then: {
-				Conditional:if(check: { ch == "\\" }, then: {
+			if({ quote != '' }, {
+				if({ ch == "\\" }, {
 					out: out . '  ';
 					i: i + 1;
-				}, else: {
-					Conditional:if(check: { ch == quote }, then: {
+				}, {
+					if({ ch == quote }, {
 						quote: '';
 						out: out . ' ';
-					}, else: {
+					}, {
 						out: out . ' ';
 					});
 				});
-			}, else: {
+			}, {
 				match(on: ch, when: [
 					['"', '\'']: {
 						quote: ch;
@@ -182,7 +182,7 @@ Class is Linter{
 
 				# E10: a constructor call inside a While/Loop
 				# callback body allocates per iteration — hoisting hint.
-				Conditional:if(check: { method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget) }, then: {
+				if({ method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget) }, {
 					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
 				});
 
@@ -190,17 +190,17 @@ Class is Linter{
 					'getString': {
 						local Boolean is hasDefault: false;
 						args:each(action: local Function(NamedArg is arg){
-							Conditional:if(check: { arg:name == 'default' }, then: {
+							if({ arg:name == 'default' }, {
 								hasDefault: true;
 							});
 						});
-						Conditional:if(check: { hasDefault }, then: {
+						if({ hasDefault }, {
 							issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
 						});
 					},
 					'random': {
 						local String is msg: 'Method call \'math:random\' provides optional min/max range parameters.';
-						Conditional:if(check: { args:length() == 0 }, then: {
+						if({ args:length() == 0 }, {
 							msg: 'Method call \'math:random\' omits optional min/max parameters (using default [0.0, 1.0)).';
 						});
 						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
@@ -210,12 +210,12 @@ Class is Linter{
 				self:lintExpression(expr: expr:methodTarget, issues: issues);
 				local Boolean is isLoopDriver: self:isLoopSpell(target: expr:methodTarget);
 				args:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { isLoopDriver && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+					if({ isLoopDriver && arg:value:kind == ExpressionKind:ANON_FN }, {
 						local Int is savedDepth: self:lintLoopDepth;
 						self:lintLoopDepth: self:lintLoopDepth + 1;
 						self:lintExpression(expr: arg:value, issues: issues);
 						self:lintLoopDepth: savedDepth;
-					}, else: {
+					}, {
 						self:lintExpression(expr: arg:value, issues: issues);
 					});
 				});
@@ -253,7 +253,7 @@ Class is Linter{
 			},
 			ExpressionKind:PATH: {
 				local Array of String is segs: target:pathSegments;
-				Conditional:if(check: { segs:length() > 0 }, then: {
+				if({ segs:length() > 0 }, {
 					name: segs:get(index: segs:length() - 1);
 				});
 			}
@@ -274,7 +274,7 @@ Class is Linter{
 			},
 			ExpressionKind:PATH: {
 				local Array of String is segs: target:pathSegments;
-				Conditional:if(check: { segs:length() > 0 }, then: {
+				if({ segs:length() > 0 }, {
 					name: segs:get(index: segs:length() - 1);
 				});
 			}
@@ -291,7 +291,7 @@ Class is Linter{
 
 		match(on: kind, when: [
 			StatementKind:VAR_DECL: {
-				Conditional:if(check: { stmt:hasInit }, then: {
+				if({ stmt:hasInit }, {
 					self:lintExpression(expr: stmt:initExpr, issues: issues);
 				});
 			},
@@ -300,7 +300,7 @@ Class is Linter{
 				self:lintExpression(expr: stmt:assignValue, issues: issues);
 			},
 			StatementKind:RETURN: {
-				Conditional:if(check: { stmt:hasReturnExpr }, then: {
+				if({ stmt:hasReturnExpr }, {
 					self:lintExpression(expr: stmt:returnExpr, issues: issues);
 				});
 			},
@@ -358,7 +358,7 @@ Class is Linter{
 	Function of Int is countWarnings(Array of LintIssue is issues){
 		local Int is res: 0;
 		issues:each(action: local Function(LintIssue is issue){
-			Conditional:if(check: { issue:isWarning }, then: {
+			if({ issue:isWarning }, {
 				res: res + 1;
 			});
 		});
@@ -372,7 +372,7 @@ Class is Linter{
 	Function of Int is countNotices(Array of LintIssue is issues){
 		local Int is res: 0;
 		issues:each(action: local Function(LintIssue is issue){
-			Conditional:if(check: { !issue:isWarning }, then: {
+			if({ !issue:isWarning }, {
 				res: res + 1;
 			});
 		});
@@ -392,7 +392,7 @@ Class is Linter{
 		local Int is warnings: self:countWarnings(issues: issues);
 		local Int is notices: self:countNotices(issues: issues);
 		Output:line("\nLint summary for " . filePath . ': ' . (warnings as String) . ' warning(s), ' . (notices as String) . ' notice(s).');
-		Conditional:if(check: { warnings == 0 }, then: {
+		if({ warnings == 0 }, {
 			Output:line('All standard checks passed successfully.');
 		});
 	}
@@ -422,14 +422,14 @@ Class is Linter{
 	##
 	## @param c: Candidate [ClassInfo] definition.
 	Function is registerAuditName(ClassInfo is c){
-		Conditional:if(check: { c:baseClass == 'Enum' }, then: {
+		if({ c:baseClass == 'Enum' }, {
 			self:auditEnums:set(key: c:name, value: 'true');
-		}, else: {
+		}, {
 			self:auditClasses:set(key: c:name, value: 'true');
 		});
 		self:auditClassNodes:set(key: c:name, value: c);
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:kind == MemberKind:CLASS }, then: {
+			if({ m:kind == MemberKind:CLASS }, {
 				self:registerAuditName(c: m:nestedClass);
 			});
 		});
@@ -476,7 +476,7 @@ Class is Linter{
 	Function is auditStatement(Statement is stmt, String is file){
 		match(on: stmt:kind, when: [
 			StatementKind:VAR_DECL: {
-				Conditional:if(check: { stmt:hasInit }, then: {
+				if({ stmt:hasInit }, {
 					self:auditExpression(expr: stmt:initExpr, file: file);
 				});
 			},
@@ -485,7 +485,7 @@ Class is Linter{
 				self:auditExpression(expr: stmt:assignValue, file: file);
 			},
 			StatementKind:RETURN: {
-				Conditional:if(check: { stmt:hasReturnExpr }, then: {
+				if({ stmt:hasReturnExpr }, {
 					self:auditExpression(expr: stmt:returnExpr, file: file);
 				});
 			},
@@ -572,60 +572,60 @@ Class is Linter{
 	Function is auditReceiver(Expression is callExpr, String is file){
 		local String is name: '';
 		local Boolean is isFloorChain: false;
-		Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:IDENT }, then: {
+		if({ callExpr:methodTarget:kind == ExpressionKind:IDENT }, {
 			name: callExpr:methodTarget:str;
-		}, else: {
-			Conditional:if(check: { callExpr:methodTarget:kind == ExpressionKind:PATH }, then: {
+		}, {
+			if({ callExpr:methodTarget:kind == ExpressionKind:PATH }, {
 				local Array of String is segs: callExpr:methodTarget:pathSegments;
-				Conditional:if(check: { segs:length() == 0 }, then: {
+				if({ segs:length() == 0 }, {
 					return;
 				});
 				name: segs:get(index: segs:length() - 1);
 				segs:each(action: local Function(String is seg){
-					Conditional:if(check: { seg == 'sysinternal' }, then: {
+					if({ seg == 'sysinternal' }, {
 						isFloorChain: true;
 					});
 				});
-			}, else: {
+			}, {
 				return;
 			});
 		});
-		Conditional:if(check: { isFloorChain || name == '' || name == 'self' }, then: {
+		if({ isFloorChain || name == '' || name == 'self' }, {
 			return;
 		});
-		Conditional:if(check: { callExpr:methodName == 'init' }, then: {
+		if({ callExpr:methodName == 'init' }, {
 			return;
 		});
-		Conditional:if(check: { self:isUpperName(name: name) }, then: {
-			Conditional:if(check: { self:auditEnums:has(key: name) }, then: {
+		if({ self:isUpperName(name: name) }, {
+			if({ self:auditEnums:has(key: name) }, {
 				return;
 			});
 			local Boolean is isExempt: false;
 			self:exemptClasses:each(action: local Function(String is e){
-				Conditional:if(check: { e == name }, then: {
+				if({ e == name }, {
 					isExempt: true;
 				});
 			});
-			Conditional:if(check: { isExempt }, then: {
+			if({ isExempt }, {
 				return;
 			});
-			Conditional:if(check: { !self:auditClasses:has(key: name) }, then: {
+			if({ !self:auditClasses:has(key: name) }, {
 				return;
 			});
-			Conditional:if(check: { self:auditOwnerImportsAs(name: name) }, then: {
+			if({ self:auditOwnerImportsAs(name: name) }, {
 				# Migrated: the owning class (or an ancestor) instance-imports
 				# this class (§2.1), so the prefix call is the
 				# new model.
 				return;
 			});
-		}, else: {
+		}, {
 			local Boolean is isAlias: false;
 			self:floorAliases:each(action: local Function(String is a){
-				Conditional:if(check: { a == name }, then: {
+				if({ a == name }, {
 					isAlias: true;
 				});
 			});
-			Conditional:if(check: { !isAlias }, then: {
+			if({ !isAlias }, {
 				return;
 			});
 		});
@@ -655,20 +655,20 @@ Class is Linter{
 	## @param hops: Recursion budget guard.
 	## @return: true when found on this class or an ancestor.
 	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Map of String to String is visited: Map:init()){
-		Conditional:if(check: { clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, then: {
+		if({ clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, {
 			return false;
 		});
 		visited:set(key: clsName, value: 'true');
 		local ClassInfo is cls: self:auditClassNodes:get(key: clsName, default: self:auditOwner);
-		Conditional:if(check: { cls:name != clsName }, then: {
+		if({ cls:name != clsName }, {
 			return false;
 		});
-		Conditional:if(check: { cls:instanceImportsAs(name: targetName) }, then: {
+		if({ cls:instanceImportsAs(name: targetName) }, {
 			return true;
 		});
 		local Boolean is viaParent: false;
 		cls:baseClasses:each(action: local Function(String is baseName){
-			Conditional:if(check: { !viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, then: {
+			if({ !viaParent && self:auditImportsAsAnywhere(clsName: baseName, targetName: targetName, visited: visited) }, {
 				viaParent: true;
 			});
 		});
@@ -684,7 +684,7 @@ Class is Linter{
 	## @param name: Identifier to classify.
 	## @return: true when the name is UpperCamel.
 	Function of Boolean is isUpperName(String is name){
-		Conditional:if(check: { name:length() == 0 }, then: {
+		if({ name:length() == 0 }, {
 			return false;
 		});
 		local String is first: name:charAt(index: 0, default: '');

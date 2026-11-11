@@ -149,29 +149,29 @@ Class is Lexer{
 	## @return: The next Token.
 	Function of Token is nextToken(){
 		self:skipWhitespaceAndComments();
-		Conditional:if(check: { self:pos >= self:length }, then: {
+		if({ self:pos >= self:length }, {
 			return Token:init(kind: TokenKind:EOF, value: '', line: self:line, col: self:col);
 		});
 
 		local String is ch: self:source:charAt(index: self:pos, default: '');
-		Conditional:if(check: { ch == '"' || ch == '\'' }, then: {
+		if({ ch == '"' || ch == '\'' }, {
 			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
-			Conditional:if(check: { triple == "'''" }, then: {
+			if({ triple == "'''" }, {
 				return self:readTriple(quote: "'''", kind: TokenKind:RAWSTRING);
 			});
 			return self:readString(quote: ch);
 		});
-		Conditional:if(check: { ch == '`' }, then: {
+		if({ ch == '`' }, {
 			local String is triple: self:source:substring(start: self:pos, end: self:pos + 3);
-			Conditional:if(check: { triple == "```" }, then: {
+			if({ triple == "```" }, {
 				return self:readTriple(quote: "```", kind: TokenKind:TEMPLATESTRING);
 			});
 			return self:readSymbol();
 		});
-		Conditional:if(check: { ch:isDigit() }, then: {
+		if({ ch:isDigit() }, {
 			return self:readNumber();
 		});
-		Conditional:if(check: { self:isIdentifierStart(ch: ch) }, then: {
+		if({ self:isIdentifierStart(ch: ch) }, {
 			return self:readIdentifierOrKeyword();
 		});
 		return self:readSymbol();
@@ -184,12 +184,12 @@ Class is Lexer{
 	Function of Int is digitValue(String is ch){
 		local String is lower: '0123456789abcdef';
 		local Int is d: lower:indexOf(search: ch, default: -1);
-		Conditional:if(check: { d >= 0 }, then: {
+		if({ d >= 0 }, {
 			return d;
 		});
 		local String is upper: 'ABCDEF';
 		local Int is u: upper:indexOf(search: ch, default: -1);
-		Conditional:if(check: { u >= 0 }, then: {
+		if({ u >= 0 }, {
 			return u + 10;
 		});
 		return -1;
@@ -200,12 +200,12 @@ Class is Lexer{
 	## @return: The consumed character ('' at end of source).
 	Function of String is advance(){
 		local Int is b: Buf:bufGetByte(b: self:source, idx: self:pos, def: -1);
-		Conditional:if(check: { b < 0 }, then: { return ''; });
+		if({ b < 0 }, { return ''; });
 		self:pos: self:pos + 1;
-		Conditional:if(check: { b == 10 }, then: {
+		if({ b == 10 }, {
 			self:line: self:line + 1;
 			self:col: 1;
-		}, else: {
+		}, {
 			self:col: self:col + 1;
 		});
 		return String:fromCharCode(code: b);
@@ -324,13 +324,13 @@ Class is Lexer{
 
 		local String is ch: self:source:charAt(index: self:pos, default: '');
 		local String is nextCh: self:source:charAt(index: self:pos + 1, default: '');
-		Conditional:if(check: { ch == '0' && nextCh != '' && nextCh != '.' && !nextCh:isDigit() }, then: {
-			Conditional:if(check: { nextCh == 'x' || nextCh == 'X' || nextCh == 'b' || nextCh == 'B' || nextCh == 'o' || nextCh == 'O' }, then: {
+		if({ ch == '0' && nextCh != '' && nextCh != '.' && !nextCh:isDigit() }, {
+			if({ nextCh == 'x' || nextCh == 'X' || nextCh == 'b' || nextCh == 'B' || nextCh == 'o' || nextCh == 'O' }, {
 				local Int is base: 16;
-				Conditional:if(check: { nextCh == 'b' || nextCh == 'B' }, then: {
+				if({ nextCh == 'b' || nextCh == 'B' }, {
 					base: 2;
 				});
-				Conditional:if(check: { nextCh == 'o' || nextCh == 'O' }, then: {
+				if({ nextCh == 'o' || nextCh == 'O' }, {
 					base: 8;
 				});
 				self:advance();
@@ -525,7 +525,7 @@ Class is Lexer{
 		local String is pair: ch . nextCh;
 
 		local Operator is op: Operator:of(pair);
-		Conditional:if(check: { op != Operator:NONE }, then: {
+		if({ op != Operator:NONE }, {
 			self:advance();
 			local Token is t: Token:init(kind: TokenKind:SYMBOL, value: Buf:intern(s: pair), line: startLine, col: startCol);
 			t:setOperator(op: op);

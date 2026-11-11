@@ -63,14 +63,14 @@ Class is Driver{
 
 	replace Function is init(Map of String to String is args){
 		local String is inputPath: args:getString(key: 'i', default: '');
-		Conditional:if(check: { inputPath == '' }, then: {
+		if({ inputPath == '' }, {
 			inputPath: args:getString(key: 'input', default: '');
 		});
-		Conditional:if(check: { inputPath == '' }, then: {
+		if({ inputPath == '' }, {
 			inputPath: args:getString(key: 'lint', default: '');
 		});
 		local String is outputPath: args:getString(key: 'o', default: '');
-		Conditional:if(check: { outputPath == '' }, then: {
+		if({ outputPath == '' }, {
 			outputPath: args:getString(key: 'output', default: '');
 		});
 		local Boolean is lintMode: args:has(key: 'lint');
@@ -78,23 +78,23 @@ Class is Driver{
 		local Boolean is debugMode: args:has(key: 'debug');
 		local Boolean is quiet: args:has(key: 'quiet');
 		local String is threadsStr: args:getString(key: 'threads', default: '');
-		Conditional:if(check: { threadsStr == '' }, then: {
+		if({ threadsStr == '' }, {
 			threadsStr: args:getString(key: 'j', default: '');
 		});
 		local Int is threadCount: 2;
-		Conditional:if(check: { threadsStr != '' }, then: {
+		if({ threadsStr != '' }, {
 			threadCount: threadsStr:parseInt(base: 10, default: 2);
-			Conditional:if(check: { threadCount < 1 }, then: {
+			if({ threadCount < 1 }, {
 				threadCount: 1;
 			});
 		});
-		Conditional:if(check: { inputPath == '' }, then: {
+		if({ inputPath == '' }, {
 			Output:line('Spec Compiler (Pure Spec)');
 			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--debug] [--quiet]');
 			Process:exit(status: 2);
 		});
 
-		Conditional:if(check: { !fileExists(path: inputPath) }, then: {
+		if({ !fileExists(path: inputPath) }, {
 			Stderr:line('Error: Source file not found: ' . inputPath);
 			Process:exit(status: 1);
 		});
@@ -110,13 +110,13 @@ Class is Driver{
 		local CompilationReport is report: CompilationReport:init(quiet: quiet);
 
 		# 1. Lint mode: scan, parse, report standards issues; no emission.
-		Conditional:if(check: { lintMode }, then: {
+		if({ lintMode }, {
 			local Lexer is lexer: Lexer:init(source: source);
 			local Parser is parser: Parser:init(tokens: []);
 			parser:setLexer(lexer: lexer);
 			parser:setSourceFile(file: inputPath);
 			local ProgramNode is lintProgram: parser:parseProgram();
-			Conditional:if(check: { lexer:hasErrors() }, then: {
+			if({ lexer:hasErrors() }, {
 				Stderr:line('Lexical errors encountered during linting:');
 				local Array of Error is lexErrors: lexer:getErrors();
 				lexErrors:each(action: local Function(Error is err){
@@ -124,7 +124,7 @@ Class is Driver{
 				});
 				Process:exit(status: 1);
 			});
-			Conditional:if(check: { parser:hasErrors() }, then: {
+			if({ parser:hasErrors() }, {
 				Stderr:line('Syntax errors encountered during linting:');
 				local Array of Error is parseErrs: parser:getErrors();
 				parseErrs:each(action: local Function(Error is err){
@@ -140,11 +140,11 @@ Class is Driver{
 		});
 
 		local String is emitCPath: args:getString(key: 'c', default: '');
-		Conditional:if(check: { emitCPath == '' }, then: {
+		if({ emitCPath == '' }, {
 			emitCPath: args:getString(key: 'emit-c', default: '');
 		});
 
-		Conditional:if(check: { !auditMode && outputPath == '' && emitCPath == '' }, then: {
+		if({ !auditMode && outputPath == '' && emitCPath == '' }, {
 			Stderr:line('Error: Missing output binary path (-o <output_binary>)');
 			Process:exit(status: 2);
 		});
@@ -159,13 +159,13 @@ Class is Driver{
 		local Int is methodCount: 0;
 		program:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is m){
-				Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
+				if({ m:kind == MemberKind:METHOD }, {
 					methodCount: methodCount + 1;
 				});
 			});
 		});
 		report:stage(n: 1, total: 4, label: 'loading packages · ' . (loader:loadedFileCount() as String) . ' files, ' . (classCount as String) . ' classes · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-		Conditional:if(check: { loader:getParseErrors():length() > 0 }, then: {
+		if({ loader:getParseErrors():length() > 0 }, {
 			Stderr:line('Compilation errors encountered during loading:');
 			local Array of String is loadErrors: loader:getParseErrors();
 			loadErrors:each(action: local Function(String is err){
@@ -179,7 +179,7 @@ Class is Driver{
 		# 2.5 Instance-model worklist audit (Phase 0.5): with the
 		# full program loaded, report class-name-receiver call sites. Purely
 		# informational; always exits 0.
-		Conditional:if(check: { auditMode }, then: {
+		if({ auditMode }, {
 			local Linter is auditor: Linter:init();
 			local Array of LintIssue is auditIssues: auditor:auditProgram(program: program);
 			auditor:auditReport(filePath: inputPath, issues: auditIssues);
@@ -194,7 +194,7 @@ Class is Driver{
 		local Int is errCount: typeErrors:length();
 		tc:cleanup();
 		report:stage(n: 2, total: 4, label: 'type checking · ' . (errCount as String) . ' errors · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
-		Conditional:if(check: { errCount > 0 }, then: {
+		if({ errCount > 0 }, {
 			Stderr:line('Type errors encountered during compilation:');
 			typeErrors:each(action: local Function(TypeError is err){
 				Stderr:line(err:toString());
@@ -209,28 +209,28 @@ Class is Driver{
 		# select a lattice class and emit a main that constructs Any.
 		# The parser stamps every loaded class with its declaring file,
 		# and the root file is this compile's input path.
-		Conditional:if(check: { classCount == 0 }, then: {
+		if({ classCount == 0 }, {
 			Stderr:line('Error: No class definitions found in source file.');
 			Process:exit(status: 1);
 		});
 		local Array of ClassInfo is rootClasses: [];
 		program:classes:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { c:sourceFile == inputPath }, then: {
+			if({ c:sourceFile == inputPath }, {
 				rootClasses:add(item: c);
 			});
 		});
-		Conditional:if(check: { rootClasses:length() == 0 }, then: {
+		if({ rootClasses:length() == 0 }, {
 			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
 			Process:exit(status: 1);
 		});
 		local String is entryName: '';
 		local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
 		rootClasses:each(action: local Function(ClassInfo is c){
-			Conditional:if(check: { entryName == '' }, then: {
+			if({ entryName == '' }, {
 				c:members:each(action: local Function(Member is m){
-					Conditional:if(check: { entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, then: {
+					if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
 						local Parameter is p: m:params:get(index: 0);
-						Conditional:if(check: { p:paramType:name == 'Map' }, then: {
+						if({ p:paramType:name == 'Map' }, {
 							entryName: c:name;
 							entryClassInfo: c;
 						});
@@ -238,15 +238,15 @@ Class is Driver{
 				});
 			});
 		});
-		Conditional:if(check: { entryName == '' }, then: {
+		if({ entryName == '' }, {
 			rootClasses:each(action: local Function(ClassInfo is c){
-				Conditional:if(check: { entryName == '' && c:baseClass != 'Enum' }, then: {
+				if({ entryName == '' && c:baseClass != 'Enum' }, {
 					entryName: c:name;
 					entryClassInfo: c;
 				});
 			});
 		});
-		Conditional:if(check: { entryName == '' }, then: {
+		if({ entryName == '' }, {
 			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
 			Process:exit(status: 1);
 		});
@@ -265,15 +265,15 @@ Class is Driver{
 		self:entryInitSawAny: false;
 		local Array of String is latticeVisited: [];
 		self:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
-		Conditional:if(check: { self:entryInitOwner == '' && self:entryInitSawAny }, then: {
+		if({ self:entryInitOwner == '' && self:entryInitSawAny }, {
 			Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
 			Process:exit(status: 1);
 		});
 
 		local String is tempCPath: emitCPath;
-		Conditional:if(check: { tempCPath == '' }, then: {
+		if({ tempCPath == '' }, {
 			tempCPath: fileTemp(template: '/tmp/_spec_stage_XXXXXX.c');
-			Conditional:if(check: { tempCPath == '' }, then: {
+			if({ tempCPath == '' }, {
 				tempCPath: '/tmp/_spec_stage_' . (Process:getPid() as String) . '.c';
 			});
 		});
@@ -293,13 +293,13 @@ Class is Driver{
 		local Int is genT0: Process:clockMs();
 		local Int is cLines: cg:generateProgramToFile(program: program, entryClass: entryName, filePath: tempCPath);
 		genMs: Process:clockMs() - genT0;
-		Conditional:if(check: { cLines < 0 }, then: {
+		if({ cLines < 0 }, {
 			Stderr:line('Error: Failed to write intermediate C code to ' . tempCPath);
 			Process:exit(status: 1);
 		});
 		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
-		Conditional:if(check: { outputPath == '' }, then: {
+		if({ outputPath == '' }, {
 			Process:monitorStop();
 			report:summary(inputPath: inputPath, outputPath: emitCPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
 			return;
@@ -307,7 +307,7 @@ Class is Driver{
 
 		# 6. GCC backend compile.
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
-		Conditional:if(check: { debugMode }, then: {
+		if({ debugMode }, {
 			# Debug info rides full optimization: -g costs nothing, and the
 			# volatile-locals emission already keeps values inspectable.
 			gccArgs:add(item: '-g');
@@ -315,10 +315,10 @@ Class is Driver{
 		local Int is ccT0: Process:clockMs();
 		local Int is gccStatus: Process:execute(command: 'gcc', args: gccArgs);
 		ccMs: Process:clockMs() - ccT0;
-		Conditional:if(check: { emitCPath == '' }, then: {
+		if({ emitCPath == '' }, {
 			fileRemove(path: tempCPath);
 		});
-		Conditional:if(check: { gccStatus != 0 }, then: {
+		if({ gccStatus != 0 }, {
 			Process:monitorStop();
 			Stderr:line('Error: Backend C compiler (gcc) failed with exit status ' . (gccStatus as String));
 			Process:exit(status: 1);
@@ -345,29 +345,29 @@ Class is Driver{
 	## @param all: The full loaded class set (lattice preloads included).
 	## @param visited: Names already probed on this walk.
 	Function is resolveEntryInit(ClassInfo is c, Array of ClassInfo is all, Array of String is visited){
-		Conditional:if(check: { visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitTakesMap }, then: {
+		if({ visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitTakesMap }, {
 			return;
 		});
 		visited:add(item: c:name);
 		local Int is initSeen: 0;
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:name == 'init' && m:kind == MemberKind:METHOD }, then: {
+			if({ m:name == 'init' && m:kind == MemberKind:METHOD }, {
 				self:entryInitSawAny: true;
 				local Int is arity: m:params:length();
 				local String is first: '';
-				Conditional:if(check: { arity == 1 }, then: {
+				if({ arity == 1 }, {
 					local Parameter is p: m:params:get(index: 0);
 					first: p:paramType:name;
 				});
-				Conditional:if(check: { arity == 1 && first == 'Map' && !self:entryInitTakesMap }, then: {
+				if({ arity == 1 && first == 'Map' && !self:entryInitTakesMap }, {
 					# The argv-capable form: overrides any empty choice.
 					self:entryInitOwner: c:qualifiedName();
 					self:entryInitParams: arity;
 					self:entryInitFirstParam: first;
 					self:entryInitOverloadIndex: initSeen;
 					self:entryInitTakesMap: true;
-				}, else: {
-					Conditional:if(check: { arity == 0 && self:entryInitOwner == '' }, then: {
+				}, {
+					if({ arity == 0 && self:entryInitOwner == '' }, {
 						# Empty fallback: provisional until an argv-capable
 						# init appears further along the lattice.
 						self:entryInitOwner: c:qualifiedName();
@@ -384,10 +384,10 @@ Class is Driver{
 				initSeen: initSeen + 1;
 			});
 		});
-		Conditional:if(check: { !self:entryInitTakesMap }, then: {
+		if({ !self:entryInitTakesMap }, {
 			c:baseClasses:each(action: local Function(String is baseName){
 				all:each(action: local Function(ClassInfo is cand){
-					Conditional:if(check: { !self:entryInitTakesMap && cand:name == baseName }, then: {
+					if({ !self:entryInitTakesMap && cand:name == baseName }, {
 						self:resolveEntryInit(c: cand, all: all, visited: visited);
 					});
 				});

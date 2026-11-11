@@ -40,11 +40,11 @@ Class is EnumDesugar{
 	Function of ClassInfo is desugar(ClassInfo is c, String is backingType){
 		local Boolean is isTagged: false;
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:params:length() > 0 }, then: {
+			if({ m:params:length() > 0 }, {
 				isTagged: true;
 			});
 		});
-		Conditional:if(check: { isTagged }, then: {
+		if({ isTagged }, {
 			return self:desugarTagged(c: c);
 		});
 		return self:desugarValue(c: c, backingType: backingType);
@@ -60,9 +60,9 @@ Class is EnumDesugar{
 		local Array of Member is out: [];
 		local Array of Member is variants: [];
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, then: {
+			if({ m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, {
 				out:add(item: m);
-			}, else: {
+			}, {
 				variants:add(item: m);
 			});
 		});
@@ -156,9 +156,9 @@ Class is EnumDesugar{
 		# Loader directives (array-valued members) stay plain members;
 		# variants collect for the held rewrite.
 		c:members:each(action: local Function(Member is m){
-			Conditional:if(check: { m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, then: {
+			if({ m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, {
 				out:add(item: m);
-			}, else: {
+			}, {
 				variants:add(item: m);
 			});
 		});
@@ -293,7 +293,7 @@ Class is EnumDesugar{
 		return body;
 	}
 
-	## Builds `Conditional:if(check: { <cond> }, then: { return <val>; });`
+	## Builds `if({ <cond> }, { return <val>; });`
 	## as an expression statement.
 	Function of Statement is guardIf(Expression is cond, Expression is val){
 		local Expression is call: Expression:init(kind: ExpressionKind:CALL);

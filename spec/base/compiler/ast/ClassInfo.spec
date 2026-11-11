@@ -49,7 +49,7 @@ Class is ClassInfo{
 	replace Function is init(String is name, String is baseClass, Array of Member is members){
 		self:name: name;
 		self:baseClass: baseClass;
-		self:baseClasses: Conditional:if(check: { baseClass != '' }, then: { [baseClass] }, else: { [] });
+		self:baseClasses: if({ baseClass != '' }, { [baseClass] }, { [] });
 		self:members: members;
 	}
 
@@ -68,11 +68,11 @@ Class is ClassInfo{
 	Function of Boolean is instanceImportsAs(String is name){
 		local Boolean is found: false;
 		self:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+			if({ !found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
 				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					Conditional:if(check: { item:kind == ExpressionKind:ARRAY }, then: {
+					if({ item:kind == ExpressionKind:ARRAY }, {
 						item:arrayItems:each(action: local Function(Expression is seg){
-							Conditional:if(check: { seg:kind == ExpressionKind:USING_AS && seg:str == name }, then: {
+							if({ seg:kind == ExpressionKind:USING_AS && seg:str == name }, {
 								found: true;
 							});
 						});
@@ -149,7 +149,7 @@ Class is ClassInfo{
 	Function of Boolean is declaresMember(Member is member){
 		local Boolean is found: false;
 		self:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !found && m == member }, then: {
+			if({ !found && m == member }, {
 				found: true;
 			});
 		});
@@ -162,7 +162,7 @@ Class is ClassInfo{
 	##
 	## @return: The qualified class name.
 	Function of String is qualifiedName(){
-		Conditional:if(check: { self:outerName != '' }, then: {
+		if({ self:outerName != '' }, {
 			return self:outerName . ':' . self:name;
 		});
 		return self:name;
@@ -175,7 +175,7 @@ Class is ClassInfo{
 	Function is withBaseClasses(String is name, Array of String is baseClasses, Array of Member is members){
 		self:name: name;
 		self:baseClasses: baseClasses;
-		self:baseClass: Conditional:if(check: { baseClasses:length() > 0 }, then: { baseClasses:get(index: 0) }, else: { '' });
+		self:baseClass: if({ baseClasses:length() > 0 }, { baseClasses:get(index: 0) }, { '' });
 		self:members: members;
 	}
 
