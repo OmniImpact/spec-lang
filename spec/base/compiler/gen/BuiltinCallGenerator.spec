@@ -42,57 +42,57 @@ Class is BuiltinCallGenerator{
 		local ClassInfo is fCls: cg:findClass(name: clsName);
 		# clsName may be qualified ('base:sysinternal:Buf'); the lookup
 		# already resolved it — only absence (empty name) is a miss.
-		Conditional:if(check: { fCls:name == '' }, then: {
+		if({ fCls:name == '' }, {
 			return '';
 		});
 		local Member is foundM;
 		local Boolean is hasM: false;
 		fCls:members:each(action: local Function(Member is m){
-			Conditional:if(check: { !hasM && m:kind == MemberKind:METHOD && m:name == expr:methodName }, then: {
+			if({ !hasM && m:kind == MemberKind:METHOD && m:name == expr:methodName }, {
 				hasM: true;
 				foundM: m;
 			});
 		});
-		Conditional:if(check: { !hasM }, then: {
+		if({ !hasM }, {
 			return '';
 		});
 		local Array of String is argList: [];
 		local Boolean is argsOk: true;
 		local Int is posIdx: 0;
 		foundM:params:each(action: local Function(Parameter is p){
-			Conditional:if(check: { argsOk }, then: {
+			if({ argsOk }, {
 				local Boolean is got: false;
 				local Expression is posArg: expr:argValue(index: posIdx);
-				Conditional:if(check: { posIdx < expr:argCount() && expr:argName(index: posIdx) == '' }, then: {
+				if({ posIdx < expr:argCount() && expr:argName(index: posIdx) == '' }, {
 					argList:add(item: cg:generateExpression(expr: posArg));
 					posIdx: posIdx + 1;
 					got: true;
 				});
-				Conditional:if(check: { !got }, then: {
+				if({ !got }, {
 					expr:methodArgs:each(action: local Function(NamedArg is a){
-						Conditional:if(check: { !got && a:name == p:name }, then: {
+						if({ !got && a:name == p:name }, {
 							got: true;
 							argList:add(item: cg:generateExpression(expr: a:value));
 						});
 					});
 				});
-				Conditional:if(check: { !got && p:hasDefault }, then: {
+				if({ !got && p:hasDefault }, {
 					got: true;
 					argList:add(item: cg:generateExpression(expr: p:defaultExpr));
 				});
-				Conditional:if(check: { !got }, then: {
+				if({ !got }, {
 					argsOk: false;
 				});
 			});
 		});
-		Conditional:if(check: { !argsOk }, then: {
+		if({ !argsOk }, {
 			return '';
 		});
 		local String is argCs: '';
 		argList:each(action: local Function(String is a){
-			Conditional:if(check: { argCs == '' }, then: {
+			if({ argCs == '' }, {
 				argCs: a;
-			}, else: {
+			}, {
 				argCs: argCs . ', ' . a;
 			});
 		});
@@ -121,7 +121,7 @@ Class is BuiltinCallGenerator{
 	## @param cg: The code generator.
 	## @return: true when the first argument is Int.
 	Function of Boolean is absArgIsInt(Expression is expr, CodeGenerator is cg){
-		Conditional:if(check: { expr:argCount() == 0 }, then: {
+		if({ expr:argCount() == 0 }, {
 			return false;
 		});
 		local Expression is a0: expr:argValue(index: 0);
@@ -137,23 +137,23 @@ Class is BuiltinCallGenerator{
 		# qualified floor chain (the base:sys wrapper delegates by chain;
 		# user code hits the bare interception first).
 		local Boolean is isReflTarget: targetC == 'Reflection';
-		Conditional:if(check: { !isReflTarget && expr:methodTarget:kind == ExpressionKind:PATH }, then: {
+		if({ !isReflTarget && expr:methodTarget:kind == ExpressionKind:PATH }, {
 			local String is rJoined: '';
 			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
-				Conditional:if(check: { rJoined == '' }, then: {
+				if({ rJoined == '' }, {
 					rJoined: seg;
-				}, else: {
+				}, {
 					rJoined: rJoined . ':' . seg;
 				});
 			});
-			Conditional:if(check: { rJoined:endsWith(suffix: ':sysinternal:Reflection') }, then: {
+			if({ rJoined:endsWith(suffix: ':sysinternal:Reflection') }, {
 				isReflTarget: true;
 			});
 		});
-		Conditional:if(check: { isReflTarget && expr:methodName == 'class' && expr:argCount() == 0 }, then: {
+		if({ isReflTarget && expr:methodName == 'class' && expr:argCount() == 0 }, {
 			return 'spec_string_intern("' . cg:currentClassName . '")';
 		});
-		Conditional:if(check: { isReflTarget && expr:methodName == 'method' && expr:argCount() == 0 }, then: {
+		if({ isReflTarget && expr:methodName == 'method' && expr:argCount() == 0 }, {
 			return 'spec_string_intern("' . cg:currentMethodName . '")';
 		});
 
@@ -161,11 +161,11 @@ Class is BuiltinCallGenerator{
 		# namespace ends with `sysinternal` compiles to spec_<snake(method)>.
 		local String is floorCls: '';
 		local ClassInfo is tc: cg:findClass(name: targetC);
-		Conditional:if(check: { targetC != '' && tc:name == targetC && cg:isSysinternalClass(name: targetC) }, then: {
+		if({ targetC != '' && tc:name == targetC && cg:isSysinternalClass(name: targetC) }, {
 			floorCls: targetC;
-		}, else: {
+		}, {
 			local String is qCls: '';
-			Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:PATH }, then: {
+			if({ expr:methodTarget:kind == ExpressionKind:PATH }, {
 				local Array of String is qSegs: expr:methodTarget:pathSegments;
 				qCls: qSegs:get(index: qSegs:length() - 1);
 				# Qualified chains ('base:sysinternal:Buf') resolve by full
@@ -173,54 +173,54 @@ Class is BuiltinCallGenerator{
 				# same-name base:sys wrapper.
 				local String is qJoined: '';
 				qSegs:each(action: local Function(String is seg){
-					Conditional:if(check: { qJoined == '' }, then: {
+					if({ qJoined == '' }, {
 						qJoined: seg;
-					}, else: {
+					}, {
 						qJoined: qJoined . ':' . seg;
 					});
 				});
-				Conditional:if(check: { qJoined:contains(needle: ':sysinternal:') }, then: {
+				if({ qJoined:contains(needle: ':sysinternal:') }, {
 					qCls: qJoined;
 				});
-			}, else: {
-				Conditional:if(check: { expr:methodTarget:kind == ExpressionKind:CALL }, then: {
+			}, {
+				if({ expr:methodTarget:kind == ExpressionKind:CALL }, {
 					local Expression is qInner: expr:methodTarget;
-					Conditional:if(check: { qInner:methodTarget:kind == ExpressionKind:PATH }, then: {
+					if({ qInner:methodTarget:kind == ExpressionKind:PATH }, {
 						qCls: qInner:methodName;
 					});
 				});
 			});
 			local ClassInfo is qc: cg:findClass(name: qCls);
-			Conditional:if(check: { qCls != '' && qc:name != '' && (qc:name == qCls || (qc:namespaceJoined() . ':' . qc:name) == qCls) && cg:isSysinternalClass(name: qCls) }, then: {
+			if({ qCls != '' && qc:name != '' && (qc:name == qCls || (qc:namespaceJoined() . ':' . qc:name) == qCls) && cg:isSysinternalClass(name: qCls) }, {
 				floorCls: qCls;
 			});
 		});
-		Conditional:if(check: { floorCls != '' }, then: {
+		if({ floorCls != '' }, {
 			local String is bound: self:bindFloorCall(clsName: floorCls, expr: expr, cg: cg);
-			Conditional:if(check: { bound != '' }, then: {
+			if({ bound != '' }, {
 				return bound;
 			});
 		});
 
 		# String:newline() — the newline constant.
-		Conditional:if(check: { targetC == 'String' && expr:methodName == 'newline' && expr:argCount() == 0 }, then: {
+		if({ targetC == 'String' && expr:methodName == 'newline' && expr:argCount() == 0 }, {
 			return 'spec_string_intern("\\n")';
 		});
 
 		# Type name introspection on class instances.
-		Conditional:if(check: { expr:methodName == 'typeName' && targetType != '' && !self:policy:isTransparent(c: cg:findClass(name: targetType)) }, then: {
+		if({ expr:methodName == 'typeName' && targetType != '' && !self:policy:isTransparent(c: cg:findClass(name: targetType)) }, {
 			return 'spec_type_name(' . targetC . ')';
 		});
 
 		# Int toBase conversion.
-		Conditional:if(check: { expr:methodName == 'toBase' && (targetType == Primitive:INT:value()) }, then: {
+		if({ expr:methodName == 'toBase' && (targetType == Primitive:INT:value()) }, {
 			local String is baseC: '10';
 			local String is digitsC: '0';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:if(check: { arg:name == 'base' }, then: {
+				if({ arg:name == 'base' }, {
  baseC: cg:generateExpression(expr: arg:value);
 				});
-				Conditional:if(check: { arg:name == 'digits' }, then: {
+				if({ arg:name == 'digits' }, {
  digitsC: cg:generateExpression(expr: arg:value);
 				});
 			});
@@ -228,18 +228,18 @@ Class is BuiltinCallGenerator{
 		});
 
 		# Parallel fan-out execution.
-		Conditional:if(check: { targetC == 'Parallel' && expr:methodName == 'run' && expr:argCount() >= 3 }, then: {
+		if({ targetC == 'Parallel' && expr:methodName == 'run' && expr:argCount() >= 3 }, {
 			local String is threadsC: '1';
 			local String is iterC: '0';
 			local String is workerC: 'NULL';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:if(check: { arg:name == 'threads' }, then: {
+				if({ arg:name == 'threads' }, {
  threadsC: cg:generateExpression(expr: arg:value);
 				});
-				Conditional:if(check: { arg:name == 'iterations' }, then: {
+				if({ arg:name == 'iterations' }, {
  iterC: cg:generateExpression(expr: arg:value);
 				});
-				Conditional:if(check: { arg:name == 'worker' }, then: {
+				if({ arg:name == 'worker' }, {
  workerC: cg:generateExpression(expr: arg:value);
 				});
 			});
@@ -247,7 +247,7 @@ Class is BuiltinCallGenerator{
 		});
 
 		# String:fromCharCode.
-		Conditional:if(check: { targetC == 'String' && expr:methodName == 'fromCharCode' && expr:argCount() > 0 }, then: {
+		if({ targetC == 'String' && expr:methodName == 'fromCharCode' && expr:argCount() > 0 }, {
 			local Expression is codeArg: self:argValue(expr: expr, index: 0);
 			local String is codeC: cg:generateExpression(expr: codeArg);
 			return 'spec_string_from_char_code(' . codeC . ')';
@@ -255,66 +255,66 @@ Class is BuiltinCallGenerator{
 
 		# The loop runners — While (the legacy spelling, bridged) and
 		# Loops (§the control-flow provider).
-		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, then: {
+		if({ (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, {
 			local Expression is loopVal: self:argValue(expr: expr, index: 0);
 			local String is loopC: cg:generateExpressionInner(expr: loopVal);
 			local String is loopClass: cg:inferTargetType(expr: loopVal);
-			Conditional:if(check: { loopClass == '' && loopVal:kind == ExpressionKind:CALL }, then: {
+			if({ loopClass == '' && loopVal:kind == ExpressionKind:CALL }, {
 				local Expression is mt: loopVal:methodTarget;
 				loopClass: cg:generateExpression(expr: mt);
 			});
 			# the loop-class symbol qualifies for
 			# nested classes — resolve the class and derive the qualified base.
 			local ClassInfo is loopCls: cg:findClass(name: loopClass);
-			Conditional:if(check: { loopCls:name != '' }, then: {
+			if({ loopCls:name != '' }, {
 				loopClass: cg:utils:cIdent(name: loopCls:qualifiedName());
 			});
 			local String is ctrlC: 'NULL';
-			Conditional:if(check: { expr:argCount() > 1 }, then: {
+			if({ expr:argCount() > 1 }, {
 				local Expression is ctrlArg: self:argValue(expr: expr, index: 1);
 				ctrlC: cg:generateExpression(expr: ctrlArg);
 			});
 			local String is freeLoopC: '';
-			Conditional:if(check: { loopVal:kind == ExpressionKind:CALL && loopVal:methodName == 'init' }, then: {
+			if({ loopVal:kind == ExpressionKind:CALL && loopVal:methodName == 'init' }, {
 				freeLoopC: ' spec_release(_lp);';
 			});
 			# The protocol inline needs the loop's static class for the
 			# direct evaluate/iteration calls; an unresolved receiver (a
 			# Loop held as Any) falls through to the runtime run body.
-			Conditional:if(check: { loopClass != '' }, then: {
+			if({ loopClass != '' }, {
 				return '({ void* _lp = (void*)(' . loopC . '); SpecLoopControl* _ctrl = (SpecLoopControl*)(' . ctrlC . '); while (' . loopClass . '_evaluate((void*)_lp)) { if (!' . loopClass . '_iteration((void*)_lp, _ctrl) || (_ctrl && _ctrl->stopped)) break; } if (_ctrl && _ctrl->on_complete) { _ctrl->on_complete(_ctrl->callback, _ctrl); }' . freeLoopC . ' })';
 			});
 		});
 		# Loops:repeat(count:, worker:) — the counting loop, inlined.
-		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'repeat' && expr:argCount() == 2 }, then: {
+		if({ (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'repeat' && expr:argCount() == 2 }, {
 			local Expression is repCountExpr;
 			local Expression is repWorkerExpr;
 			local Boolean is repHasCount: false;
 			local Boolean is repHasWorker: false;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:if(check: { arg:name == 'count' }, then: {
+				if({ arg:name == 'count' }, {
 					repCountExpr: arg:value;
 					repHasCount: true;
-				}, else: {
-					Conditional:if(check: { arg:name == 'worker' }, then: {
+				}, {
+					if({ arg:name == 'worker' }, {
 						repWorkerExpr: arg:value;
 						repHasWorker: true;
 					});
 				});
 			});
-			Conditional:if(check: { !repHasCount && expr:argCount() == 2 }, then: {
+			if({ !repHasCount && expr:argCount() == 2 }, {
 				repCountExpr: self:argValue(expr: expr, index: 0);
 				repHasCount: true;
 			});
-			Conditional:if(check: { !repHasWorker && expr:argCount() == 2 }, then: {
+			if({ !repHasWorker && expr:argCount() == 2 }, {
 				repWorkerExpr: self:argValue(expr: expr, index: 1);
 				repHasWorker: true;
 			});
-			Conditional:if(check: { repHasCount && repHasWorker && repWorkerExpr:kind == ExpressionKind:ANON_FN }, then: {
+			if({ repHasCount && repHasWorker && repWorkerExpr:kind == ExpressionKind:ANON_FN }, {
 				return cg:generateInlineRepeat(countExpr: repCountExpr, workerExpr: repWorkerExpr);
 			});
 		});
-		Conditional:if(check: { (targetC == 'Loops' || expr:bareProvider == 'Loops') && (expr:methodName == 'while' || expr:methodName == 'condition' || expr:methodName == 'until' || expr:methodName == 'loop' || expr:methodName == 'init') }, then: {
+		if({ (targetC == 'Loops' || expr:bareProvider == 'Loops') && (expr:methodName == 'while' || expr:methodName == 'condition' || expr:methodName == 'until' || expr:methodName == 'loop' || expr:methodName == 'init') }, {
 			local Expression is varsExpr;
 			local Expression is evalExpr;
 			local Expression is iterExpr;
@@ -322,54 +322,54 @@ Class is BuiltinCallGenerator{
 			local Boolean is hasEval: false;
 			local Boolean is hasIter: false;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:if(check: { arg:name == 'evaluate' }, then: {
+				if({ arg:name == 'evaluate' }, {
 					evalExpr: arg:value;
 					hasEval: true;
-				}, else: {
-					Conditional:if(check: { arg:name == 'iterate' || arg:name == 'iteration' }, then: {
+				}, {
+					if({ arg:name == 'iterate' || arg:name == 'iteration' }, {
 						iterExpr: arg:value;
 						hasIter: true;
-					}, else: {
-						Conditional:if(check: { arg:name == 'vars' || arg:name == 'state' }, then: {
+					}, {
+						if({ arg:name == 'vars' || arg:name == 'state' }, {
 							varsExpr: arg:value;
 							hasVars: true;
 						});
 					});
 				});
 			});
-			Conditional:if(check: { !hasEval }, then: {
-				Conditional:if(check: { expr:argCount() >= 3 }, then: {
+			if({ !hasEval }, {
+				if({ expr:argCount() >= 3 }, {
 					evalExpr: self:argValue(expr: expr, index: 1);
 					hasEval: true;
-				}, else: {
-					Conditional:if(check: { expr:argCount() >= 2 }, then: {
+				}, {
+					if({ expr:argCount() >= 2 }, {
 						evalExpr: self:argValue(expr: expr, index: 0);
 						hasEval: true;
 					});
 				});
 			});
-			Conditional:if(check: { !hasIter }, then: {
-				Conditional:if(check: { expr:argCount() >= 3 }, then: {
+			if({ !hasIter }, {
+				if({ expr:argCount() >= 3 }, {
 					iterExpr: self:argValue(expr: expr, index: 2);
 					hasIter: true;
-				}, else: {
-					Conditional:if(check: { expr:argCount() >= 2 }, then: {
+				}, {
+					if({ expr:argCount() >= 2 }, {
 						iterExpr: self:argValue(expr: expr, index: 1);
 						hasIter: true;
 					});
 				});
 			});
-			Conditional:if(check: { !hasVars && expr:argCount() >= 3 }, then: {
+			if({ !hasVars && expr:argCount() >= 3 }, {
 				varsExpr: self:argValue(expr: expr, index: 0);
 				hasVars: true;
 			});
-			Conditional:if(check: { hasEval && hasIter && evalExpr:kind == ExpressionKind:ANON_FN && iterExpr:kind == ExpressionKind:ANON_FN }, then: {
+			if({ hasEval && hasIter && evalExpr:kind == ExpressionKind:ANON_FN && iterExpr:kind == ExpressionKind:ANON_FN }, {
 				local Array of Parameter is loopVars: [];
-				Conditional:if(check: { hasVars && varsExpr:anonParams:length() > 0 }, then: {
+				if({ hasVars && varsExpr:anonParams:length() > 0 }, {
 					loopVars: varsExpr:anonParams;
 				});
 				# until is the do-while — the body runs once first.
-				Conditional:if(check: { expr:methodName == 'until' }, then: {
+				if({ expr:methodName == 'until' }, {
 					return cg:generateInlineUntil(evalExpr: evalExpr, iterExpr: iterExpr);
 				});
 				return cg:generateInlineWhileLoop(loopVars: loopVars, evalExpr: evalExpr, iterExpr: iterExpr);
@@ -378,48 +378,48 @@ Class is BuiltinCallGenerator{
 
 		# LoopControl methods: transparent runtime-managed objects — the
 		# constructor wires the optional completion callback directly.
-		Conditional:if(check: { targetC == 'LoopControl' && expr:methodName == 'init' }, then: {
-			Conditional:if(check: { expr:argCount() == 0 }, then: {
+		if({ targetC == 'LoopControl' && expr:methodName == 'init' }, {
+			if({ expr:argCount() == 0 }, {
 				return 'LoopControl_new()';
 			});
 			local NamedArg is cbArg: expr:methodArgs:get(index: 0);
 			local Expression is cbVal: cbArg:value;
 			local String is cbC: cg:generateExpression(expr: cbVal);
 			local String is cbClass: cg:inferTargetType(expr: cbVal);
-			Conditional:if(check: { cbClass == '' && cbVal:kind == ExpressionKind:CALL }, then: {
+			if({ cbClass == '' && cbVal:kind == ExpressionKind:CALL }, {
 				local Expression is mt: cbVal:methodTarget;
 				cbClass: cg:generateExpression(expr: mt);
 			});
 			# the callback-class symbol qualifies
 			# for nested classes.
 			local ClassInfo is cbCls: cg:findClass(name: cbClass);
-			Conditional:if(check: { cbCls:name != '' }, then: {
+			if({ cbCls:name != '' }, {
 				cbClass: cg:utils:cIdent(name: cbCls:qualifiedName());
 			});
 			return '({ SpecLoopControl* _c = LoopControl_new(); _c->callback = (void*)(' . cbC . '); _c->on_complete = (void (*)(void*, struct SpecLoopControl*))' . cbClass . '_onComplete; _c; })';
 		});
-		Conditional:if(check: { expr:methodName == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
+		if({ expr:methodName == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
 			return 'LoopControl_stop(' . targetC . ')';
 		});
 		# LoopControl:isStopped — the halt query the runtime run()
 		# composes from (the compile-time inlines read the C struct
 		# directly; the wrapper needs the public surface). Null-safe:
 		# an omitted control drives without a halt query.
-		Conditional:if(check: { expr:methodName == 'isStopped' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
+		if({ expr:methodName == 'isStopped' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
 			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); _lc ? (bool)_lc->stopped : false; })';
 		});
 		# LoopControl:complete — fires the completion callback the
 		# runtime run() owes after the loop ends (the inline protocol's
 		# on_complete tail). No callback registered: nothing fires.
-		Conditional:if(check: { expr:methodName == 'complete' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, then: {
+		if({ expr:methodName == 'complete' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
 			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); if (_lc && _lc->on_complete) { _lc->on_complete(_lc->callback, _lc); } })';
 		});
 
 		# Math functions.
-		Conditional:if(check: { targetC == 'Math' }, then: {
+		if({ targetC == 'Math' }, {
 			local String is m: expr:methodName;
 			local String is a0: '0.0';
-			Conditional:if(check: { expr:argCount() > 0 }, then: {
+			if({ expr:argCount() > 0 }, {
 				a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
 			});
 			# Single-operand functions: the match yields the C call; the
@@ -432,7 +432,7 @@ Class is BuiltinCallGenerator{
 					# §I.4: type-distinct overloads — the Int
 					# overload routes to the integer floor.
 					local String is absC: 'spec_math_abs(' . a0 . ')';
-					Conditional:if(check: { self:absArgIsInt(expr: expr, cg: cg) }, then: {
+					if({ self:absArgIsInt(expr: expr, cg: cg) }, {
 						absC: 'spec_math_abs_int(' . a0 . ')';
 					});
 					absC
@@ -446,50 +446,50 @@ Class is BuiltinCallGenerator{
 				'fastRandom': { 'spec_fast_random()' },
 				else: { '' }
 			]);
-			Conditional:if(check: { oneC != '' }, then: {
+			if({ oneC != '' }, {
 				return oneC;
 			});
 			# Two-operand functions: a + b, or named value/min/max.
 			local String is a1: '0.0';
-			Conditional:if(check: { expr:argCount() > 1 }, then: {
+			if({ expr:argCount() > 1 }, {
 				a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 			});
-			Conditional:if(check: { m == 'min' }, then: {
+			if({ m == 'min' }, {
 				return 'spec_math_min(' . a0 . ', ' . a1 . ')';
 			});
-			Conditional:if(check: { m == 'max' }, then: {
+			if({ m == 'max' }, {
 				return 'spec_math_max(' . a0 . ', ' . a1 . ')';
 			});
-			Conditional:if(check: { m == 'pow' }, then: {
+			if({ m == 'pow' }, {
 				return 'spec_math_pow(' . a0 . ', ' . a1 . ')';
 			});
-			Conditional:if(check: { m == 'atan2' }, then: {
+			if({ m == 'atan2' }, {
 				return 'spec_math_atan2(' . a0 . ', ' . a1 . ')';
 			});
-			Conditional:if(check: { m == 'random' }, then: {
+			if({ m == 'random' }, {
 				return 'spec_math_random(' . a0 . ', ' . a1 . ')';
 			});
-			Conditional:if(check: { m == 'clamp' }, then: {
+			if({ m == 'clamp' }, {
 				local String is vC: '0.0';
 				local String is loC: '0.0';
 				local String is hiC: '1.0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'value' }, then: {
+					if({ arg:name == 'value' }, {
  vC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'min' || arg:name == 'lo' }, then: {
+					if({ arg:name == 'min' || arg:name == 'lo' }, {
  loC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'max' || arg:name == 'hi' }, then: {
+					if({ arg:name == 'max' || arg:name == 'hi' }, {
  hiC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'spec_math_clamp(' . vC . ', ' . loC . ', ' . hiC . ')';
 			});
-			Conditional:if(check: { m == 'toInt' }, then: {
+			if({ m == 'toInt' }, {
 				return '((long long)(' . a0 . '))';
 			});
-			Conditional:if(check: { m == 'toFloat' }, then: {
+			if({ m == 'toFloat' }, {
 				return '((double)(' . a0 . '))';
 			});
 		});
@@ -506,25 +506,25 @@ Class is BuiltinCallGenerator{
 				expr:methodName == 'map' || expr:methodName == 'fold' ||
 				(expr:methodName == 'length' && targetType != 'String' && targetC != 'Map' && !targetType:startsWith(prefix: 'Map:'))
 			));
-		Conditional:if(check: { isArr }, then: {
+		if({ isArr }, {
 			local String is arrC: self:bindContainerCall(expr: expr, targetC: targetC, targetType: targetType, cg: cg);
-			Conditional:if(check: { arrC != '' }, then: {
+			if({ arrC != '' }, {
 				return arrC;
 			});
 		});
 
 		# Map literal-constructor + concrete getters + inline each.
-		Conditional:if(check: { targetC == 'Map' || targetType == 'Map' || targetType:startsWith(prefix: 'Map:') }, then: {
+		if({ targetC == 'Map' || targetType == 'Map' || targetType:startsWith(prefix: 'Map:') }, {
 			local String is mapC: self:bindMapCall(expr: expr, targetC: targetC, targetType: targetType, cg: cg);
-			Conditional:if(check: { mapC != '' }, then: {
+			if({ mapC != '' }, {
 				return mapC;
 			});
 		});
 
 		# String instance methods: direct dispatch to compiled bodies.
-		Conditional:if(check: { targetType == 'String' }, then: {
+		if({ targetType == 'String' }, {
 			local String is ddC: self:bindStringDirect(expr: expr, targetC: targetC, cg: cg);
-			Conditional:if(check: { ddC != '' }, then: {
+			if({ ddC != '' }, {
 				return ddC;
 			});
 		});
@@ -543,43 +543,43 @@ Class is BuiltinCallGenerator{
 	Function of String is bindContainerCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
 		local String is m: expr:methodName;
 		local String is a0: '';
-		Conditional:if(check: { expr:argCount() > 0 }, then: {
+		if({ expr:argCount() > 0 }, {
 			a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
 		});
 		local String is a1: '';
-		Conditional:if(check: { expr:argCount() > 1 }, then: {
+		if({ expr:argCount() > 1 }, {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		});
 		# Array methods (SpecArray*). Named-arg extraction.
-		Conditional:if(check: { targetType:startsWith(prefix: 'Array') }, then: {
-			Conditional:if(check: { m == 'get' }, then: {
+		if({ targetType:startsWith(prefix: 'Array') }, {
+			if({ m == 'get' }, {
 				local String is idxC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'spec_array_get(' . targetC . ', ' . idxC . ')';
 			});
-			Conditional:if(check: { m == 'set' }, then: {
+			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'item' || arg:name == 'value' }, then: {
+					if({ arg:name == 'item' || arg:name == 'value' }, {
  itemC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'spec_array_set(' . targetC . ', ' . idxC . ', (void*)(intptr_t)(' . itemC . '))';
 			});
-			Conditional:if(check: { m == 'add' }, then: {
+			if({ m == 'add' }, {
 				local String is itemC: 'NULL';
 				local Boolean is itemClaims: false;
-				Conditional:if(check: { expr:argCount() > 0 }, then: {
+				if({ expr:argCount() > 0 }, {
 					local Expression is valExpr: self:argValue(expr: expr, index: 0);
-					Conditional:if(check: { valExpr:kind == ExpressionKind:ARRAY }, then: {
+					if({ valExpr:kind == ExpressionKind:ARRAY }, {
 						cg:setContainerHint(t: targetType);
 						itemC: cg:generateExpression(expr: valExpr);
 						return 'spec_array_add_array(' . targetC . ', ' . itemC . ')';
@@ -592,111 +592,111 @@ Class is BuiltinCallGenerator{
 				});
 				local String is elemKindA: cg:containerElemKind(containerType: targetType);
 				local String is addFn: 'spec_array_add';
-				Conditional:if(check: { elemKindA == 'object' }, then: {
-					addFn: Conditional:if(check: { itemClaims }, then: { 'spec_array_add_owned' }, else: { 'spec_array_add_object' });
+				if({ elemKindA == 'object' }, {
+					addFn: if({ itemClaims }, { 'spec_array_add_owned' }, { 'spec_array_add_object' });
 				});
 				return addFn . '(' . targetC . ', (void*)(' . itemC . '))';
 			});
-			Conditional:if(check: { m == 'length' }, then: {
+			if({ m == 'length' }, {
 				return 'spec_array_length(' . targetC . ')';
 			});
-			Conditional:if(check: { m == 'pop' }, then: {
+			if({ m == 'pop' }, {
 				local String is defC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
 						local String is rawDefC: cg:generateExpression(expr: arg:value);
-						Conditional:if(check: { targetType:startsWith(prefix: 'Array:String') }, then: {
+						if({ targetType:startsWith(prefix: 'Array:String') }, {
 							defC: rawDefC;
-						}, else: {
+						}, {
 							defC: '(void*)(intptr_t)(' . rawDefC . ')';
 						});
 					});
 				});
 				return 'spec_array_pop(' . targetC . ', ' . defC . ')';
 			});
-			Conditional:if(check: { m == 'removeAt' }, then: {
+			if({ m == 'removeAt' }, {
 				local String is idxC: '0';
 				local String is defC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: '(void*)(intptr_t)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_array_remove_at(' . targetC . ', ' . idxC . ', ' . defC . ')';
 			});
-			Conditional:if(check: { m == 'isEmpty' }, then: {
+			if({ m == 'isEmpty' }, {
 				return '(long long)(spec_array_length(' . targetC . ') == 0)';
 			});
-			Conditional:if(check: { m == 'slice' }, then: {
+			if({ m == 'slice' }, {
 				local String is startC: '0';
 				local String is endC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'start' }, then: {
+					if({ arg:name == 'start' }, {
  startC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'end' }, then: {
+					if({ arg:name == 'end' }, {
  endC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'Array_slice(' . targetC . ', ' . startC . ', ' . endC . ')';
 			});
-			Conditional:if(check: { m == 'clear' }, then: {
+			if({ m == 'clear' }, {
 				return 'spec_array_clear(' . targetC . ')';
 			});
-			Conditional:if(check: { m == 'indexOf' }, then: {
+			if({ m == 'indexOf' }, {
 				local String is searchC: '""';
 				local String is defC: '-1';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'search' || arg:name == 'needle' }, then: {
+					if({ arg:name == 'search' || arg:name == 'needle' }, {
  searchC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'Array_indexOf(' . targetC . ', ' . searchC . ', ' . defC . ')';
 			});
 			# Higher-order: anon functions inline as loops; values as callbacks.
-			Conditional:if(check: { m == 'each' }, then: {
+			if({ m == 'each' }, {
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
 				return cg:generateInlineArrayOp(mode: 'each', targetC: targetC, fnExpr: fnExpr);
 			});
-			Conditional:if(check: { m == 'filter' }, then: {
+			if({ m == 'filter' }, {
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
 				return cg:generateInlineArrayOp(mode: 'filter', targetC: targetC, fnExpr: fnExpr);
 			});
-			Conditional:if(check: { m == 'count' }, then: {
+			if({ m == 'count' }, {
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
 				return cg:generateInlineArrayOp(mode: 'count', targetC: targetC, fnExpr: fnExpr);
 			});
-			Conditional:if(check: { m == 'any' }, then: {
+			if({ m == 'any' }, {
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
 				return cg:generateInlineArrayOp(mode: 'any', targetC: targetC, fnExpr: fnExpr);
 			});
-			Conditional:if(check: { m == 'map' }, then: {
-				Conditional:if(check: { expr:argCount() > 0 }, then: {
+			if({ m == 'map' }, {
+				if({ expr:argCount() > 0 }, {
 					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-					Conditional:if(check: { fnExpr:kind == ExpressionKind:ANON_FN }, then: {
+					if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
 						return cg:generateInlineArrayOp(mode: 'map', targetC: targetC, fnExpr: fnExpr);
 					});
 				});
 			});
-			Conditional:if(check: { m == 'fold' }, then: {
-				Conditional:if(check: { expr:argCount() >= 2 }, then: {
+			if({ m == 'fold' }, {
+				if({ expr:argCount() >= 2 }, {
 					local Expression is initExpr: self:argValue(expr: expr, index: 0);
 					local Expression is fnExpr: self:argValue(expr: expr, index: 1);
-					Conditional:if(check: { fnExpr:kind == ExpressionKind:ANON_FN }, then: {
+					if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
 						return cg:generateInlineArrayFold(targetC: targetC, initExpr: initExpr, fnExpr: fnExpr);
 					});
 				});
 			});
-			Conditional:if(check: { m == 'join' }, then: {
+			if({ m == 'join' }, {
 				local String is sepC: '""';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'separator' || sepC == '""' }, then: {
+					if({ arg:name == 'separator' || sepC == '""' }, {
  sepC: cg:generateExpression(expr: arg:value);
 					});
 				});
@@ -704,82 +704,82 @@ Class is BuiltinCallGenerator{
 			});
 		});
 		# List methods ([Byte] byte-buffer shape; pointer-vector shapes below).
-		Conditional:if(check: { targetType == 'List:Byte' || targetType == 'List of Byte' }, then: {
+		if({ targetType == 'List:Byte' || targetType == 'List of Byte' }, {
 			local String is errC: 'spec_noop_closure()';
-			Conditional:if(check: { m == 'get' || m == 'pop' || m == 'set' }, then: {
+			if({ m == 'get' || m == 'pop' || m == 'set' }, {
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'error' }, then: {
+					if({ arg:name == 'error' }, {
 						errC: cg:generateExpression(expr: arg:value);
 					});
 				});
 			});
-			Conditional:if(check: { m == 'push' }, then: {
+			if({ m == 'push' }, {
 				local String is itemC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					itemC: cg:generateExpression(expr: arg:value);
 				});
 				return 'spec_bytebuffer_push(' . targetC . ', (long long)(' . itemC . '))';
 			});
-			Conditional:if(check: { m == 'appendString' }, then: {
+			if({ m == 'appendString' }, {
 				local String is sC: 'spec_string_intern("")';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					sC: cg:generateExpression(expr: arg:value);
 				});
 				return 'spec_bytebuffer_append_string(' . targetC . ', spec_buf_to_cstring((SpecBuf*)(' . sC . ')))';
 			});
-			Conditional:if(check: { m == 'get' }, then: {
+			if({ m == 'get' }, {
 				local String is idxC: '0';
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_bytebuffer_get(' . targetC . ', ' . idxC . ', ' . defC . ', ' . errC . ')';
 			});
-			Conditional:if(check: { m == 'set' }, then: {
+			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'item' || arg:name == 'value' }, then: {
+					if({ arg:name == 'item' || arg:name == 'value' }, {
  itemC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_bytebuffer_set(' . targetC . ', ' . idxC . ', ' . itemC . ', ' . errC . ')';
 			});
-			Conditional:if(check: { m == 'pop' }, then: {
+			if({ m == 'pop' }, {
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_bytebuffer_pop(' . targetC . ', ' . defC . ', ' . errC . ')';
 			});
-			Conditional:if(check: { m == 'length' }, then: {
+			if({ m == 'length' }, {
 				return 'spec_bytebuffer_length(' . targetC . ')';
 			});
-			Conditional:if(check: { m == 'clear' }, then: {
+			if({ m == 'clear' }, {
 				return 'spec_bytebuffer_clear(' . targetC . ')';
 			});
-			Conditional:if(check: { m == 'toString' }, then: {
+			if({ m == 'toString' }, {
 				return 'spec_bytebuffer_to_string(' . targetC . ')';
 			});
 		});
 
 		# List methods (pointer-vector shapes, element-kind casts).
-		Conditional:if(check: { targetType:startsWith(prefix: 'List') }, then: {
+		if({ targetType:startsWith(prefix: 'List') }, {
 			local String is listElem: '';
-			Conditional:if(check: { targetType:startsWith(prefix: 'List of ') && targetType:length() > 7 }, then: {
+			if({ targetType:startsWith(prefix: 'List of ') && targetType:length() > 7 }, {
 				listElem: targetType:substring(start: 7, end: targetType:length());
-			}, else: {
-				Conditional:if(check: { targetType:startsWith(prefix: 'List:') && targetType:length() > 5 }, then: {
+			}, {
+				if({ targetType:startsWith(prefix: 'List:') && targetType:length() > 5 }, {
 					listElem: targetType:substring(start: 5, end: targetType:length());
 				});
 			});
@@ -787,24 +787,24 @@ Class is BuiltinCallGenerator{
 			local String is itemPre: '(void*)(intptr_t)(';
 			local String is itemPost: ')';
 			local String is resCast: '(long long)(intptr_t)';
-			Conditional:if(check: { elemKind == 'string' }, then: {
+			if({ elemKind == 'string' }, {
 				itemPre: '(void*)(';
 				resCast: '(String)';
-			}, else: {
-				Conditional:if(check: { elemKind == 'object' }, then: {
+			}, {
+				if({ elemKind == 'object' }, {
 					itemPre: '(void*)(';
 					resCast: '(' . cg:cTypeFor(typeName: listElem) . ')(intptr_t)';
 				});
 			});
 			local String is errC: 'spec_noop_closure()';
-			Conditional:if(check: { m == 'get' || m == 'pop' || m == 'set' }, then: {
+			if({ m == 'get' || m == 'pop' || m == 'set' }, {
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'error' }, then: {
+					if({ arg:name == 'error' }, {
 						errC: cg:generateExpression(expr: arg:value);
 					});
 				});
 			});
-			Conditional:if(check: { m == 'push' }, then: {
+			if({ m == 'push' }, {
 				local String is itemC: '0';
 				local Boolean is savedArgV: cg:argMode;
 				cg:setArgMode(m: false);
@@ -814,27 +814,27 @@ Class is BuiltinCallGenerator{
 				cg:setArgMode(m: savedArgV);
 				return 'spec_vec_push(' . targetC . ', ' . itemPre . itemC . itemPost . ')';
 			});
-			Conditional:if(check: { m == 'get' }, then: {
+			if({ m == 'get' }, {
 				local String is idxC: '0';
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return resCast . 'spec_vec_get(' . targetC . ', ' . idxC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
 			});
-			Conditional:if(check: { m == 'set' }, then: {
+			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'index' }, then: {
+					if({ arg:name == 'index' }, {
  idxC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'item' || arg:name == 'value' }, then: {
+					if({ arg:name == 'item' || arg:name == 'value' }, {
 						local Boolean is savedArgS: cg:argMode;
 						cg:setArgMode(m: false);
 						itemC: cg:generateExpression(expr: arg:value);
@@ -843,19 +843,19 @@ Class is BuiltinCallGenerator{
 				});
 				return 'spec_vec_set(' . targetC . ', ' . idxC . ', ' . itemPre . itemC . itemPost . ', ' . errC . ')';
 			});
-			Conditional:if(check: { m == 'pop' }, then: {
+			if({ m == 'pop' }, {
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return resCast . 'spec_vec_pop(' . targetC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
 			});
-			Conditional:if(check: { m == 'length' }, then: {
+			if({ m == 'length' }, {
 				return 'spec_vec_length(' . targetC . ')';
 			});
-			Conditional:if(check: { m == 'clear' }, then: {
+			if({ m == 'clear' }, {
 				return 'spec_vec_clear(' . targetC . ')';
 			});
 		});
@@ -872,17 +872,17 @@ Class is BuiltinCallGenerator{
 	Function of String is bindMapCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
 		local String is m: expr:methodName;
 		local String is a0: '';
-		Conditional:if(check: { expr:argCount() > 0 }, then: {
+		if({ expr:argCount() > 0 }, {
 			a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
 		});
 		local String is a1: '';
-		Conditional:if(check: { expr:argCount() > 1 }, then: {
+		if({ expr:argCount() > 1 }, {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		});
-		Conditional:if(check: { m == 'init' }, then: {
+		if({ m == 'init' }, {
 			return 'spec_map_new()';
 		});
-		Conditional:if(check: { m == 'set' }, then: {
+		if({ m == 'set' }, {
 			# String values store directly via spec_xstrdup (so the SpecBuf*
 			# argument stays in argMode: true to be claimed in the pool);
 			# everything else boxes into the any-slot via spec_map_set_any.
@@ -891,13 +891,13 @@ Class is BuiltinCallGenerator{
 			local Boolean is isStrMap: targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String');
 			local Boolean is valIsStr: true;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:if(check: { arg:name == 'key' }, then: {
+				if({ arg:name == 'key' }, {
  keyC: cg:generateExpression(expr: arg:value);
 				});
-				Conditional:if(check: { arg:name == 'value' }, then: {
+				if({ arg:name == 'value' }, {
 					valIsStr: isStrMap || cg:inferTargetType(expr: arg:value) == 'String' || arg:value:kind == ExpressionKind:STRING || (arg:value:kind == ExpressionKind:BINARY && arg:value:str == '.');
 					local Boolean is savedArgMode: cg:argMode;
-					Conditional:if(check: { !valIsStr }, then: {
+					if({ !valIsStr }, {
 						cg:setArgMode(m: false);
 					});
 					valC: cg:generateExpression(expr: arg:value);
@@ -905,42 +905,42 @@ Class is BuiltinCallGenerator{
 					valIsStr: valIsStr || cg:isStringExpr(expr: arg:value, exprC: valC);
 				});
 			});
-			Conditional:if(check: { isStrMap || valIsStr }, then: {
+			if({ isStrMap || valIsStr }, {
 				return 'spec_map_set(' . targetC . ', ' . keyC . ', ' . valC . ')';
 			});
 			return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 		});
-		Conditional:if(check: { m == 'get' }, then: {
+		if({ m == 'get' }, {
 			return 'spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
-		Conditional:if(check: { m == 'getString' }, then: {
+		if({ m == 'getString' }, {
 			return '(String)spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
-		Conditional:if(check: { m == 'getInt' }, then: {
+		if({ m == 'getInt' }, {
 			return 'Map_getInt(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
-		Conditional:if(check: { m == 'getFloat' }, then: {
+		if({ m == 'getFloat' }, {
 			return '((double)spec_map_get(' . targetC . ', ' . a0 . ', (void*)0))';
 		});
-		Conditional:if(check: { m == 'getBool' }, then: {
+		if({ m == 'getBool' }, {
 			return 'Map_getBool(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
-		Conditional:if(check: { m == 'has' }, then: {
+		if({ m == 'has' }, {
 			return 'spec_map_has(' . targetC . ', ' . a0 . ')';
 		});
-		Conditional:if(check: { m == 'remove' }, then: {
+		if({ m == 'remove' }, {
 			return 'spec_map_remove(' . targetC . ', ' . a0 . ')';
 		});
-		Conditional:if(check: { m == 'keys' }, then: {
+		if({ m == 'keys' }, {
 			return 'spec_map_keys(' . targetC . ')';
 		});
-		Conditional:if(check: { m == 'length' }, then: {
+		if({ m == 'length' }, {
 			return '(long long)spec_map_length(' . targetC . ')';
 		});
-		Conditional:if(check: { m == 'each' }, then: {
-			Conditional:if(check: { expr:argCount() > 0 }, then: {
+		if({ m == 'each' }, {
+			if({ expr:argCount() > 0 }, {
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-				Conditional:if(check: { fnExpr:kind == ExpressionKind:ANON_FN }, then: {
+				if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
 					return cg:generateInlineMapEach(targetC: targetC, fnExpr: fnExpr);
 				});
 			});
@@ -959,11 +959,11 @@ Class is BuiltinCallGenerator{
 	Function of String is bindStringDirect(Expression is expr, String is targetC, CodeGenerator is cg){
 		local String is m: expr:methodName;
 		local String is a0: '';
-		Conditional:if(check: { expr:argCount() > 0 }, then: {
+		if({ expr:argCount() > 0 }, {
 			a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
 		});
 		local String is a1: '';
-		Conditional:if(check: { expr:argCount() > 1 }, then: {
+		if({ expr:argCount() > 1 }, {
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		});
 		return match(on: m, when: [
@@ -986,10 +986,10 @@ Class is BuiltinCallGenerator{
 				local String is baseC: '10';
 				local String is defC: '-1';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					Conditional:if(check: { arg:name == 'base' }, then: {
+					if({ arg:name == 'base' }, {
  baseC: cg:generateExpression(expr: arg:value);
 					});
-					Conditional:if(check: { arg:name == 'default' }, then: {
+					if({ arg:name == 'default' }, {
  defC: cg:generateExpression(expr: arg:value);
 					});
 				});
