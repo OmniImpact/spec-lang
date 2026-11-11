@@ -650,7 +650,7 @@ Class is TypeChecker{
 		local Boolean is bad: false;
 		local Int is keyTotal: arms:mapKeys:length();
 		local Int is ki: 0;
-		while({ ki < keyTotal }, {
+		repeat(count: keyTotal, worker: {
 			local Expression is key: arms:mapKeys:get(index: ki);
 				local Expression is val: arms:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -875,7 +875,7 @@ Class is TypeChecker{
 		local Boolean is bad: false;
 		local Int is keyTotal: arms:mapKeys:length();
 		local Int is ki: 0;
-		while({ ki < keyTotal }, {
+		repeat(count: keyTotal, worker: {
 			local Expression is key: arms:mapKeys:get(index: ki);
 				local Expression is val: arms:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -1090,7 +1090,7 @@ Class is TypeChecker{
 		Conditional:if(check: { isScoped }, then: {
 			local Array of NamedArg is explicit: [];
 			local Int is ei: 0;
-			while({ ei < allArgs:length() - 1 }, {
+			repeat(count: allArgs:length() - 1, worker: {
 				explicit:add(item: allArgs:get(index: ei));
 				ei: ei + 1;
 			});

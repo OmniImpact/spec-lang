@@ -117,13 +117,10 @@ Class is Linter{
 			local Int is ci: 0;
 			while({ ci < masked:length() }, {
 				local String is ch: masked:charAt(index: ci, default: '');
-				Conditional:if(check: { ch == '{' }, then: {
-					depth: depth + 1;
-				}, else: {
-					Conditional:if(check: { ch == '}' }, then: {
-						depth: depth - 1;
-					});
-				});
+				match(on: ch, when: [
+					'{': { depth: depth + 1; },
+					'}': { depth: depth - 1; }
+				]);
 				ci: ci + 1;
 			});
 		});

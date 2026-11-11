@@ -2028,26 +2028,22 @@ Class is CodeGenerator{
 		local ClassInfo is chainCls: self:findClass(name: root);
 		local Boolean is chainOk: chainCls:name == root;
 		local Int is chainIdx: 1;
-		while(
-			evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
-			iteration: local Function of Boolean(){
-				local String is nextSym: '';
-				local ClassInfo is nextCls: ClassInfo:init(name: '', baseClass: '', members: []);
-				chainCls:members:each(action: local Function(Member is m){
-					Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
-						nextSym: self:utils:cIdent(name: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx));
-						nextCls: m:nestedClass;
-					});
+		while({ chainOk && chainIdx < segs:length() }, {
+			local String is nextSym: '';
+			local ClassInfo is nextCls: ClassInfo:init(name: '', baseClass: '', members: []);
+			chainCls:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
+					nextSym: self:utils:cIdent(name: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx));
+					nextCls: m:nestedClass;
 				});
-				Conditional:if(check: { nextSym != '' }, then: {
-					chainCls: nextCls;
-					chainIdx: chainIdx + 1;
-				}, else: {
-					chainOk: false;
-				});
-				return true;
-			}
-		);
+			});
+			Conditional:if(check: { nextSym != '' }, then: {
+				chainCls: nextCls;
+				chainIdx: chainIdx + 1;
+			}, else: {
+				chainOk: false;
+			});
+		});
 		Conditional:if(check: { chainOk && chainIdx == segs:length() }, then: {
 			# Enum-root variants: the nullary variant's
 			# value IS the zero-arg construction of its nested subclass —
@@ -2090,14 +2086,10 @@ Class is CodeGenerator{
 			Conditional:if(check: { heldOwner != '' && !self:localVars:has(key: root) && !self:fieldTypes:has(key: root) }, then: {
 				local String is heldC: self:utils:cIdent(name: heldOwner) . '_' . self:utils:cIdent(name: segs:get(index: 1)) . '__ensure()';
 				local Int is heldIdx: 2;
-				while(
-					evaluate: local Function of Boolean(){ return heldIdx < segs:length(); },
-					iteration: local Function of Boolean(){
-						heldC: '(' . heldC . ')->' . self:utils:cIdent(name: segs:get(index: heldIdx));
-						heldIdx: heldIdx + 1;
-						return true;
-					}
-				);
+				while({ heldIdx < segs:length() }, {
+					heldC: '(' . heldC . ')->' . self:utils:cIdent(name: segs:get(index: heldIdx));
+					heldIdx: heldIdx + 1;
+				});
 				return heldC;
 			});
 			# The resolution hook: the class-name prefix
@@ -2119,16 +2111,10 @@ Class is CodeGenerator{
 			});
 			local Int is idx: 1;
 			local String is resC: rootC;
-			while(
-				evaluate: local Function of Boolean(){
-					return idx < segs:length();
-				},
-				iteration: local Function of Boolean(){
-					resC: resC . '->' . self:utils:cIdent(name: segs:get(index: idx));
-					idx: idx + 1;
-					return true;
-				}
-			);
+			while({ idx < segs:length() }, {
+				resC: resC . '->' . self:utils:cIdent(name: segs:get(index: idx));
+				idx: idx + 1;
+			});
 			Conditional:if(check: { root != self:names:selfIdent() }, then: {
 				local String is resolvedT: expr:resolvedType;
 				local String is rootT: self:localVars:getString(key: root, default: '');
@@ -2238,51 +2224,47 @@ Class is CodeGenerator{
 		local String is delim: '';
 		local Int is i: 0;
 		local Int is len: body:length();
-		while(
-			evaluate: local Function of Boolean(){ return i < len; },
-			iteration: local Function of Boolean(){
-				ch: body:charAt(index: i, default: '');
-				Conditional:if(check: { delim == '' }, then: {
-					Conditional:if(check: { ch == '"' || ch == '\'' || ch == '`' }, then: {
-						nextCh: body:charAt(index: i + 1, default: '');
-						Conditional:if(check: { nextCh == ch && body:charAt(index: i + 2, default: '') == ch }, then: {
-							delim: ch;
-							i: i + 3;
-							return true;
-						});
+		while({ i < len }, {
+			ch: body:charAt(index: i, default: '');
+			Conditional:if(check: { delim == '' }, then: {
+				Conditional:if(check: { ch == '"' || ch == '\'' || ch == '`' }, then: {
+					nextCh: body:charAt(index: i + 1, default: '');
+					Conditional:if(check: { nextCh == ch && body:charAt(index: i + 2, default: '') == ch }, then: {
+						delim: ch;
+						i: i + 3;
+					}, else: {
 						delim: ch;
 						i: i + 1;
-						return true;
 					});
+				}, else: {
 					out: out . ch;
 					i: i + 1;
-					return true;
 				});
+			}, else: {
 				Conditional:if(check: { ch == '\\' }, then: {
 					i: i + 2;
-					return true;
-				});
-				Conditional:if(check: { delim == '`' && ch == '$' && body:charAt(index: i + 1, default: '') == '{' }, then: {
-					delim: '';
-					out: out . ' ';
-					i: i + 2;
-					return true;
-				});
-				Conditional:if(check: { ch == delim }, then: {
-					nextCh: body:charAt(index: i + 1, default: '');
-					Conditional:if(check: { delim == '\'' && nextCh == '\'' && body:charAt(index: i + 2, default: '') == '\'' }, then: {
-						i: i + 3;
+				}, else: {
+					Conditional:if(check: { delim == '`' && ch == '$' && body:charAt(index: i + 1, default: '') == '{' }, then: {
 						delim: '';
-						return true;
+						out: out . ' ';
+						i: i + 2;
+					}, else: {
+						Conditional:if(check: { ch == delim }, then: {
+							nextCh: body:charAt(index: i + 1, default: '');
+							Conditional:if(check: { delim == '\'' && nextCh == '\'' && body:charAt(index: i + 2, default: '') == '\'' }, then: {
+								i: i + 3;
+								delim: '';
+							}, else: {
+								delim: '';
+								i: i + 1;
+							});
+						}, else: {
+							i: i + 1;
+						});
 					});
-					delim: '';
-					i: i + 1;
-					return true;
 				});
-				i: i + 1;
-				return true;
-			}
-		);
+			});
+		});
 		return out;
 	}
 
@@ -2292,24 +2274,21 @@ Class is CodeGenerator{
 		});
 		local Boolean is found: false;
 		local String is rest: body;
-		while(
-			evaluate: local Function of Boolean(){ return !found; },
-			iteration: local Function of Boolean(){
-				local Int is hit: rest:indexOf(search: ident, default: -1);
-				Conditional:if(check: { hit < 0 }, then: {
-					return false;
-				});
+		while({ !found && rest:length() > 0 }, {
+			local Int is hit: rest:indexOf(search: ident, default: -1);
+			Conditional:if(check: { hit < 0 }, then: {
+				rest: '';
+			}, else: {
 				local Boolean is headOk: hit == 0 || !(self:isIdentChar(c: rest:charAt(index: hit - 1, default: '_')));
 				local Int is tail: hit + ident:length();
 				local Boolean is tailOk: tail >= rest:length() || !(self:isIdentChar(c: rest:charAt(index: tail, default: '_')));
 				Conditional:if(check: { headOk && tailOk }, then: {
 					found: true;
-					return true;
+				}, else: {
+					rest: rest:substring(start: hit + 1, end: rest:length());
 				});
-				rest: rest:substring(start: hit + 1, end: rest:length());
-				return true;
-			}
-		);
+			});
+		});
 		return found;
 	}
 
@@ -2484,16 +2463,12 @@ Class is CodeGenerator{
 			Conditional:if(check: { (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional') }, then: {
 				local Boolean is shapeOk: expr:argValue(index: 0):kind == ExpressionKind:ANON_FN;
 				local Int is bi: 1;
-				while(
-					evaluate: local Function of Boolean(){ return shapeOk && bi < expr:argCount(); },
-					iteration: local Function of Boolean(){
-						Conditional:if(check: { expr:argValue(index: bi):kind != ExpressionKind:ANON_FN }, then: {
-							shapeOk: false;
-						});
-						bi: bi + 1;
-						return true;
-					}
-				);
+				while({ shapeOk && bi < expr:argCount() }, {
+					Conditional:if(check: { expr:argValue(index: bi):kind != ExpressionKind:ANON_FN }, then: {
+						shapeOk: false;
+					});
+					bi: bi + 1;
+				});
 				Conditional:if(check: { shapeOk }, then: {
 					return self:generateInlineBranch(expr: expr);
 				});
@@ -3786,16 +3761,12 @@ Class is CodeGenerator{
 		# Prototypes first: cross-class held references in init
 		# expressions call accessors defined later in the pass.
 		local Int is pi: 0;
-		while(
-			evaluate: local Function of Boolean(){ return pi < heldAll:length(); },
-			iteration: local Function of Boolean(){
-				local Member is pm: heldAll:get(index: pi);
-				local String is pSym: ownerSyms:get(index: pi) . '_' . self:utils:cIdent(name: pm:name);
-				Buf:bufAppendBuf(dst: out, src: self:cTypeFor(typeName: declaredTypes:get(index: pi)) . ' ' . pSym . "__ensure(void);\n");
-				pi: pi + 1;
-				return true;
-			}
-		);
+		while({ pi < heldAll:length() }, {
+			local Member is pm: heldAll:get(index: pi);
+			local String is pSym: ownerSyms:get(index: pi) . '_' . self:utils:cIdent(name: pm:name);
+			Buf:bufAppendBuf(dst: out, src: self:cTypeFor(typeName: declaredTypes:get(index: pi)) . ' ' . pSym . "__ensure(void);\n");
+			pi: pi + 1;
+		});
 		Buf:bufAppendBuf(dst: out, src: "\n");
 		# Resolution-hook prototypes: the resolver
 		# and the cache-hook — spelled exactly as the definitions below
@@ -3813,9 +3784,7 @@ Class is CodeGenerator{
 			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . "_held_resolve(" . self:cTypeFor(typeName: Primitive:STRING:value()) . " name);\n");
 		});
 		local Int is di: 0;
-		while(
-			evaluate: local Function of Boolean(){ return di < heldAll:length(); },
-			iteration: local Function of Boolean(){
+		while({ di < heldAll:length() }, {
 				local Member is m: heldAll:get(index: di);
 				local String is declaredT: declaredTypes:get(index: di);
 				local String is typeC: self:cTypeFor(typeName: declaredT);
@@ -3864,9 +3833,7 @@ Class is CodeGenerator{
 				Buf:bufAppendBuf(dst: out, src: "    }\n");
 				Buf:bufAppendBuf(dst: out, src: '    return ' . retC . ";\n}\n\n");
 				di: di + 1;
-				return true;
-			}
-		);
+			});
 		# The resolution-hook machinery: per resolver
 		# class, the runtime-provided missing branch (Never Null — it
 		# panics with context) and the cache-hook. The cache starts at 8
@@ -3946,26 +3913,14 @@ Class is CodeGenerator{
 			Conditional:if(check: { names:length() > 0 }, then: {
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				Buf:bufAppendBuf(dst: out, src: 'static const char* ' . cSym . "_held_names[] = {\n");
-				local Int is ni: 0;
-				while(
-					evaluate: local Function of Boolean(){ return ni < names:length(); },
-					iteration: local Function of Boolean(){
-						Buf:bufAppendBuf(dst: out, src: '    "' . names:get(index: ni) . "\",\n");
-						ni: ni + 1;
-						return true;
-					}
-				);
+				names:each(action: local Function(String is n){
+					Buf:bufAppendBuf(dst: out, src: '    "' . n . "\",\n");
+				});
 				Buf:bufAppendBuf(dst: out, src: "};\n");
 				Buf:bufAppendBuf(dst: out, src: 'static void* (*const ' . cSym . "_held_getters[])(void) = {\n");
-				local Int is gi: 0;
-				while(
-					evaluate: local Function of Boolean(){ return gi < getters:length(); },
-					iteration: local Function of Boolean(){
-						Buf:bufAppendBuf(dst: out, src: '    ' . getters:get(index: gi) . ",\n");
-						gi: gi + 1;
-						return true;
-					}
-				);
+				getters:each(action: local Function(String is g){
+					Buf:bufAppendBuf(dst: out, src: '    ' . g . ",\n");
+				});
 				Buf:bufAppendBuf(dst: out, src: "};\n");
 				Buf:bufAppendBuf(dst: entries, src: '    { "' . c:qualifiedName() . '", ' . cSym . '_held_names, ' . (names:length() as String) . ', ' . cSym . "_held_getters },\n");
 				entryCount: entryCount + 1;
@@ -4017,16 +3972,10 @@ Class is CodeGenerator{
 
 		local Array of String is classChunks: [];
 		local Array of String is classHelpers: [];
-		local Int is gt: 0;
-		while(
-			evaluate: local Function of Boolean(){ return gt < classTotal; },
-			iteration: local Function of Boolean(){
-				classChunks:add(item: Buf:stringCopy(b: ''));
-				classHelpers:add(item: Buf:stringCopy(b: ''));
-				gt: gt + 1;
-				return true;
-			}
-		);
+		repeat(count: classTotal, worker: {
+			classChunks:add(item: Buf:stringCopy(b: ''));
+			classHelpers:add(item: Buf:stringCopy(b: ''));
+		});
 		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
@@ -4063,9 +4012,7 @@ Class is CodeGenerator{
 			# imbalanced the pool; interleaving averages the load while
 			# the per-class slots keep the merge order fixed.
 			local Int is ci: threadIndex;
-			while(
-				evaluate: local Function of Boolean(){ return ci < classTotal; },
-				iteration: local Function of Boolean(){
+			while({ ci < classTotal }, {
 					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
 					Conditional:if(check: { !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
 						wg:currentClassName: c:name;
@@ -4114,31 +4061,17 @@ Class is CodeGenerator{
 						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
 					ci: ci + genThreads;
-					return true;
-				}
-			);
+				});
 			return count;
 		});
 		local String is methods: Buf:stringCopy(b: '');
-		local Int is mt: 0;
-		while(
-			evaluate: local Function of Boolean(){ return mt < classTotal; },
-			iteration: local Function of Boolean(){
-				Buf:bufAppendBuf(dst: methods, src: classChunks:get(index: mt));
-				mt: mt + 1;
-				return true;
-			}
-		);
+		classChunks:each(action: local Function(String is chunk){
+			Buf:bufAppendBuf(dst: methods, src: chunk);
+		});
 		local String is allHelpers: Buf:stringCopy(b: '');
-		local Int is ht: 0;
-		while(
-			evaluate: local Function of Boolean(){ return ht < classTotal; },
-			iteration: local Function of Boolean(){
-				Buf:bufAppendBuf(dst: allHelpers, src: classHelpers:get(index: ht));
-				ht: ht + 1;
-				return true;
-			}
-		);
+		classHelpers:each(action: local Function(String is helper){
+			Buf:bufAppendBuf(dst: allHelpers, src: helper);
+		});
 
 		local String is mainFn: self:generateMain(entryClass: entryClass);
 
@@ -4210,16 +4143,10 @@ Class is CodeGenerator{
 
 		local Array of String is classChunks: [];
 		local Array of String is classHelpers: [];
-		local Int is gt: 0;
-		while(
-			evaluate: local Function of Boolean(){ return gt < classTotal; },
-			iteration: local Function of Boolean(){
-				classChunks:add(item: Buf:stringCopy(b: ''));
-				classHelpers:add(item: Buf:stringCopy(b: ''));
-				gt: gt + 1;
-				return true;
-			}
-		);
+		repeat(count: classTotal, worker: {
+			classChunks:add(item: Buf:stringCopy(b: ''));
+			classHelpers:add(item: Buf:stringCopy(b: ''));
+		});
 		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
@@ -4249,9 +4176,7 @@ Class is CodeGenerator{
 			wg:anonCounter: threadIndex * 100000;
 			wg:cleanupCounter: threadIndex * 100000;
 			local Int is ci: threadIndex;
-			while(
-				evaluate: local Function of Boolean(){ return ci < classTotal; },
-				iteration: local Function of Boolean(){
+			while({ ci < classTotal }, {
 					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
 					Conditional:if(check: { !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
 						wg:currentClassName: c:name;
@@ -4291,26 +4216,20 @@ Class is CodeGenerator{
 						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
 					ci: ci + genThreads;
-					return true;
-				}
-			);
+				});
 			return count;
 		});
 
 		local Int is ht: 0;
-		while(
-			evaluate: local Function of Boolean(){ return ht < classTotal; },
-			iteration: local Function of Boolean(){
-				local String is hChunk: classHelpers:get(index: ht);
-				Conditional:if(check: { hChunk != '' }, then: {
-					lineCount: lineCount + Buf:bufCountByte(b: hChunk, byteVal: 10);
-					ok: fileAppend(path: filePath, content: hChunk);
-					classHelpers:set(index: ht, item: '');
-				});
-				ht: ht + 1;
-				return ok;
-			}
-		);
+		while({ ok && ht < classTotal }, {
+			local String is hChunk: classHelpers:get(index: ht);
+			Conditional:if(check: { hChunk != '' }, then: {
+				lineCount: lineCount + Buf:bufCountByte(b: hChunk, byteVal: 10);
+				ok: fileAppend(path: filePath, content: hChunk);
+				classHelpers:set(index: ht, item: '');
+			});
+			ht: ht + 1;
+		});
 		Conditional:if(check: { !ok }, then: { return -1; });
 
 		local String is heldSrc: self:generateHeldMembers(classes: flattenedClasses);
@@ -4332,19 +4251,15 @@ Class is CodeGenerator{
 		Conditional:if(check: { !ok }, then: { return -1; });
 
 		local Int is mt: 0;
-		while(
-			evaluate: local Function of Boolean(){ return mt < classTotal; },
-			iteration: local Function of Boolean(){
-				local String is mChunk: classChunks:get(index: mt);
-				Conditional:if(check: { mChunk != '' }, then: {
-					lineCount: lineCount + Buf:bufCountByte(b: mChunk, byteVal: 10);
-					ok: fileAppend(path: filePath, content: mChunk);
-					classChunks:set(index: mt, item: '');
-				});
-				mt: mt + 1;
-				return ok;
-			}
-		);
+		while({ ok && mt < classTotal }, {
+			local String is mChunk: classChunks:get(index: mt);
+			Conditional:if(check: { mChunk != '' }, then: {
+				lineCount: lineCount + Buf:bufCountByte(b: mChunk, byteVal: 10);
+				ok: fileAppend(path: filePath, content: mChunk);
+				classChunks:set(index: mt, item: '');
+			});
+			mt: mt + 1;
+		});
 		Conditional:if(check: { !ok }, then: { return -1; });
 
 		local String is mainFn: self:generateMain(entryClass: entryClass);
@@ -4416,25 +4331,19 @@ Class is CodeGenerator{
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 				Buf:bufAppendBuf(dst: out, src: 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n");
 				local Int is slot: 0;
-				while(
-					evaluate: local Function of Boolean(){
-						return slot < self:methodSlotCount;
-					},
-					iteration: local Function of Boolean(){
-						local String is mName: self:slotNames:get(index: slot);
-						local String is implCls: self:findMethodImplementingClass(className: c:name, methodName: mName, paramCount: -1);
-						Conditional:if(check: { slot > 0 }, then: {
-							Buf:bufAppendBuf(dst: out, src: ",\n");
-						});
-						Conditional:if(check: { implCls == '' }, then: {
-							Buf:bufAppendBuf(dst: out, src: '    (void*)0');
-						}, else: {
-							Buf:bufAppendBuf(dst: out, src: '    (void*)' . implCls . '_' . mName);
-						});
-						slot: slot + 1;
-						return true;
-					}
-				);
+				while({ slot < self:methodSlotCount }, {
+					local String is mName: self:slotNames:get(index: slot);
+					local String is implCls: self:findMethodImplementingClass(className: c:name, methodName: mName, paramCount: -1);
+					Conditional:if(check: { slot > 0 }, then: {
+						Buf:bufAppendBuf(dst: out, src: ",\n");
+					});
+					Conditional:if(check: { implCls == '' }, then: {
+						Buf:bufAppendBuf(dst: out, src: '    (void*)0');
+					}, else: {
+						Buf:bufAppendBuf(dst: out, src: '    (void*)' . implCls . '_' . mName);
+					});
+					slot: slot + 1;
+				});
 				Buf:bufAppendBuf(dst: out, src: "\n};\n\n");
 			});
 		});
@@ -4955,9 +4864,7 @@ Class is CodeGenerator{
 		local Int is keyTotal: armsArg:mapKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
-		while(
-			evaluate: local Function of Boolean(){ return ki < keyTotal; },
-			iteration: local Function of Boolean(){
+		while({ ki < keyTotal }, {
 				local Expression is key: armsArg:mapKeys:get(index: ki);
 				local Expression is val: armsArg:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -5034,9 +4941,7 @@ Class is CodeGenerator{
 				}, else: {
 					out: out . self:inlineBranchBody(anonFn: val) . "\t";
 				});
-				return true;
-			}
-		);
+			});
 		Conditional:if(check: { !firstCond }, then: {
 			out: out . "}\n";
 		});
@@ -5079,9 +4984,7 @@ Class is CodeGenerator{
 		local Int is keyTotal: armsArg:mapKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
-		while(
-			evaluate: local Function of Boolean(){ return ki < keyTotal; },
-			iteration: local Function of Boolean(){
+		while({ ki < keyTotal }, {
 				local Expression is key: armsArg:mapKeys:get(index: ki);
 				local Expression is val: armsArg:mapValues:get(index: ki);
 				ki: ki + 1;
@@ -5128,9 +5031,7 @@ Class is CodeGenerator{
 						out: out . self:inlineBranchBody(anonFn: val) . "\t";
 					});
 				});
-				return true;
-			}
-		);
+			});
 		Conditional:if(check: { !firstCond }, then: {
 			out: out . tail;
 		});
