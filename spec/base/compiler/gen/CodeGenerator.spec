@@ -4440,7 +4440,11 @@ Class is CodeGenerator{
 						self:argMode: savedArgFi;
 						local String is ftn: m:memberType:name;
 						Conditional:if(check: { self:isArcType(typeName: ftn) }, then: {
-							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
+							Conditional:if(check: { self:yieldsClaim(expr: m:initExpr) }, then: {
+								fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')(' . fieldInitC . ')';
+							}, else: {
+								fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
+							});
 						});
 						bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n");
 					});

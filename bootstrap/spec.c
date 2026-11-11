@@ -49808,7 +49808,11 @@ static __attribute__((unused)) void _anon_fn_100545(void* _env_ptr, Member* m) {
 	    self->argMode = savedArgFi;
 	    SPEC_AUTO String ftn = spec_construct_string(m->memberType->name);
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
+	    if (CodeGenerator_yieldsClaim(self, m->initExpr) /* inst:CodeGenerator:yieldsClaim */) {
+	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")(")), fieldInitC), spec_string_intern(")"))));
+	} else {
 	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
+	};
 	};
 	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
@@ -49930,7 +49934,11 @@ static __attribute__((unused)) void _anon_fn_100536(void* _env_ptr, ClassInfo* c
 	    self->argMode = savedArgFi;
 	    SPEC_AUTO String ftn = spec_construct_string(m->memberType->name);
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
+	    if (CodeGenerator_yieldsClaim(self, m->initExpr) /* inst:CodeGenerator:yieldsClaim */) {
+	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")(")), fieldInitC), spec_string_intern(")"))));
+	} else {
 	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
+	};
 	};
 	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
@@ -50084,7 +50092,11 @@ static __attribute__((unused)) void _anon_fn_100558(void* _env_ptr, Member* m) {
 	    self->argMode = savedArgFi;
 	    SPEC_AUTO String ftn = spec_construct_string(m->memberType->name);
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
+	    if (CodeGenerator_yieldsClaim(self, m->initExpr) /* inst:CodeGenerator:yieldsClaim */) {
+	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")(")), fieldInitC), spec_string_intern(")"))));
+	} else {
 	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
+	};
 	};
 	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
@@ -55834,7 +55846,7 @@ ProgramNode* ProgramNode_new(void) {
     ProgramNode* self = (ProgramNode*)spec_alloc(sizeof(ProgramNode), ProgramNode_destroy);
     self->_type_name = "ProgramNode";
     self->_vtable = ProgramNode_vtable;
-    self->classes = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->classes = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     return self;
 }
 
@@ -55859,9 +55871,9 @@ ClassInfo* ClassInfo_new(void) {
     self->line = 0;
     self->sourceFile = (String)spec_retain((void*)(spec_string_intern("")));
     self->baseClass = (String)spec_retain((void*)(spec_string_intern("")));
-    self->baseClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->typeParams = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->members = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->baseClasses = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->typeParams = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->members = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     return self;
 }
 
@@ -55886,10 +55898,10 @@ Member* Member_new(void) {
     self->kind = (MemberKind*)spec_retain((void*)(MemberKind_FIELD__ensure()));
     self->line = 0;
     self->sourceFile = (String)spec_retain((void*)(spec_string_intern("")));
-    self->modifiers = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->modifiers = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     self->name = (String)spec_retain((void*)(spec_string_intern("")));
-    self->params = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->body = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->params = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->body = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     self->hasInit = false;
     return self;
 }
@@ -55919,7 +55931,7 @@ Type* Type_new(void) {
     self->_type_name = "Type";
     self->_vtable = Type_vtable;
     self->name = (String)spec_retain((void*)(spec_string_intern("")));
-    self->params = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->params = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     return self;
 }
 
@@ -56042,11 +56054,11 @@ Statement* Statement_new(void) {
     self->_vtable = Statement_vtable;
     self->kind = (StatementKind*)spec_retain((void*)(StatementKind_EXPR__ensure()));
     self->line = 0;
-    self->modifiers = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->modifiers = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     self->varName = (String)spec_retain((void*)(spec_string_intern("")));
     self->hasInit = false;
     self->hasReturnExpr = false;
-    self->forwardArgs = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->forwardArgs = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     return self;
 }
 
@@ -56082,10 +56094,10 @@ Lexer* Lexer_new(void) {
     self->pos = 0;
     self->line = 1;
     self->col = 1;
-    self->errors = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->names = (WellKnown*)spec_retain((void*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->chars = (Chars*)spec_retain((void*)(({ Chars* _inst = Chars_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->errText = (ErrorText*)spec_retain((void*)(({ ErrorText* _inst = ErrorText_new(); Loadable_init((Loadable*)_inst); _inst; })));
+    self->errors = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->names = (WellKnown*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->chars = (Chars*)(({ Chars* _inst = Chars_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->errText = (ErrorText*)(({ ErrorText* _inst = ErrorText_new(); Loadable_init((Loadable*)_inst); _inst; }));
     return self;
 }
 
@@ -56186,7 +56198,7 @@ Error* Error_new(void) {
     self->_type_name = "Error";
     self->_vtable = Error_vtable;
     self->message = (String)spec_retain((void*)(spec_string_intern("")));
-    self->trace = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->trace = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     return self;
 }
 
@@ -56263,16 +56275,16 @@ Parser* Parser_new(void) {
     Parser* self = (Parser*)spec_alloc(sizeof(Parser), Parser_destroy);
     self->_type_name = "Parser";
     self->_vtable = Parser_vtable;
-    self->tokens = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->tokens = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     self->pos = 0;
     self->length = 0;
     self->sourceFile = (String)spec_retain((void*)(spec_string_intern("")));
-    self->errors = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->lookahead = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->errors = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->lookahead = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     self->streaming = false;
     self->templateDepth = 0;
-    self->names = (WellKnown*)spec_retain((void*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->chars = (Chars*)spec_retain((void*)(({ Chars* _inst = Chars_new(); Loadable_init((Loadable*)_inst); _inst; })));
+    self->names = (WellKnown*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->chars = (Chars*)(({ Chars* _inst = Chars_new(); Loadable_init((Loadable*)_inst); _inst; }));
     return self;
 }
 
@@ -56354,15 +56366,15 @@ TypeChecker* TypeChecker_new(void) {
     TypeChecker* self = (TypeChecker*)spec_alloc(sizeof(TypeChecker), TypeChecker_destroy);
     self->_type_name = "TypeChecker";
     self->_vtable = TypeChecker_vtable;
-    self->registeredClasses = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->nestedScopeMap = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->registeredClasses = (SpecMap*)(spec_map_new());
+    self->nestedScopeMap = (SpecMap*)(spec_map_new());
     self->nestedScopeFor = (String)spec_retain((void*)(spec_string_intern("")));
-    self->allEnumNames = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->allEnumVariants = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->allStringBackedEnums = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->localVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->fieldTypes = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->unassignedFields = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->allEnumNames = (SpecMap*)(spec_map_new());
+    self->allEnumVariants = (SpecMap*)(spec_map_new());
+    self->allStringBackedEnums = (SpecMap*)(spec_map_new());
+    self->localVars = (SpecMap*)(spec_map_new());
+    self->fieldTypes = (SpecMap*)(spec_map_new());
+    self->unassignedFields = (SpecMap*)(spec_map_new());
     self->currentLine = 0;
     self->currentMethodIsMerge = false;
     self->inHeldInit = false;
@@ -56375,14 +56387,14 @@ TypeChecker* TypeChecker_new(void) {
     self->currentClassName = (String)spec_retain((void*)(spec_string_intern("")));
     self->currentSourceFile = (String)spec_retain((void*)(spec_string_intern("")));
     self->currentMethodReturnType = (String)spec_retain((void*)(spec_string_intern("")));
-    self->currentAnonNode = (Expression*)spec_retain((void*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN__ensure()); _inst; })));
+    self->currentAnonNode = (Expression*)(({ Expression* _inst = Expression_new(); Expression_init(_inst, ExpressionKind_UNKNOWN__ensure()); _inst; }));
     self->inValueBranch = false;
     self->checkingValueYield = false;
     self->currentYieldExpected = (String)spec_retain((void*)(spec_string_intern("")));
-    self->errors = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->programClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->names = (WellKnown*)spec_retain((void*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->bindings = (ClassBindings*)spec_retain((void*)(({ ClassBindings* _inst = ClassBindings_new(); Loadable_init((Loadable*)_inst); _inst; })));
+    self->errors = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->programClasses = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->names = (WellKnown*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->bindings = (ClassBindings*)(({ ClassBindings* _inst = ClassBindings_new(); Loadable_init((Loadable*)_inst); _inst; }));
     return self;
 }
 
@@ -56455,14 +56467,14 @@ Linter* Linter_new(void) {
     Linter* self = (Linter*)spec_alloc(sizeof(Linter), Linter_destroy);
     self->_type_name = "Linter";
     self->_vtable = Linter_vtable;
-    self->auditEnums = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->auditClasses = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->auditIssues = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->auditOwner = (ClassInfo*)spec_retain((void*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; })));
+    self->auditEnums = (SpecMap*)(spec_map_new());
+    self->auditClasses = (SpecMap*)(spec_map_new());
+    self->auditIssues = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->auditOwner = (ClassInfo*)(({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), ({ SpecArray* _arr = spec_array_new(); _arr; })); _inst; }));
     self->lintLoopDepth = 0;
-    self->auditClassNodes = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->floorAliases = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->exemptClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
+    self->auditClassNodes = (SpecMap*)(spec_map_new());
+    self->floorAliases = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->exemptClasses = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
     return self;
 }
 
@@ -56499,14 +56511,14 @@ Loader* Loader_new(void) {
     Loader* self = (Loader*)spec_alloc(sizeof(Loader), Loader_destroy);
     self->_type_name = "Loader";
     self->_vtable = Loader_vtable;
-    self->loadedFiles = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->loadedFiles = (SpecMap*)(spec_map_new());
     self->rootInputPath = (String)spec_retain((void*)(spec_string_intern("")));
-    self->loadedClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->seenClassNames = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->seenBareNames = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->parseErrors = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->classPaths = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->packageDirs = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->loadedClasses = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->seenClassNames = (SpecMap*)(spec_map_new());
+    self->seenBareNames = (SpecMap*)(spec_map_new());
+    self->parseErrors = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->classPaths = (SpecMap*)(spec_map_new());
+    self->packageDirs = (SpecMap*)(spec_map_new());
     self->indexBuilt = false;
     return self;
 }
@@ -56570,16 +56582,16 @@ CodeGenerator* CodeGenerator_new(void) {
     CodeGenerator* self = (CodeGenerator*)spec_alloc(sizeof(CodeGenerator), CodeGenerator_destroy);
     self->_type_name = "CodeGenerator";
     self->_vtable = CodeGenerator_vtable;
-    self->utils = (CBackendUtils*)spec_retain((void*)(({ CBackendUtils* _inst = CBackendUtils_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->declGen = (DeclarationGenerator*)spec_retain((void*)(({ DeclarationGenerator* _inst = DeclarationGenerator_new(); DeclarationGenerator_init(_inst); _inst; })));
-    self->policy = (EmissionPolicy*)spec_retain((void*)(({ EmissionPolicy* _inst = EmissionPolicy_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->names = (WellKnown*)spec_retain((void*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->builtins = (BuiltinCallGenerator*)spec_retain((void*)(({ BuiltinCallGenerator* _inst = BuiltinCallGenerator_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->flattenedClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->heldFields = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->heldFieldTypes = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->heldMethods = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->heldResolvers = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->utils = (CBackendUtils*)(({ CBackendUtils* _inst = CBackendUtils_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->declGen = (DeclarationGenerator*)(({ DeclarationGenerator* _inst = DeclarationGenerator_new(); DeclarationGenerator_init(_inst); _inst; }));
+    self->policy = (EmissionPolicy*)(({ EmissionPolicy* _inst = EmissionPolicy_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->names = (WellKnown*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->builtins = (BuiltinCallGenerator*)(({ BuiltinCallGenerator* _inst = BuiltinCallGenerator_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->flattenedClasses = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->heldFields = (SpecMap*)(spec_map_new());
+    self->heldFieldTypes = (SpecMap*)(spec_map_new());
+    self->heldMethods = (SpecMap*)(spec_map_new());
+    self->heldResolvers = (SpecMap*)(spec_map_new());
     self->emittingHeld = false;
     self->genThreads = 2;
     self->entryInitOwner = (String)spec_retain((void*)(spec_string_intern("")));
@@ -56588,19 +56600,19 @@ CodeGenerator* CodeGenerator_new(void) {
     self->currentClassName = (String)spec_retain((void*)(spec_string_intern("")));
     self->currentMethodReturnType = (String)spec_retain((void*)(spec_string_intern("")));
     self->currentMethodName = (String)spec_retain((void*)(spec_string_intern("")));
-    self->methodSlots = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->overriddenMethods = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->methodSlots = (SpecMap*)(spec_map_new());
+    self->overriddenMethods = (SpecMap*)(spec_map_new());
     self->methodSlotCount = 0;
-    self->slotNames = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->classesWithToString = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->localVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->fieldTypes = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->programClasses = (SpecArray*)spec_retain((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })));
-    self->allClassNames = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->allEnumNames = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->allEnumVariants = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->allStringBackedEnums = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->allTaggedEnums = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->slotNames = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->classesWithToString = (SpecMap*)(spec_map_new());
+    self->localVars = (SpecMap*)(spec_map_new());
+    self->fieldTypes = (SpecMap*)(spec_map_new());
+    self->programClasses = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; }));
+    self->allClassNames = (SpecMap*)(spec_map_new());
+    self->allEnumNames = (SpecMap*)(spec_map_new());
+    self->allEnumVariants = (SpecMap*)(spec_map_new());
+    self->allStringBackedEnums = (SpecMap*)(spec_map_new());
+    self->allTaggedEnums = (SpecMap*)(spec_map_new());
     self->inMethod = false;
     self->helperFunctions = (String)spec_retain((void*)(spec_string_intern("")));
     self->anonCounter = 0;
@@ -56610,10 +56622,10 @@ CodeGenerator* CodeGenerator_new(void) {
     self->cleanupRetVar = (String)spec_retain((void*)(spec_string_intern("")));
     self->cleanupCounter = 0;
     self->closureReturnTypeName = (String)spec_retain((void*)(spec_string_intern("")));
-    self->releaseExclusions = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->hoistedLocals = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->localScopeVars = (SpecMap*)spec_retain((void*)(spec_map_new()));
-    self->currentParams = (SpecMap*)spec_retain((void*)(spec_map_new()));
+    self->releaseExclusions = (SpecMap*)(spec_map_new());
+    self->hoistedLocals = (SpecMap*)(spec_map_new());
+    self->localScopeVars = (SpecMap*)(spec_map_new());
+    self->currentParams = (SpecMap*)(spec_map_new());
     self->inlineReturnArc = false;
     self->argMode = true;
     self->containerHint = (String)spec_retain((void*)(spec_string_intern("")));
@@ -56844,7 +56856,7 @@ EmissionPolicy* EmissionPolicy_new(void) {
     EmissionPolicy* self = (EmissionPolicy*)spec_alloc(sizeof(EmissionPolicy), EmissionPolicy_destroy);
     self->_type_name = "EmissionPolicy";
     self->_vtable = EmissionPolicy_vtable;
-    self->bindings = (ClassBindings*)spec_retain((void*)(({ ClassBindings* _inst = ClassBindings_new(); Loadable_init((Loadable*)_inst); _inst; })));
+    self->bindings = (ClassBindings*)(({ ClassBindings* _inst = ClassBindings_new(); Loadable_init((Loadable*)_inst); _inst; }));
     return self;
 }
 
@@ -56861,10 +56873,10 @@ DeclarationGenerator* DeclarationGenerator_new(void) {
     DeclarationGenerator* self = (DeclarationGenerator*)spec_alloc(sizeof(DeclarationGenerator), DeclarationGenerator_destroy);
     self->_type_name = "DeclarationGenerator";
     self->_vtable = DeclarationGenerator_vtable;
-    self->names = (WellKnown*)spec_retain((void*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->bindings = (ClassBindings*)spec_retain((void*)(({ ClassBindings* _inst = ClassBindings_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->utils = (CBackendUtils*)spec_retain((void*)(({ CBackendUtils* _inst = CBackendUtils_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->policy = (EmissionPolicy*)spec_retain((void*)(({ EmissionPolicy* _inst = EmissionPolicy_new(); Loadable_init((Loadable*)_inst); _inst; })));
+    self->names = (WellKnown*)(({ WellKnown* _inst = WellKnown_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->bindings = (ClassBindings*)(({ ClassBindings* _inst = ClassBindings_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->utils = (CBackendUtils*)(({ CBackendUtils* _inst = CBackendUtils_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->policy = (EmissionPolicy*)(({ EmissionPolicy* _inst = EmissionPolicy_new(); Loadable_init((Loadable*)_inst); _inst; }));
     return self;
 }
 
@@ -56879,8 +56891,8 @@ BuiltinCallGenerator* BuiltinCallGenerator_new(void) {
     BuiltinCallGenerator* self = (BuiltinCallGenerator*)spec_alloc(sizeof(BuiltinCallGenerator), BuiltinCallGenerator_destroy);
     self->_type_name = "BuiltinCallGenerator";
     self->_vtable = BuiltinCallGenerator_vtable;
-    self->utils = (CBackendUtils*)spec_retain((void*)(({ CBackendUtils* _inst = CBackendUtils_new(); Loadable_init((Loadable*)_inst); _inst; })));
-    self->policy = (EmissionPolicy*)spec_retain((void*)(({ EmissionPolicy* _inst = EmissionPolicy_new(); Loadable_init((Loadable*)_inst); _inst; })));
+    self->utils = (CBackendUtils*)(({ CBackendUtils* _inst = CBackendUtils_new(); Loadable_init((Loadable*)_inst); _inst; }));
+    self->policy = (EmissionPolicy*)(({ EmissionPolicy* _inst = EmissionPolicy_new(); Loadable_init((Loadable*)_inst); _inst; }));
     return self;
 }
 
@@ -76756,7 +76768,11 @@ String CodeGenerator_generateConstructors(CodeGenerator* self, SpecArray* classe
 	    self->argMode = savedArgFi;
 	    SPEC_AUTO String ftn = spec_construct_string(m->memberType->name);
 	    if (CodeGenerator_isArcType(self, ftn) /* inst:CodeGenerator:isArcType */) {
+	    if (CodeGenerator_yieldsClaim(self, m->initExpr) /* inst:CodeGenerator:yieldsClaim */) {
+	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")(")), fieldInitC), spec_string_intern(")"))));
+	} else {
 	    spec_assign_transfer((void**)&fieldInitC, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("("))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)((((String (*)(CodeGenerator*, String))self->_vtable[357]))((CodeGenerator*)self, ftn)); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(")spec_retain((void*)(")), fieldInitC), spec_string_intern("))"))));
+	};
 	};
 	    Buf_bufAppendBuf(NULL, out, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("    self->"))), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(CBackendUtils_cIdent(self->utils, m->name) /* inst:CBackendUtils:cIdent */); spec_pool_release_to(_pf); _v; }))))), spec_string_intern(" = ")), fieldInitC), spec_string_intern(";\n")));
     if (fieldInitC) { spec_release((void*)fieldInitC); fieldInitC = NULL; }
