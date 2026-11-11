@@ -3121,6 +3121,7 @@ Class is TypeChecker{
 			# loop typing (while/loop/until inline closures; repeat counts).
 			local Boolean is isWhileLoop: (targetType == 'Loops' || targetName == 'Loops') && (method == 'loop' || method == 'init' || method == 'while' || method == 'until' || method == 'repeat');
 		local Map of String to String is savedWhileVars;
+		local Boolean is hasLoopVars: false;
 		Conditional:if(check: { isWhileLoop }, then: {
 			savedWhileVars: Map:init();
 			local Array of String is existingKeys: self:localVars:keys();
@@ -3128,7 +3129,6 @@ Class is TypeChecker{
 				savedWhileVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 			});
 			local Int is posIdx: 0;
-			local Boolean is hasLoopVars: false;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				Conditional:if(check: { arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, then: {
 					hasLoopVars: true;
@@ -3144,7 +3144,7 @@ Class is TypeChecker{
 				# variable was built before these parameters existed and
 				# cannot capture them: reject the combination instead of
 				# running it with free identifiers.
-				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && (posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2)));
+				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && (posIdx == 1 || posIdx == 2)) || (!hasLoopVars && (posIdx == 0 || posIdx == 1))));
 				Conditional:if(check: { hasLoopVars && closureSlot && arg:value:kind != ExpressionKind:ANON_FN }, then: {
 					self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures.');
 				});
@@ -3154,7 +3154,7 @@ Class is TypeChecker{
 					});
 				}, else: {
 					Conditional:if(check: { arg:name == '' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
-						Conditional:if(check: { posIdx == 1 || (posIdx == 0 && expr:methodArgs:length() == 2) }, then: {
+						Conditional:if(check: { (hasLoopVars && posIdx == 1) || (!hasLoopVars && posIdx == 0) }, then: {
 							Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
 								arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
 							});
@@ -3173,13 +3173,15 @@ Class is TypeChecker{
 		Conditional:if(check: { isWhileLoop }, then: {
 			local Boolean is savedLoopBranch: self:inBranchClosure;
 			self:inBranchClosure: false;
+			local Int is loopArgIdx: 0;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				Conditional:if(check: { arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, then: {
+				Conditional:if(check: { (arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0)))) && arg:value:kind == ExpressionKind:ANON_FN }, then: {
 					Conditional:if(check: { arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, then: {
 						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
 					});
 				});
 				self:inferExpressionType(expr: arg:value);
+				loopArgIdx: loopArgIdx + 1;
 			});
 			self:inBranchClosure: savedLoopBranch;
 		}, else: {

@@ -88,33 +88,26 @@ Class is ClassInfo{
 	## @return: The namespace path, e.g. 'base:sysinternal'.
 	Function of String is namespaceJoined(){
 		local String is joined: '';
-		local Int is idx: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return joined == '' && idx < self:members:length();
-			},
-			iteration: local Function of Boolean(){
+		local Int is count: self:members:length();
+		Loops(
+			[Int is idx: 0],
+			{ joined == '' && idx < count },
+			{
 				local Member is m: self:members:get(index: idx);
-				idx: idx + 1;
-				Conditional:if(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+				idx++;
+				if({ m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
 					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
-						Conditional:if(check: { joined == '' }, then: {
+						if({ joined == '' }, {
 							joined: seg:str;
-						}, else: {
+						}, {
 							joined: joined . ':' . seg:str;
 						});
 					});
 				});
-				return true;
 			}
 		);
-	# no memo write — the parallel workers
-	# findClass concurrently, and a shared cache field raced (thread
-	# A's assign freed the string thread B was reading). The walk is
-	# cheap; purity wins. An owned copy: callers ride the claim pool,
-	# and pool eviction releases what it holds.
-	return Buf:stringCopy(b: joined);
-}
+		return Buf:stringCopy(b: joined);
+	}
 
 	## The class's declared namespace as its segment array (empty when
 	## undeclared) — the structural form the discipline checks compare.
@@ -125,20 +118,18 @@ Class is ClassInfo{
 	## @return: The namespace segments, e.g. ['base', 'sysinternal'].
 	Function of Array of String is namespaceSegments(){
 		local Array of String is segs: [];
-		local Int is idx: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return segs:length() == 0 && idx < self:members:length();
-			},
-			iteration: local Function of Boolean(){
+		local Int is count: self:members:length();
+		Loops(
+			[Int is idx: 0],
+			{ segs:length() == 0 && idx < count },
+			{
 				local Member is m: self:members:get(index: idx);
-				idx: idx + 1;
-				Conditional:if(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
+				idx++;
+				if({ m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
 					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
 						segs:add(item: seg:str);
 					});
 				});
-				return true;
 			}
 		);
 		return segs;

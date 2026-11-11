@@ -31,8 +31,6 @@ Class is Lexer{
 		['base', 'compiler', 'lexer', 'loops', NumberScanLoop],
 		['base', 'compiler', 'lexer', 'loops', StringScanLoop],
 		['base', 'compiler', 'lexer', 'loops', HeredocScanLoop],
-		['base', 'compiler', 'lexer', 'loops', StripUnderscoresLoop],
-		['base', 'compiler', 'lexer', 'loops', StripLeadingZerosLoop],
 		['base', 'compiler', Error],
 		['base', 'compiler', ErrorText],
 		['base', 'sys', as Reflection()],
@@ -209,40 +207,38 @@ Class is Lexer{
 		local Int is p: self:pos;
 		local Int is len: self:length;
 		local Boolean is skipping: true;
-		while(
-			evaluate: local Function of Boolean(){ return skipping && p < len; },
-			iteration: local Function of Boolean(){
+		Loops(
+			{ skipping && p < len },
+			{
 				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
-				Conditional:if(check: { b == 32 || b == 9 || b == 13 }, then: {
-					p: p + 1;
-					self:col: self:col + 1;
-				}, else: {
-					Conditional:if(check: { b == 10 }, then: {
-						p: p + 1;
-						self:line: self:line + 1;
+				if({ b == 32 || b == 9 || b == 13 }, {
+					p++;
+					self:col++;
+				}, {
+					if({ b == 10 }, {
+						p++;
+						self:line++;
 						self:col: 1;
-					}, else: {
-						Conditional:if(check: { b == 35 }, then: {
-							p: p + 1;
+					}, {
+						if({ b == 35 }, {
+							p++;
 							local Boolean is inComment: true;
-							while(
-								evaluate: local Function of Boolean(){ return inComment && p < len; },
-								iteration: local Function of Boolean(){
+							Loops(
+								{ inComment && p < len },
+								{
 									local Int is cb: Buf:bufGetByte(b: self:source, idx: p, def: -1);
-									Conditional:if(check: { cb == 10 }, then: {
+									if({ cb == 10 }, {
 										inComment: false;
-									}, else: {
-										p: p + 1;
+									}, {
+										p++;
 									});
-									return true;
 								}
 							);
-						}, else: {
+						}, {
 							skipping: false;
 						});
 					});
 				});
-				return true;
 			}
 		);
 		self:pos: p;
@@ -260,18 +256,17 @@ Class is Lexer{
 		local Int is p: self:pos;
 		local Int is len: self:length;
 		local Boolean is scanning: true;
-		while(
-			evaluate: local Function of Boolean(){ return scanning && p < len; },
-			iteration: local Function of Boolean(){
+		Loops(
+			{ scanning && p < len },
+			{
 				local Int is b: Buf:bufGetByte(b: self:source, idx: p, def: -1);
 				local Boolean is isId: (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57) || b == 95;
-				Conditional:if(check: { isId }, then: {
-					p: p + 1;
-					self:col: self:col + 1;
-				}, else: {
+				if({ isId }, {
+					p++;
+					self:col++;
+				}, {
 					scanning: false;
 				});
-				return true;
 			}
 		);
 		self:pos: p;
@@ -279,15 +274,15 @@ Class is Lexer{
 		local String is text: self:source:substring(start: startPos, end: self:pos);
 		local Keyword is kw: Keyword:of(text);
 		local TokenKind is kind: TokenKind:IDENTIFIER;
-		Conditional:if(check: { kw != Keyword:NONE }, then: {
+		if({ kw != Keyword:NONE }, {
 			kind: TokenKind:KEYWORD;
 		});
 		# Boolean literals are identifier-shaped but scan as their own kind.
-		Conditional:if(check: { text == self:names:boolTrue() || text == 'false' }, then: {
+		if({ text == self:names:boolTrue() || text == 'false' }, {
 			kind: TokenKind:BOOL;
 		});
 		local Token is t: Token:init(kind: kind, value: Buf:intern(s: text), line: startLine, col: startCol);
-		Conditional:if(check: { kw != Keyword:NONE }, then: {
+		if({ kw != Keyword:NONE }, {
 			t:setKeyword(kw: kw);
 		});
 		return t;
@@ -332,20 +327,21 @@ Class is Lexer{
 		Loops:run(loop: numLoop);
 
 		local String is text: self:source:substring(start: startPos, end: self:pos);
-		local StripUnderscoresLoop is strip: StripUnderscoresLoop:init(src: text);
-		Loops:run(loop: strip);
-		text: strip:res;
+		text: text:replaceAll(search: '_', replacement: '');
 
 		local TokenKind is kind: TokenKind:INT;
-		Conditional:if(check: { numLoop:isFloat }, then: {
+		if({ numLoop:isFloat }, {
 			kind: TokenKind:FLOAT;
 		});
-		Conditional:if(check: { kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0' }, then: {
+		if({ kind == TokenKind:INT && text:length() > 1 && text:charAt(index: 0, default: '') == '0' }, {
 			# A bare leading zero stays decimal in Spec; strip it so C does
 			# not reinterpret the emitted literal as octal.
-			local StripLeadingZerosLoop is zeros: StripLeadingZerosLoop:init(src: text);
-			Loops:run(loop: zeros);
-			text: zeros:res;
+			Loops(
+				{ text:length() > 1 && text:charAt(index: 0, default: '') == '0' },
+				{
+					text: text:substring(start: 1, end: text:length());
+				}
+			);
 		});
 		return Token:init(kind: kind, value: text, line: startLine, col: startCol);
 	}

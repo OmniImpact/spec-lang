@@ -67,9 +67,27 @@ Class is ClassBindings{
 	## @param cls: The class.
 	## @return: true when the class is a floor binding.
 	Function of Boolean is isSysinternal(ClassInfo is cls){
-		local SysinternalCheckLoop is check: SysinternalCheckLoop:init(cls: cls);
-		Loops:run(loop: check);
-		return check:isFloor;
+		local Boolean is isFloor: false;
+		local Array of Member is members: cls:members;
+		local Int is count: members:length();
+		Loops(
+			[Int is idx: 0],
+			{ !isFloor && idx < count },
+			{
+				local Member is m: members:get(index: idx);
+				idx++;
+				if({ m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
+					local Array of Expression is segs: m:initExpr:arrayItems;
+					if({ segs:length() > 0 }, {
+						local Expression is last: segs:get(index: segs:length() - 1);
+						if({ last:str == 'sysinternal' }, {
+							isFloor: true;
+						});
+					});
+				});
+			}
+		);
+		return isFloor;
 	}
 
 	## True when [c]'s instances are compilation-phase data: the AST
@@ -112,46 +130,5 @@ Class is ClassBindings{
 			});
 		});
 		return found;
-	}
-
-	## Walks a class's members looking for the namespace declaration and
-	## tests whether its last segment is `sysinternal`.
-	Class of Loop is SysinternalCheckLoop{
-
-		replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-		];
-		local ClassInfo is cls;
-		# The members array is owned at init (a consumption position) so
-		# pool eviction inside the iteration cannot free it mid-scan.
-		local Array of Member is members: [];
-		local Int is idx: 0;
-		local Boolean is isFloor: false;
-
-		replace Function is init(ClassInfo is cls){
-			self:cls: cls;
-			self:members: cls:members;
-			self:idx: 0;
-			self:isFloor: false;
-		}
-
-		replace Function of Boolean is evaluate(){
-			return !self:isFloor && self:idx < self:members:length();
-		}
-
-		replace Function of Boolean is iteration(LoopControl is c){
-			local Member is m: self:members:get(index: self:idx);
-			self:idx: self:idx + 1;
-			Conditional:if(check: { m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, then: {
-				local Array of Expression is segs: m:initExpr:arrayItems;
-				Conditional:if(check: { segs:length() > 0 }, then: {
-					local Expression is last: segs:get(index: segs:length() - 1);
-					Conditional:if(check: { last:str == 'sysinternal' }, then: {
-						self:isFloor: true;
-					});
-				});
-			});
-			return true;
-		}
 	}
 }
