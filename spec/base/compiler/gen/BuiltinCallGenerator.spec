@@ -884,24 +884,29 @@ Class is BuiltinCallGenerator{
 			return 'spec_map_new()';
 		});
 		Conditional:if(check: { m == 'set' }, then: {
-			# String values store directly; everything else boxes into the
-			# any-slot via spec_map_set_any.
+			# String values store directly via spec_xstrdup (so the SpecBuf*
+			# argument stays in argMode: true to be claimed in the pool);
+			# everything else boxes into the any-slot via spec_map_set_any.
 			local String is keyC: 'spec_string_intern("")';
 			local String is valC: 'spec_string_intern("")';
+			local Boolean is isStrMap: targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String');
 			local Boolean is valIsStr: true;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				Conditional:if(check: { arg:name == 'key' }, then: {
  keyC: cg:generateExpression(expr: arg:value);
 				});
 				Conditional:if(check: { arg:name == 'value' }, then: {
+					valIsStr: isStrMap || cg:inferTargetType(expr: arg:value) == 'String' || arg:value:kind == ExpressionKind:STRING || (arg:value:kind == ExpressionKind:BINARY && arg:value:str == '.');
 					local Boolean is savedArgMode: cg:argMode;
-					cg:setArgMode(m: false);
+					Conditional:if(check: { !valIsStr }, then: {
+						cg:setArgMode(m: false);
+					});
 					valC: cg:generateExpression(expr: arg:value);
 					cg:setArgMode(m: savedArgMode);
-					valIsStr: cg:isStringExpr(expr: arg:value, exprC: valC);
+					valIsStr: valIsStr || cg:isStringExpr(expr: arg:value, exprC: valC);
 				});
 			});
-			Conditional:if(check: { targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String') || valIsStr }, then: {
+			Conditional:if(check: { isStrMap || valIsStr }, then: {
 				return 'spec_map_set(' . targetC . ', ' . keyC . ', ' . valC . ')';
 			});
 			return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';

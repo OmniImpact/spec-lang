@@ -1608,6 +1608,9 @@ Class is CodeGenerator{
 			});
 			local String is targetT0: self:inferTargetType(expr: expr:methodTarget);
 			local String is targetT: targetT0;
+			Conditional:if(check: { targetT == '' && expr:bareProvider != '' }, then: {
+				targetT: expr:bareProvider;
+			});
 			Conditional:if(check: { targetT:contains(needle: ':') }, then: {
 				local Array of String is parts0: targetT:split(delimiter: ':');
 				targetT: parts0:get(index: 0);
@@ -1633,8 +1636,9 @@ Class is CodeGenerator{
 					return targetT:startsWith(prefix: 'Map');
 				});
 				return match(on: expr:methodName, when: [
-					['pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
-					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt']: {
+					['init', 'pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
+					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt',
+					'stringCopy', 'stringSubstring', 'file_read', 'file_temp', 'dirList', 'exeDir']: {
 						true
 					},
 					else: { false }
@@ -3209,12 +3213,13 @@ Class is CodeGenerator{
 			},
 			StatementKind:EXPR: {
 				# Any CALL that returns an ARC type and is evaluated as an
-				# unconsumed expression statement is released so it does not leak.
-				# Idents and fields are borrows — leave them alone.
+				# unconsumed expression statement is released so it does not leak
+				# (when argMode is true, generateExpression already claimed it in
+				# the pool). Idents and fields are borrows — leave them alone.
 				local String is exprC: self:generateExpression(expr: stmt:exprStmt);
 				local String is resT: self:inferTargetType(expr: stmt:exprStmt);
 				local String is stmtC: '    ' . exprC . ";\n";
-				Conditional:if(check: { stmt:exprStmt:kind == ExpressionKind:CALL && self:isArcType(typeName: resT) }, then: {
+				Conditional:if(check: { !self:argMode && stmt:exprStmt:kind == ExpressionKind:CALL && self:isArcType(typeName: resT) && self:yieldsClaim(expr: stmt:exprStmt) && !(stmt:exprStmt:methodName == 'if' || stmt:exprStmt:methodName == 'branch' || stmt:exprStmt:methodName == 'match') }, then: {
 					stmtC: '    spec_release((void*)(' . exprC . "));\n";
 				});
 				stmtC
@@ -3360,12 +3365,15 @@ Class is CodeGenerator{
 			local String is containerC: self:generateExpression(expr: stmt:assignTarget:leftExpr);
 			local String is idxC: self:generateExpression(expr: stmt:assignTarget:rightExpr);
 			local String is containerType: self:inferTargetType(expr: stmt:assignTarget:leftExpr);
+			local Boolean is isStrMapAssign: (containerType:startsWith(prefix: 'Map:') || containerType == 'Map') && (containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:inferTargetType(expr: stmt:assignValue) == 'String' || stmt:assignValue:kind == ExpressionKind:STRING || (stmt:assignValue:kind == ExpressionKind:BINARY && stmt:assignValue:str == '.'));
 			local Boolean is savedArgIx: self:argMode;
-			self:argMode: false;
+			Conditional:if(check: { !isStrMapAssign }, then: {
+				self:argMode: false;
+			});
 			local String is valC: self:generateExpression(expr: stmt:assignValue);
 			self:argMode: savedArgIx;
 			Conditional:if(check: { containerType:startsWith(prefix: 'Map:') || containerType == 'Map' }, then: {
-				Conditional:if(check: { containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:isStringExpr(expr: stmt:assignValue, exprC: valC) }, then: {
+				Conditional:if(check: { isStrMapAssign || self:isStringExpr(expr: stmt:assignValue, exprC: valC) }, then: {
 					return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
 				});
 				return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
