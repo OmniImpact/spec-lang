@@ -33,7 +33,7 @@
    - [Value-Yielding Branch Calls](#value-yielding-branch-calls)
    - [String Inspection Primitives](#string-inspection-primitives)
 5. [Control Flow & Branching](#control-flow--branching)
-   - [Conditionals & Matching (`Conditional:if`, `Conditional:match`)](#conditionals--matching)
+   - [Conditionals & Matching (`if`, `match`)](#conditionals--matching)
    - [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)
 6. [Compiler Error Recovery & Multi-File Provenance](#compiler-error-recovery--multi-file-provenance)
 7. [Unblockable Concurrency & Iteration Model](#unblockable-concurrency--iteration-model)
@@ -386,14 +386,14 @@ local Option is opt1: Option:Some(value: 42);
 local Option is opt2: Option:None;
 ```
 
-Payload variants are matched and destructured with `Conditional:match` (see [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)).
+Payload variants are matched and destructured with `match` (see [Payload Destructuring in Match Arms](#payload-destructuring-in-match-arms)).
 
 #### The Resolution Hook (`resolveHeld`)
 A class declaring `held Function of <T> is resolveHeld(String is name, Function of <T> is missing)` admits ANY undeclared name through its class-name prefix: the runtime resolves it on first access and caches it (pointer identity forever). The second parameter is the runtime-provided safe failure branch — the default panics with context; the resolver invokes it when it gives up. Declared members always win; without the hook, an undeclared name stays a compile error:
 
 ```spec
 held Function of HeldEntry is resolveHeld(String is name, Function of HeldEntry is missing){
-	if(check: { name == 'phantom' }, then: {
+	if({ name == 'phantom' }, {
 		return missing();
 	});
 	return HeldEntry:init(n: name);
@@ -675,11 +675,21 @@ languages[1]: "Spec C11"; # Replaces "Java"
 ```
 
 ### Value-Yielding Branch Calls
-The `Conditional:if` call doubles as the conditional expression: both branches are required (upholding Spec's "Never Null" standard), the arms' yields unify into the call's type, and nested branch calls type in context:
+The `if` call doubles as the conditional expression: both branches are required (upholding Spec's "Never Null" standard), the arms' yields unify into the call's type, and nested branch calls type in context:
 
 ```spec
-local String is status: if(check: { isReady }, then: { 'Ready' }, else: { 'Pending' });
-local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { if(check: { score >= 80 }, then: { 'B' }, else: { 'C' }) });
+replace Array of Array of String is using: [
+	['base', 'sys', as Conditional()]
+];
+
+local String is status: if({ isReady }, { 'Ready' }, { 'Pending' });
+
+# Multi-branch expressions are cleanly written with match(when: ...)
+local String is grade: match(when: [
+	{ score >= 90 }: { 'A' },
+	{ score >= 80 }: { 'B' },
+	else:            { 'C' }
+]);
 ```
 
 ### String Inspection Primitives
@@ -696,30 +706,39 @@ local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { if(chec
 ## Control Flow & Branching
 
 ### Conditionals & Matching
-Conditionals are calls to the `Conditional` provider — no `if`/`else` keywords. The check closure returns `Boolean`; the branch closures may read and mutate the enclosing scope. Comparisons (`==`, `is`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`) work as expected, and the `is` keyword reads as equality for expressive checks:
+Conditionals are calls to the `Conditional` provider — no `if`/`else` keywords. Served bare via the as-import (`['base', 'sys', as Conditional()]`), `if` accepts shorthand positional closures or named arguments. The check closure returns `Boolean`; the branch closures may read and mutate the enclosing scope. Comparisons (`==`, `is`, `!=`, `<`, `<=`, `>`, `>=`) and logical operators (`&&`, `||`, `!`) work as expected, and the `is` keyword reads as equality for expressive checks:
 
 ```spec
-if(check: { score is 21 }, then: {
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Conditional()]
+];
+
+if({ score is 21 }, {
 	line("Blackjack!");
-}, else: {
-	if(check: { score > 21 }, then: {
-		line("Bust!");
-	}, else: {
-		line("Continue play");
-	});
+}, {
+	match(when: [
+		{ score > 21 }: { line("Bust!"); },
+		else:           { line("Continue play"); }
+	]);
 });
 
 # The value form: both branches yield, and the call's type is the unified yield.
-local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
+local String is grade: if({ score >= 90 }, { 'A' }, { 'B' });
 ```
 
-#### Matching with `Conditional:match`
-`Conditional:match` is the match construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`) like `if`. The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation. That lowering is the fast path — and the only path that can bind payload arms and match identity/array keys. A table that is NOT a literal (a Map built with `set()`) flows to the runtime dispatch — the wrapper's held scan: string keys against String subjects, `else` as the fallback arm, first match wins.
+#### Matching with `match`
+`match` is the pattern matching construct — a member of the `Conditional` provider (`base:sys`), served bare through the as-import (`['base', 'sys', as Conditional()]`). The arm table is a **map literal whose keys are held-member references and whose values are closures**. There is no fallthrough; the compiler inlines the table into a comparison chain with zero closure allocation. That lowering is the fast path — and the only path that can bind payload arms and match identity/array keys. A table that is NOT a literal (a Map built with `set()`) flows to the runtime dispatch — the wrapper's held scan: string keys against String subjects, `else` as the fallback arm, first match wins.
 
 ##### The Predicate Table (no `on:`)
 Dropping `on:` turns the keys into **closures** — a self-contained predicate per arm, the first that holds runs its arm. This is the else-if ladder without the pyramid, sharing the arm-table contract (first match wins, `else` is the fallback, the value form's yields unify):
 
 ```spec
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Conditional()]
+];
+
 local String is grade: match(when: [
 	{ score >= 90 }: { 'A' },
 	{ score >= 80 }: { 'B' },
@@ -737,6 +756,10 @@ match(when: [
 The keys coerce to Boolean before their bodies check, and the table lowers to the zero-allocation else-if ladder — each key closure inlines into the enclosing frame. The value form requires `else` (no exhaustive-predicate notion exists to prove coverage); the statement form falls through freely when nothing holds. The predicate table is **compile-time only** — a runtime map can neither preserve scan order nor carry closure keys — so a non-literal predicate table is a compile error rather than silent garbage.
 
 ```spec
+replace Array of Array of String is using: [
+	['base', 'sys', as Conditional()]
+];
+
 local String is label: match(on: state, when: [
 	idle:   { 'waiting' },
 	MachineState:running: {
@@ -759,6 +782,11 @@ The rules:
 An arm closure with parameters binds the tagged variant's payload fields — the parameters pair by index with the variant's declared payload fields:
 
 ```spec
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Conditional()]
+];
+
 local String is statusSummary: match(on: res, when: [
 	Result:Ok: local Function(String is data){ return 'Done: ' . data; },
 	Result:Err: local Function(Int is code, String is msg){ return 'Failed (' . code . '): ' . msg; },
@@ -803,6 +831,10 @@ Spec's looping is decoupled into explicit state-machine lifecycle contracts driv
 Loops in Spec are non-blocking, decoupled state machines:
 ```spec
 of Loop is CounterLoop{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Output()]
+	];
+
 	local Int is count: 0;
 
 	replace Function of Boolean is evaluate(){
@@ -821,26 +853,29 @@ Loops:run(loop: CounterLoop:init(), control: LoopControl:init());
 
 ### The `Loops` Provider
 One as-import (`['base', 'sys', as Loops()]`) serves the loop constructs bare. Like the conditionals, the constructs are **real wrapper implementations** — composed in `base:iterator:Loops` from the iteration floor's single `while` primitive (`base:sysinternal:Loops`, the loop-shape counterpart of the conditional floor's `branch`) — with the compiler inlining the literal-closure forms as native C11 loops (zero closure allocation) as the fast path. A call whose closures are not inline literals (Function variables, callbacks held as values) flows to the runtime body:
-- `while(evaluate:, iteration:)` — the predicate loop; inlined into a native C11 `while` with zero closure allocation for literal closures.
-- `Loops:repeat(count:, worker:)` — the counting loop.
-- `Loops:until(evaluate:, iteration:)` — the body-always-runs-once form (do-while).
+- `while({ cond }, { ... })` — the predicate loop; inlined into a native C11 `while` with zero closure allocation for literal closures.
+- `while([Int is i: 0], { i < n }, { ... i++; })` — the scoped-variable loop.
+- `repeat(count: 10, worker: { ... })` — the counting loop.
+- `until({ cond }, { ... })` — the body-always-runs-once form (do-while).
 - `Loops:run(loop:, control:)` — drives the `Loop` protocol directly.
 
 The two tiers' capture semantics: the literal closures inline into the enclosing frame and share its locals (the counter idiom — a local mutated by both closures — is theirs). The runtime closures capture by value with per-closure write-back, so shared mutable state rides the instance (`self:` fields), not a frame local. A `[vars]` loop form requires inline literal closures: the variables were built before the loop's parameters existed and cannot capture them.
 
 ```spec
-local Int is total: 0;
-while(
-	evaluate: local Function of Boolean(){ return total < 5; },
-	iteration: local Function of Boolean(){
-		total: total + 1;
-		return true;
-	}
-);
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Loops()]
+];
 
-repeat(count: 10, worker: local Function of Boolean(){
-	line('step');
-	return true;
+# Scoped while loop with index variable
+while([Int is i: 0], { i < 5 }, {
+	line('step: ' . (i as String));
+	i++;
+});
+
+# Counting repetition
+repeat(count: 10, worker: {
+	line('tick');
 });
 ```
 
@@ -851,6 +886,10 @@ repeat(count: 10, worker: local Function of Boolean(){
 Spec supports Gleam-style scoped block desugaring using the existing `as` keyword. An `as` statement desugars the entire remainder of its enclosing block into an anonymous callback passed as the trailing positional argument to the target call:
 
 ```spec
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()]
+];
+
 # Parameterless: acquires resource, runs remainder of block, cleans up
 as: self:withResource("data.txt", log: log);
 log:add("reading line 1");
@@ -881,11 +920,12 @@ Because loops are evaluated explicitly per iteration:
 - **`control:stop()`**: Halts iteration from within a callback or helper.
 
 ```spec
+# With ['base', 'sys', as Conditional()]:
 replace Function of Boolean is iteration(LoopControl is control){
 	count: count + 1;
-	if (count == 5) {
+	if({ count == 5 }, {
 		return false; # Halts loop execution cleanly
-	}
+	});
 	return true;
 }
 ```

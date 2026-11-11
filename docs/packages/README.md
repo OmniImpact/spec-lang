@@ -372,19 +372,19 @@ The system package: the control-flow providers (the conditional and the loop con
 
 ### `base:sys:Conditional` (`lib/base/sys/Conditional.spec`)
 The conditional provider — served bare through the as-import (`['base', 'sys', as Conditional()]`):
-- **`if(check:, then:)`**: Runs [then] when [check] holds.
-- **`if(check:, then:, else:)`**: The two-branch form; also the value-yielding form (the branches' last expressions unify into the call's type).
-- **`if(check:, then:, else:, finally:)`**: Runs [finally] either way.
+- **`if({ cond }, { then })`** (or `if(check:, then:)`): Runs the branch when the condition holds.
+- **`if({ cond }, { then }, { else })`** (or `if(check:, then:, else:)`): The two-branch form; also the value-yielding form (the branches' last expressions unify into the call's type).
+- **`if(check:, then:, else:, finally:)`**: Runs `finally` either way.
 - **`match(on:, when:)`**: The arm-table dispatch — a map literal whose keys are held-member references (an array key matches several) and whose values are the arm bodies; `else` names the fallback. Literal tables lower at compile time (exhaustiveness-checked for value-yielding matches over enum subjects); a runtime-built Map flows to the held dispatch scan (string keys, `else` fallback).
 - **`match(when:)` — the predicate table** (no `on:`): the keys are closures and the first that holds runs its arm — the else-if ladder without the pyramid. The value form requires `else`; compile-time only (a runtime map can neither preserve scan order nor carry closure keys).
 
 ### `base:sys:Loops` (`lib/base/sys/Loops.spec`)
 The loop provider — served bare through the as-import (`['base', 'sys', as Loops()]`):
-- **`while(evaluate:, iteration:)`**: The bare predicate loop; inlines directly to a C11 statement expression with zero closures and zero heap allocations for literal closures.
-- **`Loops:repeat(count:, worker:)`**: Executes the worker exactly `count` times.
-- **`Loops:until(evaluate:, iteration:)`**: The body-always-runs-once form (do-while).
+- **`while({ cond }, { ... })`** (or `while(evaluate:, iteration:)`): The bare predicate loop; inlines directly to a C11 statement expression with zero closures and zero heap allocations for literal closures.
+- **`while([vars], { cond }, { iterate })`**: The scoped-variable loop — binds typed loop variables at block scope (e.g. `while([Int is i: 0], { i < len }, { i++; })`).
+- **`repeat(count: n, worker: { ... })`**: Executes the worker exactly `count` times.
+- **`until({ cond }, { ... })`**: The body-always-runs-once form (do-while).
 - **`Loops:run(Loop is loop, LoopControl is control)`**: Drives the iterator lifecycle and executes completion callbacks.
-- **`Loops:loop(Any is vars, Function is evaluate, Function is iterate)`**: The scoped-variable form — binds typed loop variables at block scope.
 
 ### `Output:line` / `Output:consOut`
 Writes a string representation of an expression to standard output: `line` follows it with a newline; `consOut` writes inline and flushes. The console functions are named `consOut`/`consIn` so the generic I/O verbs (`read`/`write`) stay unambiguous for File under the merged as-import scope:

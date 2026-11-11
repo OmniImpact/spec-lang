@@ -105,8 +105,12 @@ check, and emit the NEXT generation's sources. Consequences:
 
 ### Formatting
 
-- Spec sources: tab indentation, one statement per line, named
-  arguments everywhere. Match the surrounding code exactly.
+- Spec sources: tab indentation, one statement per line. Match the
+  surrounding code exactly.
+- Control flow calls (`if`, `while`, `until`) prefer shorthand
+  positional arguments (`if({ cond }, { then })`, `while({ cond }, { step })`);
+  regular domain method calls use named arguments (`get(index: i, default: '')`).
+  Never mix positional and named arguments in the same call (§I.3).
 - The emitted C lives inside string literals: verify the generated C
   compiles by emitting (`--emit-c`) and eyeballing the changed region
   before bootstrapping.
@@ -222,6 +226,42 @@ counterpart:
   (exempt from the plain-form construction gate); any same-file class's
   using grants the file (the compilation-unit convenience — a sibling's
   plain import admits what yours alone would not).
+
+### Modern control flow & legibility discipline
+
+The codebase uses modern, optimized Spec control structures across the
+board to keep compiler, standard library, and application code clean,
+legible, and fast:
+
+- **Scope merging via `as`**: Always import control-flow providers with `as`:
+  ```spec
+  replace Array of Array of String is using: [
+      ['base', 'sys', as Conditional()],
+      ['base', 'sys', as Loops()]
+  ];
+  ```
+  This brings `if`, `match`, `while`, `repeat`, and `until` directly
+  into bare scope. Avoid redundant qualifier prefixes (`Conditional:if`,
+  `Loops:repeat`, `Loops:while`).
+- **Replace if-else cascades with `match`**:
+  - For discrete values, variant enums, or strings: `match(on: val, when: [ ... ])`.
+  - For multi-condition ladders: use the predicate table `match(when: [ { c1 }: { a1 }, { c2 }: { a2 }, else: { fallback } ])`.
+    This flattens nested-if pyramids into clear, linear decision tables
+    that lower directly to zero-allocation C11 else-if chains.
+- **Use dedicated loop structures**:
+  - Use `while({ cond }, { ... })` or the scoped-variable form
+    `while([Int is i: 0], { i < limit }, { ... i++; })` for stateful iteration.
+  - Use `repeat(count: n, worker: { ... })` for simple count repetitions
+    without an index dependency.
+  - Use `until({ cond }, { ... })` when the body must execute at least once.
+- **Positional shorthand for conditionals**:
+  - Single branch: `if({ cond }, { ... })`.
+  - Two branches: `if({ cond }, { ... }, { ... })`.
+  - Value-yielding expressions: `local T is res: if({ cond }, { val1 }, { val2 });`.
+  - Direct returns: return `match` or `if` expressions directly rather
+    than mutating temporary variables and returning after.
+- **Argument discipline**: Never mix positional and named forms in one
+  call (e.g. `if({ cond }, { then }, else: { ... })` is rejected by §I.3).
 
 ### Traps on record
 

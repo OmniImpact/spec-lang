@@ -33,9 +33,9 @@ This document establishes the official code style conventions, architectural idi
 
 ## 1. Core Design Principles
 
-1. **Minimalist Grammar**: Spec relies on only **12 keywords** (`local`, `contained`, `replace`, `merge`, `is`, `as`, `of`, `to`, `if`, `else`, `return`, `when`) and **6 primitive types** (`Int`, `Float`, `Boolean`, `String`, `Function`, `Any`). All capabilities belong in the standard library.
+1. **Minimalist Grammar**: Spec relies on only **10 keywords** (`local`, `contained`, `replace`, `merge`, `held`, `is`, `as`, `of`, `to`, `return`) and **7 primitive types** (`Int`, `Byte`, `Float`, `Boolean`, `String`, `Function`, `Any`). Control flow (`if`, `match`, `while`, `repeat`, `until`) is served as library methods on standard providers (`Conditional`, `Loops`), inlined to zero-allocation native C11 constructs by the compiler.
 2. **Never Null**: Null does not exist in Spec grammar or runtime. Every potentially fallible lookup, query, or extraction accepts a caller-provided `default` fallback or returns an empty representation.
-3. **Decoupled Iteration**: Spec has no primitive `while`, `for`, or `break` keywords. Iteration is encapsulated in reusable `Loop` subclasses evaluated by `Loops:run`, or inlined through the `Loops` provider's bare `while(evaluate:, iteration:)`.
+3. **Decoupled Iteration & Modern Control Flow**: Spec has no primitive `while`, `for`, `if`, or `break` keywords. Iteration and branching are provided by `Loops` and `Conditional` in `base:sys`, merged directly into scope with `as` (`['base', 'sys', as Loops()]`, `['base', 'sys', as Conditional()]`).
 4. **Declarative & English-Like**: Code reads as explicit statements of intent: `local String is name: "Hero";`, `Function of Boolean is isAlive()`.
 
 ---
@@ -64,7 +64,7 @@ Spec follows the **One True Brace Style (OTBS)**:
   ```spec
   Class is Player{
   replace Function is takeDamage(Int is amount){
-  if (amount > 0) {
+  if({ amount > 0 }, {
   ```
 * Closing braces `}` sit on their **own line**, aligned with the indentation of the enclosing construct.
 
@@ -126,27 +126,43 @@ local String is host: config:getString(key: "host", default: "localhost");
 local String is content: fileRead(path: "save.dat", default: "");
 ```
 
-### Decoupled Iteration
-Loop logic is packaged inside dedicated loop classes extending `base:iterator:Loop`:
+### Modern Control Flow & Decoupled Iteration
+Control flow and iteration are provided by standard library providers merged into scope via `as`:
 ```spec
-of Loop is CountLoop{
-	local Int is count: 0;
-	local Int is limit: 10;
-
-	replace Function of Boolean is evaluate(){
-		return count < limit;
-	}
-
-	replace Function of Boolean is iteration(LoopControl is control){
-		line("Count: " . count);
-		self:count: count + 1;
-		return true;
-	}
-}
-
-# Run the loop
-Loops:run(loop: CountLoop:init());
+replace Array of Array of String is using: [
+	['base', 'sys', as Conditional()],
+	['base', 'sys', as Loops()]
+];
 ```
+
+#### Conditionals & Matching
+* Use positional shorthand for `if`: `if({ cond }, { ... })` and `if({ cond }, { then }, { else })`.
+* Prefer `match(when: ...)` over nested if-else ladders:
+  ```spec
+  match(when: [
+  	{ score >= 90 }: { line("Grade A"); },
+  	{ score >= 80 }: { line("Grade B"); },
+  	else:            { line("Grade C or lower"); }
+  ]);
+  ```
+* For variant enums and value switching, use `match(on: val, when: [ ... ])`.
+
+#### Iteration
+* Use bare `while` for stateful iteration:
+  ```spec
+  # Bare while loop with scoped variable
+  while([Int is i: 0], { i < 10 }, {
+  	line("Count: " . i);
+  	i++;
+  });
+  ```
+* Use `repeat` for fixed count repetitions without an index:
+  ```spec
+  repeat(count: 10, worker: {
+  	line("Tick");
+  });
+  ```
+* Complex asynchronous or decoupled loop lifecycles extend `base:iterator:Loop` and execute via `Loops:run(loop:, control:)`.
 
 ### Imports & Package Structure
 * Declare `using` at the top of the primary class definition:
@@ -217,6 +233,10 @@ Enclosing an identifier in square brackets automatically generates cross-referen
 ## Used across compiler diagnostics, tokens, and runtime stack frames.
 Class is SourceLocation{
 
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+
 	## File path or module identifier.
 	local String is file: "";
 
@@ -245,9 +265,9 @@ Class is SourceLocation{
 	## local String is s: loc:toString(); # Returns "Player.spec:42:15"
 	## ```
 	replace Function of String is toString(){
-		if (self:file:length() > 0) {
+		if({ self:file:length() > 0 }, {
 			return self:file . ":" . self:line . ":" . self:col;
-		}
+		});
 		return self:line . ":" . self:col;
 	}
 }

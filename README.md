@@ -63,25 +63,44 @@ Members without a visibility modifier are **public by default**: overridable via
 The as-import merges a provider's functions into scope — `as Conditional()` serves `if` and `match` bare, the same way `as Output()` serves `line`:
 
 ```spec
-if(check: { score is 21 }, then: {
-	line(text: 'Blackjack!');
-}, else: {
-	line(text: 'Continue play');
+# Merge Output and Conditional into bare scope:
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Conditional()]
+];
+
+# Shorthand positional if and value-yielding expression
+if({ score is 21 }, {
+	line('Blackjack!');
+}, {
+	line('Continue play');
 });
 
-local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
+local String is grade: if({ score >= 90 }, { 'A' }, { 'B' });
 
+# Pattern matching over enums or values
 match(on: state, when: [
 	idle:   { 'waiting' },
 	running: { 'go' },
 	[idle, failed]: { 'not-going' },   # array keys match several cases
 	else:   { '?' }
 ]);
+
+# Predicate tables replace nested else-if ladders
+match(when: [
+	{ score >= 90 }: { line('Excellent'); },
+	{ score >= 70 }: { line('Good'); },
+	else:            { line('Needs work'); }
+]);
 ```
 
 Enums are first-class — payload variants, a reflective identity contract on the shared root, and exhaustiveness-checked matching:
 
 ```spec
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()]
+];
+
 Enum is Result {
 	Ok(String is data),
 	Err(Int is code, String is msg),
@@ -105,17 +124,24 @@ local Function of Int is multiplier: local Function of Int(Int is x){
 local Int is doubled: numbers:map(action: local Function of Int(Int is n){ return n * factor; });
 ```
 
-Loops are providers too — `as Loops()` serves the constructs bare, zero-allocation inlining:
+Loops are providers too — `as Loops()` serves `while`, `repeat`, and `until` bare, inlined directly to C11 constructs with zero allocations:
 
 ```spec
-local Int is total: 0;
-while(
-	evaluate: local Function of Boolean(){ return total < 5; },
-	iteration: local Function of Boolean(){
-		total: total + 1;
-		return true;
-	}
-);
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Loops()]
+];
+
+# Scoped-variable while loop
+while([Int is i: 0], { i < 5 }, {
+	line('count: ' . (i as String));
+	i++;
+});
+
+# Fixed repetitions
+repeat(count: 3, worker: {
+	line('hello!');
+});
 ```
 
 ---

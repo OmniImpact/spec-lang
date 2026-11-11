@@ -29,7 +29,7 @@ compares to the languages it draws on.
 
 ### 1. Minimal Core & Maximum Standard Library
 Spec is architected with a strict philosophy: **keep the compiler minimal, and build the language in the standard library**.
-- **Ultra-Lean Compiler**: The entire grammar is the ten-keyword table in the overview, plus the six primitive types. Structural conventions such as `using` are Loader-recognized pseudo-fields, not keywords.
+- **Ultra-Lean Compiler**: The entire grammar is the ten-keyword table in the overview (`local`, `contained`, `replace`, `merge`, `held`, `is`, `as`, `of`, `to`, `return`), plus the seven primitive types (`Int`, `Byte`, `Float`, `Boolean`, `String`, `Function`, `Any`). Structural conventions such as `using` are Loader-recognized pseudo-fields, not keywords.
 - **Userland Implementation**: Rich language features live in the standard library (`spec/lib/`) written in pure Spec — including dynamic collections (`Array`, `Map`, `List`), filesystem operations (`File`), process management (`Process`), the conditional provider (`Conditional` — branching and match tables), and concurrency runners (`Loops`, `Loop`, `Parallel`).
 - **No Magic**: Language abstractions are not compiler special cases; they can be inspected, extended, or replaced using ordinary Spec code.
 
@@ -69,9 +69,30 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 - **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
 
 ### 4. Unblockable & Concurrency-First Iteration
-Spec has no primitive loop keywords. Iteration is decoupled into lifecycle objects or inlined scoped loops through the `Loops` provider:
-- **`while(evaluate:, iteration:)`**: The bare predicate loop, served by the `Loops` as-import and inlined directly to native C11 statement expressions with zero closures and zero heap allocations.
-- **`Loops:repeat(count:, worker:)`** and **`Loops:until(evaluate:, iteration:)`**: The counting and do-while forms.
+Spec has no primitive loop keywords (`while`, `for`, `do`). Iteration is decoupled into lifecycle objects or inlined scoped loops through the `Loops` provider (`['base', 'sys', as Loops()]`):
+- **`while({ cond }, { step })`**: The bare predicate loop, inlined directly to a native C11 statement expression with zero closures and zero heap allocations.
+- **`while([vars], { cond }, { step })`**: The scoped-variable loop. Variables are scoped strictly to the loop construct:
+  ```spec
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Loops()]
+  ];
+
+  while([Int is i: 0, Int is total: 0], { i < 10 }, {
+  	total: total + i;
+  	i++;
+  });
+  ```
+- **`repeat(count: n, worker: { ... })`**: The fixed counting loop for index-independent repetitions:
+  ```spec
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Loops()]
+  ];
+
+  repeat(count: 4, worker: {
+  	deck:add(item: drawCard());
+  });
+  ```
+- **`until({ cond }, { step })`**: Post-test loop (do-while form) ensuring the body executes at least once.
 - **Mixed Scope & Operator Ergonomics**: Scoped loops freely read and mutate outer variables and collections, paired with prefix and postfix increment/decrement operators (`++`, `--`).
 - **`base:iterator:Loop`**: Implements `evaluate() -> Boolean` and `iteration(LoopControl is control) -> Boolean`. Returning `false` from `iteration` or `evaluate` cleanly terminates the loop.
 - **`base:iterator:LoopControl`**: Supports non-blocking halts (`stop()`) and asynchronous completion triggers (`onComplete`).
@@ -80,6 +101,10 @@ Spec has no primitive loop keywords. Iteration is decoupled into lifecycle objec
 ### 5. Scoped Region Desugaring (`as`)
 Managing lifecycles, locks, transactions, and file handles often creates deeply nested callback pyramids ("rightward drift"). Spec solves this by repurposing the existing keyword `as` at statement position to desugar the remainder of the block into an anonymous callback passed to the trailing positional argument of a function:
 ```spec
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()]
+];
+
 # Parameterless: acquires lock/transaction, runs remainder, unwinds on exit
 as: self:withTransaction(name: "OrderProcessing");
 
@@ -149,8 +174,13 @@ replace Array of Array of String is using: [
   }
   ```
 
-- **`Conditional:match` with Payload Destructuring**: Match any value against held-member keys (array keys match several cases at once); payload arms are closures whose parameters bind the variant's fields:
+- **`match` with Payload Destructuring**: Match any value against held-member keys (array keys match several cases at once); payload arms are closures whose parameters bind the variant's fields:
   ```spec
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Output()],
+  	['base', 'sys', as Conditional()]
+  ];
+
   match(on: res, when: [
   	Result:Ok: local Function(String is data){ line("Success: " . data); },
   	Result:Err: local Function(Int is code, String is msg){ line("Error " . code . ": " . msg); },
@@ -168,6 +198,10 @@ replace Array of Array of String is using: [
 
 - **Scoped Region Desugaring (`as`)**: Linearizes nested callbacks into sequential blocks without rightward drift:
   ```spec
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Output()]
+  ];
+
   as: self:withResource(name: "file.txt", log: log);
   log:add(item: "processing data");
 
@@ -245,6 +279,43 @@ replace Array of Array of String is using: [
 
 - **High-Efficiency C11 Runtime & Memory Model**: Amortized $O(1)$ growable string buffers (`spec_str_append`), zero-allocation character table lookups, cached $O(1)$ string length queries, lazy `SpecArray` buffer allocation, and automatic deallocation of transient `Loop` instances.
 
+- **Scope-Merged Imports (`as ClassName()`)**: Instance imports materialize an owned singleton instance scoped to the declaring class, merging its methods directly into bare scope with zero global namespace pollution:
+  ```spec
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Output()],
+  	['base', 'sys', as Conditional()],
+  	['base', 'sys', as Loops()]
+  ];
+
+  # Members are directly available bare:
+  line('Hello, Spec!');
+  if({ score > 50 }, { line('Pass'); });
+  while([Int is i: 0], { i < 3 }, { i++; });
+  ```
+  Where collisions occur, the qualified class-name prefix (`Output:line(...)`, `Loops:while(...)`) remains fully supported for unambiguous resolution.
+
+- **Multiple Inheritance & Diamond Ambiguity Prevention**: Classes may inherit from multiple parents (`Class of Reader, Writer is ReadWriter`). If multiple parents declare conflicting concrete implementations and the child does not resolve the conflict with an explicit override, the compiler emits a compile-time diamond ambiguity error.
+
+- **Strict Override & Composition Discipline (`replace` & `merge`)**: Overrides are never silent or accidental:
+  - `replace`: Mandatory and compiler-verified when overriding any ancestor field or method (including root contracts `toString()`, `typeName()`, and `init()`).
+  - `merge`: Enables structured composition. On methods, the body forwards delegation to the parent implementation via `(args...);`. On Array fields, child items automatically concatenate after parent elements.
+
+- **Predicate Table Matching (`match(when: ...)`)**: Dropping `on:` turns match keys into closures, evaluating each condition in sequence. The first matching predicate executes its arm, returning a value or executing statements with zero allocation and lowering directly to an inlined C11 else-if ladder:
+  ```spec
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Conditional()]
+  ];
+
+  local String is rating: match(when: [
+  	{ score >= 90 }: { 'Outstanding' },
+  	{ score >= 75 }: { 'Good' },
+  	{ score >= 50 }: { 'Pass' },
+  	else:            { 'Retry' }
+  ]);
+  ```
+
+- **Structural `sysinternal` Floor Isolation**: Low-level C runtime primitives live in `base:sysinternal:*` floor classes bound via the `spec_<snake_case>` naming convention. The compiler structurally enforces that only classes whose declared namespace begins with `['base', 'sys', ...]` may invoke the floor, ensuring all userland code interacts through clean, type-safe Spec wrappers.
+
 ---
 
 ## The Call Model & Conditional Provider
@@ -258,12 +329,17 @@ The **`Conditional` provider** replaces `if`/`else` keywords the same way
 `Loops` replaces loop keywords: conditionals are calls, and the compiler
 inlines them into native C branches with zero closure allocation.
 
-- **Statement form**: `if(check: { ... }, then: { ... }, else: { ... })` — served bare through the as-import — the check closure returns `Boolean`; the branch bodies are statements that may read and mutate the enclosing scope.
-- **Value form**: omitting `else` is fine for statements; a value-yielding call supplies both branches, and the arms' yields unify into the call's type:
+- **Statement form**: `if({ ... }, { ... }, { ... })` — served bare through the as-import — the check closure returns `Boolean`; the branch bodies are statements that may read and mutate the enclosing scope. Single-branch form `if({ ... }, { ... })` is also supported.
+- **Value form**: a value-yielding call supplies both branches, and the arms' yields unify into the call's type:
   ```spec
-  local String is grade: if(check: { score >= 90 }, then: { 'A' }, else: { 'B' });
+  replace Array of Array of String is using: [
+  	['base', 'sys', as Conditional()]
+  ];
+
+  local String is grade: if({ score >= 90 }, { 'A' }, { 'B' });
   ```
-- **Match tables**: `match(on: value, when: [key: { body }, ...])` — the arm-table form with held-member keys, array keys for multiple matching, `else` as a plain identifier key, and payload arms whose closure parameters bind a tagged variant's fields. See the [Language Guide](docs/language/README.md#matching-with-conditionalmatch).
+- **Match tables**: `match(on: value, when: [key: { body }, ...])` — the arm-table form with held-member keys, array keys for multiple matching, `else` as a plain identifier key, and payload arms whose closure parameters bind a tagged variant's fields. See the [Language Guide](docs/language/README.md#matching-with-match).
+- **Predicate tables**: `match(when: [{ cond }: { body }, ...])` — drops `on:` so each key is a closure predicate; the first matching branch runs, replacing nested else-if pyramids with flat, zero-allocation decision tables.
 
 ---
 
@@ -311,11 +387,11 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
-| **Enums & matching** | Algebraic enums with payloads (desugared to real classes); `Conditional:match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
+| **Enums & matching** | Algebraic enums with payloads (desugared to real classes); `match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
-| **Iteration & scopes** | Loop keywords retired; the `Loops` provider's `while` inlines to C11 statement expressions with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
-| **Conditionals** | `if(check:, then:, else:)` and `match(on:, when:)` calls through the `Conditional` as-import, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
+| **Iteration & scopes** | Loop keywords retired; the `Loops` provider's bare `while`, `repeat`, and `until` inline to C11 statement expressions with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
+| **Conditionals** | `if({ ... }, { ... }, { ... })`, `match(on:, when:)`, and `match(when:)` calls through the `Conditional` as-import, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
 | **Concurrency** | pthreads; mutex-protected collections; atomics; parallel fan-out | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
 | **Build model** | Transpiles to one C translation unit; `gcc` links; the compiler is written in Spec and bootstraps from a single canonical C file whose fixed point is verified on every build | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |

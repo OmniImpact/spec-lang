@@ -59,20 +59,38 @@ Members are callable only through a value of the class's type. The class name it
 - `replace`/`merge` on non-public ancestor members = error.
 
 ## Control Flow
+Served bare via scope-merged instance imports `['base', 'sys', as Conditional()]` and `['base', 'sys', as Loops()]`. Both inlined to zero-allocation C11 constructs for literal closures.
 ```spec
-Conditional:if(check: { cond }, then: { ... }, else: { ... });
-local String is s: Conditional:if(check: { cond }, then: { "A" }, else: { "B" });
-Conditional:match(on: value, when: [
+replace Array of Array of String is using: [
+	['base', 'sys', as Output()],
+	['base', 'sys', as Conditional()],
+	['base', 'sys', as Loops()]
+];
+
+# Positional shorthand (or named check:, then:, else:)
+if({ cond }, { ... });
+if({ cond }, { ... }, { ... });
+local String is s: if({ cond }, { "A" }, { "B" });
+
+# Match tables: held-member/variant keys, string keys, array multi-keys
+match(on: value, when: [
 	'a': { ... },
 	'b': { ... },
 	else: { ... }
 ]);
-local Int is x: Conditional:match(on: e, when: [
+local Int is x: match(on: e, when: [
 	Variant: { v.field },
 	else: { 0 }
 ]);
+
+# Predicate table (no on:): first true condition runs its arm (replaces else-if ladders)
+match(when: [
+	{ x < 0 }: { line('negative'); },
+	{ x > 0 }: { line('positive'); },
+	else:      { line('zero'); }
+]);
 ```
-`Conditional:match` on enums: exhaustiveness enforced for value-yielding matches over enum-rooted subjects (`else` closes the table); payload arms are closures whose parameters bind the variant's fields.
+`match` on enums: exhaustiveness enforced for value-yielding matches over enum-rooted subjects (`else` closes the table); payload arms are closures whose parameters bind the variant's fields.
 
 Enums:
 ```spec
@@ -84,11 +102,11 @@ Enum is Result { Ok(String is data), Err(Int is code) }
 #   .name() .ordinal()
 # Per-enum remainder synthesized by the desugarer: .value() .of(v) .values() .toString()
 # Payload constructors: Result:Ok(data: "x") — nested-class construction shorthand
-# Payload destructuring: Conditional:match(on: r, when: [Result:Ok: local Function(String is data){ ... }])
+# Payload destructuring: match(on: r, when: [Result:Ok: local Function(String is data){ ... }])
 # The resolution hook: held Function of T is resolveHeld(String is name, Function of T is missing)
 ```
 
-Loops: the `Loops` provider serves them bare — `while(evaluate:, iteration:)` (inlined to zero-allocation C11 statement expression), `Loops:repeat(count:, worker:)`, `Loops:until(...)`, `Loops:run(loop:, control:)` over a `Loop` subclass; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
+Loops: the `Loops` provider serves them bare — `while({ cond }, { ... })` and scoped-var form `while([Int is i: 0], { i < n }, { ... i++; })` (inlined to zero-allocation C11 statement expression), `repeat(count: n, worker: { ... })`, `until({ cond }, { ... })`, `Loops:run(loop:, control:)` over a `Loop` subclass; `Parallel:run(threads:, iterations:, worker:)` fans pure closures across pthreads (per-thread RNG via `math:fastRandom`; atomics via `Process:atomicAdd/Put/Get`).
 
 Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `return as of Type: call(...)`) desugars the remainder of the enclosing block into an anonymous callback passed as the trailing positional argument to the call, linearizing nested callback pyramids without rightward drift.
 
