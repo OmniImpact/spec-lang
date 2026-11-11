@@ -411,20 +411,14 @@ Class is TypeChecker{
 				Conditional:if(check: { tParts:length() > 1 && sParts:length() > 1 }, then: {
 					local Boolean is argsOk: true;
 					local Int is pIdx: 1;
-					while(
-						evaluate: local Function of Boolean(){
-							return pIdx < tParts:length() && pIdx < sParts:length();
-						},
-						iteration: local Function of Boolean(){
-							local String is tp: tParts:get(index: pIdx);
-							local String is sp: sParts:get(index: pIdx);
-							Conditional:if(check: { !self:isAssignable(target: tp, source: sp) }, then: {
-								argsOk: false;
-							});
-							pIdx: pIdx + 1;
-							return true;
-						}
-					);
+					Loops({ argsOk && pIdx < tParts:length() && pIdx < sParts:length() }, {
+						local String is tp: tParts:get(index: pIdx);
+						local String is sp: sParts:get(index: pIdx);
+						Conditional:if(check: { !self:isAssignable(target: tp, source: sp) }, then: {
+							argsOk: false;
+						});
+						pIdx: pIdx + 1;
+					});
 					return argsOk;
 				});
 				return true;
@@ -656,10 +650,8 @@ Class is TypeChecker{
 		local Boolean is bad: false;
 		local Int is keyTotal: arms:mapKeys:length();
 		local Int is ki: 0;
-		while(
-			evaluate: local Function of Boolean(){ return ki < keyTotal; },
-			iteration: local Function of Boolean(){
-				local Expression is key: arms:mapKeys:get(index: ki);
+		Loops({ ki < keyTotal }, {
+			local Expression is key: arms:mapKeys:get(index: ki);
 				local Expression is val: arms:mapValues:get(index: ki);
 				ki: ki + 1;
 				# The else arm closes the table: arms after it are dead.
@@ -819,9 +811,7 @@ Class is TypeChecker{
 						anyVoid: true;
 					});
 				});
-				return true;
-			}
-		);
+			});
 		Conditional:if(check: { bad }, then: {
 			return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
 		});
@@ -885,10 +875,8 @@ Class is TypeChecker{
 		local Boolean is bad: false;
 		local Int is keyTotal: arms:mapKeys:length();
 		local Int is ki: 0;
-		while(
-			evaluate: local Function of Boolean(){ return ki < keyTotal; },
-			iteration: local Function of Boolean(){
-				local Expression is key: arms:mapKeys:get(index: ki);
+		Loops({ ki < keyTotal }, {
+			local Expression is key: arms:mapKeys:get(index: ki);
 				local Expression is val: arms:mapValues:get(index: ki);
 				ki: ki + 1;
 				# The else arm closes the table: arms after it are dead.
@@ -945,9 +933,7 @@ Class is TypeChecker{
 						anyVoid: true;
 					});
 				});
-				return true;
-			}
-		);
+			});
 		Conditional:if(check: { bad }, then: {
 			return Conditional:if(check: { anyValue && resT != '' }, then: { resT }, else: { 'Void' });
 		});
@@ -1104,14 +1090,10 @@ Class is TypeChecker{
 		Conditional:if(check: { isScoped }, then: {
 			local Array of NamedArg is explicit: [];
 			local Int is ei: 0;
-			while(
-				evaluate: local Function of Boolean(){ return ei < allArgs:length() - 1; },
-				iteration: local Function of Boolean(){
-					explicit:add(item: allArgs:get(index: ei));
-					ei: ei + 1;
-					return true;
-				}
-			);
+			Loops({ ei < allArgs:length() - 1 }, {
+				explicit:add(item: allArgs:get(index: ei));
+				ei: ei + 1;
+			});
 			args: explicit;
 		});
 		local Boolean is allPos: true;
@@ -1139,26 +1121,18 @@ Class is TypeChecker{
 		Conditional:if(check: { allNamed }, then: {
 			local Boolean is dupArg: false;
 			local Int is ai: 0;
-			while(
-				evaluate: local Function of Boolean(){ return !dupArg && ai < args:length(); },
-				iteration: local Function of Boolean(){
-					local Int is aj: ai + 1;
-					while(
-						evaluate: local Function of Boolean(){ return !dupArg && aj < args:length(); },
-						iteration: local Function of Boolean(){
-							local NamedArg is argA: args:get(index: ai);
-							local NamedArg is argB: args:get(index: aj);
-							Conditional:if(check: { argA:name == argB:name }, then: {
-								dupArg: true;
-							});
-							aj: aj + 1;
-							return true;
-						}
-					);
-					ai: ai + 1;
-					return true;
-				}
-			);
+			Loops({ !dupArg && ai < args:length() }, {
+				local Int is aj: ai + 1;
+				Loops({ !dupArg && aj < args:length() }, {
+					local NamedArg is argA: args:get(index: ai);
+					local NamedArg is argB: args:get(index: aj);
+					Conditional:if(check: { argA:name == argB:name }, then: {
+						dupArg: true;
+					});
+					aj: aj + 1;
+				});
+				ai: ai + 1;
+			});
 			Conditional:if(check: { dupArg }, then: {
 				self:addError(line: self:currentLine, msg: 'Duplicate named argument in call to \'' . baseName . '.' . methodName . '\'.');
 				return none;
@@ -1800,93 +1774,69 @@ Class is TypeChecker{
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			local Array of Member is members: c:members;
 			local Int is i: 0;
-			while(
-				evaluate: local Function of Boolean(){ return i < members:length(); },
-				iteration: local Function of Boolean(){
-					local Member is m: members:get(index: i);
-					Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
-						local Boolean is earlier: false;
-						local Int is j: 0;
-						while(
-							evaluate: local Function of Boolean(){ return !earlier && j < i; },
-							iteration: local Function of Boolean(){
-								local Member is g: members:get(index: j);
-								Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
-									earlier: true;
-								});
-								j: j + 1;
-								return true;
-							}
-						);
-						Conditional:if(check: { !earlier }, then: {
-							local Int is groupSize: 0;
-							local Int is k: 0;
-							while(
-								evaluate: local Function of Boolean(){ return k < members:length(); },
-								iteration: local Function of Boolean(){
-									local Member is g: members:get(index: k);
-									Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
-										groupSize: groupSize + 1;
+			Loops({ i < members:length() }, {
+				local Member is m: members:get(index: i);
+				Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
+					local Boolean is earlier: false;
+					local Int is j: 0;
+					Loops({ !earlier && j < i }, {
+						local Member is g: members:get(index: j);
+						Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+							earlier: true;
+						});
+						j: j + 1;
+					});
+					Conditional:if(check: { !earlier }, then: {
+						local Int is groupSize: 0;
+						local Int is k: 0;
+						Loops({ k < members:length() }, {
+							local Member is g: members:get(index: k);
+							Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+								groupSize: groupSize + 1;
+							});
+							k: k + 1;
+						});
+						Conditional:if(check: { groupSize >= 2 }, then: {
+							local Int is a: 0;
+							Loops({ a < members:length() }, {
+								local Member is ma: members:get(index: a);
+								Conditional:if(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
+									local Int is b: a + 1;
+									Loops({ b < members:length() }, {
+										local Member is mb: members:get(index: b);
+										Conditional:if(check: { mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, then: {
+											self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (§I.1).');
+										});
+										b: b + 1;
 									});
-									k: k + 1;
-									return true;
-								}
-							);
-							Conditional:if(check: { groupSize >= 2 }, then: {
-								local Int is a: 0;
-								while(
-									evaluate: local Function of Boolean(){ return a < members:length(); },
-									iteration: local Function of Boolean(){
-										local Member is ma: members:get(index: a);
-										Conditional:if(check: { ma:kind == MemberKind:METHOD && ma:name == m:name }, then: {
-											local Int is b: a + 1;
-											while(
-												evaluate: local Function of Boolean(){ return b < members:length(); },
-												iteration: local Function of Boolean(){
-													local Member is mb: members:get(index: b);
-													Conditional:if(check: { mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, then: {
-														self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (§I.1).');
-													});
-													b: b + 1;
-													return true;
-												}
-											);
-										});
-										a: a + 1;
-										return true;
-									}
-								);
-								local Boolean is nonConcrete: false;
-								local Int is p: 0;
-								while(
-									evaluate: local Function of Boolean(){ return !nonConcrete && p < members:length(); },
-									iteration: local Function of Boolean(){
-										local Member is g: members:get(index: p);
-										Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
-											g:params:each(action: local Function(Parameter is pp){
-												local String is pt: pp:paramType:name;
-												Conditional:if(check: { pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0 }, then: {
-													nonConcrete: true;
-												});
-											});
-										});
-										p: p + 1;
-										return true;
-									}
-								);
-								Conditional:if(check: { nonConcrete }, then: {
-									self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
 								});
-								Conditional:if(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name) }, then: {
-									self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (§I.3).');
+								a: a + 1;
+							});
+							local Boolean is nonConcrete: false;
+							local Int is p: 0;
+							Loops({ !nonConcrete && p < members:length() }, {
+								local Member is g: members:get(index: p);
+								Conditional:if(check: { g:kind == MemberKind:METHOD && g:name == m:name }, then: {
+									g:params:each(action: local Function(Parameter is pp){
+										local String is pt: pp:paramType:name;
+										Conditional:if(check: { pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0 }, then: {
+											nonConcrete: true;
+										});
+									});
 								});
+								p: p + 1;
+							});
+							Conditional:if(check: { nonConcrete }, then: {
+								self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
+							});
+							Conditional:if(check: { m:name != 'init' && self:ancestorDeclares(className: c:name, methodName: m:name) }, then: {
+								self:addError(line: m:line, msg: 'Cannot overload \'' . m:name . '\': the name is declared on an ancestor (§I.3).');
 							});
 						});
 					});
-					i: i + 1;
-					return true;
-				}
-			);
+				});
+				i: i + 1;
+			});
 		});
 	}
 
@@ -1903,18 +1853,14 @@ Class is TypeChecker{
 		});
 		local Boolean is same: true;
 		local Int is idx: 0;
-		while(
-			evaluate: local Function of Boolean(){ return same && idx < a:params:length(); },
-			iteration: local Function of Boolean(){
-				local Parameter is pa: a:params:get(index: idx);
-				local Parameter is pb: b:params:get(index: idx);
-				Conditional:if(check: { pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType) }, then: {
-					same: false;
-				});
-				idx: idx + 1;
-				return true;
-			}
-		);
+		Loops({ same && idx < a:params:length() }, {
+			local Parameter is pa: a:params:get(index: idx);
+			local Parameter is pb: b:params:get(index: idx);
+			Conditional:if(check: { pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType) }, then: {
+				same: false;
+			});
+			idx: idx + 1;
+		});
 		return same;
 	}
 
@@ -2355,27 +2301,23 @@ Class is TypeChecker{
 											local ClassInfo is chainCls: self:findClass(name: root);
 											local Boolean is chainOk: chainCls:name != '';
 											local Int is chainIdx: 1;
-											while(
-												evaluate: local Function of Boolean(){ return chainOk && chainIdx < segs:length(); },
-												iteration: local Function of Boolean(){
-													local String is nextType: '';
-													chainCls:members:each(action: local Function(Member is m){
-														Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
-															nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
-														});
+											Loops({ chainOk && chainIdx < segs:length() }, {
+												local String is nextType: '';
+												chainCls:members:each(action: local Function(Member is m){
+													Conditional:if(check: { m:kind == MemberKind:CLASS && m:nestedClass:name == segs:get(index: chainIdx) }, then: {
+														nextType: chainCls:qualifiedName() . ':' . segs:get(index: chainIdx);
 													});
-													Conditional:if(check: { nextType != '' }, then: {
-														chainCls: self:findClass(name: nextType);
-														Conditional:if(check: { chainCls:name == '' }, then: {
-															chainOk: false;
-														});
-														chainIdx: chainIdx + 1;
-													}, else: {
+												});
+												Conditional:if(check: { nextType != '' }, then: {
+													chainCls: self:findClass(name: nextType);
+													Conditional:if(check: { chainCls:name == '' }, then: {
 														chainOk: false;
 													});
-													return true;
-												}
-											);
+													chainIdx: chainIdx + 1;
+												}, else: {
+													chainOk: false;
+												});
+											});
 											Conditional:if(check: { chainOk && chainIdx == segs:length() }, then: {
 												rootType: chainCls:qualifiedName();
 												chainResolved: true;
@@ -3826,21 +3768,15 @@ Class is TypeChecker{
 	Function of String is displayType(String is t){
 		local String is out: '';
 		local Int is i: 0;
-		while(
-			evaluate: local Function of Boolean(){
-				return i < t:length();
-			},
-			iteration: local Function(){
-				Conditional:if(check: { i + 9 <= t:length() && t:substring(start: i, end: i + 9) == 'Function:' }, then: {
-					out: out . 'Function of ';
-					i: i + 9;
-				}, else: {
-					out: out . t:charAt(index: i, default: '');
-					i: i + 1;
-				});
-				return true;
-			}
-		);
+		Loops({ i < t:length() }, {
+			Conditional:if(check: { i + 9 <= t:length() && t:substring(start: i, end: i + 9) == 'Function:' }, then: {
+				out: out . 'Function of ';
+				i: i + 9;
+			}, else: {
+				out: out . t:charAt(index: i, default: '');
+				i: i + 1;
+			});
+		});
 		return out;
 	}
 

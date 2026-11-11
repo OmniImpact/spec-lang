@@ -36056,7 +36056,6 @@ static __attribute__((unused)) void _anon_fn_239(void* _env_ptr, ClassInfo* c) {
 	    earlier = true;
 	};
     j = ((j) + (1));
-    _it_241 = true; break;
     if (g) { spec_release((void*)g); g = NULL; }
         } while (0);
         if (!_it_241) break;
@@ -36078,7 +36077,6 @@ static __attribute__((unused)) void _anon_fn_239(void* _env_ptr, ClassInfo* c) {
 	    groupSize = ((groupSize) + (1));
 	};
     k = ((k) + (1));
-    _it_242 = true; break;
     if (g) { spec_release((void*)g); g = NULL; }
         } while (0);
         if (!_it_242) break;
@@ -36110,7 +36108,6 @@ static __attribute__((unused)) void _anon_fn_239(void* _env_ptr, ClassInfo* c) {
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[93]))((TypeChecker*)self, m->line, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Methods '"))), m->name), spec_string_intern("' in class '")), c->name), spec_string_intern("' declare identical signatures; overloads must differ (§I.1).")));
 	};
     b = ((b) + (1));
-    _it_244 = true; break;
     if (mb) { spec_release((void*)mb); mb = NULL; }
         } while (0);
         if (!_it_244) break;
@@ -36118,7 +36115,6 @@ static __attribute__((unused)) void _anon_fn_239(void* _env_ptr, ClassInfo* c) {
 });
 	};
     a = ((a) + (1));
-    _it_243 = true; break;
     if (ma) { spec_release((void*)ma); ma = NULL; }
         } while (0);
         if (!_it_243) break;
@@ -36148,7 +36144,6 @@ static __attribute__((unused)) void _anon_fn_239(void* _env_ptr, ClassInfo* c) {
     } } });
 	};
     p = ((p) + (1));
-    _it_245 = true; break;
     if (g) { spec_release((void*)g); g = NULL; }
         } while (0);
         if (!_it_245) break;
@@ -36164,7 +36159,6 @@ static __attribute__((unused)) void _anon_fn_239(void* _env_ptr, ClassInfo* c) {
 	};
 	};
     i = ((i) + (1));
-    _it_240 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
         } while (0);
         if (!_it_240) break;
@@ -63375,7 +63369,7 @@ bool TypeChecker_isAssignable(TypeChecker* self, String target, String source) {
 	    ({ while (1) {
         bool _ev_63 = false;
         do {
-    _ev_63 = ((((pIdx) < (spec_array_length(tParts)))) && (((pIdx) < (spec_array_length(sParts))))); break;
+    _ev_63 = ((((argsOk) && (((pIdx) < (spec_array_length(tParts)))))) && (((pIdx) < (spec_array_length(sParts))))); break;
         } while (0);
         if (!_ev_63) break;
         bool _it_63 = true;
@@ -63386,7 +63380,6 @@ bool TypeChecker_isAssignable(TypeChecker* self, String target, String source) {
 	    argsOk = false;
 	};
     pIdx = ((pIdx) + (1));
-    _it_63 = true; break;
     if (tp) { spec_release((void*)tp); tp = NULL; }
     if (sp) { spec_release((void*)sp); sp = NULL; }
         } while (0);
@@ -63913,7 +63906,6 @@ String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expressio
 	};
     if (valT) { spec_release((void*)valT); valT = NULL; }
 	};
-    _it_74 = true; break;
     if (key) { spec_release((void*)key); key = NULL; }
     if (val) { spec_release((void*)val); val = NULL; }
         } while (0);
@@ -64060,7 +64052,6 @@ String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms) {
 	};
     if (valT) { spec_release((void*)valT); valT = NULL; }
 	};
-    _it_103 = true; break;
     if (key) { spec_release((void*)key); key = NULL; }
     if (val) { spec_release((void*)val); val = NULL; }
         } while (0);
@@ -64271,7 +64262,6 @@ Member* TypeChecker_selectOverload(TypeChecker* self, String className, String m
         do {
     spec_array_add_object(explicit, (void*)(spec_array_get(allArgs, ei)));
     ei = ((ei) + (1));
-    _it_118 = true; break;
         } while (0);
         if (!_it_118) break;
     }
@@ -64334,7 +64324,6 @@ Member* TypeChecker_selectOverload(TypeChecker* self, String className, String m
 	    dupArg = true;
 	};
     aj = ((aj) + (1));
-    _it_122 = true; break;
     if (argA) { spec_release((void*)argA); argA = NULL; }
     if (argB) { spec_release((void*)argB); argB = NULL; }
         } while (0);
@@ -64342,7 +64331,6 @@ Member* TypeChecker_selectOverload(TypeChecker* self, String className, String m
     }
 });
     ai = ((ai) + (1));
-    _it_121 = true; break;
         } while (0);
         if (!_it_121) break;
     }
@@ -65178,7 +65166,6 @@ void TypeChecker_checkOverloadLegality(TypeChecker* self) {
 	    earlier = true;
 	};
     j = ((j) + (1));
-    _it_250 = true; break;
     if (g) { spec_release((void*)g); g = NULL; }
         } while (0);
         if (!_it_250) break;
@@ -65200,7 +65187,6 @@ void TypeChecker_checkOverloadLegality(TypeChecker* self) {
 	    groupSize = ((groupSize) + (1));
 	};
     k = ((k) + (1));
-    _it_251 = true; break;
     if (g) { spec_release((void*)g); g = NULL; }
         } while (0);
         if (!_it_251) break;
@@ -65232,7 +65218,6 @@ void TypeChecker_checkOverloadLegality(TypeChecker* self) {
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[93]))((TypeChecker*)self, m->line, spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Methods '"))), m->name), spec_string_intern("' in class '")), c->name), spec_string_intern("' declare identical signatures; overloads must differ (§I.1).")));
 	};
     b = ((b) + (1));
-    _it_253 = true; break;
     if (mb) { spec_release((void*)mb); mb = NULL; }
         } while (0);
         if (!_it_253) break;
@@ -65240,7 +65225,6 @@ void TypeChecker_checkOverloadLegality(TypeChecker* self) {
 });
 	};
     a = ((a) + (1));
-    _it_252 = true; break;
     if (ma) { spec_release((void*)ma); ma = NULL; }
         } while (0);
         if (!_it_252) break;
@@ -65270,7 +65254,6 @@ void TypeChecker_checkOverloadLegality(TypeChecker* self) {
     } } });
 	};
     p = ((p) + (1));
-    _it_254 = true; break;
     if (g) { spec_release((void*)g); g = NULL; }
         } while (0);
         if (!_it_254) break;
@@ -65286,7 +65269,6 @@ void TypeChecker_checkOverloadLegality(TypeChecker* self) {
 	};
 	};
     i = ((i) + (1));
-    _it_249 = true; break;
     if (m) { spec_release((void*)m); m = NULL; }
         } while (0);
         if (!_it_249) break;
@@ -65321,7 +65303,6 @@ bool TypeChecker_checkerSameSignature(TypeChecker* self, Member* a, Member* b) {
 	    same = false;
 	};
     idx = ((idx) + (1));
-    _it_257 = true; break;
     if (pa) { spec_release((void*)pa); pa = NULL; }
     if (pb) { spec_release((void*)pb); pb = NULL; }
         } while (0);
@@ -65815,7 +65796,6 @@ String TypeChecker_inferExpressionType(TypeChecker* self, Expression* expr, Stri
 	} else {
 	    chainOk = false;
 	};
-    _it_316 = true; break;
     if (nextType) { spec_release((void*)nextType); nextType = NULL; }
         } while (0);
         if (!_it_316) break;
@@ -67376,7 +67356,6 @@ String TypeChecker_displayType(TypeChecker* self, String t) {
 	    out = spec_string_concat(out, String_charAt(t, i, spec_string_intern("")));
 	    i = ((i) + (1));
 	};
-    _it_395 = true; break;
         } while (0);
         if (!_it_395) break;
     }
