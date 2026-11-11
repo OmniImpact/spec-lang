@@ -1538,7 +1538,7 @@ Class is CodeGenerator{
 			Conditional:if(check: { self:policy:isTransparent(c: self:findClass(name: targetT)) || targetT == 'List' || targetT == 'String' ||
 				targetT:startsWith(prefix: 'Array') || targetT:startsWith(prefix: 'List') || targetT:startsWith(prefix: 'Map') }, then: {
 				Conditional:if(check: { expr:methodName == 'get' }, then: {
-					return targetT:startsWith(prefix: 'Map');
+					return targetT:startsWith(prefix: 'Map') && resT == 'String';
 				});
 				return match(on: expr:methodName, when: [
 					['init', 'pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',

@@ -837,7 +837,6 @@ void* spec_map_get(SpecMap* m, String key, void* _default) {
             if (strcmp(curr->key, ck) == 0) {
                 void* res = curr->value;
                 if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : "");
-                else if (m->val_kind == SPEC_ELEM_OBJECT && res) spec_retain(res);
                 return res;
             }
             curr = curr->next;
@@ -851,7 +850,6 @@ void* spec_map_get(SpecMap* m, String key, void* _default) {
         if (strcmp(curr->key, ck) == 0) {
             void* res = curr->value;
             if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : "");
-            else if (m->val_kind == SPEC_ELEM_OBJECT && res) spec_retain(res);
             pthread_mutex_unlock(&m->lock);
             return res;
         }
