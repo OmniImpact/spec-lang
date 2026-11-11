@@ -1195,109 +1195,8 @@ Class is CodeGenerator{
 		});
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
-		# Container element access resolves from the type string directly:
-		# the generic machinery substitutes T through the loaded Array
-		# declaration, which leaks raw 'T' for of-form receivers.
-		if({ baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, {
-			local Array of String is ctParts: className:split(delimiter: ':');
-			local String is elem: '';
-			if({ (baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length' }, {
-				if({ ctParts:length() > 1 }, {
-					elem: ctParts:get(index: 1);
-				}, {
-					if({ className:startsWith(prefix: 'Array of ') }, {
-						elem: className:substring(start: 9, end: className:length());
-					});
-				});
-			});
-			if({ baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:') }, {
-				if({ ctParts:length() > 1 }, {
-					elem: ctParts:get(index: 1);
-				}, {
-					if({ className:startsWith(prefix: 'List of ') }, {
-						elem: className:substring(start: 8, end: className:length());
-					});
-				});
-			});
-
-			local String is knownRet: match(when: [
-				{ methodName == 'length' || methodName == 'count' || methodName == 'indexOf' || methodName == 'getInt' }: {
-					Primitive:INT:value()
-				},
-				{ methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }: {
-					Primitive:BOOLEAN:value()
-				},
-				{ methodName == 'getString' || methodName == 'join' }: {
-					Primitive:STRING:value()
-				},
-				{ methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }: {
-					'void'
-				},
-				{ (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '' }: {
-					elem
-				},
-				else: { '' }
-			]);
-			if({ knownRet != '' }, { return knownRet; });
-
-			if({ methodName == 'get' && baseClassName == 'Map' }, {
-				if({ ctParts:length() > 2 }, {
-					return ctParts:get(index: 2);
-				});
-				local String is rest: className;
-				if({ rest:startsWith(prefix: 'Map of ') }, {
-					rest: rest:substring(start: 7, end: rest:length());
-					local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
-					if({ toIdx >= 0 }, {
-						return rest:substring(start: toIdx + 4, end: rest:length());
-					});
-				});
-			});
-		});
 		local ClassInfo is cls: self:findClass(name: baseClassName);
 		Conditional:if(check: { cls:name == '' }, then: {
-			# Unloaded builtin container: resolve from the builtin table so
-			# concat wraps know the result type.
-			Conditional:if(check: { baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, then: {
-				Conditional:if(check: { methodName == 'length' }, then: {
- return Primitive:INT:value();
-				});
-				Conditional:if(check: { methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }, then: {
- return Primitive:BOOLEAN:value();
-				});
-				Conditional:if(check: { methodName == 'count' || methodName == 'indexOf' }, then: {
- return Primitive:INT:value();
-				});
-				Conditional:if(check: { methodName == 'getString' || methodName == 'join' }, then: {
- return Primitive:STRING:value();
-				});
-				Conditional:if(check: { methodName == 'getInt' }, then: {
- return Primitive:INT:value();
-				});
-				Conditional:if(check: { methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }, then: {
- return 'void';
-				});
-				Conditional:if(check: { methodName == 'get' || methodName == 'pop' || methodName == 'removeAt' }, then: {
-					local Array of String is ta: className:split(delimiter: ':');
-					Conditional:if(check: { ta:length() > 1 }, then: {
-						return ta:get(index: 1);
-					});
-					local String is cn: className;
-					Conditional:if(check: { cn:startsWith(prefix: 'Array of ') }, then: {
-						return cn:substring(start: 9, end: cn:length());
-					});
-					Conditional:if(check: { cn:startsWith(prefix: 'List of ') }, then: {
-						return cn:substring(start: 8, end: cn:length());
-					});
-					Conditional:if(check: { cn:startsWith(prefix: 'Map of ') }, then: {
-						local String is rest: cn:substring(start: 7, end: cn:length());
-						local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
-						Conditional:if(check: { toIdx >= 0 }, then: {
-							return rest:substring(start: toIdx + 4, end: rest:length());
-						});
-					});
-				});
-			});
 			return '';
 		});
 		local MethodMemberLoop is ml: MethodMemberLoop:init(members: cls:members, methodName: methodName);
@@ -4519,7 +4418,7 @@ Class is CodeGenerator{
 		local String is predVar: '_pred_' . id;
 
 		Conditional:if(check: { mode == 'each' }, then: {
-			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n        SPEC_POOL_AUTO;\n";
 			out: out . paramDecl . "        do {\n" . bodyC . "        } while (0);\n    } } })";
 			return out;
 		});
@@ -4533,19 +4432,19 @@ Class is CodeGenerator{
 					outNewC: 'spec_array_new_object()';
 				});
 			});
-			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n        SPEC_POOL_AUTO;\n";
 			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') spec_array_add(' . outVar . ', ' . arrVar . '->items[' . idxVar . "]);\n    } } " . outVar . '; })';
 			return out;
 		});
 		Conditional:if(check: { mode == 'count' }, then: {
 			local String is cntVar: '_cnt_' . id;
-			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; long long ' . cntVar . ' = 0; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; long long ' . cntVar . ' = 0; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n        SPEC_POOL_AUTO;\n";
 			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') ' . cntVar . "++;\n    } } " . cntVar . '; })';
 			return out;
 		});
 		Conditional:if(check: { mode == 'any' }, then: {
 			local String is fndVar: '_fnd_' . id;
-			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; bool ' . fndVar . ' = false; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; bool ' . fndVar . ' = false; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n        SPEC_POOL_AUTO;\n";
 			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') { ' . fndVar . " = true; break; }\n    } } " . fndVar . '; })';
 			return out;
 		});
@@ -4663,17 +4562,19 @@ Class is CodeGenerator{
 		Conditional:if(check: { fnExpr:anonParams:length() >= 1 }, then: {
 			local Parameter is p0: fnExpr:anonParams:get(index: 0);
 			self:localVars:set(key: p0:name, value: 'String');
-			paramDecl: paramDecl . '            String ' . self:utils:cIdent(name: p0:name) . ' = spec_string_from_chars(' . eVar . "->key);\n";
+			paramDecl: paramDecl . '            SPEC_AUTO String ' . self:utils:cIdent(name: p0:name) . ' = spec_string_from_chars(' . eVar . "->key);\n";
 		});
 		Conditional:if(check: { fnExpr:anonParams:length() >= 2 }, then: {
 			local Parameter is p1: fnExpr:anonParams:get(index: 1);
 			self:localVars:set(key: p1:name, value: self:formatTypeString(t: p1:paramType));
 			local String is p1CType: self:cTypeFor(typeName: p1:paramType:name);
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . eVar . '->value';
+			local String is p1Auto: '';
 			Conditional:if(check: { p1:paramType:name == 'String' }, then: {
 				p1Raw: 'spec_string_from_chars((const char*)' . eVar . '->value)';
+				p1Auto: 'SPEC_AUTO ';
 			});
-			paramDecl: paramDecl . '            ' . p1CType . ' ' . self:utils:cIdent(name: p1:name) . ' = ' . p1Raw . ";\n";
+			paramDecl: paramDecl . '            ' . p1Auto . p1CType . ' ' . self:utils:cIdent(name: p1:name) . ' = ' . p1Raw . ";\n";
 		});
 
 		local String is bodyC: '';
@@ -4686,7 +4587,7 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: '({ SpecMap* ' . mapVar . ' = ' . targetC . '; if (' . mapVar . ') { for (size_t ' . bVar . ' = 0; ' . bVar . ' < ' . mapVar . '->nbuckets; ' . bVar . '++) { for (SpecMapEntry* ' . eVar . ' = ' . mapVar . '->buckets[' . bVar . ']; ' . eVar . '; ' . eVar . ' = ' . eVar . "->next) {\n";
+		local String is out: '({ SpecMap* ' . mapVar . ' = ' . targetC . '; if (' . mapVar . ') { for (size_t ' . bVar . ' = 0; ' . bVar . ' < ' . mapVar . '->nbuckets; ' . bVar . '++) { for (SpecMapEntry* ' . eVar . ' = ' . mapVar . '->buckets[' . bVar . ']; ' . eVar . '; ' . eVar . ' = ' . eVar . "->next) {\n            SPEC_POOL_AUTO;\n";
 		out: out . paramDecl . "            do {\n" . bodyC . "            } while (0);\n        } } } })";
 		return out;
 	}
@@ -5238,7 +5139,12 @@ Class is CodeGenerator{
 			local String is pNameC: self:utils:cIdent(name: p:name);
 			local String is pInitC: '0';
 			Conditional:if(check: { p:hasDefault }, then: {
+				local Boolean is savedArgLv: self:argMode;
+				self:argMode: false;
 				pInitC: self:generateExpression(expr: p:defaultExpr);
+				self:argMode: savedArgLv;
+				local Boolean is lvClaims: self:yieldsClaim(expr: p:defaultExpr);
+				pInitC: self:generateTypedConstructor(typeName: pTypeName, valueC: pInitC, cType: pCType, claims: lvClaims);
 			});
 			declsC: declsC . '    ' . pCType . ' ' . pNameC . ' = ' . pInitC . ";\n";
 		});
@@ -5286,7 +5192,7 @@ Class is CodeGenerator{
 			});
 		});
 
-		local String is out: "({ " . declsC . "while (1) {\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n" . loopReleasesC . "})";
+		local String is out: "({ " . declsC . "while (1) {\n        SPEC_POOL_AUTO;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n" . loopReleasesC . "})";
 		self:localVars: savedVars;
 		return out;
 	}
@@ -5333,7 +5239,7 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ while (1) {\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (" . evVar . ") break;\n    }\n})";
+		local String is out: "({ while (1) {\n        SPEC_POOL_AUTO;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (" . evVar . ") break;\n    }\n})";
 		return out;
 	}
 
@@ -5364,7 +5270,7 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ long long _rn_" . id . " = (long long)(" . countC . "); for (long long _ri_" . id . " = 0; _ri_" . id . " < _rn_" . id . "; _ri_" . id . "++) {\n        bool " . itVar . " = true;\n        do {\n" . workerBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n})";
+		local String is out: "({ long long _rn_" . id . " = (long long)(" . countC . "); for (long long _ri_" . id . " = 0; _ri_" . id . " < _rn_" . id . "; _ri_" . id . "++) {\n        SPEC_POOL_AUTO;\n        bool " . itVar . " = true;\n        do {\n" . workerBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n})";
 		return out;
 	}
 
