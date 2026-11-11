@@ -68831,7 +68831,7 @@ _br_100398; });
 	};
 	};
 	} else {
-	    if (((((((((((self->anonDepth) > (0))) && ((!(self->inBranchClosure))))) && (((self->currentAnonNode->kind) == (ExpressionKind_ANON_FN__ensure()))))) && (TypeChecker_isVoid(self, self->currentAnonNode->anonReturnType->name) /* inst:TypeChecker:isVoid */))) && (TypeChecker_isVoid(self, self->currentMethodReturnType) /* inst:TypeChecker:isVoid */))) {
+	    if (((((((((((self->anonDepth) > (0))) && ((!(self->checkingValueYield))))) && (((self->currentAnonNode->kind) == (ExpressionKind_ANON_FN__ensure()))))) && (TypeChecker_isVoid(self, self->currentAnonNode->anonReturnType->name) /* inst:TypeChecker:isVoid */))) && (TypeChecker_isVoid(self, self->currentMethodReturnType) /* inst:TypeChecker:isVoid */))) {
 	    spec_assign_transfer((void**)&self->currentAnonNode->anonReturnType, (void*)(({ Type* _inst = Type_new(); Type_init(_inst, retType); _inst; })));
 	    spec_assign((void**)&self->currentMethodReturnType, (void*)(retType));
 	} else {

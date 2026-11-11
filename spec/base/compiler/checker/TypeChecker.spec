@@ -3878,7 +3878,14 @@ Class is TypeChecker{
 							});
 						});
 					}, {
-						if({ self:anonDepth > 0 && !self:inBranchClosure && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType) }, {
+						# A return inside an untyped closure infers the closure's
+						# return type — including returns nested in statement-form
+						# branches: the inline machinery routes them out of the
+						# CLOSURE, so they type against it, not against the
+						# enclosing method. Only a value-branch's yield (which
+						# types against the branch's expected type above) keeps
+						# the method-level routing.
+						if({ self:anonDepth > 0 && !self:checkingValueYield && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType) }, {
 							self:currentAnonNode:anonReturnType: Type:init(name: retType);
 							self:currentMethodReturnType: retType;
 						}, {
