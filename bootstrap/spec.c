@@ -69455,17 +69455,16 @@ bool Linter_isLoopSpell(Linter* self, Expression* target) {
     SPEC_POOL_AUTO;
     SPEC_AUTO String name = 0;
     name = spec_construct_string(spec_string_intern(""));
-    if (((target->kind) == (ExpressionKind_IDENT__ensure()))) {
+    if ((void*)(target->kind) == (void*)(ExpressionKind_IDENT__ensure())) {
 	    spec_assign((void**)&name, (void*)(target->str));
-	} else {
-	    if (((target->kind) == (ExpressionKind_PATH__ensure()))) {
+	} else if ((void*)(target->kind) == (void*)(ExpressionKind_PATH__ensure())) {
 	    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(target->pathSegments));
 	    if (((spec_array_length(segs)) > (0))) {
 	    spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
 	};
     if (segs) { spec_release((void*)segs); segs = NULL; }
-	};
-	};
+	}
+;
     _mret_100215 = ((spec_string_equals(name, spec_string_intern("Loops"))) || (spec_string_equals(name, spec_string_intern("Loop"))));
     goto _cleanup_100215;
     _cleanup_100215: ;
@@ -69480,17 +69479,16 @@ bool Linter_isClassSpell(Linter* self, Expression* target) {
     SPEC_POOL_AUTO;
     SPEC_AUTO String name = 0;
     name = spec_construct_string(spec_string_intern(""));
-    if (((target->kind) == (ExpressionKind_IDENT__ensure()))) {
+    if ((void*)(target->kind) == (void*)(ExpressionKind_IDENT__ensure())) {
 	    spec_assign((void**)&name, (void*)(target->str));
-	} else {
-	    if (((target->kind) == (ExpressionKind_PATH__ensure()))) {
+	} else if ((void*)(target->kind) == (void*)(ExpressionKind_PATH__ensure())) {
 	    SPEC_AUTO SpecArray* segs = (SpecArray*)spec_retain((void*)(target->pathSegments));
 	    if (((spec_array_length(segs)) > (0))) {
 	    spec_assign((void**)&name, (void*)(spec_array_get(segs, ((spec_array_length(segs)) - (1)))));
 	};
     if (segs) { spec_release((void*)segs); segs = NULL; }
-	};
-	};
+	}
+;
     _mret_100216 = Linter_isUpperName(self, name) /* inst:Linter:isUpperName */;
     goto _cleanup_100216;
     _cleanup_100216: ;

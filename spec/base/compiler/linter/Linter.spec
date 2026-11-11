@@ -247,16 +247,17 @@ Class is Linter{
 	## @return: true when the receiver names While or Loop.
 	Function of Boolean is isLoopSpell(Expression is target){
 		local String is name: '';
-		Conditional:if(check: { target:kind == ExpressionKind:IDENT }, then: {
-			name: target:str;
-		}, else: {
-			Conditional:if(check: { target:kind == ExpressionKind:PATH }, then: {
+		Conditional:match(on: target:kind, when: [
+			ExpressionKind:IDENT: {
+				name: target:str;
+			},
+			ExpressionKind:PATH: {
 				local Array of String is segs: target:pathSegments;
 				Conditional:if(check: { segs:length() > 0 }, then: {
 					name: segs:get(index: segs:length() - 1);
 				});
-			});
-		});
+			}
+		]);
 		return name == 'Loops' || name == 'Loop';
 	}
 
@@ -267,16 +268,17 @@ Class is Linter{
 	## @return: true when the receiver is class-spelled.
 	Function of Boolean is isClassSpell(Expression is target){
 		local String is name: '';
-		Conditional:if(check: { target:kind == ExpressionKind:IDENT }, then: {
-			name: target:str;
-		}, else: {
-			Conditional:if(check: { target:kind == ExpressionKind:PATH }, then: {
+		Conditional:match(on: target:kind, when: [
+			ExpressionKind:IDENT: {
+				name: target:str;
+			},
+			ExpressionKind:PATH: {
 				local Array of String is segs: target:pathSegments;
 				Conditional:if(check: { segs:length() > 0 }, then: {
 					name: segs:get(index: segs:length() - 1);
 				});
-			});
-		});
+			}
+		]);
 		return self:isUpperName(name: name);
 	}
 
