@@ -660,11 +660,8 @@ Class is TypeChecker{
 			return Member:init(kind: MemberKind:FIELD);
 		});
 		local Member is res: Member:init(kind: MemberKind:FIELD);
-		local Int is idx: 0;
-		while({ res:name == '' && idx < cls:members:length() }, {
-			local Member is m: cls:members:get(index: idx);
-			idx: idx + 1;
-			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
+		cls:members:each(action: local Function(Member is m){
+			if({ res:name == '' && !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
 				res: m;
 			});
 		});
@@ -688,11 +685,8 @@ Class is TypeChecker{
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
 		local Member is res: Member:init(kind: MemberKind:FIELD);
-		local Int is idx: 0;
-		while({ res:name == '' && idx < cls:members:length() }, {
-			local Member is m: cls:members:get(index: idx);
-			idx: idx + 1;
-			if({ m:kind == MemberKind:FIELD && m:name == variantName }, {
+		cls:members:each(action: local Function(Member is m){
+			if({ res:name == '' && m:kind == MemberKind:FIELD && m:name == variantName }, {
 				res: m;
 			});
 		});
@@ -728,11 +722,8 @@ Class is TypeChecker{
 			return '';
 		});
 		local Member is foundM: Member:init(kind: MemberKind:FIELD);
-		local Int is idx: 0;
-		while({ foundM:name == '' && idx < cls:members:length() }, {
-			local Member is m: cls:members:get(index: idx);
-			idx: idx + 1;
-			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:FIELD && m:name == fieldName }, {
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:FIELD && m:name == fieldName }, {
 				foundM: m;
 			});
 		});
@@ -782,11 +773,8 @@ Class is TypeChecker{
 			return '';
 		});
 		local Member is foundM: Member:init(kind: MemberKind:FIELD);
-		local Int is idx: 0;
-		while({ foundM:name == '' && idx < cls:members:length() }, {
-			local Member is m: cls:members:get(index: idx);
-			idx: idx + 1;
-			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
+		cls:members:each(action: local Function(Member is m){
+			if({ foundM:name == '' && !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
 				foundM: m;
 			});
 		});
@@ -1283,13 +1271,9 @@ Class is TypeChecker{
 		local Array of NamedArg is args: allArgs;
 		local Boolean is isScoped: expr:scopedRemainder;
 		if({ isScoped }, {
-			local Array of NamedArg is explicit: [];
-			local Int is ei: 0;
-			repeat(count: allArgs:length() - 1, worker: {
-				explicit:add(item: allArgs:get(index: ei));
-				ei: ei + 1;
-			});
-			args: explicit;
+			# The scope slot binds the remainder: the explicit arguments are
+			# every argument but the last.
+			args: allArgs:slice(start: 0, end: allArgs:length() - 1);
 		});
 		local Boolean is allPos: true;
 		local Boolean is allNamed: true;
@@ -1315,18 +1299,16 @@ Class is TypeChecker{
 		});
 		if({ allNamed }, {
 			local Boolean is dupArg: false;
-			local Int is ai: 0;
-			while({ !dupArg && ai < args:length() }, {
-				local Int is aj: ai + 1;
-				while({ !dupArg && aj < args:length() }, {
+			while([Int is ai: 0], { !dupArg && ai < args:length() }, {
+				while([Int is aj: ai + 1], { !dupArg && aj < args:length() }, {
 					local NamedArg is argA: args:get(index: ai);
 					local NamedArg is argB: args:get(index: aj);
 					if({ argA:name == argB:name }, {
 						dupArg: true;
 					});
-					aj: aj + 1;
+					aj++;
 				});
-				ai: ai + 1;
+				ai++;
 			});
 			if({ dupArg }, {
 				self:addError(line: self:currentLine, msg: 'Duplicate named argument in call to \'' . baseName . '.' . methodName . '\'.');
@@ -1938,11 +1920,8 @@ Class is TypeChecker{
 		if({ cls:name == '' }, {
 			return false;
 		});
-		local Int is groupSize: 0;
-		cls:members:each(action: local Function(Member is m){
-			if({ m:kind == MemberKind:METHOD && m:name == methodName }, {
-				groupSize: groupSize + 1;
-			});
+		local Int is groupSize: cls:members:count(predicate: local Function of Boolean(Member is m){
+			return m:kind == MemberKind:METHOD && m:name == methodName;
 		});
 		if({ groupSize >= 2 }, {
 			return true;
@@ -1968,58 +1947,40 @@ Class is TypeChecker{
 	Function is checkOverloadLegality(){
 		self:programClasses:each(action: local Function(ClassInfo is c){
 			local Array of Member is members: c:members;
-			local Int is i: 0;
-			while({ i < members:length() }, {
+			while([Int is i: 0], { i < members:length() }, {
 				local Member is m: members:get(index: i);
 				if({ m:kind == MemberKind:METHOD }, {
-					local Boolean is earlier: false;
-					local Int is j: 0;
-					while({ !earlier && j < i }, {
-						local Member is g: members:get(index: j);
-						if({ g:kind == MemberKind:METHOD && g:name == m:name }, {
-							earlier: true;
-						});
-						j: j + 1;
+					# a same-name METHOD before i: the group's legality checks
+					# run once per name, on the first declaration.
+					local Boolean is earlier: members:slice(start: 0, end: i):any(predicate: local Function of Boolean(Member is g){
+						return g:kind == MemberKind:METHOD && g:name == m:name;
 					});
 					if({ !earlier }, {
-						local Int is groupSize: 0;
-						local Int is k: 0;
-						while({ k < members:length() }, {
-							local Member is g: members:get(index: k);
-							if({ g:kind == MemberKind:METHOD && g:name == m:name }, {
-								groupSize: groupSize + 1;
-							});
-							k: k + 1;
+						local Int is groupSize: members:count(predicate: local Function of Boolean(Member is g){
+							return g:kind == MemberKind:METHOD && g:name == m:name;
 						});
 						if({ groupSize >= 2 }, {
-							local Int is a: 0;
-							while({ a < members:length() }, {
+							while([Int is a: 0], { a < members:length() }, {
 								local Member is ma: members:get(index: a);
 								if({ ma:kind == MemberKind:METHOD && ma:name == m:name }, {
-									local Int is b: a + 1;
-									while({ b < members:length() }, {
+									while([Int is b: a + 1], { b < members:length() }, {
 										local Member is mb: members:get(index: b);
 										if({ mb:kind == MemberKind:METHOD && mb:name == m:name && self:checkerSameSignature(a: ma, b: mb) }, {
 											self:addError(line: m:line, msg: 'Methods \'' . m:name . '\' in class \'' . c:name . '\' declare identical signatures; overloads must differ (§I.1).');
 										});
-										b: b + 1;
+										b++;
 									});
 								});
-								a: a + 1;
+								a++;
 							});
-							local Boolean is nonConcrete: false;
-							local Int is p: 0;
-							while({ !nonConcrete && p < members:length() }, {
-								local Member is g: members:get(index: p);
-								if({ g:kind == MemberKind:METHOD && g:name == m:name }, {
-									g:params:each(action: local Function(Parameter is pp){
-										local String is pt: pp:paramType:name;
-										if({ pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0 }, {
-											nonConcrete: true;
-										});
-									});
+							local Boolean is nonConcrete: members:any(predicate: local Function of Boolean(Member is g){
+								if({ g:kind != MemberKind:METHOD || g:name != m:name }, {
+									return false;
 								});
-								p: p + 1;
+								return g:params:any(predicate: local Function of Boolean(Parameter is pp){
+									local String is pt: pp:paramType:name;
+									return pt == '' || pt == Primitive:ANY:value() || pt == self:names:selfFieldMarker() || c:typeParams:indexOf(search: pt, default: -1) >= 0;
+								});
 							});
 							if({ nonConcrete }, {
 								self:addError(line: m:line, msg: 'Overloaded method \'' . m:name . '\' must declare concrete parameter types (§I.3).');
@@ -2030,7 +1991,7 @@ Class is TypeChecker{
 						});
 					});
 				});
-				i: i + 1;
+				i++;
 			});
 		});
 	}
@@ -2047,14 +2008,13 @@ Class is TypeChecker{
 			return false;
 		});
 		local Boolean is same: true;
-		local Int is idx: 0;
-		while({ same && idx < a:params:length() }, {
+		while([Int is idx: 0], { same && idx < a:params:length() }, {
 			local Parameter is pa: a:params:get(index: idx);
 			local Parameter is pb: b:params:get(index: idx);
 			if({ pa:name != pb:name || self:formatTypeString(t: pa:paramType) != self:formatTypeString(t: pb:paramType) }, {
 				same: false;
 			});
-			idx: idx + 1;
+			idx++;
 		});
 		return same;
 	}
@@ -3980,14 +3940,13 @@ Class is TypeChecker{
 	## @return: The display name.
 	Function of String is displayType(String is t){
 		local String is out: '';
-		local Int is i: 0;
-		while({ i < t:length() }, {
+		while([Int is i: 0], { i < t:length() }, {
 			if({ i + 9 <= t:length() && t:substring(start: i, end: i + 9) == 'Function:' }, {
 				out: out . 'Function of ';
 				i: i + 9;
 			}, {
 				out: out . t:charAt(index: i, default: '');
-				i: i + 1;
+				i++;
 			});
 		});
 		return out;
