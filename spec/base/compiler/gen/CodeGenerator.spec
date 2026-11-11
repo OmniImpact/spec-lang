@@ -269,7 +269,7 @@ Class is CodeGenerator{
 		self:allStringBackedEnums: Map:init();
 		self:allTaggedEnums: Map:init();
 		self:inMethod: false;
-		self:helperFunctions: Buf:stringCopy(b: '');
+		self:helperFunctions: stringCopy(b: '');
 		self:anonCounter: 0;
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
@@ -922,26 +922,23 @@ Class is CodeGenerator{
 		local Boolean is found: false;
 		local Int is count: self:programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
-		while(
-			[Int is idx: 0],
-			{ !found && idx < count },
-			{
-				local ClassInfo is cand: self:programClasses:get(index: idx);
-				idx++;
-				if({ cand:name == name }, {
-					res: cand;
-					found: true;
-				}, {
-					if({ hasColon }, {
-						local String is candQ: cand:namespaceJoined() . ':' . cand:name;
-						if({ candQ == name }, {
-							res: cand;
-							found: true;
-						});
+		local Int is idx: 0;
+		while({ !found && idx < count }, {
+			local ClassInfo is cand: self:programClasses:get(index: idx);
+			idx++;
+			if({ cand:name == name }, {
+				res: cand;
+				found: true;
+			}, {
+				if({ hasColon }, {
+					local String is candQ: cand:namespaceJoined() . ':' . cand:name;
+					if({ candQ == name }, {
+						res: cand;
+						found: true;
 					});
 				});
-			}
-		);
+			});
+		});
 		if({ found }, {
 			return res;
 		});
@@ -1032,57 +1029,57 @@ Class is CodeGenerator{
 		# Container element access resolves from the type string directly:
 		# the generic machinery substitutes T through the loaded Array
 		# declaration, which leaks raw 'T' for of-form receivers.
-		Conditional:if(check: { baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, then: {
+		if({ baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, {
 			local Array of String is ctParts: className:split(delimiter: ':');
 			local String is elem: '';
-			Conditional:if(check: { (baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length' }, then: {
-				Conditional:if(check: { ctParts:length() > 1 }, then: {
+			if({ (baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length' }, {
+				if({ ctParts:length() > 1 }, {
 					elem: ctParts:get(index: 1);
-				}, else: {
-					Conditional:if(check: { className:startsWith(prefix: 'Array of ') }, then: {
+				}, {
+					if({ className:startsWith(prefix: 'Array of ') }, {
 						elem: className:substring(start: 9, end: className:length());
 					});
 				});
 			});
-			Conditional:if(check: { baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:') }, then: {
-				Conditional:if(check: { ctParts:length() > 1 }, then: {
+			if({ baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:') }, {
+				if({ ctParts:length() > 1 }, {
 					elem: ctParts:get(index: 1);
-				}, else: {
-					Conditional:if(check: { className:startsWith(prefix: 'List of ') }, then: {
+				}, {
+					if({ className:startsWith(prefix: 'List of ') }, {
 						elem: className:substring(start: 8, end: className:length());
 					});
 				});
 			});
-			Conditional:if(check: { methodName == 'length' }, then: {
- return Primitive:INT:value();
-			});
-			Conditional:if(check: { methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }, then: {
- return Primitive:BOOLEAN:value();
-			});
-			Conditional:if(check: { methodName == 'count' || methodName == 'indexOf' }, then: {
- return Primitive:INT:value();
-			});
-			Conditional:if(check: { methodName == 'getString' || methodName == 'join' }, then: {
- return Primitive:STRING:value();
-			});
-			Conditional:if(check: { methodName == 'getInt' }, then: {
- return Primitive:INT:value();
-			});
-			Conditional:if(check: { methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }, then: {
- return 'void';
-			});
-			Conditional:if(check: { (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '' }, then: {
-				return elem;
-			});
-			Conditional:if(check: { methodName == 'get' && baseClassName == 'Map' }, then: {
-				Conditional:if(check: { ctParts:length() > 2 }, then: {
+
+			local String is knownRet: match(when: [
+				{ methodName == 'length' || methodName == 'count' || methodName == 'indexOf' || methodName == 'getInt' }: {
+					Primitive:INT:value()
+				},
+				{ methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }: {
+					Primitive:BOOLEAN:value()
+				},
+				{ methodName == 'getString' || methodName == 'join' }: {
+					Primitive:STRING:value()
+				},
+				{ methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }: {
+					'void'
+				},
+				{ (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '' }: {
+					elem
+				},
+				else: { '' }
+			]);
+			if({ knownRet != '' }, { return knownRet; });
+
+			if({ methodName == 'get' && baseClassName == 'Map' }, {
+				if({ ctParts:length() > 2 }, {
 					return ctParts:get(index: 2);
 				});
 				local String is rest: className;
-				Conditional:if(check: { rest:startsWith(prefix: 'Map of ') }, then: {
+				if({ rest:startsWith(prefix: 'Map of ') }, {
 					rest: rest:substring(start: 7, end: rest:length());
 					local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
-					Conditional:if(check: { toIdx >= 0 }, then: {
+					if({ toIdx >= 0 }, {
 						return rest:substring(start: toIdx + 4, end: rest:length());
 					});
 				});
@@ -1201,57 +1198,57 @@ Class is CodeGenerator{
 		# Container element access resolves from the type string directly:
 		# the generic machinery substitutes T through the loaded Array
 		# declaration, which leaks raw 'T' for of-form receivers.
-		Conditional:if(check: { baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, then: {
+		if({ baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, {
 			local Array of String is ctParts: className:split(delimiter: ':');
 			local String is elem: '';
-			Conditional:if(check: { (baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length' }, then: {
-				Conditional:if(check: { ctParts:length() > 1 }, then: {
+			if({ (baseClassName == 'Array' || baseClassName:startsWith(prefix: 'Array:')) && methodName != 'length' }, {
+				if({ ctParts:length() > 1 }, {
 					elem: ctParts:get(index: 1);
-				}, else: {
-					Conditional:if(check: { className:startsWith(prefix: 'Array of ') }, then: {
+				}, {
+					if({ className:startsWith(prefix: 'Array of ') }, {
 						elem: className:substring(start: 9, end: className:length());
 					});
 				});
 			});
-			Conditional:if(check: { baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:') }, then: {
-				Conditional:if(check: { ctParts:length() > 1 }, then: {
+			if({ baseClassName == 'List' || baseClassName:startsWith(prefix: 'List:') }, {
+				if({ ctParts:length() > 1 }, {
 					elem: ctParts:get(index: 1);
-				}, else: {
-					Conditional:if(check: { className:startsWith(prefix: 'List of ') }, then: {
+				}, {
+					if({ className:startsWith(prefix: 'List of ') }, {
 						elem: className:substring(start: 8, end: className:length());
 					});
 				});
 			});
-			Conditional:if(check: { methodName == 'length' }, then: {
- return Primitive:INT:value();
-			});
-			Conditional:if(check: { methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }, then: {
- return Primitive:BOOLEAN:value();
-			});
-			Conditional:if(check: { methodName == 'count' || methodName == 'indexOf' }, then: {
- return Primitive:INT:value();
-			});
-			Conditional:if(check: { methodName == 'getString' || methodName == 'join' }, then: {
- return Primitive:STRING:value();
-			});
-			Conditional:if(check: { methodName == 'getInt' }, then: {
- return Primitive:INT:value();
-			});
-			Conditional:if(check: { methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }, then: {
- return 'void';
-			});
-			Conditional:if(check: { (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '' }, then: {
-				return elem;
-			});
-			Conditional:if(check: { methodName == 'get' && baseClassName == 'Map' }, then: {
-				Conditional:if(check: { ctParts:length() > 2 }, then: {
+
+			local String is knownRet: match(when: [
+				{ methodName == 'length' || methodName == 'count' || methodName == 'indexOf' || methodName == 'getInt' }: {
+					Primitive:INT:value()
+				},
+				{ methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }: {
+					Primitive:BOOLEAN:value()
+				},
+				{ methodName == 'getString' || methodName == 'join' }: {
+					Primitive:STRING:value()
+				},
+				{ methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }: {
+					'void'
+				},
+				{ (methodName == 'get' || methodName == 'pop' || methodName == 'removeAt') && elem != '' }: {
+					elem
+				},
+				else: { '' }
+			]);
+			if({ knownRet != '' }, { return knownRet; });
+
+			if({ methodName == 'get' && baseClassName == 'Map' }, {
+				if({ ctParts:length() > 2 }, {
 					return ctParts:get(index: 2);
 				});
 				local String is rest: className;
-				Conditional:if(check: { rest:startsWith(prefix: 'Map of ') }, then: {
+				if({ rest:startsWith(prefix: 'Map of ') }, {
 					rest: rest:substring(start: 7, end: rest:length());
 					local Int is toIdx: rest:indexOf(search: ' to ', default: -1);
-					Conditional:if(check: { toIdx >= 0 }, then: {
+					if({ toIdx >= 0 }, {
 						return rest:substring(start: toIdx + 4, end: rest:length());
 					});
 				});
@@ -1405,46 +1402,39 @@ Class is CodeGenerator{
 		});
 		Conditional:if(check: { kind == ExpressionKind:PATH }, then: {
 			local Array of String is segs: expr:pathSegments;
-			Conditional:if(check: { segs:length() == 0 }, then: {
+			if({ segs:length() == 0 }, {
 				return '';
 			});
 			local String is root: segs:get(index: 0);
-			local String is rootType: '';
-			Conditional:if(check: { root == self:names:selfIdent() }, then: {
-				rootType: self:currentClassName;
-			}, else: {
-				Conditional:if(check: { self:localVars:has(key: root) }, then: {
-					rootType: self:localVars:getString(key: root, default: '');
-				}, else: {
-					Conditional:if(check: { self:fieldTypes:has(key: root) }, then: {
-						rootType: self:fieldTypes:getString(key: root, default: '');
-					}, else: {
-							Conditional:if(check: { self:allEnumNames:has(key: root) }, then: {
-								return root;
-							}, else: {
-								Conditional:if(check: { self:allClassNames:has(key: root) }, then: {
-									# Held member as segment 1:
-									# the class-name prefix reaches exactly the held
-									# members; the target type is the held field's
-									# type, with later segments chaining as instance
-									# fields on its value.
-									Conditional:if(check: { segs:length() >= 2 }, then: {
-										local String is heldT: self:heldFieldTypes:getString(key: root . ':' . segs:get(index: 1), default: '');
-										Conditional:if(check: { heldT != '' }, then: {
-											local Int is heldIdx: 2;
-											while({ heldT != '' && heldIdx < segs:length() }, {
-												heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
-												heldIdx: heldIdx + 1;
-											});
-											return heldT;
-										});
-									});
-									return root;
-								});
-							});
+			if({ self:allEnumNames:has(key: root) }, {
+				return root;
+			});
+			if({ self:allClassNames:has(key: root) }, {
+				# Held member as segment 1:
+				# the class-name prefix reaches exactly the held
+				# members; the target type is the held field's
+				# type, with later segments chaining as instance
+				# fields on its value.
+				if({ segs:length() >= 2 }, {
+					local String is heldT: self:heldFieldTypes:getString(key: root . ':' . segs:get(index: 1), default: '');
+					if({ heldT != '' }, {
+						local Int is heldIdx: 2;
+						while({ heldT != '' && heldIdx < segs:length() }, {
+							heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
+							heldIdx: heldIdx + 1;
+						});
+						return heldT;
 					});
 				});
+				return root;
 			});
+
+			local String is rootType: match(when: [
+				{ root == self:names:selfIdent() }: { self:currentClassName },
+				{ self:localVars:has(key: root) }: { self:localVars:getString(key: root, default: '') },
+				{ self:fieldTypes:has(key: root) }: { self:fieldTypes:getString(key: root, default: '') },
+				else: { '' }
+			]);
 			Conditional:if(check: { rootType == '' }, then: {
 				return rootType;
 			});
@@ -1858,21 +1848,21 @@ Class is CodeGenerator{
 			},
 			ExpressionKind:NUMBER: {
 				local String is numC: '0';
-				Conditional:if(check: { expr:str != '' }, then: {
+				if({ expr:str != '' }, {
 					numC: expr:str;
 				});
 				numC
 			},
 			ExpressionKind:FLOAT: {
 				local String is floatC: '0.0';
-				Conditional:if(check: { expr:str != '' }, then: {
+				if({ expr:str != '' }, {
 					floatC: expr:str;
 				});
 				floatC
 			},
 			ExpressionKind:BOOL: {
 				local String is boolC: 'false';
-				Conditional:if(check: { expr:num == 1 }, then: {
+				if({ expr:num == 1 }, {
 					boolC: 'true';
 				});
 				boolC
@@ -1894,19 +1884,13 @@ Class is CodeGenerator{
 			},
 			ExpressionKind:UNARY: {
 				local String is innerC: self:generateExpression(expr: expr:unaryExpr);
-				local String is uC: '(' . expr:str . '(' . innerC . '))';
-				Conditional:if(check: { expr:str == 'post++' }, then: {
-					uC: '((' . innerC . ')++)';
-				});
-				Conditional:if(check: { expr:str == 'post--' }, then: {
-					uC: '((' . innerC . ')--)';
-				});
-				Conditional:if(check: { expr:str == '++' }, then: {
-					uC: '(++(' . innerC . '))';
-				});
-				Conditional:if(check: { expr:str == '--' }, then: {
-					uC: '(--(' . innerC . '))';
-				});
+				local String is uC: match(when: [
+					{ expr:str == 'post++' }: { '((' . innerC . ')++)' },
+					{ expr:str == 'post--' }: { '((' . innerC . ')--)' },
+					{ expr:str == '++' }: { '(++(' . innerC . '))' },
+					{ expr:str == '--' }: { '(--(' . innerC . '))' },
+					else: { '(' . expr:str . '(' . innerC . '))' }
+				]);
 				uC
 			},
 			ExpressionKind:CALL: {
@@ -2159,19 +2143,15 @@ Class is CodeGenerator{
 				local Boolean is leftPrim: leftT == Primitive:INT:value() || leftT == 'Byte' || leftT == 'Float' || leftT == 'Boolean';
 				local Boolean is leftClaimKind: leftKind == ExpressionKind:CALL || leftKind == ExpressionKind:BINARY || leftKind == ExpressionKind:ARRAY || leftKind == ExpressionKind:MAP;
 				local Boolean is leftArc: self:isArcType(typeName: leftT);
-				local String is leftClaim: leftC;
-				Conditional:if(check: { !leftPrim }, then: {
-					Conditional:if(check: { leftClaimKind }, then: {
-						leftClaim: leftC;
-					}, else: {
-						Conditional:if(check: { leftArc }, then: {
-							leftClaim: '(void*)spec_retain((void*)(' . leftC . '))';
-						}, else: {
-							leftClaim: 'spec_string_from_chars(' . leftC . ')';
-						});
-					});
+				local String is leftClaim: match(when: [
+					{ leftPrim || leftClaimKind }: { leftC },
+					{ leftArc }: { '(void*)spec_retain((void*)(' . leftC . '))' },
+					else: { 'spec_string_from_chars(' . leftC . ')' }
+				]);
+				local String is leftWrap: leftClaim;
+				if({ leftPrim }, {
+					leftWrap: self:wrapToString(expr: expr:leftExpr, exprC: leftClaim);
 				});
-				local String is leftWrap: Conditional:if(check: { leftPrim }, then: { self:wrapToString(expr: expr:leftExpr, exprC: leftClaim) }, else: { leftClaim });
 				local Boolean is savedArgR: self:argMode;
 				self:argMode: true;
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
@@ -2183,7 +2163,7 @@ Class is CodeGenerator{
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
 				local String is eqC: '((' . leftC . ') == (' . rightC . '))';
-				Conditional:if(check: { self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, then: {
+				if({ self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, {
 					eqC: 'spec_string_equals(' . leftC . ', ' . rightC . ')';
 				});
 				eqC
@@ -2192,7 +2172,7 @@ Class is CodeGenerator{
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
 				local String is neC: '((' . leftC . ') != (' . rightC . '))';
-				Conditional:if(check: { self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, then: {
+				if({ self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, {
 					neC: '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
 				});
 				neC
@@ -2204,7 +2184,7 @@ Class is CodeGenerator{
 				local String is leftC: self:generateExpression(expr: expr:leftExpr);
 				local String is rightC: self:generateExpression(expr: expr:rightExpr);
 				local String is relC: '((' . leftC . ') ' . op . ' (' . rightC . '))';
-				Conditional:if(check: { self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, then: {
+				if({ self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, {
 					relC: '(spec_string_compare(' . leftC . ', ' . rightC . ') ' . op . ' 0)';
 				});
 				relC
@@ -2235,7 +2215,7 @@ Class is CodeGenerator{
 	## @param body: The generated closure body.
 	## @return: The body with literal contents removed.
 	Function of String is stripStringLiterals(String is body){
-		local String is out: Buf:stringCopy(b: '');
+		local String is out: stringCopy(b: '');
 		local String is ch: '';
 		local String is nextCh: '';
 		local String is delim: '';
@@ -2243,65 +2223,66 @@ Class is CodeGenerator{
 		local Int is len: body:length();
 		while({ i < len }, {
 			ch: body:charAt(index: i, default: '');
-			Conditional:if(check: { delim == '' }, then: {
-				Conditional:if(check: { ch == '"' || ch == '\'' || ch == '`' }, then: {
-					nextCh: body:charAt(index: i + 1, default: '');
-					Conditional:if(check: { nextCh == ch && body:charAt(index: i + 2, default: '') == ch }, then: {
-						delim: ch;
-						i: i + 3;
-					}, else: {
-						delim: ch;
-						i: i + 1;
-					});
-				}, else: {
-					out: out . ch;
-					i: i + 1;
-				});
-			}, else: {
-				Conditional:if(check: { ch == '\\' }, then: {
-					i: i + 2;
-				}, else: {
-					Conditional:if(check: { delim == '`' && ch == '$' && body:charAt(index: i + 1, default: '') == '{' }, then: {
-						delim: '';
-						out: out . ' ';
-						i: i + 2;
-					}, else: {
-						Conditional:if(check: { ch == delim }, then: {
+			match(when: [
+				{ delim == '' }: {
+					match(when: [
+						{ ch == '"' || ch == '\'' || ch == '`' }: {
+							delim: ch;
 							nextCh: body:charAt(index: i + 1, default: '');
-							Conditional:if(check: { delim == '\'' && nextCh == '\'' && body:charAt(index: i + 2, default: '') == '\'' }, then: {
+							if({ nextCh == ch && body:charAt(index: i + 2, default: '') == ch }, {
 								i: i + 3;
-								delim: '';
-							}, else: {
-								delim: '';
+							}, {
 								i: i + 1;
 							});
-						}, else: {
+						},
+						else: {
+							out: out . ch;
 							i: i + 1;
-						});
+						}
+					]);
+				},
+				{ ch == '\\' }: {
+					i: i + 2;
+				},
+				{ delim == '`' && ch == '$' && body:charAt(index: i + 1, default: '') == '{' }: {
+					delim: '';
+					out: out . ' ';
+					i: i + 2;
+				},
+				{ ch == delim }: {
+					nextCh: body:charAt(index: i + 1, default: '');
+					if({ delim == '\'' && nextCh == '\'' && body:charAt(index: i + 2, default: '') == '\'' }, {
+						i: i + 3;
+					}, {
+						i: i + 1;
 					});
-				});
-			});
+					delim: '';
+				},
+				else: {
+					i: i + 1;
+				}
+			]);
 		});
 		return out;
 	}
 
 	Function of Boolean is containsIdent(String is body, String is ident){
-		Conditional:if(check: { ident == '' || body:length() < ident:length() }, then: {
+		if({ ident == '' || body:length() < ident:length() }, {
 			return false;
 		});
 		local Boolean is found: false;
 		local String is rest: body;
 		while({ !found && rest:length() > 0 }, {
 			local Int is hit: rest:indexOf(search: ident, default: -1);
-			Conditional:if(check: { hit < 0 }, then: {
+			if({ hit < 0 }, {
 				rest: '';
-			}, else: {
+			}, {
 				local Boolean is headOk: hit == 0 || !(self:isIdentChar(c: rest:charAt(index: hit - 1, default: '_')));
 				local Int is tail: hit + ident:length();
 				local Boolean is tailOk: tail >= rest:length() || !(self:isIdentChar(c: rest:charAt(index: tail, default: '_')));
-				Conditional:if(check: { headOk && tailOk }, then: {
+				if({ headOk && tailOk }, {
 					found: true;
-				}, else: {
+				}, {
 					rest: rest:substring(start: hit + 1, end: rest:length());
 				});
 			});
@@ -2315,16 +2296,13 @@ Class is CodeGenerator{
 	## @param c: The character.
 	## @return: true when the character continues an identifier.
 	Function of Boolean is isIdentChar(String is c){
-		Conditional:if(check: { c == '' }, then: {
+		if({ c == '' }, {
 			return false;
 		});
 		local String is lower: 'abcdefghijklmnopqrstuvwxyz';
 		local String is upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 		local String is digits: '0123456789';
-		Conditional:if(check: { lower:contains(needle: c) || upper:contains(needle: c) || digits:contains(needle: c) || c == '_' }, then: {
-			return true;
-		});
-		return false;
+		return lower:contains(needle: c) || upper:contains(needle: c) || digits:contains(needle: c) || c == '_';
 	}
 
 	## Emits an index expression: Map lookups and Array/List element access.
@@ -2335,28 +2313,31 @@ Class is CodeGenerator{
 		local String is targetC: self:generateExpression(expr: expr:leftExpr);
 		local String is indexC: self:generateExpression(expr: expr:rightExpr);
 		local String is targetType: self:inferTargetType(expr: expr:leftExpr);
-		Conditional:if(check: { targetType:startsWith(prefix: 'Map:') || targetType == 'Map' }, then: {
+		if({ targetType:startsWith(prefix: 'Map:') || targetType == 'Map' }, {
 			local String is valType: 'String';
-			Conditional:if(check: { targetType:startsWith(prefix: 'Map:') }, then: {
+			if({ targetType:startsWith(prefix: 'Map:') }, {
 				valType: self:elemOfType(t: targetType);
 			});
-			Conditional:if(check: { valType == 'String' }, then: {
-				return '((String)spec_map_get(' . targetC . ', ' . indexC . ', spec_string_intern("")))';
-			});
-			Conditional:if(check: { valType == Primitive:INT:value() }, then: {
-				return '((long long)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', 0))';
-			});
-			Conditional:if(check: { valType == 'Float' }, then: {
-				return '((double)spec_map_get(' . targetC . ', ' . indexC . ', 0))';
-			});
-			Conditional:if(check: { valType == 'Boolean' }, then: {
-				return '((bool)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', false))';
-			});
-			local String is valCType: self:cTypeFor(typeName: valType);
-			return '((' . valCType . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))';
+			return match(when: [
+				{ valType == 'String' }: {
+					'((String)spec_map_get(' . targetC . ', ' . indexC . ', spec_string_intern("")))'
+				},
+				{ valType == Primitive:INT:value() }: {
+					'((long long)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', 0))'
+				},
+				{ valType == 'Float' }: {
+					'((double)spec_map_get(' . targetC . ', ' . indexC . ', 0))'
+				},
+				{ valType == 'Boolean' }: {
+					'((bool)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', false))'
+				},
+				else: {
+					'((' . self:cTypeFor(typeName: valType) . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))'
+				}
+			]);
 		});
 		local String is elemT: self:elemOfType(t: targetType);
-		Conditional:if(check: { elemT != '' }, then: {
+		if({ elemT != '' }, {
 			local String is elemCType: self:cTypeFor(typeName: elemT);
 			return '((' . elemCType . ')(intptr_t)spec_array_get(' . targetC . ', (size_t)(' . indexC . ')))';
 		});
@@ -2989,7 +2970,7 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			Buf:bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . bodyC . cleanupTail . "}\n\n");
+			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . bodyC . cleanupTail . "}\n\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, else: {
 			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
@@ -3006,7 +2987,7 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			Buf:bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bodyC . cleanupTail . "}\n\n");
+			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bodyC . cleanupTail . "}\n\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}
@@ -3577,7 +3558,7 @@ Class is CodeGenerator{
 		# Body first: unused-parameter suppressions need the finished text.
 		# The accumulator is a fresh mutable buffer grown IN PLACE — a concat
 		# per statement would copy the whole body each time (quadratic).
-		local String is bodyC: Buf:stringCopy(b: '');
+		local String is bodyC: stringCopy(b: '');
 
 		# Part IV memory discipline: the scope-end releases
 		# move under a cleanup label and every return funnels through it —
@@ -3610,16 +3591,16 @@ Class is CodeGenerator{
 		});
 
 		Conditional:if(check: { self:cleanupRetVar != '' }, then: {
-			Buf:bufAppendBuf(dst: bodyC, src: '    ' . retType . ' ' . self:cleanupRetVar . " = 0;\n");
+			bufAppendBuf(dst: bodyC, src: '    ' . retType . ' ' . self:cleanupRetVar . " = 0;\n");
 		});
-		Buf:bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
+		bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
 		self:hoistedLocals:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
-			Buf:bufAppendBuf(dst: bodyC, src: '    SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
+			bufAppendBuf(dst: bodyC, src: '    SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
 		});
 		method:body:each(action: local Function(Statement is stmt){
 			local String is stmtC: self:generateStatement(stmt: stmt);
-			Buf:bufAppendBuf(dst: bodyC, src: stmtC);
+			bufAppendBuf(dst: bodyC, src: stmtC);
 		});
 
 		Conditional:if(check: { method:body:length() == 0 && retType != 'void' }, then: {
@@ -3792,17 +3773,17 @@ Class is CodeGenerator{
 		# into helperFunctions; the pass collects them and appends after
 		# the definitions (the assembly places this section before the
 		# methods, so every use is preceded by its definition).
-		local String is helpersAcc: Buf:stringCopy(b: '');
+		local String is helpersAcc: stringCopy(b: '');
 		# Prototypes first: cross-class held references in init
 		# expressions call accessors defined later in the pass.
 		local Int is pi: 0;
 		while({ pi < heldAll:length() }, {
 			local Member is pm: heldAll:get(index: pi);
 			local String is pSym: ownerSyms:get(index: pi) . '_' . self:utils:cIdent(name: pm:name);
-			Buf:bufAppendBuf(dst: out, src: self:cTypeFor(typeName: declaredTypes:get(index: pi)) . ' ' . pSym . "__ensure(void);\n");
+			bufAppendBuf(dst: out, src: self:cTypeFor(typeName: declaredTypes:get(index: pi)) . ' ' . pSym . "__ensure(void);\n");
 			pi: pi + 1;
 		});
-		Buf:bufAppendBuf(dst: out, src: "\n");
+		bufAppendBuf(dst: out, src: "\n");
 		# Resolution-hook prototypes: the resolver
 		# and the cache-hook — spelled exactly as the definitions below
 		# and in the methods section (cTypeFor drives both).
@@ -3815,8 +3796,8 @@ Class is CodeGenerator{
 				});
 			});
 			local String is resRet: self:resolveReturnType(t: rm:memberType);
-			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . '_held_resolveHeld(' . self:cTypeFor(typeName: Primitive:STRING:value()) . ' name, ' . self:cTypeFor(typeName: 'Function') . ' missing);' . "\n");
-			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . "_held_resolve(" . self:cTypeFor(typeName: Primitive:STRING:value()) . " name);\n");
+			bufAppendBuf(dst: out, src: resRet . ' ' . rSym . '_held_resolveHeld(' . self:cTypeFor(typeName: Primitive:STRING:value()) . ' name, ' . self:cTypeFor(typeName: 'Function') . ' missing);' . "\n");
+			bufAppendBuf(dst: out, src: resRet . ' ' . rSym . "_held_resolve(" . self:cTypeFor(typeName: Primitive:STRING:value()) . " name);\n");
 		});
 		local Int is di: 0;
 		while({ di < heldAll:length() }, {
@@ -3839,10 +3820,10 @@ Class is CodeGenerator{
 				});
 				local Boolean is savedArg: self:argMode;
 				self:argMode: false;
-				self:helperFunctions: Buf:stringCopy(b: '');
+				self:helperFunctions: stringCopy(b: '');
 				local String is initC: self:generateExpression(expr: m:initExpr);
 				self:argMode: savedArg;
-				Buf:bufAppendBuf(dst: helpersAcc, src: self:helperFunctions);
+				bufAppendBuf(dst: helpersAcc, src: self:helperFunctions);
 				self:fieldTypes: savedFields;
 				self:localVars: savedLocals;
 				self:currentClassName: savedClass;
@@ -3854,19 +3835,19 @@ Class is CodeGenerator{
 				Conditional:if(check: { self:isArcType(typeName: declaredT) }, then: {
 					retC: '(' . typeC . ')spec_retain((void*)(' . mSym . '))';
 				});
-				Buf:bufAppendBuf(dst: out, src: typeC . ' ' . mSym . ";\n");
-				Buf:bufAppendBuf(dst: out, src: 'atomic_int ' . mSym . "_once;\n\n");
-				Buf:bufAppendBuf(dst: out, src: typeC . ' ' . mSym . "__ensure(void) {\n");
-				Buf:bufAppendBuf(dst: out, src: '    if (atomic_load_explicit(&' . mSym . "_once, memory_order_acquire) == 0) {\n");
-				Buf:bufAppendBuf(dst: out, src: "        int expected = 0;\n");
-				Buf:bufAppendBuf(dst: out, src: '        if (atomic_compare_exchange_strong_explicit(&' . mSym . "_once, &expected, 2, memory_order_acq_rel, memory_order_acquire)) {\n");
-				Buf:bufAppendBuf(dst: out, src: '            ' . mSym . ' = ' . initC . ";\n");
-				Buf:bufAppendBuf(dst: out, src: '            atomic_store_explicit(&' . mSym . "_once, 1, memory_order_release);\n");
-				Buf:bufAppendBuf(dst: out, src: "        } else {\n");
-				Buf:bufAppendBuf(dst: out, src: '            while (atomic_load_explicit(&' . mSym . "_once, memory_order_acquire) != 1) { }\n");
-				Buf:bufAppendBuf(dst: out, src: "        }\n");
-				Buf:bufAppendBuf(dst: out, src: "    }\n");
-				Buf:bufAppendBuf(dst: out, src: '    return ' . retC . ";\n}\n\n");
+				bufAppendBuf(dst: out, src: typeC . ' ' . mSym . ";\n");
+				bufAppendBuf(dst: out, src: 'atomic_int ' . mSym . "_once;\n\n");
+				bufAppendBuf(dst: out, src: typeC . ' ' . mSym . "__ensure(void) {\n");
+				bufAppendBuf(dst: out, src: '    if (atomic_load_explicit(&' . mSym . "_once, memory_order_acquire) == 0) {\n");
+				bufAppendBuf(dst: out, src: "        int expected = 0;\n");
+				bufAppendBuf(dst: out, src: '        if (atomic_compare_exchange_strong_explicit(&' . mSym . "_once, &expected, 2, memory_order_acq_rel, memory_order_acquire)) {\n");
+				bufAppendBuf(dst: out, src: '            ' . mSym . ' = ' . initC . ";\n");
+				bufAppendBuf(dst: out, src: '            atomic_store_explicit(&' . mSym . "_once, 1, memory_order_release);\n");
+				bufAppendBuf(dst: out, src: "        } else {\n");
+				bufAppendBuf(dst: out, src: '            while (atomic_load_explicit(&' . mSym . "_once, memory_order_acquire) != 1) { }\n");
+				bufAppendBuf(dst: out, src: "        }\n");
+				bufAppendBuf(dst: out, src: "    }\n");
+				bufAppendBuf(dst: out, src: '    return ' . retC . ";\n}\n\n");
 				di: di + 1;
 			});
 		# The resolution-hook machinery: per resolver
@@ -3884,34 +3865,34 @@ Class is CodeGenerator{
 			});
 			local String is resRet: self:resolveReturnType(t: rm:memberType);
 			local String is resTName: self:formatTypeString(t: rm:memberType);
-			Buf:bufAppendBuf(dst: out, src: 'static ' . resRet . ' ' . rSym . "_held_missing_fn(void* env) {\n");
-			Buf:bufAppendBuf(dst: out, src: '    ' . self:cTypeFor(typeName: Primitive:STRING:value()) . ' name = (' . self:cTypeFor(typeName: Primitive:STRING:value()) . ")env;\n");
-			Buf:bufAppendBuf(dst: out, src: '    spec_panic(spec_buf_to_cstring((SpecBuf*)(spec_string_concat(spec_string_concat(spec_string_intern("No held member \'"), name), spec_string_intern("\' on ' . c:qualifiedName() . '")))));' . "\n");
-			Buf:bufAppendBuf(dst: out, src: '    return (' . resRet . ")0;\n}\n\n");
-			Buf:bufAppendBuf(dst: out, src: resRet . ' ' . rSym . '_held_resolve(' . self:cTypeFor(typeName: Primitive:STRING:value()) . " name) {\n");
-			Buf:bufAppendBuf(dst: out, src: "    static String* _names = 0;\n    static void** _vals = 0;\n    static int _len = 0;\n    static int _cap = 0;\n");
-			Buf:bufAppendBuf(dst: out, src: "    static pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;\n");
-			Buf:bufAppendBuf(dst: out, src: "    void* found = 0;\n    pthread_mutex_lock(&_lock);\n");
-			Buf:bufAppendBuf(dst: out, src: "    for (int _i = 0; _i < _len; _i++) {\n");
-			Buf:bufAppendBuf(dst: out, src: "        if (spec_string_equals(_names[_i], name)) { found = _vals[_i]; break; }\n    }\n");
-			Buf:bufAppendBuf(dst: out, src: "    if (!found) {\n");
-			Buf:bufAppendBuf(dst: out, src: '        SpecClosure* _missing = spec_closure_new((void*)' . rSym . "_held_missing_fn, (void*)name, NULL);\n");
-			Buf:bufAppendBuf(dst: out, src: '        found = (void*)' . rSym . "_held_resolveHeld(name, _missing);\n");
-			Buf:bufAppendBuf(dst: out, src: "        if (!found) {\n            pthread_mutex_unlock(&_lock);\n");
-			Buf:bufAppendBuf(dst: out, src: '            ((' . resRet . " (*)(void*))_missing->fn)(_missing->env);\n");
-			Buf:bufAppendBuf(dst: out, src: "            spec_panic(\"resolution hook failed\");\n        }\n");
-			Buf:bufAppendBuf(dst: out, src: "        if (_len == _cap) {\n            _cap = _cap ? _cap * 2 : 8;\n");
-			Buf:bufAppendBuf(dst: out, src: "            _names = (String*)realloc(_names, sizeof(String) * _cap);\n");
-			Buf:bufAppendBuf(dst: out, src: "            _vals = (void**)realloc(_vals, sizeof(void*) * _cap);\n        }\n");
-			Buf:bufAppendBuf(dst: out, src: "        _names[_len] = name;\n        _vals[_len] = found;\n        _len++;\n");
-			Buf:bufAppendBuf(dst: out, src: "    }\n    pthread_mutex_unlock(&_lock);\n");
+			bufAppendBuf(dst: out, src: 'static ' . resRet . ' ' . rSym . "_held_missing_fn(void* env) {\n");
+			bufAppendBuf(dst: out, src: '    ' . self:cTypeFor(typeName: Primitive:STRING:value()) . ' name = (' . self:cTypeFor(typeName: Primitive:STRING:value()) . ")env;\n");
+			bufAppendBuf(dst: out, src: '    spec_panic(spec_buf_to_cstring((SpecBuf*)(spec_string_concat(spec_string_concat(spec_string_intern("No held member \'"), name), spec_string_intern("\' on ' . c:qualifiedName() . '")))));' . "\n");
+			bufAppendBuf(dst: out, src: '    return (' . resRet . ")0;\n}\n\n");
+			bufAppendBuf(dst: out, src: resRet . ' ' . rSym . '_held_resolve(' . self:cTypeFor(typeName: Primitive:STRING:value()) . " name) {\n");
+			bufAppendBuf(dst: out, src: "    static String* _names = 0;\n    static void** _vals = 0;\n    static int _len = 0;\n    static int _cap = 0;\n");
+			bufAppendBuf(dst: out, src: "    static pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;\n");
+			bufAppendBuf(dst: out, src: "    void* found = 0;\n    pthread_mutex_lock(&_lock);\n");
+			bufAppendBuf(dst: out, src: "    for (int _i = 0; _i < _len; _i++) {\n");
+			bufAppendBuf(dst: out, src: "        if (spec_string_equals(_names[_i], name)) { found = _vals[_i]; break; }\n    }\n");
+			bufAppendBuf(dst: out, src: "    if (!found) {\n");
+			bufAppendBuf(dst: out, src: '        SpecClosure* _missing = spec_closure_new((void*)' . rSym . "_held_missing_fn, (void*)name, NULL);\n");
+			bufAppendBuf(dst: out, src: '        found = (void*)' . rSym . "_held_resolveHeld(name, _missing);\n");
+			bufAppendBuf(dst: out, src: "        if (!found) {\n            pthread_mutex_unlock(&_lock);\n");
+			bufAppendBuf(dst: out, src: '            ((' . resRet . " (*)(void*))_missing->fn)(_missing->env);\n");
+			bufAppendBuf(dst: out, src: "            spec_panic(\"resolution hook failed\");\n        }\n");
+			bufAppendBuf(dst: out, src: "        if (_len == _cap) {\n            _cap = _cap ? _cap * 2 : 8;\n");
+			bufAppendBuf(dst: out, src: "            _names = (String*)realloc(_names, sizeof(String) * _cap);\n");
+			bufAppendBuf(dst: out, src: "            _vals = (void**)realloc(_vals, sizeof(void*) * _cap);\n        }\n");
+			bufAppendBuf(dst: out, src: "        _names[_len] = name;\n        _vals[_len] = found;\n        _len++;\n");
+			bufAppendBuf(dst: out, src: "    }\n    pthread_mutex_unlock(&_lock);\n");
 			Conditional:if(check: { self:isArcType(typeName: resTName) }, then: {
-				Buf:bufAppendBuf(dst: out, src: '    return (' . resRet . ")spec_retain(found);\n}\n\n");
+				bufAppendBuf(dst: out, src: '    return (' . resRet . ")spec_retain(found);\n}\n\n");
 			}, else: {
-				Buf:bufAppendBuf(dst: out, src: '    return (' . resRet . ")found;\n}\n\n");
+				bufAppendBuf(dst: out, src: '    return (' . resRet . ")found;\n}\n\n");
 			});
 		});
-		Buf:bufAppendBuf(dst: out, src: helpersAcc);
+		bufAppendBuf(dst: out, src: helpersAcc);
 		return out;
 	}
 
@@ -3947,23 +3928,23 @@ Class is CodeGenerator{
 			});
 			Conditional:if(check: { names:length() > 0 }, then: {
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-				Buf:bufAppendBuf(dst: out, src: 'static const char* ' . cSym . "_held_names[] = {\n");
+				bufAppendBuf(dst: out, src: 'static const char* ' . cSym . "_held_names[] = {\n");
 				names:each(action: local Function(String is n){
-					Buf:bufAppendBuf(dst: out, src: '    "' . n . "\",\n");
+					bufAppendBuf(dst: out, src: '    "' . n . "\",\n");
 				});
-				Buf:bufAppendBuf(dst: out, src: "};\n");
-				Buf:bufAppendBuf(dst: out, src: 'static void* (*const ' . cSym . "_held_getters[])(void) = {\n");
+				bufAppendBuf(dst: out, src: "};\n");
+				bufAppendBuf(dst: out, src: 'static void* (*const ' . cSym . "_held_getters[])(void) = {\n");
 				getters:each(action: local Function(String is g){
-					Buf:bufAppendBuf(dst: out, src: '    ' . g . ",\n");
+					bufAppendBuf(dst: out, src: '    ' . g . ",\n");
 				});
-				Buf:bufAppendBuf(dst: out, src: "};\n");
-				Buf:bufAppendBuf(dst: entries, src: '    { "' . c:qualifiedName() . '", ' . cSym . '_held_names, ' . (names:length() as String) . ', ' . cSym . "_held_getters },\n");
+				bufAppendBuf(dst: out, src: "};\n");
+				bufAppendBuf(dst: entries, src: '    { "' . c:qualifiedName() . '", ' . cSym . '_held_names, ' . (names:length() as String) . ', ' . cSym . "_held_getters },\n");
 				entryCount: entryCount + 1;
 			});
 		});
-		Buf:bufAppendBuf(dst: out, src: "static const SpecHeldEntry spec_held_registry[] = {\n");
-		Buf:bufAppendBuf(dst: out, src: entries);
-		Buf:bufAppendBuf(dst: out, src: "    { 0, 0, 0, 0 }\n};\n\n");
+		bufAppendBuf(dst: out, src: "static const SpecHeldEntry spec_held_registry[] = {\n");
+		bufAppendBuf(dst: out, src: entries);
+		bufAppendBuf(dst: out, src: "    { 0, 0, 0, 0 }\n};\n\n");
 		return out;
 	}
 
@@ -4008,8 +3989,8 @@ Class is CodeGenerator{
 		local Array of String is classChunks: [];
 		local Array of String is classHelpers: [];
 		repeat(count: classTotal, worker: {
-			classChunks:add(item: Buf:stringCopy(b: ''));
-			classHelpers:add(item: Buf:stringCopy(b: ''));
+			classChunks:add(item: stringCopy(b: ''));
+			classHelpers:add(item: stringCopy(b: ''));
 		});
 		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
@@ -4054,7 +4035,7 @@ Class is CodeGenerator{
 						# The helpers attribute per class: the worker's buffer
 						# resets before each class so the slot holds only its
 						# own anon-fn text.
-						wg:helperFunctions: Buf:stringCopy(b: '');
+						wg:helperFunctions: stringCopy(b: '');
 						local String is cSym: wg:utils:cIdent(name: c:qualifiedName());
 						wg:fieldTypes: Map:init();
 						local Array of Member is allFields: [];
@@ -4066,7 +4047,7 @@ Class is CodeGenerator{
 						outerFields:each(action: local Function(Member is m){
 							wg:fieldTypes:set(key: m:name, value: wg:formatTypeString(t: m:memberType));
 						});
-						local String is classC: Buf:stringCopy(b: '');
+						local String is classC: stringCopy(b: '');
 						local Boolean is hasInit: false;
 						c:members:each(action: local Function(Member is m){
 							match(on: m:kind, when: [
@@ -4079,7 +4060,7 @@ Class is CodeGenerator{
 										# receiver-free definition — same body pipeline,
 										# no self parameter, the _held_ symbol.
 										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
-										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
+										bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
 										wg:emittingHeld: false;
 										m:clearBody();
 									});
@@ -4087,45 +4068,45 @@ Class is CodeGenerator{
 							]);
 						});
 						Conditional:if(check: { !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, then: {
-							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
+							bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
 						});
 						# The default toString lives on
 						# `Class` (the declaration root) — the vtable dispatch
 						# finds it through the lattice; no per-class synthesis.
 						classChunks:set(index: ci, item: classC);
-						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
+						bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
 					ci: ci + genThreads;
 				});
 			return count;
 		});
-		local String is methods: Buf:stringCopy(b: '');
+		local String is methods: stringCopy(b: '');
 		classChunks:each(action: local Function(String is chunk){
-			Buf:bufAppendBuf(dst: methods, src: chunk);
+			bufAppendBuf(dst: methods, src: chunk);
 		});
-		local String is allHelpers: Buf:stringCopy(b: '');
+		local String is allHelpers: stringCopy(b: '');
 		classHelpers:each(action: local Function(String is helper){
-			Buf:bufAppendBuf(dst: allHelpers, src: helper);
+			bufAppendBuf(dst: allHelpers, src: helper);
 		});
 
 		local String is mainFn: self:generateMain(entryClass: entryClass);
 
 		local String is cSource: '';
-		Buf:bufAppendBuf(dst: cSource, src: self:generatePrelude());
-		Buf:bufAppendBuf(dst: cSource, src: decls);
-		Buf:bufAppendBuf(dst: cSource, src: structs);
-		Buf:bufAppendBuf(dst: cSource, src: vt);
-		Buf:bufAppendBuf(dst: cSource, src: self:generateTypeHierarchy(classes: flattenedClasses));
-		Buf:bufAppendBuf(dst: cSource, src: allHelpers);
+		bufAppendBuf(dst: cSource, src: self:generatePrelude());
+		bufAppendBuf(dst: cSource, src: decls);
+		bufAppendBuf(dst: cSource, src: structs);
+		bufAppendBuf(dst: cSource, src: vt);
+		bufAppendBuf(dst: cSource, src: self:generateTypeHierarchy(classes: flattenedClasses));
+		bufAppendBuf(dst: cSource, src: allHelpers);
 		# held members after the anon-fn helpers: a held initializer's
 		# closure bodies land in the helpers section, and the accessor
 		# definitions reference them. The metadata registry follows (it
 		# completes the prelude's tentative definition).
-		Buf:bufAppendBuf(dst: cSource, src: heldSrc);
-		Buf:bufAppendBuf(dst: cSource, src: heldMeta);
-		Buf:bufAppendBuf(dst: cSource, src: ctors);
-		Buf:bufAppendBuf(dst: cSource, src: methods);
-		Buf:bufAppendBuf(dst: cSource, src: mainFn);
+		bufAppendBuf(dst: cSource, src: heldSrc);
+		bufAppendBuf(dst: cSource, src: heldMeta);
+		bufAppendBuf(dst: cSource, src: ctors);
+		bufAppendBuf(dst: cSource, src: methods);
+		bufAppendBuf(dst: cSource, src: mainFn);
 		return cSource;
 	}
 
@@ -4179,8 +4160,8 @@ Class is CodeGenerator{
 		local Array of String is classChunks: [];
 		local Array of String is classHelpers: [];
 		repeat(count: classTotal, worker: {
-			classChunks:add(item: Buf:stringCopy(b: ''));
-			classHelpers:add(item: Buf:stringCopy(b: ''));
+			classChunks:add(item: stringCopy(b: ''));
+			classHelpers:add(item: stringCopy(b: ''));
 		});
 		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
@@ -4215,7 +4196,7 @@ Class is CodeGenerator{
 					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
 					Conditional:if(check: { !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, then: {
 						wg:currentClassName: c:name;
-						wg:helperFunctions: Buf:stringCopy(b: '');
+						wg:helperFunctions: stringCopy(b: '');
 						local String is cSym: wg:utils:cIdent(name: c:qualifiedName());
 						wg:fieldTypes: Map:init();
 						local Array of Member is allFields: [];
@@ -4227,7 +4208,7 @@ Class is CodeGenerator{
 						outerFields:each(action: local Function(Member is m){
 							wg:fieldTypes:set(key: m:name, value: wg:formatTypeString(t: m:memberType));
 						});
-						local String is classC: Buf:stringCopy(b: '');
+						local String is classC: stringCopy(b: '');
 						local Boolean is hasInit: false;
 						c:members:each(action: local Function(Member is m){
 							match(on: m:kind, when: [
@@ -4237,7 +4218,7 @@ Class is CodeGenerator{
 											hasInit: true;
 										});
 										wg:emittingHeld: m:hasModifier(kw: Keyword:HELD);
-										Buf:bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
+										bufAppendBuf(dst: classC, src: wg:generateMethod(classDef: c, method: m));
 										wg:emittingHeld: false;
 										m:clearBody();
 									});
@@ -4245,10 +4226,10 @@ Class is CodeGenerator{
 							]);
 						});
 						Conditional:if(check: { !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, then: {
-							Buf:bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
+							bufAppendBuf(dst: classC, src: 'void ' . cSym . '_init(' . cSym . "* self) {\n    (void)self;\n}\n\n");
 						});
 						classChunks:set(index: ci, item: classC);
-						Buf:bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
+						bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
 					ci: ci + genThreads;
 				});
@@ -4364,22 +4345,22 @@ Class is CodeGenerator{
 		classes:each(action: local Function(ClassInfo is c){
 			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
 				local String is cSym: self:utils:cIdent(name: c:qualifiedName());
-				Buf:bufAppendBuf(dst: out, src: 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n");
+				bufAppendBuf(dst: out, src: 'static void* ' . cSym . '_vtable[' . self:methodSlotCount . "] = {\n");
 				local Int is slot: 0;
 				repeat(count: self:methodSlotCount, worker: {
 					local String is mName: self:slotNames:get(index: slot);
 					local String is implCls: self:findMethodImplementingClass(className: c:name, methodName: mName, paramCount: -1);
 					Conditional:if(check: { slot > 0 }, then: {
-						Buf:bufAppendBuf(dst: out, src: ",\n");
+						bufAppendBuf(dst: out, src: ",\n");
 					});
 					Conditional:if(check: { implCls == '' }, then: {
-						Buf:bufAppendBuf(dst: out, src: '    (void*)0');
+						bufAppendBuf(dst: out, src: '    (void*)0');
 					}, else: {
-						Buf:bufAppendBuf(dst: out, src: '    (void*)' . implCls . '_' . mName);
+						bufAppendBuf(dst: out, src: '    (void*)' . implCls . '_' . mName);
 					});
 					slot: slot + 1;
 				});
-				Buf:bufAppendBuf(dst: out, src: "\n};\n\n");
+				bufAppendBuf(dst: out, src: "\n};\n\n");
 			});
 		});
 		return out;
@@ -4408,24 +4389,24 @@ Class is CodeGenerator{
 					self:fieldTypes:set(key: f:name, value: self:formatTypeString(t: f:memberType));
 				});
 
-				Buf:bufAppendBuf(dst: out, src: 'void ' . cSym . "_destroy(void* self_ptr) {\n");
-				Buf:bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . "*)self_ptr;\n");
-				Buf:bufAppendBuf(dst: out, src: "    if (!self) return;\n");
+				bufAppendBuf(dst: out, src: 'void ' . cSym . "_destroy(void* self_ptr) {\n");
+				bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . "*)self_ptr;\n");
+				bufAppendBuf(dst: out, src: "    if (!self) return;\n");
 				allFields:each(action: local Function(Member is m){
 					local String is ft: m:memberType:name;
 					Conditional:if(check: { self:isArcType(typeName: ft) }, then: {
-						Buf:bufAppendBuf(dst: out, src: '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n");
+						bufAppendBuf(dst: out, src: '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n");
 					});
 				});
 				outerFields:each(action: local Function(Member is m){
 					local String is ft: m:memberType:name;
 					Conditional:if(check: { self:isArcType(typeName: ft) }, then: {
-						Buf:bufAppendBuf(dst: out, src: '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n");
+						bufAppendBuf(dst: out, src: '    if (self->' . self:utils:cIdent(name: m:name) . ') { spec_release((void*)self->' . self:utils:cIdent(name: m:name) . '); self->' . self:utils:cIdent(name: m:name) . " = NULL; }\n");
 					});
 				});
-				Buf:bufAppendBuf(dst: out, src: "}\n\n");
+				bufAppendBuf(dst: out, src: "}\n\n");
 
-				Buf:bufAppendBuf(dst: out, src: cSym . '* ' . cSym . "_new(void) {\n");
+				bufAppendBuf(dst: out, src: cSym . '* ' . cSym . "_new(void) {\n");
 				# Part IV memory discipline: every class
 				# allocates through ARC — refcounts drive the frees, so the
 				# parser's tokens, the loop objects, and every transient
@@ -4433,10 +4414,10 @@ Class is CodeGenerator{
 				# for AST nodes was measured and falsified (+154 MB): nodes
 				# die incrementally and ARC returns their blocks to glibc's
 				# tcache, while a bump arena hoards them until drain.
-				Buf:bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n");
-				Buf:bufAppendBuf(dst: out, src: '    self->_type_name = "' . c:qualifiedName() . "\";\n");
+				bufAppendBuf(dst: out, src: '    ' . cSym . '* self = (' . cSym . '*)spec_alloc(sizeof(' . cSym . '), ' . cSym . "_destroy);\n");
+				bufAppendBuf(dst: out, src: '    self->_type_name = "' . c:qualifiedName() . "\";\n");
 				Conditional:if(check: { self:methodSlotCount > 0 }, then: {
-					Buf:bufAppendBuf(dst: out, src: '    self->_vtable = ' . cSym . "_vtable;\n");
+					bufAppendBuf(dst: out, src: '    self->_vtable = ' . cSym . "_vtable;\n");
 				});
 				# the construction expressions run for
 				# the declared-of + own fields; the OUTER-link fields zero-init
@@ -4453,17 +4434,17 @@ Class is CodeGenerator{
 						Conditional:if(check: { self:isArcType(typeName: ftn) }, then: {
 							fieldInitC: '(' . self:cTypeFor(typeName: ftn) . ')spec_retain((void*)(' . fieldInitC . '))';
 						});
-						Buf:bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n");
+						bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . ' = ' . fieldInitC . ";\n");
 					});
 				});
 				outerFields:each(action: local Function(Member is m){
 					Conditional:if(check: { self:isArcType(typeName: m:memberType:name) }, then: {
-						Buf:bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . " = NULL;\n");
+						bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . " = NULL;\n");
 					}, else: {
-						Buf:bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . " = 0;\n");
+						bufAppendBuf(dst: out, src: '    self->' . self:utils:cIdent(name: m:name) . " = 0;\n");
 					});
 				});
-				Buf:bufAppendBuf(dst: out, src: "    return self;\n}\n\n");
+				bufAppendBuf(dst: out, src: "    return self;\n}\n\n");
 			});
 		});
 		return out;
