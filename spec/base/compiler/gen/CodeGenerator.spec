@@ -1833,13 +1833,12 @@ Class is CodeGenerator{
 			Conditional:if(check: { expr:arrayItems:length() > 0 }, then: {
 				local String is elemT: self:inferTargetType(expr: expr:arrayItems:get(index: 0));
 				newCall: Conditional:if(check: { self:isArcType(typeName: elemT) || elemT == 'String' }, then: { 'spec_array_new_object()' }, else: { 'spec_array_new()' });
+			}, else: {
+				Conditional:if(check: { self:currentClassName == 'Array' }, then: {
+					newCall: 'spec_array_new_kind(self ? self->elem_kind : SPEC_ELEM_NONE)';
+				});
 			});
 		});
-		self:containerHint: '';
-		self:containerHint: '';
-		self:containerHint: '';
-		self:containerHint: '';
-		self:containerHint: '';
 		self:containerHint: '';
 		local String is arrCType: Conditional:if(check: { listHint }, then: { 'SpecVec*' }, else: { 'SpecArray*' });
 		local String is res: '({ ' . arrCType . ' _arr = ' . newCall . ';';
@@ -1847,7 +1846,11 @@ Class is CodeGenerator{
 		self:argMode: false;
 		expr:arrayItems:each(action: local Function(Expression is item){
 			local String is itemC: self:generateExpression(expr: item);
-			res: res . ' ' . addFn . '(_arr, (void*)(' . itemC . '));';
+			local String is itemAddFn: addFn;
+			Conditional:if(check: { !listHint && newCall == 'spec_array_new_object()' && self:yieldsClaim(expr: item) && !(item:kind == ExpressionKind:CALL && (item:methodName == 'get' || item:methodName == 'getString')) }, then: {
+				itemAddFn: 'spec_array_add_owned';
+			});
+			res: res . ' ' . itemAddFn . '(_arr, (void*)(' . itemC . '));';
 		});
 		self:argMode: savedArg;
 		res: res . ' _arr; })';
@@ -2949,10 +2952,13 @@ Class is CodeGenerator{
 		Conditional:if(check: { m:kind == MemberKind:METHOD }, then: {
 			return self:formatCallArgumentsForMember(m: m, className: className, args: args);
 		});
+		local Boolean is savedArgW: self:argMode;
+		self:argMode: true;
 		local String is joined: '';
 		args:each(action: local Function(NamedArg is a){
 			joined: joined . ', ' . self:generateExpression(expr: a:value);
 		});
+		self:argMode: savedArgW;
 		return joined;
 	}
 
@@ -2966,6 +2972,8 @@ Class is CodeGenerator{
 	## @param args: The call's named arguments.
 	## @return: The joined C argument list (leading comma included).
 	Function of String is formatCallArgumentsForMember(Member is m, String is className, Array of NamedArg is args){
+		local Boolean is savedArgM: self:argMode;
+		self:argMode: true;
 		local Array of String is parts: className:split(delimiter: ':');
 		local String is baseClassName: parts:get(index: 0);
 		local ClassInfo is cls: self:findClass(name: baseClassName);
@@ -3010,6 +3018,7 @@ Class is CodeGenerator{
 					joined: joined . ', ' . argC;
 					pIdx: pIdx + 1;
 				});
+				self:argMode: savedArgM;
 				return joined;
 			});
 		});
@@ -3017,6 +3026,7 @@ Class is CodeGenerator{
 		args:each(action: local Function(NamedArg is a){
 			joined: joined . ', ' . self:generateExpression(expr: a:value);
 		});
+		self:argMode: savedArgM;
 		return joined;
 	}
 
@@ -3075,7 +3085,10 @@ Class is CodeGenerator{
 		Conditional:if(check: { expr:kind == ExpressionKind:BINARY && expr:str == '.' }, then: {
 			local String is leftTarget: self:tryGenerateTargetOnly(expr: expr:leftExpr);
 			Conditional:if(check: { leftTarget == targetC }, then: {
+				local Boolean is savedArg1: self:argMode;
+				self:argMode: true;
 				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
+				self:argMode: savedArg1;
 				Conditional:if(check: { rhsC:contains(needle: targetC) }, then: {
 					return '';
 				});
@@ -3083,7 +3096,10 @@ Class is CodeGenerator{
 			});
 			local String is innerChain: self:tryGenerateAppendChain(expr: expr:leftExpr, targetC: targetC);
 			Conditional:if(check: { innerChain != '' }, then: {
+				local Boolean is savedArg2: self:argMode;
+				self:argMode: true;
 				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
+				self:argMode: savedArg2;
 				Conditional:if(check: { rhsC:contains(needle: targetC) }, then: {
 					return '';
 				});
@@ -4660,7 +4676,7 @@ Class is CodeGenerator{
 		# at method level sees the empty context and its returns stay real
 		# method returns (guard clauses). Clearing here turned loop-stops
 		# into garbage method returns.
-		self:argMode: false;
+		self:argMode: true;
 		# the value-yielding form — the checker
 		# stamped the unified yield type; emit a statement expression.
 		local String is resT: expr:resolvedType;
@@ -4776,7 +4792,7 @@ Class is CodeGenerator{
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
-		self:argMode: false;
+		self:argMode: true;
 		local String is subjC: self:generateExpression(expr: subjArg);
 		local String is subjT: self:inferTargetType(expr: subjArg);
 		Conditional:if(check: { subjT:contains(needle: ' of ') }, then: {
@@ -4906,7 +4922,7 @@ Class is CodeGenerator{
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
-		self:argMode: false;
+		self:argMode: true;
 		local String is resT: callExpr:resolvedType;
 		local Boolean is valueForm: resT != '' && resT != 'void' && resT != 'Void';
 		local String is out: '';

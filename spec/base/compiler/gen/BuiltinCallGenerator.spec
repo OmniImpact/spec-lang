@@ -579,6 +579,7 @@ Class is BuiltinCallGenerator{
 			});
 			Conditional:if(check: { m == 'add' }, then: {
 				local String is itemC: 'NULL';
+				local Boolean is itemClaims: false;
 				Conditional:if(check: { expr:argCount() > 0 }, then: {
 					local Expression is valExpr: self:argValue(expr: expr, index: 0);
 					Conditional:if(check: { valExpr:kind == ExpressionKind:ARRAY }, then: {
@@ -586,6 +587,7 @@ Class is BuiltinCallGenerator{
 						itemC: cg:generateExpression(expr: valExpr);
 						return 'spec_array_add_array(' . targetC . ', ' . itemC . ')';
 					});
+					itemClaims: cg:yieldsClaim(expr: valExpr) && !(valExpr:kind == ExpressionKind:CALL && (valExpr:methodName == 'get' || valExpr:methodName == 'getString'));
 					local Boolean is savedArgMode: cg:argMode;
 					cg:setArgMode(m: false);
 					itemC: cg:generateExpression(expr: valExpr);
@@ -594,7 +596,7 @@ Class is BuiltinCallGenerator{
 				local String is elemKindA: cg:containerElemKind(containerType: targetType);
 				local String is addFn: 'spec_array_add';
 				Conditional:if(check: { elemKindA == 'object' }, then: {
-					addFn: 'spec_array_add_object';
+					addFn: Conditional:if(check: { itemClaims }, then: { 'spec_array_add_owned' }, else: { 'spec_array_add_object' });
 				});
 				return addFn . '(' . targetC . ', (void*)(' . itemC . '))';
 			});

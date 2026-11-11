@@ -481,6 +481,7 @@ void spec_array_add_owned(SpecArray* a, void* item) {
     if (!a) return;
     if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     pthread_mutex_lock(&a->lock);
+    if (a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
         a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
