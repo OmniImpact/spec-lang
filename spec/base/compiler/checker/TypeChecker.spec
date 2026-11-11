@@ -34,10 +34,6 @@ Class is TypeChecker{
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', Error],
 		['base', 'compiler', 'checker', TypeError],
-		['base', 'compiler', 'checker', 'loops', FieldSearchLoop],
-		['base', 'compiler', 'checker', 'loops', MethodSearchLoop],
-		['base', 'compiler', 'checker', 'loops', PathResolveLoop],
-		['base', 'compiler', 'checker', 'loops', MemberImplementLoop],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Reflection()],
@@ -474,12 +470,17 @@ Class is TypeChecker{
 		Conditional:if(check: { cls:name == '' }, then: {
 			return Member:init(kind: MemberKind:FIELD);
 		});
-		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
-		# Instance lookups are held-blind.
-		ml:setSkipHeld(v: true);
-		Loops:run(loop: ml);
-		Conditional:if(check: { ml:found }, then: {
-			return ml:res;
+		local Member is res: Member:init(kind: MemberKind:FIELD);
+		local Int is idx: 0;
+		Loops({ res:name == '' && idx < cls:members:length() }, {
+			local Member is m: cls:members:get(index: idx);
+			idx: idx + 1;
+			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
+				res: m;
+			});
+		});
+		Conditional:if(check: { res:name != '' }, then: {
+			return res;
 		});
 		local Member is inherited: Member:init(kind: MemberKind:FIELD);
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -497,12 +498,16 @@ Class is TypeChecker{
 	## @return: The variant member, or an empty-named one.
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
 		local ClassInfo is cls: self:findClass(name: enumName);
-		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: variantName);
-		Loops:run(loop: fl);
-		Conditional:if(check: { fl:found }, then: {
-			return fl:res;
+		local Member is res: Member:init(kind: MemberKind:FIELD);
+		local Int is idx: 0;
+		Loops({ res:name == '' && idx < cls:members:length() }, {
+			local Member is m: cls:members:get(index: idx);
+			idx: idx + 1;
+			if({ m:kind == MemberKind:FIELD && m:name == variantName }, {
+				res: m;
+			});
 		});
-		return Member:init(kind: MemberKind:FIELD);
+		return res;
 	}
 
 	## Looks up a field's static type on a class and its ancestors.
@@ -533,13 +538,16 @@ Class is TypeChecker{
 		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
-		local FieldSearchLoop is fl: FieldSearchLoop:init(members: cls:members, fieldName: fieldName);
-		# Instance lookups are held-blind: the
-		# class-name prefix reaches exactly the held members.
-		fl:setSkipHeld(v: true);
-		Loops:run(loop: fl);
-		Conditional:if(check: { fl:found }, then: {
-			local Member is foundM: fl:res;
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		local Int is idx: 0;
+		Loops({ foundM:name == '' && idx < cls:members:length() }, {
+			local Member is m: cls:members:get(index: idx);
+			idx: idx + 1;
+			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:FIELD && m:name == fieldName }, {
+				foundM: m;
+			});
+		});
+		Conditional:if(check: { foundM:name != '' }, then: {
 			local String is rawT: self:formatTypeString(t: foundM:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		});
@@ -584,12 +592,16 @@ Class is TypeChecker{
 		Conditional:if(check: { cls:name == '' }, then: {
 			return '';
 		});
-		local MethodSearchLoop is ml: MethodSearchLoop:init(members: cls:members, methodName: methodName);
-		# Instance lookups are held-blind.
-		ml:setSkipHeld(v: true);
-		Loops:run(loop: ml);
-		Conditional:if(check: { ml:found }, then: {
-			local Member is foundM: ml:res;
+		local Member is foundM: Member:init(kind: MemberKind:FIELD);
+		local Int is idx: 0;
+		Loops({ foundM:name == '' && idx < cls:members:length() }, {
+			local Member is m: cls:members:get(index: idx);
+			idx: idx + 1;
+			if({ !m:hasModifier(kw: Keyword:HELD) && m:kind == MemberKind:METHOD && m:name == methodName }, {
+				foundM: m;
+			});
+		});
+		Conditional:if(check: { foundM:name != '' }, then: {
 			local String is rawT: self:formatTypeString(t: foundM:memberType);
 			return self:substituteTypeParam(rawType: rawT, cls: cls, typeArgs: typeArgs);
 		});
@@ -2291,7 +2303,7 @@ Class is TypeChecker{
 					local String is rootType: '';
 					# Held admission: the first segment
 					# after a class-name root resolved as a held field — the
-					# PathResolveLoop then consumes it via lookupHeldFieldType.
+					# The path resolution loop below then consumes it via lookupHeldFieldType.
 					local Boolean is heldAdmitted: false;
 					Conditional:if(check: { root == self:names:selfIdent() }, then: {
 						# A held member body has no instance.
@@ -2428,10 +2440,21 @@ Class is TypeChecker{
 							});
 						});
 					});
-					local PathResolveLoop is pLoop: PathResolveLoop:init(tc: self, segs: segs, rootType: rootType, resolveHeldFirst: heldAdmitted);
-					Loops:run(loop: pLoop);
-					Conditional:if(check: { pLoop:currType != '' }, then: {
-						res: pLoop:currType;
+					local String is currType: rootType;
+					local Int is pIdx: 1;
+					Loops({ currType != '' && pIdx < segs:length() }, {
+						local String is seg: segs:get(index: pIdx);
+						pIdx: pIdx + 1;
+						Conditional:if(check: { !self:allEnumNames:has(key: currType) }, then: {
+							Conditional:if(check: { heldAdmitted && pIdx == 2 }, then: {
+								currType: self:lookupHeldFieldType(className: currType, fieldName: seg);
+							}, else: {
+								currType: self:lookupFieldType(className: currType, fieldName: seg);
+							});
+						});
+					});
+					Conditional:if(check: { currType != '' }, then: {
+						res: currType;
 					}, else: {
 						# Strict held resolution: an
 						# instance-typed receiver (a local, a field) whose
@@ -3589,12 +3612,19 @@ Class is TypeChecker{
 		# castable is a metadata FIELD declared on the class itself — the
 		# method-only member lookup cannot see it, and ancestor searches skip
 		# the declaring class. Search own members directly.
-		local FieldSearchLoop is castLoop: FieldSearchLoop:init(members: cls:members, fieldName: MetadataField:CASTABLE:value());
-		Loops:run(loop: castLoop);
-		Conditional:if(check: { !castLoop:found }, then: {
+		local Member is castM: Member:init(kind: MemberKind:FIELD);
+		local Int is castIdx: 0;
+		local String is castTargetName: MetadataField:CASTABLE:value();
+		Loops({ castM:name == '' && castIdx < cls:members:length() }, {
+			local Member is m: cls:members:get(index: castIdx);
+			castIdx: castIdx + 1;
+			if({ m:kind == MemberKind:FIELD && m:name == castTargetName }, {
+				castM: m;
+			});
+		});
+		Conditional:if(check: { castM:name == '' }, then: {
 			return '';
 		});
-		local Member is castM: castLoop:res;
 		Conditional:if(check: { !castM:hasInit || castM:initExpr:kind != ExpressionKind:ARRAY }, then: {
 			return '';
 		});
@@ -4516,9 +4546,18 @@ Class is TypeChecker{
 						local Boolean is isAbstract: (parentM:kind == MemberKind:FIELD && !parentM:hasInit) ||
 							(parentM:kind == MemberKind:METHOD && parentM:body:length() == 0);
 						Conditional:if(check: { isAbstract }, then: {
-							local MemberImplementLoop is chk: MemberImplementLoop:init(members: classDef:members, target: parentM);
-							Loops:run(loop: chk);
-							Conditional:if(check: { !chk:implemented }, then: {
+							local Boolean is isImplemented: false;
+							local Int is mIdx: 0;
+							Loops({ !isImplemented && mIdx < classDef:members:length() }, {
+								local Member is subM: classDef:members:get(index: mIdx);
+								mIdx: mIdx + 1;
+								Conditional:if(check: { subM:name == parentM:name }, then: {
+									Conditional:if(check: { (subM:kind == MemberKind:METHOD && subM:body:length() > 0) || (subM:kind == MemberKind:FIELD && subM:hasInit) }, then: {
+										isImplemented: true;
+									});
+								});
+							});
+							Conditional:if(check: { !isImplemented }, then: {
 								local String is msg: 'ClassInfo \'' . classDef:name . '\' does not implement abstract member \'' . parentM:name . '\' required by parent \'' . baseName . '\'.';
 								self:addError(line: classDef:line, msg: msg);
 							});
