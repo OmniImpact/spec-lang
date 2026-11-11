@@ -149,6 +149,7 @@ repeat(count: 3, worker: {
 ## Documentation
 
 - 📖 **[README-FULL.md](README-FULL.md)**: The full breakdown — design philosophies, the complete feature list, module resolution, editor support, and the language comparison table.
+- 📊 **[README-PERFORMANCE.md](README-PERFORMANCE.md)**: Measured performance — the same benchmark run in C, C++, Rust, Go, Java, Kotlin, JavaScript, Python, Ruby, and Spec, with build and execution profiles. Reproduce with `utilities/run_benchmarks.sh`.
 - 📚 **[Documentation Portal](docs/README.md)**: Main documentation index.
 - 📖 **[Language Guide](docs/language/README.md)**: Syntax, typing system, Never Null standard, held members, matching, and the iteration model.
 - 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:core`, `base:math`, `base:struct`, `base:iterator`, and `base:sys` (the control-flow providers and the console/file/terminal/process surfaces).

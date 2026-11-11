@@ -16,6 +16,7 @@
 *.spec.c
 *.c
 !bootstrap/spec.c
+!utilities/benchmarks/*.c
 # Editor project files
 *.kdev4
 .kdev4/
