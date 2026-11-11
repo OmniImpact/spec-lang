@@ -2153,6 +2153,136 @@ long long spec_thread_count(void) {
     return n;
 }
 
+/* Process Resource Monitoring (instantaneous RSS and CPU sampling) */
+static pthread_t _spec_mon_thread;
+static _Atomic bool _spec_mon_active = false;
+static _Atomic long long _spec_mon_sample_count = 0;
+static _Atomic long long _spec_mon_mem_sum_kb = 0;
+static _Atomic long long _spec_mon_peak_mem_kb = 0;
+static _Atomic long long _spec_mon_peak_cpu_pct = 0;
+static long long _spec_mon_start_wall_us = 0;
+static long long _spec_mon_start_cpu_us = 0;
+static long long _spec_mon_total_wall_us = 0;
+static long long _spec_mon_total_cpu_us = 0;
+
+long long spec_monitor_avg_cpu_pct(void) {
+    if (_spec_mon_total_wall_us <= 0) return 0;
+    return (_spec_mon_total_cpu_us * 100) / _spec_mon_total_wall_us;
+}
+
+long long spec_monitor_peak_cpu_pct(void) {
+    return _spec_mon_peak_cpu_pct;
+}
+
+long long spec_monitor_avg_mem_kb(void) {
+    long long count = _spec_mon_sample_count;
+    if (count <= 0) return _spec_mon_peak_mem_kb;
+    return _spec_mon_mem_sum_kb / count;
+}
+
+long long spec_monitor_peak_mem_kb(void) {
+    return _spec_mon_peak_mem_kb;
+}
+
+static void* _spec_monitor_worker(void* arg) {
+    (void)arg;
+    struct timespec sleep_ts = {0, 20000000}; /* 20ms */
+    long long page_size = sysconf(_SC_PAGESIZE);
+    if (page_size <= 0) page_size = 4096;
+
+    struct timespec last_ts;
+    clock_gettime(CLOCK_MONOTONIC, &last_ts);
+    long long last_wall_us = ((long long)last_ts.tv_sec * 1000000) + (last_ts.tv_nsec / 1000);
+    struct rusage last_ru;
+    getrusage(RUSAGE_SELF, &last_ru);
+    long long last_cpu_us = ((long long)last_ru.ru_utime.tv_sec + last_ru.ru_stime.tv_sec) * 1000000 + (last_ru.ru_utime.tv_usec + last_ru.ru_stime.tv_usec);
+
+    while (_spec_mon_active) {
+        nanosleep(&sleep_ts, NULL);
+        if (!_spec_mon_active) break;
+
+        long long cur_rss_kb = 0;
+        FILE* f = fopen("/proc/self/statm", "r");
+        if (f) {
+            long long dummy = 0, rss_pages = 0;
+            if (fscanf(f, "%lld %lld", &dummy, &rss_pages) == 2) {
+                cur_rss_kb = (rss_pages * page_size) / 1024;
+            }
+            fclose(f);
+        }
+        if (cur_rss_kb > 0) {
+            _spec_mon_mem_sum_kb += cur_rss_kb;
+            _spec_mon_sample_count++;
+            if (cur_rss_kb > _spec_mon_peak_mem_kb) {
+                _spec_mon_peak_mem_kb = cur_rss_kb;
+            }
+        }
+
+        struct timespec now_ts;
+        clock_gettime(CLOCK_MONOTONIC, &now_ts);
+        long long now_wall_us = ((long long)now_ts.tv_sec * 1000000) + (now_ts.tv_nsec / 1000);
+        struct rusage now_ru;
+        getrusage(RUSAGE_SELF, &now_ru);
+        long long now_cpu_us = ((long long)now_ru.ru_utime.tv_sec + now_ru.ru_stime.tv_sec) * 1000000 + (now_ru.ru_utime.tv_usec + now_ru.ru_stime.tv_usec);
+
+        long long d_wall = now_wall_us - last_wall_us;
+        long long d_cpu = now_cpu_us - last_cpu_us;
+        if (d_wall >= 15000) {
+            long long cpu_pct = (d_cpu * 100) / d_wall;
+            if (cpu_pct > _spec_mon_peak_cpu_pct) {
+                _spec_mon_peak_cpu_pct = cpu_pct;
+            }
+            last_wall_us = now_wall_us;
+            last_cpu_us = now_cpu_us;
+        }
+    }
+    return NULL;
+}
+
+void spec_monitor_start(void) {
+    if (_spec_mon_active) return;
+    _spec_mon_sample_count = 0;
+    _spec_mon_mem_sum_kb = 0;
+    _spec_mon_peak_mem_kb = 0;
+    _spec_mon_peak_cpu_pct = 0;
+
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    _spec_mon_start_wall_us = ((long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
+
+    struct rusage ru;
+    getrusage(RUSAGE_SELF, &ru);
+    _spec_mon_start_cpu_us = ((long long)ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000 + (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+
+    _spec_mon_active = true;
+    pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
+}
+
+void spec_monitor_stop(void) {
+    if (!_spec_mon_active) return;
+    _spec_mon_active = false;
+    pthread_join(_spec_mon_thread, NULL);
+
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    long long end_wall_us = ((long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
+
+    struct rusage ru;
+    getrusage(RUSAGE_SELF, &ru);
+    long long end_cpu_us = ((long long)ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000 + (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+
+    _spec_mon_total_wall_us = end_wall_us - _spec_mon_start_wall_us;
+    _spec_mon_total_cpu_us = end_cpu_us - _spec_mon_start_cpu_us;
+
+    if (ru.ru_maxrss > _spec_mon_peak_mem_kb) {
+        _spec_mon_peak_mem_kb = ru.ru_maxrss;
+    }
+    long long avg_cpu = spec_monitor_avg_cpu_pct();
+    if (avg_cpu > _spec_mon_peak_cpu_pct) {
+        _spec_mon_peak_cpu_pct = avg_cpu;
+    }
+}
+
 /* Error Output Primitive */
 void spec_error_line(String s) {
     const char* cs = s ? spec_buf_to_cstring((SpecBuf*)s) : "";

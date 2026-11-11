@@ -58,6 +58,30 @@ Class is Process{
 	## @return: The previous slot value.
 	Function of Int is atomic_add(Int is slot, Int is value);
 
+	## Starts the background resource monitor thread (samples RSS and CPU).
+	## Bound to `spec_monitor_start`.
+	Function is monitor_start();
+
+	## Stops the resource monitor thread and computes summary metrics.
+	## Bound to `spec_monitor_stop`.
+	Function is monitor_stop();
+
+	## Returns the average memory in kilobytes across samples.
+	## Bound to `spec_monitor_avg_mem_kb`.
+	Function of Int is monitor_avg_mem_kb();
+
+	## Returns the peak memory in kilobytes.
+	## Bound to `spec_monitor_peak_mem_kb`.
+	Function of Int is monitor_peak_mem_kb();
+
+	## Returns the average CPU usage percentage (can exceed 100% across cores).
+	## Bound to `spec_monitor_avg_cpu_pct`.
+	Function of Int is monitor_avg_cpu_pct();
+
+	## Returns the peak interval CPU usage percentage.
+	## Bound to `spec_monitor_peak_cpu_pct`.
+	Function of Int is monitor_peak_cpu_pct();
+
 	## Atomically writes [value] into the slot at [slot]. Bound to
 	## `spec_atomic_put`.
 	##

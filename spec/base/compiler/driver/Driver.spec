@@ -88,6 +88,7 @@ Class is Driver{
 
 		local String is source: fileRead(path: inputPath, default: '');
 		local Int is specLines: source:lines():length();
+		Process:monitorStart();
 		local Int is t0: Process:clockMs();
 		local Int is loadMs: 0;
 		local Int is checkMs: 0;
@@ -241,7 +242,8 @@ Class is Driver{
 		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines');
 
 		Conditional:if(check: { outputPath == '' }, then: {
-			report:summary(inputPath: inputPath, outputPath: emitCPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:peakMemoryKb(), binKb: -1);
+			Process:monitorStop();
+			report:summary(inputPath: inputPath, outputPath: emitCPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
 			return;
 		});
 
@@ -254,12 +256,14 @@ Class is Driver{
 			fileRemove(path: tempCPath);
 		});
 		Conditional:if(check: { gccStatus != 0 }, then: {
+			Process:monitorStop();
 			Stderr:line('Error: Backend C compiler (gcc) failed with exit status ' . (gccStatus as String));
 			Process:exit(status: 1);
 		});
 
 		local Int is binBytes: Dir:fileSize(path: outputPath);
 		report:stage(n: 4, total: 4, label: 'compiling (gcc) · ' . (ccMs as String) . 'ms');
-		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:peakMemoryKb(), binKb: binBytes);
+		Process:monitorStop();
+		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
 	}
 }

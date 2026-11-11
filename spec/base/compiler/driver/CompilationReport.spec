@@ -52,8 +52,11 @@ Class is CompilationReport{
 	## @param totalMs: Whole-run wall time.
 	## @param loadMs/checkMs/genMs/ccMs: Stage timings (ccMs -1 when no binary).
 	## @param peakKb: Process peak memory in KB.
+	## @param avgMemKb: Process average memory in KB.
+	## @param avgCpuPct: Process average CPU usage percentage (can exceed 100%).
+	## @param peakCpuPct: Process peak interval CPU usage percentage.
 	## @param binKb: Binary size in KB (-1 when no binary was produced).
-	Function is summary(String is inputPath, String is outputPath, Int is classCount, Int is methodCount, Int is specLines, Int is cLines, Int is totalMs, Int is loadMs, Int is checkMs, Int is genMs, Int is ccMs, Int is peakKb, Int is binKb){
+	Function is summary(String is inputPath, String is outputPath, Int is classCount, Int is methodCount, Int is specLines, Int is cLines, Int is totalMs, Int is loadMs, Int is checkMs, Int is genMs, Int is ccMs, Int is peakKb, Int is avgMemKb, Int is avgCpuPct, Int is peakCpuPct, Int is binKb){
 		Conditional:if(check: { self:quiet }, then: {
 			return;
 		});
@@ -66,10 +69,12 @@ Class is CompilationReport{
 		});
 		times: times . ')';
 		Output:line(times);
-		local String is last: '  peak memory ' . ((peakKb / 1024) as String) . ' MB';
+		local String is memLine: '  memory ' . ((avgMemKb / 1024) as String) . ' MB avg · ' . ((peakKb / 1024) as String) . ' MB peak';
 		Conditional:if(check: { binKb >= 0 }, then: {
-			last: last . ' · binary ' . ((binKb / 1024) as String) . ' KB';
+			memLine: memLine . ' · binary ' . ((binKb / 1024) as String) . ' KB';
 		});
-		Output:line(last);
+		Output:line(memLine);
+		local String is cpuLine: '  cpu ' . (avgCpuPct as String) . '% avg · ' . (peakCpuPct as String) . '% peak';
+		Output:line(cpuLine);
 	}
 }

@@ -95,4 +95,34 @@ Class is Process{
 	Function of Int is atomicGet(Int is slot){
 		return base:sysinternal:Process:atomic_get(slot: slot);
 	}
+
+	## Starts the background resource monitor thread (samples RSS and CPU).
+	Function is monitorStart(){
+		base:sysinternal:Process:monitor_start();
+	}
+
+	## Stops the background resource monitor thread and computes final metrics.
+	Function is monitorStop(){
+		base:sysinternal:Process:monitor_stop();
+	}
+
+	## Returns the average memory usage in kilobytes.
+	Function of Int is monitorAvgMemKb(){
+		return base:sysinternal:Process:monitor_avg_mem_kb();
+	}
+
+	## Returns the peak memory usage in kilobytes.
+	Function of Int is monitorPeakMemKb(){
+		return base:sysinternal:Process:monitor_peak_mem_kb();
+	}
+
+	## Returns the average CPU usage percentage (sum of cores, can exceed 100%).
+	Function of Int is monitorAvgCpuPct(){
+		return base:sysinternal:Process:monitor_avg_cpu_pct();
+	}
+
+	## Returns the peak interval CPU usage percentage (sum of cores, can exceed 100%).
+	Function of Int is monitorPeakCpuPct(){
+		return base:sysinternal:Process:monitor_peak_cpu_pct();
+	}
 }
