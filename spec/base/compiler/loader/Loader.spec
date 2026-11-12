@@ -260,20 +260,12 @@ Class is Loader{
 	## @param className: The class whose file is wanted.
 	## @return: Candidate paths (first-found wins the try order).
 	Function of Array of String is candidatesFor(String is className){
-		local Array of String is out: [];
 		local String is joined: self:classPaths:getString(key: className, default: '');
-		local Int is start: 0;
-		local Int is i: 0;
-		while({ i <= joined:length() }, {
-			if({ i == joined:length() || joined:charAt(index: i, default: '') == ';' }, {
-				if({ i > start }, {
-					out:add(item: joined:substring(start: start, end: i));
-				});
-				start: i + 1;
-			});
-			i: i + 1;
+		# The scan order is the try order; empty segments (doubled or
+		# trailing delimiters) carry no candidate and drop out.
+		return joined:split(delimiter: ';'):filter(predicate: local Function of Boolean(String is seg){
+			return seg:length() > 0;
 		});
-		return out;
 	}
 
 	## Number of files loaded so far (package-resolution progress metric).
@@ -439,14 +431,13 @@ Class is Loader{
 			return false;
 		});
 		local Boolean is same: true;
-		local Int is idx: 0;
-		while({ same && idx < a:params:length() }, {
+		while([Int is idx: 0], { same && idx < a:params:length() }, {
 			local Parameter is pa: a:params:get(index: idx);
 			local Parameter is pb: b:params:get(index: idx);
 			if({ pa:name != pb:name || pa:paramType:name != pb:paramType:name }, {
 				same: false;
 			});
-			idx: idx + 1;
+			idx++;
 		});
 		return same;
 	}
@@ -455,15 +446,14 @@ Class is Loader{
 	##
 	## @param c: [ClassInfo] to remove.
 	Function is removeClassFromLoaded(ClassInfo is c){
-		local Int is idx: 0;
 		local Boolean is found: false;
-		while({ !found && idx < self:loadedClasses:length() }, {
+		while([Int is idx: 0], { !found && idx < self:loadedClasses:length() }, {
 			local ClassInfo is cur: self:loadedClasses:get(index: idx);
 			if({ cur == c }, {
 				self:loadedClasses:removeAt(index: idx, default: c);
 				found: true;
 			}, {
-				idx: idx + 1;
+				idx++;
 			});
 		});
 	}
@@ -606,12 +596,10 @@ Class is Loader{
 			return;
 		});
 		local String is fieldName: '_import_' . targetName;
-		local Int is idx: 0;
 		local Boolean is already: false;
 		local Array of Member is members: c:members;
-		while({ !already && idx < members:length() }, {
-			local Member is m: members:get(index: idx);
-			if({ m:name == fieldName }, {
+		members:each(action: local Function(Member is m){
+			if({ !already && m:name == fieldName }, {
 				# an inherited-import synthesis
 				# finds the field already synthesized from the class's own
 				# using (or a prior ancestor hop) — deduplicate silently. A
@@ -622,7 +610,6 @@ Class is Loader{
 					self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
 				});
 			});
-			idx: idx + 1;
 		});
 		if({ already }, {
 			return;

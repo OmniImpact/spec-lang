@@ -325,14 +325,15 @@ Class is Lexer{
 		local String is ch: self:source:charAt(index: self:pos, default: '');
 		local String is nextCh: self:source:charAt(index: self:pos + 1, default: '');
 		if({ ch == '0' && nextCh != '' && nextCh != '.' && !nextCh:isDigit() }, {
-			if({ nextCh == 'x' || nextCh == 'X' || nextCh == 'b' || nextCh == 'B' || nextCh == 'o' || nextCh == 'O' }, {
-				local Int is base: 16;
-				if({ nextCh == 'b' || nextCh == 'B' }, {
-					base: 2;
-				});
-				if({ nextCh == 'o' || nextCh == 'O' }, {
-					base: 8;
-				});
+			# the base prefix table: 0x/0b/0o (case-insensitive) ground the
+			# literal's base; any other byte falls through to decimal.
+			local Int is base: match(on: nextCh, when: [
+				['x', 'X']: { 16 },
+				['b', 'B']: { 2 },
+				['o', 'O']: { 8 },
+				else: { 0 }
+			]);
+			if({ base > 0 }, {
 				self:advance();
 				self:advance();
 				local Int is val: 0;
