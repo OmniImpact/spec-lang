@@ -109,6 +109,15 @@ Class is CodeGenerator{
 	Int is entryInitOverloadIndex: 0;
 	Boolean is entryInitTakesArgs: false;
 
+	## --test mode: main is the SpecUnit runner entry, not the
+	## application entry — runAll over the root file's source basename
+	## prefix (see SPECUNIT.md). The application entry-init wiring is
+	## unused in this mode.
+	Boolean is testMode: false;
+
+	## The root source basename prefix handed to SpecUnit:runAll.
+	String is testSourcePrefix: '';
+
 	## Copies a string-keyed registry map for a worker gen.
 	##
 	## @param source: The map to copy.
@@ -3678,9 +3687,17 @@ Class is CodeGenerator{
 
 	## Generates the C main entry point with argv->Map parsing.
 	##
+	## In --test mode the main is the SpecUnit runner entry instead:
+	## runAll over the root file's source basename prefix — report()
+	## exits with the CI contract, so the trailing return is required
+	## but unreachable.
+	##
 	## @param entryClass: The entry class name.
 	## @return: C main function.
 	Function of String is generateMain(String is entryClass){
+		Conditional:if(check: { self:testMode }, then: {
+			return self:generateTestMain();
+		});
 		local String is m: "/* Application Entry Point */\n";
 		m: m . "int main(int argc, char** argv) {\n";
 
@@ -3726,16 +3743,33 @@ Class is CodeGenerator{
 		# mismatch is what surfaced as raw gcc output on init-less and
 		# lattice-fallback entry classes.
 		local String is initSym: entryClass . '_init';
-		if({ self:entryInitOwner != '' }, {
+		Conditional:if(check: { self:entryInitOwner != '' }, then: {
 			initSym: self:overloadSymbol(className: self:entryInitOwner, methodName: 'init', idx: self:entryInitOverloadIndex);
 		});
 		m: m . '    SPEC_AUTO ' . entryClass . '* app = ' . entryClass . "_new();\n";
-		if({ self:entryInitTakesArgs }, {
+		Conditional:if(check: { self:entryInitTakesArgs }, then: {
 			m: m . '    ' . initSym . "(app, args);\n";
-		}, {
+		}, else: {
 			m: m . '    ' . initSym . "(app);\n";
 		});
 		m: m . "    spec_drain_async_tasks();\n";
+		m: m . "    return 0;\n";
+		m: m . "}\n";
+		return m;
+	}
+
+	## Generates the SpecUnit test entry (see SPECUNIT.md): constructs
+	## the runner instance and calls runAll over this suite file's
+	## source basename prefix. report() exits with the CI contract, so
+	## the trailing return is required but unreachable.
+	##
+	## @return: C main function.
+	Function of String is generateTestMain(){
+		local String is m: "/* SpecUnit Test Entry */\n";
+		m: m . "int main(int argc, char** argv) {\n";
+		m: m . "    SpecUnitRunner* runner = (SpecUnitRunner*)SpecUnitRunner_new();\n";
+		m: m . "    SpecUnitRunner_init(runner);\n";
+		m: m . '    SpecUnitRunner_runAll(runner, spec_string_intern("' . self:testSourcePrefix . "\"));\n";
 		m: m . "    return 0;\n";
 		m: m . "}\n";
 		return m;
@@ -4576,7 +4610,7 @@ Class is CodeGenerator{
 			c:members:each(action: local Function(Member is m){
 				Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) && (!self:policy:isTransparent(c: c) || m:body:length() > 0) }, then: {
 					local Int is flags: 0;
-					Conditional:if(check: { m:memberType:name == self:names:voidName() }, then: {
+					Conditional:if(check: { m:memberType:name == self:names:voidName() || m:memberType:name == self:names:voidMemberType() || (m:memberType:name == 'Function' && m:memberType:params:length() == 0) }, then: {
 						flags: flags + 1;
 					});
 					Conditional:if(check: { m:params:length() == 0 }, then: {

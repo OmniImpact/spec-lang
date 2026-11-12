@@ -66,8 +66,15 @@ Invariants:
   methods resolve through `base_names` at query time; invocation works on
   derived instances (prefix struct layout).
 - **Construct rules** mirror the entry-init rule: no `init` member → the
-  synthesized zero-arg `X_init`; a declared zero-arg `init` → that overload's
-  symbol; anything else → `construct == NULL`.
+  void-default `X_init` (the Loadable contract's synthesized init, realized
+  at C emission — no AST member is fabricated: no-magic policy); a declared
+  zero-arg `init` → that overload's symbol; anything else →
+  `construct == NULL`.
+- **No member synthesis.** The first cut baked an `init` member into the
+  loader; reverted deliberately — it cascaded abstract-member obligations
+  (an empty body reads as an abstract contract) and fought declared parent
+  signatures. `X:init()` in Spec source types as `X` at call sites via the
+  §I.2 construction rule; held bodies construct services as locals.
 - Sizing is dynamic with the class list — no caps.
 - Enum-model and transparent floor classes register with `construct == NULL`.
 
@@ -203,6 +210,14 @@ Gate every step: `./bootstrap.sh` fixed point, `utilities/run_tests.sh`,
 `utilities/run_sanitized.sh`. Commit per step with reasoning.
 
 ---
+
+## 5.1 Observed wart (recorded, not fixed here)
+
+Void has two AST spellings: methods declared without a return type carry
+lowercase `'void'` (`WellKnown:voidMemberType()`), while `voidName()` is
+`'Void'` — `resolveReturnType` normalizes both at emission. The registry
+flags and the --test validation accept both; a future normalization pass
+should collapse them at the parser.
 
 ## 6. Later (tracked, not scheduled)
 

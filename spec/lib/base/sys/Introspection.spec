@@ -76,4 +76,64 @@ Class is Introspection{
 	Function of Int is heldIndexOf(Any is obj){
 		return base:sysinternal:Introspection:heldIndexOf(obj: obj);
 	}
+
+	## --- The class registry (see SPECUNIT.md). The floor's panics are
+	## the contract: unknown classes and signature-incompatible invokes
+	## are loud, never silent. ---
+
+	## Every registered class name, in class order. Sysinternal floors
+	## are excluded; enum-model and transparent classes register with
+	## no constructor.
+	##
+	## @return: The class names.
+	Function of Array of String is classNames(){
+		return base:sysinternal:Introspection:classNames();
+	}
+
+	## The method names of a class --- own plus inherited through the base
+	## lattice, duplicates collapsed (a child override supersedes).
+	##
+	## @param className: The class name.
+	## @return: The method names.
+	Function of Array of String is methodNames(String is className){
+		return base:sysinternal:Introspection:methodNames(className: className);
+	}
+
+	## The declaring source file's basename for a class (the basename
+	## only: full paths vary with the invocation directory).
+	##
+	## @param className: The class name.
+	## @return: The basename, empty when unknown.
+	Function of String is classSourceFile(String is className){
+		return base:sysinternal:Introspection:classSourceFile(className: className);
+	}
+
+	## Whether the class declares or inherits a method of the name.
+	##
+	## @param className: The class name.
+	## @param methodName: The method name.
+	## @return: true when present.
+	Function of Boolean is hasMethod(String is className, String is methodName){
+		return base:sysinternal:Introspection:hasMethod(className: className, methodName: methodName);
+	}
+
+	## Constructs an instance of the class through its registered
+	## zero-argument constructor. Panics for unknown classes and
+	## classes whose init requires arguments.
+	##
+	## @param className: The class name.
+	## @return: The new instance.
+	Function of Any is instantiate(String is className){
+		return base:sysinternal:Introspection:instantiate(className: className);
+	}
+
+	## Invokes a void zero-parameter method on the instance, resolved
+	## through the instance's own class. Panics when the method is
+	## absent or its signature is not void/zero-params.
+	##
+	## @param instance: The receiver.
+	## @param methodName: The method name.
+	Function of void is invokeVoid(Any is instance, String is methodName){
+		base:sysinternal:Introspection:invokeVoidByName(instance: instance, methodName: methodName);
+	}
 }

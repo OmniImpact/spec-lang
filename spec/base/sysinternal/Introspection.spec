@@ -60,4 +60,52 @@ Class is Introspection{
 	## @param obj: The object.
 	## @return: The held-field index, -1 when the object is not one.
 	Function of Int is heldIndexOf(Any is obj);
+
+	## --- The class registry (the reflection floor's query surface;
+	## see SPECUNIT.md). Bindings: spec_class_names, spec_method_names,
+	## spec_class_source_file, spec_has_method, spec_instantiate,
+	## spec_invoke_void_by_name. Loud panics on unknown classes and
+	## signature-incompatible invokes --- never silent zeros. ---
+
+	## Every registered class name (class order; sysinternal floors
+	## excluded).
+	##
+	## @return: The class names.
+	Function of Array of String is classNames();
+
+	## The method names of a class --- own plus inherited through the base
+	## lattice, duplicates collapsed (a child override supersedes).
+	##
+	## @param className: The class name.
+	## @return: The method names.
+	Function of Array of String is methodNames(String is className);
+
+	## The declaring source file's basename for a class.
+	##
+	## @param className: The class name.
+	## @return: The basename, empty when unknown.
+	Function of String is classSourceFile(String is className);
+
+	## Whether the class declares or inherits a method of the name.
+	##
+	## @param className: The class name.
+	## @param methodName: The method name.
+	## @return: true when present.
+	Function of Boolean is hasMethod(String is className, String is methodName);
+
+	## Constructs an instance of the class through its registered
+	## zero-argument constructor. Panics for unknown classes and classes
+	## whose init requires arguments.
+	##
+	## @param className: The class name.
+	## @return: The new instance.
+	Function of Any is instantiate(String is className);
+
+	## Invokes a void zero-parameter method on the instance, resolved
+	## through the instance's own class. Panics when the method is
+	## absent or its signature is not void/zero-params.
+	##
+	## @param instance: The receiver.
+	## @param methodName: The method name.
+	Function of void is invokeVoidByName(Any is instance, String is methodName);
 }

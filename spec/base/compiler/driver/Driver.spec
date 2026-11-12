@@ -76,6 +76,7 @@ Class is Driver{
 		local Boolean is lintMode: args:has(key: 'lint');
 		local Boolean is auditMode: args:has(key: 'audit');
 		local Boolean is debugMode: args:has(key: 'debug');
+		local Boolean is testMode: args:has(key: 'test');
 		local Boolean is quiet: args:has(key: 'quiet');
 		local String is threadsStr: args:getString(key: 'threads', default: '');
 		if({ threadsStr == '' }, {
@@ -90,7 +91,7 @@ Class is Driver{
 		});
 		if({ inputPath == '' }, {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--debug] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--debug] [--test] [--quiet]');
 			Process:exit(status: 2);
 		});
 
@@ -225,30 +226,71 @@ Class is Driver{
 		});
 		local String is entryName: '';
 		local ClassInfo is entryClassInfo: rootClasses:get(index: 0);
-		rootClasses:each(action: local Function(ClassInfo is c){
-			if({ entryName == '' }, {
-				c:members:each(action: local Function(Member is m){
-					if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
-						local Parameter is p: m:params:get(index: 0);
-						if({ p:paramType:name == 'Map' }, {
-							entryName: c:name;
-							entryClassInfo: c;
+		if(check: { !testMode }, then: {
+			rootClasses:each(action: local Function(ClassInfo is c){
+				if({ entryName == '' }, {
+					c:members:each(action: local Function(Member is m){
+						if({ entryName == '' && m:name == 'init' && m:kind == MemberKind:METHOD && m:params:length() == 1 }, {
+							local Parameter is p: m:params:get(index: 0);
+							if({ p:paramType:name == 'Map' }, {
+								entryName: c:name;
+								entryClassInfo: c;
+							});
 						});
 					});
 				});
 			});
-		});
-		if({ entryName == '' }, {
-			rootClasses:each(action: local Function(ClassInfo is c){
-				if({ entryName == '' && c:baseClass != 'Enum' }, {
-					entryName: c:name;
-					entryClassInfo: c;
+			if({ entryName == '' }, {
+				rootClasses:each(action: local Function(ClassInfo is c){
+					if({ entryName == '' && c:baseClass != 'Enum' }, {
+						entryName: c:name;
+						entryClassInfo: c;
+					});
 				});
 			});
-		});
-		if({ entryName == '' }, {
-			Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
-			Process:exit(status: 1);
+			if({ entryName == '' }, {
+				Stderr:line('Error: No entry class found in ' . inputPath . '; a runnable program declares at least one non-enum class.');
+				Process:exit(status: 1);
+			});
+		}, else: {
+			# --test: the entry is the generated SpecUnit runner main —
+			# the root file's *Test classes are validated, not selected.
+			# Test classes construct with no arguments (the entry-init
+			# rule's no-init form); test methods are void, zero params.
+			local Int is testClassCount: 0;
+			rootClasses:each(action: local Function(ClassInfo is c){
+				if({ c:name:endsWith(suffix: 'Test') }, {
+					testClassCount: testClassCount + 1;
+					local Boolean is hasInitMember: false;
+					local Boolean is hasZeroArg: false;
+					c:members:each(action: local Function(Member is m){
+						if({ m:kind == MemberKind:METHOD && m:name == 'init' }, {
+							hasInitMember: true;
+							if({ m:params:length() == 0 }, {
+								hasZeroArg: true;
+							});
+						});
+						if({ m:kind == MemberKind:METHOD && m:name:startsWith(prefix: 'test') && (m:params:length() > 0 || (m:memberType:name != 'Void' && m:memberType:name != 'void' && !(m:memberType:name == 'Function' && m:memberType:params:length() == 0))) }, {
+							Stderr:line("Error: Test method '" . c:name . '.' . m:name . "' must be void with no parameters.");
+														Process:exit(status: 1);
+						});
+					});
+					if({ hasInitMember && !hasZeroArg }, {
+						Stderr:line("Error: Test class '" . c:name . "' init requires arguments; test classes construct with no arguments.");
+						Process:exit(status: 1);
+					});
+				});
+			});
+			if({ testClassCount == 0 }, {
+				Stderr:line('Error: No test classes found in ' . inputPath . ' — name test classes with a Test suffix.');
+				Process:exit(status: 1);
+			});
+			# --test: the entry name is unused (main is the SpecUnit
+			# runner); bind through a typed local — get() returns the
+			# element untyped, and chaining a member access on it emits
+			# an uncast void* dereference.
+			local ClassInfo is firstRoot: rootClasses:get(index: 0);
+			entryName: firstRoot:name;
 		});
 
 		# The entry rule: feed the command-line args when an init can
@@ -257,17 +299,21 @@ Class is Driver{
 		# neither form exists — a compile-time diagnostic, never a raw
 		# backend-C failure. An entry with no init at all constructs
 		# through its synthesized zero-arg default and is fine.
-		self:entryInitOwner: '';
-		self:entryInitParams: 0;
-		self:entryInitFirstParam: '';
-		self:entryInitOverloadIndex: 0;
-		self:entryInitTakesMap: false;
-		self:entryInitSawAny: false;
-		local Array of String is latticeVisited: [];
-		self:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
-		if({ self:entryInitOwner == '' && self:entryInitSawAny }, {
-			Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
-			Process:exit(status: 1);
+		# (--test skips this entirely: the entry is the generated
+		# SpecUnit runner main, and test classes construct by name.)
+		if({ !testMode }, {
+			self:entryInitOwner: '';
+			self:entryInitParams: 0;
+			self:entryInitFirstParam: '';
+			self:entryInitOverloadIndex: 0;
+			self:entryInitTakesMap: false;
+			self:entryInitSawAny: false;
+			local Array of String is latticeVisited: [];
+			self:resolveEntryInit(c: entryClassInfo, all: program:classes, visited: latticeVisited);
+			if({ self:entryInitOwner == '' && self:entryInitSawAny }, {
+				Stderr:line("Error: Entry class '" . entryName . "' requires an init that takes 'Map of String to String' or an empty init.");
+				Process:exit(status: 1);
+			});
 		});
 
 		local String is tempCPath: emitCPath;
@@ -286,6 +332,11 @@ Class is Driver{
 		# and the backend compiles -O2 -g — full speed with inspectable
 		# values, Spec-line breakpoints and stepping under gdb.
 		cg:policy:debugEmission: debugMode;
+		# --test: main becomes the SpecUnit runner entry, scoped to this
+		# suite file's classes via the source basename prefix.
+		cg:testMode: testMode;
+		local Array of String is inSegs: inputPath:split(delimiter: '/');
+		cg:testSourcePrefix: inSegs:get(index: inSegs:length() - 1);
 		cg:entryInitOwner: self:entryInitOwner;
 		cg:entryInitOverloadIndex: self:entryInitOverloadIndex;
 		cg:entryInitTakesArgs: self:entryInitTakesMap;
