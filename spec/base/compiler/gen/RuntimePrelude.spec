@@ -2218,6 +2218,83 @@ long long spec_held_index_of(const void* obj) {
     return -1;
 }
 
+/* Class Registry Introspection : the runtime reflection floor. The
+   generator emits one SpecClassMeta per class (class order) into
+   spec_class_registry; these helpers query that registry. Declared
+   `static inline` and consumed by nobody until the wrapper methods
+   land (the two-part landing): unused static inlines are never
+   emitted, so the not-yet-defined registry extern cannot break a
+   link in the interim. The floor is domain-neutral — it describes
+   classes and methods; conventions live in consumers. */
+typedef struct SpecMethodMeta {
+    const char* name;
+    void* fn;
+    int flags;          /* bit 0: void return; bit 1: zero params */
+    int line;
+} SpecMethodMeta;
+
+typedef struct SpecClassMeta {
+    const char* name;
+    const char* source_file;
+    const char** base_names;
+    int base_count;
+    void* (*construct)(void);
+    const SpecMethodMeta* methods;
+    int method_count;
+} SpecClassMeta;
+
+extern const SpecClassMeta* const spec_class_registry[];
+/* Defined by the emitted registry (Land B). Declared here so the
+   helpers compile; the inline bodies are never emitted while unconsumed,
+   so no reference materializes until the definition exists. */
+int spec_class_registry_count(void);
+
+static inline const SpecClassMeta* spec_class_meta(int index) {
+    if (index < 0 || index >= spec_class_registry_count()) return NULL;
+    return spec_class_registry[index];
+}
+
+static inline const SpecClassMeta* spec_class_find(const char* name) {
+    if (!name) return NULL;
+    for (int i = 0; i < spec_class_registry_count(); i++) {
+        const SpecClassMeta* m = spec_class_registry[i];
+        if (m && m->name && strcmp(m->name, name) == 0) return m;
+    }
+    return NULL;
+}
+
+/* Own methods first, then up the base lattice — inherited methods
+   resolve through base_names, so invocation works on derived
+   instances (prefix struct layout). */
+static inline const SpecMethodMeta* spec_class_find_method(
+        const SpecClassMeta* cls, const char* name) {
+    if (!cls || !name) return NULL;
+    for (int i = 0; i < cls->method_count; i++) {
+        if (strcmp(cls->methods[i].name, name) == 0) return &cls->methods[i];
+    }
+    for (int b = 0; b < cls->base_count; b++) {
+        const SpecClassMeta* base = spec_class_find(cls->base_names[b]);
+        const SpecMethodMeta* m = spec_class_find_method(base, name);
+        if (m) return m;
+    }
+    return NULL;
+}
+
+static inline void* spec_class_construct_by_meta(const SpecClassMeta* cls) {
+    if (!cls || !cls->construct) return NULL;
+    return cls->construct();
+}
+
+/* The v1 invoke contract: void, zero parameters. Anything else is a
+   loud panic — the bounds-check philosophy, never a silent miss. */
+static inline void spec_invoke_void_by_meta(void* instance,
+        const SpecMethodMeta* m) {
+    if (!m || !m->fn || (m->flags & 3) != 3) {
+        spec_panic("Introspection:invoke supports void zero-parameter methods only");
+    }
+    ((void (*)(void*))m->fn)(instance);
+}
+
 /* Clock & Memory Metrics */
 long long spec_clock_ms(void) {
     struct timespec ts;
