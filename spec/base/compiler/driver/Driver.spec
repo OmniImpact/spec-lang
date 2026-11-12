@@ -1,8 +1,8 @@
 #! Package base:compiler:driver
 #! The compiler driver: CLI orchestration over load, check, generate, cc.
 ##
-## Coordinates the Loader (multi-file package resolution), the Linter,
-## the TypeChecker, and the CodeGenerator, and prints progress through
+## Coordinates the Loader (multi-file package resolution), the
+## TypeChecker, and the CodeGenerator, and prints progress through
 ## the CompilationReport. This is the class the spec binary's main
 ## dispatches to with the parsed argument map; it IS
 ## the entry point of the self-hosted compiler.
@@ -19,11 +19,7 @@ Class is Driver{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
-		['base', 'compiler', 'lexer', Lexer],
-		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'checker', TypeChecker],
-		['base', 'compiler', 'linter', Linter],
-		['base', 'compiler', 'linter', LintIssue],
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'driver', CompilationReport],
 		['base', 'compiler', 'gen', CodeGenerator],
@@ -32,8 +28,6 @@ Class is Driver{
 		['base', 'iterator'],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Stderr()]
-,
-		['base', 'compiler', Error]
 ,
 		['base', 'compiler', 'ast', Parameter]
 ,
@@ -66,15 +60,10 @@ Class is Driver{
 		if({ inputPath == '' }, {
 			inputPath: args:getString(key: 'input', default: '');
 		});
-		if({ inputPath == '' }, {
-			inputPath: args:getString(key: 'lint', default: '');
-		});
 		local String is outputPath: args:getString(key: 'o', default: '');
 		if({ outputPath == '' }, {
 			outputPath: args:getString(key: 'output', default: '');
 		});
-		local Boolean is lintMode: args:has(key: 'lint');
-		local Boolean is auditMode: args:has(key: 'audit');
 		local Boolean is debugMode: args:has(key: 'debug');
 		local Boolean is quiet: args:has(key: 'quiet');
 		local String is threadsStr: args:getString(key: 'threads', default: '');
@@ -90,7 +79,7 @@ Class is Driver{
 		});
 		if({ inputPath == '' }, {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--lint] [--audit] [--debug] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--debug] [--quiet]');
 			Process:exit(status: 2);
 		});
 
@@ -109,47 +98,17 @@ Class is Driver{
 		local Int is ccMs: -1;
 		local CompilationReport is report: CompilationReport:init(quiet: quiet);
 
-		# 1. Lint mode: scan, parse, report standards issues; no emission.
-		if({ lintMode }, {
-			local Lexer is lexer: Lexer:init(source: source);
-			local Parser is parser: Parser:init(tokens: []);
-			parser:setLexer(lexer: lexer);
-			parser:setSourceFile(file: inputPath);
-			local ProgramNode is lintProgram: parser:parseProgram();
-			if({ lexer:hasErrors() }, {
-				Stderr:line('Lexical errors encountered during linting:');
-				local Array of Error is lexErrors: lexer:getErrors();
-				lexErrors:each(action: local Function(Error is err){
-					Stderr:line('  [' . inputPath . '] ' . err:toString());
-				});
-				Process:exit(status: 1);
-			});
-			if({ parser:hasErrors() }, {
-				Stderr:line('Syntax errors encountered during linting:');
-				local Array of Error is parseErrs: parser:getErrors();
-				parseErrs:each(action: local Function(Error is err){
-					Stderr:line(err:toString());
-				});
-				Process:exit(status: 1);
-			});
-
-			local Linter is linter: Linter:init();
-			local Array of LintIssue is issues: linter:lint(source: source, program: lintProgram);
-			linter:report(filePath: inputPath, issues: issues);
-			return;
-		});
-
 		local String is emitCPath: args:getString(key: 'c', default: '');
 		if({ emitCPath == '' }, {
 			emitCPath: args:getString(key: 'emit-c', default: '');
 		});
 
-		if({ !auditMode && outputPath == '' && emitCPath == '' }, {
+		if({ outputPath == '' && emitCPath == '' }, {
 			Stderr:line('Error: Missing output binary path (-o <output_binary>)');
 			Process:exit(status: 2);
 		});
 
-		# 2. Multi-file module loading and dependency resolution.
+		# 1. Multi-file module loading and dependency resolution.
 		local Int is loadT0: Process:clockMs();
 		local Loader is loader: Loader:init();
 		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
@@ -176,17 +135,7 @@ Class is Driver{
 		});
 		loader:cleanup();
 
-		# 2.5 Instance-model worklist audit (Phase 0.5): with the
-		# full program loaded, report class-name-receiver call sites. Purely
-		# informational; always exits 0.
-		if({ auditMode }, {
-			local Linter is auditor: Linter:init();
-			local Array of LintIssue is auditIssues: auditor:auditProgram(program: program);
-			auditor:auditReport(filePath: inputPath, issues: auditIssues);
-			return;
-		});
-
-		# 3. Semantic static type checking.
+		# 2. Semantic static type checking.
 		local Int is checkT0: Process:clockMs();
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is typeErrors: tc:checkProgram(program: program);
@@ -203,7 +152,7 @@ Class is Driver{
 			Process:exit(status: 1);
 		});
 
-		# 4. Entry class — scoped to the ROOT FILE's classes. The loader
+		# 3. Entry class — scoped to the ROOT FILE's classes. The loader
 		# preloads the root lattice (Any, Loadable, String, ...) into the
 		# program set ahead of user code, so an unscoped fallback would
 		# select a lattice class and emit a main that constructs Any.
@@ -278,7 +227,7 @@ Class is Driver{
 			});
 		});
 
-		# 5. C11 code generation over the FULL loaded class set streamed to disk.
+		# 4. C11 code generation over the FULL loaded class set streamed to disk.
 		local CodeGenerator is cg: CodeGenerator:init();
 		cg:genThreads: threadCount;
 		# --debug: statements carry #line directives to their Spec source,
@@ -305,7 +254,7 @@ Class is Driver{
 			return;
 		});
 
-		# 6. GCC backend compile.
+		# 5. GCC backend compile.
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
 		if({ debugMode }, {
 			# Debug info rides full optimization: -g costs nothing, and the

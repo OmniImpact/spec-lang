@@ -1,11 +1,11 @@
-#! Package base:compiler:linter
+#! Package speclint
 #! Pure-Spec code linter enforcing tab-based indentation, formatting,
 #! and AST idioms, plus the Phase 0.5 worklist audit.
 
 ## Pure-Spec code linter enforcing tab-based indentation, formatting,
 ## and AST idioms, plus the Phase 0.5 worklist audit.
 Class is Linter{
-	namespace: ['base', 'compiler', 'linter'];
+	namespace: ['speclint'];
 
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', ProgramNode],
@@ -23,7 +23,7 @@ Class is Linter{
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Output()],
-		['base', 'compiler', 'linter', LintIssue],
+		['speclint', LintIssue],
 		['base', 'sys', as Conditional()]
 	];
 

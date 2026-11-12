@@ -1,9 +1,9 @@
-#! Package base:compiler:linter
+#! Package speclint
 #! One diagnostic produced by the Linter: a line, a severity, a message.
 
 ## Represents an issue or diagnostic notice detected by the Spec linter.
 Class is LintIssue{
-	namespace: ['base', 'compiler', 'linter'];
+	namespace: ['speclint'];
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]

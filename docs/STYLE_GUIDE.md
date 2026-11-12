@@ -45,7 +45,7 @@ This document establishes the official code style conventions, architectural idi
 ### Indentation: Tabs Exclusively
 * **Mandatory Rule**: All `.spec` files must use **hard tabs (`\t`)** for indentation.
 * Exactly **one tab** per nesting level.
-* Space-based indentation is rejected by the compiler linter (`spec --lint`).
+* Space-based indentation is rejected by the linter (`bin/speclint -i file.spec`).
 
 ```spec
 # Correct (Tabs)
@@ -277,13 +277,12 @@ Class is SourceLocation{
 
 ## 6. Tooling & Linter Enforcement
 
-Run the Spec compiler linter to check compliance:
+Run the standalone linter (`bin/speclint`, built from `utilities/speclint/` — see the [Tooling Guide](tooling/README.md#code-standards--built-in-linter)):
 ```bash
-spec --lint path/to/file.spec
+bin/speclint -i path/to/file.spec
 ```
 
 The linter verifies:
 * **Indentation**: Rejects spaces; requires hard tabs (`\t`).
-* **Line Endings**: Requires Unix LF (`\n`).
 * **Optional Arguments**: Emits notices for optional parameter usage and fallback conventions.
-* **SpecDoc Integration**: Validates doc comment presence on public library APIs.
+* **Allocation Idioms**: Warns on construction inside loop bodies (E10).

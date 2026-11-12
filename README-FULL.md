@@ -119,9 +119,9 @@ line("Processing: " . path);
 - **Top-to-Bottom Flow**: Flattens nested callbacks into clean, sequential code.
 
 ### 6. Tab-Based Indentation Standard
-Spec establishes a standard indentation convention using **tabs**. A built-in linter detects space-based indentation and optional parameter patterns:
+Spec establishes a standard indentation convention using **tabs**. The standalone linter (`bin/speclint`, built from `utilities/speclint/`) detects space-based indentation and optional parameter patterns:
 ```bash
-bin/spec --lint path/to/program.spec
+bin/speclint -i path/to/program.spec
 ```
 
 ### 7. Multi-File Module Resolution
@@ -369,7 +369,7 @@ bin/spec -i examples/helloworld.spec -o helloworld
 ./helloworld --name "Spec Developer"
 
 # Run the strict whitespace and style linter:
-bin/spec --lint spec/base/compiler/driver/Driver.spec
+bin/speclint -i spec/base/compiler/driver/Driver.spec
 ```
 
 ---

@@ -184,7 +184,8 @@ bin/spec -i examples/helloworld.spec --emit-c helloworld.c
 
 ### Running the Linter
 ```bash
-bin/spec --lint examples/blackjack.spec
+bin/speclint -i examples/blackjack.spec
+bin/speclint -t examples -t tests        # whole trees
 ```
 
 ### Debugging

@@ -248,6 +248,48 @@ check, and emit the NEXT generation's sources. Consequences:
 - **Cross-language benchmarks**: `utilities/run_benchmarks.sh` (see
   README-PERFORMANCE.md).
 
+### speclint — the standalone linter
+
+- **The linter is speclint** — `utilities/speclint/`, the specunit
+  treatment applied to the compiler's former `--lint`/`--audit` modes
+  (both removed from the Driver). The binary imports the compiler's
+  front-end by namespace (`lexer`, `parser`, `ast`) plus the speclint
+  package and lints IN-PROCESS — no compiler subprocess, no diagnostic
+  scraping. Iterating on lint rules rebuilds only `bin/speclint`; the
+  bootstrap seed never reconverges for a lint change.
+- **Building and invoking:**
+
+  ```
+  bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
+  bin/speclint -i path/to/file.spec        # one file (the old `spec --lint`)
+  bin/speclint -t examples -t tests        # trees, recursive, repeatable
+  bin/speclint -a -i file.spec             # the Phase 0.5 instance-model audit
+  ```
+
+  Tree mode skips `#! specunit: negative` fixtures (compile-must-fail
+  sources — linting them is permanent noise). Exit contract: 0 clean,
+  1 findings or syntax errors, 2 usage (the retired compiler mode
+  always exited 0; the docs' exit-1 claim is now true). Per-file output
+  is byte-identical to the retired mode's — the same `Linter.report` —
+  and tree mode appends one colored tally line.
+- **`utilities/speclint/` layout**: `SpecLint.spec` (the entry program
+  + `LintTally`), `Linter.spec` (the rules: indentation, AST idioms,
+  and the audit), `LintIssue.spec`. `tests/TestSpeclint.spec` is the
+  rules' regression net — the first they ever had.
+- **Loader constraint the split uncovered**: the loader dedupes
+  NON-floor classes by BARE name across namespaces (`seenBareNames` in
+  Loader's loadFile) — two same-named classes in different namespaces
+  cannot coexist as resolvable imports while both files sit in the
+  scan trees, and scan order decides which one loads. The compiler's
+  linter had to be deleted in the SAME landing that added
+  `utilities/speclint/`; a two-commit move/rename split is not
+  possible for same-named classes.
+- Known lint reality: `RuntimePrelude.spec` (the C runtime held as
+  Spec string data) accounts for ~1,970 of the tree's ~2,030
+  indentation warnings — the raw-text rules count the embedded C's
+  lines. A multi-line-string mask in `lintIndentation` is the tracked
+  follow-up.
+
 ## 4b. When stuck
 
 - **If the same class of failure repeats twice, stop theorizing.**

@@ -27,8 +27,8 @@ Reference manual for the standard library implemented in Spec (`spec/lib/`):
 
 ### 3. [Tooling & Compiler Guide](tooling/README.md)
 Guide for building, running, linting, and editing Spec code:
-- **[Compiler CLI (`spec`)](tooling/README.md#compiler-cli-spec)**: Self-hosted bootstrap (`./bootstrap.sh`), CLI flags (`-i`, `-o`, `--emit-c`, `--lint`), multi-file compilation, and C11 code generation.
-- **[Code Standards & Linter](tooling/README.md#code-standards--built-in-linter)**: Enforcing tab-based indentation and inspecting optional parameter usage.
+- **[Compiler CLI (`spec`)](tooling/README.md#compiler-cli-spec)**: Self-hosted bootstrap (`./bootstrap.sh`), CLI flags (`-i`, `-o`, `--emit-c`), multi-file compilation, and C11 code generation.
+- **[Code Standards & Linter](tooling/README.md#code-standards--built-in-linter)**: The standalone `speclint` utility — tab-based indentation enforcement and optional parameter inspection.
 - **[Kate Editor Syntax Highlighting](tooling/README.md#kate--kwrite-syntax-highlighting)**: Installation and XML definition rules for Kate and KWrite.
 
 ---

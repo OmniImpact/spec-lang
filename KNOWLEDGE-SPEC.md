@@ -5,7 +5,7 @@ Strictly typed, class-based, compiles to C11 via `gcc`. Written in itself: the c
 ## Layout
 - `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String/Enum), `math`, `struct` (Array/Map/List), `iterator` (Loop/LoopControl/LoopCallback), `sys` (the control-flow providers Conditional and Loops, the console pair Output/Input/Stderr, File, Ansi, Process, Parallel, Introspection, Buf, Dir). The declared namespace IS the package; directories are organization only.
 - `spec/base/sysinternal/` — the C floor (Buf, Dir, Reflection, Introspection, Conditional, Loops): body-less declarations bound to C by the `spec_<snake(method)>` naming convention. Only the `base:sys` wrappers may call the floor; the checker enforces it structurally (the caller's namespace segments begin `['base', 'sys', ...]`).
-- `spec/base/compiler/` — the compiler: lexer, parser, checker, gen (CodeGenerator/BuiltinCallGenerator/DeclarationGenerator/RuntimePrelude), loader, linter, driver.
+- `spec/base/compiler/` — the compiler: lexer, parser, checker, gen (CodeGenerator/BuiltinCallGenerator/DeclarationGenerator/RuntimePrelude), loader, driver. The linter is the standalone `utilities/speclint/` utility.
 - `bootstrap/spec.c` — the canonical seed. `bin/spec` — the built compiler.
 
 ## Grammar
@@ -130,7 +130,7 @@ Reference counting with scope-end releases; runtime binaries verified leak-free 
 
 ## Compiler
 - Exit: 0=ok, 1=compile/load/type/gcc error, 2=usage. Diagnostics on stderr.
-- `bin/spec -i file.spec -o binary`; `--lint file.spec`; `--emit-c out.c`; `--gc=boehm`; `--quiet`.
+- `bin/spec -i file.spec -o binary`; `--emit-c out.c`; `--gc=boehm`; `--quiet`. Linting: `bin/speclint -i file.spec` (standalone utility).
 
 - Root classes `String` `Buf` `Dir` `Stringable` `Any` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
 - Suite: `bin/specunit -s bin/spec -t examples -t tests` (build the runner first: `bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit`); sanitized wave: KNOWLEDGE-SPECDEV.md §4a.

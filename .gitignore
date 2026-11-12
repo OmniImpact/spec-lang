@@ -6,6 +6,8 @@
 # The specunit test runner, built into bin/ during development (§4a)
 /bin/specunit
 /bin/specunit-asan
+# The speclint linter, built into bin/ during development (§4a)
+/bin/speclint
 # Demo binaries (built from examples/ on demand)
 /mandelbrot
 /pi

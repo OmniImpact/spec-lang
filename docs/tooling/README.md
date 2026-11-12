@@ -122,34 +122,49 @@ All resolved classes are merged into an AST with per-file source provenance befo
 
 ## Code Standards & Built-in Linter
 
-Spec features a built-in code linter that enforces style guidelines across all codebase files.
+The code linter is **speclint**, a standalone Spec program in
+`utilities/speclint/` — part of the ecosystem alongside the specunit
+test runner, not a compiler mode. Its binary imports the compiler's
+front-end (lexer, parser, AST) directly, so linting runs in-process,
+and iterating on lint rules never rebuilds or reconverges the compiler.
 
 ### Running the Linter
-Run the linter using the `--lint` (or `-l`) flag:
+Build the linter binary, then lint one file or whole trees:
 
 ```bash
-./spec --lint path/to/file.spec
+bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
+
+bin/speclint -i path/to/file.spec
+bin/speclint -t examples -t tests
 ```
 
-To run the linter across all project examples and standard library files:
+`-t` is a directory, repeatable or comma-separated, scanned recursively
+(dot entries skipped; `#! specunit: negative` compile-must-fail
+fixtures are skipped too). The Phase 0.5 instance-model audit over the
+fully loaded program is informational and always exits 0:
+
 ```bash
-for f in examples/*.spec tests/*.spec lib/**/*.spec; do
-	./spec --lint "$f"
-done
+bin/speclint -a -i path/to/file.spec
 ```
+
+Exit codes: **0** clean, **1** findings or syntax errors, **2** usage.
 
 ### Enforced Rules
 
 #### 1. Tab-Based Indentation Standard
 - **Rule**: All Spec source code must be indented using tab characters (`\t`).
-- **Violation**: Any leading spaces used for indentation trigger a warning and cause the linter to fail (exit code 1).
+- **Violation**: Any leading spaces used for indentation trigger a warning.
 - **Violation**: Trailing whitespace at the end of any line.
-- **Violation**: A closing brace whose indentation does not match the current nesting depth (one tab per open brace). String literals and comments are masked before brace counting, so brace characters inside them are ignored.
+- **Violation**: A column-0 closing brace whose indentation does not match the current nesting depth (one tab per open brace). String literals and comments are masked before brace counting, so brace characters inside them are ignored.
 - **Rationale**: Ensures deterministic, customizable visual alignment across editors while preventing indentation drift.
 
 #### 2. Optional Parameter Consistency
 - **Rule**: Optional method parameters must provide explicit default values in declarations.
 - **Violation**: Missing defaults in fallible reads trigger linter notices or warnings.
+
+#### 3. Allocation Idioms (E10)
+- **Rule**: Construction inside a While/Loop callback body allocates per iteration.
+- **Violation**: An `UpperCamel:init(...)` call inside a loop body triggers a hoist-the-instance warning.
 
 ---
 
