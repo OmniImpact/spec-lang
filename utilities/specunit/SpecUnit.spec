@@ -57,11 +57,13 @@ Class is WorkItem{
 	String is path;
 	String is kind;
 	Array of String is expect: [];
+	Boolean is requireReport: false;
 
-	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect){
+	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect, Boolean is itemRequireReport){
 		self:path: itemPath;
 		self:kind: itemKind;
 		self:expect: itemExpect;
+		self:requireReport: itemRequireReport;
 	}
 }
 
@@ -186,10 +188,15 @@ Class is SpecUnit{
 
 	## Classifies one candidate by its `#!` banner: an explicit
 	## `#! specunit: <kind>` marker wins; an unmarked file that mentions
-	## the specunit package is a suite; everything else is skipped.
+	## the specunit package is a suite; everything else is skipped. A
+	## suite whose file IMPORTS the framework (the `['specunit'` using
+	## spelling) must produce a SpecUnit report table — the gate that
+	## keeps entry-init machinery failures loud instead of silently
+	## empty green binaries.
 	Function is enqueueFile(String is relPath){
 		local String is content: fileRead(path: relPath, default: '');
 		local String is kind: '';
+		local Boolean is requireReport: false;
 		local Array of String is expect: [];
 		content:split(delimiter: "\n"):each(action: local Function(String is seg){
 			Conditional:if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
@@ -202,11 +209,12 @@ Class is SpecUnit{
 		});
 		Conditional:if(check: { kind == '' && content:contains(needle: 'specunit') }, then: {
 			kind: 'suite';
+			requireReport: content:contains(needle: "['specunit'");
 		});
 		Conditional:if(check: { kind == '' || kind == 'helper' }, then: {
 			return;
 		});
-		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect));
+		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect, itemRequireReport: requireReport));
 	}
 
 	## Compiles one suite (one compiler thread), executes the produced
@@ -235,8 +243,15 @@ Class is SpecUnit{
 		if(check: { passed && out:contains(needle: '[FAIL]') }, then: {
 			passed: false;
 		});
+		# A framework-importing suite must print the SpecUnit report
+		# table: a binary that exits 0 silently (entry-init machinery
+		# failing to run the runner) is a failure, never a pass.
 		local String is note: '';
-		if(check: { !passed }, then: {
+		if(check: { passed && item:requireReport && !out:contains(needle: '== SpecUnit ==') }, then: {
+			passed: false;
+			note: 'exited 0 but produced no SpecUnit report table';
+		});
+		if(check: { !passed && note == '' }, then: {
 			note: 'exit ' . (rStatus as String) . ' — ' . self:firstLine(text: out);
 		});
 		SpecTestRegistry:addResult(name: item:path, passed: passed, note: note, report: out);

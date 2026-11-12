@@ -160,7 +160,23 @@ Class is SpecUnitRunner{
 			});
 		});
 		local String is verdict: if(check: { failed == 0 }, then: { color256(code: 114, text: 'ALL GREEN'); }, else: { color256(code: 203, text: 'FAILED'); });
-		line(bold() . color256(code: 51, text: '== ' . (passed as String) . ' passed, ' . (failed as String) . ' failed in ' . (totalMs as String) . 'ms — ' . verdict . ' =='));
+		# A test GROUP is a class (the "Class" prefix of each
+		# "Class.method" result); a TEST is one method's execution. A
+		# class's tests run consecutively, so the group count is the
+		# number of prefix transitions. Both numbers report separately.
+		local Int is groups: 0;
+		local String is lastGroup: '';
+		SpecUnitState:results:each(action: local Function(TestResult is r){
+			local Int is dot: r:name:indexOf(search: '.', default: -1);
+			Conditional:if(check: { dot > 0 }, then: {
+				local String is g: r:name:substring(start: 0, end: dot);
+				Conditional:if(check: { g != lastGroup }, then: {
+					groups: groups + 1;
+					lastGroup: g;
+				});
+			});
+		});
+		line(bold() . color256(code: 51, text: '== ' . (groups as String) . ' test groups, ' . (passed as String) . ' tests passed, ' . (failed as String) . ' failed in ' . (totalMs as String) . 'ms — ' . verdict . ' =='));
 		# the branch-yield works in local-init position; nested as a call
 		# argument the builtin if emits statement-form, so bind first.
 		local Int is exitCode: if(check: { failed > 0 }, then: { 1 }, else: { 0 });

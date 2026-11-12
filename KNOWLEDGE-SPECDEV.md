@@ -198,6 +198,33 @@ check, and emit the NEXT generation's sources. Consequences:
   Void, 2 = zero parameters, 4 = paramless-Function (the empty
   function, a distinct non-void type); emission details live with the
   registry generator (CodeGenerator, the class-registry emission).
+- **Entry semantics and the loudness gate**: the base's argv-Map init
+  stamps `SpecUnitTest:entryStamped` (held array — held references are
+  immutable, contents are not), fires the `onEntry(args)` hook
+  (single-signature, so suites can `replace` it — the overloaded init
+  itself cannot be), then calls `runTests()`. Suites pin
+  entry-selection semantics by replacing `onEntry`
+  (tests/TestEntryPreference.spec); the two-hop inherited-entry chain
+  is tests/TestEntryInheritedInit.spec. The runner FAILS any
+  framework-importing suite (the `['specunit'` using spelling) whose
+  binary exits 0 without a `== SpecUnit ==` report table — entry-init
+  machinery failing to start the runner is loud, never silent
+  empty-green. Three entry-emission properties exist ONLY for non-suite
+  entries (a root class with no init anywhere, a zero-arg init called
+  at true arity, the non-constructible-overload fallback) and stay
+  standalone: `tests/entry_no_init_test.spec`,
+  `entry_zero_arg_init_test.spec`, `entry_init_fallback_test.spec`
+  (marked `#! specunit: suite`, exit-code gated).
+- **Report vocabulary**: a test GROUP is a class, a TEST is one method
+  execution — the suite summary reports both (`N test groups, M tests
+  passed, F failed`).
+- **Compiler memory (measured, the driver's own RSS monitor)**: a
+  typical suite compile peaks ~7 MB; the self-compile (the heaviest
+  regular path) ~70 MB, ~71 MB under `--debug`. `/usr/bin/time -v`
+  readings of a compile-to-binary are dominated by the GCC CHILD
+  (~90 MB on suite-sized C, ~330 MB on the 62k-line seed at -O2) — not
+  the compiler's own usage; use the driver report's `memory X MB peak`
+  line for the compiler process itself.
 - **Sanitized gate**: build an ASan+UBSan compiler from the seed, then
   build and run the runner with it — specunit, every suite compile,
   and every produced binary run under the sanitizer; run it after any

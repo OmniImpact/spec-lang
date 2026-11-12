@@ -2,12 +2,6 @@
 #! library smoke — the pure Spec base:math methods, the pure Spec Array
 #! methods, a declared-then-assigned field, and the decoupled Loop
 #! runner with the loop logic in a separate class.
-#!
-#! NOTE (observed baseline, recorded honestly): Math:clamp currently
-#! returns 0.0 for every input (clamp(15.0, 0.0, 10.0) printed 0 in the
-#! old marker run and 0 for every probed combination) — the test below
-#! asserts that observed value; the old print-only suite never checked
-#! it. If the clamp match is fixed, this assert must move with it.
 
 Class of SpecUnitTest is TestMultifile{
 
@@ -29,14 +23,19 @@ Class of SpecUnitTest is TestMultifile{
 	local String is title;
 	local Int is counter: 0;
 
-	## 1. Pure Spec Math library methods (values as the old run printed
-	## them; see the clamp note in the header).
+	## 1. Pure Spec Math library methods. The clamp arguments reach the
+	## floor now — the builtin-call generator filled them by argument
+	## index (the checker resolves named args into declaration order);
+	## its old spelling-grep matched none of the declared parameter
+	## names and shipped 0.0/0.0/1.0 defaults for every call.
 	Function is testPureSpecMathMethods(){
 		local Float is neg: -42.5;
 		Assert:areClose(42.5, Math:abs(value: neg), 0.0001);
 		Assert:areClose(10.0, Math:min(a: 10.0, b: 20.0), 0.0001);
 		Assert:areClose(20.0, Math:max(a: 10.0, b: 20.0), 0.0001);
-		Assert:areClose(0.0, Math:clamp(val: 15.0, minVal: 0.0, maxVal: 10.0), 0.0001);
+		Assert:areClose(10.0, Math:clamp(val: 15.0, minVal: 0.0, maxVal: 10.0), 0.0001);
+		Assert:areClose(5.0, Math:clamp(val: 5.0, minVal: 0.0, maxVal: 10.0), 0.0001);
+		Assert:areClose(0.0, Math:clamp(val: -5.0, minVal: 0.0, maxVal: 10.0), 0.0001);
 	}
 
 	## 2. Pure Spec Array methods: isEmpty, add.

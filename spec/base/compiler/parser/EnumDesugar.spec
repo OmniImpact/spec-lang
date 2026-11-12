@@ -374,12 +374,17 @@ Class is EnumDesugar{
 		m:memberType: Type:init(name: name);
 		m:name: 'of';
 		local Array of Parameter is params: [];
-		params:add(item: Parameter:init(name: 'v', paramType: Type:init(name: backingType)));
+		# The parameter is 'value' — the sugar's call convention
+		# (Color:of(value: ...)). The call-argument formatter matches
+		# call-site names against parameter names, so any other spelling
+		# drops the argument and every lookup degenerates to the
+		# no-match default.
+		params:add(item: Parameter:init(name: 'value', paramType: Type:init(name: backingType)));
 		m:params: params;
 		local Array of Statement is body: [];
 		local Member is first: variants:get(index: 0);
 		variants:each(action: local Function(Member is v){
-			local Expression is cond: self:eq(left: self:ident(name: 'v'), right: v:initExpr);
+			local Expression is cond: self:eq(left: self:ident(name: 'value'), right: v:initExpr);
 			body:add(item: self:guardIf(cond: cond, val: self:variantRef(enumName: name, variant: v:name)));
 		});
 		body:add(item: self:tailReturn(expr: self:variantRef(enumName: name, variant: first:name)));

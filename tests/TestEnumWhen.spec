@@ -91,12 +91,16 @@ Class of SpecUnitTest is TestEnumWhen{
 		]);
 		Assert:areEqualString('Variable/Type Identifier', tokDescription);
 
-		# String-backed reverse lookup: the no-match side maps to the
-		# empty-tag default. (The matching side — of(value: 'WRN') ==
-		# LogLevel:WARN — does NOT hold today: the desugarer's
-		# synthesized of() misses String-backed variants and always
-		# yields NONE; the legacy suite printed FAIL for it while
-		# exiting 0. Reported in the sweep.)
+		# String-backed reverse lookup, both sides: the matching arm
+		# resolves the variant; the no-match side maps to the first
+		# variant (the sugar's historical empty-tag default — LogLevel
+		# declares NONE first, so 'nope' lands there). The lookup was
+		# broken until the desugarer's of() parameter was renamed to
+		# 'value' (the call-convention spelling): the call-argument
+		# formatter matches by parameter name, and the old 'v' dropped
+		# every argument, degenerating all lookups to the default.
+		Assert:isTrue(LogLevel:of(value: 'WRN') == LogLevel:WARN);
+		Assert:isTrue(LogLevel:of(value: 'DBG') == LogLevel:DEBUG);
 		Assert:isTrue(LogLevel:of(value: 'nope') == LogLevel:NONE);
 
 		local HttpStatus is status: HttpStatus:SERVER_ERROR;

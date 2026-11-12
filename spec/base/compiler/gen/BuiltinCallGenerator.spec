@@ -470,21 +470,17 @@ Class is BuiltinCallGenerator{
 				return 'spec_math_random(' . a0 . ', ' . a1 . ')';
 			});
 			if({ m == 'clamp' }, {
-				local String is vC: '0.0';
-				local String is loC: '0.0';
-				local String is hiC: '1.0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if({ arg:name == 'value' }, {
- vC: cg:generateExpression(expr: arg:value);
-					});
-					if({ arg:name == 'min' || arg:name == 'lo' }, {
- loC: cg:generateExpression(expr: arg:value);
-					});
-					if({ arg:name == 'max' || arg:name == 'hi' }, {
- hiC: cg:generateExpression(expr: arg:value);
-					});
+				# Declared signature: clamp(Float val, Float minVal,
+				# Float maxVal). Fill by argument index — the checker
+				# resolves named args into declaration order — never by
+				# grepping spellings here: the old name-grep matched
+				# none of the declared names and shipped the
+				# 0.0/0.0/1.0 defaults for every call.
+				local String is a2: '1.0';
+				if({ expr:argCount() > 2 }, {
+					a2: cg:generateExpression(expr: self:argValue(expr: expr, index: 2));
 				});
-				return 'spec_math_clamp(' . vC . ', ' . loC . ', ' . hiC . ')';
+				return 'spec_math_clamp(' . a0 . ', ' . a1 . ', ' . a2 . ')';
 			});
 			if({ m == 'toInt' }, {
 				return '((long long)(' . a0 . '))';

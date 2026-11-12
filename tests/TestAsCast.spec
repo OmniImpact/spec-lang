@@ -1,29 +1,6 @@
 #! SpecUnit sweep (from as_cast_test.spec): the `as` cast operator across
 #! classes, numerics, and base pseudo-types.
 
-Enum is Color {
-	RED,
-	GREEN
-}
-
-Class is Animal{
-
-	Function of String is speak(){
-		return '...';
-	}
-}
-
-Class of Animal is Dog{
-
-	replace Function of String is speak(){
-		return 'woof';
-	}
-
-	Function of String is fetch(){
-		return 'ball';
-	}
-}
-
 Class of SpecUnitTest is TestAsCast{
 
 	replace Array of Array of String is using: [
@@ -90,3 +67,26 @@ Class of SpecUnitTest is TestAsCast{
 		Assert:areEqualString('ball', checkedDog:fetch());
 	}
 }
+Enum is Color {
+	RED,
+	GREEN
+}
+
+Class is Animal{
+
+	Function of String is speak(){
+		return '...';
+	}
+}
+
+Class of Animal is Dog{
+
+	replace Function of String is speak(){
+		return 'woof';
+	}
+
+	Function of String is fetch(){
+		return 'ball';
+	}
+}
+

@@ -2,32 +2,6 @@
 #! dispatch over class instances, array keys, else fallbacks, statement
 #! forms, the today's-enum bridge, and string-literal keys.
 
-Class of Enum is MachineState{
-	namespace: ['test'];
-
-	held MachineState is idle: MachineState:init();
-	held MachineState is running: MachineState:init();
-	held MachineState is failed: MachineState:init();
-
-	replace Function of String is toString(){
-		return 'MachineState';
-	}
-}
-
-Class is JobKind{
-	namespace: ['test'];
-
-	held JobKind is sync: JobKind:init();
-	held JobKind is async: JobKind:init();
-	held String is label: 'jobs';
-}
-
-Enum of String is Legacy{
-	namespace: ['test'],
-	A: 'a',
-	B: 'b'
-}
-
 Class of SpecUnitTest is TestCasesMatch{
 
 	replace Array of Array of String is using: [
@@ -114,4 +88,29 @@ Class of SpecUnitTest is TestCasesMatch{
 		]);
 		Assert:areEqualString('newline', esc);
 	}
+}
+Class of Enum is MachineState{
+	namespace: ['test'];
+
+	held MachineState is idle: MachineState:init();
+	held MachineState is running: MachineState:init();
+	held MachineState is failed: MachineState:init();
+
+	replace Function of String is toString(){
+		return 'MachineState';
+	}
+}
+
+Class is JobKind{
+	namespace: ['test'];
+
+	held JobKind is sync: JobKind:init();
+	held JobKind is async: JobKind:init();
+	held String is label: 'jobs';
+}
+
+Enum of String is Legacy{
+	namespace: ['test'],
+	A: 'a',
+	B: 'b'
 }

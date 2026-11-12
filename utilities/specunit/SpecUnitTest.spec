@@ -29,11 +29,35 @@ Class is SpecUnitTest{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Stamped by the argv-Map entry init before any test runs (held
+	## arrays are the sanctioned mutable held shape — the reference is
+	## immutable, the contents are not): proof the entry constructed
+	## through the INHERITED base init at the owner's symbol (the
+	## entry-init emission contract, locked by TestEntryInheritedInit).
+	held Array of Boolean is entryStamped: [];
+
+	## The entry hook: the argv-Map entry init calls it before the
+	## runner starts. Suites replace it (single signature — the
+	## overloaded init itself cannot be replaced) to observe entry
+	## selection; the default is inert. See TestEntryPreference.
+	Function is onEntry(Map of String to String is args){
+	}
+
 	## The suite entry: the generated main prefers an init that takes
 	## the command-line argv Map, so a suite binary's main constructs
-	## the root test class and lands here — construct the runner and
-	## run this file's test classes, scoped to the root file's basename.
+	## the root test class and lands here — stamp the entry contract,
+	## fire the hook, hand off to the runner.
 	replace Function is init(Map of String to String is args){
+		SpecUnitTest:entryStamped:add(item: true);
+		self:onEntry(args: args);
+		self:runTests();
+	}
+
+	## The runner invocation: discover and run this file's test
+	## classes, scoped to the root file's basename. A suite that pins
+	## entry-selection semantics replaces onEntry; runTests is the
+	## framework hand-off any entry-side code can call.
+	Function is runTests(){
 		local String is cn: Introspection:typeIdentity(obj: self);
 		local String is src: Introspection:classSourceFile(className: cn);
 		local SpecUnitRunner is runner: SpecUnitRunner:init();
