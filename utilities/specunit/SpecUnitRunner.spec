@@ -2,14 +2,15 @@
 #! The SpecUnit runner: reflection-driven discovery over the Introspection
 #! class registry, per-test fresh instances (the xUnit rule), lifecycle
 #! hooks by convention, and the report table. An INSTANCE class — the
-#! --test entry constructs it and calls runAll; the mutable state lives on
-#! the SpecUnit registry singleton (see SPECUNIT.md).
+#! suite entry (SpecUnitTest's argv-Map init) constructs it and calls
+#! runAll; the mutable state lives on the SpecUnitState registry
+#! singleton (see SPECUNIT.md).
 
 Class is SpecUnitRunner{
 	namespace: ['specunit'];
 
 	replace Array of Array of String is using: [
-		['specunit', SpecUnit],
+		['specunit', SpecUnitState],
 		['specunit', TestResult],
 		['specunit', CheckRecord],
 		['base', 'sys', as Introspection()],
@@ -20,19 +21,51 @@ Class is SpecUnitRunner{
 		['base', 'sys', as Process()]
 	];
 
-	## Discovers and runs every `Test*` class whose source basename
-	## starts with [sourcePrefix] — the compiling root file's basename,
-	## so a suite file's binary runs exactly that file's classes — then
-	## reports and exits (1 when any test failed).
+	## Discovers and runs every runnable test class whose source basename
+	## starts with [sourcePrefix] — the root file's basename, so a suite
+	## file's binary runs exactly that file's classes — then reports and
+	## exits (1 when any test failed). A class extending the base with no
+	## `test*` methods contributes nothing and is skipped; a suite with
+	## no runnable test classes at all is diagnosed and fails the CI
+	## contract instead of reporting a silent all-green.
 	##
 	## @param sourcePrefix: The root source basename prefix.
 	Function is runAll(String is sourcePrefix){
+		local Int is found: 0;
 		classNames():each(action: local Function(String is cn){
-			if(check: { cn:startsWith(prefix: 'Test') && classSourceFile(className: cn):startsWith(prefix: sourcePrefix) }, then: {
+			Conditional:if(check: { self:isTestClass(className: cn, sourcePrefix: sourcePrefix) }, then: {
+				found: found + 1;
 				self:runClass(className: cn);
 			});
 		});
+		Conditional:if(check: { found == 0 }, then: {
+			line('No test classes found in ' . sourcePrefix);
+			exit(status: 1);
+		});
 		self:report();
+	}
+
+	## Whether [className] is a runnable test class: it extends the
+	## SpecUnitTest base, its source matches [sourcePrefix], and it
+	## declares at least one `test*` method (own or inherited).
+	##
+	## @param className: The candidate class name.
+	## @param sourcePrefix: The root source basename prefix.
+	## @return: True when the class contributes at least one test.
+	Function of Boolean is isTestClass(String is className, String is sourcePrefix){
+		Conditional:if(check: { !extendsClass(className: className, baseName: 'SpecUnitTest') }, then: {
+			return false;
+		});
+		Conditional:if(check: { !classSourceFile(className: className):startsWith(prefix: sourcePrefix) }, then: {
+			return false;
+		});
+		local Boolean is has: false;
+		functions(className: className):each(action: local Function(Array of String is path){
+			Conditional:if(check: { path:get(index: 1):startsWith(prefix: 'test') }, then: {
+				has: true;
+			});
+		});
+		return has;
 	}
 
 	## Runs one test class: every `test*` method on a fresh instance,
@@ -43,7 +76,8 @@ Class is SpecUnitRunner{
 	Function is runClass(String is className){
 		local Boolean is hasBefore: hasMethod(className: className, methodName: 'beforeEach');
 		local Boolean is hasAfter: hasMethod(className: className, methodName: 'afterEach');
-		methodNames(className: className):each(action: local Function(String is m){
+		functions(className: className):each(action: local Function(Array of String is path){
+			local String is m: path:get(index: 1);
 			if(check: { m:startsWith(prefix: 'test') }, then: {
 				self:beginTest(name: className . '.' . m);
 				local Any is instance: instantiate(className: className);
@@ -65,10 +99,10 @@ Class is SpecUnitRunner{
 	Function is beginTest(String is name){
 		local TestResult is r: TestResult:init(testName: name);
 		r:startedAtMs: clockMs();
-		r:checksBefore: SpecUnit:checks:length();
-		SpecUnit:results:add(item: r);
-		SpecUnit:currentCell:clear();
-		SpecUnit:currentCell:add(item: r);
+		r:checksBefore: SpecUnitState:checks:length();
+		SpecUnitState:results:add(item: r);
+		SpecUnitState:currentCell:clear();
+		SpecUnitState:currentCell:add(item: r);
 	}
 
 	## Closes the current result: stamps the duration.
@@ -77,13 +111,13 @@ Class is SpecUnitRunner{
 	## failure list. Runs in the runner, where branching is available —
 	## the held-side Assert appended records unconditionally.
 	Function is endTest(){
-		local Array of TestResult is cell: SpecUnit:currentCell;
+		local Array of TestResult is cell: SpecUnitState:currentCell;
 		Conditional:if(check: { cell:length() > 0 }, then: {
 			local TestResult is r: cell:get(index: 0);
 			r:durationMs: clockMs() - r:startedAtMs;
 			local Int is idx: r:checksBefore;
-			while({ idx < SpecUnit:checks:length() }, {
-				local CheckRecord is rec: SpecUnit:checks:get(index: idx);
+			while({ idx < SpecUnitState:checks:length() }, {
+				local CheckRecord is rec: SpecUnitState:checks:get(index: idx);
 				idx++;
 				Conditional:if(check: { !rec:ok }, then: {
 					r:passed: false;
@@ -100,7 +134,7 @@ Class is SpecUnitRunner{
 		local Int is failed: 0;
 		local Int is totalMs: 0;
 		local Int is nameLen: 12;
-		SpecUnit:results:each(action: local Function(TestResult is r){
+		SpecUnitState:results:each(action: local Function(TestResult is r){
 			if(check: { r:name:length() > nameLen }, then: {
 				nameLen: r:name:length();
 			});
@@ -112,7 +146,7 @@ Class is SpecUnitRunner{
 			totalMs: totalMs + r:durationMs;
 		});
 		line(bold() . color256(code: 51, text: '== SpecUnit =='));
-		SpecUnit:results:each(action: local Function(TestResult is r){
+		SpecUnitState:results:each(action: local Function(TestResult is r){
 			local String is status: if(check: { r:passed }, then: { color256(code: 114, text: '[PASS]'); }, else: { color256(code: 203, text: '[FAIL]'); });
 			local String is pad: '';
 			repeat(count: nameLen - r:name:length(), worker: {

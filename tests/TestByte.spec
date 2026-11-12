@@ -2,9 +2,10 @@
 #! SPECUNIT.md): Byte semantics — cast round-trips, boundaries, and
 #! the Byte -> Int -> String rendering chain.
 
-Class is TestByte{
+Class of SpecUnitTest is TestByte{
 
 	replace Array of Array of String is using: [
+		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]
 	];

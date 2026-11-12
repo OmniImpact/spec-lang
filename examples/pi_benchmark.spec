@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Package examples
 #! Monte Carlo Pi benchmark: parallel point sampling with a live domain
 #! visualization, per-thread sample markers, and a running approximation.

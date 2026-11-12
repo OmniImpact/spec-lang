@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Cannot instance-import enum 'ExpressionKind'
+
 #! N8: as-import of an enum (E2).
 
 Class is N8EnumImport {

@@ -1,7 +1,7 @@
 #! Package specunit
-#! The SpecUnit registry singleton — the mutable state Assert writes and
-#! the runner reads (see SPECUNIT.md). State rides held ARRAY fields: the
-#! held field reference is immutable (the once-guard singleton), the
+#! The SpecUnitState registry singleton — the mutable state Assert writes
+#! and the runner reads (see SPECUNIT.md). State rides held ARRAY fields:
+#! the held field reference is immutable (the once-guard singleton), the
 #! contained collection is not — addFailure mutates the current test's
 #! result through the current-cell array.
 #!
@@ -10,9 +10,10 @@
 #! instance field) are unusable in held bodies, and the wrappers' init()
 #! declares no return value, so they cannot be local-constructed either.
 #! Everything needing services lives in SpecUnitRunner (an instance class
-#! with proper as-imports), which the --test entry constructs.
+#! with proper as-imports), which the suite entry (SpecUnitTest's
+#! argv-Map init) constructs.
 
-Class is SpecUnit{
+Class is SpecUnitState{
 	namespace: ['specunit'];
 
 	replace Array of Array of String is using: [

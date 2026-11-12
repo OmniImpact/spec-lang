@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: inherits conflicting implementations of 'value' from 'DiamondA' and 'DiamondB'
+
 #! Package examples:regression
 #! Tracks ambiguous multiple-inheritance implementation conflicts.
 

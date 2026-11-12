@@ -1,3 +1,10 @@
+#! specunit: negative
+#! expect: Member 'secret' is local to class 'VisBase'
+#! expect: Member 'helper' is contained in class 'VisBase'
+#! expect: Member 'secret' is local in ancestor 'VisBase' and cannot be replaced or merged
+#! expect: Member 'counter' is local in ancestor 'ShadowedLocal' and cannot be replaced or merged
+#! expect: combines 'replace'/'merge' with a visibility modifier
+
 #! Package examples:regression
 #! Tracks visibility enforcement diagnostics.
 

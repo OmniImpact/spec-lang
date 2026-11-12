@@ -1,3 +1,7 @@
+#! specunit: negative
+#! expect: Bitwise operator '&' requires Int operands
+#! expect: Bitwise complement '~' requires an Int operand
+
 #! Package examples:regression
 #! Tracks type diagnostics for bitwise operators.
 

@@ -5,9 +5,10 @@
 #! and invoke test methods of BOTH declaration forms; the assertions
 #! verify each method actually executed on its own fresh instance.
 
-Class is TestFunctionTypes{
+Class of SpecUnitTest is TestFunctionTypes{
 
 	replace Array of Array of String is using: [
+		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()]
 	];

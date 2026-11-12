@@ -90,13 +90,24 @@ Class is Introspection{
 		return base:sysinternal:Introspection:classNames();
 	}
 
-	## The method names of a class --- own plus inherited through the base
-	## lattice, duplicates collapsed (a child override supersedes).
+	## The functions of a class --- own plus inherited through the base
+	## lattice, duplicates collapsed (a child override supersedes). Each
+	## element is the function's full path: [className, functionName].
+	## Reshapes the floor's flat name list (spec_method_names stays as
+	## the plumbing; this surface speaks in paths).
 	##
 	## @param className: The class name.
-	## @return: The method names.
-	Function of Array of String is methodNames(String is className){
-		return base:sysinternal:Introspection:methodNames(className: className);
+	## @return: The function paths.
+	Function of Array of Array of String is functions(String is className){
+		local Array of Array of String is out: [];
+		local Array of String is names: base:sysinternal:Introspection:methodNames(className: className);
+		names:each(action: local Function(String is m){
+			local Array of String is path: [];
+			path:add(item: className);
+			path:add(item: m);
+			out:add(item: path);
+		});
+		return out;
 	}
 
 	## The declaring source file's basename for a class (the basename
@@ -135,5 +146,25 @@ Class is Introspection{
 	## @param methodName: The method name.
 	Function of Void is invokeVoid(Any is instance, String is methodName){
 		base:sysinternal:Introspection:invokeVoidByName(instance: instance, methodName: methodName);
+	}
+
+	## --- Lattice membership and type identity (see SPECUNIT.md). ---
+
+	## The runtime class name of [obj]'s own class.
+	##
+	## @param obj: The object.
+	## @return: The class name.
+	Function of String is typeIdentity(Any is obj){
+		return base:sysinternal:Introspection:typeIdentity(obj: obj);
+	}
+
+	## Whether [className] inherits [baseName] anywhere up its base
+	## lattice.
+	##
+	## @param className: The class name.
+	## @param baseName: The base class name.
+	## @return: true when the lattice contains the base.
+	Function of Boolean is extendsClass(String is className, String is baseName){
+		return base:sysinternal:Introspection:classExtends(className: className, baseName: baseName);
 	}
 }

@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! DeclarationGenerator port check: enum tables with of(), forward
 #! declarations with C-mapped prototypes, structs without metadata.
 

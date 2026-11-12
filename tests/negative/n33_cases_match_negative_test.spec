@@ -1,3 +1,12 @@
+#! specunit: negative
+#! expect: is not a held member of 'N33Sink'
+#! expect: Duplicate match key 'file'
+#! expect: Non-exhaustive match: missing arm(s) N33Mode:off
+#! expect: A value-yielding match requires an else arm
+#! expect: The match arms mix value-yielding and void closures
+#! expect: Match arms after else are unreachable
+#! expect: 'Int' cannot be matched
+
 #! N33 (PLAN-ENUM Stage 3): the Cases:match walls.
 #! - keys resolve against the subject's class only
 #! - duplicate keys are rejected

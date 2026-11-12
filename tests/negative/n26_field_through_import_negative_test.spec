@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Fields are not reachable through the class-name prefix 'FieldDep'
+
 #! N26 (Part IV IV.6): the as-import grants FUNCTIONS ONLY —
 #! a public FIELD of the imported class is not reachable through the
 #! class-name prefix. The field wall (§2.3).

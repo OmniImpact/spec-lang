@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Chained 'as' casts are not supported
+
 #! Package examples:regression
 #! Tracks the chained-cast restriction of the `as` operator.
 

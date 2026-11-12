@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Loader port check: multi-file loading, package resolution, the root
 #! lattice preloads and implicit-Any parenting.
 

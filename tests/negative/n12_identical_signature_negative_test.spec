@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: declare identical signatures
+
 #! N12: identical-signature overloads are the duplicate error (§I.1).
 
 Class is N12Identical {

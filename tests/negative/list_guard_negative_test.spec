@@ -1,3 +1,7 @@
+#! specunit: negative
+#! expect: Bare List type requires
+#! expect: requires a 'default:' argument
+
 Class is ListGuardNegativeTest{
 
 	replace Array of Array of String is using: [

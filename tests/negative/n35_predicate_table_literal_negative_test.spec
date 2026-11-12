@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: predicate match table is compile-time
+
 #! N35 (the predicate match landing): the predicate arm table is
 #! compile-time only — a runtime map can neither preserve scan order
 #! nor carry closure keys, so a non-literal predicate table is a

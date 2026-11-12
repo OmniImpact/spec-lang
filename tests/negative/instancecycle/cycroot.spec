@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Instance import cycle: A -> B -> A
+
 #! N6: instance-import cycle A -> B -> A must fail to compile (E4).
 
 Class is CycleRoot{

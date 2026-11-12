@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: provided by the enclosing class and Math; qualify the call
+
 #! N3: bare call with two providers must qualify (§2.3).
 
 Class is N3Collision {

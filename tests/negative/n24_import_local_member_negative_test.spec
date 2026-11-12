@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: is local to class 'StatefulCounter' and cannot be accessed from 'WallProbe'
+
 #! N24 (Part IV IV.1): the as-import grants functions under the
 #! callee's visibility — a `local` member of the imported class is not
 #! callable through the import. The same check the qualified path runs.

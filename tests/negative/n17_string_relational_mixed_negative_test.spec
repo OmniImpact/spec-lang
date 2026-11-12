@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: requires two String operands
+
 #! N17: relational ordering between String and non-String is rejected
 #! (hardening, D5).
 

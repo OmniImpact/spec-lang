@@ -1,3 +1,9 @@
+#! specunit: negative
+#! expect: must be declared exactly 'held Function of <T> is resolveHeld(String is name, Function of <T> is missing)'
+#! expect: The resolution hook cannot resolve through its own class prefix
+#! expect: only held members are (§2.3)
+#! expect: is read-only: resolution-hook values are cached single copies
+
 #! N32 (PLAN-ENUM Stage 2): the resolution-hook walls.
 #! - the contract signature is exact: (String, Function of <T>) returning <T>
 #! - the hook cannot resolve through its own class prefix (recursion)

@@ -1,3 +1,13 @@
+#! specunit: negative
+#! expect: cannot assign 'Float' to 'Int'.
+#! expect: 'Array:String' to 'Array:Int'
+#! expect: 'Map:String:String' to 'Map:String:Int'
+#! expect: Undefined identifier 'untrackedTotal'
+#! expect: Method declared return type 'Boolean', but returned 'Int'
+#! expect: is read before being initialized
+#! expect: Argument 'n' for 'CallArgumentMismatch.double'
+#! expect: Non-exhaustive match
+
 #! Package examples:regression
 #! Tracks compiler regressions for strict type-checking diagnostics.
 

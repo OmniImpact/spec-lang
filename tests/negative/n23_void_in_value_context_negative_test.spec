@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: 'Conditional.if' declares no return value
+
 #! N23 (Part IV V3): a void expression consumed as a value
 #! explains itself, derived from the CALLEE'S DECLARATION — the function's
 #! name, its void return, and the sibling overloads' parameter lists. No

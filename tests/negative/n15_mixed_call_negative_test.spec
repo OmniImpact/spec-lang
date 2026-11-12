@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Mixed positional and named arguments are not supported
+
 #! N15: mixing positional and named arguments is rejected (§I.3).
 
 Class is N15Mixed {

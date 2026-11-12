@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Package examples
 #! High-resolution 256-color Mandelbrot fractal renderer using smooth escape-time coloring,
 #! trigonometric cube palettes, and Unicode block / half-block characters.

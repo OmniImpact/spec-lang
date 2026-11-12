@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! TypeChecker port check: bidirectional container typing, the
 #! Array-of-X element fix, FIELD_ACCESS on call results, error paths,
 #! and clean programs.

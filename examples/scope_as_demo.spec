@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Package examples
 #! Demonstrates scoped region desugaring (`as`) for resource management,
 #! automatic cleanup, benchmark timing, and flat pipelines without callback pyramids.

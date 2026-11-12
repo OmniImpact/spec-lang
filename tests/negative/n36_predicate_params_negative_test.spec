@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Predicate match arms take no parameters
+
 #! N36: predicate match arms and keys have no subject to bind, so a
 #! parameterized closure is a pointed error instead of a silently empty arm.
 

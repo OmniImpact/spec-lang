@@ -7,9 +7,10 @@
 #! positional arguments plus a named else), which §I.3 correctly
 #! rejects. All-named never trips.
 
-Class is TestNamedElse{
+Class of SpecUnitTest is TestNamedElse{
 
 	replace Array of Array of String is using: [
+		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'sys', as Conditional()]

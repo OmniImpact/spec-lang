@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Type 'Helper' is provided by LibA:Helper and LibB:Helper; qualify the reference
+
 #! N25 (Part IV IV.2c): same-named inner classes under
 #! different enclosing classes are legal declarations — the ambiguity
 #! moved to the reference. A bare reference to a nested-class name that

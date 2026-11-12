@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Cannot replace or merge an overloaded method
+
 #! N16: a parent's overloaded method cannot be replaced — the virtual
 #! machinery is name-keyed (§I.3).
 

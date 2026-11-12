@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Invalid digit in base-16 number literal
+
 #! Package examples:regression
 #! Tracks lexical diagnostics for numeric base literals.
 

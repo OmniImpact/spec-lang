@@ -1,3 +1,9 @@
+#! specunit: negative
+#! expect: Cannot cast 'Cat' to unrelated class 'Dog'
+#! expect: Cannot cast 'Dog' to unrelated class 'Color'
+#! expect: Cast 'as Hex' requires an Int or String operand
+#! expect: Unknown cast target 'Hexadecimal'
+
 #! Package examples:regression
 #! Tracks cast validation diagnostics for the `as` operator.
 

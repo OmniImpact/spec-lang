@@ -1,3 +1,11 @@
+#! specunit: negative
+#! expect: is read-only: held members are class-scoped single copies
+#! expect: combines 'held' with 'replace'/'merge'
+#! expect: 'self' is not available
+#! expect: of the same class; the once-guards would deadlock
+#! expect: reach it through the class name, not an instance
+#! expect: is local to class 'N30HeldWalls' and cannot be accessed from 'N30HeldProbe'
+
 #! N30 (PLAN-ENUM Stage 1): the held strictness walls.
 #! - assignment through the class-name prefix (held is read-only)
 #! - held combined with replace (single-copy cannot be overridden)

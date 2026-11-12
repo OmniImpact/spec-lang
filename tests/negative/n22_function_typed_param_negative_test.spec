@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Argument 'check' for 'Conditional.if': cannot assign 'Function' to 'Function of Boolean'.
+
 #! N22 (Part IV V1): Function assignability is directional.
 #! A void-typed closure cannot feed a Function of Boolean param — the
 #! typed invocation reads garbage through the return-value cast.

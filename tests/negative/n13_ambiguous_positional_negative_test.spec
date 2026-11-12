@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: the arguments match multiple overloads; use named arguments
+
 #! N13: same-arity overloads whose parameters share types are ambiguous
 #! for positional calls (§I.2).
 

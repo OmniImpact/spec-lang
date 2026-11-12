@@ -1,3 +1,7 @@
+#! specunit: negative
+#! expect: cannot assign 'Int' to 'Byte'
+#! expect: Cannot cast 'String' to 'Byte'
+
 Class is ByteNegativeTest{
 
 	replace Array of Array of String is using: [

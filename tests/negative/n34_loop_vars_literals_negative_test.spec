@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: requires inline literal closures
+
 #! N34 (the runtime constructs landing): the [vars] loop forms scope
 #! their closures at the call site — compile-time only. A closure held
 #! as a variable was built before the loop's parameters existed and

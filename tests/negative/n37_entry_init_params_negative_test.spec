@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Entry class 'EntryBadInit' requires an init
+
 #! Entry-init rule: feed the command-line args when an init can take
 #! them, fall back to an empty init, and only error when the entry's
 #! lattice declares overloads but NEITHER form exists. This entry has

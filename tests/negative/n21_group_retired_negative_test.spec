@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Undefined identifier 'N21GroupTarget'.
+
 #! N21: the group: partial mechanism is retired (Part IV) —
 #! a group: declaration is an ordinary field; no fragment merging happens,
 #! so the would-be target never comes into existence.

@@ -1,3 +1,11 @@
+#! specunit: negative
+#! expect: is class-scoped: call it through the class name, not an instance
+#! expect: must be called; bare references to held functions are not supported
+#! expect: cannot be a root-contract member
+#! expect: held functions do not overload
+#! expect: A held member body has no instance: 'self' is not available
+#! expect: use self (§2.2)
+
 #! N31 (PLAN-ENUM Stage 1): the held-function strictness walls.
 #! - an instance receiver never reaches a held function
 #! - bare references to held functions are not supported (call form only)

@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: must be direct literal values
+
 #! N7: non-literal argument in the as-form (E1, parser).
 
 Class is N7NonLiteral {

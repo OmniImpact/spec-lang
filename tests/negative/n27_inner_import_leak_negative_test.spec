@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Undefined function 'floor' on class 'N27InnerImportLeak'
+
 #! N27 (Part IV IV.3/IV.6): the inner class's OWN as-import
 #! scopes to the inner — it does not leak outward into the enclosing
 #! class or a sibling inner. The outer's bare call to the inner's

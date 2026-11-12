@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! CodeGenerator port check (step 1): program registries, virtual-slot
 #! assignment, type/ownership policy, symbol lookups, target-type
 #! inference, and the claim/ARC helpers — no emission yet.

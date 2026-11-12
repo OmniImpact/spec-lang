@@ -12,10 +12,18 @@ classes and methods, never tests — because its payoffs extend past testing
 **Goals (v1):**
 - A runtime introspection floor: enumerate classes and methods, construct by
   name, invoke by name — queryable from any running Spec program.
-- SpecUnit: assert library + registry singleton + reflection-driven runner +
-  report table + exit codes, built entirely on that floor.
-- `--test`: compile-and-run sugar for a suite file (entry main calls
-  `SpecUnit:runAll(<root dir>)`); no generated test dispatcher.
+- SpecUnit: assert library + state registry + reflection-driven in-suite
+  runner + report table + exit codes, built entirely on that floor.
+- **specunit, the standalone runner program** (`utilities/specunit/`): a
+  Spec program, not a compiler mode — `specunit -s ./bin/spec -t tests/`
+  scans test trees, dispatches cores−2 workers, each compiles the test
+  with one compiler thread, runs the binary, collects the result, and
+  prints the summary when all tests are done. The compiler stays lean and
+  knows nothing about tests.
+- The suite ENTRY lives in the framework: `SpecUnitTest`'s argv-Map init
+  constructs `SpecUnitRunner` and runs the file's test classes, so a
+  suite compiles with plain `spec` and self-runs. No generated test
+  dispatcher, no `--test` flag.
 - Migrate `tests/*.spec` from the `[PASS]`/`[FAIL]` string-marker convention
   to Assert-based test classes.
 
@@ -129,63 +137,104 @@ missing/incompatible targets — the bounds-check philosophy, not silent zeros.
 
 ---
 
-## 3. SpecUnit (pure Spec, `spec/lib/specunit/`)
+## 3. SpecUnit (pure Spec, `utilities/specunit/`)
+
+The framework moved out of the compiler's `spec/lib` tree — it is ecosystem
+tooling, not compiler plumbing, and iterating on it never rebuilds the
+compiler. Files match their class names:
 
 ```spec
-Class is TestResult{
-    String is name;                    # "MathTest.testDivide"
-    Boolean is passed: true;
-    Array of String is failures: [];   # aggregated (JUnit assertAll style)
-    Int is startedAtMs: 0;
-    Int is durationMs: 0;
+Class is SpecUnitTest{                    # the base — and the suite ENTRY
+    replace Function is init(Map of String to String is args);  # argv-Map init:
+        # the entry the generated main prefers; constructs SpecUnitRunner
+        # and runAll(sourcePrefix: own source basename) — declared FIRST
+        # so it owns overload index 0
+    replace Function is init();           # empty: the per-test fresh instance
+    Function of String is name();         # own class name (typeIdentity)
+    Function of String is description();  # "Unit test: X has N tests"
+    Function of Int is methodCount();     # test* methods, own + inherited
 }
 
-Class is SpecUnit{                        # registry singleton via held state
+Class is SpecUnitRunner{                  # instance runner (per suite binary)
+    Function is runAll(String is sourcePrefix);   # discovery + run + report
+    Function is runClass(String is className);    # fresh instance per test
+    Function is beginTest(String is name);
+    Function is endTest();                        # interprets the check span
+    Function is report();                         # table + Process:exit
+}
+
+Class is SpecUnitState{                   # held registry singleton (mutable)
     held Array of TestResult is results: [];
-    held TestResult is current;
-    held Function is runAll(String is sourcePrefix);   # report() at the end
-    held Function is runClass(String is className);    # fresh instance per test
-    held Function is beginTest(String is name);
-    held Function is endTest();
-    held Function is addFailure(String is msg);
-    held Function is report();                         # table + Process:exit
+    held Array of CheckRecord is checks: [];
+    held Array of TestResult is currentCell: [];
 }
 
 Class is Assert{                          # held functions; class-prefixed calls
-    held Function is areEqual(Any is expected, Any is actual);
-    held Function is areClose(Float is expected, Float is actual, Float is delta);
-    held Function is isTrue(Boolean is condition);
-    held Function is isFalse(Boolean is condition);
-    held Function is fail(String is message);
+    held Function is areEqualInt(...); areEqualString(...); areClose(...);
+    held Function is isTrue(...); isFalse(...); fail(...);
 }
 ```
 
-- **Discovery:** `classNames()` filtered by the `Test*` prefix and the
-  source-file prefix (the compiling root's directory — same scoping philosophy
-  as entry selection).
+- **Discovery by inheritance, not name matching:** `classNames()` filtered
+  by `extendsClass(className, 'SpecUnitTest')` plus the source-file
+  basename prefix — exactly the root file's classes run. A class extending
+  the base with zero `test*` methods is skipped; a suite with none at all
+  is diagnosed (`No test classes found in …`) and exits 1 — never a silent
+  all-green.
 - **Lifecycle:** `beforeEach`/`afterEach` via `hasMethod` — JUnit hooks,
   zero annotations.
 - **Isolation:** fresh `instantiate` per test method — xUnit rule.
-- **Failure context:** `Reflection:class()`/`method()` at the assert call
-  site — failures report `Class.method:line` with zero user bookkeeping.
+- **Branch-free assertions:** Assert appends `CheckRecord`s
+  unconditionally (held bodies cannot branch); `endTest` interprets the
+  span since the test's `checksBefore`.
 - **Report:** `[PASS]`/`[FAIL]` per test with durations (markers kept for
-  `run_tests.sh` grep parity), failure detail lines beneath the failing test,
-  summary box via `Ansi`, exit 1 when failures > 0.
+  the runner's `[FAIL]` grep parity), failure detail lines beneath the
+  failing test, summary box via `Ansi`, exit 1 when failures > 0.
 
 **Conventions (the whole contract):** class name starts `Test`
-(`TestMyFeature`); method name starts `test` (`testFunctionOfFeature`); lifecycle names `beforeEach`/`afterEach`; test methods are void
-with zero parameters. Everything else in a test class is plumbing.
+(`TestMyFeature`); method name starts `test` (`testFunctionOfFeature`);
+lifecycle names `beforeEach`/`afterEach`; test methods are void with zero
+parameters. Everything else in a test class is plumbing.
 
 ---
 
-## 4. `--test` sugar
+## 4. The suite entry and the runner program
 
-`bin/spec --test -i tests/byte_test.spec -o bin` compiles exactly as release
-but generates a three-line entry main: `SpecUnit:runAll(<root file's
-directory>)`. Entry selection is bypassed (test classes need no `init(Map)`);
-everything else — load, typecheck, emission — is the standard pipeline, so
-suite files are fully statically checked. No `--test` → byte-identical
-emission (policy-gated, the `--debug` pattern).
+**In-suite entry:** `SpecUnitTest`'s argv-Map init is the entry the
+generated main prefers (the entry resolver's argv-preference over the
+empty init, resolved through the inheritance lattice). Compiling
+`tests/TestByte.spec` with plain `spec` produces a binary whose main
+constructs `TestByte`, lands in the base's init, and runs the file's
+tests. The compiler has no test mode, no test validation, no test main —
+the framework owns all of it. (What used to be `--test` compile-time
+diagnostics now guard elsewhere: a bad test-method signature trips the
+reflection floor's invoke panic at run time; an unconstructible test
+class trips the member-compatibility check at compile time; an empty
+suite is diagnosed by `runAll`.)
+
+**The runner program (`SpecUnit.spec`, same package):**
+
+```
+specunit -s ./bin/spec -t tests/ [-t more/]        # also -t a,b or -t a -t b
+```
+
+Scans the trees recursively (dot dirs skipped) and classifies every
+`.spec` file by its `#!` banner — self-describing tests, no hardcoded
+fixture table:
+
+- `#! specunit: suite` — compile, run, exit 0 and no `[FAIL]` required
+  (also the default for unmarked files that mention the specunit package)
+- `#! specunit: negative` — compilation MUST fail; every
+  `#! expect: <text>` must appear in the diagnostics
+- `#! specunit: run-fail` — compile must succeed, the run MUST exit
+  non-zero, every expect must appear in the run output
+- `#! specunit: helper` — skip (multi-file fixture partners)
+
+Dispatch: `Parallel:run` with cores−2 workers striding a held work queue;
+each worker invokes the compiler with `--threads 1`, executes the binary
+under a 10s timeout, records the verdict, deletes the compiled test, and
+adds the result to the held registry (mutex-protected). The summary
+prints when all tests are done; exit 1 on any failure.
 
 ---
 
@@ -199,27 +248,32 @@ emission (policy-gated, the `--debug` pattern).
       query functions (self-consistent TU: functions and their data land
       together). No consumers yet.
 - [x] **C — wrapper + library.** sysinternal declarations, `Introspection`
-      wrapper methods, the `specunit` package, `--test` flag, suite
-      diagnostics (bad test-method signature, init-with-args, no-tests-found).
-- [x] **D — pilots.** Convert `byte_test.spec` (TestByte, six tests);
-      `run_tests.sh` detects specunit suites and compiles them with `--test`;
-      the four --test diagnostics are locked by negative tests n39-n42.
-      loops_test conversion deferred to the sweep (E).
-- [ ] **E — sweep.** Migrate remaining suites in batches; flip the
-      test-suite loop to `--test`. Negative tests and demos stay as-is.
+      wrapper methods (functions/typeIdentity/classExtends reshape), the
+      `specunit` package, the `--test` flag (since retired — see below).
+- [x] **D — pilots + the runner separation.** TestByte and the converted
+      suites; the bash runner replaced by **specunit** (the standalone
+      Spec runner, `-s`/`-t` CLI); the framework moved to
+      `utilities/specunit/`; the suite entry moved into `SpecUnitTest`'s
+      argv-Map init (plain-`spec` compiles self-run); the negative
+      fixture table moved into the files as `#! specunit:` banners;
+      `spec_thread_count` fixed to read the CPU affinity mask (the
+      `/proc/self/status` `Threads:` read collapsed every cores-derived
+      worker count to 1 — the serial-wave bug).
+- [ ] **E — sweep.** Migrate the remaining marker suites in batches;
+      then remove the now-unused `--test` mode from the compiler
+      (Driver validation + generateTestMain).
 
 Gate every step: `./bootstrap.sh` fixed point, `utilities/run_tests.sh`,
 `utilities/run_sanitized.sh`. Commit per step with reasoning.
 
 ---
 
-## 5.1 Observed wart (recorded, not fixed here)
+## 5.1 Observed wart (resolved)
 
-Void has two AST spellings: methods declared without a return type carry
-lowercase `'void'` (`WellKnown:voidMemberType()`), while `voidName()` is
-`'Void'` — `resolveReturnType` normalizes both at emission. The registry
-flags and the --test validation accept both; a future normalization pass
-should collapse them at the parser.
+Void had two AST spellings; the vocabulary was standardized to one
+(`'Void'`) at the AST and one boundary at C — see the void-vocabulary
+commit. Paramless `Function` remains a distinct non-void type (the empty
+function), never conflated with Void.
 
 ## 6. Later (tracked, not scheduled)
 

@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Branch yields mismatched types: 'String' and 'Int'.
+
 #! N20 (Part II): the two yields of a value-yielding branch
 #! must unify. String and Int cannot both be the branch's value.
 

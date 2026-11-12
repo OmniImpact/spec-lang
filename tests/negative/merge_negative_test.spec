@@ -1,3 +1,8 @@
+#! specunit: negative
+#! expect: must contain a forward statement
+#! expect: 'merge' requires an Array field
+#! expect: no parent declares a method with that name
+
 #! Package examples:regression
 #! Tracks the `merge` modifier: data-structure-aware field overriding.
 

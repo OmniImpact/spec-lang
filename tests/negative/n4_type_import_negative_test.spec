@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Members of 'Math' are callable only through an instance
+
 #! N4: prefix call on a type-imported class, non-init member (E5).
 
 Class is N4TypeImport {

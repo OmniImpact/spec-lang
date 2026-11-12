@@ -1,3 +1,11 @@
+#! specunit: negative
+#! expect: requires the enclosing method to declare 'merge'
+#! expect: with abstract method from 'FwdBase'
+#! expect: Partial forward requires named arguments
+#! expect: passes 3 arguments but parent 'twoOf' accepts 2
+#! expect: omits 'b' of 'partial' which has no default value
+#! expect: cannot assign 'String' to 'Int'
+
 #! Package examples:regression
 #! Tracks merge-on-Function validation rules.
 

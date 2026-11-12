@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: instance-imports 'Math' more than once
+
 #! N5: duplicate as-import bindings (E3).
 
 Class is N5DuplicateAs {

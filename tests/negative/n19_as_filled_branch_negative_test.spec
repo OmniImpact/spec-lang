@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: has no open scope slot
+
 #! N19: a scoped region on a Conditional whose parameters are already
 #! bound has no open scope slot — the remainder would silently become
 #! the else branch (§as).

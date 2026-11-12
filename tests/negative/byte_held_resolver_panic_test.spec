@@ -1,3 +1,7 @@
+#! specunit: run-fail
+#! expect: [Spec Runtime Panic]
+#! expect: No held member 'phantom' on HeldPanicRegistry
+
 #! The missing branch is the safe failure path: the resolver gives up
 #! for 'phantom' by returning missing() — the runtime-provided default
 #! panics with context (Never Null: a member access must yield a

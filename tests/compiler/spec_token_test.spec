@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Token port check: enum dispatch surface, accessors, the keyword
 #! classification, and the diagnostic template.
 

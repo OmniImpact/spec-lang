@@ -1,3 +1,5 @@
+#! specunit: suite
+
 Class is Blackjack{
 
 	# The as-imports merge the providers into scope: line(), if(), match(),

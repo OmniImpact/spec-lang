@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Parser port check: precedence folding, template desugaring, enum and
 #! generic-class declarations, interface-style members, and error provenance.
 

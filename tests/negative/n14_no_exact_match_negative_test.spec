@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: No exact overload of 'N14NoExact.f' for (Any)
+
 #! N14: an Any-typed argument matches no overload exactly (§I.2).
 
 Class is N14NoExact {

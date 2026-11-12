@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: 'Math2' is not imported by 'N28AsFormConstruction'; add it to the using declaration
+
 #! N28 (Part IV IV.6): construction requires the plain
 #! type-import form. The as-form grants functions, instance dispatch,
 #! and the qualified nested-type references — never the bare parent

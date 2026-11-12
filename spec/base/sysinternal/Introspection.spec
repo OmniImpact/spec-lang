@@ -108,4 +108,26 @@ Class is Introspection{
 	## @param instance: The receiver.
 	## @param methodName: The method name.
 	Function of Void is invokeVoidByName(Any is instance, String is methodName);
+
+	## --- Lattice membership and type identity (see SPECUNIT.md): the
+	## discovery surface for runners and frameworks. Bindings:
+	## spec_type_name, spec_class_extends. ---
+
+	## The runtime class name of [obj]'s own class (the registry's
+	## qualified identity, e.g. 'TestByte'). Binds spec_type_identity —
+	## the 'typeName' surface name collides with the instance builtin.
+	##
+	## @param obj: The object.
+	## @return: The class name.
+	Function of String is typeIdentity(Any is obj);
+
+	## Whether [className] inherits [baseName] anywhere up its base
+	## lattice --- the MI-based discovery: a class is a framework test
+	## iff it extends the framework's base class. Binds
+	## spec_class_extends.
+	##
+	## @param className: The class name.
+	## @param baseName: The base class name.
+	## @return: true when the lattice contains the base.
+	Function of Boolean is classExtends(String is className, String is baseName);
 }

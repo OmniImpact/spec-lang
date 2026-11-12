@@ -1,3 +1,5 @@
+#! specunit: suite
+
 Class is HelloWorld{
 
 	# Scope, Type, "is" binds identifier, ":" is assignment/access, lines end in ;

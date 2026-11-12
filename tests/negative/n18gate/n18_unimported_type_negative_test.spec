@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: 'GTarget' is not imported by 'N18UnimportedType'
+
 #! N18: a dependency's dependency is loaded but not yours — type positions
 #! and construction require the import (§I.6, Option A).
 

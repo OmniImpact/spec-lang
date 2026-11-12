@@ -1,3 +1,7 @@
+#! specunit: run-fail
+#! expect: [Spec Runtime Panic]
+#! expect: Byte cast out of range: 300
+
 Class is ByteRangePanicTest{
 
 	replace Array of Array of String is using: [

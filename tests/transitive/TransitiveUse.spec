@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Members of 'Output' are callable only through an instance
+
 #! Package transitive:use
 
 Class is TransitiveUse{

@@ -119,7 +119,70 @@ check, and emit the NEXT generation's sources. Consequences:
 
 ---
 
-## 4. When stuck
+## 4a. Running the tests
+
+- **The runner is specunit** — `utilities/specunit/SpecUnit.spec`, a
+  standalone Spec program that is part of the language's ecosystem, not
+  a compiler mode (`specunit -s ./bin/spec -t tests/`). Invoke it
+  through the shim: `utilities/run_tests.sh` (compiles specunit with
+  the compiler under test — override with `SPEC=` — runs it, then adds
+  the repo-specific smoke: the compiler CLI contract and the bootstrap
+  fixed-point freshness). The compiler stays lean: it has no test mode
+  and no knowledge of the framework; iterating on specunit or the
+  specunit package never rebuilds the compiler.
+- **The framework lives in `utilities/specunit/`** (moved out of the
+  compiler's `spec/lib` tree): `SpecUnitTest` (the base — and the suite
+  ENTRY: its argv-Map init constructs the runner, its empty init keeps
+  test classes instantiate-able, so a suite compiles with plain `spec`
+  and its binary self-runs), `SpecUnitRunner` (discovery by inheritance
+  over the reflection registry, per-test fresh instances, the report),
+  `SpecUnitState` (the held assertion registry), `Assert`,
+  `TestResult`, `CheckRecord`.
+- **Classification is self-describing**: each candidate `.spec` file's
+  `#!` banner declares `#! specunit: suite|negative|run-fail|helper`;
+  `#! expect: <text>` lines carry the expected diagnostics (the
+  former hardcoded negative-fixture table moved into the files).
+  Unmarked files that mention the specunit package are suites;
+  everything else is a helper or a standalone program and is skipped.
+  `-t` accepts repeated flags or comma-separated dirs; the walk is
+  recursive, dot directories skipped.
+- **Parallel**: the wave runs on `Parallel:run` with threads =
+  cores − 2 (floor 1) — per-suite work items are pulled stride-wise by
+  worker index, and the results are recorded into the held registry
+  (mutex-protected arrays), so the wave is safe per worker. (The floor
+  behind `Process:threadCount()` must report the MACHINE's cores — an
+  earlier version read `/proc/self/status`'s `Threads:` line, which is
+  the process's current thread count, 1 at startup: every
+  cores-derived worker count collapsed to a serial wave.)
+- **Display**: per-item results print in queue order when the wave is
+  done, failed items' evidence underneath, then the summary and the CI
+  exit (1 on any failure).
+- **What it runs**: demos (`examples/`, marked `suite`), the specunit
+  suites (`tests/`), the compiler-as-library suites
+  (`tests/compiler/`, marked `suite`), and the negative fixtures
+  (`tests/negative/` — compile-must-fail with `expect:` diagnostics,
+  plus the run-fail form). The exit-code fixtures and the fixed-point
+  check stay in the shim's smoke tail (emit at the DEFAULT thread
+  count — the fixed point is thread-count-sensitive in symbol
+  numbering, so never re-baseline from a `--threads N` emission).
+- **SpecUnit suites**: a suite file named exactly like its class
+  (`TestByte.spec` defines `TestByte`), class starts with `Test`,
+  methods start with `test`, void with zero parameters, constructed by
+  name through the reflection registry. Assertions are typed
+  (`Assert:areEqualInt/areEqualString/areClose/isTrue/isFalse/fail`)
+  and soft — a failed assert records and the method continues; the
+  result passes iff its failure list is empty. Lifecycle:
+  `beforeEach`/`afterEach` by convention. The suite binary prints the
+  report table and exits 1 on any failure (the CI contract); the
+  runner gates on the exit code plus the absence of `[FAIL]`.
+- **Sanitized gate**: `utilities/run_sanitized.sh` — the same shim with
+  `SPEC=bin/spec-asan`: specunit, every suite compile, and every
+  produced binary run under ASan+UBSan; run it after any
+  compiler-internal change.
+- **Cross-language benchmarks**: `utilities/run_benchmarks.sh` (see
+  README-PERFORMANCE.md).
+
+## 4b. When stuck
 
 - **If the same class of failure repeats twice, stop theorizing.**
   Instrument and measure; the theories in this project's history were

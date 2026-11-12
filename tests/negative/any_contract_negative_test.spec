@@ -1,3 +1,6 @@
+#! specunit: negative
+#! expect: Member 'fetch' is not part of the root contract
+
 #! Package examples:regression
 #! Tracks the strict root-contract rule for Any-typed references.
 
