@@ -218,10 +218,10 @@ Class is BuiltinCallGenerator{
 			local String is digitsC: '0';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'base' }, {
- baseC: cg:generateExpression(expr: arg:value);
+					baseC: cg:generateExpression(expr: arg:value);
 				});
 				if({ arg:name == 'digits' }, {
- digitsC: cg:generateExpression(expr: arg:value);
+					digitsC: cg:generateExpression(expr: arg:value);
 				});
 			});
 			return 'spec_int_to_base(' . targetC . ', ' . baseC . ', ' . digitsC . ')';
@@ -234,13 +234,13 @@ Class is BuiltinCallGenerator{
 			local String is workerC: 'NULL';
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'threads' }, {
- threadsC: cg:generateExpression(expr: arg:value);
+					threadsC: cg:generateExpression(expr: arg:value);
 				});
 				if({ arg:name == 'iterations' }, {
- iterC: cg:generateExpression(expr: arg:value);
+					iterC: cg:generateExpression(expr: arg:value);
 				});
 				if({ arg:name == 'worker' }, {
- workerC: cg:generateExpression(expr: arg:value);
+					workerC: cg:generateExpression(expr: arg:value);
 				});
 			});
 			return 'spec_parallel_run(' . threadsC . ', ' . iterC . ', (void*)(' . workerC . '))';
@@ -528,6 +528,23 @@ Class is BuiltinCallGenerator{
 		return '';
 	}
 
+	## The result cast for an Array element read (get/pop): value-typed
+	## elements (Int/Boolean/Float) ride the pointer slot and must be
+	## cast back out — List emission does the same via its resCast.
+	## Class, ARC, and String elements flow as pointers and cast to
+	## nothing, the implicit shape every existing read relies on.
+	##
+	## @param containerType: The Array's static type name.
+	## @param cg: The code generator (element-type lookup).
+	## @return: A C cast prefix ('' when none is needed).
+	Function of String is arrayElemResCast(String is containerType, CodeGenerator is cg){
+		local String is elem: cg:elemOfType(t: containerType);
+		if({ elem == 'Int' || elem == 'Boolean' || elem == 'Float' }, {
+			return '(long long)(intptr_t)';
+		});
+		return '';
+	}
+
 	## Binds Array/List element and query methods to their spec_* C
 	## functions. Transitional: dies when containers are Spec classes.
 	##
@@ -552,20 +569,20 @@ Class is BuiltinCallGenerator{
 				local String is idxC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 				});
-				return 'spec_array_get(' . targetC . ', ' . idxC . ')';
+				return self:arrayElemResCast(containerType: targetType, cg: cg) . 'spec_array_get(' . targetC . ', ' . idxC . ')';
 			});
 			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'item' || arg:name == 'value' }, {
- itemC: cg:generateExpression(expr: arg:value);
+						itemC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'spec_array_set(' . targetC . ', ' . idxC . ', (void*)(intptr_t)(' . itemC . '))';
@@ -608,17 +625,17 @@ Class is BuiltinCallGenerator{
 						});
 					});
 				});
-				return 'spec_array_pop(' . targetC . ', ' . defC . ')';
+				return self:arrayElemResCast(containerType: targetType, cg: cg) . 'spec_array_pop(' . targetC . ', ' . defC . ')';
 			});
 			if({ m == 'removeAt' }, {
 				local String is idxC: '0';
 				local String is defC: 'NULL';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'default' }, {
- defC: '(void*)(intptr_t)(' . cg:generateExpression(expr: arg:value) . ')';
+						defC: '(void*)(intptr_t)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_array_remove_at(' . targetC . ', ' . idxC . ', ' . defC . ')';
@@ -631,10 +648,10 @@ Class is BuiltinCallGenerator{
 				local String is endC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'start' }, {
- startC: cg:generateExpression(expr: arg:value);
+						startC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'end' }, {
- endC: cg:generateExpression(expr: arg:value);
+						endC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'Array_slice(' . targetC . ', ' . startC . ', ' . endC . ')';
@@ -647,10 +664,10 @@ Class is BuiltinCallGenerator{
 				local String is defC: '-1';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'search' || arg:name == 'needle' }, {
- searchC: cg:generateExpression(expr: arg:value);
+						searchC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'default' }, {
- defC: cg:generateExpression(expr: arg:value);
+						defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'Array_indexOf(' . targetC . ', ' . searchC . ', ' . defC . ')';
@@ -693,7 +710,7 @@ Class is BuiltinCallGenerator{
 				local String is sepC: '""';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'separator' || sepC == '""' }, {
- sepC: cg:generateExpression(expr: arg:value);
+						sepC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return 'Array_join(' . targetC . ', ' . sepC . ')';
@@ -728,10 +745,10 @@ Class is BuiltinCallGenerator{
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'default' }, {
- defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
+						defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_bytebuffer_get(' . targetC . ', ' . idxC . ', ' . defC . ', ' . errC . ')';
@@ -741,10 +758,10 @@ Class is BuiltinCallGenerator{
 				local String is itemC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'item' || arg:name == 'value' }, {
- itemC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
+						itemC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_bytebuffer_set(' . targetC . ', ' . idxC . ', ' . itemC . ', ' . errC . ')';
@@ -753,7 +770,7 @@ Class is BuiltinCallGenerator{
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'default' }, {
- defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
+						defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
 				});
 				return 'spec_bytebuffer_pop(' . targetC . ', ' . defC . ', ' . errC . ')';
@@ -815,10 +832,10 @@ Class is BuiltinCallGenerator{
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'default' }, {
- defC: cg:generateExpression(expr: arg:value);
+						defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return resCast . 'spec_vec_get(' . targetC . ', ' . idxC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
@@ -828,7 +845,7 @@ Class is BuiltinCallGenerator{
 				local String is itemC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
- idxC: cg:generateExpression(expr: arg:value);
+						idxC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'item' || arg:name == 'value' }, {
 						local Boolean is savedArgS: cg:argMode;
@@ -843,7 +860,7 @@ Class is BuiltinCallGenerator{
 				local String is defC: '0';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'default' }, {
- defC: cg:generateExpression(expr: arg:value);
+						defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				return resCast . 'spec_vec_pop(' . targetC . ', ' . itemPre . defC . itemPost . ', ' . errC . ')';
@@ -888,7 +905,7 @@ Class is BuiltinCallGenerator{
 			local Boolean is valIsStr: true;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'key' }, {
- keyC: cg:generateExpression(expr: arg:value);
+					keyC: cg:generateExpression(expr: arg:value);
 				});
 				if({ arg:name == 'value' }, {
 					valIsStr: isStrMap || cg:inferTargetType(expr: arg:value) == 'String' || arg:value:kind == ExpressionKind:STRING || (arg:value:kind == ExpressionKind:BINARY && arg:value:str == '.');
@@ -983,10 +1000,10 @@ Class is BuiltinCallGenerator{
 				local String is defC: '-1';
 				expr:methodArgs:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'base' }, {
- baseC: cg:generateExpression(expr: arg:value);
+						baseC: cg:generateExpression(expr: arg:value);
 					});
 					if({ arg:name == 'default' }, {
- defC: cg:generateExpression(expr: arg:value);
+						defC: cg:generateExpression(expr: arg:value);
 					});
 				});
 				'String_parseInt(' . targetC . ', ' . baseC . ', ' . defC . ')'

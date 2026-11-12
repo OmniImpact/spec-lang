@@ -147,7 +147,8 @@ fully loaded program is informational and always exits 0:
 bin/speclint -a -i path/to/file.spec
 ```
 
-Exit codes: **0** clean, **1** findings or syntax errors, **2** usage.
+Exit codes: **0** clean, **1** warnings or syntax errors (notices are
+informational — optional-parameter advisories — and never gate), **2** usage.
 
 ### Enforced Rules
 

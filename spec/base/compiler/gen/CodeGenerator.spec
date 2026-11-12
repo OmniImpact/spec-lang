@@ -1103,22 +1103,22 @@ Class is CodeGenerator{
 			# concat wraps know the result type.
 			if({ baseClassName == 'Array' || baseClassName == 'List' || baseClassName == 'Map' || baseClassName:startsWith(prefix: 'Array') || baseClassName:startsWith(prefix: 'List') || baseClassName:startsWith(prefix: 'Map') }, {
 				if({ methodName == 'length' }, {
- return Primitive:INT:value();
+					return Primitive:INT:value();
 				});
 				if({ methodName == 'isEmpty' || methodName == 'has' || methodName == 'any' }, {
- return Primitive:BOOLEAN:value();
+					return Primitive:BOOLEAN:value();
 				});
 				if({ methodName == 'count' || methodName == 'indexOf' }, {
- return Primitive:INT:value();
+					return Primitive:INT:value();
 				});
 				if({ methodName == 'getString' || methodName == 'join' }, {
- return Primitive:STRING:value();
+					return Primitive:STRING:value();
 				});
 				if({ methodName == 'getInt' }, {
- return Primitive:INT:value();
+					return Primitive:INT:value();
 				});
 				if({ methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }, {
- return self:names:voidName();
+					return self:names:voidName();
 				});
 				if({ methodName == 'get' || methodName == 'pop' || methodName == 'removeAt' }, {
 					local Array of String is ta: className:split(delimiter: ':');
@@ -1400,13 +1400,13 @@ Class is CodeGenerator{
 			# Enum contract methods have fixed return types.
 			if({ self:allEnumNames:has(key: targetType) }, {
 				if({ expr:methodName == 'name' }, {
- return 'String';
+					return 'String';
 				});
 				if({ expr:methodName == 'ordinal' }, {
- return Primitive:INT:value();
+					return Primitive:INT:value();
 				});
 				if({ expr:methodName == 'values' }, {
- return 'Array:' . targetType;
+					return 'Array:' . targetType;
 				});
 				if({ expr:methodName == 'value' }, {
 					if({ self:allStringBackedEnums:has(key: targetType) }, {
@@ -2524,7 +2524,7 @@ Class is CodeGenerator{
 				local Int is pIdx: 0;
 				vParams:each(action: local Function(Parameter is p){
 					if({ pIdx > 0 }, {
- vArgsC: vArgsC . ', ';
+						vArgsC: vArgsC . ', ';
 					});
 					local String is pName: p:name;
 					local Boolean is matched: false;
@@ -2613,7 +2613,7 @@ Class is CodeGenerator{
 				return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
 			});
 			return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . self:utils:cIdent(name: initCls) . '*)_inst' . argsJoined . '); _inst; })';
-		});
+			});
 			if({ mDef:kind == MemberKind:METHOD }, {
 				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:num);
 				if({ self:isFieldFulClass(cls: self:findClass(name: targetC)) }, {
@@ -2932,10 +2932,10 @@ Class is CodeGenerator{
 						if({ self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, {
 							capWritebacks: capWritebacks . '    _env->' . cVar . ' = ' . cVar . ";\n";
 							writebackNames:add(item: k);
+						});
 					});
 				});
 			});
-		});
 		});
 
 		if({ hasCaptures }, {
@@ -3906,7 +3906,7 @@ Class is CodeGenerator{
 				bufAppendBuf(dst: out, src: "    }\n");
 				bufAppendBuf(dst: out, src: '    return ' . retC . ";\n}\n\n");
 				di: di + 1;
-			});
+		});
 		# The resolution-hook machinery: per resolver
 		# class, the runtime-provided missing branch (Never Null — it
 		# panics with context) and the cache-hook. The cache starts at 8
@@ -4134,7 +4134,7 @@ Class is CodeGenerator{
 						bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
 					ci: ci + genThreads;
-				});
+			});
 			return count;
 		});
 		local String is methods: stringCopy(b: '');
@@ -4290,7 +4290,7 @@ Class is CodeGenerator{
 						bufAppendBuf(dst: classHelpers:get(index: ci), src: wg:helperFunctions);
 					});
 					ci: ci + genThreads;
-				});
+			});
 			return count;
 		});
 
@@ -4386,7 +4386,7 @@ Class is CodeGenerator{
 					local Boolean is firstA: true;
 					ancestors:each(action: local Function(String is aName){
 						if({ !firstA }, {
- out: out . ' || ';
+							out: out . ' || ';
 						});
 						out: out . '(strcmp(target, "' . aName . '") == 0)';
 						firstA: false;
@@ -4750,7 +4750,7 @@ Class is CodeGenerator{
 			local String is outVar: '_out_' . id;
 			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:name);
 			if({ retCType == 'void' }, {
- retCType: 'void*';
+				retCType: 'void*';
 			});
 			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1, default: '') == '*';
 			local String is outNewC: 'spec_array_new()';
@@ -4794,7 +4794,7 @@ Class is CodeGenerator{
 		});
 		local String is accCType: self:cTypeFor(typeName: accTypeName);
 		if({ accCType == 'void' }, {
- accCType: 'long long';
+			accCType: 'long long';
 		});
 
 		self:inlineReturnVar: accVar;
@@ -5175,7 +5175,7 @@ Class is CodeGenerator{
 				}, {
 					out: out . self:inlineBranchBody(anonFn: val) . "\t";
 				});
-			});
+		});
 		if({ !firstCond }, {
 			out: out . "}\n";
 		});
@@ -5265,7 +5265,7 @@ Class is CodeGenerator{
 						out: out . self:inlineBranchBody(anonFn: val) . "\t";
 					});
 				});
-			});
+		});
 		if({ !firstCond }, {
 			out: out . tail;
 		});

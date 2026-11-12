@@ -268,10 +268,14 @@ check, and emit the NEXT generation's sources. Consequences:
 
   Tree mode skips `#! specunit: negative` fixtures (compile-must-fail
   sources — linting them is permanent noise). Exit contract: 0 clean,
-  1 findings or syntax errors, 2 usage (the retired compiler mode
-  always exited 0; the docs' exit-1 claim is now true). Per-file output
-  is byte-identical to the retired mode's — the same `Linter.report` —
-  and tree mode appends one colored tally line.
+  1 warnings or syntax errors (notices are informational and never
+  gate), 2 usage. The indentation rules mask multi-line strings —
+  RuntimePrelude.spec's triple-quoted C runtime is DATA, not Spec
+  style — and the closing-brace rule validates every closer (column-0
+  and tab-indented alike) against the tab indent of the line that
+  opened its block, with statement-indent tracking across operator
+  continuations. The whole tree lints clean: `bin/speclint -t examples
+  -t tests -t spec -t utilities` reports zero warnings.
 - **`utilities/speclint/` layout**: `SpecLint.spec` (the entry program
   + `LintTally`), `Linter.spec` (the rules: indentation, AST idioms,
   and the audit), `LintIssue.spec`. `tests/TestSpeclint.spec` is the

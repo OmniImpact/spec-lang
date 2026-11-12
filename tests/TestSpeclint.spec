@@ -68,11 +68,36 @@ Class of SpecUnitTest is TestSpeclint{
 	}
 
 	Function is testClosingBraceDepthWarns(){
-		# The rule validates closing braces that start the LINE (masked
-		# char 0 == '}'): a column-0 '}' while the nesting depth expects
-		# one more tab is the misalignment shape it detects.
+		# The rule validates any line whose first non-whitespace masked
+		# character is '}' — a column-0 '}' while the block opened one
+		# tab deeper is the misalignment shape it detects.
 		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n}\n}\n");
 		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: true));
+	}
+
+	Function is testTabIndentedCloserWarns(){
+		# Tab-indented closers are validated too (the pre-split rule
+		# only ever saw column-0 closers): three tabs where the block
+		# opened at one is a misalignment.
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\t\t}\n}\n");
+		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: true));
+	}
+
+	Function is testElseContinuationIsAccepted(){
+		# A `}, else: {` continuation closes and reopens at the if-line's
+		# own indent — the openTabs stack (openers' indents, not a depth
+		# delta) accepts it, and the reopened block's closer aligns too.
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\titems:each(action: local Function(X is r){\n\t\t\tif(check: { r:p }, then: {\n\t\t\t\ta: a + 1;\n\t\t\t}, else: {\n\t\t\t\tb: b + 1;\n\t\t\t});\n\t\t});\n\t}\n}\n");
+		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
+	}
+
+	Function is testMultilineStringDataIsSkipped(){
+		# Triple-quoted raw strings are DATA (RuntimePrelude.spec holds
+		# the whole C runtime in one): lines inside are skipped — space
+		# indents, column-0 braces and all — the brace stack never sees
+		# them, and the scanner resynchronizes at the closing '''.
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction of String is c(){\n\t\treturn '''select *\n    from t\n{\n}\n\t''';\n\t}\n}\n");
+		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
 	}
 
 	Function is testGetStringDefaultIsNotice(){

@@ -199,7 +199,7 @@ Class is DeclarationGenerator{
 	Function of String is generateForwardDeclarations(Array of ClassInfo is classes){
 		local String is out: "/* Forward Declarations */\n";
 
-			classes:each(action: local Function(ClassInfo is c){
+		classes:each(action: local Function(ClassInfo is c){
 				if({ (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, {
 					local String is cSym: self:utils:cIdent(name: c:qualifiedName());
 					local Array of String is tps: c:typeParams;
@@ -235,7 +235,7 @@ Class is DeclarationGenerator{
 				if({ !self:hasFieldNamed(list: c:members, name: 'init') }, {
 					Buf:bufAppendBuf(dst: out, src: 'void ' . cSym . '_init(' . cSym . "* self);\n");
 				});
-			});
+				});
 		});
 		Buf:bufAppendBuf(dst: out, src: "\n");
 
@@ -322,7 +322,7 @@ Class is DeclarationGenerator{
 					Buf:bufAppendBuf(dst: out, src: '    ' . self:cTypeForClass(typeName: m:memberType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: m:name) . ";\n");
 				});
 				Buf:bufAppendBuf(dst: out, src: "};\n\n");
-				});
+			});
 		});
 		return out;
 	}

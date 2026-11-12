@@ -76,7 +76,9 @@ Class is SpecLint{
 			});
 			local LintTally is tally: LintTally:init();
 			self:lintOne(path: inputPath, strict: true, tally: tally);
-			if({ (tally:warnings + tally:notices) > 0 }, {
+			# Notices are informational (optional-parameter advisories on
+			# legitimate call sites) — only warnings gate the exit.
+			if({ tally:warnings > 0 }, {
 				Process:exit(status: 1);
 			});
 			Process:exit(status: 0);
@@ -104,12 +106,12 @@ Class is SpecLint{
 			tail: ', ' . (tally:broken as String) . ' syntax-broken';
 		});
 		local String is text: '== ' . (tally:files as String) . ' file(s) linted, ' . (tally:warnings as String) . ' warning(s), ' . (tally:notices as String) . ' notice(s)' . tail . ' ==';
-		if({ (tally:warnings + tally:notices + tally:broken) > 0 }, {
+		if({ (tally:warnings + tally:broken) > 0 }, {
 			Output:line(bold() . color256(code: 203, text: text));
 		}, {
 			Output:line(bold() . color256(code: 114, text: text));
 		});
-		if({ (tally:warnings + tally:notices + tally:broken) > 0 }, {
+		if({ (tally:warnings + tally:broken) > 0 }, {
 			Process:exit(status: 1);
 		});
 		Process:exit(status: 0);

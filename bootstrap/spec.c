@@ -3465,6 +3465,7 @@ String BuiltinCallGenerator_bindFloorCall(BuiltinCallGenerator* self, String cls
 Expression* BuiltinCallGenerator_argValue(BuiltinCallGenerator* self, Expression* expr, long long index);
 bool BuiltinCallGenerator_absArgIsInt(BuiltinCallGenerator* self, Expression* expr, CodeGenerator* cg);
 String BuiltinCallGenerator_generateBuiltinCall(BuiltinCallGenerator* self, Expression* expr, String targetC, String targetType, CodeGenerator* cg);
+String BuiltinCallGenerator_arrayElemResCast(BuiltinCallGenerator* self, String containerType, CodeGenerator* cg);
 String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expression* expr, String targetC, String targetType, CodeGenerator* cg);
 String BuiltinCallGenerator_bindMapCall(BuiltinCallGenerator* self, Expression* expr, String targetC, String targetType, CodeGenerator* cg);
 String BuiltinCallGenerator_bindStringDirect(BuiltinCallGenerator* self, Expression* expr, String targetC, CodeGenerator* cg);
@@ -3975,7 +3976,8 @@ struct Stderr {
 };
 
 /* Virtual Method Tables */
-static void* Any_vtable[432] = {
+static void* Any_vtable[433] = {
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -4410,7 +4412,8 @@ static void* Any_vtable[432] = {
     (void*)0
 };
 
-static void* Loadable_vtable[432] = {
+static void* Loadable_vtable[433] = {
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -4845,7 +4848,7 @@ static void* Loadable_vtable[432] = {
     (void*)0
 };
 
-static void* Stringable_vtable[432] = {
+static void* Stringable_vtable[433] = {
     (void*)Stringable_toString,
     (void*)0,
     (void*)0,
@@ -5277,10 +5280,11 @@ static void* Stringable_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Class_vtable[432] = {
+static void* Class_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -5712,10 +5716,11 @@ static void* Class_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Introspection_vtable[432] = {
+static void* Introspection_vtable[433] = {
     (void*)Class_toString,
     (void*)Introspection_objectHash,
     (void*)Introspection_sameRef,
@@ -6147,10 +6152,11 @@ static void* Introspection_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Enum_vtable[432] = {
+static void* Enum_vtable[433] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -6582,10 +6588,11 @@ static void* Enum_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Conditional_vtable[432] = {
+static void* Conditional_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -7017,10 +7024,11 @@ static void* Conditional_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Buf_vtable[432] = {
+static void* Buf_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -7452,10 +7460,11 @@ static void* Buf_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loops_vtable[432] = {
+static void* Loops_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -7887,10 +7896,11 @@ static void* Loops_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loop_vtable[432] = {
+static void* Loop_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -8322,10 +8332,11 @@ static void* Loop_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Dir_vtable[432] = {
+static void* Dir_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -8757,10 +8768,11 @@ static void* Dir_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Driver_vtable[432] = {
+static void* Driver_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -9192,10 +9204,11 @@ static void* Driver_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* File_vtable[432] = {
+static void* File_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -9627,10 +9640,11 @@ static void* File_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Output_vtable[432] = {
+static void* Output_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -10062,10 +10076,11 @@ static void* Output_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Process_vtable[432] = {
+static void* Process_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -10497,10 +10512,11 @@ static void* Process_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[432] = {
+static void* ProgramNode_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -10932,10 +10948,11 @@ static void* ProgramNode_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[432] = {
+static void* ClassInfo_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -11367,10 +11384,11 @@ static void* ClassInfo_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[432] = {
+static void* Member_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -11802,10 +11820,11 @@ static void* Member_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Keyword_vtable[432] = {
+static void* Keyword_vtable[433] = {
     (void*)Keyword_toString,
     (void*)0,
     (void*)0,
@@ -12237,10 +12256,11 @@ static void* Keyword_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[432] = {
+static void* Type_vtable[433] = {
     (void*)Type_toString,
     (void*)0,
     (void*)0,
@@ -12672,10 +12692,11 @@ static void* Type_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberKind_vtable[432] = {
+static void* MemberKind_vtable[433] = {
     (void*)MemberKind_toString,
     (void*)0,
     (void*)0,
@@ -13107,10 +13128,11 @@ static void* MemberKind_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[432] = {
+static void* Parameter_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -13542,10 +13564,11 @@ static void* Parameter_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[432] = {
+static void* Expression_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -13977,10 +14000,11 @@ static void* Expression_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ExpressionKind_vtable[432] = {
+static void* ExpressionKind_vtable[433] = {
     (void*)ExpressionKind_toString,
     (void*)0,
     (void*)0,
@@ -14412,10 +14436,11 @@ static void* ExpressionKind_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[432] = {
+static void* NamedArg_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -14847,10 +14872,11 @@ static void* NamedArg_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[432] = {
+static void* Statement_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -15282,10 +15308,11 @@ static void* Statement_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StatementKind_vtable[432] = {
+static void* StatementKind_vtable[433] = {
     (void*)StatementKind_toString,
     (void*)0,
     (void*)0,
@@ -15717,10 +15744,11 @@ static void* StatementKind_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[432] = {
+static void* TypeChecker_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -16152,10 +16180,11 @@ static void* TypeChecker_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassBindings_vtable[432] = {
+static void* ClassBindings_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -16587,10 +16616,11 @@ static void* ClassBindings_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ContractMethod_vtable[432] = {
+static void* ContractMethod_vtable[433] = {
     (void*)ContractMethod_toString,
     (void*)0,
     (void*)0,
@@ -17022,10 +17052,11 @@ static void* ContractMethod_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MetadataField_vtable[432] = {
+static void* MetadataField_vtable[433] = {
     (void*)MetadataField_toString,
     (void*)0,
     (void*)0,
@@ -17457,10 +17488,11 @@ static void* MetadataField_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Primitive_vtable[432] = {
+static void* Primitive_vtable[433] = {
     (void*)Primitive_toString,
     (void*)0,
     (void*)0,
@@ -17892,10 +17924,11 @@ static void* Primitive_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WellKnown_vtable[432] = {
+static void* WellKnown_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -18327,10 +18360,11 @@ static void* WellKnown_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Error_vtable[432] = {
+static void* Error_vtable[433] = {
     (void*)Error_toString,
     (void*)0,
     (void*)0,
@@ -18762,10 +18796,11 @@ static void* Error_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StackFrame_vtable[432] = {
+static void* StackFrame_vtable[433] = {
     (void*)StackFrame_toString,
     (void*)0,
     (void*)0,
@@ -19197,10 +19232,11 @@ static void* StackFrame_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[432] = {
+static void* SourceLocation_vtable[433] = {
     (void*)SourceLocation_toString,
     (void*)0,
     (void*)0,
@@ -19632,10 +19668,11 @@ static void* SourceLocation_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[432] = {
+static void* TypeError_vtable[433] = {
     (void*)TypeError_toString,
     (void*)0,
     (void*)0,
@@ -20067,10 +20104,11 @@ static void* TypeError_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Reflection_vtable[432] = {
+static void* Reflection_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -20502,10 +20540,11 @@ static void* Reflection_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[432] = {
+static void* Loader_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -20937,10 +20976,11 @@ static void* Loader_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[432] = {
+static void* Lexer_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -21372,10 +21412,11 @@ static void* Lexer_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Chars_vtable[432] = {
+static void* Chars_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -21807,10 +21848,11 @@ static void* Chars_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[432] = {
+static void* Token_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -22242,10 +22284,11 @@ static void* Token_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Operator_vtable[432] = {
+static void* Operator_vtable[433] = {
     (void*)Operator_toString,
     (void*)0,
     (void*)0,
@@ -22677,10 +22720,11 @@ static void* Operator_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenKind_vtable[432] = {
+static void* TokenKind_vtable[433] = {
     (void*)TokenKind_toString,
     (void*)0,
     (void*)0,
@@ -23112,10 +23156,11 @@ static void* TokenKind_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ErrorText_vtable[432] = {
+static void* ErrorText_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -23547,10 +23592,11 @@ static void* ErrorText_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[432] = {
+static void* Parser_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -23982,10 +24028,11 @@ static void* Parser_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Punctuation_vtable[432] = {
+static void* Punctuation_vtable[433] = {
     (void*)Punctuation_toString,
     (void*)0,
     (void*)0,
@@ -24417,10 +24464,11 @@ static void* Punctuation_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PrecedenceLevel_vtable[432] = {
+static void* PrecedenceLevel_vtable[433] = {
     (void*)PrecedenceLevel_toString,
     (void*)0,
     (void*)0,
@@ -24852,10 +24900,11 @@ static void* PrecedenceLevel_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateEscapes_vtable[432] = {
+static void* TemplateEscapes_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -25287,10 +25336,11 @@ static void* TemplateEscapes_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumDesugar_vtable[432] = {
+static void* EnumDesugar_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -25722,10 +25772,11 @@ static void* EnumDesugar_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CompilationReport_vtable[432] = {
+static void* CompilationReport_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -26157,10 +26208,11 @@ static void* CompilationReport_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CodeGenerator_vtable[432] = {
+static void* CodeGenerator_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -26592,10 +26644,11 @@ static void* CodeGenerator_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[432] = {
+static void* CBackendUtils_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -27027,10 +27080,11 @@ static void* CBackendUtils_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EmissionPolicy_vtable[432] = {
+static void* EmissionPolicy_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -27462,10 +27516,11 @@ static void* EmissionPolicy_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[432] = {
+static void* DeclarationGenerator_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -27897,10 +27952,11 @@ static void* DeclarationGenerator_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[432] = {
+static void* BuiltinCallGenerator_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -28329,14 +28385,16 @@ static void* BuiltinCallGenerator_vtable[432] = {
     (void*)BuiltinCallGenerator_bindFloorCall,
     (void*)BuiltinCallGenerator_absArgIsInt,
     (void*)BuiltinCallGenerator_generateBuiltinCall,
+    (void*)BuiltinCallGenerator_arrayElemResCast,
     (void*)BuiltinCallGenerator_bindContainerCall,
     (void*)BuiltinCallGenerator_bindMapCall,
     (void*)BuiltinCallGenerator_bindStringDirect,
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[432] = {
+static void* RuntimePrelude_vtable[433] = {
     (void*)Class_toString,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -28770,7 +28828,7 @@ static void* RuntimePrelude_vtable[432] = {
     (void*)RuntimePrelude_emitRuntime
 };
 
-static void* Stderr_vtable[432] = {
+static void* Stderr_vtable[433] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -28829,6 +28887,7 @@ static void* Stderr_vtable[432] = {
     (void*)0,
     (void*)0,
     (void*)Stderr_line,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -59138,9 +59197,10 @@ static const SpecMethodMeta BuiltinCallGenerator_spec_methods[] = {
     { "argValue", (void*)BuiltinCallGenerator_argValue, 0, 108 },
     { "absArgIsInt", (void*)BuiltinCallGenerator_absArgIsInt, 0, 123 },
     { "generateBuiltinCall", (void*)BuiltinCallGenerator_generateBuiltinCall, 0, 134 },
-    { "bindContainerCall", (void*)BuiltinCallGenerator_bindContainerCall, 0, 539 },
-    { "bindMapCall", (void*)BuiltinCallGenerator_bindMapCall, 0, 868 },
-    { "bindStringDirect", (void*)BuiltinCallGenerator_bindStringDirect, 0, 955 },
+    { "arrayElemResCast", (void*)BuiltinCallGenerator_arrayElemResCast, 0, 540 },
+    { "bindContainerCall", (void*)BuiltinCallGenerator_bindContainerCall, 0, 556 },
+    { "bindMapCall", (void*)BuiltinCallGenerator_bindMapCall, 0, 885 },
+    { "bindStringDirect", (void*)BuiltinCallGenerator_bindStringDirect, 0, 972 },
 };
 static const char* const BuiltinCallGenerator_spec_bases[] = {
     "Class",
@@ -59150,7 +59210,7 @@ static const SpecClassMeta BuiltinCallGenerator_spec_meta = {
     "BuiltinCallGenerator.spec",
     BuiltinCallGenerator_spec_bases, 1,
     BuiltinCallGenerator_spec_construct,
-    BuiltinCallGenerator_spec_methods, 7
+    BuiltinCallGenerator_spec_methods, 8
 };
 
 static void* RuntimePrelude_spec_construct(void) {
@@ -81535,13 +81595,32 @@ _mt_100768; });
     return _mret_100250;
 }
 
+String BuiltinCallGenerator_arrayElemResCast(BuiltinCallGenerator* self, String containerType, CodeGenerator* cg) {
+    (void)self;
+    (void)containerType;
+    (void)cg;
+    String _mret_100251 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String elem = 0;
+    elem = CodeGenerator_elemOfType(cg, containerType) /* inst:CodeGenerator:elemOfType */;
+    if (((((spec_string_equals(elem, spec_string_intern("Int"))) || (spec_string_equals(elem, spec_string_intern("Boolean"))))) || (spec_string_equals(elem, spec_string_intern("Float"))))) {
+	    _mret_100251 = (String)spec_retain((void*)(spec_string_intern("(long long)(intptr_t)")));
+    goto _cleanup_100251;
+	};
+    _mret_100251 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_100251;
+    _cleanup_100251: ;
+    if (elem) { spec_release((void*)elem); elem = NULL; }
+    return _mret_100251;
+}
+
 String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expression* expr, String targetC, String targetType, CodeGenerator* cg) {
     (void)self;
     (void)expr;
     (void)targetC;
     (void)targetType;
     (void)cg;
-    String _mret_100251 = 0;
+    String _mret_100252 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String a0 = 0;
     SPEC_AUTO String m = 0;
@@ -81567,8 +81646,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_get("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(BuiltinCallGenerator_arrayElemResCast(self, targetType, cg) /* inst:BuiltinCallGenerator:arrayElemResCast */, spec_string_intern("spec_array_get(")), targetC), spec_string_intern(", ")), idxC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("set"))) {
@@ -81586,8 +81665,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_set("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", (void*)(intptr_t)(")), itemC), spec_string_intern("))")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_set("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", (void*)(intptr_t)(")), itemC), spec_string_intern("))")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
     if (itemC) { spec_release((void*)itemC); itemC = NULL; }
 	};
@@ -81599,8 +81678,8 @@ String BuiltinCallGenerator_bindContainerCall(BuiltinCallGenerator* self, Expres
 	    if (((valExpr->kind) == (ExpressionKind_ARRAY__ensure()))) {
 	    CodeGenerator_setContainerHint(cg, targetType) /* inst:CodeGenerator:setContainerHint */;
 	    spec_assign_transfer((void**)&itemC, (void*)(CodeGenerator_generateExpression(cg, valExpr) /* inst:CodeGenerator:generateExpression */));
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_add_array("))), targetC), spec_string_intern(", ")), itemC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_add_array("))), targetC), spec_string_intern(", ")), itemC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
 	    itemClaims = ((CodeGenerator_yieldsClaim(cg, valExpr) /* inst:CodeGenerator:yieldsClaim */) && ((!(((((valExpr->kind) == (ExpressionKind_CALL__ensure()))) && (((spec_string_equals(valExpr->methodName, spec_string_intern("get"))) || (spec_string_equals(valExpr->methodName, spec_string_intern("getString"))))))))));
 	    bool savedArgMode = cg->argMode;
@@ -81620,15 +81699,15 @@ if (itemClaims) {
 	}
 _br_100773; })));
 	};
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(addFn)), spec_string_intern("(")), targetC), spec_string_intern(", (void*)(")), itemC), spec_string_intern("))")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(addFn)), spec_string_intern("(")), targetC), spec_string_intern(", (void*)(")), itemC), spec_string_intern("))")));
+    goto _cleanup_100252;
     if (itemC) { spec_release((void*)itemC); itemC = NULL; }
     if (elemKindA) { spec_release((void*)elemKindA); elemKindA = NULL; }
     if (addFn) { spec_release((void*)addFn); addFn = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("length"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_length("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_length("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
 	    if (spec_string_equals(m, spec_string_intern("pop"))) {
 	    SPEC_AUTO String defC = spec_construct_string(spec_string_intern("NULL"));
@@ -81647,8 +81726,8 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_pop("))), targetC), spec_string_intern(", ")), defC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(BuiltinCallGenerator_arrayElemResCast(self, targetType, cg) /* inst:BuiltinCallGenerator:arrayElemResCast */, spec_string_intern("spec_array_pop(")), targetC), spec_string_intern(", ")), defC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("removeAt"))) {
@@ -81666,14 +81745,14 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_remove_at("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), defC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_remove_at("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), defC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("isEmpty"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(long long)(spec_array_length("))), targetC), spec_string_intern(") == 0)")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(long long)(spec_array_length("))), targetC), spec_string_intern(") == 0)")));
+    goto _cleanup_100252;
 	};
 	    if (spec_string_equals(m, spec_string_intern("slice"))) {
 	    SPEC_AUTO String startC = spec_construct_string(spec_string_intern("0"));
@@ -81690,14 +81769,14 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array_slice("))), targetC), spec_string_intern(", ")), startC), spec_string_intern(", ")), endC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array_slice("))), targetC), spec_string_intern(", ")), startC), spec_string_intern(", ")), endC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (startC) { spec_release((void*)startC); startC = NULL; }
     if (endC) { spec_release((void*)endC); endC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("clear"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_clear("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_array_clear("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
 	    if (spec_string_equals(m, spec_string_intern("indexOf"))) {
 	    SPEC_AUTO String searchC = spec_construct_string(spec_string_intern("\"\""));
@@ -81714,41 +81793,41 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array_indexOf("))), targetC), spec_string_intern(", ")), searchC), spec_string_intern(", ")), defC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array_indexOf("))), targetC), spec_string_intern(", ")), searchC), spec_string_intern(", ")), defC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (searchC) { spec_release((void*)searchC); searchC = NULL; }
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("each"))) {
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
-	    _mret_100251 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("each"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("each"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
+    goto _cleanup_100252;
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("filter"))) {
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
-	    _mret_100251 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("filter"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("filter"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
+    goto _cleanup_100252;
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("count"))) {
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
-	    _mret_100251 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("count"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("count"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
+    goto _cleanup_100252;
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("any"))) {
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
-	    _mret_100251 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("any"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("any"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
+    goto _cleanup_100252;
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("map"))) {
 	    if (((Expression_argCount(expr) /* inst:Expression:argCount */) > (0))) {
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
 	    if (((fnExpr->kind) == (ExpressionKind_ANON_FN__ensure()))) {
-	    _mret_100251 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("map"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(CodeGenerator_generateInlineArrayOp(cg, spec_string_intern("map"), targetC, fnExpr) /* inst:CodeGenerator:generateInlineArrayOp */);
+    goto _cleanup_100252;
 	};
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
 	};
@@ -81758,8 +81837,8 @@ _br_100773; })));
 	    SPEC_AUTO Expression* initExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 1)));
 	    if (((fnExpr->kind) == (ExpressionKind_ANON_FN__ensure()))) {
-	    _mret_100251 = (String)(CodeGenerator_generateInlineArrayFold(cg, targetC, initExpr, fnExpr) /* inst:CodeGenerator:generateInlineArrayFold */);
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(CodeGenerator_generateInlineArrayFold(cg, targetC, initExpr, fnExpr) /* inst:CodeGenerator:generateInlineArrayFold */);
+    goto _cleanup_100252;
 	};
     if (initExpr) { spec_release((void*)initExpr); initExpr = NULL; }
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
@@ -81776,8 +81855,8 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array_join("))), targetC), spec_string_intern(", ")), sepC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Array_join("))), targetC), spec_string_intern(", ")), sepC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (sepC) { spec_release((void*)sepC); sepC = NULL; }
 	};
 	};
@@ -81803,8 +81882,8 @@ _br_100773; })));
     spec_assign_transfer((void**)&itemC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_push("))), targetC), spec_string_intern(", (long long)(")), itemC), spec_string_intern("))")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_push("))), targetC), spec_string_intern(", (long long)(")), itemC), spec_string_intern("))")));
+    goto _cleanup_100252;
     if (itemC) { spec_release((void*)itemC); itemC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("appendString"))) {
@@ -81816,8 +81895,8 @@ _br_100773; })));
     spec_assign_transfer((void**)&sC, (void*)(CodeGenerator_generateExpression(cg, arg->value) /* inst:CodeGenerator:generateExpression */));
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_append_string("))), targetC), spec_string_intern(", spec_buf_to_cstring((SpecBuf*)(")), sC), spec_string_intern(")))")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_append_string("))), targetC), spec_string_intern(", spec_buf_to_cstring((SpecBuf*)(")), sC), spec_string_intern(")))")));
+    goto _cleanup_100252;
     if (sC) { spec_release((void*)sC); sC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("get"))) {
@@ -81835,8 +81914,8 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_get("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), defC), spec_string_intern(", ")), errC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_get("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), defC), spec_string_intern(", ")), errC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
@@ -81855,8 +81934,8 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_set("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), itemC), spec_string_intern(", ")), errC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_set("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), itemC), spec_string_intern(", ")), errC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
     if (itemC) { spec_release((void*)itemC); itemC = NULL; }
 	};
@@ -81871,21 +81950,21 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_pop("))), targetC), spec_string_intern(", ")), defC), spec_string_intern(", ")), errC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_pop("))), targetC), spec_string_intern(", ")), defC), spec_string_intern(", ")), errC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("length"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_length("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_length("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
 	    if (spec_string_equals(m, spec_string_intern("clear"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_clear("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_clear("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
 	    if (spec_string_equals(m, spec_string_intern("toString"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_to_string("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_bytebuffer_to_string("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
     if (errC) { spec_release((void*)errC); errC = NULL; }
 	};
@@ -81935,8 +82014,8 @@ _br_100773; })));
         } while (0);
     } } });
 	    CodeGenerator_setArgMode(cg, savedArgV) /* inst:CodeGenerator:setArgMode */;
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_push("))), targetC), spec_string_intern(", ")), itemPre), itemC), itemPost), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_push("))), targetC), spec_string_intern(", ")), itemPre), itemC), itemPost), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (itemC) { spec_release((void*)itemC); itemC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("get"))) {
@@ -81954,8 +82033,8 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(resCast)), spec_string_intern("spec_vec_get(")), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), itemPre), defC), itemPost), spec_string_intern(", ")), errC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(resCast)), spec_string_intern("spec_vec_get(")), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), itemPre), defC), itemPost), spec_string_intern(", ")), errC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
@@ -81977,8 +82056,8 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_set("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), itemPre), itemC), itemPost), spec_string_intern(", ")), errC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_set("))), targetC), spec_string_intern(", ")), idxC), spec_string_intern(", ")), itemPre), itemC), itemPost), spec_string_intern(", ")), errC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (idxC) { spec_release((void*)idxC); idxC = NULL; }
     if (itemC) { spec_release((void*)itemC); itemC = NULL; }
 	};
@@ -81993,17 +82072,17 @@ _br_100773; })));
 	};
         } while (0);
     } } });
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(resCast)), spec_string_intern("spec_vec_pop(")), targetC), spec_string_intern(", ")), itemPre), defC), itemPost), spec_string_intern(", ")), errC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(resCast)), spec_string_intern("spec_vec_pop(")), targetC), spec_string_intern(", ")), itemPre), defC), itemPost), spec_string_intern(", ")), errC), spec_string_intern(")")));
+    goto _cleanup_100252;
     if (defC) { spec_release((void*)defC); defC = NULL; }
 	};
 	    if (spec_string_equals(m, spec_string_intern("length"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_length("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_length("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
 	    if (spec_string_equals(m, spec_string_intern("clear"))) {
-	    _mret_100251 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_clear("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100251;
+	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_vec_clear("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100252;
 	};
     if (listElem) { spec_release((void*)listElem); listElem = NULL; }
     if (elemKind) { spec_release((void*)elemKind); elemKind = NULL; }
@@ -82012,13 +82091,13 @@ _br_100773; })));
     if (resCast) { spec_release((void*)resCast); resCast = NULL; }
     if (errC) { spec_release((void*)errC); errC = NULL; }
 	};
-    _mret_100251 = (String)spec_retain((void*)(spec_string_intern("")));
-    goto _cleanup_100251;
-    _cleanup_100251: ;
+    _mret_100252 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_100252;
+    _cleanup_100252: ;
     if (m) { spec_release((void*)m); m = NULL; }
     if (a0) { spec_release((void*)a0); a0 = NULL; }
     if (a1) { spec_release((void*)a1); a1 = NULL; }
-    return _mret_100251;
+    return _mret_100252;
 }
 
 String BuiltinCallGenerator_bindMapCall(BuiltinCallGenerator* self, Expression* expr, String targetC, String targetType, CodeGenerator* cg) {
@@ -82027,7 +82106,7 @@ String BuiltinCallGenerator_bindMapCall(BuiltinCallGenerator* self, Expression* 
     (void)targetC;
     (void)targetType;
     (void)cg;
-    String _mret_100252 = 0;
+    String _mret_100253 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String a0 = 0;
     SPEC_AUTO String m = 0;
@@ -82042,8 +82121,8 @@ String BuiltinCallGenerator_bindMapCall(BuiltinCallGenerator* self, Expression* 
 	    spec_assign_transfer((void**)&a1, (void*)(CodeGenerator_generateExpression(cg, (((Expression*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); Expression* _v = (Expression*)((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 1)); spec_pool_release_to(_pf); _v; }))))) /* inst:CodeGenerator:generateExpression */));
 	};
     if (spec_string_equals(m, spec_string_intern("init"))) {
-	    _mret_100252 = (String)spec_retain((void*)(spec_string_intern("spec_map_new()")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)spec_retain((void*)(spec_string_intern("spec_map_new()")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("set"))) {
 	    SPEC_AUTO String keyC = spec_construct_string(spec_string_intern("spec_string_intern(\"\")"));
@@ -82070,67 +82149,67 @@ String BuiltinCallGenerator_bindMapCall(BuiltinCallGenerator* self, Expression* 
         } while (0);
     } } });
 	    if (((isStrMap) || (valIsStr))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_set("))), targetC), spec_string_intern(", ")), keyC), spec_string_intern(", ")), valC), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_set("))), targetC), spec_string_intern(", ")), keyC), spec_string_intern(", ")), valC), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_set_any("))), targetC), spec_string_intern(", ")), keyC), spec_string_intern(", (void*)(intptr_t)(")), valC), spec_string_intern("))")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_set_any("))), targetC), spec_string_intern(", ")), keyC), spec_string_intern(", (void*)(intptr_t)(")), valC), spec_string_intern("))")));
+    goto _cleanup_100253;
     if (keyC) { spec_release((void*)keyC); keyC = NULL; }
     if (valC) { spec_release((void*)valC); valC = NULL; }
 	};
     if (spec_string_equals(m, spec_string_intern("get"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_get("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_get("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("getString"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(String)spec_map_get("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(String)spec_map_get("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("getInt"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Map_getInt("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Map_getInt("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("getFloat"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("((double)spec_map_get("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", (void*)0))")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("((double)spec_map_get("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", (void*)0))")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("getBool"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Map_getBool("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("Map_getBool("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(", ")), a1), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("has"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_has("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_has("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("remove"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_remove("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_remove("))), targetC), spec_string_intern(", ")), a0), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("keys"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_keys("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_map_keys("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("length"))) {
-	    _mret_100252 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(long long)spec_map_length("))), targetC), spec_string_intern(")")));
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("(long long)spec_map_length("))), targetC), spec_string_intern(")")));
+    goto _cleanup_100253;
 	};
     if (spec_string_equals(m, spec_string_intern("each"))) {
 	    if (((Expression_argCount(expr) /* inst:Expression:argCount */) > (0))) {
 	    SPEC_AUTO Expression* fnExpr = (Expression*)(((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 0)));
 	    if (((fnExpr->kind) == (ExpressionKind_ANON_FN__ensure()))) {
-	    _mret_100252 = (String)(CodeGenerator_generateInlineMapEach(cg, targetC, fnExpr) /* inst:CodeGenerator:generateInlineMapEach */);
-    goto _cleanup_100252;
+	    _mret_100253 = (String)(CodeGenerator_generateInlineMapEach(cg, targetC, fnExpr) /* inst:CodeGenerator:generateInlineMapEach */);
+    goto _cleanup_100253;
 	};
     if (fnExpr) { spec_release((void*)fnExpr); fnExpr = NULL; }
 	};
 	};
-    _mret_100252 = (String)spec_retain((void*)(spec_string_intern("")));
-    goto _cleanup_100252;
-    _cleanup_100252: ;
+    _mret_100253 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_100253;
+    _cleanup_100253: ;
     if (m) { spec_release((void*)m); m = NULL; }
     if (a0) { spec_release((void*)a0); a0 = NULL; }
     if (a1) { spec_release((void*)a1); a1 = NULL; }
-    return _mret_100252;
+    return _mret_100253;
 }
 
 String BuiltinCallGenerator_bindStringDirect(BuiltinCallGenerator* self, Expression* expr, String targetC, CodeGenerator* cg) {
@@ -82138,7 +82217,7 @@ String BuiltinCallGenerator_bindStringDirect(BuiltinCallGenerator* self, Express
     (void)expr;
     (void)targetC;
     (void)cg;
-    String _mret_100253 = 0;
+    String _mret_100254 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String a0 = 0;
     SPEC_AUTO String m = 0;
@@ -82152,7 +82231,7 @@ String BuiltinCallGenerator_bindStringDirect(BuiltinCallGenerator* self, Express
     if (((Expression_argCount(expr) /* inst:Expression:argCount */) > (1))) {
 	    spec_assign_transfer((void**)&a1, (void*)(CodeGenerator_generateExpression(cg, (((Expression*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); Expression* _v = (Expression*)((((Expression* (*)(BuiltinCallGenerator*, Expression*, long long))self->_vtable[98]))((BuiltinCallGenerator*)self, expr, 1)); spec_pool_release_to(_pf); _v; }))))) /* inst:CodeGenerator:generateExpression */));
 	};
-    _mret_100253 = (String)(({ String _mt_100808;
+    _mret_100254 = (String)(({ String _mt_100808;
 if (spec_string_equals(m, spec_string_intern("length"))) {
 	_mt_100808 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("spec_string_length("))), targetC), spec_string_intern(")")));
 	} else if (spec_string_equals(m, spec_string_intern("charAt"))) {
@@ -82205,12 +82284,12 @@ if (spec_string_equals(m, spec_string_intern("length"))) {
 	_mt_100808 = (String)spec_retain((void*)(spec_string_intern("")));
 	}
 _mt_100808; }));
-    goto _cleanup_100253;
-    _cleanup_100253: ;
+    goto _cleanup_100254;
+    _cleanup_100254: ;
     if (m) { spec_release((void*)m); m = NULL; }
     if (a0) { spec_release((void*)a0); a0 = NULL; }
     if (a1) { spec_release((void*)a1); a1 = NULL; }
-    return _mret_100253;
+    return _mret_100254;
 }
 
 void BuiltinCallGenerator_init(BuiltinCallGenerator* self) {

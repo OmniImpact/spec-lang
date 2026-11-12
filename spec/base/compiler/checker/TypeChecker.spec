@@ -1010,7 +1010,7 @@ Class is TypeChecker{
 						anyVoid: true;
 					});
 				});
-			});
+		});
 		if({ bad }, {
 			return if({ anyValue && resT != '' }, { resT }, { 'Void' });
 		});
@@ -1143,7 +1143,7 @@ Class is TypeChecker{
 						anyVoid: true;
 					});
 				});
-			});
+		});
 		if({ bad }, {
 			return if({ anyValue && resT != '' }, { resT }, { 'Void' });
 		});
@@ -2542,7 +2542,7 @@ Class is TypeChecker{
 												if({ segs:length() >= 2 && !chainResolved && !self:allEnumNames:has(key: root) && !self:isPrimitive(t: root) && root != 'Array' && root != 'Map' && root != 'List' && root != 'String' && root != 'Function' && root != 'LoopControl' && (resolver:name == '' || declaredInstance) }, {
 													self:addError(line: self:currentLine, msg: 'Fields are not reachable through the class-name prefix \'' . root . '\'; only held members are (§2.3).');
 													rootType: '';
-													}, {
+												}, {
 														if({ resolver:name != '' && !declaredInstance }, {
 															# The hook admits — the reference types as the
 															# resolver's declared return type
@@ -2556,7 +2556,7 @@ Class is TypeChecker{
 															res: self:formatTypeString(t: resolver:memberType);
 															heldAdmitted: true;
 														});
-													});
+												});
 											});
 										});
 									});
@@ -3238,7 +3238,7 @@ Class is TypeChecker{
 						res: 'Void';
 						expr:resolvedType: res;
 						return res;
-				});
+					});
 				expr:bareProvider: provider;
 				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
 				if({ providerRet == '' }, {
@@ -3266,7 +3266,7 @@ Class is TypeChecker{
 				res: providerRet;
 				expr:resolvedType: res;
 				return res;
-			});
+				});
 		});
 		# is this a Conditional branch call? Branch
 		# closure bodies (arguments 1+) type-check against the enclosing
@@ -3875,7 +3875,7 @@ Class is TypeChecker{
 							});
 						});
 						self:addError(line: stmt:line, msg: msg);
-					});
+				});
 			},
 			StatementKind:FORWARD: {
 				self:checkForward(stmt: stmt);

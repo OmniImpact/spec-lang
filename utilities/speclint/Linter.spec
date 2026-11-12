@@ -43,6 +43,21 @@ Class is Linter{
 	## (E10: construction inside a loop body is a hoist hint).
 	local Int is lintLoopDepth: 0;
 
+	## Quote state carried across lines by [maskLineStateful]: '' outside
+	## any string, or the active quote — `'` a raw string, `"` an escaped
+	## string, `'''` a raw multi-line string. Lines that START inside a
+	## string are string DATA (the C runtime held in RuntimePrelude.spec
+	## is the mass case), not Spec style, and are skipped.
+	local String is lintQuote: '';
+
+	## The tab indent of the line that opened each open brace, LIFO — the
+	## closing-brace rule's expectation: a block's closer sits at the
+	## indent of the line that opened it. A depth delta cannot express
+	## this (an if-line opens two braces but one indent level), and a
+	## `}, {` continuation closes and reopens at the statement's own
+	## indent, which the stack records naturally.
+	local Array of Int is openTabs: [];
+
 	## Loaded class nodes by name, for the inherited-import walk.
 	local Map of String to ClassInfo is auditClassNodes: Map:init();
 
@@ -60,6 +75,8 @@ Class is Linter{
 		self:auditClassNodes: Map:init();
 		self:auditIssues: [];
 		self:lintLoopDepth: 0;
+		self:lintQuote: '';
+		self:openTabs: [];
 		self:floorAliases: [];
 		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
 	}
@@ -67,20 +84,36 @@ Class is Linter{
 	## Inspects indentation whitespace line-by-line.
 	##
 	## Checks: leading spaces after tabs, trailing whitespace, and closing-brace
-	## alignment against the current nesting depth (string literals and
-	## comments are masked so brace characters inside them are ignored).
+	## alignment (string literals — single-line and multi-line — and comments
+	## are masked so brace characters inside them are ignored; lines that
+	## START inside a multi-line string are string data and skipped whole).
+	## A closing brace — column-0 or tab-indented — must sit at the tab
+	## indent of the line that opened its block; `}, {` continuations
+	## close and reopen at that same indent, which the [openTabs] stack
+	## records naturally.
 	##
 	## @param source: Raw source code string.
 	## @param issues: Destination issues array.
 	Function is lintIndentation(String is source, Array of LintIssue is issues){
 		local Int is lineNum: 0;
-		local Int is depth: 0;
+		local Int is stmtTabs: 0;
+		local Boolean is prevOpen: false;
+		self:lintQuote: '';
+		self:openTabs: [];
 		# Own the lines array: a fresh call result rides the claim pool,
-    # and this loop's bodies claim repeatedly — 32 claims would evict it
-    # mid-iteration. A var-decl init is a consumption position.
-    local Array of String is srcLines: source:lines();
-    srcLines:each(action: local Function(String is line){
+		# and this loop's bodies claim repeatedly — 32 claims would evict it
+		# mid-iteration. A var-decl init is a consumption position.
+		local Array of String is srcLines: source:lines();
+		srcLines:each(action: local Function(String is line){
 			lineNum: lineNum + 1;
+			# A line that STARTS inside a multi-line string is string data
+			# — advance the quote scanner, check nothing.
+			if({ self:lintQuote != '' }, {
+				self:maskLineStateful(line: line);
+				prevOpen: false;
+				return;
+			});
+			local String is masked: self:maskLineStateful(line: line);
 			local Int is tabs: line:countLeading(search: "\t");
 			local String is rest: line:substring(start: tabs, end: line:length());
 			local Int is spaces: rest:countLeading(search: ' ');
@@ -88,72 +121,138 @@ Class is Linter{
 				local String is msg: 'Space-based indentation detected (' . (spaces as String) . ' space(s)). Spec standard requires tabs.';
 				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
 			});
-			if({ line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, {
-				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
+			# Trailing whitespace is only judgeable when the line closes
+			# every string it opens — a line ending inside a string ends
+			# in string content.
+			if({ self:lintQuote == '' }, {
+				if({ line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, {
+					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
+				});
 			});
 
-			# Mask strings and comments, then validate brace alignment.
-			local String is masked: self:maskLine(line: line);
-			local String is body: masked;
+			# Leading-trim the masked line once: its first non-whitespace
+			# character classifies the line and drives the brace stack.
+			local String is trimmed: masked;
 			local Boolean is trimming: true;
-			while({ trimming && body:length() > 0 }, {
-				local String is last: body:charAt(index: body:length() - 1, default: '');
-				if({ last == ' ' || last == "\t" }, {
-					body: body:substring(start: 0, end: body:length() - 1);
+			while({ trimming && trimmed:length() > 0 }, {
+				local String is first: trimmed:charAt(index: 0, default: '');
+				if({ first == ' ' || first == "\t" }, {
+					trimmed: trimmed:substring(start: 1, end: trimmed:length());
 				}, {
 					trimming: false;
 				});
 			});
-			if({ body:length() > 0 && body:charAt(index: 0, default: '') == '}' }, {
-				local Int is expectedTabs: depth - 1;
-				if({ expectedTabs < 0 }, {
-					expectedTabs: 0;
+			local String is firstCh: trimmed:charAt(index: 0, default: '');
+			# The indent a brace opened on this line belongs to: a line
+			# continuing the previous statement (leading operator, or a
+			# predecessor that ended mid-expression — a trailing operator
+			# or chain dot; NOT a comma, which closes every match-table
+			# entry) carries the statement's own indent, so a `then: {`
+			# opened on a continued condition records the if-line's tabs.
+			# A `}, {` seam records its own line's tabs; closer lines
+			# update nothing.
+			local Int is pushTabs: tabs;
+			if({ trimmed:length() > 0 }, {
+				if({ firstCh == '&' || firstCh == '|' || firstCh == '.' || firstCh == '?' || prevOpen }, {
+					pushTabs: stmtTabs;
+				}, {
+					if({ firstCh != '}' }, {
+						stmtTabs: tabs;
+					});
 				});
-				if({ tabs != expectedTabs }, {
-					local String is msg: 'Closing brace indented at ' . (tabs as String) . ' tab(s); nesting depth expects ' . (expectedTabs as String) . '.';
-					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
+			});
+			# Closing-brace alignment: any line whose first non-whitespace
+			# masked character is '}' — column-0 and tab-indented closers
+			# alike — must sit at the opener's recorded indent.
+			if({ trimmed:length() > 0 && firstCh == '}' }, {
+				local Int is openCount: self:openTabs:length();
+				if({ openCount > 0 }, {
+					local Int is expectedTabs: (self:openTabs:get(index: openCount - 1)) as Int;
+					if({ tabs != expectedTabs }, {
+						local String is msg: 'Closing brace indented at ' . (tabs as String) . ' tab(s); the block opened at ' . (expectedTabs as String) . ' tab(s).';
+						issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
+					});
 				});
 			});
 			local Int is ci: 0;
 			while({ ci < masked:length() }, {
 				local String is ch: masked:charAt(index: ci, default: '');
 				match(on: ch, when: [
-					'{': { depth: depth + 1; },
-					'}': { depth: depth - 1; }
+					'{': { self:openTabs:add(item: pushTabs); },
+					'}': {
+						# A stray closer with nothing open is itself a
+						# misalignment; keep the stack from underflowing.
+						if({ self:openTabs:length() > 0 }, {
+							self:openTabs:removeAt(index: self:openTabs:length() - 1, default: 0);
+						});
+					}
 				]);
 				ci: ci + 1;
 			});
+			# Whether the NEXT line continues this one: the masked line
+			# ends mid-expression (trailing operator or chain dot).
+			local String is tail: masked;
+			local Boolean is tTrimming: true;
+			while({ tTrimming && tail:length() > 0 }, {
+				local String is last: tail:charAt(index: tail:length() - 1, default: '');
+				if({ last == ' ' || last == "\t" }, {
+					tail: tail:substring(start: 0, end: tail:length() - 1);
+				}, {
+					tTrimming: false;
+				});
+			});
+			prevOpen: tail:endsWith(suffix: '&&') || tail:endsWith(suffix: '||') || tail:endsWith(suffix: '&') || tail:endsWith(suffix: '|') || tail:endsWith(suffix: '+') || tail:endsWith(suffix: '-') || tail:endsWith(suffix: '*') || tail:endsWith(suffix: '.') || tail:endsWith(suffix: '?');
 		});
 	}
 
 	## Returns a line with string contents and comments replaced by spaces so
-	## that brace counting only sees structural characters.
+	## that brace counting only sees structural characters. Quote state
+	## carries across lines through [lintQuote]: raw `'...'`, escaped
+	## `"..."`, and raw multi-line `'''...'''` all mask — the mass case is
+	## the C runtime held in RuntimePrelude.spec's triple-quoted string,
+	## whose lines are DATA, not Spec style. Backslashes escape only
+	## inside double quotes (the raw families keep bytes verbatim, per
+	## the lexer's two-family rule).
 	##
 	## @param line: Raw source line.
 	## @return: Masked line of identical length.
-	Function of String is maskLine(String is line){
+	Function of String is maskLineStateful(String is line){
 		local String is out: '';
-		local String is quote: '';
 		local Int is i: 0;
 		while({ i < line:length() }, {
 			local String is ch: line:charAt(index: i, default: '');
-			if({ quote != '' }, {
-				if({ ch == "\\" }, {
-					out: out . '  ';
-					i: i + 1;
+			if({ self:lintQuote != '' }, {
+				if({ self:lintQuote == "'''" && self:matchTriple(line: line, index: i) }, {
+					self:lintQuote: '';
+					out: out . '   ';
+					i: i + 2;
 				}, {
-					if({ ch == quote }, {
-						quote: '';
-						out: out . ' ';
+					# The lexer's readString skips the char after a
+					# backslash in BOTH quote families (a raw '\''
+					# is a quoted quote); the verbatim triple does not.
+					if({ self:lintQuote != "'''" && ch == "\\" }, {
+						out: out . '  ';
+						i: i + 1;
 					}, {
-						out: out . ' ';
+						if({ ch == self:lintQuote }, {
+							self:lintQuote: '';
+							out: out . ' ';
+						}, {
+							out: out . ' ';
+						});
 					});
 				});
 			}, {
 				match(on: ch, when: [
 					['"', '\'']: {
-						quote: ch;
-						out: out . ' ';
+						if({ self:matchTriple(line: line, index: i) }, {
+							self:lintQuote: "'''";
+							out: out . '   ';
+							i: i + 2;
+						}, {
+							self:lintQuote: ch;
+							out: out . ' ';
+						});
 					},
 					'#': {
 						i: line:length();
@@ -166,6 +265,19 @@ Class is Linter{
 			i: i + 1;
 		});
 		return out;
+	}
+
+	## True when [index] starts a `'''` sequence in [line] — the raw
+	## multi-line string delimiter the stateful masker opens and closes on.
+	##
+	## @param line: The line being scanned.
+	## @param index: The candidate index.
+	## @return: true when chars [index..index+2] are all single quotes.
+	Function of Boolean is matchTriple(String is line, Int is index){
+		return index + 2 < line:length()
+			&& line:charAt(index: index, default: '') == '\''
+			&& line:charAt(index: index + 1, default: '') == '\''
+			&& line:charAt(index: index + 2, default: '') == '\'';
 	}
 
 	## Inspects an expression node for optional arguments and idioms.
