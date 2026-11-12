@@ -3033,8 +3033,8 @@ Member* TypeChecker_lookupAnyMember(TypeChecker* self, String className, String 
 Member* TypeChecker_lookupEnumVariant(TypeChecker* self, String enumName, String variantName);
 String TypeChecker_lookupFieldType(TypeChecker* self, String className, String fieldName);
 String TypeChecker_lookupMethodReturnType(TypeChecker* self, String className, String methodName);
-String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expression* arms);
-String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms);
+String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expression* arms, String expected);
+String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms, String expected);
 void TypeChecker_checkCallArguments(TypeChecker* self, Expression* callExpr);
 void TypeChecker_validateArgsAgainstSignature(TypeChecker* self, Expression* callExpr, SpecArray* params, ClassInfo* recvCls, String displayTarget);
 Member* TypeChecker_selectOverload(TypeChecker* self, String className, String methodName, Expression* expr);
@@ -67734,10 +67734,11 @@ String TypeChecker_lookupMethodReturnType(TypeChecker* self, String className, S
     return _mret_100151;
 }
 
-String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expression* arms) {
+String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expression* arms, String expected) {
     (void)self;
     (void)subj;
     (void)arms;
+    (void)expected;
     String _mret_100152 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String subjT = 0;
@@ -67928,7 +67929,15 @@ String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expressio
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[94]))((TypeChecker*)self, self->currentLine, spec_string_intern("Match arm bodies must be closures: 'key: { ... }'."));
 	    bad = true;
 	} else {
+	    bool savedArmValue = self->inValueBranch;
+	    SPEC_AUTO String savedArmExpected = spec_construct_string(self->currentYieldExpected);
+	    if ((((!spec_string_equals(expected, spec_string_intern("")))) && ((!(TypeChecker_isVoid(self, expected) /* inst:TypeChecker:isVoid */))))) {
+	    self->inValueBranch = true;
+	    spec_assign((void**)&self->currentYieldExpected, (void*)(expected));
+	};
 	    (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(TypeChecker_inferExpressionType(self, val, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */); spec_pool_release_to(_pf); _v; }))));
+	    self->inValueBranch = savedArmValue;
+	    spec_assign((void**)&self->currentYieldExpected, (void*)(savedArmExpected));
 	    SPEC_AUTO String valT = spec_construct_string(val->resolvedType);
 	    if (((String_startsWith(valT, spec_string_intern("Function:"))) && (((spec_string_length(valT)) > (9))))) {
 	    SPEC_AUTO String yieldT = spec_string_substring(valT, 9, spec_string_length(valT));
@@ -67949,6 +67958,7 @@ String TypeChecker_checkMatchArms(TypeChecker* self, Expression* subj, Expressio
 	} else {
 	    anyVoid = true;
 	};
+    if (savedArmExpected) { spec_release((void*)savedArmExpected); savedArmExpected = NULL; }
     if (valT) { spec_release((void*)valT); valT = NULL; }
 	};
     if (key) { spec_release((void*)key); key = NULL; }
@@ -68019,9 +68029,10 @@ _br_100103; }));
     return _mret_100152;
 }
 
-String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms) {
+String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms, String expected) {
     (void)self;
     (void)arms;
+    (void)expected;
     String _mret_100153 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String resT = 0;
@@ -68071,7 +68082,15 @@ String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms) {
 	    (((void (*)(TypeChecker*, long long, String))self->_vtable[94]))((TypeChecker*)self, self->currentLine, spec_string_intern("Predicate match arms take no parameters (there is no subject to bind)."));
 	    bad = true;
 	};
+	    bool savedArmValue = self->inValueBranch;
+	    SPEC_AUTO String savedArmExpected = spec_construct_string(self->currentYieldExpected);
+	    if ((((!spec_string_equals(expected, spec_string_intern("")))) && ((!(TypeChecker_isVoid(self, expected) /* inst:TypeChecker:isVoid */))))) {
+	    self->inValueBranch = true;
+	    spec_assign((void**)&self->currentYieldExpected, (void*)(expected));
+	};
 	    (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(TypeChecker_inferExpressionType(self, val, spec_string_intern("")) /* inst:TypeChecker:inferExpressionType */); spec_pool_release_to(_pf); _v; }))));
+	    self->inValueBranch = savedArmValue;
+	    spec_assign((void**)&self->currentYieldExpected, (void*)(savedArmExpected));
 	    SPEC_AUTO String valT = spec_construct_string(val->resolvedType);
 	    if (((String_startsWith(valT, spec_string_intern("Function:"))) && (((spec_string_length(valT)) > (9))))) {
 	    SPEC_AUTO String yieldT = spec_string_substring(valT, 9, spec_string_length(valT));
@@ -68092,6 +68111,7 @@ String TypeChecker_checkPredicateArms(TypeChecker* self, Expression* arms) {
 	} else {
 	    anyVoid = true;
 	};
+    if (savedArmExpected) { spec_release((void*)savedArmExpected); savedArmExpected = NULL; }
     if (valT) { spec_release((void*)valT); valT = NULL; }
 	};
     if (key) { spec_release((void*)key); key = NULL; }
@@ -70442,13 +70462,13 @@ String TypeChecker_inferCall(TypeChecker* self, Expression* expr, String expecte
     } } });
 	    if (((matchArms->kind) == (ExpressionKind_MAP__ensure()))) {
 	    if (((matchSubj->kind) != (ExpressionKind_UNKNOWN__ensure()))) {
-	    SPEC_AUTO String matchRes = TypeChecker_checkMatchArms(self, matchSubj, matchArms) /* inst:TypeChecker:checkMatchArms */;
+	    SPEC_AUTO String matchRes = TypeChecker_checkMatchArms(self, matchSubj, matchArms, expected) /* inst:TypeChecker:checkMatchArms */;
 	    spec_assign((void**)&expr->resolvedType, (void*)(matchRes));
 	    _mret_100184 = (String)({ String _ret_val = matchRes; matchRes = NULL; _ret_val; });
     goto _cleanup_100184;
     if (matchRes) { spec_release((void*)matchRes); matchRes = NULL; }
 	} else {
-	    SPEC_AUTO String predRes = TypeChecker_checkPredicateArms(self, matchArms) /* inst:TypeChecker:checkPredicateArms */;
+	    SPEC_AUTO String predRes = TypeChecker_checkPredicateArms(self, matchArms, expected) /* inst:TypeChecker:checkPredicateArms */;
 	    spec_assign((void**)&expr->resolvedType, (void*)(predRes));
 	    _mret_100184 = (String)({ String _ret_val = predRes; predRes = NULL; _ret_val; });
     goto _cleanup_100184;

@@ -802,7 +802,7 @@ Class is TypeChecker{
 	## @param subj: The `on:` subject expression.
 	## @param arms: The literal arm table (a MAP expression).
 	## @return: The unified yield type, or Void.
-	Function of String is checkMatchArms(Expression is subj, Expression is arms){
+	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected){
 		local String is subjT: self:inferExpressionType(expr: subj);
 		# Strip container/generic spellings to the base class name.
 		if({ subjT:contains(needle: ' of ') }, {
@@ -973,7 +973,20 @@ Class is TypeChecker{
 					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
 					bad: true;
 				}, {
+					# A value-context match arms its closures with the
+					# expected yield: the arm's trailing expression IS the
+					# arm's value (the parser's explicit-terminator form),
+					# typed against the match's expected type — not against
+					# the enclosing method's return.
+					local Boolean is savedArmValue: self:inValueBranch;
+					local String is savedArmExpected: self:currentYieldExpected;
+					if({ expected != '' && !self:isVoid(t: expected) }, {
+						self:inValueBranch: true;
+						self:currentYieldExpected: expected;
+					});
 					self:inferExpressionType(expr: val);
+					self:inValueBranch: savedArmValue;
+					self:currentYieldExpected: savedArmExpected;
 					local String is valT: val:resolvedType;
 					if({ valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, {
 						local String is yieldT: valT:substring(start: 9, end: valT:length());
@@ -1050,7 +1063,7 @@ Class is TypeChecker{
 	##
 	## @param arms: The literal arm table (a MAP expression).
 	## @return: The unified arm-yield type ('Void' when none yields).
-	Function of String is checkPredicateArms(Expression is arms){
+	Function of String is checkPredicateArms(Expression is arms, String is expected){
 		local Boolean is hasElse: false;
 		local Boolean is anyValue: false;
 		local Boolean is anyVoid: false;
@@ -1095,7 +1108,18 @@ Class is TypeChecker{
 						self:addError(line: self:currentLine, msg: 'Predicate match arms take no parameters (there is no subject to bind).');
 						bad: true;
 					});
+					# the same value-context arm yield as the subject form:
+					# the arm's trailing expression types against the match's
+					# expected type.
+					local Boolean is savedArmValue: self:inValueBranch;
+					local String is savedArmExpected: self:currentYieldExpected;
+					if({ expected != '' && !self:isVoid(t: expected) }, {
+						self:inValueBranch: true;
+						self:currentYieldExpected: expected;
+					});
 					self:inferExpressionType(expr: val);
+					self:inValueBranch: savedArmValue;
+					self:currentYieldExpected: savedArmExpected;
 					local String is valT: val:resolvedType;
 					if({ valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, {
 						local String is yieldT: valT:substring(start: 9, end: valT:length());
@@ -3045,13 +3069,13 @@ Class is TypeChecker{
 			});
 			if({ matchArms:kind == ExpressionKind:MAP }, {
 				if({ matchSubj:kind != ExpressionKind:UNKNOWN }, {
-					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms);
+					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected);
 					expr:resolvedType: matchRes;
 					return matchRes;
 				}, {
 					# The PREDICATE form: no subject — the keys are the
 					# closures, the first that holds runs its arm.
-					local String is predRes: self:checkPredicateArms(arms: matchArms);
+					local String is predRes: self:checkPredicateArms(arms: matchArms, expected: expected);
 					expr:resolvedType: predRes;
 					return predRes;
 				});
