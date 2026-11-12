@@ -2327,35 +2327,45 @@ static void spec_method_names_collect(SpecArray* out, const SpecClassMeta* cls) 
     }
 }
 
-SpecArray* spec_method_names(const char* cls) {
+SpecArray* spec_method_names(String cls) {
+    /* Sysinternal bindings pass String objects as-is — convert to the
+       C string the registry lookup needs (the stringCopy pattern). */
     SpecArray* out = spec_array_new_object();
-    spec_method_names_collect(out, spec_class_find(cls));
+    spec_method_names_collect(out, spec_class_find(spec_buf_to_cstring(cls)));
     return out;
 }
 
-const char* spec_class_source_file(const char* cls) {
+const char* spec_class_source_file_raw(const char* cls) {
     const SpecClassMeta* m = spec_class_find(cls);
     return (m && m->source_file) ? m->source_file : "";
 }
 
-int spec_has_method(const char* cls, const char* method) {
-    const SpecClassMeta* m = spec_class_find(cls);
-    return spec_class_find_method(m, method) ? 1 : 0;
+/* The wrapper's declared return is String (SpecBuf*) — return an
+   interned copy, never the raw literal: the binding retains its
+   return, and a retain on a non-object header corrupts the pool. */
+String spec_class_source_file(String cls) {
+    const SpecClassMeta* m = spec_class_find(spec_buf_to_cstring(cls));
+    return spec_string_intern((m && m->source_file) ? m->source_file : "");
 }
 
-void* spec_instantiate(const char* cls) {
-    const SpecClassMeta* m = spec_class_find(cls);
+int spec_has_method(String cls, String method) {
+    const SpecClassMeta* m = spec_class_find(spec_buf_to_cstring(cls));
+    return spec_class_find_method(m, spec_buf_to_cstring(method)) ? 1 : 0;
+}
+
+void* spec_instantiate(String cls) {
+    const SpecClassMeta* m = spec_class_find(spec_buf_to_cstring(cls));
     if (!m) spec_panic("Introspection:instantiate — unknown class");
     if (!m->construct) spec_panic("Introspection:instantiate — class init requires arguments");
     return m->construct();
 }
 
-void spec_invoke_void_by_name(void* instance, const char* method) {
+void spec_invoke_void_by_name(void* instance, String method) {
     if (!instance) spec_panic("Introspection:invoke on a null instance");
     const char* tn = *((const char**)instance);
     const SpecClassMeta* m = spec_class_find(tn);
     if (!m) spec_panic("Introspection:invoke — instance of an unregistered class");
-    const SpecMethodMeta* mm = spec_class_find_method(m, method);
+    const SpecMethodMeta* mm = spec_class_find_method(m, spec_buf_to_cstring(method));
     if (!mm) spec_panic("Introspection:invoke — no such method");
     spec_invoke_void_by_meta(instance, mm);
 }

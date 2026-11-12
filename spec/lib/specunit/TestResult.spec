@@ -24,6 +24,11 @@ Class is TestResult{
 	## endTest's computed duration.
 	Int is durationMs: 0;
 
+	## The registry's check count when this test began — endTest
+	## interprets the span [checksBefore, checks:length()) as this
+	## test's assertions.
+	Int is checksBefore: 0;
+
 	## Creates a passing result for the named test.
 	##
 	## @param testName: The "ClassName.methodName" identity.

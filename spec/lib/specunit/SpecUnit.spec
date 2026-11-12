@@ -16,27 +16,20 @@ Class is SpecUnit{
 	namespace: ['specunit'];
 
 	replace Array of Array of String is using: [
-		['specunit', TestResult]
+		['specunit', TestResult],
+		['specunit', CheckRecord]
 	];
 
 	## Every executed test, in execution order.
 	held Array of TestResult is results: [];
 
+	## Every assertion recorded, in execution order (the branch-free
+	## assertion pattern: Assert appends records unconditionally; the
+	## runner interprets the span since each test's checksBefore).
+	held Array of CheckRecord is checks: [];
+
 	## The running test's cell: zero entries between tests, exactly one
 	## while a method executes.
 	held Array of TestResult is currentCell: [];
 
-	## Records one soft-assert failure against the current test. The
-	## method keeps running; the result flips to failed and the message
-	## joins its failure list. The cell is non-empty by invariant: the
-	## runner's beginTest runs before any assert can fire, so no guard —
-	## and no Conditional import — is needed here (held bodies cannot
-	## reach instance-imported surfaces).
-	##
-	## @param msg: The failure message.
-	held Function is addFailure(String is msg){
-		local TestResult is r: SpecUnit:currentCell:get(index: 0);
-		r:passed: false;
-		r:failures:add(item: msg);
-	}
 }

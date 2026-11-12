@@ -160,7 +160,7 @@ Class is Assert{                          # held functions; class-prefixed calls
 }
 ```
 
-- **Discovery:** `classNames()` filtered by the `*Test` suffix and the
+- **Discovery:** `classNames()` filtered by the `Test*` prefix and the
   source-file prefix (the compiling root's directory — same scoping philosophy
   as entry selection).
 - **Lifecycle:** `beforeEach`/`afterEach` via `hasMethod` — JUnit hooks,
@@ -172,8 +172,8 @@ Class is Assert{                          # held functions; class-prefixed calls
   `run_tests.sh` grep parity), failure detail lines beneath the failing test,
   summary box via `Ansi`, exit 1 when failures > 0.
 
-**Conventions (the whole contract):** class name ends `Test`; method name
-starts `test`; lifecycle names `beforeEach`/`afterEach`; test methods are void
+**Conventions (the whole contract):** class name starts `Test`
+(`TestMyFeature`); method name starts `test` (`testFunctionOfFeature`); lifecycle names `beforeEach`/`afterEach`; test methods are void
 with zero parameters. Everything else in a test class is plumbing.
 
 ---
@@ -191,18 +191,20 @@ emission (policy-gated, the `--debug` pattern).
 
 ## 5. Landing plan (two-part discipline — each step converges alone)
 
-- [ ] **A — inert floor helpers.** Prelude: meta typedefs, registry externs,
+- [x] **A — inert floor helpers.** Prelude: meta typedefs, registry externs,
       `static inline` index/lookup/invoke helpers. No consumers; unused
       static inlines are never emitted, so the externs cannot break a link.
-- [ ] **B — registry emission.** Generator: per-class meta tables, construct
+- [x] **B — registry emission.** Generator: per-class meta tables, construct
       thunks, `spec_class_registry` + count definitions, and the name-level
       query functions (self-consistent TU: functions and their data land
       together). No consumers yet.
-- [ ] **C — wrapper + library.** sysinternal declarations, `Introspection`
+- [x] **C — wrapper + library.** sysinternal declarations, `Introspection`
       wrapper methods, the `specunit` package, `--test` flag, suite
       diagnostics (bad test-method signature, init-with-args, no-tests-found).
-- [ ] **D — pilots.** Convert `byte_test.spec` and `loops_test.spec`;
-      `run_tests.sh` compiles them with `--test`.
+- [x] **D — pilots.** Convert `byte_test.spec` (TestByte, six tests);
+      `run_tests.sh` detects specunit suites and compiles them with `--test`;
+      the four --test diagnostics are locked by negative tests n39-n42.
+      loops_test conversion deferred to the sweep (E).
 - [ ] **E — sweep.** Migrate remaining suites in batches; flip the
       test-suite loop to `--test`. Negative tests and demos stay as-is.
 

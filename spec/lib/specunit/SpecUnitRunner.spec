@@ -11,6 +11,7 @@ Class is SpecUnitRunner{
 	replace Array of Array of String is using: [
 		['specunit', SpecUnit],
 		['specunit', TestResult],
+		['specunit', CheckRecord],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Output()],
@@ -19,7 +20,7 @@ Class is SpecUnitRunner{
 		['base', 'sys', as Process()]
 	];
 
-	## Discovers and runs every `*Test` class whose source basename
+	## Discovers and runs every `Test*` class whose source basename
 	## starts with [sourcePrefix] — the compiling root file's basename,
 	## so a suite file's binary runs exactly that file's classes — then
 	## reports and exits (1 when any test failed).
@@ -27,7 +28,7 @@ Class is SpecUnitRunner{
 	## @param sourcePrefix: The root source basename prefix.
 	Function is runAll(String is sourcePrefix){
 		classNames():each(action: local Function(String is cn){
-			if(check: { cn:endsWith(suffix: 'Test') && classSourceFile(className: cn):startsWith(prefix: sourcePrefix) }, then: {
+			if(check: { cn:startsWith(prefix: 'Test') && classSourceFile(className: cn):startsWith(prefix: sourcePrefix) }, then: {
 				self:runClass(className: cn);
 			});
 		});
@@ -64,17 +65,31 @@ Class is SpecUnitRunner{
 	Function is beginTest(String is name){
 		local TestResult is r: TestResult:init(testName: name);
 		r:startedAtMs: clockMs();
+		r:checksBefore: SpecUnit:checks:length();
 		SpecUnit:results:add(item: r);
 		SpecUnit:currentCell:clear();
 		SpecUnit:currentCell:add(item: r);
 	}
 
 	## Closes the current result: stamps the duration.
+	## Interprets this test's assertion span (the CheckRecords since
+	## checksBefore): a failing record flips the result and joins its
+	## failure list. Runs in the runner, where branching is available —
+	## the held-side Assert appended records unconditionally.
 	Function is endTest(){
 		local Array of TestResult is cell: SpecUnit:currentCell;
 		Conditional:if(check: { cell:length() > 0 }, then: {
 			local TestResult is r: cell:get(index: 0);
 			r:durationMs: clockMs() - r:startedAtMs;
+			local Int is idx: r:checksBefore;
+			while({ idx < SpecUnit:checks:length() }, {
+				local CheckRecord is rec: SpecUnit:checks:get(index: idx);
+				idx++;
+				Conditional:if(check: { !rec:ok }, then: {
+					r:passed: false;
+					r:failures:add(item: rec:msg);
+				});
+			});
 		});
 	}
 

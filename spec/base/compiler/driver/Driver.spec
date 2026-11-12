@@ -259,7 +259,7 @@ Class is Driver{
 			# rule's no-init form); test methods are void, zero params.
 			local Int is testClassCount: 0;
 			rootClasses:each(action: local Function(ClassInfo is c){
-				if({ c:name:endsWith(suffix: 'Test') }, {
+				if({ c:name:startsWith(prefix: 'Test') }, {
 					testClassCount: testClassCount + 1;
 					local Boolean is hasInitMember: false;
 					local Boolean is hasZeroArg: false;
@@ -272,7 +272,7 @@ Class is Driver{
 						});
 						if({ m:kind == MemberKind:METHOD && m:name:startsWith(prefix: 'test') && (m:params:length() > 0 || (m:memberType:name != 'Void' && m:memberType:name != 'void' && !(m:memberType:name == 'Function' && m:memberType:params:length() == 0))) }, {
 							Stderr:line("Error: Test method '" . c:name . '.' . m:name . "' must be void with no parameters.");
-														Process:exit(status: 1);
+							Process:exit(status: 1);
 						});
 					});
 					if({ hasInitMember && !hasZeroArg }, {
@@ -283,6 +283,21 @@ Class is Driver{
 			});
 			if({ testClassCount == 0 }, {
 				Stderr:line('Error: No test classes found in ' . inputPath . ' — name test classes with a Test suffix.');
+				Process:exit(status: 1);
+			});
+			# The sugar's contract, checked LAST so the shape diagnostics
+			# above take precedence: the generated main constructs
+			# SpecUnitRunner, so the suite must import the specunit
+			# package — a missing import is a compile-time diagnostic,
+			# never raw backend-C output.
+			local Boolean is runnerLoaded: false;
+			program:classes:each(action: local Function(ClassInfo is c){
+				if({ !runnerLoaded && c:name == 'SpecUnitRunner' }, {
+					runnerLoaded: true;
+				});
+			});
+			if({ !runnerLoaded }, {
+				Stderr:line('Error: --test requires the specunit package; import SpecUnitRunner in the suite file.');
 				Process:exit(status: 1);
 			});
 			# --test: the entry name is unused (main is the SpecUnit

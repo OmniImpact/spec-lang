@@ -44,7 +44,14 @@ bad()	{ echo "  [FAIL] $1"; fail=$((fail + 1)); }
 run_one() {
 	local src="$1" name="$2" key="$3"
 	local bin="$WORK/$key-$name"
-	if ! out="$("$SPEC" --quiet -i "$src" -o "$bin" 2>&1)"; then
+	# SpecUnit suites (importing the specunit package) compile through
+	# the --test harness: same binary contract, SpecUnit report + exit
+	# codes instead of the marker-print convention.
+	local test_flag=""
+	if grep -q "specunit" "$src" 2>/dev/null; then
+		test_flag="--test"
+	fi
+	if ! out="$("$SPEC" $test_flag --quiet -i "$src" -o "$bin" 2>&1)"; then
 		echo "F|$name|compilation failed: $(echo "$out" | head -1)" > "$WORK/$key-$name.res"
 		return
 	fi
@@ -391,6 +398,38 @@ assert_runtime_panic "byte-range-panic" \
 assert_runtime_panic "held-resolver-missing-branch" \
 	"$ROOT/tests/negative/byte_held_resolver_panic_test.spec" \
 	"No held member 'phantom' on HeldPanicRegistry"
+
+# -----------------------------------------------------------------------------
+# 2b. SpecUnit --test diagnostics: the suite-harness contract.
+# -----------------------------------------------------------------------------
+echo "== SpecUnit diagnostics =="
+su_fail() {
+	local name="$1" src="$2" msg="$3"
+	local out
+	out="$("$SPEC" --quiet --test -i "$src" -o "$WORK/$name.bin" 2>&1)"
+	local st=$?
+	if [ $st -eq 0 ]; then
+		bad "$name: compilation succeeded but must fail"
+		return
+	fi
+	if echo "$out" | grep -q "$msg"; then
+		ok "$name (diagnostic present)"
+	else
+		bad "$name: missing diagnostic: $msg"
+	fi
+}
+su_fail "specunit-test-method-signature" \
+	"$ROOT/tests/negative/n39_test_method_signature_negative_test.spec" \
+	"must be void with no parameters"
+su_fail "specunit-test-class-construct" \
+	"$ROOT/tests/negative/n40_test_class_construct_negative_test.spec" \
+	"init requires arguments"
+su_fail "specunit-no-test-classes" \
+	"$ROOT/tests/negative/n41_no_test_classes_negative_test.spec" \
+	"No test classes found in"
+su_fail "specunit-missing-runner" \
+	"$ROOT/tests/negative/n42_test_missing_runner_negative_test.spec" \
+	"import SpecUnitRunner in the suite file"
 
 # -----------------------------------------------------------------------------
 # 2c. Debug emission: --debug compiles with #line + volatile locals and
