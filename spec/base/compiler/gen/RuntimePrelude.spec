@@ -2295,6 +2295,71 @@ static inline void spec_invoke_void_by_meta(void* instance,
     ((void (*)(void*))m->fn)(instance);
 }
 
+/* Name-level registry queries: real functions — the registry definition
+   is emitted by the generator in the same translation unit, so these
+   link. base:sys:Introspection wrapper methods bind here by the naming
+   convention (classNames -> spec_class_names). String values are
+   interned; object-kind arrays retain them harmlessly. */
+SpecArray* spec_class_names(void) {
+    SpecArray* out = spec_array_new_object();
+    for (int i = 0; i < spec_class_registry_count(); i++) {
+        const SpecClassMeta* m = spec_class_registry[i];
+        if (m && m->name) spec_array_add(out, (void*)spec_string_intern(m->name));
+    }
+    return out;
+}
+
+/* Bases first so a child's override supersedes the parent's name in the
+   collected list; duplicates collapse by content compare. */
+static void spec_method_names_collect(SpecArray* out, const SpecClassMeta* cls) {
+    if (!cls) return;
+    for (int b = cls->base_count - 1; b >= 0; b--) {
+        spec_method_names_collect(out, spec_class_find(cls->base_names[b]));
+    }
+    for (int i = 0; i < cls->method_count; i++) {
+        String nm = spec_string_intern(cls->methods[i].name);
+        bool dup = false;
+        for (long long j = 0; j < spec_array_length(out); j++) {
+            String seen = (String)(intptr_t)spec_array_get(out, j);
+            if (seen && spec_string_equals(seen, nm)) { dup = true; break; }
+        }
+        if (!dup) spec_array_add(out, (void*)nm);
+    }
+}
+
+SpecArray* spec_method_names(const char* cls) {
+    SpecArray* out = spec_array_new_object();
+    spec_method_names_collect(out, spec_class_find(cls));
+    return out;
+}
+
+const char* spec_class_source_file(const char* cls) {
+    const SpecClassMeta* m = spec_class_find(cls);
+    return (m && m->source_file) ? m->source_file : "";
+}
+
+int spec_has_method(const char* cls, const char* method) {
+    const SpecClassMeta* m = spec_class_find(cls);
+    return spec_class_find_method(m, method) ? 1 : 0;
+}
+
+void* spec_instantiate(const char* cls) {
+    const SpecClassMeta* m = spec_class_find(cls);
+    if (!m) spec_panic("Introspection:instantiate — unknown class");
+    if (!m->construct) spec_panic("Introspection:instantiate — class init requires arguments");
+    return m->construct();
+}
+
+void spec_invoke_void_by_name(void* instance, const char* method) {
+    if (!instance) spec_panic("Introspection:invoke on a null instance");
+    const char* tn = *((const char**)instance);
+    const SpecClassMeta* m = spec_class_find(tn);
+    if (!m) spec_panic("Introspection:invoke — instance of an unregistered class");
+    const SpecMethodMeta* mm = spec_class_find_method(m, method);
+    if (!mm) spec_panic("Introspection:invoke — no such method");
+    spec_invoke_void_by_meta(instance, mm);
+}
+
 /* Clock & Memory Metrics */
 long long spec_clock_ms(void) {
     struct timespec ts;

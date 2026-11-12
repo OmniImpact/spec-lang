@@ -45,7 +45,9 @@ typedef struct SpecMethodMeta {
 
 typedef struct SpecClassMeta {
     const char* name;
-    const char* source_file;      /* root-file scoping; entry-fix pattern */
+    const char* source_file;      /* BASENAME only — the full path spelling
+                                     varies with the invocation directory and
+                                     would break byte-identical emission */
     const char** base_names;
     int base_count;
     void* (*construct)(void);     /* NULL when init needs arguments */
@@ -214,3 +216,4 @@ Gate every step: `./bootstrap.sh` fixed point, `utilities/run_tests.sh`,
 - Source-position metadata on method entries for richer failure reports
   (`line` is already in the meta; stack-frame walking stays a gdb concern
   until a runner needs it).
+- v1 metadata covers methods with real `Class_method` symbols; floor-bound body-less methods on transparent classes (String.fromCharCode, Array.length — intercepted to spec_* at call sites) are not yet registrable.

@@ -4140,6 +4140,7 @@ Class is CodeGenerator{
 		bufAppendBuf(dst: cSource, src: heldSrc);
 		bufAppendBuf(dst: cSource, src: heldMeta);
 		bufAppendBuf(dst: cSource, src: ctors);
+		bufAppendBuf(dst: cSource, src: self:generateClassRegistry(classes: flattenedClasses));
 		bufAppendBuf(dst: cSource, src: methods);
 		bufAppendBuf(dst: cSource, src: mainFn);
 		return cSource;
@@ -4299,6 +4300,14 @@ Class is CodeGenerator{
 		lineCount: lineCount + Buf:bufCountByte(b: ctors, byteVal: 10);
 		ok: fileAppend(path: filePath, content: ctors);
 		ctors: '';
+		if({ !ok }, { return -1; });
+
+		# The reflection registry: data only in this landing — the wrapper
+		# consumers land later (see SPECUNIT.md).
+		local String is classRegistry: self:generateClassRegistry(classes: flattenedClasses);
+		lineCount: lineCount + Buf:bufCountByte(b: classRegistry, byteVal: 10);
+		ok: fileAppend(path: filePath, content: classRegistry);
+		classRegistry: '';
 		if({ !ok }, { return -1; });
 
 		local Int is mt: 0;
@@ -4493,6 +4502,135 @@ Class is CodeGenerator{
 		});
 		return out;
 	}
+
+	## Emits the runtime class registry — the reflection floor's data
+	## (see SPECUNIT.md): one construct thunk (when zero-argument
+	## constructible), one SpecMethodMeta table, and one SpecClassMeta
+	## per class in class order, then the registry array and the count
+	## function. Construct rules mirror the entry-init rule: no init
+	## member → the synthesized zero-arg init; a declared zero-arg init →
+	## that overload's symbol; anything else → NULL. Transparent and
+	## enum-model classes carry a NULL constructor. Held functions are
+	## excluded (receiver-free symbols; their metadata lands later).
+	## Deterministic: class order and member order are the emission
+	## order, so the fixed point holds.
+	##
+	## @param classes: Flattened program classes.
+	## @return: The registry C text.
+	Function of String is generateClassRegistry(Array of ClassInfo is classes){
+		local String is out: "/* Spec Class Registry (runtime introspection) */\n";
+		local String is registryEntries: '';
+		local Int is classCount: 0;
+		classes:each(action: local Function(ClassInfo is c){
+			# The sysinternal floors are skipped: each base:sys wrapper
+			# coexists with a same-name sysinternal floor class (the
+			# loader's namespace-qualified identity), and registering both
+			# would emit duplicate symbols and collide find-by-name.
+			Conditional:if(check: { self:policy:isSysinternal(cls: c) }, then: {
+				return;
+			});
+			local String is cSym: self:utils:cIdent(name: c:qualifiedName());
+
+			# Construct eligibility — the entry-init rule.
+			local Boolean is constructible: false;
+			local String is initSym: '';
+			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
+				local Boolean is hasInitMember: false;
+				local Int is zeroArgIdx: -1;
+				local Int is initIdx: 0;
+				c:members:each(action: local Function(Member is m){
+					Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == 'init' }, then: {
+						hasInitMember: true;
+						Conditional:if(check: { zeroArgIdx < 0 && m:params:length() == 0 }, then: {
+							zeroArgIdx: initIdx;
+						});
+						initIdx: initIdx + 1;
+					});
+				});
+				Conditional:if(check: { !hasInitMember }, then: {
+					constructible: true;
+					initSym: cSym . '_init';
+				}, else: {
+					Conditional:if(check: { zeroArgIdx >= 0 }, then: {
+						constructible: true;
+						initSym: self:overloadSymbol(className: c:qualifiedName(), methodName: 'init', idx: zeroArgIdx);
+					});
+				});
+			});
+			Conditional:if(check: { constructible }, then: {
+				out: out . 'static void* ' . cSym . "_spec_construct(void) {\n    " . cSym . '* o = ' . cSym . "_new();\n    " . initSym . "(o);\n    return o;\n}\n\n";
+			});
+
+			# Own declared instance methods — registrable only when the
+			# class actually emits its method symbols, mirroring the
+			# prototype gates: emitsPrototypes + non-enum outer, and
+			# body-ful methods on transparent classes (floor-bound
+			# body-less methods like String.fromCharCode / Math.abs
+			# intercept to spec_* floors and have no Class_method symbol).
+			# Held functions are receiver-free symbols with a different
+			# calling shape — also excluded.
+			local Boolean is classEmitsPrototypes: (self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c);
+			local String is methodsC: '';
+			local Int is methodCount: 0;
+			Conditional:if(check: { classEmitsPrototypes }, then: {
+			c:members:each(action: local Function(Member is m){
+				Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) && (!self:policy:isTransparent(c: c) || m:body:length() > 0) }, then: {
+					local Int is flags: 0;
+					Conditional:if(check: { m:memberType:name == self:names:voidName() }, then: {
+						flags: flags + 1;
+					});
+					Conditional:if(check: { m:params:length() == 0 }, then: {
+						flags: flags + 2;
+					});
+					local String is fnSym: self:overloadSymbol(className: c:qualifiedName(), methodName: m:name, idx: self:overloadIndexOf(classDef: c, method: m));
+					methodsC: methodsC . '    { "' . m:name . '", (void*)' . fnSym . ', ' . (flags as String) . ', ' . (m:line as String) . " },\n";
+					methodCount: methodCount + 1;
+				});
+			});
+			});
+
+			local String is methodsRef: 'NULL';
+			Conditional:if(check: { methodCount > 0 }, then: {
+				out: out . 'static const SpecMethodMeta ' . cSym . "_spec_methods[] = {\n" . methodsC . "};\n";
+				methodsRef: cSym . '_spec_methods';
+			});
+
+			local String is basesC: '';
+			c:baseClasses:each(action: local Function(String is b){
+				basesC: basesC . '    "' . b . "\",\n";
+			});
+			local String is basesRef: 'NULL';
+			Conditional:if(check: { c:baseClasses:length() > 0 }, then: {
+				out: out . 'static const char* const ' . cSym . "_spec_bases[] = {\n" . basesC . "};\n";
+				basesRef: cSym . '_spec_bases';
+			});
+
+			local String is ctorRef: 'NULL';
+			Conditional:if(check: { constructible }, then: {
+				ctorRef: cSym . '_spec_construct';
+			});
+			# The source identity is the BASENAME only: the full path
+			# spelling varies with the invocation directory, and the fixed
+			# point requires byte-identical emission regardless of where
+			# the compiler runs from. Basename keeps root-file scoping
+			# deterministic. In-memory programs (compiler-as-library) carry
+			# no source file at all — split yields nothing, so guard.
+			local String is srcBase: '';
+			Conditional:if(check: { c:sourceFile != '' }, then: {
+				local Array of String is srcSegs: c:sourceFile:split(delimiter: '/');
+				Conditional:if(check: { srcSegs:length() > 0 }, then: {
+					srcBase: srcSegs:get(index: srcSegs:length() - 1);
+				});
+			});
+			out: out . 'static const SpecClassMeta ' . cSym . "_spec_meta = {\n    \"" . c:qualifiedName() . "\",\n    \"" . srcBase . "\",\n    " . basesRef . ", " . (c:baseClasses:length() as String) . ",\n    " . ctorRef . ",\n    " . methodsRef . ", " . (methodCount as String) . "\n};\n\n";
+			registryEntries: registryEntries . '    &' . cSym . "_spec_meta,\n";
+			classCount: classCount + 1;
+		});
+		out: out . "const SpecClassMeta* const spec_class_registry[] = {\n" . registryEntries . "    NULL,\n};\n";
+		out: out . 'int spec_class_registry_count(void) { return ' . (classCount as String) . "; }\n\n";
+		return out;
+	}
+
 	## Inlines an anonymous-function callback over an Array as a C loop
 	## (each/filter/count/any/map). These inline to give the
 	## body direct access to enclosing locals; the port keeps that.
