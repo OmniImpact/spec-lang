@@ -405,6 +405,32 @@ else
 	bad "--debug build failed: $dbg_out"
 fi
 
+if command -v gdb >/dev/null 2>&1; then
+	gdb_out="$(gdb -batch \
+		-ex 'set debuginfod enabled off' \
+		-ex "source $ROOT/utilities/spec-gdb.py" \
+		-ex 'break helloworld.spec:19' \
+		-ex 'run' \
+		-ex 'print name' \
+		-ex 'print self->greeting' \
+		-ex 'speclocals' \
+		-ex 'kill' \
+		"$WORK/hello_dbg" 2>&1)"
+	gdb_ok=1
+	echo "$gdb_out" | grep -q 'at .*helloworld.spec:19' || gdb_ok=0
+	echo "$gdb_out" | grep -q '"User"' || gdb_ok=0
+	echo "$gdb_out" | grep -q '"Hello"' || gdb_ok=0
+	echo "$gdb_out" | grep -q '_spec_pool_mark' && gdb_ok=0
+	echo "$gdb_out" | grep -q 'Python Exception' && gdb_ok=0
+	if [ $gdb_ok -eq 1 ]; then
+		ok "--debug gdb smoke: Spec-line breakpoint, string printers, speclocals filter"
+	else
+		bad "--debug gdb smoke failed: $(echo "$gdb_out" | grep -E 'Exception|Error|error' | head -1)"
+	fi
+else
+	ok "--debug gdb smoke skipped (gdb not installed)"
+fi
+
 # -----------------------------------------------------------------------------
 # 3. Compiler exit-code semantics
 # -----------------------------------------------------------------------------

@@ -187,6 +187,32 @@ bin/spec -i examples/helloworld.spec --emit-c helloworld.c
 bin/spec --lint examples/blackjack.spec
 ```
 
+### Debugging
+`--debug` builds with full optimization *and* debugger-friendly metadata: every
+statement carries a `#line` mapping to its Spec source, and locals stay
+inspectable under gdb — with all control flow inlined to native branches.
+
+```bash
+bin/spec --debug -i examples/helloworld.spec -o helloworld_dbg
+gdb ./helloworld_dbg
+(gdb) break helloworld.spec:19   # breakpoint on a Spec line
+(gdb) run
+(gdb) print name                 # "User" — Spec strings render as text
+```
+
+Source the printer helpers for Spec-shaped values and a filtered locals view:
+
+```gdb
+source utilities/spec-gdb.py
+(gdb) print tags        → Array of 2 elements = {"alpha", "beta"}
+(gdb) print args        → Map of 2 entries = {["mode"] = "debug", ...}
+(gdb) speclocals        → only Spec-named locals; runtime internals hidden
+```
+
+Debug builds measure ~87% of release throughput (see
+[README-PERFORMANCE.md](README-PERFORMANCE.md)); release builds (the default)
+emit no debug metadata and remain byte-identical to the bootstrap seed.
+
 ---
 
 ## Standard Library
