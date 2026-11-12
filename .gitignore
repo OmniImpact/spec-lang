@@ -30,3 +30,4 @@
 # ZCode session artifacts
 .zcode/
 gmon.out
+.idea/
