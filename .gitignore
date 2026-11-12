@@ -3,6 +3,9 @@
 /bin/spec-asan
 /spec-asan
 /spec-stage*
+# The specunit test runner, built into bin/ during development (§4a)
+/bin/specunit
+/bin/specunit-asan
 # Demo binaries (built from examples/ on demand)
 /mandelbrot
 /pi

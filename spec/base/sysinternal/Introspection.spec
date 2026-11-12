@@ -61,8 +61,8 @@ Class is Introspection{
 	## @return: The held-field index, -1 when the object is not one.
 	Function of Int is heldIndexOf(Any is obj);
 
-	## --- The class registry (the reflection floor's query surface;
-	## see SPECUNIT.md). Bindings: spec_class_names, spec_method_names,
+	## --- The class registry (the reflection floor's query surface).
+	## Bindings: spec_class_names, spec_method_names,
 	## spec_class_source_file, spec_has_method, spec_instantiate,
 	## spec_invoke_void_by_name. Loud panics on unknown classes and
 	## signature-incompatible invokes --- never silent zeros. ---
@@ -109,7 +109,7 @@ Class is Introspection{
 	## @param methodName: The method name.
 	Function of Void is invokeVoidByName(Any is instance, String is methodName);
 
-	## --- Lattice membership and type identity (see SPECUNIT.md): the
+	## --- Lattice membership and type identity: the
 	## discovery surface for runners and frameworks. Bindings:
 	## spec_type_name, spec_class_extends. ---
 

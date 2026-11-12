@@ -133,4 +133,4 @@ Reference counting with scope-end releases; runtime binaries verified leak-free 
 - `bin/spec -i file.spec -o binary`; `--lint file.spec`; `--emit-c out.c`; `--gc=boehm`; `--quiet`.
 
 - Root classes `String` `Buf` `Dir` `Stringable` `Any` preloaded before user code; implicit `of Any` appended to parentless non-enum classes.
-- Suite: `bash utilities/run_tests.sh` (70 checks); sanitized: `bash utilities/run_sanitized.sh` (the compiler under ASan).
+- Suite: `bin/specunit -s bin/spec -t examples -t tests` (build the runner first: `bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit`); sanitized wave: KNOWLEDGE-SPECDEV.md §4a.

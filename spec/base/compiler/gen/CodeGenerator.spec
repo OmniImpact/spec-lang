@@ -4324,8 +4324,8 @@ Class is CodeGenerator{
 		ctors: '';
 		if({ !ok }, { return -1; });
 
-		# The reflection registry: data only in this landing — the wrapper
-		# consumers land later (see SPECUNIT.md).
+		# The reflection registry: data only — the wrapper consumers
+		# live in base:sys:Introspection.
 		local String is classRegistry: self:generateClassRegistry(classes: flattenedClasses);
 		lineCount: lineCount + Buf:bufCountByte(b: classRegistry, byteVal: 10);
 		ok: fileAppend(path: filePath, content: classRegistry);
@@ -4525,8 +4525,8 @@ Class is CodeGenerator{
 		return out;
 	}
 
-	## Emits the runtime class registry — the reflection floor's data
-	## (see SPECUNIT.md): one construct thunk (when zero-argument
+	## Emits the runtime class registry — the reflection floor's data:
+	## one construct thunk (when zero-argument
 	## constructible), one SpecMethodMeta table, and one SpecClassMeta
 	## per class in class order, then the registry array and the count
 	## function. Construct rules mirror the entry-init rule: no init
@@ -4598,7 +4598,8 @@ Class is CodeGenerator{
 			c:members:each(action: local Function(Member is m){
 				Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) && (!self:policy:isTransparent(c: c) || m:body:length() > 0) }, then: {
 					local Int is flags: 0;
-					# Flag vocabulary (see SPECUNIT.md section 2):
+					# Flag vocabulary (the SpecUnit framework's discovery
+					# contract — see KNOWLEDGE-SPECDEV.md §4a):
 					#   1 — declared Void (the canonical void spelling)
 					#   2 — zero parameters
 					#   4 — declared as the paramless Function type: the

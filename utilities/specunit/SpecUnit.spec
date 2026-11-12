@@ -3,7 +3,7 @@
 #! It is NOT the compiler and has no compiler test mode: it invokes the
 #! spec compiler as a command (one compile thread per test), executes
 #! each produced binary under a timeout, records the verdict, and
-#! deletes the compiled test (see SPECUNIT.md, KNOWLEDGE-SPECDEV.md §4a).
+#! deletes the compiled test (see KNOWLEDGE-SPECDEV.md §4a).
 #!
 #! CLI:
 #!   specunit -s ./bin/spec -t tests/
@@ -36,7 +36,7 @@
 #!
 #! Report ordering: results appear in queue order. dirList order is the
 #! filesystem's; a Spec-level ordering primitive (String:compare over
-#! the Buf floor) is a tracked follow-up in SPECUNIT.md.
+#! the Buf floor) is a tracked follow-up.
 
 Class is SuiteResult{
 	namespace: ['specunit'];

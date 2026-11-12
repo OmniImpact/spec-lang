@@ -1,6 +1,6 @@
 #! Package specunit
 #! The SpecUnit result model: one instance per executed test method,
-#! aggregating soft-assert failures (see SPECUNIT.md).
+#! aggregating soft-assert failures (see KNOWLEDGE-SPECDEV.md §4a).
 
 ## One test method's execution record. A test passes iff its failure
 ## list is empty — assertions record and continue, so a single run

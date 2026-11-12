@@ -46,13 +46,18 @@ bin/spec -i spec/base/compiler/driver/Driver.spec --emit-c bootstrap/spec.c
 ```
 
 ### Continuous Integration & Sanitized Builds
-Every push to `main` and every pull request runs the regression suite on GitHub Actions (`.github/workflows/ci.yml`) in three jobs: a `gcc` bootstrap, a `CC=clang` bootstrap, and an ASan/UBSan-instrumented run. The bootstrap script honors a `$CC` override; `run_tests.sh` accepts a `SPEC=` override to test any compiler binary against the full suite.
+Every push to `main` and every pull request runs the regression suite on GitHub Actions (`.github/workflows/ci.yml`) in three jobs: a `gcc` bootstrap, a `CC=clang` bootstrap, and an ASan/UBSan-instrumented run. The bootstrap script honors a `$CC` override; the suite runner is `specunit` — point it at any compiler binary with `-s` to test that binary against the full suite.
 
 To validate compiler crash-freedom (use-after-free, out-of-bounds, undefined behavior) locally, build an instrumented compiler and run the suite under it:
 ```bash
-./utilities/run_sanitized.sh
+gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+    -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+ASAN_OPTIONS=detect_leaks=0 bin/spec-asan --quiet \
+    -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
+ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
+    bin/specunit-asan -s bin/spec-asan -t examples -t tests
 ```
-Leak detection is off by default: the ARC engine reclaims the compiler's object graph and an `atexit` shutdown reclaims the string ring, but string-lifetime churn (~0.5 MB per self-compile) remains until string ownership lands; opt in with `ASAN_OPTIONS=detect_leaks=1 ./utilities/run_sanitized.sh`.
+Leak detection is off by default: the ARC engine reclaims the compiler's object graph and an `atexit` shutdown reclaims the string ring, but string-lifetime churn (~0.5 MB per self-compile) remains until string ownership lands; opt in with `ASAN_OPTIONS=detect_leaks=1` on the runner invocation.
 
 ### Compiler Exit Codes & Diagnostics
 - **`0`** — success.

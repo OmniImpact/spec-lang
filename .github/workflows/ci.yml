@@ -12,7 +12,9 @@ jobs:
       - name: Bootstrap compiler (gcc)
         run: ./bootstrap.sh
       - name: Regression suite
-        run: bash utilities/run_tests.sh
+        run: |
+          bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+          bin/specunit -s bin/spec -t examples -t tests
 
   clang:
     runs-on: ubuntu-latest
@@ -24,7 +26,9 @@ jobs:
       - name: Bootstrap compiler (clang)
         run: CC=clang ./bootstrap.sh
       - name: Regression suite
-        run: bash utilities/run_tests.sh
+        run: |
+          bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+          bin/specunit -s bin/spec -t examples -t tests
 
   sanitizer:
     runs-on: ubuntu-latest
@@ -36,4 +40,10 @@ jobs:
       - name: Lower ASLR entropy for ASan compatibility
         run: sudo sysctl -w vm.mmap_rnd_bits=28
       - name: Build sanitized compiler and run suite
-        run: bash utilities/run_sanitized.sh
+        run: |
+          gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+              -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+          export ASAN_OPTIONS=detect_leaks=0
+          export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
+          bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
+          bin/specunit-asan -s bin/spec-asan -t examples -t tests

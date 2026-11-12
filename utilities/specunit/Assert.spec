@@ -4,7 +4,8 @@
 #! outcome; the runner interprets records in endTest). Held bodies cannot
 #! branch, so the records are data by design. Held functions do not
 #! overload, so the equality asserts are typed by name — the invoke
-#! ladder's future Any-marshal rung is what unifies them. See SPECUNIT.md.
+#! ladder's future Any-marshal rung is what unifies them.
+#! See KNOWLEDGE-SPECDEV.md §4a.
 
 Class is Assert{
 	namespace: ['specunit'];

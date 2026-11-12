@@ -20,7 +20,8 @@ check, and emit the NEXT generation's sources. Consequences:
   prerequisites first, each converging alone; the semantic change last,
   once the seed can carry it.
 - Every step: converge (`./bootstrap.sh`), gate
-  (`utilities/run_tests.sh`, `utilities/run_sanitized.sh`), commit.
+  (`bin/specunit -s bin/spec -t examples -t tests` — see §4a for
+  building the runner and the sanitized wave), commit.
 
 ### The escape patterns (when the old binary blocks the change)
 
@@ -123,13 +124,21 @@ check, and emit the NEXT generation's sources. Consequences:
 
 - **The runner is specunit** — `utilities/specunit/SpecUnit.spec`, a
   standalone Spec program that is part of the language's ecosystem, not
-  a compiler mode (`specunit -s ./bin/spec -t tests/`). Invoke it
-  through the shim: `utilities/run_tests.sh` (compiles specunit with
-  the compiler under test — override with `SPEC=` — runs it, then adds
-  the repo-specific smoke: the compiler CLI contract and the bootstrap
-  fixed-point freshness). The compiler stays lean: it has no test mode
-  and no knowledge of the framework; iterating on specunit or the
-  specunit package never rebuilds the compiler.
+  a compiler mode. The compiler stays lean: it has no test mode and no
+  knowledge of the framework; iterating on specunit or the specunit
+  package never rebuilds the compiler.
+- **Building and invoking the runner.** While developing the test
+  runner, build specunit into `bin/` so it stays handy for running the
+  project's tests:
+
+  ```
+  bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+  bin/specunit -s bin/spec -t examples -t tests
+  ```
+
+  `-s` is the compiler executable the tests are compiled with (default
+  `bin/spec`); `-t` is a test directory, repeatable or comma-separated,
+  scanned recursively (dot directories skipped). Exit 1 on any failure.
 - **The framework lives in `utilities/specunit/`** (moved out of the
   compiler's `spec/lib` tree): `SpecUnitTest` (the base — and the suite
   ENTRY: its argv-Map init constructs the runner, its empty init keeps
@@ -161,10 +170,11 @@ check, and emit the NEXT generation's sources. Consequences:
   suites (`tests/`), the compiler-as-library suites
   (`tests/compiler/`, marked `suite`), and the negative fixtures
   (`tests/negative/` — compile-must-fail with `expect:` diagnostics,
-  plus the run-fail form). The exit-code fixtures and the fixed-point
-  check stay in the shim's smoke tail (emit at the DEFAULT thread
-  count — the fixed point is thread-count-sensitive in symbol
-  numbering, so never re-baseline from a `--threads N` emission).
+  plus the run-fail form). The bootstrap fixed-point freshness is the
+  bootstrap gate's job (`./bootstrap.sh` verifies the fixed point
+  byte-for-byte; emit at the DEFAULT thread count — the fixed point is
+  thread-count-sensitive in symbol numbering, so never re-baseline
+  from a `--threads N` emission).
 - **SpecUnit suites**: a suite file named exactly like its class
   (`TestByte.spec` defines `TestByte`), class starts with `Test`,
   methods start with `test`, void with zero parameters, constructed by
@@ -175,10 +185,39 @@ check, and emit the NEXT generation's sources. Consequences:
   `beforeEach`/`afterEach` by convention. The suite binary prints the
   report table and exits 1 on any failure (the CI contract); the
   runner gates on the exit code plus the absence of `[FAIL]`.
-- **Sanitized gate**: `utilities/run_sanitized.sh` — the same shim with
-  `SPEC=bin/spec-asan`: specunit, every suite compile, and every
-  produced binary run under ASan+UBSan; run it after any
-  compiler-internal change.
+- **The framework and the floor**: the framework lives in
+  `utilities/specunit/` (file name = class name): `SpecUnitTest` (the
+  base and the suite entry — argv-Map init runs the runner, empty init
+  keeps test classes instantiate-able), `SpecUnitRunner` (discovery by
+  inheritance over the reflection registry, fresh instance per test,
+  the report), `SpecUnitState` (the held assertion registry),
+  `Assert`, `TestResult`, `CheckRecord`. Beneath it the reflection
+  floor (`spec_class_registry` + the `base:sys:Introspection`
+  wrappers) is deliberately domain-neutral — class/method metadata
+  only, never test concepts. The meta flag vocabulary: 1 = declared
+  Void, 2 = zero parameters, 4 = paramless-Function (the empty
+  function, a distinct non-void type); emission details live with the
+  registry generator (CodeGenerator, the class-registry emission).
+- **Sanitized gate**: build an ASan+UBSan compiler from the seed, then
+  build and run the runner with it — specunit, every suite compile,
+  and every produced binary run under the sanitizer; run it after any
+  compiler-internal change:
+
+  ```
+  gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+      -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+  ASAN_OPTIONS=detect_leaks=0 bin/spec-asan --quiet \
+      -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
+  ASAN_OPTIONS=detect_leaks=0 \
+  UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 \
+      bin/specunit-asan -s bin/spec-asan -t examples -t tests
+  ```
+
+  Leak detection is OFF by default: strings are refcounted and
+  interned, and the direct-leak residue after a self-compile is ~1.18
+  MB / ~86k allocs, dominated by fresh-owned values consumed by
+  retaining sites. The gate covers the dangerous classes:
+  use-after-free, out-of-bounds, double-free, fatal UB.
 - **Cross-language benchmarks**: `utilities/run_benchmarks.sh` (see
   README-PERFORMANCE.md).
 

@@ -1,5 +1,5 @@
-#! SpecUnit pilot (converted from the marker-print suite; see
-#! SPECUNIT.md): Byte semantics — cast round-trips, boundaries, and
+#! SpecUnit pilot (converted from the marker-print suite): Byte
+#! semantics — cast round-trips, boundaries, and
 #! the Byte -> Int -> String rendering chain.
 
 Class of SpecUnitTest is TestByte{

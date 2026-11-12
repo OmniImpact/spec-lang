@@ -1,5 +1,5 @@
 #! The first SpecUnit tests of the type system's void/Function semantics
-#! (see SPECUNIT.md section 5.1): Void is the one canonical void spelling;
+#! (the void-vocabulary standardization): Void is the one canonical void spelling;
 #! the paramless Function type is the EMPTY FUNCTION — a distinct, valid,
 #! non-void return type whose C emission is void. The runner must discover
 #! and invoke test methods of BOTH declaration forms; the assertions

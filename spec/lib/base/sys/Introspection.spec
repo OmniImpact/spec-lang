@@ -77,7 +77,7 @@ Class is Introspection{
 		return base:sysinternal:Introspection:heldIndexOf(obj: obj);
 	}
 
-	## --- The class registry (see SPECUNIT.md). The floor's panics are
+	## --- The class registry. The floor's panics are
 	## the contract: unknown classes and signature-incompatible invokes
 	## are loud, never silent. ---
 
@@ -148,7 +148,7 @@ Class is Introspection{
 		base:sysinternal:Introspection:invokeVoidByName(instance: instance, methodName: methodName);
 	}
 
-	## --- Lattice membership and type identity (see SPECUNIT.md). ---
+	## --- Lattice membership and type identity. ---
 
 	## The runtime class name of [obj]'s own class.
 	##

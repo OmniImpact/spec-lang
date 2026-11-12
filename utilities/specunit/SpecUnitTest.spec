@@ -3,7 +3,7 @@
 #! A suite's test class extends this base (`Class of SpecUnitTest is
 #! TestByte`); the runner discovers every registered class whose lattice
 #! contains the base, so nothing outside the framework's hierarchy is
-#! ever executed (see SPECUNIT.md).
+#! ever executed (see KNOWLEDGE-SPECDEV.md §4a).
 #!
 #! The base is also the suite ENTRY: the argv-Map init the generated
 #! main prefers constructs the runner and runs this file's test classes,

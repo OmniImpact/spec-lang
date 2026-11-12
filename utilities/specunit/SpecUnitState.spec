@@ -1,6 +1,6 @@
 #! Package specunit
 #! The SpecUnitState registry singleton — the mutable state Assert writes
-#! and the runner reads (see SPECUNIT.md). State rides held ARRAY fields:
+#! and the runner reads (see KNOWLEDGE-SPECDEV.md §4a). State rides held ARRAY fields:
 #! the held field reference is immutable (the once-guard singleton), the
 #! contained collection is not — addFailure mutates the current test's
 #! result through the current-cell array.

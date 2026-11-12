@@ -4,7 +4,7 @@
 #! hooks by convention, and the report table. An INSTANCE class — the
 #! suite entry (SpecUnitTest's argv-Map init) constructs it and calls
 #! runAll; the mutable state lives on the SpecUnitState registry
-#! singleton (see SPECUNIT.md).
+#! singleton (see KNOWLEDGE-SPECDEV.md §4a).
 
 Class is SpecUnitRunner{
 	namespace: ['specunit'];
