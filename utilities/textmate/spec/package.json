@@ -1,0 +1,29 @@
+{
+  "name": "spec-syntax",
+  "displayName": "Spec Language",
+  "description": "Syntax highlighting for the Spec programming language (*.spec)",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.0.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "spec",
+        "aliases": ["Spec", "spec"],
+        "extensions": [".spec", ".SPEC"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "spec",
+        "scopeName": "source.spec",
+        "path": "./syntaxes/spec.tmLanguage.json"
+      }
+    ]
+  }
+}

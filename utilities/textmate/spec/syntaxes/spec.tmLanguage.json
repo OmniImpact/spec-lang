@@ -1,0 +1,237 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Spec",
+  "scopeName": "source.spec",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#builtins" },
+    { "include": "#method-calls" },
+    { "include": "#named-arguments" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.documentation.spec",
+          "match": "##.*$"
+        },
+        {
+          "name": "comment.line.shebang.spec",
+          "match": "#!.*$"
+        },
+        {
+          "name": "comment.line.number-sign.spec",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.triple.single.spec",
+          "begin": "'''",
+          "end": "'''",
+          "patterns": []
+        },
+        {
+          "name": "string.interpolated.spec",
+          "begin": "`",
+          "end": "`",
+          "patterns": [
+            {
+              "name": "meta.interpolation.spec",
+              "begin": "\\$\\{",
+              "beginCaptures": {
+                "0": { "name": "punctuation.section.embedded.begin.spec" }
+              },
+              "end": "\\}",
+              "endCaptures": {
+                "0": { "name": "punctuation.section.embedded.end.spec" }
+              },
+              "patterns": [
+                { "include": "$self" }
+              ]
+            },
+            {
+              "name": "constant.character.escape.spec",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.spec",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.spec",
+              "match": "\\\\[nrt\\\\\"0]"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.spec",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.spec",
+              "match": "\\\\[\\\\']"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.spec",
+          "match": "\\b0x[0-9a-fA-F]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.spec",
+          "match": "\\b0b[01]+\\b"
+        },
+        {
+          "name": "constant.numeric.octal.spec",
+          "match": "\\b0o[0-7]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.spec",
+          "match": "\\b[0-9]+\\.[0-9]+([eE][+-]?[0-9]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.spec",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.declaration.class.spec",
+          "match": "\\b(Class|Enum)\\b"
+        },
+        {
+          "name": "storage.modifier.spec",
+          "match": "\\b(local|contained|replace|merge|held)\\b"
+        },
+        {
+          "name": "keyword.control.spec",
+          "match": "\\b(return)\\b"
+        },
+        {
+          "name": "keyword.other.spec",
+          "match": "\\b(is|as|of|to)\\b"
+        },
+        {
+          "name": "variable.language.self.spec",
+          "match": "\\b(self)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.spec",
+          "match": "\\b(String|Int|Byte|Float|Boolean|Array|List|Map|Any|Function)\\b"
+        },
+        {
+          "name": "entity.name.type.class.spec",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.spec",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.control.spec",
+          "match": "\\b(while|until|repeat|loop|run|each|map|fold|filter)\\b"
+        },
+        {
+          "name": "support.class.library.spec",
+          "match": "\\b(Conditional|Loops|Output|Input|Stderr|File|Process|Math|Buf|Dir|Ansi|Parallel|Error|Reflection)\\b"
+        }
+      ]
+    },
+    "method-calls": {
+      "patterns": [
+        {
+          "name": "entity.name.function.call.spec",
+          "match": "(?<=:)[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()"
+        }
+      ]
+    },
+    "named-arguments": {
+      "patterns": [
+        {
+          "name": "variable.parameter.named.spec",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*:)"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.spec",
+          "match": ":="
+        },
+        {
+          "name": "keyword.operator.comparison.spec",
+          "match": "(==|!=|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.logical.spec",
+          "match": "(&&|\\|\\||!)"
+        },
+        {
+          "name": "keyword.operator.bitwise.spec",
+          "match": "(&|\\||\\^|~)"
+        },
+        {
+          "name": "keyword.operator.arithmetic.spec",
+          "match": "(\\+|-|\\*|/|%)"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.colon.spec",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.separator.dot.spec",
+          "match": "\\."
+        },
+        {
+          "name": "punctuation.separator.comma.spec",
+          "match": ","
+        },
+        {
+          "name": "punctuation.terminator.statement.spec",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.section.brackets.spec",
+          "match": "[\\[\\]\\{\\}\\(\\)]"
+        }
+      ]
+    }
+  }
+}
