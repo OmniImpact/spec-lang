@@ -1,12 +1,5 @@
-#! SpecUnit suite for the speclint utility: the first regression net
-#! the lint rules have ever had. Drives the Linter directly — lex +
-#! parse + lint, the exact path bin/speclint runs — over inline
-#! fixtures, asserting each rule fires and that clean fixtures stay
-#! clean. The indentation rules read raw text; the AST idioms (E10
-#! loop construction, getString-default, random) need parseable Spec,
-#! so those fixtures are full minimal classes. The single-quoted
-#! fixture strings keep the tab/space bytes literal; the double-quoted
-#! expected-message strings carry the escapes.
+#! SpecUnit suite for the speclint utility: regression net for
+#! the modular lint rules, reflection discovery, and standards walk.
 
 Class of SpecUnitTest is TestSpeclint{
 
@@ -16,6 +9,7 @@ Class of SpecUnitTest is TestSpeclint{
 		['specunit', as Assert()],
 		['speclint', Linter],
 		['speclint', LintIssue],
+		['speclint', LintRule],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'ast', ProgramNode]
@@ -68,34 +62,21 @@ Class of SpecUnitTest is TestSpeclint{
 	}
 
 	Function is testClosingBraceDepthWarns(){
-		# The rule validates any line whose first non-whitespace masked
-		# character is '}' — a column-0 '}' while the block opened one
-		# tab deeper is the misalignment shape it detects.
 		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n}\n}\n");
 		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: true));
 	}
 
 	Function is testTabIndentedCloserWarns(){
-		# Tab-indented closers are validated too (the pre-split rule
-		# only ever saw column-0 closers): three tabs where the block
-		# opened at one is a misalignment.
 		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\t\t}\n}\n");
 		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: true));
 	}
 
 	Function is testElseContinuationIsAccepted(){
-		# A `}, else: {` continuation closes and reopens at the if-line's
-		# own indent — the openTabs stack (openers' indents, not a depth
-		# delta) accepts it, and the reopened block's closer aligns too.
 		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\titems:each(action: local Function(X is r){\n\t\t\tif(check: { r:p }, then: {\n\t\t\t\ta: a + 1;\n\t\t\t}, else: {\n\t\t\t\tb: b + 1;\n\t\t\t});\n\t\t});\n\t}\n}\n");
 		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
 	}
 
 	Function is testMultilineStringDataIsSkipped(){
-		# Triple-quoted raw strings are DATA (RuntimePrelude.spec holds
-		# the whole C runtime in one): lines inside are skipped — space
-		# indents, column-0 braces and all — the brace stack never sees
-		# them, and the scanner resynchronizes at the closing '''.
 		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction of String is c(){\n\t\treturn '''select *\n    from t\n{\n}\n\t''';\n\t}\n}\n");
 		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
 	}
@@ -113,8 +94,31 @@ Class of SpecUnitTest is TestSpeclint{
 	}
 
 	Function is testLoopConstructionWarns(){
-		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\tLoops:repeat(count: 3, worker: {\n\t\t\tlocal Widget is w: Widget:init();\n\t\t});\n\t}\n}\n");
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\twhile(evaluate: { true }, iteration: {\n\t\t\tlocal Widget is w: Widget:init();\n\t\t});\n\t}\n}\n");
 		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: true));
 		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: false));
+	}
+
+	Function is testEncourageAsConditionalNotice(){
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\tConditional:if(check: { true }, then: {\n\t\t\tlocal Int is x: 1;\n\t\t});\n\t}\n}\n");
+		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
+		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: false));
+	}
+
+	Function is testEncourageAsLoopsNotice(){
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\tLoops:while(evaluate: { true }, iterate: {\n\t\t\tlocal Int is x: 1;\n\t\t});\n\t}\n}\n");
+		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
+		Assert:areEqualInt(1, self:countKind(issues: issues, wantWarnings: false));
+	}
+
+	Function is testBareIfStaysClean(){
+		local Array of LintIssue is issues: self:lintSource(src: "Class is F{\n\tFunction is go(){\n\t\tif(check: { true }, then: {\n\t\t\tlocal Int is x: 1;\n\t\t});\n\t}\n}\n");
+		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: true));
+		Assert:areEqualInt(0, self:countKind(issues: issues, wantWarnings: false));
+	}
+
+	Function is testModularRuleDiscovery(){
+		local Linter is linter: Linter:init();
+		Assert:isTrue(linter:rules:length() >= 8);
 	}
 }

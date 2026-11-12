@@ -1,9 +1,7 @@
 #! Package speclint
-#! Pure-Spec code linter enforcing tab-based indentation, formatting,
-#! and AST idioms, plus the Phase 0.5 worklist audit.
+#! Pure-Spec modular code linter with reflection-based rule discovery
+#! and Phase 0.5 instance-model audit.
 
-## Pure-Spec code linter enforcing tab-based indentation, formatting,
-## and AST idioms, plus the Phase 0.5 worklist audit.
 Class is Linter{
 	namespace: ['speclint'];
 
@@ -17,6 +15,7 @@ Class is Linter{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'lexer', Keyword],
 		['base', 'sys', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
@@ -24,8 +23,23 @@ Class is Linter{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Output()],
 		['speclint', LintIssue],
+		['speclint', LintRule],
+		['speclint', SourceMasker],
+		['speclint', 'rules'],
+		['speclint', 'rules', TabIndentationRule],
+		['speclint', 'rules', TrailingWhitespaceRule],
+		['speclint', 'rules', BraceAlignmentRule],
+		['speclint', 'rules', LoopConstructionRule],
+		['speclint', 'rules', GetStringDefaultRule],
+		['speclint', 'rules', MathRandomRule],
+		['speclint', 'rules', EncourageAsConditionalRule],
+		['speclint', 'rules', EncourageAsLoopsRule],
+		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()]
 	];
+
+	## Registered lint rules discovered via reflection or fallback.
+	Array of LintRule is rules: [];
 
 	## Audit name sets (Phase 0.5): every enum and class name in
 	## the loaded program, nested classes included.
@@ -39,30 +53,11 @@ Class is Linter{
 	## restore around nested-class recursion).
 	local ClassInfo is auditOwner: ClassInfo:init(name: '', baseClass: '', members: []);
 
-	## Depth of While/Loop callback bodies the standards walk is inside
-	## (E10: construction inside a loop body is a hoist hint).
-	local Int is lintLoopDepth: 0;
-
-	## Quote state carried across lines by [maskLineStateful]: '' outside
-	## any string, or the active quote — `'` a raw string, `"` an escaped
-	## string, `'''` a raw multi-line string. Lines that START inside a
-	## string are string DATA (the C runtime held in RuntimePrelude.spec
-	## is the mass case), not Spec style, and are skipped.
-	local String is lintQuote: '';
-
-	## The tab indent of the line that opened each open brace, LIFO — the
-	## closing-brace rule's expectation: a block's closer sits at the
-	## indent of the line that opened it. A depth delta cannot express
-	## this (an if-line opens two braces but one indent level), and a
-	## `}, {` continuation closes and reopens at the statement's own
-	## indent, which the stack records naturally.
-	local Array of Int is openTabs: [];
-
 	## Loaded class nodes by name, for the inherited-import walk.
 	local Map of String to ClassInfo is auditClassNodes: Map:init();
+	local Array of ClassInfo is auditClassList: [];
 
-	## Lowercase floor singletons routed by name (R1-R3 removes
-	## them, so their call sites belong on the worklist).
+	## Lowercase floor singletons routed by name.
 	local Array of String is floorAliases: [];
 
 	## Type-level exempt receivers (X3): primitives, base
@@ -70,378 +65,49 @@ Class is Linter{
 	local Array of String is exemptClasses: [];
 
 	replace Function is init(){
+		self:rules: [];
 		self:auditEnums: Map:init();
 		self:auditClasses: Map:init();
 		self:auditClassNodes: Map:init();
+		self:auditClassList: [];
 		self:auditIssues: [];
-		self:lintLoopDepth: 0;
-		self:lintQuote: '';
-		self:openTabs: [];
 		self:floorAliases: [];
 		self:exemptClasses: ['Int', 'Byte', 'Float', 'Boolean', 'String', 'Any', 'Hex', 'Bin', 'Oct', 'Array', 'Map', 'List'];
+		self:discoverRules();
 	}
 
-	## Inspects indentation whitespace line-by-line.
-	##
-	## Checks: leading spaces after tabs, trailing whitespace, and closing-brace
-	## alignment (string literals — single-line and multi-line — and comments
-	## are masked so brace characters inside them are ignored; lines that
-	## START inside a multi-line string are string data and skipped whole).
-	## A closing brace — column-0 or tab-indented — must sit at the tab
-	## indent of the line that opened its block; `}, {` continuations
-	## close and reopen at that same indent, which the [openTabs] stack
-	## records naturally.
-	##
-	## @param source: Raw source code string.
-	## @param issues: Destination issues array.
-	Function is lintIndentation(String is source, Array of LintIssue is issues){
-		local Int is lineNum: 0;
-		local Int is stmtTabs: 0;
-		local Boolean is prevOpen: false;
-		self:lintQuote: '';
-		self:openTabs: [];
-		# Own the lines array: a fresh call result rides the claim pool,
-		# and this loop's bodies claim repeatedly — 32 claims would evict it
-		# mid-iteration. A var-decl init is a consumption position.
-		local Array of String is srcLines: source:lines();
-		srcLines:each(action: local Function(String is line){
-			lineNum: lineNum + 1;
-			# A line that STARTS inside a multi-line string is string data
-			# — advance the quote scanner, check nothing.
-			if({ self:lintQuote != '' }, {
-				self:maskLineStateful(line: line);
-				prevOpen: false;
-				return;
+	## Discovers rules via reflection over the class registry, falling
+	## back to explicit registration if reflection finds none.
+	Function is discoverRules(){
+		self:rules: [];
+		classNames():each(action: local Function(String is cn){
+			if({ extendsClass(className: cn, baseName: 'LintRule') && cn != 'LintRule' }, {
+				local LintRule is rule: instantiate(className: cn) as LintRule;
+				self:rules:add(item: rule);
 			});
-			local String is masked: self:maskLineStateful(line: line);
-			local Int is tabs: line:countLeading(search: "\t");
-			local String is rest: line:substring(start: tabs, end: line:length());
-			local Int is spaces: rest:countLeading(search: ' ');
-			if({ spaces > 0 }, {
-				local String is msg: 'Space-based indentation detected (' . (spaces as String) . ' space(s)). Spec standard requires tabs.';
-				issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
-			});
-			# Trailing whitespace is only judgeable when the line closes
-			# every string it opens — a line ending inside a string ends
-			# in string content.
-			if({ self:lintQuote == '' }, {
-				if({ line:length() > 0 && (line:charAt(index: line:length() - 1, default: ' ') == ' ' || line:charAt(index: line:length() - 1, default: ' ') == "\t") }, {
-					issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: 'Trailing whitespace detected.'));
-				});
-			});
-
-			# Leading-trim the masked line once: its first non-whitespace
-			# character classifies the line and drives the brace stack.
-			local String is trimmed: masked;
-			local Boolean is trimming: true;
-			while({ trimming && trimmed:length() > 0 }, {
-				local String is first: trimmed:charAt(index: 0, default: '');
-				if({ first == ' ' || first == "\t" }, {
-					trimmed: trimmed:substring(start: 1, end: trimmed:length());
-				}, {
-					trimming: false;
-				});
-			});
-			local String is firstCh: trimmed:charAt(index: 0, default: '');
-			# The indent a brace opened on this line belongs to: a line
-			# continuing the previous statement (leading operator, or a
-			# predecessor that ended mid-expression — a trailing operator
-			# or chain dot; NOT a comma, which closes every match-table
-			# entry) carries the statement's own indent, so a `then: {`
-			# opened on a continued condition records the if-line's tabs.
-			# A `}, {` seam records its own line's tabs; closer lines
-			# update nothing.
-			local Int is pushTabs: tabs;
-			if({ trimmed:length() > 0 }, {
-				if({ firstCh == '&' || firstCh == '|' || firstCh == '.' || firstCh == '?' || prevOpen }, {
-					pushTabs: stmtTabs;
-				}, {
-					if({ firstCh != '}' }, {
-						stmtTabs: tabs;
-					});
-				});
-			});
-			# Closing-brace alignment: any line whose first non-whitespace
-			# masked character is '}' — column-0 and tab-indented closers
-			# alike — must sit at the opener's recorded indent.
-			if({ trimmed:length() > 0 && firstCh == '}' }, {
-				local Int is openCount: self:openTabs:length();
-				if({ openCount > 0 }, {
-					local Int is expectedTabs: (self:openTabs:get(index: openCount - 1)) as Int;
-					if({ tabs != expectedTabs }, {
-						local String is msg: 'Closing brace indented at ' . (tabs as String) . ' tab(s); the block opened at ' . (expectedTabs as String) . ' tab(s).';
-						issues:add(item: LintIssue:init(line: lineNum, isWarning: true, message: msg));
-					});
-				});
-			});
-			local Int is ci: 0;
-			while({ ci < masked:length() }, {
-				local String is ch: masked:charAt(index: ci, default: '');
-				match(on: ch, when: [
-					'{': { self:openTabs:add(item: pushTabs); },
-					'}': {
-						# A stray closer with nothing open is itself a
-						# misalignment; keep the stack from underflowing.
-						if({ self:openTabs:length() > 0 }, {
-							self:openTabs:removeAt(index: self:openTabs:length() - 1, default: 0);
-						});
-					}
-				]);
-				ci: ci + 1;
-			});
-			# Whether the NEXT line continues this one: the masked line
-			# ends mid-expression (trailing operator or chain dot).
-			local String is tail: masked;
-			local Boolean is tTrimming: true;
-			while({ tTrimming && tail:length() > 0 }, {
-				local String is last: tail:charAt(index: tail:length() - 1, default: '');
-				if({ last == ' ' || last == "\t" }, {
-					tail: tail:substring(start: 0, end: tail:length() - 1);
-				}, {
-					tTrimming: false;
-				});
-			});
-			prevOpen: tail:endsWith(suffix: '&&') || tail:endsWith(suffix: '||') || tail:endsWith(suffix: '&') || tail:endsWith(suffix: '|') || tail:endsWith(suffix: '+') || tail:endsWith(suffix: '-') || tail:endsWith(suffix: '*') || tail:endsWith(suffix: '.') || tail:endsWith(suffix: '?');
+		});
+		if({ self:rules:length() == 0 }, {
+			self:registerDefaultRules();
 		});
 	}
 
-	## Returns a line with string contents and comments replaced by spaces so
-	## that brace counting only sees structural characters. Quote state
-	## carries across lines through [lintQuote]: raw `'...'`, escaped
-	## `"..."`, and raw multi-line `'''...'''` all mask — the mass case is
-	## the C runtime held in RuntimePrelude.spec's triple-quoted string,
-	## whose lines are DATA, not Spec style. Backslashes escape only
-	## inside double quotes (the raw families keep bytes verbatim, per
-	## the lexer's two-family rule).
-	##
-	## @param line: Raw source line.
-	## @return: Masked line of identical length.
-	Function of String is maskLineStateful(String is line){
-		local String is out: '';
-		local Int is i: 0;
-		while({ i < line:length() }, {
-			local String is ch: line:charAt(index: i, default: '');
-			if({ self:lintQuote != '' }, {
-				if({ self:lintQuote == "'''" && self:matchTriple(line: line, index: i) }, {
-					self:lintQuote: '';
-					out: out . '   ';
-					i: i + 2;
-				}, {
-					# The lexer's readString skips the char after a
-					# backslash in BOTH quote families (a raw '\''
-					# is a quoted quote); the verbatim triple does not.
-					if({ self:lintQuote != "'''" && ch == "\\" }, {
-						out: out . '  ';
-						i: i + 1;
-					}, {
-						if({ ch == self:lintQuote }, {
-							self:lintQuote: '';
-							out: out . ' ';
-						}, {
-							out: out . ' ';
-						});
-					});
-				});
-			}, {
-				match(on: ch, when: [
-					['"', '\'']: {
-						if({ self:matchTriple(line: line, index: i) }, {
-							self:lintQuote: "'''";
-							out: out . '   ';
-							i: i + 2;
-						}, {
-							self:lintQuote: ch;
-							out: out . ' ';
-						});
-					},
-					'#': {
-						i: line:length();
-					},
-					else: {
-						out: out . ch;
-					}
-				]);
-			});
-			i: i + 1;
-		});
-		return out;
+	## Explicit fallback registration of default rules.
+	Function is registerDefaultRules(){
+		self:rules:add(item: TabIndentationRule:init());
+		self:rules:add(item: TrailingWhitespaceRule:init());
+		self:rules:add(item: BraceAlignmentRule:init());
+		self:rules:add(item: LoopConstructionRule:init());
+		self:rules:add(item: GetStringDefaultRule:init());
+		self:rules:add(item: MathRandomRule:init());
+		self:rules:add(item: EncourageAsConditionalRule:init());
+		self:rules:add(item: EncourageAsLoopsRule:init());
 	}
 
-	## True when [index] starts a `'''` sequence in [line] — the raw
-	## multi-line string delimiter the stateful masker opens and closes on.
+	## Adds a custom rule to the linter.
 	##
-	## @param line: The line being scanned.
-	## @param index: The candidate index.
-	## @return: true when chars [index..index+2] are all single quotes.
-	Function of Boolean is matchTriple(String is line, Int is index){
-		return index + 2 < line:length()
-			&& line:charAt(index: index, default: '') == '\''
-			&& line:charAt(index: index + 1, default: '') == '\''
-			&& line:charAt(index: index + 2, default: '') == '\'';
-	}
-
-	## Inspects an expression node for optional arguments and idioms.
-	##
-	## @param expr: [Expression] AST node.
-	## @param issues: Destination issues array.
-	Function is lintExpression(Expression is expr, Array of LintIssue is issues){
-		local ExpressionKind is kind: expr:kind;
-
-		match(on: kind, when: [
-			ExpressionKind:CALL: {
-				local String is method: expr:methodName;
-				local Array of NamedArg is args: expr:methodArgs;
-
-				# E10: a constructor call inside a While/Loop
-				# callback body allocates per iteration — hoisting hint.
-				if({ method == 'init' && self:lintLoopDepth > 0 && self:isClassSpell(target: expr:methodTarget) }, {
-					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
-				});
-
-				match(on: method, when: [
-					'getString': {
-						local Boolean is hasDefault: false;
-						args:each(action: local Function(NamedArg is arg){
-							if({ arg:name == 'default' }, {
-								hasDefault: true;
-							});
-						});
-						if({ hasDefault }, {
-							issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
-						});
-					},
-					'random': {
-						local String is msg: 'Method call \'math:random\' provides optional min/max range parameters.';
-						if({ args:length() == 0 }, {
-							msg: 'Method call \'math:random\' omits optional min/max parameters (using default [0.0, 1.0)).';
-						});
-						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
-					}
-				]);
-
-				self:lintExpression(expr: expr:methodTarget, issues: issues);
-				local Boolean is isLoopDriver: self:isLoopSpell(target: expr:methodTarget);
-				args:each(action: local Function(NamedArg is arg){
-					if({ isLoopDriver && arg:value:kind == ExpressionKind:ANON_FN }, {
-						local Int is savedDepth: self:lintLoopDepth;
-						self:lintLoopDepth: self:lintLoopDepth + 1;
-						self:lintExpression(expr: arg:value, issues: issues);
-						self:lintLoopDepth: savedDepth;
-					}, {
-						self:lintExpression(expr: arg:value, issues: issues);
-					});
-				});
-			},
-			ExpressionKind:BINARY: {
-				self:lintExpression(expr: expr:leftExpr, issues: issues);
-				self:lintExpression(expr: expr:rightExpr, issues: issues);
-			},
-			ExpressionKind:UNARY: {
-				self:lintExpression(expr: expr:unaryExpr, issues: issues);
-			},
-			ExpressionKind:ARRAY: {
-				expr:arrayItems:each(action: local Function(Expression is item){
-					self:lintExpression(expr: item, issues: issues);
-				});
-			},
-			ExpressionKind:ANON_FN: {
-				expr:anonBody:each(action: local Function(Statement is st){
-					self:lintStatement(stmt: st, issues: issues);
-				});
-			}
-		]);
-	}
-
-	## True when [target] spells a loop driver — a While/Loop class-name
-	## receiver. Purely syntactic: the standards walk has no class table.
-	##
-	## @param target: The call's receiver expression.
-	## @return: true when the receiver names While or Loop.
-	Function of Boolean is isLoopSpell(Expression is target){
-		local String is name: '';
-		match(on: target:kind, when: [
-			ExpressionKind:IDENT: {
-				name: target:str;
-			},
-			ExpressionKind:PATH: {
-				local Array of String is segs: target:pathSegments;
-				if({ segs:length() > 0 }, {
-					name: segs:get(index: segs:length() - 1);
-				});
-			}
-		]);
-		return name == 'Loops' || name == 'Loop';
-	}
-
-	## True when [target] spells an UpperCamel (class-like) receiver —
-	## the shape of a constructor call `X:init(...)`.
-	##
-	## @param target: The call's receiver expression.
-	## @return: true when the receiver is class-spelled.
-	Function of Boolean is isClassSpell(Expression is target){
-		local String is name: '';
-		match(on: target:kind, when: [
-			ExpressionKind:IDENT: {
-				name: target:str;
-			},
-			ExpressionKind:PATH: {
-				local Array of String is segs: target:pathSegments;
-				if({ segs:length() > 0 }, {
-					name: segs:get(index: segs:length() - 1);
-				});
-			}
-		]);
-		return self:isUpperName(name: name);
-	}
-
-	## Inspects a statement node.
-	##
-	## @param stmt: [Statement] AST node.
-	## @param issues: Destination issues array.
-	Function is lintStatement(Statement is stmt, Array of LintIssue is issues){
-		local StatementKind is kind: stmt:kind;
-
-		match(on: kind, when: [
-			StatementKind:VAR_DECL: {
-				if({ stmt:hasInit }, {
-					self:lintExpression(expr: stmt:initExpr, issues: issues);
-				});
-			},
-			StatementKind:ASSIGN: {
-				self:lintExpression(expr: stmt:assignTarget, issues: issues);
-				self:lintExpression(expr: stmt:assignValue, issues: issues);
-			},
-			StatementKind:RETURN: {
-				if({ stmt:hasReturnExpr }, {
-					self:lintExpression(expr: stmt:returnExpr, issues: issues);
-				});
-			},
-			StatementKind:CLASS: {
-				self:lintClass(classDef: stmt:nestedClass, issues: issues);
-			},
-			StatementKind:EXPR: {
-				self:lintExpression(expr: stmt:exprStmt, issues: issues);
-			}
-		]);
-	}
-
-	## Inspects all members of a class definition.
-	##
-	## @param classDef: [ClassInfo] definition.
-	## @param issues: Destination issues array.
-	Function is lintClass(ClassInfo is classDef, Array of LintIssue is issues){
-		classDef:members:each(action: local Function(Member is m){
-			match(on: m:kind, when: [
-				MemberKind:METHOD: {
-					m:body:each(action: local Function(Statement is s){
-						self:lintStatement(stmt: s, issues: issues);
-					});
-				},
-				MemberKind:CLASS: {
-					self:lintClass(classDef: m:nestedClass, issues: issues);
-				}
-			]);
-		});
+	## @param rule: [LintRule] instance to add.
+	Function is addRule(LintRule is rule){
+		self:rules:add(item: rule);
 	}
 
 	## Analyzes source code text and optional AST, returning all detected lint issues.
@@ -452,12 +118,14 @@ Class is Linter{
 	Function of Array of LintIssue is lint(String is source, ProgramNode is program){
 		local Array of LintIssue is issues: [];
 
-		# 1. Indentation Check
-		self:lintIndentation(source: source, issues: issues);
+		# 1. Source-level checks across registered rules
+		self:rules:each(action: local Function(LintRule is r){
+			r:checkSource(source: source, issues: issues);
+		});
 
-		# 2. AST Checks
-		program:classes:each(action: local Function(ClassInfo is c){
-			self:lintClass(classDef: c, issues: issues);
+		# 2. AST-level checks across registered rules
+		self:rules:each(action: local Function(LintRule is r){
+			r:checkProgram(program: program, issues: issues);
 		});
 
 		return issues;
@@ -509,12 +177,12 @@ Class is Linter{
 		});
 	}
 
-	## Phase 0.5 worklist audit: reports every call whose
-	## receiver names a class (or floor alias) with a non-init method,
-	## excluding the exempt strata (§4). Purely informational — the
-	## burn-down metric for the instance-based call model. Requires the
-	## LOADED program: enum and class knowledge comes from the loader,
-	## not from spelling.
+	## =========================================================================
+	## Phase 0.5 Worklist Audit (Instance-Model Transition)
+	## =========================================================================
+
+	## Phase 0.5 worklist audit: reports every call whose receiver names a class
+	## (or floor alias) with a non-init method, excluding the exempt strata.
 	##
 	## @param program: Loaded [ProgramNode].
 	## @return: [Array] of [LintIssue] worklist notices.
@@ -527,12 +195,7 @@ Class is Linter{
 		return self:auditIssues;
 	}
 
-	## Registers one class or enum name, nested classes included (a nested
-	## class is callable by its bare name). Recurses through members, never
-	## across an array literal — the claim pool evicts pool-held arrays
-	## when a nested self-call claims (see Loader.spec's note).
-	##
-	## @param c: Candidate [ClassInfo] definition.
+	## Registers one class or enum name, nested classes included.
 	Function is registerAuditName(ClassInfo is c){
 		if({ c:baseClass == 'Enum' }, {
 			self:auditEnums:set(key: c:name, value: 'true');
@@ -540,6 +203,7 @@ Class is Linter{
 			self:auditClasses:set(key: c:name, value: 'true');
 		});
 		self:auditClassNodes:set(key: c:name, value: c);
+		self:auditClassList:add(item: c);
 		c:members:each(action: local Function(Member is m){
 			if({ m:kind == MemberKind:CLASS }, {
 				self:registerAuditName(c: m:nestedClass);
@@ -548,20 +212,13 @@ Class is Linter{
 	}
 
 	## Collects class and enum names into the audit sets.
-	##
-	## @param classes: Candidate [ClassInfo] definitions.
 	Function is buildAuditNameSets(Array of ClassInfo is classes){
 		classes:each(action: local Function(ClassInfo is c){
 			self:registerAuditName(c: c);
 		});
 	}
 
-	## Audits every method body of a class definition, nested classes
-	## included. The owning class is remembered (with save and restore
-	## around nesting) so migrated as-import receivers can leave the
-	## worklist.
-	##
-	## @param classDef: [ClassInfo] definition.
+	## Audits every method body of a class definition, nested classes included.
 	Function is auditClass(ClassInfo is classDef){
 		local ClassInfo is savedOwner: self:auditOwner;
 		self:auditOwner: classDef;
@@ -580,11 +237,7 @@ Class is Linter{
 		self:auditOwner: savedOwner;
 	}
 
-	## Walks one statement, auditing every expression it contains (when
-	## arms and merge forwards included — the metric must not undercount).
-	##
-	## @param stmt: [Statement] AST node.
-	## @param file: Source file the statement lives in.
+	## Walks one statement, auditing every expression it contains.
 	Function is auditStatement(Statement is stmt, String is file){
 		match(on: stmt:kind, when: [
 			StatementKind:VAR_DECL: {
@@ -615,12 +268,7 @@ Class is Linter{
 		]);
 	}
 
-	## Walks one expression, auditing calls it contains — through casts,
-	## if/else and when expressions, map literals, index and field access,
-	## and anonymous function bodies.
-	##
-	## @param expr: [Expression] AST node.
-	## @param file: Source file the expression lives in.
+	## Walks one expression, auditing calls it contains.
 	Function is auditExpression(Expression is expr, String is file){
 		match(on: expr:kind, when: [
 			ExpressionKind:CALL: {
@@ -673,14 +321,7 @@ Class is Linter{
 		]);
 	}
 
-	## Classifies one call's receiver (§2.2, §4): flags
-	## class-named and floor-alias receivers invoking non-init members;
-	## skips self, variables and fields, enums, the exempt type-level
-	## strata, and sysinternal floor chains. Unknown uppercase names stay
-	## silent — the metric must not guess.
-	##
-	## @param callExpr: The CALL expression.
-	## @param file: Source file the call lives in.
+	## Classifies one call's receiver: flags class-named calls invoking non-init members.
 	Function is auditReceiver(Expression is callExpr, String is file){
 		local String is name: '';
 		local Boolean is isFloorChain: false;
@@ -725,9 +366,9 @@ Class is Linter{
 				return;
 			});
 			if({ self:auditOwnerImportsAs(name: name) }, {
-				# Migrated: the owning class (or an ancestor) instance-imports
-				# this class (§2.1), so the prefix call is the
-				# new model.
+				return;
+			});
+			if({ self:isHeldMember(clsName: name, memberName: callExpr:methodName) }, {
 				return;
 			});
 		}, {
@@ -745,27 +386,12 @@ Class is Linter{
 		self:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 	}
 
-	## True when the class under audit, or any ancestor, instance-imports
-	## [name] — as-imports are inherited like the fields they synthesize.
-	##
-	## @param name: Receiver class name.
-	## @return: true when imported somewhere up the chain.
-	## True when the class under audit, or any ancestor (all parents,
-	## transitively), instance-imports [name] — as-imports are inherited
-	## like the fields they synthesize.
-	##
-	## @param name: Receiver class name.
-	## @return: true when imported somewhere up the chain.
+	## True when the class under audit, or any ancestor, instance-imports [name].
 	Function of Boolean is auditOwnerImportsAs(String is name){
 		return self:auditImportsAsAnywhere(clsName: self:auditOwner:name, targetName: name);
 	}
 
 	## Recursive import search over the audit's ancestor lattice.
-	##
-	## @param clsName: Class being visited.
-	## @param targetName: The imported class name sought.
-	## @param hops: Recursion budget guard.
-	## @return: true when found on this class or an ancestor.
 	Function of Boolean is auditImportsAsAnywhere(String is clsName, String is targetName, Map of String to String is visited: Map:init()){
 		if({ clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, {
 			return false;
@@ -787,14 +413,33 @@ Class is Linter{
 		return viaParent;
 	}
 
-	## True when [name] starts with an uppercase letter (the type naming
-	## convention); variables and fields are lowerCamel. The 26-way match
-	## is deliberate: relational operators on Strings compile to raw
-	## pointer comparison (see D5), so `first >= 'A'` is not
-	## a legal test.
-	##
-	## @param name: Identifier to classify.
-	## @return: true when the name is UpperCamel.
+	## True when [memberName] is a held member on [clsName] or any of its ancestors.
+	Function of Boolean is isHeldMember(String is clsName, String is memberName, Map of String to String is visited: Map:init()){
+		if({ clsName == '' || clsName == 'Any' || visited:has(key: clsName) }, {
+			return false;
+		});
+		visited:set(key: clsName, value: 'true');
+		local Boolean is found: false;
+		self:auditClassList:each(action: local Function(ClassInfo is cls){
+			if({ !found && cls:name == clsName }, {
+				cls:members:each(action: local Function(Member is m){
+					if({ !found && m:name == memberName && m:hasModifier(kw: Keyword:HELD) }, {
+						found: true;
+					});
+				});
+				if({ !found }, {
+					cls:baseClasses:each(action: local Function(String is baseName){
+						if({ !found && self:isHeldMember(clsName: baseName, memberName: memberName, visited: visited) }, {
+							found: true;
+						});
+					});
+				});
+			});
+		});
+		return found;
+	}
+
+	## True when [name] starts with an uppercase letter.
 	Function of Boolean is isUpperName(String is name){
 		if({ name:length() == 0 }, {
 			return false;
@@ -808,9 +453,6 @@ Class is Linter{
 	}
 
 	## Prints the audit worklist: per-site lines, then the total count.
-	##
-	## @param filePath: Audited root file path.
-	## @param issues: Worklist notices.
 	Function is auditReport(String is filePath, Array of LintIssue is issues){
 		Output:line('Instance-model audit of \'' . filePath . '\':');
 		issues:each(action: local Function(LintIssue is issue){

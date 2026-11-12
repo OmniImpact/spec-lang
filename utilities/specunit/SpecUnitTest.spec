@@ -93,7 +93,7 @@ Class is SpecUnitTest{
 	Function of Int is methodCount(){
 		local Int is n: 0;
 		Introspection:functions(className: self:name()):each(action: local Function(Array of String is path){
-			Conditional:if(check: { path:get(index: 1):startsWith(prefix: 'test') }, then: {
+			if(check: { path:get(index: 1):startsWith(prefix: 'test') }, then: {
 				n: n + 1;
 			});
 		});

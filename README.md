@@ -149,6 +149,7 @@ repeat(count: 3, worker: {
 ## Documentation
 
 - 📖 **[README-FULL.md](README-FULL.md)**: The full breakdown — design philosophies, the complete feature list, module resolution, editor support, and the language comparison table.
+- 🗺️ **[ROADMAP-ALPHA.md](ROADMAP-ALPHA.md)**: Alpha release roadmap (v0.1) — tracking the milestones toward public alpha, modular tooling, packaging, build system, and cross-platform reliability.
 - 📊 **[README-PERFORMANCE.md](README-PERFORMANCE.md)**: Measured performance — the same benchmark run in C, C++, Rust, Go, Java, Kotlin, JavaScript, Python, Ruby, and Spec, with build and execution profiles. Reproduce with `utilities/run_benchmarks.sh`.
 - 📚 **[Documentation Portal](docs/README.md)**: Main documentation index.
 - 📖 **[Language Guide](docs/language/README.md)**: Syntax, typing system, Never Null standard, held members, matching, and the iteration model.
@@ -182,10 +183,20 @@ bin/spec -i examples/scope_as_demo.spec -o scope_demo
 bin/spec -i examples/helloworld.spec --emit-c helloworld.c
 ```
 
+### Running Tests
+```bash
+# Run the complete test suite (130+ unit and integration test suites)
+bin/specunit
+```
+
 ### Running the Linter
 ```bash
+# Lint a single file or entire directory trees
 bin/speclint -i examples/blackjack.spec
-bin/speclint -t examples -t tests        # whole trees
+bin/speclint -t examples -t tests
+
+# Run the instance-model audit
+bin/speclint -a -i spec/base/compiler/driver/Driver.spec
 ```
 
 ### Debugging

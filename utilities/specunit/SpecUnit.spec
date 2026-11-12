@@ -110,7 +110,7 @@ Class is SpecUnit{
 
 	replace Function is init(Map of String to String is args){
 		local String is specBin: args:getString(key: 's', default: args:getString(key: 'spec', default: '.'));
-		Conditional:if(check: { specBin == '.' }, then: {
+		if(check: { specBin == '.' }, then: {
 			specBin: 'bin/spec';
 		});
 		local String is root: args:getString(key: 'root', default: '.');
@@ -134,10 +134,10 @@ Class is SpecUnit{
 			local Int is failures: 0;
 			while({ k < count && idx < total }, {
 				local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
-				Conditional:if(check: { item:kind == 'negative' }, then: {
+				if(check: { item:kind == 'negative' }, then: {
 					failures: failures + self:runNegative(item: item, idx: idx, specBin: specBin, root: root);
 				}, else: {
-					Conditional:if(check: { item:kind == 'run-fail' }, then: {
+					if(check: { item:kind == 'run-fail' }, then: {
 						failures: failures + self:runRunFail(item: item, idx: idx, specBin: specBin, root: root);
 					}, else: {
 						failures: failures + self:runSuite(item: item, idx: idx, specBin: specBin, root: root);
@@ -157,7 +157,7 @@ Class is SpecUnit{
 	Function is enqueueDirs(String is dirsRaw, String is root){
 		dirsRaw:split(delimiter: "\n"):each(action: local Function(String is seg){
 			seg:split(delimiter: ','):each(action: local Function(String is dir){
-				Conditional:if(check: { dir != '' }, then: {
+				if(check: { dir != '' }, then: {
 					self:enqueueTree(absDir: root . '/' . dir, relDir: dir . '/');
 				});
 			});
@@ -170,16 +170,16 @@ Class is SpecUnit{
 	## `#!` banner classifies it.
 	Function is enqueueTree(String is absDir, String is relDir){
 		Dir:dirList(path: absDir):each(action: local Function(String is name){
-			Conditional:if(check: { name:startsWith(prefix: '.') }, then: {
+			if(check: { name:startsWith(prefix: '.') }, then: {
 				return;
 			});
 			local String is childAbs: absDir . '/' . name;
 			local String is childRel: relDir . name;
 			local Array of String is children: Dir:dirList(path: childAbs);
-			Conditional:if(check: { children:length() > 0 }, then: {
+			if(check: { children:length() > 0 }, then: {
 				self:enqueueTree(absDir: childAbs, relDir: childRel . '/');
 			}, else: {
-				Conditional:if(check: { name:endsWith(suffix: '.spec') && fileRead(path: childAbs, default: '') != '' }, then: {
+				if(check: { name:endsWith(suffix: '.spec') && fileRead(path: childAbs, default: '') != '' }, then: {
 					self:enqueueFile(relPath: childRel);
 				});
 			});
@@ -199,19 +199,19 @@ Class is SpecUnit{
 		local Boolean is requireReport: false;
 		local Array of String is expect: [];
 		content:split(delimiter: "\n"):each(action: local Function(String is seg){
-			Conditional:if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
+			if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
 				kind: seg:substring(start: 13, end: seg:length());
 			}, else: {
-				Conditional:if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
+				if(check: { seg:startsWith(prefix: '#! expect: ') }, then: {
 					expect:add(item: seg:substring(start: 11, end: seg:length()));
 				});
 			});
 		});
-		Conditional:if(check: { kind == '' && content:contains(needle: 'specunit') }, then: {
+		if(check: { kind == '' && content:contains(needle: 'specunit') }, then: {
 			kind: 'suite';
 			requireReport: content:contains(needle: "['specunit'");
 		});
-		Conditional:if(check: { kind == '' || kind == 'helper' }, then: {
+		if(check: { kind == '' || kind == 'helper' }, then: {
 			return;
 		});
 		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect, itemRequireReport: requireReport));

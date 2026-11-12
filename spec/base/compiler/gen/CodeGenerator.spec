@@ -3552,7 +3552,7 @@ Class is CodeGenerator{
 		# flags) resolves to the C spelling here — the one mapping for
 		# method definitions; prototypes resolve through cTypeForClass,
 		# which maps the same way.
-		Conditional:if(check: { retType == self:names:voidName() }, then: {
+		if({ retType == self:names:voidName() }, {
 			retType: 'void';
 		});
 		if({ retType == 'void' }, {
@@ -3748,13 +3748,13 @@ Class is CodeGenerator{
 		# mismatch is what surfaced as raw gcc output on init-less and
 		# lattice-fallback entry classes.
 		local String is initSym: entryClass . '_init';
-		Conditional:if(check: { self:entryInitOwner != '' }, then: {
+		if({ self:entryInitOwner != '' }, {
 			initSym: self:overloadSymbol(className: self:entryInitOwner, methodName: 'init', idx: self:entryInitOverloadIndex);
 		});
 		m: m . '    SPEC_AUTO ' . entryClass . '* app = ' . entryClass . "_new();\n";
-		Conditional:if(check: { self:entryInitTakesArgs }, then: {
+		if({ self:entryInitTakesArgs }, {
 			m: m . '    ' . initSym . "(app, args);\n";
-		}, else: {
+		}, {
 			m: m . '    ' . initSym . "(app);\n";
 		});
 		m: m . "    spec_drain_async_tasks();\n";
@@ -4548,7 +4548,7 @@ Class is CodeGenerator{
 			# coexists with a same-name sysinternal floor class (the
 			# loader's namespace-qualified identity), and registering both
 			# would emit duplicate symbols and collide find-by-name.
-			Conditional:if(check: { self:policy:isSysinternal(cls: c) }, then: {
+			if({ self:policy:isSysinternal(cls: c) }, {
 				return;
 			});
 			local String is cSym: self:utils:cIdent(name: c:qualifiedName());
@@ -4556,30 +4556,30 @@ Class is CodeGenerator{
 			# Construct eligibility — the entry-init rule.
 			local Boolean is constructible: false;
 			local String is initSym: '';
-			Conditional:if(check: { (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, then: {
+			if({ (!self:policy:isTransparent(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c) }, {
 				local Boolean is hasInitMember: false;
 				local Int is zeroArgIdx: -1;
 				local Int is initIdx: 0;
 				c:members:each(action: local Function(Member is m){
-					Conditional:if(check: { m:kind == MemberKind:METHOD && m:name == 'init' }, then: {
+					if({ m:kind == MemberKind:METHOD && m:name == 'init' }, {
 						hasInitMember: true;
-						Conditional:if(check: { zeroArgIdx < 0 && m:params:length() == 0 }, then: {
+						if({ zeroArgIdx < 0 && m:params:length() == 0 }, {
 							zeroArgIdx: initIdx;
 						});
 						initIdx: initIdx + 1;
 					});
 				});
-				Conditional:if(check: { !hasInitMember }, then: {
+				if({ !hasInitMember }, {
 					constructible: true;
 					initSym: cSym . '_init';
-				}, else: {
-					Conditional:if(check: { zeroArgIdx >= 0 }, then: {
+				}, {
+					if({ zeroArgIdx >= 0 }, {
 						constructible: true;
 						initSym: self:overloadSymbol(className: c:qualifiedName(), methodName: 'init', idx: zeroArgIdx);
 					});
 				});
 			});
-			Conditional:if(check: { constructible }, then: {
+			if({ constructible }, {
 				out: out . 'static void* ' . cSym . "_spec_construct(void) {\n    " . cSym . '* o = ' . cSym . "_new();\n    " . initSym . "(o);\n    return o;\n}\n\n";
 			});
 
@@ -4594,9 +4594,9 @@ Class is CodeGenerator{
 			local Boolean is classEmitsPrototypes: (self:policy:emitsPrototypes(c: c) && c:baseClass != self:names:enumHeader()) || self:policy:isClassModelEnum(c: c);
 			local String is methodsC: '';
 			local Int is methodCount: 0;
-			Conditional:if(check: { classEmitsPrototypes }, then: {
+			if({ classEmitsPrototypes }, {
 			c:members:each(action: local Function(Member is m){
-				Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) && (!self:policy:isTransparent(c: c) || m:body:length() > 0) }, then: {
+				if({ m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) && (!self:policy:isTransparent(c: c) || m:body:length() > 0) }, {
 					local Int is flags: 0;
 					# Flag vocabulary (the SpecUnit framework's discovery
 					# contract — see KNOWLEDGE-SPECDEV.md §4a):
@@ -4606,13 +4606,13 @@ Class is CodeGenerator{
 					#       empty function — a DISTINCT, valid, non-void
 					#       return type (never conflated with Void), whose
 					#       C emission resolves to void and stays invokable.
-					Conditional:if(check: { m:memberType:name == self:names:voidName() }, then: {
+					if({ m:memberType:name == self:names:voidName() }, {
 						flags: flags + 1;
 					});
-					Conditional:if(check: { m:params:length() == 0 }, then: {
+					if({ m:params:length() == 0 }, {
 						flags: flags + 2;
 					});
-					Conditional:if(check: { m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, then: {
+					if({ m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, {
 						flags: flags + 4;
 					});
 					local String is fnSym: self:overloadSymbol(className: c:qualifiedName(), methodName: m:name, idx: self:overloadIndexOf(classDef: c, method: m));
@@ -4623,7 +4623,7 @@ Class is CodeGenerator{
 			});
 
 			local String is methodsRef: 'NULL';
-			Conditional:if(check: { methodCount > 0 }, then: {
+			if({ methodCount > 0 }, {
 				out: out . 'static const SpecMethodMeta ' . cSym . "_spec_methods[] = {\n" . methodsC . "};\n";
 				methodsRef: cSym . '_spec_methods';
 			});
@@ -4633,13 +4633,13 @@ Class is CodeGenerator{
 				basesC: basesC . '    "' . b . "\",\n";
 			});
 			local String is basesRef: 'NULL';
-			Conditional:if(check: { c:baseClasses:length() > 0 }, then: {
+			if({ c:baseClasses:length() > 0 }, {
 				out: out . 'static const char* const ' . cSym . "_spec_bases[] = {\n" . basesC . "};\n";
 				basesRef: cSym . '_spec_bases';
 			});
 
 			local String is ctorRef: 'NULL';
-			Conditional:if(check: { constructible }, then: {
+			if({ constructible }, {
 				ctorRef: cSym . '_spec_construct';
 			});
 			# The source identity is the BASENAME only: the full path
@@ -4649,9 +4649,9 @@ Class is CodeGenerator{
 			# deterministic. In-memory programs (compiler-as-library) carry
 			# no source file at all — split yields nothing, so guard.
 			local String is srcBase: '';
-			Conditional:if(check: { c:sourceFile != '' }, then: {
+			if({ c:sourceFile != '' }, {
 				local Array of String is srcSegs: c:sourceFile:split(delimiter: '/');
-				Conditional:if(check: { srcSegs:length() > 0 }, then: {
+				if({ srcSegs:length() > 0 }, {
 					srcBase: srcSegs:get(index: srcSegs:length() - 1);
 				});
 			});

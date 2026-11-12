@@ -33,12 +33,12 @@ Class is SpecUnitRunner{
 	Function is runAll(String is sourcePrefix){
 		local Int is found: 0;
 		classNames():each(action: local Function(String is cn){
-			Conditional:if(check: { self:isTestClass(className: cn, sourcePrefix: sourcePrefix) }, then: {
+			if(check: { self:isTestClass(className: cn, sourcePrefix: sourcePrefix) }, then: {
 				found: found + 1;
 				self:runClass(className: cn);
 			});
 		});
-		Conditional:if(check: { found == 0 }, then: {
+		if(check: { found == 0 }, then: {
 			line('No test classes found in ' . sourcePrefix);
 			exit(status: 1);
 		});
@@ -53,15 +53,15 @@ Class is SpecUnitRunner{
 	## @param sourcePrefix: The root source basename prefix.
 	## @return: True when the class contributes at least one test.
 	Function of Boolean is isTestClass(String is className, String is sourcePrefix){
-		Conditional:if(check: { !extendsClass(className: className, baseName: 'SpecUnitTest') }, then: {
+		if(check: { !extendsClass(className: className, baseName: 'SpecUnitTest') }, then: {
 			return false;
 		});
-		Conditional:if(check: { !classSourceFile(className: className):startsWith(prefix: sourcePrefix) }, then: {
+		if(check: { !classSourceFile(className: className):startsWith(prefix: sourcePrefix) }, then: {
 			return false;
 		});
 		local Boolean is has: false;
 		functions(className: className):each(action: local Function(Array of String is path){
-			Conditional:if(check: { path:get(index: 1):startsWith(prefix: 'test') }, then: {
+			if(check: { path:get(index: 1):startsWith(prefix: 'test') }, then: {
 				has: true;
 			});
 		});
@@ -112,14 +112,14 @@ Class is SpecUnitRunner{
 	## the held-side Assert appended records unconditionally.
 	Function is endTest(){
 		local Array of TestResult is cell: SpecUnitState:currentCell;
-		Conditional:if(check: { cell:length() > 0 }, then: {
+		if(check: { cell:length() > 0 }, then: {
 			local TestResult is r: cell:get(index: 0);
 			r:durationMs: clockMs() - r:startedAtMs;
 			local Int is idx: r:checksBefore;
 			while({ idx < SpecUnitState:checks:length() }, {
 				local CheckRecord is rec: SpecUnitState:checks:get(index: idx);
 				idx++;
-				Conditional:if(check: { !rec:ok }, then: {
+				if(check: { !rec:ok }, then: {
 					r:passed: false;
 					r:failures:add(item: rec:msg);
 				});
@@ -168,9 +168,9 @@ Class is SpecUnitRunner{
 		local String is lastGroup: '';
 		SpecUnitState:results:each(action: local Function(TestResult is r){
 			local Int is dot: r:name:indexOf(search: '.', default: -1);
-			Conditional:if(check: { dot > 0 }, then: {
+			if(check: { dot > 0 }, then: {
 				local String is g: r:name:substring(start: 0, end: dot);
-				Conditional:if(check: { g != lastGroup }, then: {
+				if(check: { g != lastGroup }, then: {
 					groups: groups + 1;
 					lastGroup: g;
 				});
