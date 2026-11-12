@@ -18,11 +18,11 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
 ## 2. Core Compiler & Language Cleanup
 
 ### 2.1 Finalize Phase 0.5 Instance-Model Migration
-- **Status**: The instance-model audit (`speclint -a`) currently tracks remaining call sites where methods are invoked directly through uninstantiated class names.
-- **Action Items**:
-  - Migrate all remaining non-exempt call sites (e.g. `Conditional:dispatchScan` in `spec/lib/base/sys/Conditional.spec`) to instance calls or explicit `held` functions.
-  - Verify `speclint -a -i spec/base/compiler/driver/Driver.spec` reports **0 call site(s) must migrate**.
-  - Lock in the instance-model contract with strict typechecker enforcement preventing un-held class-receiver method dispatch.
+- **Status**: **Completed** (`v0.000.100`).
+- **Accomplishments**:
+  - Migrated all non-exempt call sites (including `Conditional:dispatchScan` and throughout `spec/base/compiler`) to instance calls or explicit `held` functions.
+  - Verified `speclint -a` reports **0 call site(s) must migrate** across the entire codebase.
+  - Locked in the instance-model contract with strict typechecker enforcement and dedicated linter rules (`AsConditionalRule`, `AsLoopsRule`).
 
 ### 2.2 Precompiled C Runtime Library (`libspecrt.a`)
 - **Problem**: The compiler embeds the full C11 runtime prelude (~2,600 lines in `RuntimePrelude.spec`) into every generated C output file. This makes even a 20-line `helloworld.spec` produce ~8,600 lines of C and incurs a ~2.5s compilation penalty per build.
@@ -45,11 +45,25 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
 - **Basic Networking / Sockets**: Abstract stream sockets (`base:sys:Socket`, TCP client/server) over the sysinternal floor.
 - **Collections**: Ensure `List`, `Array`, and `Map` have consistent API parity across iterations, slicing, filtering, and mutations.
 
+### 2.5 Modern Unit Testing Framework & Negative Test Suite Port
+- **Status**: **Completed**.
+- **Accomplishments**:
+  - Extended `Assert` with structured assertion primitives: `Assert:compilerRejects(source:, expect:)`, `Assert:compilerRejectsFile(filePath:, expect:)`, and `Assert:runFails(source:, expect:)`.
+  - Replaced ad-hoc loose negative test files with 9 structured, predictable `SpecUnitTest` classes: `TestNegativeReceivers`, `TestNegativeOverloads`, `TestNegativeHeld`, `TestNegativeImportsAndCasts`, `TestNegativeControlFlow`, `TestNegativeTypeSafety`, `TestNegativeClassModel`, `TestNegativeRuntime`, and `TestNegativeMultiFile`.
+  - Organized multi-file fixture assets under `tests/negative/fixtures/` classified as `helper` files.
+  - Achieved 100% green status across all 87 test suites in `specunit`.
+
 ---
 
 ## 3. Modular, Reflection-Based Linter (`speclint`)
 
-Currently, `Linter.spec` operates as a single monolithic visitor enforcing style and AST rules. For 0.1 Alpha, `speclint` will be refactored into a pluggable, reflection-driven engine mirroring the design of `SpecUnitRunner`.
+- **Status**: **Completed** (`v0.000.100`).
+- **Accomplishments**:
+  - Replaced monolithic `Linter.spec` with a pluggable, reflection-driven engine (`LintRuleRegistry.spec`) mirroring the design of `SpecUnitRunner`.
+  - Defined standard contract `Class of Loadable is LintRule`.
+  - Implemented dynamic rule discovery via reflection without hardcoded class lists.
+  - Modularized rules across formatting, naming, AST idioms, and instance-model enforcement (`AsConditionalRule`, `AsLoopsRule`).
+  - Added CLI rule filtering (`--rule` and `--disable`).
 
 ### 3.1 Architecture & The `LintRule` Contract
 Define a standardized contract class in `utilities/speclint/`:
@@ -229,9 +243,9 @@ Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysint
 
 | Milestone | Deliverables | Target Status |
 |---|---|---|
-| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0)<br>- All compiler errors migrated to `ErrorText.spec`<br>- Runtime prelude split into `spec_runtime.h` + static `libspecrt.a` | Planned |
-| **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery<br>- Separate formatting, naming, and AST idiom rules into dedicated classes<br>- CLI rule filtering flags | Planned |
-| **M3: Project Tooling** | - Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Implement shared TUI color/status module | Planned |
+| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- All compiler errors migrated to `ErrorText.spec`<br>- Runtime prelude split into `spec_runtime.h` + static `libspecrt.a` | In Progress |
+| **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery<br>- Separate formatting, naming, and AST idiom rules into dedicated classes<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`)<br>- CLI rule filtering flags (`--rule` and `--disable`) | Completed (`v0.000.100`) |
+| **M3: Project Tooling** | - Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Implement shared TUI color/status module | Next Up |
 | **M4: Platform & Packaging** | - POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, basic Json) | Planned |
 | **M5: 0.1 Alpha Release** | - Full documentation sweep<br>- Fixed-point bootstrap verification across GCC and Clang<br>- Tag `v0.1.0-alpha` and publish release tarballs | Planned |
 
