@@ -20,7 +20,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 "$SPEC" --quiet -i "$ROOT/utilities/specunit/SpecUnit.spec" -o "$WORK/specunit" || exit 1
 cd "$ROOT"
-"$WORK/specunit" -s="$SPEC" --root="$ROOT" -t="examples,tests"
+"$WORK/specunit" -s "$SPEC" -t examples -t tests
 rc=$?
 
 # --- repo-specific smoke: the compiler CLI contract ---

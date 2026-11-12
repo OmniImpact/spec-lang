@@ -109,15 +109,6 @@ Class is CodeGenerator{
 	Int is entryInitOverloadIndex: 0;
 	Boolean is entryInitTakesArgs: false;
 
-	## --test mode: main is the SpecUnit runner entry, not the
-	## application entry — runAll over the root file's source basename
-	## prefix (see SPECUNIT.md). The application entry-init wiring is
-	## unused in this mode.
-	Boolean is testMode: false;
-
-	## The root source basename prefix handed to SpecUnit:runAll.
-	String is testSourcePrefix: '';
-
 	## Copies a string-keyed registry map for a worker gen.
 	##
 	## @param source: The map to copy.
@@ -3696,20 +3687,23 @@ Class is CodeGenerator{
 		return header . suppressions . bodyC . "}\n\n";
 	}
 
-	## Generates the C main entry point with argv->Map parsing.
-	##
-	## In --test mode the main is the SpecUnit runner entry instead:
-	## runAll over the root file's source basename prefix — report()
-	## exits with the CI contract, so the trailing return is required
-	## but unreachable.
+	## Generates the C main entry point with argv->Map parsing. A
+	## repeated flag accumulates: the value joins with newline
+	## separators instead of the last one winning, so multi-value
+	## flags (-t dirA -t dirB) arrive as one split-able string.
 	##
 	## @param entryClass: The entry class name.
 	## @return: C main function.
 	Function of String is generateMain(String is entryClass){
-		Conditional:if(check: { self:testMode }, then: {
-			return self:generateTestMain();
-		});
 		local String is m: "/* Application Entry Point */\n";
+		m: m . "static void spec_arg_set(SpecMap* args, String key, String val) {\n";
+		m: m . "    String prev = (String)spec_map_get(args, key, NULL);\n";
+		m: m . "    if (prev) {\n";
+		m: m . "        spec_map_set(args, key, spec_string_concat(prev, spec_string_concat(spec_string_intern(\"\\n\"), val)));\n";
+		m: m . "    } else {\n";
+		m: m . "        spec_map_set(args, key, val);\n";
+		m: m . "    }\n";
+		m: m . "}\n";
 		m: m . "int main(int argc, char** argv) {\n";
 
 		m: m . "    srand((unsigned int)time(NULL));\n";
@@ -3719,27 +3713,27 @@ Class is CodeGenerator{
 		m: m . "            const char* eq = strchr(argv[i] + 2, '=');\n";
 		m: m . "            if (eq) {\n";
 		m: m . "                int klen = (int)(eq - (argv[i] + 2));\n";
-		m: m . "                spec_map_set(args, spec_string_from_bytes(argv[i] + 2, klen), spec_string_from_chars(eq + 1));\n";
+		m: m . "                spec_arg_set(args, spec_string_from_bytes(argv[i] + 2, klen), spec_string_from_chars(eq + 1));\n";
 		m: m . "            } else {\n";
 		m: m . "                const char* key = argv[i] + 2;\n";
 		m: m . "                const char* val = \"true\";\n";
 		m: m . "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n";
 		m: m . "                    val = argv[++i];\n";
 		m: m . "                }\n";
-		m: m . "                spec_map_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
+		m: m . "                spec_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
 		m: m . "            }\n";
 		m: m . "        } else if (argv[i][0] == '-' && argv[i][1] != 0) {\n";
 		m: m . "            const char* eq = strchr(argv[i] + 1, '=');\n";
 		m: m . "            if (eq) {\n";
 		m: m . "                int klen = (int)(eq - (argv[i] + 1));\n";
-		m: m . "                spec_map_set(args, spec_string_from_bytes(argv[i] + 1, klen), spec_string_from_chars(eq + 1));\n";
+		m: m . "                spec_arg_set(args, spec_string_from_bytes(argv[i] + 1, klen), spec_string_from_chars(eq + 1));\n";
 		m: m . "            } else {\n";
 		m: m . "                const char* key = argv[i] + 1;\n";
 		m: m . "                const char* val = \"true\";\n";
 		m: m . "                if (i + 1 < argc && argv[i + 1][0] != '-') {\n";
 		m: m . "                    val = argv[++i];\n";
 		m: m . "                }\n";
-		m: m . "                spec_map_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
+		m: m . "                spec_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
 		m: m . "            }\n";
 		m: m . "        }\n";
 		m: m . "    }\n";
@@ -3764,23 +3758,6 @@ Class is CodeGenerator{
 			m: m . '    ' . initSym . "(app);\n";
 		});
 		m: m . "    spec_drain_async_tasks();\n";
-		m: m . "    return 0;\n";
-		m: m . "}\n";
-		return m;
-	}
-
-	## Generates the SpecUnit test entry (see SPECUNIT.md): constructs
-	## the runner instance and calls runAll over this suite file's
-	## source basename prefix. report() exits with the CI contract, so
-	## the trailing return is required but unreachable.
-	##
-	## @return: C main function.
-	Function of String is generateTestMain(){
-		local String is m: "/* SpecUnit Test Entry */\n";
-		m: m . "int main(int argc, char** argv) {\n";
-		m: m . "    SpecUnitRunner* runner = (SpecUnitRunner*)SpecUnitRunner_new();\n";
-		m: m . "    SpecUnitRunner_init(runner);\n";
-		m: m . '    SpecUnitRunner_runAll(runner, spec_string_intern("' . self:testSourcePrefix . "\"));\n";
 		m: m . "    return 0;\n";
 		m: m . "}\n";
 		return m;
