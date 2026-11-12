@@ -180,7 +180,10 @@ Class is TypeChecker{
 	## @param t: Type name.
 	## @return: true for 'void' and 'Void'.
 	Function of Boolean is isVoid(String is t){
-		return t == Primitive:VOID:value() || t == self:names:voidMemberType();
+		# One canonical AST spelling: 'Void' (Primitive.VOID). The C
+		# spelling 'void' exists only at the emission boundary (the
+		# generator's formatter) — checker state carries the AST spelling.
+		return t == Primitive:VOID:value();
 	}
 
 	## True when the name is a primitive type name (not a class).
@@ -219,7 +222,7 @@ Class is TypeChecker{
 				local Type is ret: t:params:get(index: 0);
 				return self:formatTypeString(t: ret);
 			});
-			return 'void';
+			return self:names:voidName();
 		});
 		if({ t:params:length() == 1 }, {
 			local Type is p0: t:params:get(index: 0);
@@ -3248,7 +3251,7 @@ Class is TypeChecker{
 					local String is bareElseT: bareElse:anonReturnType:name;
 					if({ self:isVoid(t: bareThenT) || self:isVoid(t: bareElseT) }, {
 						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression.');
-						res: 'void';
+						res: self:names:voidName();
 					}, {
 						if({ !self:isAssignable(target: bareThenT, source: bareElseT) && !self:isAssignable(target: bareElseT, source: bareThenT) }, {
 							self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . bareThenT . '\' and \''. bareElseT . '\'.');
@@ -3601,11 +3604,11 @@ Class is TypeChecker{
 										'indexOf': { res: Primitive:INT:value(); },
 										'join': { res: Primitive:STRING:value(); },
 										'keys': { res: 'Array of String'; },
-										'add': { res: 'void'; },
-										'set': { res: 'void'; },
-										'clear': { res: 'void'; },
-										'each': { res: 'void'; },
-										'push': { res: 'void'; },
+										'add': { res: self:names:voidName(); },
+										'set': { res: self:names:voidName(); },
+										'clear': { res: self:names:voidName(); },
+										'each': { res: self:names:voidName(); },
+										'push': { res: self:names:voidName(); },
 										'remove': { res: Primitive:BOOLEAN:value(); },
 										else: {}
 									]);
@@ -3687,7 +3690,7 @@ Class is TypeChecker{
 			local String is elseT: elseAnon:anonReturnType:name;
 			if({ self:isVoid(t: thenT) || self:isVoid(t: elseT) }, {
 				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression.');
-				res: 'void';
+				res: self:names:voidName();
 			}, {
 				if({ !self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT) }, {
 					self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . thenT . '\' and \'' . elseT . '\'.');
@@ -3699,7 +3702,7 @@ Class is TypeChecker{
 		}, {
 			if({ isBranchCall }, {
 				# Branch calls are statements: void.
-				res: 'void';
+				res: self:names:voidName();
 			});
 		});
 		return res;

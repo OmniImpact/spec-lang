@@ -270,7 +270,7 @@ Class is Driver{
 								hasZeroArg: true;
 							});
 						});
-						if({ m:kind == MemberKind:METHOD && m:name:startsWith(prefix: 'test') && (m:params:length() > 0 || (m:memberType:name != 'Void' && m:memberType:name != 'void' && !(m:memberType:name == 'Function' && m:memberType:params:length() == 0))) }, {
+						if({ m:kind == MemberKind:METHOD && m:name:startsWith(prefix: 'test') && (m:params:length() > 0 || (m:memberType:name != 'Void' && !(m:memberType:name == 'Function' && m:memberType:params:length() == 0))) }, {
 							Stderr:line("Error: Test method '" . c:name . '.' . m:name . "' must be void with no parameters.");
 							Process:exit(status: 1);
 						});

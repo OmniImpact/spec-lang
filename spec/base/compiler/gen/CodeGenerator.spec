@@ -786,11 +786,14 @@ Class is CodeGenerator{
 
 	## True when the type name is one of the two void spellings.
 	##
-	## @param t: Type name.
-	## @return: true for 'void' and 'Void'.
-	Function of Boolean is isVoidType(String is t){
-		return t == self:names:voidName() || t == self:names:voidMemberType();
-	}
+		## @param t: Type name.
+		## @return: true for the canonical void spelling ('Void') — the
+		## generator's internal type-string vocabulary. The C spelling
+		## 'void' exists only in formatTypeString's emission output and
+		## cTypeFor's mappings, never in strings this predicate judges.
+		Function of Boolean is isVoidType(String is t){
+			return t == self:names:voidName();
+		}
 
 	## Maps a type name to its C type, grounding the enclosing class's
 	## generic parameters and resolving enums/containers.
@@ -888,7 +891,7 @@ Class is CodeGenerator{
 				local Type is ret: t:params:get(index: 0);
 				return self:formatTypeString(t: ret);
 			});
-			return 'void';
+			return self:names:voidName();
 		});
 		if({ t:params:length() == 1 }, {
 			local Type is p0: t:params:get(index: 0);
@@ -1124,7 +1127,7 @@ Class is CodeGenerator{
  return Primitive:INT:value();
 				});
 				if({ methodName == 'add' || methodName == 'set' || methodName == 'clear' || methodName == 'each' || methodName == 'push' }, {
- return 'void';
+ return self:names:voidName();
 				});
 				if({ methodName == 'get' || methodName == 'pop' || methodName == 'removeAt' }, {
 					local Array of String is ta: className:split(delimiter: ':');
@@ -3553,6 +3556,14 @@ Class is CodeGenerator{
 		self:currentSourceFile: method:sourceFile;
 		self:currentMethodReturnType: self:formatTypeString(t: method:memberType);
 		local String is retType: self:resolveReturnType(t: method:memberType);
+		# THE C BOUNDARY for method signatures: the AST void spelling
+		# ('Void', carried by currentMethodReturnType and the registry
+		# flags) resolves to the C spelling here — the one mapping for
+		# method definitions; prototypes resolve through cTypeForClass,
+		# which maps the same way.
+		Conditional:if(check: { retType == self:names:voidName() }, then: {
+			retType: 'void';
+		});
 		if({ retType == 'void' }, {
 			if({ method:name == ContractMethod:EVALUATE:value() || method:name == ContractMethod:ITERATION:value() }, {
 				retType: 'bool';
@@ -4610,11 +4621,21 @@ Class is CodeGenerator{
 			c:members:each(action: local Function(Member is m){
 				Conditional:if(check: { m:kind == MemberKind:METHOD && !m:hasModifier(kw: Keyword:HELD) && (!self:policy:isTransparent(c: c) || m:body:length() > 0) }, then: {
 					local Int is flags: 0;
-					Conditional:if(check: { m:memberType:name == self:names:voidName() || m:memberType:name == self:names:voidMemberType() || (m:memberType:name == 'Function' && m:memberType:params:length() == 0) }, then: {
+					# Flag vocabulary (see SPECUNIT.md section 2):
+					#   1 — declared Void (the canonical void spelling)
+					#   2 — zero parameters
+					#   4 — declared as the paramless Function type: the
+					#       empty function — a DISTINCT, valid, non-void
+					#       return type (never conflated with Void), whose
+					#       C emission resolves to void and stays invokable.
+					Conditional:if(check: { m:memberType:name == self:names:voidName() }, then: {
 						flags: flags + 1;
 					});
 					Conditional:if(check: { m:params:length() == 0 }, then: {
 						flags: flags + 2;
+					});
+					Conditional:if(check: { m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, then: {
+						flags: flags + 4;
 					});
 					local String is fnSym: self:overloadSymbol(className: c:qualifiedName(), methodName: m:name, idx: self:overloadIndexOf(classDef: c, method: m));
 					methodsC: methodsC . '    { "' . m:name . '", (void*)' . fnSym . ', ' . (flags as String) . ', ' . (m:line as String) . " },\n";

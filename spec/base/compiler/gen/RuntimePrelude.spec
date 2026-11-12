@@ -2289,7 +2289,12 @@ static inline void* spec_class_construct_by_meta(const SpecClassMeta* cls) {
    loud panic — the bounds-check philosophy, never a silent miss. */
 static inline void spec_invoke_void_by_meta(void* instance,
         const SpecMethodMeta* m) {
-    if (!m || !m->fn || (m->flags & 3) != 3) {
+    /* The invoke contract: zero parameters, and a method whose C
+       emission is void — declared Void (flag 1) or the paramless
+       Function type (flag 4, the empty function: a distinct non-void
+       type whose C resolution is void). Anything else is a loud
+       panic — never a silent miss. */
+    if (!m || !m->fn || !(m->flags & 2) || !(m->flags & 5)) {
         spec_panic("Introspection:invoke supports void zero-parameter methods only");
     }
     ((void (*)(void*))m->fn)(instance);

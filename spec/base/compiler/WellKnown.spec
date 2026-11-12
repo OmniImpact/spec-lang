@@ -38,11 +38,11 @@ Class is WellKnown{
 		return 'List';
 	}
 
-	## The void spelling used for untyped method member types (the checker
-	## and generator distinguish it from [voidName]; the split is historical
-	## legacy the new checker will normalize).
+	## The void spelling for untyped method member types — delegates to
+	## [voidName]: one canonical void spelling across the AST (the
+	## lowercase split was historical legacy; normalized).
 	Function of String is voidMemberType(){
-		return 'void';
+		return self:voidName();
 	}
 
 	## The rejected legacy class-declaration spelling, recognized only to

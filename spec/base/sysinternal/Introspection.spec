@@ -107,5 +107,5 @@ Class is Introspection{
 	##
 	## @param instance: The receiver.
 	## @param methodName: The method name.
-	Function of void is invokeVoidByName(Any is instance, String is methodName);
+	Function of Void is invokeVoidByName(Any is instance, String is methodName);
 }

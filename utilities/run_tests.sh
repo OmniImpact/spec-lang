@@ -419,16 +419,16 @@ su_fail() {
 	fi
 }
 su_fail "specunit-test-method-signature" \
-	"$ROOT/tests/negative/n39_test_method_signature_negative_test.spec" \
+	"$ROOT/tests/negative/TestBadSignature.spec" \
 	"must be void with no parameters"
 su_fail "specunit-test-class-construct" \
-	"$ROOT/tests/negative/n40_test_class_construct_negative_test.spec" \
+	"$ROOT/tests/negative/TestUnconstructible.spec" \
 	"init requires arguments"
 su_fail "specunit-no-test-classes" \
-	"$ROOT/tests/negative/n41_no_test_classes_negative_test.spec" \
+	"$ROOT/tests/negative/TestNoTestClasses.spec" \
 	"No test classes found in"
 su_fail "specunit-missing-runner" \
-	"$ROOT/tests/negative/n42_test_missing_runner_negative_test.spec" \
+	"$ROOT/tests/negative/TestMissingRunnerImport.spec" \
 	"import SpecUnitRunner in the suite file"
 
 # -----------------------------------------------------------------------------

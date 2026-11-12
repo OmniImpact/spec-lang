@@ -133,7 +133,7 @@ Class is Introspection{
 	##
 	## @param instance: The receiver.
 	## @param methodName: The method name.
-	Function of void is invokeVoid(Any is instance, String is methodName){
+	Function of Void is invokeVoid(Any is instance, String is methodName){
 		base:sysinternal:Introspection:invokeVoidByName(instance: instance, methodName: methodName);
 	}
 }

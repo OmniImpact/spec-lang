@@ -216,8 +216,11 @@ Enum of String is Level {
 			failures: failures + 1;
 		});
 
-		# --- vocabulary: void spellings and primitive names ---
-		Conditional:if(check: { cg:isVoidType(t: 'void') && cg:isVoidType(t: 'Void') && !cg:isVoidType(t: 'Int')
+		# --- vocabulary: the canonical void spelling and primitive names ---
+		# Standardized: 'Void' is the one void spelling; the C spelling
+		# 'void' lives only at the emission boundary (formatTypeString's
+		# output), outside this predicate's vocabulary.
+		Conditional:if(check: { cg:isVoidType(t: 'Void') && !cg:isVoidType(t: 'void') && !cg:isVoidType(t: 'Int')
 			&& cg:isPrimitiveName(t: 'Int') && cg:isPrimitiveName(t: 'String')
 			&& !cg:isPrimitiveName(t: 'Animal') }, then: {
 			Output:line('[PASS] isVoidType / isPrimitiveName');
