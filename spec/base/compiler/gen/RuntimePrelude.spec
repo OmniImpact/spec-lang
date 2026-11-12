@@ -2238,7 +2238,10 @@ typedef struct SpecMethodMeta {
 typedef struct SpecClassMeta {
     const char* name;
     const char* source_file;
-    const char** base_names;
+    /* The pointee is const too: the emitted base arrays are
+       `const char* const X_spec_bases[]`, so a plain `char**` here
+       would discard a qualifier on every registry initializer. */
+    const char* const* base_names;
     int base_count;
     void* (*construct)(void);
     const SpecMethodMeta* methods;

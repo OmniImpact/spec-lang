@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Entry-selection regression: an entry with no OWN init whose effective
 #! init is inherited from an imported package is constructed through the
 #! OWNER's C symbol with the owner's arity — ChildApp_new() allocates,

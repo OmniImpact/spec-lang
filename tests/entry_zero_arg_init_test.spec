@@ -1,3 +1,5 @@
+#! specunit: suite
+
 #! Entry-selection regression: a zero-argument entry init is called with
 #! its true arity (X_init(app)). The argv Map is passed only to
 #! Map-parameter inits; passing it unconditionally to a zero-arg init
