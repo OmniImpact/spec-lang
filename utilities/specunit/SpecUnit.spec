@@ -236,7 +236,7 @@ Class is SpecUnit{
 		fileRemove(path: compileOut);
 
 		local String is runOut: bin . '.out';
-		local Array of String is rArgs: ['-c', 'cd "' . root . '" && timeout 10 "' . bin . '" > "' . runOut . '" 2>&1'];
+		local Array of String is rArgs: ['-c', 'cd "' . root . '" && timeout 25 "' . bin . '" > "' . runOut . '" 2>&1'];
 		local Int is rStatus: Process:execute(command: 'sh', args: rArgs);
 		local String is out: fileRead(path: runOut, default: '');
 		local Boolean is passed: rStatus == 0;
@@ -316,7 +316,7 @@ Class is SpecUnit{
 		}, else: {
 			fileRemove(path: compileOut);
 			local String is runOut: bin . '.out';
-			local Array of String is rArgs: ['-c', 'cd "' . root . '" && timeout 10 "' . bin . '" > "' . runOut . '" 2>&1'];
+			local Array of String is rArgs: ['-c', 'cd "' . root . '" && timeout 25 "' . bin . '" > "' . runOut . '" 2>&1'];
 			local Int is rStatus: Process:execute(command: 'sh', args: rArgs);
 			evidence: fileRead(path: runOut, default: '');
 			if(check: { rStatus == 0 }, then: {

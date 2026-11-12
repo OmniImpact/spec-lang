@@ -12,8 +12,79 @@ Class is Assert{
 
 	replace Array of Array of String is using: [
 		['specunit', SpecUnitState],
-		['specunit', CheckRecord]
+		['specunit', CheckRecord],
+		['base', 'sys', File],
+		['base', 'sys', Process],
+		['base', 'struct', Array]
 	];
+
+	## Asserts that compiling [source] fails with a diagnostic containing [expect].
+	##
+	## @param source: The Spec code snippet to compile.
+	## @param expect: The expected diagnostic substring.
+	held Function is compilerRejects(String is source, String is expect){
+		local Process is proc: Process:init();
+		local File is files: File:init();
+		local String is baseTemp: files:fileTemp(template: '/tmp/spec_assert_XXXXXX');
+		files:fileRemove(path: baseTemp);
+		local String is tmp: baseTemp . '.spec';
+		local String is outPath: tmp . '.out';
+		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
+		local Array of String is args: ['-c', './bin/spec --quiet -i "' . tmp . '" -o /dev/null > "' . outPath . '" 2>&1'];
+		local Int is status: proc:execute(command: 'sh', args: args);
+		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		files:fileRemove(path: tmp);
+		files:fileRemove(path: outPath);
+
+		local Boolean is ok: status != 0 && output:contains(needle: expect);
+		local String is msg: 'expected compile error containing \'' . expect . '\', exit ' . (status as String) . ', got: ' . output;
+		SpecUnitState:checks:add(item: CheckRecord:init(ok: ok, msg: msg));
+	}
+
+	## Asserts that compiling [filePath] fails with a diagnostic containing [expect].
+	##
+	## @param filePath: The Spec file to compile.
+	## @param expect: The expected diagnostic substring.
+	held Function is compilerRejectsFile(String is filePath, String is expect){
+		local Process is proc: Process:init();
+		local File is files: File:init();
+		local String is outPath: files:fileTemp(template: '/tmp/spec_assert_out_XXXXXX');
+		local Array of String is args: ['-c', './bin/spec --quiet -i "' . filePath . '" -o /dev/null > "' . outPath . '" 2>&1'];
+		local Int is status: proc:execute(command: 'sh', args: args);
+		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		files:fileRemove(path: outPath);
+
+		local Boolean is ok: status != 0 && output:contains(needle: expect);
+		local String is msg: 'expected compile error for ' . filePath . ' containing \'' . expect . '\', exit ' . (status as String) . ', got: ' . output;
+		SpecUnitState:checks:add(item: CheckRecord:init(ok: ok, msg: msg));
+	}
+
+	## Asserts that compiling and running [source] aborts with [expect].
+	##
+	## @param source: The Spec code snippet to run.
+	## @param expect: The expected runtime error substring.
+	held Function is runFails(String is source, String is expect){
+		local Process is proc: Process:init();
+		local File is files: File:init();
+		local String is baseTemp: files:fileTemp(template: '/tmp/spec_assert_XXXXXX');
+		files:fileRemove(path: baseTemp);
+		local String is tmp: baseTemp . '.spec';
+		local String is bin: tmp . '.bin';
+		local String is outPath: tmp . '.out';
+		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
+		local Array of String is cArgs: ['-c', './bin/spec --quiet -i "' . tmp . '" -o "' . bin . '" > "' . outPath . '" 2>&1'];
+		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
+		local Array of String is rArgs: ['-c', 'timeout 25 "' . bin . '" > "' . outPath . '" 2>&1'];
+		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);
+		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		files:fileRemove(path: tmp);
+		files:fileRemove(path: bin);
+		files:fileRemove(path: outPath);
+
+		local Boolean is ok: cStatus == 0 && rStatus != 0 && rOut:contains(needle: expect);
+		local String is msg: 'expected run error containing \'' . expect . '\', compile ' . (cStatus as String) . ', exit ' . (rStatus as String) . ', got: ' . rOut;
+		SpecUnitState:checks:add(item: CheckRecord:init(ok: ok, msg: msg));
+	}
 
 	## Records an unconditional failure.
 	##
