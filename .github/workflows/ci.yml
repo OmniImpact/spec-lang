@@ -2,6 +2,9 @@ name: CI
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   gcc:
@@ -30,6 +33,18 @@ jobs:
           bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
           bin/specunit -s bin/spec -t examples -t tests
 
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap compiler (macOS clang)
+        run: CC=clang ./bootstrap.sh
+      - name: Regression suite
+        run: |
+          bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+          bin/specunit -s bin/spec -t examples -t tests
+
   sanitizer:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -47,3 +62,54 @@ jobs:
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
           bin/specunit-asan -s bin/spec-asan -t examples -t tests
+
+  release:
+    needs: [gcc, clang, macos, sanitizer]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Release Tag
+        id: vars
+        run: |
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.000.100")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Building release for tag: $TAG"
+
+      - name: Build Compiler and Tooling Binaries
+        run: |
+          ./bootstrap.sh
+          bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
+          bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
+
+      - name: Package Distribution Artifacts
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          mkdir -p dist
+          cp bin/spec dist/spec
+          cp bin/specunit dist/specunit
+          cp bin/speclint dist/speclint
+          TARBALL="spec-${TAG}-linux-x86_64.tar.gz"
+          tar -czvf "dist/${TARBALL}" \
+            bin/spec bin/specunit bin/speclint \
+            spec/ bootstrap/ README.md utilities/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: Release ${{ steps.vars.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist/spec
+            dist/specunit
+            dist/speclint
+            dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
