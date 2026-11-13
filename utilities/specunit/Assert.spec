@@ -30,7 +30,7 @@ Class is Assert{
 		local String is tmp: baseTemp . '.spec';
 		local String is outPath: tmp . '.out';
 		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
-		local Array of String is args: ['-c', './bin/spec --quiet -i "' . tmp . '" -o /dev/null > "' . outPath . '" 2>&1'];
+		local Array of String is args: ['-c', 'bin/spec --quiet -i "' . tmp . '" -o /dev/null > "' . outPath . '" 2>&1'];
 		local Int is status: proc:execute(command: 'sh', args: args);
 		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
 		files:fileRemove(path: tmp);
@@ -49,7 +49,7 @@ Class is Assert{
 		local Process is proc: Process:init();
 		local File is files: File:init();
 		local String is outPath: files:fileTemp(template: '/tmp/spec_assert_out_XXXXXX');
-		local Array of String is args: ['-c', './bin/spec --quiet -i "' . filePath . '" -o /dev/null > "' . outPath . '" 2>&1'];
+		local Array of String is args: ['-c', 'bin/spec --quiet -i "' . filePath . '" -o /dev/null > "' . outPath . '" 2>&1'];
 		local Int is status: proc:execute(command: 'sh', args: args);
 		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
 		files:fileRemove(path: outPath);
@@ -69,10 +69,10 @@ Class is Assert{
 		local String is baseTemp: files:fileTemp(template: '/tmp/spec_assert_XXXXXX');
 		files:fileRemove(path: baseTemp);
 		local String is tmp: baseTemp . '.spec';
-		local String is bin: tmp . '.bin';
+		local String is bin: tmp . '.exe';
 		local String is outPath: tmp . '.out';
 		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
-		local Array of String is cArgs: ['-c', './bin/spec --quiet -i "' . tmp . '" -o "' . bin . '" > "' . outPath . '" 2>&1'];
+		local Array of String is cArgs: ['-c', 'bin/spec --quiet -i "' . tmp . '" -o "' . bin . '" > "' . outPath . '" 2>&1'];
 		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
 		local Array of String is rArgs: ['-c', '"' . bin . '" < /dev/null > "' . outPath . '" 2>&1'];
 		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);

@@ -2227,6 +2227,23 @@ long long spec_process_execute(String command, SpecArray* args) {
         }
     }
     *w = 0;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    memset(&pi, 0, sizeof(pi));
+    DWORD exit_code = 1;
+    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        GetExitCodeProcess(pi.hProcess, &exit_code);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        free(cmd_line);
+        return (long long)exit_code;
+    }
+    int status = system(cmd_line);
+    free(cmd_line);
+    return (long long)status;
 #else
     /* Each argument is passed to the shell as ONE single-quoted word (a
        quote inside becomes quote, backslash, quote, quote), so spaces and
@@ -2261,13 +2278,9 @@ long long spec_process_execute(String command, SpecArray* args) {
         }
     }
     *w = 0;
-#endif
     int status = system(cmd_line);
     free(cmd_line);
     if (status == -1) return -1;
-#if defined(_WIN32)
-    return (long long)status;
-#else
     if (WIFSIGNALED(status)) return 128 + (long long)WTERMSIG(status);
     return (long long)WEXITSTATUS(status);
 #endif

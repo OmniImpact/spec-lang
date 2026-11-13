@@ -248,7 +248,10 @@ Class is Driver{
 		});
 		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
-		if({ outputPath == '' }, {
+		if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
+			if({ emitCPath == '' }, {
+				fileRemove(path: tempCPath);
+			});
 			Process:monitorStop();
 			report:summary(inputPath: inputPath, outputPath: emitCPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
 			return;

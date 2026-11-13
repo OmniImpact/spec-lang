@@ -73,6 +73,12 @@ Class is WorkItem{
 Class is SpecTestRegistry{
 	namespace: ['specunit'];
 
+	replace Array of Array of String is using: [
+		['base', 'sys', Output],
+		['base', 'sys', Ansi],
+		['base', 'sys', Conditional]
+	];
+
 	held Array of WorkItem is queue: [];
 	held Array of SuiteResult is results: [];
 	held Map of String to SuiteResult is byName: Map:init();
@@ -84,6 +90,18 @@ Class is SpecTestRegistry{
 		r:report: report;
 		SpecTestRegistry:results:add(item: r);
 		SpecTestRegistry:byName:set(key: name, value: r);
+
+		local Output is out: Output:init();
+		local Ansi is ansi: Ansi:init();
+		local Conditional is cond: Conditional:init();
+		cond:if(check: { return passed; }, then: {
+			out:line(text: ansi:color256(code: 114, text: '[PASS]') . ' ' . name);
+		});
+		cond:if(check: { return !passed; }, then: {
+			local String is lineNote: '';
+			cond:if(check: { return note != ''; }, then: { lineNote: '  ' . note; });
+			out:line(text: ansi:color256(code: 203, text: '[FAIL]') . ' ' . name . lineNote);
+		});
 	}
 }
 
@@ -161,8 +179,10 @@ Class is SpecUnit{
 	## Enqueues every candidate under each comma/newline-separated
 	## [dirsRaw] entry (relative to [root]), via a recursive walk.
 	Function is enqueueDirs(String is dirsRaw, String is root){
-		dirsRaw:split(delimiter: "\n"):each(action: local Function(String is seg){
-			seg:split(delimiter: ','):each(action: local Function(String is dir){
+		dirsRaw:split(delimiter: "\n"):each(action: local Function(String is segRaw){
+			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
+			seg:split(delimiter: ','):each(action: local Function(String is dirRaw){
+				local String is dir: if(check: { dirRaw:endsWith(suffix: "\r") }, then: { dirRaw:substring(start: 0, end: dirRaw:length() - 1); }, else: { dirRaw; });
 				if(check: { dir != '' }, then: {
 					self:enqueueTree(absDir: root . '/' . dir, relDir: dir . '/');
 				});
@@ -204,7 +224,8 @@ Class is SpecUnit{
 		local String is kind: '';
 		local Boolean is requireReport: false;
 		local Array of String is expect: [];
-		content:split(delimiter: "\n"):each(action: local Function(String is seg){
+		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
+			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
 			if(check: { seg:startsWith(prefix: '#! specunit: ') }, then: {
 				kind: seg:substring(start: 13, end: seg:length());
 			}, else: {
@@ -229,7 +250,8 @@ Class is SpecUnit{
 	## @return: 1 when anything failed, 0 when green.
 	Function of Int is runSuite(WorkItem is item, Int is idx, String is specBin, String is root){
 		local String is src: root . '/' . item:path;
-		local String is bin: self:workPath(suffix: '.bin', idx: idx, stem: self:fileStem(path: item:path));
+		local String is exeSuffix: if(check: { Process:osName() == 'windows' }, then: { '.exe' }, else: { '.bin' });
+		local String is bin: self:workPath(suffix: exeSuffix, idx: idx, stem: self:fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
 		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1 -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
 		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
@@ -308,7 +330,8 @@ Class is SpecUnit{
 	## @return: 1 when anything failed, 0 when green.
 	Function of Int is runRunFail(WorkItem is item, Int is idx, String is specBin, String is root){
 		local String is src: root . '/' . item:path;
-		local String is bin: self:workPath(suffix: '.bin', idx: idx, stem: self:fileStem(path: item:path));
+		local String is exeSuffix: if(check: { Process:osName() == 'windows' }, then: { '.exe' }, else: { '.bin' });
+		local String is bin: self:workPath(suffix: exeSuffix, idx: idx, stem: self:fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
 		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1 -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
 		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
@@ -345,44 +368,37 @@ Class is SpecUnit{
 		return 1;
 	}
 
-	## The flat /tmp work path for one item's artifacts: pid + queue
+	## The flat work path for one item's artifacts: pid + queue
 	## index + stem keeps concurrent compiles collision-free.
 	Function of String is workPath(String is suffix, Int is idx, String is stem){
-		return '/tmp/specrun_' . (Process:getPid() as String) . '_' . (idx as String) . '_' . stem . suffix;
+		local String is dir: if(check: { Process:osName() == 'windows' }, then: { 'bin' }, else: { '/tmp' });
+		return dir . '/specrun_' . (Process:getPid() as String) . '_' . (idx as String) . '_' . stem . suffix;
 	}
 
-	## The report: the per-item table in queue order, failed items'
-	## evidence printed, then the CI exit. Bare calls throughout — the
-	## runner is an instance class, so the as-imported surfaces dispatch
-	## through self (builtin if included: it yields in local-init
-	## position, and binds to a local before any call-argument use).
+	## The report: failed items' evidence printed (if any), then the CI exit.
 	Function is report(){
 		local Int is passed: 0;
 		local Int is failed: 0;
-		local Int is nameLen: 14;
 		SpecTestRegistry:results:each(action: local Function(SuiteResult is r){
-			if(check: { r:name:length() > nameLen }, then: {
-				nameLen: r:name:length();
-			});
 			if(check: { r:passed }, then: {
 				passed: passed + 1;
 			}, else: {
 				failed: failed + 1;
 			});
 		});
-		line('');
-		line(bold() . color256(code: 51, text: '== Results =='));
-		SpecTestRegistry:results:each(action: local Function(SuiteResult is r){
-			local String is status: if(check: { r:passed }, then: { color256(code: 114, text: '[PASS]'); }, else: { color256(code: 203, text: '[FAIL]'); });
-			local String is pad: '';
-			repeat(count: nameLen - r:name:length(), worker: {
-				pad: pad . ' ';
-			});
-			line(status . ' ' . r:name . pad . '  ' . r:note);
-			if(check: { !r:passed && r:report != '' }, then: {
-				line(color256(code: 203, text: r:report));
+		if(check: { failed > 0 }, then: {
+			line('');
+			line(bold() . color256(code: 203, text: '== Failures =='));
+			SpecTestRegistry:results:each(action: local Function(SuiteResult is r){
+				if(check: { !r:passed }, then: {
+					line(color256(code: 203, text: '[FAIL] ' . r:name . '  ' . r:note));
+					if(check: { r:report != '' }, then: {
+						line(color256(code: 203, text: r:report));
+					});
+				});
 			});
 		});
+		line('');
 		local String is verdict: if(check: { failed == 0 }, then: { color256(code: 114, text: 'ALL GREEN'); }, else: { color256(code: 203, text: 'FAILED'); });
 		line(bold() . color256(code: 51, text: '== ' . (passed as String) . ' passed, ' . (failed as String) . ' failed — ' . verdict . ' =='));
 		local Int is exitCode: if(check: { failed > 0 }, then: { 1 }, else: { 0 });
