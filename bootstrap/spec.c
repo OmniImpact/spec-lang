@@ -60093,78 +60093,78 @@ static const SpecMethodMeta CodeGenerator_spec_methods[] = {
     { "formatTypeString", (void*)CodeGenerator_formatTypeString, 0, 878 },
     { "substituteTypeParam", (void*)CodeGenerator_substituteTypeParam, 0, 905 },
     { "findClass", (void*)CodeGenerator_findClass, 0, 928 },
-    { "lookupFieldType", (void*)CodeGenerator_lookupFieldType, 0, 972 },
-    { "lookupMethodReturnType", (void*)CodeGenerator_lookupMethodReturnType, 0, 1019 },
-    { "matchKeyName", (void*)CodeGenerator_matchKeyName, 0, 1177 },
-    { "lookupEnumVariant", (void*)CodeGenerator_lookupEnumVariant, 0, 1191 },
-    { "findMethodImplementingClass", (void*)CodeGenerator_findMethodImplementingClass, 0, 1212 },
-    { "lookupMethodMember", (void*)CodeGenerator_lookupMethodMember, 0, 1250 },
-    { "isSubclassOf", (void*)CodeGenerator_isSubclassOf, 0, 1283 },
-    { "inferTargetType", (void*)CodeGenerator_inferTargetType, 0, 1309 },
-    { "yieldsClaim", (void*)CodeGenerator_yieldsClaim, 0, 1529 },
-    { "isFreshConstructorCall", (void*)CodeGenerator_isFreshConstructorCall, 0, 1598 },
-    { "isStringExpr", (void*)CodeGenerator_isStringExpr, 0, 1618 },
-    { "wrapToString", (void*)CodeGenerator_wrapToString, 0, 1640 },
-    { "argValue", (void*)CodeGenerator_argValue, 0, 1727 },
-    { "claimStatus", (void*)CodeGenerator_claimStatus, 0, 1738 },
-    { "claimWrapped", (void*)CodeGenerator_claimWrapped, 0, 1770 },
-    { "generateExpression", (void*)CodeGenerator_generateExpression, 0, 1780 },
-    { "generateExpressionInner", (void*)CodeGenerator_generateExpressionInner, 0, 1792 },
-    { "emitArrayLiteral", (void*)CodeGenerator_emitArrayLiteral, 0, 1872 },
-    { "emitMapLiteral", (void*)CodeGenerator_emitMapLiteral, 0, 1913 },
-    { "emitIdent", (void*)CodeGenerator_emitIdent, 0, 1953 },
-    { "emitPath", (void*)CodeGenerator_emitPath, 0, 1978 },
-    { "emitBinary", (void*)CodeGenerator_emitBinary, 0, 2096 },
-    { "stripStringLiterals", (void*)CodeGenerator_stripStringLiterals, 0, 2177 },
-    { "containsIdent", (void*)CodeGenerator_containsIdent, 0, 2229 },
-    { "isIdentChar", (void*)CodeGenerator_isIdentChar, 0, 2258 },
-    { "emitIndex", (void*)CodeGenerator_emitIndex, 0, 2272 },
-    { "emitCast", (void*)CodeGenerator_emitCast, 0, 2311 },
-    { "emitCall", (void*)CodeGenerator_emitCall, 0, 2397 },
-    { "bodyAssignsLocal", (void*)CodeGenerator_bodyAssignsLocal, 0, 2753 },
-    { "assignsViaCall", (void*)CodeGenerator_assignsViaCall, 0, 2780 },
-    { "emitAnonFn", (void*)CodeGenerator_emitAnonFn, 0, 2799 },
-    { "formatCallArguments", (void*)CodeGenerator_formatCallArguments, 0, 3018 },
-    { "heldMethodMemberOf", (void*)CodeGenerator_heldMethodMemberOf, 0, 3038 },
-    { "formatCallArgumentsWith", (void*)CodeGenerator_formatCallArgumentsWith, 0, 3051 },
-    { "formatCallArgumentsForMember", (void*)CodeGenerator_formatCallArgumentsForMember, 0, 3078 },
-    { "scopeReleases", (void*)CodeGenerator_scopeReleases, 0, 3144 },
-    { "tryGenerateTargetOnly", (void*)CodeGenerator_tryGenerateTargetOnly, 0, 3164 },
-    { "tryGenerateAppendChain", (void*)CodeGenerator_tryGenerateAppendChain, 0, 3185 },
-    { "generateStatement", (void*)CodeGenerator_generateStatement, 0, 3220 },
-    { "debugVolatile", (void*)CodeGenerator_debugVolatile, 2, 3275 },
-    { "emitVarDecl", (void*)CodeGenerator_emitVarDecl, 0, 3282 },
-    { "emitAssign", (void*)CodeGenerator_emitAssign, 0, 3408 },
-    { "emitForward", (void*)CodeGenerator_emitForward, 0, 3465 },
-    { "emitReturn", (void*)CodeGenerator_emitReturn, 0, 3493 },
-    { "isSysinternalClass", (void*)CodeGenerator_isSysinternalClass, 0, 3559 },
-    { "generateMethod", (void*)CodeGenerator_generateMethod, 0, 3567 },
-    { "generateMain", (void*)CodeGenerator_generateMain, 0, 3720 },
-    { "collectClassesFromStatement", (void*)CodeGenerator_collectClassesFromStatement, 4, 3790 },
-    { "collectClasses", (void*)CodeGenerator_collectClasses, 4, 3799 },
-    { "generateHeldMembers", (void*)CodeGenerator_generateHeldMembers, 0, 3827 },
-    { "generateHeldMetadata", (void*)CodeGenerator_generateHeldMetadata, 0, 3992 },
-    { "generateProgram", (void*)CodeGenerator_generateProgram, 0, 4036 },
-    { "generateProgramToFile", (void*)CodeGenerator_generateProgramToFile, 0, 4197 },
-    { "collectAncestors", (void*)CodeGenerator_collectAncestors, 4, 4379 },
-    { "generateTypeHierarchy", (void*)CodeGenerator_generateTypeHierarchy, 0, 4396 },
-    { "generateVTables", (void*)CodeGenerator_generateVTables, 0, 4429 },
-    { "generateConstructors", (void*)CodeGenerator_generateConstructors, 0, 4463 },
-    { "generateClassRegistry", (void*)CodeGenerator_generateClassRegistry, 0, 4565 },
-    { "generateInlineArrayOp", (void*)CodeGenerator_generateInlineArrayOp, 0, 4698 },
-    { "generateInlineArrayFold", (void*)CodeGenerator_generateInlineArrayFold, 0, 4797 },
-    { "generateInlineMapEach", (void*)CodeGenerator_generateInlineMapEach, 0, 4863 },
-    { "checkConditionC", (void*)CodeGenerator_checkConditionC, 0, 4926 },
-    { "generateInlineBranch", (void*)CodeGenerator_generateInlineBranch, 0, 4974 },
-    { "inlineBranchBodyYield", (void*)CodeGenerator_inlineBranchBodyYield, 0, 5030 },
-    { "inlineBranchBody", (void*)CodeGenerator_inlineBranchBody, 0, 5073 },
-    { "generateMatch", (void*)CodeGenerator_generateMatch, 0, 5096 },
-    { "generatePredicateMatch", (void*)CodeGenerator_generatePredicateMatch, 0, 5226 },
-    { "matchCondC", (void*)CodeGenerator_matchCondC, 0, 5312 },
-    { "generateInlineWhileLoop", (void*)CodeGenerator_generateInlineWhileLoop, 0, 5443 },
-    { "generateInlineUntil", (void*)CodeGenerator_generateInlineUntil, 0, 5528 },
-    { "generateInlineRepeat", (void*)CodeGenerator_generateInlineRepeat, 0, 5574 },
-    { "generateInlineWhileCondition", (void*)CodeGenerator_generateInlineWhileCondition, 0, 5604 },
+    { "lookupFieldType", (void*)CodeGenerator_lookupFieldType, 0, 983 },
+    { "lookupMethodReturnType", (void*)CodeGenerator_lookupMethodReturnType, 0, 1030 },
+    { "matchKeyName", (void*)CodeGenerator_matchKeyName, 0, 1188 },
+    { "lookupEnumVariant", (void*)CodeGenerator_lookupEnumVariant, 0, 1202 },
+    { "findMethodImplementingClass", (void*)CodeGenerator_findMethodImplementingClass, 0, 1223 },
+    { "lookupMethodMember", (void*)CodeGenerator_lookupMethodMember, 0, 1261 },
+    { "isSubclassOf", (void*)CodeGenerator_isSubclassOf, 0, 1294 },
+    { "inferTargetType", (void*)CodeGenerator_inferTargetType, 0, 1320 },
+    { "yieldsClaim", (void*)CodeGenerator_yieldsClaim, 0, 1540 },
+    { "isFreshConstructorCall", (void*)CodeGenerator_isFreshConstructorCall, 0, 1609 },
+    { "isStringExpr", (void*)CodeGenerator_isStringExpr, 0, 1629 },
+    { "wrapToString", (void*)CodeGenerator_wrapToString, 0, 1651 },
+    { "argValue", (void*)CodeGenerator_argValue, 0, 1738 },
+    { "claimStatus", (void*)CodeGenerator_claimStatus, 0, 1749 },
+    { "claimWrapped", (void*)CodeGenerator_claimWrapped, 0, 1781 },
+    { "generateExpression", (void*)CodeGenerator_generateExpression, 0, 1791 },
+    { "generateExpressionInner", (void*)CodeGenerator_generateExpressionInner, 0, 1803 },
+    { "emitArrayLiteral", (void*)CodeGenerator_emitArrayLiteral, 0, 1883 },
+    { "emitMapLiteral", (void*)CodeGenerator_emitMapLiteral, 0, 1924 },
+    { "emitIdent", (void*)CodeGenerator_emitIdent, 0, 1964 },
+    { "emitPath", (void*)CodeGenerator_emitPath, 0, 1989 },
+    { "emitBinary", (void*)CodeGenerator_emitBinary, 0, 2107 },
+    { "stripStringLiterals", (void*)CodeGenerator_stripStringLiterals, 0, 2188 },
+    { "containsIdent", (void*)CodeGenerator_containsIdent, 0, 2240 },
+    { "isIdentChar", (void*)CodeGenerator_isIdentChar, 0, 2269 },
+    { "emitIndex", (void*)CodeGenerator_emitIndex, 0, 2283 },
+    { "emitCast", (void*)CodeGenerator_emitCast, 0, 2322 },
+    { "emitCall", (void*)CodeGenerator_emitCall, 0, 2408 },
+    { "bodyAssignsLocal", (void*)CodeGenerator_bodyAssignsLocal, 0, 2764 },
+    { "assignsViaCall", (void*)CodeGenerator_assignsViaCall, 0, 2791 },
+    { "emitAnonFn", (void*)CodeGenerator_emitAnonFn, 0, 2810 },
+    { "formatCallArguments", (void*)CodeGenerator_formatCallArguments, 0, 3029 },
+    { "heldMethodMemberOf", (void*)CodeGenerator_heldMethodMemberOf, 0, 3049 },
+    { "formatCallArgumentsWith", (void*)CodeGenerator_formatCallArgumentsWith, 0, 3062 },
+    { "formatCallArgumentsForMember", (void*)CodeGenerator_formatCallArgumentsForMember, 0, 3089 },
+    { "scopeReleases", (void*)CodeGenerator_scopeReleases, 0, 3155 },
+    { "tryGenerateTargetOnly", (void*)CodeGenerator_tryGenerateTargetOnly, 0, 3175 },
+    { "tryGenerateAppendChain", (void*)CodeGenerator_tryGenerateAppendChain, 0, 3196 },
+    { "generateStatement", (void*)CodeGenerator_generateStatement, 0, 3231 },
+    { "debugVolatile", (void*)CodeGenerator_debugVolatile, 2, 3286 },
+    { "emitVarDecl", (void*)CodeGenerator_emitVarDecl, 0, 3293 },
+    { "emitAssign", (void*)CodeGenerator_emitAssign, 0, 3419 },
+    { "emitForward", (void*)CodeGenerator_emitForward, 0, 3476 },
+    { "emitReturn", (void*)CodeGenerator_emitReturn, 0, 3504 },
+    { "isSysinternalClass", (void*)CodeGenerator_isSysinternalClass, 0, 3570 },
+    { "generateMethod", (void*)CodeGenerator_generateMethod, 0, 3578 },
+    { "generateMain", (void*)CodeGenerator_generateMain, 0, 3731 },
+    { "collectClassesFromStatement", (void*)CodeGenerator_collectClassesFromStatement, 4, 3801 },
+    { "collectClasses", (void*)CodeGenerator_collectClasses, 4, 3810 },
+    { "generateHeldMembers", (void*)CodeGenerator_generateHeldMembers, 0, 3838 },
+    { "generateHeldMetadata", (void*)CodeGenerator_generateHeldMetadata, 0, 4003 },
+    { "generateProgram", (void*)CodeGenerator_generateProgram, 0, 4047 },
+    { "generateProgramToFile", (void*)CodeGenerator_generateProgramToFile, 0, 4208 },
+    { "collectAncestors", (void*)CodeGenerator_collectAncestors, 4, 4390 },
+    { "generateTypeHierarchy", (void*)CodeGenerator_generateTypeHierarchy, 0, 4407 },
+    { "generateVTables", (void*)CodeGenerator_generateVTables, 0, 4440 },
+    { "generateConstructors", (void*)CodeGenerator_generateConstructors, 0, 4474 },
+    { "generateClassRegistry", (void*)CodeGenerator_generateClassRegistry, 0, 4576 },
+    { "generateInlineArrayOp", (void*)CodeGenerator_generateInlineArrayOp, 0, 4709 },
+    { "generateInlineArrayFold", (void*)CodeGenerator_generateInlineArrayFold, 0, 4808 },
+    { "generateInlineMapEach", (void*)CodeGenerator_generateInlineMapEach, 0, 4874 },
+    { "checkConditionC", (void*)CodeGenerator_checkConditionC, 0, 4937 },
+    { "generateInlineBranch", (void*)CodeGenerator_generateInlineBranch, 0, 4985 },
+    { "inlineBranchBodyYield", (void*)CodeGenerator_inlineBranchBodyYield, 0, 5041 },
+    { "inlineBranchBody", (void*)CodeGenerator_inlineBranchBody, 0, 5084 },
+    { "generateMatch", (void*)CodeGenerator_generateMatch, 0, 5107 },
+    { "generatePredicateMatch", (void*)CodeGenerator_generatePredicateMatch, 0, 5237 },
+    { "matchCondC", (void*)CodeGenerator_matchCondC, 0, 5323 },
+    { "generateInlineWhileLoop", (void*)CodeGenerator_generateInlineWhileLoop, 0, 5454 },
+    { "generateInlineUntil", (void*)CodeGenerator_generateInlineUntil, 0, 5539 },
+    { "generateInlineRepeat", (void*)CodeGenerator_generateInlineRepeat, 0, 5585 },
+    { "generateInlineWhileCondition", (void*)CodeGenerator_generateInlineWhileCondition, 0, 5615 },
 };
 static const char* const CodeGenerator_spec_bases[] = {
     "Class",
@@ -75753,10 +75753,12 @@ ClassInfo* CodeGenerator_findClass(CodeGenerator* self, String name) {
     ClassInfo* _mret_232 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO ClassInfo* res = 0;
+    SPEC_AUTO ClassInfo* floorCand = 0;
     res = (ClassInfo*)((({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), (((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; })); spec_pool_release_to(_pf); _v; }))))); _inst; })));
     bool found = false;
     long long count = spec_array_length(self->programClasses);
     bool hasColon = String_contains(name, spec_string_intern(":"));
+    floorCand = (ClassInfo*)((({ ClassInfo* _inst = ClassInfo_new(); ClassInfo_init(_inst, spec_string_intern(""), spec_string_intern(""), (((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(({ SpecArray* _arr = spec_array_new(); _arr; })); spec_pool_release_to(_pf); _v; }))))); _inst; })));
     long long idx = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
@@ -75769,17 +75771,24 @@ ClassInfo* CodeGenerator_findClass(CodeGenerator* self, String name) {
         do {
     SPEC_AUTO ClassInfo* cand = (ClassInfo*)spec_retain((void*)(spec_array_get(self->programClasses, idx)));
     ((idx)++);
-    if (spec_string_equals(cand->name, name)) {
-	    spec_assign((void**)&res, (void*)(cand));
-	    found = true;
-	} else {
-	    if (hasColon) {
+    if (hasColon) {
 	    SPEC_AUTO String candQ = spec_string_concat(spec_string_concat(ClassInfo_namespaceJoined(cand) /* inst:ClassInfo:namespaceJoined */, spec_string_intern(":")), cand->name);
 	    if (spec_string_equals(candQ, name)) {
 	    spec_assign((void**)&res, (void*)(cand));
 	    found = true;
 	};
     if (candQ) { spec_release((void*)candQ); candQ = NULL; }
+	} else {
+	    if (spec_string_equals(cand->name, name)) {
+	    bool isFloor = ((String_endsWith((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(ClassInfo_namespaceJoined(cand) /* inst:ClassInfo:namespaceJoined */); spec_pool_release_to(_pf); _v; })))), spec_string_intern(":sysinternal"))) || (spec_string_equals(ClassInfo_namespaceJoined(cand) /* inst:ClassInfo:namespaceJoined */, spec_string_intern("sysinternal"))));
+	    if ((!(isFloor))) {
+	    spec_assign((void**)&res, (void*)(cand));
+	    found = true;
+	} else {
+	    if (spec_string_equals(floorCand->name, spec_string_intern(""))) {
+	    spec_assign((void**)&floorCand, (void*)(cand));
+	};
+	};
 	};
 	};
     if (cand) { spec_release((void*)cand); cand = NULL; }
@@ -75789,6 +75798,10 @@ ClassInfo* CodeGenerator_findClass(CodeGenerator* self, String name) {
 });
     if (found) {
 	    _mret_232 = (ClassInfo*)({ ClassInfo* _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_232;
+	};
+    if ((((!(hasColon))) && ((!spec_string_equals(floorCand->name, spec_string_intern("")))))) {
+	    _mret_232 = (ClassInfo*)({ ClassInfo* _ret_val = floorCand; floorCand = NULL; _ret_val; });
     goto _cleanup_232;
 	};
     if (hasColon) {
@@ -75812,6 +75825,7 @@ ClassInfo* CodeGenerator_findClass(CodeGenerator* self, String name) {
     goto _cleanup_232;
     _cleanup_232: ;
     if (res) { spec_release((void*)res); res = NULL; }
+    if (floorCand) { spec_release((void*)floorCand); floorCand = NULL; }
     return _mret_232;
 }
 

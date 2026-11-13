@@ -930,25 +930,36 @@ Class is CodeGenerator{
 		local Boolean is found: false;
 		local Int is count: self:programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
+		local ClassInfo is floorCand: ClassInfo:init(name: '', baseClass: '', members: []);
 		local Int is idx: 0;
 		while({ !found && idx < count }, {
 			local ClassInfo is cand: self:programClasses:get(index: idx);
 			idx++;
-			if({ cand:name == name }, {
-				res: cand;
-				found: true;
+			if({ hasColon }, {
+				local String is candQ: cand:namespaceJoined() . ':' . cand:name;
+				if({ candQ == name }, {
+					res: cand;
+					found: true;
+				});
 			}, {
-				if({ hasColon }, {
-					local String is candQ: cand:namespaceJoined() . ':' . cand:name;
-					if({ candQ == name }, {
+				if({ cand:name == name }, {
+					local Boolean is isFloor: cand:namespaceJoined():endsWith(suffix: ':sysinternal') || cand:namespaceJoined() == 'sysinternal';
+					if({ !isFloor }, {
 						res: cand;
 						found: true;
+					}, {
+						if({ floorCand:name == '' }, {
+							floorCand: cand;
+						});
 					});
 				});
 			});
 		});
 		if({ found }, {
 			return res;
+		});
+		if({ !hasColon && floorCand:name != '' }, {
+			return floorCand;
 		});
 		if({ hasColon }, {
 			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);

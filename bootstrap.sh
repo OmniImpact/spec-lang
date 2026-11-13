@@ -35,13 +35,23 @@ case "$(uname -s)" in
 		;;
 esac
 
+file_cmp() {
+	if command -v cmp >/dev/null 2>&1; then
+		cmp -s "$1" "$2"
+	elif command -v diff >/dev/null 2>&1; then
+		diff -q "$1" "$2" >/dev/null 2>&1
+	else
+		[ "$(wc -c < "$1")" -eq "$(wc -c < "$2")" ] && [ "$(sha256sum "$1" | cut -d' ' -f1)" = "$(sha256sum "$2" | cut -d' ' -f1)" ]
+	fi
+}
+
 for cycle in 1 2 3; do
 	echo "Compiling bootstrap/spec.c -> bin/spec via ${CC_BIN}..."
 	"${CC_BIN}" -O2 bootstrap/spec.c -o bin/spec -pthread -lm ${EXTRA_LIBS}
 
 	echo "Verifying the self-hosting fixed point (cycle ${cycle})..."
 	bin/spec -i "$DRIVER" --emit-c /tmp/spec_fixedpoint_verify.c --quiet
-	if cmp -s /tmp/spec_fixedpoint_verify.c bootstrap/spec.c; then
+	if file_cmp /tmp/spec_fixedpoint_verify.c bootstrap/spec.c; then
 		echo "Fixed point verified: the compiler reproduces its own seed byte-for-byte."
 		rm -f /tmp/spec_fixedpoint_verify.c
 		echo "Spec compiler bootstrapped successfully!"
