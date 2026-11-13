@@ -257,6 +257,27 @@ Class is Driver{
 		# 5. Backend C compile.
 		local String is ccBin: Process:getEnv(key: 'CC', default: 'gcc');
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
+		local String is os: Process:osName();
+		if({ os == 'windows' }, {
+			gccArgs:add(item: '-lws2_32');
+			gccArgs:add(item: '-lwinmm');
+		});
+		if({ os == 'macos' }, {
+			gccArgs:add(item: '-framework');
+			gccArgs:add(item: 'AudioToolbox');
+		});
+		if({ os == 'linux' }, {
+			gccArgs:add(item: '-ldl');
+			local Boolean is usesAudio: false;
+			program:classes:each(action: local Function(ClassInfo is cls){
+				if({ cls:name == 'Audio' }, {
+					usesAudio: true;
+				});
+			});
+			if({ usesAudio && !fileExists(path: '/usr/include/alsa/asoundlib.h') }, {
+				Stderr:line('Notice: Program uses base:audio. If ALSA development headers are missing, please install:\n  Debian/Ubuntu: sudo apt-get install libasound2-dev\n  Fedora/RHEL:   sudo dnf install alsa-lib-devel');
+			});
+		});
 		if({ debugMode }, {
 			# Debug info rides full optimization: -g costs nothing, and the
 			# volatile-locals emission already keeps values inspectable.

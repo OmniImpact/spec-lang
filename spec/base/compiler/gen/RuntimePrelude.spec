@@ -23,14 +23,20 @@ Class is RuntimePrelude{
 #include <mach/mach_init.h>
 #include <mach/task.h>
 #include <sys/sysctl.h>
+#include <AudioToolbox/AudioToolbox.h>
 #elif defined(__linux__)
 #define _GNU_SOURCE
 #include <sched.h>
+#include <dlfcn.h>
 #elif defined(_WIN32)
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
 #endif
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
+#include <mmeapi.h>
 #include <psapi.h>
 #include <io.h>
 #endif
@@ -79,6 +85,13 @@ long long spec_string_index_of_from(String b, String needle, long long from, lon
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <poll.h>
+#include <fcntl.h>
 #endif
 #include <stdatomic.h>
 
@@ -2199,6 +2212,18 @@ String spec_process_getenv(String key, String def) {
     return spec_string_from_bytes(val, strlen(val));
 }
 
+String spec_process_os_name(void) {
+#if defined(_WIN32)
+    return spec_string_intern("windows");
+#elif defined(__APPLE__) && defined(__MACH__)
+    return spec_string_intern("macos");
+#elif defined(__linux__)
+    return spec_string_intern("linux");
+#else
+    return spec_string_intern("unknown");
+#endif
+}
+
 /* Math Package Primitives */
 double spec_math_round(double v) { return round(v); }
 double spec_math_floor(double v) { return floor(v); }
@@ -2832,6 +2857,434 @@ void spec_read_line(SpecClosure* on_line) {
     }
     free(_line);
 #endif
+}
+
+/* Networking & Sockets Floor */
+#if defined(_WIN32)
+static void _spec_ensure_winsock(void) {
+    static bool init = false;
+    if (!init) {
+        WSADATA wsa;
+        WSAStartup(MAKEWORD(2, 2), &wsa);
+        init = true;
+    }
+}
+#endif
+
+long long spec_tcp_connect(String host, long long port, long long timeout_ms) {
+    if (!host || port <= 0 || port > 65535) return -1;
+#if defined(_WIN32)
+    _spec_ensure_winsock();
+#endif
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%lld", port);
+    const char* h = spec_buf_to_cstring((SpecBuf*)host);
+
+    struct addrinfo hints, *res = NULL, *rp = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if (getaddrinfo(h, port_str, &hints, &res) != 0 || !res) {
+        return -1;
+    }
+
+    long long sock_fd = -1;
+    for (rp = res; rp != NULL; rp = rp->ai_next) {
+#if defined(_WIN32)
+        SOCKET s = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (s == INVALID_SOCKET) continue;
+        if (timeout_ms > 0) {
+            DWORD tv = (DWORD)timeout_ms;
+            setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+            setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv));
+        }
+        if (connect(s, rp->ai_addr, (int)rp->ai_addrlen) == 0) {
+            sock_fd = (long long)s;
+            break;
+        }
+        closesocket(s);
+#else
+        int s = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (s < 0) continue;
+        if (timeout_ms > 0) {
+            struct timeval tv;
+            tv.tv_sec = timeout_ms / 1000;
+            tv.tv_usec = (timeout_ms % 1000) * 1000;
+            setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const void*)&tv, sizeof(tv));
+            setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const void*)&tv, sizeof(tv));
+        }
+        if (connect(s, rp->ai_addr, rp->ai_addrlen) == 0) {
+            sock_fd = (long long)s;
+            break;
+        }
+        close(s);
+#endif
+    }
+    freeaddrinfo(res);
+    return sock_fd;
+}
+
+long long spec_tcp_listen(String host, long long port, long long backlog) {
+    if (port <= 0 || port > 65535) return -1;
+#if defined(_WIN32)
+    _spec_ensure_winsock();
+#endif
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%lld", port);
+    const char* h = (host && host->length > 0) ? spec_buf_to_cstring((SpecBuf*)host) : NULL;
+
+    struct addrinfo hints, *res = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    if (getaddrinfo(h, port_str, &hints, &res) != 0 || !res) {
+        return -1;
+    }
+
+#if defined(_WIN32)
+    SOCKET s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (s == INVALID_SOCKET) { freeaddrinfo(res); return -1; }
+    BOOL opt = TRUE;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+    if (bind(s, res->ai_addr, (int)res->ai_addrlen) != 0 || listen(s, backlog > 0 ? (int)backlog : 128) != 0) {
+        closesocket(s);
+        freeaddrinfo(res);
+        return -1;
+    }
+    freeaddrinfo(res);
+    return (long long)s;
+#else
+    int s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (s < 0) { freeaddrinfo(res); return -1; }
+    int opt = 1;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    if (bind(s, res->ai_addr, res->ai_addrlen) != 0 || listen(s, backlog > 0 ? (int)backlog : 128) != 0) {
+        close(s);
+        freeaddrinfo(res);
+        return -1;
+    }
+    freeaddrinfo(res);
+    return (long long)s;
+#endif
+}
+
+long long spec_socket_accept(long long fd) {
+    if (fd < 0) return -1;
+#if defined(_WIN32)
+    SOCKET s = accept((SOCKET)fd, NULL, NULL);
+    if (s == INVALID_SOCKET) return -1;
+    return (long long)s;
+#else
+    int s = accept((int)fd, NULL, NULL);
+    return (long long)s;
+#endif
+}
+
+long long spec_socket_send(long long fd, SpecByteBuffer* buf) {
+    if (fd < 0 || !buf || buf->length == 0) return 0;
+#if defined(_WIN32)
+    int n = send((SOCKET)fd, (const char*)buf->data, (int)buf->length, 0);
+    return (n == SOCKET_ERROR) ? -1 : (long long)n;
+#else
+    ssize_t n = send((int)fd, buf->data, buf->length, 0);
+    return (n < 0) ? -1 : (long long)n;
+#endif
+}
+
+long long spec_socket_send_str(long long fd, String str) {
+    if (fd < 0 || !str || str->length == 0) return 0;
+    const char* cs = spec_buf_to_cstring((SpecBuf*)str);
+    size_t len = strlen(cs);
+#if defined(_WIN32)
+    int n = send((SOCKET)fd, cs, (int)len, 0);
+    return (n == SOCKET_ERROR) ? -1 : (long long)n;
+#else
+    ssize_t n = send((int)fd, cs, len, 0);
+    return (n < 0) ? -1 : (long long)n;
+#endif
+}
+
+SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
+    if (fd < 0) return NULL;
+    if (max_bytes <= 0) max_bytes = 4096;
+    if (max_bytes > 1048576) max_bytes = 1048576;
+
+    SpecByteBuffer* b = spec_bytebuffer_new();
+    b->data = (unsigned char*)spec_xmalloc((size_t)max_bytes);
+    b->capacity = (size_t)max_bytes;
+
+#if defined(_WIN32)
+    int n = recv((SOCKET)fd, (char*)b->data, (int)max_bytes, 0);
+    if (n <= 0) {
+        if (n == 0) { b->length = 0; return b; }
+        spec_release(b);
+        return NULL;
+    }
+    b->length = (size_t)n;
+    return b;
+#else
+    ssize_t n = recv((int)fd, b->data, (size_t)max_bytes, 0);
+    if (n <= 0) {
+        if (n == 0) { b->length = 0; return b; }
+        spec_release(b);
+        return NULL;
+    }
+    b->length = (size_t)n;
+    return b;
+#endif
+}
+
+String spec_socket_recv_str(long long fd, long long max_bytes) {
+    SpecByteBuffer* b = spec_socket_recv(fd, max_bytes);
+    if (!b) return spec_string_intern("");
+    String s = spec_bytebuffer_to_string(b);
+    spec_release(b);
+    return s;
+}
+
+long long spec_socket_close(long long fd) {
+    if (fd < 0) return 0;
+#if defined(_WIN32)
+    closesocket((SOCKET)fd);
+#else
+    close((int)fd);
+#endif
+    return 0;
+}
+
+long long spec_socket_poll(long long fd, long long mode, long long timeout_ms) {
+    if (fd < 0) return -1;
+#if defined(_WIN32)
+    WSAPOLLFD pfd;
+    pfd.fd = (SOCKET)fd;
+    pfd.events = 0;
+    if (mode & 1) pfd.events |= POLLIN;
+    if (mode & 2) pfd.events |= POLLOUT;
+    pfd.revents = 0;
+    int ret = WSAPoll(&pfd, 1, (INT)timeout_ms);
+    if (ret > 0) return (pfd.revents & (POLLIN | POLLOUT)) ? 1 : 0;
+    return (ret == 0) ? 0 : -1;
+#else
+    struct pollfd pfd;
+    pfd.fd = (int)fd;
+    pfd.events = 0;
+    if (mode & 1) pfd.events |= POLLIN;
+    if (mode & 2) pfd.events |= POLLOUT;
+    pfd.revents = 0;
+    int ret = poll(&pfd, 1, (int)timeout_ms);
+    if (ret > 0) return (pfd.revents & (POLLIN | POLLOUT)) ? 1 : 0;
+    return (ret == 0) ? 0 : -1;
+#endif
+}
+
+long long spec_socket_set_timeout(long long fd, long long timeout_ms) {
+    if (fd < 0) return -1;
+#if defined(_WIN32)
+    DWORD tv = (timeout_ms > 0) ? (DWORD)timeout_ms : 0;
+    setsockopt((SOCKET)fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+    setsockopt((SOCKET)fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv));
+#else
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    setsockopt((int)fd, SOL_SOCKET, SO_RCVTIMEO, (const void*)&tv, sizeof(tv));
+    setsockopt((int)fd, SOL_SOCKET, SO_SNDTIMEO, (const void*)&tv, sizeof(tv));
+#endif
+    return 0;
+}
+
+/* PCM Audio Output Floor */
+typedef struct {
+    bool active;
+    long long sample_rate;
+    long long channels;
+    long long format;
+#if defined(__linux__)
+    void* alsa_handle;
+#elif defined(__APPLE__) && defined(__MACH__)
+    AudioQueueRef aq_queue;
+#elif defined(_WIN32)
+    HWAVEOUT h_wave_out;
+#endif
+} SpecAudioStream;
+
+static SpecAudioStream _spec_audio_streams[8] = {0};
+
+#if defined(__linux__)
+typedef void* spec_snd_pcm_t;
+typedef int (*spec_pfn_snd_pcm_open)(spec_snd_pcm_t**, const char*, int, int);
+typedef int (*spec_pfn_snd_pcm_set_params)(spec_snd_pcm_t*, int, int, unsigned int, unsigned int, int, unsigned int);
+typedef long (*spec_pfn_snd_pcm_writei)(spec_snd_pcm_t*, const void*, unsigned long);
+typedef int (*spec_pfn_snd_pcm_drain)(spec_snd_pcm_t*);
+typedef int (*spec_pfn_snd_pcm_close)(spec_snd_pcm_t*);
+typedef int (*spec_pfn_snd_pcm_recover)(spec_snd_pcm_t*, int, int);
+
+static void* _spec_alsa_lib = NULL;
+static spec_pfn_snd_pcm_open _spec_snd_pcm_open = NULL;
+static spec_pfn_snd_pcm_set_params _spec_snd_pcm_set_params = NULL;
+static spec_pfn_snd_pcm_writei _spec_snd_pcm_writei = NULL;
+static spec_pfn_snd_pcm_drain _spec_snd_pcm_drain = NULL;
+static spec_pfn_snd_pcm_close _spec_snd_pcm_close = NULL;
+static spec_pfn_snd_pcm_recover _spec_snd_pcm_recover = NULL;
+
+static bool _spec_init_alsa(void) {
+    if (_spec_alsa_lib) return true;
+    _spec_alsa_lib = dlopen("libasound.so.2", RTLD_LAZY);
+    if (!_spec_alsa_lib) _spec_alsa_lib = dlopen("libasound.so", RTLD_LAZY);
+    if (!_spec_alsa_lib) {
+        fprintf(stderr, "[Spec Audio] ALSA library (libasound.so.2) not found.\n"
+                        "Please install the ALSA development package:\n"
+                        "  Debian/Ubuntu: sudo apt-get install libasound2-dev\n"
+                        "  Fedora/RHEL:   sudo dnf install alsa-lib-devel\n"
+                        "  Arch:          sudo pacman -S alsa-lib\n");
+        return false;
+    }
+    _spec_snd_pcm_open = (spec_pfn_snd_pcm_open)dlsym(_spec_alsa_lib, "snd_pcm_open");
+    _spec_snd_pcm_set_params = (spec_pfn_snd_pcm_set_params)dlsym(_spec_alsa_lib, "snd_pcm_set_params");
+    _spec_snd_pcm_writei = (spec_pfn_snd_pcm_writei)dlsym(_spec_alsa_lib, "snd_pcm_writei");
+    _spec_snd_pcm_drain = (spec_pfn_snd_pcm_drain)dlsym(_spec_alsa_lib, "snd_pcm_drain");
+    _spec_snd_pcm_close = (spec_pfn_snd_pcm_close)dlsym(_spec_alsa_lib, "snd_pcm_close");
+    _spec_snd_pcm_recover = (spec_pfn_snd_pcm_recover)dlsym(_spec_alsa_lib, "snd_pcm_recover");
+    return _spec_snd_pcm_open && _spec_snd_pcm_set_params && _spec_snd_pcm_writei;
+}
+#elif defined(__APPLE__) && defined(__MACH__)
+static void _spec_audio_queue_cb(void* custom_data, AudioQueueRef queue, AudioQueueBufferRef buffer) {
+    (void)custom_data;
+    AudioQueueFreeBuffer(queue, buffer);
+}
+#endif
+
+long long spec_audio_open(long long sample_rate, long long channels, long long format) {
+    if (sample_rate <= 0) sample_rate = 44100;
+    if (channels <= 0) channels = 2;
+    if (format <= 0) format = 1;
+
+    int slot = -1;
+    for (int i = 0; i < 8; i++) {
+        if (!_spec_audio_streams[i].active) {
+            slot = i;
+            break;
+        }
+    }
+    if (slot < 0) return -1;
+
+#if defined(__linux__)
+    if (!_spec_init_alsa()) return -1;
+    spec_snd_pcm_t* pcm = NULL;
+    if (_spec_snd_pcm_open(&pcm, "default", 0, 0) != 0) {
+        return -1;
+    }
+    if (_spec_snd_pcm_set_params(pcm, 2 /* S16_LE */, 3 /* RW_INTERLEAVED */, (unsigned int)channels, (unsigned int)sample_rate, 1, 500000) != 0) {
+        if (_spec_snd_pcm_close) _spec_snd_pcm_close(pcm);
+        return -1;
+    }
+    _spec_audio_streams[slot].alsa_handle = pcm;
+#elif defined(_WIN32)
+    WAVEFORMATEX wfx;
+    memset(&wfx, 0, sizeof(wfx));
+    wfx.wFormatTag = WAVE_FORMAT_PCM;
+    wfx.nChannels = (WORD)channels;
+    wfx.nSamplesPerSec = (DWORD)sample_rate;
+    wfx.wBitsPerSample = 16;
+    wfx.nBlockAlign = (WORD)(channels * 2);
+    wfx.nAvgBytesPerSec = (DWORD)(sample_rate * wfx.nBlockAlign);
+    HWAVEOUT hWave = NULL;
+    if (waveOutOpen(&hWave, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) {
+        return -1;
+    }
+    _spec_audio_streams[slot].h_wave_out = hWave;
+#elif defined(__APPLE__) && defined(__MACH__)
+    AudioStreamBasicDescription desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.mSampleRate = (Float64)sample_rate;
+    desc.mFormatID = kAudioFormatLinearPCM;
+    desc.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    desc.mBytesPerPacket = (UInt32)(channels * 2);
+    desc.mFramesPerPacket = 1;
+    desc.mBytesPerFrame = (UInt32)(channels * 2);
+    desc.mChannelsPerFrame = (UInt32)channels;
+    desc.mBitsPerChannel = 16;
+    AudioQueueRef queue = NULL;
+    if (AudioQueueNewOutput(&desc, _spec_audio_queue_cb, NULL, NULL, NULL, 0, &queue) != noErr) {
+        return -1;
+    }
+    AudioQueueStart(queue, NULL);
+    _spec_audio_streams[slot].aq_queue = queue;
+#endif
+
+    _spec_audio_streams[slot].active = true;
+    _spec_audio_streams[slot].sample_rate = sample_rate;
+    _spec_audio_streams[slot].channels = channels;
+    _spec_audio_streams[slot].format = format;
+    return (long long)(slot + 1);
+}
+
+long long spec_audio_write(long long handle, SpecByteBuffer* buf) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active || !buf || buf->length == 0) return 0;
+#if defined(__linux__)
+    if (!_spec_snd_pcm_writei) return -1;
+    long long bytes_per_frame = _spec_audio_streams[idx].channels * 2;
+    unsigned long frames = (unsigned long)(buf->length / bytes_per_frame);
+    long res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, buf->data, frames);
+    if (res < 0) {
+        if (_spec_snd_pcm_recover) res = _spec_snd_pcm_recover((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, (int)res, 0);
+        if (res == 0) res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, buf->data, frames);
+    }
+    return (res > 0) ? (long long)(res * bytes_per_frame) : res;
+#elif defined(_WIN32)
+    HWAVEOUT hWave = _spec_audio_streams[idx].h_wave_out;
+    WAVEHDR* hdr = (WAVEHDR*)spec_xmalloc(sizeof(WAVEHDR));
+    memset(hdr, 0, sizeof(WAVEHDR));
+    hdr->lpData = (LPSTR)spec_xmalloc(buf->length);
+    memcpy(hdr->lpData, buf->data, buf->length);
+    hdr->dwBufferLength = (DWORD)buf->length;
+    waveOutPrepareHeader(hWave, hdr, sizeof(WAVEHDR));
+    waveOutWrite(hWave, hdr, sizeof(WAVEHDR));
+    return (long long)buf->length;
+#elif defined(__APPLE__) && defined(__MACH__)
+    AudioQueueRef queue = _spec_audio_streams[idx].aq_queue;
+    AudioQueueBufferRef buffer = NULL;
+    if (AudioQueueAllocateBuffer(queue, (UInt32)buf->length, &buffer) == noErr) {
+        memcpy(buffer->mAudioData, buf->data, buf->length);
+        buffer->mAudioDataByteSize = (UInt32)buf->length;
+        AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
+        return (long long)buf->length;
+    }
+    return -1;
+#endif
+    return -1;
+}
+
+long long spec_audio_drain(long long handle) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return 0;
+#if defined(__linux__)
+    if (_spec_snd_pcm_drain) _spec_snd_pcm_drain((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle);
+#elif defined(_WIN32)
+    Sleep(50);
+#elif defined(__APPLE__) && defined(__MACH__)
+    AudioQueueStop(_spec_audio_streams[idx].aq_queue, false);
+    AudioQueueStart(_spec_audio_streams[idx].aq_queue, NULL);
+#endif
+    return 0;
+}
+
+void spec_audio_close(long long handle) {
+    long long idx = handle - 1;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) return;
+#if defined(__linux__)
+    if (_spec_snd_pcm_close) _spec_snd_pcm_close((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle);
+#elif defined(_WIN32)
+    waveOutReset(_spec_audio_streams[idx].h_wave_out);
+    waveOutClose(_spec_audio_streams[idx].h_wave_out);
+#elif defined(__APPLE__) && defined(__MACH__)
+    AudioQueueDispose(_spec_audio_streams[idx].aq_queue, true);
+#endif
+    memset(&_spec_audio_streams[idx], 0, sizeof(SpecAudioStream));
 }
 
 /* Terminates the current process with the given exit status. */

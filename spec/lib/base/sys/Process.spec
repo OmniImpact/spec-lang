@@ -50,6 +50,13 @@ Class is Process{
 		return base:sysinternal:Process:process_getenv(key: key, default: default);
 	}
 
+	## Returns the operating system name ('linux', 'macos', 'windows', or 'unknown').
+	##
+	## @return: Operating system name string.
+	Function of String is osName(){
+		return base:sysinternal:Process:process_os_name();
+	}
+
 	## Terminates the current process with the given exit status.
 	##
 	## @param status: Process exit code (0 = success).

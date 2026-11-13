@@ -22,9 +22,22 @@ fi
 CC_BIN="${CC:-gcc}"
 DRIVER="spec/base/compiler/driver/Driver.spec"
 
+EXTRA_LIBS=""
+case "$(uname -s)" in
+	MINGW*|MSYS*|CYGWIN*)
+		EXTRA_LIBS="-lws2_32 -lwinmm"
+		;;
+	Darwin*)
+		EXTRA_LIBS="-framework AudioToolbox"
+		;;
+	Linux*)
+		EXTRA_LIBS="-ldl"
+		;;
+esac
+
 for cycle in 1 2 3; do
 	echo "Compiling bootstrap/spec.c -> bin/spec via ${CC_BIN}..."
-	"${CC_BIN}" -O2 bootstrap/spec.c -o bin/spec -pthread -lm
+	"${CC_BIN}" -O2 bootstrap/spec.c -o bin/spec -pthread -lm ${EXTRA_LIBS}
 
 	echo "Verifying the self-hosting fixed point (cycle ${cycle})..."
 	bin/spec -i "$DRIVER" --emit-c /tmp/spec_fixedpoint_verify.c --quiet

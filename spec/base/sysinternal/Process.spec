@@ -40,6 +40,12 @@ Class is Process{
 	## @return: The environment variable value.
 	Function of String is process_getenv(String is key, String is default);
 
+	## Returns the operating system name ('linux', 'macos', 'windows', or 'unknown').
+	## Bound to `spec_process_os_name`.
+	##
+	## @return: Operating system name string.
+	Function of String is process_os_name();
+
 	## Returns monotonic wall-clock milliseconds since an arbitrary
 	## epoch. Bound to `spec_clock_ms`.
 	##
