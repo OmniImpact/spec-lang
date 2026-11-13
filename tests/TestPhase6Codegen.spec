@@ -96,8 +96,16 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		cg:entryInitOverloadIndex: 0;
 		cg:entryInitTakesArgs: true;
 		cg:registerProgram(classes: prog:classes);
-		cg:generateProgramToFile(program: prog, entryClass: 'HelloCodegen', filePath: '/tmp/pure_spec_hello.c');
-		local Int is gccCode: Process:execute(command: 'gcc', args: ['-O2', '-w', '/tmp/pure_spec_hello.c', '-o', '/tmp/pure_spec_hello', '-pthread', '-lm']);
+		local String is ccBin: Process:getEnv(key: 'CC', default: 'gcc');
+		local Array of String is gccArgs: ['-O2', '-w', '/tmp/pure_spec_hello.c', '-o', '/tmp/pure_spec_hello', '-pthread', '-lm'];
+		local String is os: Process:osName();
+		if({ os == 'linux' }, {
+			gccArgs:add(item: '-ldl');
+		});
+		if({ os == 'windows' }, {
+			gccArgs:add(item: '-lws2_32');
+		});
+		local Int is gccCode: Process:execute(command: ccBin, args: gccArgs);
 		Assert:areEqualInt(0, gccCode);
 		local Int is runCode: Process:execute(command: '/tmp/pure_spec_hello', args: []);
 		Assert:areEqualInt(0, runCode);

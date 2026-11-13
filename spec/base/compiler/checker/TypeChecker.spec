@@ -113,6 +113,7 @@ Class is TypeChecker{
 
 	## Class currently being analyzed.
 	local String is currentClassName: '';
+	local ClassInfo is currentClassDef: ClassInfo:init(name: '', baseClass: '', members: []);
 
 	## Source file of the class currently being analyzed.
 	local String is currentSourceFile: '';
@@ -284,21 +285,29 @@ Class is TypeChecker{
 		local Boolean is found: false;
 		local Int is count: self:programClasses:length();
 		local Boolean is hasColon: name:contains(needle: ':');
+		local ClassInfo is floorCand: ClassInfo:init(name: '', baseClass: '', members: []);
 		while(
 			[Int is idx: 0],
 			{ !found && idx < count },
 			{
 				local ClassInfo is cand: self:programClasses:get(index: idx);
 				idx++;
-				if({ cand:name == name }, {
-					res: cand;
-					found: true;
+				if({ hasColon }, {
+					local String is candQ: cand:namespaceJoined() . ':' . cand:name;
+					if({ candQ == name }, {
+						res: cand;
+						found: true;
+					});
 				}, {
-					if({ hasColon }, {
-						local String is candQ: cand:namespaceJoined() . ':' . cand:name;
-						if({ candQ == name }, {
+					if({ cand:name == name }, {
+						local Boolean is isFloor: cand:namespaceJoined():endsWith(suffix: ':sysinternal') || cand:namespaceJoined() == 'sysinternal';
+						if({ !isFloor }, {
 							res: cand;
 							found: true;
+						}, {
+							if({ floorCand:name == '' }, {
+								floorCand: cand;
+							});
 						});
 					});
 				});
@@ -306,6 +315,9 @@ Class is TypeChecker{
 		);
 		if({ found }, {
 			return res;
+		});
+		if({ !hasColon && floorCand:name != '' }, {
+			return floorCand;
 		});
 		if({ hasColon }, {
 			local ClassInfo is qMatch: ClassInfo:init(name: '', baseClass: '', members: []);
@@ -575,7 +587,7 @@ Class is TypeChecker{
 			});
 			return false;
 		});
-		local ClassInfo is curCls: self:findClass(name: self:currentClassName);
+		local ClassInfo is curCls: self:currentClassDef;
 		if({ curCls:typeParams:indexOf(search: target, default: -1) >= 0 || curCls:typeParams:indexOf(search: source, default: -1) >= 0 }, {
 			return true;
 		});
@@ -3450,7 +3462,7 @@ Class is TypeChecker{
 				});
 			});
 			if({ qJoined:contains(needle: ':sysinternal:') }, {
-				local ClassInfo is callerCls: self:findClass(name: self:currentClassName);
+				local ClassInfo is callerCls: self:currentClassDef;
 				# The sysinternal discipline: the floor is reachable from
 				# the base:sys wrappers — structurally: the caller's
 				# namespace segment array begins ['base', 'sys', ...] (the
@@ -3937,6 +3949,7 @@ Class is TypeChecker{
 			},
 			StatementKind:CLASS: {
 				local String is savedClass: self:currentClassName;
+				local ClassInfo is savedClassDef: self:currentClassDef;
 				local String is savedRet: self:currentMethodReturnType;
 				local Map of String to String is savedVars: Map:init();
 				local Array of String is vKeys: self:localVars:keys();
@@ -3957,6 +3970,7 @@ Class is TypeChecker{
 				self:checkClass(classDef: stmt:nestedClass);
 
 				self:currentClassName: savedClass;
+				self:currentClassDef: savedClassDef;
 				self:currentMethodReturnType: savedRet;
 				self:localVars: savedVars;
 				self:fieldTypes: savedFields;
@@ -4872,6 +4886,7 @@ Class is TypeChecker{
 	## @param classDef: Class definition.
 	Function is checkClass(ClassInfo is classDef){
 		self:currentClassName: classDef:name;
+		self:currentClassDef: classDef;
 		self:currentSourceFile: classDef:sourceFile;
 		self:fieldTypes: Map:init();
 		self:collectClassFieldTypes(classDef: classDef);
@@ -4944,6 +4959,7 @@ Class is TypeChecker{
 				},
 				MemberKind:CLASS: {
 					local String is savedClass: self:currentClassName;
+					local ClassInfo is savedClassDef: self:currentClassDef;
 					local Map of String to String is savedFields: Map:init();
 					local Array of String is fKeys: self:fieldTypes:keys();
 					fKeys:each(action: local Function(String is k){
@@ -4958,6 +4974,7 @@ Class is TypeChecker{
 					self:checkClass(classDef: m:nestedClass);
 
 					self:currentClassName: savedClass;
+					self:currentClassDef: savedClassDef;
 					self:fieldTypes: savedFields;
 					self:unassignedFields: savedUnassigned;
 				},
@@ -5200,6 +5217,7 @@ Class is TypeChecker{
 		self:localVars: Map:init();
 		self:fieldTypes: Map:init();
 		self:unassignedFields: Map:init();
+		self:currentClassDef: ClassInfo:init(name: '', baseClass: '', members: []);
 		self:errors: [];
 	}
 }
