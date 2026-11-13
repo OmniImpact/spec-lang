@@ -254,7 +254,8 @@ Class is Driver{
 			return;
 		});
 
-		# 5. GCC backend compile.
+		# 5. Backend C compile.
+		local String is ccBin: Process:getEnv(key: 'CC', default: 'cc');
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
 		if({ debugMode }, {
 			# Debug info rides full optimization: -g costs nothing, and the
@@ -262,19 +263,19 @@ Class is Driver{
 			gccArgs:add(item: '-g');
 		});
 		local Int is ccT0: Process:clockMs();
-		local Int is gccStatus: Process:execute(command: 'gcc', args: gccArgs);
+		local Int is gccStatus: Process:execute(command: ccBin, args: gccArgs);
 		ccMs: Process:clockMs() - ccT0;
 		if({ emitCPath == '' }, {
 			fileRemove(path: tempCPath);
 		});
 		if({ gccStatus != 0 }, {
 			Process:monitorStop();
-			Stderr:line('Error: Backend C compiler (gcc) failed with exit status ' . (gccStatus as String));
+			Stderr:line('Error: Backend C compiler (' . ccBin . ') failed with exit status ' . (gccStatus as String));
 			Process:exit(status: 1);
 		});
 
 		local Int is binBytes: Dir:fileSize(path: outputPath);
-		report:stage(n: 4, total: 4, label: 'compiling (gcc) · ' . (ccMs as String) . 'ms');
+		report:stage(n: 4, total: 4, label: 'compiling (' . ccBin . ') · ' . (ccMs as String) . 'ms');
 		Process:monitorStop();
 		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
 	}

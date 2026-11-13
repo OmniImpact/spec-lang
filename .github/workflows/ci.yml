@@ -58,13 +58,36 @@ jobs:
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
               -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+          cp bin/spec-asan bin/spec
           export ASAN_OPTIONS=detect_leaks=0
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
           bin/specunit-asan -s bin/spec-asan -t examples -t tests
 
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+      - name: Bootstrap compiler (MinGW UCRT64)
+        run: ./bootstrap.sh
+      - name: Regression suite
+        run: |
+          bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit.exe
+          bin/specunit.exe -s bin/spec.exe -t examples -t tests
+
   release:
-    needs: [gcc, clang, macos, sanitizer]
+    needs: [gcc, clang, macos, windows, sanitizer]
     runs-on: ubuntu-latest
     permissions:
       contents: write

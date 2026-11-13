@@ -2843,6 +2843,8 @@ Class is CodeGenerator{
 		local String is savedCleanupRetVar: self:cleanupRetVar;
 		local String is savedClosureRet: self:closureReturnTypeName;
 		local Map of String to String is savedExclusions: self:releaseExclusions;
+		local Map of String to String is savedHoisted: self:hoistedLocals;
+		self:hoistedLocals: Map:init();
 		self:cleanupLabel: '_cleanup_anon_' . id;
 		self:cleanupRetVar: '';
 		self:closureReturnTypeName: expr:anonReturnType:name;
@@ -2850,6 +2852,25 @@ Class is CodeGenerator{
 		if({ retC != 'void' }, {
 			self:cleanupRetVar: '_mret_anon_' . id;
 		});
+
+		expr:anonBody:each(action: local Function(Statement is vs){
+			if({ vs:kind == StatementKind:VAR_DECL && self:isArcType(typeName: vs:varType:name) }, {
+				local String is hType: '';
+				if({ vs:varType:name == 'List' }, {
+					hType: self:cTypeFor(typeName: self:formatTypeString(t: vs:varType));
+				}, {
+					hType: self:cTypeFor(typeName: vs:varType:name);
+				});
+				self:hoistedLocals:set(key: vs:varName, value: hType);
+			});
+		});
+
+		local String is hoistedDeclsC: '';
+		self:hoistedLocals:each(action: local Function(String is hName){
+			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
+			hoistedDeclsC: hoistedDeclsC . '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n";
+		});
+
 		local String is bodyC: '';
 		expr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
@@ -2963,7 +2984,8 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
+			self:hoistedLocals: savedHoisted;
+			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, {
 			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
@@ -2980,7 +3002,8 @@ Class is CodeGenerator{
 			self:cleanupLabel: savedCleanupLabel;
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
-			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
+			self:hoistedLocals: savedHoisted;
+			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}

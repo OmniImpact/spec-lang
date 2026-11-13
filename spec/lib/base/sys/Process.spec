@@ -41,6 +41,15 @@ Class is Process{
 		return base:sysinternal:Process:process_get_pid();
 	}
 
+	## Returns the environment variable value for [key], or [default] if unset.
+	##
+	## @param key: The environment variable name.
+	## @param default: Fallback value if the variable is not set.
+	## @return: The environment variable value.
+	Function of String is getEnv(String is key, String is default){
+		return base:sysinternal:Process:process_getenv(key: key, default: default);
+	}
+
 	## Terminates the current process with the given exit status.
 	##
 	## @param status: Process exit code (0 = success).

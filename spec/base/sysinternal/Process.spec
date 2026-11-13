@@ -32,6 +32,14 @@ Class is Process{
 	## @return: Current process ID.
 	Function of Int is process_get_pid();
 
+	## Returns the environment variable value for [key], or [default] if unset.
+	## Bound to `spec_process_getenv`.
+	##
+	## @param key: The environment variable name.
+	## @param default: The fallback value if unset.
+	## @return: The environment variable value.
+	Function of String is process_getenv(String is key, String is default);
+
 	## Returns monotonic wall-clock milliseconds since an arbitrary
 	## epoch. Bound to `spec_clock_ms`.
 	##
