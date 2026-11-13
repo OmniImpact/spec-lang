@@ -27,6 +27,9 @@ Class is RuntimePrelude{
 #define _GNU_SOURCE
 #include <sched.h>
 #elif defined(_WIN32)
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
 #include <windows.h>
 #include <psapi.h>
 #include <io.h>
@@ -47,6 +50,7 @@ Class is RuntimePrelude{
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wparentheses-equality"
+#pragma clang diagnostic ignored "-Wunused-value"
 #endif
 /* Forward declarations: SpecBuf-backed String layer (definitions below) */
 typedef struct SpecBuf SpecBuf;
@@ -68,10 +72,10 @@ String spec_string_concat(String a, String b);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
-#if !defined(_WIN32)
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#if !defined(_WIN32)
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
@@ -129,15 +133,7 @@ static long long spec_pal_get_cpu_count(void) {
 }
 
 static bool spec_pal_get_terminal_size(long long* width, long long* height) {
-    if (!isatty(1)) return false;
-#if defined(TIOCGWINSZ)
-    struct winsize ws;
-    if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
-        if (width && ws.ws_col > 0) *width = (long long)ws.ws_col;
-        if (height && ws.ws_row > 0) *height = (long long)ws.ws_row;
-        return true;
-    }
-#elif defined(_WIN32)
+#if defined(_WIN32)
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
         if (width) {
@@ -150,8 +146,81 @@ static bool spec_pal_get_terminal_size(long long* width, long long* height) {
         }
         return true;
     }
-#endif
     return false;
+#elif defined(TIOCGWINSZ)
+    if (!isatty(1)) return false;
+    struct winsize ws;
+    if (ioctl(1, TIOCGWINSZ, &ws) == 0) {
+        if (width && ws.ws_col > 0) *width = (long long)ws.ws_col;
+        if (height && ws.ws_row > 0) *height = (long long)ws.ws_row;
+        return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
+static long long spec_pal_get_page_size(void) {
+#if defined(_WIN32)
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize > 0 ? (long long)si.dwPageSize : 4096;
+#elif defined(_SC_PAGESIZE)
+    long long ps = sysconf(_SC_PAGESIZE);
+    return ps > 0 ? ps : 4096;
+#else
+    return 4096;
+#endif
+}
+
+static long long spec_pal_get_wall_time_us(void) {
+#if defined(_WIN32)
+    LARGE_INTEGER freq, count;
+    if (QueryPerformanceFrequency(&freq) && QueryPerformanceCounter(&count) && freq.QuadPart > 0) {
+        return (long long)((count.QuadPart * 1000000) / freq.QuadPart);
+    }
+    return 0;
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ((long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
+#endif
+}
+
+static long long spec_pal_get_cpu_time_us(void) {
+#if defined(_WIN32)
+    FILETIME creationTime, exitTime, kernelTime, userTime;
+    if (GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime, &kernelTime, &userTime)) {
+        ULARGE_INTEGER kt, ut;
+        kt.LowPart = kernelTime.dwLowDateTime;
+        kt.HighPart = kernelTime.dwHighDateTime;
+        ut.LowPart = userTime.dwLowDateTime;
+        ut.HighPart = userTime.dwHighDateTime;
+        return (long long)((kt.QuadPart + ut.QuadPart) / 10);
+    }
+    return 0;
+#elif !defined(_WIN32)
+    struct rusage ru;
+    if (getrusage(RUSAGE_SELF, &ru) == 0) {
+        return ((long long)ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000 + (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+    }
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+static void spec_pal_sleep_ms(long long ms) {
+    if (ms <= 0) return;
+#if defined(_WIN32)
+    Sleep((DWORD)ms);
+#else
+    struct timespec ts;
+    ts.tv_sec = ms / 1000;
+    ts.tv_nsec = (ms % 1000) * 1000000L;
+    nanosleep(&ts, NULL);
+#endif
 }
 
 static long long spec_pal_get_current_rss_kb(long long page_size) {
@@ -177,6 +246,7 @@ static long long spec_pal_get_current_rss_kb(long long page_size) {
         return (long long)(pmc.WorkingSetSize / 1024);
     }
 #endif
+#if !defined(_WIN32)
     struct rusage ru;
     if (getrusage(RUSAGE_SELF, &ru) == 0) {
 #if defined(__APPLE__)
@@ -185,10 +255,18 @@ static long long spec_pal_get_current_rss_kb(long long page_size) {
         return (long long)ru.ru_maxrss;
 #endif
     }
+#endif
     return 0;
 }
 
 static long long spec_pal_get_peak_rss_kb(void) {
+#if defined(_WIN32)
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return (long long)(pmc.PeakWorkingSetSize / 1024);
+    }
+    return 0;
+#elif !defined(_WIN32)
     struct rusage ru;
     if (getrusage(RUSAGE_SELF, &ru) == 0) {
 #if defined(__APPLE__)
@@ -198,6 +276,9 @@ static long long spec_pal_get_peak_rss_kb(void) {
 #endif
     }
     return 0;
+#else
+    return 0;
+#endif
 }
 
 /* Spec Runtime Panic & Safety Utilities */
@@ -2571,9 +2652,7 @@ void spec_invoke_void_by_name(void* instance, String method) {
 
 /* Clock & Memory Metrics */
 long long spec_clock_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ((long long)ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
+    return spec_pal_get_wall_time_us() / 1000;
 }
 
 long long spec_mem_peak_kb(void) {
@@ -2617,19 +2696,13 @@ long long spec_monitor_peak_mem_kb(void) {
 
 static void* _spec_monitor_worker(void* arg) {
     (void)arg;
-    struct timespec sleep_ts = {0, 20000000}; /* 20ms */
-    long long page_size = sysconf(_SC_PAGESIZE);
-    if (page_size <= 0) page_size = 4096;
+    long long page_size = spec_pal_get_page_size();
 
-    struct timespec last_ts;
-    clock_gettime(CLOCK_MONOTONIC, &last_ts);
-    long long last_wall_us = ((long long)last_ts.tv_sec * 1000000) + (last_ts.tv_nsec / 1000);
-    struct rusage last_ru;
-    getrusage(RUSAGE_SELF, &last_ru);
-    long long last_cpu_us = ((long long)last_ru.ru_utime.tv_sec + last_ru.ru_stime.tv_sec) * 1000000 + (last_ru.ru_utime.tv_usec + last_ru.ru_stime.tv_usec);
+    long long last_wall_us = spec_pal_get_wall_time_us();
+    long long last_cpu_us = spec_pal_get_cpu_time_us();
 
     while (_spec_mon_active) {
-        nanosleep(&sleep_ts, NULL);
+        spec_pal_sleep_ms(20);
         if (!_spec_mon_active) break;
 
         long long cur_rss_kb = spec_pal_get_current_rss_kb(page_size);
@@ -2641,12 +2714,8 @@ static void* _spec_monitor_worker(void* arg) {
             }
         }
 
-        struct timespec now_ts;
-        clock_gettime(CLOCK_MONOTONIC, &now_ts);
-        long long now_wall_us = ((long long)now_ts.tv_sec * 1000000) + (now_ts.tv_nsec / 1000);
-        struct rusage now_ru;
-        getrusage(RUSAGE_SELF, &now_ru);
-        long long now_cpu_us = ((long long)now_ru.ru_utime.tv_sec + now_ru.ru_stime.tv_sec) * 1000000 + (now_ru.ru_utime.tv_usec + now_ru.ru_stime.tv_usec);
+        long long now_wall_us = spec_pal_get_wall_time_us();
+        long long now_cpu_us = spec_pal_get_cpu_time_us();
 
         long long d_wall = now_wall_us - last_wall_us;
         long long d_cpu = now_cpu_us - last_cpu_us;
@@ -2669,13 +2738,8 @@ void spec_monitor_start(void) {
     _spec_mon_peak_mem_kb = 0;
     _spec_mon_peak_cpu_pct = 0;
 
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    _spec_mon_start_wall_us = ((long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
-
-    struct rusage ru;
-    getrusage(RUSAGE_SELF, &ru);
-    _spec_mon_start_cpu_us = ((long long)ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000 + (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+    _spec_mon_start_wall_us = spec_pal_get_wall_time_us();
+    _spec_mon_start_cpu_us = spec_pal_get_cpu_time_us();
 
     _spec_mon_active = true;
     pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
@@ -2686,13 +2750,8 @@ void spec_monitor_stop(void) {
     _spec_mon_active = false;
     pthread_join(_spec_mon_thread, NULL);
 
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    long long end_wall_us = ((long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
-
-    struct rusage ru;
-    getrusage(RUSAGE_SELF, &ru);
-    long long end_cpu_us = ((long long)ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000 + (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+    long long end_wall_us = spec_pal_get_wall_time_us();
+    long long end_cpu_us = spec_pal_get_cpu_time_us();
 
     _spec_mon_total_wall_us = end_wall_us - _spec_mon_start_wall_us;
     _spec_mon_total_cpu_us = end_cpu_us - _spec_mon_start_cpu_us;
@@ -2728,6 +2787,19 @@ void spec_print(String s) {
 /* Reads one line from stdin (the trailing newline stripped) and hands
    it to the on-line closure; at end of input nothing is handed over. */
 void spec_read_line(SpecClosure* on_line) {
+#if defined(_WIN32)
+    char buf[4096];
+    if (fgets(buf, sizeof(buf), stdin)) {
+        size_t len = strlen(buf);
+        while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
+            buf[len - 1] = '\0';
+            len--;
+        }
+        String text = spec_string_from_chars(buf);
+        spec_call_closure_str(on_line, text);
+        spec_release(text);
+    }
+#else
     char* _line = NULL;
     size_t _cap = 0;
     ssize_t _n = getline(&_line, &_cap, stdin);
@@ -2738,6 +2810,7 @@ void spec_read_line(SpecClosure* on_line) {
         spec_release(text);
     }
     free(_line);
+#endif
 }
 
 /* Terminates the current process with the given exit status. */

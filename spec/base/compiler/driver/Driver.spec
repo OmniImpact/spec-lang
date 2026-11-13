@@ -255,7 +255,7 @@ Class is Driver{
 		});
 
 		# 5. Backend C compile.
-		local String is ccBin: Process:getEnv(key: 'CC', default: 'cc');
+		local String is ccBin: Process:getEnv(key: 'CC', default: 'gcc');
 		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
 		if({ debugMode }, {
 			# Debug info rides full optimization: -g costs nothing, and the
