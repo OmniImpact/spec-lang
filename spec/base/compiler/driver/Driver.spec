@@ -326,6 +326,9 @@ Class is Driver{
 		if({ visited:indexOf(search: c:name, default: -1) >= 0 || self:entryInitTakesMap }, {
 			return;
 		});
+		if({ c:name == 'Loadable' || c:name == 'Class' || c:name == 'Stringable' || c:name == 'Any' || c:name == 'Enum' }, {
+			return;
+		});
 		visited:add(item: c:name);
 		local Int is initSeen: 0;
 		c:members:each(action: local Function(Member is m){

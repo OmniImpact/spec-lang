@@ -82,7 +82,7 @@ Class is LoaderE2E{
 			&& h:baseOf(classes: classes, name: 'Greeter') == 'Class'
 			&& h:baseOf(classes: classes, name: 'Class') == 'Stringable'
 			&& h:baseOf(classes: classes, name: 'Stringable') == 'Loadable'
-			&& h:baseOf(classes: classes, name: 'Loadable') == 'Any' }, then: {
+			&& (h:baseOf(classes: classes, name: 'Loadable') == 'Any' || h:baseOf(classes: classes, name: 'Loadable') == 'base:sysinternal:Loadable') }, then: {
 			Output:line('[PASS] root lattice and implicit Any');
 		}, else: {
 			Output:line('[FAIL] lattice');

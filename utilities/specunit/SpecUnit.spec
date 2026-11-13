@@ -264,7 +264,7 @@ Class is SpecUnit{
 		fileRemove(path: compileOut);
 
 		local String is runOut: bin . '.out';
-		local Array of String is rArgs: ['-c', 'cd "' . root . '" && "' . bin . '" < /dev/null > "' . runOut . '" 2>&1'];
+		local Array of String is rArgs: ['-c', 'cd "' . root . '" && export SPEC_BIN="' . specBin . '" && "' . bin . '" < /dev/null > "' . runOut . '" 2>&1'];
 		local Int is rStatus: Process:execute(command: 'sh', args: rArgs);
 		local String is out: fileRead(path: runOut, default: '');
 		local Boolean is passed: rStatus == 0;

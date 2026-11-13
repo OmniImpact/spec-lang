@@ -62018,6 +62018,9 @@ void Driver_resolveEntryInit(Driver* self, ClassInfo* c, SpecArray* all, SpecArr
     if (((((Array_indexOf(visited, c->name, (-(1)))) >= (0))) || (self->entryInitTakesMap))) {
 	    return;
 	};
+    if (((((((((spec_string_equals(c->name, spec_string_intern("Loadable"))) || (spec_string_equals(c->name, spec_string_intern("Class"))))) || (spec_string_equals(c->name, spec_string_intern("Stringable"))))) || (spec_string_equals(c->name, spec_string_intern("Any"))))) || (spec_string_equals(c->name, spec_string_intern("Enum"))))) {
+	    return;
+	};
     spec_array_add_object(visited, (void*)(c->name));
     long long initSeen = 0;
     ({ SpecArray* _a_181 = c->members; if (_a_181) { for (size_t _i_181 = 0; _i_181 < _a_181->length; _i_181++) {

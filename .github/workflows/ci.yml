@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Bootstrap compiler (gcc)
         run: ./bootstrap.sh
       - name: Regression suite
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install clang
         run: sudo apt-get update && sudo apt-get install -y clang
       - name: Bootstrap compiler (clang)
@@ -37,7 +37,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Bootstrap compiler (macOS clang)
         run: CC=clang ./bootstrap.sh
       - name: Regression suite
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         # Newer Ubuntu kernels ship vm.mmap_rnd_bits=32, which crashes gcc's
         # AddressSanitizer at startup; 28 is the known-good value.
       - name: Lower ASLR entropy for ASan compatibility
@@ -61,6 +61,7 @@ jobs:
           cp bin/spec-asan bin/spec
           export ASAN_OPTIONS=detect_leaks=0
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
+          export SPEC_BIN="bin/spec-asan"
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
           bin/specunit-asan -s bin/spec-asan -t tests -j 2
 
@@ -71,7 +72,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -89,6 +90,7 @@ jobs:
           if command -v mount >/dev/null 2>&1; then
             mount -f "/${CUR_DRIVE}/tmp" /tmp 2>/dev/null || true
           fi
+          export SPEC_BIN="bin/spec.exe"
           bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit.exe
           bin/specunit.exe -s bin/spec.exe -t tests
 
@@ -98,7 +100,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
