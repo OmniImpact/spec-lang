@@ -3739,6 +3739,9 @@ Class is CodeGenerator{
 		m: m . "    }\n";
 		m: m . "}\n";
 		m: m . "int main(int argc, char** argv) {\n";
+		m: m . "#if defined(_WIN32)\n";
+		m: m . "    CreateDirectoryA(\"/tmp\", NULL);\n";
+		m: m . "#endif\n";
 
 		m: m . "    srand((unsigned int)time(NULL));\n";
 		m: m . "    SPEC_AUTO SpecMap* args = spec_map_new();\n";

@@ -25,6 +25,11 @@ DRIVER="spec/base/compiler/driver/Driver.spec"
 EXTRA_LIBS=""
 case "$(uname -s)" in
 	MINGW*|MSYS*|CYGWIN*)
+		CUR_DRIVE="$(pwd | cut -d/ -f2)"
+		mkdir -p "/${CUR_DRIVE}/tmp" /tmp /c/tmp /d/tmp 2>/dev/null || true
+		if command -v mount >/dev/null 2>&1; then
+			mount -f "/${CUR_DRIVE}/tmp" /tmp 2>/dev/null || true
+		fi
 		EXTRA_LIBS="-lws2_32 -lwinmm"
 		;;
 	Darwin*)

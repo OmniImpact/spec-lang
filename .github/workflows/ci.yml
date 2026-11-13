@@ -84,6 +84,11 @@ jobs:
         run: ./bootstrap.sh
       - name: Regression suite
         run: |
+          CUR_DRIVE="$(pwd | cut -d/ -f2)"
+          mkdir -p "/${CUR_DRIVE}/tmp" /tmp /c/tmp /d/tmp 2>/dev/null || true
+          if command -v mount >/dev/null 2>&1; then
+            mount -f "/${CUR_DRIVE}/tmp" /tmp 2>/dev/null || true
+          fi
           bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit.exe
           bin/specunit.exe -s bin/spec.exe -t tests
 

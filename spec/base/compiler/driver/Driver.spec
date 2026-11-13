@@ -223,7 +223,7 @@ Class is Driver{
 		if({ tempCPath == '' }, {
 			tempCPath: fileTemp(template: '/tmp/_spec_stage_XXXXXX.c');
 			if({ tempCPath == '' }, {
-				tempCPath: '/tmp/_spec_stage_' . (Process:getPid() as String) . '.c';
+				tempCPath: '_spec_stage_' . (Process:getPid() as String) . '.c';
 			});
 		});
 

@@ -2008,6 +2008,11 @@ bool spec_file_write(String path, String content, SpecClosure* on_success, SpecC
         return false;
     }
     const char* pc = spec_buf_to_cstring((SpecBuf*)path);
+#if defined(_WIN32)
+    if (pc && (strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0)) {
+        CreateDirectoryA("/tmp", NULL);
+    }
+#endif
     size_t len = content ? ((SpecBuf*)content)->length : 0;
     const char* cc = len ? (const char*)((SpecBuf*)content)->data : "";
     FILE* f = fopen(pc, "wb");
@@ -2030,6 +2035,11 @@ bool spec_file_append(String path, String content, SpecClosure* on_success, Spec
         return false;
     }
     const char* pc = spec_buf_to_cstring((SpecBuf*)path);
+#if defined(_WIN32)
+    if (pc && (strncmp(pc, "/tmp/", 5) == 0 || strncmp(pc, "\\tmp\\", 5) == 0)) {
+        CreateDirectoryA("/tmp", NULL);
+    }
+#endif
     size_t len = content ? ((SpecBuf*)content)->length : 0;
     if (len == 0) {
         if (on_success) spec_call_closure_int(on_success, 0);
@@ -2123,6 +2133,9 @@ bool spec_file_remove(String path) {
     return remove(spec_buf_to_cstring((SpecBuf*)path)) == 0;
 }
 String spec_file_temp(String template) {
+#if defined(_WIN32)
+    CreateDirectoryA("/tmp", NULL);
+#endif
     if (!template || template->length == 0) template = spec_string_intern("/tmp/spec_XXXXXX");
     const char* tpl = spec_buf_to_cstring((SpecBuf*)template);
     size_t len = strlen(tpl);
@@ -2132,6 +2145,23 @@ String spec_file_temp(String template) {
         strcat(buf, "_XXXXXX");
     }
     int fd = mkstemp(buf);
+#if defined(_WIN32)
+    if (fd == -1) {
+        char temp_dir[MAX_PATH];
+        DWORD td_len = GetTempPathA(MAX_PATH, temp_dir);
+        if (td_len > 0 && td_len < MAX_PATH) {
+            const char* base = strrchr(tpl, '/');
+            const char* b2 = strrchr(tpl, '\\');
+            if (b2 && (!base || b2 > base)) base = b2;
+            if (base) base++; else base = tpl;
+            free(buf);
+            buf = (char*)spec_xmalloc(strlen(temp_dir) + strlen(base) + 16);
+            sprintf(buf, "%s%s", temp_dir, base);
+            if (!strstr(buf, "XXXXXX")) strcat(buf, "_XXXXXX");
+            fd = mkstemp(buf);
+        }
+    }
+#endif
     if (fd == -1) {
         free(buf);
         return spec_string_intern("");
