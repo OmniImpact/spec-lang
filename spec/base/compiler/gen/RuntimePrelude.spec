@@ -23,6 +23,7 @@ Class is RuntimePrelude{
 #include <mach/mach_init.h>
 #include <mach/task.h>
 #include <sys/sysctl.h>
+#include <dlfcn.h>
 #include <AudioToolbox/AudioToolbox.h>
 #elif defined(__linux__)
 #define _GNU_SOURCE
