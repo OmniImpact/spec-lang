@@ -111,6 +111,9 @@ static bool spec_pal_get_exe_path(char* buf, size_t size) {
 #elif defined(_WIN32)
     DWORD n = GetModuleFileNameA(NULL, buf, (DWORD)size);
     if (n > 0 && n < size) {
+        for (DWORD i = 0; i < n; i++) {
+            if (buf[i] == '\\') buf[i] = '/';
+        }
         return true;
     }
 #endif

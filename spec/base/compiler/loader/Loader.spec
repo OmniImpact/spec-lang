@@ -121,7 +121,9 @@ Class is Loader{
 			});
 			if({ !dup }, {
 				self:seenClassNames:set(key: qName, value: 'true');
-				self:seenBareNames:set(key: c:name, value: 'true');
+				if({ !isFloor }, {
+					self:seenBareNames:set(key: c:name, value: 'true');
+				});
 				self:loadedClasses:add(item: c);
 			});
 			self:collectImportsFromClass(c: c);
@@ -197,7 +199,7 @@ Class is Loader{
 		# The walk-up loop keeps climbing while the executable's locations
 		# have yielded no .spec content at all.
 		local Int is indexed: 0;
-		while({ indexed == 0 && exeDir != '' && exeDir != '/' }, {
+		while({ indexed == 0 && exeDir != '' && exeDir != '/' && exeDir != '\\' && !exeDir:endsWith(suffix: ':') }, {
 			self:scanTree(dir: exeDir, depth: 0);
 			indexed: self:classPaths:keys():length();
 			if({ indexed == 0 }, {
@@ -401,7 +403,7 @@ Class is Loader{
 			{ pos < len },
 			{
 				local String is ch: path:charAt(index: pos, default: '');
-				if({ ch == '/' }, {
+				if({ ch == '/' || ch == '\\' }, {
 					lastIdx: pos;
 				});
 				pos++;

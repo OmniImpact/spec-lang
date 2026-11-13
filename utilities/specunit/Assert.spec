@@ -74,7 +74,7 @@ Class is Assert{
 		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
 		local Array of String is cArgs: ['-c', './bin/spec --quiet -i "' . tmp . '" -o "' . bin . '" > "' . outPath . '" 2>&1'];
 		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
-		local Array of String is rArgs: ['-c', 'timeout 25 "' . bin . '" > "' . outPath . '" 2>&1'];
+		local Array of String is rArgs: ['-c', '"' . bin . '" < /dev/null > "' . outPath . '" 2>&1'];
 		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);
 		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
 		files:fileRemove(path: tmp);

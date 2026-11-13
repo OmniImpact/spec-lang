@@ -57,12 +57,12 @@ jobs:
       - name: Build sanitized compiler and run suite
         run: |
           gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined \
-              -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm
+              -fno-omit-frame-pointer bootstrap/spec.c -o bin/spec-asan -pthread -lm -ldl
           cp bin/spec-asan bin/spec
           export ASAN_OPTIONS=detect_leaks=0
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
-          bin/specunit-asan -s bin/spec-asan -t tests
+          bin/specunit-asan -s bin/spec-asan -t tests -j 2
 
   windows:
     runs-on: windows-latest

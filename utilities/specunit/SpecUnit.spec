@@ -116,7 +116,13 @@ Class is SpecUnit{
 		local String is root: args:getString(key: 'root', default: '.');
 		local String is dirsRaw: args:getString(key: 't', default: args:getString(key: 'tests', default: 'tests'));
 		local Int is cores: Process:threadCount();
-		local Int is threads: cores - 2;
+		local String is jArg: args:getString(key: 'j', default: args:getString(key: 'threads', default: ''));
+		local Int is threads: 0;
+		if(check: { jArg != '' }, then: {
+			threads: jArg as Int;
+		}, else: {
+			threads: cores - 2;
+		});
 		if(check: { threads < 1 }, then: {
 			threads: 1;
 		});
