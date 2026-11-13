@@ -223,7 +223,11 @@ Class is Driver{
 		if({ tempCPath == '' }, {
 			tempCPath: fileTemp(template: '/tmp/_spec_stage_XXXXXX.c');
 			if({ tempCPath == '' }, {
-				tempCPath: '_spec_stage_' . (Process:getPid() as String) . '.c';
+				local String is tmpDir: '/tmp';
+				if({ Process:osName() == 'windows' }, {
+					tmpDir: 'bin';
+				});
+				tempCPath: tmpDir . '/_spec_stage_' . (Process:getPid() as String) . '.c';
 			});
 		});
 

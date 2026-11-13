@@ -2139,10 +2139,18 @@ String spec_file_temp(String template) {
     if (!template || template->length == 0) template = spec_string_intern("/tmp/spec_XXXXXX");
     const char* tpl = spec_buf_to_cstring((SpecBuf*)template);
     size_t len = strlen(tpl);
-    char* buf = (char*)spec_xmalloc(len + 16);
+    char* buf = (char*)spec_xmalloc(len + 32);
     strcpy(buf, tpl);
-    if (!strstr(buf, "XXXXXX")) {
+    char suffix[64];
+    suffix[0] = '\0';
+    char* xpos = strstr(buf, "XXXXXX");
+    if (!xpos) {
         strcat(buf, "_XXXXXX");
+    } else {
+        if (strlen(xpos + 6) < sizeof(suffix)) {
+            strcpy(suffix, xpos + 6);
+        }
+        xpos[6] = '\0';
     }
     int fd = mkstemp(buf);
 #if defined(_WIN32)
@@ -2155,9 +2163,18 @@ String spec_file_temp(String template) {
             if (b2 && (!base || b2 > base)) base = b2;
             if (base) base++; else base = tpl;
             free(buf);
-            buf = (char*)spec_xmalloc(strlen(temp_dir) + strlen(base) + 16);
+            buf = (char*)spec_xmalloc(strlen(temp_dir) + strlen(base) + 32);
             sprintf(buf, "%s%s", temp_dir, base);
-            if (!strstr(buf, "XXXXXX")) strcat(buf, "_XXXXXX");
+            suffix[0] = '\0';
+            xpos = strstr(buf, "XXXXXX");
+            if (!xpos) {
+                strcat(buf, "_XXXXXX");
+            } else {
+                if (strlen(xpos + 6) < sizeof(suffix)) {
+                    strcpy(suffix, xpos + 6);
+                }
+                xpos[6] = '\0';
+            }
             fd = mkstemp(buf);
         }
     }
@@ -2167,6 +2184,16 @@ String spec_file_temp(String template) {
         return spec_string_intern("");
     }
     close(fd);
+    if (suffix[0] != '\0') {
+        size_t final_len = strlen(buf) + strlen(suffix) + 1;
+        char* final_path = (char*)spec_xmalloc(final_len);
+        sprintf(final_path, "%s%s", buf, suffix);
+        rename(buf, final_path);
+        String res = spec_string_from_chars(final_path);
+        free(final_path);
+        free(buf);
+        return res;
+    }
     String res = spec_string_from_chars(buf);
     free(buf);
     return res;
