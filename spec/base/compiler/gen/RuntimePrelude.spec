@@ -2175,6 +2175,59 @@ String spec_file_temp(String template) {
 long long spec_process_execute(String command, SpecArray* args) {
     if (!command) return -1;
     const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+#if defined(_WIN32)
+    size_t total_len = strlen(cc) + 1;
+    if (args) {
+        for (size_t i = 0; i < args->length; i++) {
+            if (!args->items[i]) continue;
+            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
+            total_len += strlen(a) * 2 + 4;
+        }
+    }
+    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
+    char* w = cmd_line;
+    size_t cmd_len = strlen(cc);
+    memcpy(w, cc, cmd_len);
+    w += cmd_len;
+    if (args) {
+        for (size_t i = 0; i < args->length; i++) {
+            if (!args->items[i]) continue;
+            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
+            *w++ = ' ';
+            bool needs_quote = (*a == 0);
+            for (size_t k = 0; a[k]; k++) {
+                if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
+                    needs_quote = true;
+                    break;
+                }
+            }
+            if (!needs_quote) {
+                size_t alen = strlen(a);
+                memcpy(w, a, alen);
+                w += alen;
+            } else {
+                *w++ = '\"';
+                size_t slashes = 0;
+                for (size_t k = 0; a[k]; k++) {
+                    if (a[k] == '\\') {
+                        slashes++;
+                    } else if (a[k] == '\"') {
+                        for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
+                        *w++ = '\"';
+                        slashes = 0;
+                    } else {
+                        for (size_t s = 0; s < slashes; s++) *w++ = '\\';
+                        *w++ = a[k];
+                        slashes = 0;
+                    }
+                }
+                for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
+                *w++ = '\"';
+            }
+        }
+    }
+    *w = 0;
+#else
     /* Each argument is passed to the shell as ONE single-quoted word (a
        quote inside becomes quote, backslash, quote, quote), so spaces and
        shell metacharacters in arguments stay data. The command word
@@ -2208,6 +2261,7 @@ long long spec_process_execute(String command, SpecArray* args) {
         }
     }
     *w = 0;
+#endif
     int status = system(cmd_line);
     free(cmd_line);
     if (status == -1) return -1;
