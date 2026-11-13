@@ -223,6 +223,27 @@ static void spec_pal_sleep_ms(long long ms) {
 #endif
 }
 
+#if defined(_WIN32)
+typedef BOOL (WINAPI *spec_pfn_GetProcessMemoryInfo)(HANDLE, PROCESS_MEMORY_COUNTERS*, DWORD);
+static bool spec_win_get_memory_info(PROCESS_MEMORY_COUNTERS* pmc) {
+    static spec_pfn_GetProcessMemoryInfo fn = NULL;
+    static bool resolved = false;
+    if (!resolved) {
+        HMODULE h = GetModuleHandleA("kernel32.dll");
+        if (h) fn = (spec_pfn_GetProcessMemoryInfo)(void*)GetProcAddress(h, "K32GetProcessMemoryInfo");
+        if (!fn) {
+            h = LoadLibraryA("psapi.dll");
+            if (h) fn = (spec_pfn_GetProcessMemoryInfo)(void*)GetProcAddress(h, "GetProcessMemoryInfo");
+        }
+        resolved = true;
+    }
+    if (fn) {
+        return fn(GetCurrentProcess(), pmc, (DWORD)sizeof(*pmc)) != 0;
+    }
+    return false;
+}
+#endif
+
 static long long spec_pal_get_current_rss_kb(long long page_size) {
 #if defined(__linux__)
     FILE* f = fopen("/proc/self/statm", "r");
@@ -242,7 +263,7 @@ static long long spec_pal_get_current_rss_kb(long long page_size) {
     }
 #elif defined(_WIN32)
     PROCESS_MEMORY_COUNTERS pmc;
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+    if (spec_win_get_memory_info(&pmc)) {
         return (long long)(pmc.WorkingSetSize / 1024);
     }
 #endif
@@ -262,7 +283,7 @@ static long long spec_pal_get_current_rss_kb(long long page_size) {
 static long long spec_pal_get_peak_rss_kb(void) {
 #if defined(_WIN32)
     PROCESS_MEMORY_COUNTERS pmc;
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+    if (spec_win_get_memory_info(&pmc)) {
         return (long long)(pmc.PeakWorkingSetSize / 1024);
     }
     return 0;
