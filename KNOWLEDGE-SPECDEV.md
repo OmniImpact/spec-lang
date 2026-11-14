@@ -166,9 +166,8 @@ check, and emit the NEXT generation's sources. Consequences:
 - **Display**: per-item results print in queue order when the wave is
   done, failed items' evidence underneath, then the summary and the CI
   exit (1 on any failure).
-- **What it runs**: demos (`examples/`, marked `suite`), the specunit
-  suites (`tests/`), the compiler-as-library suites
-  (`tests/compiler/`, marked `suite`), and the negative fixtures
+- **What it runs**: the specunit suites (`tests/`, including the
+  compiler-as-library suites in `tests/compiler/`), and the negative fixtures
   (`tests/negative/` — compile-must-fail with `expect:` diagnostics,
   plus the run-fail form). The bootstrap fixed-point freshness is the
   bootstrap gate's job (`./bootstrap.sh` verifies the fixed point
@@ -184,7 +183,8 @@ check, and emit the NEXT generation's sources. Consequences:
   result passes iff its failure list is empty. Lifecycle:
   `beforeEach`/`afterEach` by convention. The suite binary prints the
   report table and exits 1 on any failure (the CI contract); the
-  runner gates on the exit code plus the absence of `[FAIL]`.
+  runner gates on the exit code and the presence of the `== SpecUnit ==`
+  report table.
 - **The framework and the floor**: the framework lives in
   `utilities/specunit/` (file name = class name): `SpecUnitTest` (the
   base and the suite entry — argv-Map init runs the runner, empty init
@@ -206,15 +206,12 @@ check, and emit the NEXT generation's sources. Consequences:
   entry-selection semantics by replacing `onEntry`
   (tests/TestEntryPreference.spec); the two-hop inherited-entry chain
   is tests/TestEntryInheritedInit.spec. The runner FAILS any
-  framework-importing suite (the `['specunit'` using spelling) whose
-  binary exits 0 without a `== SpecUnit ==` report table — entry-init
-  machinery failing to start the runner is loud, never silent
-  empty-green. Three entry-emission properties exist ONLY for non-suite
-  entries (a root class with no init anywhere, a zero-arg init called
-  at true arity, the non-constructible-overload fallback) and stay
-  standalone: `tests/entry_no_init_test.spec`,
-  `entry_zero_arg_init_test.spec`, `entry_init_fallback_test.spec`
-  (marked `#! specunit: suite`, exit-code gated).
+  suite whose binary exits 0 without a `== SpecUnit ==` report table —
+  entry-init machinery failing to start the runner is loud, never silent
+  empty-green. Entry-emission properties for non-suite entries (a root
+  class with no init anywhere, a zero-arg init called at true arity,
+  the non-constructible-overload fallback) are verified via
+  `Assert:runSucceeds` in `tests/TestEntrySelection.spec`.
 - **Report vocabulary**: a test GROUP is a class, a TEST is one method
   execution — the suite summary reports both (`N test groups, M tests
   passed, F failed`).

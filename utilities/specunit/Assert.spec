@@ -19,6 +19,30 @@ Class is Assert{
 		['base', 'struct', Array]
 	];
 
+	## Returns the directory for temporary test files.
+	## On Windows, uses 'bin' to stay within the repo root and avoid MSYS2 /tmp
+	## path translation mismatches; on POSIX systems, uses '/tmp'.
+	##
+	## @return: The directory path ('bin' or '/tmp').
+	held Function of String is tempDir(){
+		local Process is proc: Process:init();
+		local Conditional is cond: Conditional:init();
+		local String is dir: '/tmp';
+		cond:if(check: { proc:osName() == 'windows' }, then: {
+			dir: 'bin';
+		});
+		return dir;
+	}
+
+	## Normalizes path separators to forward slashes for cross-platform
+	## command execution under shells.
+	##
+	## @param path: The path to normalize.
+	## @return: The normalized path with '/' separators.
+	held Function of String is normalizePath(String is path){
+		return path:replaceAll(search: '\\', replacement: '/');
+	}
+
 	## Returns the path to the Spec compiler binary to invoke for test assertions.
 	##
 	## @return: The binary path (e.g. 'bin/spec' or 'bin/spec.exe').
@@ -34,7 +58,10 @@ Class is Assert{
 		cond:if(check: { bin != '' }, then: {
 			result: bin;
 		});
-		return result;
+		cond:if(check: { proc:osName() == 'windows' && !result:endsWith(suffix: '.exe') }, then: {
+			result: result . '.exe';
+		});
+		return Assert:normalizePath(path: result);
 	}
 
 	## Asserts that compiling [source] fails with a diagnostic containing [expect].
@@ -44,11 +71,12 @@ Class is Assert{
 	held Function is compilerRejects(String is source, String is expect){
 		local Process is proc: Process:init();
 		local File is files: File:init();
-		local String is tmp: files:fileTemp(template: '/tmp/spec_assert_' . (proc:getPid() as String) . '_XXXXXX.spec');
+		local String is dir: Assert:tempDir();
+		local String is tmp: Assert:normalizePath(path: files:fileTemp(template: dir . '/spec_assert_' . (proc:getPid() as String) . '_XXXXXX.spec'));
 		local String is outPath: tmp . '.out';
 		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
 		local String is bin: Assert:specBin();
-		local Array of String is args: ['-c', bin . ' --quiet -i "' . tmp . '" -o /dev/null > "' . outPath . '" 2>&1'];
+		local Array of String is args: ['-c', '"' . bin . '" --quiet -i "' . tmp . '" -o /dev/null > "' . outPath . '" 2>&1'];
 		local Int is status: proc:execute(command: 'sh', args: args);
 		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
 		files:fileRemove(path: tmp);
@@ -66,9 +94,11 @@ Class is Assert{
 	held Function is compilerRejectsFile(String is filePath, String is expect){
 		local Process is proc: Process:init();
 		local File is files: File:init();
-		local String is outPath: files:fileTemp(template: '/tmp/spec_assert_out_' . (proc:getPid() as String) . '_XXXXXX.out');
+		local String is dir: Assert:tempDir();
+		local String is outPath: Assert:normalizePath(path: files:fileTemp(template: dir . '/spec_assert_out_' . (proc:getPid() as String) . '_XXXXXX.out'));
 		local String is bin: Assert:specBin();
-		local Array of String is args: ['-c', bin . ' --quiet -i "' . filePath . '" -o /dev/null > "' . outPath . '" 2>&1'];
+		local String is inPath: Assert:normalizePath(path: filePath);
+		local Array of String is args: ['-c', '"' . bin . '" --quiet -i "' . inPath . '" -o /dev/null > "' . outPath . '" 2>&1'];
 		local Int is status: proc:execute(command: 'sh', args: args);
 		local String is output: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
 		files:fileRemove(path: outPath);
@@ -86,7 +116,8 @@ Class is Assert{
 		local Process is proc: Process:init();
 		local File is files: File:init();
 		local Conditional is cond: Conditional:init();
-		local String is tmp: files:fileTemp(template: '/tmp/spec_assert_' . (proc:getPid() as String) . '_XXXXXX.spec');
+		local String is dir: Assert:tempDir();
+		local String is tmp: Assert:normalizePath(path: files:fileTemp(template: dir . '/spec_assert_' . (proc:getPid() as String) . '_XXXXXX.spec'));
 		local String is exeSuffix: '.bin';
 		cond:if(check: { proc:osName() == 'windows' }, then: {
 			exeSuffix: '.exe';
@@ -95,7 +126,7 @@ Class is Assert{
 		local String is outPath: tmp . '.out';
 		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
 		local String is bin: Assert:specBin();
-		local Array of String is cArgs: ['-c', bin . ' --quiet -i "' . tmp . '" -o "' . targetBin . '" > "' . outPath . '" 2>&1'];
+		local Array of String is cArgs: ['-c', '"' . bin . '" --quiet -i "' . tmp . '" -o "' . targetBin . '" > "' . outPath . '" 2>&1'];
 		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
 		local Array of String is rArgs: ['-c', '"' . targetBin . '" < /dev/null > "' . outPath . '" 2>&1'];
 		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);
@@ -106,6 +137,38 @@ Class is Assert{
 
 		local Boolean is ok: cStatus == 0 && rStatus != 0 && rOut:contains(needle: expect);
 		local String is msg: 'expected run error containing \'' . expect . '\', compile ' . (cStatus as String) . ', exit ' . (rStatus as String) . ', got: ' . rOut;
+		SpecUnitState:checks:add(item: CheckRecord:init(ok: ok, msg: msg));
+	}
+
+	## Asserts that compiling and running [source] succeeds with [expect] in output.
+	##
+	## @param source: The Spec code snippet to run.
+	## @param expect: The expected runtime output substring.
+	held Function is runSucceeds(String is source, String is expect){
+		local Process is proc: Process:init();
+		local File is files: File:init();
+		local Conditional is cond: Conditional:init();
+		local String is dir: Assert:tempDir();
+		local String is tmp: Assert:normalizePath(path: files:fileTemp(template: dir . '/spec_assert_' . (proc:getPid() as String) . '_XXXXXX.spec'));
+		local String is exeSuffix: '.bin';
+		cond:if(check: { proc:osName() == 'windows' }, then: {
+			exeSuffix: '.exe';
+		});
+		local String is targetBin: tmp . exeSuffix;
+		local String is outPath: tmp . '.out';
+		files:fileWrite(path: tmp, content: source, onSuccess: local Function(Int is n){}, onError: local Function(String is s){});
+		local String is bin: Assert:specBin();
+		local Array of String is cArgs: ['-c', '"' . bin . '" --quiet -i "' . tmp . '" -o "' . targetBin . '" > "' . outPath . '" 2>&1'];
+		local Int is cStatus: proc:execute(command: 'sh', args: cArgs);
+		local Array of String is rArgs: ['-c', '"' . targetBin . '" < /dev/null > "' . outPath . '" 2>&1'];
+		local Int is rStatus: proc:execute(command: 'sh', args: rArgs);
+		local String is rOut: files:fileRead(path: outPath, onSuccess: local Function(String is s){}, onError: local Function(String is s){}, default: '');
+		files:fileRemove(path: tmp);
+		files:fileRemove(path: targetBin);
+		files:fileRemove(path: outPath);
+
+		local Boolean is ok: cStatus == 0 && rStatus == 0 && rOut:contains(needle: expect);
+		local String is msg: 'expected run success containing \'' . expect . '\', compile ' . (cStatus as String) . ', exit ' . (rStatus as String) . ', got: ' . rOut;
 		SpecUnitState:checks:add(item: CheckRecord:init(ok: ok, msg: msg));
 	}
 

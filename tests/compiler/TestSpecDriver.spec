@@ -1,27 +1,21 @@
-#! specunit: suite
-
 #! Driver + CompilationReport check: the new driver compiles a source
 #! file end to end (load, check, generate, cc) and its checker rejects
 #! invalid programs.
 
-Class is SpecDriverTest{
+Class of SpecUnitTest is TestSpecDriver{
 	namespace: ['test'];
 
 	replace Array of Array of String is using: [
+		['specunit', SpecUnitTest],
+		['specunit', SpecUnitRunner],
+		['specunit', as Assert()],
 		['base', 'compiler', 'driver', Driver],
-		['base', 'sys', Output],
 		['base', 'sys', File],
 		['base', 'struct', Map],
-		['base', 'sys', as File()],
-		['base', 'sys', as Output()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as File()]
 	];
 
-	replace Function is init(Map of String to String is args){
-		Output:line('=== Spec Driver Test ===');
-		local Int is failures: 0;
-
-		# A valid program: multi-file, polymorphic, floor-imported.
+	Function is testDriverEmitsCWithVtableDispatch(){
 		local String is src: "Class is Greeter{
 	local String is greeting;
 	replace Function is init(String is g){
@@ -63,21 +57,11 @@ Class is DriverE2E{
 		local Driver is d: Driver:init(args: cli);
 
 		local String is cSrc: fileRead(path: 'tests/.driver_app_tmp.c', default: '');
-		Conditional:if(check: { cSrc:contains(needle: 'int main(')
-			&& cSrc:contains(needle: 'LoudGreeter_toString')
-			&& cSrc:contains(needle: '_vtable[') }, then: {
-			Output:line('[PASS] driver emitted C with vtable dispatch');
-		}, else: {
-			Output:line('[FAIL] driver emission');
-			failures: failures + 1;
-		});
+		Assert:isTrue(cSrc:contains(needle: 'int main('));
+		Assert:isTrue(cSrc:contains(needle: 'LoudGreeter_toString'));
+		Assert:isTrue(cSrc:contains(needle: '_vtable['));
+
 		fileRemove(path: 'tests/.driver_app_tmp.c');
 		fileRemove(path: 'tests/.driver_app_tmp.spec');
-
-		Conditional:if(check: { failures == 0 }, then: {
-			Output:line('[PASS] spec driver test complete');
-		}, else: {
-			Output:line('[FAIL] spec driver test: ' . (failures as String) . ' failures');
-		});
 	}
 }

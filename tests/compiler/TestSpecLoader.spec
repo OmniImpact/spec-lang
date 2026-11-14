@@ -1,28 +1,22 @@
-#! specunit: suite
-
 #! Loader port check: multi-file loading, package resolution, the root
 #! lattice preloads and implicit-Any parenting.
 
-Class is SpecLoaderTest{
+Class of SpecUnitTest is TestSpecLoader{
 	namespace: ['test'];
 
 	replace Array of Array of String is using: [
+		['specunit', SpecUnitTest],
+		['specunit', SpecUnitRunner],
+		['specunit', as Assert()],
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
-		['base', 'sys', Output],
 		['base', 'sys', File],
-		['base', 'sys', as File()],
-		['base', 'sys', as Output()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as File()]
 	];
 
-	replace Function is init(Map of String to String is args){
-		Output:line('=== Spec Loader Test ===');
-		local Int is failures: 0;
-
-		# A user program importing an io class by array-form package path.
-		local String is src: "Class is Greeter{
+	Function of String is sampleAppSource(){
+		return "Class is Greeter{
 	local String is greeting;
 	Function is init(String is g){
 		self:greeting: g;
@@ -54,42 +48,40 @@ Class is LoaderE2E{
 		['base', 'sys', as Output()]
 	];
 }";
-		fileWrite(path: 'tests/.loader_app_tmp.spec', content: src);
+	}
+
+	Function is testMultiFileLoadWithZeroErrors(){
+		fileWrite(path: 'tests/.loader_app_tmp.spec', content: self:sampleAppSource());
 
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 
-		# --- package resolution: imports loaded, lattice intact ---
-		Conditional:if(check: { loader:loadedFileCount() >= 6
-			&& loader:getParseErrors():length() == 0 }, then: {
-			Output:line('[PASS] multi-file load with zero errors');
-		}, else: {
-			Output:line('[FAIL] load: files=' . (loader:loadedFileCount() as String) . ' errors=' . (loader:getParseErrors():length() as String));
-			loader:getParseErrors():each(action: local Function(String is e){
-				Output:line(e);
-			});
-			failures: failures + 1;
-		});
+		Assert:isTrue(loader:loadedFileCount() >= 6);
+		Assert:areEqualInt(0, loader:getParseErrors():length());
 
-		# --- root lattice preloads + implicit Class ---
+		fileRemove(path: 'tests/.loader_app_tmp.spec');
+	}
+
+	Function is testRootLatticeAndImplicitAny(){
+		fileWrite(path: 'tests/.loader_app_tmp.spec', content: self:sampleAppSource());
+
 		local Loader is probe: Loader:init();
 		local ProgramNode is classes: probe:loadProgram(rootPath: 'tests/.loader_app_tmp.spec');
 		local LoaderE2EHelper is h: LoaderE2EHelper:init();
-		Conditional:if(check: { h:hasClass(classes: classes, name: 'String')
-			&& h:hasClass(classes: classes, name: 'Any')
-			&& h:hasClass(classes: classes, name: 'Class')
-			&& h:baseOf(classes: classes, name: 'LoudGreeter') == 'Greeter'
-			&& h:baseOf(classes: classes, name: 'Greeter') == 'Class'
-			&& h:baseOf(classes: classes, name: 'Class') == 'Stringable'
-			&& h:baseOf(classes: classes, name: 'Stringable') == 'Loadable'
-			&& (h:baseOf(classes: classes, name: 'Loadable') == 'Any' || h:baseOf(classes: classes, name: 'Loadable') == 'base:sysinternal:Loadable') }, then: {
-			Output:line('[PASS] root lattice and implicit Any');
-		}, else: {
-			Output:line('[FAIL] lattice');
-			failures: failures + 1;
-		});
 
-		# --- unresolvable imports are load errors ---
+		Assert:isTrue(h:hasClass(classes: classes, name: 'String'));
+		Assert:isTrue(h:hasClass(classes: classes, name: 'Any'));
+		Assert:isTrue(h:hasClass(classes: classes, name: 'Class'));
+		Assert:areEqualString('Greeter', h:baseOf(classes: classes, name: 'LoudGreeter'));
+		Assert:areEqualString('Class', h:baseOf(classes: classes, name: 'Greeter'));
+		Assert:areEqualString('Stringable', h:baseOf(classes: classes, name: 'Class'));
+		Assert:areEqualString('Loadable', h:baseOf(classes: classes, name: 'Stringable'));
+		Assert:isTrue(h:baseOf(classes: classes, name: 'Loadable') == 'Any' || h:baseOf(classes: classes, name: 'Loadable') == 'base:sysinternal:Loadable');
+
+		fileRemove(path: 'tests/.loader_app_tmp.spec');
+	}
+
+	Function is testUnresolvableImportReported(){
 		fileWrite(path: 'tests/.loader_bad_tmp.spec', content: "Class is BadImporter{
 	replace Function is init(Map of String to String is args){
 	}
@@ -102,21 +94,10 @@ Class is LoaderE2E{
 }");
 		local Loader is bloader: Loader:init();
 		bloader:loadProgram(rootPath: 'tests/.loader_bad_tmp.spec');
-		Conditional:if(check: { bloader:getParseErrors():length() > 0 }, then: {
-			Output:line('[PASS] unresolvable import reported');
-		}, else: {
-			Output:line('[FAIL] missing import error');
-			failures: failures + 1;
-		});
 
-		fileRemove(path: 'tests/.loader_app_tmp.spec');
+		Assert:isTrue(bloader:getParseErrors():length() > 0);
+
 		fileRemove(path: 'tests/.loader_bad_tmp.spec');
-
-		Conditional:if(check: { failures == 0 }, then: {
-			Output:line('[PASS] spec loader test complete');
-		}, else: {
-			Output:line('[FAIL] spec loader test: ' . (failures as String) . ' failures');
-		});
 	}
 }
 

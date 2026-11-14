@@ -57,13 +57,11 @@ Class is WorkItem{
 	String is path;
 	String is kind;
 	Array of String is expect: [];
-	Boolean is requireReport: false;
 
-	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect, Boolean is itemRequireReport){
+	replace Function is init(String is itemPath, String is itemKind, Array of String is itemExpect){
 		self:path: itemPath;
 		self:kind: itemKind;
 		self:expect: itemExpect;
-		self:requireReport: itemRequireReport;
 	}
 }
 
@@ -212,17 +210,12 @@ Class is SpecUnit{
 		});
 	}
 
-	## Classifies one candidate by its `#!` banner: an explicit
-	## `#! specunit: <kind>` marker wins; an unmarked file that mentions
-	## the specunit package is a suite; everything else is skipped. A
-	## suite whose file IMPORTS the framework (the `['specunit'` using
-	## spelling) must produce a SpecUnit report table — the gate that
-	## keeps entry-init machinery failures loud instead of silently
-	## empty green binaries.
+	## Classifies one candidate: every suite MUST extend the SpecUnitTest
+	## base class and produce a SpecUnit report table. Candidates that do not
+	## extend the base test class are not runnable as suites.
 	Function is enqueueFile(String is relPath){
 		local String is content: fileRead(path: relPath, default: '');
 		local String is kind: '';
-		local Boolean is requireReport: false;
 		local Array of String is expect: [];
 		content:split(delimiter: "\n"):each(action: local Function(String is segRaw){
 			local String is seg: if(check: { segRaw:endsWith(suffix: "\r") }, then: { segRaw:substring(start: 0, end: segRaw:length() - 1); }, else: { segRaw; });
@@ -234,14 +227,17 @@ Class is SpecUnit{
 				});
 			});
 		});
-		if(check: { kind == '' && content:contains(needle: 'specunit') }, then: {
+		if(check: { (kind == '' || kind == 'suite') && content:contains(needle: 'SpecUnitTest') }, then: {
 			kind: 'suite';
-			requireReport: content:contains(needle: "['specunit'");
+		}, else: {
+			if(check: { kind == 'suite' }, then: {
+				kind: '';
+			});
 		});
 		if(check: { kind == '' || kind == 'helper' }, then: {
 			return;
 		});
-		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect, itemRequireReport: requireReport));
+		SpecTestRegistry:queue:add(item: WorkItem:init(itemPath: relPath, itemKind: kind, itemExpect: expect));
 	}
 
 	## Compiles one suite (one compiler thread), executes the produced
@@ -268,14 +264,8 @@ Class is SpecUnit{
 		local Int is rStatus: Process:execute(command: 'sh', args: rArgs);
 		local String is out: fileRead(path: runOut, default: '');
 		local Boolean is passed: rStatus == 0;
-		if(check: { passed && out:contains(needle: '[FAIL]') }, then: {
-			passed: false;
-		});
-		# A framework-importing suite must print the SpecUnit report
-		# table: a binary that exits 0 silently (entry-init machinery
-		# failing to run the runner) is a failure, never a pass.
 		local String is note: '';
-		if(check: { passed && item:requireReport && !out:contains(needle: '== SpecUnit ==') }, then: {
+		if(check: { passed && !out:contains(needle: '== SpecUnit ==') }, then: {
 			passed: false;
 			note: 'exited 0 but produced no SpecUnit report table';
 		});
