@@ -1,0 +1,8 @@
+{
+  "name": "speclint",
+  "version": "0.1.0",
+  "source": "SpecLint.spec",
+  "source_dirs": [".", "../../spec"],
+  "output": "../../bin/speclint",
+  "flags": ["--quiet"]
+}

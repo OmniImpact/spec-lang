@@ -80,12 +80,22 @@ Class is SpecBuild{
 		if({ custom != '' && fileExists(path: custom) }, {
 			return custom;
 		});
+		local String is envBin: Process:getEnv(key: 'SPEC_BIN', default: '');
+		if({ envBin != '' && fileExists(path: envBin) }, {
+			return envBin;
+		});
 		local String is exeDir: Dir:exeDir();
 		if({ exeDir != '' && fileExists(path: exeDir . '/spec') }, {
 			return exeDir . '/spec';
 		});
+		if({ exeDir != '' && fileExists(path: exeDir . '/spec.exe') }, {
+			return exeDir . '/spec.exe';
+		});
 		if({ fileExists(path: 'bin/spec') }, {
 			return 'bin/spec';
+		});
+		if({ fileExists(path: 'bin/spec.exe') }, {
+			return 'bin/spec.exe';
 		});
 		return 'spec';
 	}
@@ -98,8 +108,14 @@ Class is SpecBuild{
 		if({ exeDir != '' && fileExists(path: exeDir . '/specunit') }, {
 			return exeDir . '/specunit';
 		});
+		if({ exeDir != '' && fileExists(path: exeDir . '/specunit.exe') }, {
+			return exeDir . '/specunit.exe';
+		});
 		if({ fileExists(path: 'bin/specunit') }, {
 			return 'bin/specunit';
+		});
+		if({ fileExists(path: 'bin/specunit.exe') }, {
+			return 'bin/specunit.exe';
 		});
 		return 'specunit';
 	}
@@ -112,13 +128,19 @@ Class is SpecBuild{
 		if({ exeDir != '' && fileExists(path: exeDir . '/speclint') }, {
 			return exeDir . '/speclint';
 		});
+		if({ exeDir != '' && fileExists(path: exeDir . '/speclint.exe') }, {
+			return exeDir . '/speclint.exe';
+		});
 		if({ fileExists(path: 'bin/speclint') }, {
 			return 'bin/speclint';
+		});
+		if({ fileExists(path: 'bin/speclint.exe') }, {
+			return 'bin/speclint.exe';
 		});
 		return 'speclint';
 	}
 
-	Function is printHelp(){
+	Function is printHelp() {
 		Output:line('SpecBuild - Project Build Orchestrator (Spec 0.1 Alpha)');
 		Output:line('');
 		Output:line('Usage:');
@@ -235,7 +257,12 @@ Class is SpecBuild{
 				File:fileRemove(path: output);
 				Output:line('[specbuild] Removed: ' . output);
 			}, {
-				Output:line('[specbuild] Clean: target ' . output . ' does not exist.');
+				if({ fileExists(path: output . '.exe') }, {
+					File:fileRemove(path: output . '.exe');
+					Output:line('[specbuild] Removed: ' . output . '.exe');
+				}, {
+					Output:line('[specbuild] Clean: target ' . output . ' does not exist.');
+				});
 			});
 			Process:exit(status: 0);
 		});

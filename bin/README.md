@@ -20,33 +20,37 @@ CC=clang ./bootstrap.sh
 
 This compiles `bootstrap/spec.c` into `bin/spec` via GCC/Clang and verifies byte-for-byte convergence.
 
-## 2. Produce Tooling Binaries
+## 2. Build the SpecBuild Project Orchestrator
 
-Once `bin/spec` is built, produce the developer utilities directly from their Spec sources:
+Once `bin/spec` is built, compile `specbuild`:
+
+```bash
+bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
+```
+
+## 3. Build Tooling Binaries via SpecBuild
+
+Use `bin/specbuild` with each utility's manifest to build `specunit` and `speclint`:
 
 ### Build the SpecUnit Test Runner (`specunit`)
 ```bash
-bin/spec -i utilities/specunit/SpecUnit.spec -o bin/specunit
+bin/specbuild utilities/specunit/specbuild.json
 ```
 
 ### Build the SpecLint Linter (`speclint`)
 ```bash
-bin/spec -i utilities/speclint/SpecLint.spec -o bin/speclint
+bin/specbuild utilities/speclint/specbuild.json
 ```
 
-### Build the SpecBuild Project Orchestrator (`specbuild`)
+### Complete Tooling Build Sequence
 ```bash
-bin/spec -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
+bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild && \
+bin/specbuild utilities/specunit/specbuild.json && \
+bin/specbuild utilities/speclint/specbuild.json
 ```
 
-### Build All Tooling in One Step
-```bash
-bin/spec -i utilities/specunit/SpecUnit.spec -o bin/specunit && \
-bin/spec -i utilities/speclint/SpecLint.spec -o bin/speclint && \
-bin/spec -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
-```
+## 4. Verify
 
-## 3. Verify
 Run the full regression test suite:
 ```bash
 bin/specunit -s bin/spec -t tests
