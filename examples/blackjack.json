@@ -1,10 +1,9 @@
 {
   "name": "blackjack",
   "version": "0.1.0",
-  "type": "binary",
-  "entry": "examples/blackjack.spec",
+  "source": "blackjack.spec",
   "source_dirs": [
-    "examples"
+    "."
   ],
-  "output": "bin/blackjack"
+  "output": "../bin/blackjack"
 }

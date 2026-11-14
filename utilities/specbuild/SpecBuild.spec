@@ -1,9 +1,10 @@
 #! Package specbuild
 #! The SpecBuild orchestrator: manifest-driven project compilation and management.
 ##
-## Reads a specbuild.json manifest, validates source directories, entrypoints,
+## Reads a specbuild.json manifest, validates source directories, entrypoint source,
 ## and build flags, and coordinates compiler invocations, test execution, and
-## linting.
+## linting. All paths (source, source_dirs, output) are resolved relative to the
+## build configuration file.
 ##
 ## Usage:
 ##   specbuild [manifest.json] [command] [options]
@@ -38,6 +39,7 @@ Class is SpecBuild{
 		['base', 'iterator']
 	];
 
+	## Directory portion of a file path ('' when the path has no slash).
 	Function of String is dirOf(String is path){
 		local Int is lastIdx: -1;
 		local Int is len: path:length();
@@ -52,6 +54,26 @@ Class is SpecBuild{
 			return '';
 		});
 		return path:substring(start: 0, end: lastIdx);
+	}
+
+	## Resolves a path relative to the configuration file's directory.
+	Function of String is resolvePath(String is baseDir, String is relPath){
+		if({ relPath == '' || relPath:startsWith(prefix: '/') }, {
+			return relPath;
+		});
+		if({ baseDir == '' || baseDir == '.' }, {
+			return relPath;
+		});
+		if({ relPath == '.' }, {
+			return baseDir;
+		});
+		if({ relPath:startsWith(prefix: baseDir . '/') }, {
+			return relPath;
+		});
+		if({ relPath:startsWith(prefix: '../') && !baseDir:contains(needle: '/') }, {
+			return relPath:substring(start: 3, end: relPath:length());
+		});
+		return baseDir . '/' . relPath;
 	}
 
 	Function of String is resolveCompiler(String is custom){
@@ -192,18 +214,22 @@ Class is SpecBuild{
 		local Map is cfg: parsedConfig as Map;
 		local String is name: Json:getString(obj: cfg, key: 'name', default: 'app');
 		local String is version: Json:getString(obj: cfg, key: 'version', default: '0.1.0');
-		local String is projectType: Json:getString(obj: cfg, key: 'type', default: 'binary');
-		local String is entry: Json:getString(obj: cfg, key: 'entry', default: '');
-		local String is output: Json:getString(obj: cfg, key: 'output', default: '');
+		local String is source: Json:getString(obj: cfg, key: 'source', default: '');
+		if({ source == '' }, {
+			source: Json:getString(obj: cfg, key: 'entry', default: '');
+		});
+		local String is rawOutput: Json:getString(obj: cfg, key: 'output', default: '');
 		local Array is sourceDirs: Json:getArray(obj: cfg, key: 'source_dirs');
 		local Array is flags: Json:getArray(obj: cfg, key: 'flags');
 		local Map is testsCfg: Json:getObject(obj: cfg, key: 'tests');
 
 		local String is configDir: self:dirOf(path: configPath);
+		local String is resolvedSource: self:resolvePath(baseDir: configDir, relPath: source);
+		local String is output: self:resolvePath(baseDir: configDir, relPath: rawOutput);
 
 		if({ command == 'clean' }, {
 			if({ output == '' }, {
-				output: 'bin/' . name;
+				output: self:resolvePath(baseDir: configDir, relPath: 'bin/' . name);
 			});
 			if({ fileExists(path: output) }, {
 				File:fileRemove(path: output);
@@ -230,11 +256,7 @@ Class is SpecBuild{
 					local String is sd: Json:getStringAt(arr: sourceDirs, index: di, default: '');
 					if({ sd != '' }, {
 						lintArgs:add(item: '-t');
-						if({ configDir != '' && !fileExists(path: sd) && fileExists(path: configDir . '/' . sd) }, {
-							lintArgs:add(item: configDir . '/' . sd);
-						}, {
-							lintArgs:add(item: sd);
-						});
+						lintArgs:add(item: self:resolvePath(baseDir: configDir, relPath: sd));
 					});
 					di++;
 				});
@@ -252,17 +274,13 @@ Class is SpecBuild{
 			local Int is tdCount: testDirs:length();
 			if({ tdCount == 0 }, {
 				testArgs:add(item: '-t');
-				testArgs:add(item: 'tests');
+				testArgs:add(item: self:resolvePath(baseDir: configDir, relPath: 'tests'));
 			}, {
 				while([Int is ti: 0], { ti < tdCount }, {
 					local String is td: Json:getStringAt(arr: testDirs, index: ti, default: '');
 					if({ td != '' }, {
 						testArgs:add(item: '-t');
-						if({ configDir != '' && !fileExists(path: td) && fileExists(path: configDir . '/' . td) }, {
-							testArgs:add(item: configDir . '/' . td);
-						}, {
-							testArgs:add(item: td);
-						});
+						testArgs:add(item: self:resolvePath(baseDir: configDir, relPath: td));
 					});
 					ti++;
 				});
@@ -273,22 +291,18 @@ Class is SpecBuild{
 		});
 
 		# Default command: build
-		if({ entry == '' }, {
-			Stderr:line('[specbuild] Error: Missing required property "entry" in ' . configPath);
+		if({ resolvedSource == '' }, {
+			Stderr:line('[specbuild] Error: Missing required property "source" in ' . configPath);
 			Process:exit(status: 1);
 		});
 
-		if({ configDir != '' && !fileExists(path: entry) && fileExists(path: configDir . '/' . entry) }, {
-			entry: configDir . '/' . entry;
-		});
-
-		if({ !fileExists(path: entry) }, {
-			Stderr:line('[specbuild] Error: Entry source file not found: ' . entry);
+		if({ !fileExists(path: resolvedSource) }, {
+			Stderr:line('[specbuild] Error: Source file not found: ' . resolvedSource);
 			Process:exit(status: 1);
 		});
 
 		if({ output == '' }, {
-			output: 'bin/' . name;
+			output: self:resolvePath(baseDir: configDir, relPath: 'bin/' . name);
 		});
 
 		local String is outParent: self:dirOf(path: output);
@@ -297,18 +311,14 @@ Class is SpecBuild{
 		});
 
 		local String is compiler: self:resolveCompiler(custom: '');
-		local Array of String is specArgs: ['-i', entry, '-o', output];
+		local Array of String is specArgs: ['-i', resolvedSource, '-o', output];
 
 		local Int is sLen: sourceDirs:length();
 		while([Int is si: 0], { si < sLen }, {
 			local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
 			if({ sd != '' }, {
 				specArgs:add(item: '-s');
-				if({ configDir != '' && !fileExists(path: sd) && fileExists(path: configDir . '/' . sd) }, {
-					specArgs:add(item: configDir . '/' . sd);
-				}, {
-					specArgs:add(item: sd);
-				});
+				specArgs:add(item: self:resolvePath(baseDir: configDir, relPath: sd));
 			});
 			si++;
 		});
@@ -322,8 +332,8 @@ Class is SpecBuild{
 			fi++;
 		});
 
-		Output:line('[specbuild] Building ' . name . ' v' . version . ' (' . projectType . ')');
-		Output:line('  entry:   ' . entry);
+		Output:line('[specbuild] Building ' . name . ' v' . version);
+		Output:line('  source:  ' . resolvedSource);
 		Output:line('  output:  ' . output);
 
 		if({ verbose }, {

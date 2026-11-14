@@ -15,13 +15,13 @@ Class of SpecUnitTest is TestSpecBuild{
 	];
 
 	Function is testSpecBuildConfigParsing(){
-		local String is manifest: '{"name": "test_app", "version": "1.2.3", "type": "binary", "entry": "src/Main.spec", "source_dirs": ["src", "lib"], "output": "bin/test_app"}';
+		local String is manifest: '{"name": "test_app", "version": "1.2.3", "source": "src/Main.spec", "source_dirs": ["src", "lib"], "output": "bin/test_app"}';
 		local Any is parsed: Json:parse(text: manifest);
 		Assert:isFalse(Json:hasError());
 		local Map is cfg: parsed as Map;
 		Assert:areEqualString('test_app', Json:getString(obj: cfg, key: 'name'));
 		Assert:areEqualString('1.2.3', Json:getString(obj: cfg, key: 'version'));
-		Assert:areEqualString('src/Main.spec', Json:getString(obj: cfg, key: 'entry'));
+		Assert:areEqualString('src/Main.spec', Json:getString(obj: cfg, key: 'source'));
 		Assert:areEqualString('bin/test_app', Json:getString(obj: cfg, key: 'output'));
 		local Array is sdirs: Json:getArray(obj: cfg, key: 'source_dirs');
 		Assert:areEqualInt(2, sdirs:length());
@@ -33,7 +33,8 @@ Class of SpecUnitTest is TestSpecBuild{
 		local String is appSrc: "Class is SbApp{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(){\n\t\tline('SB_APP_OK');\n\t}\n}\n";
 		fileWrite(path: '/tmp/sb_app.spec', content: appSrc);
 
-		local String is manifest: '{"name": "sb_app", "version": "0.1.0", "type": "binary", "entry": "/tmp/sb_app.spec", "source_dirs": ["/tmp"], "output": "/tmp/sb_app_bin"}';
+		# Test relative path resolution: manifest is in /tmp, source is relative to /tmp
+		local String is manifest: '{"name": "sb_app", "version": "0.1.0", "source": "sb_app.spec", "source_dirs": ["."], "output": "sb_app_bin"}';
 		fileWrite(path: '/tmp/sb_manifest.json', content: manifest);
 
 		# Build via bin/specbuild

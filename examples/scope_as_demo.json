@@ -1,10 +1,9 @@
 {
   "name": "scope_as_demo",
   "version": "0.1.0",
-  "type": "binary",
-  "entry": "examples/scope_as_demo.spec",
+  "source": "scope_as_demo.spec",
   "source_dirs": [
-    "examples"
+    "."
   ],
-  "output": "bin/scope_as_demo"
+  "output": "../bin/scope_as_demo"
 }

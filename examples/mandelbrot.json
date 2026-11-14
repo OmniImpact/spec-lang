@@ -1,10 +1,9 @@
 {
   "name": "mandelbrot",
   "version": "0.1.0",
-  "type": "binary",
-  "entry": "examples/mandelbrot.spec",
+  "source": "mandelbrot.spec",
   "source_dirs": [
-    "examples"
+    "."
   ],
-  "output": "bin/mandelbrot"
+  "output": "../bin/mandelbrot"
 }

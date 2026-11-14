@@ -160,8 +160,7 @@ A lightweight, fast build coordinator (`utilities/specbuild/SpecBuild.spec`) to 
   {
     "name": "my_project",
     "version": "0.1.0",
-    "type": "binary",
-    "entry": "src/Main.spec",
+    "source": "src/Main.spec",
     "source_dirs": ["src", "lib"],
     "output": "bin/my_project",
     "flags": ["--threads", "4"],
