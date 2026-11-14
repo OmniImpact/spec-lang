@@ -13,23 +13,13 @@ Class of SpecUnitTest is TestSpecBuild{
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
+		['base', 'sys', as Uri()],
+		['base', 'sys', Uri],
 		['specbuild', SpecBuild]
 	];
 
 	Function of String is dirOf(String is path){
-		local Int is lastIdx: -1;
-		local Int is len: path:length();
-		while([Int is pos: 0], { pos < len }, {
-			local String is ch: path:charAt(index: pos, default: '');
-			if({ ch == '/' || ch == '\\' }, {
-				lastIdx: pos;
-			});
-			pos++;
-		});
-		if({ lastIdx < 0 }, {
-			return '';
-		});
-		return path:substring(start: 0, end: lastIdx);
+		return Uri:fromFilePath(filePath: path):dirPath();
 	}
 
 	Function of String is resolveRoot(){
@@ -54,19 +44,33 @@ Class of SpecUnitTest is TestSpecBuild{
 	}
 
 	Function of String is resolveSpecBuild(String is root){
-		local String is cand: root . '/bin/specbuild';
+		local String is exeSuf: Uri:exeSuffix();
+		local String is cand: root . '/bin/specbuild' . exeSuf;
 		if({ fileExists(path: cand) }, {
 			return cand;
 		});
+		if({ exeSuf != '' && fileExists(path: root . '/bin/specbuild') }, {
+			return root . '/bin/specbuild';
+		});
 
-		local String is compiler: root . '/bin/spec';
-		if({ !fileExists(path: compiler) }, {
-			compiler: 'spec';
+		local String is compiler: '';
+		local String is specEnv: Process:getEnv(key: 'SPEC_BIN', default: '');
+		if({ specEnv != '' && fileExists(path: specEnv) }, {
+			compiler: specEnv;
+		}, {
+			if({ fileExists(path: root . '/bin/spec' . exeSuf) }, {
+				compiler: root . '/bin/spec' . exeSuf;
+			}, {
+				if({ fileExists(path: root . '/bin/spec') }, {
+					compiler: root . '/bin/spec';
+				}, {
+					compiler: 'spec';
+				});
+			});
 		});
 
 		local String is srcPath: root . '/utilities/specbuild/SpecBuild.spec';
 		if({ fileExists(path: srcPath) }, {
-			Process:execute(command: 'mkdir', args: ['-p', root . '/bin']);
 			Process:execute(command: compiler, args: ['-i', srcPath, '-s', root . '/spec', '-o', cand, '--quiet']);
 			if({ fileExists(path: cand) }, {
 				return cand;
@@ -94,29 +98,38 @@ Class of SpecUnitTest is TestSpecBuild{
 	Function is testBuildAndCleanLifecycle(){
 		local String is root: self:resolveRoot();
 		local String is specDir: root . '/spec';
+		local String is tmpDir: Uri:systemTempDir();
+		local String is appSrcFile: tmpDir . '/sb_app.spec';
+		local String is manifestFile: tmpDir . '/sb_manifest.json';
+		local String is outBin: tmpDir . '/sb_app_bin' . Uri:exeSuffix();
+		local String is outBinNoExt: tmpDir . '/sb_app_bin';
+
 		local String is appSrc: "Class is SbApp{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(){\n\t\tline('SB_APP_OK');\n\t}\n}\n";
-		fileWrite(path: '/tmp/sb_app.spec', content: appSrc);
+		fileWrite(path: appSrcFile, content: appSrc);
 
 		local String is manifest: '{"name": "sb_app", "version": "0.1.0", "source": "sb_app.spec", "source_dirs": [".", "' . specDir . '"], "output": "sb_app_bin"}';
-		fileWrite(path: '/tmp/sb_manifest.json', content: manifest);
+		fileWrite(path: manifestFile, content: manifest);
 
-		if({ fileExists(path: '/tmp/sb_app_bin') }, {
-			fileRemove(path: '/tmp/sb_app_bin');
+		if({ fileExists(path: outBin) }, {
+			fileRemove(path: outBin);
+		});
+		if({ fileExists(path: outBinNoExt) }, {
+			fileRemove(path: outBinNoExt);
 		});
 
 		local String is sbBin: self:resolveSpecBuild(root: root);
-		local Int is buildCode: Process:execute(command: sbBin, args: ['/tmp/sb_manifest.json']);
+		local Int is buildCode: Process:execute(command: sbBin, args: [manifestFile]);
 		Assert:areEqualInt(0, buildCode);
-		Assert:isTrue(fileExists(path: '/tmp/sb_app_bin'));
+		Assert:isTrue(fileExists(path: outBin));
 
-		local Int is runCode: Process:execute(command: '/tmp/sb_app_bin', args: []);
+		local Int is runCode: Process:execute(command: outBin, args: []);
 		Assert:areEqualInt(0, runCode);
 
-		local Int is cleanCode: Process:execute(command: sbBin, args: ['/tmp/sb_manifest.json', 'clean']);
+		local Int is cleanCode: Process:execute(command: sbBin, args: [manifestFile, 'clean']);
 		Assert:areEqualInt(0, cleanCode);
-		Assert:isFalse(fileExists(path: '/tmp/sb_app_bin'));
+		Assert:isFalse(fileExists(path: outBin));
 
-		fileRemove(path: '/tmp/sb_app.spec');
-		fileRemove(path: '/tmp/sb_manifest.json');
+		fileRemove(path: appSrcFile);
+		fileRemove(path: manifestFile);
 	}
 }
