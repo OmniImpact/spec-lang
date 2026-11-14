@@ -10,7 +10,7 @@ Class is SourceLocation{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()]
-];
+	];
 
 	## File path or URI of the source file.
 	local String is file: '';
@@ -21,15 +21,20 @@ Class is SourceLocation{
 	## One-based column number in source.
 	local Int is col: 1;
 
+	## Length of the span in characters (0 when unspecified).
+	local Int is length: 0;
+
 	## Initializes a source location coordinate.
 	##
 	## @param file: The file path or URI of the source.
 	## @param line: One-based line coordinate.
 	## @param col: One-based column coordinate.
-	replace Function is init(String is file, Int is line, Int is col){
+	## @param length: Span length in characters.
+	replace Function is init(String is file, Int is line, Int is col, Int is length: 0){
 		self:file: file;
 		self:line: line;
 		self:col: col;
+		self:length: length;
 	}
 
 	## Returns the source file path.
@@ -51,6 +56,13 @@ Class is SourceLocation{
 	## @return: Column number.
 	Function of Int is getCol(){
 		return self:col;
+	}
+
+	## Returns the span length in characters.
+	##
+	## @return: Span length.
+	Function of Int is getLength(){
+		return self:length;
 	}
 
 	## Formats the location as a standardized coordinate string.

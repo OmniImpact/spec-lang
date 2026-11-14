@@ -32,6 +32,8 @@ Class is Parser{
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', Error],
+		['base', 'compiler', ErrorText],
+		['base', 'sys', SourceLocation],
 		['base', 'sys', as Reflection()],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'parser', PrecedenceLevel],
@@ -49,6 +51,7 @@ Class is Parser{
 	local Int is length: 0;
 	local String is sourceFile: '';
 	local Array of Error is errors: [];
+	local ErrorText is errText: ErrorText:init();
 
 	local Lexer is lexer;
 	local Array of Token is lookahead: [];
@@ -122,7 +125,8 @@ Class is Parser{
 	## @param message: What went wrong.
 	Function is addError(Token is tok, String is message){
 		local String is prefix: if({ self:sourceFile != '' }, { self:sourceFile . ':' }, { 'Line ' });
-		local Error is e: Error:init(message: "  [SyntaxError] [{{prefix}}{{tok:getLine()}}:{{tok:getCol()}}] {{message}}");
+		local SourceLocation is loc: SourceLocation:init(file: self:sourceFile, line: tok:getLine(), col: tok:getCol(), length: tok:getValue():length());
+		local Error is e: Error:init(message: "  [SyntaxError] [{{prefix}}{{tok:getLine()}}:{{tok:getCol()}}] {{message}}", location: loc);
 		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: tok:getLine(), col: tok:getCol());
 		self:errors:add(item: e);
 	}
@@ -224,7 +228,7 @@ Class is Parser{
 			return true;
 		});
 		local Token is tok: self:peek();
-		self:addError(tok: tok, message: "Expected '{{value}}', found '{{tok:getValue()}}'");
+		self:addError(tok: tok, message: self:errText:errExpectedFound(expected: value, found: tok:getValue()));
 		return false;
 	}
 
@@ -247,7 +251,7 @@ Class is Parser{
 			return true;
 		});
 		local Token is tok: self:peek();
-		self:addError(tok: tok, message: "Expected '{{p:value()}}', found '{{tok:getValue()}}'");
+		self:addError(tok: tok, message: self:errText:errExpectedFound(expected: p:value(), found: tok:getValue()));
 		return false;
 	}
 
@@ -278,7 +282,7 @@ Class is Parser{
 			return true;
 		});
 		local Token is tok: self:peek();
-		self:addError(tok: tok, message: "Expected '{{kw:value()}}', found '{{tok:getValue()}}'");
+		self:addError(tok: tok, message: self:errText:errExpectedFound(expected: kw:value(), found: tok:getValue()));
 		return false;
 	}
 
@@ -433,7 +437,7 @@ Class is Parser{
 	## @return: The class descriptor.
 	Function of ClassInfo is parseClass(){
 		if({ self:peek():getValue() == self:names:legacyClassSpelling() }, {
-			self:addError(tok: self:peek(), message: "The 'class' keyword is no longer valid; declare classes as 'Class of Parent is Name'.");
+			self:addError(tok: self:peek(), message: self:errText:errObsoleteClassKeyword());
 		});
 		self:advance();
 
@@ -1073,7 +1077,7 @@ Class is Parser{
 		self:advance();
 		local Token is clsTok: self:peek();
 		if({ clsTok:getTokenKind() != TokenKind:IDENTIFIER }, {
-			self:addError(tok: clsTok, message: "'as' in a using entry must be followed by a class name.");
+			self:addError(tok: clsTok, message: self:errText:errUsingAsRequiresClass());
 			return Expression:init(kind: ExpressionKind:UNKNOWN);
 		});
 		self:advance();
@@ -1087,13 +1091,13 @@ Class is Parser{
 				args:each(action: local Function(NamedArg is arg){
 					local ExpressionKind is ak: arg:value:kind;
 					if({ ak != ExpressionKind:STRING && ak != ExpressionKind:NUMBER && ak != ExpressionKind:FLOAT && ak != ExpressionKind:BOOL }, {
-						self:addError(tok: clsTok, message: 'Instance-import arguments must be direct literal values (E1).');
+						self:addError(tok: clsTok, message: self:errText:errInstanceImportLiteralArgs());
 					});
 				});
 			});
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 		}, {
-			self:addError(tok: clsTok, message: "Instance import requires parentheses: 'as " . e:str . "()'.");
+			self:addError(tok: clsTok, message: self:errText:errInstanceImportParens(target: e:str));
 		});
 		return e;
 	}
@@ -1117,7 +1121,7 @@ Class is Parser{
 				self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			});
 			if({ self:checkKeyword(kw: Keyword:AS) }, {
-				self:addError(tok: self:peek(), message: "Chained 'as' casts are not supported; cast in separate steps.");
+				self:addError(tok: self:peek(), message: self:errText:errChainedAsUnsupported());
 			});
 			local Expression is c: Expression:init(kind: ExpressionKind:CAST);
 			c:makeCast(inner: left, target: targetTok:getValue(), args: args);
@@ -1335,7 +1339,7 @@ Class is Parser{
 				if({ self:checkKeyword(kw: Keyword:AS) }, {
 					return self:parseUsingAs();
 				});
-				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
+				self:addError(tok: tok, message: self:errText:errUnexpectedTokenInExpression(token: tok:getValue()));
 				self:advance();
 				Expression:init(kind: ExpressionKind:UNKNOWN)
 			},
@@ -1355,7 +1359,7 @@ Class is Parser{
 					return self:parseFunctionBlock();
 				});
 
-				self:addError(tok: tok, message: "Unexpected token '{{tok:getValue()}}' in expression");
+				self:addError(tok: tok, message: self:errText:errUnexpectedTokenInExpression(token: tok:getValue()));
 				self:advance();
 				Expression:init(kind: ExpressionKind:UNKNOWN)
 			}
@@ -1682,7 +1686,7 @@ Class is Parser{
 
 		lits:add(item: lit);
 		if({ inHole }, {
-			self:addError(tok: originTok, message: 'Unterminated template hole (missing closing }})');
+			self:addError(tok: originTok, message: self:errText:errUnterminatedTemplateHole());
 			plainE:str: '';
 			return plainE;
 		});
@@ -1720,20 +1724,20 @@ Class is Parser{
 	Function of Expression is parseTemplateExpression(String is text){
 		local Expression is emptyE: Expression:init(kind: ExpressionKind:STRING);
 		if({ text:trim():length() == 0 }, {
-			self:addError(tok: self:peek(), message: 'Empty expression in string template');
+			self:addError(tok: self:peek(), message: self:errText:errEmptyTemplateExpression());
 			return emptyE;
 		});
 		local Lexer is subLexer: Lexer:init(source: text);
 		local Array of Token is subTokens: subLexer:tokenize();
 		if({ subLexer:hasErrors() }, {
-			self:addError(tok: self:peek(), message: 'Invalid expression in string template');
+			self:addError(tok: self:peek(), message: self:errText:errInvalidTemplateExpression());
 			return emptyE;
 		});
 		local Parser is subParser: Parser:init(tokens: subTokens);
 		subParser:setTemplateDepth(depth: 1);
 		local Expression is e: subParser:parseExpression();
 		if({ subParser:hasErrors() || subParser:peek():getTokenKind() != TokenKind:EOF }, {
-			self:addError(tok: self:peek(), message: 'Invalid expression in string template');
+			self:addError(tok: self:peek(), message: self:errText:errInvalidTemplateExpression());
 			return emptyE;
 		});
 		return e;

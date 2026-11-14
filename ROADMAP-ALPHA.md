@@ -36,10 +36,13 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
   - Achieved ~2.7x compilation speedup on single-file builds while preserving byte-for-byte fixed-point bootstrap verification.
 
 ### 2.3 Compiler Diagnostic & Error Centralization
-- **Status**: `ErrorText.spec` exists as the centralized template vocabulary for compiler error messages, but several passes (`TypeChecker.spec`, `Parser.spec`, `Loader.spec`) still contain hardcoded inline string messages.
-- **Action Items**:
-  - Move all syntax, semantic, and type error strings into `spec/base/compiler/ErrorText.spec`.
-  - Enhance `TypeError.spec` and `Error.spec` to carry structured `SourceLocation` spans (file, line, column, length) for source line snippets and caret squiggles.
+- **Status**: **Completed**.
+- **Accomplishments**:
+  - Expanded `spec/base/compiler/ErrorText.spec` into the central template vocabulary for Lexer, Parser, Loader, and TypeChecker errors.
+  - Enhanced `spec/lib/base/sys/SourceLocation.spec` with span `length: Int` for structured source ranges.
+  - Updated `spec/base/compiler/Error.spec` and `spec/base/compiler/checker/TypeError.spec` to carry structured `SourceLocation` spans (`file`, `line`, `col`, `length`).
+  - Migrated hardcoded syntax, loader, and type error strings across `Parser.spec`, `Loader.spec`, and `TypeChecker.spec` to `ErrorText.spec`.
+  - Verified byte-for-byte fixed-point bootstrap verification in `bootstrap.sh` and 100% green test suite in `specunit`.
 
 ### 2.4 Standard Library Expansion
 - **Native JSON Serialization (`base:data:Json`)**: Full-featured, lightweight JSON library providing bidirectional parsing (`Json:parse`) and encoding (`Json:stringify` / `Json:format`) over structured Spec types (`Map`, `Array`, `String`, `Int`, `Float`, `Boolean`, and `null`). Serves as the shared data interchange foundation for `specbuild.json` manifests and `speclsp` JSON-RPC 2.0 communication.
@@ -262,7 +265,7 @@ Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysint
 
 | Milestone | Deliverables | Target Status |
 |---|---|---|
-| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics migration to `ErrorText.spec` | In Progress |
+| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics & structured spans migration to `ErrorText.spec` [Completed] | Completed |
 | **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery [Completed]<br>- Separate formatting, naming, and AST idiom rules into dedicated classes [Completed]<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`) [Completed]<br>- CLI rule filtering flags (`--rule` and `--disable`) [Completed] | Completed (`v0.000.100`) |
 | **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier)<br>- Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion)<br>- Implement shared TUI color/status module | Next Up |
 | **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, Sockets) | In Progress |

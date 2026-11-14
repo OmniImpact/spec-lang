@@ -35,7 +35,8 @@ Class is Loader{
 ,
 		['base', 'compiler', 'ast', Type]
 ,
-		['base', 'compiler', Error]
+		['base', 'compiler', Error],
+		['base', 'compiler', ErrorText]
 	];
 
 	local Map of String to String is loadedFiles: Map:init();
@@ -44,6 +45,7 @@ Class is Loader{
 	local Map of String to String is seenClassNames: Map:init();
 	local Map of String to String is seenBareNames: Map:init();
 	local Array of String is parseErrors: [];
+	local ErrorText is errText: ErrorText:init();
 
 
 
@@ -78,7 +80,7 @@ Class is Loader{
 		self:loadedFiles:set(key: filePath, value: 'true');
 
 		if({ !fileExists(path: filePath) }, {
-			self:parseErrors:add(item: '  [LoadError] Module file not found: ' . filePath);
+			self:parseErrors:add(item: self:errText:errModuleFileNotFound(path: filePath));
 			return;
 		});
 
@@ -143,7 +145,7 @@ Class is Loader{
 							self:loadArrayFormUsing(item: item, c: c);
 							return;
 						});
-						self:parseErrors:add(item: '  [LoadError] Malformed import in class \'' . c:name . '\': using entries are package-segment arrays.');
+						self:parseErrors:add(item: self:errText:errMalformedImport(className: c:name));
 					});
 				});
 			});
@@ -362,7 +364,7 @@ Class is Loader{
 			});
 		});
 		if({ !resolved }, {
-			self:parseErrors:add(item: '  [LoadError] Cannot resolve import \'[' . wanted . ']' . '\' declared in class \'' . c:name . '\'.');
+			self:parseErrors:add(item: self:errText:errCannotResolveImport(wanted: wanted, className: c:name));
 		});
 	}
 
@@ -609,7 +611,7 @@ Class is Loader{
 				if({ m:kind == MemberKind:FIELD && m:hasInit && m:initExpr:kind == ExpressionKind:CALL }, {
 					already: true;
 				}, {
-					self:parseErrors:add(item: '  [LoadError] \'' . fieldName . '\' collides with a declared member in class \'' . c:name . '\'; synthetic import fields reserve the name.');
+					self:parseErrors:add(item: self:errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
 				});
 			});
 		});

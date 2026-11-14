@@ -33,6 +33,8 @@ Class is TypeChecker{
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', Error],
+		['base', 'compiler', ErrorText],
+		['base', 'sys', SourceLocation],
 		['base', 'compiler', 'checker', TypeError],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
@@ -44,6 +46,7 @@ Class is TypeChecker{
 
 	## Registered classes: name -> "true".
 	local Map of String to String is registeredClasses: Map:init();
+	local ErrorText is errText: ErrorText:init();
 
 	## the per-scope nested-type map — bare
 	## nested-class name -> ';'-joined qualified identities visible in
@@ -169,11 +172,11 @@ Class is TypeChecker{
 	##
 	## @param line: Source line number.
 	## @param msg: Diagnostic message.
-	Function is addError(Int is line, String is msg){
+	Function is addError(Int is line, String is msg, Int is col: 0, Int is length: 0){
 		local String is fullMsg: if({ self:currentSourceFile != '' }, { '[' . self:currentSourceFile . '] ' . msg }, { msg });
-		local Error is e: Error:init(message: fullMsg);
-		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: line, col: 0);
-		self:errors:add(item: TypeError:init(line: line, message: fullMsg));
+		local Error is e: Error:init(message: fullMsg, location: SourceLocation:init(file: self:currentSourceFile, line: line, col: col, length: length));
+		e:addTraceAt(className: Reflection:class(), methodName: Reflection:method(), line: line, col: col);
+		self:errors:add(item: TypeError:init(line: line, message: fullMsg, col: col, length: length, file: self:currentSourceFile));
 	}
 
 	## True when the name is one of the two void spellings.
@@ -1262,7 +1265,7 @@ Class is TypeChecker{
 					local String is argT: matchedValue:resolvedType;
 					if({ argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pTF, source: argT) }, {
 						local String is label: if({ pName != '' }, { pName }, { 'position ' . (pIdx + 1) });
-						local String is msg: 'Argument \'' . label . '\' for \'' . displayTarget . '.' . callExpr:methodName . '\': cannot assign \'' . argT . '\' to \'' . self:displayType(t: pTF) . '\'.';
+						local String is msg: self:errText:errCannotAssignArg(label: label, target: displayTarget, method: callExpr:methodName, fromType: argT, toType: self:displayType(t: pTF));
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				}, {
@@ -1270,7 +1273,7 @@ Class is TypeChecker{
 						# Binding declarations (sysinternal + runtime-managed)
 						# sketch API surface, not call contracts — their C
 						# implementations carry optional/variadic semantics.
-						local String is msg: 'Missing argument \'' . pName . '\' for \'' . displayTarget . '.' . callExpr:methodName . '\'.';
+						local String is msg: self:errText:errMissingArg(paramName: pName, target: displayTarget, method: callExpr:methodName);
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				});
@@ -2637,7 +2640,7 @@ Class is TypeChecker{
 						res: Primitive:INT:value();
 						if({ (leftT != '' && leftT != 'Any' && leftT != Primitive:INT:value()) ||
 							(rightT != '' && rightT != 'Any' && rightT != Primitive:INT:value()) }, {
-							local String is msg: 'Bitwise operator \'' . op . '\' requires Int operands (got \'' . leftT . '\' and \'' . rightT . '\').';
+							local String is msg: self:errText:errBitwiseOperandsInt(op: op, leftT: leftT, rightT: rightT);
 							self:addError(line: self:currentLine, msg: msg);
 						});
 					},
@@ -2709,11 +2712,11 @@ Class is TypeChecker{
 			ExpressionKind:UNARY: {
 				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
 				if({ expr:str == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
-					local String is msg: 'Bitwise complement \'~\' requires an Int operand (got \'' . innerT . '\').';
+					local String is msg: self:errText:errBitwiseComplementInt(innerT: innerT);
 					self:addError(line: self:currentLine, msg: msg);
 				});
 				if({ (expr:str == '++' || expr:str == '--' || expr:str == 'post++' || expr:str == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
-					local String is msg: 'Operator \'' . expr:str . '\' requires an Int operand (got \'' . innerT . '\').';
+					local String is msg: self:errText:errOperatorRequiresInt(op: expr:str, innerT: innerT);
 					self:addError(line: self:currentLine, msg: msg);
 				});
 				if({ expr:str == '!' }, {
@@ -2943,7 +2946,7 @@ Class is TypeChecker{
 							});
 						}, {
 							if({ lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, {
-								local String is msg: 'The closure\'s last expression yields \'' . lastT . '\', but the closure must return \'' . expr:anonReturnType:name . '\'.';
+								local String is msg: self:errText:errClosureReturnType(actual: lastT, expected: expr:anonReturnType:name);
 								self:addError(line: self:currentLine, msg: msg);
 							});
 						});
@@ -3185,7 +3188,7 @@ Class is TypeChecker{
 						expr:methodArgs:each(action: local Function(NamedArg is arg){
 							local Boolean is bareClosureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || (arg:name == '' && barePos > 0);
 							if({ bareHasLoopVars && bareClosureSlot && arg:value:kind != ExpressionKind:ANON_FN }, {
-								self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures.');
+								self:addError(line: self:currentLine, msg: self:errText:errLoopVarsClosureLiteral());
 							});
 							barePos: barePos + 1;
 						});
@@ -3262,11 +3265,11 @@ Class is TypeChecker{
 					local String is bareThenT: bareThen:anonReturnType:name;
 					local String is bareElseT: bareElse:anonReturnType:name;
 					if({ self:isVoid(t: bareThenT) || self:isVoid(t: bareElseT) }, {
-						self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression.');
+						self:addError(line: self:currentLine, msg: self:errText:errBranchRequiresExpressions());
 						res: self:names:voidName();
 					}, {
 						if({ !self:isAssignable(target: bareThenT, source: bareElseT) && !self:isAssignable(target: bareElseT, source: bareThenT) }, {
-							self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . bareThenT . '\' and \''. bareElseT . '\'.');
+							self:addError(line: self:currentLine, msg: self:errText:errBranchMismatchedTypes(thenType: bareThenT, elseType: bareElseT));
 							res: bareThenT;
 						}, {
 							res: if({ bareThenT == Primitive:ANY:value() }, { bareElseT }, { bareThenT });
@@ -3342,7 +3345,7 @@ Class is TypeChecker{
 				# running it with free identifiers.
 				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && (posIdx == 1 || posIdx == 2)) || (!hasLoopVars && (posIdx == 0 || posIdx == 1))));
 				if({ hasLoopVars && closureSlot && arg:value:kind != ExpressionKind:ANON_FN }, {
-					self:addError(line: self:currentLine, msg: 'The loop variables scope their closures at the call site: a [vars] loop form requires inline literal closures.');
+					self:addError(line: self:currentLine, msg: self:errText:errLoopVarsClosureLiteral());
 				});
 				if({ arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, {
 					if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
@@ -3414,7 +3417,7 @@ Class is TypeChecker{
 			# A held member body has no instance: implicit-self and self
 			# calls are not available from it.
 			if({ self:inHeldInit || self:inHeldFunction }, {
-				self:addError(line: self:currentLine, msg: 'A held member body has no instance: \'' . method . '\' cannot be called on \'self\' from it.');
+				self:addError(line: self:currentLine, msg: self:errText:errHeldNoInstance(method: method));
 			});
 		});
 
@@ -3445,7 +3448,7 @@ Class is TypeChecker{
 		if({ targetType != '' && targetType != Primitive:ANY:value() && !self:allEnumNames:has(key: targetType) && heldCallFn:name == '' }, {
 			local String is iBase: targetType:split(delimiter: ':'):get(index: 0);
 			if({ self:registeredClasses:has(key: iBase) && self:lookupMethodReturnType(className: iBase, methodName: method) == '' && self:findHeldMethod(className: iBase, methodName: method):name != '' }, {
-				self:addError(line: self:currentLine, msg: 'Held function \'' . iBase . ':' . method . '\' is class-scoped: call it through the class name, not an instance.');
+				self:addError(line: self:currentLine, msg: self:errText:errHeldClassScoped(className: iBase, method: method));
 			});
 		});
 
@@ -3473,7 +3476,7 @@ Class is TypeChecker{
 				local Array of String is callerSegs: callerCls:namespaceSegments();
 				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' && callerSegs:get(index: 1) == 'sys';
 				if({ !sysWrapper }, {
-					self:addError(line: self:currentLine, msg: 'The sysinternal floor is only accessible from base:sys wrappers; call the base:sys wrapper instead (call from \'' . callerCls:namespaceJoined() . '\').');
+					self:addError(line: self:currentLine, msg: self:errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
 				});
 				res: self:lookupMethodReturnType(className: qJoined, methodName: method);
 				expr:resolvedType: res;
@@ -3512,7 +3515,7 @@ Class is TypeChecker{
 			});
 		});
 		if({ targetType == Primitive:ANY:value() && method != 'toString' && method != 'typeName' && method != 'init' }, {
-			self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not part of the root contract; cast the Any-typed value to a concrete class before calling it (value as ClassName).');
+			self:addError(line: self:currentLine, msg: self:errText:errMemberNotRootContract(member: method));
 		});
 
 		local String is fnVarT: '';
@@ -3562,7 +3565,7 @@ Class is TypeChecker{
 							# X3 stratum, the class itself, an ancestor, the same file, or the
 							# class's own using grants it.
 							if({ !self:classHasAccess(className: self:currentClassName, targetName: targetType:split(delimiter: ':'):get(index: 0)) }, {
-								self:addError(line: self:currentLine, msg: '\'' . targetType . '\' is not imported by \'' . self:currentClassName . '\'; add it to the using declaration to construct it (§I.6).');
+								self:addError(line: self:currentLine, msg: self:errText:errTypeNotImported(targetType: targetType, currentClass: self:currentClassName));
 							});
 							res: targetType;
 						}, {
@@ -3678,7 +3681,7 @@ Class is TypeChecker{
 												# as Any — the runtime magic defines it.
 												local Array of String is uParts: targetType:split(delimiter: ':');
 												if({ self:registeredClasses:has(key: uParts:get(index: 0)) && self:findClass(name: uParts:get(index: 0)):name != '' }, {
-													self:addError(line: self:currentLine, msg: 'Member \'' . method . '\' is not declared on class \'' . targetType . '\'.');
+													self:addError(line: self:currentLine, msg: self:errText:errMemberNotDeclared(member: method, targetType: targetType));
 												});
 												res: 'Any';
 											});
@@ -3701,11 +3704,11 @@ Class is TypeChecker{
 			local String is thenT: thenAnon:anonReturnType:name;
 			local String is elseT: elseAnon:anonReturnType:name;
 			if({ self:isVoid(t: thenT) || self:isVoid(t: elseT) }, {
-				self:addError(line: self:currentLine, msg: 'A value-yielding branch requires both branches to end in an expression.');
+				self:addError(line: self:currentLine, msg: self:errText:errBranchRequiresExpressions());
 				res: self:names:voidName();
 			}, {
 				if({ !self:isAssignable(target: thenT, source: elseT) && !self:isAssignable(target: elseT, source: thenT) }, {
-					self:addError(line: self:currentLine, msg: 'Branch yields mismatched types: \'' . thenT . '\' and \'' . elseT . '\'.');
+					self:addError(line: self:currentLine, msg: self:errText:errBranchMismatchedTypes(thenType: thenT, elseType: elseT));
 					res: thenT;
 				}, {
 					res: if({ thenT == Primitive:ANY:value() }, { elseT }, { thenT });
@@ -3832,7 +3835,7 @@ Class is TypeChecker{
 					# initializer, typing container literals directly.
 					local String is initType: self:inferExpressionType(expr: stmt:initExpr, expected: fullType);
 					if({ !self:isAssignable(target: fullType, source: initType) }, {
-						local String is msg: 'Type mismatch in variable declaration for \'' . varName . '\': cannot assign \'' . initType . '\' to \'' . fullType . '\'.';
+						local String is msg: self:errText:errTypeMismatchDecl(varName: varName, initType: initType, fullType: fullType);
 						# a void expression consumed as a
 						# value explains itself instead of cascading into the
 						# generic mismatch.
@@ -3878,7 +3881,7 @@ Class is TypeChecker{
 				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
 				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
 				if({ !self:isAssignable(target: targetType, source: valType) }, {
-						local String is msg: 'Type mismatch in assignment: cannot assign \'' . valType . '\' to \'' . targetType . '\'.';
+						local String is msg: self:errText:errTypeMismatchAssign(valType: valType, targetType: targetType);
 						# the same for assignments.
 						if({ self:isVoid(t: valType) }, {
 							local String is note: self:voidUseNote(expr: stmt:assignValue);
@@ -3936,7 +3939,7 @@ Class is TypeChecker{
 					});
 				}, {
 					if({ self:currentMethodReturnType != 'void' && self:currentMethodReturnType != 'Void' && self:currentMethodReturnType != '' && self:currentMethodReturnType != 'Any' }, {
-						local String is msg: 'Method expects return value of type \'' . self:currentMethodReturnType . '\', but found empty return.';
+						local String is msg: self:errText:errMethodEmptyReturn(expected: self:currentMethodReturnType);
 						self:addError(line: stmt:line, msg: msg);
 					});
 				});
@@ -4075,36 +4078,36 @@ Class is TypeChecker{
 	## @param stmt: The FORWARD statement.
 	Function is checkForward(Statement is stmt){
 		if({ !self:currentMethodIsMerge }, {
-			self:addError(line: stmt:line, msg: 'Forward statement `(args...)` requires the enclosing method to declare \'merge\'.');
+			self:addError(line: stmt:line, msg: self:errText:errForwardRequiresMerge());
 			return;
 		});
 		if({ self:anonDepth > 0 }, {
-			self:addError(line: stmt:line, msg: 'Forward statement is not allowed inside a nested function.');
+			self:addError(line: stmt:line, msg: self:errText:errForwardNestedNotAllowed());
 			return;
 		});
 		if({ self:forwardSeen }, {
-			self:addError(line: stmt:line, msg: 'Multiple forward statements in method \'' . self:currentMethodName . '\'; at most one is allowed.');
+			self:addError(line: stmt:line, msg: self:errText:errForwardMultipleNotAllowed(method: self:currentMethodName));
 			return;
 		});
 		self:forwardSeen: true;
 
 		local Member is superM: self:findFirstSuperMethod(className: self:currentClassName, methodName: self:currentMethodName);
 		if({ superM:name == '' }, {
-			self:addError(line: stmt:line, msg: 'Forward statement in \'' . self:currentMethodName . '\': no parent method to delegate to.');
+			self:addError(line: stmt:line, msg: self:errText:errForwardNoParentMethod(method: self:currentMethodName));
 			return;
 		});
 		local Array of Parameter is params: superM:params;
 		local Array of NamedArg is args: stmt:forwardArgs;
 
 		if({ args:length() > params:length() }, {
-			self:addError(line: stmt:line, msg: 'Forward statement passes ' . args:length() . ' arguments but parent \'' . superM:name . '\' accepts ' . params:length() . '.');
+			self:addError(line: stmt:line, msg: self:errText:errForwardArgCountMismatch(method: self:currentMethodName, parentMethod: superM:name, passed: args:length(), accepted: params:length()));
 			return;
 		});
 		if({ args:length() < params:length() }, {
 			local Int is nIdx: 0;
 			args:each(action: local Function(NamedArg is a){
 				if({ a:name == '' }, {
-					self:addError(line: stmt:line, msg: 'Partial forward requires named arguments; argument ' . (nIdx + 1) . ' of \'' . self:currentMethodName . '\' is unnamed.');
+					self:addError(line: stmt:line, msg: self:errText:errForwardNamedRequired(argNum: nIdx + 1, method: self:currentMethodName));
 				});
 				nIdx: nIdx + 1;
 			});
@@ -4179,10 +4182,10 @@ Class is TypeChecker{
 		self:validateTypeAccess(t: method:memberType, line: method:line);
 		local Member is mergeTarget: self:findFirstSuperMethod(className: self:currentClassName, methodName: method:name);
 		if({ mergeTarget:name != '' && self:ancestorOverloaded(className: self:currentClassName, methodName: method:name) }, {
-			self:addError(line: method:line, msg: 'Cannot replace or merge an overloaded method (\'' . method:name . '\' has multiple signatures); give each signature a distinct name (§I.3).');
+			self:addError(line: method:line, msg: self:errText:errCannotOverrideOverload(method: method:name));
 		});
 		if({ self:currentMethodIsMerge && mergeTarget:name == '' }, {
-			self:addError(line: method:line, msg: 'Method \'' . method:name . '\' in class \'' . self:currentClassName . '\' declares \'merge\' but no parent declares a method with that name.');
+			self:addError(line: method:line, msg: self:errText:errMergeNoParent(method: method:name, className: self:currentClassName));
 		});
 		method:params:each(action: local Function(Parameter is p){
 			if({ p:paramType:name == self:names:selfFieldMarker() }, {
@@ -4209,7 +4212,7 @@ Class is TypeChecker{
 		});
 
 		if({ self:currentMethodIsMerge && !self:forwardSeen && method:body:length() > 0 }, {
-			self:addError(line: method:line, msg: 'Merge method \'' . method:name . '\' in class \'' . self:currentClassName . '\' must contain a forward statement `(args...)`.');
+			self:addError(line: method:line, msg: self:errText:errMergeMustForward(method: method:name, className: self:currentClassName));
 		});
 		self:currentMethodIsMerge: false;
 		self:currentMethodName: '';
@@ -4470,13 +4473,13 @@ Class is TypeChecker{
 		});
 		if({ member:hasModifier(kw: Keyword:LOCAL) }, {
 			if({ self:currentClassName != ownerClass }, {
-				local String is msg: 'Member \'' . memberName . '\' is local to class \'' . ownerClass . '\' and cannot be accessed from \'' . self:currentClassName . '\'.';
+				local String is msg: self:errText:errMemberLocal(member: memberName, ownerClass: ownerClass, currentClass: self:currentClassName);
 				self:addError(line: self:currentLine, msg: msg);
 			});
 		}, {
 			if({ member:hasModifier(kw: Keyword:CONTAINED) }, {
 				if({ !self:isSubclassOf(subName: self:currentClassName, baseName: ownerClass) }, {
-					local String is msg: 'Member \'' . memberName . '\' is contained in class \'' . ownerClass . '\' and cannot be accessed from unrelated class \'' . self:currentClassName . '\'.';
+					local String is msg: self:errText:errMemberContained(member: memberName, ownerClass: ownerClass, currentClass: self:currentClassName);
 					self:addError(line: self:currentLine, msg: msg);
 				});
 			});
@@ -4550,7 +4553,7 @@ Class is TypeChecker{
 				return;
 			});
 			if({ m:hasModifier(kw: Keyword:REPLACE) || m:hasModifier(kw: Keyword:MERGE) }, {
-				self:addError(line: m:line, msg: 'Member \'' . m:name . '\' in class \'' . classDef:name . '\' combines \'held\' with \'replace\'/\'merge\'; held members are single-copy and cannot be overridden.');
+				self:addError(line: m:line, msg: self:errText:errHeldCombinesReplaceMerge(member: m:name, className: classDef:name));
 				return;
 			});
 			if({ m:name == MetadataField:USING:value() || m:name == MetadataField:NAMESPACE:value() || m:name == MetadataField:CASTABLE:value() }, {
@@ -4610,12 +4613,12 @@ Class is TypeChecker{
 					});
 				});
 				if({ dupHeld }, {
-					self:addError(line: m:line, msg: 'Held function \'' . m:name . '\' is declared more than once; held functions do not overload.');
+					self:addError(line: m:line, msg: self:errText:errHeldDuplicate(member: m:name));
 				});
 				return;
 			});
 			if({ !m:hasInit }, {
-				self:addError(line: m:line, msg: 'Held field \'' . m:name . '\' in class \'' . classDef:name . '\' requires an initializer; held members construct lazily, once, on first access.');
+				self:addError(line: m:line, msg: self:errText:errHeldFieldRequiresInitializer(field: m:name, className: classDef:name));
 				return;
 			});
 		});
@@ -4666,7 +4669,7 @@ Class is TypeChecker{
 					});
 				});
 				if({ maximal:length() >= 2 }, {
-					local String is msg: 'ClassInfo \'' . classDef:name . '\' inherits conflicting implementations of \'' . mName . '\' from \'' . maximal:get(index: 0) . '\' and \'' . maximal:get(index: 1) . '\'; declare the method (replace or merge) to resolve the conflict.';
+					local String is msg: self:errText:errConflictingInheritedMethods(className: classDef:name, method: mName, classA: maximal:get(index: 0), classB: maximal:get(index: 1));
 					self:addError(line: classDef:line, msg: msg);
 				});
 			});
@@ -4714,7 +4717,7 @@ Class is TypeChecker{
 								});
 							});
 							if({ !isImplemented }, {
-								local String is msg: 'ClassInfo \'' . classDef:name . '\' does not implement abstract member \'' . parentM:name . '\' required by parent \'' . baseName . '\'.';
+								local String is msg: self:errText:errUnimplementedAbstract(className: classDef:name, member: parentM:name, parentClass: baseName);
 								self:addError(line: classDef:line, msg: msg);
 							});
 						});
@@ -5047,7 +5050,7 @@ Class is TypeChecker{
 				});
 				local String is asName: asExpr:str;
 				if({ seen:has(key: asName) }, {
-					self:addError(line: m:line, msg: 'Class \'' . classDef:name . '\' instance-imports \'' . asName . '\' more than once (E3).');
+					self:addError(line: m:line, msg: self:errText:errDuplicateInstanceImport(className: classDef:name, asName: asName));
 					return;
 				});
 				seen:set(key: asName, value: 'true');
@@ -5056,7 +5059,7 @@ Class is TypeChecker{
 					return;
 				});
 				if({ target:baseClass == self:names:enumHeader() }, {
-					self:addError(line: m:line, msg: 'Cannot instance-import enum \'' . asName . '\'; enums are type-level (E2).');
+					self:addError(line: m:line, msg: self:errText:errCannotInstanceImportEnum(asName: asName));
 					return;
 				});
 					if({ target:typeParams:length() > 0 }, {
@@ -5110,7 +5113,7 @@ Class is TypeChecker{
 			return;
 		});
 		if({ state == 'g' }, {
-			self:addError(line: 0, msg: 'Instance import cycle: ' . path . c:name . ' (E4); construction would recurse forever.');
+			self:addError(line: 0, msg: self:errText:errInstanceImportCycle(cycle: path . c:name));
 			return;
 		});
 		color:set(key: c:name, value: 'g');
