@@ -108,4 +108,29 @@ Class of SpecUnitTest is TestUri{
 		Assert:areEqualString('//server/share/folder/file.txt', u:toFilePath());
 		Assert:areEqualString('file://server/share/folder/file.txt', u:toString());
 	}
+
+	Function is testSystemPaths(){
+		local String is td: Uri:systemTempDir();
+		Assert:isTrue(td:length() > 0);
+		Assert:isFalse(td:endsWith(suffix: '/'));
+
+		local String is hd: Uri:homeDir();
+		if({ hd:length() > 0 }, {
+			Assert:isFalse(hd:endsWith(suffix: '/'));
+		});
+
+		local String is cd: Uri:cacheDir();
+		Assert:isTrue(cd:length() > 0);
+		Assert:isFalse(cd:endsWith(suffix: '/'));
+
+		local String is rcd: Uri:runtimeCacheDir();
+		Assert:areEqualString(cd . '/runtime', rcd);
+
+		local String is j: Uri:join(parts: ['a', 'b/c', '../d', 'e']);
+		Assert:areEqualString('a/b/d/e', j);
+
+		local String is tf: Uri:tempFile(prefix: 'test_', suffix: '.tmp');
+		Assert:isTrue(tf:startsWith(prefix: td));
+		Assert:isTrue(tf:endsWith(suffix: '.tmp'));
+	}
 }

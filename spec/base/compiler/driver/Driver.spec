@@ -28,7 +28,9 @@ Class is Driver{
 		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'sys', as Output()],
-		['base', 'sys', as Stderr()]
+		['base', 'sys', as Stderr()],
+		['base', 'sys', as Uri()],
+		['base', 'sys', Uri]
 ,
 		['base', 'compiler', 'ast', Parameter]
 ,
@@ -242,16 +244,9 @@ Class is Driver{
 
 		local String is tempCPath: emitCPath;
 		if({ tempCPath == '' }, {
-			tempCPath: fileTemp(template: '/tmp/_spec_stage_XXXXXX.c');
+			tempCPath: fileTemp(template: Uri:systemTempDir() . '/_spec_stage_XXXXXX.c');
 			if({ tempCPath == '' }, {
-				local String is tmpDir: '/tmp';
-				if({ Process:osName() == 'windows' }, {
-					local String is envTmp: Process:getEnv(key: 'TEMP', default: '');
-					if({ envTmp != '' }, {
-						tmpDir: envTmp:replaceAll(search: '\\', replacement: '/');
-					});
-				});
-				tempCPath: tmpDir . '/_spec_stage_' . (Process:getPid() as String) . '.c';
+				tempCPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.c';
 			});
 		});
 
@@ -261,16 +256,7 @@ Class is Driver{
 		local String is runtimeC: '';
 		local String is runtimeO: '';
 		if({ useCache }, {
-			local String is homeDir: Process:getEnv(key: 'HOME', default: '');
-			if({ homeDir == '' }, {
-				homeDir: Process:getEnv(key: 'USERPROFILE', default: '');
-			});
-			if({ homeDir != '' }, {
-				homeDir: homeDir:replaceAll(search: '\\', replacement: '/');
-				cacheDir: homeDir . '/.cache/spec/runtime';
-			}, {
-				cacheDir: '/tmp/spec_runtime';
-			});
+			cacheDir: Uri:runtimeCacheDir();
 			runtimeH: cacheDir . '/spec_runtime.h';
 			runtimeC: cacheDir . '/spec_runtime.c';
 			runtimeO: cacheDir . '/spec_runtime.o';

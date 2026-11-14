@@ -1,9 +1,10 @@
 #! Package base:sys
 #! Uniform Resource Identifier (URI) and cross-platform path abstraction.
 ##
-## Centralizes URI parsing and filesystem path conversions across POSIX and
-## Windows platforms. Supports file:// URIs, Windows drive letters, UNC paths,
-## path normalization (resolving . and .. segments), and relative resolution.
+## Centralizes URI parsing, filesystem path conversions, and environment-aware
+## directory resolution across POSIX and Windows platforms. Supports file:// URIs,
+## Windows drive letters, UNC paths, path normalization (resolving . and .. segments),
+## relative resolution, temp directories, home directories, and cache locations.
 
 Class is Uri{
 	namespace: ['base', 'sys'];
@@ -384,6 +385,82 @@ Class is Uri{
 		});
 		local String is norm: self:cleanPath(rawPath: joined);
 		return Uri:init(scheme: self:scheme, authority: self:authority, path: norm);
+	}
+
+	## Returns the cross-platform temporary directory without trailing slash.
+	Function of String is systemTempDir(){
+		if({ Process:osName() == 'windows' }, {
+			local String is t: Process:getEnv(key: 'TEMP', default: '');
+			if({ t == '' }, {
+				t: Process:getEnv(key: 'TMP', default: '');
+			});
+			if({ t != '' }, {
+				return self:cleanPath(rawPath: t);
+			});
+			return '/tmp';
+		});
+		local String is p: Process:getEnv(key: 'TMPDIR', default: '');
+		if({ p != '' }, {
+			return self:cleanPath(rawPath: p);
+		});
+		return '/tmp';
+	}
+
+	## Returns the cross-platform user home directory without trailing slash, or '' if not set.
+	Function of String is homeDir(){
+		local String is h: Process:getEnv(key: 'HOME', default: '');
+		if({ h == '' }, {
+			h: Process:getEnv(key: 'USERPROFILE', default: '');
+		});
+		if({ h != '' }, {
+			return self:cleanPath(rawPath: h);
+		});
+		return '';
+	}
+
+	## Returns the root Spec cache directory without trailing slash.
+	Function of String is cacheDir(){
+		local String is h: self:homeDir();
+		if({ h != '' }, {
+			return h . '/.cache/spec';
+		});
+		return self:systemTempDir() . '/spec_cache';
+	}
+
+	## Returns the precompiled runtime accelerator cache directory without trailing slash.
+	Function of String is runtimeCacheDir(){
+		return self:cacheDir() . '/runtime';
+	}
+
+	## Joins path components with '/' and resolves '.' and '..' segments.
+	Function of String is join(Array of String is parts){
+		local Array of String is nonEmpties: [];
+		local Int is len: parts:length();
+		while([Int is i: 0], { i < len }, {
+			local String is p: parts:get(index: i, default: '');
+			if({ p != '' }, {
+				nonEmpties:add(item: p);
+			});
+			i++;
+		});
+		if({ nonEmpties:length() == 0 }, {
+			return '';
+		});
+		local String is joined: nonEmpties:join(separator: '/');
+		return self:cleanPath(rawPath: joined);
+	}
+
+	## Returns the executable file suffix for the running platform ('.exe' on Windows, '' elsewhere).
+	Function of String is exeSuffix(){
+		if({ Process:osName() == 'windows' }, {
+			return '.exe';
+		});
+		return '';
+	}
+
+	## Generates a unique temporary file path inside tempDir().
+	Function of String is tempFile(String is prefix: 'spec_', String is suffix: ''){
+		return self:systemTempDir() . '/' . prefix . (Process:getPid() as String) . '_' . (Process:clockMs() as String) . suffix;
 	}
 
 	## Formats as a URI string.

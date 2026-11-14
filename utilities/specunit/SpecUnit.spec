@@ -121,7 +121,9 @@ Class is SpecUnit{
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Dir()],
-		['base', 'sys', as File()]
+		['base', 'sys', as File()],
+		['base', 'sys', as Uri()],
+		['base', 'sys', Uri]
 	];
 
 	replace Function is init(Map of String to String is args){
@@ -361,8 +363,7 @@ Class is SpecUnit{
 	## The flat work path for one item's artifacts: pid + queue
 	## index + stem keeps concurrent compiles collision-free.
 	Function of String is workPath(String is suffix, Int is idx, String is stem){
-		local String is dir: if(check: { Process:osName() == 'windows' }, then: { 'bin' }, else: { '/tmp' });
-		return dir . '/specrun_' . (Process:getPid() as String) . '_' . (idx as String) . '_' . stem . suffix;
+		return Uri:systemTempDir() . '/specrun_' . (Process:getPid() as String) . '_' . (idx as String) . '_' . stem . suffix;
 	}
 
 	## The report: failed items' evidence printed (if any), then the CI exit.

@@ -4271,6 +4271,9 @@ typedef struct Stderr Stderr;
 Stderr* Stderr_new(void);
 void Stderr_destroy(void* self);
 void Stderr_init(Stderr* self);
+typedef struct Uri Uri;
+Uri* Uri_new(void);
+void Uri_destroy(void* self);
 
 String Stringable_toString(Stringable* self);
 String Class_toString(Class* self);
@@ -4924,6 +4927,27 @@ String RuntimePrelude_emitHeader(RuntimePrelude* self);
 String RuntimePrelude_emitBody(RuntimePrelude* self);
 String RuntimePrelude_emitRuntime(RuntimePrelude* self);
 void Stderr_line(Stderr* self, String text);
+void Uri_init(Uri* self, String scheme, String authority, String path, String query, String fragment);
+bool Uri_isAlpha(Uri* self, String ch);
+bool Uri_hasDrivePrefix(Uri* self, String p);
+String Uri_cleanPath(Uri* self, String rawPath);
+Uri* Uri_fromFilePath(Uri* self, String filePath);
+Uri* Uri_parse(Uri* self, String text);
+String Uri_toFilePath(Uri* self);
+String Uri_toNativeFilePath(Uri* self);
+bool Uri_isAbsolute(Uri* self);
+String Uri_dirPath(Uri* self);
+String Uri_baseName(Uri* self);
+String Uri_extName(Uri* self);
+Uri* Uri_resolve(Uri* self, String relativePath);
+String Uri_systemTempDir(Uri* self);
+String Uri_homeDir(Uri* self);
+String Uri_cacheDir(Uri* self);
+String Uri_runtimeCacheDir(Uri* self);
+String Uri_join(Uri* self, SpecArray* parts);
+String Uri_exeSuffix(Uri* self);
+String Uri_tempFile(Uri* self, String prefix, String suffix);
+String Uri_toString(Uri* self);
 
 /* Struct Layouts */
 struct Any {
@@ -4995,6 +5019,7 @@ struct Driver {
     long long entryInitOverloadIndex;
     bool entryInitTakesMap;
     bool entryInitSawAny;
+    Uri* _import_Uri;
 };
 
 struct File {
@@ -5444,8 +5469,37 @@ struct Stderr {
     void** _vtable;
 };
 
+struct Uri {
+    const char* _type_name;
+    void** _vtable;
+    String scheme;
+    String authority;
+    String path;
+    String query;
+    String fragment;
+};
+
 /* Virtual Method Tables */
-static void* Any_vtable[502] = {
+static void* Any_vtable[521] = {
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -5950,7 +6004,26 @@ static void* Any_vtable[502] = {
     (void*)0
 };
 
-static void* Loadable_vtable[502] = {
+static void* Loadable_vtable[521] = {
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0,
     (void*)0,
     (void*)0,
@@ -6455,7 +6528,7 @@ static void* Loadable_vtable[502] = {
     (void*)0
 };
 
-static void* Stringable_vtable[502] = {
+static void* Stringable_vtable[521] = {
     (void*)Stringable_toString,
     (void*)0,
     (void*)0,
@@ -6957,10 +7030,29 @@ static void* Stringable_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Class_vtable[502] = {
+static void* Class_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -7462,10 +7554,29 @@ static void* Class_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Introspection_vtable[502] = {
+static void* Introspection_vtable[521] = {
     (void*)Class_toString,
     (void*)Introspection_objectHash,
     (void*)Introspection_sameRef,
@@ -7967,10 +8078,29 @@ static void* Introspection_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Enum_vtable[502] = {
+static void* Enum_vtable[521] = {
     (void*)0,
     (void*)0,
     (void*)0,
@@ -8472,10 +8602,29 @@ static void* Enum_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Conditional_vtable[502] = {
+static void* Conditional_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -8977,10 +9126,29 @@ static void* Conditional_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Buf_vtable[502] = {
+static void* Buf_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -9482,10 +9650,29 @@ static void* Buf_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loops_vtable[502] = {
+static void* Loops_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -9987,10 +10174,29 @@ static void* Loops_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loop_vtable[502] = {
+static void* Loop_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -10492,10 +10698,29 @@ static void* Loop_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Vector_vtable[502] = {
+static void* Vector_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -10997,10 +11222,29 @@ static void* Vector_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Dir_vtable[502] = {
+static void* Dir_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -11502,10 +11746,29 @@ static void* Dir_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Driver_vtable[502] = {
+static void* Driver_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -12007,10 +12270,29 @@ static void* Driver_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* File_vtable[502] = {
+static void* File_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -12512,10 +12794,29 @@ static void* File_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Output_vtable[502] = {
+static void* Output_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -13017,10 +13318,29 @@ static void* Output_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Process_vtable[502] = {
+static void* Process_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -13522,10 +13842,29 @@ static void* Process_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ProgramNode_vtable[502] = {
+static void* ProgramNode_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -14027,10 +14366,29 @@ static void* ProgramNode_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassInfo_vtable[502] = {
+static void* ClassInfo_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -14532,10 +14890,29 @@ static void* ClassInfo_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Member_vtable[502] = {
+static void* Member_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -15037,10 +15414,29 @@ static void* Member_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Keyword_vtable[502] = {
+static void* Keyword_vtable[521] = {
     (void*)Keyword_toString,
     (void*)0,
     (void*)0,
@@ -15542,10 +15938,29 @@ static void* Keyword_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Type_vtable[502] = {
+static void* Type_vtable[521] = {
     (void*)Type_toString,
     (void*)0,
     (void*)0,
@@ -16047,10 +16462,29 @@ static void* Type_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MemberKind_vtable[502] = {
+static void* MemberKind_vtable[521] = {
     (void*)MemberKind_toString,
     (void*)0,
     (void*)0,
@@ -16552,10 +16986,29 @@ static void* MemberKind_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parameter_vtable[502] = {
+static void* Parameter_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -17057,10 +17510,29 @@ static void* Parameter_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Expression_vtable[502] = {
+static void* Expression_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -17562,10 +18034,29 @@ static void* Expression_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ExpressionKind_vtable[502] = {
+static void* ExpressionKind_vtable[521] = {
     (void*)ExpressionKind_toString,
     (void*)0,
     (void*)0,
@@ -18067,10 +18558,29 @@ static void* ExpressionKind_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* NamedArg_vtable[502] = {
+static void* NamedArg_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -18572,10 +19082,29 @@ static void* NamedArg_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Statement_vtable[502] = {
+static void* Statement_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -19077,10 +19606,29 @@ static void* Statement_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StatementKind_vtable[502] = {
+static void* StatementKind_vtable[521] = {
     (void*)StatementKind_toString,
     (void*)0,
     (void*)0,
@@ -19582,10 +20130,29 @@ static void* StatementKind_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeChecker_vtable[502] = {
+static void* TypeChecker_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -20087,10 +20654,29 @@ static void* TypeChecker_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ClassBindings_vtable[502] = {
+static void* ClassBindings_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -20592,10 +21178,29 @@ static void* ClassBindings_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ContractMethod_vtable[502] = {
+static void* ContractMethod_vtable[521] = {
     (void*)ContractMethod_toString,
     (void*)0,
     (void*)0,
@@ -21097,10 +21702,29 @@ static void* ContractMethod_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* MetadataField_vtable[502] = {
+static void* MetadataField_vtable[521] = {
     (void*)MetadataField_toString,
     (void*)0,
     (void*)0,
@@ -21602,10 +22226,29 @@ static void* MetadataField_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Primitive_vtable[502] = {
+static void* Primitive_vtable[521] = {
     (void*)Primitive_toString,
     (void*)0,
     (void*)0,
@@ -22107,10 +22750,29 @@ static void* Primitive_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* WellKnown_vtable[502] = {
+static void* WellKnown_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -22612,10 +23274,29 @@ static void* WellKnown_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Error_vtable[502] = {
+static void* Error_vtable[521] = {
     (void*)Error_toString,
     (void*)0,
     (void*)0,
@@ -23117,10 +23798,29 @@ static void* Error_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* StackFrame_vtable[502] = {
+static void* StackFrame_vtable[521] = {
     (void*)StackFrame_toString,
     (void*)0,
     (void*)0,
@@ -23622,10 +24322,29 @@ static void* StackFrame_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* SourceLocation_vtable[502] = {
+static void* SourceLocation_vtable[521] = {
     (void*)SourceLocation_toString,
     (void*)0,
     (void*)0,
@@ -24127,10 +24846,29 @@ static void* SourceLocation_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* ErrorText_vtable[502] = {
+static void* ErrorText_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -24632,10 +25370,29 @@ static void* ErrorText_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TypeError_vtable[502] = {
+static void* TypeError_vtable[521] = {
     (void*)TypeError_toString,
     (void*)0,
     (void*)0,
@@ -25137,10 +25894,29 @@ static void* TypeError_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Reflection_vtable[502] = {
+static void* Reflection_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -25642,10 +26418,29 @@ static void* Reflection_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Loader_vtable[502] = {
+static void* Loader_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -26147,10 +26942,29 @@ static void* Loader_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Lexer_vtable[502] = {
+static void* Lexer_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -26652,10 +27466,29 @@ static void* Lexer_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Chars_vtable[502] = {
+static void* Chars_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -27157,10 +27990,29 @@ static void* Chars_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Token_vtable[502] = {
+static void* Token_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -27662,10 +28514,29 @@ static void* Token_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Operator_vtable[502] = {
+static void* Operator_vtable[521] = {
     (void*)Operator_toString,
     (void*)0,
     (void*)0,
@@ -28167,10 +29038,29 @@ static void* Operator_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TokenKind_vtable[502] = {
+static void* TokenKind_vtable[521] = {
     (void*)TokenKind_toString,
     (void*)0,
     (void*)0,
@@ -28672,10 +29562,29 @@ static void* TokenKind_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Parser_vtable[502] = {
+static void* Parser_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -29177,10 +30086,29 @@ static void* Parser_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* Punctuation_vtable[502] = {
+static void* Punctuation_vtable[521] = {
     (void*)Punctuation_toString,
     (void*)0,
     (void*)0,
@@ -29682,10 +30610,29 @@ static void* Punctuation_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* PrecedenceLevel_vtable[502] = {
+static void* PrecedenceLevel_vtable[521] = {
     (void*)PrecedenceLevel_toString,
     (void*)0,
     (void*)0,
@@ -30187,10 +31134,29 @@ static void* PrecedenceLevel_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* TemplateEscapes_vtable[502] = {
+static void* TemplateEscapes_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -30692,10 +31658,29 @@ static void* TemplateEscapes_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EnumDesugar_vtable[502] = {
+static void* EnumDesugar_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -31197,10 +32182,29 @@ static void* EnumDesugar_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CompilationReport_vtable[502] = {
+static void* CompilationReport_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -31702,10 +32706,29 @@ static void* CompilationReport_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CodeGenerator_vtable[502] = {
+static void* CodeGenerator_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -32207,10 +33230,29 @@ static void* CodeGenerator_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* CBackendUtils_vtable[502] = {
+static void* CBackendUtils_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -32712,10 +33754,29 @@ static void* CBackendUtils_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* EmissionPolicy_vtable[502] = {
+static void* EmissionPolicy_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -33217,10 +34278,29 @@ static void* EmissionPolicy_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* DeclarationGenerator_vtable[502] = {
+static void* DeclarationGenerator_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -33722,10 +34802,29 @@ static void* DeclarationGenerator_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* BuiltinCallGenerator_vtable[502] = {
+static void* BuiltinCallGenerator_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -34227,10 +35326,29 @@ static void* BuiltinCallGenerator_vtable[502] = {
     (void*)BuiltinCallGenerator_bindStringDirect,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
 };
 
-static void* RuntimePrelude_vtable[502] = {
+static void* RuntimePrelude_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -34732,10 +35850,29 @@ static void* RuntimePrelude_vtable[502] = {
     (void*)0,
     (void*)RuntimePrelude_emitHeader,
     (void*)RuntimePrelude_emitBody,
-    (void*)RuntimePrelude_emitRuntime
+    (void*)RuntimePrelude_emitRuntime,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0
 };
 
-static void* Stderr_vtable[502] = {
+static void* Stderr_vtable[521] = {
     (void*)Class_toString,
     (void*)0,
     (void*)0,
@@ -35237,7 +36374,550 @@ static void* Stderr_vtable[502] = {
     (void*)0,
     (void*)0,
     (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
     (void*)0
+};
+
+static void* Uri_vtable[521] = {
+    (void*)Uri_toString,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)Uri_init,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)Uri_isAlpha,
+    (void*)Uri_hasDrivePrefix,
+    (void*)Uri_cleanPath,
+    (void*)Uri_fromFilePath,
+    (void*)Uri_parse,
+    (void*)Uri_toFilePath,
+    (void*)Uri_toNativeFilePath,
+    (void*)Uri_isAbsolute,
+    (void*)Uri_dirPath,
+    (void*)Uri_baseName,
+    (void*)Uri_extName,
+    (void*)Uri_resolve,
+    (void*)Uri_systemTempDir,
+    (void*)Uri_homeDir,
+    (void*)Uri_cacheDir,
+    (void*)Uri_runtimeCacheDir,
+    (void*)Uri_join,
+    (void*)Uri_exeSuffix,
+    (void*)Uri_tempFile
 };
 
 /* RTTI Class Hierarchy */
@@ -35417,6 +37097,9 @@ bool spec_is_subclass_of(const char* actual, const char* target) {
         return (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
     }
     if (strcmp(actual, "Stderr") == 0) {
+        return (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
+    }
+    if (strcmp(actual, "Uri") == 0) {
         return (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
     }
     return false;
@@ -63203,6 +64886,7 @@ void Driver_destroy(void* self_ptr) {
     if (!self) return;
     if (self->entryInitOwner) { spec_release((void*)self->entryInitOwner); self->entryInitOwner = NULL; }
     if (self->entryInitFirstParam) { spec_release((void*)self->entryInitFirstParam); self->entryInitFirstParam = NULL; }
+    if (self->_import_Uri) { spec_release((void*)self->_import_Uri); self->_import_Uri = NULL; }
 }
 
 Driver* Driver_new(void) {
@@ -63215,6 +64899,7 @@ Driver* Driver_new(void) {
     self->entryInitOverloadIndex = 0;
     self->entryInitTakesMap = false;
     self->entryInitSawAny = false;
+    self->_import_Uri = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern(""), spec_string_intern(""), spec_string_intern(""), spec_string_intern(""), spec_string_intern("")); _inst; }));
     return self;
 }
 
@@ -64114,6 +65799,28 @@ Stderr* Stderr_new(void) {
     return self;
 }
 
+void Uri_destroy(void* self_ptr) {
+    Uri* self = (Uri*)self_ptr;
+    if (!self) return;
+    if (self->scheme) { spec_release((void*)self->scheme); self->scheme = NULL; }
+    if (self->authority) { spec_release((void*)self->authority); self->authority = NULL; }
+    if (self->path) { spec_release((void*)self->path); self->path = NULL; }
+    if (self->query) { spec_release((void*)self->query); self->query = NULL; }
+    if (self->fragment) { spec_release((void*)self->fragment); self->fragment = NULL; }
+}
+
+Uri* Uri_new(void) {
+    Uri* self = (Uri*)spec_alloc(sizeof(Uri), Uri_destroy);
+    self->_type_name = "Uri";
+    self->_vtable = Uri_vtable;
+    self->scheme = (String)spec_retain((void*)(spec_string_intern("")));
+    self->authority = (String)spec_retain((void*)(spec_string_intern("")));
+    self->path = (String)spec_retain((void*)(spec_string_intern("")));
+    self->query = (String)spec_retain((void*)(spec_string_intern("")));
+    self->fragment = (String)spec_retain((void*)(spec_string_intern("")));
+    return self;
+}
+
 /* Spec Class Registry (runtime introspection) */
 static void* Any_spec_construct(void) {
     Any* o = Any_new();
@@ -64427,8 +66134,8 @@ static const SpecClassMeta Dir_spec_meta = {
 };
 
 static const SpecMethodMeta Driver_spec_methods[] = {
-    { "init", (void*)Driver_init, 4, 59 },
-    { "resolveEntryInit", (void*)Driver_resolveEntryInit, 4, 405 },
+    { "init", (void*)Driver_init, 4, 61 },
+    { "resolveEntryInit", (void*)Driver_resolveEntryInit, 4, 391 },
 };
 static const char* const Driver_spec_bases[] = {
     "Class",
@@ -65725,6 +67432,40 @@ static const SpecClassMeta Stderr_spec_meta = {
     Stderr_spec_methods, 1
 };
 
+static const SpecMethodMeta Uri_spec_methods[] = {
+    { "init", (void*)Uri_init, 4, 36 },
+    { "isAlpha", (void*)Uri_isAlpha, 0, 45 },
+    { "hasDrivePrefix", (void*)Uri_hasDrivePrefix, 0, 53 },
+    { "cleanPath", (void*)Uri_cleanPath, 0, 75 },
+    { "fromFilePath", (void*)Uri_fromFilePath, 0, 163 },
+    { "parse", (void*)Uri_parse, 0, 212 },
+    { "toFilePath", (void*)Uri_toFilePath, 2, 257 },
+    { "toNativeFilePath", (void*)Uri_toNativeFilePath, 2, 278 },
+    { "isAbsolute", (void*)Uri_isAbsolute, 2, 287 },
+    { "dirPath", (void*)Uri_dirPath, 2, 298 },
+    { "baseName", (void*)Uri_baseName, 2, 330 },
+    { "extName", (void*)Uri_extName, 2, 350 },
+    { "resolve", (void*)Uri_resolve, 0, 370 },
+    { "systemTempDir", (void*)Uri_systemTempDir, 2, 391 },
+    { "homeDir", (void*)Uri_homeDir, 2, 410 },
+    { "cacheDir", (void*)Uri_cacheDir, 2, 422 },
+    { "runtimeCacheDir", (void*)Uri_runtimeCacheDir, 2, 431 },
+    { "join", (void*)Uri_join, 0, 436 },
+    { "exeSuffix", (void*)Uri_exeSuffix, 2, 454 },
+    { "tempFile", (void*)Uri_tempFile, 0, 462 },
+    { "toString", (void*)Uri_toString, 2, 467 },
+};
+static const char* const Uri_spec_bases[] = {
+    "Class",
+};
+static const SpecClassMeta Uri_spec_meta = {
+    "Uri",
+    "Uri.spec",
+    Uri_spec_bases, 1,
+    NULL,
+    Uri_spec_methods, 21
+};
+
 const SpecClassMeta* const spec_class_registry[] = {
     &Any_spec_meta,
     &Loadable_spec_meta,
@@ -65791,9 +67532,10 @@ const SpecClassMeta* const spec_class_registry[] = {
     &BuiltinCallGenerator_spec_meta,
     &RuntimePrelude_spec_meta,
     &Stderr_spec_meta,
+    &Uri_spec_meta,
     NULL,
 };
-int spec_class_registry_count(void) { return 65; }
+int spec_class_registry_count(void) { return 66; }
 
 void Any_init(Any* self) {
     (void)self;
@@ -67309,18 +69051,9 @@ void Driver_init(Driver* self, SpecMap* args) {
 	};
     tempCPath = spec_construct_string(emitCPath);
     if (spec_string_equals(tempCPath, spec_string_intern(""))) {
-	    spec_assign_transfer((void**)&tempCPath, (void*)(File_fileTemp(NULL, spec_string_intern("/tmp/_spec_stage_XXXXXX.c"))));
+	    spec_assign_transfer((void**)&tempCPath, (void*)(File_fileTemp(NULL, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat(Uri_systemTempDir((Uri*)(self->_import_Uri)), spec_string_intern("/_spec_stage_XXXXXX.c"))); spec_pool_release_to(_pf); _v; })))))));
 	    if (spec_string_equals(tempCPath, spec_string_intern(""))) {
-	    SPEC_AUTO String tmpDir = spec_construct_string(spec_string_intern("/tmp"));
-	    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Process_osName(NULL)); spec_pool_release_to(_pf); _v; })))), spec_string_intern("windows"))) {
-	    SPEC_AUTO String envTmp = Process_getEnv(NULL, spec_string_intern("TEMP"), spec_string_intern(""));
-	    if ((!spec_string_equals(envTmp, spec_string_intern("")))) {
-	    spec_assign((void**)&tmpDir, (void*)(String_replaceAll(envTmp, spec_string_intern("\\"), spec_string_intern("/"))));
-	};
-    if (envTmp) { spec_release((void*)envTmp); envTmp = NULL; }
-	};
-	    spec_assign_transfer((void**)&tempCPath, (void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(tmpDir)), spec_string_intern("/_spec_stage_")), spec_to_string_int(Process_getPid(NULL))), spec_string_intern(".c"))));
-    if (tmpDir) { spec_release((void*)tmpDir); tmpDir = NULL; }
+	    spec_assign_transfer((void**)&tempCPath, (void*)(spec_string_concat(spec_string_concat(spec_string_concat(Uri_systemTempDir((Uri*)(self->_import_Uri)), spec_string_intern("/_spec_stage_")), spec_to_string_int(Process_getPid(NULL))), spec_string_intern(".c"))));
 	};
 	};
     bool useCache = ((((spec_string_equals(emitCPath, spec_string_intern(""))) && ((!spec_string_equals(outputPath, spec_string_intern("")))))) && ((!(spec_map_has(args, spec_string_intern("no-cache"))))));
@@ -67329,16 +69062,7 @@ void Driver_init(Driver* self, SpecMap* args) {
     runtimeC = spec_construct_string(spec_string_intern(""));
     runtimeO = spec_construct_string(spec_string_intern(""));
     if (useCache) {
-	    SPEC_AUTO String homeDir = Process_getEnv(NULL, spec_string_intern("HOME"), spec_string_intern(""));
-	    if (spec_string_equals(homeDir, spec_string_intern(""))) {
-	    spec_assign_transfer((void**)&homeDir, (void*)(Process_getEnv(NULL, spec_string_intern("USERPROFILE"), spec_string_intern(""))));
-	};
-	    if ((!spec_string_equals(homeDir, spec_string_intern("")))) {
-	    spec_assign((void**)&homeDir, (void*)(String_replaceAll(homeDir, spec_string_intern("\\"), spec_string_intern("/"))));
-	    spec_assign_transfer((void**)&cacheDir, (void*)(spec_string_concat((void*)spec_retain((void*)(homeDir)), spec_string_intern("/.cache/spec/runtime"))));
-	} else {
-	    spec_assign((void**)&cacheDir, (void*)(spec_string_intern("/tmp/spec_runtime")));
-	};
+	    spec_assign_transfer((void**)&cacheDir, (void*)(Uri_runtimeCacheDir((Uri*)(self->_import_Uri))));
 	    spec_assign_transfer((void**)&runtimeH, (void*)(spec_string_concat((void*)spec_retain((void*)(cacheDir)), spec_string_intern("/spec_runtime.h"))));
 	    spec_assign_transfer((void**)&runtimeC, (void*)(spec_string_concat((void*)spec_retain((void*)(cacheDir)), spec_string_intern("/spec_runtime.c"))));
 	    spec_assign_transfer((void**)&runtimeO, (void*)(spec_string_concat((void*)spec_retain((void*)(cacheDir)), spec_string_intern("/spec_runtime.o"))));
@@ -67365,7 +69089,6 @@ void Driver_init(Driver* self, SpecMap* args) {
     if (coldCc) { spec_release((void*)coldCc); coldCc = NULL; }
     if (rArgs) { spec_release((void*)rArgs); rArgs = NULL; }
 	};
-    if (homeDir) { spec_release((void*)homeDir); homeDir = NULL; }
 	};
     cg = (CodeGenerator*)((({ CodeGenerator* _inst = CodeGenerator_new(); CodeGenerator_init(_inst); _inst; })));
     if (((useCache) && (File_fileExists(NULL, runtimeO)))) {
@@ -89630,6 +91353,683 @@ void Stderr_line(Stderr* self, String text) {
 
 void Stderr_init(Stderr* self) {
     (void)self;
+}
+
+void Uri_init(Uri* self, String scheme, String authority, String path, String query, String fragment) {
+    (void)self;
+    (void)scheme;
+    (void)authority;
+    (void)path;
+    (void)query;
+    (void)fragment;
+    SPEC_POOL_AUTO;
+    spec_assign((void**)&self->scheme, (void*)(scheme));
+    spec_assign((void**)&self->authority, (void*)(authority));
+    spec_assign((void**)&self->path, (void*)(path));
+    spec_assign((void**)&self->query, (void*)(query));
+    spec_assign((void**)&self->fragment, (void*)(fragment));
+}
+
+bool Uri_isAlpha(Uri* self, String ch) {
+    (void)self;
+    (void)ch;
+    SPEC_POOL_AUTO;
+    if (((spec_string_length(ch)) != (1))) {
+	    return false;
+	};
+    return (((((spec_string_compare(ch, spec_string_intern("a")) >= 0)) && ((spec_string_compare(ch, spec_string_intern("z")) <= 0)))) || ((((spec_string_compare(ch, spec_string_intern("A")) >= 0)) && ((spec_string_compare(ch, spec_string_intern("Z")) <= 0)))));
+}
+
+bool Uri_hasDrivePrefix(Uri* self, String p) {
+    (void)self;
+    (void)p;
+    SPEC_POOL_AUTO;
+    long long len = spec_string_length(p);
+    if (((len) >= (2))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    if (((Uri_isAlpha(self, c0) /* inst:Uri:isAlpha */) && (spec_string_equals(c1, spec_string_intern(":"))))) {
+	    return true;
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+	};
+    if (((len) >= (3))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    SPEC_AUTO String c2 = String_charAt(p, 2, spec_string_intern(""));
+	    if (((((spec_string_equals(c0, spec_string_intern("/"))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, spec_string_intern(":"))))) {
+	    return true;
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+    if (c2) { spec_release((void*)c2); c2 = NULL; }
+	};
+    return false;
+}
+
+String Uri_cleanPath(Uri* self, String rawPath) {
+    (void)self;
+    (void)rawPath;
+    String _mret_391 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String joined = 0;
+    SPEC_AUTO SpecArray* rawSegs = 0;
+    SPEC_AUTO String p = 0;
+    SPEC_AUTO String drivePrefix = 0;
+    SPEC_AUTO SpecArray* segs = 0;
+    if (spec_string_equals(rawPath, spec_string_intern(""))) {
+	    _mret_391 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_391;
+	};
+    p = spec_construct_string(String_replaceAll(rawPath, spec_string_intern("\\"), spec_string_intern("/")));
+    bool isAbs = String_startsWith(p, spec_string_intern("/"));
+    drivePrefix = spec_construct_string(spec_string_intern(""));
+    if (((spec_string_length(p)) >= (2))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    if (((Uri_isAlpha(self, c0) /* inst:Uri:isAlpha */) && (spec_string_equals(c1, spec_string_intern(":"))))) {
+	    spec_assign_transfer((void**)&drivePrefix, (void*)(spec_string_concat((void*)spec_retain((void*)(c0)), spec_string_intern(":"))));
+	    spec_assign_transfer((void**)&p, (void*)(spec_string_substring(p, 2, spec_string_length(p))));
+	    if (String_startsWith(p, spec_string_intern("/"))) {
+	    isAbs = true;
+	};
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+	};
+    if (((spec_string_equals(drivePrefix, spec_string_intern(""))) && (((spec_string_length(p)) >= (3))))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    SPEC_AUTO String c2 = String_charAt(p, 2, spec_string_intern(""));
+	    if (((((spec_string_equals(c0, spec_string_intern("/"))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, spec_string_intern(":"))))) {
+	    spec_assign_transfer((void**)&drivePrefix, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("/"))), c1), spec_string_intern(":"))));
+	    isAbs = true;
+	    spec_assign_transfer((void**)&p, (void*)(spec_string_substring(p, 3, spec_string_length(p))));
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+    if (c2) { spec_release((void*)c2); c2 = NULL; }
+	};
+    rawSegs = (SpecArray*)((String_split(p, spec_string_intern("/"))));
+    segs = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
+    long long rawLen = spec_array_length(rawSegs);
+    ({     long long i = 0;
+while (1) {
+        SPEC_POOL_AUTO;
+        bool _ev_834 = false;
+        do {
+    _ev_834 = ((i) < (rawLen)); break;
+        } while (0);
+        if (!_ev_834) break;
+        bool _it_834 = true;
+        do {
+    SPEC_AUTO String seg = spec_construct_string(spec_array_get(rawSegs, i));
+    if ((((!spec_string_equals(seg, spec_string_intern("")))) && ((!spec_string_equals(seg, spec_string_intern(".")))))) {
+	    if (spec_string_equals(seg, spec_string_intern(".."))) {
+	    if (((spec_array_length(segs)) > (0))) {
+	    SPEC_AUTO String top = spec_construct_string(spec_array_get(segs, ((spec_array_length(segs)) - (1))));
+	    if (spec_string_equals(top, spec_string_intern(".."))) {
+	    if ((!(isAbs))) {
+	    spec_array_add_object(segs, (void*)(spec_string_intern("..")));
+	};
+	} else {
+	    (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_array_pop(segs, spec_string_intern(""))); spec_pool_release_to(_pf); _v; }))));
+	};
+    if (top) { spec_release((void*)top); top = NULL; }
+	} else {
+	    if ((!(isAbs))) {
+	    spec_array_add_object(segs, (void*)(spec_string_intern("..")));
+	};
+	};
+	} else {
+	    spec_array_add_object(segs, (void*)(seg));
+	};
+	};
+    ((i)++);
+    if (seg) { spec_release((void*)seg); seg = NULL; }
+        } while (0);
+        if (!_it_834) break;
+    }
+});
+    joined = Array_join(segs, spec_string_intern("/"));
+    if ((!spec_string_equals(drivePrefix, spec_string_intern("")))) {
+	    if (isAbs) {
+	    if ((!spec_string_equals(joined, spec_string_intern("")))) {
+	    _mret_391 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), spec_string_intern("/")), joined));
+    goto _cleanup_391;
+	} else {
+	    _mret_391 = (String)(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), spec_string_intern("/")));
+    goto _cleanup_391;
+	};
+	} else {
+	    if ((!spec_string_equals(joined, spec_string_intern("")))) {
+	    _mret_391 = (String)(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), joined));
+    goto _cleanup_391;
+	} else {
+	    _mret_391 = (String)({ String _ret_val = drivePrefix; drivePrefix = NULL; _ret_val; });
+    goto _cleanup_391;
+	};
+	};
+	};
+    if (isAbs) {
+	    _mret_391 = (String)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("/"))), joined));
+    goto _cleanup_391;
+	};
+    if (spec_string_equals(joined, spec_string_intern(""))) {
+	    _mret_391 = (String)spec_retain((void*)(spec_string_intern(".")));
+    goto _cleanup_391;
+	};
+    _mret_391 = (String)({ String _ret_val = joined; joined = NULL; _ret_val; });
+    goto _cleanup_391;
+    _cleanup_391: ;
+    if (p) { spec_release((void*)p); p = NULL; }
+    if (drivePrefix) { spec_release((void*)drivePrefix); drivePrefix = NULL; }
+    if (rawSegs) { spec_release((void*)rawSegs); rawSegs = NULL; }
+    if (segs) { spec_release((void*)segs); segs = NULL; }
+    if (joined) { spec_release((void*)joined); joined = NULL; }
+    return _mret_391;
+}
+
+Uri* Uri_fromFilePath(Uri* self, String filePath) {
+    (void)self;
+    (void)filePath;
+    Uri* _mret_392 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String p = 0;
+    SPEC_AUTO String norm = 0;
+    if (spec_string_equals(filePath, spec_string_intern(""))) {
+	    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern(""), spec_string_intern(""), spec_string_intern(""), spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+	};
+    p = spec_construct_string(String_replaceAll(filePath, spec_string_intern("\\"), spec_string_intern("/")));
+    if (String_startsWith(p, spec_string_intern("//"))) {
+	    SPEC_AUTO String rest = spec_string_substring(p, 2, spec_string_length(p));
+	    long long slashIdx = spec_string_index_of(rest, spec_string_intern("/"), (-(1)));
+	    if (((slashIdx) < (0))) {
+	    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), rest, spec_string_intern("/"), spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+	};
+	    SPEC_AUTO String auth = spec_string_substring(rest, 0, slashIdx);
+	    SPEC_AUTO String rem = spec_string_substring(rest, slashIdx, spec_string_length(rest));
+	    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), auth, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Uri_cleanPath(self, rem) /* inst:Uri:cleanPath */); spec_pool_release_to(_pf); _v; })))), spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+    if (rest) { spec_release((void*)rest); rest = NULL; }
+    if (auth) { spec_release((void*)auth); auth = NULL; }
+    if (rem) { spec_release((void*)rem); rem = NULL; }
+	};
+    if (((spec_string_length(p)) >= (2))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    if (((Uri_isAlpha(self, c0) /* inst:Uri:isAlpha */) && (spec_string_equals(c1, spec_string_intern(":"))))) {
+	    norm = Uri_cleanPath(self, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("/"))), p)); spec_pool_release_to(_pf); _v; }))))) /* inst:Uri:cleanPath */;
+	    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), spec_string_intern(""), norm, spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+    if (norm) { spec_release((void*)norm); norm = NULL; }
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+	};
+    if (((spec_string_length(p)) >= (3))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    SPEC_AUTO String c2 = String_charAt(p, 2, spec_string_intern(""));
+	    if (((((spec_string_equals(c0, spec_string_intern("/"))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, spec_string_intern(":"))))) {
+	    norm = Uri_cleanPath(self, p) /* inst:Uri:cleanPath */;
+	    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), spec_string_intern(""), norm, spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+    if (norm) { spec_release((void*)norm); norm = NULL; }
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+    if (c2) { spec_release((void*)c2); c2 = NULL; }
+	};
+    if (String_startsWith(p, spec_string_intern("/"))) {
+	    norm = Uri_cleanPath(self, p) /* inst:Uri:cleanPath */;
+	    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), spec_string_intern(""), norm, spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+    if (norm) { spec_release((void*)norm); norm = NULL; }
+	};
+    norm = Uri_cleanPath(self, p) /* inst:Uri:cleanPath */;
+    _mret_392 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern(""), spec_string_intern(""), norm, spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_392;
+    _cleanup_392: ;
+    if (p) { spec_release((void*)p); p = NULL; }
+    if (norm) { spec_release((void*)norm); norm = NULL; }
+    return _mret_392;
+}
+
+Uri* Uri_parse(Uri* self, String text) {
+    (void)self;
+    (void)text;
+    SPEC_POOL_AUTO;
+    if (spec_string_equals(text, spec_string_intern(""))) {
+	    return (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern(""), spec_string_intern(""), spec_string_intern(""), spec_string_intern(""), spec_string_intern("")); _inst; }));
+	};
+    if (String_startsWith(text, spec_string_intern("file://"))) {
+	    SPEC_AUTO String rest = spec_string_substring(text, 7, spec_string_length(text));
+	    if (String_startsWith(rest, spec_string_intern("/"))) {
+	    return (Uri*)spec_retain((void*)(Uri_fromFilePath(self, rest) /* inst:Uri:fromFilePath */));
+	};
+	    long long slashIdx = spec_string_index_of(rest, spec_string_intern("/"), (-(1)));
+	    if (((slashIdx) < (0))) {
+	    return (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), rest, spec_string_intern("/"), spec_string_intern(""), spec_string_intern("")); _inst; }));
+	};
+	    SPEC_AUTO String auth = spec_string_substring(rest, 0, slashIdx);
+	    SPEC_AUTO String rem = spec_string_substring(rest, slashIdx, spec_string_length(rest));
+	    return (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, spec_string_intern("file"), auth, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Uri_cleanPath(self, rem) /* inst:Uri:cleanPath */); spec_pool_release_to(_pf); _v; })))), spec_string_intern(""), spec_string_intern("")); _inst; }));
+    if (rest) { spec_release((void*)rest); rest = NULL; }
+    if (auth) { spec_release((void*)auth); auth = NULL; }
+    if (rem) { spec_release((void*)rem); rem = NULL; }
+	};
+    if (String_contains(text, spec_string_intern("://"))) {
+	    long long sEnd = spec_string_index_of(text, spec_string_intern("://"), (-(1)));
+	    SPEC_AUTO String sch = spec_string_substring(text, 0, sEnd);
+	    SPEC_AUTO String afterSch = spec_string_substring(text, ((sEnd) + (3)), spec_string_length(text));
+	    SPEC_AUTO String auth = spec_construct_string(spec_string_intern(""));
+	    SPEC_AUTO String p = spec_construct_string(spec_string_intern(""));
+	    long long slashIdx = spec_string_index_of(afterSch, spec_string_intern("/"), (-(1)));
+	    if (((slashIdx) < (0))) {
+	    spec_assign((void**)&auth, (void*)(afterSch));
+	    spec_assign((void**)&p, (void*)(spec_string_intern("/")));
+	} else {
+	    spec_assign_transfer((void**)&auth, (void*)(spec_string_substring(afterSch, 0, slashIdx)));
+	    spec_assign_transfer((void**)&p, (void*)(spec_string_substring(afterSch, slashIdx, spec_string_length(afterSch))));
+	};
+	    return (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, sch, auth, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Uri_cleanPath(self, p) /* inst:Uri:cleanPath */); spec_pool_release_to(_pf); _v; })))), spec_string_intern(""), spec_string_intern("")); _inst; }));
+    if (sch) { spec_release((void*)sch); sch = NULL; }
+    if (afterSch) { spec_release((void*)afterSch); afterSch = NULL; }
+    if (auth) { spec_release((void*)auth); auth = NULL; }
+    if (p) { spec_release((void*)p); p = NULL; }
+	};
+    return (Uri*)spec_retain((void*)(Uri_fromFilePath(self, text) /* inst:Uri:fromFilePath */));
+}
+
+String Uri_toFilePath(Uri* self) {
+    (void)self;
+    String _mret_394 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String p = 0;
+    if (spec_string_equals(self->path, spec_string_intern(""))) {
+	    _mret_394 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_394;
+	};
+    p = spec_construct_string(self->path);
+    if (((spec_string_length(p)) >= (3))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    SPEC_AUTO String c2 = String_charAt(p, 2, spec_string_intern(""));
+	    if (((((spec_string_equals(c0, spec_string_intern("/"))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, spec_string_intern(":"))))) {
+	    _mret_394 = (String)(spec_string_substring(p, 1, spec_string_length(p)));
+    goto _cleanup_394;
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+    if (c2) { spec_release((void*)c2); c2 = NULL; }
+	};
+    if ((!spec_string_equals(self->authority, spec_string_intern("")))) {
+	    _mret_394 = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("//"))), self->authority), p));
+    goto _cleanup_394;
+	};
+    _mret_394 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
+    goto _cleanup_394;
+    _cleanup_394: ;
+    if (p) { spec_release((void*)p); p = NULL; }
+    return _mret_394;
+}
+
+String Uri_toNativeFilePath(Uri* self) {
+    (void)self;
+    String _mret_395 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String fp = 0;
+    fp = Uri_toFilePath(self) /* inst:Uri:toFilePath */;
+    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Process_osName(NULL)); spec_pool_release_to(_pf); _v; })))), spec_string_intern("windows"))) {
+	    _mret_395 = (String)spec_retain((void*)(String_replaceAll(fp, spec_string_intern("/"), spec_string_intern("\\"))));
+    goto _cleanup_395;
+	};
+    _mret_395 = (String)({ String _ret_val = fp; fp = NULL; _ret_val; });
+    goto _cleanup_395;
+    _cleanup_395: ;
+    if (fp) { spec_release((void*)fp); fp = NULL; }
+    return _mret_395;
+}
+
+bool Uri_isAbsolute(Uri* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    if ((!spec_string_equals(self->scheme, spec_string_intern("")))) {
+	    return true;
+	};
+    if (String_startsWith(self->path, spec_string_intern("/"))) {
+	    return true;
+	};
+    return Uri_hasDrivePrefix(self, self->path) /* inst:Uri:hasDrivePrefix */;
+}
+
+String Uri_dirPath(Uri* self) {
+    (void)self;
+    String _mret_397 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String p = 0;
+    p = spec_construct_string(self->path);
+    if (((spec_string_equals(p, spec_string_intern(""))) || (spec_string_equals(p, spec_string_intern("/"))))) {
+	    _mret_397 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
+    goto _cleanup_397;
+	};
+    long long lastSlash = (-(1));
+    long long len = spec_string_length(p);
+    ({     long long i = 0;
+while (1) {
+        SPEC_POOL_AUTO;
+        bool _ev_835 = false;
+        do {
+    _ev_835 = ((i) < (len)); break;
+        } while (0);
+        if (!_ev_835) break;
+        bool _it_835 = true;
+        do {
+    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(String_charAt(p, i, spec_string_intern(""))); spec_pool_release_to(_pf); _v; })))), spec_string_intern("/"))) {
+	    lastSlash = i;
+	};
+    ((i)++);
+        } while (0);
+        if (!_it_835) break;
+    }
+});
+    if (((lastSlash) < (0))) {
+	    _mret_397 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_397;
+	};
+    if (((lastSlash) == (0))) {
+	    _mret_397 = (String)spec_retain((void*)(spec_string_intern("/")));
+    goto _cleanup_397;
+	};
+    if (((((lastSlash) == (3))) && (((spec_string_length(p)) >= (3))))) {
+	    SPEC_AUTO String c0 = String_charAt(p, 0, spec_string_intern(""));
+	    SPEC_AUTO String c1 = String_charAt(p, 1, spec_string_intern(""));
+	    SPEC_AUTO String c2 = String_charAt(p, 2, spec_string_intern(""));
+	    if (((((spec_string_equals(c0, spec_string_intern("/"))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, spec_string_intern(":"))))) {
+	    _mret_397 = (String)(spec_string_substring(p, 0, 4));
+    goto _cleanup_397;
+	};
+    if (c0) { spec_release((void*)c0); c0 = NULL; }
+    if (c1) { spec_release((void*)c1); c1 = NULL; }
+    if (c2) { spec_release((void*)c2); c2 = NULL; }
+	};
+    _mret_397 = (String)(spec_string_substring(p, 0, lastSlash));
+    goto _cleanup_397;
+    _cleanup_397: ;
+    if (p) { spec_release((void*)p); p = NULL; }
+    return _mret_397;
+}
+
+String Uri_baseName(Uri* self) {
+    (void)self;
+    String _mret_398 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String p = 0;
+    p = spec_construct_string(self->path);
+    if (((spec_string_equals(p, spec_string_intern(""))) || (spec_string_equals(p, spec_string_intern("/"))))) {
+	    _mret_398 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_398;
+	};
+    long long lastSlash = (-(1));
+    long long len = spec_string_length(p);
+    ({     long long i = 0;
+while (1) {
+        SPEC_POOL_AUTO;
+        bool _ev_836 = false;
+        do {
+    _ev_836 = ((i) < (len)); break;
+        } while (0);
+        if (!_ev_836) break;
+        bool _it_836 = true;
+        do {
+    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(String_charAt(p, i, spec_string_intern(""))); spec_pool_release_to(_pf); _v; })))), spec_string_intern("/"))) {
+	    lastSlash = i;
+	};
+    ((i)++);
+        } while (0);
+        if (!_it_836) break;
+    }
+});
+    if (((lastSlash) < (0))) {
+	    _mret_398 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
+    goto _cleanup_398;
+	};
+    _mret_398 = (String)(spec_string_substring(p, ((lastSlash) + (1)), len));
+    goto _cleanup_398;
+    _cleanup_398: ;
+    if (p) { spec_release((void*)p); p = NULL; }
+    return _mret_398;
+}
+
+String Uri_extName(Uri* self) {
+    (void)self;
+    String _mret_399 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String bn = 0;
+    bn = Uri_baseName(self) /* inst:Uri:baseName */;
+    if (spec_string_equals(bn, spec_string_intern(""))) {
+	    _mret_399 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_399;
+	};
+    long long lastDot = (-(1));
+    long long len = spec_string_length(bn);
+    ({     long long i = 0;
+while (1) {
+        SPEC_POOL_AUTO;
+        bool _ev_837 = false;
+        do {
+    _ev_837 = ((i) < (len)); break;
+        } while (0);
+        if (!_ev_837) break;
+        bool _it_837 = true;
+        do {
+    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(String_charAt(bn, i, spec_string_intern(""))); spec_pool_release_to(_pf); _v; })))), spec_string_intern("."))) {
+	    lastDot = i;
+	};
+    ((i)++);
+        } while (0);
+        if (!_it_837) break;
+    }
+});
+    if (((lastDot) <= (0))) {
+	    _mret_399 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_399;
+	};
+    _mret_399 = (String)(spec_string_substring(bn, lastDot, len));
+    goto _cleanup_399;
+    _cleanup_399: ;
+    if (bn) { spec_release((void*)bn); bn = NULL; }
+    return _mret_399;
+}
+
+Uri* Uri_resolve(Uri* self, String relativePath) {
+    (void)self;
+    (void)relativePath;
+    Uri* _mret_400 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String joined = 0;
+    SPEC_AUTO Uri* rel = 0;
+    SPEC_AUTO String baseDir = 0;
+    SPEC_AUTO String norm = 0;
+    rel = (Uri*)spec_retain((void*)(Uri_fromFilePath(self, relativePath) /* inst:Uri:fromFilePath */));
+    if (Uri_isAbsolute(rel) /* inst:Uri:isAbsolute */) {
+	    _mret_400 = (Uri*)({ Uri* _ret_val = rel; rel = NULL; _ret_val; });
+    goto _cleanup_400;
+	};
+    baseDir = Uri_dirPath(self) /* inst:Uri:dirPath */;
+    joined = spec_construct_string(spec_string_intern(""));
+    if ((!spec_string_equals(baseDir, spec_string_intern("")))) {
+	    if (String_endsWith(baseDir, spec_string_intern("/"))) {
+	    spec_assign_transfer((void**)&joined, (void*)(spec_string_concat((void*)spec_retain((void*)(baseDir)), rel->path)));
+	} else {
+	    spec_assign_transfer((void**)&joined, (void*)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(baseDir)), spec_string_intern("/")), rel->path)));
+	};
+	} else {
+	    spec_assign((void**)&joined, (void*)(rel->path));
+	};
+    norm = Uri_cleanPath(self, joined) /* inst:Uri:cleanPath */;
+    _mret_400 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, self->scheme, self->authority, norm, spec_string_intern(""), spec_string_intern("")); _inst; }));
+    goto _cleanup_400;
+    _cleanup_400: ;
+    if (rel) { spec_release((void*)rel); rel = NULL; }
+    if (baseDir) { spec_release((void*)baseDir); baseDir = NULL; }
+    if (joined) { spec_release((void*)joined); joined = NULL; }
+    if (norm) { spec_release((void*)norm); norm = NULL; }
+    return _mret_400;
+}
+
+String Uri_systemTempDir(Uri* self) {
+    (void)self;
+    String _mret_401 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String p = 0;
+    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Process_osName(NULL)); spec_pool_release_to(_pf); _v; })))), spec_string_intern("windows"))) {
+	    SPEC_AUTO String t = Process_getEnv(NULL, spec_string_intern("TEMP"), spec_string_intern(""));
+	    if (spec_string_equals(t, spec_string_intern(""))) {
+	    spec_assign_transfer((void**)&t, (void*)(Process_getEnv(NULL, spec_string_intern("TMP"), spec_string_intern(""))));
+	};
+	    if ((!spec_string_equals(t, spec_string_intern("")))) {
+	    _mret_401 = (String)(Uri_cleanPath(self, t) /* inst:Uri:cleanPath */);
+    goto _cleanup_401;
+	};
+	    _mret_401 = (String)spec_retain((void*)(spec_string_intern("/tmp")));
+    goto _cleanup_401;
+    if (t) { spec_release((void*)t); t = NULL; }
+	};
+    p = Process_getEnv(NULL, spec_string_intern("TMPDIR"), spec_string_intern(""));
+    if ((!spec_string_equals(p, spec_string_intern("")))) {
+	    _mret_401 = (String)(Uri_cleanPath(self, p) /* inst:Uri:cleanPath */);
+    goto _cleanup_401;
+	};
+    _mret_401 = (String)spec_retain((void*)(spec_string_intern("/tmp")));
+    goto _cleanup_401;
+    _cleanup_401: ;
+    if (p) { spec_release((void*)p); p = NULL; }
+    return _mret_401;
+}
+
+String Uri_homeDir(Uri* self) {
+    (void)self;
+    String _mret_402 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String h = 0;
+    h = Process_getEnv(NULL, spec_string_intern("HOME"), spec_string_intern(""));
+    if (spec_string_equals(h, spec_string_intern(""))) {
+	    spec_assign_transfer((void**)&h, (void*)(Process_getEnv(NULL, spec_string_intern("USERPROFILE"), spec_string_intern(""))));
+	};
+    if ((!spec_string_equals(h, spec_string_intern("")))) {
+	    _mret_402 = (String)(Uri_cleanPath(self, h) /* inst:Uri:cleanPath */);
+    goto _cleanup_402;
+	};
+    _mret_402 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_402;
+    _cleanup_402: ;
+    if (h) { spec_release((void*)h); h = NULL; }
+    return _mret_402;
+}
+
+String Uri_cacheDir(Uri* self) {
+    (void)self;
+    String _mret_403 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String h = 0;
+    h = Uri_homeDir(self) /* inst:Uri:homeDir */;
+    if ((!spec_string_equals(h, spec_string_intern("")))) {
+	    _mret_403 = (String)(spec_string_concat((void*)spec_retain((void*)(h)), spec_string_intern("/.cache/spec")));
+    goto _cleanup_403;
+	};
+    _mret_403 = (String)(spec_string_concat(Uri_systemTempDir(self) /* inst:Uri:systemTempDir */, spec_string_intern("/spec_cache")));
+    goto _cleanup_403;
+    _cleanup_403: ;
+    if (h) { spec_release((void*)h); h = NULL; }
+    return _mret_403;
+}
+
+String Uri_runtimeCacheDir(Uri* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    return (String)(spec_string_concat(Uri_cacheDir(self) /* inst:Uri:cacheDir */, spec_string_intern("/runtime")));
+}
+
+String Uri_join(Uri* self, SpecArray* parts) {
+    (void)self;
+    (void)parts;
+    String _mret_405 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String joined = 0;
+    SPEC_AUTO SpecArray* nonEmpties = 0;
+    nonEmpties = (SpecArray*)((({ SpecArray* _arr = spec_array_new(); _arr; })));
+    long long len = spec_array_length(parts);
+    ({     long long i = 0;
+while (1) {
+        SPEC_POOL_AUTO;
+        bool _ev_838 = false;
+        do {
+    _ev_838 = ((i) < (len)); break;
+        } while (0);
+        if (!_ev_838) break;
+        bool _it_838 = true;
+        do {
+    SPEC_AUTO String p = spec_construct_string(spec_array_get(parts, i));
+    if ((!spec_string_equals(p, spec_string_intern("")))) {
+	    spec_array_add_object(nonEmpties, (void*)(p));
+	};
+    ((i)++);
+    if (p) { spec_release((void*)p); p = NULL; }
+        } while (0);
+        if (!_it_838) break;
+    }
+});
+    if (((spec_array_length(nonEmpties)) == (0))) {
+	    _mret_405 = (String)spec_retain((void*)(spec_string_intern("")));
+    goto _cleanup_405;
+	};
+    joined = Array_join(nonEmpties, spec_string_intern("/"));
+    _mret_405 = (String)(Uri_cleanPath(self, joined) /* inst:Uri:cleanPath */);
+    goto _cleanup_405;
+    _cleanup_405: ;
+    if (nonEmpties) { spec_release((void*)nonEmpties); nonEmpties = NULL; }
+    if (joined) { spec_release((void*)joined); joined = NULL; }
+    return _mret_405;
+}
+
+String Uri_exeSuffix(Uri* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Process_osName(NULL)); spec_pool_release_to(_pf); _v; })))), spec_string_intern("windows"))) {
+	    return (String)spec_retain((void*)(spec_string_intern(".exe")));
+	};
+    return (String)spec_retain((void*)(spec_string_intern("")));
+}
+
+String Uri_tempFile(Uri* self, String prefix, String suffix) {
+    (void)self;
+    (void)prefix;
+    (void)suffix;
+    SPEC_POOL_AUTO;
+    return (String)(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(Uri_systemTempDir(self) /* inst:Uri:systemTempDir */, spec_string_intern("/")), prefix), spec_to_string_int(Process_getPid(NULL))), spec_string_intern("_")), spec_to_string_int(Process_clockMs(NULL))), suffix));
+}
+
+String Uri_toString(Uri* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    if (spec_string_equals(self->scheme, spec_string_intern("file"))) {
+	    if ((!spec_string_equals(self->authority, spec_string_intern("")))) {
+	    return (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("file://"))), self->authority), self->path));
+	};
+	    if (String_startsWith(self->path, spec_string_intern("/"))) {
+	    return (String)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("file://"))), self->path));
+	};
+	    return (String)(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("file:///"))), self->path));
+	};
+    if ((!spec_string_equals(self->scheme, spec_string_intern("")))) {
+	    return (String)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(self->scheme)), spec_string_intern("://")), self->authority), self->path));
+	};
+    return (String)spec_retain((void*)(self->path));
 }
 
 /* Application Entry Point */

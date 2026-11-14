@@ -9,7 +9,9 @@ Class is AssertHelper{
 		['base', 'sys', Conditional],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', Process],
-		['base', 'sys', as Process()]
+		['base', 'sys', as Process()],
+		['base', 'sys', as Uri()],
+		['base', 'sys', Uri]
 	];
 
 	Function of String is nextStem(){
@@ -18,7 +20,7 @@ Class is AssertHelper{
 	}
 
 	Function of String is resolveTempDir(){
-		return if(check: { Process:osName() == 'windows' }, then: { 'bin' }, else: { '/tmp' });
+		return Uri:systemTempDir();
 	}
 
 	Function of String is resolveExeSuffix(){
@@ -30,7 +32,7 @@ Class is AssertHelper{
 		local String is bin: Process:getEnv(key: 'SPEC_BIN', default: defaultSpec);
 		local String is result: if(check: { bin != '' }, then: { bin }, else: { defaultSpec });
 		local String is finalResult: if(check: { Process:osName() == 'windows' && !result:endsWith(suffix: '.exe') }, then: { result . '.exe' }, else: { result });
-		return finalResult:replaceAll(search: '\\', replacement: '/');
+		return Uri:cleanPath(rawPath: finalResult);
 	}
 
 	Function of String is workPath(String is suffix, String is stem){
