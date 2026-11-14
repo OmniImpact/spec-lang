@@ -3315,7 +3315,11 @@ long long spec_parallel_run(long long threads, long long iterations, void* worke
 }
 
 String spec_type_name(const void* obj) {
-    if (!obj) return spec_string_intern("");
+    if (!obj || (uintptr_t)obj < 4096) return spec_string_intern("");
+    SpecHeader* h = SPEC_HEADER(obj);
+    if (h->destroy == spec_map_destroy) return spec_string_intern("Map");
+    if (h->destroy == spec_array_destroy) return spec_string_intern("Array");
+    if (h->destroy == spec_buf_destroy) return spec_string_intern("String");
     return spec_string_intern(*((const char**)obj));
 }
 
