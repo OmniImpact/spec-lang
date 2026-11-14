@@ -1,0 +1,12 @@
+{
+  "name": "spec",
+  "version": "0.1.0",
+  "source": "spec/base/compiler/driver/Driver.spec",
+  "source_dirs": [
+    "spec"
+  ],
+  "output": "bin/spec",
+  "flags": [
+    "--quiet"
+  ]
+}

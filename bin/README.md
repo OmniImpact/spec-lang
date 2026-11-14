@@ -28,25 +28,36 @@ Once `bin/spec` is built, compile `specbuild`:
 bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
 ```
 
-## 3. Build Tooling Binaries via SpecBuild
+## 3. Build Binaries via SpecBuild
 
-Use `bin/specbuild` with each utility's manifest to build `specunit` and `speclint`:
+Use `bin/specbuild` with each project manifest to build native binaries:
+
+### Build the Spec Compiler (`spec`)
+```bash
+bin/specbuild spec/spec.json
+```
 
 ### Build the SpecUnit Test Runner (`specunit`)
 ```bash
-bin/specbuild utilities/specunit/specbuild.json
+bin/specbuild utilities/specunit/specunit.json
 ```
 
 ### Build the SpecLint Linter (`speclint`)
 ```bash
-bin/specbuild utilities/speclint/specbuild.json
+bin/specbuild utilities/speclint/speclint.json
+```
+
+### Build the SpecBuild Project Orchestrator (`specbuild`)
+```bash
+bin/specbuild utilities/specbuild/specbuild.json
 ```
 
 ### Complete Tooling Build Sequence
 ```bash
 bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild && \
-bin/specbuild utilities/specunit/specbuild.json && \
-bin/specbuild utilities/speclint/specbuild.json
+bin/specbuild spec/spec.json && \
+bin/specbuild utilities/specunit/specunit.json && \
+bin/specbuild utilities/speclint/speclint.json
 ```
 
 ## 4. Verify

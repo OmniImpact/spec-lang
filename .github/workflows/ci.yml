@@ -17,8 +17,9 @@ jobs:
       - name: Build tooling
         run: |
           bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
-          bin/specbuild utilities/specunit/specbuild.json
-          bin/specbuild utilities/speclint/specbuild.json
+          bin/specbuild spec/spec.json
+          bin/specbuild utilities/specunit/specunit.json
+          bin/specbuild utilities/speclint/speclint.json
       - name: Regression suite
         run: |
           bin/specunit -s bin/spec -t tests
@@ -45,7 +46,8 @@ jobs:
       - name: Build tooling and run regression suite
         run: |
           bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
-          bin/specbuild utilities/specunit/specbuild.json
+          bin/specbuild spec/spec.json
+          bin/specbuild utilities/specunit/specunit.json
           bin/specunit -s bin/spec -t tests
 
   macos:
@@ -58,8 +60,9 @@ jobs:
       - name: Build tooling
         run: |
           bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
-          bin/specbuild utilities/specunit/specbuild.json
-          bin/specbuild utilities/speclint/specbuild.json
+          bin/specbuild spec/spec.json
+          bin/specbuild utilities/specunit/specunit.json
+          bin/specbuild utilities/speclint/speclint.json
       - name: Regression suite
         run: |
           bin/specunit -s bin/spec -t tests
@@ -123,7 +126,8 @@ jobs:
           fi
           bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild.exe
           export SPEC_BIN="bin/spec.exe"
-          bin/specbuild.exe utilities/specunit/specbuild.json
+          bin/specbuild.exe spec/spec.json
+          bin/specbuild.exe utilities/specunit/specunit.json
           bin/specbuild.exe utilities/speclint/specbuild.json
           bin/specunit.exe -s bin/spec.exe -t tests
       - name: Package Windows Artifact
