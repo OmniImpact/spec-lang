@@ -246,7 +246,7 @@ Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysint
 | **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- All compiler errors migrated to `ErrorText.spec`<br>- Runtime prelude split into `spec_runtime.h` + static `libspecrt.a` | In Progress |
 | **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery<br>- Separate formatting, naming, and AST idiom rules into dedicated classes<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`)<br>- CLI rule filtering flags (`--rule` and `--disable`) | Completed (`v0.000.100`) |
 | **M3: Project Tooling** | - Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Implement shared TUI color/status module | Next Up |
-| **M4: Platform & Packaging** | - POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, basic Json) | Planned |
+| **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, basic Json) | In Progress |
 | **M5: 0.1 Alpha Release** | - Full documentation sweep<br>- Fixed-point bootstrap verification across GCC and Clang<br>- Tag `v0.1.0-alpha` and publish release tarballs | Planned |
 
 ---
