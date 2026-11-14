@@ -2806,25 +2806,24 @@ Class is CodeGenerator{
 				return;
 			});
 			match(on: s, when: [
+				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+					if({ hasInit && self:exprAssignsLocal(name: name, expr: initExpr) }, {
+						found: true;
+					});
+				},
 				Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
-					if({ assignTarget:kind == ExpressionKind:IDENT && assignTarget:str == name }, {
+					if({ (assignTarget:kind == ExpressionKind:IDENT && assignTarget:str == name) || self:exprAssignsLocal(name: name, expr: assignValue) }, {
 						found: true;
 					});
 				},
 				Statement:Expr: local Function(Expression is exprStmt){
-					if({ exprStmt:kind == ExpressionKind:UNARY && (exprStmt:str == 'post++' || exprStmt:str == 'post--' || exprStmt:str == '++' || exprStmt:str == '--') && exprStmt:unaryExpr:kind == ExpressionKind:IDENT && exprStmt:unaryExpr:str == name }, {
+					if({ self:exprAssignsLocal(name: name, expr: exprStmt) }, {
 						found: true;
-					}, {
-						if({ self:assignsViaCall(name: name, expr: exprStmt) }, {
-							found: true;
-						});
 					});
 				},
 				Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
-					if({ hasReturnExpr }, {
-						if({ self:assignsViaCall(name: name, expr: returnExpr) }, {
-							found: true;
-						});
+					if({ hasReturnExpr && self:exprAssignsLocal(name: name, expr: returnExpr) }, {
+						found: true;
 					});
 				}
 			]);
@@ -2832,21 +2831,75 @@ Class is CodeGenerator{
 		return found;
 	}
 
-	## Descends into a call expression's ANON_FN arguments (the shapes the
-	## gen inlines into this scope).
-	Function of Boolean is assignsViaCall(String is name, Expression is expr){
-		if({ expr:kind != ExpressionKind:CALL }, {
-			return false;
-		});
-		local Boolean is found: false;
-		expr:methodArgs:each(action: local Function(NamedArg is arg){
-			if({ !found && arg:value:kind == ExpressionKind:ANON_FN }, {
-				if({ self:bodyAssignsLocal(name: name, stmts: arg:value:anonBody) }, {
-					found: true;
+	## Recursively checks whether an expression (such as an inlined call or
+	## mutating unary operator) mutates the local variable [name].
+	Function of Boolean is exprAssignsLocal(String is name, Expression is expr){
+		return match(on: expr:kind, when: [
+			ExpressionKind:UNARY: {
+				(expr:str == 'post++' || expr:str == 'post--' || expr:str == '++' || expr:str == '--') && expr:unaryExpr:kind == ExpressionKind:IDENT && expr:unaryExpr:str == name
+			},
+			ExpressionKind:CALL: {
+				local Boolean is found: false;
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if({ !found }, {
+						if({ arg:value:kind == ExpressionKind:ANON_FN }, {
+							if({ self:bodyAssignsLocal(name: name, stmts: arg:value:anonBody) }, {
+								found: true;
+							});
+						}, {
+							if({ arg:value:kind == ExpressionKind:MAP }, {
+								arg:value:mapValues:each(action: local Function(Expression is armVal){
+									if({ !found }, {
+										if({ armVal:kind == ExpressionKind:ANON_FN }, {
+											if({ self:bodyAssignsLocal(name: name, stmts: armVal:anonBody) }, {
+												found: true;
+											});
+										}, {
+											if({ self:exprAssignsLocal(name: name, expr: armVal) }, {
+												found: true;
+											});
+										});
+									});
+								});
+							}, {
+								if({ self:exprAssignsLocal(name: name, expr: arg:value) }, {
+									found: true;
+								});
+							});
+						});
+					});
 				});
-			});
-		});
-		return found;
+				found
+			},
+			ExpressionKind:BINARY: {
+				self:exprAssignsLocal(name: name, expr: expr:leftExpr) || self:exprAssignsLocal(name: name, expr: expr:rightExpr)
+			},
+			ExpressionKind:CAST: {
+				self:exprAssignsLocal(name: name, expr: expr:leftExpr)
+			},
+			ExpressionKind:INDEX: {
+				self:exprAssignsLocal(name: name, expr: expr:leftExpr) || self:exprAssignsLocal(name: name, expr: expr:rightExpr)
+			},
+			ExpressionKind:ARRAY: {
+				local Boolean is itemFound: false;
+				expr:arrayItems:each(action: local Function(Expression is item){
+					if({ !itemFound && self:exprAssignsLocal(name: name, expr: item) }, {
+						itemFound: true;
+					});
+				});
+				itemFound
+			},
+			ExpressionKind:MAP: {
+				local Boolean is valFound: false;
+				expr:mapValues:each(action: local Function(Expression is val){
+					if({ !valFound && self:exprAssignsLocal(name: name, expr: val) }, {
+						valFound: true;
+					});
+				});
+				valFound
+			},
+			else: { false }
+		]);
 	}
 
 	Function of Boolean is isInlineCall(Expression is expr){

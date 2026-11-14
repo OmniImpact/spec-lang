@@ -167,4 +167,42 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 		});
 		Assert:areEqualInt(21, tally);
 	}
+	## Case 12: Local mutated inside an inlined closure in a VarDecl initializer
+	## and captured by a runtime closure.
+	Function is testMutationInVarDeclInitializerCapturedByClosure(){
+		local Int is count: 0;
+		local Int is initial: if({ true }, {
+			count: count + 10;
+			100
+		}, {
+			0
+		});
+		local Function of Int is getCount: local Function of Int(){
+			return count;
+		};
+		Assert:areEqualInt(100, initial);
+		Assert:areEqualInt(10, getCount());
+		count: count + 5;
+		Assert:areEqualInt(15, getCount());
+	}
+
+	## Case 13: Local mutated inside an inlined closure on an Assign RHS
+	## and captured by a runtime closure.
+	Function is testMutationInAssignValueCapturedByClosure(){
+		local Int is total: 1;
+		local Int is dummy: 0;
+		dummy: if({ true }, {
+			total: total * 5;
+			50
+		}, {
+			0
+		});
+		local Function of Int is getTotal: local Function of Int(){
+			return total;
+		};
+		Assert:areEqualInt(50, dummy);
+		Assert:areEqualInt(5, getTotal());
+		total: total + 3;
+		Assert:areEqualInt(8, getTotal());
+	}
 }
