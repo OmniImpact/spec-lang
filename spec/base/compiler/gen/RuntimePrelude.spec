@@ -114,6 +114,7 @@ typedef struct SpecLoopControl SpecLoopControl;
 typedef struct Loop Loop;
 typedef struct SpecArena SpecArena;
 typedef struct SpecVec SpecVec;
+typedef struct SpecBox SpecBox;
 
 /* Forward Prototypes of Runtime API */
 void spec_panic(const char* msg);
@@ -768,6 +769,46 @@ static inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_
     c->env = env;
     c->destroy_env = destroy_env;
     return c;
+}
+
+/* SpecBox: Heap-allocated reference cell for shared mutable closure captures */
+typedef struct SpecBox {
+    int64_t val;
+    bool is_arc;
+} SpecBox;
+
+static inline void spec_box_destroy(void* self) {
+    SpecBox* b = (SpecBox*)self;
+    if (b) {
+        if (b->is_arc && b->val) {
+            spec_release((void*)b->val);
+            b->val = 0;
+        }
+    }
+}
+
+static inline SpecBox* spec_box_new(int64_t val, bool is_arc) {
+    SpecBox* b = (SpecBox*)spec_alloc(sizeof(SpecBox), spec_box_destroy);
+    b->val = val;
+    b->is_arc = is_arc;
+    return b;
+}
+
+static inline void spec_box_set(SpecBox* b, void* new_val) {
+    if (!b) return;
+    if (b->is_arc) {
+        if (new_val) spec_retain(new_val);
+        if (b->val) spec_release((void*)b->val);
+    }
+    b->val = (int64_t)new_val;
+}
+
+static inline void spec_box_set_transfer(SpecBox* b, void* new_val) {
+    if (!b) return;
+    if (b->is_arc) {
+        if (b->val) spec_release((void*)b->val);
+    }
+    b->val = (int64_t)new_val;
 }
 
 /* Spec Runtime String Utilities */

@@ -247,6 +247,9 @@ Class is CodeGenerator{
 	## assignment to them must not release the caller's argument.
 	local Map of String to String is currentParams: Map:init();
 
+	## Locals captured by closures that require a reference box (SpecBox*).
+	local Map of String to String is boxedLocals: Map:init();
+
 	## True when the current inline-return target is ARC-managed
 	## (reassignment goes through spec_assign).
 	local Boolean is inlineReturnArc: false;
@@ -1855,15 +1858,28 @@ Class is CodeGenerator{
 				self:emitCast(expr: expr)
 			},
 			ExpressionKind:UNARY: {
-				local String is innerC: self:generateExpression(expr: expr:unaryExpr);
-				local String is uC: match(when: [
-					{ expr:str == 'post++' }: { '((' . innerC . ')++)' },
-					{ expr:str == 'post--' }: { '((' . innerC . ')--)' },
-					{ expr:str == '++' }: { '(++(' . innerC . '))' },
-					{ expr:str == '--' }: { '(--(' . innerC . '))' },
-					else: { '(' . expr:str . '(' . innerC . '))' }
-				]);
-				uC
+				if({ expr:unaryExpr:kind == ExpressionKind:IDENT && self:boxedLocals:has(key: expr:unaryExpr:str) && (expr:str == 'post++' || expr:str == 'post--' || expr:str == '++' || expr:str == '--') }, {
+					local String is boxVar: '_box_' . self:utils:cIdent(name: expr:unaryExpr:str);
+					local String is bType: self:boxedLocals:getString(key: expr:unaryExpr:str, default: '');
+					local String is cType: self:cTypeFor(typeName: bType);
+					match(when: [
+						{ expr:str == 'post++' }: { '((' . cType . ')((' . boxVar . '->val)++))' },
+						{ expr:str == 'post--' }: { '((' . cType . ')((' . boxVar . '->val)--))' },
+						{ expr:str == '++' }: { '((' . cType . ')(++(' . boxVar . '->val)))' },
+						{ expr:str == '--' }: { '((' . cType . ')(--(' . boxVar . '->val)))' },
+						else: { '0' }
+					])
+				}, {
+					local String is innerC: self:generateExpression(expr: expr:unaryExpr);
+					local String is uC: match(when: [
+						{ expr:str == 'post++' }: { '((' . innerC . ')++)' },
+						{ expr:str == 'post--' }: { '((' . innerC . ')--)' },
+						{ expr:str == '++' }: { '(++(' . innerC . '))' },
+						{ expr:str == '--' }: { '(--(' . innerC . '))' },
+						else: { '(' . expr:str . '(' . innerC . '))' }
+					]);
+					uC
+				})
 			},
 			ExpressionKind:CALL: {
 				self:emitCall(expr: expr)
@@ -1977,6 +1993,15 @@ Class is CodeGenerator{
 			});
 			return enumName . '_' . self:utils:cIdent(name: name);
 		});
+		if({ self:boxedLocals:has(key: name) }, {
+			local String is boxVar: '_box_' . self:utils:cIdent(name: name);
+			local String is bType: self:boxedLocals:getString(key: name, default: '');
+			local String is cType: self:cTypeFor(typeName: bType);
+			if({ self:isArcType(typeName: bType) }, {
+				return '((' . cType . ')(void*)' . boxVar . '->val)';
+			});
+			return '((' . cType . ')' . boxVar . '->val)';
+		});
 		if({ self:localVars:has(key: name) }, {
 			return self:utils:cIdent(name: name);
 		});
@@ -2082,8 +2107,18 @@ Class is CodeGenerator{
 				return hookSym . '(spec_string_intern("' . segs:get(index: 1) . '"))';
 			});
 			local String is rootC: self:utils:cIdent(name: root);
-			if({ !self:localVars:has(key: root) && self:fieldTypes:has(key: root) }, {
-				rootC: 'self->' . rootC;
+			if({ self:boxedLocals:has(key: root) }, {
+				local String is bType: self:boxedLocals:getString(key: root, default: '');
+				local String is cType: self:cTypeFor(typeName: bType);
+				if({ self:isArcType(typeName: bType) }, {
+					rootC: '((' . cType . ')(void*)_box_' . rootC . '->val)';
+				}, {
+					rootC: '((' . cType . ')_box_' . rootC . '->val)';
+				});
+			}, {
+				if({ !self:localVars:has(key: root) && self:fieldTypes:has(key: root) }, {
+					rootC: 'self->' . rootC;
+				});
 			});
 			local Int is idx: 1;
 			local String is resC: rootC;
@@ -2775,8 +2810,12 @@ Class is CodeGenerator{
 				found: true;
 			}, {
 				if({ s:kind == StatementKind:EXPR }, {
-					if({ self:assignsViaCall(name: name, expr: s:exprStmt) }, {
+					if({ s:exprStmt:kind == ExpressionKind:UNARY && (s:exprStmt:str == 'post++' || s:exprStmt:str == 'post--' || s:exprStmt:str == '++' || s:exprStmt:str == '--') && s:exprStmt:unaryExpr:kind == ExpressionKind:IDENT && s:exprStmt:unaryExpr:str == name }, {
 						found: true;
+					}, {
+						if({ self:assignsViaCall(name: name, expr: s:exprStmt) }, {
+							found: true;
+						});
 					});
 				}, {
 					if({ s:kind == StatementKind:RETURN && s:hasReturnExpr }, {
@@ -2805,6 +2844,235 @@ Class is CodeGenerator{
 			});
 		});
 		return found;
+	}
+
+	Function of Boolean is isInlineCall(Expression is expr){
+		if({ expr:kind != ExpressionKind:CALL }, {
+			return false;
+		});
+		local String is m: expr:methodName;
+		if({ (m == 'if' || m == 'branch') && (expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'Conditional')) }, {
+			return true;
+		});
+		if({ m == 'match' && (expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && (expr:methodTarget:str == 'Conditional' || expr:methodTarget:str == 'match'))) }, {
+			return true;
+		});
+		if({ (expr:bareProvider == 'Loops' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'Loops')) && (m == 'while' || m == 'until' || m == 'loop' || m == 'repeat' || m == 'condition' || m == 'init') }, {
+			return true;
+		});
+		if({ m == 'each' || m == 'filter' || m == 'count' || m == 'any' || m == 'map' || m == 'fold' }, {
+			local String is tgtT: self:inferTargetType(expr: expr:methodTarget);
+			if({ tgtT:startsWith(prefix: 'Array') || tgtT:startsWith(prefix: 'List') || tgtT:startsWith(prefix: 'Map') || tgtT == 'Array' || tgtT == 'List' || tgtT == 'Map' }, {
+				return true;
+			});
+		});
+		return false;
+	}
+
+	Function of Array of Expression is collectRuntimeAnons(Array of Statement is stmts){
+		local Array of Expression is results: [];
+		stmts:each(action: local Function(Statement is s){
+			self:findAnonsInStmt(stmt: s, results: results);
+		});
+		return results;
+	}
+
+	Function is findAnonsInStmt(Statement is stmt, Array of Expression is results){
+		if({ stmt:kind == StatementKind:VAR_DECL && stmt:hasInit }, {
+			self:findAnonsInExpr(expr: stmt:initExpr, results: results);
+		});
+		if({ stmt:kind == StatementKind:ASSIGN }, {
+			self:findAnonsInExpr(expr: stmt:assignValue, results: results);
+		});
+		if({ stmt:kind == StatementKind:EXPR }, {
+			self:findAnonsInExpr(expr: stmt:exprStmt, results: results);
+		});
+		if({ stmt:kind == StatementKind:RETURN && stmt:hasReturnExpr }, {
+			self:findAnonsInExpr(expr: stmt:returnExpr, results: results);
+		});
+	}
+
+	Function is findAnonsInExpr(Expression is expr, Array of Expression is results){
+		if({ expr:kind == ExpressionKind:CALL }, {
+			if({ self:isInlineCall(expr: expr) }, {
+				self:findAnonsInExpr(expr: expr:methodTarget, results: results);
+				expr:methodArgs:each(action: local Function(NamedArg is arg){
+					if({ arg:value:kind == ExpressionKind:ANON_FN }, {
+						arg:value:anonBody:each(action: local Function(Statement is s){
+							self:findAnonsInStmt(stmt: s, results: results);
+						});
+					}, {
+						if({ arg:value:kind == ExpressionKind:MAP }, {
+							arg:value:mapValues:each(action: local Function(Expression is arm){
+								if({ arm:kind == ExpressionKind:ANON_FN }, {
+									arm:anonBody:each(action: local Function(Statement is s){
+										self:findAnonsInStmt(stmt: s, results: results);
+									});
+								}, {
+									self:findAnonsInExpr(expr: arm, results: results);
+								});
+							});
+						}, {
+							self:findAnonsInExpr(expr: arg:value, results: results);
+						});
+					});
+				});
+				return;
+			});
+			self:findAnonsInExpr(expr: expr:methodTarget, results: results);
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				self:findAnonsInExpr(expr: arg:value, results: results);
+			});
+			return;
+		});
+		if({ expr:kind == ExpressionKind:ANON_FN }, {
+			results:add(item: expr);
+			expr:anonBody:each(action: local Function(Statement is s){
+				self:findAnonsInStmt(stmt: s, results: results);
+			});
+			return;
+		});
+		if({ expr:kind == ExpressionKind:BINARY }, {
+			self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+			self:findAnonsInExpr(expr: expr:rightExpr, results: results);
+		});
+		if({ expr:kind == ExpressionKind:UNARY }, {
+			self:findAnonsInExpr(expr: expr:unaryExpr, results: results);
+		});
+		if({ expr:kind == ExpressionKind:INDEX }, {
+			self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+			self:findAnonsInExpr(expr: expr:rightExpr, results: results);
+		});
+		if({ expr:kind == ExpressionKind:CAST }, {
+			self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+		});
+		if({ expr:kind == ExpressionKind:ARRAY }, {
+			expr:arrayItems:each(action: local Function(Expression is item){
+				self:findAnonsInExpr(expr: item, results: results);
+			});
+		});
+		if({ expr:kind == ExpressionKind:MAP }, {
+			expr:mapValues:each(action: local Function(Expression is val){
+				self:findAnonsInExpr(expr: val, results: results);
+			});
+		});
+	}
+
+	Function of Boolean is stmtListReferencesLocal(String is name, Array of Statement is stmts){
+		local Boolean is found: false;
+		stmts:each(action: local Function(Statement is s){
+			if({ !found }, {
+				if({ self:stmtReferencesLocal(name: name, stmt: s) }, {
+					found: true;
+				});
+			});
+		});
+		return found;
+	}
+
+	Function of Boolean is stmtReferencesLocal(String is name, Statement is stmt){
+		if({ stmt:kind == StatementKind:VAR_DECL && stmt:hasInit }, {
+			return self:exprReferencesLocal(name: name, expr: stmt:initExpr);
+		});
+		if({ stmt:kind == StatementKind:ASSIGN }, {
+			return self:exprReferencesLocal(name: name, expr: stmt:assignTarget) || self:exprReferencesLocal(name: name, expr: stmt:assignValue);
+		});
+		if({ stmt:kind == StatementKind:EXPR }, {
+			return self:exprReferencesLocal(name: name, expr: stmt:exprStmt);
+		});
+		if({ stmt:kind == StatementKind:RETURN && stmt:hasReturnExpr }, {
+			return self:exprReferencesLocal(name: name, expr: stmt:returnExpr);
+		});
+		return false;
+	}
+
+	Function of Boolean is exprReferencesLocal(String is name, Expression is expr){
+		if({ expr:kind == ExpressionKind:IDENT }, {
+			return expr:str == name;
+		});
+		if({ expr:kind == ExpressionKind:ANON_FN }, {
+			return self:stmtListReferencesLocal(name: name, stmts: expr:anonBody);
+		});
+		if({ expr:kind == ExpressionKind:CALL }, {
+			if({ self:exprReferencesLocal(name: name, expr: expr:methodTarget) }, {
+				return true;
+			});
+			local Boolean is argFound: false;
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if({ !argFound && self:exprReferencesLocal(name: name, expr: arg:value) }, {
+					argFound: true;
+				});
+			});
+			return argFound;
+		});
+		if({ expr:kind == ExpressionKind:BINARY }, {
+			return self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr);
+		});
+		if({ expr:kind == ExpressionKind:UNARY }, {
+			return self:exprReferencesLocal(name: name, expr: expr:unaryExpr);
+		});
+		if({ expr:kind == ExpressionKind:INDEX }, {
+			return self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr);
+		});
+		if({ expr:kind == ExpressionKind:CAST }, {
+			return self:exprReferencesLocal(name: name, expr: expr:leftExpr);
+		});
+		if({ expr:kind == ExpressionKind:ARRAY }, {
+			local Boolean is itemFound: false;
+			expr:arrayItems:each(action: local Function(Expression is item){
+				if({ !itemFound && self:exprReferencesLocal(name: name, expr: item) }, {
+					itemFound: true;
+				});
+			});
+			return itemFound;
+		});
+		if({ expr:kind == ExpressionKind:MAP }, {
+			local Boolean is valFound: false;
+			expr:mapValues:each(action: local Function(Expression is val){
+				if({ !valFound && self:exprReferencesLocal(name: name, expr: val) }, {
+					valFound: true;
+				});
+			});
+			return valFound;
+		});
+		return false;
+	}
+
+	Function is collectBoxedLocalsForMethod(ClassInfo is classDef, Member is method){
+		self:boxedLocals: Map:init();
+		local Map of String to String is candidates: Map:init();
+		method:params:each(action: local Function(Parameter is p){
+			candidates:set(key: p:name, value: p:paramType:name);
+		});
+		method:body:each(action: local Function(Statement is s){
+			if({ s:kind == StatementKind:VAR_DECL }, {
+				candidates:set(key: s:varName, value: s:varType:name);
+			});
+		});
+
+		local Array of Expression is runtimeAnons: self:collectRuntimeAnons(stmts: method:body);
+		if({ runtimeAnons:length() == 0 }, {
+			return;
+		});
+
+		local Array of String is candKeys: candidates:keys();
+		candKeys:each(action: local Function(String is k){
+			local Boolean is captured: false;
+			local Boolean is mutated: self:bodyAssignsLocal(name: k, stmts: method:body);
+
+			runtimeAnons:each(action: local Function(Expression is anon){
+				if({ self:stmtListReferencesLocal(name: k, stmts: anon:anonBody) }, {
+					captured: true;
+				});
+				if({ self:bodyAssignsLocal(name: k, stmts: anon:anonBody) }, {
+					mutated: true;
+				});
+			});
+
+			if({ captured && mutated }, {
+				self:boxedLocals:set(key: k, value: candidates:getString(key: k, default: ''));
+			});
+		});
 	}
 
 	## Emits an anonymous function as a static C function + closure.
@@ -2869,12 +3137,16 @@ Class is CodeGenerator{
 		});
 
 		expr:anonBody:each(action: local Function(Statement is vs){
-			if({ vs:kind == StatementKind:VAR_DECL && self:isArcType(typeName: vs:varType:name) }, {
+			if({ vs:kind == StatementKind:VAR_DECL && (self:isArcType(typeName: vs:varType:name) || self:boxedLocals:has(key: vs:varName)) }, {
 				local String is hType: '';
-				if({ vs:varType:name == 'List' }, {
-					hType: self:cTypeFor(typeName: self:formatTypeString(t: vs:varType));
+				if({ self:boxedLocals:has(key: vs:varName) }, {
+					hType: 'SpecBox*';
 				}, {
-					hType: self:cTypeFor(typeName: vs:varType:name);
+					if({ vs:varType:name == 'List' }, {
+						hType: self:cTypeFor(typeName: self:formatTypeString(t: vs:varType));
+					}, {
+						hType: self:cTypeFor(typeName: vs:varType:name);
+					});
 				});
 				self:hoistedLocals:set(key: vs:varName, value: hType);
 			});
@@ -2883,13 +3155,32 @@ Class is CodeGenerator{
 		local String is hoistedDeclsC: '';
 		self:hoistedLocals:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
-			hoistedDeclsC: hoistedDeclsC . '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n";
+			local String is hNameC: self:utils:cIdent(name: hName);
+			if({ self:boxedLocals:has(key: hName) }, {
+				hNameC: '_box_' . hNameC;
+			});
+			hoistedDeclsC: hoistedDeclsC . '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . hNameC . " = 0;\n";
+		});
+
+		local Map of String to String is savedBoxed: Map:init();
+		local Array of String is boxedKeys: self:boxedLocals:keys();
+		boxedKeys:each(action: local Function(String is k){
+			savedBoxed:set(key: k, value: self:boxedLocals:getString(key: k, default: ''));
+		});
+		expr:anonParams:each(action: local Function(Parameter is p){
+			self:boxedLocals:remove(key: p:name);
+		});
+		expr:anonBody:each(action: local Function(Statement is s){
+			if({ s:kind == StatementKind:VAR_DECL }, {
+				self:boxedLocals:remove(key: s:varName);
+			});
 		});
 
 		local String is bodyC: '';
 		expr:anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
+		self:boxedLocals: savedBoxed;
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 		self:localVars: savedVars;
@@ -2949,25 +3240,34 @@ Class is CodeGenerator{
 		outerKeys:each(action: local Function(String is k){
 			if({ paramNames:indexOf(search: k, default: -1) < 0 && !bodyLocals:has(key: k) }, {
 				local String is cVar: self:utils:cIdent(name: k);
-				if({ self:containsIdent(body: scanBody, ident: cVar) }, {
-					local String is vType: savedVars:getString(key: k, default: '');
-					local String is vCType: self:cTypeFor(typeName: vType);
-					if({ vCType != 'void' && vCType != '' }, {
+				local String is checkIdent: cVar;
+				if({ self:boxedLocals:has(key: k) }, {
+					checkIdent: '_box_' . cVar;
+				});
+				if({ self:containsIdent(body: scanBody, ident: checkIdent) }, {
+					if({ self:boxedLocals:has(key: k) }, {
 						hasCaptures: true;
-						capFieldDecls: capFieldDecls . '    ' . vCType . ' ' . cVar . ";\n";
-						capFieldBinds: capFieldBinds . '    ' . vCType . ' ' . cVar . ' = _env->' . cVar . ";\n    (void)" . cVar . ";\n";
-						if({ self:isArcType(typeName: vType) }, {
-							capAssigns: capAssigns . '    _env->' . cVar . ' = (' . vCType . ')spec_retain((void*)' . cVar . ");\n";
-							capReleases: capReleases . '    if (_env->' . cVar . ') spec_release((void*)_env->' . cVar . ");\n";
-						}, {
-							capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
-						});
-						# the closure body may assign a
-						# captured local — write it back at exit or the
-						# mutation is lost (the callback ran on a copy).
-						if({ self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, {
-							capWritebacks: capWritebacks . '    _env->' . cVar . ' = ' . cVar . ";\n";
-							writebackNames:add(item: k);
+						capFieldDecls: capFieldDecls . "    SpecBox* " . cVar . ";\n";
+						capFieldBinds: capFieldBinds . "    SpecBox* _box_" . cVar . " = _env->" . cVar . ";\n    (void)_box_" . cVar . ";\n";
+						capAssigns: capAssigns . "    _env->" . cVar . " = (SpecBox*)spec_retain((void*)_box_" . cVar . ");\n";
+						capReleases: capReleases . "    if (_env->" . cVar . ") spec_release((void*)_env->" . cVar . ");\n";
+					}, {
+						local String is vType: savedVars:getString(key: k, default: '');
+						local String is vCType: self:cTypeFor(typeName: vType);
+						if({ vCType != 'void' && vCType != '' }, {
+							hasCaptures: true;
+							capFieldDecls: capFieldDecls . '    ' . vCType . ' ' . cVar . ";\n";
+							capFieldBinds: capFieldBinds . '    ' . vCType . ' ' . cVar . ' = _env->' . cVar . ";\n    (void)" . cVar . ";\n";
+							if({ self:isArcType(typeName: vType) }, {
+								capAssigns: capAssigns . '    _env->' . cVar . ' = (' . vCType . ')spec_retain((void*)' . cVar . ");\n";
+								capReleases: capReleases . '    if (_env->' . cVar . ') spec_release((void*)_env->' . cVar . ");\n";
+							}, {
+								capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
+							});
+							if({ self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, {
+								capWritebacks: capWritebacks . '    _env->' . cVar . ' = ' . cVar . ";\n";
+								writebackNames:add(item: k);
+							});
 						});
 					});
 				});
@@ -3161,10 +3461,15 @@ Class is CodeGenerator{
 		stmts:each(action: local Function(Statement is stmt){
 			if({ stmt:kind == StatementKind:VAR_DECL }, {
 				if({ !self:releaseExclusions:has(key: stmt:varName) }, {
-					local String is typeName: self:formatTypeString(t: stmt:varType);
-					if({ self:isArcType(typeName: typeName) }, {
+					if({ self:boxedLocals:has(key: stmt:varName) }, {
 						local String is varC: self:utils:cIdent(name: stmt:varName);
-						out: out . '    if (' . varC . ') { spec_release((void*)' . varC . '); ' . varC . " = NULL; }\n";
+						out: out . '    if (_box_' . varC . ') { spec_release((void*)_box_' . varC . '); _box_' . varC . " = NULL; }\n";
+					}, {
+						local String is typeName: self:formatTypeString(t: stmt:varType);
+						if({ self:isArcType(typeName: typeName) }, {
+							local String is varC: self:utils:cIdent(name: stmt:varName);
+							out: out . '    if (' . varC . ') { spec_release((void*)' . varC . '); ' . varC . " = NULL; }\n";
+						});
 					});
 				});
 			});
@@ -3178,6 +3483,9 @@ Class is CodeGenerator{
 	## @return: C lvalue string, or '' when complex.
 	Function of String is tryGenerateTargetOnly(Expression is expr){
 		if({ expr:kind == ExpressionKind:IDENT }, {
+			if({ self:boxedLocals:has(key: expr:str) }, {
+				return '';
+			});
 			if({ self:localVars:has(key: expr:str) }, {
 				return self:utils:cIdent(name: expr:str);
 			});
@@ -3308,6 +3616,62 @@ Class is CodeGenerator{
 		local String is vPrefix: self:debugVolatile();
 		local Boolean is isArcVar: self:isArcType(typeName: vTypeName);
 		local String is autoPrefix: if({ isArcVar }, { 'SPEC_AUTO ' }, { '' });
+		if({ self:boxedLocals:has(key: stmt:varName) }, {
+			local String is boxInitC: "0";
+			if({ stmt:hasInit }, {
+				local ExpressionKind is bInitKind: stmt:initExpr:kind;
+				if({ bInitKind == ExpressionKind:ARRAY || bInitKind == ExpressionKind:MAP }, {
+					self:setContainerHint(t: self:formatTypeString(t: stmt:varType));
+				});
+				local Boolean is bSavedArg: self:argMode;
+				self:argMode: false;
+				boxInitC: self:generateExpression(expr: stmt:initExpr);
+				self:argMode: bSavedArg;
+				self:setContainerHint(t: '');
+				local Boolean is bClaims: self:yieldsClaim(expr: stmt:initExpr);
+				boxInitC: self:generateTypedConstructor(typeName: vTypeName, valueC: boxInitC, cType: cType, claims: bClaims);
+			}, {
+				if({ vTypeName == 'String' }, {
+					boxInitC: "spec_construct_string(\"\")";
+				});
+				if({ vTypeName == 'Array' }, {
+					local String is bElemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
+					boxInitC: "spec_array_new()";
+					if({ bElemKind == 'object' || bElemKind == 'string' }, {
+						boxInitC: "spec_array_new_object()";
+					});
+				});
+				if({ vTypeName == 'List' }, {
+					local String is bFullT: self:formatTypeString(t: stmt:varType);
+					local String is bElemKind: self:containerElemKind(containerType: bFullT);
+					boxInitC: "spec_vec_new()";
+					if({ bElemKind == 'byte' }, {
+						boxInitC: "spec_bytebuffer_new()";
+					}, {
+						if({ bElemKind == 'string' }, {
+							boxInitC: "spec_vec_new_string()";
+						}, {
+							if({ bElemKind == 'object' }, {
+								boxInitC: "spec_vec_new_object()";
+							});
+						});
+					});
+				});
+				if({ vTypeName == 'Map' }, {
+					boxInitC: "spec_map_new()";
+					if({ self:containerElemIsArc(containerType: self:formatTypeString(t: stmt:varType)) }, {
+						boxInitC: "spec_map_new_object()";
+					});
+				});
+			});
+			local String is isArcStr: if({ isArcVar }, { "true" }, { "false" });
+			local String is boxVarName: "_box_" . varName;
+			if({ self:hoistedLocals:has(key: stmt:varName) }, {
+				return "    " . boxVarName . " = spec_box_new((int64_t)(" . boxInitC . "), " . isArcStr . ");\n";
+			}, {
+				return "    " . vPrefix . "SPEC_AUTO SpecBox* " . boxVarName . " = spec_box_new((int64_t)(" . boxInitC . "), " . isArcStr . ");\n";
+			});
+		});
 		# Part IV memory discipline: a hoisted local's
 		# declaration lives in the funnel prologue (zero-initialized) — the
 		# statement assigns, so a goto can never skip the initializer.
@@ -3440,6 +3804,27 @@ Class is CodeGenerator{
 			});
 			return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 		});
+		if({ stmt:assignTarget:kind == ExpressionKind:IDENT && self:boxedLocals:has(key: stmt:assignTarget:str) }, {
+			local String is boxVar: "_box_" . self:utils:cIdent(name: stmt:assignTarget:str);
+			local String is lhsType: self:boxedLocals:getString(key: stmt:assignTarget:str, default: "");
+			local ExpressionKind is valKind: stmt:assignValue:kind;
+			if({ (valKind == ExpressionKind:ARRAY || valKind == ExpressionKind:MAP) && (lhsType:startsWith(prefix: "Array") || lhsType:startsWith(prefix: "Map") || lhsType:startsWith(prefix: "List")) }, {
+				self:setContainerHint(t: lhsType);
+			});
+			local Boolean is savedArg: self:argMode;
+			self:argMode: false;
+			local String is valC: self:generateExpression(expr: stmt:assignValue);
+			self:argMode: savedArg;
+			if({ self:isArcType(typeName: lhsType) }, {
+				if({ self:yieldsClaim(expr: stmt:assignValue) }, {
+					return "    spec_box_set_transfer(" . boxVar . ", (void*)(" . valC . "));\n";
+				}, {
+					return "    spec_box_set(" . boxVar . ", (void*)(" . valC . "));\n";
+				});
+			}, {
+				return "    " . boxVar . "->val = (int64_t)(" . valC . ");\n";
+			});
+		});
 		local String is targetC: self:generateExpression(expr: stmt:assignTarget);
 		local String is appendC: self:tryGenerateAppendChain(expr: stmt:assignValue, targetC: targetC);
 		if({ appendC != '' }, {
@@ -3535,7 +3920,7 @@ Class is CodeGenerator{
 				retC: '(void*)(intptr_t)(' . retC . ')';
 			}, {
 				if({ self:isArcType(typeName: shapeRetType) }, {
-					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: stmt:returnExpr:str);
+					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: stmt:returnExpr:str) && !self:boxedLocals:has(key: stmt:returnExpr:str);
 					if({ ownedLocal }, {
 						local String is identC: self:utils:cIdent(name: stmt:returnExpr:str);
 						local String is rtC: self:cTypeFor(typeName: shapeRetType);
@@ -3606,6 +3991,7 @@ Class is CodeGenerator{
 			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 			self:currentParams:set(key: p:name, value: 'true');
 		});
+		self:collectBoxedLocalsForMethod(classDef: classDef, method: method);
 
 		# the self parameter's C type qualifies — the bare name is
 		# not a C identity for nested classes.
@@ -3644,6 +4030,12 @@ Class is CodeGenerator{
 		# too: a bare `return` skips the releases just the same.
 		self:cleanupCounter: self:cleanupCounter + 1;
 		local String is releasesC: self:scopeReleases(stmts: method:body);
+		method:params:each(action: local Function(Parameter is p){
+			if({ self:boxedLocals:has(key: p:name) }, {
+				local String is pNameC: self:utils:cIdent(name: p:name);
+				releasesC: releasesC . '    if (_box_' . pNameC . ') { spec_release((void*)_box_' . pNameC . '); _box_' . pNameC . " = NULL; }\n";
+			});
+		});
 		if({ releasesC:length() > 0 }, {
 			self:cleanupLabel: '_cleanup_' . (self:cleanupCounter as String);
 		});
@@ -3655,12 +4047,16 @@ Class is CodeGenerator{
 		# declarations in the prologue; their statements assign.
 		if({ self:cleanupLabel != '' }, {
 			method:body:each(action: local Function(Statement is vs){
-				if({ vs:kind == StatementKind:VAR_DECL && self:isArcType(typeName: vs:varType:name) }, {
+				if({ vs:kind == StatementKind:VAR_DECL && (self:isArcType(typeName: vs:varType:name) || self:boxedLocals:has(key: vs:varName)) }, {
 					local String is hType: '';
-					if({ vs:varType:name == 'List' }, {
-						hType: self:cTypeFor(typeName: self:formatTypeString(t: vs:varType));
+					if({ self:boxedLocals:has(key: vs:varName) }, {
+						hType: 'SpecBox*';
 					}, {
-						hType: self:cTypeFor(typeName: vs:varType:name);
+						if({ vs:varType:name == 'List' }, {
+							hType: self:cTypeFor(typeName: self:formatTypeString(t: vs:varType));
+						}, {
+							hType: self:cTypeFor(typeName: vs:varType:name);
+						});
 					});
 					self:hoistedLocals:set(key: vs:varName, value: hType);
 				});
@@ -3673,7 +4069,25 @@ Class is CodeGenerator{
 		bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
 		self:hoistedLocals:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
-			bufAppendBuf(dst: bodyC, src: '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . self:utils:cIdent(name: hName) . " = 0;\n");
+			local String is hNameC: self:utils:cIdent(name: hName);
+			if({ self:boxedLocals:has(key: hName) }, {
+				hNameC: '_box_' . hNameC;
+			});
+			bufAppendBuf(dst: bodyC, src: '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . hNameC . " = 0;\n");
+		});
+		method:params:each(action: local Function(Parameter is p){
+			if({ self:boxedLocals:has(key: p:name) }, {
+				local String is pNameC: self:utils:cIdent(name: p:name);
+				local Boolean is pIsArc: self:isArcType(typeName: p:paramType:name);
+				local String is pIsArcStr: if({ pIsArc }, { "true" }, { "false" });
+				local String is pInitVal: pNameC;
+				if({ pIsArc }, {
+					pInitVal: "(int64_t)spec_retain((void*)" . pNameC . ")";
+				}, {
+					pInitVal: "(int64_t)" . pNameC;
+				});
+				bufAppendBuf(dst: bodyC, src: "    SPEC_AUTO SpecBox* _box_" . pNameC . " = spec_box_new(" . pInitVal . ", " . pIsArcStr . ");\n");
+			});
 		});
 		method:body:each(action: local Function(Statement is stmt){
 			local String is stmtC: self:generateStatement(stmt: stmt);
@@ -3714,6 +4128,7 @@ Class is CodeGenerator{
 		});
 
 		self:hoistedLocals: Map:init();
+		self:boxedLocals: Map:init();
 		self:inMethod: false;
 		# Debug emission: demarcate the end of the mapped method body —
 		# everything following (suppress-free trailing lines, the next

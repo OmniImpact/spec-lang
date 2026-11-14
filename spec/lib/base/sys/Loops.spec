@@ -13,14 +13,11 @@
 ## the runtime path a call follows when its closures are not inline
 ## literals (Function variables, callbacks held as values).
 ##
-## THE TWO TIERS' CAPTURE SEMANTICS: the literal closures inline into
-## the enclosing frame and SHARE its locals — the counter idiom
-## (`local Int is n` mutated by both closures) is theirs. The runtime
-## forms' closures are the runtime's closure objects: captures are
-## per-closure values written back into that closure's own environment
-## at exit. Shared mutable state across a runtime loop's closures
-## therefore rides the INSTANCE (`self:` fields — captured by
-## reference), not a frame local.
+## UNIFIED CAPTURE SEMANTICS: Both literal closures and runtime closures
+## share frame locals. Mutable variables captured by runtime closures are
+## shared by reference via heap-allocated cells (SpecBox), so mutations
+## made by any closure or the enclosing method are immediately visible across
+## all closures and the caller in real time.
 
 Class is Loops{
 	namespace: ['base', 'sys'];
@@ -43,11 +40,11 @@ Class is Loops{
 	## @param loop: The [Loop] instance executing iterations.
 	## @param control: Optional [LoopControl] coordinator.
 	Function is run(Loop is loop, LoopControl is control){
-		local Array of Boolean is runningCell: [true];
+		local Boolean is running: true;
 		base:sysinternal:Loops:while(
-			evaluate: { return runningCell[0] && loop:evaluate() && !control:isStopped(); },
+			evaluate: { return running && loop:evaluate() && !control:isStopped(); },
 			iterate: {
-				runningCell[0]: loop:iteration(control: control);
+				running: loop:iteration(control: control);
 			}
 		);
 		control:complete();
@@ -91,12 +88,12 @@ Class is Loops{
 	## @param count: The iteration count.
 	## @param worker: Body closure executed on each step.
 	Function is repeat(Int is count, Function is worker){
-		local Array of Int is doneCell: [0];
+		local Int is done: 0;
 		base:sysinternal:Loops:while(
-			evaluate: { return doneCell[0] < count; },
+			evaluate: { return done < count; },
 			iterate: {
 				worker();
-				doneCell[0]: doneCell[0] + 1;
+				done: done + 1;
 			}
 		);
 	}

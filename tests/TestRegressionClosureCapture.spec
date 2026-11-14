@@ -24,7 +24,8 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()],
-		['base', 'struct', Map]
+		['base', 'struct', Map],
+		['base', 'sys', as Loops()]
 	];
 
 	## Field read by a closure through self capture.
@@ -92,5 +93,78 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 			return x * factor + base;
 		};
 		return step(6);
+	}
+
+	## Case 6: Multiple runtime closures sharing a mutable counter in Loops:while.
+	Function is testSharedMutableCounter(){
+		local Int is count: 0;
+		local Function of Boolean is cond: local Function of Boolean(){
+			return count < 5;
+		};
+		local Function is step: local Function(){
+			count: count + 1;
+		};
+		Loops:while(evaluate: cond, iteration: step);
+		Assert:areEqualInt(5, count);
+	}
+
+	## Case 7: Closure mutation observed by caller.
+	Function is testClosureMutationObservedByCaller(){
+		local Int is x: 10;
+		local Function is mutate: local Function(){
+			x: 42;
+		};
+		mutate();
+		Assert:areEqualInt(42, x);
+	}
+
+	## Case 8: Caller mutation observed by closure.
+	Function is testCallerMutationObservedByClosure(){
+		local Int is x: 10;
+		local Function of Int is readX: local Function of Int(){
+			return x;
+		};
+		Assert:areEqualInt(10, readX());
+		x: 99;
+		Assert:areEqualInt(99, readX());
+	}
+
+	## Case 9: Escaping closure accumulator state retention.
+	local Function of Function:Int is makeAccumulator(Int is start){
+		local Int is total: start;
+		return local Function of Int(Int is delta){
+			total: total + delta;
+			return total;
+		};
+	}
+
+	Function is testEscapingClosure(){
+		local Function of Int to Int is acc: self:makeAccumulator(start: 100);
+		Assert:areEqualInt(110, acc(10));
+		Assert:areEqualInt(135, acc(25));
+		Assert:areEqualInt(130, acc(-5));
+	}
+
+	## Case 10: Multiple closures reading and modifying a shared String.
+	Function is testMultipleClosuresSharedString(){
+		local String is msg: 'hello';
+		local Function is appendWorld: local Function(){
+			msg: msg . ' world';
+		};
+		local Function is appendExclamation: local Function(){
+			msg: msg . '!';
+		};
+		appendWorld();
+		appendExclamation();
+		Assert:areEqualString('hello world!', msg);
+	}
+
+	## Case 11: Loops:repeat with a plain local counter.
+	Function is testRepeatWithPlainLocal(){
+		local Int is tally: 0;
+		Loops:repeat(count: 7, worker: local Function(){
+			tally: tally + 3;
+		});
+		Assert:areEqualInt(21, tally);
 	}
 }
