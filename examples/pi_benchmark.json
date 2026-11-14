@@ -1,0 +1,10 @@
+{
+  "name": "pi_benchmark",
+  "version": "0.1.0",
+  "type": "binary",
+  "entry": "examples/pi_benchmark.spec",
+  "source_dirs": [
+    "examples"
+  ],
+  "output": "bin/pi_benchmark"
+}

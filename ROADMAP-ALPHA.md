@@ -145,6 +145,15 @@ A new tool written in Spec (`utilities/specinit/SpecInit.spec`) to bootstrap new
   ```
 
 ### 4.2 Build Orchestrator (`specbuild`)
+- **Status**: **Completed**.
+- **Accomplishments**:
+  - Implemented `utilities/specbuild/SpecBuild.spec` compiled to `bin/specbuild`.
+  - Added multi-directory source scanning support (`-s`, `--source-dir`, `--source-dirs`) to the compiler driver (`Driver.spec`) and loader (`Loader.spec`).
+  - Added positional command-line argument support in `CodeGenerator.spec` generated `main` entry points.
+  - Created standalone manifest build configurations for all example programs (`examples/*.json`).
+  - Implemented full project lifecycle commands: `specbuild [manifest.json] [build|test|lint|clean|help]`.
+  - Validated via unit test suite `tests/TestSpecBuild.spec` (all passing).
+
 A lightweight, fast build coordinator (`utilities/specbuild/SpecBuild.spec`) to eliminate ad-hoc shell compile scripts:
 - **Manifest (`specbuild.json`)**:
   ```json
@@ -267,7 +276,7 @@ Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysint
 |---|---|---|
 | **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics & structured spans migration to `ErrorText.spec` [Completed] | Completed |
 | **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery [Completed]<br>- Separate formatting, naming, and AST idiom rules into dedicated classes [Completed]<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`) [Completed]<br>- CLI rule filtering flags (`--rule` and `--disable`) [Completed] | Completed (`v0.000.100`) |
-| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier) [Completed]<br>- Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion)<br>- Implement shared TUI color/status module | In Progress |
+| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier) [Completed]<br>- Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`) [Completed]<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion)<br>- Implement shared TUI color/status module | In Progress |
 | **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, Sockets) | In Progress |
 | **M5: 0.1 Alpha Release** | - Full documentation sweep<br>- Fixed-point bootstrap verification across GCC and Clang<br>- Tag `v0.1.0-alpha` and publish release tarballs | Planned |
 

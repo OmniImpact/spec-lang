@@ -46,6 +46,7 @@ Class is Loader{
 	local Map of String to String is seenBareNames: Map:init();
 	local Array of String is parseErrors: [];
 	local ErrorText is errText: ErrorText:init();
+	local Array of String is extraSourceDirs: [];
 
 
 
@@ -55,6 +56,7 @@ Class is Loader{
 		self:seenClassNames: Map:init();
 		self:seenBareNames: Map:init();
 		self:parseErrors: [];
+		self:extraSourceDirs: [];
 	}
 
 	Function of Array of String is getParseErrors(){
@@ -68,6 +70,19 @@ Class is Loader{
 		self:seenClassNames: Map:init();
 		self:seenBareNames: Map:init();
 		self:parseErrors: [];
+		self:extraSourceDirs: [];
+	}
+
+	## Adds an explicit source directory to scan for packages and modules.
+	Function is addSourceDir(String is dir){
+		if({ dir != '' }, {
+			self:extraSourceDirs:add(item: dir);
+		});
+	}
+
+	## Sets explicit source directories to scan for packages and modules.
+	Function is setSourceDirs(Array of String is dirs){
+		self:extraSourceDirs: dirs;
 	}
 
 	## Recursively reads, tokenizes, and parses a source file and its transitive dependencies.
@@ -185,6 +200,12 @@ Class is Loader{
 	Function is buildScanIndex(){
 		self:classPaths: Map:init();
 		self:packageDirs: Map:init();
+		# 0. User-configured source directories (highest priority project roots).
+		self:extraSourceDirs:each(action: local Function(String is d){
+			if({ d != '' }, {
+				self:scanTree(dir: d, depth: 0);
+			});
+		});
 		# 1. The input file's tree (project packages override).
 		local String is inDir: self:dirOf(path: self:rootInputPath);
 		if({ inDir != '' }, {

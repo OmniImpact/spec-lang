@@ -3749,6 +3749,7 @@ Class is CodeGenerator{
 
 		m: m . "    srand((unsigned int)time(NULL));\n";
 		m: m . "    SPEC_AUTO SpecMap* args = spec_map_new();\n";
+		m: m . "    int pos_idx = 0;\n";
 		m: m . "    for (int i = 1; i < argc; i++) {\n";
 		m: m . "        if (strncmp(argv[i], \"--\", 2) == 0) {\n";
 		m: m . "            const char* eq = strchr(argv[i] + 2, '=');\n";
@@ -3776,6 +3777,11 @@ Class is CodeGenerator{
 		m: m . "                }\n";
 		m: m . "                spec_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));\n";
 		m: m . "            }\n";
+		m: m . "        } else {\n";
+		m: m . "            char pos_buf[16];\n";
+		m: m . "            snprintf(pos_buf, sizeof(pos_buf), \"%d\", pos_idx++);\n";
+		m: m . "            spec_arg_set(args, spec_string_from_chars(pos_buf), spec_string_from_chars(argv[i]));\n";
+		m: m . "            spec_arg_set(args, spec_string_intern(\"\"), spec_string_from_chars(argv[i]));\n";
 		m: m . "        }\n";
 		m: m . "    }\n";
 		# The driver resolved the entry init: main constructs the entry

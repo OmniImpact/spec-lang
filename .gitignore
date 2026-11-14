@@ -8,6 +8,9 @@
 /bin/specunit-asan
 # The speclint linter, built into bin/ during development (§4a)
 /bin/speclint
+# The specbuild orchestrator, built into bin/ during development
+/bin/specbuild
+/bin/specbuild-asan
 # Demo binaries (built from examples/ on demand)
 /mandelbrot
 /pi

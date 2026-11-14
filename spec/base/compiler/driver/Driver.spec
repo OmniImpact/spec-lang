@@ -78,9 +78,26 @@ Class is Driver{
 				threadCount: 1;
 			});
 		});
+		local Array of String is sourceDirs: [];
+		local Function is addSourceDirString: local Function(String is raw){
+			if({ raw != '' }, {
+				raw:split(delimiter: "\n"):each(action: local Function(String is line){
+					line:split(delimiter: ','):each(action: local Function(String is item){
+						local String is trimmed: item:trim();
+						if({ trimmed != '' }, {
+							sourceDirs:add(item: trimmed);
+						});
+					});
+				});
+			});
+		};
+		addSourceDirString(raw: args:getString(key: 's', default: ''));
+		addSourceDirString(raw: args:getString(key: 'source-dir', default: ''));
+		addSourceDirString(raw: args:getString(key: 'source-dirs', default: ''));
+
 		if({ inputPath == '' }, {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [--emit-c <file>] [--threads <N>] [--debug] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [-s <source_dir>...] [--emit-c <file>] [--threads <N>] [--debug] [--quiet]');
 			Process:exit(status: 2);
 		});
 
@@ -112,6 +129,9 @@ Class is Driver{
 		# 1. Multi-file module loading and dependency resolution.
 		local Int is loadT0: Process:clockMs();
 		local Loader is loader: Loader:init();
+		sourceDirs:each(action: local Function(String is d){
+			loader:addSourceDir(dir: d);
+		});
 		local ProgramNode is program: loader:loadProgram(rootPath: inputPath);
 		loadMs: Process:clockMs() - loadT0;
 

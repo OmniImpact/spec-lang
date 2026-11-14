@@ -1,0 +1,8 @@
+{
+  "name": "helloworld",
+  "version": "0.1.0",
+  "type": "binary",
+  "entry": "examples/helloworld.spec",
+  "source_dirs": ["examples"],
+  "output": "bin/helloworld"
+}
