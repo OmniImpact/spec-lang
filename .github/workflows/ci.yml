@@ -14,9 +14,10 @@ jobs:
       - uses: actions/checkout@v5
       - name: Bootstrap compiler (gcc)
         run: ./bootstrap.sh
+      - name: Build specbuild
+        run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Build tooling
         run: |
-          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
           bin/specbuild utilities/specunit/specunit.json
           bin/specbuild utilities/speclint/speclint.json
       - name: Regression suite
@@ -42,9 +43,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang
       - name: Bootstrap compiler (clang)
         run: CC=clang ./bootstrap.sh
+      - name: Build specbuild
+        run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Build tooling and run regression suite
         run: |
-          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
           bin/specbuild utilities/specunit/specunit.json
           bin/specunit -s bin/spec -t tests
 
@@ -55,9 +57,10 @@ jobs:
       - uses: actions/checkout@v5
       - name: Bootstrap compiler (macOS clang)
         run: CC=clang ./bootstrap.sh
+      - name: Build specbuild
+        run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Build tooling
         run: |
-          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
           bin/specbuild utilities/specunit/specunit.json
           bin/specbuild utilities/speclint/speclint.json
       - name: Regression suite
@@ -114,6 +117,8 @@ jobs:
             zip
       - name: Bootstrap compiler (MinGW UCRT64)
         run: ./bootstrap.sh
+      - name: Build specbuild
+        run: bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild.exe
       - name: Build tooling and run regression suite
         run: |
           CUR_DRIVE="$(pwd | cut -d/ -f2)"
@@ -121,7 +126,6 @@ jobs:
           if command -v mount >/dev/null 2>&1; then
             mount -f "/${CUR_DRIVE}/tmp" /tmp 2>/dev/null || true
           fi
-          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild.exe
           export SPEC_BIN="bin/spec.exe"
           bin/specbuild.exe utilities/specunit/specunit.json
           bin/specbuild.exe utilities/speclint/specbuild.json
