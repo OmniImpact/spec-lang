@@ -3542,6 +3542,34 @@ Class is TypeChecker{
 		if({ expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() }, {
 			fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ''));
 		});
+		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith') }, {
+			local Boolean is hasAction: false;
+			local String is actRetT: 'Void';
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				local String is aName: arg:name;
+				local String is aType: self:inferExpressionType(expr: arg:value);
+				if({ aName == 'lock' }, {
+					if({ aType != Primitive:INT:value() && aType != 'Any' }, {
+						self:addError(line: self:currentLine, msg: "Parallel:syncWith 'lock' argument must be Int, found '" . aType . "'.");
+					});
+				}, {
+					if({ aName == 'action' }, {
+						hasAction: true;
+						if({ !aType:startsWith(prefix: 'Function') && aType != 'Any' }, {
+							self:addError(line: self:currentLine, msg: "Parallel:" . method . " 'action' argument must be a Function, found '" . aType . "'.");
+						}, {
+							if({ aType:startsWith(prefix: 'Function:') && aType:length() > 9 }, {
+								actRetT: aType:substring(start: 9, end: aType:length());
+							});
+						});
+					});
+				});
+			});
+			if({ !hasAction }, {
+				self:addError(line: self:currentLine, msg: "Parallel:" . method . " requires 'action' named argument.");
+			});
+			res: actRetT;
+		}, {
 		if({ targetType == 'Parallel' && method == 'run' }, {
 			local Boolean is hasWorker: false;
 			expr:methodArgs:each(action: local Function(NamedArg is arg){
@@ -3713,6 +3741,7 @@ Class is TypeChecker{
 					});
 				});
 			});
+		});
 		});
 		if({ isValueBranch }, {
 			# the value-yielding form — both branch

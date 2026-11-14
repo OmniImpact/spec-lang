@@ -267,6 +267,8 @@ long long spec_atomic_get(long long slot);
 void spec_fast_random_seed(long long idx);
 double spec_fast_random(void);
 long long spec_parallel_run(long long threads, long long iterations, void* worker_closure);
+void* spec_parallel_sync(void* action_closure);
+void* spec_parallel_sync_with(long long lock_key, void* action_closure);
 String spec_type_name(const void* obj);
 long long spec_object_hash(const void* obj);
 long long spec_held_count(const void* obj);
@@ -3439,6 +3441,36 @@ void spec_fast_random_seed(long long idx) {
 double spec_fast_random(void) {
     if (_spec_rng_state == 0) spec_fast_random_seed(0x5DEECE66DULL);
     return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);
+}
+
+/* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
+static pthread_mutex_t _spec_parallel_striped_mutexes[64];
+static pthread_once_t _spec_parallel_striped_once = PTHREAD_ONCE_INIT;
+
+static void _spec_init_parallel_striped_mutexes(void) {
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    for (int i = 0; i < 64; i++) {
+        pthread_mutex_init(&_spec_parallel_striped_mutexes[i], &attr);
+    }
+    pthread_mutexattr_destroy(&attr);
+}
+
+void* spec_parallel_sync(void* action_closure) {
+    return spec_parallel_sync_with(0, action_closure);
+}
+
+void* spec_parallel_sync_with(long long lock_key, void* action_closure) {
+    SpecClosure* cls = (SpecClosure*)action_closure;
+    if (!cls || !cls->fn) spec_panic("Parallel:sync received null action Function");
+    pthread_once(&_spec_parallel_striped_once, _spec_init_parallel_striped_mutexes);
+    unsigned long long k = (unsigned long long)lock_key;
+    size_t idx = (size_t)(k ^ (k >> 6)) & 63ULL;
+    pthread_mutex_lock(&_spec_parallel_striped_mutexes[idx]);
+    void* res = ((void* (*)(void*))cls->fn)(cls->env);
+    pthread_mutex_unlock(&_spec_parallel_striped_mutexes[idx]);
+    return res;
 }
 
 long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {

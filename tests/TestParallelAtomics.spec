@@ -86,4 +86,49 @@ Class of SpecUnitTest is TestParallelAtomics{
 		Assert:areEqualInt(1000, inRange);
 		Assert:isTrue(distinct > 990);
 	}
+
+	## Case 5: Parallel:sync guards captured mutable variable across threads.
+	Function is testParallelSyncGuardsSharedVariable(){
+		local Int is sharedCounter: 0;
+		local Function of Int is worker: local Function of Int(Int is threadIndex, Int is count){
+			local Int is j: 0;
+			while(
+				evaluate: local Function of Boolean(){ return j < count; },
+				iteration: local Function(){
+					Parallel:sync(action: local Function(){
+						sharedCounter: sharedCounter + 1;
+					});
+					j: j + 1;
+				}
+			);
+			return 0;
+		};
+		Parallel:run(threads: 4, iterations: 200, worker: worker);
+		Assert:areEqualInt(200, sharedCounter);
+	}
+
+	## Case 6: Parallel:syncWith striped locking across distinct slots.
+	Function is testParallelSyncWithStripedSlots(){
+		local Int is slotA: 0;
+		local Int is slotB: 0;
+		local Function of Int is worker: local Function of Int(Int is threadIndex, Int is count){
+			local Int is j: 0;
+			while(
+				evaluate: local Function of Boolean(){ return j < count; },
+				iteration: local Function(){
+					Parallel:syncWith(lock: 1, action: local Function(){
+						slotA: slotA + 1;
+					});
+					Parallel:syncWith(lock: 2, action: local Function(){
+						slotB: slotB + 2;
+					});
+					j: j + 1;
+				}
+			);
+			return 0;
+		};
+		Parallel:run(threads: 4, iterations: 100, worker: worker);
+		Assert:areEqualInt(100, slotA);
+		Assert:areEqualInt(200, slotB);
+	}
 }

@@ -227,7 +227,29 @@ Class is BuiltinCallGenerator{
 			return 'spec_int_to_base(' . targetC . ', ' . baseC . ', ' . digitsC . ')';
 		});
 
-		# Parallel fan-out execution.
+		# Parallel fan-out execution and synchronization.
+		if({ targetC == 'Parallel' && expr:methodName == 'sync' && expr:argCount() >= 1 }, {
+			local String is actionC: 'NULL';
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if({ arg:name == 'action' }, {
+					actionC: cg:generateExpression(expr: arg:value);
+				});
+			});
+			return 'spec_parallel_sync((void*)(' . actionC . '))';
+		});
+		if({ targetC == 'Parallel' && expr:methodName == 'syncWith' && expr:argCount() >= 2 }, {
+			local String is lockC: '0';
+			local String is actionC: 'NULL';
+			expr:methodArgs:each(action: local Function(NamedArg is arg){
+				if({ arg:name == 'lock' }, {
+					lockC: cg:generateExpression(expr: arg:value);
+				});
+				if({ arg:name == 'action' }, {
+					actionC: cg:generateExpression(expr: arg:value);
+				});
+			});
+			return 'spec_parallel_sync_with(' . lockC . ', (void*)(' . actionC . '))';
+		});
 		if({ targetC == 'Parallel' && expr:methodName == 'run' && expr:argCount() >= 3 }, {
 			local String is threadsC: '1';
 			local String is iterC: '0';
