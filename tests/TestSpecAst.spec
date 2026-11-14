@@ -82,13 +82,20 @@ Class of SpecUnitTest is TestSpecAst{
 	# Statements carry their kind's fields.
 	Function is testStatementFields(){
 		local Expression is bin: Expression:init(kind: ExpressionKind:BINARY);
-		local Statement is st: Statement:init(kind: StatementKind:RETURN);
-		st:returnExpr: bin;
-		st:hasReturnExpr: true;
+		local Statement is st: Statement:Return(returnExpr: bin, hasReturnExpr: true);
+		st:kind: StatementKind:RETURN;
 		st:setLine(line: 9);
 		Assert:isTrue(st:kind == StatementKind:RETURN);
-		Assert:isTrue(st:hasReturnExpr);
 		Assert:areEqualInt(9, st:line);
-		Assert:isTrue(st:returnExpr:kind == ExpressionKind:BINARY);
+		Assert:areEqualString('Return', st:name());
+		local Boolean is matched: false;
+		match(on: st, when: [
+			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+				Assert:isTrue(hasReturnExpr);
+				Assert:isTrue(returnExpr:kind == ExpressionKind:BINARY);
+				matched: true;
+			}
+		]);
+		Assert:isTrue(matched);
 	}
 }

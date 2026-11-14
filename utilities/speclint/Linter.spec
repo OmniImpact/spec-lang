@@ -239,29 +239,29 @@ Class is Linter{
 
 	## Walks one statement, auditing every expression it contains.
 	Function is auditStatement(Statement is stmt, String is file){
-		match(on: stmt:kind, when: [
-			StatementKind:VAR_DECL: {
-				if({ stmt:hasInit }, {
-					self:auditExpression(expr: stmt:initExpr, file: file);
+		match(on: stmt, when: [
+			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+				if({ hasInit }, {
+					self:auditExpression(expr: initExpr, file: file);
 				});
 			},
-			StatementKind:ASSIGN: {
-				self:auditExpression(expr: stmt:assignTarget, file: file);
-				self:auditExpression(expr: stmt:assignValue, file: file);
+			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+				self:auditExpression(expr: assignTarget, file: file);
+				self:auditExpression(expr: assignValue, file: file);
 			},
-			StatementKind:RETURN: {
-				if({ stmt:hasReturnExpr }, {
-					self:auditExpression(expr: stmt:returnExpr, file: file);
+			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+				if({ hasReturnExpr }, {
+					self:auditExpression(expr: returnExpr, file: file);
 				});
 			},
-			StatementKind:CLASS: {
-				self:auditClass(classDef: stmt:nestedClass);
+			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
+				self:auditClass(classDef: nestedClass);
 			},
-			StatementKind:EXPR: {
-				self:auditExpression(expr: stmt:exprStmt, file: file);
+			Statement:Expr: local Function(Expression is exprStmt){
+				self:auditExpression(expr: exprStmt, file: file);
 			},
-			StatementKind:FORWARD: {
-				stmt:forwardArgs:each(action: local Function(NamedArg is arg){
+			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
+				forwardArgs:each(action: local Function(NamedArg is arg){
 					self:auditExpression(expr: arg:value, file: file);
 				});
 			}

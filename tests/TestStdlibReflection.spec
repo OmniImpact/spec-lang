@@ -96,9 +96,10 @@ Class of SpecUnitTest is TestStdlibReflection{
 		local Expression is identExpr: Expression:init(kind: ExpressionKind:IDENT);
 		identExpr:makeIdent(name: 'health');
 
-		local Statement is assignStmt: Statement:init(kind: StatementKind:ASSIGN);
-		assignStmt:assign(target: identExpr, value: numExpr);
+		local Statement is assignStmt: Statement:Assign(assignTarget: identExpr, assignValue: numExpr);
+		assignStmt:kind: StatementKind:ASSIGN;
 		Assert:areEqualString('ASSIGN', assignStmt:kind:value());
+		Assert:areEqualString('Assign', assignStmt:name());
 		Assert:areEqualString('NUMBER', numExpr:kind:value());
 	}
 }

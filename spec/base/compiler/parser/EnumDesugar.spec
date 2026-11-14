@@ -117,7 +117,7 @@ Class is EnumDesugar{
 			local Array of Member is subMembers: [];
 			m:params:each(action: local Function(Parameter is p){
 				local Member is pf: Member:init(kind: MemberKind:FIELD);
-				pf:memberType: Type:init(name: p:paramType:name);
+				pf:memberType: p:paramType;
 				pf:name: p:name;
 				subMembers:add(item: pf);
 			});
@@ -127,21 +127,18 @@ Class is EnumDesugar{
 			subInit:params: m:params;
 			local Array of Statement is initBody: [];
 			m:params:each(action: local Function(Parameter is p){
-				local Statement is a: Statement:init(kind: StatementKind:ASSIGN);
-				a:assignTarget: self:selfPath(member: p:name);
-				a:assignValue: self:ident(name: p:name);
+				local Statement is a: Statement:Assign(assignTarget: self:selfPath(member: p:name), assignValue: self:ident(name: p:name));
+				a:kind: StatementKind:ASSIGN;
 				initBody:add(item: a);
 			});
 			local Expression is tagNum: Expression:init(kind: ExpressionKind:NUMBER);
 			tagNum:str: '' . idx;
 			tagNum:num: idx;
-			local Statement is tagAssign: Statement:init(kind: StatementKind:ASSIGN);
-			tagAssign:assignTarget: self:selfPath(member: '_tag');
-			tagAssign:assignValue: tagNum;
+			local Statement is tagAssign: Statement:Assign(assignTarget: self:selfPath(member: '_tag'), assignValue: tagNum);
+			tagAssign:kind: StatementKind:ASSIGN;
 			initBody:add(item: tagAssign);
-			local Statement is vnameAssign: Statement:init(kind: StatementKind:ASSIGN);
-			vnameAssign:assignTarget: self:selfPath(member: '_variant_name');
-			vnameAssign:assignValue: self:strLit(text: m:name);
+			local Statement is vnameAssign: Statement:Assign(assignTarget: self:selfPath(member: '_variant_name'), assignValue: self:strLit(text: m:name));
+			vnameAssign:kind: StatementKind:ASSIGN;
 			initBody:add(item: vnameAssign);
 			subInit:body: initBody;
 			subMembers:add(item: subInit);
@@ -218,10 +215,8 @@ Class is EnumDesugar{
 		ctorParams:add(item: cp);
 		ctor:params: ctorParams;
 		local Array of Statement is ctorBody: [];
-		local Statement is assign: Statement:init(kind: StatementKind:ASSIGN);
-		assign:assignTarget: self:selfPath(member: '_backing');
-		assign:assignValue: self:ident(name: 'v');
-		assign:hasReturnExpr: false;
+		local Statement is assign: Statement:Assign(assignTarget: self:selfPath(member: '_backing'), assignValue: self:ident(name: 'v'));
+		assign:kind: StatementKind:ASSIGN;
 		ctorBody:add(item: assign);
 		ctor:body: ctorBody;
 		out:add(item: ctor);
@@ -309,9 +304,8 @@ Class is EnumDesugar{
 	## Builds `{ return <expr>; }` — the single-statement closure body.
 	Function of Array of Statement is returnBody(Expression is expr){
 		local Array of Statement is body: [];
-		local Statement is r: Statement:init(kind: StatementKind:RETURN);
-		r:returnExpr: expr;
-		r:hasReturnExpr: true;
+		local Statement is r: Statement:Return(returnExpr: expr, hasReturnExpr: true);
+		r:kind: StatementKind:RETURN;
 		body:add(item: r);
 		return body;
 	}
@@ -334,8 +328,8 @@ Class is EnumDesugar{
 		thenFn:anonBody: self:returnBody(expr: val);
 		args:add(item: NamedArg:init(name: 'then', value: thenFn));
 		call:methodArgs: args;
-		local Statement is s: Statement:init(kind: StatementKind:EXPR);
-		s:exprStmt: call;
+		local Statement is s: Statement:Expr(exprStmt: call);
+		s:kind: StatementKind:EXPR;
 		return s;
 	}
 
@@ -433,11 +427,8 @@ Class is EnumDesugar{
 		m:memberType: Type:init(name: 'Array of ' . name);
 		m:name: 'values';
 		local Array of Statement is body: [];
-		local Statement is decl: Statement:init(kind: StatementKind:VAR_DECL);
-		decl:varName: 'all';
-		decl:varType: Type:init(name: 'Array of ' . name);
-		decl:hasInit: true;
-		decl:initExpr: Expression:init(kind: ExpressionKind:ARRAY);
+		local Statement is decl: Statement:VarDecl(modifiers: ['local'], varType: Type:init(name: 'Array of ' . name), varName: 'all', initExpr: Expression:init(kind: ExpressionKind:ARRAY), hasInit: true);
+		decl:kind: StatementKind:VAR_DECL;
 		body:add(item: decl);
 		variants:each(action: local Function(Member is v){
 			local Expression is call: Expression:init(kind: ExpressionKind:CALL);
@@ -446,8 +437,8 @@ Class is EnumDesugar{
 			local Array of NamedArg is args: [];
 			args:add(item: NamedArg:init(name: 'item', value: self:variantRef(enumName: name, variant: v:name)));
 			call:methodArgs: args;
-			local Statement is s: Statement:init(kind: StatementKind:EXPR);
-			s:exprStmt: call;
+			local Statement is s: Statement:Expr(exprStmt: call);
+			s:kind: StatementKind:EXPR;
 			body:add(item: s);
 		});
 		body:add(item: self:tailReturn(expr: self:ident(name: 'all')));
@@ -463,9 +454,8 @@ Class is EnumDesugar{
 
 	## The final `return <expr>;` of a synthesized body.
 	Function of Statement is tailReturn(Expression is expr){
-		local Statement is r: Statement:init(kind: StatementKind:RETURN);
-		r:returnExpr: expr;
-		r:hasReturnExpr: true;
+		local Statement is r: Statement:Return(returnExpr: expr, hasReturnExpr: true);
+		r:kind: StatementKind:RETURN;
 		return r;
 	}
 }

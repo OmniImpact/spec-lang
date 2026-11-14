@@ -48,7 +48,12 @@ Class of SpecUnitTest is TestSpecParser{
 		local ClassInfo is cls: prog:classes:get(index: 0);
 		local Member is go: cls:members:get(index: 0);
 		local Statement is vd: go:body:get(index: 0);
-		local Expression is init: vd:initExpr;
+		local Expression is init: Expression:init(kind: ExpressionKind:UNKNOWN);
+		match(on: vd, when: [
+			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+				init: initExpr;
+			}
+		]);
 		Assert:isFalse(p:hasErrors());
 		Assert:isTrue(vd:kind == StatementKind:VAR_DECL);
 		Assert:isTrue(init:kind == ExpressionKind:BINARY);
@@ -63,7 +68,12 @@ Class of SpecUnitTest is TestSpecParser{
 		local ClassInfo is cls2: prog2:classes:get(index: 0);
 		local Member is m2: cls2:members:get(index: 0);
 		local Statement is vd2: m2:body:get(index: 0);
-		local Expression is s2: vd2:initExpr;
+		local Expression is s2: Expression:init(kind: ExpressionKind:UNKNOWN);
+		match(on: vd2, when: [
+			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+				s2: initExpr;
+			}
+		]);
 		Assert:isFalse(p2:hasErrors());
 		Assert:isTrue(s2:kind == ExpressionKind:BINARY);
 		Assert:areEqualString('.', s2:str);

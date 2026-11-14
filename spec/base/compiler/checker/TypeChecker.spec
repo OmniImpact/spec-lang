@@ -974,7 +974,7 @@ Class is TypeChecker{
 											val:anonParams:each(action: local Function(Parameter is bp){
 												if({ pbi < pvMem:params:length() }, {
 													local Parameter is vp: pvMem:params:get(index: pbi);
-													bp:paramType: Type:init(name: vp:paramType:name);
+													bp:paramType: vp:paramType;
 												});
 												pbi: pbi + 1;
 											});
@@ -2938,19 +2938,21 @@ Class is TypeChecker{
 				local Int is lastIdx: expr:anonBody:length() - 1;
 				if({ lastIdx >= 0 }, {
 					local Statement is lastStmt: expr:anonBody:get(index: lastIdx);
-					if({ lastStmt:kind == StatementKind:EXPR }, {
-						local String is lastT: lastStmt:exprStmt:resolvedType;
-						if({ self:isVoid(t: expr:anonReturnType:name) }, {
-							if({ lastT != '' && !self:isVoid(t: lastT) }, {
-								expr:anonReturnType: Type:init(name: lastT);
+					match(on: lastStmt, when: [
+						Statement:Expr: local Function(Expression is exprStmt){
+							local String is lastT: exprStmt:resolvedType;
+							if({ self:isVoid(t: expr:anonReturnType:name) }, {
+								if({ lastT != '' && !self:isVoid(t: lastT) }, {
+									expr:anonReturnType: Type:init(name: lastT);
+								});
+							}, {
+								if({ lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, {
+									local String is msg: self:errText:errClosureReturnType(actual: lastT, expected: expr:anonReturnType:name);
+									self:addError(line: self:currentLine, msg: msg);
+								});
 							});
-						}, {
-							if({ lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, {
-								local String is msg: self:errText:errClosureReturnType(actual: lastT, expected: expr:anonReturnType:name);
-								self:addError(line: self:currentLine, msg: msg);
-							});
-						});
-					});
+						}
+					]);
 				});
 				self:currentAnonNode: savedAnonNode;
 				self:checkingValueYield: savedYieldFlag;
@@ -3308,7 +3310,19 @@ Class is TypeChecker{
 			}, {
 				local Statement is tLast: tAnon:anonBody:get(index: tLen - 1);
 				local Statement is eLast: eAnon:anonBody:get(index: eLen - 1);
-				if({ !(tLast:kind == StatementKind:RETURN && tLast:hasReturnExpr) || !(eLast:kind == StatementKind:RETURN && eLast:hasReturnExpr) }, {
+				local Boolean is tHasRet: match(on: tLast, when: [
+					Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
+						return hasReturnExpr;
+					},
+					else: { false }
+				]);
+				local Boolean is eHasRet: match(on: eLast, when: [
+					Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
+						return hasReturnExpr;
+					},
+					else: { false }
+				]);
+				if({ !tHasRet || !eHasRet }, {
 					isValueBranch: false;
 				});
 			});
@@ -3813,16 +3827,13 @@ Class is TypeChecker{
 		if({ stmt:line > 0 }, {
 			self:currentLine: stmt:line;
 		});
-		local StatementKind is kind: stmt:kind;
-
-		match(on: kind, when: [
-			StatementKind:VAR_DECL: {
-				local String is varName: stmt:varName;
+		match(on: stmt, when: [
+			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				# the access gate resolves the bare nested
 				# reference BEFORE the scope map stamps it — the checker and
 				# the gen agree on the qualified identity.
-				self:validateTypeAccess(t: stmt:varType, line: stmt:line);
-				local String is fullType: self:formatVarTypeString(t: stmt:varType);
+				self:validateTypeAccess(t: varType, line: stmt:line);
+				local String is fullType: self:formatVarTypeString(t: varType);
 				self:localVars:set(key: varName, value: fullType);
 
 				if({ fullType == 'List' }, {
@@ -3830,32 +3841,32 @@ Class is TypeChecker{
 					self:addError(line: stmt:line, msg: msg);
 				});
 
-				if({ stmt:hasInit }, {
+				if({ hasInit }, {
 					# Bidirectional: the declared type flows into the
 					# initializer, typing container literals directly.
-					local String is initType: self:inferExpressionType(expr: stmt:initExpr, expected: fullType);
+					local String is initType: self:inferExpressionType(expr: initExpr, expected: fullType);
 					if({ !self:isAssignable(target: fullType, source: initType) }, {
 						local String is msg: self:errText:errTypeMismatchDecl(varName: varName, initType: initType, fullType: fullType);
 						# a void expression consumed as a
 						# value explains itself instead of cascading into the
 						# generic mismatch.
 						if({ self:isVoid(t: initType) }, {
-							local String is note: self:voidUseNote(expr: stmt:initExpr);
+							local String is note: self:voidUseNote(expr: initExpr);
 							if({ note != '' }, {
-								msg: 'cannot initialize \'' . fullType . '\' from a void expression: ' . note;
+								msg: 'cannot initialize \'' . fullType . '\': ' . note;
 							});
 						});
 						self:addError(line: stmt:line, msg: msg);
 					});
 				});
 			},
-			StatementKind:ASSIGN: {
+			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
 				# Held members are read-only: a
 				# class-name prefix target resolves to the shared held
 				# slot, and assignment through it is rejected.
 				# a resolution-hook name is a cached single copy too.
-				if({ stmt:assignTarget:kind == ExpressionKind:PATH && stmt:assignTarget:pathSegments:length() >= 2 }, {
-					local Array of String is hSegs: stmt:assignTarget:pathSegments;
+				if({ assignTarget:kind == ExpressionKind:PATH && assignTarget:pathSegments:length() >= 2 }, {
+					local Array of String is hSegs: assignTarget:pathSegments;
 					local String is hRoot: hSegs:get(index: 0);
 					local String is hName: hSegs:get(index: 1);
 					local Boolean is hReadOnly: self:findHeldMember(className: hRoot, memberName: hName):name != '';
@@ -3868,23 +3879,23 @@ Class is TypeChecker{
 						self:addError(line: stmt:line, msg: hMsg);
 					});
 				});
-				if({ stmt:assignTarget:kind == ExpressionKind:PATH }, {
-					local Array of String is tSegs: stmt:assignTarget:pathSegments;
+				if({ assignTarget:kind == ExpressionKind:PATH }, {
+					local Array of String is tSegs: assignTarget:pathSegments;
 					if({ tSegs:length() == 2 && tSegs:get(index: 0) == self:names:selfIdent() }, {
 						self:unassignedFields:remove(key: tSegs:get(index: 1));
 					});
 				}, {
-					if({ stmt:assignTarget:kind == ExpressionKind:IDENT }, {
-						self:unassignedFields:remove(key: stmt:assignTarget:str);
+					if({ assignTarget:kind == ExpressionKind:IDENT }, {
+						self:unassignedFields:remove(key: assignTarget:str);
 					});
 				});
-				local String is targetType: self:inferExpressionType(expr: stmt:assignTarget);
-				local String is valType: self:inferExpressionType(expr: stmt:assignValue, expected: targetType);
+				local String is targetType: self:inferExpressionType(expr: assignTarget);
+				local String is valType: self:inferExpressionType(expr: assignValue, expected: targetType);
 				if({ !self:isAssignable(target: targetType, source: valType) }, {
 						local String is msg: self:errText:errTypeMismatchAssign(valType: valType, targetType: targetType);
 						# the same for assignments.
 						if({ self:isVoid(t: valType) }, {
-							local String is note: self:voidUseNote(expr: stmt:assignValue);
+							local String is note: self:voidUseNote(expr: assignValue);
 							if({ note != '' }, {
 								msg: 'cannot assign a void expression to \'' . targetType . '\': ' . note;
 							});
@@ -3892,11 +3903,11 @@ Class is TypeChecker{
 						self:addError(line: stmt:line, msg: msg);
 				});
 			},
-			StatementKind:FORWARD: {
-				self:checkForward(stmt: stmt);
+			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
+				self:checkForward(args: forwardArgs, line: stmt:line);
 			},
-			StatementKind:RETURN: {
-				if({ stmt:hasReturnExpr }, {
+			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+				if({ hasReturnExpr }, {
 					# Bidirectional: the declared return type flows in — and a
 					# value-yielding branch's yield takes the branch's own
 					# expected type (nested branch calls type in context).
@@ -3904,7 +3915,7 @@ Class is TypeChecker{
 					if({ self:checkingValueYield && self:currentYieldExpected != '' }, {
 						yieldExpected: self:currentYieldExpected;
 					});
-					local String is retType: self:inferExpressionType(expr: stmt:returnExpr, expected: yieldExpected);
+					local String is retType: self:inferExpressionType(expr: returnExpr, expected: yieldExpected);
 					# the last statement of a
 					# value-yielding branch closure establishes the branch's
 					# yield type (the inBranchClosure method-routing does not
@@ -3932,7 +3943,7 @@ Class is TypeChecker{
 							self:currentMethodReturnType: retType;
 						}, {
 							if({ !self:isAssignable(target: self:currentMethodReturnType, source: retType) }, {
-								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\' (method ' . self:currentMethodName . ' of ' . self:currentClassName . ', stmt line ' . (stmt:line as String) . ', depth ' . (self:anonDepth as String) . ', inBranch ' . (self:inBranchClosure as String) . ', expr kind ' . (stmt:returnExpr:kind as String) . ', expr str \'' . stmt:returnExpr:str . '\').';
+								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\' (method ' . self:currentMethodName . ' of ' . self:currentClassName . ', stmt line ' . (stmt:line as String) . ', depth ' . (self:anonDepth as String) . ', inBranch ' . (self:inBranchClosure as String) . ', expr kind ' . (returnExpr:kind as String) . ', expr str \'' . returnExpr:str . '\').';
 								self:addError(line: stmt:line, msg: msg);
 							});
 						});
@@ -3944,13 +3955,13 @@ Class is TypeChecker{
 					});
 				});
 			},
-			StatementKind:EXPR: {
+			Statement:Expr: local Function(Expression is exprStmt){
 				# Bound so the arm stays void: a trailing value-yielding
 				# expression statement IS the arm's yield (the Kotlin
 				# last-expression rule), and this arm is statement-form.
-				local String is exprT: self:inferExpressionType(expr: stmt:exprStmt);
+				local String is exprT: self:inferExpressionType(expr: exprStmt);
 			},
-			StatementKind:CLASS: {
+			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
 				local String is savedClass: self:currentClassName;
 				local ClassInfo is savedClassDef: self:currentClassDef;
 				local String is savedRet: self:currentMethodReturnType;
@@ -3970,7 +3981,7 @@ Class is TypeChecker{
 					savedUnassigned:set(key: k, value: self:unassignedFields:getString(key: k, default: ''));
 				});
 
-				self:checkClass(classDef: stmt:nestedClass);
+				self:checkClass(classDef: nestedClass);
 
 				self:currentClassName: savedClass;
 				self:currentClassDef: savedClassDef;
@@ -4075,39 +4086,39 @@ Class is TypeChecker{
 	## Validates a merge-forward statement against its parent method:
 	## merge context, single-use, arity, naming, and argument types.
 	##
-	## @param stmt: The FORWARD statement.
-	Function is checkForward(Statement is stmt){
+	## @param args: The FORWARD arguments.
+	## @param line: Source line number.
+	Function is checkForward(Array of NamedArg is args, Int is line){
 		if({ !self:currentMethodIsMerge }, {
-			self:addError(line: stmt:line, msg: self:errText:errForwardRequiresMerge());
+			self:addError(line: line, msg: self:errText:errForwardRequiresMerge());
 			return;
 		});
 		if({ self:anonDepth > 0 }, {
-			self:addError(line: stmt:line, msg: self:errText:errForwardNestedNotAllowed());
+			self:addError(line: line, msg: self:errText:errForwardNestedNotAllowed());
 			return;
 		});
 		if({ self:forwardSeen }, {
-			self:addError(line: stmt:line, msg: self:errText:errForwardMultipleNotAllowed(method: self:currentMethodName));
+			self:addError(line: line, msg: self:errText:errForwardMultipleNotAllowed(method: self:currentMethodName));
 			return;
 		});
 		self:forwardSeen: true;
 
 		local Member is superM: self:findFirstSuperMethod(className: self:currentClassName, methodName: self:currentMethodName);
 		if({ superM:name == '' }, {
-			self:addError(line: stmt:line, msg: self:errText:errForwardNoParentMethod(method: self:currentMethodName));
+			self:addError(line: line, msg: self:errText:errForwardNoParentMethod(method: self:currentMethodName));
 			return;
 		});
 		local Array of Parameter is params: superM:params;
-		local Array of NamedArg is args: stmt:forwardArgs;
 
 		if({ args:length() > params:length() }, {
-			self:addError(line: stmt:line, msg: self:errText:errForwardArgCountMismatch(method: self:currentMethodName, parentMethod: superM:name, passed: args:length(), accepted: params:length()));
+			self:addError(line: line, msg: self:errText:errForwardArgCountMismatch(method: self:currentMethodName, parentMethod: superM:name, passed: args:length(), accepted: params:length()));
 			return;
 		});
 		if({ args:length() < params:length() }, {
 			local Int is nIdx: 0;
 			args:each(action: local Function(NamedArg is a){
 				if({ a:name == '' }, {
-					self:addError(line: stmt:line, msg: self:errText:errForwardNamedRequired(argNum: nIdx + 1, method: self:currentMethodName));
+					self:addError(line: line, msg: self:errText:errForwardNamedRequired(argNum: nIdx + 1, method: self:currentMethodName));
 				});
 				nIdx: nIdx + 1;
 			});
@@ -4136,12 +4147,12 @@ Class is TypeChecker{
 				if({ pT != Primitive:ANY:value() && pT != '' && argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pT, source: argT) }, {
 					local String is label: if({ p:name != '' }, { p:name }, { 'position ' . (pIdx + 1) });
 					local String is msg: 'Forward argument \'' . label . '\' of \'' . self:currentMethodName . '\': cannot assign \'' . argT . '\' to \'' . pT . '\'.';
-					self:addError(line: stmt:line, msg: msg);
+					self:addError(line: line, msg: msg);
 				});
 			}, {
 				if({ !p:hasDefault }, {
 					local String is msg: 'Forward statement omits \'' . p:name . '\' of \'' . self:currentMethodName . '\' which has no default value.';
-					self:addError(line: stmt:line, msg: msg);
+					self:addError(line: line, msg: msg);
 				});
 			});
 			pIdx: pIdx + 1;
@@ -4991,10 +5002,11 @@ Class is TypeChecker{
 	## @param stmt: The statement to walk.
 	## @param acc: Output array.
 	Function is collectClassesFromStatement(Statement is stmt, Array of ClassInfo is acc){
-		match(on: stmt:kind, when: [
-			StatementKind:CLASS: {
-				self:collectClasses(c: stmt:nestedClass, acc: acc);
-			}
+		match(on: stmt, when: [
+			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
+				self:collectClasses(c: nestedClass, acc: acc);
+			},
+			else: {}
 		]);
 	}
 

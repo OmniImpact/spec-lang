@@ -83,30 +83,29 @@ Class is LintRule{
 
 	## Default statement traversal.
 	Function is traverseStatement(Statement is stmt, Array of LintIssue is issues){
-		local StatementKind is kind: stmt:kind;
-		match(on: kind, when: [
-			StatementKind:VAR_DECL: {
-				if({ stmt:hasInit }, {
-					self:checkExpression(expr: stmt:initExpr, issues: issues);
+		match(on: stmt, when: [
+			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+				if({ hasInit }, {
+					self:checkExpression(expr: initExpr, issues: issues);
 				});
 			},
-			StatementKind:ASSIGN: {
-				self:checkExpression(expr: stmt:assignTarget, issues: issues);
-				self:checkExpression(expr: stmt:assignValue, issues: issues);
+			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+				self:checkExpression(expr: assignTarget, issues: issues);
+				self:checkExpression(expr: assignValue, issues: issues);
 			},
-			StatementKind:RETURN: {
-				if({ stmt:hasReturnExpr }, {
-					self:checkExpression(expr: stmt:returnExpr, issues: issues);
+			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+				if({ hasReturnExpr }, {
+					self:checkExpression(expr: returnExpr, issues: issues);
 				});
 			},
-			StatementKind:CLASS: {
-				self:checkClass(classDef: stmt:nestedClass, issues: issues);
+			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
+				self:checkClass(classDef: nestedClass, issues: issues);
 			},
-			StatementKind:EXPR: {
-				self:checkExpression(expr: stmt:exprStmt, issues: issues);
+			Statement:Expr: local Function(Expression is exprStmt){
+				self:checkExpression(expr: exprStmt, issues: issues);
 			},
-			StatementKind:FORWARD: {
-				stmt:forwardArgs:each(action: local Function(NamedArg is arg){
+			Statement:Forward: local Function(Array of NamedArg is forwardArgs){
+				forwardArgs:each(action: local Function(NamedArg is arg){
 					self:checkExpression(expr: arg:value, issues: issues);
 				});
 			}
