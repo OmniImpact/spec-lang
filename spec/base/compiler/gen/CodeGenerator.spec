@@ -2392,11 +2392,11 @@ Class is CodeGenerator{
 				innerC
 			},
 			'Int': {
-				local String is intC: innerC;
+				local String is intC: '((long long)(intptr_t)(' . innerC . '))';
 				if({ srcT == 'String' }, {
 					intC: 'String_parseInt(' . innerC . ', 10, 0)';
 				});
-				if({ srcT == 'Float' || srcT == 'Byte' }, {
+				if({ srcT == 'Float' }, {
 					intC: '((long long)(' . innerC . '))';
 				});
 				intC
@@ -2878,84 +2878,92 @@ Class is CodeGenerator{
 	}
 
 	Function is findAnonsInStmt(Statement is stmt, Array of Expression is results){
-		if({ stmt:kind == StatementKind:VAR_DECL && stmt:hasInit }, {
-			self:findAnonsInExpr(expr: stmt:initExpr, results: results);
-		});
-		if({ stmt:kind == StatementKind:ASSIGN }, {
-			self:findAnonsInExpr(expr: stmt:assignValue, results: results);
-		});
-		if({ stmt:kind == StatementKind:EXPR }, {
-			self:findAnonsInExpr(expr: stmt:exprStmt, results: results);
-		});
-		if({ stmt:kind == StatementKind:RETURN && stmt:hasReturnExpr }, {
-			self:findAnonsInExpr(expr: stmt:returnExpr, results: results);
-		});
+		match(on: stmt:kind, when: [
+			StatementKind:VAR_DECL: {
+				if({ stmt:hasInit }, {
+					self:findAnonsInExpr(expr: stmt:initExpr, results: results);
+				});
+			},
+			StatementKind:ASSIGN: {
+				self:findAnonsInExpr(expr: stmt:assignValue, results: results);
+			},
+			StatementKind:EXPR: {
+				self:findAnonsInExpr(expr: stmt:exprStmt, results: results);
+			},
+			StatementKind:RETURN: {
+				if({ stmt:hasReturnExpr }, {
+					self:findAnonsInExpr(expr: stmt:returnExpr, results: results);
+				});
+			},
+			else: {}
+		]);
 	}
 
 	Function is findAnonsInExpr(Expression is expr, Array of Expression is results){
-		if({ expr:kind == ExpressionKind:CALL }, {
-			if({ self:isInlineCall(expr: expr) }, {
-				self:findAnonsInExpr(expr: expr:methodTarget, results: results);
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					if({ arg:value:kind == ExpressionKind:ANON_FN }, {
-						arg:value:anonBody:each(action: local Function(Statement is s){
-							self:findAnonsInStmt(stmt: s, results: results);
-						});
-					}, {
-						if({ arg:value:kind == ExpressionKind:MAP }, {
-							arg:value:mapValues:each(action: local Function(Expression is arm){
-								if({ arm:kind == ExpressionKind:ANON_FN }, {
-									arm:anonBody:each(action: local Function(Statement is s){
-										self:findAnonsInStmt(stmt: s, results: results);
-									});
-								}, {
-									self:findAnonsInExpr(expr: arm, results: results);
-								});
+		match(on: expr:kind, when: [
+			ExpressionKind:CALL: {
+				if({ self:isInlineCall(expr: expr) }, {
+					self:findAnonsInExpr(expr: expr:methodTarget, results: results);
+					expr:methodArgs:each(action: local Function(NamedArg is arg){
+						if({ arg:value:kind == ExpressionKind:ANON_FN }, {
+							arg:value:anonBody:each(action: local Function(Statement is s){
+								self:findAnonsInStmt(stmt: s, results: results);
 							});
 						}, {
-							self:findAnonsInExpr(expr: arg:value, results: results);
+							if({ arg:value:kind == ExpressionKind:MAP }, {
+								arg:value:mapValues:each(action: local Function(Expression is arm){
+									if({ arm:kind == ExpressionKind:ANON_FN }, {
+										arm:anonBody:each(action: local Function(Statement is s){
+											self:findAnonsInStmt(stmt: s, results: results);
+										});
+									}, {
+										self:findAnonsInExpr(expr: arm, results: results);
+									});
+								});
+							}, {
+								self:findAnonsInExpr(expr: arg:value, results: results);
+							});
 						});
 					});
+				}, {
+					self:findAnonsInExpr(expr: expr:methodTarget, results: results);
+					expr:methodArgs:each(action: local Function(NamedArg is arg){
+						self:findAnonsInExpr(expr: arg:value, results: results);
+					});
 				});
-				return;
-			});
-			self:findAnonsInExpr(expr: expr:methodTarget, results: results);
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				self:findAnonsInExpr(expr: arg:value, results: results);
-			});
-			return;
-		});
-		if({ expr:kind == ExpressionKind:ANON_FN }, {
-			results:add(item: expr);
-			expr:anonBody:each(action: local Function(Statement is s){
-				self:findAnonsInStmt(stmt: s, results: results);
-			});
-			return;
-		});
-		if({ expr:kind == ExpressionKind:BINARY }, {
-			self:findAnonsInExpr(expr: expr:leftExpr, results: results);
-			self:findAnonsInExpr(expr: expr:rightExpr, results: results);
-		});
-		if({ expr:kind == ExpressionKind:UNARY }, {
-			self:findAnonsInExpr(expr: expr:unaryExpr, results: results);
-		});
-		if({ expr:kind == ExpressionKind:INDEX }, {
-			self:findAnonsInExpr(expr: expr:leftExpr, results: results);
-			self:findAnonsInExpr(expr: expr:rightExpr, results: results);
-		});
-		if({ expr:kind == ExpressionKind:CAST }, {
-			self:findAnonsInExpr(expr: expr:leftExpr, results: results);
-		});
-		if({ expr:kind == ExpressionKind:ARRAY }, {
-			expr:arrayItems:each(action: local Function(Expression is item){
-				self:findAnonsInExpr(expr: item, results: results);
-			});
-		});
-		if({ expr:kind == ExpressionKind:MAP }, {
-			expr:mapValues:each(action: local Function(Expression is val){
-				self:findAnonsInExpr(expr: val, results: results);
-			});
-		});
+			},
+			ExpressionKind:ANON_FN: {
+				results:add(item: expr);
+				expr:anonBody:each(action: local Function(Statement is s){
+					self:findAnonsInStmt(stmt: s, results: results);
+				});
+			},
+			ExpressionKind:BINARY: {
+				self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+				self:findAnonsInExpr(expr: expr:rightExpr, results: results);
+			},
+			ExpressionKind:UNARY: {
+				self:findAnonsInExpr(expr: expr:unaryExpr, results: results);
+			},
+			ExpressionKind:INDEX: {
+				self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+				self:findAnonsInExpr(expr: expr:rightExpr, results: results);
+			},
+			ExpressionKind:CAST: {
+				self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+			},
+			ExpressionKind:ARRAY: {
+				expr:arrayItems:each(action: local Function(Expression is item){
+					self:findAnonsInExpr(expr: item, results: results);
+				});
+			},
+			ExpressionKind:MAP: {
+				expr:mapValues:each(action: local Function(Expression is val){
+					self:findAnonsInExpr(expr: val, results: results);
+				});
+			},
+			else: {}
+		]);
 	}
 
 	Function of Boolean is stmtListReferencesLocal(String is name, Array of Statement is stmts){
@@ -2971,71 +2979,84 @@ Class is CodeGenerator{
 	}
 
 	Function of Boolean is stmtReferencesLocal(String is name, Statement is stmt){
-		if({ stmt:kind == StatementKind:VAR_DECL && stmt:hasInit }, {
-			return self:exprReferencesLocal(name: name, expr: stmt:initExpr);
-		});
-		if({ stmt:kind == StatementKind:ASSIGN }, {
-			return self:exprReferencesLocal(name: name, expr: stmt:assignTarget) || self:exprReferencesLocal(name: name, expr: stmt:assignValue);
-		});
-		if({ stmt:kind == StatementKind:EXPR }, {
-			return self:exprReferencesLocal(name: name, expr: stmt:exprStmt);
-		});
-		if({ stmt:kind == StatementKind:RETURN && stmt:hasReturnExpr }, {
-			return self:exprReferencesLocal(name: name, expr: stmt:returnExpr);
-		});
-		return false;
+		return match(on: stmt:kind, when: [
+			StatementKind:VAR_DECL: {
+				if({ stmt:hasInit }, {
+					self:exprReferencesLocal(name: name, expr: stmt:initExpr)
+				}, {
+					false
+				})
+			},
+			StatementKind:ASSIGN: {
+				self:exprReferencesLocal(name: name, expr: stmt:assignTarget) || self:exprReferencesLocal(name: name, expr: stmt:assignValue)
+			},
+			StatementKind:EXPR: {
+				self:exprReferencesLocal(name: name, expr: stmt:exprStmt)
+			},
+			StatementKind:RETURN: {
+				if({ stmt:hasReturnExpr }, {
+					self:exprReferencesLocal(name: name, expr: stmt:returnExpr)
+				}, {
+					false
+				})
+			},
+			else: { false }
+		]);
 	}
 
 	Function of Boolean is exprReferencesLocal(String is name, Expression is expr){
-		if({ expr:kind == ExpressionKind:IDENT }, {
-			return expr:str == name;
-		});
-		if({ expr:kind == ExpressionKind:ANON_FN }, {
-			return self:stmtListReferencesLocal(name: name, stmts: expr:anonBody);
-		});
-		if({ expr:kind == ExpressionKind:CALL }, {
-			if({ self:exprReferencesLocal(name: name, expr: expr:methodTarget) }, {
-				return true;
-			});
-			local Boolean is argFound: false;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if({ !argFound && self:exprReferencesLocal(name: name, expr: arg:value) }, {
-					argFound: true;
+		return match(on: expr:kind, when: [
+			ExpressionKind:IDENT: {
+				expr:str == name
+			},
+			ExpressionKind:ANON_FN: {
+				self:stmtListReferencesLocal(name: name, stmts: expr:anonBody)
+			},
+			ExpressionKind:CALL: {
+				if({ self:exprReferencesLocal(name: name, expr: expr:methodTarget) }, {
+					true
+				}, {
+					local Boolean is argFound: false;
+					expr:methodArgs:each(action: local Function(NamedArg is arg){
+						if({ !argFound && self:exprReferencesLocal(name: name, expr: arg:value) }, {
+							argFound: true;
+						});
+					});
+					argFound
+				})
+			},
+			ExpressionKind:BINARY: {
+				self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr)
+			},
+			ExpressionKind:UNARY: {
+				self:exprReferencesLocal(name: name, expr: expr:unaryExpr)
+			},
+			ExpressionKind:INDEX: {
+				self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr)
+			},
+			ExpressionKind:CAST: {
+				self:exprReferencesLocal(name: name, expr: expr:leftExpr)
+			},
+			ExpressionKind:ARRAY: {
+				local Boolean is itemFound: false;
+				expr:arrayItems:each(action: local Function(Expression is item){
+					if({ !itemFound && self:exprReferencesLocal(name: name, expr: item) }, {
+						itemFound: true;
+					});
 				});
-			});
-			return argFound;
-		});
-		if({ expr:kind == ExpressionKind:BINARY }, {
-			return self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr);
-		});
-		if({ expr:kind == ExpressionKind:UNARY }, {
-			return self:exprReferencesLocal(name: name, expr: expr:unaryExpr);
-		});
-		if({ expr:kind == ExpressionKind:INDEX }, {
-			return self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr);
-		});
-		if({ expr:kind == ExpressionKind:CAST }, {
-			return self:exprReferencesLocal(name: name, expr: expr:leftExpr);
-		});
-		if({ expr:kind == ExpressionKind:ARRAY }, {
-			local Boolean is itemFound: false;
-			expr:arrayItems:each(action: local Function(Expression is item){
-				if({ !itemFound && self:exprReferencesLocal(name: name, expr: item) }, {
-					itemFound: true;
+				itemFound
+			},
+			ExpressionKind:MAP: {
+				local Boolean is valFound: false;
+				expr:mapValues:each(action: local Function(Expression is val){
+					if({ !valFound && self:exprReferencesLocal(name: name, expr: val) }, {
+						valFound: true;
+					});
 				});
-			});
-			return itemFound;
-		});
-		if({ expr:kind == ExpressionKind:MAP }, {
-			local Boolean is valFound: false;
-			expr:mapValues:each(action: local Function(Expression is val){
-				if({ !valFound && self:exprReferencesLocal(name: name, expr: val) }, {
-					valFound: true;
-				});
-			});
-			return valFound;
-		});
-		return false;
+				valFound
+			},
+			else: { false }
+		]);
 	}
 
 	Function is collectBoxedLocalsForMethod(ClassInfo is classDef, Member is method){
@@ -3631,45 +3652,48 @@ Class is CodeGenerator{
 				local Boolean is bClaims: self:yieldsClaim(expr: stmt:initExpr);
 				boxInitC: self:generateTypedConstructor(typeName: vTypeName, valueC: boxInitC, cType: cType, claims: bClaims);
 			}, {
-				if({ vTypeName == 'String' }, {
-					boxInitC: "spec_construct_string(\"\")";
-				});
-				if({ vTypeName == 'Array' }, {
-					local String is bElemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
-					boxInitC: "spec_array_new()";
-					if({ bElemKind == 'object' || bElemKind == 'string' }, {
-						boxInitC: "spec_array_new_object()";
-					});
-				});
-				if({ vTypeName == 'List' }, {
-					local String is bFullT: self:formatTypeString(t: stmt:varType);
-					local String is bElemKind: self:containerElemKind(containerType: bFullT);
-					boxInitC: "spec_vec_new()";
-					if({ bElemKind == 'byte' }, {
-						boxInitC: "spec_bytebuffer_new()";
-					}, {
-						if({ bElemKind == 'string' }, {
-							boxInitC: "spec_vec_new_string()";
+				match(on: vTypeName, when: [
+					'String': {
+						boxInitC: "spec_construct_string(\"\")";
+					},
+					'Array': {
+						local String is bElemKind: self:containerElemKind(containerType: self:formatTypeString(t: stmt:varType));
+						boxInitC: "spec_array_new()";
+						if({ bElemKind == 'object' || bElemKind == 'string' }, {
+							boxInitC: "spec_array_new_object()";
+						});
+					},
+					'List': {
+						local String is bFullT: self:formatTypeString(t: stmt:varType);
+						local String is bElemKind: self:containerElemKind(containerType: bFullT);
+						boxInitC: "spec_vec_new()";
+						if({ bElemKind == 'byte' }, {
+							boxInitC: "spec_bytebuffer_new()";
 						}, {
-							if({ bElemKind == 'object' }, {
-								boxInitC: "spec_vec_new_object()";
+							if({ bElemKind == 'string' }, {
+								boxInitC: "spec_vec_new_string()";
+							}, {
+								if({ bElemKind == 'object' }, {
+									boxInitC: "spec_vec_new_object()";
+								});
 							});
 						});
-					});
-				});
-				if({ vTypeName == 'Map' }, {
-					boxInitC: "spec_map_new()";
-					if({ self:containerElemIsArc(containerType: self:formatTypeString(t: stmt:varType)) }, {
-						boxInitC: "spec_map_new_object()";
-					});
-				});
+					},
+					'Map': {
+						boxInitC: "spec_map_new()";
+						if({ self:containerElemIsArc(containerType: self:formatTypeString(t: stmt:varType)) }, {
+							boxInitC: "spec_map_new_object()";
+						});
+					},
+					else: {}
+				]);
 			});
 			local String is isArcStr: if({ isArcVar }, { "true" }, { "false" });
 			local String is boxVarName: "_box_" . varName;
 			if({ self:hoistedLocals:has(key: stmt:varName) }, {
-				return "    " . boxVarName . " = spec_box_new((int64_t)(" . boxInitC . "), " . isArcStr . ");\n";
+				return "    " . boxVarName . " = spec_box_new((void*)(intptr_t)(" . boxInitC . "), " . isArcStr . ");\n";
 			}, {
-				return "    " . vPrefix . "SPEC_AUTO SpecBox* " . boxVarName . " = spec_box_new((int64_t)(" . boxInitC . "), " . isArcStr . ");\n";
+				return "    " . vPrefix . "SPEC_AUTO SpecBox* " . boxVarName . " = spec_box_new((void*)(intptr_t)(" . boxInitC . "), " . isArcStr . ");\n";
 			});
 		});
 		# Part IV memory discipline: a hoisted local's
@@ -4082,9 +4106,9 @@ Class is CodeGenerator{
 				local String is pIsArcStr: if({ pIsArc }, { "true" }, { "false" });
 				local String is pInitVal: pNameC;
 				if({ pIsArc }, {
-					pInitVal: "(int64_t)spec_retain((void*)" . pNameC . ")";
+					pInitVal: "(void*)spec_retain((void*)" . pNameC . ")";
 				}, {
-					pInitVal: "(int64_t)" . pNameC;
+					pInitVal: "(void*)(intptr_t)(" . pNameC . ")";
 				});
 				bufAppendBuf(dst: bodyC, src: "    SPEC_AUTO SpecBox* _box_" . pNameC . " = spec_box_new(" . pInitVal . ", " . pIsArcStr . ");\n");
 			});
