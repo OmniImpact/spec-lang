@@ -227,8 +227,7 @@ Class is SpecBuild{
 			Process:exit(status: 1);
 		});
 
-		local String is cfgType: Introspection:typeIdentity(obj: parsedConfig);
-		if({ cfgType != 'Map' }, {
+		if({ !rawText:trim():startsWith(prefix: '{') }, {
 			Stderr:line('[specbuild] Error: Configuration root in ' . configPath . ' must be a JSON object');
 			Process:exit(status: 1);
 		});
@@ -319,7 +318,7 @@ Class is SpecBuild{
 
 		# Default command: build
 		if({ resolvedSource == '' }, {
-			Stderr:line('[specbuild] Error: Missing required property "source" in ' . configPath);
+			Stderr:line('[specbuild] Error: Missing required property \"source\" in ' . configPath);
 			Process:exit(status: 1);
 		});
 
