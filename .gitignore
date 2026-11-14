@@ -1,16 +1,8 @@
-# Compiler binaries (./bootstrap.sh builds bin/spec from bootstrap/spec.c)
-/bin/spec
-/bin/spec-asan
+# Built binaries (bin/ directory only tracks README.md)
+/bin/*
+!/bin/README.md
 /spec-asan
 /spec-stage*
-# The specunit test runner, built into bin/ during development (§4a)
-/bin/specunit
-/bin/specunit-asan
-# The speclint linter, built into bin/ during development (§4a)
-/bin/speclint
-# The specbuild orchestrator, built into bin/ during development
-/bin/specbuild
-/bin/specbuild-asan
 # Demo binaries (built from examples/ on demand)
 /mandelbrot
 /pi

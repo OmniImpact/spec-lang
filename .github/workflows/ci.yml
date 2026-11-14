@@ -18,13 +18,14 @@ jobs:
         run: |
           bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
           bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
+          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Regression suite
         run: |
           bin/specunit -s bin/spec -t tests
       - name: Package Linux Artifact
         run: |
           mkdir -p dist
-          zip -9 -j dist/spec-linux-x86_64.zip bin/spec bin/specunit bin/speclint
+          zip -9 -j dist/spec-linux-x86_64.zip bin/spec bin/specunit bin/speclint bin/specbuild
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -57,6 +58,7 @@ jobs:
         run: |
           bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit
           bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
+          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild
       - name: Regression suite
         run: |
           bin/specunit -s bin/spec -t tests
@@ -64,7 +66,7 @@ jobs:
         run: |
           ARCH=$(uname -m)
           mkdir -p dist
-          zip -9 -j "dist/spec-macos-${ARCH}.zip" bin/spec bin/specunit bin/speclint
+          zip -9 -j "dist/spec-macos-${ARCH}.zip" bin/spec bin/specunit bin/speclint bin/specbuild
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -120,12 +122,13 @@ jobs:
           fi
           bin/spec --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit.exe
           bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint.exe
+          bin/spec --quiet -i utilities/specbuild/SpecBuild.spec -o bin/specbuild.exe
           export SPEC_BIN="bin/spec.exe"
           bin/specunit.exe -s bin/spec.exe -t tests
       - name: Package Windows Artifact
         run: |
           mkdir -p dist
-          zip -9 -j dist/spec-windows-x86_64.zip bin/spec.exe bin/specunit.exe bin/speclint.exe
+          zip -9 -j dist/spec-windows-x86_64.zip bin/spec.exe bin/specunit.exe bin/speclint.exe bin/specbuild.exe
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -181,16 +184,13 @@ jobs:
             cp "$f" "dist/spec-${TAG}-${suffix}"
           done
 
-          # Create source code archive
-          git archive --format=tar.gz --prefix="spec-${TAG}/" -o "dist/spec-${TAG}-source.tar.gz" HEAD
-
       - name: Verify Distribution Artifacts
         run: |
           echo "Distribution artifacts generated:"
           ls -lh dist/
           COUNT=$(ls -1 dist/ | wc -l)
-          if [ "$COUNT" -ne 4 ]; then
-            echo "Expected exactly 4 artifacts in dist/, found $COUNT!"
+          if [ "$COUNT" -ne 3 ]; then
+            echo "Expected exactly 3 artifacts in dist/, found $COUNT!"
             exit 1
           fi
           echo "--- Linux zip contents ---"
@@ -199,8 +199,6 @@ jobs:
           unzip -l dist/spec-*-macos-*.zip
           echo "--- Windows zip contents ---"
           unzip -l dist/spec-*-windows-*.zip
-          echo "--- Source archive sample ---"
-          tar -ztvf dist/spec-*-source.tar.gz | head -n 20
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -212,6 +210,5 @@ jobs:
           generate_release_notes: true
           files: |
             dist/*.zip
-            dist/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
