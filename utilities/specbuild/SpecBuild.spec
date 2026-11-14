@@ -36,46 +36,31 @@ Class is SpecBuild{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Introspection()],
+		['base', 'sys', as Uri()],
+		['base', 'sys', Uri],
 		['base', 'iterator']
 	];
 
 	## Directory portion of a file path ('' when the path has no slash).
 	Function of String is dirOf(String is path){
-		local Int is lastIdx: -1;
-		local Int is len: path:length();
-		while([Int is pos: 0], { pos < len }, {
-			local String is ch: path:charAt(index: pos, default: '');
-			if({ ch == '/' || ch == '\\' }, {
-				lastIdx: pos;
-			});
-			pos++;
-		});
-		if({ lastIdx < 0 }, {
-			return '';
-		});
-		return path:substring(start: 0, end: lastIdx);
+		return Uri:fromFilePath(filePath: path):dirPath();
 	}
 
 	## Resolves a path relative to the configuration file's directory.
 	Function of String is resolvePath(String is baseDir, String is relPath){
-		if({ relPath == '' || relPath:startsWith(prefix: '/') }, {
-			return relPath;
+		if({ relPath == '' }, {
+			return '';
+		});
+		local Uri is relUri: Uri:fromFilePath(filePath: relPath);
+		if({ relUri:isAbsolute() }, {
+			return relUri:toFilePath();
 		});
 		if({ baseDir == '' || baseDir == '.' }, {
-			return relPath;
+			return relUri:toFilePath();
 		});
-		if({ relPath == '.' }, {
-			return baseDir;
-		});
-		if({ relPath:startsWith(prefix: baseDir . '/') }, {
-			return relPath;
-		});
-		if({ relPath:startsWith(prefix: '../') && !baseDir:contains(needle: '/') }, {
-			return relPath:substring(start: 3, end: relPath:length());
-		});
-		return baseDir . '/' . relPath;
+		local Uri is baseUri: Uri:fromFilePath(filePath: baseDir . '/dummy');
+		return baseUri:resolve(relativePath: relPath):toFilePath();
 	}
-
 	Function of String is resolveCompiler(String is custom){
 		if({ custom != '' && fileExists(path: custom) }, {
 			return custom;
