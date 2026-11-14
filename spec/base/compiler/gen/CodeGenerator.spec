@@ -108,6 +108,7 @@ Class is CodeGenerator{
 	String is entryInitOwner: '';
 	Int is entryInitOverloadIndex: 0;
 	Boolean is entryInitTakesArgs: false;
+	String is runtimeHeaderInclude: '';
 
 	## Copies a string-keyed registry map for a worker gen.
 	##
@@ -306,6 +307,9 @@ Class is CodeGenerator{
 	##
 	## @return: The C runtime source.
 	Function of String is generatePrelude(){
+		if({ self:runtimeHeaderInclude != '' }, {
+			return '#include "' . self:runtimeHeaderInclude . "\"\n";
+		});
 		local RuntimePrelude is rp: RuntimePrelude:init();
 		return rp:emitRuntime();
 	}
@@ -4036,7 +4040,7 @@ Class is CodeGenerator{
 				entryCount: entryCount + 1;
 			});
 		});
-		bufAppendBuf(dst: out, src: "static const SpecHeldEntry spec_held_registry[] = {\n");
+		bufAppendBuf(dst: out, src: "const SpecHeldEntry spec_held_registry[] = {\n");
 		bufAppendBuf(dst: out, src: entries);
 		bufAppendBuf(dst: out, src: "    { 0, 0, 0, 0 }\n};\n\n");
 		return out;
@@ -4409,7 +4413,7 @@ Class is CodeGenerator{
 	## @return: C source text.
 	Function of String is generateTypeHierarchy(Array of ClassInfo is classes){
 		local String is out: "/* RTTI Class Hierarchy */\n";
-		out: out . "static bool spec_is_subclass_of(const char* actual, const char* target) {\n";
+		out: out . "bool spec_is_subclass_of(const char* actual, const char* target) {\n";
 		out: out . "    if (!actual || !target) return false;\n";
 		out: out . "    if (strcmp(actual, target) == 0) return true;\n";
 		out: out . "    if (strcmp(target, \"Any\") == 0 || strcmp(target, \"Stringable\") == 0) return true;\n";

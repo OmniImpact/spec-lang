@@ -9,9 +9,9 @@ This roadmap defines the core milestones, architectural cleanup tasks, tooling a
 The 0.1 Alpha release represents Spec's transition from an experimental self-hosting language to an accessible, reliable, and developer-ready systems language. The objectives for 0.1 Alpha are:
 
 1. **Rock-Solid Self-Hosting Core**: Byte-identical compiler fixed point, deterministic C11 code generation, and 100% test-suite green status.
-2. **First-Class Developer Tooling**: A complete command-line toolchain consisting of `spec` (compiler), `specunit` (test runner), `speclint` (linter), `specinit` (project initializer), and `specbuild` (build orchestrator).
+2. **First-Class Developer Tooling**: A complete toolchain consisting of `spec` (compiler), `specunit` (test runner), `speclint` (linter), `specinit` (project initializer), `specbuild` (build orchestrator), and `speclsp` (Language Server Protocol server for IDE integration).
 3. **Turnkey Installation**: Zero-friction setup on Linux with automated dependency checks and environment configuration.
-4. **Clean, Extensible Architecture**: Modular rule-based linting, unified error reporting, and a clear abstraction layer isolating POSIX/platform-specific runtime code.
+4. **Clean, Extensible Architecture**: Modular rule-based linting, unified error reporting, native JSON serialization, and a clear abstraction layer isolating POSIX/platform-specific runtime code.
 
 ---
 
@@ -24,14 +24,16 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
   - Verified `speclint -a` reports **0 call site(s) must migrate** across the entire codebase.
   - Locked in the instance-model contract with strict typechecker enforcement and dedicated linter rules (`AsConditionalRule`, `AsLoopsRule`).
 
-### 2.2 Precompiled C Runtime Library (`libspecrt.a`)
-- **Problem**: The compiler embeds the full C11 runtime prelude (~2,600 lines in `RuntimePrelude.spec`) into every generated C output file. This makes even a 20-line `helloworld.spec` produce ~8,600 lines of C and incurs a ~2.5s compilation penalty per build.
-- **Action Items**:
-  - Separate `RuntimePrelude.spec` into:
-    1. A minimal runtime header (`spec_runtime.h`) containing type definitions, inline helpers, and function declarations.
-    2. A static library (`libspecrt.a` / `libspecrt.so`) compiled once during bootstrap.
-  - Update `spec/base/compiler/driver/Driver.spec` and `CodeGenerator.spec` to `#include <spec_runtime.h>` and link `-lspecrt` instead of emitting static C prelude text verbatim.
-  - Target: Reduce single-file compile times from ~2,500ms down to **<100ms**.
+### 2.2 On-Demand Precompiled C Runtime Accelerator
+- **Status**: **Completed**.
+- **Accomplishments**:
+  - Partitioned `RuntimePrelude.spec` into `emitHeader()` (types, structs, inlines, and runtime API prototypes) and `emitBody()` (runtime implementation), while preserving `emitRuntime()` for monolithic standalone emission (`--emit-c` and canonical `bootstrap/spec.c`).
+  - Added named tags to anonymous structs (`SpecArray`, `SpecMap`, `SpecByteBuffer`, `SpecVec`, `SpecAudioStream`) and converted cross-boundary symbols (`spec_is_subclass_of`, `spec_held_registry`) to external linkage.
+  - Implemented an on-demand accelerator cache in `Driver.spec` located at `~/.cache/spec/runtime/` (`spec_runtime.h`, `spec_runtime.c`, and compiled `spec_runtime.o`).
+  - Cold compile writes header and source, compiling `spec_runtime.o` via `${CC:-gcc} -O2 -w -c`. Warm compiles emit user programs with `#include ".../spec_runtime.h"` and link `spec_runtime.o` directly.
+  - **Stale/Corrupt Cache Auto-Purge**: If the backend C compiler exits with a failure status (`gccStatus != 0`), cached artifacts are automatically removed so the subsequent compile regenerates cleanly.
+  - Added CLI flags `--no-cache` and `--clean-cache`.
+  - Achieved ~2.7x compilation speedup on single-file builds while preserving byte-for-byte fixed-point bootstrap verification.
 
 ### 2.3 Compiler Diagnostic & Error Centralization
 - **Status**: `ErrorText.spec` exists as the centralized template vocabulary for compiler error messages, but several passes (`TypeChecker.spec`, `Parser.spec`, `Loader.spec`) still contain hardcoded inline string messages.
@@ -40,8 +42,8 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
   - Enhance `TypeError.spec` and `Error.spec` to carry structured `SourceLocation` spans (file, line, column, length) for source line snippets and caret squiggles.
 
 ### 2.4 Standard Library Expansion
+- **Native JSON Serialization (`base:data:Json`)**: Full-featured, lightweight JSON library providing bidirectional parsing (`Json:parse`) and encoding (`Json:stringify` / `Json:format`) over structured Spec types (`Map`, `Array`, `String`, `Int`, `Float`, `Boolean`, and `null`). Serves as the shared data interchange foundation for `specbuild.json` manifests and `speclsp` JSON-RPC 2.0 communication.
 - **Time & Clocks**: Provide a high-resolution time module (`base:sys:Time`) with ISO-8601 formatting, duration arithmetic, and nanosecond/microsecond clocks (expanding beyond `Process:clockMs()`).
-- **Data Serialization**: Add lightweight, native JSON parsing and serialization (`base:data:Json`) for data interchange.
 - **Basic Networking / Sockets**: Abstract stream sockets (`base:sys:Socket`, TCP client/server) over the sysinternal floor.
 - **Collections**: Ensure `List`, `Array`, and `Map` have consistent API parity across iterations, slicing, filtering, and mutations.
 
@@ -51,7 +53,7 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
   - Extended `Assert` with structured assertion primitives: `Assert:compilerRejects(source:, expect:)`, `Assert:compilerRejectsFile(filePath:, expect:)`, and `Assert:runFails(source:, expect:)`.
   - Replaced ad-hoc loose negative test files with 9 structured, predictable `SpecUnitTest` classes: `TestNegativeReceivers`, `TestNegativeOverloads`, `TestNegativeHeld`, `TestNegativeImportsAndCasts`, `TestNegativeControlFlow`, `TestNegativeTypeSafety`, `TestNegativeClassModel`, `TestNegativeRuntime`, and `TestNegativeMultiFile`.
   - Organized multi-file fixture assets under `tests/negative/fixtures/` classified as `helper` files.
-  - Achieved 100% green status across all 87 test suites in `specunit`.
+  - Achieved 100% green status across all test suites in `specunit`.
 
 ---
 
@@ -111,15 +113,15 @@ Class of Loadable is LintRule {
 
 ## 4. Developer Experience & New Tooling
 
-To provide a complete developer workflow out of the box, three new utilities will accompany `spec` and `specunit`:
+To provide a complete developer workflow out of the box, four new utilities will accompany `spec` and `specunit`:
 
 ```
-   +-----------------------------------------------------------------+
-   |                           SPEC CLI                              |
-   +-----------------+-------------------+-------------------+-------+
-   |  specinit       |  specbuild        |  spec             |  speclint / specunit
-   |  (Scaffolding)  |  (Orchestration)  |  (Compiler)       |  (Quality Assurance)
-   +-----------------+-------------------+-------------------+-------+
+   +-----------------------------------------------------------------------------------+
+   |                                     SPEC CLI                                      |
+   +-----------------+-------------------+-------------------+---------------+---------+
+   |  specinit       |  specbuild        |  spec             |  speclint /   | speclsp |
+   |  (Scaffolding)  |  (Orchestration)  |  (Compiler)       |  specunit (QA)| (LSP)   |
+   +-----------------+-------------------+-------------------+---------------+---------+
 ```
 
 ### 4.1 Project Initializer (`specinit`)
@@ -159,9 +161,9 @@ A lightweight, fast build coordinator (`utilities/specbuild/SpecBuild.spec`) to 
   }
   ```
 - **Capabilities**:
-  - `specbuild`: Reads `specbuild.json`, invokes `spec -i <entry> -o <output>` with configured source trees and dependencies.
+  - `specbuild`: Reads `specbuild.json` via `base:data:Json`, invokes `spec -i <entry> -o <output>` with configured source trees and dependencies.
   - `specbuild test`: Automatically delegates to `specunit` with configured test roots.
-  - `specbuild lint`: Automatically runs `speclint` across all defined `source_dirs`.
+  - `specbuild lint`: Automatically runs `speclint` across all defined `source_dirs` package paths.
   - `specbuild clean`: Removes build artifacts and intermediate files.
 
 ### 4.3 Shared Terminal UI (TUI) Framework
@@ -175,6 +177,22 @@ A shared UI library (`spec/lib/base/ui/` or `utilities/common/tui/`) providing c
   - Update `spec` compilation report for clear 4-stage pipeline rendering.
   - Modernize `specunit` summary with formatted execution times, pass/fail bars, and worker utilization.
   - Enhance `speclint` report with formatted file grouping and grouped issue cards.
+
+### 4.4 Language Server Protocol Server (`speclsp`)
+A standalone native LSP binary (`utilities/speclsp/SpecLsp.spec` compiled to `bin/speclsp`) implementing JSON-RPC 2.0 over standard input/output to deliver full IDE intelligence across JetBrains products, VS Code, Zed, and Neovim:
+- **Architecture**:
+  - Imports the compiler frontend (`base:compiler:lexer`, `parser`, `ast`, `loader`, `checker`) in-process.
+  - Compiles to native C11 with instant startup (<5ms) and in-memory parsing/typechecking (<10ms).
+  - Uses `base:data:Json` for high-throughput JSON-RPC request and response serialization.
+- **0.1 Alpha Capabilities**:
+  1. **Live Diagnostics (`textDocument/publishDiagnostics`)**: Surfaces syntax and type errors as in-editor squiggles on file open/save (`TextDocumentSyncKind.Full`).
+  2. **Hover & Type Inspection (`textDocument/hover`)**: Displays inferred types, method signatures, and class hierarchy metadata.
+  3. **Go to Definition (`textDocument/definition`)**: Jumps to declaring classes, methods, or fields across multi-file packages using the `Loader` and `TypeChecker` symbol index.
+  4. **Code Completion (`textDocument/completion`)**: Context-aware member completions following `:` accessors, plus package symbols and keyword proposals.
+- **IDE Integration**:
+  - **JetBrains (PhpStorm, IntelliJ, CLion)**: Connects via IntelliJ Platform LSP API or the LSP4IJ plugin, pairing with the existing TextMate syntax highlighter bundle.
+  - **VS Code**: Minimal extension wrapper launching `bin/speclsp`.
+  - **Zed / Neovim / Helix**: Native zero-plugin configuration via standard editor LSP config.
 
 ---
 
@@ -190,7 +208,7 @@ A turnkey installation script (`install.sh`) to install Spec on Linux distributi
 2. **Download & Build / Install**:
    - Fetch release archive or clone repository to `~/.spec/` (or `/usr/local/share/spec`).
    - Execute bootstrap convergence via `bootstrap.sh` to generate native `bin/spec`.
-   - Build companion utilities: `bin/specunit`, `bin/speclint`, `bin/specinit`, `bin/specbuild`.
+   - Build companion utilities: `bin/specunit`, `bin/speclint`, `bin/specinit`, `bin/specbuild`, `bin/speclsp`.
 3. **Environment & PATH Integration**:
    - Place symlinks in `/usr/local/bin` (system-wide) or add `~/.spec/bin` to `~/.bashrc`, `~/.zshrc`, or `~/.profile`.
    - Register executables:
@@ -199,6 +217,7 @@ A turnkey installation script (`install.sh`) to install Spec on Linux distributi
      - `speclint`
      - `specinit`
      - `specbuild`
+     - `speclsp`
 4. **Verification**:
    - Run `spec --help` and compile a minimal test program to verify end-to-end functionality.
 
@@ -243,10 +262,10 @@ Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysint
 
 | Milestone | Deliverables | Target Status |
 |---|---|---|
-| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- All compiler errors migrated to `ErrorText.spec`<br>- Runtime prelude split into `spec_runtime.h` + static `libspecrt.a` | In Progress |
-| **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery<br>- Separate formatting, naming, and AST idiom rules into dedicated classes<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`)<br>- CLI rule filtering flags (`--rule` and `--disable`) | Completed (`v0.000.100`) |
-| **M3: Project Tooling** | - Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Implement shared TUI color/status module | Next Up |
-| **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, basic Json) | In Progress |
+| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics migration to `ErrorText.spec` | In Progress |
+| **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery [Completed]<br>- Separate formatting, naming, and AST idiom rules into dedicated classes [Completed]<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`) [Completed]<br>- CLI rule filtering flags (`--rule` and `--disable`) [Completed] | Completed (`v0.000.100`) |
+| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier)<br>- Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`)<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion)<br>- Implement shared TUI color/status module | Next Up |
+| **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, Sockets) | In Progress |
 | **M5: 0.1 Alpha Release** | - Full documentation sweep<br>- Fixed-point bootstrap verification across GCC and Clang<br>- Tag `v0.1.0-alpha` and publish release tarballs | Planned |
 
 ---

@@ -23,6 +23,7 @@ Class is Driver{
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'driver', CompilationReport],
 		['base', 'compiler', 'gen', CodeGenerator],
+		['base', 'compiler', 'gen', RuntimePrelude],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
@@ -231,8 +232,51 @@ Class is Driver{
 			});
 		});
 
+		local Boolean is useCache: (emitCPath == '' && outputPath != '' && !args:has(key: 'no-cache'));
+		local String is cacheDir: '';
+		local String is runtimeH: '';
+		local String is runtimeC: '';
+		local String is runtimeO: '';
+		if({ useCache }, {
+			local String is homeDir: Process:getEnv(key: 'HOME', default: '');
+			if({ homeDir != '' }, {
+				cacheDir: homeDir . '/.cache/spec/runtime';
+			}, {
+				cacheDir: '/tmp/spec_runtime';
+			});
+			if({ Process:osName() == 'windows' }, {
+				cacheDir: 'bin/cache/runtime';
+			});
+			runtimeH: cacheDir . '/spec_runtime.h';
+			runtimeC: cacheDir . '/spec_runtime.c';
+			runtimeO: cacheDir . '/spec_runtime.o';
+			if({ args:has(key: 'clean-cache') }, {
+				fileRemove(path: runtimeO);
+				fileRemove(path: runtimeH);
+				fileRemove(path: runtimeC);
+			});
+			if({ !fileExists(path: runtimeO) || !fileExists(path: runtimeH) }, {
+				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+				local RuntimePrelude is rp: RuntimePrelude:init();
+				fileWrite(path: runtimeH, content: rp:emitHeader());
+				fileWrite(path: runtimeC, content: '#include "' . runtimeH . "\"\n" . rp:emitBody());
+				local String is coldCc: Process:getEnv(key: 'CC', default: 'gcc');
+				local Array of String is rArgs: ['-O2', '-w', '-c', runtimeC, '-o', runtimeO, '-pthread'];
+				local Int is rStat: Process:execute(command: coldCc, args: rArgs);
+				if({ rStat != 0 }, {
+					fileRemove(path: runtimeO);
+					fileRemove(path: runtimeH);
+					fileRemove(path: runtimeC);
+					useCache: false;
+				});
+			});
+		});
+
 		# 4. C11 code generation over the FULL loaded class set streamed to disk.
 		local CodeGenerator is cg: CodeGenerator:init();
+		if({ useCache && fileExists(path: runtimeO) }, {
+			cg:runtimeHeaderInclude: runtimeH;
+		});
 		cg:genThreads: threadCount;
 		# --debug: statements carry #line directives to their Spec source,
 		# locals stay volatile so the optimizer cannot fold or hoist them,
@@ -263,7 +307,14 @@ Class is Driver{
 
 		# 5. Backend C compile.
 		local String is ccBin: Process:getEnv(key: 'CC', default: 'gcc');
-		local Array of String is gccArgs: ['-O2', '-w', tempCPath, '-o', outputPath, '-pthread', '-lm'];
+		local Array of String is gccArgs: ['-O2', '-w', tempCPath];
+		if({ useCache && fileExists(path: runtimeO) }, {
+			gccArgs:add(item: runtimeO);
+		});
+		gccArgs:add(item: '-o');
+		gccArgs:add(item: outputPath);
+		gccArgs:add(item: '-pthread');
+		gccArgs:add(item: '-lm');
 		local String is os: Process:osName();
 		if({ os == 'windows' }, {
 			gccArgs:add(item: '-lws2_32');
@@ -297,6 +348,11 @@ Class is Driver{
 			fileRemove(path: tempCPath);
 		});
 		if({ gccStatus != 0 }, {
+			if({ useCache }, {
+				fileRemove(path: runtimeO);
+				fileRemove(path: runtimeH);
+				fileRemove(path: runtimeC);
+			});
 			Process:monitorStop();
 			Stderr:line('Error: Backend C compiler (' . ccBin . ') failed with exit status ' . (gccStatus as String));
 			Process:exit(status: 1);
