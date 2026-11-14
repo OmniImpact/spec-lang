@@ -494,6 +494,111 @@ Class is Parser{
 		return c;
 	}
 
+	## True when the cursor sits on a class-body member inside an enum
+	## (field, method, nested class/enum, or shorthand metadata) rather than
+	## an enum variant.
+	##
+	## @return: true when the next tokens begin an enum member declaration.
+	Function of Boolean is atEnumMember(){
+		local String is firstVal: self:peek():getValue();
+		if({ firstVal == 'namespace' || firstVal == 'using' || firstVal == 'castable' }, {
+			return false;
+		});
+		if({ self:checkKeyword(kw: Keyword:LOCAL) || self:checkKeyword(kw: Keyword:CONTAINED) || self:checkKeyword(kw: Keyword:REPLACE) || self:checkKeyword(kw: Keyword:MERGE) || self:checkKeyword(kw: Keyword:HELD) }, {
+			return true;
+		});
+		if({ self:atClassHeader() || self:atEnumHeader() }, {
+			return true;
+		});
+		if({ self:peek():getValue() == self:names:fnName() }, {
+			return true;
+		});
+		if({ self:checkPunct(p: Punctuation:BRACKET_OPEN) }, {
+			return true;
+		});
+
+		local Boolean is isMember: false;
+
+		# If next token is followed by '(':
+		# Could be untyped method name(...) { or variant Name(...).
+		if({ self:peekAhead(offset: 1):getValue() == '(' }, {
+			local Int is depth: 1;
+			local Int is i: 2;
+			local Boolean is searching: true;
+			while({ searching }, {
+				local Token is t: self:peekAhead(offset: i);
+				local String is tv: t:getValue();
+				if({ t:getTokenKind() == TokenKind:EOF || tv == '}' }, {
+					searching: false;
+				}, {
+					if({ tv == '(' }, {
+						depth: depth + 1;
+					});
+					if({ tv == ')' }, {
+						depth: depth - 1;
+						if({ depth == 0 }, {
+							searching: false;
+							local Token is after: self:peekAhead(offset: i + 1);
+							if({ after:getValue() == '{' }, {
+								isMember: true;
+							});
+						});
+					});
+				});
+				i: i + 1;
+			});
+			return isMember;
+		});
+
+		# For other tokens, scan ahead up to the statement/variant boundary.
+		# A typed field/method has 'is' before ';', '{', or ','.
+		# Shorthand metadata or a statement has ';' before ','.
+		local Int is j: 1;
+		local Int is bDepth: 0;
+		local Int is pDepth: 0;
+		local Boolean is scanning: true;
+		while({ scanning }, {
+			local Token is tok: self:peekAhead(offset: j);
+			local String is val: tok:getValue();
+			if({ tok:getTokenKind() == TokenKind:EOF }, {
+				scanning: false;
+			}, {
+				if({ bDepth == 0 && pDepth == 0 && val == '}' }, {
+					scanning: false;
+				}, {
+					if({ val == '[' }, {
+						bDepth: bDepth + 1;
+					});
+					if({ val == ']' && bDepth > 0 }, {
+						bDepth: bDepth - 1;
+					});
+					if({ val == '(' }, {
+						pDepth: pDepth + 1;
+					});
+					if({ val == ')' && pDepth > 0 }, {
+						pDepth: pDepth - 1;
+					});
+					if({ bDepth == 0 && pDepth == 0 }, {
+						if({ tok:getTokenKind() == TokenKind:KEYWORD && val == 'is' }, {
+							isMember: true;
+							scanning: false;
+						});
+						if({ !isMember && tok:getTokenKind() == TokenKind:SYMBOL && val == ';' }, {
+							isMember: true;
+							scanning: false;
+						});
+						if({ !isMember && tok:getTokenKind() == TokenKind:SYMBOL && (val == ',' || val == '{') }, {
+							scanning: false;
+						});
+					});
+				});
+			});
+			j: j + 1;
+		});
+
+		return isMember;
+	}
+
 	## Parses one enum declaration: `Enum of Backing is Name` with tagged or
 	## ordinal variants.
 	##
@@ -513,42 +618,44 @@ Class is Parser{
 
 		local Array of Member is members: [];
 		local Int is count: 0;
-		local Boolean is keepGoing: true;
-		while({ keepGoing && !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
-			local Token is vTok: self:advance();
-			local String is vName: vTok:getValue();
-			local Array of Parameter is vParams: [];
-			if({ self:checkPunct(p: Punctuation:GROUP_OPEN) }, {
-				self:advance();
-				vParams: self:parseParams();
-				self:matchPunct(p: Punctuation:GROUP_CLOSE);
-			});
-			local Expression is valExpr: Expression:init(kind: ExpressionKind:NUMBER);
-			local Boolean is hasInit: false;
-			if({ self:checkPunct(p: Punctuation:TAG) }, {
-				self:advance();
-				valExpr: self:parseExpression();
-				hasInit: true;
+		while({ !self:checkPunct(p: Punctuation:BLOCK_CLOSE) && !self:check(kind: TokenKind:EOF, value: '') }, {
+			if({ self:atEnumMember() }, {
+				members:add(item: self:parseMember());
 			}, {
-				valExpr:str: '' . count;
-				valExpr:num: count;
-				hasInit: true;
-			});
-			count: count + 1;
+				local Token is vTok: self:advance();
+				local String is vName: vTok:getValue();
+				local Array of Parameter is vParams: [];
+				if({ self:checkPunct(p: Punctuation:GROUP_OPEN) }, {
+					self:advance();
+					vParams: self:parseParams();
+					self:matchPunct(p: Punctuation:GROUP_CLOSE);
+				});
+				local Expression is valExpr: Expression:init(kind: ExpressionKind:NUMBER);
+				local Boolean is hasInit: false;
+				if({ self:checkPunct(p: Punctuation:TAG) }, {
+					self:advance();
+					valExpr: self:parseExpression();
+					hasInit: true;
+				}, {
+					valExpr:str: '' . count;
+					valExpr:num: count;
+					hasInit: true;
+				});
+				count: count + 1;
 
-			local Member is m: Member:init(kind: MemberKind:FIELD);
-			m:modifiers: ['static', 'local'];
-			m:memberType: Type:init(name: backingType);
-			m:name: vName;
-			m:params: vParams;
-			m:initExpr: valExpr;
-			m:hasInit: hasInit;
-			members:add(item: m);
+				local Member is m: Member:init(kind: MemberKind:FIELD);
+				m:setLine(line: vTok:getLine());
+				m:modifiers: ['static', 'local'];
+				m:memberType: Type:init(name: backingType);
+				m:name: vName;
+				m:params: vParams;
+				m:initExpr: valExpr;
+				m:hasInit: hasInit;
+				members:add(item: m);
 
-			if({ self:checkPunct(p: Punctuation:SEPARATOR) }, {
-				self:advance();
-			}, {
-				keepGoing: false;
+				if({ self:checkPunct(p: Punctuation:SEPARATOR) }, {
+					self:advance();
+				});
 			});
 		});
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);

@@ -40,7 +40,11 @@ Class is EnumDesugar{
 	Function of ClassInfo is desugar(ClassInfo is c, String is backingType){
 		local Boolean is isTagged: false;
 		c:members:each(action: local Function(Member is m){
-			if({ m:params:length() > 0 }, {
+			local Boolean is isVariant: m:modifiers:indexOf(search: 'static', default: -1) >= 0;
+			if({ isVariant && m:params:length() > 0 }, {
+				isTagged: true;
+			});
+			if({ !isVariant && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0) }, {
 				isTagged: true;
 			});
 		});
@@ -59,11 +63,16 @@ Class is EnumDesugar{
 		local String is name: c:name;
 		local Array of Member is out: [];
 		local Array of Member is variants: [];
+		local Array of Member is common: [];
 		c:members:each(action: local Function(Member is m){
 			if({ m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, {
 				out:add(item: m);
 			}, {
-				variants:add(item: m);
+				if({ m:modifiers:indexOf(search: 'static', default: -1) >= 0 }, {
+					variants:add(item: m);
+				}, {
+					common:add(item: m);
+				});
 			});
 		});
 
@@ -92,6 +101,11 @@ Class is EnumDesugar{
 		ordBody:add(item: self:tailReturn(expr: self:selfPath(member: '_tag')));
 		ordFn:body: ordBody;
 		out:add(item: ordFn);
+
+		# Shared product members (common fields and methods).
+		common:each(action: local Function(Member is cm){
+			out:add(item: cm);
+		});
 
 		# The variants: nested subclasses carrying real payload fields,
 		# their constructors stamping the tag and the variant name.
@@ -153,13 +167,18 @@ Class is EnumDesugar{
 		local String is name: c:name;
 		local Array of Member is out: [];
 		local Array of Member is variants: [];
+		local Array of Member is common: [];
 		# Loader directives (array-valued members) stay plain members;
-		# variants collect for the held rewrite.
+		# variants collect for the held rewrite; common members preserved.
 		c:members:each(action: local Function(Member is m){
 			if({ m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY && m:params:length() == 0 }, {
 				out:add(item: m);
 			}, {
-				variants:add(item: m);
+				if({ m:modifiers:indexOf(search: 'static', default: -1) >= 0 }, {
+					variants:add(item: m);
+				}, {
+					common:add(item: m);
+				});
 			});
 		});
 
@@ -237,6 +256,10 @@ Class is EnumDesugar{
 		});
 		tsBody:add(item: self:tailReturn(expr: self:strLit(text: name)));
 		out:add(item: self:synthToString(body: tsBody));
+
+		common:each(action: local Function(Member is cm){
+			out:add(item: cm);
+		});
 
 		c:members: out;
 		return c;
