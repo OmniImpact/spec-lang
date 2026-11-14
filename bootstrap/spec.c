@@ -64428,7 +64428,7 @@ static const SpecClassMeta Dir_spec_meta = {
 
 static const SpecMethodMeta Driver_spec_methods[] = {
     { "init", (void*)Driver_init, 4, 59 },
-    { "resolveEntryInit", (void*)Driver_resolveEntryInit, 4, 401 },
+    { "resolveEntryInit", (void*)Driver_resolveEntryInit, 4, 405 },
 };
 static const char* const Driver_spec_bases[] = {
     "Class",
@@ -67313,7 +67313,11 @@ void Driver_init(Driver* self, SpecMap* args) {
 	    if (spec_string_equals(tempCPath, spec_string_intern(""))) {
 	    SPEC_AUTO String tmpDir = spec_construct_string(spec_string_intern("/tmp"));
 	    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Process_osName(NULL)); spec_pool_release_to(_pf); _v; })))), spec_string_intern("windows"))) {
-	    spec_assign((void**)&tmpDir, (void*)(spec_string_intern("bin")));
+	    SPEC_AUTO String envTmp = Process_getEnv(NULL, spec_string_intern("TEMP"), spec_string_intern(""));
+	    if ((!spec_string_equals(envTmp, spec_string_intern("")))) {
+	    spec_assign((void**)&tmpDir, (void*)(String_replaceAll(envTmp, spec_string_intern("\\"), spec_string_intern("/"))));
+	};
+    if (envTmp) { spec_release((void*)envTmp); envTmp = NULL; }
 	};
 	    spec_assign_transfer((void**)&tempCPath, (void*)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(tmpDir)), spec_string_intern("/_spec_stage_")), spec_to_string_int(Process_getPid(NULL))), spec_string_intern(".c"))));
     if (tmpDir) { spec_release((void*)tmpDir); tmpDir = NULL; }
@@ -67326,13 +67330,14 @@ void Driver_init(Driver* self, SpecMap* args) {
     runtimeO = spec_construct_string(spec_string_intern(""));
     if (useCache) {
 	    SPEC_AUTO String homeDir = Process_getEnv(NULL, spec_string_intern("HOME"), spec_string_intern(""));
+	    if (spec_string_equals(homeDir, spec_string_intern(""))) {
+	    spec_assign_transfer((void**)&homeDir, (void*)(Process_getEnv(NULL, spec_string_intern("USERPROFILE"), spec_string_intern(""))));
+	};
 	    if ((!spec_string_equals(homeDir, spec_string_intern("")))) {
+	    spec_assign((void**)&homeDir, (void*)(String_replaceAll(homeDir, spec_string_intern("\\"), spec_string_intern("/"))));
 	    spec_assign_transfer((void**)&cacheDir, (void*)(spec_string_concat((void*)spec_retain((void*)(homeDir)), spec_string_intern("/.cache/spec/runtime"))));
 	} else {
 	    spec_assign((void**)&cacheDir, (void*)(spec_string_intern("/tmp/spec_runtime")));
-	};
-	    if (spec_string_equals((((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(Process_osName(NULL)); spec_pool_release_to(_pf); _v; })))), spec_string_intern("windows"))) {
-	    spec_assign((void**)&cacheDir, (void*)(spec_string_intern("bin/cache/runtime")));
 	};
 	    spec_assign_transfer((void**)&runtimeH, (void*)(spec_string_concat((void*)spec_retain((void*)(cacheDir)), spec_string_intern("/spec_runtime.h"))));
 	    spec_assign_transfer((void**)&runtimeC, (void*)(spec_string_concat((void*)spec_retain((void*)(cacheDir)), spec_string_intern("/spec_runtime.c"))));
@@ -67346,7 +67351,7 @@ void Driver_init(Driver* self, SpecMap* args) {
 	    Process_execute(NULL, spec_string_intern("mkdir"), (((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("-p"))); spec_array_add(_arr, (void*)(cacheDir)); _arr; })); spec_pool_release_to(_pf); _v; })))));
 	    SPEC_AUTO RuntimePrelude* rp = (RuntimePrelude*)((({ RuntimePrelude* _inst = RuntimePrelude_new(); Loadable_init((Loadable*)_inst); _inst; })));
 	    File_fileWrite(NULL, runtimeH, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(RuntimePrelude_emitHeader(rp) /* inst:RuntimePrelude:emitHeader */); spec_pool_release_to(_pf); _v; })))), 0, 0);
-	    File_fileWrite(NULL, runtimeC, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("#include \""))), runtimeH), spec_string_intern("\"\n")), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(RuntimePrelude_emitBody(rp) /* inst:RuntimePrelude:emitBody */); spec_pool_release_to(_pf); _v; })))))); spec_pool_release_to(_pf); _v; })))), 0, 0);
+	    File_fileWrite(NULL, runtimeC, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat(spec_string_concat((void*)spec_retain((void*)(spec_string_intern("#include \"spec_runtime.h\""))), spec_string_intern("\n")), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(RuntimePrelude_emitBody(rp) /* inst:RuntimePrelude:emitBody */); spec_pool_release_to(_pf); _v; })))))); spec_pool_release_to(_pf); _v; })))), 0, 0);
 	    SPEC_AUTO String coldCc = Process_getEnv(NULL, spec_string_intern("CC"), spec_string_intern("gcc"));
 	    SPEC_AUTO SpecArray* rArgs = (SpecArray*)((({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(spec_string_intern("-O2"))); spec_array_add(_arr, (void*)(spec_string_intern("-w"))); spec_array_add(_arr, (void*)(spec_string_intern("-c"))); spec_array_add(_arr, (void*)(runtimeC)); spec_array_add(_arr, (void*)(spec_string_intern("-o"))); spec_array_add(_arr, (void*)(runtimeO)); spec_array_add(_arr, (void*)(spec_string_intern("-pthread"))); _arr; })));
 	    long long rStat = Process_execute(NULL, coldCc, rArgs);

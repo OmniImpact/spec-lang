@@ -246,7 +246,10 @@ Class is Driver{
 			if({ tempCPath == '' }, {
 				local String is tmpDir: '/tmp';
 				if({ Process:osName() == 'windows' }, {
-					tmpDir: 'bin';
+					local String is envTmp: Process:getEnv(key: 'TEMP', default: '');
+					if({ envTmp != '' }, {
+						tmpDir: envTmp:replaceAll(search: '\\', replacement: '/');
+					});
 				});
 				tempCPath: tmpDir . '/_spec_stage_' . (Process:getPid() as String) . '.c';
 			});
@@ -259,13 +262,14 @@ Class is Driver{
 		local String is runtimeO: '';
 		if({ useCache }, {
 			local String is homeDir: Process:getEnv(key: 'HOME', default: '');
+			if({ homeDir == '' }, {
+				homeDir: Process:getEnv(key: 'USERPROFILE', default: '');
+			});
 			if({ homeDir != '' }, {
+				homeDir: homeDir:replaceAll(search: '\\', replacement: '/');
 				cacheDir: homeDir . '/.cache/spec/runtime';
 			}, {
 				cacheDir: '/tmp/spec_runtime';
-			});
-			if({ Process:osName() == 'windows' }, {
-				cacheDir: 'bin/cache/runtime';
 			});
 			runtimeH: cacheDir . '/spec_runtime.h';
 			runtimeC: cacheDir . '/spec_runtime.c';
@@ -279,7 +283,7 @@ Class is Driver{
 				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
 				local RuntimePrelude is rp: RuntimePrelude:init();
 				fileWrite(path: runtimeH, content: rp:emitHeader());
-				fileWrite(path: runtimeC, content: '#include "' . runtimeH . "\"\n" . rp:emitBody());
+				fileWrite(path: runtimeC, content: '#include "spec_runtime.h"' . "\n" . rp:emitBody());
 				local String is coldCc: Process:getEnv(key: 'CC', default: 'gcc');
 				local Array of String is rArgs: ['-O2', '-w', '-c', runtimeC, '-o', runtimeO, '-pthread'];
 				local Int is rStat: Process:execute(command: coldCc, args: rArgs);

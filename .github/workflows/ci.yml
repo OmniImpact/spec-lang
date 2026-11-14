@@ -128,7 +128,7 @@ jobs:
           fi
           export SPEC_BIN="bin/spec.exe"
           bin/specbuild.exe utilities/specunit/specunit.json
-          bin/specbuild.exe utilities/speclint/specbuild.json
+          bin/specbuild.exe utilities/speclint/speclint.json
           bin/specunit.exe -s bin/spec.exe -t tests
       - name: Package Windows Artifact
         run: |
