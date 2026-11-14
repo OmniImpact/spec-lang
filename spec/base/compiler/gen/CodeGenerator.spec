@@ -830,7 +830,7 @@ Class is CodeGenerator{
 	Function of String is formatVarTypeString(Type is t){
 		if({ Primitive:of(t:name) == Primitive:FUNCTION }, {
 			if({ t:params:length() > 0 }, {
-				local Type is ret: t:params:get(index: 0);
+				local Type is ret: if({ t:params:length() >= 2 }, { t:params:get(index: 1) }, { t:params:get(index: 0) });
 				return 'Function:' . self:formatTypeString(t: ret);
 			});
 			return 'Function';
@@ -885,7 +885,10 @@ Class is CodeGenerator{
 		local String is baseName: t:name;
 		if({ Primitive:of(baseName) == Primitive:FUNCTION }, {
 			if({ t:params:length() > 0 }, {
-				local Type is ret: t:params:get(index: 0);
+				local Type is ret: if({ t:params:length() >= 2 }, { t:params:get(index: 1) }, { t:params:get(index: 0) });
+				if({ Primitive:of(ret:name) == Primitive:FUNCTION }, {
+					return self:formatVarTypeString(t: ret);
+				});
 				return self:formatTypeString(t: ret);
 			});
 			return self:names:voidName();

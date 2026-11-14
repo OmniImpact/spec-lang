@@ -130,7 +130,7 @@ Class of SpecUnitTest is TestRegressionClosureCapture{
 	}
 
 	## Case 9: Escaping closure accumulator state retention.
-	local Function of Function:Int is makeAccumulator(Int is start){
+	local Function of Function of Int to Int is makeAccumulator(Int is start){
 		local Int is total: start;
 		return local Function of Int(Int is delta){
 			total: total + delta;

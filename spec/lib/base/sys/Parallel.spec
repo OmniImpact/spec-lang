@@ -5,11 +5,11 @@
 ##
 ## Runtime-managed: [run] binds to the runtime's
 ## pthread trampoline. Workers must be pure functions of their two
-## parameters (thread index and sample count): captured variables are shared
-## static slots and must not be mutated from worker threads. Communication
-## happens through atomic slots (`Process:atomicAdd` / `atomicPut` /
-## `atomicGet`) and the worker's return value. Each thread receives a
-## distinct, deterministic RNG seed.
+## parameters (thread index and sample count): captured mutable variables
+## share heap cells across all worker threads and must not be mutated
+## concurrently without synchronization. Communication happens through atomic
+## slots (`Process:atomicAdd` / `atomicPut` / `atomicGet`) and the worker's
+## return value. Each thread receives a distinct, deterministic RNG seed.
 
 Class is Parallel{
 	namespace: ['base', 'sys'];

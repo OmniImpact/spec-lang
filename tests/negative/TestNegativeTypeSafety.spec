@@ -305,4 +305,17 @@ Class is N23VoidInValueContext{
 			expect: "'Conditional.if' declares no return value"
 		);
 	}
+
+	Function is testFunctionColonSyntaxRejected(){
+		Assert:compilerRejects(
+			source: '''
+Class is N24FunctionColonSyntax{
+	replace Function is init(Map of String to String is args){
+		local Function:Int is fn: { 42 };
+	}
+}
+''',
+			expect: "Function type must use 'Function of <Ret>' or 'Function of <Arg> to <Ret>', not colon syntax."
+		);
+	}
 }
