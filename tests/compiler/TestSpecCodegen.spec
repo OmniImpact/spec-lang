@@ -15,7 +15,6 @@ Class of SpecUnitTest is TestSpecCodegen{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', Statement],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'lexer', Lexer],

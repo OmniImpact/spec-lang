@@ -24,7 +24,6 @@ Class is Parser{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', Statement],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
@@ -821,7 +820,6 @@ Class is Parser{
 				local Expression is rhs: Expression:init(kind: ExpressionKind:IDENT);
 				rhs:makeIdent(name: p:name);
 				local Statement is assignS: Statement:Assign(assignTarget: lhs, assignValue: rhs);
-				assignS:kind: StatementKind:ASSIGN;
 				body:add(item: assignS);
 			});
 		});
@@ -895,7 +893,6 @@ Class is Parser{
 			local ClassInfo is cls: self:parseClass();
 			local Statement is s: Statement:ClassDecl(nestedClass: cls);
 			s:setLine(line: startLine);
-			s:kind: StatementKind:CLASS;
 			return s;
 		});
 
@@ -903,7 +900,6 @@ Class is Parser{
 			local ClassInfo is edef: self:parseEnum();
 			local Statement is s: Statement:ClassDecl(nestedClass: edef);
 			s:setLine(line: startLine);
-			s:kind: StatementKind:CLASS;
 			return s;
 		});
 
@@ -920,7 +916,6 @@ Class is Parser{
 				]);
 				local Statement is s: Statement:Return(returnExpr: asExpr, hasReturnExpr: true);
 				s:setLine(line: startLine);
-				s:kind: StatementKind:RETURN;
 				return s;
 			});
 			local Expression is retExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
@@ -933,7 +928,6 @@ Class is Parser{
 
 			local Statement is s: Statement:Return(returnExpr: retExpr, hasReturnExpr: hasExpr);
 			s:setLine(line: startLine);
-			s:kind: StatementKind:RETURN;
 			return s;
 		});
 
@@ -955,7 +949,6 @@ Class is Parser{
 
 			local Statement is s: Statement:VarDecl(modifiers: ['local'], varType: vType, varName: name, initExpr: initExpr, hasInit: hasInit);
 			s:setLine(line: startLine);
-			s:kind: StatementKind:VAR_DECL;
 			return s;
 		});
 
@@ -970,14 +963,12 @@ Class is Parser{
 
 			local Statement is s: Statement:Assign(assignTarget: expr, assignValue: val);
 			s:setLine(line: startLine);
-			s:kind: StatementKind:ASSIGN;
 			return s;
 		});
 
 		self:matchPunct(p: Punctuation:TERMINATOR);
 		local Statement is s: Statement:Expr(exprStmt: expr);
 		s:setLine(line: startLine);
-		s:kind: StatementKind:EXPR;
 		return s;
 	}
 
@@ -996,7 +987,6 @@ Class is Parser{
 		});
 		local Statement is s: Statement:Forward(forwardArgs: args);
 		s:setLine(line: startLine);
-		s:kind: StatementKind:FORWARD;
 		return s;
 	}
 
@@ -1073,7 +1063,6 @@ Class is Parser{
 
 		local Statement is s: Statement:Expr(exprStmt: callExpr);
 		s:setLine(line: startLine);
-		s:kind: StatementKind:EXPR;
 		return s;
 	}
 
@@ -1566,19 +1555,16 @@ Class is Parser{
 					self:matchPunct(p: Punctuation:TERMINATOR);
 					local Statement is s: Statement:Assign(assignTarget: expr, assignValue: val);
 					s:setLine(line: stmtLine);
-					s:kind: StatementKind:ASSIGN;
 					body:add(item: s);
 				}, {
 					if({ self:checkPunct(p: Punctuation:BLOCK_CLOSE) }, {
 						local Statement is retS: Statement:Return(returnExpr: expr, hasReturnExpr: true);
 						retS:setLine(line: stmtLine);
-						retS:kind: StatementKind:RETURN;
 						body:add(item: retS);
 					}, {
 						self:matchPunct(p: Punctuation:TERMINATOR);
 						local Statement is exprS: Statement:Expr(exprStmt: expr);
 						exprS:setLine(line: stmtLine);
-						exprS:kind: StatementKind:EXPR;
 						body:add(item: exprS);
 					});
 				});

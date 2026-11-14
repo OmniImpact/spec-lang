@@ -38,7 +38,6 @@ Class is CodeGenerator{
 		['base', 'struct', Map],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Buf()],
-		['base', 'compiler', 'ast', StatementKind]
 	];
 
 	## Backend utilities.

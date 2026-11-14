@@ -10,7 +10,6 @@ Class of SpecUnitTest is TestSpecParser{
 		['specunit', as Assert()],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'lexer', Lexer],
@@ -55,7 +54,7 @@ Class of SpecUnitTest is TestSpecParser{
 			}
 		]);
 		Assert:isFalse(p:hasErrors());
-		Assert:isTrue(vd:kind == StatementKind:VAR_DECL);
+		Assert:areEqualString('VarDecl', vd:name());
 		Assert:isTrue(init:kind == ExpressionKind:BINARY);
 		Assert:areEqualString('+', init:str);
 		Assert:areEqualString('*', init:rightExpr:str);

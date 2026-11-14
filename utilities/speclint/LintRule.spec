@@ -11,7 +11,6 @@ Class is LintRule{
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Statement],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],

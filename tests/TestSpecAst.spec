@@ -9,7 +9,6 @@ Class of SpecUnitTest is TestSpecAst{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'compiler', 'ast', ExpressionKind],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Type],
@@ -79,13 +78,11 @@ Class of SpecUnitTest is TestSpecAst{
 		Assert:areEqualInt(0, cls:baseClasses:length());
 	}
 
-	# Statements carry their kind's fields.
+	# Statements carry their variant's payload fields.
 	Function is testStatementFields(){
 		local Expression is bin: Expression:init(kind: ExpressionKind:BINARY);
 		local Statement is st: Statement:Return(returnExpr: bin, hasReturnExpr: true);
-		st:kind: StatementKind:RETURN;
 		st:setLine(line: 9);
-		Assert:isTrue(st:kind == StatementKind:RETURN);
 		Assert:areEqualInt(9, st:line);
 		Assert:areEqualString('Return', st:name());
 		local Boolean is matched: false;

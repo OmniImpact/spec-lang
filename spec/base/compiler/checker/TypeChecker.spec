@@ -19,7 +19,6 @@ Class is TypeChecker{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', Statement],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],

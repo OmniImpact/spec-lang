@@ -18,7 +18,6 @@ Class of SpecUnitTest is TestStdlibReflection{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Statement],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', ExpressionKind]
 	];
@@ -89,7 +88,7 @@ Class of SpecUnitTest is TestStdlibReflection{
 	}
 
 	## 4. Meta AST Expression & Statement: the assign statement wires its
-	## target and value, and the kinds read back.
+	## target and value, and the variant/kind reads back.
 	Function is testMetaAstKinds(){
 		local Expression is numExpr: Expression:init(kind: ExpressionKind:NUMBER);
 		numExpr:str: '100';
@@ -97,8 +96,6 @@ Class of SpecUnitTest is TestStdlibReflection{
 		identExpr:makeIdent(name: 'health');
 
 		local Statement is assignStmt: Statement:Assign(assignTarget: identExpr, assignValue: numExpr);
-		assignStmt:kind: StatementKind:ASSIGN;
-		Assert:areEqualString('ASSIGN', assignStmt:kind:value());
 		Assert:areEqualString('Assign', assignStmt:name());
 		Assert:areEqualString('NUMBER', numExpr:kind:value());
 	}

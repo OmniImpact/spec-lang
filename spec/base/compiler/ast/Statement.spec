@@ -2,15 +2,14 @@
 #! One statement node, modeled as a sum type.
 ##
 ## Statements are represented as an enhanced enum (sum type): each variant
-## carries only the payload fields relevant to its kind, while shared product
-## members (like source line and category) are defined once on the base class.
+## carries only the payload fields relevant to its variant type, while shared
+## product members (like source line) are defined once on the base enum.
 
 Enum is Statement {
 	namespace: ['base', 'compiler', 'ast'],
 
 	using: [
 		['base', 'compiler', 'ast', Type],
-		['base', 'compiler', 'ast', StatementKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', ClassInfo]
@@ -22,9 +21,6 @@ Enum is Statement {
 	ClassDecl(ClassInfo is nestedClass),
 	Expr(Expression is exprStmt),
 	Forward(Array of NamedArg is forwardArgs),
-
-	## Node category for enum dispatch and backwards compatibility.
-	StatementKind is kind: StatementKind:EXPR;
 
 	## One-based source line where the statement starts.
 	Int is line: 0;
