@@ -219,8 +219,13 @@ void spec_vec_report(SpecClosure* error, const char* msg);
 void* spec_vec_get(SpecVec* v, long long idx, void* def, SpecClosure* error);
 void spec_vec_set(SpecVec* v, long long idx, void* item, SpecClosure* error);
 void* spec_vec_pop(SpecVec* v, void* def, SpecClosure* error);
-long long spec_vec_length(SpecVec* v);
-void spec_vec_clear(SpecVec* v);
+long long spec_vec_length(void* v);
+void spec_vec_clear(void* v);
+void* spec_vec_get_at(void* v, long long idx, void* def);
+void spec_vec_set_at(void* v, long long idx, void* item);
+void spec_vec_add(void* v, void* item);
+void* spec_vec_pop_last(void* v, void* def);
+void* spec_vec_remove_at(void* v, long long idx, void* def);
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_append(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
@@ -2795,17 +2800,96 @@ void* spec_vec_pop(SpecVec* v, void* def, SpecClosure* error) {
     return v->items[--v->length];
 }
 
-long long spec_vec_length(SpecVec* v) {
-    return v ? (long long)v->length : 0;
+long long spec_vec_length(void* v) {
+    if (!v) return 0;
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) return spec_array_length((SpecArray*)v);
+    return (long long)((SpecVec*)v)->length;
 }
 
-void spec_vec_clear(SpecVec* v) {
+void spec_vec_clear(void* v) {
     if (!v) return;
-    for (size_t i = 0; i < v->length; i++) {
-        if (!v->items[i]) continue;
-        if (v->elem_kind == 1) spec_release(v->items[i]);
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) { spec_array_clear((SpecArray*)v); return; }
+    SpecVec* vec = (SpecVec*)v;
+    for (size_t i = 0; i < vec->length; i++) {
+        if (!vec->items[i]) continue;
+        if (vec->elem_kind == 1) spec_release(vec->items[i]);
     }
-    v->length = 0;
+    vec->length = 0;
+}
+
+void* spec_vec_get_at(void* v, long long idx, void* def) {
+    if (!v) return def;
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) {
+        SpecArray* a = (SpecArray*)v;
+        if (idx < 0 || (size_t)idx >= a->length) return def;
+        return spec_array_get(a, idx);
+    }
+    SpecVec* vec = (SpecVec*)v;
+    if (idx < 0 || (size_t)idx >= vec->length) return def;
+    void* val = vec->items[idx];
+    if (vec->elem_kind == 1 && val) {
+        spec_retain(val);
+        spec_claim_pool(val);
+    }
+    return val;
+}
+
+void spec_vec_set_at(void* v, long long idx, void* item) {
+    if (!v) return;
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) {
+        SpecArray* a = (SpecArray*)v;
+        if (idx < 0 || (size_t)idx >= a->length) return;
+        spec_array_set(a, idx, item);
+        return;
+    }
+    SpecVec* vec = (SpecVec*)v;
+    if (idx < 0 || (size_t)idx >= vec->length) return;
+    if (vec->elem_kind == 1) {
+        if (item) spec_retain(item);
+        if (vec->items[idx]) spec_release(vec->items[idx]);
+    }
+    vec->items[idx] = item;
+}
+
+void spec_vec_add(void* v, void* item) {
+    if (!v) return;
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) {
+        spec_array_add((SpecArray*)v, item);
+        return;
+    }
+    spec_vec_push((SpecVec*)v, item);
+}
+
+void* spec_vec_pop_last(void* v, void* def) {
+    if (!v) return def;
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) {
+        return spec_array_pop((SpecArray*)v, def);
+    }
+    SpecVec* vec = (SpecVec*)v;
+    if (vec->length == 0) return def;
+    return vec->items[--vec->length];
+}
+
+void* spec_vec_remove_at(void* v, long long idx, void* def) {
+    if (!v || idx < 0) return def;
+    SpecHeader* h = SPEC_HEADER(v);
+    if (h->destroy == spec_array_destroy) {
+        return spec_array_remove_at((SpecArray*)v, idx, def);
+    }
+    SpecVec* vec = (SpecVec*)v;
+    if ((size_t)idx >= vec->length) return def;
+    void* val = vec->items[idx];
+    for (size_t i = (size_t)idx; i + 1 < vec->length; i++) {
+        vec->items[i] = vec->items[i + 1];
+    }
+    vec->length--;
+    return val;
 }
 
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {
@@ -3315,11 +3399,7 @@ long long spec_parallel_run(long long threads, long long iterations, void* worke
 }
 
 String spec_type_name(const void* obj) {
-    if (!obj || (uintptr_t)obj < 4096) return spec_string_intern("");
-    SpecHeader* h = SPEC_HEADER(obj);
-    if (h->destroy == spec_map_destroy) return spec_string_intern("Map");
-    if (h->destroy == spec_array_destroy) return spec_string_intern("Array");
-    if (h->destroy == spec_buf_destroy) return spec_string_intern("String");
+    if (!obj) return spec_string_intern("");
     return spec_string_intern(*((const char**)obj));
 }
 

@@ -48,7 +48,7 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
 - **Native JSON Serialization (`base:data:Json`)** [Completed]: Full-featured, pure Spec JSON library (`spec/lib/base/data/Json.spec`, `JsonNull.spec`, `JsonBool.spec`, `JsonNumber.spec`) providing bidirectional recursive descent parsing (`Json:parse`), typed getters (`getInt`, `getString`, `getBool`, `getFloat`, `getObject`, `getArray`), compact encoding (`Json:stringify`), and pretty printing (`Json:format`). Serves as the shared data interchange foundation for `specbuild.json` manifests and `speclsp` JSON-RPC 2.0 communication. Verified with unit test suite `tests/TestJson.spec` (9/9 passing).
 - **Time & Clocks**: Provide a high-resolution time module (`base:sys:Time`) with ISO-8601 formatting, duration arithmetic, and nanosecond/microsecond clocks (expanding beyond `Process:clockMs()`).
 - **Basic Networking / Sockets**: Abstract stream sockets (`base:sys:Socket`, TCP client/server) over the sysinternal floor.
-- **Collections**: Ensure `List`, `Array`, and `Map` have consistent API parity across iterations, slicing, filtering, and mutations.
+- **Collections**: Ensure `List`, `Array`, and `Map` have consistent API parity across iterations, slicing, filtering, and mutations. Began container migration to pure Spec classes implemented over sysinternal floors: Phase 1 completed for `Array` over `base:sys:Vector` / `base:sysinternal:Vector`.
 
 ### 2.5 Modern Unit Testing Framework & Negative Test Suite Port
 - **Status**: **Completed**.

@@ -12,6 +12,7 @@ Class is Array of T{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
+		['base', 'sys', as Vector()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
@@ -20,6 +21,7 @@ Class is Array of T{
 	##
 	## @return: Element count.
 	Function of Int is length(){
+		return Vector:vecLength(v: self);
 	}
 
 	## Retrieves an element at the specified zero-based index.
@@ -29,12 +31,14 @@ Class is Array of T{
 	## @return: The element, or [default].
 	## @fallback: Returns [default] when index < 0 or index >= length().
 	Function of T is get(Int is index, Any is default){
+		return Vector:vecGetAt(v: self, idx: index, def: default);
 	}
 
 	## Appends an element or merges another array into this array.
 	##
 	## @param item: Value or [Array] to append.
 	Function is add(Any is item){
+		Vector:vecAdd(v: self, item: item);
 	}
 
 	## Replaces the element at the specified zero-based [index] with [item].
@@ -42,6 +46,7 @@ Class is Array of T{
 	## @param index: Zero-based position.
 	## @param item: Replacement element value.
 	Function is set(Int is index, Any is item){
+		Vector:vecSetAt(v: self, idx: index, item: item);
 	}
 
 	## Removes and returns the last element in the array.
@@ -50,6 +55,7 @@ Class is Array of T{
 	## @return: The removed last element, or [default].
 	## @fallback: Returns [default] when the array has zero elements.
 	Function of T is pop(Any is default){
+		return Vector:vecPopLast(v: self, def: default);
 	}
 
 	## Removes and returns the element at [index], shifting trailing elements.
@@ -59,6 +65,7 @@ Class is Array of T{
 	## @return: The removed element, or [default].
 	## @fallback: Returns [default] when index is out of bounds.
 	Function of T is removeAt(Int is index, Any is default){
+		return Vector:vecRemoveAt(v: self, idx: index, def: default);
 	}
 
 	## Returns a shallow sub-array slice from [start] (inclusive) to [end] (exclusive).
@@ -87,6 +94,7 @@ Class is Array of T{
 
 	## Empties the array, resetting its length to zero.
 	Function is clear(){
+		Vector:vecClear(v: self);
 	}
 
 	## Searches for the first occurrence of [search], returning its index.

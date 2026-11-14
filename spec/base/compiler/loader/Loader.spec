@@ -508,6 +508,7 @@ Class is Loader{
 			'Array',
 			'Map',
 			'Buf',
+			'Vector',
 			'Dir'
 		];
 		preloads:each(action: local Function(String is cls){
