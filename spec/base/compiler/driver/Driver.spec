@@ -23,6 +23,10 @@ Class is Driver{
 		['base', 'compiler', 'driver', CompilationReport],
 		['base', 'compiler', 'gen', CodeGenerator],
 		['base', 'compiler', 'gen', RuntimePrelude],
+		['base', 'compiler', 'ir', IrModule],
+		['base', 'compiler', 'opt', OptimizerPipeline],
+		['base', 'compiler', 'llvm', IrBuilder],
+		['base', 'compiler', 'llvm', LlvmEmitter],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],
@@ -117,6 +121,8 @@ Class is Driver{
 		if({ emitCPath == '' }, {
 			emitCPath: args:getString(key: 'emit-c', default: '');
 		});
+		local String is emitLlvmPath: args:getString(key: 'emit-llvm', default: '');
+		local Boolean is useLlvm: args:has(key: 'llvm') || emitLlvmPath != '';
 
 		if({ outputPath == '' && emitCPath == '' }, {
 			Stderr:line('Error: Missing output binary path (-o <output_binary>)');
@@ -275,6 +281,75 @@ Class is Driver{
 					useCache: false;
 				});
 			});
+		});
+
+		if({ useLlvm }, {
+			local Int is llvmGenT0: Process:clockMs();
+			local IrBuilder is irb: IrBuilder:init();
+			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
+			if({ !args:has(key: 'no-opt') }, {
+				local OptimizerPipeline is optPipe: OptimizerPipeline:init();
+				optPipe:run(mod: irMod);
+			});
+			local LlvmEmitter is emitter: LlvmEmitter:init();
+			local String is llText: emitter:emitModule(mod: irMod);
+			genMs: Process:clockMs() - llvmGenT0;
+
+			local String is tempLlPath: emitLlvmPath;
+			if({ tempLlPath == '' }, {
+				tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
+			});
+			fileWrite(path: tempLlPath, content: llText);
+			report:stage(n: 3, total: 4, label: 'generating LLVM IR');
+
+			if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
+				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+				Process:monitorStop();
+				return;
+			});
+
+			# Ensure spec_runtime.o exists for linking
+			if({ runtimeO == '' }, {
+				cacheDir: Uri:runtimeCacheDir();
+				runtimeH: cacheDir . '/spec_runtime.h';
+				runtimeC: cacheDir . '/spec_runtime.c';
+				runtimeO: cacheDir . '/spec_runtime.o';
+			});
+			if({ !fileExists(path: runtimeO) }, {
+				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+				local RuntimePrelude is rpLlvm: RuntimePrelude:init();
+				fileWrite(path: runtimeH, content: rpLlvm:emitHeader());
+				fileWrite(path: runtimeC, content: '#include "spec_runtime.h"' . "\n" . rpLlvm:emitBody());
+				Process:execute(command: 'clang', args: ['-O2', '-w', '-c', runtimeC, '-o', runtimeO, '-pthread']);
+			});
+
+			local Array of String is llArgs: ['-O2', '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
+			local String is llOs: Process:osName();
+			if({ llOs == 'windows' }, {
+				llArgs:add(item: '-lws2_32');
+				llArgs:add(item: '-lwinmm');
+				llArgs:add(item: '-lpsapi');
+			});
+			if({ llOs == 'macos' }, {
+				llArgs:add(item: '-framework');
+				llArgs:add(item: 'AudioToolbox');
+			});
+			if({ llOs == 'linux' }, {
+				llArgs:add(item: '-ldl');
+				llArgs:add(item: '-no-pie');
+			});
+			local Int is llCcT0: Process:clockMs();
+			local Int is llStat: Process:execute(command: 'clang', args: llArgs);
+			ccMs: Process:clockMs() - llCcT0;
+			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+			if({ llStat != 0 }, {
+				Process:monitorStop();
+				Stderr:line('Error: clang failed on LLVM IR with exit status ' . (llStat as String));
+				Process:exit(status: 1);
+			});
+			Process:monitorStop();
+			report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: 0, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: fileSize(path: outputPath) / 1024);
+			return;
 		});
 
 		# 4. C11 code generation over the FULL loaded class set streamed to disk.
