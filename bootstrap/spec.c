@@ -60321,7 +60321,6 @@ static __attribute__((unused)) bool _anon_fn_100400(void* _env_ptr, Parameter* p
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100406;
@@ -60337,8 +60336,6 @@ static __attribute__((unused)) void _destroy_env_anon_100406(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100406(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100406* _env = (_Env_anon_100406*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -60346,12 +60343,10 @@ static __attribute__((unused)) void _anon_fn_100406(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60362,7 +60357,6 @@ static __attribute__((unused)) void _anon_fn_100406(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100406: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -60400,7 +60394,6 @@ static __attribute__((unused)) void _anon_fn_100405(void* _env_ptr, Expression* 
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100407 = segs; if (_a_100407) { for (size_t _i_100407 = 0; _i_100407 < _a_100407->length; _i_100407++) {
         SPEC_POOL_AUTO;
@@ -60409,12 +60402,10 @@ static __attribute__((unused)) void _anon_fn_100405(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60428,9 +60419,7 @@ static __attribute__((unused)) void _anon_fn_100405(void* _env_ptr, Expression* 
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -60446,7 +60435,6 @@ static __attribute__((unused)) void _anon_fn_100405(void* _env_ptr, Expression* 
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100409;
@@ -60462,8 +60450,6 @@ static __attribute__((unused)) void _destroy_env_anon_100409(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100409(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100409* _env = (_Env_anon_100409*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -60471,12 +60457,10 @@ static __attribute__((unused)) void _anon_fn_100409(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60487,7 +60471,6 @@ static __attribute__((unused)) void _anon_fn_100409(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100409: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -60528,7 +60511,6 @@ static __attribute__((unused)) void _anon_fn_100404(void* _env_ptr, Member* m) {
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100410 = segs; if (_a_100410) { for (size_t _i_100410 = 0; _i_100410 < _a_100410->length; _i_100410++) {
         SPEC_POOL_AUTO;
@@ -60537,12 +60519,10 @@ static __attribute__((unused)) void _anon_fn_100404(void* _env_ptr, Member* m) {
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60556,9 +60536,7 @@ static __attribute__((unused)) void _anon_fn_100404(void* _env_ptr, Member* m) {
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -60579,7 +60557,6 @@ static __attribute__((unused)) void _anon_fn_100404(void* _env_ptr, Member* m) {
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100413;
@@ -60595,8 +60572,6 @@ static __attribute__((unused)) void _destroy_env_anon_100413(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100413(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100413* _env = (_Env_anon_100413*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -60604,12 +60579,10 @@ static __attribute__((unused)) void _anon_fn_100413(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60620,7 +60593,6 @@ static __attribute__((unused)) void _anon_fn_100413(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100413: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -60658,7 +60630,6 @@ static __attribute__((unused)) void _anon_fn_100412(void* _env_ptr, Expression* 
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100414 = segs; if (_a_100414) { for (size_t _i_100414 = 0; _i_100414 < _a_100414->length; _i_100414++) {
         SPEC_POOL_AUTO;
@@ -60667,12 +60638,10 @@ static __attribute__((unused)) void _anon_fn_100412(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60686,9 +60655,7 @@ static __attribute__((unused)) void _anon_fn_100412(void* _env_ptr, Expression* 
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -60704,7 +60671,6 @@ static __attribute__((unused)) void _anon_fn_100412(void* _env_ptr, Expression* 
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100416;
@@ -60720,8 +60686,6 @@ static __attribute__((unused)) void _destroy_env_anon_100416(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100416(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100416* _env = (_Env_anon_100416*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -60729,12 +60693,10 @@ static __attribute__((unused)) void _anon_fn_100416(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60745,7 +60707,6 @@ static __attribute__((unused)) void _anon_fn_100416(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100416: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -60799,7 +60760,6 @@ static __attribute__((unused)) void _anon_fn_100403(void* _env_ptr, ClassInfo* c
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100417 = segs; if (_a_100417) { for (size_t _i_100417 = 0; _i_100417 < _a_100417->length; _i_100417++) {
         SPEC_POOL_AUTO;
@@ -60808,12 +60768,10 @@ static __attribute__((unused)) void _anon_fn_100403(void* _env_ptr, ClassInfo* c
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60827,9 +60785,7 @@ static __attribute__((unused)) void _anon_fn_100403(void* _env_ptr, ClassInfo* c
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -60853,7 +60809,6 @@ static __attribute__((unused)) void _anon_fn_100403(void* _env_ptr, ClassInfo* c
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100421;
@@ -60869,8 +60824,6 @@ static __attribute__((unused)) void _destroy_env_anon_100421(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100421(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100421* _env = (_Env_anon_100421*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -60878,12 +60831,10 @@ static __attribute__((unused)) void _anon_fn_100421(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60894,7 +60845,6 @@ static __attribute__((unused)) void _anon_fn_100421(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100421: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -60932,7 +60882,6 @@ static __attribute__((unused)) void _anon_fn_100420(void* _env_ptr, Expression* 
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100422 = segs; if (_a_100422) { for (size_t _i_100422 = 0; _i_100422 < _a_100422->length; _i_100422++) {
         SPEC_POOL_AUTO;
@@ -60941,12 +60890,10 @@ static __attribute__((unused)) void _anon_fn_100420(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -60960,9 +60907,7 @@ static __attribute__((unused)) void _anon_fn_100420(void* _env_ptr, Expression* 
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -60978,7 +60923,6 @@ static __attribute__((unused)) void _anon_fn_100420(void* _env_ptr, Expression* 
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100424;
@@ -60994,8 +60938,6 @@ static __attribute__((unused)) void _destroy_env_anon_100424(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100424(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100424* _env = (_Env_anon_100424*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61003,12 +60945,10 @@ static __attribute__((unused)) void _anon_fn_100424(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61019,7 +60959,6 @@ static __attribute__((unused)) void _anon_fn_100424(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100424: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -61060,7 +60999,6 @@ static __attribute__((unused)) void _anon_fn_100419(void* _env_ptr, Member* m) {
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100425 = segs; if (_a_100425) { for (size_t _i_100425 = 0; _i_100425 < _a_100425->length; _i_100425++) {
         SPEC_POOL_AUTO;
@@ -61069,12 +61007,10 @@ static __attribute__((unused)) void _anon_fn_100419(void* _env_ptr, Member* m) {
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61088,9 +61024,7 @@ static __attribute__((unused)) void _anon_fn_100419(void* _env_ptr, Member* m) {
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -61111,7 +61045,6 @@ static __attribute__((unused)) void _anon_fn_100419(void* _env_ptr, Member* m) {
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100428;
@@ -61127,8 +61060,6 @@ static __attribute__((unused)) void _destroy_env_anon_100428(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100428(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100428* _env = (_Env_anon_100428*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61136,12 +61067,10 @@ static __attribute__((unused)) void _anon_fn_100428(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61152,7 +61081,6 @@ static __attribute__((unused)) void _anon_fn_100428(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100428: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -61190,7 +61118,6 @@ static __attribute__((unused)) void _anon_fn_100427(void* _env_ptr, Expression* 
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100429 = segs; if (_a_100429) { for (size_t _i_100429 = 0; _i_100429 < _a_100429->length; _i_100429++) {
         SPEC_POOL_AUTO;
@@ -61199,12 +61126,10 @@ static __attribute__((unused)) void _anon_fn_100427(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61218,9 +61143,7 @@ static __attribute__((unused)) void _anon_fn_100427(void* _env_ptr, Expression* 
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -61236,7 +61159,6 @@ static __attribute__((unused)) void _anon_fn_100427(void* _env_ptr, Expression* 
 }
 
 typedef struct {
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100431;
@@ -61252,8 +61174,6 @@ static __attribute__((unused)) void _destroy_env_anon_100431(void* _env_ptr) {
 static __attribute__((unused)) void _anon_fn_100431(void* _env_ptr, Expression* seg) {
     SPEC_POOL_AUTO;
     _Env_anon_100431* _env = (_Env_anon_100431*)_env_ptr;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61261,12 +61181,10 @@ static __attribute__((unused)) void _anon_fn_100431(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61277,7 +61195,6 @@ static __attribute__((unused)) void _anon_fn_100431(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100431: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -61285,7 +61202,6 @@ static __attribute__((unused)) void _anon_fn_100431(void* _env_ptr, Expression* 
 
 typedef struct {
     String className;
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100435;
@@ -61304,8 +61220,6 @@ static __attribute__((unused)) void _anon_fn_100435(void* _env_ptr, Expression* 
     _Env_anon_100435* _env = (_Env_anon_100435*)_env_ptr;
     String className = _env->className;
     (void)className;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61313,12 +61227,10 @@ static __attribute__((unused)) void _anon_fn_100435(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61329,7 +61241,6 @@ static __attribute__((unused)) void _anon_fn_100435(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100435: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -61371,7 +61282,6 @@ static __attribute__((unused)) void _anon_fn_100434(void* _env_ptr, Expression* 
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100436 = segs; if (_a_100436) { for (size_t _i_100436 = 0; _i_100436 < _a_100436->length; _i_100436++) {
         SPEC_POOL_AUTO;
@@ -61380,12 +61290,10 @@ static __attribute__((unused)) void _anon_fn_100434(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61399,9 +61307,7 @@ static __attribute__((unused)) void _anon_fn_100434(void* _env_ptr, Expression* 
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(((String)(void*)_box_targetNs->val), spec_string_intern("")))))) && (((spec_string_equals(((String)(void*)_box_targetNs->val), nsJoined)) || (String_startsWith(((String)(void*)_box_targetNs->val), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -61418,7 +61324,6 @@ static __attribute__((unused)) void _anon_fn_100434(void* _env_ptr, Expression* 
 
 typedef struct {
     String className;
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100438;
@@ -61437,8 +61342,6 @@ static __attribute__((unused)) void _anon_fn_100438(void* _env_ptr, Expression* 
     _Env_anon_100438* _env = (_Env_anon_100438*)_env_ptr;
     String className = _env->className;
     (void)className;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61446,12 +61349,10 @@ static __attribute__((unused)) void _anon_fn_100438(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61462,7 +61363,6 @@ static __attribute__((unused)) void _anon_fn_100438(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100438: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -61507,7 +61407,6 @@ static __attribute__((unused)) void _anon_fn_100433(void* _env_ptr, Member* m) {
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100439 = segs; if (_a_100439) { for (size_t _i_100439 = 0; _i_100439 < _a_100439->length; _i_100439++) {
         SPEC_POOL_AUTO;
@@ -61516,12 +61415,10 @@ static __attribute__((unused)) void _anon_fn_100433(void* _env_ptr, Member* m) {
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61535,9 +61432,7 @@ static __attribute__((unused)) void _anon_fn_100433(void* _env_ptr, Member* m) {
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(((String)(void*)_box_targetNs->val), spec_string_intern("")))))) && (((spec_string_equals(((String)(void*)_box_targetNs->val), nsJoined)) || (String_startsWith(((String)(void*)_box_targetNs->val), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -61559,7 +61454,6 @@ static __attribute__((unused)) void _anon_fn_100433(void* _env_ptr, Member* m) {
 
 typedef struct {
     String className;
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100442;
@@ -61578,8 +61472,6 @@ static __attribute__((unused)) void _anon_fn_100442(void* _env_ptr, Expression* 
     _Env_anon_100442* _env = (_Env_anon_100442*)_env_ptr;
     String className = _env->className;
     (void)className;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61587,12 +61479,10 @@ static __attribute__((unused)) void _anon_fn_100442(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61603,7 +61493,6 @@ static __attribute__((unused)) void _anon_fn_100442(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100442: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -61645,7 +61534,6 @@ static __attribute__((unused)) void _anon_fn_100441(void* _env_ptr, Expression* 
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100443 = segs; if (_a_100443) { for (size_t _i_100443 = 0; _i_100443 < _a_100443->length; _i_100443++) {
         SPEC_POOL_AUTO;
@@ -61654,12 +61542,10 @@ static __attribute__((unused)) void _anon_fn_100441(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61673,9 +61559,7 @@ static __attribute__((unused)) void _anon_fn_100441(void* _env_ptr, Expression* 
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(((String)(void*)_box_targetNs->val), spec_string_intern("")))))) && (((spec_string_equals(((String)(void*)_box_targetNs->val), nsJoined)) || (String_startsWith(((String)(void*)_box_targetNs->val), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -61692,7 +61576,6 @@ static __attribute__((unused)) void _anon_fn_100441(void* _env_ptr, Expression* 
 
 typedef struct {
     String className;
-    bool terminalAs;
     String nsJoined;
     String terminal;
 } _Env_anon_100445;
@@ -61711,8 +61594,6 @@ static __attribute__((unused)) void _anon_fn_100445(void* _env_ptr, Expression* 
     _Env_anon_100445* _env = (_Env_anon_100445*)_env_ptr;
     String className = _env->className;
     (void)className;
-    bool terminalAs = _env->terminalAs;
-    (void)terminalAs;
     String nsJoined = _env->nsJoined;
     (void)nsJoined;
     String terminal = _env->terminal;
@@ -61720,12 +61601,10 @@ static __attribute__((unused)) void _anon_fn_100445(void* _env_ptr, Expression* 
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -61736,7 +61615,6 @@ static __attribute__((unused)) void _anon_fn_100445(void* _env_ptr, Expression* 
 	}
 ;
     _cleanup_anon_100445: ;
-    _env->terminalAs = terminalAs;
     _env->nsJoined = nsJoined;
     _env->terminal = terminal;
     return;
@@ -84322,45 +84200,45 @@ static const SpecMethodMeta TypeChecker_spec_methods[] = {
     { "checkerSameSignature", (void*)TypeChecker_checkerSameSignature, 0, 2250 },
     { "classHasAccess", (void*)TypeChecker_classHasAccess, 0, 2275 },
     { "fileGrants", (void*)TypeChecker_fileGrants, 0, 2290 },
-    { "accessInClass", (void*)TypeChecker_accessInClass, 0, 2371 },
-    { "validateTypeAccess", (void*)TypeChecker_validateTypeAccess, 4, 2465 },
-    { "bindContainerCallbackParams", (void*)TypeChecker_bindContainerCallbackParams, 4, 2515 },
-    { "isBindingDeclaration", (void*)TypeChecker_isBindingDeclaration, 0, 2610 },
-    { "inferExpressionType", (void*)TypeChecker_inferExpressionType, 0, 2620 },
-    { "inferCall", (void*)TypeChecker_inferCall, 0, 3236 },
-    { "isCastable", (void*)TypeChecker_isCastable, 0, 4168 },
-    { "castableMethod", (void*)TypeChecker_castableMethod, 0, 4195 },
-    { "checkStatement", (void*)TypeChecker_checkStatement, 4, 4265 },
-    { "displayType", (void*)TypeChecker_displayType, 0, 4454 },
-    { "voidUseNote", (void*)TypeChecker_voidUseNote, 0, 4477 },
-    { "checkForward", (void*)TypeChecker_checkForward, 4, 4533 },
-    { "resolveReturnType", (void*)TypeChecker_resolveReturnType, 0, 4608 },
-    { "checkMethod", (void*)TypeChecker_checkMethod, 4, 4615 },
-    { "findFirstSuperMethod", (void*)TypeChecker_findFirstSuperMethod, 0, 4680 },
-    { "collectConcreteDeclarers", (void*)TypeChecker_collectConcreteDeclarers, 4, 4704 },
-    { "findAncestorMember", (void*)TypeChecker_findAncestorMember, 0, 4736 },
-    { "findMemberOwnerClass", (void*)TypeChecker_findMemberOwnerClass, 0, 4769 },
-    { "findHeldOwnerClass", (void*)TypeChecker_findHeldOwnerClass, 0, 4798 },
-    { "findHeldMember", (void*)TypeChecker_findHeldMember, 0, 4828 },
-    { "findHeldMethod", (void*)TypeChecker_findHeldMethod, 0, 4848 },
-    { "findHeldMethodOwner", (void*)TypeChecker_findHeldMethodOwner, 0, 4879 },
-    { "lookupHeldFieldType", (void*)TypeChecker_lookupHeldFieldType, 0, 4909 },
-    { "checkMemberVisibility", (void*)TypeChecker_checkMemberVisibility, 4, 4923 },
-    { "checkShadowTargets", (void*)TypeChecker_checkShadowTargets, 4, 4947 },
-    { "checkHeldMembers", (void*)TypeChecker_checkHeldMembers, 4, 4997 },
-    { "checkMethodConflicts", (void*)TypeChecker_checkMethodConflicts, 4, 5086 },
-    { "checkInheritance", (void*)TypeChecker_checkInheritance, 4, 5135 },
-    { "applyMerge", (void*)TypeChecker_applyMerge, 4, 5282 },
-    { "collectClassFieldTypes", (void*)TypeChecker_collectClassFieldTypes, 4, 5339 },
-    { "checkClass", (void*)TypeChecker_checkClass, 4, 5360 },
-    { "collectClassesFromStatement", (void*)TypeChecker_collectClassesFromStatement, 4, 5463 },
-    { "collectClasses", (void*)TypeChecker_collectClasses, 4, 5476 },
-    { "checkInstanceImports", (void*)TypeChecker_checkInstanceImports, 4, 5503 },
-    { "instanceImportTargets", (void*)TypeChecker_instanceImportTargets, 0, 5554 },
-    { "checkInstanceImportGraph", (void*)TypeChecker_checkInstanceImportGraph, 6, 5583 },
-    { "visitImportNode", (void*)TypeChecker_visitImportNode, 4, 5595 },
-    { "checkProgram", (void*)TypeChecker_checkProgram, 0, 5615 },
-    { "cleanup", (void*)TypeChecker_cleanup, 6, 5706 },
+    { "accessInClass", (void*)TypeChecker_accessInClass, 0, 2363 },
+    { "validateTypeAccess", (void*)TypeChecker_validateTypeAccess, 4, 2450 },
+    { "bindContainerCallbackParams", (void*)TypeChecker_bindContainerCallbackParams, 4, 2500 },
+    { "isBindingDeclaration", (void*)TypeChecker_isBindingDeclaration, 0, 2595 },
+    { "inferExpressionType", (void*)TypeChecker_inferExpressionType, 0, 2605 },
+    { "inferCall", (void*)TypeChecker_inferCall, 0, 3221 },
+    { "isCastable", (void*)TypeChecker_isCastable, 0, 4153 },
+    { "castableMethod", (void*)TypeChecker_castableMethod, 0, 4180 },
+    { "checkStatement", (void*)TypeChecker_checkStatement, 4, 4250 },
+    { "displayType", (void*)TypeChecker_displayType, 0, 4439 },
+    { "voidUseNote", (void*)TypeChecker_voidUseNote, 0, 4462 },
+    { "checkForward", (void*)TypeChecker_checkForward, 4, 4518 },
+    { "resolveReturnType", (void*)TypeChecker_resolveReturnType, 0, 4593 },
+    { "checkMethod", (void*)TypeChecker_checkMethod, 4, 4600 },
+    { "findFirstSuperMethod", (void*)TypeChecker_findFirstSuperMethod, 0, 4665 },
+    { "collectConcreteDeclarers", (void*)TypeChecker_collectConcreteDeclarers, 4, 4689 },
+    { "findAncestorMember", (void*)TypeChecker_findAncestorMember, 0, 4721 },
+    { "findMemberOwnerClass", (void*)TypeChecker_findMemberOwnerClass, 0, 4754 },
+    { "findHeldOwnerClass", (void*)TypeChecker_findHeldOwnerClass, 0, 4783 },
+    { "findHeldMember", (void*)TypeChecker_findHeldMember, 0, 4813 },
+    { "findHeldMethod", (void*)TypeChecker_findHeldMethod, 0, 4833 },
+    { "findHeldMethodOwner", (void*)TypeChecker_findHeldMethodOwner, 0, 4864 },
+    { "lookupHeldFieldType", (void*)TypeChecker_lookupHeldFieldType, 0, 4894 },
+    { "checkMemberVisibility", (void*)TypeChecker_checkMemberVisibility, 4, 4908 },
+    { "checkShadowTargets", (void*)TypeChecker_checkShadowTargets, 4, 4932 },
+    { "checkHeldMembers", (void*)TypeChecker_checkHeldMembers, 4, 4982 },
+    { "checkMethodConflicts", (void*)TypeChecker_checkMethodConflicts, 4, 5071 },
+    { "checkInheritance", (void*)TypeChecker_checkInheritance, 4, 5120 },
+    { "applyMerge", (void*)TypeChecker_applyMerge, 4, 5267 },
+    { "collectClassFieldTypes", (void*)TypeChecker_collectClassFieldTypes, 4, 5324 },
+    { "checkClass", (void*)TypeChecker_checkClass, 4, 5345 },
+    { "collectClassesFromStatement", (void*)TypeChecker_collectClassesFromStatement, 4, 5448 },
+    { "collectClasses", (void*)TypeChecker_collectClasses, 4, 5461 },
+    { "checkInstanceImports", (void*)TypeChecker_checkInstanceImports, 4, 5488 },
+    { "instanceImportTargets", (void*)TypeChecker_instanceImportTargets, 0, 5539 },
+    { "checkInstanceImportGraph", (void*)TypeChecker_checkInstanceImportGraph, 6, 5568 },
+    { "visitImportNode", (void*)TypeChecker_visitImportNode, 4, 5580 },
+    { "checkProgram", (void*)TypeChecker_checkProgram, 0, 5600 },
+    { "cleanup", (void*)TypeChecker_cleanup, 6, 5691 },
 };
 static const char* const TypeChecker_spec_bases[] = {
     "Class",
@@ -91644,7 +91522,6 @@ bool TypeChecker_fileGrants(TypeChecker* self, String sourceFile, String targetN
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100432 = segs; if (_a_100432) { for (size_t _i_100432 = 0; _i_100432 < _a_100432->length; _i_100432++) {
         SPEC_POOL_AUTO;
@@ -91653,12 +91530,10 @@ bool TypeChecker_fileGrants(TypeChecker* self, String sourceFile, String targetN
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -91672,9 +91547,7 @@ bool TypeChecker_fileGrants(TypeChecker* self, String sourceFile, String targetN
     } } });
 	    SPEC_AUTO String targetRoot = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(targetNs, spec_string_intern("")))))) && (((spec_string_equals(targetNs, nsJoined)) || (String_startsWith(targetNs, (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);
@@ -91755,7 +91628,6 @@ bool TypeChecker_accessInClass(TypeChecker* self, String className, String targe
 	    if ((item)->_tag == (6)) {
         SpecArray* segs = ((Expression_ArrayLit*)(item))->items;
 	    SPEC_AUTO String terminal = spec_construct_string(spec_string_intern(""));
-	    bool terminalAs = false;
 	    SPEC_AUTO String nsJoined = spec_construct_string(spec_string_intern(""));
 	    ({ SpecArray* _a_100446 = segs; if (_a_100446) { for (size_t _i_100446 = 0; _i_100446 < _a_100446->length; _i_100446++) {
         SPEC_POOL_AUTO;
@@ -91764,12 +91636,10 @@ bool TypeChecker_accessInClass(TypeChecker* self, String className, String targe
     if ((seg)->_tag == (4)) {
         String s = ((Expression_Ident*)(seg))->name;
 	    spec_assign((void**)&terminal, (void*)(s));
-	    terminalAs = false;
 	} else if ((seg)->_tag == (15)) {
         String className = ((Expression_UsingAs*)(seg))->className;
         SpecArray* args = ((Expression_UsingAs*)(seg))->args;
 	    spec_assign((void**)&terminal, (void*)(className));
-	    terminalAs = true;
 	} else if ((seg)->_tag == (0)) {
         String s = ((Expression_StringLit*)(seg))->value;
 	    if (spec_string_equals(nsJoined, spec_string_intern(""))) {
@@ -91783,9 +91653,7 @@ bool TypeChecker_accessInClass(TypeChecker* self, String className, String targe
     } } });
 	    SPEC_AUTO String targetRoot2 = spec_construct_string(spec_array_get((((SpecArray*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); SpecArray* _v = (SpecArray*)(String_split(targetName, spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))), 0));
 	    if (((spec_string_equals(terminal, targetName)) || (spec_string_equals(terminal, targetRoot2)))) {
-	    if ((((!(terminalAs))) || (String_contains(targetName, spec_string_intern(":"))))) {
 	    _box_granted->val = (int64_t)(true);
-	};
 	};
 	    if (((((spec_string_equals(terminal, spec_string_intern(""))) && ((!spec_string_equals(((String)(void*)_box_targetNs->val), spec_string_intern("")))))) && (((spec_string_equals(((String)(void*)_box_targetNs->val), nsJoined)) || (String_startsWith(((String)(void*)_box_targetNs->val), (((String)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); String _v = (String)(spec_string_concat((void*)spec_retain((void*)(nsJoined)), spec_string_intern(":"))); spec_pool_release_to(_pf); _v; })))))))))) {
 	    _box_granted->val = (int64_t)(true);

@@ -2309,17 +2309,14 @@ Class is TypeChecker{
 										match(on: item, when: [
 											Expression:ArrayLit: local Function(Array of Expression is segs){
 												local String is terminal: '';
-												local Boolean is terminalAs: false;
 												local String is nsJoined: '';
 												segs:each(action: local Function(Expression is seg){
 													match(on: seg, when: [
 														Expression:Ident: local Function(String is s){
 															terminal: s;
-															terminalAs: false;
 														},
 														Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 															terminal: className;
-															terminalAs: true;
 														},
 														Expression:StringLit: local Function(String is s){
 															if({ nsJoined == '' }, {
@@ -2331,17 +2328,12 @@ Class is TypeChecker{
 													], default: {
 													});
 												});
-												# the qualified nested reference
-												# ('Outer:Inner') rides the parent's grant — the terminal
-												# matches the target's root segment. IV.6 strictness: the
-												# as-form grants functions and the qualified nested
-												# references; the BARE parent reference (and with it
-												# construction) requires the plain type import.
+												# The as-form and plain type import both grant the class
+												# itself (type annotations, construction, static/instance
+												# calls) as well as qualified nested references ('Outer:Inner').
 												local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
 												if({ terminal == targetName || terminal == targetRoot }, {
-													if({ !terminalAs || targetName:contains(needle: ':') }, {
-														granted: true;
-													});
+													granted: true;
 												});
 												if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
 													granted: true;
@@ -2402,17 +2394,14 @@ Class is TypeChecker{
 								match(on: item, when: [
 									Expression:ArrayLit: local Function(Array of Expression is segs){
 										local String is terminal: '';
-										local Boolean is terminalAs: false;
 										local String is nsJoined: '';
 										segs:each(action: local Function(Expression is seg){
 											match(on: seg, when: [
 												Expression:Ident: local Function(String is s){
 													terminal: s;
-													terminalAs: false;
 												},
 												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 													terminal: className;
-													terminalAs: true;
 												},
 												Expression:StringLit: local Function(String is s){
 													if({ nsJoined == '' }, {
@@ -2423,16 +2412,12 @@ Class is TypeChecker{
 												}
 											], default: {});
 										});
-										# the same root-segment grant for
-										# the qualified nested reference. IV.6 strictness: the as-form
-										# grants functions and the qualified nested references; the
-										# BARE parent reference (and with it construction) requires
-										# the plain type import.
+										# The as-form and plain type import both grant the class
+										# itself (type annotations, construction, static/instance
+										# calls) as well as qualified nested references ('Outer:Inner').
 										local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
 										if({ terminal == targetName || terminal == targetRoot2 }, {
-											if({ !terminalAs || targetName:contains(needle: ':') }, {
-												granted: true;
-											});
+											granted: true;
 										});
 										if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
 											granted: true;

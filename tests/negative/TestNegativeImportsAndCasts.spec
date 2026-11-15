@@ -92,23 +92,6 @@ Class is N27{
 		);
 	}
 
-	## N28: as-form import does not grant construction.
-	Function is testAsFormCannotConstruct(){
-		Assert:compilerRejects(
-			source: '''
-Class is N28{
-	replace Array of Array of String is using: [
-		['base', 'math', as Math()]
-	];
-	replace Function is init(Map of String to String is args){
-		local Math is m: Math:init();
-	}
-}
-''',
-			expect: "'Math' is not imported by 'N28'; add it to the using declaration"
-		);
-	}
-
 	## as_cast: Cast between unrelated classes is rejected.
 	Function is testCastBetweenUnrelatedClasses(){
 		Assert:compilerRejects(

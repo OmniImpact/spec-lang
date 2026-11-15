@@ -39,11 +39,4 @@ Class of SpecUnitTest is TestNegativeMultiFile{
 			expect: "Fields are not reachable through the class-name prefix 'FieldDep'"
 		);
 	}
-
-	Function is testAsFormDefault(){
-		Assert:compilerRejectsFile(
-			filePath: 'tests/negative/fixtures/n29_as_form_default.spec',
-			expect: "'Math2' is not imported by 'N29AsFormDefault'"
-		);
-	}
 }

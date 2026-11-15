@@ -26,4 +26,12 @@ Class of SpecUnitTest is TestStatefulImport{
 		Assert:areEqualString('owned=3', first);
 		Assert:areEqualString('owned=4', second);
 	}
+
+	## Importing with `as` automatically grants the class itself for
+	## type annotations and direct construction without a separate plain import.
+	Function is testAsImportGrantsClass(){
+		local StatefulCounter is standalone: StatefulCounter:init(label: 'direct');
+		standalone:tick();
+		Assert:areEqualString('direct=1', standalone:report());
+	}
 }
