@@ -30,6 +30,7 @@ Class is CodeGenerator{
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
+		['base', 'compiler', 'gen', OptimizationPolicy],
 		['base', 'compiler', 'gen', DeclarationGenerator],
 		['base', 'compiler', 'gen', BuiltinCallGenerator],
 		['base', 'compiler', 'gen', RuntimePrelude],
@@ -48,6 +49,9 @@ Class is CodeGenerator{
 
 	## Emission transparency decisions.
 	local EmissionPolicy is policy: EmissionPolicy:init();
+
+	## Structural optimization predicates.
+	local OptimizationPolicy is opt: OptimizationPolicy:init();
 
 	## Well-known names.
 	local WellKnown is names: WellKnown:init();
@@ -3511,7 +3515,11 @@ Class is CodeGenerator{
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
 			self:hoistedLocals: savedHoisted;
-			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
+			local String is anonPoolLine: '';
+			if({ self:opt:paramsNeedPoolFrame(params: anonParams) || self:opt:stmtsNeedPoolFrame(stmts: anonBody) }, {
+				anonPoolLine: "    SPEC_POOL_AUTO;\n";
+			});
+			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . anonPoolLine . bindsC . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, {
 			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: anonBody);
@@ -3529,7 +3537,11 @@ Class is CodeGenerator{
 			self:cleanupRetVar: savedCleanupRetVar;
 			self:closureReturnTypeName: savedClosureRet;
 			self:hoistedLocals: savedHoisted;
-			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . "    SPEC_POOL_AUTO;\n" . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
+			local String is anonPoolLine: '';
+			if({ self:opt:paramsNeedPoolFrame(params: anonParams) || self:opt:stmtsNeedPoolFrame(stmts: anonBody) }, {
+				anonPoolLine: "    SPEC_POOL_AUTO;\n";
+			});
+			bufAppendBuf(dst: self:helperFunctions, src: 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n    (void)_env_ptr;\n" . retDecl . anonPoolLine . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return 'spec_closure_new((void*)' . fnName . ', NULL, NULL)';
 		});
 	}
@@ -4344,7 +4356,9 @@ Class is CodeGenerator{
 		if({ self:cleanupRetVar != '' }, {
 			bufAppendBuf(dst: bodyC, src: '    ' . retType . ' ' . self:cleanupRetVar . " = 0;\n");
 		});
-		bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
+		if({ self:opt:methodNeedsPoolFrame(m: method) }, {
+			bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
+		});
 		local Array of String is hoistedKeys2: self:hoistedLocals:keys();
 		sortStrings(values: hoistedKeys2);
 		hoistedKeys2:each(action: local Function(String is hName){
@@ -6473,7 +6487,11 @@ Class is CodeGenerator{
 			});
 		});
 
-		local String is out: "({ " . declsC . "while (1) {\n        SPEC_POOL_AUTO;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n" . loopReleasesC . "})";
+		local String is whilePoolLine: '';
+		if({ self:opt:paramsNeedPoolFrame(params: loopVars) || self:opt:stmtsNeedPoolFrame(stmts: evalBody) || self:opt:stmtsNeedPoolFrame(stmts: iterBody) }, {
+			whilePoolLine: "        SPEC_POOL_AUTO;\n";
+		});
+		local String is out: "({ " . declsC . "while (1) {\n" . whilePoolLine . "        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (!" . evVar . ") break;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n" . loopReleasesC . "})";
 		self:localVars: savedVars;
 		return out;
 	}
@@ -6530,7 +6548,11 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ while (1) {\n        SPEC_POOL_AUTO;\n        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (" . evVar . ") break;\n    }\n})";
+		local String is untilPoolLine: '';
+		if({ self:opt:stmtsNeedPoolFrame(stmts: evalBody) || self:opt:stmtsNeedPoolFrame(stmts: iterBody) }, {
+			untilPoolLine: "        SPEC_POOL_AUTO;\n";
+		});
+		local String is out: "({ while (1) {\n" . untilPoolLine . "        bool " . itVar . " = true;\n        do {\n" . iterBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n        bool " . evVar . " = false;\n        do {\n" . evalBodyC . "        } while (0);\n        if (" . evVar . ") break;\n    }\n})";
 		return out;
 	}
 
@@ -6562,7 +6584,11 @@ Class is CodeGenerator{
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
 
-		local String is out: "({ long long _rn_" . id . " = (long long)(" . countC . "); for (long long _ri_" . id . " = 0; _ri_" . id . " < _rn_" . id . "; _ri_" . id . "++) {\n        SPEC_POOL_AUTO;\n        bool " . itVar . " = true;\n        do {\n" . workerBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n})";
+		local String is repeatPoolLine: '';
+		if({ self:opt:exprNeedsPoolFrame(expr: countExpr) || self:opt:stmtsNeedPoolFrame(stmts: workerBody) }, {
+			repeatPoolLine: "        SPEC_POOL_AUTO;\n";
+		});
+		local String is out: "({ long long _rn_" . id . " = (long long)(" . countC . "); for (long long _ri_" . id . " = 0; _ri_" . id . " < _rn_" . id . "; _ri_" . id . "++) {\n" . repeatPoolLine . "        bool " . itVar . " = true;\n        do {\n" . workerBodyC . "        } while (0);\n        if (!" . itVar . ") break;\n    }\n})";
 		return out;
 	}
 
