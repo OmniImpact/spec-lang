@@ -46,9 +46,10 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
 
 ### 2.4 Standard Library Expansion
 - **Native JSON Serialization (`base:data:Json`)** [Completed]: Full-featured, pure Spec JSON library (`spec/lib/base/data/Json.spec`, `JsonNull.spec`, `JsonBool.spec`, `JsonNumber.spec`) providing bidirectional recursive descent parsing (`Json:parse`), typed getters (`getInt`, `getString`, `getBool`, `getFloat`, `getObject`, `getArray`), compact encoding (`Json:stringify`), and pretty printing (`Json:format`). Serves as the shared data interchange foundation for `specbuild.json` manifests and `speclsp` JSON-RPC 2.0 communication. Verified with unit test suite `tests/TestJson.spec` (9/9 passing).
-- **Time & Clocks**: Provide a high-resolution time module (`base:sys:Time`) with ISO-8601 formatting, duration arithmetic, and nanosecond/microsecond clocks (expanding beyond `Process:clockMs()`).
-- **Basic Networking / Sockets**: Abstract stream sockets (`base:sys:Socket`, TCP client/server) over the sysinternal floor.
-- **Collections**: Ensure `List`, `Array`, and `Map` have consistent API parity across iterations, slicing, filtering, and mutations. Began container migration to pure Spec classes implemented over sysinternal floors: Phase 1 completed for `Array` over `base:sys:Vector` / `base:sysinternal:Vector`.
+- **Basic Networking / Sockets (`base:net:Socket`)** [Completed]: TCP client and server stream socket abstraction (`spec/lib/base/net/Socket.spec`) over the `base:sysinternal:Socket` floor.
+- **Cross-Platform Paths & System Primitives** [Completed]: Implemented `base:sys:Uri` (`spec/lib/base/sys/Uri.spec`) for cross-platform path normalization and centralized temp/home/cache directory resolution; exposed `base:sys:Box` for shared heap cells; added `Parallel:sync` and `Parallel:syncWith` for safe multi-threaded synchronization.
+- **Time & Clocks** [Planned]: Provide a high-resolution time module (`base:sys:Time`) with ISO-8601 formatting, duration arithmetic, and nanosecond/microsecond clocks (expanding beyond `Process:clockMs()`).
+- **Collections** [In Progress]: Ensure `List`, `Array`, and `Map` have consistent API parity across iterations, slicing, filtering, and mutations. Implemented `base:sys:Vector` / `base:sysinternal:Vector`, `base:struct:Stack`, and pure Spec `Array` methods.
 
 ### 2.5 Modern Unit Testing Framework & Negative Test Suite Port
 - **Status**: **Completed**.
@@ -57,6 +58,13 @@ The 0.1 Alpha release represents Spec's transition from an experimental self-hos
   - Replaced ad-hoc loose negative test files with 9 structured, predictable `SpecUnitTest` classes: `TestNegativeReceivers`, `TestNegativeOverloads`, `TestNegativeHeld`, `TestNegativeImportsAndCasts`, `TestNegativeControlFlow`, `TestNegativeTypeSafety`, `TestNegativeClassModel`, `TestNegativeRuntime`, and `TestNegativeMultiFile`.
   - Organized multi-file fixture assets under `tests/negative/fixtures/` classified as `helper` files.
   - Achieved 100% green status across all test suites in `specunit`.
+
+### 2.6 Language & AST Modernization
+- **Status**: **Completed**.
+- **Accomplishments**:
+  - **Unified Closure Capture Semantics**: Implemented shared mutable closure captures backed by `base:sys:Box` heap cells.
+  - **Enhanced Enum Sum Types & AST Migration**: Migrated `Statement` and `Expression` AST nodes from fat classes to Enhanced Enums, retiring `StatementKind` and `ExpressionKind`.
+  - **Pattern Matching Ergonomics**: Added support for `match` `default:` closures and nested early returns in value-form arms.
 
 ---
 
@@ -128,6 +136,8 @@ To provide a complete developer workflow out of the box, four new utilities will
 ```
 
 ### 4.1 Project Initializer (`specinit`)
+- **Status**: **Planned**.
+
 A new tool written in Spec (`utilities/specinit/SpecInit.spec`) to bootstrap new projects:
 - **Usage**:
   ```bash
@@ -150,7 +160,8 @@ A new tool written in Spec (`utilities/specinit/SpecInit.spec`) to bootstrap new
   - Implemented `utilities/specbuild/SpecBuild.spec` compiled to `bin/specbuild`.
   - Added multi-directory source scanning support (`-s`, `--source-dir`, `--source-dirs`) to the compiler driver (`Driver.spec`) and loader (`Loader.spec`).
   - Added positional command-line argument support in `CodeGenerator.spec` generated `main` entry points.
-  - Created standalone manifest build configurations for all example programs (`examples/*.json`).
+  - Integrated `base:sys:Uri` for cross-platform path, executable suffix (`.exe` on Windows), and temp directory resolution.
+  - Created standalone manifest build configurations for core tooling (`spec.json`, `utilities/specunit/specunit.json`, `utilities/speclint/speclint.json`) and example programs (`examples/*.json`), and removed tracked binaries in favor of zero-start builds (`bin/README.md`).
   - Implemented full project lifecycle commands: `specbuild [manifest.json] [build|test|lint|clean|help]`.
   - Validated via unit test suite `tests/TestSpecBuild.spec` (all passing).
 
@@ -178,6 +189,8 @@ A lightweight, fast build coordinator (`utilities/specbuild/SpecBuild.spec`) to 
   - `specbuild clean`: Removes build artifacts and intermediate files.
 
 ### 4.3 Shared Terminal UI (TUI) Framework
+- **Status**: **Planned**.
+
 A shared UI library (`spec/lib/base/ui/` or `utilities/common/tui/`) providing consistent, beautiful command-line output across all Spec tools:
 - **Features**:
   - **Color & Style Engine**: ANSI 256-color & truecolor formatting with graceful fallback on dumb terminals.
@@ -190,6 +203,8 @@ A shared UI library (`spec/lib/base/ui/` or `utilities/common/tui/`) providing c
   - Enhance `speclint` report with formatted file grouping and grouped issue cards.
 
 ### 4.4 Language Server Protocol Server (`speclsp`)
+- **Status**: **Planned**.
+
 A standalone native LSP binary (`utilities/speclsp/SpecLsp.spec` compiled to `bin/speclsp`) implementing JSON-RPC 2.0 over standard input/output to deliver full IDE intelligence across JetBrains products, VS Code, Zed, and Neovim:
 - **Architecture**:
   - Imports the compiler frontend (`base:compiler:lexer`, `parser`, `ast`, `loader`, `checker`) in-process.
@@ -208,6 +223,7 @@ A standalone native LSP binary (`utilities/speclsp/SpecLsp.spec` compiled to `bi
 ---
 
 ## 5. Automated Installation & Linux Setup
+- **Status**: **Planned**.
 
 A turnkey installation script (`install.sh`) to install Spec on Linux distributions:
 
@@ -235,37 +251,15 @@ A turnkey installation script (`install.sh`) to install Spec on Linux distributi
 ---
 
 ## 6. Cross-Platform Reliability & POSIX Abstraction
+- **Status**: **Completed** (Linux GCC/Clang, macOS Clang, Windows MinGW-w64 UCRT64 all verified in CI).
 
-Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysinternal floor (`spec/base/sysinternal/`) include direct POSIX and Linux-specific headers (`_GNU_SOURCE`, `sched.h`, `sys/ioctl.h`, `sys/wait.h`, `sys/resource.h`).
+Spec compiles to C11. Platform-specific headers and primitives in `RuntimePrelude.spec` and `base:sysinternal` are guarded across Linux, macOS, and Windows:
 
-### 6.1 Audit & Isolation of Platform-Specific Primitives
-- **Isolate System Dependencies**: Group all direct POSIX system calls into `sysinternal` modules with dedicated C shims rather than embedding them in general prelude code.
-- **Platform Feature Detection**:
-  - Replace hardcoded Linux headers with conditional compilation flags:
-    ```c
-    #if defined(__linux__)
-        #define _GNU_SOURCE
-        #include <sched.h>
-    #elif defined(__APPLE__) && defined(__MACH__)
-        #include <mach/mach_time.h>
-        #include <sys/sysctl.h>
-    #elif defined(_WIN32)
-        #include <windows.h>
-        #include <io.h>
-    #endif
-    ```
-
-### 6.2 macOS / BSD Support
-- Adapt process monitoring (`Process:peakMemoryKb()`) to query `getrusage(RUSAGE_SELF, ...)` portable fields or `sysctl` instead of Linux `/proc/self/status`.
-- Abstract thread pinning / core count queries (`sched_getaffinity` on Linux vs `sysctl hw.ncpu` on macOS).
-- Ensure terminal width/height queries in `Terminal.spec` cleanly handle BSD `TIOCGWINSZ`.
-
-### 6.3 Windows (Win32) Roadmap Path
-- Target **MinGW-w64** / **Clang on Windows** as the initial Windows compilation target.
-- Map basic I/O and process execution primitives:
-  - Memory: Windows `VirtualAlloc` / `HeapAlloc` backing `Arena.spec`.
-  - Process: Win32 `CreateProcess` / `WaitForSingleObject` to provide fallback for `fork` / `exec` / `waitpid`.
-  - Threading: C11 `<threads.h>` or Win32 threads alongside `pthread-win32`.
+### 6.1 Implemented Platform Abstraction
+- **Cross-Platform CI Matrix (`.github/workflows/ci.yml`)**: Full bootstrap, tooling build (`specbuild`, `specunit`, `speclint`), and `specunit` regression suite verified on Linux (`gcc` and `clang`), macOS (`clang`), Windows (`MinGW-w64 UCRT64`), and Linux ASan+UBSan.
+- **Cross-Platform Path & Environment Resolution (`base:sys:Uri`)**: Unified path normalization, executable suffix handling, and temp/home/cache directory resolution across POSIX and Windows.
+- **Win32 Runtime Support**: Implemented Win32 `CreateProcessA` execution, CRLF handling, and `spec_file_temp` suffix templates for Windows builds.
+- **Remaining Cleanup**: Continue isolating any residual platform-specific shims into `sysinternal` modules where needed for BSD/other targets.
 
 ---
 
@@ -273,11 +267,11 @@ Spec compiles to C11, but the current runtime (`RuntimePrelude.spec`) and sysint
 
 | Milestone | Deliverables | Target Status |
 |---|---|---|
-| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics & structured spans migration to `ErrorText.spec` [Completed] | Completed |
+| **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics & structured spans migration to `ErrorText.spec` [Completed]<br>- Unified shared mutable closure capture semantics (`Box`) & `Parallel:sync`/`syncWith` [Completed]<br>- Enhanced Enum sum types & AST migration (`Statement`, `Expression`) + `match` `default:` closures [Completed] | Completed |
 | **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery [Completed]<br>- Separate formatting, naming, and AST idiom rules into dedicated classes [Completed]<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`) [Completed]<br>- CLI rule filtering flags (`--rule` and `--disable`) [Completed] | Completed (`v0.000.100`) |
-| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier) [Completed]<br>- Build `specinit` project scaffolder<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`) [Completed]<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion)<br>- Implement shared TUI color/status module | In Progress |
-| **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- POSIX/OSX platform guards in runtime prelude<br>- Complete `install.sh` for Linux<br>- Standard library additions (Time, Sockets) | In Progress |
-| **M5: 0.1 Alpha Release** | - Full documentation sweep<br>- Fixed-point bootstrap verification across GCC and Clang<br>- Tag `v0.1.0-alpha` and publish release tarballs | Planned |
+| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier) [Completed]<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`) [Completed]<br>- Build `specinit` project scaffolder [Planned]<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion) [Planned]<br>- Implement shared TUI color/status module [Planned] | In Progress |
+| **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- Cross-platform runtime & CI verification (Linux GCC/Clang, macOS Clang, Windows MinGW-w64, ASan+UBSan) [Completed]<br>- Cross-platform `base:sys:Uri` path/cache/temp abstraction [Completed]<br>- Networking sockets (`base:net:Socket`) & `Vector`/`Stack` collections [Completed]<br>- Complete `install.sh` for Linux [Planned]<br>- Standard library `base:sys:Time` module [Planned] | In Progress |
+| **M5: 0.1 Alpha Release** | - Fixed-point bootstrap verification across GCC and Clang [Completed in CI]<br>- Full documentation sweep [Planned]<br>- Tag `v0.1.0-alpha` and publish release tarballs [Planned] | Planned |
 
 ---
 
