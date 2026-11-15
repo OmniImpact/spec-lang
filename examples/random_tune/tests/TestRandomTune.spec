@@ -13,8 +13,8 @@ Class of SpecUnitTest is TestRandomTune{
 
 	Function is testMidiToFreq(){
 		local Synth is s: Synth:init();
-		local Int is a4: Math:toInt(x: Math:round(x: s:midiToFreq(midi: 69)));
-		local Int is a5: Math:toInt(x: Math:round(x: s:midiToFreq(midi: 81)));
+		local Int is a4: Math:toInt(value: Math:round(value: s:midiToFreq(midi: 69)));
+		local Int is a5: Math:toInt(value: Math:round(value: s:midiToFreq(midi: 81)));
 		Assert:areEqualInt(440, a4);
 		Assert:areEqualInt(880, a5);
 	}

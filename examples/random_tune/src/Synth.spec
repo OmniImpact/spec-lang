@@ -32,8 +32,8 @@ Class is Synth{
 				env: ((totalSamples - i) as Float) / (fadeSamples as Float);
 			});
 			local Float is t: (i as Float) / (sampleRate as Float);
-			local Float is sampleVal: Math:sin(x: twoPi * freqHz * t) * amplitude * env;
-			local Int is s: Math:toInt(x: Math:round(x: sampleVal));
+			local Float is sampleVal: Math:sin(value: twoPi * freqHz * t) * amplitude * env;
+			local Int is s: Math:toInt(value: Math:round(value: sampleVal));
 			if({ s < 0 }, {
 				s: s + 65536;
 			});

@@ -464,47 +464,6 @@ Class is BuiltinCallGenerator{
 			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); if (_lc && _lc->on_complete) { _lc->on_complete(_lc->callback, _lc); } })';
 		});
 
-		# Math functions (libm / C-cast floor only).
-		if({ targetC == 'Math' || targetType == 'Math' }, {
-			local String is m: cd:name;
-			local String is a0: '0.0';
-			if({ expr:argCount() > 0 }, {
-				a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
-			});
-			# Single-operand functions: the match yields the C call; the
-			# empty else lets the two-operand section run.
-			local String is oneC: match(on: m, when: [
-				'sqrt': { 'spec_math_sqrt(' . a0 . ')' },
-				'sin': { 'spec_math_sin(' . a0 . ')' },
-				'cos': { 'spec_math_cos(' . a0 . ')' },
-				'tan': { 'spec_math_tan(' . a0 . ')' },
-				'log': { 'spec_math_log(' . a0 . ')' },
-				'log2': { 'spec_math_log2(' . a0 . ')' },
-				'fastRandom': { 'spec_fast_random()' },
-				else: { '' }
-			]);
-			if({ oneC != '' }, {
-				return oneC;
-			});
-			# Two-operand floor functions.
-			local String is a1: '0.0';
-			if({ expr:argCount() > 1 }, {
-				a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
-			});
-			if({ m == 'pow' }, {
-				return 'spec_math_pow(' . a0 . ', ' . a1 . ')';
-			});
-			if({ m == 'atan2' }, {
-				return 'spec_math_atan2(' . a0 . ', ' . a1 . ')';
-			});
-			if({ m == 'toInt' }, {
-				return '((long long)(' . a0 . '))';
-			});
-			if({ m == 'toFloat' }, {
-				return '((double)(' . a0 . '))';
-			});
-		});
-
 		# Array/List/Map method bindings (runtime-managed; spec_* calls).
 		# Entry is by method name on any Array-typed target — no transparency
 		# check: registered locals must bind without a registry lookup.

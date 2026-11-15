@@ -3863,7 +3863,9 @@ Class is TypeChecker{
 				# base:sysinternal; a prefix test on the joined string
 				# would conflate them.
 				local Array of String is callerSegs: callerCls:namespaceSegments();
-				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' && callerSegs:get(index: 1) == 'sys';
+				local String is floorClsName: targetPathSegs:get(index: targetPathSegs:length() - 1);
+				local Boolean is sysWrapper: callerSegs:length() >= 2 && callerSegs:get(index: 0) == 'base' &&
+					(callerSegs:get(index: 1) == 'sys' || callerCls:name == floorClsName);
 				if({ !sysWrapper }, {
 					self:addError(line: self:currentLine, msg: self:errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
 				});

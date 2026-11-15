@@ -165,6 +165,17 @@ Class of SpecUnitTest is TestStdlibParity{
 		Assert:isTrue(abs(value: round(value: 0.49999999999999994)) < 0.0001);
 		local Float is rnd: random(min: 5.0, max: 10.0);
 		Assert:isTrue(rnd >= 5.0 && rnd < 10.0);
+		Assert:isTrue(abs(value: exp(value: 1.0) - e()) < 0.0001);
+		Assert:isTrue(abs(value: log10(value: 1000.0) - 3.0) < 0.0001);
+		Assert:isTrue(abs(value: cbrt(value: 27.0) - 3.0) < 0.0001);
+		Assert:isTrue(abs(value: asin(value: 1.0) - (pi() / 2.0)) < 0.0001);
+		Assert:isTrue(abs(value: acos(value: 1.0)) < 0.0001);
+		Assert:isTrue(abs(value: atan(value: 1.0) - (pi() / 4.0)) < 0.0001);
+		Assert:isTrue(abs(value: fma(a: 2.0, b: 3.0, c: 4.0) - 10.0) < 0.0001);
+		Assert:isTrue(abs(value: sinh(value: 0.0)) < 0.0001);
+		Assert:isTrue(abs(value: cosh(value: 0.0) - 1.0) < 0.0001);
+		Assert:isTrue(abs(value: tanh(value: 0.0)) < 0.0001);
+		Assert:isTrue(abs(value: tanh(value: 30.0) - 1.0) < 0.0001);
 	}
 
 	Function is testSort(){

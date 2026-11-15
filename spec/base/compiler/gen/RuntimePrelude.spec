@@ -255,6 +255,13 @@ double spec_math_atan2(double y, double x);
 double spec_math_log(double v);
 double spec_math_log2(double v);
 double spec_math_pow(double base, double exp);
+double spec_math_exp(double v);
+double spec_math_log10(double v);
+double spec_math_cbrt(double v);
+double spec_math_asin(double v);
+double spec_math_acos(double v);
+double spec_math_atan(double v);
+double spec_math_fma(double a, double b, double c);
 long long spec_math_to_int(double v);
 double spec_math_to_float(long long v);
 double spec_math_random(double min, double max);
@@ -3381,6 +3388,20 @@ double spec_math_log(double v) { return v <= 0.0 ? 0.0 : log(v); }
 double spec_math_log2(double v) { return v <= 0.0 ? 0.0 : log2(v); }
 
 double spec_math_pow(double base, double exp) { return pow(base, exp); }
+
+double spec_math_exp(double v) { return exp(v); }
+
+double spec_math_log10(double v) { return v <= 0.0 ? 0.0 : log10(v); }
+
+double spec_math_cbrt(double v) { return cbrt(v); }
+
+double spec_math_asin(double v) { return asin(v); }
+
+double spec_math_acos(double v) { return acos(v); }
+
+double spec_math_atan(double v) { return atan(v); }
+
+double spec_math_fma(double a, double b, double c) { return fma(a, b, c); }
 
 long long spec_math_to_int(double v) {
     if (v != v) return 0;

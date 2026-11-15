@@ -3,14 +3,15 @@
 
 ## Mathematical functions and algorithmic primitives.
 ##
-## Runtime-managed: the libm-backed functions bind
-## to `external` libm declarations at the floor; the pure functions ([abs],
-## [min], [max], [clamp]) are real Spec bodies.
+## Hardware-accelerated and libm primitives delegate to `base:sysinternal:Math`;
+## rounding, constants, clamping, hyperbolic functions, and array reductions
+## are implemented in pure Spec.
 
 Class is Math{
 	namespace: ['base', 'math'];
 
 	replace Array of Array of String is using: [
+		['base', 'sysinternal', Math],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -74,6 +75,7 @@ Class is Math{
 	## @param value: Input floating point number.
 	## @return: Truncated integer value.
 	Function of Int is toInt(Float is value){
+		return base:sysinternal:Math:math_to_int(v: value);
 	}
 
 	## Converts a 64-bit integer to a double-precision floating point number.
@@ -81,6 +83,7 @@ Class is Math{
 	## @param value: Input integer value.
 	## @return: Floating point representation.
 	Function of Float is toFloat(Int is value){
+		return base:sysinternal:Math:math_to_float(v: value);
 	}
 
 	## Computes the non-negative square root of [value].
@@ -88,6 +91,15 @@ Class is Math{
 	## @param value: Input non-negative floating point number.
 	## @return: Square root of [value], or `0.0` if negative.
 	Function of Float is sqrt(Float is value){
+		return base:sysinternal:Math:math_sqrt(v: value);
+	}
+
+	## Computes the cube root of [value].
+	##
+	## @param value: Input floating point number.
+	## @return: Cube root of [value].
+	Function of Float is cbrt(Float is value){
+		return base:sysinternal:Math:math_cbrt(v: value);
 	}
 
 	## Computes the trigonometric sine of [value] (in radians).
@@ -95,6 +107,7 @@ Class is Math{
 	## @param value: Angle in radians.
 	## @return: Sine of [value].
 	Function of Float is sin(Float is value){
+		return base:sysinternal:Math:math_sin(v: value);
 	}
 
 	## Computes the trigonometric cosine of [value] (in radians).
@@ -102,6 +115,7 @@ Class is Math{
 	## @param value: Angle in radians.
 	## @return: Cosine of [value].
 	Function of Float is cos(Float is value){
+		return base:sysinternal:Math:math_cos(v: value);
 	}
 
 	## Computes the trigonometric tangent of [value] (in radians).
@@ -109,6 +123,31 @@ Class is Math{
 	## @param value: Angle in radians.
 	## @return: Tangent of [value].
 	Function of Float is tan(Float is value){
+		return base:sysinternal:Math:math_tan(v: value);
+	}
+
+	## Computes the arc sine of [value] (in radians).
+	##
+	## @param value: Input in [-1.0, 1.0].
+	## @return: Angle in radians in [-pi/2, pi/2].
+	Function of Float is asin(Float is value){
+		return base:sysinternal:Math:math_asin(v: value);
+	}
+
+	## Computes the arc cosine of [value] (in radians).
+	##
+	## @param value: Input in [-1.0, 1.0].
+	## @return: Angle in radians in [0, pi].
+	Function of Float is acos(Float is value){
+		return base:sysinternal:Math:math_acos(v: value);
+	}
+
+	## Computes the arc tangent of [value] (in radians).
+	##
+	## @param value: Input value.
+	## @return: Angle in radians in [-pi/2, pi/2].
+	Function of Float is atan(Float is value){
+		return base:sysinternal:Math:math_atan(v: value);
 	}
 
 	## Computes the principal value of the arc tangent of `y / x` in radians.
@@ -117,6 +156,37 @@ Class is Math{
 	## @param x: Horizontal coordinate.
 	## @return: Angle in radians in [-pi, pi].
 	Function of Float is atan2(Float is y, Float is x){
+		return base:sysinternal:Math:math_atan2(y: y, x: x);
+	}
+
+	## Computes `e` raised to the power [value].
+	##
+	## @param value: Exponent.
+	## @return: `e^value`.
+	Function of Float is exp(Float is value){
+		return base:sysinternal:Math:math_exp(v: value);
+	}
+
+	## Computes the hyperbolic sine of [value].
+	Function of Float is sinh(Float is value){
+		return 0.5 * (self:exp(value: value) - self:exp(value: -value));
+	}
+
+	## Computes the hyperbolic cosine of [value].
+	Function of Float is cosh(Float is value){
+		return 0.5 * (self:exp(value: value) + self:exp(value: -value));
+	}
+
+	## Computes the hyperbolic tangent of [value].
+	Function of Float is tanh(Float is value){
+		if({ value > 20.0 }, {
+			return 1.0;
+		});
+		if({ value < -20.0 }, {
+			return -1.0;
+		});
+		local Float is e2x: self:exp(value: 2.0 * value);
+		return (e2x - 1.0) / (e2x + 1.0);
 	}
 
 	## Computes the natural logarithm (base e) of [value].
@@ -124,6 +194,7 @@ Class is Math{
 	## @param value: Positive input number.
 	## @return: Natural logarithm of [value], or `0.0` if non-positive.
 	Function of Float is log(Float is value){
+		return base:sysinternal:Math:math_log(v: value);
 	}
 
 	## Computes the base-2 logarithm of [value].
@@ -131,6 +202,15 @@ Class is Math{
 	## @param value: Positive input number.
 	## @return: Base-2 logarithm of [value], or `0.0` if non-positive.
 	Function of Float is log2(Float is value){
+		return base:sysinternal:Math:math_log2(v: value);
+	}
+
+	## Computes the base-10 logarithm of [value].
+	##
+	## @param value: Positive input number.
+	## @return: Base-10 logarithm of [value], or `0.0` if non-positive.
+	Function of Float is log10(Float is value){
+		return base:sysinternal:Math:math_log10(v: value);
 	}
 
 	## Computes [base] raised to the power [exp].
@@ -139,6 +219,17 @@ Class is Math{
 	## @param exp: Exponent floating point number.
 	## @return: Result of base^exp.
 	Function of Float is pow(Float is base, Float is exp){
+		return base:sysinternal:Math:math_pow(base: base, exp: exp);
+	}
+
+	## Computes `(a * b) + c` with a single rounding (hardware FMA when available).
+	##
+	## @param a: First multiplicand.
+	## @param b: Second multiplicand.
+	## @param c: Addend.
+	## @return: Fused multiply-add result.
+	Function of Float is fma(Float is a, Float is b, Float is c){
+		return base:sysinternal:Math:math_fma(a: a, b: b, c: c);
 	}
 
 	## Generates a pseudo-random floating point number in range [min, max).
@@ -157,6 +248,7 @@ Class is Math{
 	##
 	## @return: Uniform float in [0, 1).
 	Function of Float is fastRandom(){
+		return base:sysinternal:Math:fast_random();
 	}
 
 	## Returns the absolute (non-negative) magnitude of [value].

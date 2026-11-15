@@ -44,12 +44,12 @@ Class is RandomTune{
 		Time:interval(intervalMs: stepMs, count: noteCount, callback: {
 			local Int is nowNs: Time:monotonicNs();
 			local Int is expectedNs: startNs + ((idx + 1) * stepMs * 1000000);
-			local Int is jitterUs: Math:toInt(x: Math:abs(value: ((nowNs - expectedNs) / 1000) as Float));
+			local Int is jitterUs: Math:toInt(value: Math:abs(value: ((nowNs - expectedNs) / 1000) as Float));
 			if({ jitterUs > maxJitterUs }, {
 				maxJitterUs: jitterUs;
 			});
 
-			local Int is pick: Math:toInt(x: Math:floor(x: Math:fastRandom() * (scaleMidi:length() as Float)));
+			local Int is pick: Math:toInt(value: Math:floor(value: Math:fastRandom() * (scaleMidi:length() as Float)));
 			if({ pick >= scaleMidi:length() }, {
 				pick: scaleMidi:length() - 1;
 			});
@@ -62,7 +62,7 @@ Class is RandomTune{
 				audio:write(samples: pcm);
 			});
 
-			Output:line(text: "  Note " . ((idx + 1) as String) . ": " . noteName . " (" . (Math:toInt(x: freq) as String) . " Hz)");
+			Output:line(text: "  Note " . ((idx + 1) as String) . ": " . noteName . " (" . (Math:toInt(value: freq) as String) . " Hz)");
 			idx: idx + 1;
 		});
 

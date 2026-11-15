@@ -279,7 +279,8 @@ Enum of String is Level {
 		local BuiltinCallGenerator is bcg: BuiltinCallGenerator:init();
 		Assert:areEqualString('', bcg:generateBuiltinCall(expr: self:exprOf(src: 'Output:line(text: \'hi\')'), targetC: 'Output', targetType: '', cg: eg));
 		Assert:areEqualString('spec_string_length(s)', bcg:generateBuiltinCall(expr: self:exprOf(src: 's:length()'), targetC: 's', targetType: 'String', cg: eg));
-		Assert:areEqualString('spec_math_sqrt(n)', bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg));
+		Assert:areEqualString('', bcg:generateBuiltinCall(expr: self:exprOf(src: 'Math:sqrt(value: n)'), targetC: 'Math', targetType: '', cg: eg));
+		Assert:areEqualString('spec_int_to_base(n, 16, 0)', bcg:generateBuiltinCall(expr: self:exprOf(src: 'n:toBase(base: 16)'), targetC: 'n', targetType: 'Int', cg: eg));
 		Assert:areEqualString('spec_array_length(xs)', bcg:generateBuiltinCall(expr: self:exprOf(src: 'xs:length()'), targetC: 'xs', targetType: 'Array of Int', cg: eg));
 	}
 
