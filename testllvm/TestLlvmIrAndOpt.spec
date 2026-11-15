@@ -421,4 +421,78 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testDirTimeMathAndUserUsingAsLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is srcDir: tmp . '/spec_llvm_p7_' . pid;
+		local String is helperPath: srcDir . '/MathHelper.spec';
+		local String is specPath: srcDir . '/LlvmP7.spec';
+		local String is llPath: tmp . '/spec_llvm_p7_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_p7_bin_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		Process:execute(command: 'mkdir', args: ['-p', srcDir]);
+
+		local String is helperSrc: '''
+Class is MathHelper {
+	namespace: ['demo'];
+	replace Function is init(){ return; }
+	Function of Int is triple(Int is x){ return x * 3; }
+}
+''';
+
+		local String is src: ```
+Class is LlvmP7{
+	replace Array of Array of String is using: [
+		['base', 'struct', Map],
+		['base', 'math', as Math()],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Output()],
+		['base', 'sys', as Process()],
+		['base', 'sys', as Dir()],
+		['base', 'sys', as Time()],
+		['demo', as MathHelper()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Int is tri: triple(x: 7);
+		local Int is sq: toInt(value: sqrt(value: 9.0));
+		local Int is sn: toInt(value: sin(value: 0.0));
+		local Int is tNs: monotonicNs();
+		local Int is tMs: nowMs();
+		local String is ed: exeDir();
+		local Int is fsz: fileSize(path: '{{specPath}}');
+		if({ tri == 21 && sq == 3 && sn == 0 && tNs > 0 && tMs > 0 && ed != '' && fsz > 0 }, {
+			line('llvm-p7-ok');
+		}, {
+			Process:exit(status: 2);
+		});
+	}
+}
+```;
+
+		local Boolean is wroteHelper: File:fileWrite(path: helperPath, content: helperSrc, onSuccess: local Function(){}, onError: local Function(String is e){});
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wroteHelper && wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-s', srcDir, '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: 'call double @sqrt('));
+		Assert:isTrue(ll:contains(needle: 'call i64 @spec_time_monotonic_ns()'));
+		Assert:isTrue(ll:contains(needle: 'call ptr @spec_exe_dir()'));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: helperPath);
+		File:fileRemove(path: specPath);
+		Process:execute(command: 'rmdir', args: [srcDir]);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }

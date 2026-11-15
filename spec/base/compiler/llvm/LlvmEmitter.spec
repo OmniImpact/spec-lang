@@ -31,48 +31,80 @@ Class is LlvmEmitter{
 	}
 
 	Function of String is emitModule(IrModule is mod){
-		local String is out: "; Spec LLVM IR (experimental)\n\n";
+		local String is out: '''
+; Spec LLVM IR (experimental)
 
-		# Runtime declarations and empty reflection registry stubs for spec_runtime.o
-		out: out . "declare ptr @spec_rt_alloc(i64, ptr)\n";
-		out: out . "declare ptr @spec_rt_retain(ptr)\n";
-		out: out . "declare void @spec_rt_release(ptr)\n";
-		out: out . "declare ptr @spec_rt_closure_new(ptr, ptr, ptr)\n";
-		out: out . "declare ptr @spec_rt_box_new(i64, i1)\n";
-		out: out . "declare ptr @spec_string_intern(ptr)\n";
-		out: out . "declare ptr @spec_string_concat(ptr, ptr)\n";
-		out: out . "declare i1 @spec_string_equals(ptr, ptr)\n";
-		out: out . "declare i64 @spec_string_length(ptr)\n";
-		out: out . "declare ptr @spec_string_substring(ptr, i64, i64)\n";
-		out: out . "declare i64 @spec_string_index_of(ptr, ptr, i64)\n";
-		out: out . "declare ptr @spec_to_string_int(i64)\n";
-		out: out . "declare void @spec_print(ptr)\n";
-		out: out . "declare void @spec_print_line(ptr)\n";
-		out: out . "declare void @spec_process_exit(i64)\n";
-		out: out . "declare ptr @spec_process_os_name()\n";
-		out: out . "declare i64 @spec_process_get_pid()\n";
-		out: out . "declare i64 @spec_clock_ms()\n";
-		out: out . "declare i1 @spec_file_exists(ptr)\n";
-		out: out . "declare i1 @spec_file_remove(ptr)\n";
-		out: out . "declare ptr @spec_file_read(ptr, ptr, ptr, ptr)\n";
-		out: out . "declare i1 @spec_file_write(ptr, ptr, ptr, ptr)\n";
-		out: out . "declare ptr @spec_array_new()\n";
-		out: out . "declare ptr @spec_array_new_object()\n";
-		out: out . "declare void @spec_array_add(ptr, ptr)\n";
-		out: out . "declare void @spec_array_add_object(ptr, ptr)\n";
-		out: out . "declare i64 @spec_array_length(ptr)\n";
-		out: out . "declare ptr @spec_array_get(ptr, i64)\n";
-		out: out . "declare void @spec_array_set(ptr, i64, ptr)\n";
-		out: out . "declare ptr @spec_map_new()\n";
-		out: out . "declare ptr @spec_map_new_object()\n";
-		out: out . "declare void @spec_map_set(ptr, ptr, ptr)\n";
-		out: out . "declare ptr @spec_map_get(ptr, ptr, ptr)\n";
-		out: out . "declare i1 @spec_map_has(ptr, ptr)\n";
-		out: out . "declare i64 @spec_map_length(ptr)\n";
-		out: out . "%struct.SpecClosure = type { ptr, ptr, ptr }\n";
-		out: out . "@spec_class_registry = constant [1 x ptr] zeroinitializer\n";
-		out: out . "@spec_held_registry = constant [1 x { ptr, ptr, i32, ptr }] zeroinitializer\n";
-		out: out . "define i32 @spec_class_registry_count() {\n  ret i32 0\n}\n\n";
+declare ptr @spec_rt_alloc(i64, ptr)
+declare ptr @spec_rt_retain(ptr)
+declare void @spec_rt_release(ptr)
+declare ptr @spec_rt_closure_new(ptr, ptr, ptr)
+declare ptr @spec_rt_box_new(i64, i1)
+declare ptr @spec_string_intern(ptr)
+declare ptr @spec_string_concat(ptr, ptr)
+declare i1 @spec_string_equals(ptr, ptr)
+declare i64 @spec_string_length(ptr)
+declare ptr @spec_string_substring(ptr, i64, i64)
+declare i64 @spec_string_index_of(ptr, ptr, i64)
+declare ptr @spec_to_string_int(i64)
+declare void @spec_print(ptr)
+declare void @spec_print_line(ptr)
+declare void @spec_process_exit(i64)
+declare ptr @spec_process_os_name()
+declare i64 @spec_process_get_pid()
+declare i64 @spec_clock_ms()
+declare i1 @spec_file_exists(ptr)
+declare i1 @spec_file_remove(ptr)
+declare ptr @spec_file_read(ptr, ptr, ptr, ptr)
+declare i1 @spec_file_write(ptr, ptr, ptr, ptr)
+declare ptr @spec_dir_list_cb(ptr, ptr)
+declare ptr @spec_exe_dir()
+declare i64 @spec_file_size(ptr)
+declare i64 @spec_time_monotonic_ns()
+declare i64 @spec_time_monotonic_us()
+declare i64 @spec_time_monotonic_ms()
+declare i64 @spec_time_epoch_ms()
+declare i64 @spec_time_epoch_ns()
+declare void @spec_time_sleep_ms(i64)
+declare void @spec_time_sleep_us(i64)
+declare void @spec_time_sleep_ns(i64)
+declare i64 @spec_time_local_offset_sec(i64)
+declare double @sqrt(double)
+declare double @fma(double, double, double)
+declare double @spec_math_sin(double)
+declare double @spec_math_cos(double)
+declare double @spec_math_tan(double)
+declare double @spec_math_atan2(double, double)
+declare double @spec_math_log(double)
+declare double @spec_math_log2(double)
+declare double @spec_math_pow(double, double)
+declare double @spec_math_exp(double)
+declare double @spec_math_log10(double)
+declare double @spec_math_cbrt(double)
+declare double @spec_math_asin(double)
+declare double @spec_math_acos(double)
+declare double @spec_math_atan(double)
+declare double @spec_math_random(double, double)
+declare ptr @spec_array_new()
+declare ptr @spec_array_new_object()
+declare void @spec_array_add(ptr, ptr)
+declare void @spec_array_add_object(ptr, ptr)
+declare i64 @spec_array_length(ptr)
+declare ptr @spec_array_get(ptr, i64)
+declare void @spec_array_set(ptr, i64, ptr)
+declare ptr @spec_map_new()
+declare ptr @spec_map_new_object()
+declare void @spec_map_set(ptr, ptr, ptr)
+declare ptr @spec_map_get(ptr, ptr, ptr)
+declare i1 @spec_map_has(ptr, ptr)
+declare i64 @spec_map_length(ptr)
+%struct.SpecClosure = type { ptr, ptr, ptr }
+@spec_class_registry = constant [1 x ptr] zeroinitializer
+@spec_held_registry = constant [1 x { ptr, ptr, i32, ptr }] zeroinitializer
+define i32 @spec_class_registry_count() {
+  ret i32 0
+}
+
+''';
 
 		# Struct types
 		local Int is si: 0;

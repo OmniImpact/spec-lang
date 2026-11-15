@@ -43,37 +43,43 @@ Class of SysinternalCallLowerer is FileCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		if({ self:matchesSys(call: call, recvName: 'File', methodName: 'fileExists', minArgs: 1) }, { return true; });
-		if({ self:matchesSys(call: call, recvName: 'File', methodName: 'fileRemove', minArgs: 1) }, { return true; });
-		if({ self:matchesSys(call: call, recvName: 'File', methodName: 'fileRead', minArgs: 1) }, { return true; });
-		if({ self:matchesSys(call: call, recvName: 'File', methodName: 'fileWrite', minArgs: 2) }, { return true; });
-		return false;
+		local String is r: self:receiverName(call: call);
+		if({ r != '' && r != 'File' }, { return false; });
+		local Int is argc: call:args:length();
+		local Boolean is ok: false;
+		match(on: call:name, when: [
+			['fileExists', 'fileRemove', 'fileRead']: { ok: argc >= 1; },
+			'fileWrite': { ok: argc >= 2; }
+		]);
+		return ok;
 	}
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
-		local String is nm: call:name;
-		if({ nm == 'fileExists' }, {
-			local String is p: self:lowerArg(b: b, call: call, idx: 0);
-			return self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_exists', argTypes: [IrType:Ptr], args: [p]);
-		});
-		if({ nm == 'fileRemove' }, {
-			local String is p: self:lowerArg(b: b, call: call, idx: 0);
-			return self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_remove', argTypes: [IrType:Ptr], args: [p]);
-		});
-		if({ nm == 'fileRead' }, {
-			local String is p: self:lowerArg(b: b, call: call, idx: 0);
-			local String is defV: self:namedOrNull(b: b, call: call, argName: 'default');
-			local String is okCb: self:namedOrNull(b: b, call: call, argName: 'onSuccess');
-			local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
-			return self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_file_read', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, defV, okCb, errCb]);
-		});
-		if({ nm == 'fileWrite' }, {
-			local String is p: self:lowerArg(b: b, call: call, idx: 0);
-			local String is c: self:lowerArg(b: b, call: call, idx: 1);
-			local String is okCb: self:namedOrNull(b: b, call: call, argName: 'onSuccess');
-			local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
-			return self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_write', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, c, okCb, errCb]);
-		});
-		return '0';
+		local String is res: '0';
+		match(on: call:name, when: [
+			'fileExists': {
+				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_exists', argTypes: [IrType:Ptr], args: [p]);
+			},
+			'fileRemove': {
+				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_remove', argTypes: [IrType:Ptr], args: [p]);
+			},
+			'fileRead': {
+				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				local String is defV: self:namedOrNull(b: b, call: call, argName: 'default');
+				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'onSuccess');
+				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_file_read', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, defV, okCb, errCb]);
+			},
+			'fileWrite': {
+				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				local String is c: self:lowerArg(b: b, call: call, idx: 1);
+				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'onSuccess');
+				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
+				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_write', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, c, okCb, errCb]);
+			}
+		]);
+		return res;
 	}
 }

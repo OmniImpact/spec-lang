@@ -5438,6 +5438,15 @@ void ProcessCallLowerer_destroy(void* self);
 typedef struct FileCallLowerer FileCallLowerer;
 FileCallLowerer* FileCallLowerer_new(void);
 void FileCallLowerer_destroy(void* self);
+typedef struct DirCallLowerer DirCallLowerer;
+DirCallLowerer* DirCallLowerer_new(void);
+void DirCallLowerer_destroy(void* self);
+typedef struct TimeCallLowerer TimeCallLowerer;
+TimeCallLowerer* TimeCallLowerer_new(void);
+void TimeCallLowerer_destroy(void* self);
+typedef struct MathCallLowerer MathCallLowerer;
+MathCallLowerer* MathCallLowerer_new(void);
+void MathCallLowerer_destroy(void* self);
 typedef struct MatchCallLowerer MatchCallLowerer;
 MatchCallLowerer* MatchCallLowerer_new(void);
 void MatchCallLowerer_destroy(void* self);
@@ -6351,6 +6360,22 @@ static inline long long FileCallLowerer_order(FileCallLowerer* self);
 String FileCallLowerer_namedOrNull(FileCallLowerer* self, IrBuilder* b, CallData* call, String argName);
 bool FileCallLowerer_matches(FileCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
 String FileCallLowerer_lower(FileCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
+void DirCallLowerer_init(DirCallLowerer* self);
+String DirCallLowerer_name(DirCallLowerer* self);
+static inline long long DirCallLowerer_order(DirCallLowerer* self);
+String DirCallLowerer_namedOrNull(DirCallLowerer* self, IrBuilder* b, CallData* call, String argName);
+bool DirCallLowerer_matches(DirCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
+String DirCallLowerer_lower(DirCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
+void TimeCallLowerer_init(TimeCallLowerer* self);
+String TimeCallLowerer_name(TimeCallLowerer* self);
+static inline long long TimeCallLowerer_order(TimeCallLowerer* self);
+bool TimeCallLowerer_matches(TimeCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
+String TimeCallLowerer_lower(TimeCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
+void MathCallLowerer_init(MathCallLowerer* self);
+String MathCallLowerer_name(MathCallLowerer* self);
+static inline long long MathCallLowerer_order(MathCallLowerer* self);
+bool MathCallLowerer_matches(MathCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
+String MathCallLowerer_lower(MathCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call);
 void MatchCallLowerer_init(MatchCallLowerer* self);
 String MatchCallLowerer_name(MatchCallLowerer* self);
 static inline long long MatchCallLowerer_order(MatchCallLowerer* self);
@@ -7500,6 +7525,21 @@ struct ProcessCallLowerer {
 };
 
 struct FileCallLowerer {
+    const char* _type_name;
+    void** _vtable;
+};
+
+struct DirCallLowerer {
+    const char* _type_name;
+    void** _vtable;
+};
+
+struct TimeCallLowerer {
+    const char* _type_name;
+    void** _vtable;
+};
+
+struct MathCallLowerer {
     const char* _type_name;
     void** _vtable;
 };
@@ -88233,6 +88273,1974 @@ static void* FileCallLowerer_vtable[653] = {
     (void*)0
 };
 
+static void* DirCallLowerer_vtable[653] = {
+    (void*)Class_toString,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)DirCallLowerer_name,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)DirCallLowerer_init,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)DirCallLowerer_order,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)DirCallLowerer_matches,
+    (void*)DirCallLowerer_lower,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)SysinternalCallLowerer_receiverName,
+    (void*)SysinternalCallLowerer_matchesSys,
+    (void*)SysinternalCallLowerer_lowerArg,
+    (void*)SysinternalCallLowerer_emitSysCall,
+    (void*)DirCallLowerer_namedOrNull,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0
+};
+
+static void* TimeCallLowerer_vtable[653] = {
+    (void*)Class_toString,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)TimeCallLowerer_name,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)TimeCallLowerer_init,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)TimeCallLowerer_order,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)TimeCallLowerer_matches,
+    (void*)TimeCallLowerer_lower,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)SysinternalCallLowerer_receiverName,
+    (void*)SysinternalCallLowerer_matchesSys,
+    (void*)SysinternalCallLowerer_lowerArg,
+    (void*)SysinternalCallLowerer_emitSysCall,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0
+};
+
+static void* MathCallLowerer_vtable[653] = {
+    (void*)Class_toString,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)MathCallLowerer_name,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)MathCallLowerer_init,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)MathCallLowerer_order,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)MathCallLowerer_matches,
+    (void*)MathCallLowerer_lower,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)SysinternalCallLowerer_receiverName,
+    (void*)SysinternalCallLowerer_matchesSys,
+    (void*)SysinternalCallLowerer_lowerArg,
+    (void*)SysinternalCallLowerer_emitSysCall,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0,
+    (void*)0
+};
+
 static void* MatchCallLowerer_vtable[653] = {
     (void*)Class_toString,
     (void*)0,
@@ -93194,6 +95202,15 @@ bool spec_is_subclass_of(const char* actual, const char* target) {
         return (strcmp(target, "SysinternalCallLowerer") == 0) || (strcmp(target, "CallLowerer") == 0) || (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
     }
     if (strcmp(actual, "FileCallLowerer") == 0) {
+        return (strcmp(target, "SysinternalCallLowerer") == 0) || (strcmp(target, "CallLowerer") == 0) || (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
+    }
+    if (strcmp(actual, "DirCallLowerer") == 0) {
+        return (strcmp(target, "SysinternalCallLowerer") == 0) || (strcmp(target, "CallLowerer") == 0) || (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
+    }
+    if (strcmp(actual, "TimeCallLowerer") == 0) {
+        return (strcmp(target, "SysinternalCallLowerer") == 0) || (strcmp(target, "CallLowerer") == 0) || (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
+    }
+    if (strcmp(actual, "MathCallLowerer") == 0) {
         return (strcmp(target, "SysinternalCallLowerer") == 0) || (strcmp(target, "CallLowerer") == 0) || (strcmp(target, "Class") == 0) || (strcmp(target, "Stringable") == 0) || (strcmp(target, "Loadable") == 0) || (strcmp(target, "base:sysinternal:Loadable") == 0) || (strcmp(target, "Any") == 0);
     }
     if (strcmp(actual, "MatchCallLowerer") == 0) {
@@ -125075,295 +127092,154 @@ static __attribute__((unused)) long long _anon_fn_100981(void* _env_ptr, Any* a,
 
 typedef struct {
     String recvType;
-} _Env_anon_1627;
+} _Env_anon_101059;
 
-static __attribute__((unused)) void _destroy_env_anon_1627(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101059(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1627* _env = (_Env_anon_1627*)_env_ptr;
+    _Env_anon_101059* _env = (_Env_anon_101059*)_env_ptr;
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1627(void* _env_ptr) {
-    bool _mret_anon_1627 = 0;
+static __attribute__((unused)) bool _anon_fn_101059(void* _env_ptr) {
+    bool _mret_anon_101059 = 0;
     SPEC_POOL_AUTO;
-    _Env_anon_1627* _env = (_Env_anon_1627*)_env_ptr;
+    _Env_anon_101059* _env = (_Env_anon_101059*)_env_ptr;
     String recvType = _env->recvType;
     (void)recvType;
-    _mret_anon_1627 = (((((!spec_string_equals(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))));
-    goto _cleanup_anon_1627;
-    _cleanup_anon_1627: ;
-    return _mret_anon_1627;
+    _mret_anon_101059 = (((((!spec_string_equals(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))));
+    goto _cleanup_anon_101059;
+    _cleanup_anon_101059: ;
+    return _mret_anon_101059;
 }
 
-static __attribute__((unused)) void _anon_fn_1628(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101060(void* _env_ptr) {
     (void)_env_ptr;
-    goto _cleanup_anon_1628;
-    _cleanup_anon_1628: ;
+    goto _cleanup_anon_101060;
+    _cleanup_anon_101060: ;
     return;
 }
 
 typedef struct {
-    String nm;
-} _Env_anon_1629;
+    bool ok;
+} _Env_anon_101061;
 
-static __attribute__((unused)) void _destroy_env_anon_1629(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101061(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1629* _env = (_Env_anon_1629*)_env_ptr;
-    if (_env->nm) spec_release((void*)_env->nm);
+    _Env_anon_101061* _env = (_Env_anon_101061*)_env_ptr;
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1629(void* _env_ptr) {
-    bool _mret_anon_1629 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1629* _env = (_Env_anon_1629*)_env_ptr;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1629 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1629;
-    _cleanup_anon_1629: ;
-    return _mret_anon_1629;
-}
-
-static __attribute__((unused)) void _anon_fn_1630(void* _env_ptr) {
-    (void)_env_ptr;
-    goto _cleanup_anon_1630;
-    _cleanup_anon_1630: ;
+static __attribute__((unused)) void _anon_fn_101061(void* _env_ptr) {
+    _Env_anon_101061* _env = (_Env_anon_101061*)_env_ptr;
+    bool ok = _env->ok;
+    (void)ok;
+    ok = true;
+    _cleanup_anon_101061: ;
+    _env->ok = ok;
     return;
 }
 
 typedef struct {
-    CallData* call;
-    String nm;
-} _Env_anon_1631;
+    long long argc;
+    bool ok;
+} _Env_anon_101062;
 
-static __attribute__((unused)) void _destroy_env_anon_1631(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101062(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1631* _env = (_Env_anon_1631*)_env_ptr;
-    if (_env->call) spec_release((void*)_env->call);
-    if (_env->nm) spec_release((void*)_env->nm);
+    _Env_anon_101062* _env = (_Env_anon_101062*)_env_ptr;
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1631(void* _env_ptr) {
-    bool _mret_anon_1631 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1631* _env = (_Env_anon_1631*)_env_ptr;
-    CallData* call = _env->call;
-    (void)call;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1631 = ((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))));
-    goto _cleanup_anon_1631;
-    _cleanup_anon_1631: ;
-    return _mret_anon_1631;
-}
-
-static __attribute__((unused)) void _anon_fn_1632(void* _env_ptr) {
-    (void)_env_ptr;
-    goto _cleanup_anon_1632;
-    _cleanup_anon_1632: ;
+static __attribute__((unused)) void _anon_fn_101062(void* _env_ptr) {
+    _Env_anon_101062* _env = (_Env_anon_101062*)_env_ptr;
+    long long argc = _env->argc;
+    (void)argc;
+    bool ok = _env->ok;
+    (void)ok;
+    ok = ((argc) >= (1));
+    _cleanup_anon_101062: ;
+    _env->ok = ok;
     return;
 }
 
 typedef struct {
-    CallData* call;
-    String nm;
-} _Env_anon_1633;
+    long long argc;
+    bool ok;
+} _Env_anon_101063;
 
-static __attribute__((unused)) void _destroy_env_anon_1633(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101063(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1633* _env = (_Env_anon_1633*)_env_ptr;
-    if (_env->call) spec_release((void*)_env->call);
-    if (_env->nm) spec_release((void*)_env->nm);
+    _Env_anon_101063* _env = (_Env_anon_101063*)_env_ptr;
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1633(void* _env_ptr) {
-    bool _mret_anon_1633 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1633* _env = (_Env_anon_1633*)_env_ptr;
-    CallData* call = _env->call;
-    (void)call;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1633 = ((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))));
-    goto _cleanup_anon_1633;
-    _cleanup_anon_1633: ;
-    return _mret_anon_1633;
-}
-
-static __attribute__((unused)) void _anon_fn_1634(void* _env_ptr) {
-    (void)_env_ptr;
-    goto _cleanup_anon_1634;
-    _cleanup_anon_1634: ;
+static __attribute__((unused)) void _anon_fn_101063(void* _env_ptr) {
+    _Env_anon_101063* _env = (_Env_anon_101063*)_env_ptr;
+    long long argc = _env->argc;
+    (void)argc;
+    bool ok = _env->ok;
+    (void)ok;
+    ok = ((argc) >= (2));
+    _cleanup_anon_101063: ;
+    _env->ok = ok;
     return;
-}
-
-typedef struct {
-    CallData* call;
-    String nm;
-} _Env_anon_1635;
-
-static __attribute__((unused)) void _destroy_env_anon_1635(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1635* _env = (_Env_anon_1635*)_env_ptr;
-    if (_env->call) spec_release((void*)_env->call);
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1635(void* _env_ptr) {
-    bool _mret_anon_1635 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1635* _env = (_Env_anon_1635*)_env_ptr;
-    CallData* call = _env->call;
-    (void)call;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1635 = ((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (2))));
-    goto _cleanup_anon_1635;
-    _cleanup_anon_1635: ;
-    return _mret_anon_1635;
-}
-
-static __attribute__((unused)) void _anon_fn_1636(void* _env_ptr) {
-    (void)_env_ptr;
-    goto _cleanup_anon_1636;
-    _cleanup_anon_1636: ;
-    return;
-}
-
-typedef struct {
-    CallData* call;
-    String nm;
-} _Env_anon_1637;
-
-static __attribute__((unused)) void _destroy_env_anon_1637(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1637* _env = (_Env_anon_1637*)_env_ptr;
-    if (_env->call) spec_release((void*)_env->call);
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1637(void* _env_ptr) {
-    bool _mret_anon_1637 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1637* _env = (_Env_anon_1637*)_env_ptr;
-    CallData* call = _env->call;
-    (void)call;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1637 = ((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("each"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))));
-    goto _cleanup_anon_1637;
-    _cleanup_anon_1637: ;
-    return _mret_anon_1637;
-}
-
-static __attribute__((unused)) void _anon_fn_1638(void* _env_ptr) {
-    (void)_env_ptr;
-    goto _cleanup_anon_1638;
-    _cleanup_anon_1638: ;
-    return;
-}
-
-typedef struct {
-    String nm;
-} _Env_anon_1639;
-
-static __attribute__((unused)) void _destroy_env_anon_1639(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1639* _env = (_Env_anon_1639*)_env_ptr;
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1639(void* _env_ptr) {
-    bool _mret_anon_1639 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1639* _env = (_Env_anon_1639*)_env_ptr;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1639 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1639;
-    _cleanup_anon_1639: ;
-    return _mret_anon_1639;
 }
 
 typedef struct {
     String aRecv;
     IrBuilder* b;
-} _Env_anon_1640;
+    String res;
+} _Env_anon_101064;
 
-static __attribute__((unused)) void _destroy_env_anon_1640(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101064(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1640* _env = (_Env_anon_1640*)_env_ptr;
+    _Env_anon_101064* _env = (_Env_anon_101064*)_env_ptr;
     if (_env->aRecv) spec_release((void*)_env->aRecv);
     if (_env->b) spec_release((void*)_env->b);
+    if (_env->res) spec_release((void*)_env->res);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1640(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101064(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1640* _env = (_Env_anon_1640*)_env_ptr;
+    _Env_anon_101064* _env = (_Env_anon_101064*)_env_ptr;
     String aRecv = _env->aRecv;
     (void)aRecv;
     IrBuilder* b = _env->b;
     (void)b;
+    String res = _env->res;
+    (void)res;
     SPEC_AUTO String dst = 0;
     dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
     IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, dst, true, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_array_length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(aRecv)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-    goto _cleanup_anon_1640;
-    _cleanup_anon_1640: ;
+    spec_assign((void**)&res, (void*)(dst));
+    _cleanup_anon_101064: ;
     if (dst) { spec_release((void*)dst); dst = NULL; }
+    _env->res = res;
     return;
 }
 
 typedef struct {
-    String nm;
-} _Env_anon_1641;
-
-static __attribute__((unused)) void _destroy_env_anon_1641(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1641* _env = (_Env_anon_1641*)_env_ptr;
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1641(void* _env_ptr) {
-    bool _mret_anon_1641 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1641* _env = (_Env_anon_1641*)_env_ptr;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1641 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1641;
-    _cleanup_anon_1641: ;
-    return _mret_anon_1641;
-}
-
-typedef struct {
     IrType* ity;
-} _Env_anon_1643;
+} _Env_anon_101066;
 
-static __attribute__((unused)) void _destroy_env_anon_1643(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101066(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1643* _env = (_Env_anon_1643*)_env_ptr;
+    _Env_anon_101066* _env = (_Env_anon_101066*)_env_ptr;
     if (_env->ity) spec_release((void*)_env->ity);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1643(void* _env_ptr) {
-    bool _mret_anon_1643 = 0;
-    _Env_anon_1643* _env = (_Env_anon_1643*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101066(void* _env_ptr) {
+    bool _mret_anon_101066 = 0;
+    _Env_anon_101066* _env = (_Env_anon_101066*)_env_ptr;
     IrType* ity = _env->ity;
     (void)ity;
-    _mret_anon_1643 = ((ity) != (IrType_Ptr__ensure()));
-    goto _cleanup_anon_1643;
-    _cleanup_anon_1643: ;
-    return _mret_anon_1643;
+    _mret_anon_101066 = ((ity) != (IrType_Ptr__ensure()));
+    goto _cleanup_anon_101066;
+    _cleanup_anon_101066: ;
+    return _mret_anon_101066;
 }
 
 typedef struct {
@@ -125371,11 +127247,11 @@ typedef struct {
     String ip;
     IrType* ity;
     String iv;
-} _Env_anon_1644;
+} _Env_anon_101067;
 
-static __attribute__((unused)) void _destroy_env_anon_1644(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101067(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1644* _env = (_Env_anon_1644*)_env_ptr;
+    _Env_anon_101067* _env = (_Env_anon_101067*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->ip) spec_release((void*)_env->ip);
     if (_env->ity) spec_release((void*)_env->ity);
@@ -125383,9 +127259,9 @@ static __attribute__((unused)) void _destroy_env_anon_1644(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1644(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101067(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1644* _env = (_Env_anon_1644*)_env_ptr;
+    _Env_anon_101067* _env = (_Env_anon_101067*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     String ip = _env->ip;
@@ -125396,7 +127272,7 @@ static __attribute__((unused)) void _anon_fn_1644(void* _env_ptr) {
     (void)iv;
     spec_assign_transfer((void**)&ip, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
     IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
-    _cleanup_anon_1644: ;
+    _cleanup_anon_101067: ;
     _env->ip = ip;
     return;
 }
@@ -125405,20 +127281,20 @@ typedef struct {
     String aRecv;
     IrBuilder* b;
     CallData* call;
-} _Env_anon_1642;
+} _Env_anon_101065;
 
-static __attribute__((unused)) void _destroy_env_anon_1642(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101065(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1642* _env = (_Env_anon_1642*)_env_ptr;
+    _Env_anon_101065* _env = (_Env_anon_101065*)_env_ptr;
     if (_env->aRecv) spec_release((void*)_env->aRecv);
     if (_env->b) spec_release((void*)_env->b);
     if (_env->call) spec_release((void*)_env->call);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1642(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101065(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1642* _env = (_Env_anon_1642*)_env_ptr;
+    _Env_anon_101065* _env = (_Env_anon_101065*)_env_ptr;
     String aRecv = _env->aRecv;
     (void)aRecv;
     IrBuilder* b = _env->b;
@@ -125440,8 +127316,7 @@ static __attribute__((unused)) void _anon_fn_1642(void* _env_ptr) {
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
 	};
     IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), false, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_array_add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(aRecv)); spec_array_add(_arr, (void*)(ip)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-    goto _cleanup_anon_1642;
-    _cleanup_anon_1642: ;
+    _cleanup_anon_101065: ;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (ivExpr) { spec_release((void*)ivExpr); ivExpr = NULL; }
     if (iv) { spec_release((void*)iv); iv = NULL; }
@@ -125451,137 +127326,62 @@ static __attribute__((unused)) void _anon_fn_1642(void* _env_ptr) {
 }
 
 typedef struct {
-    IrType* ity;
-} _Env_anon_1645;
-
-static __attribute__((unused)) void _destroy_env_anon_1645(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1645* _env = (_Env_anon_1645*)_env_ptr;
-    if (_env->ity) spec_release((void*)_env->ity);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1645(void* _env_ptr) {
-    bool _mret_anon_1645 = 0;
-    _Env_anon_1645* _env = (_Env_anon_1645*)_env_ptr;
-    IrType* ity = _env->ity;
-    (void)ity;
-    _mret_anon_1645 = ((ity) != (IrType_Ptr__ensure()));
-    goto _cleanup_anon_1645;
-    _cleanup_anon_1645: ;
-    return _mret_anon_1645;
-}
-
-typedef struct {
-    IrBuilder* b;
-    String ip;
-    IrType* ity;
-    String iv;
-} _Env_anon_1646;
-
-static __attribute__((unused)) void _destroy_env_anon_1646(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1646* _env = (_Env_anon_1646*)_env_ptr;
-    if (_env->b) spec_release((void*)_env->b);
-    if (_env->ip) spec_release((void*)_env->ip);
-    if (_env->ity) spec_release((void*)_env->ity);
-    if (_env->iv) spec_release((void*)_env->iv);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_1646(void* _env_ptr) {
-    SPEC_POOL_AUTO;
-    _Env_anon_1646* _env = (_Env_anon_1646*)_env_ptr;
-    IrBuilder* b = _env->b;
-    (void)b;
-    String ip = _env->ip;
-    (void)ip;
-    IrType* ity = _env->ity;
-    (void)ity;
-    String iv = _env->iv;
-    (void)iv;
-    spec_assign_transfer((void**)&ip, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
-    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
-    _cleanup_anon_1646: ;
-    _env->ip = ip;
-    return;
-}
-
-typedef struct {
-    String nm;
-} _Env_anon_1647;
-
-static __attribute__((unused)) void _destroy_env_anon_1647(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1647* _env = (_Env_anon_1647*)_env_ptr;
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1647(void* _env_ptr) {
-    bool _mret_anon_1647 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1647* _env = (_Env_anon_1647*)_env_ptr;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1647 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1647;
-    _cleanup_anon_1647: ;
-    return _mret_anon_1647;
-}
-
-typedef struct {
     IrType* grTy;
-} _Env_anon_1649;
+} _Env_anon_101069;
 
-static __attribute__((unused)) void _destroy_env_anon_1649(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101069(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1649* _env = (_Env_anon_1649*)_env_ptr;
+    _Env_anon_101069* _env = (_Env_anon_101069*)_env_ptr;
     if (_env->grTy) spec_release((void*)_env->grTy);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1649(void* _env_ptr) {
-    bool _mret_anon_1649 = 0;
-    _Env_anon_1649* _env = (_Env_anon_1649*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101069(void* _env_ptr) {
+    bool _mret_anon_101069 = 0;
+    _Env_anon_101069* _env = (_Env_anon_101069*)_env_ptr;
     IrType* grTy = _env->grTy;
     (void)grTy;
-    _mret_anon_1649 = ((((grTy) != (IrType_Ptr__ensure()))) && (((grTy) != (IrType_Void__ensure()))));
-    goto _cleanup_anon_1649;
-    _cleanup_anon_1649: ;
-    return _mret_anon_1649;
+    _mret_anon_101069 = ((((grTy) != (IrType_Ptr__ensure()))) && (((grTy) != (IrType_Void__ensure()))));
+    goto _cleanup_anon_101069;
+    _cleanup_anon_101069: ;
+    return _mret_anon_101069;
 }
 
 typedef struct {
     IrBuilder* b;
     IrType* grTy;
     String raw;
-} _Env_anon_1650;
+    String res;
+} _Env_anon_101070;
 
-static __attribute__((unused)) void _destroy_env_anon_1650(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101070(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1650* _env = (_Env_anon_1650*)_env_ptr;
+    _Env_anon_101070* _env = (_Env_anon_101070*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->grTy) spec_release((void*)_env->grTy);
     if (_env->raw) spec_release((void*)_env->raw);
+    if (_env->res) spec_release((void*)_env->res);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1650(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101070(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1650* _env = (_Env_anon_1650*)_env_ptr;
+    _Env_anon_101070* _env = (_Env_anon_101070*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* grTy = _env->grTy;
     (void)grTy;
     String raw = _env->raw;
     (void)raw;
+    String res = _env->res;
+    (void)res;
     SPEC_AUTO String casted = 0;
     casted = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
     IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, casted, raw, IrType_Ptr__ensure(), grTy); _inst; }))))) /* inst:IrBuilder:emit */;
-    goto _cleanup_anon_1650;
-    _cleanup_anon_1650: ;
+    spec_assign((void**)&res, (void*)(casted));
+    _cleanup_anon_101070: ;
     if (casted) { spec_release((void*)casted); casted = NULL; }
+    _env->res = res;
     return;
 }
 
@@ -125590,21 +127390,23 @@ typedef struct {
     IrBuilder* b;
     CallData* call;
     Expression* expr;
-} _Env_anon_1648;
+    String res;
+} _Env_anon_101068;
 
-static __attribute__((unused)) void _destroy_env_anon_1648(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101068(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1648* _env = (_Env_anon_1648*)_env_ptr;
+    _Env_anon_101068* _env = (_Env_anon_101068*)_env_ptr;
     if (_env->aRecv) spec_release((void*)_env->aRecv);
     if (_env->b) spec_release((void*)_env->b);
     if (_env->call) spec_release((void*)_env->call);
     if (_env->expr) spec_release((void*)_env->expr);
+    if (_env->res) spec_release((void*)_env->res);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1648(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101068(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1648* _env = (_Env_anon_1648*)_env_ptr;
+    _Env_anon_101068* _env = (_Env_anon_101068*)_env_ptr;
     String aRecv = _env->aRecv;
     (void)aRecv;
     IrBuilder* b = _env->b;
@@ -125613,6 +127415,8 @@ static __attribute__((unused)) void _anon_fn_1648(void* _env_ptr) {
     (void)call;
     Expression* expr = _env->expr;
     (void)expr;
+    String res = _env->res;
+    (void)res;
     SPEC_AUTO IrType* grTy = 0;
     SPEC_AUTO String idxV = 0;
     SPEC_AUTO NamedArg* na0 = 0;
@@ -125625,116 +127429,40 @@ static __attribute__((unused)) void _anon_fn_1648(void* _env_ptr) {
     if (((((grTy) != (IrType_Ptr__ensure()))) && (((grTy) != (IrType_Void__ensure()))))) {
 	    SPEC_AUTO String casted = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, casted, raw, IrType_Ptr__ensure(), grTy); _inst; }))))) /* inst:IrBuilder:emit */;
-	    goto _cleanup_anon_1648;
+	    spec_assign((void**)&res, (void*)(casted));
     if (casted) { spec_release((void*)casted); casted = NULL; }
+	} else {
+	    spec_assign((void**)&res, (void*)(raw));
 	};
-    goto _cleanup_anon_1648;
-    _cleanup_anon_1648: ;
+    _cleanup_anon_101068: ;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (idxV) { spec_release((void*)idxV); idxV = NULL; }
     if (raw) { spec_release((void*)raw); raw = NULL; }
     if (grTy) { spec_release((void*)grTy); grTy = NULL; }
+    _env->res = res;
     return;
-}
-
-typedef struct {
-    IrType* grTy;
-} _Env_anon_1651;
-
-static __attribute__((unused)) void _destroy_env_anon_1651(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1651* _env = (_Env_anon_1651*)_env_ptr;
-    if (_env->grTy) spec_release((void*)_env->grTy);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1651(void* _env_ptr) {
-    bool _mret_anon_1651 = 0;
-    _Env_anon_1651* _env = (_Env_anon_1651*)_env_ptr;
-    IrType* grTy = _env->grTy;
-    (void)grTy;
-    _mret_anon_1651 = ((((grTy) != (IrType_Ptr__ensure()))) && (((grTy) != (IrType_Void__ensure()))));
-    goto _cleanup_anon_1651;
-    _cleanup_anon_1651: ;
-    return _mret_anon_1651;
-}
-
-typedef struct {
-    IrBuilder* b;
-    IrType* grTy;
-    String raw;
-} _Env_anon_1652;
-
-static __attribute__((unused)) void _destroy_env_anon_1652(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1652* _env = (_Env_anon_1652*)_env_ptr;
-    if (_env->b) spec_release((void*)_env->b);
-    if (_env->grTy) spec_release((void*)_env->grTy);
-    if (_env->raw) spec_release((void*)_env->raw);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_1652(void* _env_ptr) {
-    SPEC_POOL_AUTO;
-    _Env_anon_1652* _env = (_Env_anon_1652*)_env_ptr;
-    IrBuilder* b = _env->b;
-    (void)b;
-    IrType* grTy = _env->grTy;
-    (void)grTy;
-    String raw = _env->raw;
-    (void)raw;
-    SPEC_AUTO String casted = 0;
-    casted = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
-    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, casted, raw, IrType_Ptr__ensure(), grTy); _inst; }))))) /* inst:IrBuilder:emit */;
-    goto _cleanup_anon_1652;
-    _cleanup_anon_1652: ;
-    if (casted) { spec_release((void*)casted); casted = NULL; }
-    return;
-}
-
-typedef struct {
-    String nm;
-} _Env_anon_1653;
-
-static __attribute__((unused)) void _destroy_env_anon_1653(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1653* _env = (_Env_anon_1653*)_env_ptr;
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1653(void* _env_ptr) {
-    bool _mret_anon_1653 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1653* _env = (_Env_anon_1653*)_env_ptr;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1653 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1653;
-    _cleanup_anon_1653: ;
-    return _mret_anon_1653;
 }
 
 typedef struct {
     IrType* ity;
-} _Env_anon_1655;
+} _Env_anon_101072;
 
-static __attribute__((unused)) void _destroy_env_anon_1655(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101072(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1655* _env = (_Env_anon_1655*)_env_ptr;
+    _Env_anon_101072* _env = (_Env_anon_101072*)_env_ptr;
     if (_env->ity) spec_release((void*)_env->ity);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1655(void* _env_ptr) {
-    bool _mret_anon_1655 = 0;
-    _Env_anon_1655* _env = (_Env_anon_1655*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101072(void* _env_ptr) {
+    bool _mret_anon_101072 = 0;
+    _Env_anon_101072* _env = (_Env_anon_101072*)_env_ptr;
     IrType* ity = _env->ity;
     (void)ity;
-    _mret_anon_1655 = ((ity) != (IrType_Ptr__ensure()));
-    goto _cleanup_anon_1655;
-    _cleanup_anon_1655: ;
-    return _mret_anon_1655;
+    _mret_anon_101072 = ((ity) != (IrType_Ptr__ensure()));
+    goto _cleanup_anon_101072;
+    _cleanup_anon_101072: ;
+    return _mret_anon_101072;
 }
 
 typedef struct {
@@ -125742,11 +127470,11 @@ typedef struct {
     String ip;
     IrType* ity;
     String iv;
-} _Env_anon_1656;
+} _Env_anon_101073;
 
-static __attribute__((unused)) void _destroy_env_anon_1656(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101073(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1656* _env = (_Env_anon_1656*)_env_ptr;
+    _Env_anon_101073* _env = (_Env_anon_101073*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->ip) spec_release((void*)_env->ip);
     if (_env->ity) spec_release((void*)_env->ity);
@@ -125754,9 +127482,9 @@ static __attribute__((unused)) void _destroy_env_anon_1656(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1656(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101073(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1656* _env = (_Env_anon_1656*)_env_ptr;
+    _Env_anon_101073* _env = (_Env_anon_101073*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     String ip = _env->ip;
@@ -125767,7 +127495,7 @@ static __attribute__((unused)) void _anon_fn_1656(void* _env_ptr) {
     (void)iv;
     spec_assign_transfer((void**)&ip, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
     IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
-    _cleanup_anon_1656: ;
+    _cleanup_anon_101073: ;
     _env->ip = ip;
     return;
 }
@@ -125776,20 +127504,20 @@ typedef struct {
     String aRecv;
     IrBuilder* b;
     CallData* call;
-} _Env_anon_1654;
+} _Env_anon_101071;
 
-static __attribute__((unused)) void _destroy_env_anon_1654(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101071(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1654* _env = (_Env_anon_1654*)_env_ptr;
+    _Env_anon_101071* _env = (_Env_anon_101071*)_env_ptr;
     if (_env->aRecv) spec_release((void*)_env->aRecv);
     if (_env->b) spec_release((void*)_env->b);
     if (_env->call) spec_release((void*)_env->call);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1654(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101071(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1654* _env = (_Env_anon_1654*)_env_ptr;
+    _Env_anon_101071* _env = (_Env_anon_101071*)_env_ptr;
     String aRecv = _env->aRecv;
     (void)aRecv;
     IrBuilder* b = _env->b;
@@ -125815,8 +127543,7 @@ static __attribute__((unused)) void _anon_fn_1654(void* _env_ptr) {
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
 	};
     IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), false, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_array_set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_I64__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(aRecv)); spec_array_add(_arr, (void*)(idxV)); spec_array_add(_arr, (void*)(ip)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-    goto _cleanup_anon_1654;
-    _cleanup_anon_1654: ;
+    _cleanup_anon_101071: ;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (na1) { spec_release((void*)na1); na1 = NULL; }
     if (idxV) { spec_release((void*)idxV); idxV = NULL; }
@@ -125828,126 +127555,46 @@ static __attribute__((unused)) void _anon_fn_1654(void* _env_ptr) {
 }
 
 typedef struct {
-    IrType* ity;
-} _Env_anon_1657;
-
-static __attribute__((unused)) void _destroy_env_anon_1657(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1657* _env = (_Env_anon_1657*)_env_ptr;
-    if (_env->ity) spec_release((void*)_env->ity);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1657(void* _env_ptr) {
-    bool _mret_anon_1657 = 0;
-    _Env_anon_1657* _env = (_Env_anon_1657*)_env_ptr;
-    IrType* ity = _env->ity;
-    (void)ity;
-    _mret_anon_1657 = ((ity) != (IrType_Ptr__ensure()));
-    goto _cleanup_anon_1657;
-    _cleanup_anon_1657: ;
-    return _mret_anon_1657;
-}
-
-typedef struct {
-    IrBuilder* b;
-    String ip;
-    IrType* ity;
-    String iv;
-} _Env_anon_1658;
-
-static __attribute__((unused)) void _destroy_env_anon_1658(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1658* _env = (_Env_anon_1658*)_env_ptr;
-    if (_env->b) spec_release((void*)_env->b);
-    if (_env->ip) spec_release((void*)_env->ip);
-    if (_env->ity) spec_release((void*)_env->ity);
-    if (_env->iv) spec_release((void*)_env->iv);
-    free(_env);
-}
-
-static __attribute__((unused)) void _anon_fn_1658(void* _env_ptr) {
-    SPEC_POOL_AUTO;
-    _Env_anon_1658* _env = (_Env_anon_1658*)_env_ptr;
-    IrBuilder* b = _env->b;
-    (void)b;
-    String ip = _env->ip;
-    (void)ip;
-    IrType* ity = _env->ity;
-    (void)ity;
-    String iv = _env->iv;
-    (void)iv;
-    spec_assign_transfer((void**)&ip, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
-    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
-    _cleanup_anon_1658: ;
-    _env->ip = ip;
-    return;
-}
-
-typedef struct {
-    String nm;
-} _Env_anon_1659;
-
-static __attribute__((unused)) void _destroy_env_anon_1659(void* _env_ptr) {
-    if (!_env_ptr) return;
-    _Env_anon_1659* _env = (_Env_anon_1659*)_env_ptr;
-    if (_env->nm) spec_release((void*)_env->nm);
-    free(_env);
-}
-
-static __attribute__((unused)) bool _anon_fn_1659(void* _env_ptr) {
-    bool _mret_anon_1659 = 0;
-    SPEC_POOL_AUTO;
-    _Env_anon_1659* _env = (_Env_anon_1659*)_env_ptr;
-    String nm = _env->nm;
-    (void)nm;
-    _mret_anon_1659 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("each"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1659;
-    _cleanup_anon_1659: ;
-    return _mret_anon_1659;
-}
-
-typedef struct {
     String recvType;
-} _Env_anon_1661;
+} _Env_anon_101075;
 
-static __attribute__((unused)) void _destroy_env_anon_1661(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101075(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1661* _env = (_Env_anon_1661*)_env_ptr;
+    _Env_anon_101075* _env = (_Env_anon_101075*)_env_ptr;
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1661(void* _env_ptr) {
-    bool _mret_anon_1661 = 0;
+static __attribute__((unused)) bool _anon_fn_101075(void* _env_ptr) {
+    bool _mret_anon_101075 = 0;
     SPEC_POOL_AUTO;
-    _Env_anon_1661* _env = (_Env_anon_1661*)_env_ptr;
+    _Env_anon_101075* _env = (_Env_anon_101075*)_env_ptr;
     String recvType = _env->recvType;
     (void)recvType;
-    _mret_anon_1661 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1661;
-    _cleanup_anon_1661: ;
-    return _mret_anon_1661;
+    _mret_anon_101075 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    goto _cleanup_anon_101075;
+    _cleanup_anon_101075: ;
+    return _mret_anon_101075;
 }
 
 typedef struct {
     IrBuilder* b;
     IrType* elemTy;
     String recvType;
-} _Env_anon_1662;
+} _Env_anon_101076;
 
-static __attribute__((unused)) void _destroy_env_anon_1662(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101076(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1662* _env = (_Env_anon_1662*)_env_ptr;
+    _Env_anon_101076* _env = (_Env_anon_101076*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1662(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101076(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1662* _env = (_Env_anon_1662*)_env_ptr;
+    _Env_anon_101076* _env = (_Env_anon_101076*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* elemTy = _env->elemTy;
@@ -125955,52 +127602,52 @@ static __attribute__((unused)) void _anon_fn_1662(void* _env_ptr) {
     String recvType = _env->recvType;
     (void)recvType;
     spec_assign_transfer((void**)&elemTy, (void*)(IrBuilder_irTypeFor(b, ((String)spec_claim_pool((void*)(spec_string_substring(recvType, 6, spec_string_length(recvType)))))) /* inst:IrBuilder:irTypeFor */));
-    _cleanup_anon_1662: ;
+    _cleanup_anon_101076: ;
     _env->elemTy = elemTy;
     return;
 }
 
 typedef struct {
     String recvType;
-} _Env_anon_1663;
+} _Env_anon_101077;
 
-static __attribute__((unused)) void _destroy_env_anon_1663(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101077(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1663* _env = (_Env_anon_1663*)_env_ptr;
+    _Env_anon_101077* _env = (_Env_anon_101077*)_env_ptr;
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1663(void* _env_ptr) {
-    bool _mret_anon_1663 = 0;
+static __attribute__((unused)) bool _anon_fn_101077(void* _env_ptr) {
+    bool _mret_anon_101077 = 0;
     SPEC_POOL_AUTO;
-    _Env_anon_1663* _env = (_Env_anon_1663*)_env_ptr;
+    _Env_anon_101077* _env = (_Env_anon_101077*)_env_ptr;
     String recvType = _env->recvType;
     (void)recvType;
-    _mret_anon_1663 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1663;
-    _cleanup_anon_1663: ;
-    return _mret_anon_1663;
+    _mret_anon_101077 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    goto _cleanup_anon_101077;
+    _cleanup_anon_101077: ;
+    return _mret_anon_101077;
 }
 
 typedef struct {
     IrBuilder* b;
     IrType* elemTy;
     String recvType;
-} _Env_anon_1664;
+} _Env_anon_101078;
 
-static __attribute__((unused)) void _destroy_env_anon_1664(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101078(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1664* _env = (_Env_anon_1664*)_env_ptr;
+    _Env_anon_101078* _env = (_Env_anon_101078*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1664(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101078(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1664* _env = (_Env_anon_1664*)_env_ptr;
+    _Env_anon_101078* _env = (_Env_anon_101078*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* elemTy = _env->elemTy;
@@ -126008,74 +127655,74 @@ static __attribute__((unused)) void _anon_fn_1664(void* _env_ptr) {
     String recvType = _env->recvType;
     (void)recvType;
     spec_assign_transfer((void**)&elemTy, (void*)(IrBuilder_irTypeFor(b, ((String)spec_claim_pool((void*)(spec_string_substring(recvType, 9, spec_string_length(recvType)))))) /* inst:IrBuilder:irTypeFor */));
-    _cleanup_anon_1664: ;
+    _cleanup_anon_101078: ;
     _env->elemTy = elemTy;
     return;
 }
 
 typedef struct {
     IrType* elemTy;
-} _Env_anon_1665;
+} _Env_anon_101079;
 
-static __attribute__((unused)) void _destroy_env_anon_1665(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101079(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1665* _env = (_Env_anon_1665*)_env_ptr;
+    _Env_anon_101079* _env = (_Env_anon_101079*)_env_ptr;
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1665(void* _env_ptr) {
-    bool _mret_anon_1665 = 0;
-    _Env_anon_1665* _env = (_Env_anon_1665*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101079(void* _env_ptr) {
+    bool _mret_anon_101079 = 0;
+    _Env_anon_101079* _env = (_Env_anon_101079*)_env_ptr;
     IrType* elemTy = _env->elemTy;
     (void)elemTy;
-    _mret_anon_1665 = ((elemTy) == (IrType_Void__ensure()));
-    goto _cleanup_anon_1665;
-    _cleanup_anon_1665: ;
-    return _mret_anon_1665;
+    _mret_anon_101079 = ((elemTy) == (IrType_Void__ensure()));
+    goto _cleanup_anon_101079;
+    _cleanup_anon_101079: ;
+    return _mret_anon_101079;
 }
 
 typedef struct {
     IrType* elemTy;
-} _Env_anon_1666;
+} _Env_anon_101080;
 
-static __attribute__((unused)) void _destroy_env_anon_1666(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101080(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1666* _env = (_Env_anon_1666*)_env_ptr;
+    _Env_anon_101080* _env = (_Env_anon_101080*)_env_ptr;
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1666(void* _env_ptr) {
-    _Env_anon_1666* _env = (_Env_anon_1666*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_101080(void* _env_ptr) {
+    _Env_anon_101080* _env = (_Env_anon_101080*)_env_ptr;
     IrType* elemTy = _env->elemTy;
     (void)elemTy;
     spec_assign((void**)&elemTy, (void*)(IrType_Ptr__ensure()));
-    _cleanup_anon_1666: ;
+    _cleanup_anon_101080: ;
     _env->elemTy = elemTy;
     return;
 }
 
 typedef struct {
     IrType* elemTy;
-} _Env_anon_1667;
+} _Env_anon_101081;
 
-static __attribute__((unused)) void _destroy_env_anon_1667(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101081(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1667* _env = (_Env_anon_1667*)_env_ptr;
+    _Env_anon_101081* _env = (_Env_anon_101081*)_env_ptr;
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1667(void* _env_ptr) {
-    bool _mret_anon_1667 = 0;
-    _Env_anon_1667* _env = (_Env_anon_1667*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101081(void* _env_ptr) {
+    bool _mret_anon_101081 = 0;
+    _Env_anon_101081* _env = (_Env_anon_101081*)_env_ptr;
     IrType* elemTy = _env->elemTy;
     (void)elemTy;
-    _mret_anon_1667 = ((elemTy) != (IrType_Ptr__ensure()));
-    goto _cleanup_anon_1667;
-    _cleanup_anon_1667: ;
-    return _mret_anon_1667;
+    _mret_anon_101081 = ((elemTy) != (IrType_Ptr__ensure()));
+    goto _cleanup_anon_101081;
+    _cleanup_anon_101081: ;
+    return _mret_anon_101081;
 }
 
 typedef struct {
@@ -126083,11 +127730,11 @@ typedef struct {
     IrType* elemTy;
     String elemV;
     String raw;
-} _Env_anon_1668;
+} _Env_anon_101082;
 
-static __attribute__((unused)) void _destroy_env_anon_1668(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101082(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1668* _env = (_Env_anon_1668*)_env_ptr;
+    _Env_anon_101082* _env = (_Env_anon_101082*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     if (_env->elemV) spec_release((void*)_env->elemV);
@@ -126095,9 +127742,9 @@ static __attribute__((unused)) void _destroy_env_anon_1668(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1668(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101082(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1668* _env = (_Env_anon_1668*)_env_ptr;
+    _Env_anon_101082* _env = (_Env_anon_101082*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* elemTy = _env->elemTy;
@@ -126108,7 +127755,7 @@ static __attribute__((unused)) void _anon_fn_1668(void* _env_ptr) {
     (void)raw;
     spec_assign_transfer((void**)&elemV, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
     IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, elemV, raw, IrType_Ptr__ensure(), elemTy); _inst; }))))) /* inst:IrBuilder:emit */;
-    _cleanup_anon_1668: ;
+    _cleanup_anon_101082: ;
     _env->elemV = elemV;
     return;
 }
@@ -126117,20 +127764,20 @@ typedef struct {
     String aRecv;
     IrBuilder* b;
     CallData* call;
-} _Env_anon_1660;
+} _Env_anon_101074;
 
-static __attribute__((unused)) void _destroy_env_anon_1660(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101074(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1660* _env = (_Env_anon_1660*)_env_ptr;
+    _Env_anon_101074* _env = (_Env_anon_101074*)_env_ptr;
     if (_env->aRecv) spec_release((void*)_env->aRecv);
     if (_env->b) spec_release((void*)_env->b);
     if (_env->call) spec_release((void*)_env->call);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1660(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101074(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1660* _env = (_Env_anon_1660*)_env_ptr;
+    _Env_anon_101074* _env = (_Env_anon_101074*)_env_ptr;
     String aRecv = _env->aRecv;
     (void)aRecv;
     IrBuilder* b = _env->b;
@@ -126219,8 +127866,7 @@ static __attribute__((unused)) void _anon_fn_1660(void* _env_ptr) {
     IrBuilder_terminate(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_Br* _inst = IrInst_Br_new(); IrInst_Br_init(_inst, hdrLbl); _inst; }))))) /* inst:IrBuilder:terminate */;
     endBlk = (IrBlock*)((IrFunction_addBlock(b->curFn, endLbl) /* inst:IrFunction:addBlock */));
     IrBuilder_switchBlock(b, endBlk) /* inst:IrBuilder:switchBlock */;
-    goto _cleanup_anon_1660;
-    _cleanup_anon_1660: ;
+    _cleanup_anon_101074: ;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (cObj) { spec_release((void*)cObj); cObj = NULL; }
     if (fnPtrAddr) { spec_release((void*)fnPtrAddr); fnPtrAddr = NULL; }
@@ -126248,46 +127894,220 @@ static __attribute__((unused)) void _anon_fn_1660(void* _env_ptr) {
 }
 
 typedef struct {
-    String recvType;
-} _Env_anon_1669;
+    IrType* ity;
+} _Env_anon_101083;
 
-static __attribute__((unused)) void _destroy_env_anon_1669(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101083(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1669* _env = (_Env_anon_1669*)_env_ptr;
+    _Env_anon_101083* _env = (_Env_anon_101083*)_env_ptr;
+    if (_env->ity) spec_release((void*)_env->ity);
+    free(_env);
+}
+
+static __attribute__((unused)) bool _anon_fn_101083(void* _env_ptr) {
+    bool _mret_anon_101083 = 0;
+    _Env_anon_101083* _env = (_Env_anon_101083*)_env_ptr;
+    IrType* ity = _env->ity;
+    (void)ity;
+    _mret_anon_101083 = ((ity) != (IrType_Ptr__ensure()));
+    goto _cleanup_anon_101083;
+    _cleanup_anon_101083: ;
+    return _mret_anon_101083;
+}
+
+typedef struct {
+    IrBuilder* b;
+    String ip;
+    IrType* ity;
+    String iv;
+} _Env_anon_101084;
+
+static __attribute__((unused)) void _destroy_env_anon_101084(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_101084* _env = (_Env_anon_101084*)_env_ptr;
+    if (_env->b) spec_release((void*)_env->b);
+    if (_env->ip) spec_release((void*)_env->ip);
+    if (_env->ity) spec_release((void*)_env->ity);
+    if (_env->iv) spec_release((void*)_env->iv);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_101084(void* _env_ptr) {
+    SPEC_POOL_AUTO;
+    _Env_anon_101084* _env = (_Env_anon_101084*)_env_ptr;
+    IrBuilder* b = _env->b;
+    (void)b;
+    String ip = _env->ip;
+    (void)ip;
+    IrType* ity = _env->ity;
+    (void)ity;
+    String iv = _env->iv;
+    (void)iv;
+    spec_assign_transfer((void**)&ip, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
+    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
+    _cleanup_anon_101084: ;
+    _env->ip = ip;
+    return;
+}
+
+typedef struct {
+    IrType* grTy;
+} _Env_anon_101085;
+
+static __attribute__((unused)) void _destroy_env_anon_101085(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_101085* _env = (_Env_anon_101085*)_env_ptr;
+    if (_env->grTy) spec_release((void*)_env->grTy);
+    free(_env);
+}
+
+static __attribute__((unused)) bool _anon_fn_101085(void* _env_ptr) {
+    bool _mret_anon_101085 = 0;
+    _Env_anon_101085* _env = (_Env_anon_101085*)_env_ptr;
+    IrType* grTy = _env->grTy;
+    (void)grTy;
+    _mret_anon_101085 = ((((grTy) != (IrType_Ptr__ensure()))) && (((grTy) != (IrType_Void__ensure()))));
+    goto _cleanup_anon_101085;
+    _cleanup_anon_101085: ;
+    return _mret_anon_101085;
+}
+
+typedef struct {
+    IrBuilder* b;
+    IrType* grTy;
+    String raw;
+    String res;
+} _Env_anon_101086;
+
+static __attribute__((unused)) void _destroy_env_anon_101086(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_101086* _env = (_Env_anon_101086*)_env_ptr;
+    if (_env->b) spec_release((void*)_env->b);
+    if (_env->grTy) spec_release((void*)_env->grTy);
+    if (_env->raw) spec_release((void*)_env->raw);
+    if (_env->res) spec_release((void*)_env->res);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_101086(void* _env_ptr) {
+    SPEC_POOL_AUTO;
+    _Env_anon_101086* _env = (_Env_anon_101086*)_env_ptr;
+    IrBuilder* b = _env->b;
+    (void)b;
+    IrType* grTy = _env->grTy;
+    (void)grTy;
+    String raw = _env->raw;
+    (void)raw;
+    String res = _env->res;
+    (void)res;
+    SPEC_AUTO String casted = 0;
+    casted = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
+    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, casted, raw, IrType_Ptr__ensure(), grTy); _inst; }))))) /* inst:IrBuilder:emit */;
+    spec_assign((void**)&res, (void*)(casted));
+    _cleanup_anon_101086: ;
+    if (casted) { spec_release((void*)casted); casted = NULL; }
+    _env->res = res;
+    return;
+}
+
+typedef struct {
+    IrType* ity;
+} _Env_anon_101087;
+
+static __attribute__((unused)) void _destroy_env_anon_101087(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_101087* _env = (_Env_anon_101087*)_env_ptr;
+    if (_env->ity) spec_release((void*)_env->ity);
+    free(_env);
+}
+
+static __attribute__((unused)) bool _anon_fn_101087(void* _env_ptr) {
+    bool _mret_anon_101087 = 0;
+    _Env_anon_101087* _env = (_Env_anon_101087*)_env_ptr;
+    IrType* ity = _env->ity;
+    (void)ity;
+    _mret_anon_101087 = ((ity) != (IrType_Ptr__ensure()));
+    goto _cleanup_anon_101087;
+    _cleanup_anon_101087: ;
+    return _mret_anon_101087;
+}
+
+typedef struct {
+    IrBuilder* b;
+    String ip;
+    IrType* ity;
+    String iv;
+} _Env_anon_101088;
+
+static __attribute__((unused)) void _destroy_env_anon_101088(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_101088* _env = (_Env_anon_101088*)_env_ptr;
+    if (_env->b) spec_release((void*)_env->b);
+    if (_env->ip) spec_release((void*)_env->ip);
+    if (_env->ity) spec_release((void*)_env->ity);
+    if (_env->iv) spec_release((void*)_env->iv);
+    free(_env);
+}
+
+static __attribute__((unused)) void _anon_fn_101088(void* _env_ptr) {
+    SPEC_POOL_AUTO;
+    _Env_anon_101088* _env = (_Env_anon_101088*)_env_ptr;
+    IrBuilder* b = _env->b;
+    (void)b;
+    String ip = _env->ip;
+    (void)ip;
+    IrType* ity = _env->ity;
+    (void)ity;
+    String iv = _env->iv;
+    (void)iv;
+    spec_assign_transfer((void**)&ip, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
+    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
+    _cleanup_anon_101088: ;
+    _env->ip = ip;
+    return;
+}
+
+typedef struct {
+    String recvType;
+} _Env_anon_101089;
+
+static __attribute__((unused)) void _destroy_env_anon_101089(void* _env_ptr) {
+    if (!_env_ptr) return;
+    _Env_anon_101089* _env = (_Env_anon_101089*)_env_ptr;
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1669(void* _env_ptr) {
-    bool _mret_anon_1669 = 0;
+static __attribute__((unused)) bool _anon_fn_101089(void* _env_ptr) {
+    bool _mret_anon_101089 = 0;
     SPEC_POOL_AUTO;
-    _Env_anon_1669* _env = (_Env_anon_1669*)_env_ptr;
+    _Env_anon_101089* _env = (_Env_anon_101089*)_env_ptr;
     String recvType = _env->recvType;
     (void)recvType;
-    _mret_anon_1669 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1669;
-    _cleanup_anon_1669: ;
-    return _mret_anon_1669;
+    _mret_anon_101089 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    goto _cleanup_anon_101089;
+    _cleanup_anon_101089: ;
+    return _mret_anon_101089;
 }
 
 typedef struct {
     IrBuilder* b;
     IrType* elemTy;
     String recvType;
-} _Env_anon_1670;
+} _Env_anon_101090;
 
-static __attribute__((unused)) void _destroy_env_anon_1670(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101090(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1670* _env = (_Env_anon_1670*)_env_ptr;
+    _Env_anon_101090* _env = (_Env_anon_101090*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1670(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101090(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1670* _env = (_Env_anon_1670*)_env_ptr;
+    _Env_anon_101090* _env = (_Env_anon_101090*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* elemTy = _env->elemTy;
@@ -126295,52 +128115,52 @@ static __attribute__((unused)) void _anon_fn_1670(void* _env_ptr) {
     String recvType = _env->recvType;
     (void)recvType;
     spec_assign_transfer((void**)&elemTy, (void*)(IrBuilder_irTypeFor(b, ((String)spec_claim_pool((void*)(spec_string_substring(recvType, 6, spec_string_length(recvType)))))) /* inst:IrBuilder:irTypeFor */));
-    _cleanup_anon_1670: ;
+    _cleanup_anon_101090: ;
     _env->elemTy = elemTy;
     return;
 }
 
 typedef struct {
     String recvType;
-} _Env_anon_1671;
+} _Env_anon_101091;
 
-static __attribute__((unused)) void _destroy_env_anon_1671(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101091(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1671* _env = (_Env_anon_1671*)_env_ptr;
+    _Env_anon_101091* _env = (_Env_anon_101091*)_env_ptr;
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1671(void* _env_ptr) {
-    bool _mret_anon_1671 = 0;
+static __attribute__((unused)) bool _anon_fn_101091(void* _env_ptr) {
+    bool _mret_anon_101091 = 0;
     SPEC_POOL_AUTO;
-    _Env_anon_1671* _env = (_Env_anon_1671*)_env_ptr;
+    _Env_anon_101091* _env = (_Env_anon_101091*)_env_ptr;
     String recvType = _env->recvType;
     (void)recvType;
-    _mret_anon_1671 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    goto _cleanup_anon_1671;
-    _cleanup_anon_1671: ;
-    return _mret_anon_1671;
+    _mret_anon_101091 = String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    goto _cleanup_anon_101091;
+    _cleanup_anon_101091: ;
+    return _mret_anon_101091;
 }
 
 typedef struct {
     IrBuilder* b;
     IrType* elemTy;
     String recvType;
-} _Env_anon_1672;
+} _Env_anon_101092;
 
-static __attribute__((unused)) void _destroy_env_anon_1672(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101092(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1672* _env = (_Env_anon_1672*)_env_ptr;
+    _Env_anon_101092* _env = (_Env_anon_101092*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     if (_env->recvType) spec_release((void*)_env->recvType);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1672(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101092(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1672* _env = (_Env_anon_1672*)_env_ptr;
+    _Env_anon_101092* _env = (_Env_anon_101092*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* elemTy = _env->elemTy;
@@ -126348,74 +128168,74 @@ static __attribute__((unused)) void _anon_fn_1672(void* _env_ptr) {
     String recvType = _env->recvType;
     (void)recvType;
     spec_assign_transfer((void**)&elemTy, (void*)(IrBuilder_irTypeFor(b, ((String)spec_claim_pool((void*)(spec_string_substring(recvType, 9, spec_string_length(recvType)))))) /* inst:IrBuilder:irTypeFor */));
-    _cleanup_anon_1672: ;
+    _cleanup_anon_101092: ;
     _env->elemTy = elemTy;
     return;
 }
 
 typedef struct {
     IrType* elemTy;
-} _Env_anon_1673;
+} _Env_anon_101093;
 
-static __attribute__((unused)) void _destroy_env_anon_1673(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101093(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1673* _env = (_Env_anon_1673*)_env_ptr;
+    _Env_anon_101093* _env = (_Env_anon_101093*)_env_ptr;
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1673(void* _env_ptr) {
-    bool _mret_anon_1673 = 0;
-    _Env_anon_1673* _env = (_Env_anon_1673*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101093(void* _env_ptr) {
+    bool _mret_anon_101093 = 0;
+    _Env_anon_101093* _env = (_Env_anon_101093*)_env_ptr;
     IrType* elemTy = _env->elemTy;
     (void)elemTy;
-    _mret_anon_1673 = ((elemTy) == (IrType_Void__ensure()));
-    goto _cleanup_anon_1673;
-    _cleanup_anon_1673: ;
-    return _mret_anon_1673;
+    _mret_anon_101093 = ((elemTy) == (IrType_Void__ensure()));
+    goto _cleanup_anon_101093;
+    _cleanup_anon_101093: ;
+    return _mret_anon_101093;
 }
 
 typedef struct {
     IrType* elemTy;
-} _Env_anon_1674;
+} _Env_anon_101094;
 
-static __attribute__((unused)) void _destroy_env_anon_1674(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101094(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1674* _env = (_Env_anon_1674*)_env_ptr;
+    _Env_anon_101094* _env = (_Env_anon_101094*)_env_ptr;
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1674(void* _env_ptr) {
-    _Env_anon_1674* _env = (_Env_anon_1674*)_env_ptr;
+static __attribute__((unused)) void _anon_fn_101094(void* _env_ptr) {
+    _Env_anon_101094* _env = (_Env_anon_101094*)_env_ptr;
     IrType* elemTy = _env->elemTy;
     (void)elemTy;
     spec_assign((void**)&elemTy, (void*)(IrType_Ptr__ensure()));
-    _cleanup_anon_1674: ;
+    _cleanup_anon_101094: ;
     _env->elemTy = elemTy;
     return;
 }
 
 typedef struct {
     IrType* elemTy;
-} _Env_anon_1675;
+} _Env_anon_101095;
 
-static __attribute__((unused)) void _destroy_env_anon_1675(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101095(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1675* _env = (_Env_anon_1675*)_env_ptr;
+    _Env_anon_101095* _env = (_Env_anon_101095*)_env_ptr;
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     free(_env);
 }
 
-static __attribute__((unused)) bool _anon_fn_1675(void* _env_ptr) {
-    bool _mret_anon_1675 = 0;
-    _Env_anon_1675* _env = (_Env_anon_1675*)_env_ptr;
+static __attribute__((unused)) bool _anon_fn_101095(void* _env_ptr) {
+    bool _mret_anon_101095 = 0;
+    _Env_anon_101095* _env = (_Env_anon_101095*)_env_ptr;
     IrType* elemTy = _env->elemTy;
     (void)elemTy;
-    _mret_anon_1675 = ((elemTy) != (IrType_Ptr__ensure()));
-    goto _cleanup_anon_1675;
-    _cleanup_anon_1675: ;
-    return _mret_anon_1675;
+    _mret_anon_101095 = ((elemTy) != (IrType_Ptr__ensure()));
+    goto _cleanup_anon_101095;
+    _cleanup_anon_101095: ;
+    return _mret_anon_101095;
 }
 
 typedef struct {
@@ -126423,11 +128243,11 @@ typedef struct {
     IrType* elemTy;
     String elemV;
     String raw;
-} _Env_anon_1676;
+} _Env_anon_101096;
 
-static __attribute__((unused)) void _destroy_env_anon_1676(void* _env_ptr) {
+static __attribute__((unused)) void _destroy_env_anon_101096(void* _env_ptr) {
     if (!_env_ptr) return;
-    _Env_anon_1676* _env = (_Env_anon_1676*)_env_ptr;
+    _Env_anon_101096* _env = (_Env_anon_101096*)_env_ptr;
     if (_env->b) spec_release((void*)_env->b);
     if (_env->elemTy) spec_release((void*)_env->elemTy);
     if (_env->elemV) spec_release((void*)_env->elemV);
@@ -126435,9 +128255,9 @@ static __attribute__((unused)) void _destroy_env_anon_1676(void* _env_ptr) {
     free(_env);
 }
 
-static __attribute__((unused)) void _anon_fn_1676(void* _env_ptr) {
+static __attribute__((unused)) void _anon_fn_101096(void* _env_ptr) {
     SPEC_POOL_AUTO;
-    _Env_anon_1676* _env = (_Env_anon_1676*)_env_ptr;
+    _Env_anon_101096* _env = (_Env_anon_101096*)_env_ptr;
     IrBuilder* b = _env->b;
     (void)b;
     IrType* elemTy = _env->elemTy;
@@ -126448,7 +128268,7 @@ static __attribute__((unused)) void _anon_fn_1676(void* _env_ptr) {
     (void)raw;
     spec_assign_transfer((void**)&elemV, (void*)(IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */));
     IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, elemV, raw, IrType_Ptr__ensure(), elemTy); _inst; }))))) /* inst:IrBuilder:emit */;
-    _cleanup_anon_1676: ;
+    _cleanup_anon_101096: ;
     _env->elemV = elemV;
     return;
 }
@@ -130308,6 +132128,42 @@ FileCallLowerer* FileCallLowerer_new(void) {
     return self;
 }
 
+void DirCallLowerer_destroy(void* self_ptr) {
+    DirCallLowerer* self = (DirCallLowerer*)self_ptr;
+    if (!self) return;
+}
+
+DirCallLowerer* DirCallLowerer_new(void) {
+    DirCallLowerer* self = (DirCallLowerer*)spec_alloc(sizeof(DirCallLowerer), DirCallLowerer_destroy);
+    self->_type_name = "DirCallLowerer";
+    self->_vtable = DirCallLowerer_vtable;
+    return self;
+}
+
+void TimeCallLowerer_destroy(void* self_ptr) {
+    TimeCallLowerer* self = (TimeCallLowerer*)self_ptr;
+    if (!self) return;
+}
+
+TimeCallLowerer* TimeCallLowerer_new(void) {
+    TimeCallLowerer* self = (TimeCallLowerer*)spec_alloc(sizeof(TimeCallLowerer), TimeCallLowerer_destroy);
+    self->_type_name = "TimeCallLowerer";
+    self->_vtable = TimeCallLowerer_vtable;
+    return self;
+}
+
+void MathCallLowerer_destroy(void* self_ptr) {
+    MathCallLowerer* self = (MathCallLowerer*)self_ptr;
+    if (!self) return;
+}
+
+MathCallLowerer* MathCallLowerer_new(void) {
+    MathCallLowerer* self = (MathCallLowerer*)spec_alloc(sizeof(MathCallLowerer), MathCallLowerer_destroy);
+    self->_type_name = "MathCallLowerer";
+    self->_vtable = MathCallLowerer_vtable;
+    return self;
+}
+
 void MatchCallLowerer_destroy(void* self_ptr) {
     MatchCallLowerer* self = (MatchCallLowerer*)self_ptr;
     if (!self) return;
@@ -133055,32 +134911,32 @@ static void* IrBuilder_spec_construct(void) {
 }
 
 static const SpecMethodMeta IrBuilder_spec_methods[] = {
-    { "init", (void*)IrBuilder_init, 6, 57 },
-    { "nextTmp", (void*)IrBuilder_nextTmp, 2, 74 },
-    { "nextLabel", (void*)IrBuilder_nextLabel, 0, 79 },
-    { "irTypeFor", (void*)IrBuilder_irTypeFor, 0, 84 },
-    { "emit", (void*)IrBuilder_emit, 4, 92 },
-    { "terminate", (void*)IrBuilder_terminate, 4, 98 },
-    { "switchBlock", (void*)IrBuilder_switchBlock, 4, 105 },
-    { "isStdlibClass", (void*)IrBuilder_isStdlibClass, 0, 110 },
-    { "cStructName", (void*)IrBuilder_cStructName, 0, 119 },
-    { "addInheritedFields", (void*)IrBuilder_addInheritedFields, 4, 123 },
-    { "buildVtable", (void*)IrBuilder_buildVtable, 4, 146 },
-    { "collectAllClasses", (void*)IrBuilder_collectAllClasses, 4, 171 },
-    { "buildProgram", (void*)IrBuilder_buildProgram, 0, 183 },
-    { "buildMainEntry", (void*)IrBuilder_buildMainEntry, 4, 259 },
-    { "methodReturnType", (void*)IrBuilder_methodReturnType, 0, 279 },
-    { "emitFieldDefaults", (void*)IrBuilder_emitFieldDefaults, 4, 290 },
-    { "buildMethod", (void*)IrBuilder_buildMethod, 4, 319 },
-    { "emitReleaseOwnedLocals", (void*)IrBuilder_emitReleaseOwnedLocals, 6, 380 },
-    { "emitDefaultVal", (void*)IrBuilder_emitDefaultVal, 0, 391 },
-    { "lowerStmts", (void*)IrBuilder_lowerStmts, 4, 408 },
-    { "lowerStmt", (void*)IrBuilder_lowerStmt, 4, 416 },
-    { "lowerExpr", (void*)IrBuilder_lowerExpr, 0, 526 },
-    { "collectFreeInStmts", (void*)IrBuilder_collectFreeInStmts, 4, 748 },
-    { "collectFreeInExpr", (void*)IrBuilder_collectFreeInExpr, 4, 776 },
-    { "lowerAnonFn", (void*)IrBuilder_lowerAnonFn, 0, 849 },
-    { "lowerCall", (void*)IrBuilder_lowerCall, 0, 1038 },
+    { "init", (void*)IrBuilder_init, 6, 60 },
+    { "nextTmp", (void*)IrBuilder_nextTmp, 2, 77 },
+    { "nextLabel", (void*)IrBuilder_nextLabel, 0, 82 },
+    { "irTypeFor", (void*)IrBuilder_irTypeFor, 0, 87 },
+    { "emit", (void*)IrBuilder_emit, 4, 95 },
+    { "terminate", (void*)IrBuilder_terminate, 4, 101 },
+    { "switchBlock", (void*)IrBuilder_switchBlock, 4, 108 },
+    { "isStdlibClass", (void*)IrBuilder_isStdlibClass, 0, 113 },
+    { "cStructName", (void*)IrBuilder_cStructName, 0, 122 },
+    { "addInheritedFields", (void*)IrBuilder_addInheritedFields, 4, 126 },
+    { "buildVtable", (void*)IrBuilder_buildVtable, 4, 149 },
+    { "collectAllClasses", (void*)IrBuilder_collectAllClasses, 4, 174 },
+    { "buildProgram", (void*)IrBuilder_buildProgram, 0, 186 },
+    { "buildMainEntry", (void*)IrBuilder_buildMainEntry, 4, 262 },
+    { "methodReturnType", (void*)IrBuilder_methodReturnType, 0, 282 },
+    { "emitFieldDefaults", (void*)IrBuilder_emitFieldDefaults, 4, 293 },
+    { "buildMethod", (void*)IrBuilder_buildMethod, 4, 322 },
+    { "emitReleaseOwnedLocals", (void*)IrBuilder_emitReleaseOwnedLocals, 6, 383 },
+    { "emitDefaultVal", (void*)IrBuilder_emitDefaultVal, 0, 394 },
+    { "lowerStmts", (void*)IrBuilder_lowerStmts, 4, 411 },
+    { "lowerStmt", (void*)IrBuilder_lowerStmt, 4, 419 },
+    { "lowerExpr", (void*)IrBuilder_lowerExpr, 0, 529 },
+    { "collectFreeInStmts", (void*)IrBuilder_collectFreeInStmts, 4, 751 },
+    { "collectFreeInExpr", (void*)IrBuilder_collectFreeInExpr, 4, 779 },
+    { "lowerAnonFn", (void*)IrBuilder_lowerAnonFn, 0, 852 },
+    { "lowerCall", (void*)IrBuilder_lowerCall, 0, 1041 },
 };
 static const char* const IrBuilder_spec_bases[] = {
     "Class",
@@ -133206,7 +135062,7 @@ static const SpecMethodMeta ProcessCallLowerer_spec_methods[] = {
     { "name", (void*)ProcessCallLowerer_name, 2, 20 },
     { "order", (void*)ProcessCallLowerer_order, 2, 24 },
     { "matches", (void*)ProcessCallLowerer_matches, 0, 28 },
-    { "lower", (void*)ProcessCallLowerer_lower, 0, 36 },
+    { "lower", (void*)ProcessCallLowerer_lower, 0, 40 },
 };
 static const char* const ProcessCallLowerer_spec_bases[] = {
     "SysinternalCallLowerer",
@@ -133231,7 +135087,7 @@ static const SpecMethodMeta FileCallLowerer_spec_methods[] = {
     { "order", (void*)FileCallLowerer_order, 2, 26 },
     { "namedOrNull", (void*)FileCallLowerer_namedOrNull, 0, 30 },
     { "matches", (void*)FileCallLowerer_matches, 0, 45 },
-    { "lower", (void*)FileCallLowerer_lower, 0, 53 },
+    { "lower", (void*)FileCallLowerer_lower, 0, 57 },
 };
 static const char* const FileCallLowerer_spec_bases[] = {
     "SysinternalCallLowerer",
@@ -133242,6 +135098,79 @@ static const SpecClassMeta FileCallLowerer_spec_meta = {
     FileCallLowerer_spec_bases, 1,
     FileCallLowerer_spec_construct,
     FileCallLowerer_spec_methods, 6
+};
+
+static void* DirCallLowerer_spec_construct(void) {
+    DirCallLowerer* o = DirCallLowerer_new();
+    DirCallLowerer_init(o);
+    return o;
+}
+
+static const SpecMethodMeta DirCallLowerer_spec_methods[] = {
+    { "init", (void*)DirCallLowerer_init, 6, 18 },
+    { "name", (void*)DirCallLowerer_name, 2, 22 },
+    { "order", (void*)DirCallLowerer_order, 2, 26 },
+    { "namedOrNull", (void*)DirCallLowerer_namedOrNull, 0, 30 },
+    { "matches", (void*)DirCallLowerer_matches, 0, 45 },
+    { "lower", (void*)DirCallLowerer_lower, 0, 57 },
+};
+static const char* const DirCallLowerer_spec_bases[] = {
+    "SysinternalCallLowerer",
+};
+static const SpecClassMeta DirCallLowerer_spec_meta = {
+    "DirCallLowerer",
+    "DirCallLowerer.spec",
+    DirCallLowerer_spec_bases, 1,
+    DirCallLowerer_spec_construct,
+    DirCallLowerer_spec_methods, 6
+};
+
+static void* TimeCallLowerer_spec_construct(void) {
+    TimeCallLowerer* o = TimeCallLowerer_new();
+    TimeCallLowerer_init(o);
+    return o;
+}
+
+static const SpecMethodMeta TimeCallLowerer_spec_methods[] = {
+    { "init", (void*)TimeCallLowerer_init, 6, 16 },
+    { "name", (void*)TimeCallLowerer_name, 2, 20 },
+    { "order", (void*)TimeCallLowerer_order, 2, 24 },
+    { "matches", (void*)TimeCallLowerer_matches, 0, 28 },
+    { "lower", (void*)TimeCallLowerer_lower, 0, 40 },
+};
+static const char* const TimeCallLowerer_spec_bases[] = {
+    "SysinternalCallLowerer",
+};
+static const SpecClassMeta TimeCallLowerer_spec_meta = {
+    "TimeCallLowerer",
+    "TimeCallLowerer.spec",
+    TimeCallLowerer_spec_bases, 1,
+    TimeCallLowerer_spec_construct,
+    TimeCallLowerer_spec_methods, 5
+};
+
+static void* MathCallLowerer_spec_construct(void) {
+    MathCallLowerer* o = MathCallLowerer_new();
+    MathCallLowerer_init(o);
+    return o;
+}
+
+static const SpecMethodMeta MathCallLowerer_spec_methods[] = {
+    { "init", (void*)MathCallLowerer_init, 6, 17 },
+    { "name", (void*)MathCallLowerer_name, 2, 21 },
+    { "order", (void*)MathCallLowerer_order, 2, 25 },
+    { "matches", (void*)MathCallLowerer_matches, 0, 29 },
+    { "lower", (void*)MathCallLowerer_lower, 0, 42 },
+};
+static const char* const MathCallLowerer_spec_bases[] = {
+    "SysinternalCallLowerer",
+};
+static const SpecClassMeta MathCallLowerer_spec_meta = {
+    "MathCallLowerer",
+    "MathCallLowerer.spec",
+    MathCallLowerer_spec_bases, 1,
+    MathCallLowerer_spec_construct,
+    MathCallLowerer_spec_methods, 5
 };
 
 static void* MatchCallLowerer_spec_construct(void) {
@@ -133282,7 +135211,7 @@ static const SpecMethodMeta StringCallLowerer_spec_methods[] = {
     { "name", (void*)StringCallLowerer_name, 2, 23 },
     { "order", (void*)StringCallLowerer_order, 2, 27 },
     { "matches", (void*)StringCallLowerer_matches, 0, 31 },
-    { "lower", (void*)StringCallLowerer_lower, 0, 40 },
+    { "lower", (void*)StringCallLowerer_lower, 0, 43 },
 };
 static const char* const StringCallLowerer_spec_bases[] = {
     "CallLowerer",
@@ -133306,7 +135235,7 @@ static const SpecMethodMeta ArrayCallLowerer_spec_methods[] = {
     { "name", (void*)ArrayCallLowerer_name, 2, 24 },
     { "order", (void*)ArrayCallLowerer_order, 2, 28 },
     { "matches", (void*)ArrayCallLowerer_matches, 0, 32 },
-    { "lower", (void*)ArrayCallLowerer_lower, 0, 46 },
+    { "lower", (void*)ArrayCallLowerer_lower, 0, 47 },
 };
 static const char* const ArrayCallLowerer_spec_bases[] = {
     "CallLowerer",
@@ -133330,7 +135259,7 @@ static const SpecMethodMeta MapCallLowerer_spec_methods[] = {
     { "name", (void*)MapCallLowerer_name, 2, 23 },
     { "order", (void*)MapCallLowerer_order, 2, 27 },
     { "matches", (void*)MapCallLowerer_matches, 0, 31 },
-    { "lower", (void*)MapCallLowerer_lower, 0, 44 },
+    { "lower", (void*)MapCallLowerer_lower, 0, 46 },
 };
 static const char* const MapCallLowerer_spec_bases[] = {
     "CallLowerer",
@@ -133353,10 +135282,10 @@ static const SpecMethodMeta LlvmEmitter_spec_methods[] = {
     { "init", (void*)LlvmEmitter_init, 6, 20 },
     { "llvmType", (void*)LlvmEmitter_llvmType, 0, 23 },
     { "emitModule", (void*)LlvmEmitter_emitModule, 0, 33 },
-    { "escapeLlvmBytes", (void*)LlvmEmitter_escapeLlvmBytes, 0, 134 },
-    { "emitFunction", (void*)LlvmEmitter_emitFunction, 0, 155 },
-    { "emitInst", (void*)LlvmEmitter_emitInst, 0, 186 },
-    { "llvmBinOp", (void*)LlvmEmitter_llvmBinOp, 0, 330 },
+    { "escapeLlvmBytes", (void*)LlvmEmitter_escapeLlvmBytes, 0, 166 },
+    { "emitFunction", (void*)LlvmEmitter_emitFunction, 0, 187 },
+    { "emitInst", (void*)LlvmEmitter_emitInst, 0, 218 },
+    { "llvmBinOp", (void*)LlvmEmitter_llvmBinOp, 0, 362 },
 };
 static const char* const LlvmEmitter_spec_bases[] = {
     "Class",
@@ -133553,6 +135482,9 @@ const SpecClassMeta* const spec_class_registry[] = {
     &ConsoleCallLowerer_spec_meta,
     &ProcessCallLowerer_spec_meta,
     &FileCallLowerer_spec_meta,
+    &DirCallLowerer_spec_meta,
+    &TimeCallLowerer_spec_meta,
+    &MathCallLowerer_spec_meta,
     &MatchCallLowerer_spec_meta,
     &StringCallLowerer_spec_meta,
     &ArrayCallLowerer_spec_meta,
@@ -133562,7 +135494,7 @@ const SpecClassMeta* const spec_class_registry[] = {
     &Uri_spec_meta,
     NULL,
 };
-int spec_class_registry_count(void) { return 136; }
+int spec_class_registry_count(void) { return 139; }
 
 void Any_init(Any* self) {
     (void)self;
@@ -166233,20 +168165,27 @@ bool ProcessCallLowerer_matches(ProcessCallLowerer* self, IrBuilder* b, Expressi
     (void)b;
     (void)expr;
     (void)call;
+    bool _mret_502 = 0;
     SPEC_POOL_AUTO;
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Process"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exit"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 1) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
+    SPEC_AUTO String r = 0;
+    r = SysinternalCallLowerer_receiverName(((SysinternalCallLowerer*)self), call) /* inst:SysinternalCallLowerer:receiverName */;
+    if ((((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Process"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
+	    _mret_502 = false;
+    goto _cleanup_502;
 	};
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Process"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("osName"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 0) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
-	};
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Process"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("getPid"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 0) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
-	};
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Process"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("clockMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 0) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
-	};
-    return false;
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exit"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("osName"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("getPid"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("clockMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = true;
+	}
+;
+    _mret_502 = ok;
+    goto _cleanup_502;
+    _cleanup_502: ;
+    if (r) { spec_release((void*)r); r = NULL; }
+    return _mret_502;
 }
 
 String ProcessCallLowerer_lower(ProcessCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
@@ -166256,30 +168195,24 @@ String ProcessCallLowerer_lower(ProcessCallLowerer* self, IrBuilder* b, Expressi
     (void)call;
     String _mret_503 = 0;
     SPEC_POOL_AUTO;
-    SPEC_AUTO String nm = 0;
-    nm = spec_construct_string(call->name);
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exit"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+    SPEC_AUTO String res = 0;
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exit"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String stV = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
-	    _mret_503 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_process_exit"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(stV)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_503;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_process_exit"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(stV)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
     if (stV) { spec_release((void*)stV); stV = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("osName"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_503 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_process_os_name"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_503;
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("getPid"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_503 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_process_get_pid"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_503;
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("clockMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_503 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_clock_ms"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_503;
-	};
-    _mret_503 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("osName"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_process_os_name"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("getPid"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_process_get_pid"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("clockMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_clock_ms"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	}
+;
+    _mret_503 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
     goto _cleanup_503;
     _cleanup_503: ;
-    if (nm) { spec_release((void*)nm); nm = NULL; }
+    if (res) { spec_release((void*)res); res = NULL; }
     return _mret_503;
 }
 
@@ -166342,20 +168275,27 @@ bool FileCallLowerer_matches(FileCallLowerer* self, IrBuilder* b, Expression* ex
     (void)b;
     (void)expr;
     (void)call;
+    bool _mret_100386 = 0;
     SPEC_POOL_AUTO;
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("File"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileExists"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 1) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
+    SPEC_AUTO String r = 0;
+    r = SysinternalCallLowerer_receiverName(((SysinternalCallLowerer*)self), call) /* inst:SysinternalCallLowerer:receiverName */;
+    if ((((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("File"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
+	    _mret_100386 = false;
+    goto _cleanup_100386;
 	};
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("File"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRemove"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 1) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
-	};
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("File"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRead"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 1) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
-	};
-    if (SysinternalCallLowerer_matchesSys(((SysinternalCallLowerer*)self), call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("File"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileWrite"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), 2) /* inst:SysinternalCallLowerer:matchesSys */) {
-	    return true;
-	};
-    return false;
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileExists"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRemove"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRead"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileWrite"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (2));
+	}
+;
+    _mret_100386 = ok;
+    goto _cleanup_100386;
+    _cleanup_100386: ;
+    if (r) { spec_release((void*)r); r = NULL; }
+    return _mret_100386;
 }
 
 String FileCallLowerer_lower(FileCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
@@ -166365,49 +168305,346 @@ String FileCallLowerer_lower(FileCallLowerer* self, IrBuilder* b, Expression* ex
     (void)call;
     String _mret_100387 = 0;
     SPEC_POOL_AUTO;
-    SPEC_AUTO String nm = 0;
-    nm = spec_construct_string(call->name);
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileExists"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+    SPEC_AUTO String res = 0;
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileExists"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String p = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
-	    _mret_100387 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_exists"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_100387;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_exists"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
     if (p) { spec_release((void*)p); p = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRemove"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRemove"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String p = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
-	    _mret_100387 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_remove"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_100387;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_remove"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
     if (p) { spec_release((void*)p); p = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRead"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileRead"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String p = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
-	    SPEC_AUTO String defV = FileCallLowerer_namedOrNull(self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("default"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) /* inst:FileCallLowerer:namedOrNull */;
-	    SPEC_AUTO String okCb = FileCallLowerer_namedOrNull(self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onSuccess"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) /* inst:FileCallLowerer:namedOrNull */;
-	    SPEC_AUTO String errCb = FileCallLowerer_namedOrNull(self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onError"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) /* inst:FileCallLowerer:namedOrNull */;
-	    _mret_100387 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_read"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); spec_array_add(_arr, (void*)(defV)); spec_array_add(_arr, (void*)(okCb)); spec_array_add(_arr, (void*)(errCb)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_100387;
+	    SPEC_AUTO String defV = (((String (*)(FileCallLowerer*, IrBuilder*, CallData*, String))self->_vtable[624]))((FileCallLowerer*)self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("default"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	    SPEC_AUTO String okCb = (((String (*)(FileCallLowerer*, IrBuilder*, CallData*, String))self->_vtable[624]))((FileCallLowerer*)self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onSuccess"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	    SPEC_AUTO String errCb = (((String (*)(FileCallLowerer*, IrBuilder*, CallData*, String))self->_vtable[624]))((FileCallLowerer*)self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onError"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_read"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); spec_array_add(_arr, (void*)(defV)); spec_array_add(_arr, (void*)(okCb)); spec_array_add(_arr, (void*)(errCb)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
     if (p) { spec_release((void*)p); p = NULL; }
     if (defV) { spec_release((void*)defV); defV = NULL; }
     if (okCb) { spec_release((void*)okCb); okCb = NULL; }
     if (errCb) { spec_release((void*)errCb); errCb = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileWrite"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileWrite"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String p = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
 	    SPEC_AUTO String c = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 1) /* inst:SysinternalCallLowerer:lowerArg */;
-	    SPEC_AUTO String okCb = FileCallLowerer_namedOrNull(self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onSuccess"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) /* inst:FileCallLowerer:namedOrNull */;
-	    SPEC_AUTO String errCb = FileCallLowerer_namedOrNull(self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onError"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) /* inst:FileCallLowerer:namedOrNull */;
-	    _mret_100387 = (String)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_write"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); spec_array_add(_arr, (void*)(c)); spec_array_add(_arr, (void*)(okCb)); spec_array_add(_arr, (void*)(errCb)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */);
-    goto _cleanup_100387;
+	    SPEC_AUTO String okCb = (((String (*)(FileCallLowerer*, IrBuilder*, CallData*, String))self->_vtable[624]))((FileCallLowerer*)self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onSuccess"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	    SPEC_AUTO String errCb = (((String (*)(FileCallLowerer*, IrBuilder*, CallData*, String))self->_vtable[624]))((FileCallLowerer*)self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onError"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_write"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); spec_array_add(_arr, (void*)(c)); spec_array_add(_arr, (void*)(okCb)); spec_array_add(_arr, (void*)(errCb)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
     if (p) { spec_release((void*)p); p = NULL; }
     if (c) { spec_release((void*)c); c = NULL; }
     if (okCb) { spec_release((void*)okCb); okCb = NULL; }
     if (errCb) { spec_release((void*)errCb); errCb = NULL; }
-	};
-    _mret_100387 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	}
+;
+    _mret_100387 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
     goto _cleanup_100387;
     _cleanup_100387: ;
-    if (nm) { spec_release((void*)nm); nm = NULL; }
+    if (res) { spec_release((void*)res); res = NULL; }
     return _mret_100387;
+}
+
+void DirCallLowerer_init(DirCallLowerer* self) {
+    (void)self;
+    return;
+}
+
+String DirCallLowerer_name(DirCallLowerer* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    return (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("DirCallLowerer"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+}
+
+static inline long long DirCallLowerer_order(DirCallLowerer* self) {
+    (void)self;
+    return 45;
+}
+
+String DirCallLowerer_namedOrNull(DirCallLowerer* self, IrBuilder* b, CallData* call, String argName) {
+    (void)self;
+    (void)b;
+    (void)call;
+    (void)argName;
+    String _mret_507 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String res = 0;
+    long long i = 0;
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("null"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    bool found = false;
+    ({ while (1) {
+        SPEC_POOL_AUTO;
+        bool _ev_1619 = false;
+        do {
+    _ev_1619 = ((((i) < (spec_array_length(call->args)))) && ((!(found)))); break;
+        } while (0);
+        if (!_ev_1619) break;
+        bool _it_1619 = true;
+        do {
+    SPEC_AUTO NamedArg* na = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, i)));
+    if (spec_string_equals(na->name, argName)) {
+	    spec_assign_transfer((void**)&res, (void*)(IrBuilder_lowerExpr(b, na->value) /* inst:IrBuilder:lowerExpr */));
+	    found = true;
+	};
+    ((i)++);
+    if (na) { spec_release((void*)na); na = NULL; }
+        } while (0);
+        if (!_it_1619) break;
+    }
+});
+    _mret_507 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_507;
+    _cleanup_507: ;
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_507;
+}
+
+bool DirCallLowerer_matches(DirCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
+    (void)self;
+    (void)b;
+    (void)expr;
+    (void)call;
+    bool _mret_508 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String r = 0;
+    r = SysinternalCallLowerer_receiverName(((SysinternalCallLowerer*)self), call) /* inst:SysinternalCallLowerer:receiverName */;
+    if ((((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Dir"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
+	    _mret_508 = false;
+    goto _cleanup_508;
+	};
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("dirList"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileSize"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exeDir"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = true;
+	}
+;
+    _mret_508 = ok;
+    goto _cleanup_508;
+    _cleanup_508: ;
+    if (r) { spec_release((void*)r); r = NULL; }
+    return _mret_508;
+}
+
+String DirCallLowerer_lower(DirCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
+    (void)self;
+    (void)b;
+    (void)expr;
+    (void)call;
+    String _mret_509 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String res = 0;
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("dirList"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String p = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    SPEC_AUTO String errCb = (((String (*)(DirCallLowerer*, IrBuilder*, CallData*, String))self->_vtable[624]))((DirCallLowerer*)self, b, call, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("onError"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_dir_list_cb"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); spec_array_add(_arr, (void*)(errCb)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (p) { spec_release((void*)p); p = NULL; }
+    if (errCb) { spec_release((void*)errCb); errCb = NULL; }
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exeDir"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_exe_dir"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fileSize"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String p = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_file_size"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(p)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (p) { spec_release((void*)p); p = NULL; }
+	}
+;
+    _mret_509 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_509;
+    _cleanup_509: ;
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_509;
+}
+
+void TimeCallLowerer_init(TimeCallLowerer* self) {
+    (void)self;
+    return;
+}
+
+String TimeCallLowerer_name(TimeCallLowerer* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    return (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("TimeCallLowerer"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+}
+
+static inline long long TimeCallLowerer_order(TimeCallLowerer* self) {
+    (void)self;
+    return 44;
+}
+
+bool TimeCallLowerer_matches(TimeCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
+    (void)self;
+    (void)b;
+    (void)expr;
+    (void)call;
+    bool _mret_100391 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String r = 0;
+    r = SysinternalCallLowerer_receiverName(((SysinternalCallLowerer*)self), call) /* inst:SysinternalCallLowerer:receiverName */;
+    if ((((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Time"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
+	    _mret_100391 = false;
+    goto _cleanup_100391;
+	};
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("monotonicNs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("monotonicUs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("monotonicMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("nowMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("nowNs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = true;
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sleepMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sleepUs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sleepNs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("localOffsetSec"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	}
+;
+    _mret_100391 = ok;
+    goto _cleanup_100391;
+    _cleanup_100391: ;
+    if (r) { spec_release((void*)r); r = NULL; }
+    return _mret_100391;
+}
+
+String TimeCallLowerer_lower(TimeCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
+    (void)self;
+    (void)b;
+    (void)expr;
+    (void)call;
+    String _mret_100392 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String res = 0;
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("monotonicNs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_monotonic_ns"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("monotonicUs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_monotonic_us"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("monotonicMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_monotonic_ms"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("nowMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_epoch_ms"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("nowNs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_epoch_ns"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new(); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sleepMs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_sleep_ms"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(v)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (v) { spec_release((void*)v); v = NULL; }
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sleepUs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_sleep_us"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(v)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (v) { spec_release((void*)v); v = NULL; }
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sleepNs"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_sleep_ns"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(v)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (v) { spec_release((void*)v); v = NULL; }
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("localOffsetSec"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_time_local_offset_sec"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(v)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (v) { spec_release((void*)v); v = NULL; }
+	}
+;
+    _mret_100392 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_100392;
+    _cleanup_100392: ;
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_100392;
+}
+
+void MathCallLowerer_init(MathCallLowerer* self) {
+    (void)self;
+    return;
+}
+
+String MathCallLowerer_name(MathCallLowerer* self) {
+    (void)self;
+    SPEC_POOL_AUTO;
+    return (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("MathCallLowerer"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+}
+
+static inline long long MathCallLowerer_order(MathCallLowerer* self) {
+    (void)self;
+    return 43;
+}
+
+bool MathCallLowerer_matches(MathCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
+    (void)self;
+    (void)b;
+    (void)expr;
+    (void)call;
+    bool _mret_513 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String r = 0;
+    r = SysinternalCallLowerer_receiverName(((SysinternalCallLowerer*)self), call) /* inst:SysinternalCallLowerer:receiverName */;
+    if ((((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals(r, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Math"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
+	    _mret_513 = false;
+    goto _cleanup_513;
+	};
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("toInt"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("toFloat"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sqrt"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("cbrt"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sin"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("cos"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("tan"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("asin"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("acos"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("atan"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("exp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("log"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("log2"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("log10"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("atan2"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("pow"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("random"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (2));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fma"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (3));
+	}
+;
+    _mret_513 = ok;
+    goto _cleanup_513;
+    _cleanup_513: ;
+    if (r) { spec_release((void*)r); r = NULL; }
+    return _mret_513;
+}
+
+String MathCallLowerer_lower(MathCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
+    (void)self;
+    (void)b;
+    (void)expr;
+    (void)call;
+    String _mret_514 = 0;
+    SPEC_POOL_AUTO;
+    SPEC_AUTO String nm = 0;
+    SPEC_AUTO String res = 0;
+    nm = spec_construct_string(call->name);
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("toInt"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
+	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, dst, v, IrType_F64__ensure(), IrType_I64__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
+	    spec_assign((void**)&res, (void*)(dst));
+    if (v) { spec_release((void*)v); v = NULL; }
+    if (dst) { spec_release((void*)dst); dst = NULL; }
+	} else if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("toFloat"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
+	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, dst, v, IrType_I64__ensure(), IrType_F64__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
+	    spec_assign((void**)&res, (void*)(dst));
+    if (v) { spec_release((void*)v); v = NULL; }
+    if (dst) { spec_release((void*)dst); dst = NULL; }
+	} else if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sqrt"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_F64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sqrt"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_F64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(v)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (v) { spec_release((void*)v); v = NULL; }
+	} else if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fma"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String a = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    SPEC_AUTO String bArg = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 1) /* inst:SysinternalCallLowerer:lowerArg */;
+	    SPEC_AUTO String c = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 2) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_F64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("fma"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_F64__ensure())); spec_array_add(_arr, (void*)(IrType_F64__ensure())); spec_array_add(_arr, (void*)(IrType_F64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(a)); spec_array_add(_arr, (void*)(bArg)); spec_array_add(_arr, (void*)(c)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (a) { spec_release((void*)a); a = NULL; }
+    if (bArg) { spec_release((void*)bArg); bArg = NULL; }
+    if (c) { spec_release((void*)c); c = NULL; }
+	} else if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("atan2"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("pow"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("random"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    SPEC_AUTO String x = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    SPEC_AUTO String y = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 1) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_F64__ensure(), ((String)spec_claim_pool((void*)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_math_"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), nm)))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_F64__ensure())); spec_array_add(_arr, (void*)(IrType_F64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(x)); spec_array_add(_arr, (void*)(y)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (x) { spec_release((void*)x); x = NULL; }
+    if (y) { spec_release((void*)y); y = NULL; }
+	} else {
+	    SPEC_AUTO String v = SysinternalCallLowerer_lowerArg(((SysinternalCallLowerer*)self), b, call, 0) /* inst:SysinternalCallLowerer:lowerArg */;
+	    spec_assign_transfer((void**)&res, (void*)(SysinternalCallLowerer_emitSysCall(((SysinternalCallLowerer*)self), b, IrType_F64__ensure(), ((String)spec_claim_pool((void*)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_math_"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), nm)))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_F64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(v)); _arr; }))))) /* inst:SysinternalCallLowerer:emitSysCall */));
+    if (v) { spec_release((void*)v); v = NULL; }
+	}
+;
+    _mret_514 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_514;
+    _cleanup_514: ;
+    if (nm) { spec_release((void*)nm); nm = NULL; }
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_514;
 }
 
 void MatchCallLowerer_init(MatchCallLowerer* self) {
@@ -166439,14 +168676,14 @@ bool MatchCallLowerer_isElseKey(MatchCallLowerer* self, Expression* key) {
     (void)self;
     (void)key;
     SPEC_POOL_AUTO;
-    return ({ bool _mt_1619;
+    return ({ bool _mt_101051;
 if ((key)->_tag == (4)) {
         String nm = ((Expression_Ident*)(key))->name;
-	_mt_1619 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("else"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+	_mt_101051 = spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("else"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	} else {
-	_mt_1619 = false;
+	_mt_101051 = false;
 	}
-_mt_1619; });
+_mt_101051; });
 }
 
 bool MatchCallLowerer_storeLastStmt(MatchCallLowerer* self, IrBuilder* b, Statement* st, String resSlot, IrType* resTy) {
@@ -166495,12 +168732,12 @@ void MatchCallLowerer_lowerArmBody(MatchCallLowerer* self, IrBuilder* b, Express
 	    long long i = 0;
 	    ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1622 = false;
+        bool _ev_101054 = false;
         do {
-    _ev_1622 = ((((i) < (spec_array_length(bd)))) && ((!(b->blkTerminated)))); break;
+    _ev_101054 = ((((i) < (spec_array_length(bd)))) && ((!(b->blkTerminated)))); break;
         } while (0);
-        if (!_ev_1622) break;
-        bool _it_1622 = true;
+        if (!_ev_101054) break;
+        bool _it_101054 = true;
         do {
     SPEC_AUTO Statement* st = (Statement*)spec_retain((void*)(spec_array_get(bd, i)));
     bool isLast = ((i) == (((spec_array_length(bd)) - (1))));
@@ -166514,7 +168751,7 @@ void MatchCallLowerer_lowerArmBody(MatchCallLowerer* self, IrBuilder* b, Express
     ((i)++);
     if (st) { spec_release((void*)st); st = NULL; }
         } while (0);
-        if (!_it_1622) break;
+        if (!_it_101054) break;
     }
 });
 	}
@@ -166536,7 +168773,7 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     (void)b;
     (void)expr;
     (void)call;
-    String _mret_511 = 0;
+    String _mret_100400 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO Expression* elseExpr = 0;
     SPEC_AUTO IrBlock* endBlk = 0;
@@ -166558,12 +168795,12 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     long long ai = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1623 = false;
+        bool _ev_101055 = false;
         do {
-    _ev_1623 = ((ai) < (spec_array_length(call->args))); break;
+    _ev_101055 = ((ai) < (spec_array_length(call->args))); break;
         } while (0);
-        if (!_ev_1623) break;
-        bool _it_1623 = true;
+        if (!_ev_101055) break;
+        bool _it_101055 = true;
         do {
     SPEC_AUTO NamedArg* na = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, ai)));
     if (spec_string_equals(na->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("on"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
@@ -166581,7 +168818,7 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     ((ai)++);
     if (na) { spec_release((void*)na); na = NULL; }
         } while (0);
-        if (!_it_1623) break;
+        if (!_it_101055) break;
     }
 });
     resTy = (IrType*)((IrBuilder_irTypeFor(b, expr->resolvedType) /* inst:IrBuilder:irTypeFor */));
@@ -166616,12 +168853,12 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     long long ki = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1624 = false;
+        bool _ev_101056 = false;
         do {
-    _ev_1624 = ((ki) < (spec_array_length(keys))); break;
+    _ev_101056 = ((ki) < (spec_array_length(keys))); break;
         } while (0);
-        if (!_ev_1624) break;
-        bool _it_1624 = true;
+        if (!_ev_101056) break;
+        bool _it_101056 = true;
         do {
     SPEC_AUTO Expression* k = (Expression*)spec_retain((void*)(spec_array_get(keys, ki)));
     SPEC_AUTO Expression* v = (Expression*)spec_retain((void*)(spec_array_get(vals, ki)));
@@ -166638,12 +168875,12 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
 	    long long si = 0;
 	    ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1625 = false;
+        bool _ev_101057 = false;
         do {
-    _ev_1625 = ((si) < (spec_array_length(segs))); break;
+    _ev_101057 = ((si) < (spec_array_length(segs))); break;
         } while (0);
-        if (!_ev_1625) break;
-        bool _it_1625 = true;
+        if (!_ev_101057) break;
+        bool _it_101057 = true;
         do {
     if (((si) > (0))) {
 	    joined = spec_string_concat(joined, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("_"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -166651,7 +168888,7 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     joined = spec_string_concat(joined, spec_array_get(segs, si));
     ((si)++);
         } while (0);
-        if (!_it_1625) break;
+        if (!_it_101057) break;
     }
 });
 	    if ((((!spec_string_equals(joined, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals((((IrStruct*)spec_claim_pool((void*)(IrModule_findStruct(b->mod, joined) /* inst:IrModule:findStruct */))))->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
@@ -166724,12 +168961,12 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
 	    long long pi = 0;
 	    ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1626 = false;
+        bool _ev_101058 = false;
         do {
-    _ev_1626 = ((pi) < (spec_array_length(ps))); break;
+    _ev_101058 = ((pi) < (spec_array_length(ps))); break;
         } while (0);
-        if (!_ev_1626) break;
-        bool _it_1626 = true;
+        if (!_ev_101058) break;
+        bool _it_101058 = true;
         do {
     SPEC_AUTO Parameter* p = (Parameter*)spec_retain((void*)(spec_array_get(ps, pi)));
     SPEC_AUTO IrType* pty = (IrType*)((IrBuilder_irTypeFor(b, p->paramType->name) /* inst:IrBuilder:irTypeFor */));
@@ -166757,7 +168994,7 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     if (pVal) { spec_release((void*)pVal); pVal = NULL; }
     if (pSlot) { spec_release((void*)pSlot); pSlot = NULL; }
         } while (0);
-        if (!_it_1626) break;
+        if (!_it_101058) break;
     }
 });
 	}
@@ -166778,7 +169015,7 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     if (k) { spec_release((void*)k); k = NULL; }
     if (v) { spec_release((void*)v); v = NULL; }
         } while (0);
-        if (!_it_1624) break;
+        if (!_it_101056) break;
     }
 });
     if (hasElse) {
@@ -166793,13 +169030,13 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     if (hasResult) {
 	    SPEC_AUTO String outVal = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_Load* _inst = IrInst_Load_new(); IrInst_Load_init(_inst, outVal, resSlot, resTy); _inst; }))))) /* inst:IrBuilder:emit */;
-	    _mret_511 = (String)({ String _ret_val = outVal; outVal = NULL; _ret_val; });
-    goto _cleanup_511;
+	    _mret_100400 = (String)({ String _ret_val = outVal; outVal = NULL; _ret_val; });
+    goto _cleanup_100400;
     if (outVal) { spec_release((void*)outVal); outVal = NULL; }
 	};
-    _mret_511 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_511;
-    _cleanup_511: ;
+    _mret_100400 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100400;
+    _cleanup_100400: ;
     if (onExpr) { spec_release((void*)onExpr); onExpr = NULL; }
     if (whenExpr) { spec_release((void*)whenExpr); whenExpr = NULL; }
     if (elseExpr) { spec_release((void*)elseExpr); elseExpr = NULL; }
@@ -166811,7 +169048,7 @@ String MatchCallLowerer_lower(MatchCallLowerer* self, IrBuilder* b, Expression* 
     if (keys) { spec_release((void*)keys); keys = NULL; }
     if (vals) { spec_release((void*)vals); vals = NULL; }
     if (endBlk) { spec_release((void*)endBlk); endBlk = NULL; }
-    return _mret_511;
+    return _mret_100400;
 }
 
 void StringCallLowerer_init(StringCallLowerer* self) {
@@ -166835,31 +169072,21 @@ bool StringCallLowerer_matches(StringCallLowerer* self, IrBuilder* b, Expression
     (void)b;
     (void)expr;
     (void)call;
-    bool _mret_100391 = 0;
     SPEC_POOL_AUTO;
-    SPEC_AUTO String nm = 0;
     if ((!spec_string_equals(call->target->resolvedType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("String"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_100391 = false;
-    goto _cleanup_100391;
+	    return false;
 	};
-    nm = spec_construct_string(call->name);
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_100391 = true;
-    goto _cleanup_100391;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("contains"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))))) {
-	    _mret_100391 = true;
-    goto _cleanup_100391;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("substring"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (2))))) {
-	    _mret_100391 = true;
-    goto _cleanup_100391;
-	};
-    _mret_100391 = false;
-    goto _cleanup_100391;
-    _cleanup_100391: ;
-    if (nm) { spec_release((void*)nm); nm = NULL; }
-    return _mret_100391;
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = true;
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("contains"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("substring"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (2));
+	}
+;
+    return ok;
 }
 
 String StringCallLowerer_lower(StringCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
@@ -166867,20 +169094,18 @@ String StringCallLowerer_lower(StringCallLowerer* self, IrBuilder* b, Expression
     (void)b;
     (void)expr;
     (void)call;
-    String _mret_100392 = 0;
+    String _mret_519 = 0;
     SPEC_POOL_AUTO;
-    SPEC_AUTO String nm = 0;
+    SPEC_AUTO String res = 0;
     SPEC_AUTO String sRecv = 0;
-    nm = spec_construct_string(call->name);
     sRecv = IrBuilder_lowerExpr(b, call->target) /* inst:IrBuilder:lowerExpr */;
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, dst, true, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_string_length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(sRecv)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100392 = (String)({ String _ret_val = dst; dst = NULL; _ret_val; });
-    goto _cleanup_100392;
+	    spec_assign((void**)&res, (void*)(dst));
     if (dst) { spec_release((void*)dst); dst = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("contains"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("contains"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO String needle = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String idxTmp = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
@@ -166891,36 +169116,34 @@ String StringCallLowerer_lower(StringCallLowerer* self, IrBuilder* b, Expression
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_ConstInt* _inst = IrInst_ConstInt_new(); IrInst_ConstInt_init(_inst, zeroTmp, 0); _inst; }))))) /* inst:IrBuilder:emit */;
 	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_Cmp* _inst = IrInst_Cmp_new(); IrInst_Cmp_init(_inst, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(">="); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), idxTmp, zeroTmp, IrType_I64__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100392 = (String)({ String _ret_val = dst; dst = NULL; _ret_val; });
-    goto _cleanup_100392;
+	    spec_assign((void**)&res, (void*)(dst));
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (needle) { spec_release((void*)needle); needle = NULL; }
     if (idxTmp) { spec_release((void*)idxTmp); idxTmp = NULL; }
     if (negOne) { spec_release((void*)negOne); negOne = NULL; }
     if (zeroTmp) { spec_release((void*)zeroTmp); zeroTmp = NULL; }
     if (dst) { spec_release((void*)dst); dst = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("substring"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("substring"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO NamedArg* na1 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 1)));
 	    SPEC_AUTO String st = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String en = IrBuilder_lowerExpr(b, na1->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, dst, true, IrType_Ptr__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_string_substring"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_I64__ensure())); spec_array_add(_arr, (void*)(IrType_I64__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(sRecv)); spec_array_add(_arr, (void*)(st)); spec_array_add(_arr, (void*)(en)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100392 = (String)({ String _ret_val = dst; dst = NULL; _ret_val; });
-    goto _cleanup_100392;
+	    spec_assign((void**)&res, (void*)(dst));
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (na1) { spec_release((void*)na1); na1 = NULL; }
     if (st) { spec_release((void*)st); st = NULL; }
     if (en) { spec_release((void*)en); en = NULL; }
     if (dst) { spec_release((void*)dst); dst = NULL; }
-	};
-    _mret_100392 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_100392;
-    _cleanup_100392: ;
-    if (nm) { spec_release((void*)nm); nm = NULL; }
+	}
+;
+    _mret_519 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_519;
+    _cleanup_519: ;
     if (sRecv) { spec_release((void*)sRecv); sRecv = NULL; }
-    return _mret_100392;
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_519;
 }
 
 void ArrayCallLowerer_init(ArrayCallLowerer* self) {
@@ -166944,42 +169167,29 @@ bool ArrayCallLowerer_matches(ArrayCallLowerer* self, IrBuilder* b, Expression* 
     (void)b;
     (void)expr;
     (void)call;
-    bool _mret_515 = 0;
+    bool _mret_100404 = 0;
     SPEC_POOL_AUTO;
-    SPEC_AUTO String nm = 0;
     SPEC_AUTO String recvType = 0;
     recvType = spec_construct_string(call->target->resolvedType);
     if ((((((!spec_string_equals(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Array:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))))) {
-	    _mret_515 = false;
-    goto _cleanup_515;
+	    _mret_100404 = false;
+    goto _cleanup_100404;
 	};
-    nm = spec_construct_string(call->name);
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_515 = true;
-    goto _cleanup_515;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))))) {
-	    _mret_515 = true;
-    goto _cleanup_515;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))))) {
-	    _mret_515 = true;
-    goto _cleanup_515;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (2))))) {
-	    _mret_515 = true;
-    goto _cleanup_515;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("each"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))))) {
-	    _mret_515 = true;
-    goto _cleanup_515;
-	};
-    _mret_515 = false;
-    goto _cleanup_515;
-    _cleanup_515: ;
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = true;
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("each"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (2));
+	}
+;
+    _mret_100404 = ok;
+    goto _cleanup_100404;
+    _cleanup_100404: ;
     if (recvType) { spec_release((void*)recvType); recvType = NULL; }
-    if (nm) { spec_release((void*)nm); nm = NULL; }
-    return _mret_515;
+    return _mret_100404;
 }
 
 String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
@@ -166987,20 +169197,18 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
     (void)b;
     (void)expr;
     (void)call;
-    String _mret_516 = 0;
+    String _mret_100405 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String aRecv = 0;
-    SPEC_AUTO String nm = 0;
-    nm = spec_construct_string(call->name);
+    SPEC_AUTO String res = 0;
     aRecv = IrBuilder_lowerExpr(b, call->target) /* inst:IrBuilder:lowerExpr */;
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, dst, true, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_array_length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(aRecv)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_516 = (String)({ String _ret_val = dst; dst = NULL; _ret_val; });
-    goto _cleanup_516;
+	    spec_assign((void**)&res, (void*)(dst));
     if (dst) { spec_release((void*)dst); dst = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO Expression* ivExpr = (Expression*)spec_retain((void*)(na0->value));
 	    SPEC_AUTO String iv = IrBuilder_lowerExpr(b, ivExpr) /* inst:IrBuilder:lowerExpr */;
@@ -167011,15 +169219,12 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
 	};
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), false, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_array_add"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(aRecv)); spec_array_add(_arr, (void*)(ip)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_516 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_516;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (ivExpr) { spec_release((void*)ivExpr); ivExpr = NULL; }
     if (iv) { spec_release((void*)iv); iv = NULL; }
     if (ity) { spec_release((void*)ity); ity = NULL; }
     if (ip) { spec_release((void*)ip); ip = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO String idxV = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String raw = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
@@ -167028,18 +169233,16 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
 	    if (((((grTy) != (IrType_Ptr__ensure()))) && (((grTy) != (IrType_Void__ensure()))))) {
 	    SPEC_AUTO String casted = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, casted, raw, IrType_Ptr__ensure(), grTy); _inst; }))))) /* inst:IrBuilder:emit */;
-	    _mret_516 = (String)({ String _ret_val = casted; casted = NULL; _ret_val; });
-    goto _cleanup_516;
+	    spec_assign((void**)&res, (void*)(casted));
     if (casted) { spec_release((void*)casted); casted = NULL; }
+	} else {
+	    spec_assign((void**)&res, (void*)(raw));
 	};
-	    _mret_516 = (String)({ String _ret_val = raw; raw = NULL; _ret_val; });
-    goto _cleanup_516;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (idxV) { spec_release((void*)idxV); idxV = NULL; }
     if (raw) { spec_release((void*)raw); raw = NULL; }
     if (grTy) { spec_release((void*)grTy); grTy = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO NamedArg* na1 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 1)));
 	    SPEC_AUTO String idxV = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
@@ -167052,8 +169255,6 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, ip, iv, ity, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
 	};
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), false, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_array_set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_I64__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(aRecv)); spec_array_add(_arr, (void*)(idxV)); spec_array_add(_arr, (void*)(ip)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_516 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_516;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (na1) { spec_release((void*)na1); na1 = NULL; }
     if (idxV) { spec_release((void*)idxV); idxV = NULL; }
@@ -167061,8 +169262,7 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
     if (iv) { spec_release((void*)iv); iv = NULL; }
     if (ity) { spec_release((void*)ity); ity = NULL; }
     if (ip) { spec_release((void*)ip); ip = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("each"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("each"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO String cObj = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String fnPtrAddr = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
@@ -167122,8 +169322,6 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
 	    IrBuilder_terminate(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_Br* _inst = IrInst_Br_new(); IrInst_Br_init(_inst, hdrLbl); _inst; }))))) /* inst:IrBuilder:terminate */;
 	    SPEC_AUTO IrBlock* endBlk = (IrBlock*)((IrFunction_addBlock(b->curFn, endLbl) /* inst:IrFunction:addBlock */));
 	    IrBuilder_switchBlock(b, endBlk) /* inst:IrBuilder:switchBlock */;
-	    _mret_516 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_516;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (cObj) { spec_release((void*)cObj); cObj = NULL; }
     if (fnPtrAddr) { spec_release((void*)fnPtrAddr); fnPtrAddr = NULL; }
@@ -167147,13 +169345,14 @@ String ArrayCallLowerer_lower(ArrayCallLowerer* self, IrBuilder* b, Expression* 
     if (oneV) { spec_release((void*)oneV); oneV = NULL; }
     if (nextI) { spec_release((void*)nextI); nextI = NULL; }
     if (endBlk) { spec_release((void*)endBlk); endBlk = NULL; }
-	};
-    _mret_516 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_516;
-    _cleanup_516: ;
-    if (nm) { spec_release((void*)nm); nm = NULL; }
+	}
+;
+    _mret_100405 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_100405;
+    _cleanup_100405: ;
     if (aRecv) { spec_release((void*)aRecv); aRecv = NULL; }
-    return _mret_516;
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_100405;
 }
 
 void MapCallLowerer_init(MapCallLowerer* self) {
@@ -167177,38 +169376,29 @@ bool MapCallLowerer_matches(MapCallLowerer* self, IrBuilder* b, Expression* expr
     (void)b;
     (void)expr;
     (void)call;
-    bool _mret_100396 = 0;
+    bool _mret_523 = 0;
     SPEC_POOL_AUTO;
-    SPEC_AUTO String nm = 0;
     SPEC_AUTO String recvType = 0;
     recvType = spec_construct_string(call->target->resolvedType);
     if ((((((!spec_string_equals(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Map"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Map of "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))))) && ((!(String_startsWith(recvType, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("Map:"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))))) {
-	    _mret_100396 = false;
-    goto _cleanup_100396;
+	    _mret_523 = false;
+    goto _cleanup_523;
 	};
-    nm = spec_construct_string(call->name);
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_100396 = true;
-    goto _cleanup_100396;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("has"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))))) {
-	    _mret_100396 = true;
-    goto _cleanup_100396;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (2))))) {
-	    _mret_100396 = true;
-    goto _cleanup_100396;
-	};
-    if (((spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (((spec_array_length(call->args)) >= (1))))) {
-	    _mret_100396 = true;
-    goto _cleanup_100396;
-	};
-    _mret_100396 = false;
-    goto _cleanup_100396;
-    _cleanup_100396: ;
+    long long argc = spec_array_length(call->args);
+    bool ok = false;
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = true;
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("has"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })) || spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (1));
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	    ok = ((argc) >= (2));
+	}
+;
+    _mret_523 = ok;
+    goto _cleanup_523;
+    _cleanup_523: ;
     if (recvType) { spec_release((void*)recvType); recvType = NULL; }
-    if (nm) { spec_release((void*)nm); nm = NULL; }
-    return _mret_100396;
+    return _mret_523;
 }
 
 String MapCallLowerer_lower(MapCallLowerer* self, IrBuilder* b, Expression* expr, CallData* call) {
@@ -167216,31 +169406,27 @@ String MapCallLowerer_lower(MapCallLowerer* self, IrBuilder* b, Expression* expr
     (void)b;
     (void)expr;
     (void)call;
-    String _mret_100397 = 0;
+    String _mret_524 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String mRecv = 0;
-    SPEC_AUTO String nm = 0;
-    nm = spec_construct_string(call->name);
+    SPEC_AUTO String res = 0;
     mRecv = IrBuilder_lowerExpr(b, call->target) /* inst:IrBuilder:lowerExpr */;
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+    res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, dst, true, IrType_I64__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_map_length"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(mRecv)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100397 = (String)({ String _ret_val = dst; dst = NULL; _ret_val; });
-    goto _cleanup_100397;
+	    spec_assign((void**)&res, (void*)(dst));
     if (dst) { spec_release((void*)dst); dst = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("has"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("has"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO String kv = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String dst = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, dst, true, IrType_I1__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_map_has"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(mRecv)); spec_array_add(_arr, (void*)(kv)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100397 = (String)({ String _ret_val = dst; dst = NULL; _ret_val; });
-    goto _cleanup_100397;
+	    spec_assign((void**)&res, (void*)(dst));
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (kv) { spec_release((void*)kv); kv = NULL; }
     if (dst) { spec_release((void*)dst); dst = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO NamedArg* na1 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 1)));
 	    SPEC_AUTO String kv = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
@@ -167253,8 +169439,6 @@ String MapCallLowerer_lower(MapCallLowerer* self, IrBuilder* b, Expression* expr
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, vp, vv, vty, IrType_Ptr__ensure()); _inst; }))))) /* inst:IrBuilder:emit */;
 	};
 	    IrBuilder_emit(b, (((IrInst*)spec_claim_pool((void*)({ size_t _pf = spec_pool_frame(); IrInst* _v = (IrInst*)(({ IrInst_IrCall* _inst = IrInst_IrCall_new(); IrInst_IrCall_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), false, IrType_Void__ensure(), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("spec_map_set"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); spec_array_add(_arr, (void*)(IrType_Ptr__ensure())); _arr; })))), ((SpecArray*)spec_claim_pool((void*)(({ SpecArray* _arr = spec_array_new_object(); spec_array_add(_arr, (void*)(mRecv)); spec_array_add(_arr, (void*)(kv)); spec_array_add(_arr, (void*)(vp)); _arr; }))))); _inst; })); spec_pool_release_to(_pf); _v; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100397 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_100397;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (na1) { spec_release((void*)na1); na1 = NULL; }
     if (kv) { spec_release((void*)kv); kv = NULL; }
@@ -167262,8 +169446,7 @@ String MapCallLowerer_lower(MapCallLowerer* self, IrBuilder* b, Expression* expr
     if (vv) { spec_release((void*)vv); vv = NULL; }
     if (vty) { spec_release((void*)vty); vty = NULL; }
     if (vp) { spec_release((void*)vp); vp = NULL; }
-	};
-    if (spec_string_equals(nm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
+	} else if (spec_string_equals(call->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("get"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO NamedArg* na0 = (NamedArg*)spec_retain((void*)(spec_array_get(call->args, 0)));
 	    SPEC_AUTO String kv = IrBuilder_lowerExpr(b, na0->value) /* inst:IrBuilder:lowerExpr */;
 	    SPEC_AUTO String defV = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("null"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167289,24 +169472,24 @@ String MapCallLowerer_lower(MapCallLowerer* self, IrBuilder* b, Expression* expr
 	    if (((((mrTy) != (IrType_Ptr__ensure()))) && (((mrTy) != (IrType_Void__ensure()))))) {
 	    SPEC_AUTO String casted = IrBuilder_nextTmp(b) /* inst:IrBuilder:nextTmp */;
 	    IrBuilder_emit(b, ((IrInst*)spec_claim_pool((void*)(({ IrInst_IrCast* _inst = IrInst_IrCast_new(); IrInst_IrCast_init(_inst, casted, raw, IrType_Ptr__ensure(), mrTy); _inst; }))))) /* inst:IrBuilder:emit */;
-	    _mret_100397 = (String)({ String _ret_val = casted; casted = NULL; _ret_val; });
-    goto _cleanup_100397;
+	    spec_assign((void**)&res, (void*)(casted));
     if (casted) { spec_release((void*)casted); casted = NULL; }
+	} else {
+	    spec_assign((void**)&res, (void*)(raw));
 	};
-	    _mret_100397 = (String)({ String _ret_val = raw; raw = NULL; _ret_val; });
-    goto _cleanup_100397;
     if (na0) { spec_release((void*)na0); na0 = NULL; }
     if (kv) { spec_release((void*)kv); kv = NULL; }
     if (defV) { spec_release((void*)defV); defV = NULL; }
     if (raw) { spec_release((void*)raw); raw = NULL; }
     if (mrTy) { spec_release((void*)mrTy); mrTy = NULL; }
-	};
-    _mret_100397 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_100397;
-    _cleanup_100397: ;
-    if (nm) { spec_release((void*)nm); nm = NULL; }
+	}
+;
+    _mret_524 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_524;
+    _cleanup_524: ;
     if (mRecv) { spec_release((void*)mRecv); mRecv = NULL; }
-    return _mret_100397;
+    if (res) { spec_release((void*)res); res = NULL; }
+    return _mret_524;
 }
 
 void LlvmEmitter_init(LlvmEmitter* self) {
@@ -167317,88 +169500,49 @@ String LlvmEmitter_llvmType(LlvmEmitter* self, IrType* ty) {
     (void)self;
     (void)ty;
     SPEC_POOL_AUTO;
-    return (String)(({ String _mt_1677;
+    return (String)(({ String _mt_101097;
 if ((void*)(ty) == (void*)(IrType_Void__ensure())) {
-	_mt_1677 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("void"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101097 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("void"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((void*)(ty) == (void*)(IrType_I1__ensure())) {
-	_mt_1677 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("i1"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101097 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("i1"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((void*)(ty) == (void*)(IrType_I64__ensure())) {
-	_mt_1677 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("i64"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101097 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("i64"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((void*)(ty) == (void*)(IrType_F64__ensure())) {
-	_mt_1677 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("double"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101097 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("double"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((void*)(ty) == (void*)(IrType_Ptr__ensure())) {
-	_mt_1677 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("ptr"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101097 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("ptr"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	}
-_mt_1677; }));
+_mt_101097; }));
 }
 
 String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     (void)self;
     (void)mod;
-    String _mret_519 = 0;
+    String _mret_100408 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String out = 0;
-    out = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("; Spec LLVM IR (experimental)\n\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_rt_alloc(i64, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_rt_retain(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_rt_release(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_rt_closure_new(ptr, ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_rt_box_new(i64, i1)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_string_intern(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_string_concat(ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i1 @spec_string_equals(ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i64 @spec_string_length(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_string_substring(ptr, i64, i64)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i64 @spec_string_index_of(ptr, ptr, i64)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_to_string_int(i64)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_print(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_print_line(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_process_exit(i64)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_process_os_name()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i64 @spec_process_get_pid()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i64 @spec_clock_ms()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i1 @spec_file_exists(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i1 @spec_file_remove(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_file_read(ptr, ptr, ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i1 @spec_file_write(ptr, ptr, ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_array_new()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_array_new_object()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_array_add(ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_array_add_object(ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i64 @spec_array_length(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_array_get(ptr, i64)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_array_set(ptr, i64, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_map_new()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_map_new_object()\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare void @spec_map_set(ptr, ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare ptr @spec_map_get(ptr, ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i1 @spec_map_has(ptr, ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare i64 @spec_map_length(ptr)\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("%struct.SpecClosure = type { ptr, ptr, ptr }\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("@spec_class_registry = constant [1 x ptr] zeroinitializer\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("@spec_held_registry = constant [1 x { ptr, ptr, i32, ptr }] zeroinitializer\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("define i32 @spec_class_registry_count() {\n  ret i32 0\n}\n\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
+    out = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("; Spec LLVM IR (experimental)\n\ndeclare ptr @spec_rt_alloc(i64, ptr)\ndeclare ptr @spec_rt_retain(ptr)\ndeclare void @spec_rt_release(ptr)\ndeclare ptr @spec_rt_closure_new(ptr, ptr, ptr)\ndeclare ptr @spec_rt_box_new(i64, i1)\ndeclare ptr @spec_string_intern(ptr)\ndeclare ptr @spec_string_concat(ptr, ptr)\ndeclare i1 @spec_string_equals(ptr, ptr)\ndeclare i64 @spec_string_length(ptr)\ndeclare ptr @spec_string_substring(ptr, i64, i64)\ndeclare i64 @spec_string_index_of(ptr, ptr, i64)\ndeclare ptr @spec_to_string_int(i64)\ndeclare void @spec_print(ptr)\ndeclare void @spec_print_line(ptr)\ndeclare void @spec_process_exit(i64)\ndeclare ptr @spec_process_os_name()\ndeclare i64 @spec_process_get_pid()\ndeclare i64 @spec_clock_ms()\ndeclare i1 @spec_file_exists(ptr)\ndeclare i1 @spec_file_remove(ptr)\ndeclare ptr @spec_file_read(ptr, ptr, ptr, ptr)\ndeclare i1 @spec_file_write(ptr, ptr, ptr, ptr)\ndeclare ptr @spec_dir_list_cb(ptr, ptr)\ndeclare ptr @spec_exe_dir()\ndeclare i64 @spec_file_size(ptr)\ndeclare i64 @spec_time_monotonic_ns()\ndeclare i64 @spec_time_monotonic_us()\ndeclare i64 @spec_time_monotonic_ms()\ndeclare i64 @spec_time_epoch_ms()\ndeclare i64 @spec_time_epoch_ns()\ndeclare void @spec_time_sleep_ms(i64)\ndeclare void @spec_time_sleep_us(i64)\ndeclare void @spec_time_sleep_ns(i64)\ndeclare i64 @spec_time_local_offset_sec(i64)\ndeclare double @sqrt(double)\ndeclare double @fma(double, double, double)\ndeclare double @spec_math_sin(double)\ndeclare double @spec_math_cos(double)\ndeclare double @spec_math_tan(double)\ndeclare double @spec_math_atan2(double, double)\ndeclare double @spec_math_log(double)\ndeclare double @spec_math_log2(double)\ndeclare double @spec_math_pow(double, double)\ndeclare double @spec_math_exp(double)\ndeclare double @spec_math_log10(double)\ndeclare double @spec_math_cbrt(double)\ndeclare double @spec_math_asin(double)\ndeclare double @spec_math_acos(double)\ndeclare double @spec_math_atan(double)\ndeclare double @spec_math_random(double, double)\ndeclare ptr @spec_array_new()\ndeclare ptr @spec_array_new_object()\ndeclare void @spec_array_add(ptr, ptr)\ndeclare void @spec_array_add_object(ptr, ptr)\ndeclare i64 @spec_array_length(ptr)\ndeclare ptr @spec_array_get(ptr, i64)\ndeclare void @spec_array_set(ptr, i64, ptr)\ndeclare ptr @spec_map_new()\ndeclare ptr @spec_map_new_object()\ndeclare void @spec_map_set(ptr, ptr, ptr)\ndeclare ptr @spec_map_get(ptr, ptr, ptr)\ndeclare i1 @spec_map_has(ptr, ptr)\ndeclare i64 @spec_map_length(ptr)\n%struct.SpecClosure = type { ptr, ptr, ptr }\n@spec_class_registry = constant [1 x ptr] zeroinitializer\n@spec_held_registry = constant [1 x { ptr, ptr, i32, ptr }] zeroinitializer\ndefine i32 @spec_class_registry_count() {\n  ret i32 0\n}\n\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     long long si = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1683 = false;
+        bool _ev_101103 = false;
         do {
-    _ev_1683 = ((si) < (spec_array_length(mod->structs))); break;
+    _ev_101103 = ((si) < (spec_array_length(mod->structs))); break;
         } while (0);
-        if (!_ev_1683) break;
-        bool _it_1683 = true;
+        if (!_ev_101103) break;
+        bool _it_101103 = true;
         do {
     SPEC_AUTO IrStruct* st = (IrStruct*)spec_retain((void*)(spec_array_get(mod->structs, si)));
     SPEC_AUTO String fieldsStr = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     long long fi = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1684 = false;
+        bool _ev_101104 = false;
         do {
-    _ev_1684 = ((fi) < (spec_array_length(st->fieldTypes))); break;
+    _ev_101104 = ((fi) < (spec_array_length(st->fieldTypes))); break;
         } while (0);
-        if (!_ev_1684) break;
-        bool _it_1684 = true;
+        if (!_ev_101104) break;
+        bool _it_101104 = true;
         do {
     if (((fi) > (0))) {
 	    fieldsStr = spec_string_concat(fieldsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167406,7 +169550,7 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     fieldsStr = spec_string_concat(fieldsStr, ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, spec_array_get(st->fieldTypes, fi)) /* inst:LlvmEmitter:llvmType */))));
     ((fi)++);
         } while (0);
-        if (!_it_1684) break;
+        if (!_it_101104) break;
     }
 });
     out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("%struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), st->name), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = type { "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), fieldsStr), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" }\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167419,12 +169563,12 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
 	    long long vi = 0;
 	    ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1685 = false;
+        bool _ev_101105 = false;
         do {
-    _ev_1685 = ((vi) < (vtLen)); break;
+    _ev_101105 = ((vi) < (vtLen)); break;
         } while (0);
-        if (!_ev_1685) break;
-        bool _it_1685 = true;
+        if (!_ev_101105) break;
+        bool _it_101105 = true;
         do {
     if (((vi) > (0))) {
 	    vtItems = spec_string_concat(vtItems, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167438,7 +169582,7 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     ((vi)++);
     if (vfn) { spec_release((void*)vfn); vfn = NULL; }
         } while (0);
-        if (!_it_1685) break;
+        if (!_it_101105) break;
     }
 });
 	    out = spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("@.vtable."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), st->name), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = constant ["); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), spec_to_string_int(vtLen)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" x ptr] ["); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), vtItems), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("]\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167451,7 +169595,7 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     if (fieldsStr) { spec_release((void*)fieldsStr); fieldsStr = NULL; }
     if (tnEsc) { spec_release((void*)tnEsc); tnEsc = NULL; }
         } while (0);
-        if (!_it_1683) break;
+        if (!_it_101103) break;
     }
 });
     if (((spec_array_length(mod->structs)) > (0))) {
@@ -167460,12 +169604,12 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     long long li = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1686 = false;
+        bool _ev_101106 = false;
         do {
-    _ev_1686 = ((li) < (spec_array_length(mod->stringLiterals))); break;
+    _ev_101106 = ((li) < (spec_array_length(mod->stringLiterals))); break;
         } while (0);
-        if (!_ev_1686) break;
-        bool _it_1686 = true;
+        if (!_ev_101106) break;
+        bool _it_101106 = true;
         do {
     SPEC_AUTO String raw = spec_construct_string(spec_array_get(mod->stringLiterals, li));
     long long byteLen = ((spec_string_length(raw)) + (1));
@@ -167475,7 +169619,7 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     if (raw) { spec_release((void*)raw); raw = NULL; }
     if (esc) { spec_release((void*)esc); esc = NULL; }
         } while (0);
-        if (!_it_1686) break;
+        if (!_it_101106) break;
     }
 });
     if (((spec_array_length(mod->stringLiterals)) > (0))) {
@@ -167484,42 +169628,42 @@ String LlvmEmitter_emitModule(LlvmEmitter* self, IrModule* mod) {
     long long fi = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1687 = false;
+        bool _ev_101107 = false;
         do {
-    _ev_1687 = ((fi) < (spec_array_length(mod->functions))); break;
+    _ev_101107 = ((fi) < (spec_array_length(mod->functions))); break;
         } while (0);
-        if (!_ev_1687) break;
-        bool _it_1687 = true;
+        if (!_ev_101107) break;
+        bool _it_101107 = true;
         do {
     out = spec_string_concat(spec_string_concat(out, ((String)spec_claim_pool((void*)(LlvmEmitter_emitFunction(self, spec_array_get(mod->functions, fi)) /* inst:LlvmEmitter:emitFunction */)))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     ((fi)++);
         } while (0);
-        if (!_it_1687) break;
+        if (!_it_101107) break;
     }
 });
-    _mret_519 = (String)({ String _ret_val = out; out = NULL; _ret_val; });
-    goto _cleanup_519;
-    _cleanup_519: ;
+    _mret_100408 = (String)({ String _ret_val = out; out = NULL; _ret_val; });
+    goto _cleanup_100408;
+    _cleanup_100408: ;
     if (out) { spec_release((void*)out); out = NULL; }
-    return _mret_519;
+    return _mret_100408;
 }
 
 String LlvmEmitter_escapeLlvmBytes(LlvmEmitter* self, String s) {
     (void)self;
     (void)s;
-    String _mret_520 = 0;
+    String _mret_100409 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String res = 0;
     res = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     long long i = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1688 = false;
+        bool _ev_101108 = false;
         do {
-    _ev_1688 = ((i) < (spec_string_length(s))); break;
+    _ev_101108 = ((i) < (spec_string_length(s))); break;
         } while (0);
-        if (!_ev_1688) break;
-        bool _it_1688 = true;
+        if (!_ev_101108) break;
+        bool _it_101108 = true;
         do {
     SPEC_AUTO String ch = String_charAt(s, i, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     if (spec_string_equals(ch, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\\"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
@@ -167546,20 +169690,20 @@ String LlvmEmitter_escapeLlvmBytes(LlvmEmitter* self, String s) {
     ((i)++);
     if (ch) { spec_release((void*)ch); ch = NULL; }
         } while (0);
-        if (!_it_1688) break;
+        if (!_it_101108) break;
     }
 });
-    _mret_520 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
-    goto _cleanup_520;
-    _cleanup_520: ;
+    _mret_100409 = (String)({ String _ret_val = res; res = NULL; _ret_val; });
+    goto _cleanup_100409;
+    _cleanup_100409: ;
     if (res) { spec_release((void*)res); res = NULL; }
-    return _mret_520;
+    return _mret_100409;
 }
 
 String LlvmEmitter_emitFunction(LlvmEmitter* self, IrFunction* fn) {
     (void)self;
     (void)fn;
-    String _mret_521 = 0;
+    String _mret_100410 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String out = 0;
     SPEC_AUTO String paramsStr = 0;
@@ -167569,12 +169713,12 @@ String LlvmEmitter_emitFunction(LlvmEmitter* self, IrFunction* fn) {
     long long pi = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1689 = false;
+        bool _ev_101109 = false;
         do {
-    _ev_1689 = ((pi) < (spec_array_length(fn->params))); break;
+    _ev_101109 = ((pi) < (spec_array_length(fn->params))); break;
         } while (0);
-        if (!_ev_1689) break;
-        bool _it_1689 = true;
+        if (!_ev_101109) break;
+        bool _it_101109 = true;
         do {
     if (((pi) > (0))) {
 	    paramsStr = spec_string_concat(paramsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167584,94 +169728,94 @@ String LlvmEmitter_emitFunction(LlvmEmitter* self, IrFunction* fn) {
     ((pi)++);
     if (p) { spec_release((void*)p); p = NULL; }
         } while (0);
-        if (!_it_1689) break;
+        if (!_it_101109) break;
     }
 });
     if (fn->isExternal) {
-	    _mret_521 = (String)(spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), retStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fn->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), paramsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_521;
+	    _mret_100410 = (String)(spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("declare "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), retStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fn->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), paramsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100410;
 	};
     out = spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("define "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), retStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fn->name, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), paramsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(") {\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     long long bi = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1690 = false;
+        bool _ev_101110 = false;
         do {
-    _ev_1690 = ((bi) < (spec_array_length(fn->blocks))); break;
+    _ev_101110 = ((bi) < (spec_array_length(fn->blocks))); break;
         } while (0);
-        if (!_ev_1690) break;
-        bool _it_1690 = true;
+        if (!_ev_101110) break;
+        bool _it_101110 = true;
         do {
     SPEC_AUTO IrBlock* blk = (IrBlock*)spec_retain((void*)(spec_array_get(fn->blocks, bi)));
     out = spec_string_concat(spec_string_concat(out, blk->label), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(":\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     long long ii = 0;
     ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1691 = false;
+        bool _ev_101111 = false;
         do {
-    _ev_1691 = ((ii) < (spec_array_length(blk->insts))); break;
+    _ev_101111 = ((ii) < (spec_array_length(blk->insts))); break;
         } while (0);
-        if (!_ev_1691) break;
-        bool _it_1691 = true;
+        if (!_ev_101111) break;
+        bool _it_101111 = true;
         do {
     out = spec_string_concat(spec_string_concat(spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), ((String)spec_claim_pool((void*)(LlvmEmitter_emitInst(self, spec_array_get(blk->insts, ii)) /* inst:LlvmEmitter:emitInst */)))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     ((ii)++);
         } while (0);
-        if (!_it_1691) break;
+        if (!_it_101111) break;
     }
 });
     ((bi)++);
     if (blk) { spec_release((void*)blk); blk = NULL; }
         } while (0);
-        if (!_it_1690) break;
+        if (!_it_101110) break;
     }
 });
     out = spec_string_concat(out, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("}\n"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    _mret_521 = (String)({ String _ret_val = out; out = NULL; _ret_val; });
-    goto _cleanup_521;
-    _cleanup_521: ;
+    _mret_100410 = (String)({ String _ret_val = out; out = NULL; _ret_val; });
+    goto _cleanup_100410;
+    _cleanup_100410: ;
     if (retStr) { spec_release((void*)retStr); retStr = NULL; }
     if (paramsStr) { spec_release((void*)paramsStr); paramsStr = NULL; }
     if (out) { spec_release((void*)out); out = NULL; }
-    return _mret_521;
+    return _mret_100410;
 }
 
 String LlvmEmitter_emitInst(LlvmEmitter* self, IrInst* inst) {
     (void)self;
     (void)inst;
     SPEC_POOL_AUTO;
-    return (String)(({ String _mt_1692;
+    return (String)(({ String _mt_101112;
 if ((inst)->_tag == (0)) {
         String dst = ((IrInst_ConstInt*)(inst))->dst;
         long long value = ((IrInst_ConstInt*)(inst))->value;
-	_mt_1692 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i64 0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(value)));
+	_mt_101112 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i64 0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(value)));
 	} else if ((inst)->_tag == (1)) {
         String dst = ((IrInst_ConstFloat*)(inst))->dst;
         String text = ((IrInst_ConstFloat*)(inst))->text;
-	_mt_1692 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fadd double 0.0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), text));
+	_mt_101112 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fadd double 0.0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), text));
 	} else if ((inst)->_tag == (2)) {
         String dst = ((IrInst_ConstBool*)(inst))->dst;
         bool value = ((IrInst_ConstBool*)(inst))->value;
 	    if (value) {
-	    _mt_1692 = (String)(spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i1 0, 1"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1695;
+	    _mt_101112 = (String)(spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i1 0, 1"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101115;
 	};
-	_mt_1692 = (String)(spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i1 0, 0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-_yend_1695: ;
+	_mt_101112 = (String)(spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i1 0, 0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+_yend_101115: ;
 	} else if ((inst)->_tag == (3)) {
         String dst = ((IrInst_ConstString*)(inst))->dst;
         long long strId = ((IrInst_ConstString*)(inst))->strId;
-	_mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call ptr @spec_string_intern(ptr @.str."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(strId), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call ptr @spec_string_intern(ptr @.str."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(strId), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((inst)->_tag == (4)) {
         String slot = ((IrInst_Alloca*)(inst))->slot;
         IrType* ty = ((IrInst_Alloca*)(inst))->ty;
-	_mt_1692 = (String)(spec_string_concat_n(3, slot, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = alloca "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */)))));
+	_mt_101112 = (String)(spec_string_concat_n(3, slot, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = alloca "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */)))));
 	} else if ((inst)->_tag == (5)) {
         String dst = ((IrInst_Load*)(inst))->dst;
         String slot = ((IrInst_Load*)(inst))->slot;
         IrType* ty = ((IrInst_Load*)(inst))->ty;
     SPEC_AUTO String t = 0;
 	    t = LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */;
-	_mt_1692 = (String)(spec_string_concat_n(5, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = load "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), slot));
+	_mt_101112 = (String)(spec_string_concat_n(5, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = load "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), slot));
     if (t) { spec_release((void*)t); t = NULL; }
 	} else if ((inst)->_tag == (6)) {
         String slot = ((IrInst_Store*)(inst))->slot;
@@ -167679,7 +169823,7 @@ _yend_1695: ;
         IrType* ty = ((IrInst_Store*)(inst))->ty;
     SPEC_AUTO String t = 0;
 	    t = LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */;
-	_mt_1692 = (String)(spec_string_concat_n(6, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("store "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), slot));
+	_mt_101112 = (String)(spec_string_concat_n(6, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("store "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), slot));
     if (t) { spec_release((void*)t); t = NULL; }
 	} else if ((inst)->_tag == (7)) {
         String dst = ((IrInst_BinOp*)(inst))->dst;
@@ -167691,7 +169835,7 @@ _yend_1695: ;
     SPEC_AUTO String t = 0;
 	    t = LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */;
 	    llvmOp = LlvmEmitter_llvmBinOp(self, op, ty) /* inst:LlvmEmitter:llvmBinOp */;
-	_mt_1692 = (String)(spec_string_concat_n(9, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), llvmOp, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), lhs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rhs));
+	_mt_101112 = (String)(spec_string_concat_n(9, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), llvmOp, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), lhs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rhs));
     if (t) { spec_release((void*)t); t = NULL; }
     if (llvmOp) { spec_release((void*)llvmOp); llvmOp = NULL; }
 	} else if ((inst)->_tag == (8)) {
@@ -167701,15 +169845,15 @@ _yend_1695: ;
         IrType* ty = ((IrInst_UnaryOp*)(inst))->ty;
 	    if (spec_string_equals(op, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("-"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    if (((ty) == (IrType_F64__ensure()))) {
-	    _mt_1692 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fneg double "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand)); goto _yend_1701;
+	    _mt_101112 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fneg double "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand)); goto _yend_101121;
 	};
-	    _mt_1692 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = sub i64 0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand)); goto _yend_1701;
+	    _mt_101112 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = sub i64 0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand)); goto _yend_101121;
 	};
 	    if (spec_string_equals(op, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("!"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = xor i1 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", 1"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1701;
+	    _mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = xor i1 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", 1"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101121;
 	};
-	_mt_1692 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i64 0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand));
-_yend_1701: ;
+	_mt_101112 = (String)(spec_string_concat_n(3, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = add i64 0, "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), operand));
+_yend_101121: ;
 	} else if ((inst)->_tag == (9)) {
         String dst = ((IrInst_Cmp*)(inst))->dst;
         String op = ((IrInst_Cmp*)(inst))->op;
@@ -167736,7 +169880,7 @@ _yend_1701: ;
 	    if (spec_string_equals(op, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(">="); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    spec_assign((void**)&fpred, (void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("oge"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	};
-	    _mt_1692 = (String)(spec_string_concat_n(7, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fcmp "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fpred, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" double "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), lhs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rhs)); goto _yend_1702;
+	    _mt_101112 = (String)(spec_string_concat_n(7, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fcmp "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fpred, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" double "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), lhs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rhs)); goto _yend_101122;
     if (fpred) { spec_release((void*)fpred); fpred = NULL; }
 	};
 	    ipred = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("eq"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167755,8 +169899,8 @@ _yend_1701: ;
 	    if (spec_string_equals(op, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(">="); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    spec_assign((void**)&ipred, (void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("sge"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	};
-	_mt_1692 = (String)(spec_string_concat_n(9, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = icmp "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ipred, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), lhs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rhs));
-_yend_1702: ;
+	_mt_101112 = (String)(spec_string_concat_n(9, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = icmp "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ipred, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), lhs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rhs));
+_yend_101122: ;
     if (t) { spec_release((void*)t); t = NULL; }
     if (ipred) { spec_release((void*)ipred); ipred = NULL; }
 	} else if ((inst)->_tag == (10)) {
@@ -167772,12 +169916,12 @@ _yend_1702: ;
 	    long long ai = 0;
 	    ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1704 = false;
+        bool _ev_101124 = false;
         do {
-    _ev_1704 = ((ai) < (spec_array_length(args))); break;
+    _ev_101124 = ((ai) < (spec_array_length(args))); break;
         } while (0);
-        if (!_ev_1704) break;
-        bool _it_1704 = true;
+        if (!_ev_101124) break;
+        bool _it_101124 = true;
         do {
     if (((ai) > (0))) {
 	    argsStr = spec_string_concat(argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167785,15 +169929,15 @@ _yend_1702: ;
     argsStr = spec_string_concat(spec_string_concat(spec_string_concat(argsStr, ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, spec_array_get(argTypes, ai)) /* inst:LlvmEmitter:llvmType */)))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), spec_array_get(args, ai));
     ((ai)++);
         } while (0);
-        if (!_it_1704) break;
+        if (!_it_101124) break;
     }
 });
 	    rt = LlvmEmitter_llvmType(self, retType) /* inst:LlvmEmitter:llvmType */;
 	    if (hasDst) {
-	    _mt_1692 = (String)(spec_string_concat_n(8, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), callee, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1703;
+	    _mt_101112 = (String)(spec_string_concat_n(8, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), callee, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101123;
 	};
-	_mt_1692 = (String)(spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), callee, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-_yend_1703: ;
+	_mt_101112 = (String)(spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), callee, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+_yend_101123: ;
     if (argsStr) { spec_release((void*)argsStr); argsStr = NULL; }
     if (rt) { spec_release((void*)rt); rt = NULL; }
 	} else if ((inst)->_tag == (11)) {
@@ -167809,12 +169953,12 @@ _yend_1703: ;
 	    long long ai = 0;
 	    ({ while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1706 = false;
+        bool _ev_101126 = false;
         do {
-    _ev_1706 = ((ai) < (spec_array_length(args))); break;
+    _ev_101126 = ((ai) < (spec_array_length(args))); break;
         } while (0);
-        if (!_ev_1706) break;
-        bool _it_1706 = true;
+        if (!_ev_101126) break;
+        bool _it_101126 = true;
         do {
     if (((ai) > (0))) {
 	    argsStr = spec_string_concat(argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -167822,21 +169966,21 @@ _yend_1703: ;
     argsStr = spec_string_concat(spec_string_concat(spec_string_concat(argsStr, ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, spec_array_get(argTypes, ai)) /* inst:LlvmEmitter:llvmType */)))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })), spec_array_get(args, ai));
     ((ai)++);
         } while (0);
-        if (!_it_1706) break;
+        if (!_it_101126) break;
     }
 });
 	    rt = LlvmEmitter_llvmType(self, retType) /* inst:LlvmEmitter:llvmType */;
 	    if (hasDst) {
-	    _mt_1692 = (String)(spec_string_concat_n(8, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1705;
+	    _mt_101112 = (String)(spec_string_concat_n(8, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101125;
 	};
-	_mt_1692 = (String)(spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-_yend_1705: ;
+	_mt_101112 = (String)(spec_string_concat_n(7, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rt, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), fnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("("); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), argsStr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+_yend_101125: ;
     if (argsStr) { spec_release((void*)argsStr); argsStr = NULL; }
     if (rt) { spec_release((void*)rt); rt = NULL; }
 	} else if ((inst)->_tag == (12)) {
         String dst = ((IrInst_GlobalAddr*)(inst))->dst;
         String globalName = ((IrInst_GlobalAddr*)(inst))->globalName;
-	_mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr i8, ptr @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), globalName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i64 0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr i8, ptr @"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), globalName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i64 0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((inst)->_tag == (13)) {
         String dst = ((IrInst_AllocObj*)(inst))->dst;
         String structName = ((IrInst_AllocObj*)(inst))->structName;
@@ -167849,7 +169993,7 @@ _yend_1705: ;
 	    szVal = spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("_sz"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    tnPtr = spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("_tnp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    vtPtr = spec_string_concat((void*)spec_retain((void*)(dst)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("_vtp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-	_mt_1692 = (String)(spec_string_concat_n(35, szPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr null, i32 1\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), szVal, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = ptrtoint ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), szPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to i64\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call ptr @spec_rt_alloc(i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), szVal, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), destroyFn, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), tnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr inbounds %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i32 0, i32 0\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("store ptr @.typename."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), tnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), vtPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr inbounds %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i32 0, i32 1\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("store ptr @.vtable."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), vtPtr));
+	_mt_101112 = (String)(spec_string_concat_n(35, szPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr null, i32 1\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), szVal, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = ptrtoint ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), szPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to i64\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = call ptr @spec_rt_alloc(i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), szVal, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), destroyFn, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), tnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr inbounds %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i32 0, i32 0\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("store ptr @.typename."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), tnPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), vtPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr inbounds %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i32 0, i32 1\n  "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("store ptr @.vtable."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), vtPtr));
     if (szPtr) { spec_release((void*)szPtr); szPtr = NULL; }
     if (szVal) { spec_release((void*)szVal); szVal = NULL; }
     if (tnPtr) { spec_release((void*)tnPtr); tnPtr = NULL; }
@@ -167859,62 +170003,62 @@ _yend_1705: ;
         String objPtr = ((IrInst_FieldPtr*)(inst))->objPtr;
         String structName = ((IrInst_FieldPtr*)(inst))->structName;
         long long fieldIndex = ((IrInst_FieldPtr*)(inst))->fieldIndex;
-	_mt_1692 = (String)(spec_string_concat_n(7, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr inbounds %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), objPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i32 0, i32 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(fieldIndex)));
+	_mt_101112 = (String)(spec_string_concat_n(7, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr inbounds %struct."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), structName, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), objPtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i32 0, i32 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(fieldIndex)));
 	} else if ((inst)->_tag == (15)) {
         String dst = ((IrInst_PtrElem*)(inst))->dst;
         String basePtr = ((IrInst_PtrElem*)(inst))->basePtr;
         long long index = ((IrInst_PtrElem*)(inst))->index;
-	_mt_1692 = (String)(spec_string_concat_n(5, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr ptr, ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), basePtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(index)));
+	_mt_101112 = (String)(spec_string_concat_n(5, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = getelementptr ptr, ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), basePtr, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), spec_to_string_int(index)));
 	} else if ((inst)->_tag == (16)) {
         String dst = ((IrInst_IrCast*)(inst))->dst;
         String val = ((IrInst_IrCast*)(inst))->val;
         IrType* fromType = ((IrInst_IrCast*)(inst))->fromType;
         IrType* toType = ((IrInst_IrCast*)(inst))->toType;
 	    if (((((fromType) == (IrType_I64__ensure()))) && (((toType) == (IrType_F64__ensure()))))) {
-	    _mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = sitofp i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to double"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1711;
+	    _mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = sitofp i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to double"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101131;
 	};
 	    if (((((fromType) == (IrType_F64__ensure()))) && (((toType) == (IrType_I64__ensure()))))) {
-	    _mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fptosi double "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to i64"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1711;
+	    _mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = fptosi double "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to i64"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101131;
 	};
 	    if (((((((fromType) == (IrType_I64__ensure()))) || (((fromType) == (IrType_I1__ensure()))))) && (((toType) == (IrType_Ptr__ensure()))))) {
-	    _mt_1692 = (String)(spec_string_concat_n(6, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = inttoptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, fromType) /* inst:LlvmEmitter:llvmType */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to ptr"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1711;
+	    _mt_101112 = (String)(spec_string_concat_n(6, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = inttoptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, fromType) /* inst:LlvmEmitter:llvmType */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to ptr"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101131;
 	};
 	    if (((((fromType) == (IrType_Ptr__ensure()))) && (((((toType) == (IrType_I64__ensure()))) || (((toType) == (IrType_I1__ensure()))))))) {
-	    _mt_1692 = (String)(spec_string_concat_n(5, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = ptrtoint ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, toType) /* inst:LlvmEmitter:llvmType */))))); goto _yend_1711;
+	    _mt_101112 = (String)(spec_string_concat_n(5, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = ptrtoint ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, toType) /* inst:LlvmEmitter:llvmType */))))); goto _yend_101131;
 	};
 	    if (((((fromType) == (IrType_I1__ensure()))) && (((toType) == (IrType_I64__ensure()))))) {
-	    _mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = zext i1 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to i64"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1711;
+	    _mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = zext i1 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to i64"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101131;
 	};
 	    if (((((fromType) == (IrType_I64__ensure()))) && (((toType) == (IrType_I1__ensure()))))) {
-	    _mt_1692 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = icmp ne i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", 0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_1711;
+	    _mt_101112 = (String)(spec_string_concat_n(4, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = icmp ne i64 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", 0"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))); goto _yend_101131;
 	};
-	_mt_1692 = (String)(spec_string_concat_n(7, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = bitcast "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, fromType) /* inst:LlvmEmitter:llvmType */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, toType) /* inst:LlvmEmitter:llvmType */)))));
-_yend_1711: ;
+	_mt_101112 = (String)(spec_string_concat_n(7, dst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" = bitcast "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, fromType) /* inst:LlvmEmitter:llvmType */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" to "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, toType) /* inst:LlvmEmitter:llvmType */)))));
+_yend_101131: ;
 	} else if ((inst)->_tag == (17)) {
         String val = ((IrInst_Retain*)(inst))->val;
-	_mt_1692 = (String)(spec_string_concat_n(3, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call ptr @spec_rt_retain(ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101112 = (String)(spec_string_concat_n(3, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call ptr @spec_rt_retain(ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((inst)->_tag == (18)) {
         String val = ((IrInst_Release*)(inst))->val;
-	_mt_1692 = (String)(spec_string_concat_n(3, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call void @spec_rt_release(ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	_mt_101112 = (String)(spec_string_concat_n(3, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("call void @spec_rt_release(ptr "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(")"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	} else if ((inst)->_tag == (19)) {
         bool hasVal = ((IrInst_Ret*)(inst))->hasVal;
         String val = ((IrInst_Ret*)(inst))->val;
         IrType* ty = ((IrInst_Ret*)(inst))->ty;
 	    if (hasVal) {
-	    _mt_1692 = (String)(spec_string_concat_n(4, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("ret "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val)); goto _yend_1714;
+	    _mt_101112 = (String)(spec_string_concat_n(4, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("ret "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ((String)spec_claim_pool((void*)(LlvmEmitter_llvmType(self, ty) /* inst:LlvmEmitter:llvmType */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(" "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), val)); goto _yend_101134;
 	};
-	_mt_1692 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("ret void"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-_yend_1714: ;
+	_mt_101112 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("ret void"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+_yend_101134: ;
 	} else if ((inst)->_tag == (20)) {
         String target = ((IrInst_Br*)(inst))->target;
-	_mt_1692 = (String)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("br label %"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), target));
+	_mt_101112 = (String)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("br label %"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), target));
 	} else if ((inst)->_tag == (21)) {
         String cond = ((IrInst_CondBr*)(inst))->cond;
         String thenLabel = ((IrInst_CondBr*)(inst))->thenLabel;
         String elseLabel = ((IrInst_CondBr*)(inst))->elseLabel;
-	_mt_1692 = (String)(spec_string_concat_n(6, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("br i1 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), cond, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", label %"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), thenLabel, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", label %"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), elseLabel));
+	_mt_101112 = (String)(spec_string_concat_n(6, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("br i1 "); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), cond, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", label %"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), thenLabel, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(", label %"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), elseLabel));
 	}
-_mt_1692; }));
+_mt_101112; }));
 }
 
 String LlvmEmitter_llvmBinOp(LlvmEmitter* self, String op, IrType* ty) {
@@ -168036,7 +170180,7 @@ bool Uri_hasDrivePrefix(Uri* self, String p) {
 String Uri_cleanPath(Uri* self, String rawPath) {
     (void)self;
     (void)rawPath;
-    String _mret_527 = 0;
+    String _mret_100416 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String drivePrefix = 0;
     SPEC_AUTO String joined = 0;
@@ -168044,8 +170188,8 @@ String Uri_cleanPath(Uri* self, String rawPath) {
     SPEC_AUTO SpecArray* rawSegs = 0;
     SPEC_AUTO SpecArray* segs = 0;
     if (spec_string_equals(rawPath, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_527 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_527;
+	    _mret_100416 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100416;
 	};
     p = spec_construct_string(String_replaceAll(rawPath, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\\"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
     bool isAbs = String_startsWith(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -168082,12 +170226,12 @@ String Uri_cleanPath(Uri* self, String rawPath) {
     ({     long long i = 0;
 while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1717 = false;
+        bool _ev_101137 = false;
         do {
-    _ev_1717 = ((i) < (rawLen)); break;
+    _ev_101137 = ((i) < (rawLen)); break;
         } while (0);
-        if (!_ev_1717) break;
-        bool _it_1717 = true;
+        if (!_ev_101137) break;
+        bool _it_101137 = true;
         do {
     SPEC_AUTO String seg = spec_construct_string(spec_array_get(rawSegs, i));
     if ((((!spec_string_equals(seg, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) && ((!spec_string_equals(seg, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))))) {
@@ -168114,71 +170258,71 @@ while (1) {
     ((i)++);
     if (seg) { spec_release((void*)seg); seg = NULL; }
         } while (0);
-        if (!_it_1717) break;
+        if (!_it_101137) break;
     }
 });
     joined = Array_join(segs, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     if ((!spec_string_equals(drivePrefix, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
 	    if (isAbs) {
 	    if ((!spec_string_equals(joined, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_527 = (String)(spec_string_concat_n(3, drivePrefix, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), joined));
-    goto _cleanup_527;
+	    _mret_100416 = (String)(spec_string_concat_n(3, drivePrefix, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), joined));
+    goto _cleanup_100416;
 	} else {
-	    _mret_527 = (String)(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_527;
+	    _mret_100416 = (String)(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100416;
 	};
 	} else {
 	    if ((!spec_string_equals(joined, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_527 = (String)(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), joined));
-    goto _cleanup_527;
+	    _mret_100416 = (String)(spec_string_concat((void*)spec_retain((void*)(drivePrefix)), joined));
+    goto _cleanup_100416;
 	} else {
-	    _mret_527 = (String)({ String _ret_val = drivePrefix; drivePrefix = NULL; _ret_val; });
-    goto _cleanup_527;
+	    _mret_100416 = (String)({ String _ret_val = drivePrefix; drivePrefix = NULL; _ret_val; });
+    goto _cleanup_100416;
 	};
 	};
 	};
     if (isAbs) {
-	    _mret_527 = (String)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), joined));
-    goto _cleanup_527;
+	    _mret_100416 = (String)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), joined));
+    goto _cleanup_100416;
 	};
     if (spec_string_equals(joined, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_527 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_527;
+	    _mret_100416 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100416;
 	};
-    _mret_527 = (String)({ String _ret_val = joined; joined = NULL; _ret_val; });
-    goto _cleanup_527;
-    _cleanup_527: ;
+    _mret_100416 = (String)({ String _ret_val = joined; joined = NULL; _ret_val; });
+    goto _cleanup_100416;
+    _cleanup_100416: ;
     if (p) { spec_release((void*)p); p = NULL; }
     if (drivePrefix) { spec_release((void*)drivePrefix); drivePrefix = NULL; }
     if (rawSegs) { spec_release((void*)rawSegs); rawSegs = NULL; }
     if (segs) { spec_release((void*)segs); segs = NULL; }
     if (joined) { spec_release((void*)joined); joined = NULL; }
-    return _mret_527;
+    return _mret_100416;
 }
 
 Uri* Uri_fromFilePath(Uri* self, String filePath) {
     (void)self;
     (void)filePath;
-    Uri* _mret_528 = 0;
+    Uri* _mret_100417 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String norm = 0;
     SPEC_AUTO String p = 0;
     if (spec_string_equals(filePath, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
+	    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
 	};
     p = spec_construct_string(String_replaceAll(filePath, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\\"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
     if (String_startsWith(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("//"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    SPEC_AUTO String rest = spec_string_substring(p, 2, spec_string_length(p));
 	    long long slashIdx = spec_string_index_of(rest, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), (-(1)));
 	    if (((slashIdx) < (0))) {
-	    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rest, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
+	    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), rest, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
 	};
 	    SPEC_AUTO String auth = spec_string_substring(rest, 0, slashIdx);
 	    SPEC_AUTO String rem = spec_string_substring(rest, slashIdx, spec_string_length(rest));
-	    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), auth, ((String)spec_claim_pool((void*)(Uri_cleanPath(self, rem) /* inst:Uri:cleanPath */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
+	    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), auth, ((String)spec_claim_pool((void*)(Uri_cleanPath(self, rem) /* inst:Uri:cleanPath */))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
     if (rest) { spec_release((void*)rest); rest = NULL; }
     if (auth) { spec_release((void*)auth); auth = NULL; }
     if (rem) { spec_release((void*)rem); rem = NULL; }
@@ -168188,8 +170332,8 @@ Uri* Uri_fromFilePath(Uri* self, String filePath) {
 	    SPEC_AUTO String c1 = String_charAt(p, 1, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    if (((Uri_isAlpha(self, c0) /* inst:Uri:isAlpha */) && (spec_string_equals(c1, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(":"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))) {
 	    norm = Uri_cleanPath(self, ((String)spec_claim_pool((void*)(spec_string_concat((void*)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))), p))))) /* inst:Uri:cleanPath */;
-	    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
+	    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
     if (norm) { spec_release((void*)norm); norm = NULL; }
 	};
     if (c0) { spec_release((void*)c0); c0 = NULL; }
@@ -168201,8 +170345,8 @@ Uri* Uri_fromFilePath(Uri* self, String filePath) {
 	    SPEC_AUTO String c2 = String_charAt(p, 2, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    if (((((spec_string_equals(c0, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(":"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))) {
 	    norm = Uri_cleanPath(self, p) /* inst:Uri:cleanPath */;
-	    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
+	    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
     if (norm) { spec_release((void*)norm); norm = NULL; }
 	};
     if (c0) { spec_release((void*)c0); c0 = NULL; }
@@ -168211,17 +170355,17 @@ Uri* Uri_fromFilePath(Uri* self, String filePath) {
 	};
     if (String_startsWith(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    norm = Uri_cleanPath(self, p) /* inst:Uri:cleanPath */;
-	    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
+	    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("file"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
     if (norm) { spec_release((void*)norm); norm = NULL; }
 	};
     norm = Uri_cleanPath(self, p) /* inst:Uri:cleanPath */;
-    _mret_528 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_528;
-    _cleanup_528: ;
+    _mret_100417 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100417;
+    _cleanup_100417: ;
     if (p) { spec_release((void*)p); p = NULL; }
     if (norm) { spec_release((void*)norm); norm = NULL; }
-    return _mret_528;
+    return _mret_100417;
 }
 
 Uri* Uri_parse(Uri* self, String text) {
@@ -168272,12 +170416,12 @@ Uri* Uri_parse(Uri* self, String text) {
 
 String Uri_toFilePath(Uri* self) {
     (void)self;
-    String _mret_530 = 0;
+    String _mret_100419 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String p = 0;
     if (spec_string_equals(self->path, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_530 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_530;
+	    _mret_100419 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100419;
 	};
     p = spec_construct_string(self->path);
     if (((spec_string_length(p)) >= (3))) {
@@ -168285,39 +170429,39 @@ String Uri_toFilePath(Uri* self) {
 	    SPEC_AUTO String c1 = String_charAt(p, 1, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    SPEC_AUTO String c2 = String_charAt(p, 2, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    if (((((spec_string_equals(c0, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(":"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))) {
-	    _mret_530 = (String)(spec_string_substring(p, 1, spec_string_length(p)));
-    goto _cleanup_530;
+	    _mret_100419 = (String)(spec_string_substring(p, 1, spec_string_length(p)));
+    goto _cleanup_100419;
 	};
     if (c0) { spec_release((void*)c0); c0 = NULL; }
     if (c1) { spec_release((void*)c1); c1 = NULL; }
     if (c2) { spec_release((void*)c2); c2 = NULL; }
 	};
     if ((!spec_string_equals(self->authority, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_530 = (String)(spec_string_concat_n(3, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("//"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), self->authority, p));
-    goto _cleanup_530;
+	    _mret_100419 = (String)(spec_string_concat_n(3, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("//"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), self->authority, p));
+    goto _cleanup_100419;
 	};
-    _mret_530 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
-    goto _cleanup_530;
-    _cleanup_530: ;
+    _mret_100419 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
+    goto _cleanup_100419;
+    _cleanup_100419: ;
     if (p) { spec_release((void*)p); p = NULL; }
-    return _mret_530;
+    return _mret_100419;
 }
 
 String Uri_toNativeFilePath(Uri* self) {
     (void)self;
-    String _mret_531 = 0;
+    String _mret_100420 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String fp = 0;
     fp = Uri_toFilePath(self) /* inst:Uri:toFilePath */;
     if (spec_string_equals(((String)spec_claim_pool((void*)(Process_osName(NULL)))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("windows"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_531 = (String)spec_retain((void*)(String_replaceAll(fp, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\\"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))));
-    goto _cleanup_531;
+	    _mret_100420 = (String)spec_retain((void*)(String_replaceAll(fp, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("\\"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))));
+    goto _cleanup_100420;
 	};
-    _mret_531 = (String)({ String _ret_val = fp; fp = NULL; _ret_val; });
-    goto _cleanup_531;
-    _cleanup_531: ;
+    _mret_100420 = (String)({ String _ret_val = fp; fp = NULL; _ret_val; });
+    goto _cleanup_100420;
+    _cleanup_100420: ;
     if (fp) { spec_release((void*)fp); fp = NULL; }
-    return _mret_531;
+    return _mret_100420;
 }
 
 bool Uri_isAbsolute(Uri* self) {
@@ -168334,147 +170478,147 @@ bool Uri_isAbsolute(Uri* self) {
 
 String Uri_dirPath(Uri* self) {
     (void)self;
-    String _mret_533 = 0;
+    String _mret_100422 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String p = 0;
     p = spec_construct_string(self->path);
     if (((spec_string_equals(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) || (spec_string_equals(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))) {
-	    _mret_533 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
-    goto _cleanup_533;
+	    _mret_100422 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
+    goto _cleanup_100422;
 	};
     long long lastSlash = (-(1));
     long long len = spec_string_length(p);
     ({     long long i = 0;
 while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1718 = false;
+        bool _ev_101138 = false;
         do {
-    _ev_1718 = ((i) < (len)); break;
+    _ev_101138 = ((i) < (len)); break;
         } while (0);
-        if (!_ev_1718) break;
-        bool _it_1718 = true;
+        if (!_ev_101138) break;
+        bool _it_101138 = true;
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(p, i, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    lastSlash = i;
 	};
     ((i)++);
         } while (0);
-        if (!_it_1718) break;
+        if (!_it_101138) break;
     }
 });
     if (((lastSlash) < (0))) {
-	    _mret_533 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_533;
+	    _mret_100422 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100422;
 	};
     if (((lastSlash) == (0))) {
-	    _mret_533 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_533;
+	    _mret_100422 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100422;
 	};
     if (((((lastSlash) == (3))) && (((spec_string_length(p)) >= (3))))) {
 	    SPEC_AUTO String c0 = String_charAt(p, 0, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    SPEC_AUTO String c1 = String_charAt(p, 1, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    SPEC_AUTO String c2 = String_charAt(p, 2, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
 	    if (((((spec_string_equals(c0, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) && (Uri_isAlpha(self, c1) /* inst:Uri:isAlpha */))) && (spec_string_equals(c2, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(":"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))) {
-	    _mret_533 = (String)(spec_string_substring(p, 0, 4));
-    goto _cleanup_533;
+	    _mret_100422 = (String)(spec_string_substring(p, 0, 4));
+    goto _cleanup_100422;
 	};
     if (c0) { spec_release((void*)c0); c0 = NULL; }
     if (c1) { spec_release((void*)c1); c1 = NULL; }
     if (c2) { spec_release((void*)c2); c2 = NULL; }
 	};
-    _mret_533 = (String)(spec_string_substring(p, 0, lastSlash));
-    goto _cleanup_533;
-    _cleanup_533: ;
+    _mret_100422 = (String)(spec_string_substring(p, 0, lastSlash));
+    goto _cleanup_100422;
+    _cleanup_100422: ;
     if (p) { spec_release((void*)p); p = NULL; }
-    return _mret_533;
+    return _mret_100422;
 }
 
 String Uri_baseName(Uri* self) {
     (void)self;
-    String _mret_534 = 0;
+    String _mret_100423 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String p = 0;
     p = spec_construct_string(self->path);
     if (((spec_string_equals(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) || (spec_string_equals(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))) {
-	    _mret_534 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_534;
+	    _mret_100423 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100423;
 	};
     long long lastSlash = (-(1));
     long long len = spec_string_length(p);
     ({     long long i = 0;
 while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1719 = false;
+        bool _ev_101139 = false;
         do {
-    _ev_1719 = ((i) < (len)); break;
+    _ev_101139 = ((i) < (len)); break;
         } while (0);
-        if (!_ev_1719) break;
-        bool _it_1719 = true;
+        if (!_ev_101139) break;
+        bool _it_101139 = true;
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(p, i, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    lastSlash = i;
 	};
     ((i)++);
         } while (0);
-        if (!_it_1719) break;
+        if (!_it_101139) break;
     }
 });
     if (((lastSlash) < (0))) {
-	    _mret_534 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
-    goto _cleanup_534;
+	    _mret_100423 = (String)({ String _ret_val = p; p = NULL; _ret_val; });
+    goto _cleanup_100423;
 	};
-    _mret_534 = (String)(spec_string_substring(p, ((lastSlash) + (1)), len));
-    goto _cleanup_534;
-    _cleanup_534: ;
+    _mret_100423 = (String)(spec_string_substring(p, ((lastSlash) + (1)), len));
+    goto _cleanup_100423;
+    _cleanup_100423: ;
     if (p) { spec_release((void*)p); p = NULL; }
-    return _mret_534;
+    return _mret_100423;
 }
 
 String Uri_extName(Uri* self) {
     (void)self;
-    String _mret_535 = 0;
+    String _mret_100424 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String bn = 0;
     bn = Uri_baseName(self) /* inst:Uri:baseName */;
     if (spec_string_equals(bn, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
-	    _mret_535 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_535;
+	    _mret_100424 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100424;
 	};
     long long lastDot = (-(1));
     long long len = spec_string_length(bn);
     ({     long long i = 0;
 while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1720 = false;
+        bool _ev_101140 = false;
         do {
-    _ev_1720 = ((i) < (len)); break;
+    _ev_101140 = ((i) < (len)); break;
         } while (0);
-        if (!_ev_1720) break;
-        bool _it_1720 = true;
+        if (!_ev_101140) break;
+        bool _it_101140 = true;
         do {
     if (spec_string_equals(((String)spec_claim_pool((void*)(String_charAt(bn, i, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("."); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    lastDot = i;
 	};
     ((i)++);
         } while (0);
-        if (!_it_1720) break;
+        if (!_it_101140) break;
     }
 });
     if (((lastDot) <= (0))) {
-	    _mret_535 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_535;
+	    _mret_100424 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100424;
 	};
-    _mret_535 = (String)(spec_string_substring(bn, lastDot, len));
-    goto _cleanup_535;
-    _cleanup_535: ;
+    _mret_100424 = (String)(spec_string_substring(bn, lastDot, len));
+    goto _cleanup_100424;
+    _cleanup_100424: ;
     if (bn) { spec_release((void*)bn); bn = NULL; }
-    return _mret_535;
+    return _mret_100424;
 }
 
 Uri* Uri_resolve(Uri* self, String relativePath) {
     (void)self;
     (void)relativePath;
-    Uri* _mret_536 = 0;
+    Uri* _mret_100425 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String baseDir = 0;
     SPEC_AUTO String joined = 0;
@@ -168482,8 +170626,8 @@ Uri* Uri_resolve(Uri* self, String relativePath) {
     SPEC_AUTO Uri* rel = 0;
     rel = (Uri*)spec_retain((void*)(Uri_fromFilePath(self, relativePath) /* inst:Uri:fromFilePath */));
     if (Uri_isAbsolute(rel) /* inst:Uri:isAbsolute */) {
-	    _mret_536 = (Uri*)({ Uri* _ret_val = rel; rel = NULL; _ret_val; });
-    goto _cleanup_536;
+	    _mret_100425 = (Uri*)({ Uri* _ret_val = rel; rel = NULL; _ret_val; });
+    goto _cleanup_100425;
 	};
     baseDir = Uri_dirPath(self) /* inst:Uri:dirPath */;
     joined = spec_construct_string(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -168497,19 +170641,19 @@ Uri* Uri_resolve(Uri* self, String relativePath) {
 	    spec_assign((void**)&joined, (void*)(rel->path));
 	};
     norm = Uri_cleanPath(self, joined) /* inst:Uri:cleanPath */;
-    _mret_536 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, self->scheme, self->authority, norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
-    goto _cleanup_536;
-    _cleanup_536: ;
+    _mret_100425 = (Uri*)(({ Uri* _inst = Uri_new(); Uri_init(_inst, self->scheme, self->authority, norm, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })); _inst; }));
+    goto _cleanup_100425;
+    _cleanup_100425: ;
     if (rel) { spec_release((void*)rel); rel = NULL; }
     if (baseDir) { spec_release((void*)baseDir); baseDir = NULL; }
     if (joined) { spec_release((void*)joined); joined = NULL; }
     if (norm) { spec_release((void*)norm); norm = NULL; }
-    return _mret_536;
+    return _mret_100425;
 }
 
 String Uri_systemTempDir(Uri* self) {
     (void)self;
-    String _mret_537 = 0;
+    String _mret_100426 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String p = 0;
     if (spec_string_equals(((String)spec_claim_pool((void*)(Process_osName(NULL)))), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("windows"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
@@ -168518,28 +170662,28 @@ String Uri_systemTempDir(Uri* self) {
 	    spec_assign_transfer((void**)&t, (void*)(Process_getEnv(NULL, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("TMP"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))));
 	};
 	    if ((!spec_string_equals(t, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_537 = (String)(Uri_cleanPath(self, t) /* inst:Uri:cleanPath */);
-    goto _cleanup_537;
+	    _mret_100426 = (String)(Uri_cleanPath(self, t) /* inst:Uri:cleanPath */);
+    goto _cleanup_100426;
 	};
-	    _mret_537 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/tmp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_537;
+	    _mret_100426 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/tmp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100426;
     if (t) { spec_release((void*)t); t = NULL; }
 	};
     p = Process_getEnv(NULL, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("TMPDIR"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
     if ((!spec_string_equals(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_537 = (String)(Uri_cleanPath(self, p) /* inst:Uri:cleanPath */);
-    goto _cleanup_537;
+	    _mret_100426 = (String)(Uri_cleanPath(self, p) /* inst:Uri:cleanPath */);
+    goto _cleanup_100426;
 	};
-    _mret_537 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/tmp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_537;
-    _cleanup_537: ;
+    _mret_100426 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/tmp"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100426;
+    _cleanup_100426: ;
     if (p) { spec_release((void*)p); p = NULL; }
-    return _mret_537;
+    return _mret_100426;
 }
 
 String Uri_homeDir(Uri* self) {
     (void)self;
-    String _mret_538 = 0;
+    String _mret_100427 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String h = 0;
     h = Process_getEnv(NULL, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("HOME"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
@@ -168547,31 +170691,31 @@ String Uri_homeDir(Uri* self) {
 	    spec_assign_transfer((void**)&h, (void*)(Process_getEnv(NULL, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("USERPROFILE"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))));
 	};
     if ((!spec_string_equals(h, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_538 = (String)(Uri_cleanPath(self, h) /* inst:Uri:cleanPath */);
-    goto _cleanup_538;
+	    _mret_100427 = (String)(Uri_cleanPath(self, h) /* inst:Uri:cleanPath */);
+    goto _cleanup_100427;
 	};
-    _mret_538 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_538;
-    _cleanup_538: ;
+    _mret_100427 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100427;
+    _cleanup_100427: ;
     if (h) { spec_release((void*)h); h = NULL; }
-    return _mret_538;
+    return _mret_100427;
 }
 
 String Uri_cacheDir(Uri* self) {
     (void)self;
-    String _mret_539 = 0;
+    String _mret_100428 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String h = 0;
     h = Uri_homeDir(self) /* inst:Uri:homeDir */;
     if ((!spec_string_equals(h, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
-	    _mret_539 = (String)(spec_string_concat((void*)spec_retain((void*)(h)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/.cache/spec"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_539;
+	    _mret_100428 = (String)(spec_string_concat((void*)spec_retain((void*)(h)), ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/.cache/spec"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100428;
 	};
-    _mret_539 = (String)(spec_string_concat(Uri_systemTempDir(self) /* inst:Uri:systemTempDir */, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/spec_cache"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_539;
-    _cleanup_539: ;
+    _mret_100428 = (String)(spec_string_concat(Uri_systemTempDir(self) /* inst:Uri:systemTempDir */, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/spec_cache"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100428;
+    _cleanup_100428: ;
     if (h) { spec_release((void*)h); h = NULL; }
-    return _mret_539;
+    return _mret_100428;
 }
 
 String Uri_runtimeCacheDir(Uri* self) {
@@ -168583,7 +170727,7 @@ String Uri_runtimeCacheDir(Uri* self) {
 String Uri_join(Uri* self, SpecArray* parts) {
     (void)self;
     (void)parts;
-    String _mret_541 = 0;
+    String _mret_100430 = 0;
     SPEC_POOL_AUTO;
     SPEC_AUTO String joined = 0;
     SPEC_AUTO SpecArray* nonEmpties = 0;
@@ -168592,12 +170736,12 @@ String Uri_join(Uri* self, SpecArray* parts) {
     ({     long long i = 0;
 while (1) {
         SPEC_POOL_AUTO;
-        bool _ev_1721 = false;
+        bool _ev_101141 = false;
         do {
-    _ev_1721 = ((i) < (len)); break;
+    _ev_101141 = ((i) < (len)); break;
         } while (0);
-        if (!_ev_1721) break;
-        bool _it_1721 = true;
+        if (!_ev_101141) break;
+        bool _it_101141 = true;
         do {
     SPEC_AUTO String p = spec_construct_string(spec_array_get(parts, i));
     if ((!spec_string_equals(p, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })))) {
@@ -168606,20 +170750,20 @@ while (1) {
     ((i)++);
     if (p) { spec_release((void*)p); p = NULL; }
         } while (0);
-        if (!_it_1721) break;
+        if (!_it_101141) break;
     }
 });
     if (((spec_array_length(nonEmpties)) == (0))) {
-	    _mret_541 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
-    goto _cleanup_541;
+	    _mret_100430 = (String)spec_retain((void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern(""); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+    goto _cleanup_100430;
 	};
     joined = Array_join(nonEmpties, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("/"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }));
-    _mret_541 = (String)(Uri_cleanPath(self, joined) /* inst:Uri:cleanPath */);
-    goto _cleanup_541;
-    _cleanup_541: ;
+    _mret_100430 = (String)(Uri_cleanPath(self, joined) /* inst:Uri:cleanPath */);
+    goto _cleanup_100430;
+    _cleanup_100430: ;
     if (nonEmpties) { spec_release((void*)nonEmpties); nonEmpties = NULL; }
     if (joined) { spec_release((void*)joined); joined = NULL; }
-    return _mret_541;
+    return _mret_100430;
 }
 
 String Uri_exeSuffix(Uri* self) {

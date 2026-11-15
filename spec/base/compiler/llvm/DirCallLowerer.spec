@@ -1,0 +1,75 @@
+#! Package base:compiler:llvm
+#! Lowers Dir sysinternal calls (dirList, exeDir, fileSize) to Spec IR.
+
+Class of SysinternalCallLowerer is DirCallLowerer{
+	namespace: ['base', 'compiler', 'llvm'];
+
+	replace Array of Array of String is using: [
+		['base', 'compiler', 'llvm', SysinternalCallLowerer],
+		['base', 'compiler', 'llvm', IrBuilder],
+		['base', 'compiler', 'ast', Expression],
+		['base', 'compiler', 'ast', CallData],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ir', IrType],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
+	];
+
+	replace Function is init(){
+		return;
+	}
+
+	replace Function of String is name(){
+		return 'DirCallLowerer';
+	}
+
+	replace Function of Int is order(){
+		return 45;
+	}
+
+	local Function of String is namedOrNull(IrBuilder is b, CallData is call, String is argName){
+		local Int is i: 0;
+		local String is res: 'null';
+		local Boolean is found: false;
+		while({ i < call:args:length() && !found }, {
+			local NamedArg is na: call:args:get(index: i);
+			if({ na:name == argName }, {
+				res: b:lowerExpr(expr: na:value);
+				found: true;
+			});
+			i++;
+		});
+		return res;
+	}
+
+	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
+		local String is r: self:receiverName(call: call);
+		if({ r != '' && r != 'Dir' }, { return false; });
+		local Int is argc: call:args:length();
+		local Boolean is ok: false;
+		match(on: call:name, when: [
+			['dirList', 'fileSize']: { ok: argc >= 1; },
+			'exeDir': { ok: true; }
+		]);
+		return ok;
+	}
+
+	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
+		local String is res: '0';
+		match(on: call:name, when: [
+			'dirList': {
+				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_dir_list_cb', argTypes: [IrType:Ptr, IrType:Ptr], args: [p, errCb]);
+			},
+			'exeDir': {
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_exe_dir', argTypes: [], args: []);
+			},
+			'fileSize': {
+				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				res: self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_file_size', argTypes: [IrType:Ptr], args: [p]);
+			}
+		]);
+		return res;
+	}
+}
