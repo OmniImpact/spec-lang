@@ -230,7 +230,8 @@ Class is Linter{
 				},
 				MemberKind:CLASS: {
 					self:auditClass(classDef: m:nestedClass);
-				}
+				},
+				else: {}
 			]);
 		});
 		self:auditOwner: savedOwner;
@@ -297,7 +298,7 @@ Class is Linter{
 					self:auditExpression(expr: v, file: file);
 				});
 			},
-			Expression:Cast: local Function(Expression is target, Type is targetType, Array of Expression is args){
+			Expression:Cast: local Function(Expression is target, String is targetType, Array of Expression is args){
 				self:auditExpression(expr: target, file: file);
 				args:each(action: local Function(Expression is a){
 					self:auditExpression(expr: a, file: file);

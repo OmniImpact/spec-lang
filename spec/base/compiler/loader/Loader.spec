@@ -171,7 +171,8 @@ Class is Loader{
 								self:parseErrors:add(item: self:errText:errMalformedImport(className: c:name));
 							});
 						});
-					}
+					},
+					else: {}
 				]);
 			});
 		});
@@ -422,7 +423,8 @@ Class is Loader{
 				},
 				Expression:StringLit: local Function(String is value){
 					parts:add(item: value);
-				}
+				},
+				else: {}
 			]);
 		});
 		self:resolveImport(parts: parts, termClass: termClass, c: c);
@@ -568,13 +570,16 @@ Class is Loader{
 											match(on: seg, when: [
 												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 													self:synthesizeFor(c: c, asExpr: seg);
-												}
+												},
+												else: {}
 											]);
 										});
-									}
+									},
+									else: {}
 								]);
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 			});
@@ -617,13 +622,16 @@ Class is Loader{
 												match(on: seg, when: [
 													Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 														self:synthesizeFor(c: cls, asExpr: seg);
-													}
+													},
+													else: {}
 												]);
 											});
-										}
+										},
+										else: {}
 									]);
 								});
-							}
+							},
+							else: {}
 						]);
 					});
 				});
@@ -646,7 +654,8 @@ Class is Loader{
 			Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 				targetName: className;
 				asArgs: args;
-			}
+			},
+			else: {}
 		]);
 		local ClassInfo is target: self:findLoadedClass(name: targetName);
 		if({ target:name == '' }, {
@@ -669,7 +678,8 @@ Class is Loader{
 					match(on: m:initExpr, when: [
 						Expression:Call: local Function(CallData is call){
 							isCallInit: true;
-						}
+						},
+						else: {}
 					]);
 				});
 				if({ isCallInit }, {

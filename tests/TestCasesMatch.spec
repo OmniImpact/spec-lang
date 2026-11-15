@@ -42,7 +42,6 @@ Class of SpecUnitTest is TestCasesMatch{
 		local String is label4: Conditional:match(on: ghost, when: [
 			idle: { 'waiting' },
 			running: { 'go' },
-			failed: { 'down' },
 			else: { '?' }
 		]);
 		Assert:areEqualString('?', label4);

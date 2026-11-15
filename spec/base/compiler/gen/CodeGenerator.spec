@@ -2822,7 +2822,8 @@ Class is CodeGenerator{
 					if({ hasReturnExpr && self:exprAssignsLocal(name: name, expr: returnExpr) }, {
 						found: true;
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 		return found;
@@ -2969,7 +2970,8 @@ Class is CodeGenerator{
 				if({ hasReturnExpr }, {
 					self:findAnonsInExpr(expr: returnExpr, results: results);
 				});
-			}
+			},
+			else: {}
 		]);
 	}
 
@@ -3146,7 +3148,8 @@ Class is CodeGenerator{
 			match(on: s, when: [
 				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 					candidates:set(key: varName, value: varType:name);
-				}
+				},
+				else: {}
 			]);
 		});
 
@@ -3269,7 +3272,8 @@ Class is CodeGenerator{
 						});
 						self:hoistedLocals:set(key: varName, value: hType);
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 
@@ -3294,8 +3298,9 @@ Class is CodeGenerator{
 		anonBody:each(action: local Function(Statement is s){
 			match(on: s, when: [
 				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
-					self:boxedLocals:remove(key: varName);
-				}
+					local Boolean is _removed: self:boxedLocals:remove(key: varName);
+				},
+				else: {}
 			]);
 		});
 
@@ -3359,7 +3364,8 @@ Class is CodeGenerator{
 			match(on: s, when: [
 				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 					bodyLocals:set(key: varName, value: 'true');
-				}
+				},
+				else: {}
 			]);
 		});
 
@@ -3599,7 +3605,8 @@ Class is CodeGenerator{
 							});
 						});
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 		return out;
@@ -3716,8 +3723,7 @@ Class is CodeGenerator{
 			},
 			Statement:ClassDecl: {
 				''
-			},
-			else: { '' }
+			}
 		]);
 		# Debug emission: map this statement to its declaring Spec source
 		# line. gdb resolves file:line from the dense directive stream —
@@ -4255,7 +4261,8 @@ Class is CodeGenerator{
 							});
 							self:hoistedLocals:set(key: varName, value: hType);
 						});
-					}
+					},
+					else: {}
 				]);
 			});
 		});
@@ -4427,7 +4434,8 @@ Class is CodeGenerator{
 		match(on: stmt, when: [
 			Statement:ClassDecl: local Function(ClassInfo is nestedClass){
 				self:collectClasses(c: nestedClass, acc: acc);
-			}
+			},
+			else: {}
 		]);
 	}
 
@@ -4443,7 +4451,8 @@ Class is CodeGenerator{
 					m:body:each(action: local Function(Statement is s){
 						self:collectClassesFromStatement(stmt: s, acc: acc);
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 	}
@@ -4780,7 +4789,8 @@ Class is CodeGenerator{
 										wg:emittingHeld: false;
 										m:clearBody();
 									});
-								}
+								},
+								else: {}
 							]);
 						});
 						if({ !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, {
@@ -4939,7 +4949,8 @@ Class is CodeGenerator{
 										wg:emittingHeld: false;
 										m:clearBody();
 									});
-								}
+								},
+								else: {}
 							]);
 						});
 						if({ !hasInit && ((!wg:policy:isTransparent(c: c) && c:baseClass != wg:names:enumHeader()) || wg:policy:isClassModelEnum(c: c)) }, {
@@ -5619,7 +5630,8 @@ Class is CodeGenerator{
 						lastExprIdx: si;
 						condExpr: returnExpr;
 					});
-				}
+				},
+				else: {}
 			]);
 			si: si + 1;
 		});
@@ -5747,7 +5759,8 @@ Class is CodeGenerator{
 						});
 						self:hoistedLocals:set(key: varName, value: hType);
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 		local String is hoistedDeclsC: '';
@@ -5791,7 +5804,8 @@ Class is CodeGenerator{
 					Statement:Expr: local Function(Expression is exprStmt){
 						yieldExpr: exprStmt;
 						isYieldStmt: true;
-					}
+					},
+					else: {}
 				]);
 			});
 			if({ isYieldStmt }, {
@@ -6318,7 +6332,8 @@ Class is CodeGenerator{
 						local String is exprC: self:generateExpression(expr: exprStmt);
 						evalBodyC: evalBodyC . '    ' . self:inlineReturnVar . ' = ' . exprC . "; break;\n";
 						handled: true;
-					}
+					},
+					else: {}
 				]);
 			});
 			if({ !handled }, {
@@ -6388,7 +6403,8 @@ Class is CodeGenerator{
 						local String is exprC: self:generateExpression(expr: exprStmt);
 						evalBodyC: evalBodyC . '    ' . self:inlineReturnVar . ' = ' . exprC . "; break;\n";
 						handled: true;
-					}
+					},
+					else: {}
 				]);
 			});
 			if({ !handled }, {

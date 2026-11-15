@@ -89,7 +89,8 @@ Class is ClassBindings{
 									isFloor: true;
 								});
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 			}

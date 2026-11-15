@@ -30,13 +30,16 @@ Class of SpecUnitTest is TestSpecAst{
 			Expression:Binary: local Function(String is op, Expression is l, Expression is r){
 				Assert:areEqualString('+', op);
 				Conditional:match(on: l, when: [
-					Expression:Ident: local Function(String is lname){ Assert:areEqualString('a', lname); }
+					Expression:Ident: local Function(String is lname){ Assert:areEqualString('a', lname); },
+					else: {}
 				]);
 				Conditional:match(on: r, when: [
-					Expression:Ident: local Function(String is rname){ Assert:areEqualString('b', rname); }
+					Expression:Ident: local Function(String is rname){ Assert:areEqualString('b', rname); },
+					else: {}
 				]);
 				ok: true;
-			}
+			},
+			else: {}
 		]);
 		Assert:isTrue(ok);
 	}
@@ -75,7 +78,8 @@ Class of SpecUnitTest is TestSpecAst{
 		prog:classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is mem){
 				Conditional:match(on: mem:kind, when: [
-					MemberKind:METHOD: { found: mem:name; }
+					MemberKind:METHOD: { found: mem:name; },
+					else: {}
 				]);
 			});
 		});
@@ -96,7 +100,8 @@ Class of SpecUnitTest is TestSpecAst{
 				Assert:isTrue(hasReturnExpr);
 				Assert:areEqualString('Binary', returnExpr:name());
 				matched: true;
-			}
+			},
+			else: {}
 		]);
 		Assert:isTrue(matched);
 	}

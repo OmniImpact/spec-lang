@@ -70,7 +70,8 @@ Class is LintRule{
 				},
 				MemberKind:CLASS: {
 					self:checkClass(classDef: m:nestedClass, issues: issues);
-				}
+				},
+				else: {}
 			]);
 		});
 	}
@@ -145,7 +146,7 @@ Class is LintRule{
 					self:checkExpression(expr: v, issues: issues);
 				});
 			},
-			Expression:Cast: local Function(Expression is target, Type is targetType, Array of Expression is args){
+			Expression:Cast: local Function(Expression is target, String is targetType, Array of Expression is args){
 				self:checkExpression(expr: target, issues: issues);
 				args:each(action: local Function(Expression is a){
 					self:checkExpression(expr: a, issues: issues);

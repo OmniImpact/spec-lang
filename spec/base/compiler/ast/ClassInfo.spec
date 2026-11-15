@@ -80,13 +80,16 @@ Class is ClassInfo{
 												if({ className == name }, {
 													found: true;
 												});
-											}
+											},
+											else: {}
 										]);
 									});
-								}
+								},
+								else: {}
 							]);
 						});
-					}
+					},
+					else: {}
 				]);
 			});
 		});
@@ -120,7 +123,8 @@ Class is ClassInfo{
 									joined: joined . ':' . segText;
 								});
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 			}
@@ -155,7 +159,8 @@ Class is ClassInfo{
 								]);
 								segs:add(item: segText);
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 			}

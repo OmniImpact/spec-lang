@@ -1083,7 +1083,7 @@ Class is Parser{
 			PrecedenceLevel:BIT_OR: { self:foldBinary(ops: ['|'], next: PrecedenceLevel:BIT_XOR) },
 			PrecedenceLevel:LOGICAL_AND: { self:foldBinary(ops: ['&&'], next: PrecedenceLevel:BIT_OR) },
 			PrecedenceLevel:LOGICAL_OR: { self:foldBinary(ops: ['||'], next: PrecedenceLevel:LOGICAL_AND) },
-			else: { self:parseUnary() }
+			PrecedenceLevel:NONE: { self:parseUnary() }
 		]);
 	}
 
@@ -1300,7 +1300,8 @@ Class is Parser{
 											},
 											Expression:Ident: local Function(String is name){
 												segs:add(item: name);
-											}
+											},
+											else: {}
 										]);
 										segs:add(item: method);
 										currentExpr: Expression:Path(segments: segs);

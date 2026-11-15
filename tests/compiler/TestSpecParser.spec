@@ -50,7 +50,8 @@ Class of SpecUnitTest is TestSpecParser{
 		match(on: vd, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				init: initExpr;
-			}
+			},
+			else: {}
 		]);
 		Assert:isFalse(p:hasErrors());
 		Assert:areEqualString('VarDecl', vd:name());
@@ -80,7 +81,8 @@ Class of SpecUnitTest is TestSpecParser{
 		match(on: vd2, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				s2: initExpr;
-			}
+			},
+			else: {}
 		]);
 		Assert:isFalse(p2:hasErrors());
 		local Boolean is s2Ok: false;

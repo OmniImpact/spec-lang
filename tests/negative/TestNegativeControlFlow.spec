@@ -93,6 +93,104 @@ Class is App{
 		);
 	}
 
+	## Void-form enum matches must also be exhaustive.
+	Function is testVoidEnumMatchNonExhaustive(){
+		Assert:compilerRejects(
+			source: '''
+Class of Enum is Mode{
+	held Mode is on: Mode:init();
+	held Mode is off: Mode:init();
+}
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		match(on: Mode:on, when: [
+			Mode:on: {}
+		]);
+	}
+}
+''',
+			expect: "Non-exhaustive match: missing arm(s) Mode:off"
+		);
+	}
+
+	## Redundant else on an already-exhaustive enum match is rejected.
+	Function is testRedundantElseOnEnumMatch(){
+		Assert:compilerRejects(
+			source: '''
+Class of Enum is Mode{
+	held Mode is on: Mode:init();
+	held Mode is off: Mode:init();
+}
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		local String is s: match(on: Mode:on, when: [
+			Mode:on: { 'on' },
+			Mode:off: { 'off' },
+			else: { '?' }
+		]);
+	}
+}
+''',
+			expect: "Redundant else arm in exhaustive match on 'Mode'"
+		);
+	}
+
+	## Tagged-variant payload closure with excess parameters is rejected.
+	Function is testTaggedPayloadArityMismatch(){
+		Assert:compilerRejects(
+			source: '''
+Enum is Shape{
+	Circle(Int is r),
+	Point
+}
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Shape is sh: Shape:Circle(r: 5);
+		local Int is x: match(on: sh, when: [
+			Shape:Circle: local Function of Int(Int is r, Int is extra){ return r; },
+			Shape:Point: { 0 }
+		]);
+	}
+}
+''',
+			expect: "binds 2 parameter(s), but the variant declares 1"
+		);
+	}
+
+	## Tagged-variant payload closure with wrong explicit parameter type is rejected.
+	Function is testTaggedPayloadTypeMismatch(){
+		Assert:compilerRejects(
+			source: '''
+Enum is Shape{
+	Circle(Int is r),
+	Point
+}
+Class is App{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Shape is sh: Shape:Circle(r: 5);
+		local Int is x: match(on: sh, when: [
+			Shape:Circle: local Function of Int(String is r){ return 1; },
+			Shape:Point: { 0 }
+		]);
+	}
+}
+''',
+			expect: "has type 'String', expected 'Int'"
+		);
+	}
+
 	## N34: Loop vars require inline literal closures.
 	Function is testLoopVarsRequireLiterals(){
 		Assert:compilerRejects(

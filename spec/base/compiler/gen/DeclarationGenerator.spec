@@ -163,7 +163,8 @@ Class is DeclarationGenerator{
 							target:add(item: m);
 						});
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 	}
@@ -291,7 +292,8 @@ Class is DeclarationGenerator{
 							});
 							Buf:bufAppendBuf(dst: out, src: ");\n");
 						});
-					}
+					},
+					else: {}
 					]);
 				});
 			});

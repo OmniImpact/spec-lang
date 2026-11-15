@@ -145,7 +145,8 @@ Class is BuiltinCallGenerator{
 					if({ rJoined:endsWith(suffix: ':sysinternal:Reflection') }, {
 						isReflTarget: true;
 					});
-				}
+				},
+				else: {}
 			]);
 		});
 		if({ isReflTarget && cd:name == 'class' && expr:argCount() == 0 }, {
@@ -185,9 +186,11 @@ Class is BuiltinCallGenerator{
 					match(on: qInner:target, when: [
 						Expression:Path: local Function(Array of String is segments){
 							qCls: qInner:name;
-						}
+						},
+						else: {}
 					]);
-				}
+				},
+				else: {}
 			]);
 			local ClassInfo is qc: cg:findClass(name: qCls);
 			if({ qCls != '' && qc:name != '' && (qc:name == qCls || (qc:namespaceJoined() . ':' . qc:name) == qCls) && cg:isSysinternalClass(name: qCls) }, {
@@ -289,7 +292,8 @@ Class is BuiltinCallGenerator{
 					if({ lvCall:name == 'init' }, {
 						freeLoopC: ' spec_release(_lp);';
 					});
-				}
+				},
+				else: {}
 			]);
 			# the loop-class symbol qualifies for
 			# nested classes — resolve the class and derive the qualified base.
@@ -410,7 +414,8 @@ Class is BuiltinCallGenerator{
 								if({ params:length() > 0 }, {
 									loopVars: params;
 								});
-							}
+							},
+							else: {}
 						]);
 					});
 					# until is the do-while — the body runs once first.
@@ -436,7 +441,8 @@ Class is BuiltinCallGenerator{
 				match(on: cbVal, when: [
 					Expression:Call: local Function(CallData is cbCall){
 						cbClass: cg:generateExpression(expr: cbCall:target);
-					}
+					},
+					else: {}
 				]);
 			});
 			# the callback-class symbol qualifies

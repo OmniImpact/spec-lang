@@ -40,7 +40,8 @@ Class of SpecUnitTest is TestSpecCodegen{
 		match(on: stmt, when: [
 			Statement:Expr: local Function(Expression is exprStmt){
 				expr: exprStmt;
-			}
+			},
+			else: {}
 		]);
 		return expr;
 	}

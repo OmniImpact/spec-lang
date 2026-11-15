@@ -851,7 +851,7 @@ Class is TypeChecker{
 		return '';
 	}
 
-	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected, Expression is defaultArm, Boolean is hasDefault){
+	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected, Expression is defaultArm, Boolean is hasDefault, Boolean is hasExplicitDefault: false){
 		local String is subjT: self:inferExpressionType(expr: subj);
 		# Strip container/generic spellings to the base class name.
 		if({ subjT:contains(needle: ' of ') }, {
@@ -886,7 +886,8 @@ Class is TypeChecker{
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 				armKeys: keys;
 				armVals: values;
-			}
+			},
+			else: {}
 		]);
 		local Int is keyTotal: armKeys:length();
 		local Int is ki: 0;
@@ -997,7 +998,7 @@ Class is TypeChecker{
 									bad: true;
 								}, {
 									covered:add(item: target);
-									if({ self:allEnumNames:has(key: owner) }, {
+									if({ self:allEnumNames:has(key: owner) || self:bindings:isClassModelEnum(c: self:findClass(name: owner)) }, {
 										# Payload arms (the Stage-5 form pulled forward):
 										# an arm closure's parameters bind the tagged
 										# variant's constructor payloads — type them
@@ -1030,16 +1031,30 @@ Class is TypeChecker{
 															});
 														});
 													});
+													if({ params:length() > pvMem:params:length() }, {
+														self:addError(line: self:currentLine, msg: 'Match arm for \'' . owner . ':' . keyName . '\' binds ' . (params:length() as String) . ' parameter(s), but the variant declares ' . (pvMem:params:length() as String) . '.');
+														bad: true;
+													});
 													local Int is pbi: 0;
 													params:each(action: local Function(Parameter is bp){
 														if({ pbi < pvMem:params:length() }, {
 															local Parameter is vp: pvMem:params:get(index: pbi);
-															bp:paramType: vp:paramType;
+															if({ bp:paramType:name == '' || bp:paramType:name == Primitive:ANY:value() }, {
+																bp:paramType: vp:paramType;
+															}, {
+																local String is bpT: self:formatVarTypeString(t: bp:paramType);
+																local String is vpT: self:formatVarTypeString(t: vp:paramType);
+																if({ !self:isAssignable(target: bpT, source: vpT) }, {
+																	self:addError(line: self:currentLine, msg: 'Match arm parameter \'' . bp:name . '\' for \'' . owner . ':' . keyName . '\' has type \'' . bpT . '\', expected \'' . vpT . '\'.');
+																	bad: true;
+																});
+															});
 														});
 														pbi: pbi + 1;
 													});
 												});
-											}
+											},
+											else: {}
 										]);
 									}, {
 										self:checkMemberVisibility(ownerClass: owner, member: self:findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
@@ -1135,39 +1150,40 @@ Class is TypeChecker{
 		if({ anyValue && anyVoid }, {
 			self:addError(line: self:currentLine, msg: 'The match arms mix value-yielding and void closures.');
 		});
-		if({ rooted && anyValue }, {
+		if({ rooted }, {
 			local ClassInfo is subjCls: self:findClass(name: subjT);
 			local Boolean is todayEnum: self:allEnumNames:has(key: subjT);
 			local String is missing: '';
 			subjCls:members:each(action: local Function(Member is m){
-				# Class-model: the held fields are the closed set.
-				# Today's enum: the variants are (the namespace array is
-				# metadata, not a variant — the registry's own convention).
+				# Class-model enum: nested subclasses (tagged enum) OR held
+				# fields (value/plain enum) are the closed variant set.
+				# Legacy/plain enum: non-array members in allEnumNames.
 				local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
 					Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
 					else: { false }
 				]);
-				local Boolean is variantMember: if({ todayEnum }, {
-					!initIsArr
+				local Boolean is variantMember: false;
+				if({ todayEnum }, {
+					variantMember: !initIsArr;
 				}, {
-					m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD)
+					variantMember: m:kind == MemberKind:CLASS || (m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD));
 				});
 				if({ variantMember }, {
-					if({ covered:indexOf(search: subjT . ':' . m:name, default: -1) < 0 }, {
+					local String is vName: if({ m:kind == MemberKind:CLASS }, { m:nestedClass:name }, { m:name });
+					if({ covered:indexOf(search: subjT . ':' . vName, default: -1) < 0 }, {
 						if({ missing != '' }, {
 							missing: missing . ', ';
 						});
-						missing: missing . subjT . ':' . m:name;
+						missing: missing . subjT . ':' . vName;
 					});
 				});
 			});
-			if({ missing != '' && !hasElse }, {
+			if({ missing != '' && !hasElse && !hasExplicitDefault }, {
 				self:addError(line: self:currentLine, msg: 'Non-exhaustive match: missing arm(s) ' . missing . ' of \'' . subjT . '\'; add arms or an else.');
 			});
-			# Void-form matches fall through freely: the closed-set demand
-			# binds the VALUE form only (a statement match's uncovered
-			# subjects simply run nothing — the old `else: {}` was empty
-			# by the same reasoning).
+			if({ missing == '' && (hasElse || hasExplicitDefault) }, {
+				self:addError(line: self:currentLine, msg: 'Redundant else arm in exhaustive match on \'' . subjT . '\'; all variants are already covered.');
+			});
 		});
 		if({ anyValue && !hasElse && !rooted }, {
 			self:addError(line: self:currentLine, msg: 'A value-yielding match requires an else arm (the subject may match no key).');
@@ -1200,7 +1216,8 @@ Class is TypeChecker{
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 				armKeys: keys;
 				armVals: values;
-			}
+			},
+			else: {}
 		]);
 		local Int is keyTotal: armKeys:length();
 		local Int is ki: 0;
@@ -1938,13 +1955,16 @@ Class is TypeChecker{
 												if({ !already && self:findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
 													acc:add(item: className);
 												});
-											}
+											},
+											else: {}
 										]);
 									});
-								}
+								},
+								else: {}
 							]);
 						});
-					}
+					},
+					else: {}
 				]);
 			});
 		});
@@ -2531,7 +2551,8 @@ Class is TypeChecker{
 								p1:paramType: Type:init(name: elemTypeName);
 							});
 						});
-					}
+					},
+					else: {}
 				]);
 			}, {
 				cd:args:each(action: local Function(NamedArg is arg){
@@ -2543,7 +2564,8 @@ Class is TypeChecker{
 									p:paramType: Type:init(name: elemTypeName);
 								});
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 			});
@@ -2571,7 +2593,8 @@ Class is TypeChecker{
 									p1:paramType: Type:init(name: valTypeName);
 								});
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 			});
@@ -3185,7 +3208,8 @@ Class is TypeChecker{
 									self:addError(line: self:currentLine, msg: msg);
 								});
 							});
-						}
+						},
+						else: {}
 					]);
 				});
 				self:currentAnonNode: savedAnonNode;
@@ -3363,7 +3387,7 @@ Class is TypeChecker{
 			if({ matchArmsIsMap }, {
 				local Boolean is defaultActive: hasMatchDefault && self:isNonEmptyMatchDefault(expr: matchDefault);
 				if({ hasMatchSubj }, {
-					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive);
+					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive, hasExplicitDefault: hasMatchDefault);
 					expr:setResolvedType(t: matchRes);
 					return matchRes;
 				}, {
@@ -4425,8 +4449,7 @@ Class is TypeChecker{
 				self:localVars: savedVars;
 				self:fieldTypes: savedFields;
 				self:unassignedFields: savedUnassigned;
-			},
-			else: {}
+			}
 		]);
 	}
 
