@@ -17,7 +17,8 @@ Class of SpecUnitTest is TestSpecInit{
 	];
 
 	local Function of String is dirOf(String is path){
-		return Uri:fromFilePath(filePath: path):dirPath();
+		local String is dp: Uri:fromFilePath(filePath: path):dirPath();
+		return Uri:fromFilePath(filePath: dp):toFilePath();
 	}
 
 	local Function of String is resolveRoot(){
@@ -57,7 +58,7 @@ Class of SpecUnitTest is TestSpecInit{
 			return cand;
 		});
 		local String is specBin: self:resolveCompiler(root: root);
-		local String is tmpDir: Uri:fromFilePath(filePath: Uri:tempFile()):dirPath();
+		local String is tmpDir: self:dirOf(path: Uri:tempFile());
 		local String is built: tmpDir . '/specinit_test_bin' . exeSuf;
 		Process:execute(command: specBin, args: ['--quiet', '-i', root . '/utilities/specinit/SpecInit.spec', '-o', built]);
 		return built;
@@ -75,7 +76,7 @@ Class of SpecUnitTest is TestSpecInit{
 		Assert:areEqualInt(0, helpCode);
 
 		local String is pid: Process:getPid() as String;
-		local String is tmpDir: Uri:fromFilePath(filePath: Uri:tempFile()):dirPath();
+		local String is tmpDir: self:dirOf(path: Uri:tempFile());
 		local String is appDir: tmpDir . '/specinit_app_' . pid;
 		local String is libDir: tmpDir . '/specinit_lib_' . pid;
 

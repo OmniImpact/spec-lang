@@ -18,7 +18,8 @@ Class of SpecUnitTest is TestSpecLsp{
 	];
 
 	local Function of String is dirOf(String is path){
-		return Uri:fromFilePath(filePath: path):dirPath();
+		local String is dp: Uri:fromFilePath(filePath: path):dirPath();
+		return Uri:fromFilePath(filePath: dp):toFilePath();
 	}
 
 	local Function of String is resolveRoot(){
@@ -58,7 +59,7 @@ Class of SpecUnitTest is TestSpecLsp{
 			return cand;
 		});
 		local String is specBin: self:resolveCompiler(root: root);
-		local String is tmpDir: Uri:fromFilePath(filePath: Uri:tempFile()):dirPath();
+		local String is tmpDir: self:dirOf(path: Uri:tempFile());
 		local String is built: tmpDir . '/speclsp_test_bin' . exeSuf;
 		Process:execute(command: specBin, args: ['--quiet', '-i', root . '/utilities/speclsp/SpecLsp.spec', '-o', built]);
 		return built;
@@ -75,7 +76,7 @@ Class of SpecUnitTest is TestSpecLsp{
 		Assert:isTrue(fileExists(path: lsp));
 
 		local String is pid: Process:getPid() as String;
-		local String is tmpDir: Uri:fromFilePath(filePath: Uri:tempFile()):dirPath();
+		local String is tmpDir: self:dirOf(path: Uri:tempFile());
 		local String is samplePath: tmpDir . '/speclsp_sample_' . pid . '.spec';
 		local String is inPath: tmpDir . '/speclsp_in_' . pid . '.bin';
 		local String is outPath: tmpDir . '/speclsp_out_' . pid . '.bin';

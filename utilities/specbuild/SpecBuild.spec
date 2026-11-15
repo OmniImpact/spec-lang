@@ -43,7 +43,8 @@ Class is SpecBuild{
 
 	## Directory portion of a file path ('' when the path has no slash).
 	Function of String is dirOf(String is path){
-		return Uri:fromFilePath(filePath: path):dirPath();
+		local String is dp: Uri:fromFilePath(filePath: path):dirPath();
+		return Uri:fromFilePath(filePath: dp):toFilePath();
 	}
 
 	## Resolves a path relative to the configuration file's directory.

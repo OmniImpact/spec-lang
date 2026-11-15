@@ -64,9 +64,9 @@ Class is SpecInit{
 		return norm;
 	}
 
-	local Function of String is sanitizeIdent(String is raw, Boolean is pascal){
+	local Function of String is sanitizeIdent(String is raw, Boolean is isPascal){
 		local String is out: '';
-		local Boolean is capNext: pascal;
+		local Boolean is capNext: isPascal;
 		local Int is len: raw:length();
 		while([Int is i: 0], { i < len }, {
 			local String is ch: raw:substring(start: i, end: i + 1);
@@ -81,7 +81,7 @@ Class is SpecInit{
 				if({ capNext && isLower }, {
 					out: out . String:fromCharCode(code: code - 32);
 				}, {
-					if({ !capNext && isUpper && !pascal }, {
+					if({ !capNext && isUpper && !isPascal }, {
 						out: out . String:fromCharCode(code: code + 32);
 					}, {
 						out: out . ch;
@@ -94,7 +94,7 @@ Class is SpecInit{
 			i: i + 1;
 		});
 		if({ out == '' }, {
-			return if({ pascal }, { 'App' }, { 'app' });
+			return if({ isPascal }, { 'App' }, { 'app' });
 		});
 		return out;
 	}
@@ -232,8 +232,8 @@ Class is SpecInit{
 		if({ projectName == '' || projectName == '.' }, {
 			projectName: 'spec_project';
 		});
-		local String is pkgName: sanitizeIdent(raw: projectName, pascal: false);
-		local String is pascalName: sanitizeIdent(raw: projectName, pascal: true);
+		local String is pkgName: sanitizeIdent(raw: projectName, isPascal: false);
+		local String is pascalName: sanitizeIdent(raw: projectName, isPascal: true);
 
 		local String is manifestPath: joinPath(baseDir: targetPath, relPath: 'specbuild.json');
 		if({ File:fileExists(path: manifestPath) && !force }, {

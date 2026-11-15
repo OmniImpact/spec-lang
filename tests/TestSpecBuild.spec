@@ -19,7 +19,8 @@ Class of SpecUnitTest is TestSpecBuild{
 	];
 
 	Function of String is dirOf(String is path){
-		return Uri:fromFilePath(filePath: path):dirPath();
+		local String is dp: Uri:fromFilePath(filePath: path):dirPath();
+		return Uri:fromFilePath(filePath: dp):toFilePath();
 	}
 
 	Function of String is resolveRoot(){

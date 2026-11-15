@@ -204,7 +204,7 @@ Class is SpecLsp{
 				if({ self:workspaceRoot != '' && dir == self:workspaceRoot }, {
 					searching: false;
 				}, {
-					local String is up: Uri:fromFilePath(filePath: dir):dirPath();
+					local String is up: Uri:fromFilePath(filePath: Uri:fromFilePath(filePath: dir):dirPath()):toFilePath();
 					if({ up == '' || up == dir }, {
 						searching: false;
 					}, {
@@ -234,7 +234,7 @@ Class is SpecLsp{
 		});
 
 		local Loader is loader: Loader:init();
-		local String is parentDir: Uri:fromFilePath(filePath: filePath):dirPath();
+		local String is parentDir: Uri:fromFilePath(filePath: Uri:fromFilePath(filePath: filePath):dirPath()):toFilePath();
 		if({ parentDir != '' }, {
 			loader:addSourceDir(dir: parentDir);
 		});

@@ -27,6 +27,9 @@ Class is RuntimePrelude{
 #include <sys/sysctl.h>
 #include <dlfcn.h>
 #include <AudioToolbox/AudioToolbox.h>
+#ifdef pascal
+#undef pascal
+#endif
 #elif defined(__linux__)
 #define _GNU_SOURCE
 #include <sched.h>
