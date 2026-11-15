@@ -566,10 +566,18 @@ Class is Loader{
 							items:each(action: local Function(Expression is item){
 								match(on: item, when: [
 									Expression:ArrayLit: local Function(Array of Expression is subItems){
+										local String is pkgPrefix: '';
 										subItems:each(action: local Function(Expression is seg){
 											match(on: seg, when: [
+												Expression:StringLit: local Function(String is value){
+													if({ pkgPrefix == '' }, {
+														pkgPrefix: value;
+													}, {
+														pkgPrefix: pkgPrefix . ':' . value;
+													});
+												},
 												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
-													self:synthesizeFor(c: c, asExpr: seg);
+													self:synthesizeFor(c: c, asExpr: seg, pkgPrefix: pkgPrefix);
 												},
 												else: {}
 											]);
@@ -618,10 +626,18 @@ Class is Loader{
 								items:each(action: local Function(Expression is item){
 									match(on: item, when: [
 										Expression:ArrayLit: local Function(Array of Expression is subItems){
+											local String is pkgPrefix: '';
 											subItems:each(action: local Function(Expression is seg){
 												match(on: seg, when: [
+													Expression:StringLit: local Function(String is value){
+														if({ pkgPrefix == '' }, {
+															pkgPrefix: value;
+														}, {
+															pkgPrefix: pkgPrefix . ':' . value;
+														});
+													},
 													Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
-														self:synthesizeFor(c: cls, asExpr: seg);
+														self:synthesizeFor(c: cls, asExpr: seg, pkgPrefix: pkgPrefix);
 													},
 													else: {}
 												]);
@@ -647,7 +663,7 @@ Class is Loader{
 	##
 	## @param c: The importing class.
 	## @param asExpr: The USING_AS expression node.
-	Function is synthesizeFor(ClassInfo is c, Expression is asExpr){
+	Function is synthesizeFor(ClassInfo is c, Expression is asExpr, String is pkgPrefix: ''){
 		local String is targetName: '';
 		local Array of NamedArg is asArgs: [];
 		match(on: asExpr, when: [
@@ -657,7 +673,11 @@ Class is Loader{
 			},
 			else: {}
 		]);
-		local ClassInfo is target: self:findLoadedClass(name: targetName);
+		local ClassInfo is target: if({ pkgPrefix != '' }, {
+			self:findLoadedClassInNamespace(name: targetName, nsJoined: pkgPrefix);
+		}, {
+			self:findLoadedClass(name: targetName);
+		});
 		if({ target:name == '' }, {
 			return;
 		});
@@ -735,6 +755,26 @@ Class is Loader{
 				local ClassInfo is cand: self:loadedClasses:get(index: idx);
 				idx++;
 				if({ cand:name == name }, {
+					res: cand;
+					found: true;
+				});
+			}
+		);
+		return res;
+	}
+
+	## Looks up a loaded class by exact class [name] and colon-joined namespace [nsJoined].
+	Function of ClassInfo is findLoadedClassInNamespace(String is name, String is nsJoined){
+		local ClassInfo is res: ClassInfo:init(name: '', baseClass: '', members: []);
+		local Boolean is found: false;
+		local Int is count: self:loadedClasses:length();
+		while(
+			[Int is idx: 0],
+			{ !found && idx < count },
+			{
+				local ClassInfo is cand: self:loadedClasses:get(index: idx);
+				idx++;
+				if({ cand:name == name && cand:namespaceJoined() == nsJoined }, {
 					res: cand;
 					found: true;
 				});
