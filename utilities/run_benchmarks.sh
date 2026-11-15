@@ -143,7 +143,7 @@ else
 	echo "   [SKIP] kotlinc not found"
 fi
 if [ -x "$ROOT/bin/spec" ]; then
-	measure_step spec "$ROOT/bin/spec" --quiet -i "$ROOT/examples/pi_benchmark.spec" -o "$OUT/spec_pi" | tee -a "$BUILDS"
+	measure_step spec "$ROOT/bin/spec" --quiet -i "$ROOT/examples/pi_benchmark/src/PiBenchmark.spec" -o "$OUT/spec_pi" | tee -a "$BUILDS"
 else
 	echo "   [SKIP] bin/spec not found (run ./bootstrap.sh first)"
 fi

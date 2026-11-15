@@ -5,11 +5,7 @@ benchmark runs in ten languages on one machine; the runner, every language's
 source, and the raw per-run data are committed under
 [`utilities/benchmarks/`](utilities/benchmarks/).
 
-**Headline:** on a tight numeric loop, Spec runs at **~51–52% of C** — about
-half the speed of the compiled tier (C, C++, Rust, Go, Java, Kotlin all land
-within a few percent of C here), **~2.2× faster** than Node's V8 JIT, **~37×
-faster** than Ruby, and **~59× faster** than CPython — while its peak memory
-footprint matches C's, not the JVM's or V8's.
+**Headline:** on a tight numeric loop, Spec runs at **~19–20% of C** (31.9M pts/s single-threaded, 201.6M pts/s on 8 threads) — **~14× faster** than Ruby and **~21–22× faster** than CPython — while its peak memory footprint matches C's (12.3–12.4 MB), not the JVM's or V8's. (Earlier at `d36b0cc`, when `fastRandom()` and `toInt()` were intercepted directly to the C floor in the hot loop, Spec reached ~51–52% of C; moving those wrappers into pure Spec added per-call `SPEC_POOL_AUTO` frame overhead inside tight loops.)
 
 ---
 
@@ -45,8 +41,9 @@ as datapoints.
 
 **Environment:** AMD Ryzen AI 7 350 (8 cores / 16 threads), Linux 7.3.0,
 gcc/g++ 15.3.0 (`-O2`, matching Spec's own backend flags), rustc 1.97.1
-(`-O`), Go 1.27.4, OpenJDK 25.0.5, kotlinc 2.4.21 (JVM 25), Node 24.21 (V8),
-CPython 3.14.8, CRuby 3.3.8 (built **without** YJIT), Spec @ `d36b0cc`.
+(`-O`), OpenJDK 25.0.5, kotlinc 2.4.21 (JVM 25), Node 24.21 (V8),
+CPython 3.14.8, CRuby 3.3.8 (built **without** YJIT), Spec @ `a8c0fe4`
+(Go skipped — toolchain not installed in this environment).
 
 All implementations agreed on π ≈ 3.1416 ± 0.001 — the same distribution was
 actually sampled everywhere.
@@ -57,51 +54,48 @@ actually sampled everywhere.
 
 | Language | Threads | Rate (pts/s) | × C | × Spec | Wall (s) |
 |---|---|---|---|---|---|
-| C (anchor) | 1 | 164,580,000 | 1.00 | 1.95 | 1.217 |
-| C++ | 1 | 163,420,000 | 0.99 | 1.94 | 1.227 |
-| Rust | 1 | 163,160,000 | 0.99 | 1.93 | 1.228 |
-| Go | 1 | 164,700,000 | 1.00 | 1.95 | 1.217 |
-| Java (C2 JIT) | 1 | 165,020,000 | 1.00 | 1.96 | 2.199 |
-| Kotlin (JVM) | 1 | 164,740,000 | 1.00 | 1.95 | 2.205 |
-| **Spec (ARC runtime)** | **1** | **84,353,000** | **0.51** | **1.00** | **2.374** |
-| JavaScript (V8) | 1 | 93,905,000 | 0.57 | 1.11 | 2.387 |
-| Ruby 3.3 (no YJIT) | 1 | 2,299,300 | 0.014 | 0.027 | 8.771 |
-| Python 3.14 | 1 | 1,437,800 | 0.009 | 0.017 | 13.929 |
-| Python 3.14 (JIT) | 1 | 1,530,500 | 0.009 | 0.018 | 13.091 |
-| C (anchor) | 8 | 973,500,000 | 1.00 | 1.92 | 0.207 |
-| C++ | 8 | 972,600,000 | 1.00 | 1.92 | 0.209 |
-| Rust | 8 | 970,280,000 | 1.00 | 1.92 | 0.208 |
-| Go | 8 | 1,011,000,000 | 1.04 | 2.00 | 0.201 |
-| Java (C2 JIT) | 8 | 975,610,000 | 1.00 | 1.93 | 0.492 |
-| Kotlin (JVM) | 8 | 990,100,000 | 1.02 | 1.96 | 0.485 |
-| **Spec (ARC runtime)** | **8** | **506,330,000** | **0.52** | **1.00** | **0.397** |
-| JavaScript (V8 workers) | 8 | 445,060,000 | 0.46 | 0.88 | 0.487 |
+| C (anchor) | 1 | 164,950,000 | 1.00 | 5.17 | 1.214 |
+| C++ | 1 | 164,680,000 | 1.00 | 5.16 | 1.218 |
+| Rust | 1 | 164,560,000 | 1.00 | 5.16 | 1.217 |
+| Java (C2 JIT) | 1 | 165,150,000 | 1.00 | 5.18 | 2.193 |
+| Kotlin (JVM) | 1 | 165,020,000 | 1.00 | 5.17 | 2.197 |
+| JavaScript (V8) | 1 | 93,648,000 | 0.57 | 2.93 | 2.391 |
+| **Spec (ARC runtime)** | **1** | **31,908,000** | **0.19** | **1.00** | **6.270** |
+| Ruby 3.3 (no YJIT) | 1 | 2,250,900 | 0.014 | 0.071 | 8.955 |
+| Python 3.14 | 1 | 1,462,700 | 0.009 | 0.046 | 13.691 |
+| Python 3.14 (JIT) | 1 | 1,529,600 | 0.009 | 0.048 | 13.096 |
+| C (anchor) | 8 | 1,007,000,000 | 1.00 | 4.99 | 0.200 |
+| C++ | 8 | 1,001,500,000 | 0.99 | 4.97 | 0.202 |
+| Kotlin (JVM) | 8 | 995,020,000 | 0.99 | 4.94 | 0.466 |
+| Java (C2 JIT) | 8 | 1,000,000,000 | 0.99 | 4.96 | 0.488 |
+| Rust | 8 | 990,970,000 | 0.98 | 4.92 | 0.203 |
+| JavaScript (V8 workers) | 8 | 451,450,000 | 0.45 | 2.24 | 0.481 |
+| **Spec (ARC runtime)** | **8** | **201,610,000** | **0.20** | **1.00** | **0.993** |
 
 Read: the compiled tier is one speed class — everything from C through
-Kotlin lands within ±4% of C on this loop, JIT and AOT alike. Spec sits at
-roughly half that tier, ahead of V8 single-threaded, and two orders of
-magnitude ahead of the pure interpreters.
+Kotlin lands within ±2% of C on this loop, JIT and AOT alike. Spec sits at
+roughly one-fifth of C here (reflecting pure-Spec `Math` wrapper call
+overhead in the hot loop), still over an order of magnitude ahead of the
+pure interpreters.
 
 ## Resource profile (per-run medians)
 
 | Language | CPU util (1t) | CPU util (8t) | Peak RSS (1t) | Peak RSS (8t) |
 |---|---|---|---|---|
-| C | 100% | 683% | 12.5 MB | 12.3 MB |
-| C++ | 100% | 677% | 12.2 MB | 12.5 MB |
-| Rust | 100% | 681% | 12.5 MB | 12.3 MB |
-| Go | 100% | 710% | 12.4 MB | 12.3 MB |
-| Java | 102% | 634% | 47.7 MB | 48.1 MB |
-| Kotlin | 103% | 628% | 49.2 MB | 49.5 MB |
-| JavaScript | 100% | 649% | 54.1 MB | 152.7 MB |
-| Python | 100% | — | 12.5 MB | — |
+| C | 100% | 698% | 12.4 MB | 12.5 MB |
+| C++ | 100% | 692% | 12.4 MB | 12.5 MB |
+| Rust | 100% | 691% | 12.5 MB | 12.4 MB |
+| Java | 102% | 640% | 47.4 MB | 47.9 MB |
+| Kotlin | 103% | 635% | 47.9 MB | 48.7 MB |
+| JavaScript | 100% | 657% | 54.2 MB | 153.4 MB |
+| Python | 100% | — | 12.4 MB | — |
 | Ruby | 100% | — | 19.9 MB | — |
-| **Spec** | **100%** | **691%** | **12.5 MB** | **12.4 MB** |
+| **Spec** | **100%** | **716%** | **12.4 MB** | **12.3 MB** |
 
 Spec's managed runtime (ARC + per-scope claim pools) costs essentially
 nothing in memory: it matches C's footprint, not the JVM's (~4×) or V8's
 (~4–12×). CPU utilization tracks real parallel work — the 8-thread runs use
-~6.8 of 8 cores, the gap being thread spawn/join at these sub-second
-durations.
+~7.2 of 8 cores.
 
 ---
 
@@ -109,23 +103,21 @@ durations.
 
 | Language | Build step | Wall (s) | CPU (s) | Peak RSS |
 |---|---|---|---|---|
-| C | gcc -O2 | 0.09 | 0.09 | 32 MB |
-| C++ | g++ -O2 | 0.43 | 0.42 | 72 MB |
-| Rust | rustc -O | 0.86 | 0.86 | 187 MB |
-| Go | go build | 0.04* | 0.13 | 22 MB* |
-| Java | javac | 0.63 | 1.84 | 109 MB |
-| Kotlin | kotlinc | 5.83 | 15.71 | 605 MB |
-| **Spec** | **bin/spec → C11 → gcc** | **2.60** | **2.61** | **82 MB** |
+| C | gcc -O2 | 0.090 | 0.090 | 32.8 MB |
+| C++ | g++ -O2 | 0.397 | 0.394 | 73.2 MB |
+| Rust | rustc -O | 0.781 | 0.784 | 187.4 MB |
+| Java | javac | 0.577 | 1.755 | 107.4 MB |
+| Kotlin | kotlinc | 2.638 | 11.642 | 425.8 MB |
+| **Spec (cached runtime)** | **bin/spec → C11 → gcc** | **1.871** | **1.872** | **79.8 MB** |
+| **Spec (self-compile, `--no-cache`)** | **bin/spec (`Driver.spec`, 116.6K LOC C) → gcc** | **29.300** | **30.036** | **344.8 MB** |
 | JavaScript / Python / Ruby | — (interpreted) | — | — | — |
 
-\* Go's build is cache-warm here; the cold first build measured 3.62 s /
-279 MB on the same machine.
-
-Spec's 2.6 s is dominated by its fixed ~2.4 s front-end cost (load + type
-check), gcc backend included; hello-world compiles in essentially the same
-time. That is the price of a compiler that emits and then *re-verifies* C
-byte-for-byte at bootstrap — and it is still ~2× faster than kotlinc's jar
-build while using ⅐ the memory.
+With the precompiled runtime accelerator cache warm, `PiBenchmark.spec` compiles
+in **1.87 s / 79.8 MB** (down from 2.60 s / 82 MB previously) — faster than
+`kotlinc` at under one-fifth the memory. Without cached C (`--no-cache`), a
+full self-compilation of the Spec compiler itself (77 classes, 819 methods,
+116,566 lines of C) completes in **29.30 s** (`4.96 s` Spec frontend at 186 MB
+peak + `24.31 s` `gcc -O2` backend, 344.8 MB combined peak RSS).
 
 ---
 
@@ -168,9 +160,9 @@ the C anchor, lives in [`utilities/benchmarks/`](utilities/benchmarks/).
 
 | Tier | Languages | × C on this loop |
 |---|---|---|
-| Native codegen | C, C++, Rust, Go, Java, Kotlin | 0.99–1.04 |
-| **Spec (C-emitting, ARC)** | **Spec** | **0.51** |
+| Native codegen | C, C++, Rust, Java, Kotlin | 0.98–1.00 |
 | Managed JIT | JavaScript/Node (V8) | 0.57 |
+| **Spec (C-emitting, ARC)** | **Spec** | **0.19–0.20** |
 | Pure interpreters | Ruby, Python | 0.014 / 0.009 |
 
 Spec trades half of C's raw numeric throughput for ARC's predictable
