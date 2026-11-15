@@ -272,14 +272,19 @@ void spec_process_sleep(long long ms);
 long long spec_process_get_pid(void);
 String spec_process_getenv(String key, String def);
 String spec_process_os_name(void);
-double spec_math_round(double v);
-double spec_math_floor(double v);
-double spec_math_ceil(double v);
-double spec_math_abs(double v);
-double spec_math_min(double a, double b);
-double spec_math_max(double a, double b);
-double spec_math_clamp(double v, double lo, double hi);
-double spec_math_sqrt(double v);
+static inline double spec_math_round(double v) { return round(v); }
+static inline double spec_math_floor(double v) { return floor(v); }
+static inline double spec_math_ceil(double v) { return ceil(v); }
+static inline double spec_math_abs(double v) { return fabs(v); }
+static inline double spec_math_min(double a, double b) { return (a < b) ? a : b; }
+static inline double spec_math_max(double a, double b) { return (a > b) ? a : b; }
+static inline double spec_math_clamp(double v, double lo, double hi) {
+    if (hi < lo) return lo;
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+static inline double spec_math_sqrt(double v) { return v < 0.0 ? 0.0 : sqrt(v); }
 double spec_math_sin(double v);
 double spec_math_cos(double v);
 double spec_math_tan(double v);
@@ -293,9 +298,14 @@ double spec_math_cbrt(double v);
 double spec_math_asin(double v);
 double spec_math_acos(double v);
 double spec_math_atan(double v);
-double spec_math_fma(double a, double b, double c);
-long long spec_math_to_int(double v);
-double spec_math_to_float(long long v);
+static inline double spec_math_fma(double a, double b, double c) { return fma(a, b, c); }
+static inline long long spec_math_to_int(double v) {
+    if (v != v) return 0;
+    if (v >= 9223372036854775808.0) return 9223372036854775807LL;
+    if (v <= -9223372036854775808.0) return (-9223372036854775807LL - 1);
+    return (long long)v;
+}
+static inline double spec_math_to_float(long long v) { return (double)v; }
 double spec_math_random(double min, double max);
 String spec_int_to_base(long long v, long long base, long long digits);
 long long spec_term_width(void);
@@ -303,8 +313,26 @@ long long spec_term_height(void);
 long long spec_atomic_add(long long slot, long long v);
 long long spec_atomic_put(long long slot, long long v);
 long long spec_atomic_get(long long slot);
-void spec_fast_random_seed(long long idx);
-double spec_fast_random(void);
+extern __thread unsigned long long _spec_rng_state;
+static inline unsigned long long spec_rng_next(void) {
+    unsigned long long x = _spec_rng_state;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    _spec_rng_state = x;
+    return x * 0x2545F4914F6CDD1DULL;
+}
+static inline void spec_fast_random_seed(long long idx) {
+    _spec_rng_state = 0x9E3779B97F4A7C15ULL ^ ((unsigned long long)idx * 0xBF58476D1CE4E5B9ULL + 0x94D049BB133111EBULL);
+    if (_spec_rng_state == 0) _spec_rng_state = 1;
+    spec_rng_next();
+    spec_rng_next();
+    spec_rng_next();
+}
+static inline double spec_fast_random(void) {
+    if (__builtin_expect(_spec_rng_state == 0, 0)) spec_fast_random_seed(0x5DEECE66DULL);
+    return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);
+}
 long long spec_parallel_run(long long threads, long long iterations, void* worker_closure);
 void* spec_parallel_sync(void* action_closure);
 void* spec_parallel_sync_with(long long lock_key, void* action_closure);
@@ -1394,19 +1422,6 @@ static atomic_llong* spec_atomic_slot_ptr(long long slot) {
 
 
 
-/* Per-Thread RNG (xorshift64*, lock-free, self-seeding) */
-static __thread unsigned long long _spec_rng_state = 0;
-
-static unsigned long long spec_rng_next(void) {
-    unsigned long long x = _spec_rng_state;
-    x ^= x >> 12;
-    x ^= x << 25;
-    x ^= x >> 27;
-    _spec_rng_state = x;
-    return x * 0x2545F4914F6CDD1DULL;
-}
-
-
 
 /* Parallel Fan-Out */
 typedef long long (*SpecWorkerFn)(void* env, long long idx, long long count);
@@ -1833,6 +1848,8 @@ bool _spec_arena_active = false;
 __thread void** _spec_pool_stack = NULL;
 __thread size_t _spec_pool_top = 0;
 __thread size_t _spec_pool_cap = 0;
+/* Per-Thread RNG (xorshift64*, lock-free, self-seeding) */
+__thread unsigned long long _spec_rng_state = 0;
 void spec_panic(const char* msg) {
     fprintf(stderr, "[Spec Runtime Panic] %s\n", msg ? msg : "fatal error");
     exit(1);
@@ -3796,27 +3813,6 @@ String spec_process_os_name(void) {
 #endif
 }
 
-double spec_math_round(double v) { return round(v); }
-
-double spec_math_floor(double v) { return floor(v); }
-
-double spec_math_ceil(double v) { return ceil(v); }
-
-double spec_math_abs(double v) { return fabs(v); }
-
-double spec_math_min(double a, double b) { return (a < b) ? a : b; }
-
-double spec_math_max(double a, double b) { return (a > b) ? a : b; }
-
-double spec_math_clamp(double v, double lo, double hi) {
-    if (hi < lo) return lo;
-    if (v < lo) return lo;
-    if (v > hi) return hi;
-    return v;
-}
-
-double spec_math_sqrt(double v) { return v < 0.0 ? 0.0 : sqrt(v); }
-
 double spec_math_sin(double v) { return sin(v); }
 
 double spec_math_cos(double v) { return cos(v); }
@@ -3842,17 +3838,6 @@ double spec_math_asin(double v) { return asin(v); }
 double spec_math_acos(double v) { return acos(v); }
 
 double spec_math_atan(double v) { return atan(v); }
-
-double spec_math_fma(double a, double b, double c) { return fma(a, b, c); }
-
-long long spec_math_to_int(double v) {
-    if (v != v) return 0;
-    if (v >= 9223372036854775808.0) return 9223372036854775807LL;
-    if (v <= -9223372036854775808.0) return (-9223372036854775807LL - 1);
-    return (long long)v;
-}
-
-double spec_math_to_float(long long v) { return (double)v; }
 
 double spec_math_random(double min, double max) {
     if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));
@@ -3905,19 +3890,6 @@ long long spec_atomic_put(long long slot, long long v) {
 long long spec_atomic_get(long long slot) {
     atomic_llong* p = spec_atomic_slot_ptr(slot);
     return atomic_load(p);
-}
-
-void spec_fast_random_seed(long long idx) {
-    _spec_rng_state = 0x9E3779B97F4A7C15ULL ^ ((unsigned long long)idx * 0xBF58476D1CE4E5B9ULL + 0x94D049BB133111EBULL);
-    if (_spec_rng_state == 0) _spec_rng_state = 1;
-    spec_rng_next();
-    spec_rng_next();
-    spec_rng_next();
-}
-
-double spec_fast_random(void) {
-    if (_spec_rng_state == 0) spec_fast_random_seed(0x5DEECE66DULL);
-    return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);
 }
 
 /* Striped recursive mutexes for Parallel:sync and Parallel:syncWith */
