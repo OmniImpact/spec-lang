@@ -21,6 +21,7 @@ Class is Driver{
 		['base', 'compiler', 'checker', TypeChecker],
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'driver', CompilationReport],
+		['base', 'compiler', 'driver', OsLinkFlags],
 		['base', 'compiler', 'gen', CodeGenerator],
 		['base', 'compiler', 'gen', RuntimePrelude],
 		['base', 'compiler', 'ir', IrModule],
@@ -324,19 +325,9 @@ Class is Driver{
 			});
 
 			local Array of String is llArgs: ['-O2', '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
-			local String is llOs: Process:osName();
-			if({ llOs == 'windows' }, {
-				llArgs:add(item: '-lws2_32');
-				llArgs:add(item: '-lwinmm');
-				llArgs:add(item: '-lpsapi');
-			});
-			if({ llOs == 'macos' }, {
-				llArgs:add(item: '-framework');
-				llArgs:add(item: 'AudioToolbox');
-			});
-			if({ llOs == 'linux' }, {
-				llArgs:add(item: '-ldl');
-				llArgs:add(item: '-no-pie');
+			local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
+			llOsFlags:each(action: local Function(String is fl){
+				llArgs:add(item: fl);
 			});
 			local Int is llCcT0: Process:clockMs();
 			local Int is llStat: Process:execute(command: 'clang', args: llArgs);
@@ -395,18 +386,11 @@ Class is Driver{
 		gccArgs:add(item: outputPath);
 		gccArgs:add(item: '-pthread');
 		gccArgs:add(item: '-lm');
-		local String is os: Process:osName();
-		if({ os == 'windows' }, {
-			gccArgs:add(item: '-lws2_32');
-			gccArgs:add(item: '-lwinmm');
-			gccArgs:add(item: '-lpsapi');
+		local Array of String is cOsFlags: OsLinkFlags:init(noPie: false):flags();
+		cOsFlags:each(action: local Function(String is fl){
+			gccArgs:add(item: fl);
 		});
-		if({ os == 'macos' }, {
-			gccArgs:add(item: '-framework');
-			gccArgs:add(item: 'AudioToolbox');
-		});
-		if({ os == 'linux' }, {
-			gccArgs:add(item: '-ldl');
+		if({ Process:osName() == 'linux' }, {
 			local Boolean is usesAudio: false;
 			program:classes:each(action: local Function(ClassInfo is cls){
 				if({ cls:name == 'Audio' }, {

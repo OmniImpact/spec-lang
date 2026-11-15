@@ -1,5 +1,5 @@
 #! Package base:compiler:llvm
-#! Lowers control-flow and builtin calls (if, while, line, exit) to Spec IR.
+#! Lowers control-flow calls (if, while) to Spec IR.
 
 Class of CallLowerer is ControlFlowCallLowerer{
 	namespace: ['base', 'compiler', 'llvm'];
@@ -36,8 +36,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local String is nm: call:name;
 		if({ nm == 'if' && call:args:length() >= 2 }, { return true; });
 		if({ nm == 'while' && call:args:length() >= 2 }, { return true; });
-		if({ nm == 'line' && call:args:length() >= 1 }, { return true; });
-		if({ nm == 'exit' && call:args:length() >= 1 }, { return true; });
 		return false;
 	}
 
@@ -48,18 +46,6 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		});
 		if({ nm == 'while' }, {
 			self:lowerWhileCall(b: b, call: call);
-			return '0';
-		});
-		if({ nm == 'line' }, {
-			local NamedArg is lineArg: call:args:get(index: 0);
-			local String is txt: b:lowerExpr(expr: lineArg:value);
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_print_line', argTypes: [IrType:Ptr], args: [txt]));
-			return '0';
-		});
-		if({ nm == 'exit' }, {
-			local NamedArg is exArg: call:args:get(index: 0);
-			local String is stV: b:lowerExpr(expr: exArg:value);
-			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_process_exit', argTypes: [IrType:I64], args: [stV]));
 			return '0';
 		});
 		return '0';

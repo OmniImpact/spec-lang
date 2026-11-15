@@ -46,8 +46,16 @@ Class is LlvmEmitter{
 		out: out . "declare ptr @spec_string_substring(ptr, i64, i64)\n";
 		out: out . "declare i64 @spec_string_index_of(ptr, ptr, i64)\n";
 		out: out . "declare ptr @spec_to_string_int(i64)\n";
+		out: out . "declare void @spec_print(ptr)\n";
 		out: out . "declare void @spec_print_line(ptr)\n";
 		out: out . "declare void @spec_process_exit(i64)\n";
+		out: out . "declare ptr @spec_process_os_name()\n";
+		out: out . "declare i64 @spec_process_get_pid()\n";
+		out: out . "declare i64 @spec_clock_ms()\n";
+		out: out . "declare i1 @spec_file_exists(ptr)\n";
+		out: out . "declare i1 @spec_file_remove(ptr)\n";
+		out: out . "declare ptr @spec_file_read(ptr, ptr, ptr, ptr)\n";
+		out: out . "declare i1 @spec_file_write(ptr, ptr, ptr, ptr)\n";
 		out: out . "declare ptr @spec_array_new()\n";
 		out: out . "declare ptr @spec_array_new_object()\n";
 		out: out . "declare void @spec_array_add(ptr, ptr)\n";

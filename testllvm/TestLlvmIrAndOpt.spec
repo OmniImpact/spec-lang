@@ -310,4 +310,60 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testSysinternalPluginsLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_sys_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_sys_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_sys_' . pid;
+		local String is dataPath: tmp . '/spec_llvm_sys_data_' . pid . '.txt';
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: "Class is LlvmSys{\n"
+			. "\treplace Array of Array of String is using: [\n"
+			. "\t\t['base', 'struct', Map],\n"
+			. "\t\t['base', 'sys', as Conditional()],\n"
+			. "\t\t['base', 'sys', as Output()],\n"
+			. "\t\t['base', 'sys', as Process()],\n"
+			. "\t\t['base', 'sys', as File()]\n"
+			. "\t];\n"
+			. "\treplace Function is init(Map of String to String is args){\n"
+			. "\t\tlocal String is os: Process:osName();\n"
+			. "\t\tlocal Int is p: Process:getPid();\n"
+			. "\t\tlocal Int is t: Process:clockMs();\n"
+			. "\t\tlocal String is path: '" . dataPath . "';\n"
+			. "\t\tlocal Boolean is w: File:fileWrite(path: path, content: 'sys-ok', onSuccess: local Function(){}, onError: local Function(String is e){});\n"
+			. "\t\tlocal Boolean is ex: File:fileExists(path: path);\n"
+			. "\t\tlocal String is txt: File:fileRead(path: path, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');\n"
+			. "\t\tlocal Boolean is rm: File:fileRemove(path: path);\n"
+			. "\t\tif({ os != '' && p > 0 && t >= 0 && w && ex && txt == 'sys-ok' && rm }, {\n"
+			. "\t\t\tline('llvm-sys-ok');\n"
+			. "\t\t}, {\n"
+			. "\t\t\tProcess:exit(status: 2);\n"
+			. "\t\t});\n"
+			. "\t}\n"
+			. "}\n";
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: 'call ptr @spec_process_os_name()'));
+		Assert:isTrue(ll:contains(needle: 'call i1 @spec_file_exists('));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+		File:fileRemove(path: dataPath);
+	}
 }
