@@ -67,6 +67,9 @@ Class of SpecUnitTest is TestSpecInit{
 		local String is root: self:resolveRoot();
 		local String is si: self:resolveSpecInit(root: root);
 		Assert:isTrue(fileExists(path: si));
+		if({ !fileExists(path: si) }, {
+			return;
+		});
 
 		local Int is helpCode: Process:execute(command: si, args: ['--help']);
 		Assert:areEqualInt(0, helpCode);

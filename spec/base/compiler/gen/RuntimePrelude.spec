@@ -42,6 +42,7 @@ Class is RuntimePrelude{
 #include <mmeapi.h>
 #include <psapi.h>
 #include <io.h>
+#include <fcntl.h>
 #endif
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
