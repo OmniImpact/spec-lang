@@ -23,6 +23,7 @@ Enum is IrInst {
 	GlobalAddr(String is dst, String is globalName),
 	AllocObj(String is dst, String is structName, String is destroyFn),
 	FieldPtr(String is dst, String is objPtr, String is structName, Int is fieldIndex),
+	PtrElem(String is dst, String is basePtr, Int is index),
 	IrCast(String is dst, String is val, IrType is fromType, IrType is toType),
 	Retain(String is val),
 	Release(String is val),

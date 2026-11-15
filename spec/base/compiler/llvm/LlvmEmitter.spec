@@ -89,6 +89,24 @@ Class is LlvmEmitter{
 			local Int is tnLen: st:name:length() + 1;
 			local String is tnEsc: self:escapeLlvmBytes(s: st:name);
 			out: out . '@.typename.' . st:name . ' = private unnamed_addr constant [' . (tnLen as String) . ' x i8] c"' . tnEsc . "\\00\"\n";
+			local Int is vtLen: st:vtableFns:length();
+			if({ vtLen > 0 }, {
+				local String is vtItems: '';
+				local Int is vi: 0;
+				while({ vi < vtLen }, {
+					if({ vi > 0 }, { vtItems: vtItems . ', '; });
+					local String is vfn: st:vtableFns:get(index: vi, default: 'null');
+					if({ vfn == 'null' }, {
+						vtItems: vtItems . 'ptr null';
+					}, {
+						vtItems: vtItems . 'ptr @' . vfn;
+					});
+					vi++;
+				});
+				out: out . '@.vtable.' . st:name . ' = constant [' . (vtLen as String) . ' x ptr] [' . vtItems . "]\n";
+			}, {
+				out: out . '@.vtable.' . st:name . " = constant [1 x ptr] zeroinitializer\n";
+			});
 			si++;
 		});
 		if({ mod:structs:length() > 0 }, { out: out . "\n"; });
@@ -260,14 +278,20 @@ Class is LlvmEmitter{
 				local String is szPtr: dst . '_szp';
 				local String is szVal: dst . '_sz';
 				local String is tnPtr: dst . '_tnp';
+				local String is vtPtr: dst . '_vtp';
 				return szPtr . ' = getelementptr %struct.' . structName . ", ptr null, i32 1\n  "
 					. szVal . ' = ptrtoint ptr ' . szPtr . " to i64\n  "
 					. dst . ' = call ptr @spec_rt_alloc(i64 ' . szVal . ', ptr ' . destroyFn . ")\n  "
 					. tnPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ", i32 0, i32 0\n  "
-					. 'store ptr @.typename.' . structName . ', ptr ' . tnPtr;
+					. 'store ptr @.typename.' . structName . ', ptr ' . tnPtr . "\n  "
+					. vtPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ", i32 0, i32 1\n  "
+					. 'store ptr @.vtable.' . structName . ', ptr ' . vtPtr;
 			},
 			IrInst:FieldPtr: local Function of String(String is dst, String is objPtr, String is structName, Int is fieldIndex){
 				return dst . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . objPtr . ', i32 0, i32 ' . (fieldIndex as String);
+			},
+			IrInst:PtrElem: local Function of String(String is dst, String is basePtr, Int is index){
+				return dst . ' = getelementptr ptr, ptr ' . basePtr . ', i64 ' . (index as String);
 			},
 			IrInst:IrCast: local Function of String(String is dst, String is val, IrType is fromType, IrType is toType){
 				if({ fromType == IrType:I64 && toType == IrType:F64 }, { return dst . ' = sitofp i64 ' . val . ' to double'; });

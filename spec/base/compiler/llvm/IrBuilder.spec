@@ -143,6 +143,31 @@ Class is IrBuilder{
 		});
 	}
 
+	local Function is buildVtable(IrStruct is st, ClassInfo is cls, Map of String to ClassInfo is clsMap){
+		local Int is bi: 0;
+		while({ bi < cls:baseClasses:length() }, {
+			local String is bname: cls:baseClasses:get(index: bi, default: '');
+			if({ clsMap:has(key: bname) }, {
+				local ClassInfo is bcls: clsMap:get(key: bname, default: cls);
+				self:buildVtable(st: st, cls: bcls, clsMap: clsMap);
+			});
+			bi++;
+		});
+		local String is sname: self:cStructName(qname: cls:qualifiedName());
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:METHOD && m:name != 'init' && m:name != 'destroy' }, {
+				local String is fnName: 'null';
+				if({ m:body:length() > 0 }, {
+					fnName: sname . '_' . m:name;
+				});
+				st:setVtableMethod(mname: m:name, fnName: fnName);
+			});
+			mi++;
+		});
+	}
+
 	local Function is collectAllClasses(ClassInfo is cls, Array of ClassInfo is out){
 		out:add(item: cls);
 		local Int is mi: 0;
@@ -195,6 +220,7 @@ Class is IrBuilder{
 				st:addField(name: '_vtable', ty: IrType:Ptr);
 				local Map of String to Boolean is seenFields: Map:init();
 				self:addInheritedFields(st: st, cls: cls, clsMap: clsMap, seenFields: seenFields);
+				self:buildVtable(st: st, cls: cls, clsMap: clsMap);
 				self:mod:addStruct(s: st);
 			});
 			ci++;
@@ -1148,6 +1174,20 @@ Class is IrBuilder{
 			});
 		});
 
+		if({ call:bareProvider != '' }, {
+			local String is provStruct: self:cStructName(qname: call:bareProvider);
+			if({ self:mod:findStruct(name: provStruct):name != '' }, {
+				local String is provObj: self:nextTmp();
+				self:emit(inst: IrInst:AllocObj(dst: provObj, structName: provStruct, destroyFn: 'null'));
+				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: provStruct . '_init', argTypes: [IrType:Ptr], args: [provObj]));
+				argTypes: [IrType:Ptr];
+				argVals: [provObj];
+				hasRecv: true;
+				recvType: call:bareProvider;
+				calleeName: provStruct . '_' . nm;
+			});
+		});
+
 		if({ !hasRecv }, {
 			argTypes:add(item: IrType:Ptr);
 			argVals:add(item: 'null');
@@ -1167,7 +1207,30 @@ Class is IrBuilder{
 		local Boolean is hasDst: retTy != IrType:Void;
 		local String is dst: '';
 		if({ hasDst }, { dst: self:nextTmp(); });
-		self:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: retTy, callee: calleeName, argTypes: argTypes, args: argVals));
+
+		local Int is vslot: -1;
+		local String is recvStruct: self:currentClass;
+		if({ hasRecv && nm != 'init' && nm != 'destroy' }, {
+			if({ recvType != '' }, {
+				recvStruct: self:cStructName(qname: recvType);
+			});
+			local IrStruct is rst: self:mod:findStruct(name: recvStruct);
+			vslot: rst:vtableSlot(mname: nm);
+		});
+		if({ vslot >= 0 }, {
+			local String is recvPtr: argVals:get(index: 0, default: 'null');
+			local String is vtPtrAddr: self:nextTmp();
+			self:emit(inst: IrInst:FieldPtr(dst: vtPtrAddr, objPtr: recvPtr, structName: recvStruct, fieldIndex: 1));
+			local String is vtBase: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: vtBase, slot: vtPtrAddr, ty: IrType:Ptr));
+			local String is slotPtr: self:nextTmp();
+			self:emit(inst: IrInst:PtrElem(dst: slotPtr, basePtr: vtBase, index: vslot));
+			local String is fnPtr: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: fnPtr, slot: slotPtr, ty: IrType:Ptr));
+			self:emit(inst: IrInst:IndirectCall(dst: dst, hasDst: hasDst, retType: retTy, fnPtr: fnPtr, argTypes: argTypes, args: argVals));
+		}, {
+			self:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: retTy, callee: calleeName, argTypes: argTypes, args: argVals));
+		});
 		return dst;
 	}
 }

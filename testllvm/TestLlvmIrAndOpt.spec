@@ -366,4 +366,59 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: binPath);
 		File:fileRemove(path: dataPath);
 	}
+
+	Function is testVtableDispatchAndUsingAsLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_vt_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_vt_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_vt_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: "Class is Animal {\n"
+			. "\treplace Function is init(){ return; }\n"
+			. "\tFunction of Int is speak(){ return 1; }\n"
+			. "}\n\n"
+			. "Class of Animal is Dog {\n"
+			. "\treplace Function is init(){ return; }\n"
+			. "\treplace Function of Int is speak(){ return 42; }\n"
+			. "}\n\n"
+			. "Class is LlvmVt{\n"
+			. "\treplace Array of Array of String is using: [\n"
+			. "\t\t['base', 'struct', Map],\n"
+			. "\t\t['base', 'sys', as Conditional()],\n"
+			. "\t\t['base', 'sys', as Output()],\n"
+			. "\t\t['base', 'sys', as Process()]\n"
+			. "\t];\n"
+			. "\treplace Function is init(Map of String to String is args){\n"
+			. "\t\tlocal Animal is a: Dog:init();\n"
+			. "\t\tlocal Int is s: a:speak();\n"
+			. "\t\tif({ s == 42 }, {\n"
+			. "\t\t\tline('llvm-vt-ok');\n"
+			. "\t\t}, {\n"
+			. "\t\t\tProcess:exit(status: 2);\n"
+			. "\t\t});\n"
+			. "\t}\n"
+			. "}\n";
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: '@.vtable.Dog = constant'));
+		Assert:isTrue(ll:contains(needle: 'getelementptr ptr, ptr'));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }

@@ -14,6 +14,8 @@ Class is IrStruct{
 	String is name: '';
 	Array of String is fieldNames: [];
 	Array of IrType is fieldTypes: [];
+	Array of String is vtableMethodNames: [];
+	Array of String is vtableFns: [];
 
 	replace Function is init(){
 	}
@@ -41,5 +43,31 @@ Class is IrStruct{
 			i++;
 		});
 		return res;
+	}
+
+	Function of Int is vtableSlot(String is mname){
+		local Int is i: 0;
+		local Int is res: -1;
+		local Boolean is found: false;
+		while({ i < self:vtableMethodNames:length() && !found }, {
+			if({ self:vtableMethodNames:get(index: i, default: '') == mname }, {
+				res: i;
+				found: true;
+			});
+			i++;
+		});
+		return res;
+	}
+
+	Function is setVtableMethod(String is mname, String is fnName){
+		local Int is idx: self:vtableSlot(mname: mname);
+		if({ idx >= 0 }, {
+			if({ fnName != 'null' }, {
+				self:vtableFns:set(index: idx, value: fnName);
+			});
+		}, {
+			self:vtableMethodNames:add(item: mname);
+			self:vtableFns:add(item: fnName);
+		});
 	}
 }
