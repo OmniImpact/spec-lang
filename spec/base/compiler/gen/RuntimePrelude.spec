@@ -3351,7 +3351,7 @@ String spec_file_temp_cb(String template, SpecClosure* on_error) {
     }
     int fd = mkstemp(buf);
 #if defined(_WIN32)
-    if (fd == -1) {
+    if (fd == -1 && (strncmp(tpl, "/tmp/", 5) == 0 || strcmp(tpl, "/tmp") == 0)) {
         char temp_dir[MAX_PATH];
         DWORD td_len = GetTempPathA(MAX_PATH, temp_dir);
         if (td_len > 0 && td_len < MAX_PATH) {
