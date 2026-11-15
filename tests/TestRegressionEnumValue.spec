@@ -20,7 +20,6 @@ Class of SpecUnitTest is TestRegressionEnumValue{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];

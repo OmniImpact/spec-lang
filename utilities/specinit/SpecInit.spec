@@ -20,8 +20,7 @@ Class is SpecInit{
 		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', Uri]
+		['base', 'sys', as Uri()]
 	];
 
 	Function is printUsage(){

@@ -7,8 +7,7 @@ Class of SpecUnitTest is TestUri{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', Uri]
+		['base', 'sys', as Uri()]
 	];
 
 	Function is testPosixPaths(){

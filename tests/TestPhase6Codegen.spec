@@ -19,7 +19,6 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'sys', Process],
 		['base', 'struct', Array],
 		['base', 'iterator'],
 		['base', 'compiler', 'lexer', Token],

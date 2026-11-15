@@ -30,13 +30,11 @@ Class is SpecLint{
 		['base', 'compiler', 'loader', Loader],
 		['speclint', Linter],
 		['speclint', LintIssue],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Stderr()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as File()],
-		['base', 'sys', Ansi],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Conditional()]
 	];

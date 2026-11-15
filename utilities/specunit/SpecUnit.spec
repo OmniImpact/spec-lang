@@ -109,21 +109,15 @@ Class is SpecUnit{
 	replace Array of Array of String is using: [
 		# The plain form grants construction (the report's locals), the
 		# as-form grants the bare call surface (the overloads pattern).
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
-		['base', 'sys', Conditional],
 		['base', 'sys', as Conditional()],
-		['base', 'sys', Loops],
 		['base', 'sys', as Loops()],
-		['base', 'sys', Process],
 		['base', 'sys', as Process()],
-		['base', 'sys', Ansi],
 		['base', 'sys', as Ansi()],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as File()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', Uri]
+		['base', 'sys', as Uri()]
 	];
 
 	replace Function is init(Map of String to String is args){

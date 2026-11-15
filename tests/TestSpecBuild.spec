@@ -14,7 +14,6 @@ Class of SpecUnitTest is TestSpecBuild{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', Uri],
 		['specbuild', SpecBuild]
 	];
 

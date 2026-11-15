@@ -13,7 +13,6 @@ Class is ScopeAsDemo{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', Uri],
 		[CsvParser]
 	];
 

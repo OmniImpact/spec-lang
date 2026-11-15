@@ -23,7 +23,6 @@ Class of SpecUnitTest is TestRegressionOverrideDispatch{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'struct', Array],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];

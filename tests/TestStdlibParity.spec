@@ -14,7 +14,6 @@ Class of SpecUnitTest is TestStdlibParity{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'math', as Math()],
-		['base', 'math', Stats],
 		['base', 'math', as Stats()]
 	];
 

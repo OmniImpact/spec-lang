@@ -13,7 +13,6 @@ Class of SpecUnitTest is TestFileManagement{
 		['specunit', as Assert()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'sys', File],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Process()],

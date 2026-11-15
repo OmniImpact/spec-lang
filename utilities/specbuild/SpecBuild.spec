@@ -37,7 +37,6 @@ Class is SpecBuild{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', Uri],
 		['base', 'iterator']
 	];
 

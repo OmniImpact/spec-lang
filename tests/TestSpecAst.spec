@@ -15,7 +15,6 @@ Class of SpecUnitTest is TestSpecAst{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];

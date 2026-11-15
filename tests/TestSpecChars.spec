@@ -9,7 +9,6 @@ Class of SpecUnitTest is TestSpecChars{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'compiler', 'utils', Chars],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];

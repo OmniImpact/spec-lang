@@ -40,7 +40,7 @@ Class of SpecUnitTest is TestMerge{
 Class is MergeBase{
 
 	## No ancestor declares `using`, so this merge stands alone as a fresh array.
-	merge Array of Array of String is using: [['base', 'sys', Output], ['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
+	merge Array of Array of String is using: [['base', 'sys', as Output()], ['base', 'sys', as Conditional()]] ;
 
 	Array of String is tags: ['core'];
 

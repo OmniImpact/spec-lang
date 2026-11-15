@@ -10,7 +10,6 @@ Class of SpecUnitTest is TestWhileLoop{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'sys', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],

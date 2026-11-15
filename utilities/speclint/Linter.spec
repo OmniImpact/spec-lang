@@ -15,7 +15,6 @@ Class is Linter{
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'sys', Output],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'iterator'],

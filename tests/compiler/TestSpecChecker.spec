@@ -15,7 +15,6 @@ Class of SpecUnitTest is TestSpecChecker{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', ProgramNode],
-		['base', 'sys', File],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
 		['base', 'sys', as File()],

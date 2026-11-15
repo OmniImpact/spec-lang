@@ -6,12 +6,9 @@ Class is AssertHelper{
 	namespace: ['specunit'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', Conditional],
 		['base', 'sys', as Conditional()],
-		['base', 'sys', Process],
 		['base', 'sys', as Process()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', Uri]
+		['base', 'sys', as Uri()]
 	];
 
 	Function of String is nextStem(){

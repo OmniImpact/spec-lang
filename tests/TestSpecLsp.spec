@@ -13,7 +13,6 @@ Class of SpecUnitTest is TestSpecLsp{
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', Uri],
 		['base', 'sys', as Buf()]
 	];
 

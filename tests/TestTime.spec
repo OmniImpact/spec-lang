@@ -9,7 +9,6 @@ Class of SpecUnitTest is TestTime{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'sys', as Time()],
-		['base', 'sys', DateTime],
 		['base', 'sys', as DateTime()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]

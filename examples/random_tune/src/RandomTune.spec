@@ -9,10 +9,8 @@ Class is RandomTune{
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Time()],
-		['base', 'sys', DateTime],
 		['base', 'sys', as DateTime()],
 		['base', 'math', as Math()],
-		['base', 'audio', Audio],
 		['base', 'audio', as Audio()],
 		['base', 'struct', Array],
 		['base', 'struct', List],
@@ -32,9 +30,17 @@ Class is RandomTune{
 		local Int is noteMs: 150;
 		local Synth is synth: Synth:init();
 
-		local Audio is audio: Audio:open(sampleRate: sampleRate, channels: 2, format: 1);
+		local String is audioErr: '';
+		local Audio is audio: Audio:open(
+			sampleRate: sampleRate,
+			channels: 2,
+			format: 1,
+			onError: local Function(String is error){
+				audioErr: error;
+			}
+		);
 		if({ !audio:isOpen() }, {
-			Output:line(text: "Audio device unavailable; running silent timing & synthesis pass.");
+			Output:line(text: "Audio device unavailable (" . audioErr . "); running silent timing & synthesis pass.");
 		});
 
 		local Int is idx: 0;

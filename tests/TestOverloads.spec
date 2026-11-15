@@ -10,7 +10,6 @@ Class of SpecUnitTest is TestOverloads{
 		['specunit', as Assert()],
 		# IV.6 strictness: the plain form grants construction; the as-form
 		# grants the bare function calls (twice).
-		['ovl', 'lib', Over],
 		['ovl', 'lib', as Over()]
 	];
 

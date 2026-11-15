@@ -16,7 +16,6 @@ Class of SpecUnitTest is TestRuntimeConstructs{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]

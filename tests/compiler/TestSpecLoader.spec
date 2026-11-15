@@ -11,7 +11,6 @@ Class of SpecUnitTest is TestSpecLoader{
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
-		['base', 'sys', File],
 		['base', 'sys', as File()]
 	];
 
@@ -43,7 +42,6 @@ Class is LoaderE2E{
 	}
 	replace Array of Array of String is using: [
 		['base', 'sys', as Conditional()],
-		['base', 'sys', Output],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()]
 	];

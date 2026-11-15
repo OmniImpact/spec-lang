@@ -34,7 +34,6 @@ Class is SpecLsp{
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Uri()],
 		['base', 'sys', as Dir()],
-		['base', 'sys', Uri],
 		['base', 'sys', SourceLocation]
 	];
 

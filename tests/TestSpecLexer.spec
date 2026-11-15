@@ -13,7 +13,6 @@ Class of SpecUnitTest is TestSpecLexer{
 		['base', 'compiler', 'lexer', TokenKind],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', Keyword],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'compiler', Error],
 		['base', 'sys', as Conditional()]

@@ -12,8 +12,7 @@ Class of SpecUnitTest is TestSpecInit{
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
 		['base', 'sys', as Conditional()],
-		['base', 'sys', as Uri()],
-		['base', 'sys', Uri]
+		['base', 'sys', as Uri()]
 	];
 
 	local Function of String is dirOf(String is path){

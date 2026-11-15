@@ -11,7 +11,6 @@ Class of SpecUnitTest is TestEnumWhen{
 		['specunit', as Assert()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Conditional()]
 	];

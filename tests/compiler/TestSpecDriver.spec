@@ -10,7 +10,6 @@ Class of SpecUnitTest is TestSpecDriver{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'compiler', 'driver', Driver],
-		['base', 'sys', File],
 		['base', 'struct', Map],
 		['base', 'sys', as File()]
 	];
@@ -44,7 +43,6 @@ Class is DriverE2E{
 		Output:line(text: g:toString());
 	}
 	replace Array of Array of String is using: [
-		['base', 'sys', Output],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()]
 	];

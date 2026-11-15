@@ -11,7 +11,6 @@ Class is CodeGenerator{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', Parallel],
 		['base', 'sys', as Parallel()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as File()],
@@ -38,7 +37,7 @@ Class is CodeGenerator{
 		['base', 'struct', Map],
 		['base', 'struct', as Sort()],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Buf()],
+		['base', 'sys', as Buf()]
 	];
 
 	## Backend utilities.

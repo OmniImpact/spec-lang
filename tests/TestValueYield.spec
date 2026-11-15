@@ -14,7 +14,6 @@ Class of SpecUnitTest is TestValueYield{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'sys', as Conditional()],
-		['base', 'sys', Output],
 		['base', 'sys', as Output()]
 	];
 

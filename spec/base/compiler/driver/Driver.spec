@@ -12,7 +12,6 @@ Class is Driver{
 
 	replace Array of Array of String is using: [
 		['base', 'sys', as File()],
-		['base', 'sys', Output],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
 		['base', 'compiler', 'ast', ProgramNode],
@@ -30,12 +29,8 @@ Class is Driver{
 		['base', 'sys', as Output()],
 		['base', 'sys', as Stderr()],
 		['base', 'sys', as Uri()],
-		['base', 'sys', Uri]
-,
-		['base', 'compiler', 'ast', Parameter]
-,
-		['base', 'compiler', 'lexer', Token]
-,
+		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'checker', TypeError],
 		['base', 'sys', as Conditional()]
 	];

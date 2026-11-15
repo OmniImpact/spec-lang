@@ -13,7 +13,6 @@ Class of SpecUnitTest is TestSyntacticSugar{
 		['specunit', as Assert()],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'sys', Loops],
 		['base', 'sys', as Loops()]
 	];
 
