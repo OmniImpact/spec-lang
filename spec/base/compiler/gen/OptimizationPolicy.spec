@@ -9,6 +9,7 @@ Class is OptimizationPolicy{
 	namespace: ['base', 'compiler', 'gen'];
 
 	replace Array of Array of String is using: [
+		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'lexer', Keyword],
@@ -423,6 +424,24 @@ Class is OptimizationPolicy{
 		local Expression is res: Expression:Call(call: newCd);
 		res:setResolvedType(t: resolvedType);
 		return res;
+	}
+
+	## True when [m] on [c] is a small, non-generic, pure-primitive leaf method
+	## that can be safely emitted as `static inline` in C11.
+	## Both DeclarationGenerator (prototype) and CodeGenerator (definition)
+	## use this exact predicate so C linkage always matches.
+	Function of Boolean is isStaticInlineLeaf(ClassInfo is c, Member is m){
+		return noneOf(checks: [
+			m:kind != MemberKind:METHOD,
+			m:hasModifier(kw: Keyword:HELD),
+			m:name == 'init',
+			m:name == 'destroy',
+			c:typeParams:length() > 0,
+			m:body:length() == 0,
+			m:body:length() > 12,
+			!self:isPrimitiveScalarType(typeName: self:methodReturnTypeName(t: m:memberType)),
+			self:methodNeedsPoolFrame(m: m)
+		]);
 	}
 
 }

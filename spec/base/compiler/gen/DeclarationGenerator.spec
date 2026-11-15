@@ -27,6 +27,7 @@ Class is DeclarationGenerator{
 		['base', 'compiler', WellKnown],
 		['base', 'compiler', 'gen', CBackendUtils],
 		['base', 'compiler', 'gen', EmissionPolicy],
+		['base', 'compiler', 'gen', OptimizationPolicy],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()],
 
@@ -43,6 +44,9 @@ Class is DeclarationGenerator{
 
 	## Emission transparency decisions.
 	local EmissionPolicy is policy: EmissionPolicy:init();
+
+	## Structural optimization predicates.
+	local OptimizationPolicy is opt: OptimizationPolicy:init();
 
 	replace Function is init(){
 	}
@@ -286,7 +290,11 @@ Class is DeclarationGenerator{
 							if({ self:policy:isTransparent(c: c) && c:name != 'String' && c:name != 'Array' && c:name != 'Map' }, {
 								selfCType: 'void*';
 							});
-							Buf:bufAppendBuf(dst: out, src: retType . ' ' . symName . '(' . selfCType . ' self');
+							local String is inlinePrefix: '';
+							if({ self:opt:isStaticInlineLeaf(c: c, m: m) }, {
+								inlinePrefix: 'static inline ';
+							});
+							Buf:bufAppendBuf(dst: out, src: inlinePrefix . retType . ' ' . symName . '(' . selfCType . ' self');
 							m:params:each(action: local Function(Parameter is p){
 								Buf:bufAppendBuf(dst: out, src: ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
 							});

@@ -58,6 +58,39 @@ Class is Conditional{
 		base:sysinternal:Conditional:branch(check: check, then: else);
 	}
 
+	## Returns `true` only when every Boolean in [checks] is `false`.
+	## Literal array arguments are inlined to short-circuiting C `&&` checks.
+	##
+	## @param checks: Comparison results to test.
+	## @return: `true` if all elements are `false`, `false` otherwise.
+	Function of Boolean is noneOf(Array of Boolean is checks){
+		return Conditional:noneOfScan(checks: checks, index: 0);
+	}
+
+	## Recursive runtime scan for [noneOf].
+	##
+	## @param checks: Comparison results to test.
+	## @param index: Current scan index.
+	## @return: `true` if all remaining elements are `false`.
+	held Function of Boolean is noneOfScan(Array of Boolean is checks, Int is index){
+		local Boolean is res: true;
+		base:sysinternal:Conditional:branch(
+			check: { return index < checks:length(); },
+			then: {
+				local Boolean is val: checks:get(index: index, default: false);
+				base:sysinternal:Conditional:branch(
+					check: { return val; },
+					then: { res: false; }
+				);
+				base:sysinternal:Conditional:branch(
+					check: { return !val; },
+					then: { res: Conditional:noneOfScan(checks: checks, index: index + 1); }
+				);
+			}
+		);
+		return res;
+	}
+
 	## Dispatches an arm table — the match construct. TWO KEY KINDS:
 	##
 	## - `match(on:, when:)` — the SUBJECT form: the keys are

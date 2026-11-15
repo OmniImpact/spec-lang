@@ -4371,7 +4371,11 @@ Class is CodeGenerator{
 			# parameter, the _held_ symbol infix, direct C linkage.
 			header: retType . ' ' . self:utils:cIdent(name: classDef:qualifiedName()) . '_held_' . self:utils:cIdent(name: method:name) . '(';
 		}, {
-			header: retType . ' ' . self:overloadSymbol(className: classDef:qualifiedName(), methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
+			local String is inlinePrefix: '';
+			if({ self:opt:isStaticInlineLeaf(c: classDef, m: method) }, {
+				inlinePrefix: 'static inline ';
+			});
+			header: inlinePrefix . retType . ' ' . self:overloadSymbol(className: classDef:qualifiedName(), methodName: method:name, idx: self:overloadIndexOf(classDef: classDef, method: method)) . '(' . selfCType . ' self';
 		});
 		local Boolean is firstParam: self:emittingHeld;
 		method:params:each(action: local Function(Parameter is p){
