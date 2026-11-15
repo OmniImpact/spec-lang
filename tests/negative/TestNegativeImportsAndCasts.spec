@@ -63,12 +63,12 @@ Class is N7{
 			source: '''
 Class is N8{
 	replace Array of Array of String is using: [
-		['base', 'compiler', 'ast', as ExpressionKind()]
+		['base', 'compiler', 'ast', as MemberKind()]
 	];
 	replace Function is init(Map of String to String is args){}
 }
 ''',
-			expect: "Cannot instance-import enum 'ExpressionKind'"
+			expect: "Cannot instance-import enum 'MemberKind'"
 		);
 	}
 
