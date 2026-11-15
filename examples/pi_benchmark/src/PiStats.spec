@@ -1,0 +1,55 @@
+#! Formatting and math helpers for PiBenchmark.
+
+Class is PiStats{
+
+	replace Array of Array of String is using: [
+		['base', 'sys', as Ansi()],
+		['base', 'math', as Math()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Conditional()]
+	];
+
+	Function of Float is estimatePi(Int is hits, Int is samples){
+		if(check: { samples <= 0 }, then: {
+			return 0.0;
+		});
+		return (4.0 * toFloat(value: hits)) / toFloat(value: samples);
+	}
+
+	Function of String is piText(Float is value){
+		local Int is thousandths: toInt(value: round(value: value * 1000.0));
+		local Int is whole: thousandths / 1000;
+		local Int is frac: thousandths % 1000;
+		local String is padded: match(when: [
+			{ frac < 10 }:  { '00' . (frac as String); },
+			{ frac < 100 }: { '0' . (frac as String); },
+			else:           { '' . frac }
+		]);
+		return '' . whole . '.' . padded;
+	}
+
+	Function of Int is threadColor(Int is index){
+		return cubeIndex(r: index % 6, g: (index / 2) % 6, b: 5 - (index % 5));
+	}
+
+	Function of String is boxed(String is inner, Int is width){
+		local String is line: '║ ' . inner;
+		local Int is pad: width - 2 - inner:length();
+		if({ pad < 1 }, {
+			pad: 1;
+		});
+		repeat(count: pad, worker: {
+			line: line . ' ';
+		});
+		return line . '║';
+	}
+
+	Function of String is bar(Int is width){
+		local String is barText: '';
+		repeat(count: width, worker: {
+			barText: barText . '═';
+		});
+		return barText;
+	}
+
+}

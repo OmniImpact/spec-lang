@@ -1,9 +1,0 @@
-{
-  "name": "pi_benchmark",
-  "version": "0.1.0",
-  "source": "pi_benchmark.spec",
-  "source_dirs": [
-    "."
-  ],
-  "output": "../bin/pi_benchmark"
-}

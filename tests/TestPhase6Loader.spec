@@ -32,7 +32,7 @@ Class of SpecUnitTest is TestPhase6Loader{
 	# package through the resolver cascade (spec/lib stdlib first).
 	Function is testLoadHelloWorldProgram(){
 		local Loader is loader: Loader:init();
-		local ProgramNode is helloProg: loader:loadProgram(rootPath: 'examples/helloworld.spec');
+		local ProgramNode is helloProg: loader:loadProgram(rootPath: 'examples/helloworld/src/HelloWorld.spec');
 		Assert:isTrue(helloProg:classes:length() >= 1);
 		Assert:isTrue(loader:loadedFileCount() >= 1);
 		Assert:areEqualInt(0, loader:getParseErrors():length());

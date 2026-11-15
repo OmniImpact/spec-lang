@@ -1,9 +1,0 @@
-{
-  "name": "random_tune",
-  "version": "0.1.0",
-  "source": "random_tune.spec",
-  "source_dirs": [
-    "."
-  ],
-  "output": "../bin/random_tune"
-}

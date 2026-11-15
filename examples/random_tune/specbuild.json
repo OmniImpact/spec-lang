@@ -1,0 +1,16 @@
+{
+  "name": "random_tune",
+  "version": "0.1.0",
+  "source": "src/RandomTune.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/random_tune",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

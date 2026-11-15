@@ -1,9 +1,0 @@
-{
-  "name": "blackjack",
-  "version": "0.1.0",
-  "source": "blackjack.spec",
-  "source_dirs": [
-    "."
-  ],
-  "output": "../bin/blackjack"
-}

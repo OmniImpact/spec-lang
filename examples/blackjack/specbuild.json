@@ -1,0 +1,16 @@
+{
+  "name": "blackjack",
+  "version": "0.1.0",
+  "source": "src/Blackjack.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/blackjack",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

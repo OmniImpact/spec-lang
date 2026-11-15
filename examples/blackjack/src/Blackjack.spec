@@ -1,10 +1,5 @@
-#! specunit: suite
-
 Class is Blackjack{
 
-	# The as-imports merge the providers into scope: line(), if(), match(),
-	# run(), consIn(), random(), floor() answer bare. The plain imports are
-	# the type references (Loop/LoopControl/LoopCallback/InputHandler).
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
 		['base', 'struct', Map],
@@ -13,29 +8,18 @@ Class is Blackjack{
 		['base', 'iterator', LoopCallback],
 		['base', 'sys', InputHandler],
 		['base', 'sys', as Input()],
-		['base', 'math', as Math()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Loops()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		[Deck]
 	];
 
-	# =========================================================================
-	# Game State Fields
-	# Context is explicitly passed to internal classes via :init(...)
-	# =========================================================================
+	local Deck is deckUtil: Deck:init();
 	local Array of Int is deck: [];
 	local Array of Int is playerHand: [];
 	local Array of Int is dealerHand: [];
 	local Boolean is roundActive: true;
 
-	# =========================================================================
-	# Internal ClassInfo: Dealer's Turn Loop
-	# Lifecycle:
-	#   - evaluate() checks if dealer score < 17
-	#   - iteration() draws card and returns true
-	#   - When evaluate() becomes false (dealer >= 17), iterator stops automatically
-	#     and fires the onComplete callback attached to LoopControl
-	# =========================================================================
 	Class of Loop is DealerTurnLoop{
 
 		replace Array of Array of String is using: [
@@ -47,28 +31,21 @@ Class is Blackjack{
 			self:game: game;
 		}
 
-		# Automatically re-evaluated after each draw
 		replace Function of Boolean is evaluate(){
 			local Int is currentScore: game:handValue(hand: game:dealerHand);
 			return currentScore < 17;
 		}
 
-		# Step logic: draw one card
 		replace Function of Boolean is iteration(LoopControl is control){
 			local Int is card: game:drawCard();
 			game:dealerHand:add(item: card);
-
 			local Int is newScore: game:handValue(hand: game:dealerHand);
 			line('Dealer draws: ' . card . ' (Total: ' . newScore . ')');
-
-			return true; # Step completed normally; engine will call evaluate() next
+			return true;
 		}
+
 	}
 
-	# =========================================================================
-	# Internal ClassInfo: Dealer Turn Completion Callback
-	# Triggered automatically when evaluate() returns false or control is stopped
-	# =========================================================================
 	Class of LoopCallback is DealerTurnCompleteCallback{
 
 		replace Array of Array of String is using: [
@@ -84,12 +61,9 @@ Class is Blackjack{
 			line("\nDealer stands or busts.");
 			game:evaluateRoundOutcome();
 		}
+
 	}
 
-	# =========================================================================
-	# Internal ClassInfo: Interactive Input Handler
-	# Dispatched asynchronously on user input
-	# =========================================================================
 	Class of InputHandler is PlayerTurnHandler{
 
 		replace Array of Array of String is using: [
@@ -141,44 +115,15 @@ Class is Blackjack{
 				}
 			]);
 		}
+
 	}
 
-	# =========================================================================
-	# Helper Functions
-	# =========================================================================
 	Function of Int is drawCard(){
-		local Float is roll: random(min: 1.0, max: 11.0);
-		return floor(value: roll) as Int;
+		return self:deckUtil:drawCard();
 	}
 
-	## Computes the best blackjack value of a hand: aces count 11, downgraded
-	## to 1 as needed to stay at or under 21.
-	##
-	## @param hand: Card values (1 = ace, 2..10 = face value).
-	## @return: Best hand total.
 	Function of Int is handValue(Array of Int is hand){
-		local Int is total: hand:fold(
-			initial: 0,
-			accumulate: local Function of Int(Int is acc, Int is card){
-				return acc + if({ card == 1 }, { 11 }, { card });
-			}
-		);
-		local Int is aceCount: hand:count(
-			predicate: local Function of Boolean(Int is card){
-				return card == 1;
-			}
-		);
-
-		# Each ace can absorb 10 points of excess; compute how many must downgrade.
-		local Int is excess: total - 21;
-		local Int is downgrades: 0;
-		if({ excess > 0 }, {
-			downgrades: (excess + 9) / 10;
-			if({ downgrades > aceCount }, {
-				downgrades: aceCount;
-			});
-		});
-		return total - (downgrades * 10);
+		return self:deckUtil:handValue(hand: hand);
 	}
 
 	Function is promptPlayerAction(){
@@ -189,11 +134,9 @@ Class is Blackjack{
 
 	Function is startDealerTurn(){
 		line("\n--- Starting Dealer's Turn ---");
-
 		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: self);
 		local DealerTurnCompleteCallback is onComplete: DealerTurnCompleteCallback:init(game: self);
 		local LoopControl is control: LoopControl:init(onComplete: onComplete);
-
 		run(loop: dealerLoop, control: control);
 	}
 
@@ -212,24 +155,13 @@ Class is Blackjack{
 		]);
 	}
 
-	# =========================================================================
-	# Application Entry Point
-	# =========================================================================
 	replace Function is init(Map of String to String is args){
 		line('======================================');
 		line('         Welcome to SpecJack          ');
 		line("======================================\n");
 
-		# 1. Build the deck: four suits of each value 1..10.
-		local Int is value: 1;
-		while({ value <= 10 }, {
-			repeat(count: 4, worker: {
-				deck:add(item: value);
-			});
-			value: value + 1;
-		});
+		self:deck: self:deckUtil:createDeck();
 
-		# 2. Initial deal
 		playerHand:add(item: drawCard());
 		playerHand:add(item: drawCard());
 		dealerHand:add(item: drawCard());
@@ -238,13 +170,11 @@ Class is Blackjack{
 		line('Your hand: ' . playerHand[0] . ', ' . playerHand[1] . ' (Total: ' . handValue(hand: playerHand) . ')');
 		line('Dealer\'s up card: ' . dealerHand[0] . " [Hidden Card]\n");
 
-		# 3. Check natural 21
 		if({ handValue(hand: playerHand) == 21 }, {
 			line('Natural Blackjack! You win!');
 			return;
 		});
 
-		# 4. Start player turn
 		promptPlayerAction();
 	}
 

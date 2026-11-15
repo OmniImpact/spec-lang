@@ -1,0 +1,16 @@
+{
+  "name": "scope_as_demo",
+  "version": "0.1.0",
+  "source": "src/ScopeAsDemo.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/scope_as_demo",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

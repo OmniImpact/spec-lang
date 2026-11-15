@@ -27,3 +27,6 @@
 gmon.out
 .idea/
 /skills/
+jetbrains/.gradle/
+jetbrains/.intellijPlatform/
+jetbrains/build/

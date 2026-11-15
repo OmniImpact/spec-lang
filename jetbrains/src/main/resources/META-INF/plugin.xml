@@ -1,0 +1,42 @@
+<idea-plugin>
+    <id>org.speclang.jetbrains</id>
+    <name>Spec</name>
+    <vendor url="https://github.com/SpecLang/Spec">SpecLang</vendor>
+    <description><![CDATA[
+        Language support for the <b>Spec</b> programming language via LSP4IJ and native Spec tooling.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.redhat.devtools.lsp4ij</depends>
+    <depends optional="true" config-file="textmate.xml">org.jetbrains.plugins.textmate</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+            name="Spec"
+            implementationClass="org.speclang.jetbrains.SpecFileType"
+            fieldName="INSTANCE"
+            language="Spec"
+            extensions="spec"/>
+        <lang.commenter
+            language="Spec"
+            implementationClass="org.speclang.jetbrains.SpecCommenter"/>
+        <configurationType
+            implementation="org.speclang.jetbrains.run.SpecBuildConfigurationType"/>
+        <runConfigurationProducer
+            implementation="org.speclang.jetbrains.run.SpecBuildRunConfigurationProducer"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server
+            id="speclsp"
+            name="Spec Language Server"
+            factoryClass="org.speclang.jetbrains.lsp.SpecLspServerFactory"/>
+        <languageMapping
+            language="Spec"
+            serverId="speclsp"/>
+        <debugAdapterServer
+            id="spec-gdb-dap"
+            name="Spec Debugger (GDB DAP)"
+            factoryClass="org.speclang.jetbrains.debug.SpecDebugAdapterFactory"/>
+    </extensions>
+</idea-plugin>

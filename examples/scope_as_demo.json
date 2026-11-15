@@ -1,9 +1,0 @@
-{
-  "name": "scope_as_demo",
-  "version": "0.1.0",
-  "source": "scope_as_demo.spec",
-  "source_dirs": [
-    "."
-  ],
-  "output": "../bin/scope_as_demo"
-}

@@ -23,4 +23,19 @@ Class is Input{
 			handler:onInput(text);
 		});
 	}
+
+	## Reads one line from standard input and passes it to [onLine].
+	Function is readLine(Function is onLine){
+		base:sysinternal:Console:read_line(on_line: onLine);
+	}
+
+	## Reads up to [count] raw bytes from standard input.
+	Function of String is readBytes(Int is count){
+		return base:sysinternal:Console:read_bytes(count: count);
+	}
+
+	## Switches stdin and stdout to binary mode (required for framed protocols on Windows).
+	Function is setBinaryMode(){
+		base:sysinternal:Console:console_binary_mode();
+	}
 }

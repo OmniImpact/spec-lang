@@ -134,6 +134,7 @@ Class is SpecBuild{
 		Output:line('');
 		Output:line('Commands:');
 		Output:line('  build    Compile target binary (default)');
+		Output:line('  run      Compile target binary and execute it');
 		Output:line('  test     Execute project unit tests via runner');
 		Output:line('  lint     Run speclint over project source directories');
 		Output:line('  clean    Remove compiled output binary');
@@ -174,7 +175,7 @@ Class is SpecBuild{
 					command: pos1;
 				});
 			}, {
-				if({ pos0 == 'build' || pos0 == 'test' || pos0 == 'clean' || pos0 == 'lint' || pos0 == 'help' }, {
+				if({ pos0 == 'build' || pos0 == 'run' || pos0 == 'test' || pos0 == 'clean' || pos0 == 'lint' || pos0 == 'help' }, {
 					command: pos0;
 					if({ pos1 != '' && pos1:endsWith(suffix: '.json') && configPath == '' }, {
 						configPath: pos1;
@@ -280,8 +281,18 @@ Class is SpecBuild{
 		if({ command == 'test' }, {
 			local String is runnerName: Json:getString(obj: testsCfg, key: 'runner', default: 'specunit');
 			local String is runner: self:resolveRunner(custom: runnerName);
+			local String is testCompiler: self:resolveCompiler(custom: '');
 			local Array is testDirs: Json:getArray(obj: testsCfg, key: 'dirs');
-			local Array of String is testArgs: [];
+			local Array of String is testArgs: ['-s', testCompiler];
+			local Int is sdCount: sourceDirs:length();
+			while([Int is si: 0], { si < sdCount }, {
+				local String is sd: Json:getStringAt(arr: sourceDirs, index: si, default: '');
+				if({ sd != '' }, {
+					testArgs:add(item: '-S');
+					testArgs:add(item: self:resolvePath(baseDir: configDir, relPath: sd));
+				});
+				si++;
+			});
 			local Int is tdCount: testDirs:length();
 			if({ tdCount == 0 }, {
 				testArgs:add(item: '-t');
@@ -364,5 +375,10 @@ Class is SpecBuild{
 		});
 
 		Output:line('[specbuild] Build succeeded -> ' . output);
+		if({ command == 'run' }, {
+			Output:line('[specbuild] Running ' . output);
+			local Int is runCode: Process:execute(command: output, args: []);
+			Process:exit(status: runCode);
+		});
 	}
 }

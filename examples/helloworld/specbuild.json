@@ -1,0 +1,16 @@
+{
+  "name": "helloworld",
+  "version": "0.1.0",
+  "source": "src/HelloWorld.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/helloworld",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "mandelbrot",
+  "version": "0.1.0",
+  "source": "src/Mandelbrot.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/mandelbrot",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

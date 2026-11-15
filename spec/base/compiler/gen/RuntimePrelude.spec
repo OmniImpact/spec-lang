@@ -297,6 +297,8 @@ void spec_error_line(String s);
 void spec_print_line(String s);
 void spec_print(String s);
 void spec_read_line(SpecClosure* on_line);
+String spec_read_bytes(long long count);
+void spec_console_binary_mode(void);
 long long spec_tcp_connect(String host, long long port, long long timeout_ms);
 long long spec_tcp_listen(String host, long long port, long long backlog);
 long long spec_socket_accept(long long fd);
@@ -3937,6 +3939,28 @@ void spec_read_line(SpecClosure* on_line) {
         spec_release(text);
     }
     free(_line);
+#endif
+}
+
+String spec_read_bytes(long long count) {
+    if (count <= 0) return spec_string_from_bytes("", 0);
+    size_t want = (size_t)count;
+    char* buf = (char*)spec_xmalloc(want);
+    size_t got = 0;
+    while (got < want) {
+        size_t n = fread(buf + got, 1, want - got, stdin);
+        if (n == 0) break;
+        got += n;
+    }
+    String res = spec_string_from_bytes(buf, got);
+    free(buf);
+    return res;
+}
+
+void spec_console_binary_mode(void) {
+#if defined(_WIN32)
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
 #endif
 }
 

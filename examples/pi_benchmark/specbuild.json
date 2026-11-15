@@ -1,0 +1,16 @@
+{
+  "name": "pi_benchmark",
+  "version": "0.1.0",
+  "source": "src/PiBenchmark.spec",
+  "source_dirs": [
+    "src",
+    "../../spec"
+  ],
+  "output": "../../bin/pi_benchmark",
+  "tests": {
+    "runner": "specunit",
+    "dirs": [
+      "tests"
+    ]
+  }
+}

@@ -133,6 +133,8 @@ Class is SpecUnit{
 		});
 		local String is root: args:getString(key: 'root', default: '.');
 		local String is dirsRaw: args:getString(key: 't', default: args:getString(key: 'tests', default: 'tests'));
+		local String is srcDirsRaw: args:getString(key: 'S', default: args:getString(key: 'source-dirs', default: ''));
+		local String is srcDirFlags: self:buildSourceDirFlags(raw: srcDirsRaw);
 		local Int is cores: Process:threadCount();
 		local String is jArg: args:getString(key: 'j', default: args:getString(key: 'threads', default: ''));
 		local Int is threads: 0;
@@ -159,12 +161,12 @@ Class is SpecUnit{
 			while({ k < count && idx < total }, {
 				local WorkItem is item: SpecTestRegistry:queue:get(index: idx);
 				if(check: { item:kind == 'negative' }, then: {
-					failures: failures + self:runNegative(item: item, idx: idx, specBin: specBin, root: root);
+					failures: failures + self:runNegative(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
 				}, else: {
 					if(check: { item:kind == 'run-fail' }, then: {
-						failures: failures + self:runRunFail(item: item, idx: idx, specBin: specBin, root: root);
+						failures: failures + self:runRunFail(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
 					}, else: {
-						failures: failures + self:runSuite(item: item, idx: idx, specBin: specBin, root: root);
+						failures: failures + self:runSuite(item: item, idx: idx, specBin: specBin, root: root, srcDirFlags: srcDirFlags);
 					});
 				});
 				k: k + 1;
@@ -176,6 +178,27 @@ Class is SpecUnit{
 		self:report();
 	}
 
+	Function of String is buildSourceDirFlags(String is raw){
+		local String is out: '';
+		if(check: { raw == '' }, then: {
+			return out;
+		});
+		raw:split(delimiter: ','):each(action: local Function(String is seg){
+			local String is sd: seg:trim();
+			if(check: { sd != '' }, then: {
+				out: out . ' -s "' . sd . '"';
+			});
+		});
+		return out;
+	}
+
+	Function of String is resolveItemPath(String is root, String is relOrAbs){
+		if(check: { relOrAbs:startsWith(prefix: '/') || (relOrAbs:length() >= 2 && relOrAbs:substring(start: 1, end: 2) == ':') }, then: {
+			return relOrAbs;
+		});
+		return root . '/' . relOrAbs;
+	}
+
 	## Enqueues every candidate under each comma/newline-separated
 	## [dirsRaw] entry (relative to [root]), via a recursive walk.
 	Function is enqueueDirs(String is dirsRaw, String is root){
@@ -184,7 +207,7 @@ Class is SpecUnit{
 			seg:split(delimiter: ','):each(action: local Function(String is dirRaw){
 				local String is dir: if(check: { dirRaw:endsWith(suffix: "\r") }, then: { dirRaw:substring(start: 0, end: dirRaw:length() - 1); }, else: { dirRaw; });
 				if(check: { dir != '' }, then: {
-					self:enqueueTree(absDir: root . '/' . dir, relDir: dir . '/');
+					self:enqueueTree(absDir: self:resolveItemPath(root: root, relOrAbs: dir), relDir: dir . '/');
 				});
 			});
 		});
@@ -246,12 +269,12 @@ Class is SpecUnit{
 	## binary, records the verdict, and deletes the compiled test.
 	##
 	## @return: 1 when anything failed, 0 when green.
-	Function of Int is runSuite(WorkItem is item, Int is idx, String is specBin, String is root){
-		local String is src: root . '/' . item:path;
+	Function of Int is runSuite(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags){
+		local String is src: self:resolveItemPath(root: root, relOrAbs: item:path);
 		local String is exeSuffix: if(check: { Process:osName() == 'windows' }, then: { '.exe' }, else: { '.bin' });
 		local String is bin: self:workPath(suffix: exeSuffix, idx: idx, stem: self:fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1 -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
+		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
 		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
 		if(check: { cStatus != 0 }, then: {
 			local String is diag: fileRead(path: compileOut, default: '');
@@ -288,10 +311,10 @@ Class is SpecUnit{
 	##
 	## @return: 1 when the compile succeeds or an expect is missing, 0
 	##          when green.
-	Function of Int is runNegative(WorkItem is item, Int is idx, String is specBin, String is root){
-		local String is src: root . '/' . item:path;
+	Function of Int is runNegative(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags){
+		local String is src: self:resolveItemPath(root: root, relOrAbs: item:path);
 		local String is compileOut: self:workPath(suffix: '.compile', idx: idx, stem: self:fileStem(path: item:path));
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1 -i "' . src . '" -o "/dev/null" > "' . compileOut . '" 2>&1'];
+		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "/dev/null" > "' . compileOut . '" 2>&1'];
 		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
 		local String is cText: fileRead(path: compileOut, default: '');
 		local Boolean is passed: true;
@@ -320,12 +343,12 @@ Class is SpecUnit{
 	## unconstructible test class).
 	##
 	## @return: 1 when anything failed, 0 when green.
-	Function of Int is runRunFail(WorkItem is item, Int is idx, String is specBin, String is root){
-		local String is src: root . '/' . item:path;
+	Function of Int is runRunFail(WorkItem is item, Int is idx, String is specBin, String is root, String is srcDirFlags){
+		local String is src: self:resolveItemPath(root: root, relOrAbs: item:path);
 		local String is exeSuffix: if(check: { Process:osName() == 'windows' }, then: { '.exe' }, else: { '.bin' });
 		local String is bin: self:workPath(suffix: exeSuffix, idx: idx, stem: self:fileStem(path: item:path));
 		local String is compileOut: bin . '.compile';
-		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1 -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
+		local Array of String is cArgs: ['-c', 'cd "' . root . '" && "' . specBin . '" --quiet --threads 1' . srcDirFlags . ' -i "' . src . '" -o "' . bin . '" > "' . compileOut . '" 2>&1'];
 		local Int is cStatus: Process:execute(command: 'sh', args: cArgs);
 		local Boolean is passed: true;
 		local String is note: '';

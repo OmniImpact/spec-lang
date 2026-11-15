@@ -31,4 +31,14 @@ Class is Console{
 	##
 	## @param on_line: The closure receiving the line.
 	Function is read_line(Function is on_line);
+
+	## Reads up to [count] raw bytes from standard input. Bound to `spec_read_bytes`.
+	##
+	## @param count: Maximum number of bytes to read.
+	## @return: String containing the bytes read.
+	Function of String is read_bytes(Int is count);
+
+	## Switches stdin and stdout to binary mode on Windows (no-op on POSIX).
+	## Bound to `spec_console_binary_mode`.
+	Function is console_binary_mode();
 }
