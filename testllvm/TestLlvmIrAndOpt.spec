@@ -495,4 +495,66 @@ Class is LlvmP7{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testHeldMembersAndReflectionLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_p8_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_p8_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_p8_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: '''
+Class is Counter {
+	replace Array of Array of String is using: [
+		['base', 'struct', Array]
+	];
+	held Int is count: 10;
+	held Array of String is tags: [];
+	held Function of Int is bump(Int is delta){
+		return Counter:count + delta;
+	}
+}
+
+Class is LlvmP8{
+	replace Array of Array of String is using: [
+		['base', 'struct', Map],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Output()],
+		['base', 'sys', as Process()]
+	];
+	replace Function is init(Map of String to String is args){
+		local Int is b: Counter:bump(delta: 5);
+		Counter:tags:add(item: 'ok');
+		if({ b == 15 && Counter:count == 10 && Counter:tags:length() == 1 }, {
+			line('llvm-p8-ok');
+		}, {
+			Process:exit(status: 2);
+		});
+	}
+}
+''';
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: '@.meta.Counter = private constant'));
+		Assert:isTrue(ll:contains(needle: '@spec_class_registry = constant ['));
+		Assert:isTrue(ll:contains(needle: '@spec_held_registry = constant ['));
+		Assert:isTrue(ll:contains(needle: '@Counter_count__ensure('));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }

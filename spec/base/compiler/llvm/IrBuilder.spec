@@ -56,6 +56,9 @@ Class is IrBuilder{
 	Array of String is ownedSlots: [];
 	Array of CallLowerer is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
+	Map of String to String is heldFields: Map:init();
+	Map of String to String is heldFieldTypes: Map:init();
+	Map of String to Boolean is heldMethods: Map:init();
 
 	replace Function is init(){
 		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'CallLowerer');
@@ -136,7 +139,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && !seenFields:has(key: m:name) }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && !m:hasModifier(kw: Keyword:HELD) && !seenFields:has(key: m:name) }, {
 				seenFields:set(key: m:name, value: true);
 				local IrType is fty: self:irTypeFor(specType: m:memberType:name);
 				if({ fty == IrType:Void }, { fty: IrType:Ptr; });
@@ -160,7 +163,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:METHOD && m:name != 'init' && m:name != 'destroy' }, {
+			if({ m:kind == MemberKind:METHOD && m:name != 'init' && m:name != 'destroy' && !m:hasModifier(kw: Keyword:HELD) }, {
 				local String is fnName: 'null';
 				if({ m:body:length() > 0 }, {
 					fnName: sname . '_' . m:name;
@@ -208,6 +211,9 @@ Class is IrBuilder{
 			ci++;
 		});
 		self:clsMap: clsMap;
+		self:heldFields: Map:init();
+		self:heldFieldTypes: Map:init();
+		self:heldMethods: Map:init();
 
 		# 1. Register structs for user classes (deduplicated by name, with inherited fields)
 		local Map of String to Boolean is seenStructs: Map:init();
@@ -218,18 +224,31 @@ Class is IrBuilder{
 			if({ !seenStructs:has(key: sname) }, {
 				seenStructs:set(key: sname, value: true);
 				local IrStruct is st: IrStruct:init(name: sname);
+				st:qualifiedName: cls:qualifiedName();
+				if({ cls:sourceFile != '' }, {
+					local Array of String is srcSegs: cls:sourceFile:split(delimiter: '/');
+					if({ srcSegs:length() > 0 }, {
+						st:sourceFileBase: srcSegs:get(index: srcSegs:length() - 1, default: '');
+					});
+				});
+				local Int is bni: 0;
+				while({ bni < cls:baseClasses:length() }, {
+					st:baseNames:add(item: cls:baseClasses:get(index: bni, default: ''));
+					bni++;
+				});
 				# Header layout: _type_name (Ptr), _vtable (Ptr)
 				st:addField(name: '_type_name', ty: IrType:Ptr);
 				st:addField(name: '_vtable', ty: IrType:Ptr);
 				local Map of String to Boolean is seenFields: Map:init();
 				self:addInheritedFields(st: st, cls: cls, clsMap: clsMap, seenFields: seenFields);
 				self:buildVtable(st: st, cls: cls, clsMap: clsMap);
+				self:registerClassMetaAndHeld(st: st, cls: cls, sname: sname);
 				self:mod:addStruct(s: st);
 			});
 			ci++;
 		});
 
-		# 2. Lower methods for each class (deduplicated by mangled name)
+		# 2. Lower methods, construct helpers, and held field __ensure accessors
 		local Map of String to Boolean is seenFns: Map:init();
 		ci: 0;
 		while({ ci < allClasses:length() }, {
@@ -239,6 +258,13 @@ Class is IrBuilder{
 			local Int is mi: 0;
 			while({ mi < cls:members:length() }, {
 				local Member is m: cls:members:get(index: mi);
+				if({ m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, {
+					local String is ensureFn: sname . '_' . m:name . '__ensure';
+					if({ !seenFns:has(key: ensureFn) }, {
+						seenFns:set(key: ensureFn, value: true);
+						self:buildHeldEnsure(sname: sname, m: m);
+					});
+				});
 				if({ m:kind == MemberKind:METHOD }, {
 					local String is fnName: sname . '_' . m:name;
 					if({ !seenFns:has(key: fnName) }, {
@@ -247,6 +273,11 @@ Class is IrBuilder{
 					});
 				});
 				mi++;
+			});
+			local IrStruct is st2: self:mod:findStruct(name: sname);
+			if({ st2:constructFn != 'null' && !seenFns:has(key: st2:constructFn) }, {
+				seenFns:set(key: st2:constructFn, value: true);
+				self:buildConstructHelper(cls: cls, sname: sname, ctorFn: st2:constructFn);
 			});
 			ci++;
 		});
@@ -304,7 +335,7 @@ Class is IrBuilder{
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
 			local Member is m: cls:members:get(index: mi);
-			if({ m:kind == MemberKind:FIELD && m:name != 'using' && m:hasInit && !seen:has(key: m:name) }, {
+			if({ m:kind == MemberKind:FIELD && m:name != 'using' && !m:hasModifier(kw: Keyword:HELD) && m:hasInit && !seen:has(key: m:name) }, {
 				seen:set(key: m:name, value: true);
 				local Int is fidx: st:fieldIndex(name: m:name);
 				if({ fidx >= 0 }, {
@@ -319,14 +350,134 @@ Class is IrBuilder{
 		});
 	}
 
+	local Function is registerClassMetaAndHeld(IrStruct is st, ClassInfo is cls, String is sname){
+		local Boolean is hasInitMember: false;
+		local Boolean is hasZeroArgInit: false;
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD) }, {
+				local IrType is hty: self:irTypeFor(specType: m:memberType:name);
+				if({ hty == IrType:Void }, { hty: IrType:Ptr; });
+				local String is valGlob: '.held_val.' . sname . '.' . m:name;
+				local String is initGlob: '.held_init.' . sname . '.' . m:name;
+				self:mod:addGlobal(name: valGlob, ty: hty, initVal: 'zeroinitializer');
+				self:mod:addGlobal(name: initGlob, ty: IrType:I1, initVal: 'false');
+				self:heldFields:set(key: sname . ':' . m:name, value: sname);
+				self:heldFields:set(key: cls:name . ':' . m:name, value: sname);
+				self:heldFieldTypes:set(key: sname . ':' . m:name, value: m:memberType:name);
+				st:heldNames:add(item: m:name);
+				st:heldGetters:add(item: sname . '_' . m:name . '__ensure');
+			});
+			if({ m:kind == MemberKind:METHOD }, {
+				if({ m:hasModifier(kw: Keyword:HELD) }, {
+					self:heldMethods:set(key: sname . '_' . m:name, value: true);
+					st:heldNames:add(item: m:name);
+					st:heldGetters:add(item: 'null');
+				}, {
+					if({ m:name == 'init' }, {
+						hasInitMember: true;
+						if({ m:params:length() == 0 }, { hasZeroArgInit: true; });
+					});
+					local Int is flags: 0;
+					if({ m:memberType:name == 'Void' }, { flags: flags + 1; });
+					if({ m:params:length() == 0 }, { flags: flags + 2; });
+					if({ m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, { flags: flags + 4; });
+					st:metaMethodNames:add(item: m:name);
+					if({ m:body:length() > 0 }, {
+						st:metaMethodFns:add(item: sname . '_' . m:name);
+					}, {
+						st:metaMethodFns:add(item: 'null');
+					});
+					st:metaMethodFlags:add(item: flags);
+					st:metaMethodLines:add(item: m:line);
+				});
+			});
+			mi++;
+		});
+		if({ !hasInitMember || hasZeroArgInit }, {
+			st:constructFn: sname . '__spec_construct';
+		});
+	}
+
+	local Function is buildConstructHelper(ClassInfo is cls, String is sname, String is ctorFn){
+		local IrFunction is fn: IrFunction:init(name: ctorFn, retType: IrType:Ptr);
+		local IrBlock is entry: fn:addBlock(label: 'entry');
+		self:curFn: fn;
+		self:switchBlock(blk: entry);
+		self:tmpCounter: 0;
+		local String is obj: self:nextTmp();
+		self:emit(inst: IrInst:AllocObj(dst: obj, structName: sname, destroyFn: 'null'));
+		local Boolean is hasZeroInit: false;
+		local Int is mi: 0;
+		while({ mi < cls:members:length() }, {
+			local Member is m: cls:members:get(index: mi);
+			if({ m:kind == MemberKind:METHOD && m:name == 'init' && m:params:length() == 0 }, {
+				hasZeroInit: true;
+			});
+			mi++;
+		});
+		if({ hasZeroInit }, {
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: sname . '_init', argTypes: [IrType:Ptr], args: [obj]));
+		});
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: obj, ty: IrType:Ptr));
+		self:mod:addFunction(fn: fn);
+	}
+
+	local Function is buildHeldEnsure(String is sname, Member is m){
+		local IrType is hty: self:irTypeFor(specType: m:memberType:name);
+		if({ hty == IrType:Void }, { hty: IrType:Ptr; });
+		local String is fnName: sname . '_' . m:name . '__ensure';
+		local IrFunction is fn: IrFunction:init(name: fnName, retType: hty);
+		local IrBlock is entry: fn:addBlock(label: 'entry');
+		self:curFn: fn;
+		self:switchBlock(blk: entry);
+		self:tmpCounter: 0;
+		self:lblCounter: 0;
+		self:localSlots: Map:init();
+		self:localTypes: Map:init();
+		self:ownedSlots: [];
+
+		local String is valGlob: '@.held_val.' . sname . '.' . m:name;
+		local String is initGlob: '@.held_init.' . sname . '.' . m:name;
+		local String is isInit: self:nextTmp();
+		self:emit(inst: IrInst:Load(dst: isInit, slot: initGlob, ty: IrType:I1));
+
+		local String is initLbl: self:nextLabel(prefix: 'held_init');
+		local String is doneLbl: self:nextLabel(prefix: 'held_done');
+		self:terminate(inst: IrInst:CondBr(cond: isInit, thenLabel: doneLbl, elseLabel: initLbl));
+
+		local IrBlock is initBlk: fn:addBlock(label: initLbl);
+		self:switchBlock(blk: initBlk);
+		local String is trueTmp: self:nextTmp();
+		self:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
+		self:emit(inst: IrInst:Store(slot: initGlob, val: trueTmp, ty: IrType:I1));
+		if({ m:hasInit }, {
+			local String is iv: self:lowerExpr(expr: m:initExpr);
+			if({ iv == '' }, { iv: self:emitDefaultVal(ty: hty); });
+			self:emit(inst: IrInst:Store(slot: valGlob, val: iv, ty: hty));
+		});
+		self:terminate(inst: IrInst:Br(target: doneLbl));
+
+		local IrBlock is doneBlk: fn:addBlock(label: doneLbl);
+		self:switchBlock(blk: doneBlk);
+		local String is res: self:nextTmp();
+		self:emit(inst: IrInst:Load(dst: res, slot: valGlob, ty: hty));
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: res, ty: hty));
+		self:mod:addFunction(fn: fn);
+	}
+
 	local Function is buildMethod(ClassInfo is cls, Member is m){
 		local IrType is retTy: self:methodReturnType(mt: m:memberType);
 		local String is fnName: self:cStructName(qname: cls:qualifiedName()) . '_' . m:name;
+		local Boolean is isHeldMethod: m:hasModifier(kw: Keyword:HELD);
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
 		fn:sourceFile: cls:sourceFile;
 		fn:line: m:line;
 		self:currentLine: m:line;
-		fn:addParam(name: '%self', ty: IrType:Ptr);
+		if({ !isHeldMethod }, {
+			fn:addParam(name: '%self', ty: IrType:Ptr);
+		});
 		local Int is pi: 0;
 		while({ pi < m:params:length() }, {
 			local Parameter is p: m:params:get(index: pi);
@@ -343,11 +494,13 @@ Class is IrBuilder{
 		self:localTypes: Map:init();
 		self:ownedSlots: [];
 
-		# Bind 'self' and params into stack slots
-		self:localSlots:set(key: 'self', value: '%self_slot');
-		self:localTypes:set(key: 'self', value: IrType:Ptr);
-		self:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
-		self:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
+		if({ !isHeldMethod }, {
+			# Bind 'self' into stack slot
+			self:localSlots:set(key: 'self', value: '%self_slot');
+			self:localTypes:set(key: 'self', value: IrType:Ptr);
+			self:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
+			self:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
+		});
 
 		pi: 0;
 		while({ pi < m:params:length() }, {
@@ -463,6 +616,17 @@ Class is IrBuilder{
 								self:emit(inst: IrInst:Release(val: oldVal));
 							});
 							self:emit(inst: IrInst:Store(slot: slot, val: val, ty: ty));
+						}, {
+							local String is hk: self:currentClass . ':' . name;
+							if({ self:heldFields:has(key: hk) }, {
+								local String is owner: self:heldFields:get(key: hk, default: '');
+								local IrType is hty: self:irTypeFor(specType: self:heldFieldTypes:get(key: owner . ':' . name, default: ''));
+								if({ hty == IrType:Void }, { hty: IrType:Ptr; });
+								local String is trueTmp: self:nextTmp();
+								self:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
+								self:emit(inst: IrInst:Store(slot: '@.held_init.' . owner . '.' . name, val: trueTmp, ty: IrType:I1));
+								self:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . name, val: val, ty: hty));
+							});
 						});
 					},
 					Expression:FieldAccess: local Function(Expression is target, String is fieldName){
@@ -494,6 +658,18 @@ Class is IrBuilder{
 									local String is ptr: self:nextTmp();
 									self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
 									self:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
+								});
+							}, {
+								local String is seg1: segments:get(index: 1, default: '');
+								local String is hk: seg0 . ':' . seg1;
+								if({ segments:length() == 2 && self:heldFields:has(key: hk) }, {
+									local String is owner: self:heldFields:get(key: hk, default: '');
+									local IrType is hty: self:irTypeFor(specType: self:heldFieldTypes:get(key: owner . ':' . seg1, default: ''));
+									if({ hty == IrType:Void }, { hty: IrType:Ptr; });
+									local String is trueTmp: self:nextTmp();
+									self:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
+									self:emit(inst: IrInst:Store(slot: '@.held_init.' . owner . '.' . seg1, val: trueTmp, ty: IrType:I1));
+									self:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . seg1, val: val, ty: hty));
 								});
 							});
 						});
@@ -557,6 +733,15 @@ Class is IrBuilder{
 					local IrType is ty: self:localTypes:get(key: name, default: IrType:I64);
 					local String is dst: self:nextTmp();
 					self:emit(inst: IrInst:Load(dst: dst, slot: slot, ty: ty));
+					return dst;
+				});
+				local String is hk: self:currentClass . ':' . name;
+				if({ self:heldFields:has(key: hk) }, {
+					local String is owner: self:heldFields:get(key: hk, default: '');
+					local IrType is hty: self:irTypeFor(specType: self:heldFieldTypes:get(key: owner . ':' . name, default: ''));
+					if({ hty == IrType:Void }, { hty: IrType:Ptr; });
+					local String is dst: self:nextTmp();
+					self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: hty, callee: owner . '_' . name . '__ensure', argTypes: [], args: []));
 					return dst;
 				});
 				return '0';
@@ -635,6 +820,17 @@ Class is IrBuilder{
 							local String is dst: self:nextTmp();
 							self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
 							self:emit(inst: IrInst:Load(dst: dst, slot: ptr, ty: fty));
+							return dst;
+						});
+					}, {
+						local String is seg1: segments:get(index: 1, default: '');
+						local String is hk: seg0 . ':' . seg1;
+						if({ segments:length() == 2 && self:heldFields:has(key: hk) }, {
+							local String is owner: self:heldFields:get(key: hk, default: '');
+							local IrType is hty: self:irTypeFor(specType: self:heldFieldTypes:get(key: owner . ':' . seg1, default: ''));
+							if({ hty == IrType:Void }, { hty: IrType:Ptr; });
+							local String is dst: self:nextTmp();
+							self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: hty, callee: owner . '_' . seg1 . '__ensure', argTypes: [], args: []));
 							return dst;
 						});
 					});
@@ -1100,9 +1296,15 @@ Class is IrBuilder{
 				if({ tname != 'self' && self:localSlots:has(key: tname) && recvType != '' }, {
 					return recvType . '_' . nm;
 				});
+				if({ tname != 'self' && !self:localSlots:has(key: tname) }, {
+					return self:cStructName(qname: tname) . '_' . nm;
+				});
 				return self:currentClass . '_' . nm;
 			},
 			Expression:Path: local Function of String(Array of String is segs){
+				if({ segs:length() == 2 && self:heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: '')) }, {
+					if({ recvType != '' }, { return self:cStructName(qname: recvType) . '_' . nm; });
+				});
 				if({ segs:length() > 0 }, {
 					return segs:get(index: segs:length() - 1, default: '') . '_' . nm;
 				});
@@ -1112,7 +1314,7 @@ Class is IrBuilder{
 			if({ recvType != '' }, { return recvType . '_' . nm; });
 			return self:currentClass . '_' . nm;
 		});
-		# Receiver: self or local variable, else static class Path
+		# Receiver: self or local variable, else static class Path (or held field receiver)
 		local Boolean is hasRecv: match(on: call:target, when: [
 			Expression:Ident: local Function of Boolean(String is tname){
 				if({ tname == 'self' || self:localSlots:has(key: tname) }, {
@@ -1123,6 +1325,11 @@ Class is IrBuilder{
 				return false;
 			},
 			Expression:Path: local Function of Boolean(Array of String is segs){
+				if({ segs:length() == 2 && self:heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: '')) }, {
+					argTypes:add(item: IrType:Ptr);
+					argVals:add(item: self:lowerExpr(expr: call:target));
+					return true;
+				});
 				return false;
 			}
 		], default: {
@@ -1191,7 +1398,7 @@ Class is IrBuilder{
 			});
 		});
 
-		if({ !hasRecv }, {
+		if({ !hasRecv && !self:heldMethods:has(key: calleeName) }, {
 			argTypes:add(item: IrType:Ptr);
 			argVals:add(item: 'null');
 		});

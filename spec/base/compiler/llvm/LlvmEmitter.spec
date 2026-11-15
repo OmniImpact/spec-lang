@@ -98,15 +98,23 @@ declare ptr @spec_map_get(ptr, ptr, ptr)
 declare i1 @spec_map_has(ptr, ptr)
 declare i64 @spec_map_length(ptr)
 %struct.SpecClosure = type { ptr, ptr, ptr }
-@spec_class_registry = constant [1 x ptr] zeroinitializer
-@spec_held_registry = constant [1 x { ptr, ptr, i32, ptr }] zeroinitializer
-define i32 @spec_class_registry_count() {
-  ret i32 0
-}
 
 ''';
 
-		# Struct types
+		# Module globals (held fields, etc.)
+		local Int is gi: 0;
+		while({ gi < mod:globalNames:length() }, {
+			local String is gn: mod:globalNames:get(index: gi, default: '');
+			local IrType is gt: mod:globalTypes:get(index: gi);
+			local String is giv: mod:globalInits:get(index: gi, default: 'zeroinitializer');
+			out: out . '@' . gn . ' = internal global ' . self:llvmType(ty: gt) . ' ' . giv . "\n";
+			gi++;
+		});
+		if({ mod:globalNames:length() > 0 }, { out: out . "\n"; });
+
+		# Struct types, vtables, and reflection metadata
+		local Array of String is classMetaRefs: [];
+		local Array of String is heldEntryItems: [];
 		local Int is si: 0;
 		while({ si < mod:structs:length() }, {
 			local IrStruct is st: mod:structs:get(index: si);
@@ -118,9 +126,8 @@ define i32 @spec_class_registry_count() {
 				fi++;
 			});
 			out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
-			local Int is tnLen: st:name:length() + 1;
-			local String is tnEsc: self:escapeLlvmBytes(s: st:name);
-			out: out . '@.typename.' . st:name . ' = private unnamed_addr constant [' . (tnLen as String) . ' x i8] c"' . tnEsc . "\\00\"\n";
+			local String is qn: if({ st:qualifiedName != '' }, { st:qualifiedName }, { st:name });
+			out: out . self:emitCStrGlobal(sym: '@.typename.' . st:name, val: qn);
 			local Int is vtLen: st:vtableFns:length();
 			if({ vtLen > 0 }, {
 				local String is vtItems: '';
@@ -139,9 +146,100 @@ define i32 @spec_class_registry_count() {
 			}, {
 				out: out . '@.vtable.' . st:name . " = constant [1 x ptr] zeroinitializer\n";
 			});
+
+			# Reflection metadata for this struct
+			out: out . self:emitCStrGlobal(sym: '@.src.' . st:name, val: st:sourceFileBase);
+			local String is basesRef: 'null';
+			if({ st:baseNames:length() > 0 }, {
+				local String is bItems: '';
+				local Int is bi: 0;
+				while({ bi < st:baseNames:length() }, {
+					local String is bn: st:baseNames:get(index: bi, default: '');
+					local String is bSym: '@.bname.' . st:name . '.' . (bi as String);
+					out: out . self:emitCStrGlobal(sym: bSym, val: bn);
+					if({ bi > 0 }, { bItems: bItems . ', '; });
+					bItems: bItems . 'ptr ' . bSym;
+					bi++;
+				});
+				out: out . '@.bases.' . st:name . ' = private constant [' . (st:baseNames:length() as String) . ' x ptr] [' . bItems . "]\n";
+				basesRef: '@.bases.' . st:name;
+			});
+
+			local String is methodsRef: 'null';
+			if({ st:metaMethodNames:length() > 0 }, {
+				local String is mItems: '';
+				local Int is mi: 0;
+				while({ mi < st:metaMethodNames:length() }, {
+					local String is mn: st:metaMethodNames:get(index: mi, default: '');
+					local String is mSym: '@.mname.' . st:name . '.' . (mi as String);
+					out: out . self:emitCStrGlobal(sym: mSym, val: mn);
+					local String is mfn: st:metaMethodFns:get(index: mi, default: 'null');
+					local String is mfnRef: if({ mfn == 'null' }, { 'null' }, { '@' . mfn });
+					local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
+					local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
+					if({ mi > 0 }, { mItems: mItems . ', '; });
+					mItems: mItems . '{ ptr, ptr, i32, i32 } { ptr ' . mSym . ', ptr ' . mfnRef . ', i32 ' . (mfl as String) . ', i32 ' . (mln as String) . ' }';
+					mi++;
+				});
+				out: out . '@.methods.' . st:name . ' = private constant [' . (st:metaMethodNames:length() as String) . ' x { ptr, ptr, i32, i32 }] [' . mItems . "]\n";
+				methodsRef: '@.methods.' . st:name;
+			});
+
+			local String is ctorPtr: if({ st:constructFn == 'null' }, { 'null' }, { '@' . st:constructFn });
+			out: out . '@.meta.' . st:name . ' = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32 } { ptr @.typename.' . st:name . ', ptr @.src.' . st:name . ', ptr ' . basesRef . ', i32 ' . (st:baseNames:length() as String) . ', ptr ' . ctorPtr . ', ptr ' . methodsRef . ', i32 ' . (st:metaMethodNames:length() as String) . " }\n";
+			classMetaRefs:add(item: 'ptr @.meta.' . st:name);
+
+			if({ st:heldNames:length() > 0 }, {
+				local String is hnItems: '';
+				local String is hgItems: '';
+				local Int is hi: 0;
+				while({ hi < st:heldNames:length() }, {
+					local String is hn: st:heldNames:get(index: hi, default: '');
+					local String is hSym: '@.hname.' . st:name . '.' . (hi as String);
+					out: out . self:emitCStrGlobal(sym: hSym, val: hn);
+					local String is hg: st:heldGetters:get(index: hi, default: 'null');
+					local String is hgPtr: if({ hg == 'null' }, { 'null' }, { '@' . hg });
+					if({ hi > 0 }, {
+						hnItems: hnItems . ', ';
+						hgItems: hgItems . ', ';
+					});
+					hnItems: hnItems . 'ptr ' . hSym;
+					hgItems: hgItems . 'ptr ' . hgPtr;
+					hi++;
+				});
+				out: out . '@.held_names.' . st:name . ' = private constant [' . (st:heldNames:length() as String) . ' x ptr] [' . hnItems . "]\n";
+				out: out . '@.held_getters.' . st:name . ' = private constant [' . (st:heldGetters:length() as String) . ' x ptr] [' . hgItems . "]\n";
+				heldEntryItems:add(item: '{ ptr, ptr, i32, ptr } { ptr @.typename.' . st:name . ', ptr @.held_names.' . st:name . ', i32 ' . (st:heldNames:length() as String) . ', ptr @.held_getters.' . st:name . ' }');
+			});
 			si++;
 		});
 		if({ mod:structs:length() > 0 }, { out: out . "\n"; });
+
+		# Global class and held registries
+		local Int is cmCount: classMetaRefs:length();
+		if({ cmCount > 0 }, {
+			local String is cmList: '';
+			local Int is ci: 0;
+			while({ ci < cmCount }, {
+				if({ ci > 0 }, { cmList: cmList . ', '; });
+				cmList: cmList . classMetaRefs:get(index: ci, default: 'ptr null');
+				ci++;
+			});
+			out: out . '@spec_class_registry = constant [' . (cmCount as String) . ' x ptr] [' . cmList . "]\n";
+		}, {
+			out: out . "@spec_class_registry = constant [1 x ptr] zeroinitializer\n";
+		});
+		out: out . 'define i32 @spec_class_registry_count() {' . "\n  ret i32 " . (cmCount as String) . "\n}\n";
+
+		heldEntryItems:add(item: '{ ptr, ptr, i32, ptr } zeroinitializer');
+		local String is heList: '';
+		local Int is hei: 0;
+		while({ hei < heldEntryItems:length() }, {
+			if({ hei > 0 }, { heList: heList . ', '; });
+			heList: heList . heldEntryItems:get(index: hei, default: '');
+			hei++;
+		});
+		out: out . '@spec_held_registry = constant [' . (heldEntryItems:length() as String) . ' x { ptr, ptr, i32, ptr }] [' . heList . "]\n\n";
 
 		# String literal globals (null-terminated)
 		local Int is li: 0;
@@ -161,6 +259,12 @@ define i32 @spec_class_registry_count() {
 			fi++;
 		});
 		return out;
+	}
+
+	local Function of String is emitCStrGlobal(String is sym, String is val){
+		local Int is byteLen: val:length() + 1;
+		local String is esc: self:escapeLlvmBytes(s: val);
+		return sym . ' = private unnamed_addr constant [' . (byteLen as String) . ' x i8] c"' . esc . "\\00\"\n";
 	}
 
 	local Function of String is escapeLlvmBytes(String is s){

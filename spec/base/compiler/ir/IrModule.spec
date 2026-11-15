@@ -5,6 +5,7 @@ Class is IrModule{
 	namespace: ['base', 'compiler', 'ir'];
 
 	replace Array of Array of String is using: [
+		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrStruct],
 		['base', 'compiler', 'ir', IrFunction],
 		['base', 'struct', Array],
@@ -17,9 +18,18 @@ Class is IrModule{
 	Array of IrFunction is functions: [];
 	Array of String is stringLiterals: [];
 	Map of String to Int is stringIds: Map:init();
+	Array of String is globalNames: [];
+	Array of IrType is globalTypes: [];
+	Array of String is globalInits: [];
 	String is entryFunction: '';
 
 	replace Function is init(){
+	}
+
+	Function is addGlobal(String is name, IrType is ty, String is initVal){
+		self:globalNames:add(item: name);
+		self:globalTypes:add(item: ty);
+		self:globalInits:add(item: initVal);
 	}
 
 	Function of Int is internStringLiteral(String is value){

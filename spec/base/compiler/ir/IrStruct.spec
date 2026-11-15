@@ -12,10 +12,20 @@ Class is IrStruct{
 	];
 
 	String is name: '';
+	String is qualifiedName: '';
+	String is sourceFileBase: '';
 	Array of String is fieldNames: [];
 	Array of IrType is fieldTypes: [];
 	Array of String is vtableMethodNames: [];
 	Array of String is vtableFns: [];
+	Array of String is baseNames: [];
+	String is constructFn: 'null';
+	Array of String is metaMethodNames: [];
+	Array of String is metaMethodFns: [];
+	Array of Int is metaMethodFlags: [];
+	Array of Int is metaMethodLines: [];
+	Array of String is heldNames: [];
+	Array of String is heldGetters: [];
 
 	replace Function is init(){
 	}
