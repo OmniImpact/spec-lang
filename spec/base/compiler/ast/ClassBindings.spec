@@ -25,7 +25,6 @@ Class is ClassBindings{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'iterator'],
 		['base', 'sys', as Loops()]
@@ -76,14 +75,22 @@ Class is ClassBindings{
 			{
 				local Member is m: members:get(index: idx);
 				idx++;
-				if({ m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-					local Array of Expression is segs: m:initExpr:arrayItems;
-					if({ segs:length() > 0 }, {
-						local Expression is last: segs:get(index: segs:length() - 1);
-						if({ last:str == 'sysinternal' }, {
-							isFloor: true;
-						});
-					});
+				if({ m:name == 'namespace' && m:hasInit }, {
+					match(on: m:initExpr, when: [
+						Expression:ArrayLit: local Function(Array of Expression is segs){
+							if({ segs:length() > 0 }, {
+								local Expression is last: segs:get(index: segs:length() - 1);
+								local String is lastText: match(on: last, when: [
+									Expression:StringLit: local Function of String(String is value){ return value; },
+									Expression:Ident: local Function of String(String is name){ return name; },
+									else: { '' }
+								]);
+								if({ lastText == 'sysinternal' }, {
+									isFloor: true;
+								});
+							});
+						}
+					]);
 				});
 			}
 		);

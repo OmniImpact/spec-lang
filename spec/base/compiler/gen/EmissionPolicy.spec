@@ -20,7 +20,6 @@ Class is EmissionPolicy{
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', ClassBindings],
 		['base', 'compiler', 'ast', MetadataField],
-		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'iterator']
 	];
 

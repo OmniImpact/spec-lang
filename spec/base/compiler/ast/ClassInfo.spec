@@ -7,7 +7,7 @@ Class is ClassInfo{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Member],
 		['base', 'sys', as Buf()],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', Expression],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];
@@ -68,16 +68,26 @@ Class is ClassInfo{
 	Function of Boolean is instanceImportsAs(String is name){
 		local Boolean is found: false;
 		self:members:each(action: local Function(Member is m){
-			if({ !found && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					if({ item:kind == ExpressionKind:ARRAY }, {
-						item:arrayItems:each(action: local Function(Expression is seg){
-							if({ seg:kind == ExpressionKind:USING_AS && seg:str == name }, {
-								found: true;
-							});
+			if({ !found && m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function(Array of Expression is items){
+						items:each(action: local Function(Expression is item){
+							match(on: item, when: [
+								Expression:ArrayLit: local Function(Array of Expression is subItems){
+									subItems:each(action: local Function(Expression is seg){
+										match(on: seg, when: [
+											Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+												if({ className == name }, {
+													found: true;
+												});
+											}
+										]);
+									});
+								}
+							]);
 						});
-					});
-				});
+					}
+				]);
 			});
 		});
 		return found;
@@ -95,14 +105,23 @@ Class is ClassInfo{
 			{
 				local Member is m: self:members:get(index: idx);
 				idx++;
-				if({ m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
-						if({ joined == '' }, {
-							joined: seg:str;
-						}, {
-							joined: joined . ':' . seg:str;
-						});
-					});
+				if({ m:name == 'namespace' && m:hasInit }, {
+					match(on: m:initExpr, when: [
+						Expression:ArrayLit: local Function(Array of Expression is items){
+							items:each(action: local Function(Expression is seg){
+								local String is segText: match(on: seg, when: [
+									Expression:StringLit: local Function of String(String is value){ return value; },
+									Expression:Ident: local Function of String(String is name){ return name; },
+									else: { '' }
+								]);
+								if({ joined == '' }, {
+									joined: segText;
+								}, {
+									joined: joined . ':' . segText;
+								});
+							});
+						}
+					]);
 				});
 			}
 		);
@@ -125,10 +144,19 @@ Class is ClassInfo{
 			{
 				local Member is m: self:members:get(index: idx);
 				idx++;
-				if({ m:name == 'namespace' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-					m:initExpr:arrayItems:each(action: local Function(Expression is seg){
-						segs:add(item: seg:str);
-					});
+				if({ m:name == 'namespace' && m:hasInit }, {
+					match(on: m:initExpr, when: [
+						Expression:ArrayLit: local Function(Array of Expression is items){
+							items:each(action: local Function(Expression is seg){
+								local String is segText: match(on: seg, when: [
+									Expression:StringLit: local Function of String(String is value){ return value; },
+									Expression:Ident: local Function of String(String is name){ return name; },
+									else: { '' }
+								]);
+								segs:add(item: segText);
+							});
+						}
+					]);
 				});
 			}
 		);

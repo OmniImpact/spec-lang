@@ -8,7 +8,6 @@ Class of SpecUnitTest is TestSpecAst{
 		['specunit', SpecUnitTest],
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
-		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Type],
@@ -23,26 +22,32 @@ Class of SpecUnitTest is TestSpecAst{
 
 	# Records build and cross-reference: a binary expression over idents.
 	Function is testExpressionRecordsCrossReference(){
-		local Expression is lhs: Expression:init(kind: ExpressionKind:IDENT);
-		lhs:makeIdent(name: 'a');
-		local Expression is rhs: Expression:init(kind: ExpressionKind:IDENT);
-		rhs:makeIdent(name: 'b');
-		local Expression is bin: Expression:init(kind: ExpressionKind:BINARY);
-		bin:str: '+';
-		bin:leftExpr: lhs;
-		bin:rightExpr: rhs;
-		Assert:isTrue(bin:kind == ExpressionKind:BINARY);
-		Assert:areEqualString('a', bin:leftExpr:str);
-		Assert:areEqualString('b', bin:rightExpr:str);
+		local Expression is lhs: Expression:Ident(name: 'a');
+		local Expression is rhs: Expression:Ident(name: 'b');
+		local Expression is bin: Expression:Binary(op: '+', leftExpr: lhs, rightExpr: rhs);
+		local Boolean is ok: false;
+		Conditional:match(on: bin, when: [
+			Expression:Binary: local Function(String is op, Expression is l, Expression is r){
+				Assert:areEqualString('+', op);
+				Conditional:match(on: l, when: [
+					Expression:Ident: local Function(String is lname){ Assert:areEqualString('a', lname); }
+				]);
+				Conditional:match(on: r, when: [
+					Expression:Ident: local Function(String is rname){ Assert:areEqualString('b', rname); }
+				]);
+				ok: true;
+			}
+		]);
+		Assert:isTrue(ok);
 	}
 
 	# Enum dispatch on the kind (the style contract's string-tag removal).
 	Function is testMatchDispatchOnKind(){
-		local Expression is bin: Expression:init(kind: ExpressionKind:BINARY);
+		local Expression is bin: Expression:Binary(op: '+', leftExpr: Expression:Ident(name: 'a'), rightExpr: Expression:Ident(name: 'b'));
 		local String is tag: '';
-		Conditional:match(on: bin:kind, when: [
-			ExpressionKind:BINARY: { tag: 'binary'; },
-			ExpressionKind:CALL: { tag: 'call'; },
+		Conditional:match(on: bin, when: [
+			Expression:Binary: local Function(String is op, Expression is l, Expression is r){ tag: 'binary'; },
+			Expression:Call: { tag: 'call'; },
 			else: { tag: 'other'; }
 		]);
 		Assert:areEqualString('binary', tag);
@@ -80,7 +85,7 @@ Class of SpecUnitTest is TestSpecAst{
 
 	# Statements carry their variant's payload fields.
 	Function is testStatementFields(){
-		local Expression is bin: Expression:init(kind: ExpressionKind:BINARY);
+		local Expression is bin: Expression:Binary(op: '+', leftExpr: Expression:Ident(name: 'a'), rightExpr: Expression:Ident(name: 'b'));
 		local Statement is st: Statement:Return(returnExpr: bin, hasReturnExpr: true);
 		st:setLine(line: 9);
 		Assert:areEqualInt(9, st:line);
@@ -89,7 +94,7 @@ Class of SpecUnitTest is TestSpecAst{
 		match(on: st, when: [
 			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
 				Assert:isTrue(hasReturnExpr);
-				Assert:isTrue(returnExpr:kind == ExpressionKind:BINARY);
+				Assert:areEqualString('Binary', returnExpr:name());
 				matched: true;
 			}
 		]);

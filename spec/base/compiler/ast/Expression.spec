@@ -1,28 +1,40 @@
 #! Package base:compiler:ast
-#! One expression node.
+#! One expression node, modeled as a sum type.
 ##
-## Spec has no sum types, so a node carries the fields of every kind; the
-## fields below are grouped by [ExpressionKind] and only the group for the
-## node's kind is meaningful. The kind enum drives exhaustive `when`
-## dispatch in every pass.
-##
-## AST nodes are transparent data records: fields are public because the
-## compiler passes read and write them directly.
+## Expressions are represented as an enhanced enum (sum type): each variant
+## carries only the payload fields relevant to its variant type, while shared
+## product members (source line and resolved type) are defined once on the
+## base enum.
 
-Class is Expression{
-	namespace: ['base', 'compiler', 'ast'];
+Enum is Expression {
+	namespace: ['base', 'compiler', 'ast'],
 
-	replace Array of Array of String is using: [
+	using: [
 		['base', 'compiler', 'ast', Type],
-		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'sys', as Conditional()]
-	];
+	],
 
-	## Node category for enum dispatch.
-	ExpressionKind is kind: ExpressionKind:IDENT;
+	StringLit(String is value),
+	NumberLit(Int is value, String is text),
+	FloatLit(String is text),
+	BoolLit(Boolean is value),
+	Ident(String is name),
+	Path(Array of String is segments),
+	ArrayLit(Array of Expression is items),
+	MapLit(Array of Expression is keys, Array of Expression is values),
+	Cast(Expression is inner, String is target, Array of Expression is args),
+	FieldAccess(Expression is target, String is fieldName),
+	Index(Expression is target, Expression is index),
+	Call(CallData is call),
+	Binary(String is op, Expression is left, Expression is right),
+	Unary(String is op, Expression is operand),
+	AnonFn(Type is returnType, Array of Parameter is params, Array of Statement is body),
+	UsingAs(String is className, Array of NamedArg is args),
+	Unknown,
 
 	## One-based source line where the expression starts.
 	Int is line: 0;
@@ -30,145 +42,14 @@ Class is Expression{
 	## Type resolved by the checker (its canonical name).
 	String is resolvedType: '';
 
-	## All literal kinds: the literal's text (numbers keep their scanned,
-	## normalized text; strings carry processed content).
-	# Part V (Path C): the kind-disjoint field groups fuse —
-	# a node is exactly one kind, so the value-string fields share one
-	# slot (IDENT/STRING/PATH text, the CAST target, the BINARY/UNARY
-	# operator) and the scalar fields share another. The CALL's
-	# methodName/bareProvider stay separate (they co-populate on bare
-	# calls).
-	String is str: '';
-
-	## NUMBER: the integer value.
-	Int is num: 0;
-
-	## FLOAT: the floating-point value.
-	Float is floatValue: 0.0;
-
-	## BOOL: the boolean value.
-
-	## PATH: the colon-delimited segments.
-	Array of String is pathSegments;
-
-	## ARRAY: the element expressions.
-	Array of Expression is arrayItems;
-
-	## MAP: the key and value expressions (parallel arrays).
-	Array of Expression is mapKeys;
-	Array of Expression is mapValues;
-
-	## CAST: the cast operand, target type name, and optional width args
-	## (e.g. the digit width of Hex(8)).
-	Expression is leftExpr;
-	Array of Expression is castArgs;
-
-	## CALL: the receiver, method name, and arguments.
-	Expression is methodTarget;
-	String is methodName: '';
-	Array of NamedArg is methodArgs;
-
-	## CALL: for a bare (self-receiver) call resolved against the bare
-	## scope, the as-imported class providing the member (§2.3); '' when
-	## the call is an ordinary own-member dispatch.
-	String is bareProvider: '';
-
-	## CALL: the scoped-region desugarer appended the remainder as the
-	## last argument (§as). The remainder never participates
-	## in overload selection — it binds to the selected overload's
-	## declared-but-unbound last Function parameter.
-	Boolean is scopedRemainder: false;
-
-	## CALL: the checker-selected overload's position within the owning
-	## class's same-name member group (§I.2); -1 when
-	## unstamped (single-member names resolve as index 0).
-
-	## BINARY: the operator and the right operand (the left operand shares
-	## leftExpr with CAST).
-	Expression is rightExpr;
-
-	## UNARY: the operator and inner operand.
-	Expression is unaryExpr;
-
-	## IF_ELSE: condition and branches.
-
-
-	## ANON_FN: return type, parameters, and body.
-	Type is anonReturnType;
-	Array of Parameter is anonParams;
-	Array of Statement is anonBody;
-
-	## Initializes an expression node with its kind.
+	## Sets the one-based source line.
 	##
-	## @param kind: Node category.
-	replace Function is init(ExpressionKind is kind){
-		self:kind: kind;
-		match(on: kind, when: [
-			ExpressionKind:CALL: {
-				self:methodArgs: [];
-			},
-			ExpressionKind:ARRAY: {
-				self:arrayItems: [];
-			},
-			ExpressionKind:MAP: {
-				self:mapKeys: [];
-				self:mapValues: [];
-			},
-			ExpressionKind:PATH: {
-				self:pathSegments: [];
-			},
-			ExpressionKind:CAST: {
-				self:castArgs: [];
-			},
-			ExpressionKind:ANON_FN: {
-				self:anonParams: [];
-				self:anonBody: [];
-			}
-		]);
+	## @param line: Source line number.
+	Function of Expression is setLine(Int is line){
+		self:line: line;
+		return self;
 	}
 
-	## Configures this node as an identifier reference.
-	##
-	## @param name: Identifier name.
-	Function is makeIdent(String is name){
-		self:kind: ExpressionKind:IDENT;
-		self:str: name;
-	}
-
-	## Configures this node as a colon-delimited path.
-	##
-	## @param segments: Path segment identifiers.
-	Function is makePath(Array of String is segments){
-		self:kind: ExpressionKind:PATH;
-		self:pathSegments: segments;
-	}
-
-	## Configures this node as a map literal.
-	##
-	## @param keys: Key expressions.
-	## @param values: Value expressions (parallel to [keys]).
-	Function is makeMap(Array of Expression is keys, Array of Expression is values){
-		self:kind: ExpressionKind:MAP;
-		self:mapKeys: keys;
-		self:mapValues: values;
-	}
-
-	## Configures this node as a type cast (value as Target).
-	##
-	## @param inner: The cast operand.
-	## @param target: Target type name.
-	## @param args: Optional arguments (e.g. digit width for Hex(8)).
-	Function is makeCast(Expression is inner, String is target, Array of Expression is args){
-		self:kind: ExpressionKind:CAST;
-		self:leftExpr: inner;
-		self:str: target;
-		self:castArgs: args;
-	}
-
-	## Configures this node as a `when` matching expression.
-	##
-	## @param subject: Subject being matched.
-	## @param arms: The branches.
 	## Sets the checker-resolved type name.
 	##
 	## @param t: Resolved type name.
@@ -177,13 +58,17 @@ Class is Expression{
 	}
 
 	## Returns the value expression of the call argument at [index].
-	## Typed accessor: avoids the Array.get->Any limitation.
 	##
 	## @param index: The argument index.
 	## @return: The argument's value expression.
 	Function of Expression is argValue(Int is index){
-		local NamedArg is arg: self:methodArgs:get(index: index);
-		return arg:value;
+		return match(on: self, when: [
+			Expression:Call: local Function of Expression(CallData is call){
+				local NamedArg is arg: call:args:get(index: index);
+				return arg:value;
+			},
+			else: { Expression:Unknown }
+		]);
 	}
 
 	## Returns the name of the call argument at [index].
@@ -191,14 +76,24 @@ Class is Expression{
 	## @param index: The argument index.
 	## @return: The argument's name (empty for positional).
 	Function of String is argName(Int is index){
-		local NamedArg is arg: self:methodArgs:get(index: index);
-		return arg:name;
+		return match(on: self, when: [
+			Expression:Call: local Function of String(CallData is call){
+				local NamedArg is arg: call:args:get(index: index);
+				return arg:name;
+			},
+			else: { '' }
+		]);
 	}
 
 	## Returns the number of call arguments.
 	##
 	## @return: The argument count.
 	Function of Int is argCount(){
-		return self:methodArgs:length();
+		return match(on: self, when: [
+			Expression:Call: local Function of Int(CallData is call){
+				return call:args:length();
+			},
+			else: { 0 }
+		]);
 	}
 }

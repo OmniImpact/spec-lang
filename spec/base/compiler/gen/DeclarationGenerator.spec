@@ -17,7 +17,6 @@ Class is DeclarationGenerator{
 		['base', 'compiler', 'ast', ClassBindings],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', MemberKind],

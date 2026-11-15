@@ -9,7 +9,6 @@ Class of SpecUnitTest is TestSpecParser{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'compiler', 'parser', Parser],
-		['base', 'compiler', 'ast', ExpressionKind],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'lexer', Lexer],
@@ -47,7 +46,7 @@ Class of SpecUnitTest is TestSpecParser{
 		local ClassInfo is cls: prog:classes:get(index: 0);
 		local Member is go: cls:members:get(index: 0);
 		local Statement is vd: go:body:get(index: 0);
-		local Expression is init: Expression:init(kind: ExpressionKind:UNKNOWN);
+		local Expression is init: Expression:Unknown;
 		match(on: vd, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				init: initExpr;
@@ -55,9 +54,19 @@ Class of SpecUnitTest is TestSpecParser{
 		]);
 		Assert:isFalse(p:hasErrors());
 		Assert:areEqualString('VarDecl', vd:name());
-		Assert:isTrue(init:kind == ExpressionKind:BINARY);
-		Assert:areEqualString('+', init:str);
-		Assert:areEqualString('*', init:rightExpr:str);
+		local Boolean is initOk: false;
+		match(on: init, when: [
+			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
+				Assert:areEqualString('+', op);
+				match(on: rightExpr, when: [
+					Expression:Binary: local Function(String is rop, Expression is rl, Expression is rr){
+						Assert:areEqualString('*', rop);
+						initOk: true;
+					}
+				], default: {});
+			}
+		], default: {});
+		Assert:isTrue(initOk);
 	}
 
 	Function is testTemplateDesugarsToConcatChain(){
@@ -67,16 +76,29 @@ Class of SpecUnitTest is TestSpecParser{
 		local ClassInfo is cls2: prog2:classes:get(index: 0);
 		local Member is m2: cls2:members:get(index: 0);
 		local Statement is vd2: m2:body:get(index: 0);
-		local Expression is s2: Expression:init(kind: ExpressionKind:UNKNOWN);
+		local Expression is s2: Expression:Unknown;
 		match(on: vd2, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				s2: initExpr;
 			}
 		]);
 		Assert:isFalse(p2:hasErrors());
-		Assert:isTrue(s2:kind == ExpressionKind:BINARY);
-		Assert:areEqualString('.', s2:str);
-		Assert:isTrue(s2:leftExpr:rightExpr:kind == ExpressionKind:BINARY);
+		local Boolean is s2Ok: false;
+		match(on: s2, when: [
+			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
+				Assert:areEqualString('.', op);
+				match(on: leftExpr, when: [
+					Expression:Binary: local Function(String is lop, Expression is ll, Expression is lr){
+						match(on: lr, when: [
+							Expression:Binary: local Function(String is lrop, Expression is lrl, Expression is lrr){
+								s2Ok: true;
+							}
+						], default: {});
+					}
+				], default: {});
+			}
+		], default: {});
+		Assert:isTrue(s2Ok);
 	}
 
 	Function is testEnumAndGenericClassParseClean(){

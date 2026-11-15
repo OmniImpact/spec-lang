@@ -17,7 +17,7 @@ Class is TypeChecker{
 	replace Array of Array of String is using: [
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
@@ -125,7 +125,7 @@ Class is TypeChecker{
 
 	## the anon-fn node whose body is being checked
 	## (the Kotlin write-back target for void-declared closures).
-	local Expression is currentAnonNode: Expression:init(kind: ExpressionKind:UNKNOWN);
+	local Expression is currentAnonNode: Expression:Unknown;
 
 	## inside a value-yielding branch's then/otherwise
 	## closure (the call site expects a value).
@@ -851,54 +851,73 @@ Class is TypeChecker{
 		local Boolean is anyVoid: false;
 		local String is resT: '';
 		local Boolean is bad: false;
-		local Int is keyTotal: arms:mapKeys:length();
+		local Array of Expression is armKeys: [];
+		local Array of Expression is armVals: [];
+		match(on: arms, when: [
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				armKeys: keys;
+				armVals: values;
+			}
+		]);
+		local Int is keyTotal: armKeys:length();
 		local Int is ki: 0;
 		repeat(count: keyTotal, worker: {
-			local Expression is key: arms:mapKeys:get(index: ki);
-				local Expression is val: arms:mapValues:get(index: ki);
+			local Expression is key: armKeys:get(index: ki);
+				local Expression is val: armVals:get(index: ki);
 				ki: ki + 1;
+				local Boolean is keyIsElse: match(on: key, when: [
+					Expression:Ident: local Function of Boolean(String is name){ return name == 'else'; },
+					else: { false }
+				]);
 				# The else arm closes the table: arms after it are dead.
-				if({ hasElse && !(key:kind == ExpressionKind:IDENT && key:str == 'else') }, {
+				if({ hasElse && !keyIsElse }, {
 					self:addError(line: self:currentLine, msg: 'Match arms after else are unreachable; move else last.');
 					bad: true;
 				});
-				if({ key:kind == ExpressionKind:IDENT && key:str == 'else' }, {
+				if({ keyIsElse }, {
 					if({ hasElse }, {
 						self:addError(line: self:currentLine, msg: 'Duplicate else arm in the match table.');
 					});
 					hasElse: true;
 				}, {
-					local Array of Expression is keyTargets: [];
-					if({ key:kind == ExpressionKind:ARRAY }, {
-						keyTargets: key:arrayItems;
-					}, {
-						keyTargets: [key];
-					});
+					local Array of Expression is keyTargets: match(on: key, when: [
+						Expression:ArrayLit: local Function of Array of Expression(Array of Expression is items){ return items; },
+						else: { [key] }
+					]);
 					keyTargets:each(action: local Function(Expression is one){
 						# String-literal keys match String subjects by value.
-						if({ one:kind == ExpressionKind:STRING }, {
-							if({ subjT != Primitive:STRING:value() }, {
-								self:addError(line: self:currentLine, msg: 'String-literal match keys match String subjects; \'' . subjT . '\' is not one.');
-								bad: true;
-							}, {
-								local String is target: 'str:' . one:str;
-								if({ covered:indexOf(search: target, default: -1) >= 0 }, {
-									self:addError(line: self:currentLine, msg: 'Duplicate match key \'' . one:str . '\'.');
+						local Boolean is handledStr: match(on: one, when: [
+							Expression:StringLit: local Function of Boolean(String is value){
+								if({ subjT != Primitive:STRING:value() }, {
+									self:addError(line: self:currentLine, msg: 'String-literal match keys match String subjects; \'' . subjT . '\' is not one.');
 									bad: true;
 								}, {
-									covered:add(item: target);
+									local String is target: 'str:' . value;
+									if({ covered:indexOf(search: target, default: -1) >= 0 }, {
+										self:addError(line: self:currentLine, msg: 'Duplicate match key \'' . value . '\'.');
+										bad: true;
+									}, {
+										covered:add(item: target);
+									});
 								});
-							});
+								return true;
+							},
+							else: { false }
+						]);
+						if({ handledStr }, {
 							return;
 						});
-						local String is keyName: '';
-						if({ one:kind == ExpressionKind:IDENT }, {
-							keyName: one:str;
-						}, {
-							if({ one:kind == ExpressionKind:PATH && one:pathSegments:length() > 0 }, {
-								keyName: one:pathSegments:get(index: one:pathSegments:length() - 1);
-							});
-						});
+						local String is keyName: match(on: one, when: [
+							Expression:Ident: local Function of String(String is name){ return name; },
+							Expression:Path: local Function of String(Array of String is segments){
+								return if({ segments:length() > 0 }, {
+									segments:get(index: segments:length() - 1)
+								}, {
+									''
+								});
+							},
+							else: { '' }
+						]);
 						if({ keyName == '' }, {
 							self:addError(line: self:currentLine, msg: 'Match keys must be held-member references.');
 							bad: true;
@@ -915,7 +934,11 @@ Class is TypeChecker{
 								local ClassInfo is enumCls: self:findClass(name: subjT);
 								local Boolean is variantFound: false;
 								enumCls:members:each(action: local Function(Member is m){
-									if({ !variantFound && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, {
+									local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
+										Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+										else: { false }
+									]);
+									if({ !variantFound && m:name == keyName && !initIsArr }, {
 										variantFound: true;
 									});
 								});
@@ -950,37 +973,45 @@ Class is TypeChecker{
 										# an arm closure's parameters bind the tagged
 										# variant's constructor payloads — type them
 										# from the variant's declared parameters.
-										if({ val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 }, {
-											# The variant's parameter surface: the legacy
-											# member (today's enums) or the desugared
-											# nested subclass's init.
-											local Member is pvMem: Member:init(kind: MemberKind:FIELD);
-											if({ self:allEnumNames:has(key: owner) }, {
-												local ClassInfo is pvCls: self:findClass(name: owner);
-												pvCls:members:each(action: local Function(Member is m){
-													if({ pvMem:name == '' && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, {
-														pvMem: m;
-													});
-												});
-											}, {
-												local ClassInfo is subCls: self:findClass(name: owner . ':' . keyName);
-												if({ subCls:name != '' }, {
-													subCls:members:each(action: local Function(Member is m){
-														if({ pvMem:name == '' && m:kind == MemberKind:METHOD && m:name == 'init' }, {
-															pvMem: m;
+										match(on: val, when: [
+											Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+												if({ params:length() > 0 }, {
+													# The variant's parameter surface: the legacy
+													# member (today's enums) or the desugared
+													# nested subclass's init.
+													local Member is pvMem: Member:init(kind: MemberKind:FIELD);
+													if({ self:allEnumNames:has(key: owner) }, {
+														local ClassInfo is pvCls: self:findClass(name: owner);
+														pvCls:members:each(action: local Function(Member is m){
+															local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
+																Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+																else: { false }
+															]);
+															if({ pvMem:name == '' && m:name == keyName && !initIsArr }, {
+																pvMem: m;
+															});
+														});
+													}, {
+														local ClassInfo is subCls: self:findClass(name: owner . ':' . keyName);
+														if({ subCls:name != '' }, {
+															subCls:members:each(action: local Function(Member is m){
+																if({ pvMem:name == '' && m:kind == MemberKind:METHOD && m:name == 'init' }, {
+																	pvMem: m;
+																});
+															});
 														});
 													});
+													local Int is pbi: 0;
+													params:each(action: local Function(Parameter is bp){
+														if({ pbi < pvMem:params:length() }, {
+															local Parameter is vp: pvMem:params:get(index: pbi);
+															bp:paramType: vp:paramType;
+														});
+														pbi: pbi + 1;
+													});
 												});
-											});
-											local Int is pbi: 0;
-											val:anonParams:each(action: local Function(Parameter is bp){
-												if({ pbi < pvMem:params:length() }, {
-													local Parameter is vp: pvMem:params:get(index: pbi);
-													bp:paramType: vp:paramType;
-												});
-												pbi: pbi + 1;
-											});
-										});
+											}
+										]);
 									}, {
 										self:checkMemberVisibility(ownerClass: owner, member: self:findHeldMember(className: subjT, memberName: keyName), memberName: keyName);
 									});
@@ -989,7 +1020,11 @@ Class is TypeChecker{
 						});
 					});
 				});
-				if({ val:kind != ExpressionKind:ANON_FN }, {
+				local Boolean is valIsAnon: match(on: val, when: [
+					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+					else: { false }
+				]);
+				if({ !valIsAnon }, {
 					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
 					bad: true;
 				}, {
@@ -1042,8 +1077,12 @@ Class is TypeChecker{
 				# Class-model: the held fields are the closed set.
 				# Today's enum: the variants are (the namespace array is
 				# metadata, not a variant — the registry's own convention).
+				local Boolean is initIsArr: m:hasInit && match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+					else: { false }
+				]);
 				local Boolean is variantMember: if({ todayEnum }, {
-					!(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY)
+					!initIsArr
 				}, {
 					m:kind == MemberKind:FIELD && m:hasModifier(kw: Keyword:HELD)
 				});
@@ -1089,45 +1128,69 @@ Class is TypeChecker{
 		local Boolean is anyVoid: false;
 		local String is resT: '';
 		local Boolean is bad: false;
-		local Int is keyTotal: arms:mapKeys:length();
+		local Array of Expression is armKeys: [];
+		local Array of Expression is armVals: [];
+		match(on: arms, when: [
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				armKeys: keys;
+				armVals: values;
+			}
+		]);
+		local Int is keyTotal: armKeys:length();
 		local Int is ki: 0;
 		repeat(count: keyTotal, worker: {
-			local Expression is key: arms:mapKeys:get(index: ki);
-				local Expression is val: arms:mapValues:get(index: ki);
+			local Expression is key: armKeys:get(index: ki);
+				local Expression is val: armVals:get(index: ki);
 				ki: ki + 1;
+				local Boolean is keyIsElse: match(on: key, when: [
+					Expression:Ident: local Function of Boolean(String is name){ return name == 'else'; },
+					else: { false }
+				]);
 				# The else arm closes the table: arms after it are dead.
-				if({ hasElse && !(key:kind == ExpressionKind:IDENT && key:str == 'else') }, {
+				if({ hasElse && !keyIsElse }, {
 					self:addError(line: self:currentLine, msg: 'Match arms after else are unreachable; move else last.');
 					bad: true;
 				});
-				if({ key:kind == ExpressionKind:IDENT && key:str == 'else' }, {
+				if({ keyIsElse }, {
 					if({ hasElse }, {
 						self:addError(line: self:currentLine, msg: 'Duplicate else arm in the match table.');
 					});
 					hasElse: true;
 				}, {
-					if({ key:kind != ExpressionKind:ANON_FN }, {
+					local Boolean is keyOk: false;
+					match(on: key, when: [
+						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+							if({ params:length() > 0 }, {
+								self:addError(line: self:currentLine, msg: 'Predicate match keys take no parameters.');
+								bad: true;
+							});
+							if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+								returnType:name: Primitive:BOOLEAN:value();
+							});
+							keyOk: true;
+						}
+					], default: {});
+					if({ !keyOk }, {
 						self:addError(line: self:currentLine, msg: 'Predicate match keys must be closures: `{ condition }`.');
 						bad: true;
 					}, {
-						if({ key:anonParams:length() > 0 }, {
-							self:addError(line: self:currentLine, msg: 'Predicate match keys take no parameters.');
-							bad: true;
-						});
-						if({ key:anonReturnType:name == '' || key:anonReturnType:name == self:names:voidName() }, {
-							key:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
-						});
 						self:inferExpressionType(expr: key);
 					});
 				});
-				if({ val:kind != ExpressionKind:ANON_FN }, {
+				local Boolean is valIsAnon: match(on: val, when: [
+					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){
+						if({ params:length() > 0 }, {
+							self:addError(line: self:currentLine, msg: 'Predicate match arms take no parameters (there is no subject to bind).');
+							bad: true;
+						});
+						return true;
+					},
+					else: { false }
+				]);
+				if({ !valIsAnon }, {
 					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
 					bad: true;
 				}, {
-					if({ val:anonParams:length() > 0 }, {
-						self:addError(line: self:currentLine, msg: 'Predicate match arms take no parameters (there is no subject to bind).');
-						bad: true;
-					});
 					# the same value-context arm yield as the subject form:
 					# the arm's trailing expression types against the match's
 					# expected type.
@@ -1181,7 +1244,11 @@ Class is TypeChecker{
 	##
 	## @param callExpr: The CALL expression.
 	Function is checkCallArguments(Expression is callExpr){
-		local String is targetType: callExpr:methodTarget:resolvedType;
+		local CallData is cd: match(on: callExpr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
+		local String is targetType: cd:target:resolvedType;
 		if({ targetType == self:names:selfIdent() || targetType == '' }, {
 			targetType: self:currentClassName;
 		});
@@ -1193,22 +1260,25 @@ Class is TypeChecker{
 		if({ baseClassName == '' || baseClassName == Primitive:ANY:value() || baseClassName == 'Loops' }, {
 			return;
 		});
-		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: callExpr:methodName, idx: callExpr:num);
+		local Member is m: self:lookupOverloadedMember(className: self:memberLookupRoot(className: targetType), methodName: cd:name, idx: cd:overloadIndex);
 		local String is sigDisplay: baseClassName;
 		if({ m:kind != MemberKind:METHOD }, {
 			# No instance method: the receiver shape
 			# may still reach a held function — a bare class-name root,
 			# never self or an instance-typed name.
-			if({ callExpr:methodTarget:kind == ExpressionKind:IDENT || callExpr:methodTarget:kind == ExpressionKind:PATH }, {
-				local String is sigRoot: callExpr:methodTarget:str;
-				if({ callExpr:methodTarget:kind == ExpressionKind:PATH && callExpr:methodTarget:pathSegments:length() > 0 }, {
-					sigRoot: callExpr:methodTarget:pathSegments:get(index: 0);
-				});
-				if({ sigRoot != '' && sigRoot != self:names:selfIdent() && !self:localVars:has(key: sigRoot) && !self:fieldTypes:has(key: sigRoot) && self:registeredClasses:has(key: sigRoot) }, {
-					m: self:findHeldMethod(className: sigRoot, methodName: callExpr:methodName);
-					if({ m:name != '' }, {
-						sigDisplay: sigRoot;
+			local String is sigRoot: '';
+			match(on: cd:target, when: [
+				Expression:Ident: local Function(String is name){ sigRoot: name; },
+				Expression:Path: local Function(Array of String is segments){
+					if({ segments:length() > 0 }, {
+						sigRoot: segments:get(index: 0);
 					});
+				}
+			], default: {});
+			if({ sigRoot != '' && sigRoot != self:names:selfIdent() && !self:localVars:has(key: sigRoot) && !self:fieldTypes:has(key: sigRoot) && self:registeredClasses:has(key: sigRoot) }, {
+				m: self:findHeldMethod(className: sigRoot, methodName: cd:name);
+				if({ m:name != '' }, {
+					sigDisplay: sigRoot;
 				});
 			});
 		});
@@ -1231,6 +1301,10 @@ Class is TypeChecker{
 		if({ params:length() == 0 }, {
 			return;
 		});
+		local CallData is cd: match(on: callExpr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
 		local Array of String is recvTypeParams: recvCls:typeParams;
 		local Int is pIdx: 0;
 		params:each(action: local Function(Parameter is p){
@@ -1245,17 +1319,17 @@ Class is TypeChecker{
 				pTF: self:formatVarTypeString(t: p:paramType);
 			});
 			if({ pT != self:names:selfFieldMarker() && pT != Primitive:ANY:value() && pT != '' && recvTypeParams:indexOf(search: pT, default: -1) < 0 }, {
-				local Expression is matchedValue: Expression:init(kind: ExpressionKind:UNKNOWN);
+				local Expression is matchedValue: Expression:Unknown;
 				local Boolean is found: false;
 				local Int is posIdx: 0;
-				callExpr:methodArgs:each(action: local Function(NamedArg is a){
+				cd:args:each(action: local Function(NamedArg is a){
 					if({ !found && pName != '' && a:name == pName }, {
 						matchedValue: a:value;
 						found: true;
 					});
 				});
 				if({ !found }, {
-					callExpr:methodArgs:each(action: local Function(NamedArg is a){
+					cd:args:each(action: local Function(NamedArg is a){
 						if({ !found && a:name == '' && posIdx == pIdx }, {
 							matchedValue: a:value;
 							found: true;
@@ -1267,7 +1341,7 @@ Class is TypeChecker{
 					local String is argT: matchedValue:resolvedType;
 					if({ argT != '' && argT != Primitive:ANY:value() && !self:isAssignable(target: pTF, source: argT) }, {
 						local String is label: if({ pName != '' }, { pName }, { 'position ' . (pIdx + 1) });
-						local String is msg: self:errText:errCannotAssignArg(label: label, target: displayTarget, method: callExpr:methodName, fromType: argT, toType: self:displayType(t: pTF));
+						local String is msg: self:errText:errCannotAssignArg(label: label, target: displayTarget, method: cd:name, fromType: argT, toType: self:displayType(t: pTF));
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				}, {
@@ -1275,7 +1349,7 @@ Class is TypeChecker{
 						# Binding declarations (sysinternal + runtime-managed)
 						# sketch API surface, not call contracts — their C
 						# implementations carry optional/variadic semantics.
-						local String is msg: self:errText:errMissingArg(paramName: pName, target: displayTarget, method: callExpr:methodName);
+						local String is msg: self:errText:errMissingArg(paramName: pName, target: displayTarget, method: cd:name);
 						self:addError(line: self:currentLine, msg: msg);
 					});
 				});
@@ -1307,13 +1381,17 @@ Class is TypeChecker{
 		if({ group:length() == 0 }, {
 			return none;
 		});
+		local CallData is cd: match(on: expr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
 		# §I.3: no mixed calls — enforced globally, including
 		# single-member names. The scoped-region desugaring no longer
 		# produces mixed calls: its remainder binds to the unbound last
 		# Function parameter instead of riding as an argument (§as).
-		local Array of NamedArg is allArgs: expr:methodArgs;
+		local Array of NamedArg is allArgs: cd:args;
 		local Array of NamedArg is args: allArgs;
-		local Boolean is isScoped: expr:scopedRemainder;
+		local Boolean is isScoped: cd:scopedRemainder;
 		if({ isScoped }, {
 			# The scope slot binds the remainder: the explicit arguments are
 			# every argument but the last.
@@ -1338,7 +1416,7 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'The scoped region requires exactly one unbound Function parameter at the end of \'' . baseName . '.' . methodName . '\' (§as).');
 				return none;
 			});
-			expr:num: 0;
+			cd:overloadIndex: 0;
 			return only;
 		});
 		if({ allNamed }, {
@@ -1408,7 +1486,7 @@ Class is TypeChecker{
 			});
 			if({ slots:length() == 1 }, {
 				local Member is sel: slots:get(index: 0);
-				expr:num: self:indexOfMember(group: group, m: sel);
+				cd:overloadIndex: self:indexOfMember(group: group, m: sel);
 				return sel;
 			});
 		});
@@ -1426,7 +1504,7 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (§as).');
 				return none;
 			});
-			expr:num: self:indexOfMember(group: group, m: sel);
+			cd:overloadIndex: self:indexOfMember(group: group, m: sel);
 			return sel;
 		});
 		local Array of Member is exact: [];
@@ -1441,7 +1519,7 @@ Class is TypeChecker{
 				self:addError(line: self:currentLine, msg: 'The scoped region has no open scope slot in \'' . baseName . '.' . methodName . '\': every parameter is already bound (§as).');
 				return none;
 			});
-			expr:num: self:indexOfMember(group: group, m: sel);
+			cd:overloadIndex: self:indexOfMember(group: group, m: sel);
 			return sel;
 		});
 		if({ isScoped && exact:length() == 0 }, {
@@ -1455,7 +1533,7 @@ Class is TypeChecker{
 			});
 			if({ slots:length() == 1 }, {
 				local Member is sel: slots:get(index: 0);
-				expr:num: self:indexOfMember(group: group, m: sel);
+				cd:overloadIndex: self:indexOfMember(group: group, m: sel);
 				return sel;
 			});
 		});
@@ -1544,21 +1622,25 @@ Class is TypeChecker{
 	## @param expr: The CALL expression.
 	## @return: true when all argument types match exactly.
 	Function of Boolean is exactTypeMatch(Member is m, Expression is expr){
+		local CallData is cd: match(on: expr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
 		local Boolean is allMatch: true;
 		local Int is posIdx: 0;
 		m:params:each(action: local Function(Parameter is p){
-			local Expression is bound: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is bound: Expression:Unknown;
 			local Boolean is found: false;
 			if({ p:name != '' }, {
-				expr:methodArgs:each(action: local Function(NamedArg is a){
+				cd:args:each(action: local Function(NamedArg is a){
 					if({ !found && a:name == p:name }, {
 						bound: a:value;
 						found: true;
 					});
 				});
 			});
-			if({ !found && posIdx < expr:methodArgs:length() }, {
-				local NamedArg is pa: expr:methodArgs:get(index: posIdx);
+			if({ !found && posIdx < cd:args:length() }, {
+				local NamedArg is pa: cd:args:get(index: posIdx);
 				if({ pa:name == '' }, {
 					bound: pa:value;
 					found: true;
@@ -1735,25 +1817,32 @@ Class is TypeChecker{
 			return;
 		});
 		cls:members:each(action: local Function(Member is m){
-			if({ m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					if({ item:kind == ExpressionKind:ARRAY }, {
-						item:arrayItems:each(action: local Function(Expression is seg){
-							if({ seg:kind == ExpressionKind:USING_AS }, {
-								local String is prov: seg:str;
-								local Boolean is already: false;
-								acc:each(action: local Function(String is got){
-									if({ got == prov }, {
-										already: true;
+			if({ m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function(Array of Expression is items){
+						items:each(action: local Function(Expression is item){
+							match(on: item, when: [
+								Expression:ArrayLit: local Function(Array of Expression is subItems){
+									subItems:each(action: local Function(Expression is seg){
+										match(on: seg, when: [
+											Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+												local Boolean is already: false;
+												acc:each(action: local Function(String is got){
+													if({ got == className }, {
+														already: true;
+													});
+												});
+												if({ !already && self:findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
+													acc:add(item: className);
+												});
+											}
+										]);
 									});
-								});
-								if({ !already && self:findMemberOwnerClass(className: prov, memberName: methodName) != '' }, {
-									acc:add(item: prov);
-								});
-							});
+								}
+							]);
 						});
-					});
-				});
+					}
+				]);
 			});
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -1805,23 +1894,31 @@ Class is TypeChecker{
 		});
 		# The as-imported classes' nested classes.
 		cls:members:each(action: local Function(Member is m){
-			if({ m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					if({ item:kind == ExpressionKind:ARRAY }, {
-						item:arrayItems:each(action: local Function(Expression is seg){
-							if({ seg:kind == ExpressionKind:USING_AS }, {
-								local ClassInfo is provCls: self:findClass(name: seg:str);
-								if({ provCls:name != '' }, {
-									provCls:members:each(action: local Function(Member is nm){
-										if({ nm:kind == MemberKind:CLASS }, {
-											self:appendNestedScopeEntry(bare: nm:nestedClass:name, q: nm:nestedClass:qualifiedName());
-										});
+			if({ m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function(Array of Expression is items){
+						items:each(action: local Function(Expression is item){
+							match(on: item, when: [
+								Expression:ArrayLit: local Function(Array of Expression is segs){
+									segs:each(action: local Function(Expression is seg){
+										match(on: seg, when: [
+											Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+												local ClassInfo is provCls: self:findClass(name: className);
+												if({ provCls:name != '' }, {
+													provCls:members:each(action: local Function(Member is nm){
+														if({ nm:kind == MemberKind:CLASS }, {
+															self:appendNestedScopeEntry(bare: nm:nestedClass:name, q: nm:nestedClass:qualifiedName());
+														});
+													});
+												});
+											}
+										], default: {});
 									});
-								});
-							});
+								}
+							], default: {});
 						});
-					});
-				});
+					}
+				], default: {});
 			});
 		});
 		cls:baseClasses:each(action: local Function(String is baseName){
@@ -2101,40 +2198,58 @@ Class is TypeChecker{
 					return;
 				});
 				c:members:each(action: local Function(Member is m){
-					if({ !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-						m:initExpr:arrayItems:each(action: local Function(Expression is item){
-							if({ !granted && item:kind == ExpressionKind:ARRAY }, {
-								local String is terminal: '';
-								local Boolean is terminalAs: false;
-								local String is nsJoined: '';
-								item:arrayItems:each(action: local Function(Expression is seg){
-									if({ seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, {
-										terminal: seg:str;
-										terminalAs: seg:kind == ExpressionKind:USING_AS;
-									}, {
-										if({ nsJoined == '' }, {
-											nsJoined: seg:str;
-										}, {
-											nsJoined: nsJoined . ':' . seg:str;
+					if({ !granted && m:name == 'using' && m:hasInit }, {
+						match(on: m:initExpr, when: [
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								items:each(action: local Function(Expression is item){
+									if({ !granted }, {
+										match(on: item, when: [
+											Expression:ArrayLit: local Function(Array of Expression is segs){
+												local String is terminal: '';
+												local Boolean is terminalAs: false;
+												local String is nsJoined: '';
+												segs:each(action: local Function(Expression is seg){
+													match(on: seg, when: [
+														Expression:Ident: local Function(String is s){
+															terminal: s;
+															terminalAs: false;
+														},
+														Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+															terminal: className;
+															terminalAs: true;
+														},
+														Expression:StringLit: local Function(String is s){
+															if({ nsJoined == '' }, {
+																nsJoined: s;
+															}, {
+																nsJoined: nsJoined . ':' . s;
+															});
+														}
+													], default: {
+													});
+												});
+												# the qualified nested reference
+												# ('Outer:Inner') rides the parent's grant — the terminal
+												# matches the target's root segment. IV.6 strictness: the
+												# as-form grants functions and the qualified nested
+												# references; the BARE parent reference (and with it
+												# construction) requires the plain type import.
+												local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
+												if({ terminal == targetName || terminal == targetRoot }, {
+													if({ !terminalAs || targetName:contains(needle: ':') }, {
+														granted: true;
+													});
+												});
+												if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
+													granted: true;
+												});
+											}
+										], default: {
 										});
 									});
 								});
-								# the qualified nested reference
-								# ('Outer:Inner') rides the parent's grant — the terminal
-								# matches the target's root segment. IV.6 strictness: the
-								# as-form grants functions and the qualified nested
-								# references; the BARE parent reference (and with it
-								# construction) requires the plain type import.
-								local String is targetRoot: targetName:split(delimiter: ':'):get(index: 0);
-								if({ terminal == targetName || terminal == targetRoot }, {
-									if({ !terminalAs || targetName:contains(needle: ':') }, {
-										granted: true;
-									});
-								});
-								if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
-									granted: true;
-								});
-							});
+							}
+						], default: {
 						});
 					});
 				});
@@ -2176,40 +2291,55 @@ Class is TypeChecker{
 		});
 		local Boolean is granted: false;
 		cls:members:each(action: local Function(Member is m){
-			if({ !granted && m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					if({ !granted && item:kind == ExpressionKind:ARRAY }, {
-						local String is terminal: '';
-						local Boolean is terminalAs: false;
-						local String is nsJoined: '';
-						item:arrayItems:each(action: local Function(Expression is seg){
-							if({ seg:kind == ExpressionKind:IDENT || seg:kind == ExpressionKind:USING_AS }, {
-								terminal: seg:str;
-								terminalAs: seg:kind == ExpressionKind:USING_AS;
-							}, {
-								if({ nsJoined == '' }, {
-									nsJoined: seg:str;
-								}, {
-									nsJoined: nsJoined . ':' . seg:str;
-								});
+			if({ !granted && m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function(Array of Expression is items){
+						items:each(action: local Function(Expression is item){
+							if({ !granted }, {
+								match(on: item, when: [
+									Expression:ArrayLit: local Function(Array of Expression is segs){
+										local String is terminal: '';
+										local Boolean is terminalAs: false;
+										local String is nsJoined: '';
+										segs:each(action: local Function(Expression is seg){
+											match(on: seg, when: [
+												Expression:Ident: local Function(String is s){
+													terminal: s;
+													terminalAs: false;
+												},
+												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+													terminal: className;
+													terminalAs: true;
+												},
+												Expression:StringLit: local Function(String is s){
+													if({ nsJoined == '' }, {
+														nsJoined: s;
+													}, {
+														nsJoined: nsJoined . ':' . s;
+													});
+												}
+											], default: {});
+										});
+										# the same root-segment grant for
+										# the qualified nested reference. IV.6 strictness: the as-form
+										# grants functions and the qualified nested references; the
+										# BARE parent reference (and with it construction) requires
+										# the plain type import.
+										local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
+										if({ terminal == targetName || terminal == targetRoot2 }, {
+											if({ !terminalAs || targetName:contains(needle: ':') }, {
+												granted: true;
+											});
+										});
+										if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
+											granted: true;
+										});
+									}
+								], default: {});
 							});
 						});
-						# the same root-segment grant for
-						# the qualified nested reference. IV.6 strictness: the as-form
-						# grants functions and the qualified nested references; the
-						# BARE parent reference (and with it construction) requires
-						# the plain type import.
-						local String is targetRoot2: targetName:split(delimiter: ':'):get(index: 0);
-						if({ terminal == targetName || terminal == targetRoot2 }, {
-							if({ !terminalAs || targetName:contains(needle: ':') }, {
-								granted: true;
-							});
-						});
-						if({ terminal == '' && targetNs != '' && (targetNs == nsJoined || targetNs:startsWith(prefix: nsJoined . ':')) }, {
-							granted: true;
-						});
-					});
-				});
+					}
+				], default: {});
 			});
 		});
 		if({ granted }, {
@@ -2288,37 +2418,45 @@ Class is TypeChecker{
 				cbElem: targetType:substring(start: 6, end: targetType:length());
 			});
 		});
+		local CallData is cd: match(on: expr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
 		if({ cbElem != Primitive:ANY:value() }, {
 			local String is elemTypeName: cbElem;
-			if({ method == 'fold' && expr:methodArgs:length() >= 2 }, {
-				local NamedArg is a0: expr:methodArgs:get(index: 0);
+			if({ method == 'fold' && cd:args:length() >= 2 }, {
+				local NamedArg is a0: cd:args:get(index: 0);
 				local String is initType: self:inferExpressionType(expr: a0:value);
-				local NamedArg is a1: expr:methodArgs:get(index: 1);
+				local NamedArg is a1: cd:args:get(index: 1);
 				local Expression is av: a1:value;
-				if({ av:kind == ExpressionKind:ANON_FN }, {
-					if({ av:anonParams:length() >= 1 }, {
-						local Parameter is p0: av:anonParams:get(index: 0);
-						if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
-							p0:paramType: Type:init(name: initType);
-						});
-					});
-					if({ av:anonParams:length() >= 2 }, {
-						local Parameter is p1: av:anonParams:get(index: 1);
-						if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
-							p1:paramType: Type:init(name: elemTypeName);
-						});
-					});
-				});
-			}, {
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					local Expression is av: arg:value;
-					if({ av:kind == ExpressionKind:ANON_FN }, {
-						av:anonParams:each(action: local Function(Parameter is p){
-							if({ p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, {
-								p:paramType: Type:init(name: elemTypeName);
+				match(on: av, when: [
+					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+						if({ params:length() >= 1 }, {
+							local Parameter is p0: params:get(index: 0);
+							if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
+								p0:paramType: Type:init(name: initType);
 							});
 						});
-					});
+						if({ params:length() >= 2 }, {
+							local Parameter is p1: params:get(index: 1);
+							if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
+								p1:paramType: Type:init(name: elemTypeName);
+							});
+						});
+					}
+				]);
+			}, {
+				cd:args:each(action: local Function(NamedArg is arg){
+					local Expression is av: arg:value;
+					match(on: av, when: [
+						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+							params:each(action: local Function(Parameter is p){
+								if({ p:paramType:name == Primitive:ANY:value() || p:paramType:name == '' }, {
+									p:paramType: Type:init(name: elemTypeName);
+								});
+							});
+						}
+					]);
 				});
 			});
 		}, {
@@ -2329,22 +2467,24 @@ Class is TypeChecker{
 				if({ colonIdx >= 0 && colonIdx + 1 < afterMap:length() }, {
 					valTypeName: afterMap:substring(start: colonIdx + 1, end: afterMap:length());
 				});
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					local Expression is av: arg:value;
-					if({ av:kind == ExpressionKind:ANON_FN }, {
-						if({ av:anonParams:length() >= 1 }, {
-							local Parameter is p0: av:anonParams:get(index: 0);
-							if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
-								p0:paramType: Type:init(name: 'String');
+					match(on: av, when: [
+						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+							if({ params:length() >= 1 }, {
+								local Parameter is p0: params:get(index: 0);
+								if({ p0:paramType:name == Primitive:ANY:value() || p0:paramType:name == '' }, {
+									p0:paramType: Type:init(name: 'String');
+								});
 							});
-						});
-						if({ av:anonParams:length() >= 2 }, {
-							local Parameter is p1: av:anonParams:get(index: 1);
-							if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
-								p1:paramType: Type:init(name: valTypeName);
+							if({ params:length() >= 2 }, {
+								local Parameter is p1: params:get(index: 1);
+								if({ p1:paramType:name == Primitive:ANY:value() || p1:paramType:name == '' }, {
+									p1:paramType: Type:init(name: valTypeName);
+								});
 							});
-						});
-					});
+						}
+					]);
 				});
 			});
 		});
@@ -2375,30 +2515,34 @@ Class is TypeChecker{
 	## @param expected: Contextual type ('' when none).
 	## @return: Resolved type name string.
 	Function of String is inferExpressionType(Expression is expr, String is expected: ''){
-		local ExpressionKind is kind: expr:kind;
 		local String is res: 'Any';
 
-		if({ kind == ExpressionKind:USING_AS }, {
-			self:addError(line: self:currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (E1).');
-			expr:resolvedType: '';
+		local Boolean is isUsingAs: false;
+		match(on: expr, when: [
+			Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+				self:addError(line: self:currentLine, msg: 'Instance imports (as ClassName()) may only appear as entries of a using declaration (E1).');
+				expr:setResolvedType(t: '');
+				isUsingAs: true;
+			}
+		], default: {});
+		if({ isUsingAs }, {
 			return '';
 		});
 
-		match(on: kind, when: [
-			ExpressionKind:STRING: {
+		match(on: expr, when: [
+			Expression:StringLit: local Function(String is value){
 				res: Primitive:STRING:value();
 			},
-			ExpressionKind:NUMBER: {
+			Expression:NumberLit: local Function(Int is value, String is text){
 				res: Primitive:INT:value();
 			},
-			ExpressionKind:FLOAT: {
+			Expression:FloatLit: local Function(String is text){
 				res: Primitive:FLOAT:value();
 			},
-			ExpressionKind:BOOL: {
+			Expression:BoolLit: local Function(Boolean is value){
 				res: Primitive:BOOLEAN:value();
 			},
-			ExpressionKind:IDENT: {
-				local String is name: expr:str;
+			Expression:Ident: local Function(String is name){
 				if({ name == self:names:selfIdent() }, {
 					# A held member body has no instance
 					# — except a function-variable call target: the closure
@@ -2445,8 +2589,7 @@ Class is TypeChecker{
 					});
 				});
 			},
-			ExpressionKind:PATH: {
-				local Array of String is segs: expr:pathSegments;
+			Expression:Path: local Function(Array of String is segs){
 				if({ segs:length() > 0 }, {
 					local String is root: segs:get(index: 0);
 					local String is rootType: '';
@@ -2614,13 +2757,12 @@ Class is TypeChecker{
 					});
 				});
 			},
-			ExpressionKind:BINARY: {
+			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
 				# the expected type flows into the
 				# operands so a value-yielding branch call nested in an
 				# expression (e.g. `n + if(...)`) types in context.
-				local String is leftT: self:inferExpressionType(expr: expr:leftExpr, expected: expected);
-				local String is rightT: self:inferExpressionType(expr: expr:rightExpr, expected: expected);
-				local String is op: expr:str;
+				local String is leftT: self:inferExpressionType(expr: left, expected: expected);
+				local String is rightT: self:inferExpressionType(expr: right, expected: expected);
 				match(on: op, when: [
 					'.': {
 						res: Primitive:STRING:value();
@@ -2655,18 +2797,17 @@ Class is TypeChecker{
 					}
 				]);
 			},
-			ExpressionKind:CAST: {
-				local String is innerT: self:inferExpressionType(expr: expr:leftExpr);
-				local String is target: expr:str;
+			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+				local String is innerT: self:inferExpressionType(expr: inner);
 				local String is src: if({ innerT != '' }, { innerT }, { Primitive:ANY:value() });
 				local Boolean is isFormat: target == 'Hex' || target == 'Bin' || target == 'Oct';
 				# Every non-format cast takes no arguments.
-				if({ expr:castArgs:length() > 0 && !isFormat }, {
+				if({ args:length() > 0 && !isFormat }, {
 					self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' takes no arguments.');
 				});
 				match(on: target, when: [
 					['Hex', 'Bin', 'Oct']: {
-						if({ expr:castArgs:length() > 1 }, {
+						if({ args:length() > 1 }, {
 							self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' accepts at most one width argument.');
 						});
 						if({ src != 'Any' && src != 'String' && src != Primitive:INT:value() }, {
@@ -2715,23 +2856,23 @@ Class is TypeChecker{
 					}
 				]);
 			},
-			ExpressionKind:UNARY: {
-				local String is innerT: self:inferExpressionType(expr: expr:unaryExpr);
-				if({ expr:str == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
+			Expression:Unary: local Function(String is op, Expression is operand){
+				local String is innerT: self:inferExpressionType(expr: operand);
+				if({ op == '~' && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
 					local String is msg: self:errText:errBitwiseComplementInt(innerT: innerT);
 					self:addError(line: self:currentLine, msg: msg);
 				});
-				if({ (expr:str == '++' || expr:str == '--' || expr:str == 'post++' || expr:str == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
-					local String is msg: self:errText:errOperatorRequiresInt(op: expr:str, innerT: innerT);
+				if({ (op == '++' || op == '--' || op == 'post++' || op == 'post--') && innerT != '' && innerT != 'Any' && innerT != Primitive:INT:value() }, {
+					local String is msg: self:errText:errOperatorRequiresInt(op: op, innerT: innerT);
 					self:addError(line: self:currentLine, msg: msg);
 				});
-				if({ expr:str == '!' }, {
+				if({ op == '!' }, {
 					res: Primitive:BOOLEAN:value();
 				}, {
 					res: innerT;
 				});
 			},
-			ExpressionKind:ARRAY: {
+			Expression:ArrayLit: local Function(Array of Expression is items){
 				# Bidirectional: a container expectation from the declaration
 				# site types the literal directly — no hint state. The
 				# elements must all be mutually compatible (same primitive
@@ -2751,7 +2892,7 @@ Class is TypeChecker{
 					});
 				});
 				local Array of String is itemTypes: [];
-				expr:arrayItems:each(action: local Function(Expression is item){
+				items:each(action: local Function(Expression is item){
 					local String is itemT: self:inferExpressionType(expr: item, expected: elemT);
 					if({ self:isVoid(t: itemT) }, {
 						self:addError(line: self:currentLine, msg: 'Array elements cannot be void.');
@@ -2787,7 +2928,7 @@ Class is TypeChecker{
 					});
 				});
 			},
-			ExpressionKind:MAP: {
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
 				if({ expected != '' && expected:startsWith(prefix: 'Map') }, {
 					# Value type from the expectation ('Map of K to V' both
 					# spellings); values must be assignable to it.
@@ -2807,10 +2948,10 @@ Class is TypeChecker{
 							valT: kv:substring(start: toIdx + 4, end: kv:length());
 						});
 					});
-					expr:mapKeys:each(action: local Function(Expression is k){
+					keys:each(action: local Function(Expression is k){
 						self:inferExpressionType(expr: k);
 					});
-					expr:mapValues:each(action: local Function(Expression is v){
+					values:each(action: local Function(Expression is v){
 						local String is vT: self:inferExpressionType(expr: v);
 						if({ valT != '' && vT != '' && vT != Primitive:ANY:value() && !self:isAssignable(target: valT, source: vT) }, {
 							self:addError(line: self:currentLine, msg: "Cannot assign 'Map:String:" . vT . "' to 'Map:String:" . valT . "'.");
@@ -2820,13 +2961,13 @@ Class is TypeChecker{
 				}, {
 					local String is firstKeyType: '';
 					local String is firstValType: '';
-					expr:mapKeys:each(action: local Function(Expression is k){
+					keys:each(action: local Function(Expression is k){
 						local String is kt: self:inferExpressionType(expr: k);
 						if({ firstKeyType == '' && kt != '' && kt != Primitive:ANY:value() }, {
 							firstKeyType: kt;
 						});
 					});
-					expr:mapValues:each(action: local Function(Expression is v){
+					values:each(action: local Function(Expression is v){
 						local String is vt: self:inferExpressionType(expr: v);
 						if({ firstValType == '' && vt != '' && vt != Primitive:ANY:value() }, {
 							firstValType: vt;
@@ -2839,14 +2980,13 @@ Class is TypeChecker{
 					});
 				});
 			},
-			ExpressionKind:FIELD_ACCESS: {
-				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
+			Expression:FieldAccess: local Function(Expression is target, String is fName){
+				local String is leftT: self:inferExpressionType(expr: target);
 				if({ leftT == '' || leftT == 'Any' || self:isPrimitive(t: leftT) }, {
 					res: 'Any';
 				}, {
 					local Array of String is faParts: leftT:split(delimiter: ':');
 					local String is faBase: faParts:get(index: 0);
-					local String is fName: expr:str;
 						local String is fOwner: self:findMemberOwnerClass(className: faBase, memberName: fName);
 						if({ fOwner != '' }, {
 							self:checkMemberVisibility(ownerClass: fOwner, member: self:findAncestorMember(className: faBase, memberName: fName), memberName: fName);
@@ -2862,9 +3002,9 @@ Class is TypeChecker{
 					res: if({ fT != '' }, { fT }, { 'Any' });
 				});
 			},
-			ExpressionKind:INDEX: {
-				local String is leftT: self:inferExpressionType(expr: expr:leftExpr);
-				self:inferExpressionType(expr: expr:rightExpr);
+			Expression:Index: local Function(Expression is target, Expression is index){
+				local String is leftT: self:inferExpressionType(expr: target);
+				self:inferExpressionType(expr: index);
 				# Element extraction accepts both container spellings.
 				if({ leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, {
 					res: leftT:substring(start: 9, end: leftT:length());
@@ -2890,7 +3030,7 @@ Class is TypeChecker{
 					});
 				});
 			},
-			ExpressionKind:ANON_FN: {
+			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
 				local Map of String to String is savedVars: Map:init();
 				local Array of String is existingKeys: self:localVars:keys();
 				existingKeys:each(action: local Function(String is k){
@@ -2910,17 +3050,17 @@ Class is TypeChecker{
 					# a closure literal assigned into a `Function of X` context
 					# types its body against X, so its own type comes out
 					# `Function of X` and the narrowed param accepts it.
-					if({ expected:startsWith(prefix: 'Function:') && self:isVoid(t: expr:anonReturnType:name) }, {
-						expr:anonReturnType: Type:init(name: expected:substring(start: 9, end: expected:length()));
+					if({ expected:startsWith(prefix: 'Function:') && self:isVoid(t: returnType:name) }, {
+						returnType:name: expected:substring(start: 9, end: expected:length());
 					});
-					self:currentMethodReturnType: self:resolveReturnType(t: expr:anonReturnType);
+					self:currentMethodReturnType: self:resolveReturnType(t: returnType);
 				});
-				expr:anonParams:each(action: local Function(Parameter is p){
+				params:each(action: local Function(Parameter is p){
 					self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 				});
-				local Int is bodyLen: expr:anonBody:length();
+				local Int is bodyLen: body:length();
 				local Int is bodyIdx: 0;
-				expr:anonBody:each(action: local Function(Statement is s){
+				body:each(action: local Function(Statement is s){
 					self:anonDepth: self:anonDepth + 1;
 					# the last statement of a
 					# value-yielding branch closure is the branch's yield.
@@ -2941,19 +3081,19 @@ Class is TypeChecker{
 				# explicit-terminator last-expression form is handled, reading
 				# the type the body check already resolved — never
 				# re-inferring.
-				local Int is lastIdx: expr:anonBody:length() - 1;
+				local Int is lastIdx: body:length() - 1;
 				if({ lastIdx >= 0 }, {
-					local Statement is lastStmt: expr:anonBody:get(index: lastIdx);
+					local Statement is lastStmt: body:get(index: lastIdx);
 					match(on: lastStmt, when: [
 						Statement:Expr: local Function(Expression is exprStmt){
 							local String is lastT: exprStmt:resolvedType;
-							if({ self:isVoid(t: expr:anonReturnType:name) }, {
+							if({ self:isVoid(t: returnType:name) }, {
 								if({ lastT != '' && !self:isVoid(t: lastT) }, {
-									expr:anonReturnType: Type:init(name: lastT);
+									returnType:name: lastT;
 								});
 							}, {
-								if({ lastT != '' && !self:isAssignable(target: expr:anonReturnType:name, source: lastT) }, {
-									local String is msg: self:errText:errClosureReturnType(actual: lastT, expected: expr:anonReturnType:name);
+								if({ lastT != '' && !self:isAssignable(target: returnType:name, source: lastT) }, {
+									local String is msg: self:errText:errClosureReturnType(actual: lastT, expected: returnType:name);
 									self:addError(line: self:currentLine, msg: msg);
 								});
 							});
@@ -2962,26 +3102,23 @@ Class is TypeChecker{
 				});
 				self:currentAnonNode: savedAnonNode;
 				self:checkingValueYield: savedYieldFlag;
-				local String is anonRetName: expr:anonReturnType:name;
+				local String is anonRetName: returnType:name;
 				if({ anonRetName != '' && !self:isVoid(t: anonRetName) }, {
-					res: 'Function:' . self:formatTypeString(t: expr:anonReturnType);
+					res: 'Function:' . self:formatTypeString(t: returnType);
 				}, {
 					res: 'Function';
 				});
 			},
-			ExpressionKind:CALL: {
-				res: self:inferCall(expr: expr, expected: expected);
+			Expression:Call: local Function(CallData is call){
+				res: self:inferCall(expr: expr, call: call, expected: expected);
+				self:checkCallArguments(callExpr: expr);
 			},
 			else: {
 				res: 'Any';
 			}
-		]);
+		], default: {});
 
-		if({ kind == ExpressionKind:CALL }, {
-			self:checkCallArguments(callExpr: expr);
-		});
-
-		expr:resolvedType: res;
+		expr:setResolvedType(t: res);
 		return res;
 	}
 
@@ -2993,29 +3130,46 @@ Class is TypeChecker{
 	## @param expr: The CALL expression.
 	## @param expected: Contextual type ('' when none).
 	## @return: Resolved type name string.
-	Function of String is inferCall(Expression is expr, String is expected: ''){
+	Function of String is inferCall(Expression is expr, CallData is call, String is expected: ''){
 		# A function-variable invocation (self:missing()) inside a held
 		# body infers its target through the IDENT arm — exempt the
 		# no-instance error for exactly that shape.
 		local Boolean is savedFnVarTarget: self:inHeldFnVarTarget;
-		if({ expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:localVars:getString(key: expr:methodName, default: ''):startsWith(prefix: 'Function') }, {
+		local Boolean is targetIsSelf: false;
+		local Boolean is targetIsIdent: false;
+		local Boolean is targetIsPath: false;
+		local String is targetStr: '';
+		local Array of String is targetPathSegs: [];
+		match(on: call:target, when: [
+			Expression:Ident: local Function(String is name){
+				targetIsIdent: true;
+				targetStr: name;
+				targetIsSelf: name == self:names:selfIdent();
+			},
+			Expression:Path: local Function(Array of String is segs){
+				targetIsPath: true;
+				targetPathSegs: segs;
+			}
+		], default: {
+		});
+		if({ targetIsSelf && self:localVars:getString(key: call:name, default: ''):startsWith(prefix: 'Function') }, {
 			self:inHeldFnVarTarget: true;
 		});
-		local String is targetType: self:inferExpressionType(expr: expr:methodTarget);
+		local String is targetType: self:inferExpressionType(expr: call:target);
 		self:inHeldFnVarTarget: savedFnVarTarget;
-		local String is method: expr:methodName;
+		local String is method: call:name;
 		local String is res: 'Any';
 
-		local String is targetName: expr:methodTarget:str;
-		if({ targetName == '' && expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, {
-			targetName: expr:methodTarget:pathSegments:get(index: expr:methodTarget:pathSegments:length() - 1);
+		local String is targetName: targetStr;
+		if({ targetName == '' && targetIsPath && targetPathSegs:length() > 0 }, {
+			targetName: targetPathSegs:get(index: targetPathSegs:length() - 1);
 		});
 
 		# Nested-construction shorthand: a class-name
 		# receiver naming a nested class constructs it —
 		# `Result:Ok(data: 'x')` ≡ `Result:Ok:init(data: 'x')`. The call
 		# rewrites in place and falls through to the init path.
-		if({ (expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH) && method != 'init' && self:registeredClasses:has(key: targetName) && !self:localVars:has(key: targetName) && !self:fieldTypes:has(key: targetName) }, {
+		if({ (targetIsIdent || targetIsPath) && method != 'init' && self:registeredClasses:has(key: targetName) && !self:localVars:has(key: targetName) && !self:fieldTypes:has(key: targetName) }, {
 			local ClassInfo is ncCls: self:findClass(name: targetName);
 			local Boolean is hasNested: false;
 			if({ ncCls:name != '' }, {
@@ -3027,10 +3181,15 @@ Class is TypeChecker{
 			});
 			if({ hasNested }, {
 				local Array of String is segs: [targetName, method];
-				expr:methodTarget: Expression:init(kind: ExpressionKind:PATH);
-				expr:methodTarget:makePath(segments: segs);
-				expr:methodName: 'init';
-				targetType: self:inferExpressionType(expr: expr:methodTarget);
+				call:target: Expression:Path(segments: segs);
+				call:name: 'init';
+				targetIsIdent: false;
+				targetIsSelf: false;
+				targetIsPath: true;
+				targetPathSegs: segs;
+				targetName: method;
+				method: 'init';
+				targetType: self:inferExpressionType(expr: call:target);
 			});
 		});
 
@@ -3040,20 +3199,21 @@ Class is TypeChecker{
 		# primitives, containers, transparent runtime types). Conversely,
 		# init on a non-class receiver is construct-only and banned.
 		local String is recvName: '';
-		if({ expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH }, {
+		if({ targetIsIdent || targetIsPath }, {
 			local String is cand: targetName;
 			if({ cand != '' && cand != self:names:selfIdent() && self:registeredClasses:has(key: cand) && !self:localVars:has(key: cand) && !self:fieldTypes:has(key: cand) }, {
 				recvName: cand;
 			});
 		});
-		if({ recvName != '' && expr:methodName != 'init' }, {
-			local Boolean is isTypeLevel: self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || self:bindings:isClassModelEnum(c: self:findClass(name: recvName));
+		if({ recvName != '' && call:name != 'init' }, {
+			local Boolean is isSysinternalPath: targetIsPath && targetPathSegs:indexOf(search: 'sysinternal', default: -1) >= 0;
+			local Boolean is isTypeLevel: isSysinternalPath || self:allEnumNames:has(key: recvName) || self:isPrimitive(t: recvName) || recvName == 'Array' || recvName == 'Map' || recvName == 'List' || recvName == 'String' || recvName == 'Function' || recvName == 'LoopControl' || self:bindings:isClassModelEnum(c: self:findClass(name: recvName));
 			# Desugared enums are type-level by design:
 			# their contract methods dispatch through the class name.
 			# Held functions: the class-name prefix IS
 			# their dispatch — the call is type-level by design, inside
 			# the class and out.
-			if({ self:findHeldMethod(className: recvName, methodName: expr:methodName):name != '' }, {
+			if({ self:findHeldMethod(className: recvName, methodName: call:name):name != '' }, {
 				isTypeLevel: true;
 			});
 			if({ !isTypeLevel }, {
@@ -3066,7 +3226,7 @@ Class is TypeChecker{
 				});
 			});
 		});
-		if({ recvName == '' && expr:methodName == 'init' }, {
+		if({ recvName == '' && call:name == 'init' }, {
 			self:addError(line: self:currentLine, msg: '\'init\' is construct-only; call it on the class name (E7).');
 		});
 
@@ -3079,30 +3239,43 @@ Class is TypeChecker{
 		# is recognized here too — the recognizer returns before the
 		# bare-scope branch runs, so the bareProvider stamp happens
 		# HERE: the backend's match interceptor keys on it.
-		if({ method == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && ((expr:methodTarget:str == 'match' && self:isAsImportedInherited(className: 'Conditional')) || (expr:methodTarget:str == self:names:selfIdent() && self:isAsImportedInherited(className: 'Conditional'))))) }, {
-			if({ expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() }, {
-				expr:bareProvider: 'Conditional';
+		if({ method == 'match' && (call:bareProvider == 'Conditional' || targetType == 'Conditional' || (targetIsIdent && ((targetStr == 'match' && self:isAsImportedInherited(className: 'Conditional')) || (targetIsSelf && self:isAsImportedInherited(className: 'Conditional'))))) }, {
+			if({ targetIsSelf }, {
+				call:bareProvider: 'Conditional';
 			});
-			local Expression is matchSubj: Expression:init(kind: ExpressionKind:UNKNOWN);
-			local Expression is matchArms: Expression:init(kind: ExpressionKind:UNKNOWN);
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			local Expression is matchSubj: Expression:Unknown;
+			local Expression is matchArms: Expression:Unknown;
+			local Boolean is hasMatchSubj: false;
+			local Boolean is hasMatchArms: false;
+			local Boolean is matchArmsIsMap: false;
+			call:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'on' }, {
 					matchSubj: arg:value;
+					hasMatchSubj: true;
 				});
 				if({ arg:name == 'when' }, {
 					matchArms: arg:value;
+					hasMatchArms: true;
 				});
 			});
-			if({ matchArms:kind == ExpressionKind:MAP }, {
-				if({ matchSubj:kind != ExpressionKind:UNKNOWN }, {
+			if({ hasMatchArms }, {
+				match(on: matchArms, when: [
+					Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+						matchArmsIsMap: true;
+					}
+				], default: {
+				});
+			});
+			if({ matchArmsIsMap }, {
+				if({ hasMatchSubj }, {
 					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected);
-					expr:resolvedType: matchRes;
+					expr:setResolvedType(t: matchRes);
 					return matchRes;
 				}, {
 					# The PREDICATE form: no subject — the keys are the
 					# closures, the first that holds runs its arm.
 					local String is predRes: self:checkPredicateArms(arms: matchArms, expected: expected);
-					expr:resolvedType: predRes;
+					expr:setResolvedType(t: predRes);
 					return predRes;
 				});
 			});
@@ -3116,9 +3289,9 @@ Class is TypeChecker{
 			# map can neither preserve scan order nor carry closure
 			# keys — so a non-literal predicate table is a pointed
 			# error instead of silent garbage.
-			if({ matchSubj:kind == ExpressionKind:UNKNOWN && matchArms:kind != ExpressionKind:UNKNOWN }, {
+			if({ !hasMatchSubj && hasMatchArms }, {
 				self:addError(line: self:currentLine, msg: 'A predicate match table is compile-time: the keys are closures and the scan order matters — write the arm table as a literal.');
-				expr:resolvedType: Primitive:ANY:value();
+				expr:setResolvedType(t: Primitive:ANY:value());
 				return Primitive:ANY:value();
 			});
 		});
@@ -3129,9 +3302,9 @@ Class is TypeChecker{
 		# one provider resolves; two or more collide and force
 		# qualification; zero is an error — the old behavior silently
 		# invented CurrentClass_method and died in gcc.
-		if({ recvName == '' && expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && expr:methodName != 'init' && expr:methodName != 'typeName' && !self:shadowsAsFunction(name: expr:methodName) }, {
-			local String is ownOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: expr:methodName);
-			local Array of String is bsProviders: self:bareScopeProviders(methodName: expr:methodName);
+		if({ recvName == '' && targetIsSelf && call:name != 'init' && call:name != 'typeName' && !self:shadowsAsFunction(name: call:name) }, {
+			local String is ownOwner: self:findMemberOwnerClass(className: self:currentClassName, memberName: call:name);
+			local Array of String is bsProviders: self:bareScopeProviders(methodName: call:name);
 			local Int is providerTotal: bsProviders:length() + if({ ownOwner != '' }, { 1 }, { 0 });
 			if({ providerTotal > 1 }, {
 				local String is listed: '';
@@ -3145,13 +3318,13 @@ Class is TypeChecker{
 						listed: listed . ' and ' . prov;
 					});
 				});
-				self:addError(line: self:currentLine, msg: 'Function \'' . expr:methodName . '\' is provided by ' . listed . '; qualify the call (' . self:names:selfIdent() . ':' . expr:methodName . ' or the class name) (§2.3).');
-				expr:resolvedType: '';
+				self:addError(line: self:currentLine, msg: 'Function \'' . call:name . '\' is provided by ' . listed . '; qualify the call (' . self:names:selfIdent() . ':' . call:name . ' or the class name) (§2.3).');
+				expr:setResolvedType(t: '');
 				return '';
 			});
 			if({ providerTotal == 0 }, {
-				self:addError(line: self:currentLine, msg: 'Undefined function \'' . expr:methodName . '\' on class \'' . self:currentClassName . '\' (E9).');
-				expr:resolvedType: '';
+				self:addError(line: self:currentLine, msg: 'Undefined function \'' . call:name . '\' on class \'' . self:currentClassName . '\' (E9).');
+				expr:setResolvedType(t: '');
 				return '';
 			});
 				if({ ownOwner == '' }, {
@@ -3163,7 +3336,23 @@ Class is TypeChecker{
 					local Boolean is bareIsBranch: provider == 'Conditional' && expr:argCount() >= 2 && expr:argCount() <= 4;
 					# the bare form carries the value-yield
 					# semantics exactly like the qualified call.
-					local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
+					local Boolean is bareArg1Anon: false;
+					local Boolean is bareArg2Anon: false;
+					if({ bareIsBranch && expr:argCount() == 3 }, {
+						match(on: expr:argValue(index: 1), when: [
+							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+								bareArg1Anon: true;
+							}
+						], default: {
+						});
+						match(on: expr:argValue(index: 2), when: [
+							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+								bareArg2Anon: true;
+							}
+						], default: {
+						});
+					});
+					local Boolean is bareIsValue: bareIsBranch && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && bareArg1Anon && bareArg2Anon;
 					# the bare loop constructs — the vars
 					# closure's parameters scope over the closure bodies, so
 					# they bind BEFORE the inference and restore after. The
@@ -3177,15 +3366,20 @@ Class is TypeChecker{
 							savedLoopVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 						});
 						local Boolean is bareHasLoopVars: false;
-						expr:methodArgs:each(action: local Function(NamedArg is arg){
-							if({ arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, {
-								bareHasLoopVars: true;
-								arg:value:anonParams:each(action: local Function(Parameter is p){
-									if({ p:hasDefault }, {
-										self:inferExpressionType(expr: p:defaultExpr);
+						call:args:each(action: local Function(NamedArg is arg){
+							match(on: arg:value, when: [
+								Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+									if({ ps:length() > 0 && bd:length() == 0 }, {
+										bareHasLoopVars: true;
+										ps:each(action: local Function(Parameter is p){
+											if({ p:hasDefault }, {
+												self:inferExpressionType(expr: p:defaultExpr);
+											});
+											self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
+										});
 									});
-									self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
-								});
+								}
+							], default: {
 							});
 						});
 						# the [vars] parameters scope the closures at
@@ -3193,10 +3387,19 @@ Class is TypeChecker{
 						# as a variable was built before these parameters
 						# existed and cannot capture them.
 						local Int is barePos: 0;
-						expr:methodArgs:each(action: local Function(NamedArg is arg){
+						call:args:each(action: local Function(NamedArg is arg){
 							local Boolean is bareClosureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || (arg:name == '' && barePos > 0);
-							if({ bareHasLoopVars && bareClosureSlot && arg:value:kind != ExpressionKind:ANON_FN }, {
-								self:addError(line: self:currentLine, msg: self:errText:errLoopVarsClosureLiteral());
+							if({ bareHasLoopVars && bareClosureSlot }, {
+								local Boolean is valIsAnon: false;
+								match(on: arg:value, when: [
+									Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+										valIsAnon: true;
+									}
+								], default: {
+								});
+								if({ !valIsAnon }, {
+									self:addError(line: self:currentLine, msg: self:errText:errLoopVarsClosureLiteral());
+								});
 							});
 							barePos: barePos + 1;
 						});
@@ -3207,10 +3410,15 @@ Class is TypeChecker{
 						# yields — the enclosing branch's flag must not leak.
 						local Boolean is savedLoopBranch: self:inBranchClosure;
 						self:inBranchClosure: false;
-						expr:methodArgs:each(action: local Function(NamedArg is arg){
-							if({ arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, {
-								if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
-									arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+						call:args:each(action: local Function(NamedArg is arg){
+							if({ arg:name == 'evaluate' }, {
+								match(on: arg:value, when: [
+									Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+										if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+											returnType:name: Primitive:BOOLEAN:value();
+										});
+									}
+								], default: {
 								});
 							});
 							self:inferExpressionType(expr: arg:value);
@@ -3222,13 +3430,18 @@ Class is TypeChecker{
 						# must not leak into the check closure (the same
 						# entry reset the qualified branch call makes).
 						self:inBranchClosure: false;
-						expr:methodArgs:each(action: local Function(NamedArg is arg){
-							if({ bareIsBranch && bareIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, {
-								# the check closure coerces to Boolean
-								# before its body check (the qualified
-								# branch call's arg-0 rule).
-								if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
-									arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+						call:args:each(action: local Function(NamedArg is arg){
+							if({ bareIsBranch && bareIdx == 0 }, {
+								match(on: arg:value, when: [
+									Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+										# the check closure coerces to Boolean
+										# before its body check (the qualified
+										# branch call's arg-0 rule).
+										if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+											returnType:name: Primitive:BOOLEAN:value();
+										});
+									}
+								], default: {
 								});
 							});
 							if({ bareIsBranch && bareIdx >= 1 }, {
@@ -3246,32 +3459,42 @@ Class is TypeChecker{
 							bareIdx: bareIdx + 1;
 						});
 					});
-					self:selectOverload(className: provider, methodName: expr:methodName, expr: expr);
+					self:selectOverload(className: provider, methodName: call:name, expr: expr);
 					# the as-import grants FUNCTIONS
 					# ONLY under the callee's visibility — a `local` member of the
 					# imported class is not callable through the import. The same
 					# check the qualified path runs.
-					local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: expr:methodName, idx: expr:num);
+					local Member is bareSelected: self:lookupOverloadedMember(className: provider, methodName: call:name, idx: call:overloadIndex);
 					if({ bareSelected:name != '' }, {
-						self:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: expr:methodName);
+						self:checkMemberVisibility(ownerClass: provider, member: bareSelected, memberName: call:name);
 					});
 					if({ provider == 'Loops' }, {
 						self:localVars: savedLoopVars;
-						expr:bareProvider: provider;
+						call:bareProvider: provider;
 						res: 'Void';
-						expr:resolvedType: res;
+						expr:setResolvedType(t: res);
 						return res;
 					});
-				expr:bareProvider: provider;
-				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: expr:methodName);
+				call:bareProvider: provider;
+				local String is providerRet: self:lookupMethodReturnType(className: provider, methodName: call:name);
 				if({ providerRet == '' }, {
 					providerRet: 'Any';
 				});
 				if({ bareIsValue }, {
-					local Expression is bareThen: expr:argValue(index: 1);
-					local Expression is bareElse: expr:argValue(index: 2);
-					local String is bareThenT: bareThen:anonReturnType:name;
-					local String is bareElseT: bareElse:anonReturnType:name;
+					local String is bareThenT: '';
+					local String is bareElseT: '';
+					match(on: expr:argValue(index: 1), when: [
+						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+							bareThenT: rt:name;
+						}
+					], default: {
+					});
+					match(on: expr:argValue(index: 2), when: [
+						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+							bareElseT: rt:name;
+						}
+					], default: {
+					});
 					if({ self:isVoid(t: bareThenT) || self:isVoid(t: bareElseT) }, {
 						self:addError(line: self:currentLine, msg: self:errText:errBranchRequiresExpressions());
 						res: self:names:voidName();
@@ -3283,11 +3506,11 @@ Class is TypeChecker{
 							res: if({ bareThenT == Primitive:ANY:value() }, { bareElseT }, { bareThenT });
 						});
 					});
-					expr:resolvedType: res;
+					expr:setResolvedType(t: res);
 					return res;
 				});
 				res: providerRet;
-				expr:resolvedType: res;
+				expr:setResolvedType(t: res);
 				return res;
 				});
 		});
@@ -3296,26 +3519,44 @@ Class is TypeChecker{
 		# method's return type — they inline into it. The self-call
 		# disjunct lets the wrapper's own self-calls pre-type their check
 		# closures too.
-		local Boolean is isBranchCall: expr:methodName == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() && self:currentClassName == 'Conditional')) || expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'if' && self:isAsImportedInherited(className: 'Conditional')));
+		local Boolean is isBranchCall: call:name == 'if' && expr:argCount() >= 2 && expr:argCount() <= 4 && (((targetType == 'Conditional' && targetIsIdent) || (targetIsSelf && self:currentClassName == 'Conditional')) || call:bareProvider == 'Conditional' || (targetIsIdent && targetStr == 'if' && self:isAsImportedInherited(className: 'Conditional')));
 		# the value-yielding form — a 3-arg branch
 		# call in a context that expects a value (a declaration, an
 		# assignment, a return). Both branch closures must be inline
 		# literals; their last expressions are the yields.
-		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && expr:argValue(index: 1):kind == ExpressionKind:ANON_FN && expr:argValue(index: 2):kind == ExpressionKind:ANON_FN;
+		local Boolean is arg1IsAnon: false;
+		local Boolean is arg2IsAnon: false;
+		local Array of Statement is tAnonBody: [];
+		local Array of Statement is eAnonBody: [];
+		if({ isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) }, {
+			match(on: expr:argValue(index: 1), when: [
+				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+					arg1IsAnon: true;
+					tAnonBody: bd;
+				}
+			], default: {
+			});
+			match(on: expr:argValue(index: 2), when: [
+				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+					arg2IsAnon: true;
+					eAnonBody: bd;
+				}
+			], default: {
+			});
+		});
+		local Boolean is isValueBranch: isBranchCall && expr:argCount() == 3 && expected != '' && !self:isVoid(t: expected) && arg1IsAnon && arg2IsAnon;
 		# the value form is structural — BOTH branch
 		# closures must end in a return-expression (the yield). Closures that
 		# end in assignments are statement-style branches even in a
 		# value-typed context; they stay void-routed.
 		if({ isValueBranch }, {
-			local Expression is tAnon: expr:argValue(index: 1);
-			local Expression is eAnon: expr:argValue(index: 2);
-			local Int is tLen: tAnon:anonBody:length();
-			local Int is eLen: eAnon:anonBody:length();
+			local Int is tLen: tAnonBody:length();
+			local Int is eLen: eAnonBody:length();
 			if({ tLen == 0 || eLen == 0 }, {
 				isValueBranch: false;
 			}, {
-				local Statement is tLast: tAnon:anonBody:get(index: tLen - 1);
-				local Statement is eLast: eAnon:anonBody:get(index: eLen - 1);
+				local Statement is tLast: tAnonBody:get(index: tLen - 1);
+				local Statement is eLast: eAnonBody:get(index: eLen - 1);
 				local Boolean is tHasRet: match(on: tLast, when: [
 					Statement:Return: local Function of Boolean(Expression is returnExpr, Boolean is hasReturnExpr){
 						return hasReturnExpr;
@@ -3348,37 +3589,47 @@ Class is TypeChecker{
 				savedWhileVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 			});
 			local Int is posIdx: 0;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if({ arg:value:kind == ExpressionKind:ARRAY && arg:value:anonParams:length() > 0 }, {
-					hasLoopVars: true;
-					arg:value:anonParams:each(action: local Function(Parameter is p){
-						if({ p:hasDefault }, {
-							self:inferExpressionType(expr: p:defaultExpr);
+			call:args:each(action: local Function(NamedArg is arg){
+				match(on: arg:value, when: [
+					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+						if({ ps:length() > 0 && bd:length() == 0 }, {
+							hasLoopVars: true;
+							ps:each(action: local Function(Parameter is p){
+								if({ p:hasDefault }, {
+									self:inferExpressionType(expr: p:defaultExpr);
+								});
+								self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
+							});
 						});
-						self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
-					});
-				});
+					}
+				], default: {});
 				# the [vars] parameters scope the closures at the
 				# call site — compile-time only. A closure held as a
 				# variable was built before these parameters existed and
 				# cannot capture them: reject the combination instead of
 				# running it with free identifiers.
 				local Boolean is closureSlot: arg:name == 'evaluate' || arg:name == 'iterate' || arg:name == 'iteration' || arg:name == 'worker' || (arg:name == '' && ((hasLoopVars && (posIdx == 1 || posIdx == 2)) || (!hasLoopVars && (posIdx == 0 || posIdx == 1))));
-				if({ hasLoopVars && closureSlot && arg:value:kind != ExpressionKind:ANON_FN }, {
-					self:addError(line: self:currentLine, msg: self:errText:errLoopVarsClosureLiteral());
-				});
-				if({ arg:name == 'evaluate' && arg:value:kind == ExpressionKind:ANON_FN }, {
-					if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
-						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
-					});
-				}, {
-					if({ arg:name == '' && arg:value:kind == ExpressionKind:ANON_FN }, {
-						if({ (hasLoopVars && posIdx == 1) || (!hasLoopVars && posIdx == 0) }, {
-							if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
-								arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
+				local Boolean is argIsAnon: false;
+				match(on: arg:value, when: [
+					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+						argIsAnon: true;
+						if({ arg:name == 'evaluate' }, {
+							if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+								returnType:name: Primitive:BOOLEAN:value();
+							});
+						}, {
+							if({ arg:name == '' }, {
+								if({ (hasLoopVars && posIdx == 1) || (!hasLoopVars && posIdx == 0) }, {
+									if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+										returnType:name: Primitive:BOOLEAN:value();
+									});
+								});
 							});
 						});
-					});
+					}
+				], default: {});
+				if({ hasLoopVars && closureSlot && !argIsAnon }, {
+					self:addError(line: self:currentLine, msg: self:errText:errLoopVarsClosureLiteral());
 				});
 				posIdx: posIdx + 1;
 			});
@@ -3393,22 +3644,30 @@ Class is TypeChecker{
 			local Boolean is savedLoopBranch: self:inBranchClosure;
 			self:inBranchClosure: false;
 			local Int is loopArgIdx: 0;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if({ (arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0)))) && arg:value:kind == ExpressionKind:ANON_FN }, {
-					if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
-						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
-					});
+			call:args:each(action: local Function(NamedArg is arg){
+				if({ arg:name == 'evaluate' || (arg:name == '' && ((hasLoopVars && loopArgIdx == 1) || (!hasLoopVars && loopArgIdx == 0))) }, {
+					match(on: arg:value, when: [
+						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+							if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+								returnType:name: Primitive:BOOLEAN:value();
+							});
+						}
+					], default: {});
 				});
 				self:inferExpressionType(expr: arg:value);
 				loopArgIdx: loopArgIdx + 1;
 			});
 			self:inBranchClosure: savedLoopBranch;
 		}, {
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if({ isBranchCall && argIdx == 0 && arg:value:kind == ExpressionKind:ANON_FN }, {
-					if({ arg:value:anonReturnType:name == '' || arg:value:anonReturnType:name == self:names:voidName() }, {
-						arg:value:anonReturnType: Type:init(name: Primitive:BOOLEAN:value());
-					});
+			call:args:each(action: local Function(NamedArg is arg){
+				if({ isBranchCall && argIdx == 0 }, {
+					match(on: arg:value, when: [
+						Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+							if({ returnType:name == '' || returnType:name == self:names:voidName() }, {
+								returnType:name: Primitive:BOOLEAN:value();
+							});
+						}
+					], default: {});
 				});
 				if({ isBranchCall && argIdx >= 1 }, {
 					self:inBranchClosure: true;
@@ -3428,7 +3687,7 @@ Class is TypeChecker{
 
 		if({ isWhileLoop }, {
 			self:localVars: savedWhileVars;
-			expr:resolvedType: 'Void';
+			expr:setResolvedType(t: 'Void');
 			return 'Void';
 		});
 
@@ -3446,10 +3705,10 @@ Class is TypeChecker{
 		# receiver-free C function, no vtable.
 		local Member is heldCallFn: Member:init(kind: MemberKind:METHOD);
 		local String is heldRoot: '';
-		if({ expr:methodTarget:kind == ExpressionKind:IDENT || expr:methodTarget:kind == ExpressionKind:PATH }, {
-			heldRoot: expr:methodTarget:str;
-			if({ expr:methodTarget:kind == ExpressionKind:PATH && expr:methodTarget:pathSegments:length() > 0 }, {
-				heldRoot: expr:methodTarget:pathSegments:get(index: 0);
+		if({ targetIsIdent || targetIsPath }, {
+			heldRoot: targetStr;
+			if({ targetIsPath && targetPathSegs:length() > 0 }, {
+				heldRoot: targetPathSegs:get(index: 0);
 			});
 			if({ heldRoot != '' && heldRoot != self:names:selfIdent() && !self:localVars:has(key: heldRoot) && !self:fieldTypes:has(key: heldRoot) && self:registeredClasses:has(key: heldRoot) }, {
 				if({ method != 'init' }, {
@@ -3460,7 +3719,7 @@ Class is TypeChecker{
 		if({ heldCallFn:name != '' }, {
 			self:checkMemberVisibility(ownerClass: self:findHeldMethodOwner(className: heldRoot, methodName: method), member: heldCallFn, memberName: method);
 			local String is heldRet: self:resolveReturnType(t: heldCallFn:memberType);
-			expr:resolvedType: heldRet;
+			expr:setResolvedType(t: heldRet);
 			return heldRet;
 		});
 		# Strict held resolution: an instance
@@ -3475,9 +3734,9 @@ Class is TypeChecker{
 		# Sysinternal floor access by qualified chain: ONLY base:sys
 		# wrappers may call the floor — everyone else goes through the
 		# same-name wrapper (the sysinternal discipline).
-		if({ expr:methodTarget:kind == ExpressionKind:PATH }, {
+		if({ targetIsPath }, {
 			local String is qJoined: '';
-			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
+			targetPathSegs:each(action: local Function(String is seg){
 				if({ qJoined == '' }, {
 					qJoined: seg;
 				}, {
@@ -3499,7 +3758,7 @@ Class is TypeChecker{
 					self:addError(line: self:currentLine, msg: self:errText:errSysinternalRestricted(caller: callerCls:namespaceJoined()));
 				});
 				res: self:lookupMethodReturnType(className: qJoined, methodName: method);
-				expr:resolvedType: res;
+				expr:setResolvedType(t: res);
 				return res;
 			});
 		});
@@ -3507,22 +3766,25 @@ Class is TypeChecker{
 		# Namespace-qualified chains: `base:sysinternal:Buf()` and method
 		# calls on one — the chain's type is the named class.
 		if({ targetType == Primitive:ANY:value() || targetType == '' }, {
-			if({ expr:methodTarget:kind == ExpressionKind:PATH }, {
+			if({ targetIsPath }, {
 				local ClassInfo is qCls: self:findClass(name: method);
 				if({ qCls:name == method }, {
 					targetType: method;
 				});
 			}, {
-				if({ expr:methodTarget:kind == ExpressionKind:CALL }, {
-					local Expression is qInner: expr:methodTarget;
-					if({ qInner:methodTarget:kind == ExpressionKind:PATH }, {
-						local String is qCand: qInner:methodName;
-						local ClassInfo is qCls: self:findClass(name: qCand);
-						if({ qCand != '' && qCls:name == qCand }, {
-							targetType: qCand;
-						});
-					});
-				});
+				match(on: call:target, when: [
+					Expression:Call: local Function(CallData is qInnerCall){
+						match(on: qInnerCall:target, when: [
+							Expression:Path: local Function(Array of String is qSegs){
+								local String is qCand: qInnerCall:name;
+								local ClassInfo is qCls: self:findClass(name: qCand);
+								if({ qCand != '' && qCls:name == qCand }, {
+									targetType: qCand;
+								});
+							}
+						], default: {});
+					}
+				], default: {});
 			});
 		});
 
@@ -3539,13 +3801,13 @@ Class is TypeChecker{
 		});
 
 		local String is fnVarT: '';
-		if({ expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == self:names:selfIdent() }, {
+		if({ targetIsSelf }, {
 			fnVarT: self:localVars:getString(key: method, default: self:fieldTypes:getString(key: method, default: ''));
 		});
 		if({ targetType == 'Parallel' && (method == 'sync' || method == 'syncWith') }, {
 			local Boolean is hasAction: false;
 			local String is actRetT: 'Void';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			call:args:each(action: local Function(NamedArg is arg){
 				local String is aName: arg:name;
 				local String is aType: self:inferExpressionType(expr: arg:value);
 				if({ aName == 'lock' }, {
@@ -3572,7 +3834,7 @@ Class is TypeChecker{
 		}, {
 		if({ targetType == 'Parallel' && method == 'run' }, {
 			local Boolean is hasWorker: false;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			call:args:each(action: local Function(NamedArg is arg){
 				local String is aName: arg:name;
 				local String is aType: self:inferExpressionType(expr: arg:value);
 				if({ aName == 'threads' || aName == 'iterations' }, {
@@ -3621,7 +3883,7 @@ Class is TypeChecker{
 								# List get/pop REQUIRE a 'default:' argument (Never Null).
 								if({ (targetType == 'List' || targetType:startsWith(prefix: 'List:') || targetType:startsWith(prefix: 'List of ')) && (method == 'get' || method == 'pop') }, {
 									local Boolean is hasDefault: false;
-									expr:methodArgs:each(action: local Function(NamedArg is arg){
+									call:args:each(action: local Function(NamedArg is arg){
 										if({ arg:name == 'default' }, {
 											hasDefault: true;
 										});
@@ -3687,21 +3949,23 @@ Class is TypeChecker{
 							}, {
 								if({ targetType:startsWith(prefix: 'Array') && method == 'map' }, {
 									local String is mappedElem: Primitive:ANY:value();
-									if({ expr:methodArgs:length() > 0 }, {
-										local NamedArg is a0: expr:methodArgs:get(index: 0);
-										local Expression is fnExpr: a0:value;
-										if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
-											local String is fnRet: fnExpr:anonReturnType:name;
-											if({ fnRet != '' && !self:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, {
-												mappedElem: self:formatTypeString(t: fnExpr:anonReturnType);
-											});
+									if({ call:args:length() > 0 }, {
+										local NamedArg is a0: call:args:get(index: 0);
+										match(on: a0:value, when: [
+											Expression:AnonFn: local Function(Type is fnRetType, Array of Parameter is ps, Array of Statement is bd){
+												local String is fnRet: fnRetType:name;
+												if({ fnRet != '' && !self:isVoid(t: fnRet) && fnRet != Primitive:ANY:value() }, {
+													mappedElem: self:formatTypeString(t: fnRetType);
+												});
+											}
+										], default: {
 										});
 									});
 									res: if({ mappedElem != Primitive:ANY:value() }, { 'Array:' . mappedElem }, { 'Array' });
 								}, {
 									if({ targetType:startsWith(prefix: 'Array') && method == 'fold' }, {
-										if({ expr:methodArgs:length() > 0 }, {
-											local NamedArg is a0: expr:methodArgs:get(index: 0);
+										if({ call:args:length() > 0 }, {
+											local NamedArg is a0: call:args:get(index: 0);
 											res: a0:value:resolvedType;
 										}, {
 											res: 'Any';
@@ -3748,10 +4012,20 @@ Class is TypeChecker{
 			# closures' established return types must unify. Read from the
 			# nodes (the write-backs happened during the body check); never
 			# re-infer.
-			local Expression is thenAnon: expr:argValue(index: 1);
-			local Expression is elseAnon: expr:argValue(index: 2);
-			local String is thenT: thenAnon:anonReturnType:name;
-			local String is elseT: elseAnon:anonReturnType:name;
+			local String is thenT: '';
+			local String is elseT: '';
+			match(on: expr:argValue(index: 1), when: [
+				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+					thenT: rt:name;
+				}
+			], default: {
+			});
+			match(on: expr:argValue(index: 2), when: [
+				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+					elseT: rt:name;
+				}
+			], default: {
+			});
 			if({ self:isVoid(t: thenT) || self:isVoid(t: elseT) }, {
 				self:addError(line: self:currentLine, msg: self:errText:errBranchRequiresExpressions());
 				res: self:names:voidName();
@@ -3831,27 +4105,45 @@ Class is TypeChecker{
 		if({ castM:name == '' }, {
 			return '';
 		});
-		if({ !castM:hasInit || castM:initExpr:kind != ExpressionKind:ARRAY }, {
+		if({ !castM:hasInit }, {
 			return '';
 		});
 		local String is found: '';
-		castM:initExpr:arrayItems:each(action: local Function(Expression is entry){
-			if({ found == '' && entry:kind == ExpressionKind:ARRAY && entry:arrayItems:length() == 2 }, {
-				local Expression is tExpr: entry:arrayItems:get(index: 0);
-				local Expression is fExpr: entry:arrayItems:get(index: 1);
-				local String is entryTarget: tExpr:str;
-				local String is entryFn: fExpr:str;
-				if({ entryTarget == target }, {
-					local String is fnRet: self:lookupMethodReturnType(className: srcType, methodName: entryFn);
-					if({ fnRet != target }, {
-						self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
-						found: entryFn;
-						return;
+		match(on: castM:initExpr, when: [
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				items:each(action: local Function(Expression is entry){
+					if({ found == '' }, {
+						match(on: entry, when: [
+							Expression:ArrayLit: local Function(Array of Expression is pair){
+								if({ pair:length() == 2 }, {
+									local String is entryTarget: '';
+									local String is entryFn: '';
+									local Expression is p0: pair:get(index: 0);
+									local Expression is p1: pair:get(index: 1);
+									match(on: p0, when: [
+										Expression:Ident: local Function(String is s){ entryTarget: s; },
+										Expression:StringLit: local Function(String is s){ entryTarget: s; }
+									], default: {});
+									match(on: p1, when: [
+										Expression:Ident: local Function(String is s){ entryFn: s; },
+										Expression:StringLit: local Function(String is s){ entryFn: s; }
+									], default: {});
+									if({ entryTarget == target }, {
+										local String is fnRet: self:lookupMethodReturnType(className: srcType, methodName: entryFn);
+										if({ fnRet != target }, {
+											self:addError(line: self:currentLine, msg: 'Cast \'as ' . target . '\' maps to \'' . entryFn . '\', which returns \'' . fnRet . '\', not \'' . target . '\'.');
+											found: entryFn;
+											return;
+										});
+										found: entryFn;
+									});
+								});
+							}
+						], default: {});
 					});
-					found: entryFn;
 				});
-			});
-		});
+			}
+		], default: {});
 		return found;
 	}
 
@@ -3900,30 +4192,29 @@ Class is TypeChecker{
 				# class-name prefix target resolves to the shared held
 				# slot, and assignment through it is rejected.
 				# a resolution-hook name is a cached single copy too.
-				if({ assignTarget:kind == ExpressionKind:PATH && assignTarget:pathSegments:length() >= 2 }, {
-					local Array of String is hSegs: assignTarget:pathSegments;
-					local String is hRoot: hSegs:get(index: 0);
-					local String is hName: hSegs:get(index: 1);
-					local Boolean is hReadOnly: self:findHeldMember(className: hRoot, memberName: hName):name != '';
-					local Boolean is hHooked: false;
-					if({ !hReadOnly && self:findHeldMethod(className: hRoot, methodName: ContractMethod:RESOLVE_HELD:value()):name != '' }, {
-						hHooked: self:lookupFieldType(className: hRoot, fieldName: hName) == '' && self:lookupAnyMember(className: hRoot, methodName: hName):kind != MemberKind:METHOD && self:findHeldMethod(className: hRoot, methodName: hName):name == '';
-					});
-					if({ hRoot != self:names:selfIdent() && !self:localVars:has(key: hRoot) && !self:fieldTypes:has(key: hRoot) && (hReadOnly || hHooked) }, {
-						local String is hMsg: if({ hReadOnly }, { 'Held member \'' . hRoot . ':' . hName . '\' is read-only: held members are class-scoped single copies, assigned once by their initializer.' }, { 'Resolved member \'' . hRoot . ':' . hName . '\' is read-only: resolution-hook values are cached single copies.' });
-						self:addError(line: stmt:line, msg: hMsg);
-					});
-				});
-				if({ assignTarget:kind == ExpressionKind:PATH }, {
-					local Array of String is tSegs: assignTarget:pathSegments;
-					if({ tSegs:length() == 2 && tSegs:get(index: 0) == self:names:selfIdent() }, {
-						self:unassignedFields:remove(key: tSegs:get(index: 1));
-					});
-				}, {
-					if({ assignTarget:kind == ExpressionKind:IDENT }, {
-						self:unassignedFields:remove(key: assignTarget:str);
-					});
-				});
+				match(on: assignTarget, when: [
+					Expression:Path: local Function(Array of String is hSegs){
+						if({ hSegs:length() >= 2 }, {
+							local String is hRoot: hSegs:get(index: 0);
+							local String is hName: hSegs:get(index: 1);
+							local Boolean is hReadOnly: self:findHeldMember(className: hRoot, memberName: hName):name != '';
+							local Boolean is hHooked: false;
+							if({ !hReadOnly && self:findHeldMethod(className: hRoot, methodName: ContractMethod:RESOLVE_HELD:value()):name != '' }, {
+								hHooked: self:lookupFieldType(className: hRoot, fieldName: hName) == '' && self:lookupAnyMember(className: hRoot, methodName: hName):kind != MemberKind:METHOD && self:findHeldMethod(className: hRoot, methodName: hName):name == '';
+							});
+							if({ hRoot != self:names:selfIdent() && !self:localVars:has(key: hRoot) && !self:fieldTypes:has(key: hRoot) && (hReadOnly || hHooked) }, {
+								local String is hMsg: if({ hReadOnly }, { 'Held member \'' . hRoot . ':' . hName . '\' is read-only: held members are class-scoped single copies, assigned once by their initializer.' }, { 'Resolved member \'' . hRoot . ':' . hName . '\' is read-only: resolution-hook values are cached single copies.' });
+								self:addError(line: stmt:line, msg: hMsg);
+							});
+						});
+						if({ hSegs:length() == 2 && hSegs:get(index: 0) == self:names:selfIdent() }, {
+							self:unassignedFields:remove(key: hSegs:get(index: 1));
+						});
+					},
+					Expression:Ident: local Function(String is name){
+						local Boolean is removed: self:unassignedFields:remove(key: name);
+					}
+				], default: {});
 				local String is targetType: self:inferExpressionType(expr: assignTarget);
 				local String is valType: self:inferExpressionType(expr: assignValue, expected: targetType);
 				if({ !self:isAssignable(target: targetType, source: valType) }, {
@@ -3956,15 +4247,19 @@ Class is TypeChecker{
 					# yield type (the inBranchClosure method-routing does not
 					# apply to it).
 					if({ self:checkingValueYield }, {
-						if({ self:isVoid(t: self:currentAnonNode:anonReturnType:name) }, {
-							self:currentAnonNode:anonReturnType: Type:init(name: retType);
-							self:currentMethodReturnType: retType;
-						}, {
-							if({ !self:isAssignable(target: self:currentAnonNode:anonReturnType:name, source: retType) }, {
-								local String is msg: 'Branch yields mismatched types: expected \'' . self:currentAnonNode:anonReturnType:name . '\', found \'' . retType . '\'.';
-								self:addError(line: stmt:line, msg: msg);
-							});
-						});
+						match(on: self:currentAnonNode, when: [
+							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+								if({ self:isVoid(t: returnType:name) }, {
+									returnType:name: retType;
+									self:currentMethodReturnType: retType;
+								}, {
+									if({ !self:isAssignable(target: returnType:name, source: retType) }, {
+										local String is msg: 'Branch yields mismatched types: expected \'' . returnType:name . '\', found \'' . retType . '\'.';
+										self:addError(line: stmt:line, msg: msg);
+									});
+								});
+							}
+						], default: {});
 					}, {
 						# A return inside an untyped closure infers the closure's
 						# return type — including returns nested in statement-form
@@ -3973,12 +4268,21 @@ Class is TypeChecker{
 						# enclosing method. Only a value-branch's yield (which
 						# types against the branch's expected type above) keeps
 						# the method-level routing.
-						if({ self:anonDepth > 0 && !self:checkingValueYield && self:currentAnonNode:kind == ExpressionKind:ANON_FN && self:isVoid(t: self:currentAnonNode:anonReturnType:name) && self:isVoid(t: self:currentMethodReturnType) }, {
-							self:currentAnonNode:anonReturnType: Type:init(name: retType);
-							self:currentMethodReturnType: retType;
-						}, {
+						local Boolean is inferredClosureRet: false;
+						if({ self:anonDepth > 0 && !self:checkingValueYield && self:isVoid(t: self:currentMethodReturnType) }, {
+							match(on: self:currentAnonNode, when: [
+								Expression:AnonFn: local Function(Type is returnType, Array of Parameter is ps, Array of Statement is bd){
+									if({ self:isVoid(t: returnType:name) }, {
+										returnType:name: retType;
+										self:currentMethodReturnType: retType;
+										inferredClosureRet: true;
+									});
+								}
+							], default: {});
+						});
+						if({ !inferredClosureRet }, {
 							if({ !self:isAssignable(target: self:currentMethodReturnType, source: retType) }, {
-								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\' (method ' . self:currentMethodName . ' of ' . self:currentClassName . ', stmt line ' . (stmt:line as String) . ', depth ' . (self:anonDepth as String) . ', inBranch ' . (self:inBranchClosure as String) . ', expr kind ' . (returnExpr:kind as String) . ', expr str \'' . returnExpr:str . '\').';
+								local String is msg: 'Method declared return type \'' . self:currentMethodReturnType . '\', but returned \'' . retType . '\' (method ' . self:currentMethodName . ' of ' . self:currentClassName . ', stmt line ' . (stmt:line as String) . ', depth ' . (self:anonDepth as String) . ', inBranch ' . (self:inBranchClosure as String) . ', expr line ' . (returnExpr:line as String) . ').';
 								self:addError(line: stmt:line, msg: msg);
 							});
 						});
@@ -4059,62 +4363,53 @@ Class is TypeChecker{
 	## @param expr: The void expression being consumed.
 	## @return: The hint text, or ''.
 	Function of String is voidUseNote(Expression is expr){
-		if({ expr:kind != ExpressionKind:CALL }, {
-			return '';
-		});
-		local String is targetT: expr:methodTarget:resolvedType;
-		if({ targetT == self:names:selfIdent() || targetT == '' }, {
-			targetT: self:currentClassName;
-		});
-		local ClassInfo is tc: self:findClass(name: targetT:split(delimiter: ':'):get(index: 0));
-		if({ tc:name == '' }, {
-			return '';
-		});
-		local Member is m: self:lookupOverloadedMember(className: targetT, methodName: expr:methodName, idx: expr:num);
-		if({ m:name == '' }, {
-			return '';
-		});
-		local String is mRet: self:resolveReturnType(t: m:memberType);
-		if({ !self:isVoid(t: mRet) }, {
-			return '';
-		});
-		local String is note: '\'' . targetT . '.' . expr:methodName . '\' declares no return value';
-		# a partially-bound void call — the
-		# unbound parameters' effects are absent. The arity gap is the
-		# general signal (a 2-arg conditional's missing else is one case
-		# of it, not a special one).
-		if({ expr:argCount() < m:params:length() }, {
-			note: note . ' (' . (expr:argCount() as String) . ' of ' . (m:params:length() as String) . ' declared parameters bound)';
-		});
-		# a sibling overload binding MORE parameters
-		# is the general signal that this call's effects are incomplete — a
-		# 2-arg conditional's missing else is one case of it, not a special
-		# one. Name the sibling's parameters so the user sees what to add.
-		local Array of Member is group: [];
-		local Array of String is groupOwners: [];
-		self:collectOverloadGroup(className: targetT, methodName: expr:methodName, acc: group, ownerAcc: groupOwners);
-		local Int is maxParams: m:params:length();
-		group:each(action: local Function(Member is g){
-			if({ g:params:length() > maxParams }, {
-				maxParams: g:params:length();
-			});
-		});
-		if({ maxParams > m:params:length() }, {
-			local String is names: '';
-			group:each(action: local Function(Member is g){
-				if({ g:params:length() == maxParams }, {
-					g:params:each(action: local Function(Parameter is p){
-						if({ names:endsWith(suffix: p:name) == false }, {
-							if({ names != '' }, {
-								names: names . ', ';
+		local String is note: '';
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is call){
+				local String is targetT: call:target:resolvedType;
+				if({ targetT == self:names:selfIdent() || targetT == '' }, {
+					targetT: self:currentClassName;
+				});
+				local ClassInfo is tc: self:findClass(name: targetT:split(delimiter: ':'):get(index: 0));
+				if({ tc:name != '' }, {
+					local Member is m: self:lookupOverloadedMember(className: targetT, methodName: call:name, idx: call:overloadIndex);
+					if({ m:name != '' }, {
+						local String is mRet: self:resolveReturnType(t: m:memberType);
+						if({ self:isVoid(t: mRet) }, {
+							note: '\'' . targetT . '.' . call:name . '\' declares no return value';
+							if({ call:args:length() < m:params:length() }, {
+								note: note . ' (' . (call:args:length() as String) . ' of ' . (m:params:length() as String) . ' declared parameters bound)';
 							});
-							names: names . p:name;
+							local Array of Member is group: [];
+							local Array of String is groupOwners: [];
+							self:collectOverloadGroup(className: targetT, methodName: call:name, acc: group, ownerAcc: groupOwners);
+							local Int is maxParams: m:params:length();
+							group:each(action: local Function(Member is g){
+								if({ g:params:length() > maxParams }, {
+									maxParams: g:params:length();
+								});
+							});
+							if({ maxParams > m:params:length() }, {
+								local String is names: '';
+								group:each(action: local Function(Member is g){
+									if({ g:params:length() == maxParams }, {
+										g:params:each(action: local Function(Parameter is p){
+											if({ names:endsWith(suffix: p:name) == false }, {
+												if({ names != '' }, {
+													names: names . ', ';
+												});
+												names: names . p:name;
+											});
+										});
+									});
+								});
+								note: note . ' (' . (maxParams as String) . ' parameters are available: ' . names . ')';
+							});
 						});
 					});
 				});
-			});
-			note: note . ' (' . (maxParams as String) . ' parameters are available: ' . names . ')';
-		});
+			}
+		], default: {});
 		return note;
 	}
 
@@ -4161,7 +4456,7 @@ Class is TypeChecker{
 
 		local Int is pIdx: 0;
 		params:each(action: local Function(Parameter is p){
-			local Expression is matchedValue: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is matchedValue: Expression:Unknown;
 			local Boolean is found: false;
 			args:each(action: local Function(NamedArg is a){
 				if({ !found && a:name != '' && a:name == p:name }, {
@@ -4886,7 +5181,15 @@ Class is TypeChecker{
 			return;
 		});
 		local Expression is parentInit: parentM:initExpr;
-		if({ parentInit:kind != ExpressionKind:ARRAY }, {
+		local Array of Expression is parentItems: [];
+		local Boolean is parentIsArray: false;
+		match(on: parentInit, when: [
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				parentIsArray: true;
+				parentItems: items;
+			}
+		], default: {});
+		if({ !parentIsArray }, {
 			self:addError(line: subM:line, msg: '\'merge\' requires a constant array literal in parent \'' . baseName . '.' . parentM:name . '.');
 			return;
 		});
@@ -4894,19 +5197,28 @@ Class is TypeChecker{
 			return;
 		});
 		local Expression is childInit: subM:initExpr;
-		if({ childInit:kind != ExpressionKind:ARRAY }, {
+		local Array of Expression is childItems: [];
+		local Boolean is childIsArray: false;
+		match(on: childInit, when: [
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				childIsArray: true;
+				childItems: items;
+			}
+		], default: {});
+		if({ !childIsArray }, {
 			self:addError(line: subM:line, msg: '\'merge\' requires a constant array literal initializer on \'' . classDef:name . '.' . subM:name . '.');
 			return;
 		});
 		local Array of Expression is combined: [];
-		parentInit:arrayItems:each(action: local Function(Expression is item){
+		parentItems:each(action: local Function(Expression is item){
 			combined:add(item: item);
 		});
-		childInit:arrayItems:each(action: local Function(Expression is item){
+		childItems:each(action: local Function(Expression is item){
 			combined:add(item: item);
 		});
-		local Expression is folded: subM:initExpr;
-		folded:arrayItems: combined;
+		local Expression is folded: Expression:ArrayLit(items: combined);
+		folded:setLine(line: childInit:line);
+		subM:initExpr: folded;
 	}
 
 	## Populates `fieldTypes` for a class including inherited fields.
@@ -5079,41 +5391,47 @@ Class is TypeChecker{
 	Function is checkInstanceImports(ClassInfo is classDef){
 		local Map of String to String is seen: Map:init();
 		classDef:members:each(action: local Function(Member is m){
-			if({ m:name != 'using' || !m:hasInit || m:initExpr:kind != ExpressionKind:ARRAY }, {
+			if({ m:name != 'using' || !m:hasInit }, {
 				return;
 			});
-			m:initExpr:arrayItems:each(action: local Function(Expression is item){
-				if({ item:kind != ExpressionKind:ARRAY }, {
-					return;
-				});
-				local Expression is asExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
-				item:arrayItems:each(action: local Function(Expression is seg){
-					if({ seg:kind == ExpressionKind:USING_AS }, {
-						asExpr: seg;
+			match(on: m:initExpr, when: [
+				Expression:ArrayLit: local Function(Array of Expression is items){
+					items:each(action: local Function(Expression is item){
+						match(on: item, when: [
+							Expression:ArrayLit: local Function(Array of Expression is segs){
+								local String is asName: '';
+								segs:each(action: local Function(Expression is seg){
+									match(on: seg, when: [
+										Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+											asName: className;
+										}
+									], default: {});
+								});
+								if({ asName == '' }, {
+									return;
+								});
+								if({ seen:has(key: asName) }, {
+									self:addError(line: m:line, msg: self:errText:errDuplicateInstanceImport(className: classDef:name, asName: asName));
+									return;
+								});
+								seen:set(key: asName, value: 'true');
+								local ClassInfo is target: self:findClass(name: asName);
+								if({ target:name == '' }, {
+									return;
+								});
+								if({ target:baseClass == self:names:enumHeader() }, {
+									self:addError(line: m:line, msg: self:errText:errCannotInstanceImportEnum(asName: asName));
+									return;
+								});
+								if({ target:typeParams:length() > 0 }, {
+									self:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (§10).');
+									return;
+								});
+							}
+						], default: {});
 					});
-				});
-				if({ asExpr:str == '' }, {
-					return;
-				});
-				local String is asName: asExpr:str;
-				if({ seen:has(key: asName) }, {
-					self:addError(line: m:line, msg: self:errText:errDuplicateInstanceImport(className: classDef:name, asName: asName));
-					return;
-				});
-				seen:set(key: asName, value: 'true');
-				local ClassInfo is target: self:findClass(name: asName);
-				if({ target:name == '' }, {
-					return;
-				});
-				if({ target:baseClass == self:names:enumHeader() }, {
-					self:addError(line: m:line, msg: self:errText:errCannotInstanceImportEnum(asName: asName));
-					return;
-				});
-					if({ target:typeParams:length() > 0 }, {
-						self:addError(line: m:line, msg: 'Generic classes cannot be instance-imported yet (§10).');
-						return;
-					});
-			});
+				}
+			], default: {});
 		});
 	}
 
@@ -5124,16 +5442,24 @@ Class is TypeChecker{
 	Function of Array of String is instanceImportTargets(ClassInfo is classDef){
 		local Array of String is out: [];
 		classDef:members:each(action: local Function(Member is m){
-			if({ m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-				m:initExpr:arrayItems:each(action: local Function(Expression is item){
-					if({ item:kind == ExpressionKind:ARRAY }, {
-						item:arrayItems:each(action: local Function(Expression is seg){
-							if({ seg:kind == ExpressionKind:USING_AS }, {
-								out:add(item: seg:str);
-							});
+			if({ m:name == 'using' && m:hasInit }, {
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function(Array of Expression is items){
+						items:each(action: local Function(Expression is item){
+							match(on: item, when: [
+								Expression:ArrayLit: local Function(Array of Expression is segs){
+									segs:each(action: local Function(Expression is seg){
+										match(on: seg, when: [
+											Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+												out:add(item: className);
+											}
+										], default: {});
+									});
+								}
+							], default: {});
 						});
-					});
-				});
+					}
+				], default: {});
 			});
 		});
 		return out;
@@ -5223,7 +5549,15 @@ Class is TypeChecker{
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
 					# The namespace declaration is metadata, not a variant.
-					if({ m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
+					local Boolean is isArrayInit: false;
+					if({ m:hasInit }, {
+						match(on: m:initExpr, when: [
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								isArrayInit: true;
+							}
+						], default: {});
+					});
+					if({ isArrayInit }, {
 						return;
 					});
 					self:allEnumVariants:set(key: m:name, value: c:name);

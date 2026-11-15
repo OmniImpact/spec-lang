@@ -22,7 +22,7 @@ Class is Parser{
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
@@ -629,15 +629,14 @@ Class is Parser{
 					vParams: self:parseParams();
 					self:matchPunct(p: Punctuation:GROUP_CLOSE);
 				});
-				local Expression is valExpr: Expression:init(kind: ExpressionKind:NUMBER);
+				local Expression is valExpr: Expression:Unknown;
 				local Boolean is hasInit: false;
 				if({ self:checkPunct(p: Punctuation:TAG) }, {
 					self:advance();
 					valExpr: self:parseExpression();
 					hasInit: true;
 				}, {
-					valExpr:str: '' . count;
-					valExpr:num: count;
+					valExpr: Expression:NumberLit(value: count, text: '' . count);
 					hasInit: true;
 				});
 				count: count + 1;
@@ -815,10 +814,8 @@ Class is Parser{
 		local Array of Statement is body: [];
 		params:each(action: local Function(Parameter is p){
 			if({ p:paramType:name == self:names:selfFieldMarker() }, {
-				local Expression is lhs: Expression:init(kind: ExpressionKind:PATH);
-				lhs:makePath(segments: [self:names:selfIdent(), p:name]);
-				local Expression is rhs: Expression:init(kind: ExpressionKind:IDENT);
-				rhs:makeIdent(name: p:name);
+				local Expression is lhs: Expression:Path(segments: [self:names:selfIdent(), p:name]);
+				local Expression is rhs: Expression:Ident(name: p:name);
 				local Statement is assignS: Statement:Assign(assignTarget: lhs, assignValue: rhs);
 				body:add(item: assignS);
 			});
@@ -912,13 +909,13 @@ Class is Parser{
 					Statement:Expr: local Function of Expression(Expression is exprStmt){
 						return exprStmt;
 					},
-					else: { return Expression:init(kind: ExpressionKind:UNKNOWN); }
+					else: { return Expression:Unknown; }
 				]);
 				local Statement is s: Statement:Return(returnExpr: asExpr, hasReturnExpr: true);
 				s:setLine(line: startLine);
 				return s;
 			});
-			local Expression is retExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is retExpr: Expression:Unknown;
 			local Boolean is hasExpr: false;
 			if({ !self:checkPunct(p: Punctuation:TERMINATOR) }, {
 				retExpr: self:parseExpression();
@@ -938,7 +935,7 @@ Class is Parser{
 			local Token is nameTok: self:advance();
 			local String is name: nameTok:getValue();
 
-			local Expression is initExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is initExpr: Expression:Unknown;
 			local Boolean is hasInit: false;
 			if({ self:checkPunct(p: Punctuation:ASSIGN) }, {
 				self:advance();
@@ -1030,36 +1027,32 @@ Class is Parser{
 			closureBody:add(item: self:parseStatement());
 		});
 
-		local Expression is anonFn: Expression:init(kind: ExpressionKind:ANON_FN);
-		anonFn:anonReturnType: returnType;
-		anonFn:anonParams: params;
-		anonFn:anonBody: closureBody;
+		local Expression is anonFn: Expression:AnonFn(returnType: returnType, params: params, body: closureBody);
 
-		if({ callExpr:kind != ExpressionKind:CALL }, {
-			local Expression is c: Expression:init(kind: ExpressionKind:CALL);
-			if({ callExpr:kind == ExpressionKind:FIELD_ACCESS }, {
-				c:methodTarget: callExpr:leftExpr;
-				c:methodName: callExpr:str;
-			}, {
-				if({ callExpr:kind == ExpressionKind:IDENT }, {
-					local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
-					selfTarget:str: self:names:selfIdent();
-					c:methodTarget: selfTarget;
-					c:methodName: callExpr:str;
-				}, {
-					c:methodTarget: callExpr;
-					c:methodName: '';
-				});
-			});
-			c:methodArgs: [];
-			callExpr: c;
-		});
+		local CallData is cd: match(on: callExpr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: {
+				local CallData is created: match(on: callExpr, when: [
+					Expression:FieldAccess: local Function of CallData(Expression is target, String is fieldName){
+						return CallData:init(target: target, name: fieldName, args: []);
+					},
+					Expression:Ident: local Function of CallData(String is name){
+						return CallData:init(target: Expression:Ident(name: self:names:selfIdent()), name: name, args: []);
+					},
+					else: {
+						CallData:init(target: callExpr, name: '', args: [])
+					}
+				]);
+				callExpr: Expression:Call(call: created);
+				created
+			}
+		]);
 
-		callExpr:methodArgs:add(item: NamedArg:init(name: '', value: anonFn));
+		cd:args:add(item: NamedArg:init(name: '', value: anonFn));
 		# §as: the remainder is not an argument — it fills the
 		# callable's declared-but-unbound last Function parameter. The
 		# marker keeps it out of overload selection.
-		callExpr:scopedRemainder: true;
+		cd:scopedRemainder: true;
 
 		local Statement is s: Statement:Expr(exprStmt: callExpr);
 		s:setLine(line: startLine);
@@ -1101,7 +1094,7 @@ Class is Parser{
 	## @param next: The next-lower level (NONE descends to unary).
 	## @return: The folded expression.
 	Function of Expression is foldBinary(Array of String is ops, PrecedenceLevel is next){
-		local Expression is left: Expression:init(kind: ExpressionKind:UNKNOWN);
+		local Expression is left: Expression:Unknown;
 		if({ next == PrecedenceLevel:NONE }, {
 			left: self:parseUnary();
 		}, {
@@ -1113,17 +1106,13 @@ Class is Parser{
 			if({ op == Keyword:IS:value() }, {
 				op: '==';
 			});
-			local Expression is right: Expression:init(kind: ExpressionKind:UNKNOWN);
+			local Expression is right: Expression:Unknown;
 			if({ next == PrecedenceLevel:NONE }, {
 				right: self:parseUnary();
 			}, {
 				right: self:parseLevel(level: next);
 			});
-			local Expression is binExpr: Expression:init(kind: ExpressionKind:BINARY);
-			binExpr:str: op;
-			binExpr:leftExpr: left;
-			binExpr:rightExpr: right;
-			left: binExpr;
+			left: Expression:Binary(op: op, left: left, right: right);
 		});
 		return left;
 	}
@@ -1156,10 +1145,7 @@ Class is Parser{
 		});
 		self:advance();
 		local Expression is expr: self:parseUnary();
-		local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
-		u:str: op;
-		u:unaryExpr: expr;
-		return u;
+		return Expression:Unary(op: op, operand: expr);
 	}
 
 	## Parses the instance-import form `as ClassName(args)` — a using-entry
@@ -1173,28 +1159,33 @@ Class is Parser{
 		local Token is clsTok: self:peek();
 		if({ clsTok:getTokenKind() != TokenKind:IDENTIFIER }, {
 			self:addError(tok: clsTok, message: self:errText:errUsingAsRequiresClass());
-			return Expression:init(kind: ExpressionKind:UNKNOWN);
+			return Expression:Unknown;
 		});
 		self:advance();
-		local Expression is e: Expression:init(kind: ExpressionKind:USING_AS);
-		e:str: clsTok:getValue();
+		local String is clsName: clsTok:getValue();
+		local Array of NamedArg is args: [];
 		if({ self:checkPunct(p: Punctuation:GROUP_OPEN) }, {
 			self:advance();
 			if({ !self:checkPunct(p: Punctuation:GROUP_CLOSE) }, {
-				local Array of NamedArg is args: self:parseArgs();
-				e:methodArgs: args;
+				args: self:parseArgs();
 				args:each(action: local Function(NamedArg is arg){
-					local ExpressionKind is ak: arg:value:kind;
-					if({ ak != ExpressionKind:STRING && ak != ExpressionKind:NUMBER && ak != ExpressionKind:FLOAT && ak != ExpressionKind:BOOL }, {
+					local Boolean is isLiteral: match(on: arg:value, when: [
+						Expression:StringLit: local Function of Boolean(String is value){ return true; },
+						Expression:NumberLit: local Function of Boolean(Int is value, String is text){ return true; },
+						Expression:FloatLit: local Function of Boolean(String is text){ return true; },
+						Expression:BoolLit: local Function of Boolean(Boolean is value){ return true; },
+						else: { false }
+					]);
+					if({ !isLiteral }, {
 						self:addError(tok: clsTok, message: self:errText:errInstanceImportLiteralArgs());
 					});
 				});
 			});
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 		}, {
-			self:addError(tok: clsTok, message: self:errText:errInstanceImportParens(target: e:str));
+			self:addError(tok: clsTok, message: self:errText:errInstanceImportParens(target: clsName));
 		});
-		return e;
+		return Expression:UsingAs(className: clsName, args: args);
 	}
 
 	## Parses a type cast: `value as Target` or `value as Target(width)`.
@@ -1218,9 +1209,7 @@ Class is Parser{
 			if({ self:checkKeyword(kw: Keyword:AS) }, {
 				self:addError(tok: self:peek(), message: self:errText:errChainedAsUnsupported());
 			});
-			local Expression is c: Expression:init(kind: ExpressionKind:CAST);
-			c:makeCast(inner: left, target: targetTok:getValue(), args: args);
-			return c;
+			return Expression:Cast(inner: left, target: targetTok:getValue(), args: args);
 		});
 		return left;
 	}
@@ -1253,47 +1242,34 @@ Class is Parser{
 				local Array of NamedArg is args: self:parseArgs();
 				self:matchPunct(p: Punctuation:GROUP_CLOSE);
 
-				local Expression is callExpr: Expression:init(kind: ExpressionKind:CALL);
-				if({ currentExpr:kind == ExpressionKind:IDENT }, {
-					if({ currentExpr:str == 'Loops' }, {
-						callExpr:methodTarget: currentExpr;
-						callExpr:methodName: 'loop';
-					}, {
-						local Expression is selfTarget: Expression:init(kind: ExpressionKind:IDENT);
-						selfTarget:str: self:names:selfIdent();
-						callExpr:methodTarget: selfTarget;
-						callExpr:methodName: currentExpr:str;
-					});
-				}, {
-					callExpr:methodTarget: currentExpr;
-					callExpr:methodName: '';
-				});
-				callExpr:methodArgs: args;
-				currentExpr: callExpr;
+				local CallData is cd: match(on: currentExpr, when: [
+					Expression:Ident: local Function of CallData(String is name){
+						return if({ name == 'Loops' }, {
+							CallData:init(target: currentExpr, name: 'loop', args: args)
+						}, {
+							CallData:init(target: Expression:Ident(name: self:names:selfIdent()), name: name, args: args)
+						});
+					},
+					else: {
+						CallData:init(target: currentExpr, name: '', args: args)
+					}
+				]);
+				currentExpr: Expression:Call(call: cd);
 			}, {
 				if({ self:checkPunct(p: Punctuation:BRACKET_OPEN) }, {
 					self:advance();
 					local Expression is idxExpr: self:parseExpression();
 					self:matchPunct(p: Punctuation:BRACKET_CLOSE);
 
-					local Expression is indexNode: Expression:init(kind: ExpressionKind:INDEX);
-					indexNode:leftExpr: currentExpr;
-					indexNode:rightExpr: idxExpr;
-					currentExpr: indexNode;
+					currentExpr: Expression:Index(target: currentExpr, index: idxExpr);
 				}, {
 					if({ self:checkSymbol(value: '++') }, {
 						self:advance();
-						local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
-						u:str: 'post++';
-						u:unaryExpr: currentExpr;
-						currentExpr: u;
+						currentExpr: Expression:Unary(op: 'post++', operand: currentExpr);
 					}, {
 						if({ self:checkSymbol(value: '--') }, {
 							self:advance();
-							local Expression is u: Expression:init(kind: ExpressionKind:UNARY);
-							u:str: 'post--';
-							u:unaryExpr: currentExpr;
-							currentExpr: u;
+							currentExpr: Expression:Unary(op: 'post--', operand: currentExpr);
 						}, {
 							if({ self:checkPunct(p: Punctuation:ACCESSOR) }, {
 								self:advance();
@@ -1305,33 +1281,29 @@ Class is Parser{
 									local Array of NamedArg is args: self:parseArgs();
 									self:matchPunct(p: Punctuation:GROUP_CLOSE);
 
-									local Expression is callExpr: Expression:init(kind: ExpressionKind:CALL);
-									callExpr:methodTarget: currentExpr;
-									callExpr:methodName: method;
-									callExpr:methodArgs: args;
-									currentExpr: callExpr;
+									currentExpr: Expression:Call(call: CallData:init(target: currentExpr, name: method, args: args));
 								}, {
-									if({ currentExpr:kind != ExpressionKind:PATH && currentExpr:kind != ExpressionKind:IDENT }, {
-										local Expression is fa: Expression:init(kind: ExpressionKind:FIELD_ACCESS);
-										fa:leftExpr: currentExpr;
-										fa:str: method;
-										currentExpr: fa;
+									local Boolean is isPathOrIdent: match(on: currentExpr, when: [
+										Expression:Path: local Function of Boolean(Array of String is segments){ return true; },
+										Expression:Ident: local Function of Boolean(String is name){ return true; },
+										else: { false }
+									]);
+									if({ !isPathOrIdent }, {
+										currentExpr: Expression:FieldAccess(target: currentExpr, fieldName: method);
 									}, {
 										local Array of String is segs: [];
-										if({ currentExpr:kind == ExpressionKind:PATH }, {
-											currentExpr:pathSegments:each(action: local Function(String is s){
-												segs:add(item: s);
-											});
-										}, {
-											if({ currentExpr:kind == ExpressionKind:IDENT }, {
-												segs:add(item: currentExpr:str);
-											});
-										});
+										match(on: currentExpr, when: [
+											Expression:Path: local Function(Array of String is segments){
+												segments:each(action: local Function(String is s){
+													segs:add(item: s);
+												});
+											},
+											Expression:Ident: local Function(String is name){
+												segs:add(item: name);
+											}
+										]);
 										segs:add(item: method);
-										local Expression is pathExpr: Expression:init(kind: ExpressionKind:PATH);
-										pathExpr:pathSegments: segs;
-										pathExpr:str: currentExpr:str . ':' . method;
-										currentExpr: pathExpr;
+										currentExpr: Expression:Path(segments: segs);
 									});
 								});
 							});
@@ -1374,11 +1346,7 @@ Class is Parser{
 			self:matchPunct(p: Punctuation:GROUP_CLOSE);
 			local Array of Statement is body: self:parseMethodBody(params: params);
 
-			local Expression is e: Expression:init(kind: ExpressionKind:ANON_FN);
-			e:anonReturnType: returnType;
-			e:anonParams: params;
-			e:anonBody: body;
-			return e;
+			return Expression:AnonFn(returnType: returnType, params: params, body: body);
 		});
 
 
@@ -1387,15 +1355,11 @@ Class is Parser{
 		return match(on: tok:getTokenKind(), when: [
 			TokenKind:STRING: {
 				self:advance();
-				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
-				e:str: tok:getValue();
-				e
+				Expression:StringLit(value: tok:getValue()) as Expression
 			},
 			TokenKind:RAWSTRING: {
 				self:advance();
-				local Expression is e: Expression:init(kind: ExpressionKind:STRING);
-				e:str: tok:getValue();
-				e
+				Expression:StringLit(value: tok:getValue()) as Expression
 			},
 			TokenKind:TEMPLATESTRING: {
 				self:advance();
@@ -1403,28 +1367,19 @@ Class is Parser{
 			},
 			TokenKind:INT: {
 				self:advance();
-				local Expression is e: Expression:init(kind: ExpressionKind:NUMBER);
-				e:str: tok:getValue();
-				e
+				Expression:NumberLit(value: 0, text: tok:getValue()) as Expression
 			},
 			TokenKind:FLOAT: {
 				self:advance();
-				local Expression is e: Expression:init(kind: ExpressionKind:FLOAT);
-				e:str: tok:getValue();
-				e
+				Expression:FloatLit(text: tok:getValue()) as Expression
 			},
 			TokenKind:BOOL: {
 				self:advance();
-				local Expression is e: Expression:init(kind: ExpressionKind:BOOL);
-				e:num: if({ tok:getValue() == self:names:boolTrue() }, { 1 }, { 0 });
-				e:str: tok:getValue();
-				e
+				Expression:BoolLit(value: tok:getValue() == self:names:boolTrue()) as Expression
 			},
 			TokenKind:IDENTIFIER: {
 				self:advance();
-				local Expression is e: Expression:init(kind: ExpressionKind:IDENT);
-				e:str: tok:getValue();
-				e
+				Expression:Ident(name: tok:getValue()) as Expression
 			},
 			TokenKind:KEYWORD: {
 				# Expression-initial `as` is the instance-import form
@@ -1436,7 +1391,7 @@ Class is Parser{
 				});
 				self:addError(tok: tok, message: self:errText:errUnexpectedTokenInExpression(token: tok:getValue()));
 				self:advance();
-				Expression:init(kind: ExpressionKind:UNKNOWN)
+				Expression:Unknown
 			},
 			else: {
 				if({ self:checkPunct(p: Punctuation:GROUP_OPEN) }, {
@@ -1456,7 +1411,7 @@ Class is Parser{
 
 				self:addError(tok: tok, message: self:errText:errUnexpectedTokenInExpression(token: tok:getValue()));
 				self:advance();
-				Expression:init(kind: ExpressionKind:UNKNOWN)
+				Expression:Unknown
 			}
 		]);
 	}
@@ -1527,9 +1482,7 @@ Class is Parser{
 			});
 		});
 		self:matchPunct(p: Punctuation:BRACKET_CLOSE);
-		local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
-		e:anonParams: params;
-		return e;
+		return Expression:AnonFn(returnType: Type:init(name: ''), params: params, body: []);
 	}
 
 	## Parses a function block shorthand `{ ... }` as an anonymous function.
@@ -1574,11 +1527,7 @@ Class is Parser{
 		});
 		self:matchPunct(p: Punctuation:BLOCK_CLOSE);
 
-		local Expression is e: Expression:init(kind: ExpressionKind:ANON_FN);
-		e:anonReturnType: returnType;
-		e:anonParams: params;
-		e:anonBody: body;
-		return e;
+		return Expression:AnonFn(returnType: returnType, params: params, body: body);
 	}
 
 	## Parses a bracketed `[...]` literal: array, map, or their empty
@@ -1592,16 +1541,12 @@ Class is Parser{
 		self:advance();
 		if({ self:checkPunct(p: Punctuation:BRACKET_CLOSE) }, {
 			self:advance();
-			local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
-			e:arrayItems: [];
-			return e;
+			return Expression:ArrayLit(items: []);
 		});
 		if({ self:checkPunct(p: Punctuation:PAIR) }, {
 			self:advance();
 			self:matchPunct(p: Punctuation:BRACKET_CLOSE);
-			local Expression is e: Expression:init(kind: ExpressionKind:MAP);
-			e:makeMap(keys: [], values: []);
-			return e;
+			return Expression:MapLit(keys: [], values: []);
 		});
 		local Expression is firstItem: self:parseExpression();
 		if({ self:checkPunct(p: Punctuation:PAIR) }, {
@@ -1626,9 +1571,7 @@ Class is Parser{
 				});
 			});
 			self:matchPunct(p: Punctuation:BRACKET_CLOSE);
-			local Expression is e: Expression:init(kind: ExpressionKind:MAP);
-			e:makeMap(keys: mKeys, values: mVals);
-			return e;
+			return Expression:MapLit(keys: mKeys, values: mVals);
 		});
 		local Array of Expression is items: [firstItem];
 		if({ self:checkPunct(p: Punctuation:SEPARATOR) }, {
@@ -1644,9 +1587,7 @@ Class is Parser{
 			});
 		});
 		self:matchPunct(p: Punctuation:BRACKET_CLOSE);
-		local Expression is e: Expression:init(kind: ExpressionKind:ARRAY);
-		e:arrayItems: items;
-		return e;
+		return Expression:ArrayLit(items: items);
 	}
 
 	## Desugars template-family string content ("..." and backtick
@@ -1661,7 +1602,6 @@ Class is Parser{
 	## @param depth: Current template nesting depth.
 	## @return: The desugared expression.
 	Function of Expression is expandFancyString(String is raw, Token is originTok, Int is depth){
-		local Expression is plainE: Expression:init(kind: ExpressionKind:STRING);
 		if({ depth > 0 }, {
 			local String is dRes: '';
 			local Int is dPos: 0;
@@ -1681,8 +1621,7 @@ Class is Parser{
 					dRes: dRes . ch;
 				});
 			});
-			plainE:str: dRes;
-			return plainE;
+			return Expression:StringLit(value: dRes);
 		});
 
 		local Int is sPos: 0;
@@ -1777,11 +1716,9 @@ Class is Parser{
 		lits:add(item: lit);
 		if({ inHole }, {
 			self:addError(tok: originTok, message: self:errText:errUnterminatedTemplateHole());
-			plainE:str: '';
-			return plainE;
+			return Expression:StringLit(value: '');
 		});
-		local Expression is acc: Expression:init(kind: ExpressionKind:STRING);
-		acc:str: lits:get(index: 0);
+		local Expression is acc: Expression:StringLit(value: lits:get(index: 0));
 		if({ holes:length() == 0 }, {
 			return acc;
 		});
@@ -1789,17 +1726,9 @@ Class is Parser{
 		local Int is k: 0;
 		repeat(count: holes:length(), worker: {
 			local Expression is holeE: self:parseTemplateExpression(text: holes:get(index: k));
-			local Expression is withHole: Expression:init(kind: ExpressionKind:BINARY);
-			withHole:str: '.';
-			withHole:leftExpr: acc;
-			withHole:rightExpr: holeE;
-			local Expression is litE: Expression:init(kind: ExpressionKind:STRING);
-			litE:str: lits:get(index: k + 1);
-			local Expression is withLit: Expression:init(kind: ExpressionKind:BINARY);
-			withLit:str: '.';
-			withLit:leftExpr: withHole;
-			withLit:rightExpr: litE;
-			acc: withLit;
+			local Expression is withHole: Expression:Binary(op: '.', left: acc, right: holeE);
+			local Expression is litE: Expression:StringLit(value: lits:get(index: k + 1));
+			acc: Expression:Binary(op: '.', left: withHole, right: litE);
 			k: k + 1;
 		});
 		return acc;
@@ -1812,7 +1741,7 @@ Class is Parser{
 	## @param text: The hole's raw text.
 	## @return: The hole's expression.
 	Function of Expression is parseTemplateExpression(String is text){
-		local Expression is emptyE: Expression:init(kind: ExpressionKind:STRING);
+		local Expression is emptyE: Expression:StringLit(value: '');
 		if({ text:trim():length() == 0 }, {
 			self:addError(tok: self:peek(), message: self:errText:errEmptyTemplateExpression());
 			return emptyE;

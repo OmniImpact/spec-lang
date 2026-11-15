@@ -36,7 +36,7 @@ Class of SpecUnitTest is TestSpecCodegen{
 		local ClassInfo is cls: prog:classes:get(index: 0) as ClassInfo;
 		local Member is m: cls:members:get(index: 0) as Member;
 		local Statement is stmt: m:body:get(index: 0) as Statement;
-		local Expression is expr: Expression:init(kind: ExpressionKind:UNKNOWN);
+		local Expression is expr: Expression:Unknown;
 		match(on: stmt, when: [
 			Statement:Expr: local Function(Expression is exprStmt){
 				expr: exprStmt;

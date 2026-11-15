@@ -8,7 +8,7 @@ Class of LintRule is EncourageAsConditionalRule{
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
@@ -41,14 +41,15 @@ Class of LintRule is EncourageAsConditionalRule{
 	}
 
 	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
-		if({ expr:kind == ExpressionKind:CALL }, {
-			local String is targetName: self:extractTargetName(target: expr:methodTarget);
-			if({ targetName == 'Conditional' }, {
-				local String is method: expr:methodName;
-				local String is msg: 'Direct call to \'Conditional:' . method . '\': import \'as Conditional()\' in using and use bare \'' . method . '(...)\'.';
-				issues:add(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
-			});
-		});
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				local String is targetName: self:extractTargetName(target: cd:target);
+				if({ targetName == 'Conditional' }, {
+					local String is msg: 'Direct call to \'Conditional:' . cd:name . '\': import \'as Conditional()\' in using and use bare \'' . cd:name . '(...)\'.';
+					issues:add(item: LintIssue:init(line: expr:line, isWarning: false, message: msg));
+				});
+			}
+		], default: {});
 
 		self:traverseExpression(expr: expr, issues: issues);
 	}

@@ -8,7 +8,7 @@ Class of LintRule is GetStringDefaultRule{
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
@@ -27,17 +27,21 @@ Class of LintRule is GetStringDefaultRule{
 	}
 
 	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
-		if({ expr:kind == ExpressionKind:CALL && expr:methodName == 'getString' }, {
-			local Boolean is hasDefault: false;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if({ arg:name == 'default' }, {
-					hasDefault: true;
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				if({ cd:name == 'getString' }, {
+					local Boolean is hasDefault: false;
+					cd:args:each(action: local Function(NamedArg is arg){
+						if({ arg:name == 'default' }, {
+							hasDefault: true;
+						});
+					});
+					if({ hasDefault }, {
+						issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
+					});
 				});
-			});
-			if({ hasDefault }, {
-				issues:add(item: LintIssue:init(line: 0, isWarning: false, message: 'Method call \'getString\' provides optional parameter \'default\'.'));
-			});
-		});
+			}
+		], default: {});
 
 		self:traverseExpression(expr: expr, issues: issues);
 	}

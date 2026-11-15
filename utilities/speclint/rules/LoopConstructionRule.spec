@@ -8,7 +8,7 @@ Class of LintRule is LoopConstructionRule{
 		['speclint', LintRule],
 		['speclint', LintIssue],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
@@ -33,36 +33,44 @@ Class of LintRule is LoopConstructionRule{
 	}
 
 	replace Function is checkExpression(Expression is expr, Array of LintIssue is issues){
-		if({ expr:kind == ExpressionKind:CALL }, {
-			local String is method: expr:methodName;
-			local Array of NamedArg is args: expr:methodArgs;
+		local Boolean is handledCall: false;
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				handledCall: true;
+				local String is method: cd:name;
 
-			if({ method == 'init' && self:loopDepth > 0 && self:isClassTarget(target: expr:methodTarget) }, {
-				issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
-			});
-
-			self:checkExpression(expr: expr:methodTarget, issues: issues);
-			local Boolean is isLoop: self:isLoopCall(expr: expr);
-			args:each(action: local Function(NamedArg is arg){
-				if({ isLoop && arg:value:kind == ExpressionKind:ANON_FN }, {
-					local Int is savedDepth: self:loopDepth;
-					self:loopDepth: self:loopDepth + 1;
-					self:checkExpression(expr: arg:value, issues: issues);
-					self:loopDepth: savedDepth;
-				}, {
-					self:checkExpression(expr: arg:value, issues: issues);
+				if({ method == 'init' && self:loopDepth > 0 && self:isClassTarget(target: cd:target) }, {
+					issues:add(item: LintIssue:init(line: 0, isWarning: true, message: 'Construction inside a loop body: hoist the instance out of the loop (E10).'));
 				});
-			});
-			return;
-		});
 
-		self:traverseExpression(expr: expr, issues: issues);
+				self:checkExpression(expr: cd:target, issues: issues);
+				local Boolean is isLoop: self:isLoopCall(call: cd);
+				cd:args:each(action: local Function(NamedArg is arg){
+					local Boolean is isAnon: match(on: arg:value, when: [
+						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){ true; },
+						else: { false; }
+					], default: {});
+					if({ isLoop && isAnon }, {
+						local Int is savedDepth: self:loopDepth;
+						self:loopDepth: self:loopDepth + 1;
+						self:checkExpression(expr: arg:value, issues: issues);
+						self:loopDepth: savedDepth;
+					}, {
+						self:checkExpression(expr: arg:value, issues: issues);
+					});
+				});
+			}
+		], default: {});
+
+		if({ !handledCall }, {
+			self:traverseExpression(expr: expr, issues: issues);
+		});
 	}
 
-	## True when [expr] is a loop driver call (Loops:*, Loop:*, or bare while/loop/repeat).
-	Function of Boolean is isLoopCall(Expression is expr){
-		local String is targetName: self:extractTargetName(target: expr:methodTarget);
-		local String is method: expr:methodName;
+	## True when [call] is a loop driver call (Loops:*, Loop:*, or bare while/loop/repeat).
+	Function of Boolean is isLoopCall(CallData is call){
+		local String is targetName: self:extractTargetName(target: call:target);
+		local String is method: call:name;
 		return targetName == 'Loops' || targetName == 'Loop' || method == 'while' || method == 'loop' || method == 'repeat';
 	}
 

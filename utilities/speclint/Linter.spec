@@ -12,7 +12,7 @@ Class is Linter{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'lexer', Keyword],
 		['base', 'sys', Output],
@@ -269,83 +269,81 @@ Class is Linter{
 
 	## Walks one expression, auditing calls it contains.
 	Function is auditExpression(Expression is expr, String is file){
-		match(on: expr:kind, when: [
-			ExpressionKind:CALL: {
-				self:auditReceiver(callExpr: expr, file: file);
-				self:auditExpression(expr: expr:methodTarget, file: file);
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				self:auditReceiver(call: cd, file: file);
+				self:auditExpression(expr: cd:target, file: file);
+				cd:args:each(action: local Function(NamedArg is arg){
 					self:auditExpression(expr: arg:value, file: file);
 				});
 			},
-			ExpressionKind:BINARY: {
-				self:auditExpression(expr: expr:leftExpr, file: file);
-				self:auditExpression(expr: expr:rightExpr, file: file);
+			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
+				self:auditExpression(expr: leftExpr, file: file);
+				self:auditExpression(expr: rightExpr, file: file);
 			},
-			ExpressionKind:UNARY: {
-				self:auditExpression(expr: expr:unaryExpr, file: file);
+			Expression:Unary: local Function(String is op, Expression is operand){
+				self:auditExpression(expr: operand, file: file);
 			},
-			ExpressionKind:ARRAY: {
-				expr:arrayItems:each(action: local Function(Expression is item){
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				items:each(action: local Function(Expression is item){
 					self:auditExpression(expr: item, file: file);
 				});
 			},
-			ExpressionKind:MAP: {
-				expr:mapKeys:each(action: local Function(Expression is k){
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				keys:each(action: local Function(Expression is k){
 					self:auditExpression(expr: k, file: file);
 				});
-				expr:mapValues:each(action: local Function(Expression is v){
+				values:each(action: local Function(Expression is v){
 					self:auditExpression(expr: v, file: file);
 				});
 			},
-			ExpressionKind:CAST: {
-				self:auditExpression(expr: expr:leftExpr, file: file);
-				expr:castArgs:each(action: local Function(Expression is a){
+			Expression:Cast: local Function(Expression is target, Type is targetType, Array of Expression is args){
+				self:auditExpression(expr: target, file: file);
+				args:each(action: local Function(Expression is a){
 					self:auditExpression(expr: a, file: file);
 				});
 			},
-			ExpressionKind:FIELD_ACCESS: {
-				self:auditExpression(expr: expr:leftExpr, file: file);
+			Expression:FieldAccess: local Function(Expression is target, String is field){
+				self:auditExpression(expr: target, file: file);
 			},
-			ExpressionKind:INDEX: {
-				self:auditExpression(expr: expr:leftExpr, file: file);
-				expr:castArgs:each(action: local Function(Expression is a){
-					self:auditExpression(expr: a, file: file);
-				});
+			Expression:Index: local Function(Expression is target, Expression is index){
+				self:auditExpression(expr: target, file: file);
+				self:auditExpression(expr: index, file: file);
 			},
-			ExpressionKind:ANON_FN: {
-				expr:anonBody:each(action: local Function(Statement is s){
+			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+				body:each(action: local Function(Statement is s){
 					self:auditStatement(stmt: s, file: file);
 				});
 			}
-		]);
+		], default: {});
 	}
 
 	## Classifies one call's receiver: flags class-named calls invoking non-init members.
-	Function is auditReceiver(Expression is callExpr, String is file){
+	Function is auditReceiver(CallData is call, String is file){
 		local String is name: '';
 		local Boolean is isFloorChain: false;
-		if({ callExpr:methodTarget:kind == ExpressionKind:IDENT }, {
-			name: callExpr:methodTarget:str;
-		}, {
-			if({ callExpr:methodTarget:kind == ExpressionKind:PATH }, {
-				local Array of String is segs: callExpr:methodTarget:pathSegments;
-				if({ segs:length() == 0 }, {
-					return;
-				});
-				name: segs:get(index: segs:length() - 1);
-				segs:each(action: local Function(String is seg){
-					if({ seg == 'sysinternal' }, {
-						isFloorChain: true;
+		local Boolean is recognizedTarget: false;
+		match(on: call:target, when: [
+			Expression:Ident: local Function(String is targetName){
+				name: targetName;
+				recognizedTarget: true;
+			},
+			Expression:Path: local Function(Array of String is segs){
+				if({ segs:length() > 0 }, {
+					name: segs:get(index: segs:length() - 1);
+					segs:each(action: local Function(String is seg){
+						if({ seg == 'sysinternal' }, {
+							isFloorChain: true;
+						});
 					});
+					recognizedTarget: true;
 				});
-			}, {
-				return;
-			});
-		});
-		if({ isFloorChain || name == '' || name == 'self' }, {
+			}
+		], default: {});
+		if({ !recognizedTarget || isFloorChain || name == '' || name == 'self' }, {
 			return;
 		});
-		if({ callExpr:methodName == 'init' }, {
+		if({ call:name == 'init' }, {
 			return;
 		});
 		if({ self:isUpperName(name: name) }, {
@@ -367,7 +365,7 @@ Class is Linter{
 			if({ self:auditOwnerImportsAs(name: name) }, {
 				return;
 			});
-			if({ self:isHeldMember(clsName: name, memberName: callExpr:methodName) }, {
+			if({ self:isHeldMember(clsName: name, memberName: call:name) }, {
 				return;
 			});
 		}, {
@@ -381,7 +379,7 @@ Class is Linter{
 				return;
 			});
 		});
-		local String is msg: 'Instance-model worklist: \'' . name . ':' . callExpr:methodName . '\' calls a member through a class name (' . file . ').';
+		local String is msg: 'Instance-model worklist: \'' . name . ':' . call:name . '\' calls a member through a class name (' . file . ').';
 		self:auditIssues:add(item: LintIssue:init(line: 0, isWarning: false, message: msg));
 	}
 

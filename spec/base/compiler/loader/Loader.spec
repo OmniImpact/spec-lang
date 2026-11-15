@@ -17,7 +17,8 @@ Class is Loader{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'sys', as Buf()],
@@ -153,16 +154,22 @@ Class is Loader{
 	Function is collectImportsFromClass(ClassInfo is c){
 		c:members:each(action: local Function(Member is m){
 			if({ m:name == 'using' && m:hasInit }, {
-				local Expression is initExpr: m:initExpr;
-				if({ initExpr:kind == ExpressionKind:ARRAY }, {
-					initExpr:arrayItems:each(action: local Function(Expression is item){
-						if({ item:kind == ExpressionKind:ARRAY }, {
-							self:loadArrayFormUsing(item: item, c: c);
-							return;
+				match(on: m:initExpr, when: [
+					Expression:ArrayLit: local Function(Array of Expression is items){
+						items:each(action: local Function(Expression is item){
+							local Boolean is handled: match(on: item, when: [
+								Expression:ArrayLit: local Function(Array of Expression is subItems){
+									self:loadArrayFormUsing(items: subItems, c: c);
+									return true;
+								},
+								else: { false }
+							]);
+							if({ !handled }, {
+								self:parseErrors:add(item: self:errText:errMalformedImport(className: c:name));
+							});
 						});
-						self:parseErrors:add(item: self:errText:errMalformedImport(className: c:name));
-					});
-				});
+					}
+				]);
 			});
 		});
 	}
@@ -393,26 +400,27 @@ Class is Loader{
 	##
 	## @param item: The ARRAY expression naming the package segments.
 	## @param c: The importing class.
-	Function is loadArrayFormUsing(Expression is item, ClassInfo is c){
-		local Array of Expression is segs: item:arrayItems;
-		if({ segs:length() == 0 }, {
+	Function is loadArrayFormUsing(Array of Expression is items, ClassInfo is c){
+		if({ items:length() == 0 }, {
 			return;
 		});
 		local Array of String is parts: [];
 		local String is termClass: '';
-		segs:each(action: local Function(Expression is seg){
-			if({ seg:kind == ExpressionKind:IDENT }, {
-				termClass: seg:str;
-			}, {
-				if({ seg:kind == ExpressionKind:USING_AS }, {
+		items:each(action: local Function(Expression is seg){
+			match(on: seg, when: [
+				Expression:Ident: local Function(String is name){
+					termClass: name;
+				},
+				Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
 					# Instance-import form (§2.1): resolves exactly
 					# like the class form; the as-ness stays on the using member
 					# for the checker, generator, and audit.
-					termClass: seg:str;
-				}, {
-					parts:add(item: seg:str);
-				});
-			});
+					termClass: className;
+				},
+				Expression:StringLit: local Function(String is value){
+					parts:add(item: value);
+				}
+			]);
 		});
 		self:resolveImport(parts: parts, termClass: termClass, c: c);
 	}
@@ -547,16 +555,24 @@ Class is Loader{
 	Function is synthesizeInto(Array of ClassInfo is classes){
 		classes:each(action: local Function(ClassInfo is c){
 			c:members:each(action: local Function(Member is m){
-				if({ m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-					m:initExpr:arrayItems:each(action: local Function(Expression is item){
-						if({ item:kind == ExpressionKind:ARRAY }, {
-							item:arrayItems:each(action: local Function(Expression is seg){
-								if({ seg:kind == ExpressionKind:USING_AS }, {
-									self:synthesizeFor(c: c, asExpr: seg);
-								});
+				if({ m:name == 'using' && m:hasInit }, {
+					match(on: m:initExpr, when: [
+						Expression:ArrayLit: local Function(Array of Expression is items){
+							items:each(action: local Function(Expression is item){
+								match(on: item, when: [
+									Expression:ArrayLit: local Function(Array of Expression is subItems){
+										subItems:each(action: local Function(Expression is seg){
+											match(on: seg, when: [
+												Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+													self:synthesizeFor(c: c, asExpr: seg);
+												}
+											]);
+										});
+									}
+								]);
 							});
-						});
-					});
+						}
+					]);
 				});
 			});
 			c:members:each(action: local Function(Member is m){
@@ -588,16 +604,24 @@ Class is Loader{
 			local ClassInfo is base: self:findLoadedClass(name: baseName);
 			if({ base:name != '' }, {
 				base:members:each(action: local Function(Member is m){
-					if({ m:name == 'using' && m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
-						m:initExpr:arrayItems:each(action: local Function(Expression is item){
-							if({ item:kind == ExpressionKind:ARRAY }, {
-								item:arrayItems:each(action: local Function(Expression is seg){
-									if({ seg:kind == ExpressionKind:USING_AS }, {
-										self:synthesizeFor(c: cls, asExpr: seg);
-									});
+					if({ m:name == 'using' && m:hasInit }, {
+						match(on: m:initExpr, when: [
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								items:each(action: local Function(Expression is item){
+									match(on: item, when: [
+										Expression:ArrayLit: local Function(Array of Expression is subItems){
+											subItems:each(action: local Function(Expression is seg){
+												match(on: seg, when: [
+													Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+														self:synthesizeFor(c: cls, asExpr: seg);
+													}
+												]);
+											});
+										}
+									]);
 								});
-							});
-						});
+							}
+						]);
 					});
 				});
 				self:synthesizeInheritedImports(cls: base, visited: visited);
@@ -613,7 +637,14 @@ Class is Loader{
 	## @param c: The importing class.
 	## @param asExpr: The USING_AS expression node.
 	Function is synthesizeFor(ClassInfo is c, Expression is asExpr){
-		local String is targetName: asExpr:str;
+		local String is targetName: '';
+		local Array of NamedArg is asArgs: [];
+		match(on: asExpr, when: [
+			Expression:UsingAs: local Function(String is className, Array of NamedArg is args){
+				targetName: className;
+				asArgs: args;
+			}
+		]);
 		local ClassInfo is target: self:findLoadedClass(name: targetName);
 		if({ target:name == '' }, {
 			return;
@@ -630,7 +661,15 @@ Class is Loader{
 				# finds the field already synthesized from the class's own
 				# using (or a prior ancestor hop) — deduplicate silently. A
 				# DECLARED member with that name is still a collision.
-				if({ m:kind == MemberKind:FIELD && m:hasInit && m:initExpr:kind == ExpressionKind:CALL }, {
+				local Boolean is isCallInit: false;
+				if({ m:kind == MemberKind:FIELD && m:hasInit }, {
+					match(on: m:initExpr, when: [
+						Expression:Call: local Function(CallData is call){
+							isCallInit: true;
+						}
+					]);
+				});
+				if({ isCallInit }, {
 					already: true;
 				}, {
 					self:parseErrors:add(item: self:errText:errSyntheticImportCollision(fieldName: fieldName, className: c:name));
@@ -643,12 +682,9 @@ Class is Loader{
 		local Member is field: Member:init(kind: MemberKind:FIELD);
 		field:name: fieldName;
 		field:memberType: Type:init(name: targetName);
-		local Expression is ctor: Expression:init(kind: ExpressionKind:CALL);
-		local Expression is recv: Expression:init(kind: ExpressionKind:IDENT);
-		recv:str: targetName;
-		ctor:methodTarget: recv;
-		ctor:methodName: 'init';
-		ctor:methodArgs: asExpr:methodArgs;
+		local Expression is recv: Expression:Ident(name: targetName);
+		local CallData is callData: CallData:init(target: recv, name: 'init', args: asArgs);
+		local Expression is ctor: Expression:Call(call: callData);
 		field:hasInit: true;
 		field:initExpr: ctor;
 		field:setSourceFile(file: c:sourceFile);

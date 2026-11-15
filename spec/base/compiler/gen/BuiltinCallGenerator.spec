@@ -15,7 +15,7 @@ Class is BuiltinCallGenerator{
 		['base', 'compiler', 'ast', Type],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
@@ -39,6 +39,10 @@ Class is BuiltinCallGenerator{
 	## defaults filling the rest. Returns '' when the method is not a floor
 	## declaration, letting the caller fall through.
 	Function of String is bindFloorCall(String is clsName, Expression is expr, CodeGenerator is cg){
+		local CallData is cd: match(on: expr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
 		local ClassInfo is fCls: cg:findClass(name: clsName);
 		# clsName may be qualified ('base:sysinternal:Buf'); the lookup
 		# already resolved it — only absence (empty name) is a miss.
@@ -48,7 +52,7 @@ Class is BuiltinCallGenerator{
 		local Member is foundM;
 		local Boolean is hasM: false;
 		fCls:members:each(action: local Function(Member is m){
-			if({ !hasM && m:kind == MemberKind:METHOD && m:name == expr:methodName }, {
+			if({ !hasM && m:kind == MemberKind:METHOD && m:name == cd:name }, {
 				hasM: true;
 				foundM: m;
 			});
@@ -69,7 +73,7 @@ Class is BuiltinCallGenerator{
 					got: true;
 				});
 				if({ !got }, {
-					expr:methodArgs:each(action: local Function(NamedArg is a){
+					cd:args:each(action: local Function(NamedArg is a){
 						if({ !got && a:name == p:name }, {
 							got: true;
 							argList:add(item: cg:generateExpression(expr: a:value));
@@ -96,7 +100,7 @@ Class is BuiltinCallGenerator{
 				argCs: argCs . ', ' . a;
 			});
 		});
-		return 'spec_' . self:utils:snakeCase(name: expr:methodName) . '(' . argCs . ')';
+		return 'spec_' . self:utils:snakeCase(name: cd:name) . '(' . argCs . ')';
 	}
 
 	## Safely extracts a call argument's value expression, avoiding the
@@ -106,8 +110,7 @@ Class is BuiltinCallGenerator{
 	## @param index: The argument index.
 	## @return: The value expression.
 	Function of Expression is argValue(Expression is expr, Int is index){
-		local NamedArg is arg: expr:methodArgs:get(index: index);
-		return arg:value;
+		return expr:argValue(index: index);
 	}
 
 	## Translates a builtin call into C; '' when not a builtin.
@@ -128,32 +131,45 @@ Class is BuiltinCallGenerator{
 		return cg:inferTargetType(expr: a0) == 'Int';
 	}
 
+	## Extracts CallData from a Call expression (or an empty dummy when not Call).
+	Function of CallData is extractCall(Expression is expr){
+		return match(on: expr, when: [
+			Expression:Call: local Function of CallData(CallData is call){ return call; },
+			else: { CallData:init(target: Expression:Unknown, name: '', args: []) }
+		]);
+	}
+
 	## @param targetType: Inferred type of the target.
 	## @param cg: The code generator.
 	## @return: C call string, or '' when not builtin.
 	Function of String is generateBuiltinCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
+		local CallData is cd: self:extractCall(expr: expr);
 		# Reflection:class()/method() — compile-time source identity,
 		# injected at the call site. Matches the bare usage form AND the
 		# qualified floor chain (the base:sys wrapper delegates by chain;
 		# user code hits the bare interception first).
 		local Boolean is isReflTarget: targetC == 'Reflection';
-		if({ !isReflTarget && expr:methodTarget:kind == ExpressionKind:PATH }, {
-			local String is rJoined: '';
-			expr:methodTarget:pathSegments:each(action: local Function(String is seg){
-				if({ rJoined == '' }, {
-					rJoined: seg;
-				}, {
-					rJoined: rJoined . ':' . seg;
-				});
-			});
-			if({ rJoined:endsWith(suffix: ':sysinternal:Reflection') }, {
-				isReflTarget: true;
-			});
+		if({ !isReflTarget }, {
+			match(on: cd:target, when: [
+				Expression:Path: local Function(Array of String is segments){
+					local String is rJoined: '';
+					segments:each(action: local Function(String is seg){
+						if({ rJoined == '' }, {
+							rJoined: seg;
+						}, {
+							rJoined: rJoined . ':' . seg;
+						});
+					});
+					if({ rJoined:endsWith(suffix: ':sysinternal:Reflection') }, {
+						isReflTarget: true;
+					});
+				}
+			]);
 		});
-		if({ isReflTarget && expr:methodName == 'class' && expr:argCount() == 0 }, {
+		if({ isReflTarget && cd:name == 'class' && expr:argCount() == 0 }, {
 			return 'spec_string_intern("' . cg:currentClassName . '")';
 		});
-		if({ isReflTarget && expr:methodName == 'method' && expr:argCount() == 0 }, {
+		if({ isReflTarget && cd:name == 'method' && expr:argCount() == 0 }, {
 			return 'spec_string_intern("' . cg:currentMethodName . '")';
 		});
 
@@ -165,31 +181,32 @@ Class is BuiltinCallGenerator{
 			floorCls: targetC;
 		}, {
 			local String is qCls: '';
-			if({ expr:methodTarget:kind == ExpressionKind:PATH }, {
-				local Array of String is qSegs: expr:methodTarget:pathSegments;
-				qCls: qSegs:get(index: qSegs:length() - 1);
-				# Qualified chains ('base:sysinternal:Buf') resolve by full
-				# namespace path so the floor never collides with its
-				# same-name base:sys wrapper.
-				local String is qJoined: '';
-				qSegs:each(action: local Function(String is seg){
-					if({ qJoined == '' }, {
-						qJoined: seg;
-					}, {
-						qJoined: qJoined . ':' . seg;
+			match(on: cd:target, when: [
+				Expression:Path: local Function(Array of String is qSegs){
+					qCls: qSegs:get(index: qSegs:length() - 1);
+					# Qualified chains ('base:sysinternal:Buf') resolve by full
+					# namespace path so the floor never collides with its
+					# same-name base:sys wrapper.
+					local String is qJoined: '';
+					qSegs:each(action: local Function(String is seg){
+						if({ qJoined == '' }, {
+							qJoined: seg;
+						}, {
+							qJoined: qJoined . ':' . seg;
+						});
 					});
-				});
-				if({ qJoined:contains(needle: ':sysinternal:') }, {
-					qCls: qJoined;
-				});
-			}, {
-				if({ expr:methodTarget:kind == ExpressionKind:CALL }, {
-					local Expression is qInner: expr:methodTarget;
-					if({ qInner:methodTarget:kind == ExpressionKind:PATH }, {
-						qCls: qInner:methodName;
+					if({ qJoined:contains(needle: ':sysinternal:') }, {
+						qCls: qJoined;
 					});
-				});
-			});
+				},
+				Expression:Call: local Function(CallData is qInner){
+					match(on: qInner:target, when: [
+						Expression:Path: local Function(Array of String is segments){
+							qCls: qInner:name;
+						}
+					]);
+				}
+			]);
 			local ClassInfo is qc: cg:findClass(name: qCls);
 			if({ qCls != '' && qc:name != '' && (qc:name == qCls || (qc:namespaceJoined() . ':' . qc:name) == qCls) && cg:isSysinternalClass(name: qCls) }, {
 				floorCls: qCls;
@@ -203,20 +220,20 @@ Class is BuiltinCallGenerator{
 		});
 
 		# String:newline() — the newline constant.
-		if({ targetC == 'String' && expr:methodName == 'newline' && expr:argCount() == 0 }, {
+		if({ targetC == 'String' && cd:name == 'newline' && expr:argCount() == 0 }, {
 			return 'spec_string_intern("\\n")';
 		});
 
 		# Type name introspection on class instances.
-		if({ expr:methodName == 'typeName' && targetType != '' && !self:policy:isTransparent(c: cg:findClass(name: targetType)) }, {
+		if({ cd:name == 'typeName' && targetType != '' && !self:policy:isTransparent(c: cg:findClass(name: targetType)) }, {
 			return 'spec_type_name(' . targetC . ')';
 		});
 
 		# Int toBase conversion.
-		if({ expr:methodName == 'toBase' && (targetType == Primitive:INT:value()) }, {
+		if({ cd:name == 'toBase' && (targetType == Primitive:INT:value()) }, {
 			local String is baseC: '10';
 			local String is digitsC: '0';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'base' }, {
 					baseC: cg:generateExpression(expr: arg:value);
 				});
@@ -228,19 +245,19 @@ Class is BuiltinCallGenerator{
 		});
 
 		# Parallel fan-out execution and synchronization.
-		if({ targetC == 'Parallel' && expr:methodName == 'sync' && expr:argCount() >= 1 }, {
+		if({ targetC == 'Parallel' && cd:name == 'sync' && expr:argCount() >= 1 }, {
 			local String is actionC: 'NULL';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'action' }, {
 					actionC: cg:generateExpression(expr: arg:value);
 				});
 			});
 			return 'spec_parallel_sync((void*)(' . actionC . '))';
 		});
-		if({ targetC == 'Parallel' && expr:methodName == 'syncWith' && expr:argCount() >= 2 }, {
+		if({ targetC == 'Parallel' && cd:name == 'syncWith' && expr:argCount() >= 2 }, {
 			local String is lockC: '0';
 			local String is actionC: 'NULL';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'lock' }, {
 					lockC: cg:generateExpression(expr: arg:value);
 				});
@@ -250,11 +267,11 @@ Class is BuiltinCallGenerator{
 			});
 			return 'spec_parallel_sync_with(' . lockC . ', (void*)(' . actionC . '))';
 		});
-		if({ targetC == 'Parallel' && expr:methodName == 'run' && expr:argCount() >= 3 }, {
+		if({ targetC == 'Parallel' && cd:name == 'run' && expr:argCount() >= 3 }, {
 			local String is threadsC: '1';
 			local String is iterC: '0';
 			local String is workerC: 'NULL';
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'threads' }, {
 					threadsC: cg:generateExpression(expr: arg:value);
 				});
@@ -269,7 +286,7 @@ Class is BuiltinCallGenerator{
 		});
 
 		# String:fromCharCode.
-		if({ targetC == 'String' && expr:methodName == 'fromCharCode' && expr:argCount() > 0 }, {
+		if({ targetC == 'String' && cd:name == 'fromCharCode' && expr:argCount() > 0 }, {
 			local Expression is codeArg: self:argValue(expr: expr, index: 0);
 			local String is codeC: cg:generateExpression(expr: codeArg);
 			return 'spec_string_from_char_code(' . codeC . ')';
@@ -277,14 +294,21 @@ Class is BuiltinCallGenerator{
 
 		# The loop runners — While (the legacy spelling, bridged) and
 		# Loops (§the control-flow provider).
-		if({ (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'run' && expr:argCount() > 0 }, {
+		if({ (targetC == 'Loops' || cd:bareProvider == 'Loops') && cd:name == 'run' && expr:argCount() > 0 }, {
 			local Expression is loopVal: self:argValue(expr: expr, index: 0);
 			local String is loopC: cg:generateExpressionInner(expr: loopVal);
 			local String is loopClass: cg:inferTargetType(expr: loopVal);
-			if({ loopClass == '' && loopVal:kind == ExpressionKind:CALL }, {
-				local Expression is mt: loopVal:methodTarget;
-				loopClass: cg:generateExpression(expr: mt);
-			});
+			local String is freeLoopC: '';
+			match(on: loopVal, when: [
+				Expression:Call: local Function(CallData is lvCall){
+					if({ loopClass == '' }, {
+						loopClass: cg:generateExpression(expr: lvCall:target);
+					});
+					if({ lvCall:name == 'init' }, {
+						freeLoopC: ' spec_release(_lp);';
+					});
+				}
+			]);
 			# the loop-class symbol qualifies for
 			# nested classes — resolve the class and derive the qualified base.
 			local ClassInfo is loopCls: cg:findClass(name: loopClass);
@@ -296,10 +320,6 @@ Class is BuiltinCallGenerator{
 				local Expression is ctrlArg: self:argValue(expr: expr, index: 1);
 				ctrlC: cg:generateExpression(expr: ctrlArg);
 			});
-			local String is freeLoopC: '';
-			if({ loopVal:kind == ExpressionKind:CALL && loopVal:methodName == 'init' }, {
-				freeLoopC: ' spec_release(_lp);';
-			});
 			# The protocol inline needs the loop's static class for the
 			# direct evaluate/iteration calls; an unresolved receiver (a
 			# Loop held as Any) falls through to the runtime run body.
@@ -308,12 +328,12 @@ Class is BuiltinCallGenerator{
 			});
 		});
 		# Loops:repeat(count:, worker:) — the counting loop, inlined.
-		if({ (targetC == 'Loops' || expr:bareProvider == 'Loops') && expr:methodName == 'repeat' && expr:argCount() == 2 }, {
+		if({ (targetC == 'Loops' || cd:bareProvider == 'Loops') && cd:name == 'repeat' && expr:argCount() == 2 }, {
 			local Expression is repCountExpr;
 			local Expression is repWorkerExpr;
 			local Boolean is repHasCount: false;
 			local Boolean is repHasWorker: false;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'count' }, {
 					repCountExpr: arg:value;
 					repHasCount: true;
@@ -332,18 +352,24 @@ Class is BuiltinCallGenerator{
 				repWorkerExpr: self:argValue(expr: expr, index: 1);
 				repHasWorker: true;
 			});
-			if({ repHasCount && repHasWorker && repWorkerExpr:kind == ExpressionKind:ANON_FN }, {
-				return cg:generateInlineRepeat(countExpr: repCountExpr, workerExpr: repWorkerExpr);
+			if({ repHasCount && repHasWorker }, {
+				local Boolean is workerIsAnon: match(on: repWorkerExpr, when: [
+					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+					else: { false }
+				]);
+				if({ workerIsAnon }, {
+					return cg:generateInlineRepeat(countExpr: repCountExpr, workerExpr: repWorkerExpr);
+				});
 			});
 		});
-		if({ (targetC == 'Loops' || expr:bareProvider == 'Loops') && (expr:methodName == 'while' || expr:methodName == 'condition' || expr:methodName == 'until' || expr:methodName == 'loop' || expr:methodName == 'init') }, {
+		if({ (targetC == 'Loops' || cd:bareProvider == 'Loops') && (cd:name == 'while' || cd:name == 'condition' || cd:name == 'until' || cd:name == 'loop' || cd:name == 'init') }, {
 			local Expression is varsExpr;
 			local Expression is evalExpr;
 			local Expression is iterExpr;
 			local Boolean is hasVars: false;
 			local Boolean is hasEval: false;
 			local Boolean is hasIter: false;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'evaluate' }, {
 					evalExpr: arg:value;
 					hasEval: true;
@@ -385,32 +411,51 @@ Class is BuiltinCallGenerator{
 				varsExpr: self:argValue(expr: expr, index: 0);
 				hasVars: true;
 			});
-			if({ hasEval && hasIter && evalExpr:kind == ExpressionKind:ANON_FN && iterExpr:kind == ExpressionKind:ANON_FN }, {
-				local Array of Parameter is loopVars: [];
-				if({ hasVars && varsExpr:anonParams:length() > 0 }, {
-					loopVars: varsExpr:anonParams;
+			if({ hasEval && hasIter }, {
+				local Boolean is evalIsAnon: match(on: evalExpr, when: [
+					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+					else: { false }
+				]);
+				local Boolean is iterIsAnon: match(on: iterExpr, when: [
+					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+					else: { false }
+				]);
+				if({ evalIsAnon && iterIsAnon }, {
+					local Array of Parameter is loopVars: [];
+					if({ hasVars }, {
+						match(on: varsExpr, when: [
+							Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+								if({ params:length() > 0 }, {
+									loopVars: params;
+								});
+							}
+						]);
+					});
+					# until is the do-while — the body runs once first.
+					if({ cd:name == 'until' }, {
+						return cg:generateInlineUntil(evalExpr: evalExpr, iterExpr: iterExpr);
+					});
+					return cg:generateInlineWhileLoop(loopVars: loopVars, evalExpr: evalExpr, iterExpr: iterExpr);
 				});
-				# until is the do-while — the body runs once first.
-				if({ expr:methodName == 'until' }, {
-					return cg:generateInlineUntil(evalExpr: evalExpr, iterExpr: iterExpr);
-				});
-				return cg:generateInlineWhileLoop(loopVars: loopVars, evalExpr: evalExpr, iterExpr: iterExpr);
 			});
 		});
 
 		# LoopControl methods: transparent runtime-managed objects — the
 		# constructor wires the optional completion callback directly.
-		if({ targetC == 'LoopControl' && expr:methodName == 'init' }, {
+		if({ targetC == 'LoopControl' && cd:name == 'init' }, {
 			if({ expr:argCount() == 0 }, {
 				return 'LoopControl_new()';
 			});
-			local NamedArg is cbArg: expr:methodArgs:get(index: 0);
+			local NamedArg is cbArg: cd:args:get(index: 0);
 			local Expression is cbVal: cbArg:value;
 			local String is cbC: cg:generateExpression(expr: cbVal);
 			local String is cbClass: cg:inferTargetType(expr: cbVal);
-			if({ cbClass == '' && cbVal:kind == ExpressionKind:CALL }, {
-				local Expression is mt: cbVal:methodTarget;
-				cbClass: cg:generateExpression(expr: mt);
+			if({ cbClass == '' }, {
+				match(on: cbVal, when: [
+					Expression:Call: local Function(CallData is cbCall){
+						cbClass: cg:generateExpression(expr: cbCall:target);
+					}
+				]);
 			});
 			# the callback-class symbol qualifies
 			# for nested classes.
@@ -420,26 +465,26 @@ Class is BuiltinCallGenerator{
 			});
 			return '({ SpecLoopControl* _c = LoopControl_new(); _c->callback = (void*)(' . cbC . '); _c->on_complete = (void (*)(void*, struct SpecLoopControl*))' . cbClass . '_onComplete; _c; })';
 		});
-		if({ expr:methodName == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
+		if({ cd:name == 'stop' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
 			return 'LoopControl_stop(' . targetC . ')';
 		});
 		# LoopControl:isStopped — the halt query the runtime run()
 		# composes from (the compile-time inlines read the C struct
 		# directly; the wrapper needs the public surface). Null-safe:
 		# an omitted control drives without a halt query.
-		if({ expr:methodName == 'isStopped' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
+		if({ cd:name == 'isStopped' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
 			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); _lc ? (bool)_lc->stopped : false; })';
 		});
 		# LoopControl:complete — fires the completion callback the
 		# runtime run() owes after the loop ends (the inline protocol's
 		# on_complete tail). No callback registered: nothing fires.
-		if({ expr:methodName == 'complete' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
+		if({ cd:name == 'complete' && (targetC == 'LoopControl' || targetType == 'LoopControl') }, {
 			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); if (_lc && _lc->on_complete) { _lc->on_complete(_lc->callback, _lc); } })';
 		});
 
 		# Math functions.
 		if({ targetC == 'Math' }, {
-			local String is m: expr:methodName;
+			local String is m: cd:name;
 			local String is a0: '0.0';
 			if({ expr:argCount() > 0 }, {
 				a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
@@ -518,11 +563,11 @@ Class is BuiltinCallGenerator{
 		local Boolean is isArr: targetC == 'Array' || targetType == 'Array' || targetType:startsWith(prefix: 'Array') ||
 			targetType:startsWith(prefix: 'List') ||
 			((targetType == '' || targetType == Primitive:ANY:value()) && (
-				expr:methodName == 'get' || expr:methodName == 'add' || expr:methodName == 'set' || expr:methodName == 'pop' ||
-				expr:methodName == 'removeAt' || expr:methodName == 'slice' || expr:methodName == 'clear' || expr:methodName == 'join' ||
-				expr:methodName == 'each' || expr:methodName == 'filter' || expr:methodName == 'count' || expr:methodName == 'any' ||
-				expr:methodName == 'map' || expr:methodName == 'fold' ||
-				(expr:methodName == 'length' && targetType != 'String' && targetC != 'Map' && !targetType:startsWith(prefix: 'Map:'))
+				cd:name == 'get' || cd:name == 'add' || cd:name == 'set' || cd:name == 'pop' ||
+				cd:name == 'removeAt' || cd:name == 'slice' || cd:name == 'clear' || cd:name == 'join' ||
+				cd:name == 'each' || cd:name == 'filter' || cd:name == 'count' || cd:name == 'any' ||
+				cd:name == 'map' || cd:name == 'fold' ||
+				(cd:name == 'length' && targetType != 'String' && targetC != 'Map' && !targetType:startsWith(prefix: 'Map:'))
 			));
 		if({ isArr }, {
 			local String is arrC: self:bindContainerCall(expr: expr, targetC: targetC, targetType: targetType, cg: cg);
@@ -576,7 +621,8 @@ Class is BuiltinCallGenerator{
 	## @param cg: The code generator.
 	## @return: C call, or ''.
 	Function of String is bindContainerCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		local String is m: expr:methodName;
+		local CallData is cd: self:extractCall(expr: expr);
+		local String is m: cd:name;
 		local String is a0: '';
 		if({ expr:argCount() > 0 }, {
 			a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
@@ -589,7 +635,7 @@ Class is BuiltinCallGenerator{
 		if({ targetType:startsWith(prefix: 'Array') }, {
 			if({ m == 'get' }, {
 				local String is idxC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -599,7 +645,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -614,12 +660,22 @@ Class is BuiltinCallGenerator{
 				local Boolean is itemClaims: false;
 				if({ expr:argCount() > 0 }, {
 					local Expression is valExpr: self:argValue(expr: expr, index: 0);
-					if({ valExpr:kind == ExpressionKind:ARRAY }, {
+					local Boolean is valIsArray: match(on: valExpr, when: [
+						Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+						else: { false }
+					]);
+					if({ valIsArray }, {
 						cg:setContainerHint(t: targetType);
 						itemC: cg:generateExpression(expr: valExpr);
 						return 'spec_array_add_array(' . targetC . ', ' . itemC . ')';
 					});
-					itemClaims: cg:yieldsClaim(expr: valExpr) && !(valExpr:kind == ExpressionKind:CALL && (valExpr:methodName == 'get' || valExpr:methodName == 'getString'));
+					local Boolean is valIsGetCall: match(on: valExpr, when: [
+						Expression:Call: local Function of Boolean(CallData is vc){
+							return vc:name == 'get' || vc:name == 'getString';
+						},
+						else: { false }
+					]);
+					itemClaims: cg:yieldsClaim(expr: valExpr) && !valIsGetCall;
 					local Boolean is savedArgMode: cg:argMode;
 					cg:setArgMode(m: false);
 					itemC: cg:generateExpression(expr: valExpr);
@@ -637,7 +693,7 @@ Class is BuiltinCallGenerator{
 			});
 			if({ m == 'pop' }, {
 				local String is defC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'default' }, {
 						local String is rawDefC: cg:generateExpression(expr: arg:value);
 						if({ targetType:startsWith(prefix: 'Array:String') }, {
@@ -652,7 +708,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'removeAt' }, {
 				local String is idxC: '0';
 				local String is defC: 'NULL';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -668,7 +724,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'slice' }, {
 				local String is startC: '0';
 				local String is endC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'start' }, {
 						startC: cg:generateExpression(expr: arg:value);
 					});
@@ -684,7 +740,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'indexOf' }, {
 				local String is searchC: '""';
 				local String is defC: '-1';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'search' || arg:name == 'needle' }, {
 						searchC: cg:generateExpression(expr: arg:value);
 					});
@@ -714,7 +770,11 @@ Class is BuiltinCallGenerator{
 			if({ m == 'map' }, {
 				if({ expr:argCount() > 0 }, {
 					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-					if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
+					local Boolean is isAnon: match(on: fnExpr, when: [
+						Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+						else: { false }
+					]);
+					if({ isAnon }, {
 						return cg:generateInlineArrayOp(mode: 'map', targetC: targetC, fnExpr: fnExpr);
 					});
 				});
@@ -723,14 +783,18 @@ Class is BuiltinCallGenerator{
 				if({ expr:argCount() >= 2 }, {
 					local Expression is initExpr: self:argValue(expr: expr, index: 0);
 					local Expression is fnExpr: self:argValue(expr: expr, index: 1);
-					if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
+					local Boolean is isAnon: match(on: fnExpr, when: [
+						Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+						else: { false }
+					]);
+					if({ isAnon }, {
 						return cg:generateInlineArrayFold(targetC: targetC, initExpr: initExpr, fnExpr: fnExpr);
 					});
 				});
 			});
 			if({ m == 'join' }, {
 				local String is sepC: '""';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'separator' || sepC == '""' }, {
 						sepC: cg:generateExpression(expr: arg:value);
 					});
@@ -742,7 +806,7 @@ Class is BuiltinCallGenerator{
 		if({ targetType == 'List:Byte' || targetType == 'List of Byte' }, {
 			local String is errC: 'spec_noop_closure()';
 			if({ m == 'get' || m == 'pop' || m == 'set' }, {
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'error' }, {
 						errC: cg:generateExpression(expr: arg:value);
 					});
@@ -750,14 +814,14 @@ Class is BuiltinCallGenerator{
 			});
 			if({ m == 'push' }, {
 				local String is itemC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					itemC: cg:generateExpression(expr: arg:value);
 				});
 				return 'spec_bytebuffer_push(' . targetC . ', (long long)(' . itemC . '))';
 			});
 			if({ m == 'appendString' }, {
 				local String is sC: 'spec_string_intern("")';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					sC: cg:generateExpression(expr: arg:value);
 				});
 				return 'spec_bytebuffer_append_string(' . targetC . ', spec_buf_to_cstring((SpecBuf*)(' . sC . ')))';
@@ -765,7 +829,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'get' }, {
 				local String is idxC: '0';
 				local String is defC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -778,7 +842,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -790,7 +854,7 @@ Class is BuiltinCallGenerator{
 			});
 			if({ m == 'pop' }, {
 				local String is defC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'default' }, {
 						defC: '(long long)(' . cg:generateExpression(expr: arg:value) . ')';
 					});
@@ -833,7 +897,7 @@ Class is BuiltinCallGenerator{
 			});
 			local String is errC: 'spec_noop_closure()';
 			if({ m == 'get' || m == 'pop' || m == 'set' }, {
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'error' }, {
 						errC: cg:generateExpression(expr: arg:value);
 					});
@@ -843,7 +907,7 @@ Class is BuiltinCallGenerator{
 				local String is itemC: '0';
 				local Boolean is savedArgV: cg:argMode;
 				cg:setArgMode(m: false);
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					itemC: cg:generateExpression(expr: arg:value);
 				});
 				cg:setArgMode(m: savedArgV);
@@ -852,7 +916,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'get' }, {
 				local String is idxC: '0';
 				local String is defC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -865,7 +929,7 @@ Class is BuiltinCallGenerator{
 			if({ m == 'set' }, {
 				local String is idxC: '0';
 				local String is itemC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'index' }, {
 						idxC: cg:generateExpression(expr: arg:value);
 					});
@@ -880,7 +944,7 @@ Class is BuiltinCallGenerator{
 			});
 			if({ m == 'pop' }, {
 				local String is defC: '0';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'default' }, {
 						defC: cg:generateExpression(expr: arg:value);
 					});
@@ -905,7 +969,8 @@ Class is BuiltinCallGenerator{
 	## @param cg: The code generator.
 	## @return: C call, or ''.
 	Function of String is bindMapCall(Expression is expr, String is targetC, String is targetType, CodeGenerator is cg){
-		local String is m: expr:methodName;
+		local CallData is cd: self:extractCall(expr: expr);
+		local String is m: cd:name;
 		local String is a0: '';
 		if({ expr:argCount() > 0 }, {
 			a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
@@ -925,12 +990,17 @@ Class is BuiltinCallGenerator{
 			local String is valC: 'spec_string_intern("")';
 			local Boolean is isStrMap: targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String');
 			local Boolean is valIsStr: true;
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
+			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'key' }, {
 					keyC: cg:generateExpression(expr: arg:value);
 				});
 				if({ arg:name == 'value' }, {
-					valIsStr: isStrMap || cg:inferTargetType(expr: arg:value) == 'String' || arg:value:kind == ExpressionKind:STRING || (arg:value:kind == ExpressionKind:BINARY && arg:value:str == '.');
+					local Boolean is argIsStrLitOrConcat: match(on: arg:value, when: [
+						Expression:StringLit: local Function of Boolean(String is value){ return true; },
+						Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){ return op == '.'; },
+						else: { false }
+					]);
+					valIsStr: isStrMap || cg:inferTargetType(expr: arg:value) == 'String' || argIsStrLitOrConcat;
 					local Boolean is savedArgMode: cg:argMode;
 					if({ !valIsStr }, {
 						cg:setArgMode(m: false);
@@ -975,7 +1045,11 @@ Class is BuiltinCallGenerator{
 		if({ m == 'each' }, {
 			if({ expr:argCount() > 0 }, {
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
-				if({ fnExpr:kind == ExpressionKind:ANON_FN }, {
+				local Boolean is isAnon: match(on: fnExpr, when: [
+					Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+					else: { false }
+				]);
+				if({ isAnon }, {
 					return cg:generateInlineMapEach(targetC: targetC, fnExpr: fnExpr);
 				});
 			});
@@ -992,7 +1066,8 @@ Class is BuiltinCallGenerator{
 	## @param cg: The code generator.
 	## @return: C call, or ''.
 	Function of String is bindStringDirect(Expression is expr, String is targetC, CodeGenerator is cg){
-		local String is m: expr:methodName;
+		local CallData is cd: self:extractCall(expr: expr);
+		local String is m: cd:name;
 		local String is a0: '';
 		if({ expr:argCount() > 0 }, {
 			a0: cg:generateExpression(expr: self:argValue(expr: expr, index: 0));
@@ -1020,7 +1095,7 @@ Class is BuiltinCallGenerator{
 			'parseInt': {
 				local String is baseC: '10';
 				local String is defC: '-1';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				cd:args:each(action: local Function(NamedArg is arg){
 					if({ arg:name == 'base' }, {
 						baseC: cg:generateExpression(expr: arg:value);
 					});

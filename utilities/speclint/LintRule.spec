@@ -12,7 +12,7 @@ Class is LintRule{
 		['base', 'compiler', 'ast', MemberKind],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
 		['base', 'struct', Array],
 		['base', 'sys', as Loops()],
@@ -118,55 +118,52 @@ Class is LintRule{
 
 	## Default expression traversal.
 	Function is traverseExpression(Expression is expr, Array of LintIssue is issues){
-		local ExpressionKind is kind: expr:kind;
-		match(on: kind, when: [
-			ExpressionKind:CALL: {
-				self:checkExpression(expr: expr:methodTarget, issues: issues);
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				self:checkExpression(expr: cd:target, issues: issues);
+				cd:args:each(action: local Function(NamedArg is arg){
 					self:checkExpression(expr: arg:value, issues: issues);
 				});
 			},
-			ExpressionKind:BINARY: {
-				self:checkExpression(expr: expr:leftExpr, issues: issues);
-				self:checkExpression(expr: expr:rightExpr, issues: issues);
+			Expression:Binary: local Function(String is op, Expression is leftExpr, Expression is rightExpr){
+				self:checkExpression(expr: leftExpr, issues: issues);
+				self:checkExpression(expr: rightExpr, issues: issues);
 			},
-			ExpressionKind:UNARY: {
-				self:checkExpression(expr: expr:unaryExpr, issues: issues);
+			Expression:Unary: local Function(String is op, Expression is operand){
+				self:checkExpression(expr: operand, issues: issues);
 			},
-			ExpressionKind:ARRAY: {
-				expr:arrayItems:each(action: local Function(Expression is item){
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				items:each(action: local Function(Expression is item){
 					self:checkExpression(expr: item, issues: issues);
 				});
 			},
-			ExpressionKind:MAP: {
-				expr:mapKeys:each(action: local Function(Expression is k){
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				keys:each(action: local Function(Expression is k){
 					self:checkExpression(expr: k, issues: issues);
 				});
-				expr:mapValues:each(action: local Function(Expression is v){
+				values:each(action: local Function(Expression is v){
 					self:checkExpression(expr: v, issues: issues);
 				});
 			},
-			ExpressionKind:CAST: {
-				self:checkExpression(expr: expr:leftExpr, issues: issues);
-				expr:castArgs:each(action: local Function(Expression is a){
+			Expression:Cast: local Function(Expression is target, Type is targetType, Array of Expression is args){
+				self:checkExpression(expr: target, issues: issues);
+				args:each(action: local Function(Expression is a){
 					self:checkExpression(expr: a, issues: issues);
 				});
 			},
-			ExpressionKind:FIELD_ACCESS: {
-				self:checkExpression(expr: expr:leftExpr, issues: issues);
+			Expression:FieldAccess: local Function(Expression is target, String is field){
+				self:checkExpression(expr: target, issues: issues);
 			},
-			ExpressionKind:INDEX: {
-				self:checkExpression(expr: expr:leftExpr, issues: issues);
-				expr:castArgs:each(action: local Function(Expression is a){
-					self:checkExpression(expr: a, issues: issues);
-				});
+			Expression:Index: local Function(Expression is target, Expression is index){
+				self:checkExpression(expr: target, issues: issues);
+				self:checkExpression(expr: index, issues: issues);
 			},
-			ExpressionKind:ANON_FN: {
-				expr:anonBody:each(action: local Function(Statement is st){
+			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+				body:each(action: local Function(Statement is st){
 					self:checkStatement(stmt: st, issues: issues);
 				});
 			}
-		]);
+		], default: {});
 	}
 
 	## True when [name] starts with an uppercase letter (type naming convention).
@@ -184,18 +181,17 @@ Class is LintRule{
 
 	## Extracts the bare name from an IDENT or PATH expression.
 	Function of String is extractTargetName(Expression is target){
-		local String is name: '';
-		match(on: target:kind, when: [
-			ExpressionKind:IDENT: {
-				name: target:str;
+		return match(on: target, when: [
+			Expression:Ident: local Function of String(String is name){
+				return name;
 			},
-			ExpressionKind:PATH: {
-				local Array of String is segs: target:pathSegments;
+			Expression:Path: local Function of String(Array of String is segs){
 				if({ segs:length() > 0 }, {
-					name: segs:get(index: segs:length() - 1);
+					return segs:get(index: segs:length() - 1);
 				});
-			}
-		]);
-		return name;
+				return '';
+			},
+			else: { ''; }
+		], default: {});
 	}
 }

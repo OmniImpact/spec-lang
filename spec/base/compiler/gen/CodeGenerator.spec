@@ -19,7 +19,7 @@ Class is CodeGenerator{
 		['base', 'sys', as Conditional()],
 		['base', 'compiler', 'ast', Primitive],
 		['base', 'compiler', 'ast', Expression],
-		['base', 'compiler', 'ast', ExpressionKind],
+		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', Statement],
 		['base', 'compiler', 'ast', Parameter],
 		['base', 'compiler', 'ast', Member],
@@ -380,7 +380,15 @@ Class is CodeGenerator{
 				self:allEnumNames:set(key: c:name, value: 'true');
 				c:members:each(action: local Function(Member is m){
 					# The namespace declaration is metadata, not a variant.
-					if({ m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY }, {
+					local Boolean is isArrayInit: false;
+					if({ m:hasInit }, {
+						match(on: m:initExpr, when: [
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								isArrayInit: true;
+							}
+						], default: {});
+					});
+					if({ isArrayInit }, {
 						return;
 					});
 					self:allEnumVariants:set(key: m:name, value: c:name);
@@ -1195,17 +1203,24 @@ Class is CodeGenerator{
 	## @param subjT: The subject's base class (the bare-key fallback).
 	## @return: The member name, or '' when the key spells neither.
 	Function of String is matchKeyName(Expression is key, String is subjT){
-		if({ key:kind == ExpressionKind:IDENT }, {
-			return key:str;
-		});
-		if({ key:kind == ExpressionKind:PATH && key:pathSegments:length() > 0 }, {
-			return key:pathSegments:get(index: key:pathSegments:length() - 1);
-		});
-		if({ key:kind == ExpressionKind:ARRAY && key:arrayItems:length() > 0 }, {
-			local Expression is first: key:arrayItems:get(index: 0);
-			return self:matchKeyName(key: first, subjT: subjT);
-		});
-		return '';
+		return match(on: key, when: [
+			Expression:Ident: local Function of String(String is name){
+				return name;
+			},
+			Expression:Path: local Function of String(Array of String is segs){
+				if({ segs:length() > 0 }, {
+					return segs:get(index: segs:length() - 1);
+				});
+				return '';
+			},
+			Expression:ArrayLit: local Function of String(Array of Expression is items){
+				if({ items:length() > 0 }, {
+					return self:matchKeyName(key: items:get(index: 0), subjT: subjT);
+				});
+				return '';
+			},
+			else: { '' }
+		]);
 	}
 
 	Function of Member is lookupEnumVariant(String is enumName, String is variantName){
@@ -1327,215 +1342,188 @@ Class is CodeGenerator{
 	## @param expr: The expression node.
 	## @return: The inferred type name ('' when unknown).
 	Function of String is inferTargetType(Expression is expr){
-		local ExpressionKind is kind: expr:kind;
-		if({ kind == ExpressionKind:IDENT }, {
-			local String is name: expr:str;
-			if({ name == self:names:selfIdent() }, {
-				return self:currentClassName;
-			});
-			if({ self:localVars:has(key: name) }, {
-				return self:localVars:getString(key: name, default: '');
-			});
-			if({ self:fieldTypes:has(key: name) }, {
-				return self:fieldTypes:getString(key: name, default: '');
-			});
-			if({ self:allEnumVariants:has(key: name) }, {
-				return self:allEnumVariants:getString(key: name, default: '');
-			});
-			if({ self:allClassNames:has(key: name) }, {
-				return name;
-			});
-			return '';
-		});
-		if({ kind == ExpressionKind:PATH }, {
-			local Array of String is segs: expr:pathSegments;
-			if({ segs:length() == 0 }, {
+		return match(on: expr, when: [
+			Expression:Ident: local Function of String(String is name){
+				if({ name == self:names:selfIdent() }, {
+					return self:currentClassName;
+				});
+				if({ self:localVars:has(key: name) }, {
+					return self:localVars:getString(key: name, default: '');
+				});
+				if({ self:fieldTypes:has(key: name) }, {
+					return self:fieldTypes:getString(key: name, default: '');
+				});
+				if({ self:allEnumVariants:has(key: name) }, {
+					return self:allEnumVariants:getString(key: name, default: '');
+				});
+				if({ self:allClassNames:has(key: name) }, {
+					return name;
+				});
 				return '';
-			});
-			local String is root: segs:get(index: 0);
-			if({ self:allEnumNames:has(key: root) }, {
-				return root;
-			});
-			if({ self:allClassNames:has(key: root) }, {
-				# Held member as segment 1:
-				# the class-name prefix reaches exactly the held
-				# members; the target type is the held field's
-				# type, with later segments chaining as instance
-				# fields on its value.
-				if({ segs:length() >= 2 }, {
-					local String is heldT: self:heldFieldTypes:getString(key: root . ':' . segs:get(index: 1), default: '');
-					if({ heldT != '' }, {
-						local Int is heldIdx: 2;
-						while({ heldT != '' && heldIdx < segs:length() }, {
-							heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
-							heldIdx: heldIdx + 1;
+			},
+			Expression:Path: local Function of String(Array of String is segs){
+				if({ segs:length() == 0 }, {
+					return '';
+				});
+				local String is root: segs:get(index: 0);
+				if({ self:allEnumNames:has(key: root) }, {
+					return root;
+				});
+				if({ self:allClassNames:has(key: root) }, {
+					if({ segs:length() >= 2 }, {
+						local String is heldT: self:heldFieldTypes:getString(key: root . ':' . segs:get(index: 1), default: '');
+						if({ heldT != '' }, {
+							local Int is heldIdx: 2;
+							while({ heldT != '' && heldIdx < segs:length() }, {
+								heldT: self:lookupFieldType(className: heldT, fieldName: segs:get(index: heldIdx));
+								heldIdx: heldIdx + 1;
+							});
+							return heldT;
 						});
-						return heldT;
 					});
+					return root;
 				});
-				return root;
-			});
 
-			local String is rootType: match(when: [
-				{ root == self:names:selfIdent() }: { self:currentClassName },
-				{ self:localVars:has(key: root) }: { self:localVars:getString(key: root, default: '') },
-				{ self:fieldTypes:has(key: root) }: { self:fieldTypes:getString(key: root, default: '') },
-				else: { '' }
-			]);
-			if({ rootType == '' }, {
+				local String is rootType: match(when: [
+					{ root == self:names:selfIdent() }: { self:currentClassName },
+					{ self:localVars:has(key: root) }: { self:localVars:getString(key: root, default: '') },
+					{ self:fieldTypes:has(key: root) }: { self:fieldTypes:getString(key: root, default: '') },
+					else: { '' }
+				]);
+				if({ rootType == '' }, {
+					return rootType;
+				});
+				local Int is idx: 1;
+				while({ rootType != '' && idx < segs:length() }, {
+					rootType: self:lookupFieldType(className: rootType, fieldName: segs:get(index: idx));
+					idx: idx + 1;
+				});
 				return rootType;
-			});
-			local Int is idx: 1;
-			while({ rootType != '' && idx < segs:length() }, {
-				rootType: self:lookupFieldType(className: rootType, fieldName: segs:get(index: idx));
-				idx: idx + 1;
-			});
-			return rootType;
-		});
-		if({ kind == ExpressionKind:CALL }, {
-			local String is targetType: self:inferTargetType(expr: expr:methodTarget);
-			if({ targetType == self:names:selfIdent() || targetType == '' }, {
-				targetType: self:currentClassName;
-			});
-			# §2.3: a bare call resolved against the bare scope
-			# dispatches on its as-imported provider.
-			if({ expr:bareProvider != '' }, {
-				targetType: expr:bareProvider;
-			});
-			# Keep the generic suffix ('Box:Int') for lookup: substitution
-			# needs the type arguments to ground T. The split base only
-			# feeds the enum-registry checks.
-			local String is baseOnly: targetType;
-			if({ targetType:contains(needle: ':') }, {
-				local Array of String is parts: targetType:split(delimiter: ':');
-				baseOnly: parts:get(index: 0);
-			});
-			if({ self:allEnumNames:has(key: baseOnly) }, {
-				targetType: baseOnly;
-			});
-			# Container element extraction: Array of X:get/pop/removeAt -> X.
-			if({ targetType:startsWith(prefix: 'Array:') && (expr:methodName == 'get' || expr:methodName == 'pop' || expr:methodName == 'removeAt') }, {
-				return targetType:substring(start: 6, end: targetType:length());
-			});
-			# Enum contract methods have fixed return types.
-			if({ self:allEnumNames:has(key: targetType) }, {
-				if({ expr:methodName == 'name' }, {
-					return 'String';
+			},
+			Expression:Call: local Function of String(CallData is call){
+				local String is targetType: self:inferTargetType(expr: call:target);
+				if({ targetType == self:names:selfIdent() || targetType == '' }, {
+					targetType: self:currentClassName;
 				});
-				if({ expr:methodName == 'ordinal' }, {
-					return Primitive:INT:value();
+				if({ call:bareProvider != '' }, {
+					targetType: call:bareProvider;
 				});
-				if({ expr:methodName == 'values' }, {
-					return 'Array:' . targetType;
+				local String is baseOnly: targetType;
+				if({ targetType:contains(needle: ':') }, {
+					local Array of String is parts: targetType:split(delimiter: ':');
+					baseOnly: parts:get(index: 0);
 				});
-				if({ expr:methodName == 'value' }, {
-					if({ self:allStringBackedEnums:has(key: targetType) }, {
+				if({ self:allEnumNames:has(key: baseOnly) }, {
+					targetType: baseOnly;
+				});
+				if({ targetType:startsWith(prefix: 'Array:') && (call:name == 'get' || call:name == 'pop' || call:name == 'removeAt') }, {
+					return targetType:substring(start: 6, end: targetType:length());
+				});
+				if({ self:allEnumNames:has(key: targetType) }, {
+					if({ call:name == 'name' }, {
 						return 'String';
 					});
-					return Primitive:INT:value();
+					if({ call:name == 'ordinal' }, {
+						return Primitive:INT:value();
+					});
+					if({ call:name == 'values' }, {
+						return 'Array:' . targetType;
+					});
+					if({ call:name == 'value' }, {
+						if({ self:allStringBackedEnums:has(key: targetType) }, {
+							return 'String';
+						});
+						return Primitive:INT:value();
+					});
 				});
-			});
-			if({ targetType == Primitive:INT:value() && expr:methodName == 'toBase' }, {
-				return 'String';
-			});
-			local String is ret: '';
-			if({ expr:num > 0 }, {
-				# The checker stamped the exact return type for the selected
-				# overload (§I.2); it is the source of truth.
-				local String is rt: expr:resolvedType;
-				if({ rt != '' && rt != Primitive:ANY:value() }, {
-					ret: rt;
+				if({ targetType == Primitive:INT:value() && call:name == 'toBase' }, {
+					return 'String';
 				});
-			});
-			if({ ret == '' }, {
-				ret: self:lookupMethodReturnType(className: targetType, methodName: expr:methodName);
-			});
-			if({ ret == '' || self:isVoidType(t: ret) }, {
-				if({ expr:methodName == 'if' || expr:methodName == 'branch' || expr:methodName == 'match' }, {
-					local String is rtFallback: expr:resolvedType;
-					if({ rtFallback != '' && rtFallback != Primitive:ANY:value() && !self:isVoidType(t: rtFallback) }, {
-						return rtFallback;
+				local String is ret: '';
+				if({ call:overloadIndex > 0 }, {
+					local String is rt: expr:resolvedType;
+					if({ rt != '' && rt != Primitive:ANY:value() }, {
+						ret: rt;
+					});
+				});
+				if({ ret == '' }, {
+					ret: self:lookupMethodReturnType(className: targetType, methodName: call:name);
+				});
+				if({ ret == '' || self:isVoidType(t: ret) }, {
+					if({ call:name == 'if' || call:name == 'branch' || call:name == 'match' }, {
+						local String is rtFallback: expr:resolvedType;
+						if({ rtFallback != '' && rtFallback != Primitive:ANY:value() && !self:isVoidType(t: rtFallback) }, {
+							return rtFallback;
+						});
+					});
+					return '';
+				});
+				return ret;
+			},
+			Expression:FieldAccess: local Function of String(Expression is target, String is fieldName){
+				local String is leftT: self:inferTargetType(expr: target);
+				if({ leftT == '' || leftT == Primitive:ANY:value() }, {
+					return '';
+				});
+				return self:lookupFieldType(className: leftT, fieldName: fieldName);
+			},
+			Expression:Index: local Function of String(Expression is target, Expression is index){
+				local String is leftT: self:inferTargetType(expr: target);
+				if({ leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, {
+					return leftT:substring(start: 6, end: leftT:length());
+				});
+				if({ leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, {
+					return leftT:substring(start: 9, end: leftT:length());
+				});
+				if({ leftT:startsWith(prefix: 'List of ') && leftT:length() > 8 }, {
+					return leftT:substring(start: 8, end: leftT:length());
+				});
+				if({ leftT:startsWith(prefix: 'Map of ') && leftT:length() > 7 }, {
+					local String is kv: leftT:substring(start: 7, end: leftT:length());
+					local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
+					if({ toIdx >= 0 }, {
+						return kv:substring(start: toIdx + 4, end: kv:length());
+					});
+				});
+				if({ leftT:startsWith(prefix: 'Map:') && leftT:length() > 5 }, {
+					local String is kv: leftT:substring(start: 5, end: leftT:length());
+					local Int is cIdx: kv:indexOf(search: ':', default: -1);
+					if({ cIdx >= 0 }, {
+						return kv:substring(start: cIdx + 1, end: kv:length());
 					});
 				});
 				return '';
-			});
-			return ret;
-		});
-		if({ kind == ExpressionKind:FIELD_ACCESS }, {
-			local String is leftT: self:inferTargetType(expr: expr:leftExpr);
-			if({ leftT == '' || leftT == Primitive:ANY:value() }, {
+			},
+			Expression:StringLit: local Function of String(String is value){ return 'String'; },
+			Expression:NumberLit: local Function of String(Int is value, String is text){ return Primitive:INT:value(); },
+			Expression:FloatLit: local Function of String(String is text){ return 'Float'; },
+			Expression:BoolLit: local Function of String(Boolean is value){ return 'Boolean'; },
+			Expression:ArrayLit: local Function of String(Array of Expression is items){ return 'Array'; },
+			Expression:MapLit: local Function of String(Array of Expression is keys, Array of Expression is values){ return 'Map'; },
+			Expression:Binary: local Function of String(String is op, Expression is left, Expression is right){
+				if({ op == '.' }, {
+					return 'String';
+				});
 				return '';
-			});
-			return self:lookupFieldType(className: leftT, fieldName: expr:str);
-		});
-		if({ kind == ExpressionKind:INDEX }, {
-			# Indexing a container yields its element type (both spellings).
-			local String is leftT: self:inferTargetType(expr: expr:leftExpr);
-			if({ leftT:startsWith(prefix: 'Array:') && leftT:length() > 6 }, {
-				return leftT:substring(start: 6, end: leftT:length());
-			});
-			if({ leftT:startsWith(prefix: 'Array of ') && leftT:length() > 9 }, {
-				return leftT:substring(start: 9, end: leftT:length());
-			});
-			if({ leftT:startsWith(prefix: 'List of ') && leftT:length() > 8 }, {
-				return leftT:substring(start: 8, end: leftT:length());
-			});
-			# Map indexing yields the VALUE type (both spellings).
-			if({ leftT:startsWith(prefix: 'Map of ') && leftT:length() > 7 }, {
-				local String is kv: leftT:substring(start: 7, end: leftT:length());
-				local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
-				if({ toIdx >= 0 }, {
-					return kv:substring(start: toIdx + 4, end: kv:length());
+			},
+			Expression:Cast: local Function of String(Expression is inner, String is target, Array of Expression is args){
+				return target;
+			},
+			Expression:Unary: local Function of String(String is op, Expression is operand){
+				if({ op == '!' }, {
+					return 'Boolean';
 				});
-			});
-			if({ leftT:startsWith(prefix: 'Map:') && leftT:length() > 5 }, {
-				local String is kv: leftT:substring(start: 5, end: leftT:length());
-				local Int is cIdx: kv:indexOf(search: ':', default: -1);
-				if({ cIdx >= 0 }, {
-					return kv:substring(start: cIdx + 1, end: kv:length());
+				return self:inferTargetType(expr: operand);
+			},
+			Expression:AnonFn: local Function of String(Type is returnType, Array of Parameter is params, Array of Statement is body){
+				local String is anonRet: returnType:name;
+				if({ anonRet != '' && !self:isVoidType(t: anonRet) }, {
+					return 'Function:' . self:formatTypeString(t: returnType);
 				});
-			});
-			return '';
-		});
-		if({ kind == ExpressionKind:STRING }, {
-			return 'String';
-		});
-		if({ kind == ExpressionKind:NUMBER }, {
-			return Primitive:INT:value();
-		});
-		if({ kind == ExpressionKind:FLOAT }, {
-			return 'Float';
-		});
-		if({ kind == ExpressionKind:BOOL }, {
-			return 'Boolean';
-		});
-		if({ kind == ExpressionKind:ARRAY }, {
-			return 'Array';
-		});
-		if({ kind == ExpressionKind:MAP }, {
-			return 'Map';
-		});
-		if({ kind == ExpressionKind:BINARY && expr:str == '.' }, {
-			# String concatenation chains produce a String.
-			return 'String';
-		});
-		if({ kind == ExpressionKind:CAST }, {
-			return expr:str;
-		});
-		if({ kind == ExpressionKind:UNARY }, {
-			if({ expr:str == '!' }, {
-				return 'Boolean';
-			});
-			return self:inferTargetType(expr: expr:unaryExpr);
-		});
-		if({ kind == ExpressionKind:ANON_FN }, {
-			local String is anonRet: expr:anonReturnType:name;
-			if({ anonRet != '' && !self:isVoidType(t: anonRet) }, {
-				return 'Function:' . self:formatTypeString(t: expr:anonReturnType);
-			});
-			return 'Function';
-		});
-		return '';
+				return 'Function';
+			},
+			else: { '' }
+		]);
 	}
 
 	## Determines whether evaluating [expr] yields a transferred ownership
@@ -1547,67 +1535,51 @@ Class is CodeGenerator{
 	## @param expr: The expression node.
 	## @return: true when ownership transfers.
 	Function of Boolean is yieldsClaim(Expression is expr){
-		local ExpressionKind is kind: expr:kind;
-		if({ kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP }, {
-			return true;
-		});
-		if({ kind == ExpressionKind:BINARY }, {
-			return expr:str == '.';
-		});
-		if({ kind == ExpressionKind:CALL }, {
-			local String is resT: self:inferTargetType(expr: expr);
-			if({ !self:isArcType(typeName: resT) }, {
-				return false;
-			});
-			local String is targetT0: self:inferTargetType(expr: expr:methodTarget);
-			local String is targetT: targetT0;
-			# A bare call parses with a self receiver: the methodTarget
-			# infers to the ENCLOSING class, so the bareProvider override
-			# must replace it outright — the same rule inferTargetType's
-			# CALL branch runs. Filling only an empty target left bare
-			# as-imported calls classified against the wrong class, and a
-			# bare value-if missed the branch exclusion below: its owned
-			# branch result was treated as a borrow, retained a second
-			# time, and the branch's own reference leaked (LSan-proven).
-			if({ expr:bareProvider != '' }, {
-				targetT: expr:bareProvider;
-			});
-			if({ targetT:contains(needle: ':') }, {
-				local Array of String is parts0: targetT:split(delimiter: ':');
-				targetT: parts0:get(index: 0);
-			});
-			if({ self:allClassNames:has(key: targetT) && !self:allEnumNames:has(key: targetT) }, {
-				local String is mRet: self:lookupMethodReturnType(className: targetT, methodName: expr:methodName);
-				if({ (mRet == '' || self:isVoidType(t: mRet)) && !(targetT == 'Conditional' && (expr:methodName == 'if' || expr:methodName == 'branch' || expr:methodName == 'match')) }, {
+		return match(on: expr, when: [
+			Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+			Expression:MapLit: local Function of Boolean(Array of Expression is keys, Array of Expression is values){ return true; },
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){ return op == '.'; },
+			Expression:Call: local Function of Boolean(CallData is call){
+				local String is resT: self:inferTargetType(expr: expr);
+				if({ !self:isArcType(typeName: resT) }, {
 					return false;
 				});
-				if({ mRet == targetT && expr:methodName != 'init' && expr:methodName != targetT && !self:policy:isTransparent(c: self:findClass(name: targetT)) }, {
-					return false;
+				local String is targetT0: self:inferTargetType(expr: call:target);
+				local String is targetT: targetT0;
+				if({ call:bareProvider != '' }, {
+					targetT: call:bareProvider;
 				});
-			});
-			# Container-typed receivers (incl. of-form spellings) resolve
-			# like the transparent classes they are: their element gets are
-			# BORROWS, never claims. Without this, the fallback below
-			# classified every array element-get as a claim, the typed
-			# constructor skipped its retain, and the var-decl's
-			# scope-end release underflowed the refcount.
-			if({ self:policy:isTransparent(c: self:findClass(name: targetT)) || targetT == 'List' || targetT == 'String' ||
-				targetT:startsWith(prefix: 'Array') || targetT:startsWith(prefix: 'List') || targetT:startsWith(prefix: 'Map') }, {
-				if({ expr:methodName == 'get' }, {
-					return targetT:startsWith(prefix: 'Map') && resT == 'String';
+				if({ targetT:contains(needle: ':') }, {
+					local Array of String is parts0: targetT:split(delimiter: ':');
+					targetT: parts0:get(index: 0);
 				});
-				return match(on: expr:methodName, when: [
-					['init', 'pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
-					'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt',
-					'stringCopy', 'stringSubstring', 'file_read', 'file_temp', 'dirList', 'exeDir']: {
-						true
-					},
-					else: { false }
-				]);
-			});
-			return true;
-		});
-		return false;
+				if({ self:allClassNames:has(key: targetT) && !self:allEnumNames:has(key: targetT) }, {
+					local String is mRet: self:lookupMethodReturnType(className: targetT, methodName: call:name);
+					if({ (mRet == '' || self:isVoidType(t: mRet)) && !(targetT == 'Conditional' && (call:name == 'if' || call:name == 'branch' || call:name == 'match')) }, {
+						return false;
+					});
+					if({ mRet == targetT && call:name != 'init' && call:name != targetT && !self:policy:isTransparent(c: self:findClass(name: targetT)) }, {
+						return false;
+					});
+				});
+				if({ self:policy:isTransparent(c: self:findClass(name: targetT)) || targetT == 'List' || targetT == 'String' ||
+					targetT:startsWith(prefix: 'Array') || targetT:startsWith(prefix: 'List') || targetT:startsWith(prefix: 'Map') }, {
+					if({ call:name == 'get' }, {
+						return targetT:startsWith(prefix: 'Map') && resT == 'String';
+					});
+					return match(on: call:name, when: [
+						['init', 'pop', 'removeAt', 'substring', 'trim', 'replace', 'join', 'split', 'lines', 'keys',
+						'getString', 'read', 'fromCharCode', 'toString', 'map', 'filter', 'slice', 'charAt',
+						'stringCopy', 'stringSubstring', 'file_read', 'file_temp', 'dirList', 'exeDir']: {
+							true
+						},
+						else: { false }
+					]);
+				});
+				return true;
+			},
+			else: { false }
+		]);
 	}
 
 	## True when the expression is a constructor call whose produced value
@@ -1616,15 +1588,17 @@ Class is CodeGenerator{
 	## @param expr: The expression node.
 	## @return: true when fresh.
 	Function of Boolean is isFreshConstructorCall(Expression is expr){
-		if({ expr:kind != ExpressionKind:CALL }, {
-			return false;
-		});
-		local String is m: expr:methodName;
-		if({ !(m == 'init' || m == 'new') }, {
-			return false;
-		});
-		local String is targetT: self:inferTargetType(expr: expr:methodTarget);
-		return self:allClassNames:has(key: targetT);
+		return match(on: expr, when: [
+			Expression:Call: local Function of Boolean(CallData is call){
+				local String is m: call:name;
+				if({ !(m == 'init' || m == 'new') }, {
+					return false;
+				});
+				local String is targetT: self:inferTargetType(expr: call:target);
+				return self:allClassNames:has(key: targetT);
+			},
+			else: { false }
+		]);
 	}
 
 	## Decides whether an expression's value is a Spec String (SpecBuf*):
@@ -1640,14 +1614,11 @@ Class is CodeGenerator{
 		if({ resolved == 'String' || resolved == 'string' }, {
 			return true;
 		});
-		local ExpressionKind is kind: expr:kind;
-		if({ kind == ExpressionKind:STRING }, {
-			return true;
-		});
-		if({ kind == ExpressionKind:BINARY && expr:str == '.' }, {
-			return true;
-		});
-		return false;
+		return match(on: expr, when: [
+			Expression:StringLit: local Function of Boolean(String is value){ return true; },
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){ return op == '.'; },
+			else: { false }
+		]);
 	}
 
 	## Wraps an expression's C into a String (SpecBuf*) for contexts that
@@ -1658,34 +1629,30 @@ Class is CodeGenerator{
 	## @param exprC: Its generated C.
 	## @return: C producing a String.
 	Function of String is wrapToString(Expression is expr, String is exprC){
-		local ExpressionKind is kind: expr:kind;
-		if({ kind == ExpressionKind:STRING }, {
-			return 'spec_string_intern("' . self:utils:escapeString(s: expr:str) . '")';
-		});
-		if({ kind == ExpressionKind:NUMBER }, {
-			return 'spec_to_string_int(' . exprC . ')';
-		});
-		if({ kind == ExpressionKind:FLOAT }, {
-			return 'spec_to_string_float(' . exprC . ')';
-		});
-		if({ kind == ExpressionKind:BOOL }, {
-			return 'spec_to_string_bool(' . exprC . ')';
-		});
-		if({ kind == ExpressionKind:BINARY }, {
-			local String is op: expr:str;
-			if({ op == '+' || op == '-' || op == '*' || op == '/' || op == '%' || op == '&' || op == '|' || op == '^' || op == '<<' || op == '>>' }, {
+		local String is fastWrap: match(on: expr, when: [
+			Expression:StringLit: local Function of String(String is value){ return 'spec_string_intern("' . self:utils:escapeString(s: value) . '")'; },
+			Expression:NumberLit: local Function of String(Int is value, String is text){ return 'spec_to_string_int(' . exprC . ')'; },
+			Expression:FloatLit: local Function of String(String is text){ return 'spec_to_string_float(' . exprC . ')'; },
+			Expression:BoolLit: local Function of String(Boolean is value){ return 'spec_to_string_bool(' . exprC . ')'; },
+			Expression:Binary: local Function of String(String is op, Expression is left, Expression is right){
+				if({ op == '+' || op == '-' || op == '*' || op == '/' || op == '%' || op == '&' || op == '|' || op == '^' || op == '<<' || op == '>>' }, {
+					return 'spec_to_string_int(' . exprC . ')';
+				});
+				if({ op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' || op == '&&' || op == '||' }, {
+					return 'spec_to_string_bool(' . exprC . ')';
+				});
+				return exprC;
+			},
+			Expression:Unary: local Function of String(String is op, Expression is operand){
+				if({ op == '!' }, {
+					return 'spec_to_string_bool(' . exprC . ')';
+				});
 				return 'spec_to_string_int(' . exprC . ')';
-			});
-			if({ op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' || op == '&&' || op == '||' }, {
-				return 'spec_to_string_bool(' . exprC . ')';
-			});
-			return exprC;
-		});
-		if({ kind == ExpressionKind:UNARY }, {
-			if({ expr:str == '!' }, {
-				return 'spec_to_string_bool(' . exprC . ')';
-			});
-			return 'spec_to_string_int(' . exprC . ')';
+			},
+			else: { ''; }
+		], default: {});
+		if({ fastWrap != '' }, {
+			return fastWrap;
 		});
 		local String is t: self:inferTargetType(expr: expr);
 		if({ t == 'String' }, {
@@ -1745,8 +1712,7 @@ Class is CodeGenerator{
 	## @param index: The argument index.
 	## @return: The value expression.
 	Function of Expression is argValue(Expression is expr, Int is index){
-		local NamedArg is arg: expr:methodArgs:get(index: index);
-		return arg:value;
+		return expr:argValue(index: index);
 	}
 
 	## The claim decision for an expression's value: a claim hands
@@ -1756,25 +1722,25 @@ Class is CodeGenerator{
 	## @param expr: The expression node.
 	## @return: true when the value transfers ownership.
 	Function of Boolean is claimStatus(Expression is expr){
-		local ExpressionKind is kind: expr:kind;
-		if({ kind == ExpressionKind:CALL }, {
-			local Boolean is claim: self:yieldsClaim(expr: expr);
-			if({ (expr:methodName == 'if' || expr:methodName == 'branch') && (expr:argCount() != 3 || expr:resolvedType == '' || self:isVoidType(t: expr:resolvedType)) }, {
-				claim: false;
-			});
-			return claim;
-		});
-		if({ kind == ExpressionKind:BINARY }, {
-			return expr:str == '.';
-		});
-		if({ kind == ExpressionKind:ARRAY || kind == ExpressionKind:MAP }, {
-			return true;
-		});
-		if({ kind == ExpressionKind:INDEX }, {
-			local String is tgt: self:inferTargetType(expr: expr:leftExpr);
-			return (tgt:startsWith(prefix: 'Map') && self:inferTargetType(expr: expr) == 'String');
-		});
-		return false;
+		return match(on: expr, when: [
+			Expression:Call: local Function of Boolean(CallData is call){
+				local Boolean is claim: self:yieldsClaim(expr: expr);
+				if({ (call:name == 'if' || call:name == 'branch') && (call:args:length() != 3 || expr:resolvedType == '' || self:isVoidType(t: expr:resolvedType)) }, {
+					claim: false;
+				});
+				return claim;
+			},
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){
+				return op == '.';
+			},
+			Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+			Expression:MapLit: local Function of Boolean(Array of Expression is keys, Array of Expression is values){ return true; },
+			Expression:Index: local Function of Boolean(Expression is target, Expression is index){
+				local String is tgt: self:inferTargetType(expr: target);
+				return tgt:startsWith(prefix: 'Map') && self:inferTargetType(expr: expr) == 'String';
+			},
+			else: { false }
+		]);
 	}
 
 	## Wraps a claim-yielding value in the self-framing claim pool
@@ -1810,88 +1776,86 @@ Class is CodeGenerator{
 	## @param expr: The expression node.
 	## @return: C expression string.
 	Function of String is generateExpressionInner(Expression is expr){
-		local ExpressionKind is kind: expr:kind;
-
-		return match(on: kind, when: [
-			ExpressionKind:ARRAY: {
-				self:emitArrayLiteral(expr: expr)
+		return match(on: expr, when: [
+			Expression:ArrayLit: local Function of String(Array of Expression is items){
+				return self:emitArrayLiteral(expr: expr, items: items);
 			},
-			ExpressionKind:MAP: {
-				self:emitMapLiteral(expr: expr)
+			Expression:MapLit: local Function of String(Array of Expression is keys, Array of Expression is values){
+				return self:emitMapLiteral(expr: expr, keys: keys, values: values);
 			},
-			ExpressionKind:STRING: {
+			Expression:StringLit: local Function of String(String is value){
 				# Raw strings collapse into STRING upstream; one intern path.
-				'spec_string_intern("' . self:utils:escapeString(s: expr:str) . '")'
+				return 'spec_string_intern("' . self:utils:escapeString(s: value) . '")';
 			},
-			ExpressionKind:NUMBER: {
+			Expression:NumberLit: local Function of String(Int is value, String is text){
 				local String is numC: '0';
-				if({ expr:str != '' }, {
-					numC: expr:str;
+				if({ text != '' }, {
+					numC: text;
 				});
-				numC
+				return numC;
 			},
-			ExpressionKind:FLOAT: {
+			Expression:FloatLit: local Function of String(String is text){
 				local String is floatC: '0.0';
-				if({ expr:str != '' }, {
-					floatC: expr:str;
+				if({ text != '' }, {
+					floatC: text;
 				});
-				floatC
+				return floatC;
 			},
-			ExpressionKind:BOOL: {
-				local String is boolC: 'false';
-				if({ expr:num == 1 }, {
-					boolC: 'true';
-				});
-				boolC
+			Expression:BoolLit: local Function of String(Boolean is value){
+				if({ value }, { return 'true'; });
+				return 'false';
 			},
-			ExpressionKind:IDENT: {
-				self:emitIdent(expr: expr)
+			Expression:Ident: local Function of String(String is name){
+				return self:emitIdent(expr: expr);
 			},
-			ExpressionKind:PATH: {
-				self:emitPath(expr: expr)
+			Expression:Path: local Function of String(Array of String is segs){
+				return self:emitPath(expr: expr);
 			},
-			ExpressionKind:BINARY: {
-				self:emitBinary(expr: expr)
+			Expression:Binary: local Function of String(String is op, Expression is left, Expression is right){
+				return self:emitBinary(expr: expr);
 			},
-			ExpressionKind:INDEX: {
-				self:emitIndex(expr: expr)
+			Expression:Index: local Function of String(Expression is target, Expression is index){
+				return self:emitIndex(expr: expr);
 			},
-			ExpressionKind:CAST: {
-				self:emitCast(expr: expr)
+			Expression:Cast: local Function of String(Expression is inner, String is target, Array of Expression is args){
+				return self:emitCast(expr: expr);
 			},
-			ExpressionKind:UNARY: {
-				if({ expr:unaryExpr:kind == ExpressionKind:IDENT && self:boxedLocals:has(key: expr:unaryExpr:str) && (expr:str == 'post++' || expr:str == 'post--' || expr:str == '++' || expr:str == '--') }, {
-					local String is boxVar: '_box_' . self:utils:cIdent(name: expr:unaryExpr:str);
-					local String is bType: self:boxedLocals:getString(key: expr:unaryExpr:str, default: '');
+			Expression:Unary: local Function of String(String is op, Expression is operand){
+				local String is identName: '';
+				match(on: operand, when: [
+					Expression:Ident: local Function(String is s){ identName: s; }
+				], default: {});
+				if({ identName != '' && self:boxedLocals:has(key: identName) && (op == 'post++' || op == 'post--' || op == '++' || op == '--') }, {
+					local String is boxVar: '_box_' . self:utils:cIdent(name: identName);
+					local String is bType: self:boxedLocals:getString(key: identName, default: '');
 					local String is cType: self:cTypeFor(typeName: bType);
-					match(when: [
-						{ expr:str == 'post++' }: { '((' . cType . ')((' . boxVar . '->val)++))' },
-						{ expr:str == 'post--' }: { '((' . cType . ')((' . boxVar . '->val)--))' },
-						{ expr:str == '++' }: { '((' . cType . ')(++(' . boxVar . '->val)))' },
-						{ expr:str == '--' }: { '((' . cType . ')(--(' . boxVar . '->val)))' },
+					return match(when: [
+						{ op == 'post++' }: { '((' . cType . ')((' . boxVar . '->val)++))' },
+						{ op == 'post--' }: { '((' . cType . ')((' . boxVar . '->val)--))' },
+						{ op == '++' }: { '((' . cType . ')(++(' . boxVar . '->val)))' },
+						{ op == '--' }: { '((' . cType . ')(--(' . boxVar . '->val)))' },
 						else: { '0' }
-					])
-				}, {
-					local String is innerC: self:generateExpression(expr: expr:unaryExpr);
-					local String is uC: match(when: [
-						{ expr:str == 'post++' }: { '((' . innerC . ')++)' },
-						{ expr:str == 'post--' }: { '((' . innerC . ')--)' },
-						{ expr:str == '++' }: { '(++(' . innerC . '))' },
-						{ expr:str == '--' }: { '(--(' . innerC . '))' },
-						else: { '(' . expr:str . '(' . innerC . '))' }
 					]);
-					uC
-				})
+				});
+				local String is innerC: self:generateExpression(expr: operand);
+				local String is uC: match(when: [
+					{ op == 'post++' }: { '((' . innerC . ')++)' },
+					{ op == 'post--' }: { '((' . innerC . ')--)' },
+					{ op == '++' }: { '(++(' . innerC . '))' },
+					{ op == '--' }: { '(--(' . innerC . '))' },
+					else: { '(' . op . '(' . innerC . '))' }
+				]);
+				return uC;
 			},
-			ExpressionKind:CALL: {
-				self:emitCall(expr: expr)
+			Expression:Call: local Function of String(CallData is call){
+				return self:emitCall(expr: expr);
 			},
-			ExpressionKind:FIELD_ACCESS: {
-				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				'(' . leftC . ')->' . self:utils:cIdent(name: expr:str)
+			Expression:FieldAccess: local Function of String(Expression is target, String is fieldName){
+				local String is leftC: self:generateExpression(expr: target);
+				return '(' . leftC . ')->' . self:utils:cIdent(name: fieldName);
 			},
-			ExpressionKind:ANON_FN: {
-				self:emitAnonFn(expr: expr)
+			Expression:AnonFn: local Function of String(Type is returnType, Array of Parameter is params, Array of Statement is body){
+				return self:emitAnonFn(expr: expr);
 			},
 			else: { '0' }
 		]);
@@ -1902,7 +1866,7 @@ Class is CodeGenerator{
 	##
 	## @param expr: The ARRAY expression.
 	## @return: C compound-literal allocation.
-	Function of String is emitArrayLiteral(Expression is expr){
+	Function of String is emitArrayLiteral(Expression is expr, Array of Expression is items){
 		local Boolean is listHint: self:containerHint:startsWith(prefix: 'List');
 		local String is addFn: if({ listHint }, { 'spec_vec_push' }, { 'spec_array_add' });
 		local String is newCall: 'spec_array_new()';
@@ -1911,8 +1875,8 @@ Class is CodeGenerator{
 			local String is hintKind: self:containerElemKind(containerType: self:containerHint);
 			newCall: if({ hintKind == 'byte' }, { 'spec_bytebuffer_new()' }, { if({ hintKind == 'object' || hintKind == 'string' }, { if({ listHint }, { 'spec_vec_new_string()' }, { 'spec_vec_new_object()' }) }, { if({ listHint }, { 'spec_vec_new()' }, { 'spec_array_new_object()' }) }) });
 		}, {
-			if({ expr:arrayItems:length() > 0 }, {
-				local String is elemT: self:inferTargetType(expr: expr:arrayItems:get(index: 0));
+			if({ items:length() > 0 }, {
+				local String is elemT: self:inferTargetType(expr: items:get(index: 0));
 				newCall: if({ self:isArcType(typeName: elemT) || elemT == 'String' }, { 'spec_array_new_object()' }, { 'spec_array_new()' });
 			}, {
 				if({ self:currentClassName == 'Array' }, {
@@ -1925,10 +1889,16 @@ Class is CodeGenerator{
 		local String is res: '({ ' . arrCType . ' _arr = ' . newCall . ';';
 		local Boolean is savedArg: self:argMode;
 		self:argMode: false;
-		expr:arrayItems:each(action: local Function(Expression is item){
+		items:each(action: local Function(Expression is item){
 			local String is itemC: self:generateExpression(expr: item);
 			local String is itemAddFn: addFn;
-			if({ !listHint && newCall == 'spec_array_new_object()' && self:yieldsClaim(expr: item) && !(item:kind == ExpressionKind:CALL && (item:methodName == 'get' || item:methodName == 'getString')) }, {
+			local Boolean is isGetCall: false;
+			match(on: item, when: [
+				Expression:Call: local Function(CallData is ic){
+					isGetCall: ic:name == 'get' || ic:name == 'getString';
+				}
+			], default: {});
+			if({ !listHint && newCall == 'spec_array_new_object()' && self:yieldsClaim(expr: item) && !isGetCall }, {
 				itemAddFn: 'spec_array_add_owned';
 			});
 			res: res . ' ' . itemAddFn . '(_arr, (void*)(' . itemC . '));';
@@ -1943,7 +1913,7 @@ Class is CodeGenerator{
 	##
 	## @param expr: The MAP expression.
 	## @return: C compound-literal allocation.
-	Function of String is emitMapLiteral(Expression is expr){
+	Function of String is emitMapLiteral(Expression is expr, Array of Expression is keys, Array of Expression is values){
 		local String is newCall: 'spec_map_new()';
 		if({ self:containerHint != '' }, {
 			if({ self:containerElemIsArc(containerType: self:containerHint) }, {
@@ -1951,8 +1921,8 @@ Class is CodeGenerator{
 			});
 			self:containerHint: '';
 		}, {
-			if({ expr:mapValues:length() > 0 }, {
-				local String is valT: self:inferTargetType(expr: expr:mapValues:get(index: 0));
+			if({ values:length() > 0 }, {
+				local String is valT: self:inferTargetType(expr: values:get(index: 0));
 				if({ self:isArcType(typeName: valT) }, {
 					newCall: 'spec_map_new_object()';
 				});
@@ -1962,8 +1932,8 @@ Class is CodeGenerator{
 		local Int is idx: 0;
 		local Boolean is savedArgM: self:argMode;
 		self:argMode: false;
-		expr:mapKeys:each(action: local Function(Expression is kExpr){
-			local Expression is vExpr: expr:mapValues:get(index: idx);
+		keys:each(action: local Function(Expression is kExpr){
+			local Expression is vExpr: values:get(index: idx);
 			local String is kC: self:generateExpression(expr: kExpr);
 			local String is vC: self:generateExpression(expr: vExpr);
 			if({ self:isStringExpr(expr: vExpr, exprC: vC) }, {
@@ -1984,7 +1954,10 @@ Class is CodeGenerator{
 	## @param expr: The IDENT expression.
 	## @return: C identifier expression.
 	Function of String is emitIdent(Expression is expr){
-		local String is name: expr:str;
+		local String is name: '';
+		match(on: expr, when: [
+			Expression:Ident: local Function(String is s){ name: s; }
+		], default: {});
 		if({ name == self:names:selfIdent() || name == 'true' || name == 'false' }, {
 			return name;
 		});
@@ -2018,7 +1991,10 @@ Class is CodeGenerator{
 	## @param expr: The PATH expression.
 	## @return: C expression.
 	Function of String is emitPath(Expression is expr){
-		local Array of String is segs: expr:pathSegments;
+		local Array of String is segs: [];
+		match(on: expr, when: [
+			Expression:Path: local Function(Array of String is s){ segs: s; }
+		], default: {});
 		if({ segs:length() == 1 }, {
 			return segs:get(index: 0);
 		});
@@ -2146,65 +2122,74 @@ Class is CodeGenerator{
 	## @param expr: The BINARY expression.
 	## @return: C expression.
 	Function of String is emitBinary(Expression is expr){
-		local String is op: expr:str;
-		return match(on: op, when: [
-			'.': {
-				local String is leftC: self:generateExpressionInner(expr: expr:leftExpr);
-				local ExpressionKind is leftKind: expr:leftExpr:kind;
-				local String is leftT: self:inferTargetType(expr: expr:leftExpr);
-				local Boolean is leftPrim: leftT == Primitive:INT:value() || leftT == 'Byte' || leftT == 'Float' || leftT == 'Boolean';
-				local Boolean is leftClaimKind: leftKind == ExpressionKind:CALL || leftKind == ExpressionKind:BINARY || leftKind == ExpressionKind:ARRAY || leftKind == ExpressionKind:MAP;
-				local Boolean is leftArc: self:isArcType(typeName: leftT);
-				local String is leftClaim: match(when: [
-					{ leftArc && !self:yieldsClaim(expr: expr:leftExpr) }: { '(void*)spec_retain((void*)(' . leftC . '))' },
-					{ leftPrim || leftClaimKind }: { leftC },
-					else: { 'spec_string_from_chars(' . leftC . ')' }
+		return match(on: expr, when: [
+			Expression:Binary: local Function of String(String is op, Expression is left, Expression is right){
+				return match(on: op, when: [
+					'.': {
+						local String is leftC: self:generateExpressionInner(expr: left);
+						local String is leftT: self:inferTargetType(expr: left);
+						local Boolean is leftPrim: leftT == Primitive:INT:value() || leftT == 'Byte' || leftT == 'Float' || leftT == 'Boolean';
+						local Boolean is leftClaimKind: match(on: left, when: [
+							Expression:Call: local Function of Boolean(CallData is c){ return true; },
+							Expression:Binary: local Function of Boolean(String is o, Expression is l, Expression is r){ return true; },
+							Expression:ArrayLit: local Function of Boolean(Array of Expression is items){ return true; },
+							Expression:MapLit: local Function of Boolean(Array of Expression is ks, Array of Expression is vs){ return true; },
+							else: { false }
+						]);
+						local Boolean is leftArc: self:isArcType(typeName: leftT);
+						local String is leftClaim: match(when: [
+							{ leftArc && !self:yieldsClaim(expr: left) }: { '(void*)spec_retain((void*)(' . leftC . '))' },
+							{ leftPrim || leftClaimKind }: { leftC },
+							else: { 'spec_string_from_chars(' . leftC . ')' }
+						]);
+						local String is leftWrap: leftClaim;
+						if({ leftPrim }, {
+							leftWrap: self:wrapToString(expr: left, exprC: leftClaim);
+						});
+						local Boolean is savedArgR: self:argMode;
+						self:argMode: true;
+						local String is rightC: self:generateExpression(expr: right);
+						self:argMode: savedArgR;
+						local String is rightWrap: self:wrapToString(expr: right, exprC: rightC);
+						'spec_string_concat(' . leftWrap . ', ' . rightWrap . ')'
+					},
+					['is', '==']: {
+						local String is leftC: self:generateExpression(expr: left);
+						local String is rightC: self:generateExpression(expr: right);
+						local String is eqC: '((' . leftC . ') == (' . rightC . '))';
+						if({ self:isStringExpr(expr: left, exprC: leftC) || self:isStringExpr(expr: right, exprC: rightC) }, {
+							eqC: 'spec_string_equals(' . leftC . ', ' . rightC . ')';
+						});
+						eqC
+					},
+					'!=': {
+						local String is leftC: self:generateExpression(expr: left);
+						local String is rightC: self:generateExpression(expr: right);
+						local String is neC: '((' . leftC . ') != (' . rightC . '))';
+						if({ self:isStringExpr(expr: left, exprC: leftC) || self:isStringExpr(expr: right, exprC: rightC) }, {
+							neC: '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
+						});
+						neC
+					},
+					['<', '<=', '>', '>=']: {
+						# hardening (D5): relational operators on String
+						# compare lexicographically through the floor — never by
+						# pointer.
+						local String is leftC: self:generateExpression(expr: left);
+						local String is rightC: self:generateExpression(expr: right);
+						local String is relC: '((' . leftC . ') ' . op . ' (' . rightC . '))';
+						if({ self:isStringExpr(expr: left, exprC: leftC) || self:isStringExpr(expr: right, exprC: rightC) }, {
+							relC: '(spec_string_compare(' . leftC . ', ' . rightC . ') ' . op . ' 0)';
+						});
+						relC
+					},
+					['+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>']: {
+						local String is leftC: self:generateExpression(expr: left);
+						local String is rightC: self:generateExpression(expr: right);
+						'((' . leftC . ') ' . op . ' (' . rightC . '))'
+					},
+					else: { '0' }
 				]);
-				local String is leftWrap: leftClaim;
-				if({ leftPrim }, {
-					leftWrap: self:wrapToString(expr: expr:leftExpr, exprC: leftClaim);
-				});
-				local Boolean is savedArgR: self:argMode;
-				self:argMode: true;
-				local String is rightC: self:generateExpression(expr: expr:rightExpr);
-				self:argMode: savedArgR;
-				local String is rightWrap: self:wrapToString(expr: expr:rightExpr, exprC: rightC);
-				'spec_string_concat(' . leftWrap . ', ' . rightWrap . ')'
-			},
-			['is', '==']: {
-				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				local String is rightC: self:generateExpression(expr: expr:rightExpr);
-				local String is eqC: '((' . leftC . ') == (' . rightC . '))';
-				if({ self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, {
-					eqC: 'spec_string_equals(' . leftC . ', ' . rightC . ')';
-				});
-				eqC
-			},
-			'!=': {
-				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				local String is rightC: self:generateExpression(expr: expr:rightExpr);
-				local String is neC: '((' . leftC . ') != (' . rightC . '))';
-				if({ self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, {
-					neC: '(!spec_string_equals(' . leftC . ', ' . rightC . '))';
-				});
-				neC
-			},
-			['<', '<=', '>', '>=']: {
-				# hardening (D5): relational operators on String
-				# compare lexicographically through the floor — never by
-				# pointer.
-				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				local String is rightC: self:generateExpression(expr: expr:rightExpr);
-				local String is relC: '((' . leftC . ') ' . op . ' (' . rightC . '))';
-				if({ self:isStringExpr(expr: expr:leftExpr, exprC: leftC) || self:isStringExpr(expr: expr:rightExpr, exprC: rightC) }, {
-					relC: '(spec_string_compare(' . leftC . ', ' . rightC . ') ' . op . ' 0)';
-				});
-				relC
-			},
-			['+', '-', '*', '/', '%', '&&', '||', '&', '|', '^', '<<', '>>']: {
-				local String is leftC: self:generateExpression(expr: expr:leftExpr);
-				local String is rightC: self:generateExpression(expr: expr:rightExpr);
-				'((' . leftC . ') ' . op . ' (' . rightC . '))'
 			},
 			else: { '0' }
 		]);
@@ -2322,9 +2307,17 @@ Class is CodeGenerator{
 	## @param expr: The INDEX expression.
 	## @return: C expression.
 	Function of String is emitIndex(Expression is expr){
-		local String is targetC: self:generateExpression(expr: expr:leftExpr);
-		local String is indexC: self:generateExpression(expr: expr:rightExpr);
-		local String is targetType: self:inferTargetType(expr: expr:leftExpr);
+		local Expression is leftExpr: Expression:Unknown;
+		local Expression is rightExpr: Expression:Unknown;
+		match(on: expr, when: [
+			Expression:Index: local Function(Expression is target, Expression is index){
+				leftExpr: target;
+				rightExpr: index;
+			}
+		], default: {});
+		local String is targetC: self:generateExpression(expr: leftExpr);
+		local String is indexC: self:generateExpression(expr: rightExpr);
+		local String is targetType: self:inferTargetType(expr: leftExpr);
 		if({ targetType:startsWith(prefix: 'Map:') || targetType == 'Map' }, {
 			local String is valType: 'String';
 			if({ targetType:startsWith(prefix: 'Map:') }, {
@@ -2361,83 +2354,87 @@ Class is CodeGenerator{
 	## @param expr: The CAST expression.
 	## @return: C expression.
 	Function of String is emitCast(Expression is expr){
-		local String is innerC: self:generateExpression(expr: expr:leftExpr);
-		local String is target: expr:str;
-		local String is srcT: self:inferTargetType(expr: expr:leftExpr);
-		local String is digitsC: '0';
-		if({ expr:castArgs:length() > 0 }, {
-			digitsC: self:generateExpression(expr: expr:castArgs:get(index: 0));
-		});
-		return match(on: target, when: [
-			'Hex': {
-				local String is hexC: 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
-				if({ srcT == 'String' }, {
-					hexC: 'String_parseInt(' . innerC . ', 16, 0)';
+		return match(on: expr, when: [
+			Expression:Cast: local Function of String(Expression is inner, String is target, Array of Expression is args){
+				local String is innerC: self:generateExpression(expr: inner);
+				local String is srcT: self:inferTargetType(expr: inner);
+				local String is digitsC: '0';
+				if({ args:length() > 0 }, {
+					digitsC: self:generateExpression(expr: args:get(index: 0));
 				});
-				hexC
+				return match(on: target, when: [
+					'Hex': {
+						local String is hexC: 'spec_int_to_base(' . innerC . ', 16, ' . digitsC . ')';
+						if({ srcT == 'String' }, {
+							hexC: 'String_parseInt(' . innerC . ', 16, 0)';
+						});
+						hexC
+					},
+					'Bin': {
+						local String is binC: 'spec_int_to_base(' . innerC . ', 2, ' . digitsC . ')';
+						if({ srcT == 'String' }, {
+							binC: 'String_parseInt(' . innerC . ', 2, 0)';
+						});
+						binC
+					},
+					'Oct': {
+						local String is octC: 'spec_int_to_base(' . innerC . ', 8, ' . digitsC . ')';
+						if({ srcT == 'String' }, {
+							octC: 'String_parseInt(' . innerC . ', 8, 0)';
+						});
+						octC
+					},
+					'Any': {
+						innerC
+					},
+					'Int': {
+						local String is intC: '((long long)(intptr_t)(' . innerC . '))';
+						if({ srcT == 'String' }, {
+							intC: 'String_parseInt(' . innerC . ', 10, 0)';
+						});
+						if({ srcT == 'Float' }, {
+							intC: '((long long)(' . innerC . '))';
+						});
+						intC
+					},
+					'Float': {
+						'((double)(' . innerC . '))'
+					},
+					'Byte': {
+						local String is byteC: '({ long long _bv = (long long)(' . innerC . '); if (_bv < 0 || _bv > 255) { spec_panic_byte_range(_bv); } ((unsigned char)_bv); })';
+						if({ srcT == 'Byte' }, {
+							byteC: innerC;
+						});
+						byteC
+					},
+					'String': {
+						local String is strC: self:wrapToString(expr: inner, exprC: innerC);
+						if({ srcT == Primitive:INT:value() }, {
+							strC: 'spec_to_string_int(' . innerC . ')';
+						});
+						if({ srcT == 'Float' }, {
+							strC: 'spec_to_string_float(' . innerC . ')';
+						});
+						if({ srcT == 'Boolean' }, {
+							strC: 'spec_to_string_bool(' . innerC . ')';
+						});
+						if({ self:allClassNames:has(key: srcT) && !self:allEnumNames:has(key: srcT) && !self:policy:isTransparent(c: self:findClass(name: srcT)) }, {
+							strC: 'spec_type_name(' . innerC . ')';
+						});
+						# Unknown or computed sources (arithmetic binaries, calls with
+						# unresolved types) keep the string-wrap policy default.
+						strC
+					},
+					else: {
+						local String is castC: innerC;
+						if({ self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:policy:isTransparent(c: self:findClass(name: target)) }, {
+							castC: '((' . target . '*)spec_cast_check(' . innerC . ', "' . target . '"))';
+						});
+						castC
+					}
+				]);
 			},
-			'Bin': {
-				local String is binC: 'spec_int_to_base(' . innerC . ', 2, ' . digitsC . ')';
-				if({ srcT == 'String' }, {
-					binC: 'String_parseInt(' . innerC . ', 2, 0)';
-				});
-				binC
-			},
-			'Oct': {
-				local String is octC: 'spec_int_to_base(' . innerC . ', 8, ' . digitsC . ')';
-				if({ srcT == 'String' }, {
-					octC: 'String_parseInt(' . innerC . ', 8, 0)';
-				});
-				octC
-			},
-			'Any': {
-				innerC
-			},
-			'Int': {
-				local String is intC: '((long long)(intptr_t)(' . innerC . '))';
-				if({ srcT == 'String' }, {
-					intC: 'String_parseInt(' . innerC . ', 10, 0)';
-				});
-				if({ srcT == 'Float' }, {
-					intC: '((long long)(' . innerC . '))';
-				});
-				intC
-			},
-			'Float': {
-				'((double)(' . innerC . '))'
-			},
-			'Byte': {
-				local String is byteC: '({ long long _bv = (long long)(' . innerC . '); if (_bv < 0 || _bv > 255) { spec_panic_byte_range(_bv); } ((unsigned char)_bv); })';
-				if({ srcT == 'Byte' }, {
-					byteC: innerC;
-				});
-				byteC
-			},
-			'String': {
-				local String is strC: self:wrapToString(expr: expr:leftExpr, exprC: innerC);
-				if({ srcT == Primitive:INT:value() }, {
-					strC: 'spec_to_string_int(' . innerC . ')';
-				});
-				if({ srcT == 'Float' }, {
-					strC: 'spec_to_string_float(' . innerC . ')';
-				});
-				if({ srcT == 'Boolean' }, {
-					strC: 'spec_to_string_bool(' . innerC . ')';
-				});
-				if({ self:allClassNames:has(key: srcT) && !self:allEnumNames:has(key: srcT) && !self:policy:isTransparent(c: self:findClass(name: srcT)) }, {
-					strC: 'spec_type_name(' . innerC . ')';
-				});
-				# Unknown or computed sources (arithmetic binaries, calls with
-				# unresolved types) keep the string-wrap policy default.
-				strC
-			},
-			else: {
-				local String is castC: innerC;
-				if({ self:allClassNames:has(key: target) && !self:allEnumNames:has(key: target) && !self:policy:isTransparent(c: self:findClass(name: target)) }, {
-					castC: '((' . target . '*)spec_cast_check(' . innerC . ', "' . target . '"))';
-				});
-				castC
-			}
+			else: { '0' }
 		]);
 	}
 
@@ -2447,354 +2444,336 @@ Class is CodeGenerator{
 	## @param expr: The CALL expression.
 	## @return: C expression.
 	Function of String is emitCall(Expression is expr){
-		# The receiver is a READ position for every dispatched call: the
-		# intercepted builtins and the vtable bodies read it and return,
-		# and nothing takes ownership. A claim-yielding receiver (a fresh
-		# call result feeding a member call) would otherwise be dropped by
-		# its consumer when the ambient argMode is false (assignment RHS,
-		# decl-init) — the pool adopts it here, exactly once, regardless
-		# of the ambient mode. Argument positions keep generateExpression's
-		# argMode wrap; this is the one canonical receiver site.
-		local Expression is targetExpr: expr:methodTarget;
-		local String is targetC: self:generateExpressionInner(expr: targetExpr);
-		if({ self:claimStatus(expr: targetExpr) }, {
-			targetC: self:claimWrapped(typeName: self:inferTargetType(expr: targetExpr), valueC: targetC);
-		});
-		local String is targetType: self:inferTargetType(expr: expr:methodTarget);
-		local String is fieldKey: targetC;
-		if({ targetC:startsWith(prefix: 'self->') }, {
-			fieldKey: targetC:substring(start: 6, end: targetC:length());
-		});
-		if({ targetType == '' }, {
-			targetType: self:localVars:getString(key: fieldKey, default: '');
-		});
-		if({ targetType == '' }, {
-			targetType: self:fieldTypes:getString(key: fieldKey, default: '');
-		});
+		return match(on: expr, when: [
+			Expression:Call: local Function of String(CallData is call){
+				# The receiver is a READ position for every dispatched call: the
+				# intercepted builtins and the vtable bodies read it and return,
+				# and nothing takes ownership. A claim-yielding receiver (a fresh
+				# call result feeding a member call) would otherwise be dropped by
+				# its consumer when the ambient argMode is false (assignment RHS,
+				# decl-init) — the pool adopts it here, exactly once, regardless
+				# of the ambient mode. Argument positions keep generateExpression's
+				# argMode wrap; this is the one canonical receiver site.
+				local Expression is targetExpr: call:target;
+				local String is targetC: self:generateExpressionInner(expr: targetExpr);
+				if({ self:claimStatus(expr: targetExpr) }, {
+					targetC: self:claimWrapped(typeName: self:inferTargetType(expr: targetExpr), valueC: targetC);
+				});
+				local String is targetType: self:inferTargetType(expr: call:target);
+				local String is fieldKey: targetC;
+				if({ targetC:startsWith(prefix: 'self->') }, {
+					fieldKey: targetC:substring(start: 6, end: targetC:length());
+				});
+				if({ targetType == '' }, {
+					targetType: self:localVars:getString(key: fieldKey, default: '');
+				});
+				if({ targetType == '' }, {
+					targetType: self:fieldTypes:getString(key: fieldKey, default: '');
+				});
 
-		local String is builtinC: self:builtins:generateBuiltinCall(expr: expr, targetC: targetC, targetType: targetType, cg: self);
-		if({ builtinC != '' }, {
-			return builtinC;
-		});
+				local String is builtinC: self:builtins:generateBuiltinCall(expr: expr, targetC: targetC, targetType: targetType, cg: self);
+				if({ builtinC != '' }, {
+					return builtinC;
+				});
 
-		# the Conditional inline — statement-form
-		# conditionals compile to zero-allocation C if/else (the
-		# While:condition precedent). The wrapper's own floor call arrives
-		# as a qualified PATH receiver and is excluded, so the fallback
-			# stays honest.
-			if({ (expr:methodName == 'if' || expr:methodName == 'branch') && expr:argCount() >= 2 && expr:argCount() <= 4 && ((targetC == 'Conditional' && expr:methodTarget:kind == ExpressionKind:IDENT) || expr:bareProvider == 'Conditional') }, {
-				local Boolean is shapeOk: expr:argValue(index: 0):kind == ExpressionKind:ANON_FN;
-				local Int is bi: 1;
-				while({ shapeOk && bi < expr:argCount() }, {
-					if({ expr:argValue(index: bi):kind != ExpressionKind:ANON_FN }, {
-						shapeOk: false;
+				local Boolean is targetIsIdent: false;
+				local String is targetIdentStr: '';
+				match(on: call:target, when: [
+					Expression:Ident: local Function(String is s){
+						targetIsIdent: true;
+						targetIdentStr: s;
+					}
+				], default: {});
+
+				# the Conditional inline — statement-form
+				# conditionals compile to zero-allocation C if/else (the
+				# While:condition precedent). The wrapper's own floor call arrives
+				# as a qualified PATH receiver and is excluded, so the fallback
+				# stays honest.
+				if({ (call:name == 'if' || call:name == 'branch') && call:args:length() >= 2 && call:args:length() <= 4 && ((targetC == 'Conditional' && targetIsIdent) || call:bareProvider == 'Conditional') }, {
+					local Boolean is shapeOk: true;
+					local Int is bi: 0;
+					while({ shapeOk && bi < call:args:length() }, {
+						local Boolean is argAnon: false;
+						local NamedArg is bArg: call:args:get(index: bi);
+						match(on: bArg:value, when: [
+							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+								argAnon: true;
+							}
+						], default: {});
+						if({ !argAnon }, {
+							shapeOk: false;
+						});
+						bi: bi + 1;
 					});
-					bi: bi + 1;
-				});
-				if({ shapeOk }, {
-					return self:generateInlineBranch(expr: expr);
-				});
-				# The runtime dispatch: the branch closures are not inline
-				# literals (Function variables, callbacks held as values) —
-				# the Conditional wrapper's if body (the floor branch)
-				# serves them, the same two-tier shape as match.
-				local String is rtArgs: self:formatCallArgumentsWith(className: 'Conditional', methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
-				return self:overloadSymbol(className: 'Conditional', methodName: expr:methodName, idx: expr:num) . '(NULL' . rtArgs . ')';
-			});
-
-		# Conditional:match: the arm table lowers into a
-		# comparison chain — identity for class-typed held members,
-		# spec_string_equals for String, == for the numeric primitives —
-		# with the arm closures inlined as statement blocks (no
-		# per-arm closure allocation, the generateInlineBranch protocol).
-		if({ expr:methodName == 'match' && (expr:bareProvider == 'Conditional' || targetType == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'match')) }, {
-			local Expression is matchSubjC: Expression:init(kind: ExpressionKind:UNKNOWN);
-			local Expression is matchArmsC: Expression:init(kind: ExpressionKind:UNKNOWN);
-			expr:methodArgs:each(action: local Function(NamedArg is arg){
-				if({ arg:name == 'on' }, {
-					matchSubjC: arg:value;
-				});
-				if({ arg:name == 'when' }, {
-					matchArmsC: arg:value;
-				});
-			});
-			if({ matchSubjC:kind != ExpressionKind:UNKNOWN && matchArmsC:kind == ExpressionKind:MAP }, {
-				return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC);
-			});
-			# The PREDICATE form: no subject — the keys are the closures,
-			# the first that holds runs its arm (the else-if ladder).
-			if({ matchSubjC:kind == ExpressionKind:UNKNOWN && matchArmsC:kind == ExpressionKind:MAP }, {
-				return self:generatePredicateMatch(callExpr: expr, armsArg: matchArmsC);
-			});
-			# The runtime dispatch: the arm table is not a literal — a Map
-			# built at runtime or a literal assigned to a variable — the
-			# Conditional wrapper's match body serves it (string keys,
-			# array keys, identity over the held singletons, else as the
-			# fallback). Payload arms are compile-time by design.
-			if({ matchSubjC:kind != ExpressionKind:UNKNOWN && matchArmsC:kind != ExpressionKind:UNKNOWN }, {
-				local String is rtSubj: self:generateExpression(expr: matchSubjC);
-				local String is rtArms: self:generateExpression(expr: matchArmsC);
-				return self:overloadSymbol(className: 'Conditional', methodName: 'match', idx: expr:num) . '(NULL, ' . rtSubj . ', ' . rtArms . ')';
-			});
-		});
-
-		# Function variable or field invocation: fnVar(args).
-		if({ targetC == self:names:selfIdent() && (self:localVars:has(key: expr:methodName) || self:fieldTypes:has(key: expr:methodName)) }, {
-			local String is fnVarT: self:localVars:getString(key: expr:methodName, default: self:fieldTypes:getString(key: expr:methodName, default: ''));
-			if({ fnVarT:startsWith(prefix: 'Function') }, {
-				local String is fnPtrC: if({ self:localVars:has(key: expr:methodName) }, { self:utils:cIdent(name: expr:methodName) }, { 'self->' . self:utils:cIdent(name: expr:methodName) });
-				local String is retTName: if({ fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, { fnVarT:substring(start: 9, end: fnVarT:length()) }, { 'Void' });
-				local String is retCType: self:cTypeFor(typeName: retTName);
-				local String is pTypesC: 'void*';
-				local String is cArgsC: '_cls->env';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					local String is aValC: self:generateExpression(expr: arg:value);
-					local String is aT: self:inferTargetType(expr: arg:value);
-					local String is aCType: self:cTypeFor(typeName: aT);
-					pTypesC: pTypesC . ', ' . aCType;
-					cArgsC: cArgsC . ', ' . aValC;
-				});
-				return '({ SpecClosure* _cls = (SpecClosure*)(' . fnPtrC . '); if (!_cls || !_cls->fn) spec_panic("Invocation of null Function"); ((' . retCType . ' (*)(' . pTypesC . '))_cls->fn)(' . cArgsC . '); })';
-			});
-		});
-
-		# Tagged enum variant constructor.
-		if({ self:allEnumVariants:has(key: expr:methodName) && (self:allTaggedEnums:has(key: targetC) || targetC == self:names:selfIdent()) }, {
-			local String is eName: self:allEnumVariants:getString(key: expr:methodName, default: '');
-			# the variant symbols qualify for
-			# nested tagged enums — the registry lookups stay on the bare
-			# name; the C symbol derives from the qualified identity.
-			local String is eSym: eName;
-			local ClassInfo is eCls: self:findClass(name: eName);
-			if({ eCls:name == eName }, {
-				eSym: self:utils:cIdent(name: eCls:qualifiedName());
-			});
-			if({ self:allTaggedEnums:has(key: eName) }, {
-				local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: expr:methodName);
-				local Array of Parameter is vParams: vMem:params;
-				local String is vArgsC: '';
-				local Int is pIdx: 0;
-				vParams:each(action: local Function(Parameter is p){
-					if({ pIdx > 0 }, {
-						vArgsC: vArgsC . ', ';
+					if({ shapeOk }, {
+						return self:generateInlineBranch(expr: expr);
 					});
-					local String is pName: p:name;
-					local Boolean is matched: false;
-					local String is argC: '0';
-					expr:methodArgs:each(action: local Function(NamedArg is a){
-						if({ !matched && a:name == pName && pName != '' }, {
-							argC: self:generateExpression(expr: a:value);
-							matched: true;
+					local String is rtArgs: self:formatCallArgumentsWith(className: 'Conditional', methodName: call:name, idx: call:overloadIndex, args: call:args);
+					return self:overloadSymbol(className: 'Conditional', methodName: call:name, idx: call:overloadIndex) . '(NULL' . rtArgs . ')';
+				});
+
+				# Conditional:match: the arm table lowers into a
+				# comparison chain — identity for class-typed held members,
+				# spec_string_equals for String, == for the numeric primitives —
+				# with the arm closures inlined as statement blocks (no
+				# per-arm closure allocation, the generateInlineBranch protocol).
+				if({ call:name == 'match' && (call:bareProvider == 'Conditional' || targetType == 'Conditional' || (targetIsIdent && targetIdentStr == 'match')) }, {
+					local Expression is matchSubjC: Expression:Unknown;
+					local Expression is matchArmsC: Expression:Unknown;
+					local Boolean is hasSubjC: false;
+					local Boolean is hasArmsC: false;
+					local Boolean is armsIsMap: false;
+					call:args:each(action: local Function(NamedArg is arg){
+						if({ arg:name == 'on' }, {
+							matchSubjC: arg:value;
+							hasSubjC: true;
+						});
+						if({ arg:name == 'when' }, {
+							matchArmsC: arg:value;
+							hasArmsC: true;
 						});
 					});
-					if({ !matched && pIdx < expr:argCount() }, {
-						local Expression is posArg: self:argValue(expr: expr, index: pIdx);
-						argC: self:generateExpression(expr: posArg);
-						matched: true;
+					if({ hasArmsC }, {
+						match(on: matchArmsC, when: [
+							Expression:MapLit: local Function(Array of Expression is ks, Array of Expression is vs){
+								armsIsMap: true;
+							}
+						], default: {});
 					});
-					vArgsC: vArgsC . argC;
-					pIdx: pIdx + 1;
+					if({ hasSubjC && armsIsMap }, {
+						return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC);
+					});
+					if({ !hasSubjC && armsIsMap }, {
+						return self:generatePredicateMatch(callExpr: expr, armsArg: matchArmsC);
+					});
+					if({ hasSubjC && hasArmsC }, {
+						local String is rtSubj: self:generateExpression(expr: matchSubjC);
+						local String is rtArms: self:generateExpression(expr: matchArmsC);
+						return self:overloadSymbol(className: 'Conditional', methodName: 'match', idx: call:overloadIndex) . '(NULL, ' . rtSubj . ', ' . rtArms . ')';
+					});
 				});
-				return eSym . '_' . self:utils:cIdent(name: expr:methodName) . '(' . vArgsC . ')';
-			});
-		});
 
-		# Constructor or static invocation: ClassName:init(...)/ClassName:method(...).
-		if({ self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC) }, {
-			# the C identity of the target — a bare nested-class name
-			# has no C type when the bare alias is absent (the bare name is
-			# not unique); resolve to the qualified symbol form.
-			local String is targetSym: targetC;
-			local ClassInfo is tgtCls: self:findClass(name: targetC);
-			if({ tgtCls:name != '' }, {
-				targetSym: self:utils:cIdent(name: tgtCls:qualifiedName());
-			});
-			# Held functions: the class-name prefix
-			# dispatches the class-scoped function — a direct C call with
-			# no receiver, no vtable. The registry folds the lattice, so a
-			# subclass name reaches the inherited held function.
-			local String is heldOwner: self:heldMethods:getString(key: targetC . ':' . expr:methodName, default: '');
-			if({ heldOwner != '' && expr:methodName != 'init' }, {
-				local Member is heldFn: self:heldMethodMemberOf(ownerName: heldOwner, methodName: expr:methodName);
-				local String is heldOwnerSym: self:utils:cIdent(name: heldOwner);
-				local ClassInfo is heldOwnerCls: self:findClass(name: heldOwner);
-				if({ heldOwnerCls:name == heldOwner }, {
-					heldOwnerSym: self:utils:cIdent(name: heldOwnerCls:qualifiedName());
+				# Function variable or field invocation: fnVar(args).
+				if({ targetC == self:names:selfIdent() && (self:localVars:has(key: call:name) || self:fieldTypes:has(key: call:name)) }, {
+					local String is fnVarT: self:localVars:getString(key: call:name, default: self:fieldTypes:getString(key: call:name, default: ''));
+					if({ fnVarT:startsWith(prefix: 'Function') }, {
+						local String is fnPtrC: if({ self:localVars:has(key: call:name) }, { self:utils:cIdent(name: call:name) }, { 'self->' . self:utils:cIdent(name: call:name) });
+						local String is retTName: if({ fnVarT:startsWith(prefix: 'Function:') && fnVarT:length() > 9 }, { fnVarT:substring(start: 9, end: fnVarT:length()) }, { 'Void' });
+						local String is retCType: self:cTypeFor(typeName: retTName);
+						local String is pTypesC: 'void*';
+						local String is cArgsC: '_cls->env';
+						call:args:each(action: local Function(NamedArg is arg){
+							local String is aValC: self:generateExpression(expr: arg:value);
+							local String is aT: self:inferTargetType(expr: arg:value);
+							local String is aCType: self:cTypeFor(typeName: aT);
+							pTypesC: pTypesC . ', ' . aCType;
+							cArgsC: cArgsC . ', ' . aValC;
+						});
+						return '({ SpecClosure* _cls = (SpecClosure*)(' . fnPtrC . '); if (!_cls || !_cls->fn) spec_panic("Invocation of null Function"); ((' . retCType . ' (*)(' . pTypesC . '))_cls->fn)(' . cArgsC . '); })';
+					});
 				});
-				local String is heldArgs: self:formatCallArgumentsForMember(m: heldFn, className: heldOwner, args: expr:methodArgs);
-				# The argument list is joined with leading ', ' — the
-				# separator after an instance call's self parameter. The
-				# held form has no self: strip it.
-				if({ heldArgs:startsWith(prefix: ', ') }, {
-					heldArgs: heldArgs:substring(start: 2, end: heldArgs:length());
-				});
-				return heldOwnerSym . '_held_' . self:utils:cIdent(name: expr:methodName) . '(' . heldArgs . ')';
-			});
-			local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: expr:methodName, idx: expr:num);
-			local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: expr:methodName, idx: expr:num);
-			local String is symOwner: ownerName;
-			if({ symOwner == '' }, {
-				symOwner: targetC;
-			});
-			local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
-			if({ expr:methodName == 'init' }, {
-				# a qualified inner-class target
-				# constructs with its OWN _new/default-_init pair — the
-				# enclosing class's entry-point init is not the inner's
-				# construction protocol. The gate: the targetC is a registered
-				# class identity (the qualified or the symbol form).
-				if({ self:allClassNames:has(key: targetC) && targetC:contains(needle: '_') && self:findClass(name: targetC):name == '' }, {
-					local String is innerNewSym: targetC;
-					local String is innerInitSym: targetC . '_init';
-					return '({ ' . targetC . '* _inst = ' . innerNewSym . '_new(); ' . innerInitSym . '(_inst' . argsJoined . '); _inst; })';
-				});
-				local String is initCls: self:overloadOwnerNameGen(className: targetC, methodName: 'init', idx: expr:num);
-				local String is symOwnerCls: initCls;
-				if({ symOwnerCls == '' }, {
-					symOwnerCls: targetC;
-				});
-			local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: expr:num);
-			# the _new symbol qualifies like the
-			# init symbol — resolve the class's qualified identity.
-			local String is newSym: self:utils:cIdent(name: targetC);
-			local ClassInfo is newCls: self:findClass(name: targetC);
-			if({ newCls:name == targetC }, {
-				newSym: self:utils:cIdent(name: newCls:qualifiedName());
-			});
-			if({ initCls == '' || initCls == targetC }, {
-				return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
-			});
-			return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . self:utils:cIdent(name: initCls) . '*)_inst' . argsJoined . '); _inst; })';
-			});
-			if({ mDef:kind == MemberKind:METHOD }, {
-				local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: expr:methodName, idx: expr:num);
-				if({ self:isFieldFulClass(cls: self:findClass(name: targetC)) }, {
-					# Field-ful instance import (E1/E2 full
-					# form): dispatch through the synthetic hidden field
-					# the loader materialized; the field borrows as self.
-					return callSymbol . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
-				});
-				# Elided instance import (§2.4): under E5 every
-				# non-init class-name call is an instance-imported receiver.
-				# The class is field-less, its methods self-free — a direct
-				# C call with self ignored, void or not. The old unsound
-				# static paths (unguarded NULL self, fresh-instance
-				# discard) are deleted (E8).
-				return callSymbol . '(NULL' . argsJoined . ')';
-			});
-		});
 
-		# §2.3: bare call resolved to an as-imported provider —
-		# elided dispatch (v1 providers are field-less, self-free).
-		# Runtime-managed providers (Math, Output, Stderr) route through
-		# the builtin table under the provider's name first.
-		if({ expr:bareProvider != '' }, {
-			local String is bpBuiltin: self:builtins:generateBuiltinCall(expr: expr, targetC: expr:bareProvider, targetType: expr:bareProvider, cg: self);
-			if({ bpBuiltin != '' }, {
-				return bpBuiltin;
-			});
-			local String is bpArgs: self:formatCallArgumentsWith(className: expr:bareProvider, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
-			local String is bpSymbol: self:overloadSymbol(className: expr:bareProvider, methodName: expr:methodName, idx: expr:num);
-			if({ self:isFieldFulClass(cls: self:findClass(name: expr:bareProvider)) }, {
-				return bpSymbol . '((' . expr:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . expr:bareProvider) . ')' . bpArgs . ')';
-			});
-			return bpSymbol . '(NULL' . bpArgs . ')';
-		});
+				# Tagged enum variant constructor.
+				if({ self:allEnumVariants:has(key: call:name) && (self:allTaggedEnums:has(key: targetC) || targetC == self:names:selfIdent()) }, {
+					local String is eName: self:allEnumVariants:getString(key: call:name, default: '');
+					local String is eSym: eName;
+					local ClassInfo is eCls: self:findClass(name: eName);
+					if({ eCls:name == eName }, {
+						eSym: self:utils:cIdent(name: eCls:qualifiedName());
+					});
+					if({ self:allTaggedEnums:has(key: eName) }, {
+						local Member is vMem: self:lookupEnumVariant(enumName: eName, variantName: call:name);
+						local Array of Parameter is vParams: vMem:params;
+						local String is vArgsC: '';
+						local Int is pIdx: 0;
+						vParams:each(action: local Function(Parameter is p){
+							if({ pIdx > 0 }, {
+								vArgsC: vArgsC . ', ';
+							});
+							local String is pName: p:name;
+							local Boolean is matched: false;
+							local String is argC: '0';
+							call:args:each(action: local Function(NamedArg is a){
+								if({ !matched && a:name == pName && pName != '' }, {
+									argC: self:generateExpression(expr: a:value);
+									matched: true;
+								});
+							});
+							if({ !matched && pIdx < call:args:length() }, {
+								local NamedArg is posNamedArg: call:args:get(index: pIdx);
+								local Expression is posArg: posNamedArg:value;
+								argC: self:generateExpression(expr: posArg);
+								matched: true;
+							});
+							vArgsC: vArgsC . argC;
+							pIdx: pIdx + 1;
+						});
+						return eSym . '_' . self:utils:cIdent(name: call:name) . '(' . vArgsC . ')';
+					});
+				});
 
-		# Instance method invocation.
-		local String is objType: targetType;
-		if({ objType == '' }, {
-			objType: self:localVars:getString(key: targetC, default: '');
-		});
-		if({ objType == '' }, {
-			objType: self:fieldTypes:getString(key: targetC, default: '');
-		});
-		if({ objType == '' || objType == Primitive:ANY:value() || targetC == self:names:selfIdent() }, {
-			objType: self:currentClassName;
-		});
-		local String is fullObjType: objType;
+				# Constructor or static invocation: ClassName:init(...)/ClassName:method(...).
+				if({ self:allClassNames:has(key: targetC) && !self:allEnumNames:has(key: targetC) }, {
+					local String is targetSym: targetC;
+					local ClassInfo is tgtCls: self:findClass(name: targetC);
+					if({ tgtCls:name != '' }, {
+						targetSym: self:utils:cIdent(name: tgtCls:qualifiedName());
+					});
+					local String is heldOwner: self:heldMethods:getString(key: targetC . ':' . call:name, default: '');
+					if({ heldOwner != '' && call:name != 'init' }, {
+						local Member is heldFn: self:heldMethodMemberOf(ownerName: heldOwner, methodName: call:name);
+						local String is heldOwnerSym: self:utils:cIdent(name: heldOwner);
+						local ClassInfo is heldOwnerCls: self:findClass(name: heldOwner);
+						if({ heldOwnerCls:name == heldOwner }, {
+							heldOwnerSym: self:utils:cIdent(name: heldOwnerCls:qualifiedName());
+						});
+						local String is heldArgs: self:formatCallArgumentsForMember(m: heldFn, className: heldOwner, args: call:args);
+						if({ heldArgs:startsWith(prefix: ', ') }, {
+							heldArgs: heldArgs:substring(start: 2, end: heldArgs:length());
+						});
+						return heldOwnerSym . '_held_' . self:utils:cIdent(name: call:name) . '(' . heldArgs . ')';
+					});
+					local Member is mDef: self:lookupOverloadedMemberGen(className: targetC, methodName: call:name, idx: call:overloadIndex);
+					local String is ownerName: self:overloadOwnerNameGen(className: targetC, methodName: call:name, idx: call:overloadIndex);
+					local String is symOwner: ownerName;
+					if({ symOwner == '' }, {
+						symOwner: targetC;
+					});
+					local String is argsJoined: self:formatCallArgumentsWith(className: targetC, methodName: call:name, idx: call:overloadIndex, args: call:args);
+					if({ call:name == 'init' }, {
+						if({ self:allClassNames:has(key: targetC) && targetC:contains(needle: '_') && self:findClass(name: targetC):name == '' }, {
+							local String is innerNewSym: targetC;
+							local String is innerInitSym: targetC . '_init';
+							return '({ ' . targetC . '* _inst = ' . innerNewSym . '_new(); ' . innerInitSym . '(_inst' . argsJoined . '); _inst; })';
+						});
+						local String is initCls: self:overloadOwnerNameGen(className: targetC, methodName: 'init', idx: call:overloadIndex);
+						local String is symOwnerCls: initCls;
+						if({ symOwnerCls == '' }, {
+							symOwnerCls: targetC;
+						});
+						local String is initSymbol: self:overloadSymbol(className: symOwnerCls, methodName: 'init', idx: call:overloadIndex);
+						local String is newSym: self:utils:cIdent(name: targetC);
+						local ClassInfo is newCls: self:findClass(name: targetC);
+						if({ newCls:name == targetC }, {
+							newSym: self:utils:cIdent(name: newCls:qualifiedName());
+						});
+						if({ initCls == '' || initCls == targetC }, {
+							return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '(_inst' . argsJoined . '); _inst; })';
+						});
+						return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . self:utils:cIdent(name: initCls) . '*)_inst' . argsJoined . '); _inst; })';
+					});
+					if({ mDef:kind == MemberKind:METHOD }, {
+						local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: call:name, idx: call:overloadIndex);
+						if({ self:isFieldFulClass(cls: self:findClass(name: targetC)) }, {
+							return callSymbol . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
+						});
+						return callSymbol . '(NULL' . argsJoined . ')';
+					});
+				});
 
-		# Any-typed receiver dispatches through its own vtable.
-		if({ objType == Primitive:ANY:value() && self:methodSlots:has(key: expr:methodName) }, {
-			local Member is anyM: self:lookupMethodMember(className: 'Any', methodName: expr:methodName);
-			if({ anyM:kind == MemberKind:METHOD }, {
-				local String is slotC: self:methodSlots:getString(key: expr:methodName, default: '0');
-				local String is retT: self:resolveReturnType(t: anyM:memberType);
-				local String is argsC: '';
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
-					argsC: argsC . ', ' . self:generateExpression(expr: arg:value);
+				if({ call:bareProvider != '' }, {
+					local String is bpBuiltin: self:builtins:generateBuiltinCall(expr: expr, targetC: call:bareProvider, targetType: call:bareProvider, cg: self);
+					if({ bpBuiltin != '' }, {
+						return bpBuiltin;
+					});
+					local String is bpArgs: self:formatCallArgumentsWith(className: call:bareProvider, methodName: call:name, idx: call:overloadIndex, args: call:args);
+					local String is bpSymbol: self:overloadSymbol(className: call:bareProvider, methodName: call:name, idx: call:overloadIndex);
+					if({ self:isFieldFulClass(cls: self:findClass(name: call:bareProvider)) }, {
+						return bpSymbol . '((' . call:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . call:bareProvider) . ')' . bpArgs . ')';
+					});
+					return bpSymbol . '(NULL' . bpArgs . ')';
 				});
-				if({ retT == 'void' }, {
-					return '((void (*)(Any*))((Any*)' . targetC . ')->_vtable[' . slotC . '])((Any*)' . targetC . argsC . ')';
-				});
-				return '((' . retT . ' (*)(Any*))((Any*)' . targetC . ')->_vtable[' . slotC . '])((Any*)' . targetC . argsC . ')';
-			});
-		});
 
-		if({ objType:startsWith(prefix: 'Array:') }, {
-			objType: 'Array';
-		}, {
-			if({ objType:startsWith(prefix: 'Map:') }, {
-				objType: 'Map';
-			}, {
-				# a qualified objType whose root is
-				# a registered class is a nested-class reference — the FULL
-				# qualified name stays (overloadSymbol qualifies the symbol);
-				# only container-prefixed types truncate.
-				if({ objType:contains(needle: ':') && self:findClass(name: objType):name == '' }, {
-					local Array of String is parts: objType:split(delimiter: ':');
-					objType: parts:get(index: 0);
+				# Instance method invocation.
+				local String is objType: targetType;
+				if({ objType == '' }, {
+					objType: self:localVars:getString(key: targetC, default: '');
 				});
-			});
-		});
-		local String is argsC: self:formatCallArgumentsWith(className: fullObjType, methodName: expr:methodName, idx: expr:num, args: expr:methodArgs);
-		local String is callStr: '';
-		if({ self:overriddenMethods:has(key: expr:methodName) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:policy:isTransparent(c: self:findClass(name: objType)) && self:methodSlots:has(key: expr:methodName) }, {
-			local Member is vm: self:lookupMethodMember(className: objType, methodName: expr:methodName);
-			if({ vm:kind == MemberKind:METHOD }, {
-				local String is retT: self:resolveReturnType(t: vm:memberType);
-				# the vtable signature's C types qualify (cIdent maps
-				# the qualified identity's colon chain).
-				local String is objCType: self:utils:cIdent(name: objType);
-				local String is sigC: objCType . '*';
-				vm:params:each(action: local Function(Parameter is p){
-					sigC: sigC . ', ' . self:cTypeFor(typeName: p:paramType:name);
+				if({ objType == '' }, {
+					objType: self:fieldTypes:getString(key: targetC, default: '');
 				});
-				local String is slotC: self:methodSlots:getString(key: expr:methodName, default: '0');
-				if({ targetC == self:names:selfIdent() }, {
-					callStr: '(((' . retT . ' (*)(' . sigC . '))self->_vtable[' . slotC . ']))((' . objCType . '*)self' . argsC . ')';
+				if({ objType == '' || objType == Primitive:ANY:value() || targetC == self:names:selfIdent() }, {
+					objType: self:currentClassName;
+				});
+				local String is fullObjType: objType;
+
+				# Any-typed receiver dispatches through its own vtable.
+				if({ objType == Primitive:ANY:value() && self:methodSlots:has(key: call:name) }, {
+					local Member is anyM: self:lookupMethodMember(className: 'Any', methodName: call:name);
+					if({ anyM:kind == MemberKind:METHOD }, {
+						local String is slotC: self:methodSlots:getString(key: call:name, default: '0');
+						local String is retT: self:resolveReturnType(t: anyM:memberType);
+						local String is argsC: '';
+						call:args:each(action: local Function(NamedArg is arg){
+							argsC: argsC . ', ' . self:generateExpression(expr: arg:value);
+						});
+						if({ retT == 'void' }, {
+							return '((void (*)(Any*))((Any*)' . targetC . ')->_vtable[' . slotC . '])((Any*)' . targetC . argsC . ')';
+						});
+						return '((' . retT . ' (*)(Any*))((Any*)' . targetC . ')->_vtable[' . slotC . '])((Any*)' . targetC . argsC . ')';
+					});
+				});
+
+				if({ objType:startsWith(prefix: 'Array:') }, {
+					objType: 'Array';
 				}, {
-					callStr: '({ ' . objCType . '* _recv = (' . objCType . '*)(' . targetC . '); (((' . retT . ' (*)(' . sigC . '))_recv->_vtable[' . slotC . ']))((' . objCType . '*)_recv' . argsC . '); })';
+					if({ objType:startsWith(prefix: 'Map:') }, {
+						objType: 'Map';
+					}, {
+						if({ objType:contains(needle: ':') && self:findClass(name: objType):name == '' }, {
+							local Array of String is parts: objType:split(delimiter: ':');
+							objType: parts:get(index: 0);
+						});
+					});
 				});
-			});
-		});
-		if({ callStr == '' }, {
-			local String is dispatchCls: self:overloadOwnerNameGen(className: objType, methodName: expr:methodName, idx: expr:num);
-			if({ dispatchCls == '' }, {
-				dispatchCls: self:findMethodImplementingClass(className: objType, methodName: expr:methodName, paramCount: -1);
-			});
-			local String is targetExprC: targetC;
-			if({ dispatchCls != '' && dispatchCls != objType }, {
-				objType: dispatchCls;
-				# the cast's C type derives from the (possibly
-				# qualified) owner identity.
-				targetExprC: '((' . self:utils:cIdent(name: dispatchCls) . '*)' . targetC . ')';
-			});
-			callStr: self:overloadSymbol(className: objType, methodName: expr:methodName, idx: expr:num) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . expr:methodName . ' */';
-		});
-		local Member is targetM: self:lookupOverloadedMemberGen(className: objType, methodName: expr:methodName, idx: expr:num);
-		local ClassInfo is targetCls: self:findClass(name: objType);
-		if({ targetM:kind == MemberKind:METHOD && targetCls:typeParams:length() > 0 }, {
-			local String is rawRet: self:formatTypeString(t: targetM:memberType);
-			if({ targetCls:typeParams:indexOf(search: rawRet, default: -1) >= 0 }, {
-				local String is resolvedRet: expr:resolvedType;
-				if({ resolvedRet != '' && resolvedRet != Primitive:ANY:value() }, {
-					local String is castCType: self:cTypeFor(typeName: resolvedRet);
-					callStr: '((' . castCType . ')(intptr_t)(' . callStr . '))';
+				local String is argsC: self:formatCallArgumentsWith(className: fullObjType, methodName: call:name, idx: call:overloadIndex, args: call:args);
+				local String is callStr: '';
+				if({ self:overriddenMethods:has(key: call:name) && self:allClassNames:has(key: objType) && !self:allEnumNames:has(key: objType) && !self:policy:isTransparent(c: self:findClass(name: objType)) && self:methodSlots:has(key: call:name) }, {
+					local Member is vm: self:lookupMethodMember(className: objType, methodName: call:name);
+					if({ vm:kind == MemberKind:METHOD }, {
+						local String is retT: self:resolveReturnType(t: vm:memberType);
+						local String is objCType: self:utils:cIdent(name: objType);
+						local String is sigC: objCType . '*';
+						vm:params:each(action: local Function(Parameter is p){
+							sigC: sigC . ', ' . self:cTypeFor(typeName: p:paramType:name);
+						});
+						local String is slotC: self:methodSlots:getString(key: call:name, default: '0');
+						if({ targetC == self:names:selfIdent() }, {
+							callStr: '(((' . retT . ' (*)(' . sigC . '))self->_vtable[' . slotC . ']))((' . objCType . '*)self' . argsC . ')';
+						}, {
+							callStr: '({ ' . objCType . '* _recv = (' . objCType . '*)(' . targetC . '); (((' . retT . ' (*)(' . sigC . '))_recv->_vtable[' . slotC . ']))((' . objCType . '*)_recv' . argsC . '); })';
+						});
+					});
 				});
-			});
-		});
-		return callStr;
+				if({ callStr == '' }, {
+					local String is dispatchCls: self:overloadOwnerNameGen(className: objType, methodName: call:name, idx: call:overloadIndex);
+					if({ dispatchCls == '' }, {
+						dispatchCls: self:findMethodImplementingClass(className: objType, methodName: call:name, paramCount: -1);
+					});
+					local String is targetExprC: targetC;
+					if({ dispatchCls != '' && dispatchCls != objType }, {
+						objType: dispatchCls;
+						targetExprC: '((' . self:utils:cIdent(name: dispatchCls) . '*)' . targetC . ')';
+					});
+					callStr: self:overloadSymbol(className: objType, methodName: call:name, idx: call:overloadIndex) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . call:name . ' */';
+				});
+				local Member is targetM: self:lookupOverloadedMemberGen(className: objType, methodName: call:name, idx: call:overloadIndex);
+				local ClassInfo is targetCls: self:findClass(name: objType);
+				if({ targetM:kind == MemberKind:METHOD && targetCls:typeParams:length() > 0 }, {
+					local String is rawRet: self:formatTypeString(t: targetM:memberType);
+					if({ targetCls:typeParams:indexOf(search: rawRet, default: -1) >= 0 }, {
+						local String is resolvedRet: expr:resolvedType;
+						if({ resolvedRet != '' && resolvedRet != Primitive:ANY:value() }, {
+							local String is castCType: self:cTypeFor(typeName: resolvedRet);
+							callStr: '((' . castCType . ')(intptr_t)(' . callStr . '))';
+						});
+					});
+				});
+				return callStr;
+			},
+			else: { '0' }
+		]);
 	}
 
 	## stores an unchanged value).
@@ -2815,7 +2794,11 @@ Class is CodeGenerator{
 					});
 				},
 				Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
-					if({ (assignTarget:kind == ExpressionKind:IDENT && assignTarget:str == name) || self:exprAssignsLocal(name: name, expr: assignValue) }, {
+					local Boolean is targetMatch: false;
+					match(on: assignTarget, when: [
+						Expression:Ident: local Function(String is s){ targetMatch: s == name; }
+					], default: {});
+					if({ targetMatch || self:exprAssignsLocal(name: name, expr: assignValue) }, {
 						found: true;
 					});
 				},
@@ -2837,95 +2820,117 @@ Class is CodeGenerator{
 	## Recursively checks whether an expression (such as an inlined call or
 	## mutating unary operator) mutates the local variable [name].
 	Function of Boolean is exprAssignsLocal(String is name, Expression is expr){
-		return match(on: expr:kind, when: [
-			ExpressionKind:UNARY: {
-				(expr:str == 'post++' || expr:str == 'post--' || expr:str == '++' || expr:str == '--') && expr:unaryExpr:kind == ExpressionKind:IDENT && expr:unaryExpr:str == name
+		return match(on: expr, when: [
+			Expression:Unary: local Function of Boolean(String is op, Expression is operand){
+				local Boolean is isMutOp: op == 'post++' || op == 'post--' || op == '++' || op == '--';
+				if({ !isMutOp }, {
+					return false;
+				});
+				return match(on: operand, when: [
+					Expression:Ident: local Function of Boolean(String is s){ return s == name; },
+					else: { false }
+				]);
 			},
-			ExpressionKind:CALL: {
+			Expression:Call: local Function of Boolean(CallData is call){
 				local Boolean is found: false;
-				expr:methodArgs:each(action: local Function(NamedArg is arg){
+				call:args:each(action: local Function(NamedArg is arg){
 					if({ !found }, {
-						if({ arg:value:kind == ExpressionKind:ANON_FN }, {
-							if({ self:bodyAssignsLocal(name: name, stmts: arg:value:anonBody) }, {
-								found: true;
-							});
-						}, {
-							if({ arg:value:kind == ExpressionKind:MAP }, {
-								arg:value:mapValues:each(action: local Function(Expression is armVal){
+						match(on: arg:value, when: [
+							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+								if({ self:bodyAssignsLocal(name: name, stmts: bd) }, {
+									found: true;
+								});
+							},
+							Expression:MapLit: local Function(Array of Expression is ks, Array of Expression is vs){
+								vs:each(action: local Function(Expression is armVal){
 									if({ !found }, {
-										if({ armVal:kind == ExpressionKind:ANON_FN }, {
-											if({ self:bodyAssignsLocal(name: name, stmts: armVal:anonBody) }, {
-												found: true;
-											});
-										}, {
-											if({ self:exprAssignsLocal(name: name, expr: armVal) }, {
-												found: true;
-											});
-										});
+										match(on: armVal, when: [
+											Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+												if({ self:bodyAssignsLocal(name: name, stmts: bd) }, {
+													found: true;
+												});
+											},
+											else: {
+												if({ self:exprAssignsLocal(name: name, expr: armVal) }, {
+													found: true;
+												});
+											}
+										], default: {});
 									});
 								});
-							}, {
+							},
+							else: {
 								if({ self:exprAssignsLocal(name: name, expr: arg:value) }, {
 									found: true;
 								});
-							});
-						});
+							}
+						], default: {});
 					});
 				});
-				found
+				return found;
 			},
-			ExpressionKind:BINARY: {
-				self:exprAssignsLocal(name: name, expr: expr:leftExpr) || self:exprAssignsLocal(name: name, expr: expr:rightExpr)
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){
+				return self:exprAssignsLocal(name: name, expr: left) || self:exprAssignsLocal(name: name, expr: right);
 			},
-			ExpressionKind:CAST: {
-				self:exprAssignsLocal(name: name, expr: expr:leftExpr)
+			Expression:Cast: local Function of Boolean(Expression is inner, String is target, Array of Expression is args){
+				return self:exprAssignsLocal(name: name, expr: inner);
 			},
-			ExpressionKind:INDEX: {
-				self:exprAssignsLocal(name: name, expr: expr:leftExpr) || self:exprAssignsLocal(name: name, expr: expr:rightExpr)
+			Expression:Index: local Function of Boolean(Expression is target, Expression is index){
+				return self:exprAssignsLocal(name: name, expr: target) || self:exprAssignsLocal(name: name, expr: index);
 			},
-			ExpressionKind:ARRAY: {
+			Expression:ArrayLit: local Function of Boolean(Array of Expression is items){
 				local Boolean is itemFound: false;
-				expr:arrayItems:each(action: local Function(Expression is item){
+				items:each(action: local Function(Expression is item){
 					if({ !itemFound && self:exprAssignsLocal(name: name, expr: item) }, {
 						itemFound: true;
 					});
 				});
-				itemFound
+				return itemFound;
 			},
-			ExpressionKind:MAP: {
+			Expression:MapLit: local Function of Boolean(Array of Expression is keys, Array of Expression is values){
 				local Boolean is valFound: false;
-				expr:mapValues:each(action: local Function(Expression is val){
+				values:each(action: local Function(Expression is val){
 					if({ !valFound && self:exprAssignsLocal(name: name, expr: val) }, {
 						valFound: true;
 					});
 				});
-				valFound
+				return valFound;
 			},
 			else: { false }
 		]);
 	}
 
 	Function of Boolean is isInlineCall(Expression is expr){
-		if({ expr:kind != ExpressionKind:CALL }, {
-			return false;
-		});
-		local String is m: expr:methodName;
-		if({ (m == 'if' || m == 'branch') && (expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'Conditional')) }, {
-			return true;
-		});
-		if({ m == 'match' && (expr:bareProvider == 'Conditional' || (expr:methodTarget:kind == ExpressionKind:IDENT && (expr:methodTarget:str == 'Conditional' || expr:methodTarget:str == 'match'))) }, {
-			return true;
-		});
-		if({ (expr:bareProvider == 'Loops' || (expr:methodTarget:kind == ExpressionKind:IDENT && expr:methodTarget:str == 'Loops')) && (m == 'while' || m == 'until' || m == 'loop' || m == 'repeat' || m == 'condition' || m == 'init') }, {
-			return true;
-		});
-		if({ m == 'each' || m == 'filter' || m == 'count' || m == 'any' || m == 'map' || m == 'fold' }, {
-			local String is tgtT: self:inferTargetType(expr: expr:methodTarget);
-			if({ tgtT:startsWith(prefix: 'Array') || tgtT:startsWith(prefix: 'List') || tgtT:startsWith(prefix: 'Map') || tgtT == 'Array' || tgtT == 'List' || tgtT == 'Map' }, {
-				return true;
-			});
-		});
-		return false;
+		return match(on: expr, when: [
+			Expression:Call: local Function of Boolean(CallData is call){
+				local String is m: call:name;
+				local Boolean is targetIsIdent: false;
+				local String is targetIdentStr: '';
+				match(on: call:target, when: [
+					Expression:Ident: local Function(String is s){
+						targetIsIdent: true;
+						targetIdentStr: s;
+					}
+				], default: {});
+				if({ (m == 'if' || m == 'branch') && (call:bareProvider == 'Conditional' || (targetIsIdent && targetIdentStr == 'Conditional')) }, {
+					return true;
+				});
+				if({ m == 'match' && (call:bareProvider == 'Conditional' || (targetIsIdent && (targetIdentStr == 'Conditional' || targetIdentStr == 'match'))) }, {
+					return true;
+				});
+				if({ (call:bareProvider == 'Loops' || (targetIsIdent && targetIdentStr == 'Loops')) && (m == 'while' || m == 'until' || m == 'loop' || m == 'repeat' || m == 'condition' || m == 'init') }, {
+					return true;
+				});
+				if({ m == 'each' || m == 'filter' || m == 'count' || m == 'any' || m == 'map' || m == 'fold' }, {
+					local String is tgtT: self:inferTargetType(expr: call:target);
+					if({ tgtT:startsWith(prefix: 'Array') || tgtT:startsWith(prefix: 'List') || tgtT:startsWith(prefix: 'Map') || tgtT == 'Array' || tgtT == 'List' || tgtT == 'Map' }, {
+						return true;
+					});
+				});
+				return false;
+			},
+			else: { false }
+		]);
 	}
 
 	Function of Array of Expression is collectRuntimeAnons(Array of Statement is stmts){
@@ -2958,70 +2963,74 @@ Class is CodeGenerator{
 	}
 
 	Function is findAnonsInExpr(Expression is expr, Array of Expression is results){
-		match(on: expr:kind, when: [
-			ExpressionKind:CALL: {
+		match(on: expr, when: [
+			Expression:Call: local Function(CallData is call){
 				if({ self:isInlineCall(expr: expr) }, {
-					self:findAnonsInExpr(expr: expr:methodTarget, results: results);
-					expr:methodArgs:each(action: local Function(NamedArg is arg){
-						if({ arg:value:kind == ExpressionKind:ANON_FN }, {
-							arg:value:anonBody:each(action: local Function(Statement is s){
-								self:findAnonsInStmt(stmt: s, results: results);
-							});
-						}, {
-							if({ arg:value:kind == ExpressionKind:MAP }, {
-								arg:value:mapValues:each(action: local Function(Expression is arm){
-									if({ arm:kind == ExpressionKind:ANON_FN }, {
-										arm:anonBody:each(action: local Function(Statement is s){
-											self:findAnonsInStmt(stmt: s, results: results);
-										});
-									}, {
-										self:findAnonsInExpr(expr: arm, results: results);
-									});
+					self:findAnonsInExpr(expr: call:target, results: results);
+					call:args:each(action: local Function(NamedArg is arg){
+						match(on: arg:value, when: [
+							Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+								bd:each(action: local Function(Statement is s){
+									self:findAnonsInStmt(stmt: s, results: results);
 								});
-							}, {
+							},
+							Expression:MapLit: local Function(Array of Expression is ks, Array of Expression is vs){
+								vs:each(action: local Function(Expression is arm){
+									match(on: arm, when: [
+										Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+											bd:each(action: local Function(Statement is s){
+												self:findAnonsInStmt(stmt: s, results: results);
+											});
+										},
+										else: {
+											self:findAnonsInExpr(expr: arm, results: results);
+										}
+									], default: {});
+								});
+							},
+							else: {
 								self:findAnonsInExpr(expr: arg:value, results: results);
-							});
-						});
+							}
+						], default: {});
 					});
 				}, {
-					self:findAnonsInExpr(expr: expr:methodTarget, results: results);
-					expr:methodArgs:each(action: local Function(NamedArg is arg){
+					self:findAnonsInExpr(expr: call:target, results: results);
+					call:args:each(action: local Function(NamedArg is arg){
 						self:findAnonsInExpr(expr: arg:value, results: results);
 					});
 				});
 			},
-			ExpressionKind:ANON_FN: {
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
 				results:add(item: expr);
-				expr:anonBody:each(action: local Function(Statement is s){
+				bd:each(action: local Function(Statement is s){
 					self:findAnonsInStmt(stmt: s, results: results);
 				});
 			},
-			ExpressionKind:BINARY: {
-				self:findAnonsInExpr(expr: expr:leftExpr, results: results);
-				self:findAnonsInExpr(expr: expr:rightExpr, results: results);
+			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
+				self:findAnonsInExpr(expr: left, results: results);
+				self:findAnonsInExpr(expr: right, results: results);
 			},
-			ExpressionKind:UNARY: {
-				self:findAnonsInExpr(expr: expr:unaryExpr, results: results);
+			Expression:Unary: local Function(String is op, Expression is operand){
+				self:findAnonsInExpr(expr: operand, results: results);
 			},
-			ExpressionKind:INDEX: {
-				self:findAnonsInExpr(expr: expr:leftExpr, results: results);
-				self:findAnonsInExpr(expr: expr:rightExpr, results: results);
+			Expression:Index: local Function(Expression is target, Expression is index){
+				self:findAnonsInExpr(expr: target, results: results);
+				self:findAnonsInExpr(expr: index, results: results);
 			},
-			ExpressionKind:CAST: {
-				self:findAnonsInExpr(expr: expr:leftExpr, results: results);
+			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
+				self:findAnonsInExpr(expr: inner, results: results);
 			},
-			ExpressionKind:ARRAY: {
-				expr:arrayItems:each(action: local Function(Expression is item){
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				items:each(action: local Function(Expression is item){
 					self:findAnonsInExpr(expr: item, results: results);
 				});
 			},
-			ExpressionKind:MAP: {
-				expr:mapValues:each(action: local Function(Expression is val){
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				values:each(action: local Function(Expression is val){
 					self:findAnonsInExpr(expr: val, results: results);
 				});
-			},
-			else: {}
-		]);
+			}
+		], default: {});
 	}
 
 	Function of Boolean is stmtListReferencesLocal(String is name, Array of Statement is stmts){
@@ -3063,55 +3072,54 @@ Class is CodeGenerator{
 	}
 
 	Function of Boolean is exprReferencesLocal(String is name, Expression is expr){
-		return match(on: expr:kind, when: [
-			ExpressionKind:IDENT: {
-				expr:str == name
+		return match(on: expr, when: [
+			Expression:Ident: local Function of Boolean(String is s){
+				return s == name;
 			},
-			ExpressionKind:ANON_FN: {
-				self:stmtListReferencesLocal(name: name, stmts: expr:anonBody)
+			Expression:AnonFn: local Function of Boolean(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				return self:stmtListReferencesLocal(name: name, stmts: bd);
 			},
-			ExpressionKind:CALL: {
-				if({ self:exprReferencesLocal(name: name, expr: expr:methodTarget) }, {
-					true
-				}, {
-					local Boolean is argFound: false;
-					expr:methodArgs:each(action: local Function(NamedArg is arg){
-						if({ !argFound && self:exprReferencesLocal(name: name, expr: arg:value) }, {
-							argFound: true;
-						});
+			Expression:Call: local Function of Boolean(CallData is call){
+				if({ self:exprReferencesLocal(name: name, expr: call:target) }, {
+					return true;
+				});
+				local Boolean is argFound: false;
+				call:args:each(action: local Function(NamedArg is arg){
+					if({ !argFound && self:exprReferencesLocal(name: name, expr: arg:value) }, {
+						argFound: true;
 					});
-					argFound
-				})
+				});
+				return argFound;
 			},
-			ExpressionKind:BINARY: {
-				self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr)
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){
+				return self:exprReferencesLocal(name: name, expr: left) || self:exprReferencesLocal(name: name, expr: right);
 			},
-			ExpressionKind:UNARY: {
-				self:exprReferencesLocal(name: name, expr: expr:unaryExpr)
+			Expression:Unary: local Function of Boolean(String is op, Expression is operand){
+				return self:exprReferencesLocal(name: name, expr: operand);
 			},
-			ExpressionKind:INDEX: {
-				self:exprReferencesLocal(name: name, expr: expr:leftExpr) || self:exprReferencesLocal(name: name, expr: expr:rightExpr)
+			Expression:Index: local Function of Boolean(Expression is target, Expression is index){
+				return self:exprReferencesLocal(name: name, expr: target) || self:exprReferencesLocal(name: name, expr: index);
 			},
-			ExpressionKind:CAST: {
-				self:exprReferencesLocal(name: name, expr: expr:leftExpr)
+			Expression:Cast: local Function of Boolean(Expression is inner, String is target, Array of Expression is args){
+				return self:exprReferencesLocal(name: name, expr: inner);
 			},
-			ExpressionKind:ARRAY: {
+			Expression:ArrayLit: local Function of Boolean(Array of Expression is items){
 				local Boolean is itemFound: false;
-				expr:arrayItems:each(action: local Function(Expression is item){
+				items:each(action: local Function(Expression is item){
 					if({ !itemFound && self:exprReferencesLocal(name: name, expr: item) }, {
 						itemFound: true;
 					});
 				});
-				itemFound
+				return itemFound;
 			},
-			ExpressionKind:MAP: {
+			Expression:MapLit: local Function of Boolean(Array of Expression is keys, Array of Expression is values){
 				local Boolean is valFound: false;
-				expr:mapValues:each(action: local Function(Expression is val){
+				values:each(action: local Function(Expression is val){
 					if({ !valFound && self:exprReferencesLocal(name: name, expr: val) }, {
 						valFound: true;
 					});
 				});
-				valFound
+				return valFound;
 			},
 			else: { false }
 		]);
@@ -3142,12 +3150,16 @@ Class is CodeGenerator{
 			local Boolean is mutated: self:bodyAssignsLocal(name: k, stmts: method:body);
 
 			runtimeAnons:each(action: local Function(Expression is anon){
-				if({ self:stmtListReferencesLocal(name: k, stmts: anon:anonBody) }, {
-					captured: true;
-				});
-				if({ self:bodyAssignsLocal(name: k, stmts: anon:anonBody) }, {
-					mutated: true;
-				});
+				match(on: anon, when: [
+					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+						if({ self:stmtListReferencesLocal(name: k, stmts: bd) }, {
+							captured: true;
+						});
+						if({ self:bodyAssignsLocal(name: k, stmts: bd) }, {
+							mutated: true;
+						});
+					}
+				], default: {});
 			});
 
 			if({ captured && mutated }, {
@@ -3161,10 +3173,20 @@ Class is CodeGenerator{
 	## @param expr: The ANON_FN expression.
 	## @return: C closure-construction expression.
 	Function of String is emitAnonFn(Expression is expr){
+		local Type is anonRetType: Type:init(name: '');
+		local Array of Parameter is anonParams: [];
+		local Array of Statement is anonBody: [];
+		match(on: expr, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				anonRetType: rt;
+				anonParams: ps;
+				anonBody: bd;
+			}
+		], default: {});
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is fnName: '_anon_fn_' . id;
-		local String is retC: self:cTypeFor(typeName: expr:anonReturnType:name);
+		local String is retC: self:cTypeFor(typeName: anonRetType:name);
 		# Debug emission: after each closure definition, demarcate the end
 		# of the mapped body — the next helper or method reports as
 		# unmapped runtime text instead of inheriting this body's mapping.
@@ -3187,7 +3209,7 @@ Class is CodeGenerator{
 
 		local String is paramsC: 'void* _env_ptr';
 		local Array of String is paramNames: [];
-		expr:anonParams:each(action: local Function(Parameter is p){
+		anonParams:each(action: local Function(Parameter is p){
 			paramNames:add(item: p:name);
 			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
@@ -3211,13 +3233,13 @@ Class is CodeGenerator{
 		self:hoistedLocals: Map:init();
 		self:cleanupLabel: '_cleanup_anon_' . id;
 		self:cleanupRetVar: '';
-		self:closureReturnTypeName: expr:anonReturnType:name;
+		self:closureReturnTypeName: anonRetType:name;
 		self:releaseExclusions: Map:init();
 		if({ retC != 'void' }, {
 			self:cleanupRetVar: '_mret_anon_' . id;
 		});
 
-		expr:anonBody:each(action: local Function(Statement is vs){
+		anonBody:each(action: local Function(Statement is vs){
 			match(on: vs, when: [
 				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 					if({ self:isArcType(typeName: varType:name) || self:boxedLocals:has(key: varName) }, {
@@ -3252,10 +3274,10 @@ Class is CodeGenerator{
 		boxedKeys:each(action: local Function(String is k){
 			savedBoxed:set(key: k, value: self:boxedLocals:getString(key: k, default: ''));
 		});
-		expr:anonParams:each(action: local Function(Parameter is p){
+		anonParams:each(action: local Function(Parameter is p){
 			self:boxedLocals:remove(key: p:name);
 		});
-		expr:anonBody:each(action: local Function(Statement is s){
+		anonBody:each(action: local Function(Statement is s){
 			match(on: s, when: [
 				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 					self:boxedLocals:remove(key: varName);
@@ -3264,7 +3286,7 @@ Class is CodeGenerator{
 		});
 
 		local String is bodyC: '';
-		expr:anonBody:each(action: local Function(Statement is s){
+		anonBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
 		self:boxedLocals: savedBoxed;
@@ -3318,7 +3340,7 @@ Class is CodeGenerator{
 		# Names the body redeclares shadow the outer scope — they are NOT
 		# captures; binding them from the env would redeclare the local.
 		local Map of String to String is bodyLocals: Map:init();
-		expr:anonBody:each(action: local Function(Statement is s){
+		anonBody:each(action: local Function(Statement is s){
 			match(on: s, when: [
 				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 					bodyLocals:set(key: varName, value: 'true');
@@ -3353,7 +3375,7 @@ Class is CodeGenerator{
 							}, {
 								capAssigns: capAssigns . '    _env->' . cVar . ' = ' . cVar . ";\n";
 							});
-							if({ self:bodyAssignsLocal(name: k, stmts: expr:anonBody) && k != 'self' }, {
+							if({ self:bodyAssignsLocal(name: k, stmts: anonBody) && k != 'self' }, {
 								capWritebacks: capWritebacks . '    _env->' . cVar . ' = ' . cVar . ";\n";
 								writebackNames:add(item: k);
 							});
@@ -3374,7 +3396,7 @@ Class is CodeGenerator{
 			writebackNames:each(action: local Function(String is wn){
 				self:releaseExclusions:set(key: wn, value: 'true');
 			});
-			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody) . capWritebacks;
+			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: anonBody) . capWritebacks;
 			self:releaseExclusions: savedExclusions;
 			if({ self:cleanupRetVar != '' }, {
 				cleanupTail: cleanupTail . '    return ' . self:cleanupRetVar . ";\n";
@@ -3392,7 +3414,7 @@ Class is CodeGenerator{
 			bufAppendBuf(dst: self:helperFunctions, src: envStruct . destroyEnv . 'static __attribute__((unused)) ' . retC . ' ' . fnName . '(' . paramsC . ") {\n" . retDecl . "    SPEC_POOL_AUTO;\n" . bindsC . hoistedDeclsC . bodyC . cleanupTail . "}\n" . lineResetC . "\n");
 			return '({ ' . envName . '* _env = (' . envName . '*)calloc(1, sizeof(' . envName . "));\n" . capAssigns . '    spec_closure_new((void*)' . fnName . ', (void*)_env, ' . destroyEnvName . '); })';
 		}, {
-			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: expr:anonBody);
+			local String is cleanupTail: '    ' . self:cleanupLabel . ": ;\n" . self:scopeReleases(stmts: anonBody);
 			self:releaseExclusions: savedExclusions;
 			if({ self:cleanupRetVar != '' }, {
 				cleanupTail: cleanupTail . '    return ' . self:cleanupRetVar . ";\n";
@@ -3573,22 +3595,27 @@ Class is CodeGenerator{
 	## @param expr: The target expression.
 	## @return: C lvalue string, or '' when complex.
 	Function of String is tryGenerateTargetOnly(Expression is expr){
-		if({ expr:kind == ExpressionKind:IDENT }, {
-			if({ self:boxedLocals:has(key: expr:str) }, {
+		return match(on: expr, when: [
+			Expression:Ident: local Function of String(String is name){
+				if({ self:boxedLocals:has(key: name) }, {
+					return '';
+				});
+				if({ self:localVars:has(key: name) }, {
+					return self:utils:cIdent(name: name);
+				});
+				if({ self:inMethod && self:fieldTypes:has(key: name) }, {
+					return 'self->' . self:utils:cIdent(name: name);
+				});
+				return self:utils:cIdent(name: name);
+			},
+			Expression:Path: local Function of String(Array of String is segs){
+				if({ segs:length() == 2 && segs:get(index: 0) == self:names:selfIdent() }, {
+					return 'self->' . self:utils:cIdent(name: segs:get(index: 1));
+				});
 				return '';
-			});
-			if({ self:localVars:has(key: expr:str) }, {
-				return self:utils:cIdent(name: expr:str);
-			});
-			if({ self:inMethod && self:fieldTypes:has(key: expr:str) }, {
-				return 'self->' . self:utils:cIdent(name: expr:str);
-			});
-			return self:utils:cIdent(name: expr:str);
-		});
-		if({ expr:kind == ExpressionKind:PATH && expr:pathSegments:length() == 2 && expr:pathSegments:get(index: 0) == self:names:selfIdent() }, {
-			return 'self->' . self:utils:cIdent(name: expr:pathSegments:get(index: 1));
-		});
-		return '';
+			},
+			else: { ''; }
+		], default: {});
 	}
 
 	## Optimizes left-recursive concat chains into spec_string_append.
@@ -3600,31 +3627,37 @@ Class is CodeGenerator{
 		if({ targetC == '' }, {
 			return '';
 		});
-		if({ expr:kind == ExpressionKind:BINARY && expr:str == '.' }, {
-			local String is leftTarget: self:tryGenerateTargetOnly(expr: expr:leftExpr);
-			if({ leftTarget == targetC }, {
-				local Boolean is savedArg1: self:argMode;
-				self:argMode: true;
-				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
-				self:argMode: savedArg1;
-				if({ rhsC:contains(needle: targetC) }, {
+		return match(on: expr, when: [
+			Expression:Binary: local Function of String(String is op, Expression is leftExpr, Expression is rightExpr){
+				if({ op != '.' }, {
 					return '';
 				});
-				return 'spec_string_concat(' . targetC . ', ' . rhsC . ')';
-			});
-			local String is innerChain: self:tryGenerateAppendChain(expr: expr:leftExpr, targetC: targetC);
-			if({ innerChain != '' }, {
-				local Boolean is savedArg2: self:argMode;
-				self:argMode: true;
-				local String is rhsC: self:wrapToString(expr: expr:rightExpr, exprC: self:generateExpression(expr: expr:rightExpr));
-				self:argMode: savedArg2;
-				if({ rhsC:contains(needle: targetC) }, {
-					return '';
+				local String is leftTarget: self:tryGenerateTargetOnly(expr: leftExpr);
+				if({ leftTarget == targetC }, {
+					local Boolean is savedArg1: self:argMode;
+					self:argMode: true;
+					local String is rhsC: self:wrapToString(expr: rightExpr, exprC: self:generateExpression(expr: rightExpr));
+					self:argMode: savedArg1;
+					if({ rhsC:contains(needle: targetC) }, {
+						return '';
+					});
+					return 'spec_string_concat(' . targetC . ', ' . rhsC . ')';
 				});
-				return 'spec_string_concat(' . innerChain . ', ' . rhsC . ')';
-			});
-		});
-		return '';
+				local String is innerChain: self:tryGenerateAppendChain(expr: leftExpr, targetC: targetC);
+				if({ innerChain != '' }, {
+					local Boolean is savedArg2: self:argMode;
+					self:argMode: true;
+					local String is rhsC: self:wrapToString(expr: rightExpr, exprC: self:generateExpression(expr: rightExpr));
+					self:argMode: savedArg2;
+					if({ rhsC:contains(needle: targetC) }, {
+						return '';
+					});
+					return 'spec_string_concat(' . innerChain . ', ' . rhsC . ')';
+				});
+				return '';
+			},
+			else: { ''; }
+		], default: {});
 	}
 
 	## Generates C for a statement node.
@@ -3653,7 +3686,15 @@ Class is CodeGenerator{
 				local String is exprC: self:generateExpression(expr: exprStmt);
 				local String is resT: self:inferTargetType(expr: exprStmt);
 				local String is stmtC: '    ' . exprC . ";\n";
-				if({ !self:argMode && exprStmt:kind == ExpressionKind:CALL && self:isArcType(typeName: resT) && self:yieldsClaim(expr: exprStmt) && !(exprStmt:methodName == 'if' || exprStmt:methodName == 'branch' || exprStmt:methodName == 'match') }, {
+				local String is callMethodName: '';
+				local Boolean is isCallStmt: false;
+				match(on: exprStmt, when: [
+					Expression:Call: local Function(CallData is cd){
+						isCallStmt: true;
+						callMethodName: cd:name;
+					}
+				], default: {});
+				if({ !self:argMode && isCallStmt && self:isArcType(typeName: resT) && self:yieldsClaim(expr: exprStmt) && !(callMethodName == 'if' || callMethodName == 'branch' || callMethodName == 'match') }, {
 					stmtC: '    spec_release((void*)(' . exprC . "));\n";
 				});
 				return stmtC;
@@ -3691,6 +3732,14 @@ Class is CodeGenerator{
 		return '';
 	}
 
+	Function of Boolean is isContainerLiteral(Expression is expr){
+		return match(on: expr, when: [
+			Expression:ArrayLit: { true; },
+			Expression:MapLit: { true; },
+			else: { false; }
+		], default: {});
+	}
+
 	Function of String is emitVarDecl(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 		self:localVars:set(key: varName, value: self:formatVarTypeString(t: varType));
 		self:localScopeVars:set(key: varName, value: varType:name);
@@ -3708,8 +3757,7 @@ Class is CodeGenerator{
 		if({ self:boxedLocals:has(key: varName) }, {
 			local String is boxInitC: "0";
 			if({ hasInit }, {
-				local ExpressionKind is bInitKind: initExpr:kind;
-				if({ bInitKind == ExpressionKind:ARRAY || bInitKind == ExpressionKind:MAP }, {
+				if({ self:isContainerLiteral(expr: initExpr) }, {
 					self:setContainerHint(t: self:formatTypeString(t: varType));
 				});
 				local Boolean is bSavedArg: self:argMode;
@@ -3769,8 +3817,7 @@ Class is CodeGenerator{
 		# statement assigns, so a goto can never skip the initializer.
 		if({ self:hoistedLocals:has(key: varName) }, {
 			if({ hasInit }, {
-				local ExpressionKind is hInitKind: initExpr:kind;
-				if({ hInitKind == ExpressionKind:ARRAY || hInitKind == ExpressionKind:MAP }, {
+				if({ self:isContainerLiteral(expr: initExpr) }, {
 					self:setContainerHint(t: self:formatTypeString(t: varType));
 				});
 				local Boolean is hSavedArg: self:argMode;
@@ -3820,8 +3867,7 @@ Class is CodeGenerator{
 			return '';
 		});
 		if({ hasInit }, {
-			local ExpressionKind is initKind: initExpr:kind;
-			if({ initKind == ExpressionKind:ARRAY || initKind == ExpressionKind:MAP }, {
+			if({ self:isContainerLiteral(expr: initExpr) }, {
 				self:setContainerHint(t: self:formatTypeString(t: varType));
 			});
 			local Boolean is savedArg: self:argMode;
@@ -3877,30 +3923,46 @@ Class is CodeGenerator{
 	## @param stmt: The ASSIGN statement.
 	## @return: C assignment.
 	Function of String is emitAssign(Expression is assignTarget, Expression is assignValue){
-		if({ assignTarget:kind == ExpressionKind:INDEX }, {
-			local String is containerC: self:generateExpression(expr: assignTarget:leftExpr);
-			local String is idxC: self:generateExpression(expr: assignTarget:rightExpr);
-			local String is containerType: self:inferTargetType(expr: assignTarget:leftExpr);
-			local Boolean is isStrMapAssign: (containerType:startsWith(prefix: 'Map:') || containerType == 'Map') && (containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:inferTargetType(expr: assignValue) == 'String' || assignValue:kind == ExpressionKind:STRING || (assignValue:kind == ExpressionKind:BINARY && assignValue:str == '.'));
-			local Boolean is savedArgIx: self:argMode;
-			if({ !isStrMapAssign }, {
-				self:argMode: false;
-			});
-			local String is valC: self:generateExpression(expr: assignValue);
-			self:argMode: savedArgIx;
-			if({ containerType:startsWith(prefix: 'Map:') || containerType == 'Map' }, {
-				if({ isStrMapAssign || self:isStringExpr(expr: assignValue, exprC: valC) }, {
-					return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
+		local String is indexResult: match(on: assignTarget, when: [
+			Expression:Index: local Function of String(Expression is leftExpr, Expression is rightExpr){
+				local String is containerC: self:generateExpression(expr: leftExpr);
+				local String is idxC: self:generateExpression(expr: rightExpr);
+				local String is containerType: self:inferTargetType(expr: leftExpr);
+				local Boolean is valIsStrOrConcat: match(on: assignValue, when: [
+					Expression:StringLit: { true; },
+					Expression:Binary: local Function(String is op, Expression is l, Expression is r){ op == '.'; },
+					else: { false; }
+				], default: {});
+				local Boolean is isStrMapAssign: (containerType:startsWith(prefix: 'Map:') || containerType == 'Map') && (containerType:contains(needle: 'String:String') || containerType:contains(needle: 'to String') || self:inferTargetType(expr: assignValue) == 'String' || valIsStrOrConcat);
+				local Boolean is savedArgIx: self:argMode;
+				if({ !isStrMapAssign }, {
+					self:argMode: false;
 				});
-				return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
-			});
-			return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+				local String is valC: self:generateExpression(expr: assignValue);
+				self:argMode: savedArgIx;
+				if({ containerType:startsWith(prefix: 'Map:') || containerType == 'Map' }, {
+					if({ isStrMapAssign || self:isStringExpr(expr: assignValue, exprC: valC) }, {
+						return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
+					});
+					return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+				});
+				return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+			},
+			else: { ''; }
+		], default: {});
+		if({ indexResult != '' }, {
+			return indexResult;
 		});
-		if({ assignTarget:kind == ExpressionKind:IDENT && self:boxedLocals:has(key: assignTarget:str) }, {
-			local String is boxVar: "_box_" . self:utils:cIdent(name: assignTarget:str);
-			local String is lhsType: self:boxedLocals:getString(key: assignTarget:str, default: "");
-			local ExpressionKind is valKind: assignValue:kind;
-			if({ (valKind == ExpressionKind:ARRAY || valKind == ExpressionKind:MAP) && (lhsType:startsWith(prefix: "Array") || lhsType:startsWith(prefix: "Map") || lhsType:startsWith(prefix: "List")) }, {
+		local String is targetIdentName: '';
+		match(on: assignTarget, when: [
+			Expression:Ident: local Function(String is name){
+				targetIdentName: name;
+			}
+		], default: {});
+		if({ targetIdentName != '' && self:boxedLocals:has(key: targetIdentName) }, {
+			local String is boxVar: "_box_" . self:utils:cIdent(name: targetIdentName);
+			local String is lhsType: self:boxedLocals:getString(key: targetIdentName, default: "");
+			if({ self:isContainerLiteral(expr: assignValue) && (lhsType:startsWith(prefix: "Array") || lhsType:startsWith(prefix: "Map") || lhsType:startsWith(prefix: "List")) }, {
 				self:setContainerHint(t: lhsType);
 			});
 			local Boolean is savedArg: self:argMode;
@@ -3923,8 +3985,7 @@ Class is CodeGenerator{
 			return '    ' . targetC . ' = ' . appendC . ";\n";
 		});
 		local String is lhsType: self:inferTargetType(expr: assignTarget);
-		local ExpressionKind is valKind: assignValue:kind;
-		if({ (valKind == ExpressionKind:ARRAY || valKind == ExpressionKind:MAP) && (lhsType:startsWith(prefix: 'Array') || lhsType:startsWith(prefix: 'Map') || lhsType:startsWith(prefix: 'List')) }, {
+		if({ self:isContainerLiteral(expr: assignValue) && (lhsType:startsWith(prefix: 'Array') || lhsType:startsWith(prefix: 'Map') || lhsType:startsWith(prefix: 'List')) }, {
 			self:setContainerHint(t: lhsType);
 		});
 		local Boolean is savedArg: self:argMode;
@@ -3939,7 +4000,7 @@ Class is CodeGenerator{
 		if({ isArcLhs }, {
 			# Parameters are borrows: overwriting one retains the new value
 			# but must not release the caller's argument.
-			if({ assignTarget:kind == ExpressionKind:IDENT && self:currentParams:has(key: assignTarget:str) }, {
+			if({ targetIdentName != '' && self:currentParams:has(key: targetIdentName) }, {
 				return '    spec_retain((void*)(' . valC . ')); ' . targetC . ' = ' . valC . ";\n";
 			});
 			if({ self:yieldsClaim(expr: assignValue) }, {
@@ -3999,8 +4060,7 @@ Class is CodeGenerator{
 			shapeRetType: self:closureReturnTypeName;
 		});
 		if({ hasReturnExpr }, {
-			local ExpressionKind is retKind: returnExpr:kind;
-			if({ (retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (shapeRetType:startsWith(prefix: 'Array') || shapeRetType:startsWith(prefix: 'Map')) }, {
+			if({ self:isContainerLiteral(expr: returnExpr) && (shapeRetType:startsWith(prefix: 'Array') || shapeRetType:startsWith(prefix: 'Map')) }, {
 				self:setContainerHint(t: shapeRetType);
 			});
 			local Boolean is savedArg: self:argMode;
@@ -4012,13 +4072,23 @@ Class is CodeGenerator{
 				retC: '(void*)(intptr_t)(' . retC . ')';
 			}, {
 				if({ self:isArcType(typeName: shapeRetType) }, {
-					local Boolean is ownedLocal: retKind == ExpressionKind:IDENT && self:localScopeVars:has(key: returnExpr:str) && !self:boxedLocals:has(key: returnExpr:str);
+					local String is retIdentName: '';
+					local Boolean is isBorrowedGetCall: false;
+					match(on: returnExpr, when: [
+						Expression:Ident: local Function(String is name){
+							retIdentName: name;
+						},
+						Expression:Call: local Function(CallData is cd){
+							isBorrowedGetCall: cd:name == 'get' || cd:name == 'getString';
+						}
+					], default: {});
+					local Boolean is ownedLocal: retIdentName != '' && self:localScopeVars:has(key: retIdentName) && !self:boxedLocals:has(key: retIdentName);
 					if({ ownedLocal }, {
-						local String is identC: self:utils:cIdent(name: returnExpr:str);
+						local String is identC: self:utils:cIdent(name: retIdentName);
 						local String is rtC: self:cTypeFor(typeName: shapeRetType);
 						retC: '(' . rtC . ')({ ' . rtC . ' _ret_val = ' . identC . '; ' . identC . " = NULL; _ret_val; })";
 					}, {
-						if({ self:isFreshConstructorCall(expr: returnExpr) || (self:yieldsClaim(expr: returnExpr) && !(retKind == ExpressionKind:CALL && (returnExpr:methodName == 'get' || returnExpr:methodName == 'getString'))) }, {
+						if({ self:isFreshConstructorCall(expr: returnExpr) || (self:yieldsClaim(expr: returnExpr) && !isBorrowedGetCall) }, {
 							retC: '(' . self:cTypeFor(typeName: shapeRetType) . ')(' . retC . ')';
 						}, {
 							retC: '(' . self:cTypeFor(typeName: shapeRetType) . ')spec_retain((void*)(' . retC . '))';
@@ -4430,7 +4500,7 @@ Class is CodeGenerator{
 				self:localVars: Map:init();
 				self:currentClassName: ownerClsNames:get(index: di);
 				self:currentMethodReturnType: declaredT;
-				if({ (m:initExpr:kind == ExpressionKind:ARRAY || m:initExpr:kind == ExpressionKind:MAP) && (declaredT:startsWith(prefix: 'Array') || declaredT:startsWith(prefix: 'Map')) }, {
+				if({ self:isContainerLiteral(expr: m:initExpr) && (declaredT:startsWith(prefix: 'Array') || declaredT:startsWith(prefix: 'Map')) }, {
 					self:setContainerHint(t: declaredT);
 				});
 				local Boolean is savedArg: self:argMode;
@@ -5249,9 +5319,20 @@ Class is CodeGenerator{
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
 
+		local Array of Parameter is fnParams: [];
+		local Array of Statement is fnBody: [];
+		local Type is fnRetType: Type:init(name: '');
+		match(on: fnExpr, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				fnRetType: rt;
+				fnParams: ps;
+				fnBody: bd;
+			}
+		], default: {});
+
 		local String is paramDecl: '';
-		if({ fnExpr:anonParams:length() > 0 }, {
-			local Parameter is p: fnExpr:anonParams:get(index: 0);
+		if({ fnParams:length() > 0 }, {
+			local Parameter is p: fnParams:get(index: 0);
 			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
 			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
 			local String is pRaw: '(' . pCType . ')(intptr_t)_a_' . id . '->items[_i_' . id . ']';
@@ -5259,10 +5340,10 @@ Class is CodeGenerator{
 		});
 
 		local String is bodyC: '';
-		fnExpr:anonBody:each(action: local Function(Statement is s){
+		fnBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
-		bodyC: bodyC . self:scopeReleases(stmts: fnExpr:anonBody);
+		bodyC: bodyC . self:scopeReleases(stmts: fnBody);
 
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
@@ -5281,8 +5362,8 @@ Class is CodeGenerator{
 		if({ mode == 'filter' }, {
 			local String is outVar: '_out_' . id;
 			local String is outNewC: 'spec_array_new()';
-			if({ fnExpr:anonParams:length() > 0 }, {
-				local Parameter is p0: fnExpr:anonParams:get(index: 0);
+			if({ fnParams:length() > 0 }, {
+				local Parameter is p0: fnParams:get(index: 0);
 				local String is pName: p0:paramType:name;
 				if({ self:isArcType(typeName: pName) || pName == 'String' }, {
 					outNewC: 'spec_array_new_object()';
@@ -5306,13 +5387,13 @@ Class is CodeGenerator{
 		});
 		if({ mode == 'map' }, {
 			local String is outVar: '_out_' . id;
-			local String is retCType: self:cTypeFor(typeName: fnExpr:anonReturnType:name);
+			local String is retCType: self:cTypeFor(typeName: fnRetType:name);
 			if({ retCType == 'void' }, {
 				retCType: 'void*';
 			});
 			self:inlineReturnArc: retCType:charAt(index: retCType:length() - 1, default: '') == '*';
 			local String is outNewC: 'spec_array_new()';
-			if({ self:isArcType(typeName: fnExpr:anonReturnType:name) || fnExpr:anonReturnType:name == 'String' }, {
+			if({ self:isArcType(typeName: fnRetType:name) || fnRetType:name == 'String' }, {
 				outNewC: 'spec_array_new_object()';
 			});
 			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; SpecArray* ' . outVar . ' = ' . outNewC . '; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n";
@@ -5345,10 +5426,21 @@ Class is CodeGenerator{
 		local String is arrVar: '_a_' . id;
 		local String is idxVar: '_i_' . id;
 
+		local Array of Parameter is fnParams: [];
+		local Array of Statement is fnBody: [];
+		local Type is fnRetType: Type:init(name: '');
+		match(on: fnExpr, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				fnRetType: rt;
+				fnParams: ps;
+				fnBody: bd;
+			}
+		], default: {});
+
 		local String is initC: self:generateExpression(expr: initExpr);
 		local String is accTypeName: self:inferTargetType(expr: initExpr);
-		if({ accTypeName == '' && fnExpr:anonReturnType:name != 'Void' && fnExpr:anonReturnType:name != 'void' }, {
-			accTypeName: fnExpr:anonReturnType:name;
+		if({ accTypeName == '' && fnRetType:name != 'Void' && fnRetType:name != 'void' }, {
+			accTypeName: fnRetType:name;
 		});
 		local String is accCType: self:cTypeFor(typeName: accTypeName);
 		if({ accCType == 'void' }, {
@@ -5361,13 +5453,13 @@ Class is CodeGenerator{
 		self:inlineReturnArc: accCType:charAt(index: accCType:length() - 1, default: '') == '*';
 
 		local String is paramDecl: '';
-		if({ fnExpr:anonParams:length() >= 1 }, {
-			local Parameter is p0: fnExpr:anonParams:get(index: 0);
+		if({ fnParams:length() >= 1 }, {
+			local Parameter is p0: fnParams:get(index: 0);
 			self:localVars:set(key: p0:name, value: accTypeName);
 			paramDecl: paramDecl . '        ' . accCType . ' ' . self:utils:cIdent(name: p0:name) . ' = ' . accVar . ";\n";
 		});
-		if({ fnExpr:anonParams:length() >= 2 }, {
-			local Parameter is p1: fnExpr:anonParams:get(index: 1);
+		if({ fnParams:length() >= 2 }, {
+			local Parameter is p1: fnParams:get(index: 1);
 			self:localVars:set(key: p1:name, value: self:formatTypeString(t: p1:paramType));
 			local String is p1CType: self:cTypeFor(typeName: p1:paramType:name);
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . arrVar . '->items[' . idxVar . ']';
@@ -5375,10 +5467,10 @@ Class is CodeGenerator{
 		});
 
 		local String is bodyC: '';
-		fnExpr:anonBody:each(action: local Function(Statement is s){
+		fnBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
-		bodyC: bodyC . self:scopeReleases(stmts: fnExpr:anonBody);
+		bodyC: bodyC . self:scopeReleases(stmts: fnBody);
 
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
@@ -5414,14 +5506,23 @@ Class is CodeGenerator{
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: 'break';
 
+		local Array of Parameter is fnParams: [];
+		local Array of Statement is fnBody: [];
+		match(on: fnExpr, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				fnParams: ps;
+				fnBody: bd;
+			}
+		], default: {});
+
 		local String is paramDecl: '';
-		if({ fnExpr:anonParams:length() >= 1 }, {
-			local Parameter is p0: fnExpr:anonParams:get(index: 0);
+		if({ fnParams:length() >= 1 }, {
+			local Parameter is p0: fnParams:get(index: 0);
 			self:localVars:set(key: p0:name, value: 'String');
 			paramDecl: paramDecl . '            SPEC_AUTO String ' . self:utils:cIdent(name: p0:name) . ' = spec_string_from_chars(' . eVar . "->key);\n";
 		});
-		if({ fnExpr:anonParams:length() >= 2 }, {
-			local Parameter is p1: fnExpr:anonParams:get(index: 1);
+		if({ fnParams:length() >= 2 }, {
+			local Parameter is p1: fnParams:get(index: 1);
 			self:localVars:set(key: p1:name, value: self:formatTypeString(t: p1:paramType));
 			local String is p1CType: self:cTypeFor(typeName: p1:paramType:name);
 			local String is p1Raw: '(' . p1CType . ')(intptr_t)' . eVar . '->value';
@@ -5434,10 +5535,10 @@ Class is CodeGenerator{
 		});
 
 		local String is bodyC: '';
-		fnExpr:anonBody:each(action: local Function(Statement is s){
+		fnBody:each(action: local Function(Statement is s){
 			bodyC: bodyC . self:generateStatement(stmt: s);
 		});
-		bodyC: bodyC . self:scopeReleases(stmts: fnExpr:anonBody);
+		bodyC: bodyC . self:scopeReleases(stmts: fnBody);
 
 		self:localVars: savedVars;
 		self:inlineReturnVar: savedRetVar;
@@ -5458,12 +5559,22 @@ Class is CodeGenerator{
 	## @param checkAnon: The check closure's ANON_FN.
 	## @param prefixOut: Accumulator for any pre-condition statements.
 	## @return: The C condition expression.
+	Function of Array of Statement is anonBodyOf(Expression is expr){
+		return match(on: expr, when: [
+			Expression:AnonFn: local Function of Array of Statement(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				return bd;
+			},
+			else: { []; }
+		], default: {});
+	}
+
 	Function of String is checkConditionC(Expression is checkAnon, Array of String is prefixOut){
-		local Expression is condExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
+		local Expression is condExpr: Expression:Unknown;
 		local Int is lastExprIdx: -1;
 		local Boolean is lastIsReturn: false;
+		local Array of Statement is bodyStmts: self:anonBodyOf(expr: checkAnon);
 		local Int is si: 0;
-		checkAnon:anonBody:each(action: local Function(Statement is st){
+		bodyStmts:each(action: local Function(Statement is st){
 			# Both the explicit-terminator form (`expr;`) and the brace
 			# shorthand's RETURN-desugared trailing expression carry the
 			# condition.
@@ -5483,7 +5594,7 @@ Class is CodeGenerator{
 		});
 		if({ lastExprIdx > 0 }, {
 			local Int is ei: 0;
-			checkAnon:anonBody:each(action: local Function(Statement is st){
+			bodyStmts:each(action: local Function(Statement is st){
 				if({ ei < lastExprIdx }, {
 					prefixOut:add(item: self:generateStatement(stmt: st));
 				});
@@ -5560,10 +5671,11 @@ Class is CodeGenerator{
 	Function of String is inlineBranchBodyYield(Expression is anonFn, String is yieldVar, String is yieldT){
 		local String is bodyC: '';
 		local String is yieldCType: self:cTypeFor(typeName: yieldT);
-		local Int is bodyLen: anonFn:anonBody:length();
+		local Array of Statement is bodyStmts: self:anonBodyOf(expr: anonFn);
+		local Int is bodyLen: bodyStmts:length();
 		local Int is bi: 0;
-		anonFn:anonBody:each(action: local Function(Statement is st){
-			local Expression is yieldExpr: Expression:init(kind: ExpressionKind:UNKNOWN);
+		bodyStmts:each(action: local Function(Statement is st){
+			local Expression is yieldExpr: Expression:Unknown;
 			local Boolean is isYieldStmt: false;
 			if({ bi == bodyLen - 1 }, {
 				match(on: st, when: [
@@ -5580,8 +5692,7 @@ Class is CodeGenerator{
 				]);
 			});
 			if({ isYieldStmt }, {
-				local ExpressionKind is retKind: yieldExpr:kind;
-				if({ (retKind == ExpressionKind:ARRAY || retKind == ExpressionKind:MAP) && (yieldT:startsWith(prefix: 'Array') || yieldT:startsWith(prefix: 'Map')) }, {
+				if({ self:isContainerLiteral(expr: yieldExpr) && (yieldT:startsWith(prefix: 'Array') || yieldT:startsWith(prefix: 'Map')) }, {
 					self:setContainerHint(t: yieldT);
 				});
 				local Boolean is savedArg: self:argMode;
@@ -5589,12 +5700,18 @@ Class is CodeGenerator{
 				local String is retC: self:generateExpression(expr: yieldExpr);
 				self:argMode: savedArg;
 				if({ self:isArcType(typeName: yieldT) }, {
+					local Boolean is isBorrowedGetCall: match(on: yieldExpr, when: [
+						Expression:Call: local Function(CallData is cd){
+							cd:name == 'get' || cd:name == 'getString';
+						},
+						else: { false; }
+					], default: {});
 					# a yield does not end the enclosing
 					# scope — the source local may be read after the
 					# if-expression, so the yield RETAINS (the ARC-safe copy)
 					# instead of the return path's ownership NULL-swap. A fresh
 					# allocation flows unclaimed into the result variable.
-					if({ self:isFreshConstructorCall(expr: yieldExpr) || (self:yieldsClaim(expr: yieldExpr) && !(retKind == ExpressionKind:CALL && (yieldExpr:methodName == 'get' || yieldExpr:methodName == 'getString'))) }, {
+					if({ self:isFreshConstructorCall(expr: yieldExpr) || (self:yieldsClaim(expr: yieldExpr) && !isBorrowedGetCall) }, {
 						retC: '(' . yieldCType . ')(' . retC . ')';
 					}, {
 						retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
@@ -5606,7 +5723,7 @@ Class is CodeGenerator{
 			});
 			bi: bi + 1;
 		});
-		bodyC: bodyC . self:scopeReleases(stmts: anonFn:anonBody);
+		bodyC: bodyC . self:scopeReleases(stmts: bodyStmts);
 		return bodyC;
 	}
 
@@ -5616,10 +5733,11 @@ Class is CodeGenerator{
 	## @return: C statement text.
 	Function of String is inlineBranchBody(Expression is anonFn){
 		local String is bodyC: '';
-		anonFn:anonBody:each(action: local Function(Statement is st){
+		local Array of Statement is bodyStmts: self:anonBodyOf(expr: anonFn);
+		bodyStmts:each(action: local Function(Statement is st){
 			bodyC: bodyC . "\t" . self:generateStatement(stmt: st);
 		});
-		bodyC: bodyC . self:scopeReleases(stmts: anonFn:anonBody);
+		bodyC: bodyC . self:scopeReleases(stmts: bodyStmts);
 		return bodyC;
 	}
 
@@ -5662,14 +5780,25 @@ Class is CodeGenerator{
 			yieldVar: '_mt_' . (self:anonCounter as String);
 			out: '({ ' . self:cTypeFor(typeName: resT) . ' ' . yieldVar . ";\n";
 		});
-		local Int is keyTotal: armsArg:mapKeys:length();
+		local Array of Expression is armsKeys: [];
+		local Array of Expression is armsValues: [];
+		match(on: armsArg, when: [
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				armsKeys: keys;
+				armsValues: values;
+			}
+		], default: {});
+		local Int is keyTotal: armsKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
 		repeat(count: keyTotal, worker: {
-				local Expression is key: armsArg:mapKeys:get(index: ki);
-				local Expression is val: armsArg:mapValues:get(index: ki);
+				local Expression is key: armsKeys:get(index: ki);
+				local Expression is val: armsValues:get(index: ki);
 				ki: ki + 1;
-				local Boolean is elseArm: key:kind == ExpressionKind:IDENT && key:str == 'else';
+				local Boolean is elseArm: match(on: key, when: [
+					Expression:Ident: local Function(String is name){ name == 'else'; },
+					else: { false; }
+				], default: {});
 				if({ !elseArm }, {
 					local String is condC: self:matchCondC(subjT: subjT, subjC: subjC, key: key);
 					if({ firstCond }, {
@@ -5692,11 +5821,17 @@ Class is CodeGenerator{
 				# The legacy tagged form binds through the flat payload
 				# fields; the desugared form  casts the subject
 				# to the nested subclass and reads its real fields.
-				if({ val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 && self:allTaggedEnums:has(key: subjT) }, {
+				local Array of Parameter is valParams: [];
+				match(on: val, when: [
+					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+						valParams: ps;
+					}
+				], default: {});
+				if({ valParams:length() > 0 && self:allTaggedEnums:has(key: subjT) }, {
 					local Member is pvMem: self:lookupEnumVariant(enumName: subjT, variantName: self:matchKeyName(key: key, subjT: subjT));
 					if({ pvMem:name != '' }, {
 						local Int is pbi: 0;
-						val:anonParams:each(action: local Function(Parameter is bp){
+						valParams:each(action: local Function(Parameter is bp){
 							if({ pbi < pvMem:params:length() }, {
 								local Parameter is vp: pvMem:params:get(index: pbi);
 								local String is pCType: self:cTypeFor(typeName: vp:paramType:name);
@@ -5709,7 +5844,7 @@ Class is CodeGenerator{
 						});
 					});
 				});
-				if({ val:kind == ExpressionKind:ANON_FN && val:anonParams:length() > 0 && !self:allTaggedEnums:has(key: subjT) && !self:allEnumNames:has(key: subjT) }, {
+				if({ valParams:length() > 0 && !self:allTaggedEnums:has(key: subjT) && !self:allEnumNames:has(key: subjT) }, {
 					local String is cmKey: self:matchKeyName(key: key, subjT: subjT);
 					if({ cmKey != '' }, {
 						local String is subSym: self:utils:cIdent(name: subjT . ':' . cmKey);
@@ -5725,7 +5860,7 @@ Class is CodeGenerator{
 								});
 							});
 							local Int is pbi2: 0;
-							val:anonParams:each(action: local Function(Parameter is bp){
+							valParams:each(action: local Function(Parameter is bp){
 								if({ pbi2 < fieldParams:length() }, {
 									local Parameter is srcP: fieldParams:get(index: pbi2);
 									local String is pCType2: self:cTypeFor(typeName: srcP:paramType:name);
@@ -5782,15 +5917,30 @@ Class is CodeGenerator{
 			yieldVar: '_mt_' . (self:anonCounter as String);
 			out: '({ ' . self:cTypeFor(typeName: resT) . ' ' . yieldVar . ";\n";
 		});
-		local Int is keyTotal: armsArg:mapKeys:length();
+		local Array of Expression is armsKeys: [];
+		local Array of Expression is armsValues: [];
+		match(on: armsArg, when: [
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				armsKeys: keys;
+				armsValues: values;
+			}
+		], default: {});
+		local Int is keyTotal: armsKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
 		repeat(count: keyTotal, worker: {
-				local Expression is key: armsArg:mapKeys:get(index: ki);
-				local Expression is val: armsArg:mapValues:get(index: ki);
+				local Expression is key: armsKeys:get(index: ki);
+				local Expression is val: armsValues:get(index: ki);
 				ki: ki + 1;
-				local Boolean is elseArm: key:kind == ExpressionKind:IDENT && key:str == 'else';
-				if({ !elseArm && key:kind == ExpressionKind:ANON_FN }, {
+				local Boolean is elseArm: match(on: key, when: [
+					Expression:Ident: local Function(String is name){ name == 'else'; },
+					else: { false; }
+				], default: {});
+				local Boolean is keyIsAnon: match(on: key, when: [
+					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){ true; },
+					else: { false; }
+				], default: {});
+				if({ !elseArm && keyIsAnon }, {
 					# The key closure inlines into the frame: its leading
 					# statements run only once the earlier keys have failed
 					# (never inside a previous arm's block), and its last
@@ -5825,7 +5975,11 @@ Class is CodeGenerator{
 						out: out . "} else {\n";
 					});
 				});
-				if({ val:kind == ExpressionKind:ANON_FN && val:anonParams:length() == 0 }, {
+				local Boolean is valIsNoArgAnon: match(on: val, when: [
+					Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){ ps:length() == 0; },
+					else: { false; }
+				], default: {});
+				if({ valIsNoArgAnon }, {
 					if({ valueForm }, {
 						out: out . self:inlineBranchBodyYield(anonFn: val, yieldVar: yieldVar, yieldT: resT) . "\t";
 					}, {
@@ -5854,17 +6008,21 @@ Class is CodeGenerator{
 	## @param key: The key expression.
 	## @return: C boolean expression.
 	Function of String is matchCondC(String is subjT, String is subjC, Expression is key){
-		local Array of Expression is keyTargets: [];
-		if({ key:kind == ExpressionKind:ARRAY }, {
-			keyTargets: key:arrayItems;
-		}, {
-			keyTargets: [key];
-		});
+		local Array of Expression is keyTargets: match(on: key, when: [
+			Expression:ArrayLit: local Function of Array of Expression(Array of Expression is items){
+				return items;
+			},
+			else: { [key]; }
+		], default: {});
 		local String is joined: '';
 		keyTargets:each(action: local Function(Expression is one){
 			# String-literal keys compare by value (the bridge for the
 			# string-subject matches).
-			if({ one:kind == ExpressionKind:STRING }, {
+			local Boolean is isStrLit: match(on: one, when: [
+				Expression:StringLit: local Function(String is value){ true; },
+				else: { false; }
+			], default: {});
+			if({ isStrLit }, {
 				local String is litC: self:generateExpression(expr: one);
 				if({ joined != '' }, {
 					joined: joined . ' || ';
@@ -5874,18 +6032,21 @@ Class is CodeGenerator{
 			});
 			local String is keyName: '';
 			local String is lookupCls: subjT;
-			if({ one:kind == ExpressionKind:IDENT }, {
-				keyName: one:str;
-			}, {
-				if({ one:kind == ExpressionKind:PATH && one:pathSegments:length() >= 2 }, {
-					keyName: one:pathSegments:get(index: one:pathSegments:length() - 1);
-					lookupCls: one:pathSegments:get(index: 0);
-				}, {
-					if({ one:kind == ExpressionKind:PATH && one:pathSegments:length() > 0 }, {
-						keyName: one:pathSegments:get(index: 0);
+			match(on: one, when: [
+				Expression:Ident: local Function(String is name){
+					keyName: name;
+				},
+				Expression:Path: local Function(Array of String is segs){
+					if({ segs:length() >= 2 }, {
+						keyName: segs:get(index: segs:length() - 1);
+						lookupCls: segs:get(index: 0);
+					}, {
+						if({ segs:length() > 0 }, {
+							keyName: segs:get(index: 0);
+						});
 					});
-				});
-			});
+				}
+			], default: {});
 			local String is owner: self:heldFields:getString(key: lookupCls . ':' . keyName, default: '');
 			if({ owner == '' }, {
 				owner: self:heldFields:getString(key: subjT . ':' . keyName, default: '');
@@ -5924,7 +6085,11 @@ Class is CodeGenerator{
 				if({ enumName != '' }, {
 					local ClassInfo is enumCls: self:findClass(name: enumName);
 					enumCls:members:each(action: local Function(Member is m){
-						if({ !variantOk && m:name == keyName && !(m:hasInit && m:initExpr:kind == ExpressionKind:ARRAY) }, {
+						local Boolean is initIsArray: m:hasInit && match(on: m:initExpr, when: [
+							Expression:ArrayLit: local Function(Array of Expression is items){ true; },
+							else: { false; }
+						], default: {});
+						if({ !variantOk && m:name == keyName && !initIsArray }, {
 							variantOk: true;
 						});
 					});
@@ -6018,9 +6183,10 @@ Class is CodeGenerator{
 		self:inlineReturnVar: evVar;
 		self:inlineReturnLabel: 'break';
 		local String is evalBodyC: '';
-		local Int is evalCount: evalExpr:anonBody:length();
+		local Array of Statement is evalBody: self:anonBodyOf(expr: evalExpr);
+		local Int is evalCount: evalBody:length();
 		local Int is evIdx: 0;
-		evalExpr:anonBody:each(action: local Function(Statement is s){
+		evalBody:each(action: local Function(Statement is s){
 			evIdx: evIdx + 1;
 			local Boolean is handled: false;
 			if({ evIdx == evalCount && self:inlineReturnVar != '' }, {
@@ -6036,7 +6202,7 @@ Class is CodeGenerator{
 				evalBodyC: evalBodyC . self:generateStatement(stmt: s);
 			});
 		});
-		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
+		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalBody);
 
 		# hardening: the iteration closure's returns drive the
 		# loop — `return true` continues (skipping the rest of the body),
@@ -6047,10 +6213,11 @@ Class is CodeGenerator{
 		self:inlineReturnVar: itVar;
 		self:inlineReturnLabel: 'break';
 		local String is iterBodyC: '';
-		iterExpr:anonBody:each(action: local Function(Statement is s){
+		local Array of Statement is iterBody: self:anonBodyOf(expr: iterExpr);
+		iterBody:each(action: local Function(Statement is s){
 			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
 		});
-		iterBodyC: iterBodyC . self:scopeReleases(stmts: iterExpr:anonBody);
+		iterBodyC: iterBodyC . self:scopeReleases(stmts: iterBody);
 
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
@@ -6086,9 +6253,10 @@ Class is CodeGenerator{
 		self:inlineReturnVar: evVar;
 		self:inlineReturnLabel: 'break';
 		local String is evalBodyC: '';
-		local Int is evalCount: evalExpr:anonBody:length();
+		local Array of Statement is evalBody: self:anonBodyOf(expr: evalExpr);
+		local Int is evalCount: evalBody:length();
 		local Int is evIdx: 0;
-		evalExpr:anonBody:each(action: local Function(Statement is s){
+		evalBody:each(action: local Function(Statement is s){
 			evIdx: evIdx + 1;
 			local Boolean is handled: false;
 			if({ evIdx == evalCount && self:inlineReturnVar != '' }, {
@@ -6104,16 +6272,17 @@ Class is CodeGenerator{
 				evalBodyC: evalBodyC . self:generateStatement(stmt: s);
 			});
 		});
-		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalExpr:anonBody);
+		evalBodyC: evalBodyC . self:scopeReleases(stmts: evalBody);
 
 		local String is itVar: '_it_' . id;
 		self:inlineReturnVar: itVar;
 		self:inlineReturnLabel: 'break';
 		local String is iterBodyC: '';
-		iterExpr:anonBody:each(action: local Function(Statement is s){
+		local Array of Statement is iterBody: self:anonBodyOf(expr: iterExpr);
+		iterBody:each(action: local Function(Statement is s){
 			iterBodyC: iterBodyC . self:generateStatement(stmt: s);
 		});
-		iterBodyC: iterBodyC . self:scopeReleases(stmts: iterExpr:anonBody);
+		iterBodyC: iterBodyC . self:scopeReleases(stmts: iterBody);
 
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
@@ -6141,10 +6310,11 @@ Class is CodeGenerator{
 		self:inlineReturnVar: itVar;
 		self:inlineReturnLabel: 'break';
 		local String is workerBodyC: '';
-		workerExpr:anonBody:each(action: local Function(Statement is s){
+		local Array of Statement is workerBody: self:anonBodyOf(expr: workerExpr);
+		workerBody:each(action: local Function(Statement is s){
 			workerBodyC: workerBodyC . self:generateStatement(stmt: s);
 		});
-		workerBodyC: workerBodyC . self:scopeReleases(stmts: workerExpr:anonBody);
+		workerBodyC: workerBodyC . self:scopeReleases(stmts: workerBody);
 
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
