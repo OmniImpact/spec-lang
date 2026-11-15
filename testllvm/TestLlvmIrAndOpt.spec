@@ -228,4 +228,86 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testEnumsInheritanceAndEachLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_adt_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_adt_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_adt_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: "Enum is Expr {\n"
+			. "\tNum(Int is v),\n"
+			. "\tPair(Int is a, Int is b)\n"
+			. "}\n\n"
+			. "Class is BaseBox {\n"
+			. "\tInt is x: 10;\n"
+			. "\treplace Function is init(){\n"
+			. "\t\treturn;\n"
+			. "\t}\n"
+			. "}\n\n"
+			. "Class of BaseBox is SubBox {\n"
+			. "\tInt is y: 5;\n"
+			. "\treplace Function is init(){\n"
+			. "\t\treturn;\n"
+			. "\t}\n"
+			. "\tFunction of Int is total(){\n"
+			. "\t\treturn self:x + self:y;\n"
+			. "\t}\n"
+			. "}\n\n"
+			. "Class is LlvmAdt{\n"
+			. "\treplace Array of Array of String is using: [\n"
+			. "\t\t['base', 'struct', Array],\n"
+			. "\t\t['base', 'struct', Map],\n"
+			. "\t\t['base', 'sys', as Conditional()],\n"
+			. "\t\t['base', 'sys', as Output()],\n"
+			. "\t\t['base', 'sys', as Process()]\n"
+			. "\t];\n"
+			. "\treplace Function is init(Map of String to String is args){\n"
+			. "\t\tlocal Expr is e1: Expr:Num(v: 19);\n"
+			. "\t\tlocal Expr is e2: Expr:Pair(a: 20, b: 3);\n"
+			. "\t\tlocal Int is v1: match(on: e1, when: [\n"
+			. "\t\t\tExpr:Num: local Function of Int(Int is v){ return v; },\n"
+			. "\t\t\tExpr:Pair: local Function of Int(Int is a, Int is b){ return a + b; }\n"
+			. "\t\t]);\n"
+			. "\t\tlocal Int is v2: match(on: e2, when: [\n"
+			. "\t\t\tExpr:Num: local Function of Int(Int is v){ return v; },\n"
+			. "\t\t\tExpr:Pair: local Function of Int(Int is a, Int is b){ return a + b; }\n"
+			. "\t\t]);\n"
+			. "\t\tlocal SubBox is sb: SubBox:init();\n"
+			. "\t\tlocal Int is st: sb:total();\n"
+			. "\t\tlocal Array of Int is xs: [1, 2, 3];\n"
+			. "\t\tlocal Array of Int is acc: [];\n"
+			. "\t\txs:each(action: local Function(Int is item){\n"
+			. "\t\t\tacc:add(item: item * 2);\n"
+			. "\t\t});\n"
+			. "\t\tif({ v1 == 19 && v2 == 23 && st == 15 && acc:length() == 3 && acc[2] == 6 }, {\n"
+			. "\t\t\tline('llvm-adt-ok');\n"
+			. "\t\t}, {\n"
+			. "\t\t\tProcess:exit(status: 2);\n"
+			. "\t\t});\n"
+			. "\t}\n"
+			. "}\n";
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: '%struct.Expr_Num = type'));
+		Assert:isTrue(ll:contains(needle: '%struct.SubBox = type'));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }

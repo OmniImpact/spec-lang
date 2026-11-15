@@ -42,13 +42,16 @@ Class is IrModule{
 
 	Function of IrStruct is findStruct(String is name){
 		local Int is i: 0;
-		while({ i < self:structs:length() }, {
+		local Boolean is found: false;
+		local IrStruct is res: IrStruct:init(name: '');
+		while({ i < self:structs:length() && !found }, {
 			local IrStruct is s: self:structs:get(index: i);
 			if({ s:name == name }, {
-				return s;
+				res: s;
+				found: true;
 			});
 			i++;
 		});
-		return IrStruct:init(name: '');
+		return res;
 	}
 }

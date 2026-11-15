@@ -16,6 +16,7 @@ Class of CallLowerer is MatchCallLowerer{
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'compiler', 'ir', IrBlock],
+		['base', 'compiler', 'ir', IrStruct],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -148,13 +149,39 @@ Class of CallLowerer is MatchCallLowerer{
 				elseExpr: v;
 			}, {
 				local String is condVal: '0';
+				local String is variantStruct: '';
 				if({ hasOn }, {
-					local String is kVal: b:lowerExpr(expr: k);
-					condVal: b:nextTmp();
-					if({ subjTy == IrType:Ptr }, {
-						b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [subjVal, kVal]));
+					match(on: k, when: [
+						Expression:Path: local Function(Array of String is segs){
+							local String is joined: '';
+							local Int is si: 0;
+							while({ si < segs:length() }, {
+								if({ si > 0 }, { joined: joined . '_'; });
+								joined: joined . segs:get(index: si, default: '');
+								si++;
+							});
+							if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {
+								variantStruct: joined;
+							});
+						}
+					], default: {});
+					if({ variantStruct != '' }, {
+						local String is tnAddr: b:nextTmp();
+						b:emit(inst: IrInst:FieldPtr(dst: tnAddr, objPtr: subjVal, structName: variantStruct, fieldIndex: 0));
+						local String is tnVal: b:nextTmp();
+						b:emit(inst: IrInst:Load(dst: tnVal, slot: tnAddr, ty: IrType:Ptr));
+						local String is expTn: b:nextTmp();
+						b:emit(inst: IrInst:GlobalAddr(dst: expTn, globalName: '.typename.' . variantStruct));
+						condVal: b:nextTmp();
+						b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: tnVal, rhs: expTn, ty: IrType:Ptr));
 					}, {
-						b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));
+						local String is kVal: b:lowerExpr(expr: k);
+						condVal: b:nextTmp();
+						if({ subjTy == IrType:Ptr }, {
+							b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [subjVal, kVal]));
+						}, {
+							b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));
+						});
 					});
 				}, {
 					local Boolean is unwrapped: false;
@@ -184,6 +211,34 @@ Class of CallLowerer is MatchCallLowerer{
 
 				local IrBlock is armBlk: b:curFn:addBlock(label: armLbl);
 				b:switchBlock(blk: armBlk);
+				if({ variantStruct != '' }, {
+					local IrStruct is vst: b:mod:findStruct(name: variantStruct);
+					match(on: v, when: [
+						Expression:AnonFn: local Function(Type is _rt, Array of Parameter is ps, Array of Statement is _bd){
+							local Int is pi: 0;
+							while({ pi < ps:length() }, {
+								local Parameter is p: ps:get(index: pi);
+								local IrType is pty: b:irTypeFor(specType: p:paramType:name);
+								if({ pty == IrType:Void }, { pty: IrType:Ptr; });
+								local Int is fidx: vst:fieldIndex(name: p:name);
+								if({ fidx < 0 }, {
+									fidx: vst:fieldNames:length() - ps:length() + pi;
+								});
+								local String is fPtr: b:nextTmp();
+								b:emit(inst: IrInst:FieldPtr(dst: fPtr, objPtr: subjVal, structName: variantStruct, fieldIndex: fidx));
+								local String is pVal: b:nextTmp();
+								b:emit(inst: IrInst:Load(dst: pVal, slot: fPtr, ty: pty));
+								local String is pSlot: '%arm_' . p:name . '_' . (b:nextTmp());
+								pSlot: '%arm_' . p:name . '_' . (b:tmpCounter as String);
+								b:emit(inst: IrInst:Alloca(slot: pSlot, ty: pty));
+								b:emit(inst: IrInst:Store(slot: pSlot, val: pVal, ty: pty));
+								b:localSlots:set(key: p:name, value: pSlot);
+								b:localTypes:set(key: p:name, value: pty);
+								pi++;
+							});
+						}
+					], default: {});
+				});
 				self:lowerArmBody(b: b, armExpr: v, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
 
 				local IrBlock is nextBlk: b:curFn:addBlock(label: nextLbl);

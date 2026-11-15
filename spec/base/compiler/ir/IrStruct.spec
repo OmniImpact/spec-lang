@@ -31,12 +31,15 @@ Class is IrStruct{
 
 	Function of Int is fieldIndex(String is name){
 		local Int is i: 0;
-		while({ i < self:fieldNames:length() }, {
+		local Int is res: -1;
+		local Boolean is found: false;
+		while({ i < self:fieldNames:length() && !found }, {
 			if({ self:fieldNames:get(index: i, default: '') == name }, {
-				return i;
+				res: i;
+				found: true;
 			});
 			i++;
 		});
-		return -1;
+		return res;
 	}
 }
