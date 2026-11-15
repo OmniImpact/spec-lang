@@ -15,9 +15,9 @@ Class is Audio{
 	## Writes PCM audio data to the output stream. Bound to `spec_audio_write`.
 	##
 	## @param handle: Audio stream handle returned by audio_open.
-	## @param buffer: ByteBuffer containing PCM audio samples.
+	## @param buffer: List of Byte containing PCM audio samples.
 	## @return: Number of bytes written, or -1 on error.
-	Function of Int is audio_write(Int is handle, ByteBuffer is buffer);
+	Function of Int is audio_write(Int is handle, List of Byte is buffer);
 
 	## Drains the pending audio buffer queue until finished. Bound to `spec_audio_drain`.
 	##
