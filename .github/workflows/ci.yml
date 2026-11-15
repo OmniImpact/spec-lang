@@ -6,6 +6,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   gcc:
     runs-on: ubuntu-latest
@@ -20,15 +23,17 @@ jobs:
         run: |
           bin/specbuild utilities/specunit/specunit.json
           bin/specbuild utilities/speclint/speclint.json
+          bin/specbuild utilities/specinit/specinit.json
+          bin/specbuild utilities/speclsp/speclsp.json
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t tests
+          bin/specunit -s bin/spec -t examples -t tests
       - name: Package Linux Artifact
         run: |
           mkdir -p dist
-          zip -9 -j dist/spec-linux-x86_64.zip bin/spec bin/specunit bin/speclint bin/specbuild
+          zip -9 -j dist/spec-linux-x86_64.zip bin/spec bin/specunit bin/speclint bin/specbuild bin/specinit bin/speclsp
       - name: Upload Linux Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-artifact
           path: dist/spec-linux-x86_64.zip
@@ -48,7 +53,7 @@ jobs:
       - name: Build tooling and run regression suite
         run: |
           bin/specbuild utilities/specunit/specunit.json
-          bin/specunit -s bin/spec -t tests
+          bin/specunit -s bin/spec -t examples -t tests
 
   macos:
     runs-on: macos-latest
@@ -63,16 +68,18 @@ jobs:
         run: |
           bin/specbuild utilities/specunit/specunit.json
           bin/specbuild utilities/speclint/speclint.json
+          bin/specbuild utilities/specinit/specinit.json
+          bin/specbuild utilities/speclsp/speclsp.json
       - name: Regression suite
         run: |
-          bin/specunit -s bin/spec -t tests
+          bin/specunit -s bin/spec -t examples -t tests
       - name: Package macOS Artifact
         run: |
           ARCH=$(uname -m)
           mkdir -p dist
-          zip -9 -j "dist/spec-macos-${ARCH}.zip" bin/spec bin/specunit bin/speclint bin/specbuild
+          zip -9 -j "dist/spec-macos-${ARCH}.zip" bin/spec bin/specunit bin/speclint bin/specbuild bin/specinit bin/speclsp
       - name: Upload macOS Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: macos-artifact
           path: dist/spec-macos-*.zip
@@ -96,7 +103,7 @@ jobs:
           export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
           export SPEC_BIN="bin/spec-asan"
           bin/spec-asan --quiet -i utilities/specunit/SpecUnit.spec -o bin/specunit-asan
-          bin/specunit-asan -s bin/spec-asan -t tests -j 2
+          bin/specunit-asan -s bin/spec-asan -t examples -t tests -j 2
 
   windows:
     runs-on: windows-latest
@@ -129,13 +136,15 @@ jobs:
           export SPEC_BIN="bin/spec.exe"
           bin/specbuild.exe utilities/specunit/specunit.json
           bin/specbuild.exe utilities/speclint/speclint.json
-          bin/specunit.exe -s bin/spec.exe -t tests
+          bin/specbuild.exe utilities/specinit/specinit.json
+          bin/specbuild.exe utilities/speclsp/speclsp.json
+          bin/specunit.exe -s bin/spec.exe -t examples -t tests
       - name: Package Windows Artifact
         run: |
           mkdir -p dist
-          zip -9 -j dist/spec-windows-x86_64.zip bin/spec.exe bin/specunit.exe bin/speclint.exe bin/specbuild.exe
+          zip -9 -j dist/spec-windows-x86_64.zip bin/spec.exe bin/specunit.exe bin/speclint.exe bin/specbuild.exe bin/specinit.exe bin/speclsp.exe
       - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-artifact
           path: dist/spec-windows-x86_64.zip
@@ -159,19 +168,19 @@ jobs:
           echo "Building release for tag: $TAG"
 
       - name: Download Linux Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: linux-artifact
           path: incoming
 
       - name: Download macOS Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: macos-artifact
           path: incoming
 
       - name: Download Windows Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: windows-artifact
           path: incoming
@@ -206,7 +215,7 @@ jobs:
           unzip -l dist/spec-*-windows-*.zip
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: Release ${{ steps.vars.outputs.tag }}

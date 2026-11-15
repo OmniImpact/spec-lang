@@ -119,7 +119,7 @@ Class of SpecUnitTest is TestSpecLsp{
 		Assert:isTrue(outRaw:contains(needle: '"start":{"line":1,"character":0}'));
 		Assert:isTrue(outRaw:contains(needle: '"label":"local"'));
 		Assert:isTrue(outRaw:contains(needle: '"severity":1'));
-		Assert:isTrue(outRaw:contains(needle: '"id":5,"result":null'));
+		Assert:isTrue(outRaw:contains(needle: '"id":5,"result":null') || outRaw:contains(needle: '"result":null,"id":5'));
 
 		fileRemove(path: samplePath);
 		fileRemove(path: inPath);
