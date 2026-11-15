@@ -40,6 +40,24 @@ Class is Conditional{
 		finally();
 	}
 
+	## Runs [then] when [check] returns `false`.
+	##
+	## @param check: The condition to negate.
+	## @param then: The closure to run when [check] is `false`.
+	Function is unless(Function of Boolean is check, Function is then){
+		base:sysinternal:Conditional:branch(check: { return !check(); }, then: then);
+	}
+
+	## Runs [then] when [check] returns `false`, or [else] when [check] returns `true`.
+	##
+	## @param check: The condition to negate.
+	## @param then: The closure for the `false` case.
+	## @param else: The closure for the `true` case.
+	Function is unless(Function of Boolean is check, Function is then, Function is else){
+		base:sysinternal:Conditional:branch(check: { return !check(); }, then: then);
+		base:sysinternal:Conditional:branch(check: check, then: else);
+	}
+
 	## Dispatches an arm table — the match construct. TWO KEY KINDS:
 	##
 	## - `match(on:, when:)` — the SUBJECT form: the keys are

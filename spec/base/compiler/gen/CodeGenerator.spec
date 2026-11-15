@@ -4186,6 +4186,9 @@ Class is CodeGenerator{
 		# the self parameter's C type qualifies — the bare name is
 		# not a C identity for nested classes.
 		local String is selfCType: self:cTypeFor(typeName: classDef:qualifiedName());
+		if({ self:policy:isTransparent(c: classDef) && classDef:name != 'String' && classDef:name != 'Array' && classDef:name != 'Map' }, {
+			selfCType: 'void*';
+		});
 		# the method's own identity drives its symbol — a bare
 		# inner-class name would first-match whichever same-named class
 		# registered first; classDef IS the declaring class.
@@ -4743,7 +4746,7 @@ Class is CodeGenerator{
 			local Int is ci: threadIndex;
 			while({ ci < classTotal }, {
 					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
-					if({ !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, {
+					if({ wg:policy:emitsPrototypes(c: c) }, {
 						wg:currentClassName: c:name;
 						# The helpers attribute per class: the worker's buffer
 						# resets before each class so the slot holds only its
@@ -4908,7 +4911,7 @@ Class is CodeGenerator{
 			local Int is ci: threadIndex;
 			while({ ci < classTotal }, {
 					local ClassInfo is c: wg:flattenedClasses:get(index: ci);
-					if({ !wg:policy:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' }, {
+					if({ wg:policy:emitsPrototypes(c: c) }, {
 						wg:currentClassName: c:name;
 						wg:helperFunctions: stringCopy(b: '');
 						local String is cSym: wg:utils:cIdent(name: c:qualifiedName());

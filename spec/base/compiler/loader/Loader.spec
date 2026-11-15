@@ -153,6 +153,9 @@ Class is Loader{
 	## @param c: Target [ClassInfo] definition.
 	Function is collectImportsFromClass(ClassInfo is c){
 		c:members:each(action: local Function(Member is m){
+			if({ m:kind == MemberKind:CLASS }, {
+				self:collectImportsFromClass(c: m:nestedClass);
+			});
 			if({ m:name == 'using' && m:hasInit }, {
 				match(on: m:initExpr, when: [
 					Expression:ArrayLit: local Function(Array of Expression is items){

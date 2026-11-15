@@ -11,14 +11,30 @@ Class is Math{
 	namespace: ['base', 'math'];
 
 	replace Array of Array of String is using: [
-		['base', 'sys', as Conditional()]
-];
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
+	];
 
-	## Rounds a floating point number to the nearest whole integer.
+	## Rounds a floating point number to the nearest whole integer (half away from zero).
 	##
 	## @param value: Input floating point number.
 	## @return: Nearest whole number float.
 	Function of Float is round(Float is value){
+		if({ !(value == value) || value >= 4503599627370496.0 || value <= -4503599627370496.0 }, {
+			return value;
+		});
+		if({ value >= 0.0 }, {
+			local Float is fl: self:floor(value: value);
+			if({ (value - fl) >= 0.5 }, {
+				return fl + 1.0;
+			});
+			return fl;
+		});
+		local Float is ce: self:ceil(value: value);
+		if({ (ce - value) >= 0.5 }, {
+			return ce - 1.0;
+		});
+		return ce;
 	}
 
 	## Computes the largest integer less than or equal to [value].
@@ -26,6 +42,15 @@ Class is Math{
 	## @param value: Input floating point number.
 	## @return: Floored float.
 	Function of Float is floor(Float is value){
+		if({ !(value == value) || value >= 4503599627370496.0 || value <= -4503599627370496.0 }, {
+			return value;
+		});
+		local Int is i: self:toInt(value: value);
+		local Float is f: self:toFloat(value: i);
+		if({ f > value }, {
+			return f - 1.0;
+		});
+		return f;
 	}
 
 	## Computes the smallest integer greater than or equal to [value].
@@ -33,6 +58,15 @@ Class is Math{
 	## @param value: Input floating point number.
 	## @return: Ceiled float.
 	Function of Float is ceil(Float is value){
+		if({ !(value == value) || value >= 4503599627370496.0 || value <= -4503599627370496.0 }, {
+			return value;
+		});
+		local Int is i: self:toInt(value: value);
+		local Float is f: self:toFloat(value: i);
+		if({ f < value }, {
+			return f + 1.0;
+		});
+		return f;
 	}
 
 	## Converts a floating point number to an Int by truncation toward zero.
@@ -113,6 +147,7 @@ Class is Math{
 	## @param max: Upper bound (exclusive).
 	## @return: Random float within range.
 	Function of Float is random(Float is min, Float is max){
+		return min + ((max - min) * self:fastRandom());
 	}
 
 	## Generates a lock-free per-thread uniform float in [0, 1).
@@ -158,6 +193,23 @@ Class is Math{
 		return b;
 	}
 
+	## Returns the smallest element in [values], or `0` if empty.
+	Function of Int is min(Array of Int is values){
+		if({ values:length() == 0 }, {
+			return 0;
+		});
+		local Int is best: values:get(index: 0);
+		local Int is idx: 1;
+		while({ idx < values:length() }, {
+			local Int is v: values:get(index: idx);
+			if({ v < best }, {
+				best: v;
+			});
+			idx: idx + 1;
+		});
+		return best;
+	}
+
 	## Computes the maximum of two values.
 	##
 	## @param a: First operand.
@@ -168,6 +220,23 @@ Class is Math{
 			return a;
 		});
 		return b;
+	}
+
+	## Returns the largest element in [values], or `0` if empty.
+	Function of Int is max(Array of Int is values){
+		if({ values:length() == 0 }, {
+			return 0;
+		});
+		local Int is best: values:get(index: 0);
+		local Int is idx: 1;
+		while({ idx < values:length() }, {
+			local Int is v: values:get(index: idx);
+			if({ v > best }, {
+				best: v;
+			});
+			idx: idx + 1;
+		});
+		return best;
 	}
 
 	## Restricts [val] to lie within the closed range [minVal, maxVal].
@@ -182,5 +251,58 @@ Class is Math{
 			{ val > maxVal }: { maxVal },
 			else:             { val }
 		]);
+	}
+
+	## Returns the mathematical constant pi (3.141592653589793).
+	Function of Float is pi(){
+		return 3.141592653589793;
+	}
+
+	## Returns the circle constant tau = 2 * pi (6.283185307179586).
+	Function of Float is tau(){
+		return 6.283185307179586;
+	}
+
+	## Returns Euler's number e (2.718281828459045).
+	Function of Float is e(){
+		return 2.718281828459045;
+	}
+
+	## Returns the sign of [value]: `-1.0`, `0.0`, or `1.0`.
+	Function of Float is sign(Float is value){
+		return match(when: [
+			{ value < 0.0 }: { -1.0 },
+			{ value > 0.0 }: { 1.0 },
+			else:            { 0.0 }
+		]);
+	}
+
+	## Returns the sign of integer [value]: `-1`, `0`, or `1`.
+	Function of Int is sign(Int is value){
+		return match(when: [
+			{ value < 0 }: { -1 },
+			{ value > 0 }: { 1 },
+			else:          { 0 }
+		]);
+	}
+
+	## Linearly interpolates between [a] and [b] by [t] (`a + (b - a) * t`).
+	Function of Float is lerp(Float is a, Float is b, Float is t){
+		return a + ((b - a) * t);
+	}
+
+	## Converts degrees to radians.
+	Function of Float is degToRad(Float is deg){
+		return deg * 0.017453292519943295;
+	}
+
+	## Converts radians to degrees.
+	Function of Float is radToDeg(Float is rad){
+		return rad * 57.29577951308232;
+	}
+
+	## Computes the Euclidean hypotenuse `sqrt(x*x + y*y)`.
+	Function of Float is hypot(Float is x, Float is y){
+		return self:sqrt(value: (x * x) + (y * y));
 	}
 }

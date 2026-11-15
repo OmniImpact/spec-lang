@@ -186,4 +186,132 @@ Class is Array of T{
 	Function of Boolean is isEmpty(){
 		return self:length() == 0;
 	}
+
+	## Returns whether [search] is present in the array.
+	##
+	## @param search: String value to locate.
+	## @return: `true` if found, `false` otherwise.
+	Function of Boolean is contains(String is search){
+		return self:indexOf(search: search, default: -1) >= 0;
+	}
+
+	## Returns the first element, or [default] if the array is empty.
+	##
+	## @param default: Fallback value returned when empty.
+	## @return: First element, or [default].
+	Function of T is first(Any is default){
+		if({ self:length() == 0 }, {
+			return default;
+		});
+		return self:get(index: 0, default: default);
+	}
+
+	## Returns the last element, or [default] if the array is empty.
+	##
+	## @param default: Fallback value returned when empty.
+	## @return: Last element, or [default].
+	Function of T is last(Any is default){
+		local Int is len: self:length();
+		if({ len == 0 }, {
+			return default;
+		});
+		return self:get(index: len - 1, default: default);
+	}
+
+	## Returns a shallow copy of this array.
+	##
+	## @return: New [Array] with the same elements.
+	Function of Array of T is copy(){
+		return self:slice(start: 0, end: self:length());
+	}
+
+	## Returns a new array containing the elements in reverse order.
+	##
+	## @return: Reversed [Array].
+	Function of Array of T is reverse(){
+		local Array of T is out: [];
+		local Int is i: self:length() - 1;
+		while({ i >= 0 }, {
+			out:add(item: self:get(index: i, default: ''));
+			i: i - 1;
+		});
+		return out;
+	}
+
+	## Returns a new array containing at most the first [n] elements.
+	##
+	## @param n: Maximum number of leading elements to take.
+	## @return: Prefix [Array].
+	Function of Array of T is take(Int is n){
+		if({ n <= 0 }, {
+			return [];
+		});
+		return self:slice(start: 0, end: n);
+	}
+
+	## Returns a new array with the first [n] elements omitted.
+	##
+	## @param n: Number of leading elements to skip.
+	## @return: Suffix [Array].
+	Function of Array of T is drop(Int is n){
+		if({ n <= 0 }, {
+			return self:slice(start: 0, end: self:length());
+		});
+		return self:slice(start: n, end: self:length());
+	}
+
+	## Evaluates whether every element satisfies [predicate] (vacuously `true` when empty).
+	##
+	## @param predicate: Function returning `true` for matching elements.
+	## @return: `true` if all elements match, `false` otherwise.
+	Function of Boolean is all(Function of Boolean is predicate){
+		local Int is len: self:length();
+		local Boolean is ok: true;
+		local Int is i: 0;
+		while({ ok && i < len }, {
+			if({ !predicate(self:get(index: i, default: 0)) }, {
+				ok: false;
+			});
+			i: i + 1;
+		});
+		return ok;
+	}
+
+	## Evaluates whether no element satisfies [predicate].
+	##
+	## @param predicate: Function returning `true` for matching elements.
+	## @return: `true` if zero elements match, `false` otherwise.
+	Function of Boolean is none(Function of Boolean is predicate){
+		local Int is len: self:length();
+		local Boolean is ok: true;
+		local Int is i: 0;
+		while({ ok && i < len }, {
+			if({ predicate(self:get(index: i, default: 0)) }, {
+				ok: false;
+			});
+			i: i + 1;
+		});
+		return ok;
+	}
+
+	## Returns the first element satisfying [predicate], or [default] if none match.
+	##
+	## @param predicate: Function returning `true` for the target element.
+	## @param default: Fallback value returned if no element matches.
+	## @return: First matching element, or [default].
+	Function of T is find(Function of Boolean is predicate, Any is default){
+		local Int is len: self:length();
+		local Any is found: default;
+		local Boolean is hasFound: false;
+		local Int is i: 0;
+		while({ !hasFound && i < len }, {
+			local Any is item: self:get(index: i, default: default);
+			if({ predicate(item) }, {
+				found: item;
+				hasFound: true;
+			});
+			i: i + 1;
+		});
+		return found;
+	}
 }

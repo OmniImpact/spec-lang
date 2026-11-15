@@ -64,7 +64,7 @@ Class is EmissionPolicy{
 	## @param c: The class.
 	## @return: true when method prototypes are emitted.
 	Function of Boolean is emitsPrototypes(ClassInfo is c){
-		return !self:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map';
+		return !self:isTransparent(c: c) || c:name == 'String' || c:name == 'Array' || c:name == 'Map' || c:name == 'Math';
 	}
 
 	## True when [c]'s instances are compilation-phase data: the AST

@@ -281,7 +281,11 @@ Class is DeclarationGenerator{
 							if({ ovHit > 0 }, {
 								symName: symName . '_' . (ovHit + 1) . '';
 							});
-							Buf:bufAppendBuf(dst: out, src: retType . ' ' . symName . '(' . self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps) . ' self');
+							local String is selfCType: self:cTypeForClass(typeName: c:qualifiedName(), typeParams: tps);
+							if({ self:policy:isTransparent(c: c) && c:name != 'String' && c:name != 'Array' && c:name != 'Map' }, {
+								selfCType: 'void*';
+							});
+							Buf:bufAppendBuf(dst: out, src: retType . ' ' . symName . '(' . selfCType . ' self');
 							m:params:each(action: local Function(Parameter is p){
 								Buf:bufAppendBuf(dst: out, src: ', ' . self:cTypeForClass(typeName: p:paramType:name, typeParams: tps) . ' ' . self:utils:cIdent(name: p:name));
 							});

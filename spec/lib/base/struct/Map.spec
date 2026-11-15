@@ -12,8 +12,10 @@ Class is Map of K to V{
 	namespace: ['base', 'struct'];
 
 	replace Array of Array of String is using: [
+		['base', 'struct', Array],
+		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
-];
+	];
 
 	## Looks up the value mapped to [key], returning [default] if not found.
 	##
@@ -105,5 +107,88 @@ Class is Map of K to V{
 	##
 	## @param action: Function invoked with (key, value) for each entry.
 	Function is each(Function is action){
+	}
+
+	## Returns whether the map contains zero entries.
+	##
+	## @return: `true` if empty, `false` otherwise.
+	Function of Boolean is isEmpty(){
+		return self:length() == 0;
+	}
+
+	## Returns an array containing all values in key iteration order.
+	##
+	## @return: [Array] of values.
+	Function of Array is values(){
+		local Array is out: [];
+		self:each(action: local Function(String is k, Any is v){
+			out:add(item: v);
+		});
+		return out;
+	}
+
+	## Removes all entries from the map.
+	Function is clear(){
+		local Array of String is ks: self:keys();
+		ks:each(action: local Function(String is k){
+			self:remove(key: k);
+		});
+	}
+
+	## Copies all entries from [other] into this map, overwriting matching keys.
+	##
+	## @param other: Source map to merge in.
+	Function is merge(Map of K to V is other){
+		local Array of String is ks: other:keys();
+		ks:each(action: local Function(String is k){
+			local String is sv: other:getString(key: k, default: '');
+			if({ sv != '' }, {
+				self:set(key: k, value: sv);
+			}, {
+				self:set(key: k, value: other:get(key: k, default: ''));
+			});
+		});
+	}
+
+	## Returns a new map containing entries for which [predicate](key, value) returns `true`.
+	##
+	## @param predicate: Function taking (key, value) and returning `Boolean`.
+	## @return: Filtered [Map].
+	Function of Map is filter(Function of Boolean is predicate){
+		local Map is out: [:];
+		self:each(action: local Function(String is k, Any is v){
+			if({ predicate(k, v) }, {
+				out:set(key: k, value: v);
+			});
+		});
+		return out;
+	}
+
+	## Returns `true` if any entry satisfies [predicate](key, value).
+	##
+	## @param predicate: Function taking (key, value) and returning `Boolean`.
+	## @return: `true` if any entry matches.
+	Function of Boolean is any(Function of Boolean is predicate){
+		local Boolean is found: false;
+		self:each(action: local Function(String is k, Any is v){
+			if({ !found && predicate(k, v) }, {
+				found: true;
+			});
+		});
+		return found;
+	}
+
+	## Counts entries for which [predicate](key, value) returns `true`.
+	##
+	## @param predicate: Function taking (key, value) and returning `Boolean`.
+	## @return: Count of matching entries.
+	Function of Int is count(Function of Boolean is predicate){
+		local Int is total: 0;
+		self:each(action: local Function(String is k, Any is v){
+			if({ predicate(k, v) }, {
+				total: total + 1;
+			});
+		});
+		return total;
 	}
 }

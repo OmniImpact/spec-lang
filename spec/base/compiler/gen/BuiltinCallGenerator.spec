@@ -113,24 +113,6 @@ Class is BuiltinCallGenerator{
 		return expr:argValue(index: index);
 	}
 
-	## Translates a builtin call into C; '' when not a builtin.
-	##
-	## @param expr: CALL expression node.
-	## @param targetC: Generated C for the method target.
-	## True when the first argument of a builtin math call is Int-typed
-	## (§I.4: selects the integer overload's floor).
-	##
-	## @param expr: The call expression.
-	## @param cg: The code generator.
-	## @return: true when the first argument is Int.
-	Function of Boolean is absArgIsInt(Expression is expr, CodeGenerator is cg){
-		if({ expr:argCount() == 0 }, {
-			return false;
-		});
-		local Expression is a0: expr:argValue(index: 0);
-		return cg:inferTargetType(expr: a0) == 'Int';
-	}
-
 	## Extracts CallData from a Call expression (or an empty dummy when not Call).
 	Function of CallData is extractCall(Expression is expr){
 		return match(on: expr, when: [
@@ -482,8 +464,8 @@ Class is BuiltinCallGenerator{
 			return '({ SpecLoopControl* _lc = (SpecLoopControl*)(' . targetC . '); if (_lc && _lc->on_complete) { _lc->on_complete(_lc->callback, _lc); } })';
 		});
 
-		# Math functions.
-		if({ targetC == 'Math' }, {
+		# Math functions (libm / C-cast floor only).
+		if({ targetC == 'Math' || targetType == 'Math' }, {
 			local String is m: cd:name;
 			local String is a0: '0.0';
 			if({ expr:argCount() > 0 }, {
@@ -492,18 +474,6 @@ Class is BuiltinCallGenerator{
 			# Single-operand functions: the match yields the C call; the
 			# empty else lets the two-operand section run.
 			local String is oneC: match(on: m, when: [
-				'round': { 'spec_math_round(' . a0 . ')' },
-				'floor': { 'spec_math_floor(' . a0 . ')' },
-				['ceil', 'ceiling']: { 'spec_math_ceil(' . a0 . ')' },
-				'abs': {
-					# §I.4: type-distinct overloads — the Int
-					# overload routes to the integer floor.
-					local String is absC: 'spec_math_abs(' . a0 . ')';
-					if({ self:absArgIsInt(expr: expr, cg: cg) }, {
-						absC: 'spec_math_abs_int(' . a0 . ')';
-					});
-					absC
-				},
 				'sqrt': { 'spec_math_sqrt(' . a0 . ')' },
 				'sin': { 'spec_math_sin(' . a0 . ')' },
 				'cos': { 'spec_math_cos(' . a0 . ')' },
@@ -516,38 +486,16 @@ Class is BuiltinCallGenerator{
 			if({ oneC != '' }, {
 				return oneC;
 			});
-			# Two-operand functions: a + b, or named value/min/max.
+			# Two-operand floor functions.
 			local String is a1: '0.0';
 			if({ expr:argCount() > 1 }, {
 				a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
-			});
-			if({ m == 'min' }, {
-				return 'spec_math_min(' . a0 . ', ' . a1 . ')';
-			});
-			if({ m == 'max' }, {
-				return 'spec_math_max(' . a0 . ', ' . a1 . ')';
 			});
 			if({ m == 'pow' }, {
 				return 'spec_math_pow(' . a0 . ', ' . a1 . ')';
 			});
 			if({ m == 'atan2' }, {
 				return 'spec_math_atan2(' . a0 . ', ' . a1 . ')';
-			});
-			if({ m == 'random' }, {
-				return 'spec_math_random(' . a0 . ', ' . a1 . ')';
-			});
-			if({ m == 'clamp' }, {
-				# Declared signature: clamp(Float val, Float minVal,
-				# Float maxVal). Fill by argument index — the checker
-				# resolves named args into declaration order — never by
-				# grepping spellings here: the old name-grep matched
-				# none of the declared names and shipped the
-				# 0.0/0.0/1.0 defaults for every call.
-				local String is a2: '1.0';
-				if({ expr:argCount() > 2 }, {
-					a2: cg:generateExpression(expr: self:argValue(expr: expr, index: 2));
-				});
-				return 'spec_math_clamp(' . a0 . ', ' . a1 . ', ' . a2 . ')';
 			});
 			if({ m == 'toInt' }, {
 				return '((long long)(' . a0 . '))';

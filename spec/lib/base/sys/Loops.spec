@@ -24,8 +24,9 @@ Class is Loops{
 
 	replace Array of Array of String is using: [
 		['base', 'iterator', Loop],
-		['base', 'sysinternal', Loops]
-];
+		['base', 'sysinternal', Loops],
+		['base', 'sys', as Conditional()]
+	];
 
 	## Repeatedly evaluates and steps [loop] until termination or halt.
 	##
@@ -109,5 +110,73 @@ Class is Loops{
 	Function is until(Function of Boolean is evaluate, Function is iteration){
 		iteration();
 		base:sysinternal:Loops:while(evaluate: { return !evaluate(); }, iterate: iteration);
+	}
+
+	## Executes [worker](index) for each zero-based index from `0` to `count - 1`.
+	##
+	## @param count: Number of iterations.
+	## @param worker: Closure receiving the current `Int` index.
+	Function is times(Int is count, Function is worker){
+		local Int is idx: 0;
+		base:sysinternal:Loops:while(
+			evaluate: { return idx < count; },
+			iterate: {
+				worker(idx);
+				idx: idx + 1;
+			}
+		);
+	}
+
+	## Executes [worker](index) for each integer in `[start, end)`.
+	##
+	## @param start: Inclusive start integer.
+	## @param end: Exclusive end integer.
+	## @param worker: Closure receiving the current `Int` index.
+	Function is range(Int is start, Int is end, Function is worker){
+		local Int is idx: start;
+		base:sysinternal:Loops:while(
+			evaluate: { return idx < end; },
+			iterate: {
+				worker(idx);
+				idx: idx + 1;
+			}
+		);
+	}
+
+	## Executes [worker](index) stepping by [step] from [start] toward [end] (exclusive).
+	##
+	## Supports positive steps (`idx < end`) and negative steps (`idx > end`).
+	## A zero [step] is a no-op.
+	##
+	## @param start: Inclusive start integer.
+	## @param end: Exclusive end bound.
+	## @param step: Non-zero step delta.
+	## @param worker: Closure receiving the current `Int` index.
+	Function is rangeStep(Int is start, Int is end, Int is step, Function is worker){
+		local Int is idx: start;
+		if(check: { return step != 0; }, then: {
+			base:sysinternal:Loops:while(
+				evaluate: {
+					return (step > 0 && idx < end) || (step < 0 && idx > end);
+				},
+				iterate: {
+					worker(idx);
+					idx: idx + step;
+				}
+			);
+		});
+	}
+
+	## Repeatedly invokes [worker]() until it returns `false`.
+	##
+	## @param worker: Closure returning `true` to continue or `false` to stop.
+	Function is forever(Function of Boolean is worker){
+		local Boolean is keepGoing: true;
+		base:sysinternal:Loops:while(
+			evaluate: { return keepGoing; },
+			iterate: {
+				keepGoing: worker();
+			}
+		);
 	}
 }
