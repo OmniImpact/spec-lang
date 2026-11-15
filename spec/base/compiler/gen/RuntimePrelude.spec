@@ -60,6 +60,7 @@ Class is RuntimePrelude{
 #include <errno.h>
 #include <math.h>
 #include <unistd.h>
+#include <stdarg.h>
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wparentheses-equality"
@@ -82,6 +83,7 @@ long long spec_string_length(String b);
 bool spec_string_equals(String a, String b);
 long long spec_string_compare(String a, String b);
 String spec_string_concat(String a, String b);
+String spec_string_concat_n(int count, ...);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
@@ -220,6 +222,7 @@ long long spec_string_length(String b);
 bool spec_string_equals(String a, String b);
 long long spec_string_compare(String a, String b);
 String spec_string_concat(String a, String b);
+String spec_string_concat_n(int count, ...);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
@@ -1973,6 +1976,20 @@ void spec_array_destroy(void* self) {
     }
 }
 
+static _Atomic int g_spec_active_threads = 0;
+
+static inline void spec_thread_enter(void) {
+    atomic_fetch_add_explicit(&g_spec_active_threads, 1, memory_order_release);
+}
+
+static inline void spec_thread_leave(void) {
+    atomic_fetch_sub_explicit(&g_spec_active_threads, 1, memory_order_release);
+}
+
+static inline bool spec_is_multithreaded(void) {
+    return atomic_load_explicit(&g_spec_active_threads, memory_order_acquire) > 0;
+}
+
 SpecArray* spec_array_new(void) {
     return spec_array_new_kind(SPEC_ELEM_NONE);
 }
@@ -1984,7 +2001,8 @@ SpecArray* spec_array_new_object(void) {
 void spec_array_add(SpecArray* a, void* item) {
     if (!a) return;
     if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    pthread_mutex_lock(&a->lock);
+    bool mt = spec_is_multithreaded();
+    if (mt) pthread_mutex_lock(&a->lock);
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
         a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
@@ -1992,7 +2010,7 @@ void spec_array_add(SpecArray* a, void* item) {
     }
     if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
     a->items[a->length++] = item;
-    pthread_mutex_unlock(&a->lock);
+    if (mt) pthread_mutex_unlock(&a->lock);
 }
 
 void spec_array_add_object(SpecArray* a, void* item) {
@@ -2003,7 +2021,8 @@ void spec_array_add_object(SpecArray* a, void* item) {
 void spec_array_add_owned(SpecArray* a, void* item) {
     if (!a) return;
     if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    pthread_mutex_lock(&a->lock);
+    bool mt = spec_is_multithreaded();
+    if (mt) pthread_mutex_lock(&a->lock);
     if (a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
@@ -2011,7 +2030,7 @@ void spec_array_add_owned(SpecArray* a, void* item) {
         a->capacity = ncap;
     }
     a->items[a->length++] = item;
-    pthread_mutex_unlock(&a->lock);
+    if (mt) pthread_mutex_unlock(&a->lock);
 }
 
 void spec_array_add_array(SpecArray* a, SpecArray* other) {
@@ -2059,7 +2078,7 @@ void spec_array_add_array(SpecArray* a, SpecArray* other) {
 
 long long spec_array_length(SpecArray* a) {
     if (!a) return 0;
-    if (a->frozen) return (long long)a->length;
+    if (a->frozen || !spec_is_multithreaded()) return (long long)a->length;
     pthread_mutex_lock(&a->lock);
     long long len = (long long)a->length;
     pthread_mutex_unlock(&a->lock);
@@ -2068,7 +2087,7 @@ long long spec_array_length(SpecArray* a) {
 
 void* spec_array_get(SpecArray* a, long long idx) {
     if (!a) spec_panic("Null pointer access on uninitialized Array");
-    if (a->frozen) {
+    if (a->frozen || !spec_is_multithreaded()) {
         if (idx < 0 || (size_t)idx >= a->length) {
             spec_panic_bounds("Array", idx, a->length);
             return NULL;
@@ -2099,10 +2118,11 @@ void* spec_array_get(SpecArray* a, long long idx) {
 void spec_array_set(SpecArray* a, long long idx, void* item) {
     if (!a) spec_panic("Null pointer access on uninitialized Array");
     if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    pthread_mutex_lock(&a->lock);
+    bool mt = spec_is_multithreaded();
+    if (mt) pthread_mutex_lock(&a->lock);
     if (idx < 0 || (size_t)idx >= a->length) {
         size_t len = a->length;
-        pthread_mutex_unlock(&a->lock);
+        if (mt) pthread_mutex_unlock(&a->lock);
         spec_panic_bounds("Array assignment", idx, len);
         return;
     }
@@ -2111,7 +2131,7 @@ void spec_array_set(SpecArray* a, long long idx, void* item) {
         if (a->items[idx]) spec_release(a->items[idx]);
     }
     a->items[idx] = item;
-    pthread_mutex_unlock(&a->lock);
+    if (mt) pthread_mutex_unlock(&a->lock);
 }
 
 void* spec_array_pop(SpecArray* a, void* def) {
@@ -2213,7 +2233,8 @@ static void _spec_map_set_raw(SpecMap* m, uint64_t key_bits, const char* ck, voi
     if (!m) return;
     if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return; }
     if (m->key_kind == SPEC_KEY_STRING && !ck) return;
-    pthread_mutex_lock(&m->lock);
+    bool mt = spec_is_multithreaded();
+    if (mt) pthread_mutex_lock(&m->lock);
     size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
     SpecMapEntry* curr = m->buckets[idx];
     while (curr) {
@@ -2227,7 +2248,7 @@ static void _spec_map_set_raw(SpecMap* m, uint64_t key_bits, const char* ck, voi
                 curr->value = val;
             }
             curr->is_str = val_is_str;
-            pthread_mutex_unlock(&m->lock);
+            if (mt) pthread_mutex_unlock(&m->lock);
             return;
         }
         curr = curr->next;
@@ -2247,13 +2268,13 @@ static void _spec_map_set_raw(SpecMap* m, uint64_t key_bits, const char* ck, voi
     e->next = m->buckets[idx];
     m->buckets[idx] = e;
     m->length++;
-    pthread_mutex_unlock(&m->lock);
+    if (mt) pthread_mutex_unlock(&m->lock);
 }
 
 static void* _spec_map_get_raw(SpecMap* m, uint64_t key_bits, const char* ck, void* _default) {
     if (!m) return _default;
     if (m->key_kind == SPEC_KEY_STRING && !ck) return _default;
-    if (m->frozen) {
+    if (m->frozen || !spec_is_multithreaded()) {
         size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
         SpecMapEntry* curr = m->buckets[idx];
         while (curr) {
@@ -2285,7 +2306,7 @@ static void* _spec_map_get_raw(SpecMap* m, uint64_t key_bits, const char* ck, vo
 static bool _spec_map_has_raw(SpecMap* m, uint64_t key_bits, const char* ck) {
     if (!m) return false;
     if (m->key_kind == SPEC_KEY_STRING && !ck) return false;
-    if (m->frozen) {
+    if (m->frozen || !spec_is_multithreaded()) {
         size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
         SpecMapEntry* curr = m->buckets[idx];
         while (curr) {
@@ -2457,7 +2478,7 @@ bool spec_map_remove_obj(SpecMap* m, void* key) {
 
 long long spec_map_length(SpecMap* m) {
     if (!m) return 0;
-    if (m->frozen) return (long long)m->length;
+    if (m->frozen || !spec_is_multithreaded()) return (long long)m->length;
     pthread_mutex_lock(&m->lock);
     long long cnt = (long long)m->length;
     pthread_mutex_unlock(&m->lock);
@@ -2479,7 +2500,7 @@ SpecArray* spec_map_keys(SpecMap* m) {
         ? spec_array_new_object()
         : spec_array_new();
     if (!m) return a;
-    if (m->frozen) {
+    if (m->frozen || !spec_is_multithreaded()) {
         for (size_t i = 0; i < m->nbuckets; i++) {
             SpecMapEntry* curr = m->buckets[i];
             while (curr) {
@@ -2523,6 +2544,7 @@ void LoopControl_stop(SpecLoopControl* c) {
 }
 
 void spec_async_task_started(void) {
+    spec_thread_enter();
     pthread_mutex_lock(&spec_task_mutex);
     spec_in_flight_tasks++;
     pthread_mutex_unlock(&spec_task_mutex);
@@ -2536,6 +2558,7 @@ void spec_async_task_finished(void) {
         pthread_cond_broadcast(&spec_task_cond);
     }
     pthread_mutex_unlock(&spec_task_mutex);
+    spec_thread_leave();
 }
 
 void spec_drain_async_tasks(void) {
@@ -2886,6 +2909,38 @@ String spec_string_concat(String a, String b) {
     if (a->length) spec_buf_append_buf(res, a);
     spec_buf_append_buf(res, b);
     spec_release(a);
+    return res;
+}
+
+String spec_string_concat_n(int count, ...) {
+    if (count <= 0) return spec_string_from_bytes("", 0);
+    va_list ap;
+    va_start(ap, count);
+    size_t total_len = 0;
+    String stack_parts[32];
+    String* parts = (count <= 32) ? stack_parts : (String*)spec_xmalloc((size_t)count * sizeof(String));
+    for (int i = 0; i < count; i++) {
+        String s = va_arg(ap, String);
+        parts[i] = s;
+        if (s) total_len += s->length;
+    }
+    va_end(ap);
+    String res = spec_buf_new(1, 0);
+    if (total_len > 0) {
+        spec_buf_grow(res, total_len);
+        unsigned char* dst = (unsigned char*)res->data;
+        size_t pos = 0;
+        for (int i = 0; i < count; i++) {
+            String s = parts[i];
+            if (s && s->length > 0) {
+                memcpy(dst + pos, s->data, s->length);
+                pos += s->length;
+            }
+        }
+        res->length = pos;
+        dst[pos] = 0;
+    }
+    if (parts != stack_parts) free(parts);
     return res;
 }
 
@@ -3899,6 +3954,7 @@ long long spec_parallel_run(long long threads, long long iterations, void* worke
     if (threads < 1) threads = 1;
     SpecClosure* cls = (SpecClosure*)worker_closure;
     if (!cls || !cls->fn) spec_panic("Parallel:run received null worker Function");
+    spec_thread_enter();
     pthread_t* tids = (pthread_t*)spec_xmalloc(sizeof(pthread_t) * (size_t)threads);
     bool* spawned = (bool*)spec_xmalloc(sizeof(bool) * (size_t)threads);
     long long total = 0;
@@ -3921,6 +3977,7 @@ long long spec_parallel_run(long long threads, long long iterations, void* worke
         pthread_join(tids[i], &ret);
         total += (long long)(intptr_t)ret;
     }
+    spec_thread_leave();
     free(tids);
     free(spawned);
     return total;
@@ -4285,6 +4342,7 @@ void spec_monitor_start(void) {
     _spec_mon_start_cpu_us = spec_pal_get_cpu_time_us();
 
     _spec_mon_active = true;
+    spec_thread_enter();
     pthread_create(&_spec_mon_thread, NULL, _spec_monitor_worker, NULL);
 }
 
@@ -4292,6 +4350,7 @@ void spec_monitor_stop(void) {
     if (!_spec_mon_active) return;
     _spec_mon_active = false;
     pthread_join(_spec_mon_thread, NULL);
+    spec_thread_leave();
 
     long long end_wall_us = spec_pal_get_wall_time_us();
     long long end_cpu_us = spec_pal_get_cpu_time_us();

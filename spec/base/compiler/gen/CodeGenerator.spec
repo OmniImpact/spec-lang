@@ -288,6 +288,9 @@ Class is CodeGenerator{
 	## Locals captured by closures that require a reference box (SpecBox*).
 	local Map of String to String is boxedLocals: Map:init();
 
+	## Function parameters bound to literal AnonFn expressions during structural inlining.
+	local Map of String to Expression is inlineFnMap: Map:init();
+
 	## True when the current inline-return target is ARC-managed
 	## (reassignment goes through spec_assign).
 	local Boolean is inlineReturnArc: false;
@@ -2232,6 +2235,22 @@ Class is CodeGenerator{
 
 	## Emits a binary operation: concat, equality, arithmetic, bitwise.
 	##
+	Function is collectConcatParts(Expression is expr, Array of Expression is out){
+		match(on: expr, when: [
+			Expression:Binary: local Function(String is op, Expression is left, Expression is right){
+				if({ op == '.' }, {
+					self:collectConcatParts(expr: left, out: out);
+					self:collectConcatParts(expr: right, out: out);
+					return;
+				});
+				out:add(item: expr);
+			},
+			else: {
+				out:add(item: expr);
+			}
+		]);
+	}
+
 	## @param expr: The BINARY expression.
 	## @return: C expression.
 	Function of String is emitBinary(Expression is expr){
@@ -2239,6 +2258,24 @@ Class is CodeGenerator{
 			Expression:Binary: local Function of String(String is op, Expression is left, Expression is right){
 				return match(on: op, when: [
 					'.': {
+						local Array of Expression is parts: [];
+						self:collectConcatParts(expr: expr, out: parts);
+						if({ parts:length() >= 3 }, {
+							local Boolean is savedArgN: self:argMode;
+							self:argMode: true;
+							local String is joinedParts: '';
+							local Int is pi: 0;
+							parts:each(action: local Function(Expression is part){
+								if({ pi > 0 }, {
+									joinedParts: joinedParts . ', ';
+								});
+								local String is pC: self:generateExpression(expr: part);
+								joinedParts: joinedParts . self:wrapToString(expr: part, exprC: pC);
+								pi: pi + 1;
+							});
+							self:argMode: savedArgN;
+							return 'spec_string_concat_n(' . parts:length() . ', ' . joinedParts . ')';
+						});
 						local String is leftC: self:generateExpressionInner(expr: left);
 						local String is leftT: self:inferTargetType(expr: left);
 						local Boolean is leftPrim: leftT == Primitive:INT:value() || leftT == 'Byte' || leftT == 'Float' || leftT == 'Boolean';
@@ -2702,6 +2739,12 @@ Class is CodeGenerator{
 					});
 				});
 
+				# Function parameter bound during structural AnonFn inlining.
+				if({ targetC == self:names:selfIdent() && self:inlineFnMap:has(key: call:name) }, {
+					local Expression is boundFn: self:inlineFnMap:get(key: call:name, default: Expression:Unknown);
+					return self:generateInlineBoundFnCall(fnExpr: boundFn, args: call:args);
+				});
+
 				# Function variable or field invocation: fnVar(args).
 				if({ targetC == self:names:selfIdent() && (self:localVars:has(key: call:name) || self:fieldTypes:has(key: call:name)) }, {
 					local String is fnVarT: self:localVars:getString(key: call:name, default: self:fieldTypes:getString(key: call:name, default: ''));
@@ -2818,6 +2861,10 @@ Class is CodeGenerator{
 							if({ unwrappedC != '' }, {
 								return unwrappedC;
 							});
+							local String is inlinedAnonC: self:maybeInlineAnonCall(cls: staticCls, m: mDef, call: call, resolvedType: expr:resolvedType);
+							if({ inlinedAnonC != '' }, {
+								return inlinedAnonC;
+							});
 						});
 						local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: call:name, idx: call:overloadIndex);
 						if({ self:isFieldFulClass(cls: self:findClass(name: targetC)) }, {
@@ -2838,6 +2885,10 @@ Class is CodeGenerator{
 						local String is bpUnwrapped: self:maybeUnwrapForwardingCall(cls: bpCls, m: bpM, call: call, resolvedType: expr:resolvedType);
 						if({ bpUnwrapped != '' }, {
 							return bpUnwrapped;
+						});
+						local String is bpInlinedAnon: self:maybeInlineAnonCall(cls: bpCls, m: bpM, call: call, resolvedType: expr:resolvedType);
+						if({ bpInlinedAnon != '' }, {
+							return bpInlinedAnon;
 						});
 					});
 					local String is bpArgs: self:formatCallArgumentsWith(className: call:bareProvider, methodName: call:name, idx: call:overloadIndex, args: call:args);
@@ -2952,41 +3003,79 @@ Class is CodeGenerator{
 	## @param name: The local's Spec name.
 	## @param stmts: The statement list to scan.
 	## @return: true when the local is assigned.
+	Function of Boolean is stmtAssignsLocal(String is name, Statement is stmt){
+		local Boolean is found: false;
+		match(on: stmt, when: [
+			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+				if({ hasInit && self:exprAssignsLocal(name: name, expr: initExpr) }, {
+					found: true;
+				});
+			},
+			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+				local Boolean is targetMatch: false;
+				match(on: assignTarget, when: [
+					Expression:Ident: local Function(String is s){ targetMatch: s == name; }
+				], default: {});
+				if({ targetMatch || self:exprAssignsLocal(name: name, expr: assignValue) }, {
+					found: true;
+				});
+			},
+			Statement:Expr: local Function(Expression is exprStmt){
+				if({ self:exprAssignsLocal(name: name, expr: exprStmt) }, {
+					found: true;
+				});
+			},
+			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+				if({ hasReturnExpr && self:exprAssignsLocal(name: name, expr: returnExpr) }, {
+					found: true;
+				});
+			},
+			else: {}
+		]);
+		return found;
+	}
+
 	Function of Boolean is bodyAssignsLocal(String is name, Array of Statement is stmts){
 		local Boolean is found: false;
 		stmts:each(action: local Function(Statement is s){
-			if({ found }, {
-				return;
+			if({ !found && self:stmtAssignsLocal(name: name, stmt: s) }, {
+				found: true;
 			});
-			match(on: s, when: [
-				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
-					if({ hasInit && self:exprAssignsLocal(name: name, expr: initExpr) }, {
-						found: true;
-					});
-				},
-				Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
-					local Boolean is targetMatch: false;
-					match(on: assignTarget, when: [
-						Expression:Ident: local Function(String is s){ targetMatch: s == name; }
-					], default: {});
-					if({ targetMatch || self:exprAssignsLocal(name: name, expr: assignValue) }, {
-						found: true;
-					});
-				},
-				Statement:Expr: local Function(Expression is exprStmt){
-					if({ self:exprAssignsLocal(name: name, expr: exprStmt) }, {
-						found: true;
-					});
-				},
-				Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
-					if({ hasReturnExpr && self:exprAssignsLocal(name: name, expr: returnExpr) }, {
-						found: true;
-					});
-				},
-				else: {}
-			]);
 		});
 		return found;
+	}
+
+	Function of Boolean is bodyMutatesAfterCapture(String is name, Array of Statement is stmts){
+		local Boolean is seenCapture: false;
+		local Boolean is mutatedAfter: false;
+		stmts:each(action: local Function(Statement is s){
+			if({ mutatedAfter }, {
+				return;
+			});
+			local Array of Expression is anonsInS: [];
+			self:findAnonsInStmt(stmt: s, results: anonsInS);
+			local Boolean is capturesInS: false;
+			anonsInS:each(action: local Function(Expression is anon){
+				if({ !capturesInS }, {
+					match(on: anon, when: [
+						Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+							if({ self:stmtListReferencesLocal(name: name, stmts: bd) }, {
+								capturesInS: true;
+							});
+						}
+					], default: {});
+				});
+			});
+			local Boolean is assignsInS: self:stmtAssignsLocal(name: name, stmt: s);
+			if({ (seenCapture && assignsInS) || (capturesInS && assignsInS) }, {
+				mutatedAfter: true;
+				return;
+			});
+			if({ capturesInS }, {
+				seenCapture: true;
+			});
+		});
+		return mutatedAfter;
 	}
 
 	## Recursively checks whether an expression (such as an inlined call or
@@ -3093,11 +3182,14 @@ Class is CodeGenerator{
 				if({ (call:bareProvider == 'Loops' || (targetIsIdent && targetIdentStr == 'Loops')) && (m == 'while' || m == 'until' || m == 'loop' || m == 'repeat' || m == 'condition' || m == 'init') }, {
 					return true;
 				});
-				if({ m == 'each' || m == 'filter' || m == 'count' || m == 'any' || m == 'map' || m == 'fold' }, {
+				if({ m == 'each' || m == 'filter' || m == 'count' || m == 'any' || m == 'all' || m == 'none' || m == 'map' || m == 'fold' }, {
 					local String is tgtT: self:inferTargetType(expr: call:target);
 					if({ tgtT:startsWith(prefix: 'Array') || tgtT:startsWith(prefix: 'List') || tgtT:startsWith(prefix: 'Map') || tgtT == 'Array' || tgtT == 'List' || tgtT == 'Map' }, {
 						return true;
 					});
+				});
+				if({ self:isInlineableAnonCallExpr(call: call) }, {
+					return true;
 				});
 				return false;
 			},
@@ -3321,7 +3413,7 @@ Class is CodeGenerator{
 		local Array of String is candKeys: candidates:keys();
 		candKeys:each(action: local Function(String is k){
 			local Boolean is captured: false;
-			local Boolean is mutated: self:bodyAssignsLocal(name: k, stmts: method:body);
+			local Boolean is mutated: self:bodyMutatesAfterCapture(name: k, stmts: method:body);
 
 			runtimeAnons:each(action: local Function(Expression is anon){
 				match(on: anon, when: [
@@ -5608,6 +5700,18 @@ Class is CodeGenerator{
 			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') { ' . fndVar . " = true; break; }\n    } } " . fndVar . '; })';
 			return out;
 		});
+		if({ mode == 'all' }, {
+			local String is allVar: '_all_' . id;
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; bool ' . allVar . ' = true; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n        SPEC_POOL_AUTO;\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (!" . predVar . ') { ' . allVar . " = false; break; }\n    } } " . allVar . '; })';
+			return out;
+		});
+		if({ mode == 'none' }, {
+			local String is noneVar: '_none_' . id;
+			local String is out: '({ SpecArray* ' . arrVar . ' = ' . targetC . '; bool ' . noneVar . ' = true; if (' . arrVar . ') { for (size_t ' . idxVar . ' = 0; ' . idxVar . ' < ' . arrVar . '->length; ' . idxVar . "++) {\n        SPEC_POOL_AUTO;\n";
+			out: out . paramDecl . '        bool ' . predVar . " = false;\n        do {\n" . bodyC . "        } while (0);\n        if (" . predVar . ') { ' . noneVar . " = false; break; }\n    } } " . noneVar . '; })';
+			return out;
+		});
 		if({ mode == 'map' }, {
 			local String is outVar: '_out_' . id;
 			local String is retCType: self:cTypeFor(typeName: fnRetType:name);
@@ -6690,6 +6794,280 @@ Class is CodeGenerator{
 	## @return: C statement expression.
 	Function of String is generateInlineWhileCondition(Expression is evalExpr, Expression is iterExpr){
 		return self:generateInlineWhileLoop(loopVars: [], evalExpr: evalExpr, iterExpr: iterExpr);
+	}
+
+	Function of Boolean is isInlineableAnonCallExpr(CallData is call){
+		local String is clsName: call:bareProvider;
+		if({ clsName == '' }, {
+			match(on: call:target, when: [
+				Expression:Ident: local Function(String is s){
+					if({ self:allClassNames:has(key: s) }, {
+						clsName: s;
+					});
+				}
+			], default: {});
+		});
+		if({ clsName == '' || !self:allClassNames:has(key: clsName) || self:allEnumNames:has(key: clsName) }, {
+			return false;
+		});
+		local ClassInfo is cls: self:findClass(name: clsName);
+		if({ self:isFieldFulClass(cls: cls) }, {
+			return false;
+		});
+		local Member is m: self:lookupOverloadedMemberGen(className: clsName, methodName: call:name, idx: call:overloadIndex);
+		return self:opt:isInlineableAnonMethod(c: cls, m: m, call: call);
+	}
+
+	Function of String is maybeInlineAnonCall(ClassInfo is cls, Member is m, CallData is call, String is resolvedType){
+		if({ !self:opt:isInlineableAnonMethod(c: cls, m: m, call: call) }, {
+			return '';
+		});
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+
+		# Evaluate non-Function arguments in caller scope before switching maps.
+		local Array of String is paramDecls: [];
+		local Map of String to Expression is newFnBindings: Map:init();
+		local Boolean is savedArg: self:argMode;
+		self:argMode: true;
+		local Int is pi: 0;
+		m:params:each(action: local Function(Parameter is p){
+			local Expression is argVal: Expression:Unknown;
+			local Boolean is foundArg: false;
+			call:args:each(action: local Function(NamedArg is a){
+				if({ !foundArg && a:name == p:name && p:name != '' }, {
+					argVal: a:value;
+					foundArg: true;
+				});
+			});
+			if({ !foundArg && pi < call:args:length() }, {
+				local NamedArg is posArg: call:args:get(index: pi);
+				if({ posArg:name == '' || posArg:name == p:name }, {
+					argVal: posArg:value;
+					foundArg: true;
+				});
+			});
+			local String is pt: p:paramType:name;
+			if({ pt == 'Function' || pt:startsWith(prefix: 'Function:') }, {
+				newFnBindings:set(key: p:name, value: argVal);
+			}, {
+				local String is valC: '0';
+				if({ foundArg }, {
+					valC: self:generateExpression(expr: argVal);
+				});
+				local String is pCType: self:cTypeFor(typeName: pt);
+				paramDecls:add(item: '    ' . pCType . ' ' . self:utils:cIdent(name: p:name) . ' = (' . pCType . ')(' . valC . ");\n");
+			});
+			pi: pi + 1;
+		});
+		self:argMode: savedArg;
+
+		# Save generator state.
+		local Map of String to String is savedVars: Map:init();
+		self:localVars:keys():each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+		local Map of String to Expression is savedInlineFns: Map:init();
+		self:inlineFnMap:keys():each(action: local Function(String is k){
+			savedInlineFns:set(key: k, value: self:inlineFnMap:get(key: k, default: Expression:Unknown));
+		});
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+		local Boolean is savedRetArc: self:inlineReturnArc;
+		local String is savedYieldT: self:inlineYieldType;
+		local String is savedCleanupLbl: self:cleanupLabel;
+		local String is savedCleanupRet: self:cleanupRetVar;
+
+		self:cleanupLabel: '';
+		self:cleanupRetVar: '';
+		newFnBindings:keys():each(action: local Function(String is k){
+			self:inlineFnMap:set(key: k, value: newFnBindings:get(key: k, default: Expression:Unknown));
+		});
+		m:params:each(action: local Function(Parameter is p){
+			local String is pt: p:paramType:name;
+			if({ pt != 'Function' && !pt:startsWith(prefix: 'Function:') }, {
+				self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
+			});
+		});
+
+		local String is retTypeName: self:opt:methodReturnTypeName(t: m:memberType);
+		if({ resolvedType != '' && retTypeName == '' }, {
+			retTypeName: resolvedType;
+		});
+		local Boolean is isVoidRet: retTypeName == '' || retTypeName == 'Void' || retTypeName == 'void';
+		local String is endLbl: '_inl_end_' . id;
+		local String is retVar: '_inl_ret_' . id;
+		local String is retCType: self:cTypeFor(typeName: retTypeName);
+		if({ isVoidRet }, {
+			self:inlineReturnVar: '';
+			self:inlineReturnLabel: endLbl;
+			self:inlineReturnArc: false;
+			self:inlineYieldType: '';
+		}, {
+			self:inlineReturnVar: retVar;
+			self:inlineReturnLabel: endLbl;
+			self:inlineReturnArc: self:isArcType(typeName: retTypeName);
+			self:inlineYieldType: retTypeName;
+		});
+
+		local String is bodyC: '';
+		m:body:each(action: local Function(Statement is s){
+			bodyC: bodyC . self:generateStatement(stmt: s);
+		});
+		bodyC: bodyC . self:scopeReleases(stmts: m:body);
+
+		# Restore generator state.
+		self:localVars: savedVars;
+		self:inlineFnMap: savedInlineFns;
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+		self:inlineReturnArc: savedRetArc;
+		self:inlineYieldType: savedYieldT;
+		self:cleanupLabel: savedCleanupLbl;
+		self:cleanupRetVar: savedCleanupRet;
+
+		local String is out: "({\n";
+		if({ self:opt:stmtsNeedPoolFrame(stmts: m:body) }, {
+			out: out . "    SPEC_POOL_AUTO;\n";
+		});
+		if({ !isVoidRet }, {
+			out: out . '    ' . retCType . ' ' . retVar . " = 0;\n";
+		});
+		paramDecls:each(action: local Function(String is d){
+			out: out . d;
+		});
+		out: out . bodyC . '    ' . endLbl . ": ;\n";
+		if({ !isVoidRet }, {
+			out: out . '    ' . retVar . ";\n";
+		});
+		out: out . '})';
+		return out;
+	}
+
+	Function of String is generateInlineBoundFnCall(Expression is fnExpr, Array of NamedArg is args){
+		self:anonCounter: self:anonCounter + 1;
+		local Int is id: self:anonCounter;
+
+		local Type is fnRetType: Type:init(name: '');
+		local Array of Parameter is fnParams: [];
+		local Array of Statement is fnBody: [];
+		match(on: fnExpr, when: [
+			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				fnRetType: rt;
+				fnParams: ps;
+				fnBody: bd;
+			}
+		], default: {});
+
+		local Array of String is paramDecls: [];
+		local Boolean is savedArg: self:argMode;
+		self:argMode: true;
+		local Int is pi: 0;
+		fnParams:each(action: local Function(Parameter is p){
+			local Expression is argVal: Expression:Unknown;
+			local Boolean is foundArg: false;
+			args:each(action: local Function(NamedArg is a){
+				if({ !foundArg && a:name == p:name && p:name != '' }, {
+					argVal: a:value;
+					foundArg: true;
+				});
+			});
+			if({ !foundArg && pi < args:length() }, {
+				local NamedArg is posArg: args:get(index: pi);
+				argVal: posArg:value;
+				foundArg: true;
+			});
+			local String is valC: '0';
+			if({ foundArg }, {
+				valC: self:generateExpression(expr: argVal);
+			});
+			local String is pCType: self:cTypeFor(typeName: p:paramType:name);
+			paramDecls:add(item: '    ' . pCType . ' ' . self:utils:cIdent(name: p:name) . ' = (' . pCType . ')(' . valC . ");\n");
+			pi: pi + 1;
+		});
+		self:argMode: savedArg;
+
+		local Map of String to String is savedVars: Map:init();
+		self:localVars:keys():each(action: local Function(String is k){
+			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
+		});
+		fnParams:each(action: local Function(Parameter is p){
+			self:localVars:set(key: p:name, value: self:formatVarTypeString(t: p:paramType));
+		});
+
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+		local Boolean is savedRetArc: self:inlineReturnArc;
+		local String is savedYieldT: self:inlineYieldType;
+
+		local String is retT: fnRetType:name;
+		local Boolean is isVoidRet: retT == '' || retT == 'Void' || retT == 'void';
+		local String is endLbl: '_fnend_' . id;
+		local String is retVar: '_fnret_' . id;
+		local String is retCType: self:cTypeFor(typeName: retT);
+
+		local String is bodyC: '';
+		if({ isVoidRet }, {
+			self:inlineReturnVar: '';
+			self:inlineReturnLabel: endLbl;
+			self:inlineReturnArc: false;
+			self:inlineYieldType: '';
+			fnBody:each(action: local Function(Statement is s){
+				bodyC: bodyC . self:generateStatement(stmt: s);
+			});
+			bodyC: bodyC . self:scopeReleases(stmts: fnBody);
+		}, {
+			self:inlineReturnVar: retVar;
+			self:inlineReturnLabel: endLbl;
+			self:inlineReturnArc: self:isArcType(typeName: retT);
+			self:inlineYieldType: retT;
+			local Int is bodyLen: fnBody:length();
+			local Int is bi: 0;
+			fnBody:each(action: local Function(Statement is st){
+				local Boolean is handled: false;
+				if({ bi == bodyLen - 1 }, {
+					match(on: st, when: [
+						Statement:Expr: local Function(Expression is exprStmt){
+							local Boolean is savedA2: self:argMode;
+							self:argMode: false;
+							local String is yC: self:generateExpression(expr: exprStmt);
+							self:argMode: savedA2;
+							yC: self:wrapYieldValue(expr: exprStmt, retC: yC, yieldT: retT);
+							bodyC: bodyC . '    ' . retVar . ' = ' . yC . ";\n";
+							handled: true;
+						}
+					], default: {});
+				});
+				if({ !handled }, {
+					bodyC: bodyC . self:generateStatement(stmt: st);
+				});
+				bi: bi + 1;
+			});
+			bodyC: bodyC . self:scopeReleases(stmts: fnBody);
+		});
+
+		self:localVars: savedVars;
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+		self:inlineReturnArc: savedRetArc;
+		self:inlineYieldType: savedYieldT;
+
+		local String is out: "({\n";
+		if({ self:opt:stmtsNeedPoolFrame(stmts: fnBody) }, {
+			out: out . "    SPEC_POOL_AUTO;\n";
+		});
+		if({ !isVoidRet }, {
+			out: out . '    ' . retCType . ' ' . retVar . " = 0;\n";
+		});
+		paramDecls:each(action: local Function(String is d){
+			out: out . d;
+		});
+		out: out . bodyC . '    ' . endLbl . ": ;\n";
+		if({ !isVoidRet }, {
+			out: out . '    ' . retVar . ";\n";
+		});
+		out: out . '})';
+		return out;
 	}
 
 }

@@ -680,6 +680,18 @@ Class is BuiltinCallGenerator{
 				local Expression is fnExpr: self:argValue(expr: expr, index: 0);
 				return cg:generateInlineArrayOp(mode: 'any', targetC: targetC, fnExpr: fnExpr);
 			});
+			if({ m == 'all' || m == 'none' }, {
+				if({ expr:argCount() > 0 }, {
+					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
+					local Boolean is isAnon: match(on: fnExpr, when: [
+						Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){ return true; },
+						else: { false }
+					]);
+					if({ isAnon }, {
+						return cg:generateInlineArrayOp(mode: m, targetC: targetC, fnExpr: fnExpr);
+					});
+				});
+			});
 			if({ m == 'map' }, {
 				if({ expr:argCount() > 0 }, {
 					local Expression is fnExpr: self:argValue(expr: expr, index: 0);
