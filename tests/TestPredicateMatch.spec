@@ -84,4 +84,13 @@ Class of SpecUnitTest is TestPredicateMatch{
 		]);
 		Assert:areEqualInt(10, hits);
 	}
+
+	Function is testPredicateDefaultParam(){
+		local Int is x: 3;
+		local String is res: match(when: [
+			{ x == 1 }: { 'one' },
+			{ x == 2 }: { 'two' }
+		], default: { 'other' });
+		Assert:areEqualString('other', res);
+	}
 }

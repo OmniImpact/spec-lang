@@ -210,6 +210,9 @@ Class is CodeGenerator{
 	## Active inline-return label (closure inlining).
 	local String is inlineReturnLabel: '';
 
+	## Active inline-yield type (value-form branch/match inlining).
+	local String is inlineYieldType: '';
+
 	## Part IV memory discipline: the active method-level
 	## cleanup label — returns funnel through it so the scope-end releases
 	## run on every exit path, not only the fall-through one.
@@ -281,6 +284,7 @@ Class is CodeGenerator{
 		self:anonCounter: 0;
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
+		self:inlineYieldType: '';
 		self:cleanupLabel: '';
 		self:cleanupRetVar: '';
 		self:cleanupCounter: 0;
@@ -2521,8 +2525,10 @@ Class is CodeGenerator{
 				if({ call:name == 'match' && (call:bareProvider == 'Conditional' || targetType == 'Conditional' || (targetIsIdent && targetIdentStr == 'match')) }, {
 					local Expression is matchSubjC: Expression:Unknown;
 					local Expression is matchArmsC: Expression:Unknown;
+					local Expression is matchDefaultC: Expression:Unknown;
 					local Boolean is hasSubjC: false;
 					local Boolean is hasArmsC: false;
+					local Boolean is hasDefaultC: false;
 					local Boolean is armsIsMap: false;
 					call:args:each(action: local Function(NamedArg is arg){
 						if({ arg:name == 'on' }, {
@@ -2533,6 +2539,10 @@ Class is CodeGenerator{
 							matchArmsC: arg:value;
 							hasArmsC: true;
 						});
+						if({ arg:name == 'default' }, {
+							matchDefaultC: arg:value;
+							hasDefaultC: true;
+						});
 					});
 					if({ hasArmsC }, {
 						match(on: matchArmsC, when: [
@@ -2541,11 +2551,12 @@ Class is CodeGenerator{
 							}
 						], default: {});
 					});
+					local Boolean is defaultActiveC: hasDefaultC && self:isNonEmptyAnon(expr: matchDefaultC);
 					if({ hasSubjC && armsIsMap }, {
-						return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC);
+						return self:generateMatch(callExpr: expr, subjArg: matchSubjC, armsArg: matchArmsC, defaultArm: matchDefaultC, hasDefault: defaultActiveC);
 					});
 					if({ !hasSubjC && armsIsMap }, {
-						return self:generatePredicateMatch(callExpr: expr, armsArg: matchArmsC);
+						return self:generatePredicateMatch(callExpr: expr, armsArg: matchArmsC, defaultArm: matchDefaultC, hasDefault: defaultActiveC);
 					});
 					if({ hasSubjC && hasArmsC }, {
 						local String is rtSubj: self:generateExpression(expr: matchSubjC);
@@ -3218,8 +3229,11 @@ Class is CodeGenerator{
 
 		local String is savedRetVar: self:inlineReturnVar;
 		local String is savedRetLbl: self:inlineReturnLabel;
+		local String is savedYieldT: self:inlineYieldType;
 		self:inlineReturnVar: '';
 		self:inlineReturnLabel: '';
+		self:inlineYieldType: '';
+		self:inlineYieldType: '';
 		# The closure body is its own C function with its OWN cleanup
 		# funnel: its returns release its locals through the label, and the
 		# write-backs transfer their locals' ownership to the env (those
@@ -3292,6 +3306,7 @@ Class is CodeGenerator{
 		self:boxedLocals: savedBoxed;
 		self:inlineReturnVar: savedRetVar;
 		self:inlineReturnLabel: savedRetLbl;
+		self:inlineYieldType: savedYieldT;
 		self:localVars: savedVars;
 		self:localScopeVars: savedScopeVars;
 		# the capture scans run over the body with
@@ -4046,8 +4061,21 @@ Class is CodeGenerator{
 	Function of String is emitReturn(Expression is returnExpr, Boolean is hasReturnExpr){
 		if({ self:inlineReturnLabel != '' }, {
 			if({ hasReturnExpr && self:inlineReturnVar != '' }, {
+				if({ self:inlineReturnLabel != 'break' }, {
+					local Boolean is savedArgIr: self:argMode;
+					self:argMode: false;
+					local String is retC: self:generateExpression(expr: returnExpr);
+					self:argMode: savedArgIr;
+					if({ self:inlineYieldType != '' }, {
+						retC: self:wrapYieldValue(expr: returnExpr, retC: retC, yieldT: self:inlineYieldType);
+					});
+					return '    ' . self:inlineReturnVar . ' = ' . retC . '; goto ' . self:inlineReturnLabel . ";\n";
+				});
 				local String is retC: self:generateExpression(expr: returnExpr);
 				return '    ' . self:inlineReturnVar . ' = ' . retC . "; break;\n";
+			});
+			if({ self:inlineReturnLabel != 'break' }, {
+				return '    goto ' . self:inlineReturnLabel . ";\n";
 			});
 			return "    break;\n";
 		});
@@ -5668,10 +5696,82 @@ Class is CodeGenerator{
 	## @param yieldVar: The statement-expression's result variable.
 	## @param yieldT: The unified yield type name.
 	## @return: C statement text.
-	Function of String is inlineBranchBodyYield(Expression is anonFn, String is yieldVar, String is yieldT){
-		local String is bodyC: '';
+	Function of Boolean is isNonEmptyAnon(Expression is expr){
+		return match(on: expr, when: [
+			Expression:AnonFn: local Function of Boolean(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				return bd:length() > 0;
+			},
+			else: { false; }
+		], default: {});
+	}
+
+	Function of String is wrapYieldValue(Expression is expr, String is retC, String is yieldT){
+		if({ !self:isArcType(typeName: yieldT) }, {
+			return retC;
+		});
 		local String is yieldCType: self:cTypeFor(typeName: yieldT);
+		local Boolean is isBorrowedGetCall: match(on: expr, when: [
+			Expression:Call: local Function(CallData is cd){
+				cd:name == 'get' || cd:name == 'getString';
+			},
+			else: { false; }
+		], default: {});
+		# a yield does not end the enclosing
+		# scope — the source local may be read after the
+		# if-expression, so the yield RETAINS (the ARC-safe copy)
+		# instead of the return path's ownership NULL-swap. A fresh
+		# allocation flows unclaimed into the result variable.
+		if({ self:isFreshConstructorCall(expr: expr) || (self:yieldsClaim(expr: expr) && !isBorrowedGetCall) }, {
+			return '(' . yieldCType . ')(' . retC . ')';
+		});
+		return '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
+	}
+
+	Function of String is hoistArcDecls(Array of Statement is stmts){
+		stmts:each(action: local Function(Statement is vs){
+			match(on: vs, when: [
+				Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
+					if({ self:isArcType(typeName: varType:name) || self:boxedLocals:has(key: varName) }, {
+						local String is hType: '';
+						if({ self:boxedLocals:has(key: varName) }, {
+							hType: 'SpecBox*';
+						}, {
+							if({ varType:name == 'List' }, {
+								hType: self:cTypeFor(typeName: self:formatTypeString(t: varType));
+							}, {
+								hType: self:cTypeFor(typeName: varType:name);
+							});
+						});
+						self:hoistedLocals:set(key: varName, value: hType);
+					});
+				}
+			]);
+		});
+		local String is hoistedDeclsC: '';
+		self:hoistedLocals:each(action: local Function(String is hName){
+			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
+			local String is hNameC: self:utils:cIdent(name: hName);
+			if({ self:boxedLocals:has(key: hName) }, {
+				hNameC: '_box_' . hNameC;
+			});
+			hoistedDeclsC: hoistedDeclsC . '    ' . self:debugVolatile() . 'SPEC_AUTO ' . hType . ' ' . hNameC . " = 0;\n";
+		});
+		return hoistedDeclsC;
+	}
+
+	Function of String is inlineBranchBodyYield(Expression is anonFn, String is yieldVar, String is yieldT){
+		local String is savedRetVar: self:inlineReturnVar;
+		local String is savedRetLbl: self:inlineReturnLabel;
+		local String is savedYieldT: self:inlineYieldType;
+		local Map of String to String is savedHoisted: self:hoistedLocals;
+		self:hoistedLocals: Map:init();
+		self:anonCounter: self:anonCounter + 1;
+		local String is armEndLbl: '_yend_' . (self:anonCounter as String);
+		self:inlineReturnVar: yieldVar;
+		self:inlineReturnLabel: armEndLbl;
+		self:inlineYieldType: yieldT;
 		local Array of Statement is bodyStmts: self:anonBodyOf(expr: anonFn);
+		local String is bodyC: self:hoistArcDecls(stmts: bodyStmts);
 		local Int is bodyLen: bodyStmts:length();
 		local Int is bi: 0;
 		bodyStmts:each(action: local Function(Statement is st){
@@ -5699,31 +5799,21 @@ Class is CodeGenerator{
 				self:argMode: false;
 				local String is retC: self:generateExpression(expr: yieldExpr);
 				self:argMode: savedArg;
-				if({ self:isArcType(typeName: yieldT) }, {
-					local Boolean is isBorrowedGetCall: match(on: yieldExpr, when: [
-						Expression:Call: local Function(CallData is cd){
-							cd:name == 'get' || cd:name == 'getString';
-						},
-						else: { false; }
-					], default: {});
-					# a yield does not end the enclosing
-					# scope — the source local may be read after the
-					# if-expression, so the yield RETAINS (the ARC-safe copy)
-					# instead of the return path's ownership NULL-swap. A fresh
-					# allocation flows unclaimed into the result variable.
-					if({ self:isFreshConstructorCall(expr: yieldExpr) || (self:yieldsClaim(expr: yieldExpr) && !isBorrowedGetCall) }, {
-						retC: '(' . yieldCType . ')(' . retC . ')';
-					}, {
-						retC: '(' . yieldCType . ')spec_retain((void*)(' . retC . '))';
-					});
-				});
+				retC: self:wrapYieldValue(expr: yieldExpr, retC: retC, yieldT: yieldT);
 				bodyC: bodyC . "\t" . yieldVar . ' = ' . retC . ";\n";
 			}, {
 				bodyC: bodyC . "\t" . self:generateStatement(stmt: st);
 			});
 			bi: bi + 1;
 		});
+		if({ bodyC:contains(needle: armEndLbl) }, {
+			bodyC: bodyC . armEndLbl . ": ;\n";
+		});
 		bodyC: bodyC . self:scopeReleases(stmts: bodyStmts);
+		self:hoistedLocals: savedHoisted;
+		self:inlineReturnVar: savedRetVar;
+		self:inlineReturnLabel: savedRetLbl;
+		self:inlineYieldType: savedYieldT;
 		return bodyC;
 	}
 
@@ -5755,7 +5845,7 @@ Class is CodeGenerator{
 	## @param subjArg: The `on:` subject expression.
 	## @param armsArg: The literal arm table (a MAP expression).
 	## @return: C expression/statement text.
-	Function of String is generateMatch(Expression is callExpr, Expression is subjArg, Expression is armsArg){
+	Function of String is generateMatch(Expression is callExpr, Expression is subjArg, Expression is armsArg, Expression is defaultArm, Boolean is hasDefault){
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
@@ -5791,6 +5881,7 @@ Class is CodeGenerator{
 		local Int is keyTotal: armsKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
+		local Boolean is hadElse: false;
 		repeat(count: keyTotal, worker: {
 				local Expression is key: armsKeys:get(index: ki);
 				local Expression is val: armsValues:get(index: ki);
@@ -5808,6 +5899,7 @@ Class is CodeGenerator{
 						out: out . '} else if (' . condC . ") {\n";
 					});
 				}, {
+					hadElse: true;
 					if({ firstCond }, {
 						out: out . "if (1) {\n";
 						firstCond: false;
@@ -5878,6 +5970,19 @@ Class is CodeGenerator{
 					out: out . self:inlineBranchBody(anonFn: val) . "\t";
 				});
 		});
+		if({ hasDefault && !hadElse }, {
+			if({ firstCond }, {
+				out: out . "if (1) {\n";
+				firstCond: false;
+			}, {
+				out: out . "} else {\n";
+			});
+			if({ valueForm }, {
+				out: out . self:inlineBranchBodyYield(anonFn: defaultArm, yieldVar: yieldVar, yieldT: resT) . "\t";
+			}, {
+				out: out . self:inlineBranchBody(anonFn: defaultArm) . "\t";
+			});
+		});
 		if({ !firstCond }, {
 			out: out . "}\n";
 		});
@@ -5902,7 +6007,7 @@ Class is CodeGenerator{
 	##                  decides the value form).
 	## @param armsArg: The literal arm table (a MAP expression).
 	## @return: C expression/statement text.
-	Function of String is generatePredicateMatch(Expression is callExpr, Expression is armsArg){
+	Function of String is generatePredicateMatch(Expression is callExpr, Expression is armsArg, Expression is defaultArm, Boolean is hasDefault){
 		local String is savedVar: self:inlineReturnVar;
 		local String is savedLbl: self:inlineReturnLabel;
 		local Boolean is savedArg: self:argMode;
@@ -5928,6 +6033,7 @@ Class is CodeGenerator{
 		local Int is keyTotal: armsKeys:length();
 		local Int is ki: 0;
 		local Boolean is firstCond: true;
+		local Boolean is hadElse: false;
 		repeat(count: keyTotal, worker: {
 				local Expression is key: armsKeys:get(index: ki);
 				local Expression is val: armsValues:get(index: ki);
@@ -5968,6 +6074,7 @@ Class is CodeGenerator{
 					});
 				}, {
 					# The else arm: the chain's tail.
+					hadElse: true;
 					if({ firstCond }, {
 						out: out . "if (1) {\n";
 						firstCond: false;
@@ -5986,6 +6093,19 @@ Class is CodeGenerator{
 						out: out . self:inlineBranchBody(anonFn: val) . "\t";
 					});
 				});
+		});
+		if({ hasDefault && !hadElse }, {
+			if({ firstCond }, {
+				out: out . "if (1) {\n";
+				firstCond: false;
+			}, {
+				out: out . "} else {\n";
+			});
+			if({ valueForm }, {
+				out: out . self:inlineBranchBodyYield(anonFn: defaultArm, yieldVar: yieldVar, yieldT: resT) . "\t";
+			}, {
+				out: out . self:inlineBranchBody(anonFn: defaultArm) . "\t";
+			});
 		});
 		if({ !firstCond }, {
 			out: out . tail;

@@ -120,6 +120,34 @@ Class of SpecUnitTest is TestEnumWhen{
 		]);
 		Assert:areEqualInt(4, priority);
 	}
+
+	Function is testDefaultParamAndLoopNestedYieldReturn(){
+		local String is fallbackLabel: Conditional:match(on: HttpStatus:NOT_FOUND, when: [
+			HttpStatus:OK: { 'ok' }
+		], default: { 'other' });
+		Assert:areEqualString('other', fallbackLabel);
+
+		local Array of HttpStatus is items: [HttpStatus:OK, HttpStatus:NOT_FOUND, HttpStatus:SERVER_ERROR];
+		local Array of String is labels: [];
+		items:each(action: local Function(HttpStatus is s){
+			local String is lbl: Conditional:match(on: s, when: [
+				HttpStatus:OK: { 'ok' },
+				HttpStatus:NOT_FOUND: {
+					local String is prefix: 'miss:';
+					if({ s == HttpStatus:NOT_FOUND }, {
+						return prefix . '404';
+					});
+					return 'other';
+				},
+				else: { 'err' }
+			]);
+			labels:add(item: lbl);
+		});
+		Assert:areEqualInt(3, labels:length());
+		Assert:areEqualString('ok', labels:get(index: 0));
+		Assert:areEqualString('miss:404', labels:get(index: 1));
+		Assert:areEqualString('err', labels:get(index: 2));
+	}
 }
 
 Enum is TokenKind2 {

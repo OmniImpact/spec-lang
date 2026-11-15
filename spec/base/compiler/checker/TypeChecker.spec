@@ -822,7 +822,36 @@ Class is TypeChecker{
 	## @param subj: The `on:` subject expression.
 	## @param arms: The literal arm table (a MAP expression).
 	## @return: The unified yield type, or Void.
-	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected){
+	Function of Boolean is isNonEmptyMatchDefault(Expression is expr){
+		return match(on: expr, when: [
+			Expression:AnonFn: local Function of Boolean(Type is returnType, Array of Parameter is params, Array of Statement is body){
+				return body:length() > 0;
+			},
+			else: { true }
+		]);
+	}
+
+	Function of String is checkMatchArmYield(Expression is val, String is expected){
+		local Boolean is savedArmValue: self:inValueBranch;
+		local String is savedArmExpected: self:currentYieldExpected;
+		if({ expected != '' && !self:isVoid(t: expected) }, {
+			self:inValueBranch: true;
+			self:currentYieldExpected: expected;
+		});
+		self:inferExpressionType(expr: val);
+		self:inValueBranch: savedArmValue;
+		self:currentYieldExpected: savedArmExpected;
+		local String is valT: val:resolvedType;
+		if({ valT:startsWith(prefix: 'Function:') && valT:length() > 9 }, {
+			local String is yieldT: valT:substring(start: 9, end: valT:length());
+			if({ !self:isVoid(t: yieldT) }, {
+				return yieldT;
+			});
+		});
+		return '';
+	}
+
+	Function of String is checkMatchArms(Expression is subj, Expression is arms, String is expected, Expression is defaultArm, Boolean is hasDefault){
 		local String is subjT: self:inferExpressionType(expr: subj);
 		# Strip container/generic spellings to the base class name.
 		if({ subjT:contains(needle: ' of ') }, {
@@ -1063,6 +1092,43 @@ Class is TypeChecker{
 					});
 				});
 		});
+		if({ hasDefault }, {
+			if({ hasElse }, {
+				self:addError(line: self:currentLine, msg: 'Match has both an else arm and a non-empty default; use only one.');
+				bad: true;
+			}, {
+				hasElse: true;
+				local Boolean is defIsAnon: false;
+				match(on: defaultArm, when: [
+					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+						if({ params:length() > 0 }, {
+							self:addError(line: self:currentLine, msg: 'Match default arm takes no parameters.');
+							bad: true;
+						});
+						defIsAnon: true;
+					}
+				], default: {});
+				if({ !defIsAnon }, {
+					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
+					bad: true;
+				}, {
+					local String is defYieldT: self:checkMatchArmYield(val: defaultArm, expected: expected);
+					if({ defYieldT != '' }, {
+						anyValue: true;
+						if({ resT == '' }, {
+							resT: defYieldT;
+						}, {
+							if({ !self:isAssignable(target: resT, source: defYieldT) && !self:isAssignable(target: defYieldT, source: resT) }, {
+								self:addError(line: self:currentLine, msg: 'The match arms yield incompatible types (\'' . resT . '\' and \'' . defYieldT . '\').');
+								bad: true;
+							});
+						});
+					}, {
+						anyVoid: true;
+					});
+				});
+			});
+		});
 		if({ bad }, {
 			return if({ anyValue && resT != '' }, { resT }, { 'Void' });
 		});
@@ -1122,7 +1188,7 @@ Class is TypeChecker{
 	##
 	## @param arms: The literal arm table (a MAP expression).
 	## @return: The unified arm-yield type ('Void' when none yields).
-	Function of String is checkPredicateArms(Expression is arms, String is expected){
+	Function of String is checkPredicateArms(Expression is arms, String is expected, Expression is defaultArm, Boolean is hasDefault){
 		local Boolean is hasElse: false;
 		local Boolean is anyValue: false;
 		local Boolean is anyVoid: false;
@@ -1223,6 +1289,43 @@ Class is TypeChecker{
 						anyVoid: true;
 					});
 				});
+		});
+		if({ hasDefault }, {
+			if({ hasElse }, {
+				self:addError(line: self:currentLine, msg: 'Match has both an else arm and a non-empty default; use only one.');
+				bad: true;
+			}, {
+				hasElse: true;
+				local Boolean is defIsAnon: false;
+				match(on: defaultArm, when: [
+					Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+						if({ params:length() > 0 }, {
+							self:addError(line: self:currentLine, msg: 'Match default arm takes no parameters.');
+							bad: true;
+						});
+						defIsAnon: true;
+					}
+				], default: {});
+				if({ !defIsAnon }, {
+					self:addError(line: self:currentLine, msg: 'Match arm bodies must be closures: \'key: { ... }\'.');
+					bad: true;
+				}, {
+					local String is defYieldT: self:checkMatchArmYield(val: defaultArm, expected: expected);
+					if({ defYieldT != '' }, {
+						anyValue: true;
+						if({ resT == '' }, {
+							resT: defYieldT;
+						}, {
+							if({ !self:isAssignable(target: resT, source: defYieldT) && !self:isAssignable(target: defYieldT, source: resT) }, {
+								self:addError(line: self:currentLine, msg: 'The match arms yield incompatible types (\'' . resT . '\' and \'' . defYieldT . '\').');
+								bad: true;
+							});
+						});
+					}, {
+						anyVoid: true;
+					});
+				});
+			});
 		});
 		if({ bad }, {
 			return if({ anyValue && resT != '' }, { resT }, { 'Void' });
@@ -3245,8 +3348,10 @@ Class is TypeChecker{
 			});
 			local Expression is matchSubj: Expression:Unknown;
 			local Expression is matchArms: Expression:Unknown;
+			local Expression is matchDefault: Expression:Unknown;
 			local Boolean is hasMatchSubj: false;
 			local Boolean is hasMatchArms: false;
+			local Boolean is hasMatchDefault: false;
 			local Boolean is matchArmsIsMap: false;
 			call:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'on' }, {
@@ -3256,6 +3361,10 @@ Class is TypeChecker{
 				if({ arg:name == 'when' }, {
 					matchArms: arg:value;
 					hasMatchArms: true;
+				});
+				if({ arg:name == 'default' }, {
+					matchDefault: arg:value;
+					hasMatchDefault: true;
 				});
 			});
 			if({ hasMatchArms }, {
@@ -3267,14 +3376,15 @@ Class is TypeChecker{
 				});
 			});
 			if({ matchArmsIsMap }, {
+				local Boolean is defaultActive: hasMatchDefault && self:isNonEmptyMatchDefault(expr: matchDefault);
 				if({ hasMatchSubj }, {
-					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected);
+					local String is matchRes: self:checkMatchArms(subj: matchSubj, arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive);
 					expr:setResolvedType(t: matchRes);
 					return matchRes;
 				}, {
 					# The PREDICATE form: no subject — the keys are the
 					# closures, the first that holds runs its arm.
-					local String is predRes: self:checkPredicateArms(arms: matchArms, expected: expected);
+					local String is predRes: self:checkPredicateArms(arms: matchArms, expected: expected, defaultArm: matchDefault, hasDefault: defaultActive);
 					expr:setResolvedType(t: predRes);
 					return predRes;
 				});
