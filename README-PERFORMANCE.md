@@ -33,7 +33,7 @@ hits summed across a thread fan-out. One identical algorithm everywhere:
   lane.
 
 **Measurement:** every run is wrapped by
-[`utilities/benchmarks/measure.py`](utilities/benchmarks/measure.py), which
+[`utilities/benchmarks/Measure.spec`](utilities/benchmarks/Measure.spec) (compiled to a native Spec binary), which
 records wall time, total CPU time across all threads, and peak RSS of the
 isolated child. **3 measured runs per configuration; medians below.** Run
 spread was ≤5% across all configurations. Failed commands are never recorded

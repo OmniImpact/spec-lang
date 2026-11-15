@@ -47,14 +47,26 @@ if [ -z "$JAVAC" ] && have java; then
 	[ -n "$JH" ] && [ -x "$JH/bin/javac" ] && JAVAC="$JH/bin/javac"
 fi
 
+# Build the pure-Spec measurement wrapper (Measure.spec -> $OUT/measure).
+MEASURE="$OUT/measure"
+if [ -x "$ROOT/bin/spec" ]; then
+	if ! "$ROOT/bin/spec" --quiet -i "$BENCH/Measure.spec" -o "$MEASURE"; then
+		echo "FATAL: failed to build $BENCH/Measure.spec" >&2
+		exit 1
+	fi
+else
+	echo "FATAL: $ROOT/bin/spec not found (run ./bootstrap.sh first)" >&2
+	exit 1
+fi
+
 # measure_step LABEL -- cmd... : one measured build step.
-# Parses measure.py's __MEASURE__ line into $W / $C / $R / $RC and emits a
+# Parses Measure's __MEASURE__ line into $W / $C / $R / $RC and emits a
 # builds.csv row — unless the command failed, in which case nothing is
 # recorded (a failed build must not masquerade as a datapoint).
 measure_step() {
 	local label="$1"; shift
 	local out w c r rc
-	out="$(python3 "$BENCH/measure.py" "$@")"
+	out="$("$MEASURE" "$@")"
 	w="$(awk '/__MEASURE__/ {split($2,a,"="); print a[2]}' <<< "$out")"
 	c="$(awk '/__MEASURE__/ {split($3,a,"="); print a[2]}' <<< "$out")"
 	r="$(awk '/__MEASURE__/ {split($4,a,"="); print a[2]}' <<< "$out")"
@@ -75,7 +87,7 @@ run_matrix() {
 	local w r out rate wall cpu rss rc
 	for ((w = 0; w < warmups; w++)); do "$@" >/dev/null 2>&1; done
 	for ((r = 1; r <= RUNS; r++)); do
-		out="$(python3 "$BENCH/measure.py" "$@")"
+		out="$("$MEASURE" "$@")"
 		rate="$(grep -o 'rate=[0-9.e+-]*' <<< "$out" | head -1 | cut -d= -f2)"
 		# The Spec benchmark reports its own Throughput line instead of rate=.
 		if [ -z "$rate" ]; then
