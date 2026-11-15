@@ -30,6 +30,7 @@ Class is IrBuilder{
 	IrModule is mod: IrModule:init();
 	Int is tmpCounter: 0;
 	Int is lblCounter: 0;
+	Int is anonCounter: 0;
 	String is currentClass: '';
 	Int is currentLine: 0;
 	IrFunction is curFn: IrFunction:init();
@@ -37,6 +38,7 @@ Class is IrBuilder{
 	Boolean is blkTerminated: false;
 	Map of String to String is localSlots: Map:init();
 	Map of String to IrType is localTypes: Map:init();
+	Array of String is ownedSlots: [];
 
 	replace Function is init(){
 	}
@@ -200,6 +202,7 @@ Class is IrBuilder{
 		self:lblCounter: 0;
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
+		self:ownedSlots: [];
 
 		# Bind 'self' and params into stack slots
 		self:localSlots:set(key: 'self', value: '%self_slot');
@@ -222,6 +225,7 @@ Class is IrBuilder{
 		self:lowerStmts(stmts: m:body);
 
 		if({ !self:blkTerminated }, {
+			self:emitReleaseOwnedLocals();
 			if({ retTy == IrType:Void }, {
 				self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 			}, {
@@ -231,6 +235,17 @@ Class is IrBuilder{
 		});
 
 		self:mod:addFunction(fn: fn);
+	}
+
+	local Function is emitReleaseOwnedLocals(){
+		local Int is oi: 0;
+		while({ oi < self:ownedSlots:length() }, {
+			local String is oslot: self:ownedSlots:get(index: oi, default: '');
+			local String is oval: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: oval, slot: oslot, ty: IrType:Ptr));
+			self:emit(inst: IrInst:Release(val: oval));
+			oi++;
+		});
 	}
 
 	local Function of String is emitDefaultVal(IrType is ty){
@@ -272,10 +287,23 @@ Class is IrBuilder{
 				self:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
 				if({ hasInit }, {
 					local String is val: self:lowerExpr(expr: initExpr);
+					if({ vty == IrType:Ptr }, {
+						local Boolean is needsRetain: match(on: initExpr, when: [
+							Expression:Ident: local Function of Boolean(String is _n){ return true; },
+							Expression:FieldAccess: local Function of Boolean(Expression is _t, String is _f){ return true; },
+							Expression:Index: local Function of Boolean(Expression is _t, Expression is _i){ return true; }
+						], default: { return false; });
+						if({ needsRetain }, {
+							self:emit(inst: IrInst:Retain(val: val));
+						});
+					});
 					self:emit(inst: IrInst:Store(slot: slot, val: val, ty: vty));
 				}, {
 					local String is defVal: self:emitDefaultVal(ty: vty);
 					self:emit(inst: IrInst:Store(slot: slot, val: defVal, ty: vty));
+				});
+				if({ vty == IrType:Ptr }, {
+					self:ownedSlots:add(item: slot);
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
@@ -285,6 +313,12 @@ Class is IrBuilder{
 						if({ self:localSlots:has(key: name) }, {
 							local String is slot: self:localSlots:get(key: name, default: '');
 							local IrType is ty: self:localTypes:get(key: name, default: IrType:I64);
+							if({ ty == IrType:Ptr }, {
+								self:emit(inst: IrInst:Retain(val: val));
+								local String is oldVal: self:nextTmp();
+								self:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
+								self:emit(inst: IrInst:Release(val: oldVal));
+							});
 							self:emit(inst: IrInst:Store(slot: slot, val: val, ty: ty));
 						});
 					},
@@ -307,8 +341,13 @@ Class is IrBuilder{
 					if({ val == '' && self:curFn:retType != IrType:Void }, {
 						val: self:emitDefaultVal(ty: self:curFn:retType);
 					});
+					if({ self:curFn:retType == IrType:Ptr }, {
+						self:emit(inst: IrInst:Retain(val: val));
+					});
+					self:emitReleaseOwnedLocals();
 					self:terminate(inst: IrInst:Ret(hasVal: true, val: val, ty: self:curFn:retType));
 				}, {
+					self:emitReleaseOwnedLocals();
 					self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 				});
 			},
@@ -369,6 +408,19 @@ Class is IrBuilder{
 				if({ op == '==' || op == '!=' || op == '<' || op == '<=' || op == '>' || op == '>=' }, {
 					local IrType is cmpTy: self:irTypeFor(specType: left:resolvedType);
 					if({ cmpTy == IrType:Void }, { cmpTy: IrType:I64; });
+					if({ cmpTy == IrType:Ptr && (op == '==' || op == '!=') }, {
+						local Array of IrType is sT: [IrType:Ptr, IrType:Ptr];
+						local Array of String is sV: [l, r];
+						if({ op == '==' }, {
+							self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: sT, args: sV));
+							return dst;
+						}, {
+							local String is eqTmp: self:nextTmp();
+							self:emit(inst: IrInst:IrCall(dst: eqTmp, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: sT, args: sV));
+							self:emit(inst: IrInst:UnaryOp(dst: dst, op: '!', operand: eqTmp, ty: IrType:I1));
+							return dst;
+						});
+					});
 					self:emit(inst: IrInst:Cmp(dst: dst, op: op, lhs: l, rhs: r, ty: cmpTy));
 					return dst;
 				});
@@ -413,12 +465,171 @@ Class is IrBuilder{
 				self:emit(inst: IrInst:IrCast(dst: dst, val: v, fromType: fromTy, toType: toTy));
 				return dst;
 			},
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				local String is arr: self:nextTmp();
+				local Array of IrType is emptyT: [];
+				local Array of String is emptyV: [];
+				local Boolean is isObjArr: false;
+				if({ items:length() > 0 }, {
+					local Expression is firstItem: items:get(index: 0);
+					if({ self:irTypeFor(specType: firstItem:resolvedType) == IrType:Ptr }, { isObjArr: true; });
+				});
+				if({ isObjArr }, {
+					self:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new_object', argTypes: emptyT, args: emptyV));
+				}, {
+					self:emit(inst: IrInst:IrCall(dst: arr, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new', argTypes: emptyT, args: emptyV));
+				});
+				local Int is ii: 0;
+				while({ ii < items:length() }, {
+					local Expression is it: items:get(index: ii);
+					local String is iv: self:lowerExpr(expr: it);
+					local IrType is ity: self:irTypeFor(specType: it:resolvedType);
+					local String is ip: iv;
+					if({ ity != IrType:Ptr }, {
+						ip: self:nextTmp();
+						self:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
+					});
+					local Array of IrType is addT: [IrType:Ptr, IrType:Ptr];
+					local Array of String is addV: [arr, ip];
+					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add', argTypes: addT, args: addV));
+					ii++;
+				});
+				return arr;
+			},
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				local String is mp: self:nextTmp();
+				local Array of IrType is emptyT: [];
+				local Array of String is emptyV: [];
+				self:emit(inst: IrInst:IrCall(dst: mp, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_new', argTypes: emptyT, args: emptyV));
+				local Int is mi: 0;
+				while({ mi < keys:length() }, {
+					local Expression is ke: keys:get(index: mi);
+					local Expression is ve: values:get(index: mi);
+					local String is kv: self:lowerExpr(expr: ke);
+					local String is vv: self:lowerExpr(expr: ve);
+					local IrType is vty: self:irTypeFor(specType: ve:resolvedType);
+					local String is vp: vv;
+					if({ vty != IrType:Ptr }, {
+						vp: self:nextTmp();
+						self:emit(inst: IrInst:IrCast(dst: vp, val: vv, fromType: vty, toType: IrType:Ptr));
+					});
+					local Array of IrType is setT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
+					local Array of String is setV: [mp, kv, vp];
+					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set', argTypes: setT, args: setV));
+					mi++;
+				});
+				return mp;
+			},
+			Expression:Index: local Function(Expression is target, Expression is index){
+				local String is tv: self:lowerExpr(expr: target);
+				local String is iv: self:lowerExpr(expr: index);
+				local String is raw: self:nextTmp();
+				local Array of IrType is gT: [IrType:Ptr, IrType:I64];
+				local Array of String is gV: [tv, iv];
+				self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: gT, args: gV));
+				local IrType is rty: self:irTypeFor(specType: expr:resolvedType);
+				if({ rty != IrType:Ptr && rty != IrType:Void }, {
+					local String is casted: self:nextTmp();
+					self:emit(inst: IrInst:IrCast(dst: casted, val: raw, fromType: IrType:Ptr, toType: rty));
+					return casted;
+				});
+				return raw;
+			},
+			Expression:AnonFn: local Function(Type is returnType, Array of Parameter is params, Array of Statement is body){
+				return self:lowerAnonFn(returnType: returnType, params: params, body: body);
+			},
 			Expression:Call: local Function(CallData is call){
 				return self:lowerCall(expr: expr, call: call);
 			}
 		], default: {
 			return '0';
 		});
+	}
+
+	local Function of String is lowerAnonFn(Type is returnType, Array of Parameter is params, Array of Statement is body){
+		self:anonCounter: self:anonCounter + 1;
+		local String is fnName: '__anon_' . (self:anonCounter as String);
+		local IrType is retTy: self:irTypeFor(specType: returnType:name);
+		if({ returnType:name == 'Function' }, {
+			if({ returnType:params:length() > 0 }, {
+				local Type is rt: returnType:params:get(index: 0);
+				retTy: self:irTypeFor(specType: rt:name);
+			}, {
+				retTy: IrType:Void;
+			});
+		});
+
+		# Save outer method builder state
+		local IrFunction is savedFn: self:curFn;
+		local IrBlock is savedBlk: self:curBlk;
+		local Boolean is savedTerm: self:blkTerminated;
+		local Int is savedTmp: self:tmpCounter;
+		local Int is savedLbl: self:lblCounter;
+		local Map of String to String is savedSlots: self:localSlots;
+		local Map of String to IrType is savedTypes: self:localTypes;
+		local Array of String is savedOwned: self:ownedSlots;
+
+		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
+		fn:sourceFile: savedFn:sourceFile;
+		fn:line: self:currentLine;
+		fn:addParam(name: '%env', ty: IrType:Ptr);
+		local Int is pi: 0;
+		while({ pi < params:length() }, {
+			local Parameter is p: params:get(index: pi);
+			fn:addParam(name: '%p_' . p:name, ty: self:irTypeFor(specType: p:paramType:name));
+			pi++;
+		});
+
+		local IrBlock is entry: fn:addBlock(label: 'entry');
+		self:curFn: fn;
+		self:switchBlock(blk: entry);
+		self:tmpCounter: 0;
+		self:lblCounter: 0;
+		self:localSlots: Map:init();
+		self:localTypes: Map:init();
+		self:ownedSlots: [];
+
+		pi: 0;
+		while({ pi < params:length() }, {
+			local Parameter is p: params:get(index: pi);
+			local IrType is pty: self:irTypeFor(specType: p:paramType:name);
+			local String is slot: '%slot_' . p:name;
+			self:localSlots:set(key: p:name, value: slot);
+			self:localTypes:set(key: p:name, value: pty);
+			self:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
+			self:emit(inst: IrInst:Store(slot: slot, val: '%p_' . p:name, ty: pty));
+			pi++;
+		});
+
+		self:lowerStmts(stmts: body);
+		if({ !self:blkTerminated }, {
+			self:emitReleaseOwnedLocals();
+			if({ retTy == IrType:Void }, {
+				self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
+			}, {
+				local String is defVal: self:emitDefaultVal(ty: retTy);
+				self:terminate(inst: IrInst:Ret(hasVal: true, val: defVal, ty: retTy));
+			});
+		});
+		self:mod:addFunction(fn: fn);
+
+		# Restore outer method builder state
+		self:curFn: savedFn;
+		self:curBlk: savedBlk;
+		self:blkTerminated: savedTerm;
+		self:tmpCounter: savedTmp;
+		self:lblCounter: savedLbl;
+		self:localSlots: savedSlots;
+		self:localTypes: savedTypes;
+		self:ownedSlots: savedOwned;
+
+		local String is fnPtr: self:nextTmp();
+		self:emit(inst: IrInst:GlobalAddr(dst: fnPtr, globalName: fnName));
+		local String is clsTmp: self:nextTmp();
+		local Array of IrType is cT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
+		local Array of String is cV: [fnPtr, 'null', 'null'];
+		self:emit(inst: IrInst:IrCall(dst: clsTmp, hasDst: true, retType: IrType:Ptr, callee: 'spec_rt_closure_new', argTypes: cT, args: cV));
+		return clsTmp;
 	}
 
 	local Function of String is lowerCall(Expression is expr, CallData is call){
@@ -438,33 +649,223 @@ Class is IrBuilder{
 			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_print_line', argTypes: aT, args: aV));
 			return '0';
 		});
+		if({ nm == 'exit' && call:args:length() >= 1 }, {
+			local NamedArg is exArg: call:args:get(index: 0);
+			local String is stV: self:lowerExpr(expr: exArg:value);
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_process_exit', argTypes: [IrType:I64], args: [stV]));
+			return '0';
+		});
+
+		# Closure local variable call: fn(...)
+		if({ self:localSlots:has(key: nm) && self:localTypes:get(key: nm, default: IrType:I64) == IrType:Ptr }, {
+			local String is cSlot: self:localSlots:get(key: nm, default: '');
+			local String is cObj: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: cObj, slot: cSlot, ty: IrType:Ptr));
+			local String is fnPtrAddr: self:nextTmp();
+			self:emit(inst: IrInst:FieldPtr(dst: fnPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 0));
+			local String is fnPtrVal: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: fnPtrVal, slot: fnPtrAddr, ty: IrType:Ptr));
+			local String is envPtrAddr: self:nextTmp();
+			self:emit(inst: IrInst:FieldPtr(dst: envPtrAddr, objPtr: cObj, structName: 'SpecClosure', fieldIndex: 1));
+			local String is envVal: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
+			local IrType is cRetTy: self:irTypeFor(specType: expr:resolvedType);
+			local Array of IrType is cArgT: [IrType:Ptr];
+			local Array of String is cArgV: [envVal];
+			local Int is cai: 0;
+			while({ cai < call:args:length() }, {
+				local NamedArg is cna: call:args:get(index: cai);
+				local Expression is cav: cna:value;
+				local IrType is caty: self:irTypeFor(specType: cav:resolvedType);
+				if({ caty == IrType:Void }, { caty: IrType:I64; });
+				cArgT:add(item: caty);
+				cArgV:add(item: self:lowerExpr(expr: cav));
+				cai++;
+			});
+			local Boolean is cHasDst: cRetTy != IrType:Void;
+			local String is cDst: '';
+			if({ cHasDst }, { cDst: self:nextTmp(); });
+			self:emit(inst: IrInst:IndirectCall(dst: cDst, hasDst: cHasDst, retType: cRetTy, fnPtr: fnPtrVal, argTypes: cArgT, args: cArgV));
+			return cDst;
+		});
+
+		# Stdlib String / Array / Map runtime method lowering
+		local String is recvType: call:target:resolvedType;
+		if({ recvType == 'String' }, {
+			local String is sRecv: self:lowerExpr(expr: call:target);
+			if({ nm == 'length' }, {
+				local String is dst: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_string_length', argTypes: [IrType:Ptr], args: [sRecv]));
+				return dst;
+			});
+			if({ nm == 'contains' && call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local String is needle: self:lowerExpr(expr: na0:value);
+				local String is idxTmp: self:nextTmp();
+				local String is negOne: self:nextTmp();
+				self:emit(inst: IrInst:ConstInt(dst: negOne, value: -1));
+				self:emit(inst: IrInst:IrCall(dst: idxTmp, hasDst: true, retType: IrType:I64, callee: 'spec_string_index_of', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: [sRecv, needle, negOne]));
+				local String is zeroTmp: self:nextTmp();
+				self:emit(inst: IrInst:ConstInt(dst: zeroTmp, value: 0));
+				local String is dst: self:nextTmp();
+				self:emit(inst: IrInst:Cmp(dst: dst, op: '>=', lhs: idxTmp, rhs: zeroTmp, ty: IrType:I64));
+				return dst;
+			});
+			if({ nm == 'substring' && call:args:length() >= 2 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local NamedArg is na1: call:args:get(index: 1);
+				local String is st: self:lowerExpr(expr: na0:value);
+				local String is en: self:lowerExpr(expr: na1:value);
+				local String is dst: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_substring', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [sRecv, st, en]));
+				return dst;
+			});
+		});
+		if({ recvType == 'Array' || recvType:startsWith(prefix: 'Array of ') || recvType:startsWith(prefix: 'Array:') }, {
+			local String is aRecv: self:lowerExpr(expr: call:target);
+			if({ nm == 'length' }, {
+				local String is dst: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				return dst;
+			});
+			if({ nm == 'add' && call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local Expression is ivExpr: na0:value;
+				local String is iv: self:lowerExpr(expr: ivExpr);
+				local IrType is ity: self:irTypeFor(specType: ivExpr:resolvedType);
+				local String is ip: iv;
+				if({ ity != IrType:Ptr }, {
+					ip: self:nextTmp();
+					self:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
+				});
+				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, ip]));
+				return '0';
+			});
+			if({ nm == 'get' && call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local String is idxV: self:lowerExpr(expr: na0:value);
+				local String is raw: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, idxV]));
+				local IrType is grTy: self:irTypeFor(specType: expr:resolvedType);
+				if({ grTy != IrType:Ptr && grTy != IrType:Void }, {
+					local String is casted: self:nextTmp();
+					self:emit(inst: IrInst:IrCast(dst: casted, val: raw, fromType: IrType:Ptr, toType: grTy));
+					return casted;
+				});
+				return raw;
+			});
+			if({ nm == 'set' && call:args:length() >= 2 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local NamedArg is na1: call:args:get(index: 1);
+				local String is idxV: self:lowerExpr(expr: na0:value);
+				local Expression is ivExpr: na1:value;
+				local String is iv: self:lowerExpr(expr: ivExpr);
+				local IrType is ity: self:irTypeFor(specType: ivExpr:resolvedType);
+				local String is ip: iv;
+				if({ ity != IrType:Ptr }, {
+					ip: self:nextTmp();
+					self:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
+				});
+				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [aRecv, idxV, ip]));
+				return '0';
+			});
+		});
+		if({ recvType == 'Map' || recvType:startsWith(prefix: 'Map of ') || recvType:startsWith(prefix: 'Map:') }, {
+			local String is mRecv: self:lowerExpr(expr: call:target);
+			if({ nm == 'length' }, {
+				local String is dst: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_map_length', argTypes: [IrType:Ptr], args: [mRecv]));
+				return dst;
+			});
+			if({ nm == 'has' && call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local String is kv: self:lowerExpr(expr: na0:value);
+				local String is dst: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'spec_map_has', argTypes: [IrType:Ptr, IrType:Ptr], args: [mRecv, kv]));
+				return dst;
+			});
+			if({ nm == 'set' && call:args:length() >= 2 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local NamedArg is na1: call:args:get(index: 1);
+				local String is kv: self:lowerExpr(expr: na0:value);
+				local Expression is vvExpr: na1:value;
+				local String is vv: self:lowerExpr(expr: vvExpr);
+				local IrType is vty: self:irTypeFor(specType: vvExpr:resolvedType);
+				local String is vp: vv;
+				if({ vty != IrType:Ptr }, {
+					vp: self:nextTmp();
+					self:emit(inst: IrInst:IrCast(dst: vp, val: vv, fromType: vty, toType: IrType:Ptr));
+				});
+				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [mRecv, kv, vp]));
+				return '0';
+			});
+			if({ nm == 'get' && call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				local String is kv: self:lowerExpr(expr: na0:value);
+				local String is defV: 'null';
+				if({ call:args:length() >= 2 }, {
+					local NamedArg is na1: call:args:get(index: 1);
+					local Expression is dvExpr: na1:value;
+					local String is dv: self:lowerExpr(expr: dvExpr);
+					local IrType is dty: self:irTypeFor(specType: dvExpr:resolvedType);
+					if({ dty != IrType:Ptr }, {
+						defV: self:nextTmp();
+						self:emit(inst: IrInst:IrCast(dst: defV, val: dv, fromType: dty, toType: IrType:Ptr));
+					}, {
+						defV: dv;
+					});
+				});
+				local String is raw: self:nextTmp();
+				self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [mRecv, kv, defV]));
+				local IrType is mrTy: self:irTypeFor(specType: expr:resolvedType);
+				if({ mrTy != IrType:Ptr && mrTy != IrType:Void }, {
+					local String is casted: self:nextTmp();
+					self:emit(inst: IrInst:IrCast(dst: casted, val: raw, fromType: IrType:Ptr, toType: mrTy));
+					return casted;
+				});
+				return raw;
+			});
+		});
 
 		# Method / constructor call
 		local IrType is retTy: self:irTypeFor(specType: expr:resolvedType);
 		local Array of IrType is argTypes: [];
 		local Array of String is argVals: [];
 
-		local String is calleeName: self:currentClass . '_' . nm;
-		# Receiver: self if Ident('self'), or static class Path
-		local Boolean is hasRecv: true;
-		match(on: call:target, when: [
-			Expression:Ident: local Function(String is tname){
-				if({ tname == 'self' }, {
+		local String is calleeName: match(on: call:target, when: [
+			Expression:Ident: local Function of String(String is tname){
+				if({ tname != 'self' && self:localSlots:has(key: tname) && recvType != '' }, {
+					return recvType . '_' . nm;
+				});
+				return self:currentClass . '_' . nm;
+			},
+			Expression:Path: local Function of String(Array of String is segs){
+				if({ segs:length() > 0 }, {
+					return segs:get(index: segs:length() - 1, default: '') . '_' . nm;
+				});
+				return self:currentClass . '_' . nm;
+			}
+		], default: {
+			if({ recvType != '' }, { return recvType . '_' . nm; });
+			return self:currentClass . '_' . nm;
+		});
+		# Receiver: self or local variable, else static class Path
+		local Boolean is hasRecv: match(on: call:target, when: [
+			Expression:Ident: local Function of Boolean(String is tname){
+				if({ tname == 'self' || self:localSlots:has(key: tname) }, {
 					argTypes:add(item: IrType:Ptr);
 					argVals:add(item: self:lowerExpr(expr: call:target));
-				}, {
-					hasRecv: false;
+					return true;
 				});
+				return false;
 			},
-			Expression:Path: local Function(Array of String is segs){
-				if({ segs:length() > 0 }, {
-					calleeName: segs:get(index: segs:length() - 1, default: '') . '_' . nm;
-				});
-				hasRecv: false;
+			Expression:Path: local Function of Boolean(Array of String is segs){
+				return false;
 			}
 		], default: {
 			argTypes:add(item: IrType:Ptr);
 			argVals:add(item: self:lowerExpr(expr: call:target));
+			return true;
 		});
 
 		if({ !hasRecv && nm == 'init' }, {

@@ -19,6 +19,8 @@ Enum is IrInst {
 	UnaryOp(String is dst, String is op, String is operand, IrType is ty),
 	Cmp(String is dst, String is op, String is lhs, String is rhs, IrType is ty),
 	IrCall(String is dst, Boolean is hasDst, IrType is retType, String is callee, Array of IrType is argTypes, Array of String is args),
+	IndirectCall(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args),
+	GlobalAddr(String is dst, String is globalName),
 	AllocObj(String is dst, String is structName, String is destroyFn),
 	FieldPtr(String is dst, String is objPtr, String is structName, Int is fieldIndex),
 	IrCast(String is dst, String is val, IrType is fromType, IrType is toType),

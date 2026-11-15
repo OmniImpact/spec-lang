@@ -41,8 +41,27 @@ Class is LlvmEmitter{
 		out: out . "declare ptr @spec_rt_box_new(i64, i1)\n";
 		out: out . "declare ptr @spec_string_intern(ptr)\n";
 		out: out . "declare ptr @spec_string_concat(ptr, ptr)\n";
+		out: out . "declare i1 @spec_string_equals(ptr, ptr)\n";
+		out: out . "declare i64 @spec_string_length(ptr)\n";
+		out: out . "declare ptr @spec_string_substring(ptr, i64, i64)\n";
+		out: out . "declare i64 @spec_string_index_of(ptr, ptr, i64)\n";
 		out: out . "declare ptr @spec_to_string_int(i64)\n";
 		out: out . "declare void @spec_print_line(ptr)\n";
+		out: out . "declare void @spec_process_exit(i64)\n";
+		out: out . "declare ptr @spec_array_new()\n";
+		out: out . "declare ptr @spec_array_new_object()\n";
+		out: out . "declare void @spec_array_add(ptr, ptr)\n";
+		out: out . "declare void @spec_array_add_object(ptr, ptr)\n";
+		out: out . "declare i64 @spec_array_length(ptr)\n";
+		out: out . "declare ptr @spec_array_get(ptr, i64)\n";
+		out: out . "declare void @spec_array_set(ptr, i64, ptr)\n";
+		out: out . "declare ptr @spec_map_new()\n";
+		out: out . "declare ptr @spec_map_new_object()\n";
+		out: out . "declare void @spec_map_set(ptr, ptr, ptr)\n";
+		out: out . "declare ptr @spec_map_get(ptr, ptr, ptr)\n";
+		out: out . "declare i1 @spec_map_has(ptr, ptr)\n";
+		out: out . "declare i64 @spec_map_length(ptr)\n";
+		out: out . "%struct.SpecClosure = type { ptr, ptr, ptr }\n";
 		out: out . "@spec_class_registry = constant [1 x ptr] zeroinitializer\n";
 		out: out . "@spec_held_registry = constant [1 x { ptr, ptr, i32, ptr }] zeroinitializer\n";
 		out: out . "define i32 @spec_class_registry_count() {\n  ret i32 0\n}\n\n";
@@ -212,6 +231,23 @@ Class is LlvmEmitter{
 				});
 				return 'call ' . rt . ' @' . callee . '(' . argsStr . ')';
 			},
+			IrInst:IndirectCall: local Function of String(String is dst, Boolean is hasDst, IrType is retType, String is fnPtr, Array of IrType is argTypes, Array of String is args){
+				local String is argsStr: '';
+				local Int is ai: 0;
+				while({ ai < args:length() }, {
+					if({ ai > 0 }, { argsStr: argsStr . ', '; });
+					argsStr: argsStr . self:llvmType(ty: argTypes:get(index: ai)) . ' ' . args:get(index: ai, default: '');
+					ai++;
+				});
+				local String is rt: self:llvmType(ty: retType);
+				if({ hasDst }, {
+					return dst . ' = call ' . rt . ' ' . fnPtr . '(' . argsStr . ')';
+				});
+				return 'call ' . rt . ' ' . fnPtr . '(' . argsStr . ')';
+			},
+			IrInst:GlobalAddr: local Function of String(String is dst, String is globalName){
+				return dst . ' = getelementptr i8, ptr @' . globalName . ', i64 0';
+			},
 			IrInst:AllocObj: local Function of String(String is dst, String is structName, String is destroyFn){
 				local String is szPtr: dst . '_szp';
 				local String is szVal: dst . '_sz';
@@ -228,6 +264,14 @@ Class is LlvmEmitter{
 			IrInst:IrCast: local Function of String(String is dst, String is val, IrType is fromType, IrType is toType){
 				if({ fromType == IrType:I64 && toType == IrType:F64 }, { return dst . ' = sitofp i64 ' . val . ' to double'; });
 				if({ fromType == IrType:F64 && toType == IrType:I64 }, { return dst . ' = fptosi double ' . val . ' to i64'; });
+				if({ (fromType == IrType:I64 || fromType == IrType:I1) && toType == IrType:Ptr }, {
+					return dst . ' = inttoptr ' . self:llvmType(ty: fromType) . ' ' . val . ' to ptr';
+				});
+				if({ fromType == IrType:Ptr && (toType == IrType:I64 || toType == IrType:I1) }, {
+					return dst . ' = ptrtoint ptr ' . val . ' to ' . self:llvmType(ty: toType);
+				});
+				if({ fromType == IrType:I1 && toType == IrType:I64 }, { return dst . ' = zext i1 ' . val . ' to i64'; });
+				if({ fromType == IrType:I64 && toType == IrType:I1 }, { return dst . ' = icmp ne i64 ' . val . ', 0'; });
 				return dst . ' = bitcast ' . self:llvmType(ty: fromType) . ' ' . val . ' to ' . self:llvmType(ty: toType);
 			},
 			IrInst:Retain: local Function of String(String is val){
@@ -264,8 +308,8 @@ Class is LlvmEmitter{
 		if({ op == '*' }, { return 'mul'; });
 		if({ op == '/' }, { return 'sdiv'; });
 		if({ op == '%' }, { return 'srem'; });
-		if({ op == '&' }, { return 'and'; });
-		if({ op == '|' }, { return 'or'; });
+		if({ op == '&' || op == '&&' }, { return 'and'; });
+		if({ op == '|' || op == '||' }, { return 'or'; });
 		if({ op == '^' }, { return 'xor'; });
 		if({ op == '<<' }, { return 'shl'; });
 		if({ op == '>>' }, { return 'ashr'; });

@@ -107,4 +107,61 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testContainersClosuresAndArcLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_cca_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_cca_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_cca_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: "Class is LlvmCCA{\n"
+			. "\treplace Array of Array of String is using: [\n"
+			. "\t\t['base', 'struct', Array],\n"
+			. "\t\t['base', 'struct', Map],\n"
+			. "\t\t['base', 'sys', as Conditional()],\n"
+			. "\t\t['base', 'sys', as Output()],\n"
+			. "\t\t['base', 'sys', as Process()]\n"
+			. "\t];\n"
+			. "\treplace Function is init(Map of String to String is args){\n"
+			. "\t\tlocal Array of Int is nums: [10, 20];\n"
+			. "\t\tnums:add(item: 30);\n"
+			. "\t\tlocal Int is total: nums[0] + nums:get(index: 1) + nums[2];\n"
+			. "\t\tlocal Map of String to String is mp: ['lang': 'spec'];\n"
+			. "\t\tmp:set(key: 'mode', value: 'llvm');\n"
+			. "\t\tlocal String is mode: mp:get(key: 'mode', default: '');\n"
+			. "\t\tlocal Function of Int is addTen: local Function of Int(Int is x){\n"
+			. "\t\t\treturn x + 10;\n"
+			. "\t\t};\n"
+			. "\t\tlocal Int is res: addTen(x: total);\n"
+			. "\t\tif({ nums:length() == 3 && mp:has(key: 'lang') && mode == 'llvm' && mode:length() == 4 && mode:contains(needle: 'lv') && res == 70 }, {\n"
+			. "\t\t\tline('llvm-cca-ok');\n"
+			. "\t\t}, {\n"
+			. "\t\t\tProcess:exit(status: 2);\n"
+			. "\t\t});\n"
+			. "\t}\n"
+			. "}\n";
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: 'call ptr @spec_rt_alloc('));
+		Assert:isTrue(ll:contains(needle: 'call void @spec_rt_release('));
+		Assert:isTrue(ll:contains(needle: 'call ptr @spec_rt_closure_new('));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }
