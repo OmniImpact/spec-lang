@@ -1,5 +1,6 @@
 #! Simple CSV row parser utility for ScopeAsDemo.
 
+## Splits comma-separated text lines into row arrays.
 Class is CsvParser{
 
 	replace Array of Array of String is using: [
@@ -8,6 +9,7 @@ Class is CsvParser{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Parses non-empty lines from [raw] into comma-delimited fields, optionally skipping the header row when [skipHeader] is true.
 	Function of Array of Array of String is parseRows(String is raw, Boolean is skipHeader){
 		local Array of Array of String is rows: [];
 		local Array of String is allLines: raw:lines();

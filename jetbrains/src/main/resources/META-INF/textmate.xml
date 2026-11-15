@@ -2,4 +2,12 @@
     <extensions defaultExtensionNs="org.jetbrains.plugins.textmate">
         <bundleProvider implementation="org.speclang.jetbrains.SpecTextMateBundleProvider"/>
     </extensions>
+    <extensions defaultExtensionNs="com.intellij">
+        <editorHighlighterProvider
+            filetype="Spec"
+            implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"/>
+        <lang.syntaxHighlighterFactory
+            language="Spec"
+            implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateSyntaxHighlighterFactory"/>
+    </extensions>
 </idea-plugin>

@@ -180,13 +180,23 @@ Class is SpecUnit{
 
 	Function of String is buildSourceDirFlags(String is raw){
 		local String is out: '';
-		if(check: { raw == '' }, then: {
-			return out;
+		if(check: { raw != '' }, then: {
+			raw:split(delimiter: ','):each(action: local Function(String is seg){
+				local String is sd: seg:trim();
+				if(check: { sd != '' }, then: {
+					out: out . ' -s "' . sd . '"';
+				});
+			});
 		});
-		raw:split(delimiter: ','):each(action: local Function(String is seg){
-			local String is sd: seg:trim();
-			if(check: { sd != '' }, then: {
-				out: out . ' -s "' . sd . '"';
+		local String is exeDir: Dir:exeDir();
+		if(check: { exeDir != '' }, then: {
+			local String is bundledUnit: exeDir . '/../utilities/specunit';
+			if(check: { fileExists(path: bundledUnit) }, then: {
+				out: out . ' -s "' . bundledUnit . '"';
+			});
+			local String is bundledSpec: exeDir . '/../spec';
+			if(check: { fileExists(path: bundledSpec) }, then: {
+				out: out . ' -s "' . bundledSpec . '"';
 			});
 		});
 		return out;

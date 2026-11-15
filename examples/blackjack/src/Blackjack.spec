@@ -1,3 +1,6 @@
+#! Interactive console Blackjack game ("SpecJack").
+
+## Interactive Blackjack game coordinating player input, dealer loop, and outcome scoring.
 Class is Blackjack{
 
 	replace Array of Array of String is using: [
@@ -20,6 +23,7 @@ Class is Blackjack{
 	local Array of Int is dealerHand: [];
 	local Boolean is roundActive: true;
 
+	## Loop driving the dealer's hit-until-17 turn.
 	Class of Loop is DealerTurnLoop{
 
 		replace Array of Array of String is using: [
@@ -46,6 +50,7 @@ Class is Blackjack{
 
 	}
 
+	## Callback invoked when the dealer loop finishes to score the round.
 	Class of LoopCallback is DealerTurnCompleteCallback{
 
 		replace Array of Array of String is using: [
@@ -64,6 +69,7 @@ Class is Blackjack{
 
 	}
 
+	## Console input handler for player `(h)it` / `(s)tand` commands.
 	Class of InputHandler is PlayerTurnHandler{
 
 		replace Array of Array of String is using: [
@@ -118,20 +124,24 @@ Class is Blackjack{
 
 	}
 
+	## Draws a random card value (1..10).
 	Function of Int is drawCard(){
 		return self:deckUtil:drawCard();
 	}
 
+	## Computes the optimal Blackjack score for [hand], treating Aces (`1`) as 11 or 1.
 	Function of Int is handValue(Array of Int is hand){
 		return self:deckUtil:handValue(hand: hand);
 	}
 
+	## Prompts the player for hit/stand input via [consIn].
 	Function is promptPlayerAction(){
 		line('Would you like to (h)it or (s)tand?');
 		local PlayerTurnHandler is handler: PlayerTurnHandler:init(game: self);
 		consIn(handler: handler);
 	}
 
+	## Runs the dealer's automated draw loop until total >= 17.
 	Function is startDealerTurn(){
 		line("\n--- Starting Dealer's Turn ---");
 		local DealerTurnLoop is dealerLoop: DealerTurnLoop:init(game: self);
@@ -140,6 +150,7 @@ Class is Blackjack{
 		run(loop: dealerLoop, control: control);
 	}
 
+	## Compares player and dealer scores and prints the final round outcome.
 	Function is evaluateRoundOutcome(){
 		local Int is playerScore: handValue(hand: playerHand);
 		local Int is dealerScore: handValue(hand: dealerHand);
@@ -155,6 +166,7 @@ Class is Blackjack{
 		]);
 	}
 
+	## Entry point; deals initial hands and begins the player turn.
 	replace Function is init(Map of String to String is args){
 		line('======================================');
 		line('         Welcome to SpecJack          ');

@@ -1,6 +1,7 @@
 #! Demonstrates scoped region desugaring (`as`) for resource management,
 #! automatic cleanup, benchmark timing, and flat pipelines without callback pyramids.
 
+## Demonstrates scoped region desugaring (`as`) for resource management and timing.
 Class is ScopeAsDemo{
 
 	replace Array of Array of String is using: [
@@ -16,6 +17,7 @@ Class is ScopeAsDemo{
 		[CsvParser]
 	];
 
+	## Measures and prints the wall-clock duration of [block] under [label].
 	Function is measure(String is label, Function is block){
 		line("[Timer] Starting: " . label);
 		local Int is start: clockMs();
@@ -24,6 +26,7 @@ Class is ScopeAsDemo{
 		line("[Timer] Finished: " . label . " (" . elapsed . " ms elapsed)\n");
 	}
 
+	## Writes [content] to [path], invokes [block] with [path], and removes the file on exit.
 	Function is withTempFile(String is path, String is content, Function is block){
 		line("[File] Creating managed resource: " . path);
 		fileWrite(path: path, content: content);
@@ -34,6 +37,7 @@ Class is ScopeAsDemo{
 		});
 	}
 
+	## Entry point; runs a temp-file CSV ingestion pipeline inside nested `as` scopes.
 	replace Function is init(Map of String to String is args){
 		line("=================================================");
 		line("       Spec Scoped Region (`as`) Demo            ");

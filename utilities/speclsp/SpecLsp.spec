@@ -33,6 +33,7 @@ Class is SpecLsp{
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Uri()],
+		['base', 'sys', as Dir()],
 		['base', 'sys', Uri],
 		['base', 'sys', SourceLocation]
 	];
@@ -172,6 +173,59 @@ Class is SpecLsp{
 		return Uri:fromFilePath(filePath: filePath):toString();
 	}
 
+	local Function is addDirIfExists(Loader is loader, String is dirPath){
+		if({ dirPath != '' && fileExists(path: dirPath) }, {
+			loader:addSourceDir(dir: dirPath);
+		});
+	}
+
+	local Function is addProjectSourceDirs(Loader is loader, String is parentDir){
+		local String is dir: parentDir;
+		while([Boolean is searching: dir != ''], { searching }, {
+			local String is manifestPath: dir . '/specbuild.json';
+			if({ fileExists(path: manifestPath) }, {
+				local String is raw: fileRead(path: manifestPath, default: '');
+				if({ raw != '' }, {
+					local Any is parsed: Json:parse(text: raw);
+					if({ !Json:hasError() }, {
+						local Array is srcDirs: Json:getArray(obj: parsed, key: 'source_dirs');
+						local Int is n: srcDirs:length();
+						while([Int is i: 0], { i < n }, {
+							local String is sd: Json:getStringAt(arr: srcDirs, index: i, default: '');
+							if({ sd != '' }, {
+								addDirIfExists(loader: loader, dirPath: dir . '/' . sd);
+							});
+							i++;
+						});
+					});
+				});
+				searching: false;
+			}, {
+				if({ self:workspaceRoot != '' && dir == self:workspaceRoot }, {
+					searching: false;
+				}, {
+					local String is up: Uri:fromFilePath(filePath: dir):dirPath();
+					if({ up == '' || up == dir }, {
+						searching: false;
+					}, {
+						dir: up;
+					});
+				});
+			});
+		});
+
+		if({ self:workspaceRoot != '' }, {
+			addDirIfExists(loader: loader, dirPath: self:workspaceRoot . '/spec');
+			addDirIfExists(loader: loader, dirPath: self:workspaceRoot . '/utilities/specunit');
+		});
+
+		local String is exeDir: Dir:exeDir();
+		if({ exeDir != '' }, {
+			addDirIfExists(loader: loader, dirPath: exeDir . '/../spec');
+			addDirIfExists(loader: loader, dirPath: exeDir . '/../utilities/specunit');
+		});
+	}
+
 	local Function is analyzeFullFile(String is uri, String is filePath){
 		local Array of String is diags: [];
 		if({ filePath == '' || !fileExists(path: filePath) }, {
@@ -186,6 +240,9 @@ Class is SpecLsp{
 		});
 		if({ self:workspaceRoot != '' }, {
 			loader:addSourceDir(dir: self:workspaceRoot);
+		});
+		if({ parentDir != '' }, {
+			addProjectSourceDirs(loader: loader, parentDir: parentDir);
 		});
 
 		local ProgramNode is prog: loader:loadProgram(rootPath: filePath);

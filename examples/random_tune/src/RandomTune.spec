@@ -2,6 +2,7 @@
 #! Exercises high-resolution timing (base:sys:Time, base:sys:DateTime),
 #! trigonometry & RNG (base:math:Math), and raw PCM audio (base:audio:Audio).
 
+## Generates and plays a 12-note random pentatonic melody with high-resolution interval timing.
 Class is RandomTune{
 
 	replace Array of Array of String is using: [
@@ -18,6 +19,7 @@ Class is RandomTune{
 		[Synth]
 	];
 
+	## Entry point; opens the audio device (falling back to silent timing if unavailable) and plays 12 notes.
 	Function is init(){
 		local DateTime is startedAt: DateTime:now();
 		Output:line(text: "RandomTune started at " . startedAt:formatIso());

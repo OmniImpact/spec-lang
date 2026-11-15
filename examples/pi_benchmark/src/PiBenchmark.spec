@@ -1,6 +1,7 @@
 #! Monte Carlo Pi benchmark: parallel point sampling with a live domain
 #! visualization, per-thread sample markers, and a running approximation.
 
+## Parallel Monte Carlo Pi benchmark with live terminal domain rendering.
 Class is PiBenchmark{
 
 	replace Array of Array of String is using: [
@@ -18,6 +19,7 @@ Class is PiBenchmark{
 	local Int is gridH: 22;
 	local PiStats is stats: PiStats:init();
 
+	## Entry point; reads optional [args] (`threads`, `points`, `refresh`) and runs the parallel benchmark.
 	replace Function is init(Map of String to String is args){
 		local Int is threads: args:getInt(key: 'threads', default: 4);
 		local Int is points: args:getInt(key: 'points', default: 1_000_000_000);
@@ -85,6 +87,7 @@ Class is PiBenchmark{
 		self:printStats(totalHits: totalHits, points: points, elapsedMs: elapsedMs, threads: threads);
 	}
 
+	## Renders the full `[gridW x gridH]` unit-circle domain with live thread markers.
 	local Function is drawDomain(Int is threads){
 		while(
 			[Int is row: 0],
@@ -97,6 +100,7 @@ Class is PiBenchmark{
 		line('');
 	}
 
+	## Builds one rendered [row] of the unit-circle visualization across [threads].
 	local Function of String is domainRow(Int is row, Int is threads){
 		local String is buf: '';
 		while(
@@ -125,6 +129,7 @@ Class is PiBenchmark{
 		return buf;
 	}
 
+	## Returns the thread index currently occupying `(col, row)`, or `-1` if none.
 	local Function of Int is markerAt(Int is col, Int is row, Int is threads){
 		local Int is found: -1;
 		while(
@@ -142,6 +147,7 @@ Class is PiBenchmark{
 		return found;
 	}
 
+	## Redraws the live domain and running `pi` estimate from atomic counters.
 	local Function is drawProgress(Int is threads){
 		line(moveTo(row: 4, col: 1));
 		self:drawDomain(threads: threads);
@@ -152,6 +158,7 @@ Class is PiBenchmark{
 		line(color256(code: 220, text: '  samples: ' . samples . '  hits: ' . hits . '  pi ≈ ' . self:stats:piText(value: pi) . '  threads: ' . threads));
 	}
 
+	## Prints the final Pi estimate, error, elapsed time, and throughput summary box.
 	local Function is printStats(Int is totalHits, Int is points, Int is elapsedMs, Int is threads){
 		local Float is pi: self:stats:estimatePi(hits: totalHits, samples: points);
 		local Float is err: abs(value: pi - 3.14159265358979);

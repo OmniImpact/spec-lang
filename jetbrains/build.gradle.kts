@@ -39,8 +39,10 @@ dependencies {
 val repoRoot = layout.projectDirectory.dir("..").asFile
 val binDir = file("$repoRoot/bin")
 val specStdlibDir = file("$repoRoot/spec")
+val specUnitDir = file("$repoRoot/utilities/specunit")
 val textmateDir = file("$repoRoot/utilities/textmate/spec")
 val specGdbPy = file("$repoRoot/utilities/spec-gdb.py")
+val specDapPy = file("$repoRoot/utilities/spec-dap.py")
 
 val ensureSpecToolchain by tasks.registering(Exec::class) {
     group = "spec"
@@ -81,10 +83,17 @@ tasks {
         from(specStdlibDir) {
             into("${intellijPlatform.projectName.get()}/spec")
         }
+        from(specUnitDir) {
+            into("${intellijPlatform.projectName.get()}/utilities/specunit")
+            include("*.spec")
+        }
         from(textmateDir) {
             into("${intellijPlatform.projectName.get()}/textmate/spec")
         }
         from(specGdbPy) {
+            into("${intellijPlatform.projectName.get()}/utilities")
+        }
+        from(specDapPy) {
             into("${intellijPlatform.projectName.get()}/utilities")
         }
     }

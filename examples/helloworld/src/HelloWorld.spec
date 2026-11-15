@@ -1,3 +1,4 @@
+## Minimal greeting application demonstrating CLI arguments and utility delegation.
 Class is HelloWorld{
 
 	local String is greeting: 'Hello';
@@ -8,6 +9,7 @@ Class is HelloWorld{
 		[Greeter]
 	];
 
+	## Entry point; reads optional [args] `'name'` and prints the formatted greeting.
 	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
 		local Greeter is greeter: Greeter:init();

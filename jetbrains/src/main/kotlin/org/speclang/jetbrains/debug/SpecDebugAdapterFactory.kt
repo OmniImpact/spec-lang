@@ -8,9 +8,11 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessOutput
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.util.ExecUtil
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import java.util.concurrent.Callable
 import com.redhat.devtools.lsp4ij.dap.DebugMode
 import com.redhat.devtools.lsp4ij.dap.LaunchConfiguration
 import com.redhat.devtools.lsp4ij.dap.configurations.DAPRunConfiguration
@@ -41,7 +43,11 @@ class SpecDebugAdapterFactory : DebugAdapterDescriptorFactory() {
         if (configuration is DAPRunConfiguration) {
             configuration.name = "Debug ${file.nameWithoutExtension}"
             configuration.file = file.path
-            configuration.workingDirectory = project.basePath ?: file.parent?.path ?: ""
+            val manifest = SpecToolchain.findManifestFor(file.path, project.basePath)
+            configuration.workingDirectory = manifest?.parent?.toString()
+                ?: project.basePath
+                ?: file.parent?.path
+                ?: ""
             return true
         }
         return false
@@ -80,8 +86,13 @@ class SpecDebugAdapterDescriptor(
             targetPath
         }
 
-        val cmd = GeneralCommandLine("gdb", "-i", "dap")
         val gdbPy = SpecToolchain.pluginRoot()?.resolve("utilities")?.resolve("spec-gdb.py")
+        val dapPy = SpecToolchain.pluginRoot()?.resolve("utilities")?.resolve("spec-dap.py")
+        val cmd = if (dapPy != null && Files.isRegularFile(dapPy)) {
+            GeneralCommandLine("python3", dapPy.toString())
+        } else {
+            GeneralCommandLine("gdb", "-i", "dap")
+        }
         if (gdbPy != null && Files.isRegularFile(gdbPy)) {
             cmd.addParameters("-x", gdbPy.toString())
         }
@@ -96,9 +107,29 @@ class SpecDebugAdapterDescriptor(
         outBin.toFile().deleteOnExit()
 
         val cmd = GeneralCommandLine(specBin, "--debug", "--quiet", "-i", specFile.toString(), "-o", outBin.toString())
+        val manifest = SpecToolchain.findManifestFor(specFile.toString(), projectBasePath)
+        if (manifest != null) {
+            for (srcDir in SpecToolchain.readManifestSourceDirs(manifest)) {
+                if (Files.isDirectory(srcDir)) {
+                    cmd.addParameters("-s", srcDir.toString())
+                }
+            }
+        }
+        SpecToolchain.pluginRoot()?.let { root ->
+            val bundledUnit = root.resolve("utilities").resolve("specunit")
+            if (Files.isDirectory(bundledUnit)) {
+                cmd.addParameters("-s", bundledUnit.toString())
+            }
+            val bundledSpec = root.resolve("spec")
+            if (Files.isDirectory(bundledSpec)) {
+                cmd.addParameters("-s", bundledSpec.toString())
+            }
+        }
         workDir?.let { cmd.withWorkDirectory(it) }
 
-        val output: ProcessOutput = ExecUtil.execAndGetOutput(cmd, 60_000)
+        val output: ProcessOutput = ApplicationManager.getApplication()
+            .executeOnPooledThread(Callable { ExecUtil.execAndGetOutput(cmd, 60_000) })
+            .get()
         if (output.exitCode != 0) {
             val details = (output.stderr + "\n" + output.stdout).trim()
             throw ExecutionException("Spec --debug compilation failed (exit ${output.exitCode}):\n$details")

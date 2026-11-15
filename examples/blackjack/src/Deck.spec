@@ -1,5 +1,6 @@
 #! Deck and hand-scoring utility for Blackjack.
 
+## Provides card deck creation, random card draws, and Ace-aware Blackjack hand scoring.
 Class is Deck{
 
 	replace Array of Array of String is using: [
@@ -9,6 +10,7 @@ Class is Deck{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Creates a 40-card deck containing values 1..10 repeated four times each.
 	Function of Array of Int is createDeck(){
 		local Array of Int is cards: [];
 		local Int is value: 1;
@@ -21,11 +23,13 @@ Class is Deck{
 		return cards;
 	}
 
+	## Draws a uniformly distributed card rank in `1..10`.
 	Function of Int is drawCard(){
 		local Float is roll: random(min: 1.0, max: 11.0);
 		return floor(value: roll) as Int;
 	}
 
+	## Returns the highest Blackjack score <= 21 (or lowest bust score) for [hand], counting Aces (`1`) as 11 or 1.
 	Function of Int is handValue(Array of Int is hand){
 		local Int is total: hand:fold(
 			initial: 0,

@@ -23,7 +23,10 @@
         <configurationType
             implementation="org.speclang.jetbrains.run.SpecBuildConfigurationType"/>
         <runConfigurationProducer
+            order="first"
             implementation="org.speclang.jetbrains.run.SpecBuildRunConfigurationProducer"/>
+        <programRunner
+            implementation="org.speclang.jetbrains.run.SpecBuildDebugRunner"/>
     </extensions>
 
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
@@ -33,6 +36,12 @@
             factoryClass="org.speclang.jetbrains.lsp.SpecLspServerFactory"/>
         <languageMapping
             language="Spec"
+            serverId="speclsp"/>
+        <fileTypeMapping
+            fileType="Spec"
+            serverId="speclsp"/>
+        <fileNamePatternMapping
+            patterns="*.spec"
             serverId="speclsp"/>
         <debugAdapterServer
             id="spec-gdb-dap"

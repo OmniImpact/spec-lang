@@ -1,22 +1,32 @@
 package org.speclang.jetbrains.run
 
 import com.intellij.execution.Executor
+import com.intellij.execution.RunManager
 import com.intellij.execution.actions.ConfigurationContext
+import com.intellij.execution.actions.ConfigurationFromContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
 import com.intellij.execution.configurations.*
+import com.intellij.execution.executors.DefaultDebugExecutor
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessHandlerFactory
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.runners.ExecutionEnvironmentBuilder
+import com.intellij.execution.runners.ProgramRunner
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.components.BaseState
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Ref
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import com.redhat.devtools.lsp4ij.dap.DebugMode
+import com.redhat.devtools.lsp4ij.dap.configurations.DAPRunConfiguration
 import org.speclang.jetbrains.SpecToolchain
 import java.nio.file.Files
 import java.nio.file.Path
@@ -61,14 +71,20 @@ class SpecBuildRunConfiguration(
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
         return object : CommandLineState(environment) {
             override fun startProcess(): ProcessHandler {
-                val exe = SpecToolchain.findExecutable("specbuild", project.basePath)?.toString()
-                    ?: "specbuild"
-                val cmd = GeneralCommandLine(exe)
-                val manifest = options.manifestPath?.takeIf { it.isNotBlank() } ?: "specbuild.json"
-                cmd.addParameter(manifest)
                 val sub = options.subcommand?.takeIf { it.isNotBlank() }
-                if (sub != null) {
-                    cmd.addParameter(sub)
+                val target = options.manifestPath?.takeIf { it.isNotBlank() } ?: "specbuild.json"
+                val cmd = if (sub == "specunit") {
+                    val unitExe = SpecToolchain.findExecutable("specunit", project.basePath)?.toString()
+                        ?: "specunit"
+                    val specExe = SpecToolchain.findExecutable("spec", project.basePath)?.toString()
+                        ?: "spec"
+                    GeneralCommandLine(unitExe, "-s", specExe, "-t", target)
+                } else {
+                    val exe = SpecToolchain.findExecutable("specbuild", project.basePath)?.toString()
+                        ?: "specbuild"
+                    GeneralCommandLine(exe, target).apply {
+                        if (sub != null) addParameter(sub)
+                    }
                 }
                 val extra = options.extraArgs?.trim().orEmpty()
                 if (extra.isNotEmpty()) {
@@ -85,7 +101,7 @@ class SpecBuildRunConfiguration(
 
 class SpecBuildSettingsEditor : SettingsEditor<SpecBuildRunConfiguration>() {
     private val manifestField = JBTextField()
-    private val subcommandBox = ComboBox(arrayOf("run", "build", "test", "lint", "clean"))
+    private val subcommandBox = ComboBox(arrayOf("run", "build", "test", "lint", "clean", "specunit"))
     private val extraArgsField = JBTextField()
 
     override fun resetEditorFrom(s: SpecBuildRunConfiguration) {
@@ -113,20 +129,49 @@ class SpecBuildRunConfigurationProducer : LazyRunConfigurationProducer<SpecBuild
         ConfigurationTypeUtil.findConfigurationType(SpecBuildConfigurationType::class.java)
             .configurationFactories.first()
 
+    override fun shouldReplace(self: ConfigurationFromContext, other: ConfigurationFromContext): Boolean =
+        true
+
+    override fun isPreferredConfiguration(self: ConfigurationFromContext, other: ConfigurationFromContext): Boolean =
+        true
+
+    private fun resolveTarget(context: ConfigurationContext): Pair<String, String>? {
+        val vf: VirtualFile = context.location?.virtualFile
+            ?: CommonDataKeys.VIRTUAL_FILE.getData(context.dataContext)
+            ?: return null
+        val basePath = context.project.basePath ?: return null
+        val root = Path.of(basePath).normalize()
+        val isTestContext = vf.path.contains("/tests/") ||
+            vf.path.endsWith("/tests") ||
+            (vf.name.startsWith("Test") && vf.extension.equals("spec", ignoreCase = true))
+
+        val manifestPath = SpecToolchain.findManifestFor(vf.path, basePath)
+        if (manifestPath != null) {
+            val rel = root.relativize(manifestPath).toString()
+            val sub = if (isTestContext) "test" else "run"
+            return rel to sub
+        }
+
+        if (isTestContext) {
+            val rel = root.relativize(Path.of(vf.path).normalize()).toString()
+            return rel to "specunit"
+        }
+        return null
+    }
+
     override fun setupConfigurationFromContext(
         configuration: SpecBuildRunConfiguration,
         context: ConfigurationContext,
         sourceElement: Ref<PsiElement>
     ): Boolean {
-        val vf = context.location?.virtualFile ?: return false
-        val basePath = context.project.basePath ?: return false
-        val manifestPath = findManifestFor(vf.path, basePath) ?: return false
-        val rel = Path.of(basePath).relativize(manifestPath).toString()
-        val isTestContext = vf.path.contains("/tests/") || vf.path.endsWith("/tests")
-        val sub = if (isTestContext) "test" else "run"
-        configuration.options.manifestPath = rel
+        val (target, sub) = resolveTarget(context) ?: return false
+        configuration.options.manifestPath = target
         configuration.options.subcommand = sub
-        configuration.name = if (isTestContext) "SpecBuild Test ($rel)" else "SpecBuild ($rel)"
+        configuration.name = when (sub) {
+            "test" -> "SpecBuild Test ($target)"
+            "specunit" -> "SpecUnit ($target)"
+            else -> "SpecBuild ($target)"
+        }
         return true
     }
 
@@ -134,26 +179,75 @@ class SpecBuildRunConfigurationProducer : LazyRunConfigurationProducer<SpecBuild
         configuration: SpecBuildRunConfiguration,
         context: ConfigurationContext
     ): Boolean {
-        val vf = context.location?.virtualFile ?: return false
-        val basePath = context.project.basePath ?: return false
-        val manifestPath = findManifestFor(vf.path, basePath) ?: return false
-        val rel = Path.of(basePath).relativize(manifestPath).toString()
-        return configuration.options.manifestPath == rel
+        val (target, sub) = resolveTarget(context) ?: return false
+        return configuration.options.manifestPath == target &&
+            configuration.options.subcommand == sub
+    }
+}
+
+class SpecBuildDebugRunner : ProgramRunner<RunnerSettings> {
+    override fun getRunnerId(): String = "SpecBuildDebugRunner"
+
+    override fun canRun(executorId: String, profile: RunProfile): Boolean {
+        if (executorId != DefaultDebugExecutor.EXECUTOR_ID) return false
+        if (profile !is SpecBuildRunConfiguration) return false
+        val sub = profile.options.subcommand
+        return sub != "clean" && sub != "lint"
     }
 
-    private fun findManifestFor(filePath: String, basePath: String): Path? {
-        val p = Path.of(filePath)
-        if (p.fileName?.toString() == "specbuild.json" && Files.isRegularFile(p)) {
-            return p
+    override fun execute(environment: ExecutionEnvironment) {
+        val profile = environment.runProfile as? SpecBuildRunConfiguration ?: return
+        val project = environment.project
+        val basePath = project.basePath ?: return
+        val targetRel = profile.options.manifestPath?.takeIf { it.isNotBlank() } ?: "specbuild.json"
+        val targetPath = Path.of(basePath).resolve(targetRel).normalize()
+        val sub = profile.options.subcommand
+
+        val sourcePath: Path? = when (sub) {
+            "specunit" -> if (Files.isRegularFile(targetPath)) targetPath else findFirstSpecTest(targetPath)
+            "test" -> {
+                val active = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+                if (active != null && active.extension.equals("spec", ignoreCase = true) &&
+                    (active.path.contains("/tests/") || active.name.startsWith("Test"))
+                ) {
+                    Path.of(active.path)
+                } else {
+                    findFirstSpecTest(targetPath.parent?.resolve("tests") ?: targetPath.parent)
+                        ?: SpecToolchain.readManifestSource(targetPath)
+                }
+            }
+            else -> SpecToolchain.readManifestSource(targetPath)
         }
-        var dir = if (Files.isDirectory(p)) p else p.parent
-        val root = Path.of(basePath)
-        while (dir != null && dir.startsWith(root)) {
-            val cand = dir.resolve("specbuild.json")
-            if (Files.isRegularFile(cand)) return cand
-            if (dir == root) break
-            dir = dir.parent
+        if (sourcePath == null) return
+
+        val workDir = if (Files.isRegularFile(targetPath) && targetPath.fileName?.toString() == "specbuild.json") {
+            targetPath.parent?.toString() ?: basePath
+        } else {
+            basePath
         }
-        return null
+
+        val dapType = ConfigurationType.CONFIGURATION_TYPE_EP.extensionList
+            .firstOrNull { it.displayName == "DAP" || it.id.contains("DAP", ignoreCase = true) }
+            ?: return
+        val factory = dapType.configurationFactories.firstOrNull() ?: return
+        val settings = RunManager.getInstance(project).createConfiguration("Debug ${sourcePath.fileName}", factory)
+        val dapConfig = settings.configuration as? DAPRunConfiguration ?: return
+        dapConfig.serverId = "spec-gdb-dap"
+        dapConfig.serverName = "Spec Debugger (GDB DAP)"
+        dapConfig.file = sourcePath.toString()
+        dapConfig.workingDirectory = workDir
+        dapConfig.debugMode = DebugMode.LAUNCH
+        dapConfig.launchConfigurationId = "spec-gdb-launch"
+        ExecutionEnvironmentBuilder.create(DefaultDebugExecutor.getDebugExecutorInstance(), settings)
+            .buildAndExecute()
+    }
+
+    private fun findFirstSpecTest(dir: Path?): Path? {
+        if (dir == null || !Files.isDirectory(dir)) return null
+        Files.walk(dir).use { stream ->
+            return stream.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".spec") }
+                .findFirst()
+                .orElse(null)
+        }
     }
 }

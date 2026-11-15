@@ -244,6 +244,40 @@ class SpecClosurePrinter(object):
             return '<closure>'
 
 
+class SpecObjectPrinter(object):
+    def __init__(self, val, class_name):
+        self.val = val
+        self.class_name = class_name
+
+    def to_string(self):
+        try:
+            ptr = int(self.val)
+            if ptr == 0:
+                return 'null'
+            return '<%s %s>' % (self.class_name, hex(ptr))
+        except Exception:
+            return '<%s>' % self.class_name
+
+    def children(self):
+        try:
+            ptr = int(self.val)
+            if ptr == 0:
+                return []
+            obj = self.val.dereference()
+            out = []
+            for f in obj.type.fields():
+                fname = f.name
+                if not fname or fname.startswith('_'):
+                    continue
+                try:
+                    out.append((fname, obj[fname]))
+                except Exception:
+                    pass
+            return out
+        except Exception:
+            return []
+
+
 def _match_printer(val):
     try:
         # Debug-emission locals are volatile-qualified (and may pick up
@@ -262,6 +296,17 @@ def _match_printer(val):
         return SpecMapPrinter(val)
     if t in ('SpecClosure *',):
         return SpecClosurePrinter(val)
+    try:
+        ut = val.type.strip_typedefs().unqualified()
+        if ut.code == gdb.TYPE_CODE_PTR:
+            target = ut.target().strip_typedefs().unqualified()
+            if target.code == gdb.TYPE_CODE_STRUCT:
+                field_names = {f.name for f in target.fields() if f.name}
+                if '_vtable' in field_names or '_refcount' in field_names:
+                    cname = target.tag or t.rstrip(' *')
+                    return SpecObjectPrinter(val, cname)
+    except Exception:
+        pass
     return None
 
 

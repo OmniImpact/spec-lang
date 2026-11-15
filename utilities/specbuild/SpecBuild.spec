@@ -234,6 +234,17 @@ Class is SpecBuild{
 		local String is resolvedSource: self:resolvePath(baseDir: configDir, relPath: source);
 		local String is output: self:resolvePath(baseDir: configDir, relPath: rawOutput);
 
+		local String is rawCompiler: Json:getString(obj: cfg, key: 'compiler', default: '');
+		local String is customCompiler: '';
+		if({ rawCompiler != '' }, {
+			customCompiler: self:resolvePath(baseDir: configDir, relPath: rawCompiler);
+		});
+		local String is rawLinter: Json:getString(obj: cfg, key: 'linter', default: '');
+		local String is customLinter: '';
+		if({ rawLinter != '' }, {
+			customLinter: self:resolvePath(baseDir: configDir, relPath: rawLinter);
+		});
+
 		if({ command == 'clean' }, {
 			if({ output == '' }, {
 				output: self:resolvePath(baseDir: configDir, relPath: 'bin/' . name);
@@ -253,7 +264,7 @@ Class is SpecBuild{
 		});
 
 		if({ command == 'lint' }, {
-			local String is linter: self:resolveLinter(custom: '');
+			local String is linter: self:resolveLinter(custom: customLinter);
 			local Array of String is lintArgs: [];
 			local Int is dirCount: sourceDirs:length();
 			if({ dirCount == 0 }, {
@@ -280,8 +291,12 @@ Class is SpecBuild{
 
 		if({ command == 'test' }, {
 			local String is runnerName: Json:getString(obj: testsCfg, key: 'runner', default: 'specunit');
-			local String is runner: self:resolveRunner(custom: runnerName);
-			local String is testCompiler: self:resolveCompiler(custom: '');
+			local String is resolvedRunner: runnerName;
+			if({ runnerName != '' && runnerName != 'specunit' }, {
+				resolvedRunner: self:resolvePath(baseDir: configDir, relPath: runnerName);
+			});
+			local String is runner: self:resolveRunner(custom: resolvedRunner);
+			local String is testCompiler: self:resolveCompiler(custom: customCompiler);
 			local Array is testDirs: Json:getArray(obj: testsCfg, key: 'dirs');
 			local Array of String is testArgs: ['-s', testCompiler];
 			local Int is sdCount: sourceDirs:length();
@@ -332,7 +347,7 @@ Class is SpecBuild{
 			Process:execute(command: 'mkdir', args: ['-p', outParent]);
 		});
 
-		local String is compiler: self:resolveCompiler(custom: '');
+		local String is compiler: self:resolveCompiler(custom: customCompiler);
 		local Array of String is specArgs: ['-i', resolvedSource, '-o', output];
 
 		local Int is sLen: sourceDirs:length();

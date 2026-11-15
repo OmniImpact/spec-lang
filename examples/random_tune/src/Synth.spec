@@ -1,5 +1,6 @@
 #! PCM sine-wave synthesizer and MIDI pitch helper for RandomTune.
 
+## Converts MIDI note numbers to frequencies and synthesizes 16-bit stereo PCM sine waves.
 Class is Synth{
 
 	replace Array of Array of String is using: [
@@ -9,10 +10,12 @@ Class is Synth{
 		['base', 'struct', List]
 	];
 
+	## Converts a [midi] note number (A4 = 69 = 440 Hz) to frequency in Hz.
 	Function of Float is midiToFreq(Int is midi){
 		return 440.0 * Math:pow(base: 2.0, exp: ((midi - 69) as Float) / 12.0);
 	}
 
+	## Synthesizes a 16-bit signed little-endian stereo PCM sine wave at [freqHz] for [durationMs] at [sampleRate] Hz.
 	Function of List of Byte is synthesizeSine(Float is freqHz, Int is durationMs, Int is sampleRate){
 		local List of Byte is buf;
 		local Int is totalSamples: (sampleRate * durationMs) / 1000;

@@ -1,6 +1,7 @@
 #! High-resolution 256-color Mandelbrot fractal renderer using smooth escape-time
 #! coloring, trigonometric cube palettes, and Unicode block / half-block characters.
 
+## Terminal 256-color Mandelbrot renderer supporting shaded ASCII and half-block modes.
 Class is Mandelbrot{
 
 	replace Array of Array of String is using: [
@@ -16,6 +17,7 @@ Class is Mandelbrot{
 
 	local FractalMath is fractal: FractalMath:init();
 
+	## Prints render statistics (resolution, points sampled, elapsed time, memory, and thread count).
 	local Function is printStats(Int is width, Int is height, Int is maxIter, Int is elapsedMs){
 		local Int is peakKb: peakMemoryKb();
 		local Int is peakMb: peakKb / 1024;
@@ -32,6 +34,7 @@ Class is Mandelbrot{
 		line(bold() . color256(code: 51, text: '╚' . bar . '╝'));
 	}
 
+	## Returns a horizontal box-drawing bar of [count] `═` characters.
 	local Function of String is repeatBar(Int is count){
 		local String is bar: '';
 		repeat(count: count, worker: {
@@ -40,6 +43,7 @@ Class is Mandelbrot{
 		return bar;
 	}
 
+	## Centers [title] inside a bordered banner line of [width] columns.
 	local Function of String is centerTitle(String is title, Int is width){
 		local String is line: '║';
 		local Int is pad: width - 2 - title:length();
@@ -54,6 +58,7 @@ Class is Mandelbrot{
 		return line . '║';
 	}
 
+	## Entry point; reads optional [args] (`width`, `height`, `iter`, `mode`) and renders the fractal.
 	replace Function is init(Map of String to String is args){
 		local Int is width: args:getInt(key: 'width', default: 0);
 		local Int is height: args:getInt(key: 'height', default: 0);
@@ -113,6 +118,7 @@ Class is Mandelbrot{
 		self:printStats(width: width, height: height, maxIter: maxIter, elapsedMs: clockMs() - startedAtMs);
 	}
 
+	## Renders the region `[minRe..maxRe, minIm..maxIm]` using 2x vertical sub-pixel `▀` half-blocks.
 	local Function is renderHalfBlock(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
 		local Int is pixelHeight: rows * 2;
 		local Float is wFloat: toFloat(value: width - 1);
@@ -143,6 +149,7 @@ Class is Mandelbrot{
 		});
 	}
 
+	## Renders the region `[minRe..maxRe, minIm..maxIm]` using shaded block glyphs (`░▒▓█`).
 	local Function is renderShaded(Int is width, Int is rows, Int is maxIter, Float is minRe, Float is maxRe, Float is minIm, Float is maxIm){
 		local Float is wFloat: toFloat(value: width - 1);
 		local Float is hFloat: toFloat(value: rows - 1);

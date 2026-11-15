@@ -1,5 +1,6 @@
 #! Smooth escape-time fractal math and palette mapping for Mandelbrot.
 
+## Computes smooth Mandelbrot escape values and maps them to 256-color palette indices and shading glyphs.
 Class is FractalMath{
 
 	replace Array of Array of String is using: [
@@ -9,8 +10,10 @@ Class is FractalMath{
 		['base', 'sys', as Conditional()]
 	];
 
+	## Total complex-plane points evaluated across calls to [smoothEscape].
 	Int is pointsRendered: 0;
 
+	## Computes the smooth escape-time value for `(cr, ci)` up to [maxIter], or `-1.0` if inside the set.
 	Function of Float is smoothEscape(Float is cr, Float is ci, Int is maxIter){
 		self:pointsRendered: self:pointsRendered + 1;
 
@@ -49,6 +52,7 @@ Class is FractalMath{
 		return (toFloat(value: iter) + 1.0) - nu;
 	}
 
+	## Maps a smooth escape value [mu] to an xterm 256-color cube index (16 for interior points).
 	Function of Int is palette256(Float is mu){
 		if({ mu < 0.0 }, {
 			return 16;
@@ -64,6 +68,7 @@ Class is FractalMath{
 		return cubeIndex(r: r, g: g, b: b);
 	}
 
+	## Selects a shading glyph (`░`, `▒`, `▓`, `█`, or `' '` for interior) from [mu].
 	Function of String is shadeGlyph(Float is mu){
 		if({ mu < 0.0 }, {
 			return ' ';
@@ -77,6 +82,7 @@ Class is FractalMath{
 		]);
 	}
 
+	## Clamps [v] to the closed interval `[lo, hi]`.
 	Function of Float is clampFloat(Float is v, Float is lo, Float is hi){
 		return match(when: [
 			{ v < lo }: { lo },
