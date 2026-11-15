@@ -31,6 +31,7 @@ Class is IrBuilder{
 	Int is tmpCounter: 0;
 	Int is lblCounter: 0;
 	String is currentClass: '';
+	Int is currentLine: 0;
 	IrFunction is curFn: IrFunction:init();
 	IrBlock is curBlk: IrBlock:init();
 	Boolean is blkTerminated: false;
@@ -60,13 +61,13 @@ Class is IrBuilder{
 
 	Function is emit(IrInst is inst){
 		if({ !self:blkTerminated }, {
-			self:curBlk:append(inst: inst);
+			self:curBlk:appendAt(inst: inst, line: self:currentLine);
 		});
 	}
 
 	Function is terminate(IrInst is inst){
 		if({ !self:blkTerminated }, {
-			self:curBlk:append(inst: inst);
+			self:curBlk:appendAt(inst: inst, line: self:currentLine);
 			self:blkTerminated: true;
 		});
 	}
@@ -181,6 +182,9 @@ Class is IrBuilder{
 		local IrType is retTy: self:methodReturnType(mt: m:memberType);
 		local String is fnName: cls:name . '_' . m:name;
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
+		fn:sourceFile: cls:sourceFile;
+		fn:line: m:line;
+		self:currentLine: m:line;
 		fn:addParam(name: '%self', ty: IrType:Ptr);
 		local Int is pi: 0;
 		while({ pi < m:params:length() }, {
@@ -255,6 +259,8 @@ Class is IrBuilder{
 	}
 
 	local Function is lowerStmt(Statement is stmt){
+		local Int is prevLine: self:currentLine;
+		if({ stmt:line > 0 }, { self:currentLine: stmt:line; });
 		match(on: stmt, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				local IrType is vty: self:irTypeFor(specType: varType:name);
@@ -310,6 +316,7 @@ Class is IrBuilder{
 				local String is _u0: self:lowerExpr(expr: exprStmt);
 			}
 		], default: {});
+		self:currentLine: prevLine;
 	}
 
 	local Function of String is lowerExpr(Expression is expr){

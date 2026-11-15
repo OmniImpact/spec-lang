@@ -4921,6 +4921,13 @@ void spec_audio_close(long long handle) {
 void spec_process_exit(long long status) {
     exit((int)status);
 }
+
+/* Non-inline ABI entrypoints for external/LLVM object linking */
+void* spec_rt_alloc(size_t size, void (*destroy)(void*)) { return spec_alloc(size, destroy); }
+void* spec_rt_retain(void* obj) { return spec_retain(obj); }
+void spec_rt_release(void* obj) { spec_release(obj); }
+SpecClosure* spec_rt_closure_new(void* fn, void* env, void (*destroy_env)(void*)) { return spec_closure_new(fn, env, destroy_env); }
+SpecBox* spec_rt_box_new(int64_t val, bool is_arc) { return _spec_box_new(val, is_arc); }
 ''';
 		return b;
 	}

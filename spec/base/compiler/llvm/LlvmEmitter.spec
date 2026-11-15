@@ -34,9 +34,11 @@ Class is LlvmEmitter{
 		local String is out: "; Spec LLVM IR (experimental)\n\n";
 
 		# Runtime declarations and empty reflection registry stubs for spec_runtime.o
-		out: out . "declare ptr @calloc(i64, i64)\n";
-		out: out . "declare void @spec_retain(ptr)\n";
-		out: out . "declare void @spec_release(ptr)\n";
+		out: out . "declare ptr @spec_rt_alloc(i64, ptr)\n";
+		out: out . "declare ptr @spec_rt_retain(ptr)\n";
+		out: out . "declare void @spec_rt_release(ptr)\n";
+		out: out . "declare ptr @spec_rt_closure_new(ptr, ptr, ptr)\n";
+		out: out . "declare ptr @spec_rt_box_new(i64, i1)\n";
 		out: out . "declare ptr @spec_string_intern(ptr)\n";
 		out: out . "declare ptr @spec_string_concat(ptr, ptr)\n";
 		out: out . "declare ptr @spec_to_string_int(i64)\n";
@@ -57,6 +59,9 @@ Class is LlvmEmitter{
 				fi++;
 			});
 			out: out . '%struct.' . st:name . ' = type { ' . fieldsStr . " }\n";
+			local Int is tnLen: st:name:length() + 1;
+			local String is tnEsc: self:escapeLlvmBytes(s: st:name);
+			out: out . '@.typename.' . st:name . ' = private unnamed_addr constant [' . (tnLen as String) . ' x i8] c"' . tnEsc . "\\00\"\n";
 			si++;
 		});
 		if({ mod:structs:length() > 0 }, { out: out . "\n"; });
@@ -208,8 +213,14 @@ Class is LlvmEmitter{
 				return 'call ' . rt . ' @' . callee . '(' . argsStr . ')';
 			},
 			IrInst:AllocObj: local Function of String(String is dst, String is structName, String is destroyFn){
-				# Conservative 256-byte zeroed object allocation for experimental IR; exact sizeof via GEP in next step
-				return dst . ' = call ptr @calloc(i64 1, i64 256)';
+				local String is szPtr: dst . '_szp';
+				local String is szVal: dst . '_sz';
+				local String is tnPtr: dst . '_tnp';
+				return szPtr . ' = getelementptr %struct.' . structName . ", ptr null, i32 1\n  "
+					. szVal . ' = ptrtoint ptr ' . szPtr . " to i64\n  "
+					. dst . ' = call ptr @spec_rt_alloc(i64 ' . szVal . ', ptr ' . destroyFn . ")\n  "
+					. tnPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ", i32 0, i32 0\n  "
+					. 'store ptr @.typename.' . structName . ', ptr ' . tnPtr;
 			},
 			IrInst:FieldPtr: local Function of String(String is dst, String is objPtr, String is structName, Int is fieldIndex){
 				return dst . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . objPtr . ', i32 0, i32 ' . (fieldIndex as String);
@@ -220,10 +231,10 @@ Class is LlvmEmitter{
 				return dst . ' = bitcast ' . self:llvmType(ty: fromType) . ' ' . val . ' to ' . self:llvmType(ty: toType);
 			},
 			IrInst:Retain: local Function of String(String is val){
-				return 'call void @spec_retain(ptr ' . val . ')';
+				return 'call ptr @spec_rt_retain(ptr ' . val . ')';
 			},
 			IrInst:Release: local Function of String(String is val){
-				return 'call void @spec_release(ptr ' . val . ')';
+				return 'call void @spec_rt_release(ptr ' . val . ')';
 			},
 			IrInst:Ret: local Function of String(Boolean is hasVal, String is val, IrType is ty){
 				if({ hasVal }, {

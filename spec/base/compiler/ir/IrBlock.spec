@@ -11,6 +11,7 @@ Class is IrBlock{
 
 	String is label: 'entry';
 	Array of IrInst is insts: [];
+	Array of Int is instLines: [];
 
 	replace Function is init(){
 	}
@@ -20,6 +21,11 @@ Class is IrBlock{
 	}
 
 	Function is append(IrInst is inst){
+		self:appendAt(inst: inst, line: 0);
+	}
+
+	Function is appendAt(IrInst is inst, Int is line){
 		self:insts:add(item: inst);
+		self:instLines:add(item: line);
 	}
 }

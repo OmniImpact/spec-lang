@@ -16,6 +16,8 @@ Class is IrFunction{
 	Array of IrParam is params: [];
 	Array of IrBlock is blocks: [];
 	Boolean is isExternal: false;
+	String is sourceFile: '';
+	Int is line: 0;
 
 	replace Function is init(){
 	}
