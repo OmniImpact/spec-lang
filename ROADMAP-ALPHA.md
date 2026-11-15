@@ -136,7 +136,12 @@ To provide a complete developer workflow out of the box, four new utilities will
 ```
 
 ### 4.1 Project Initializer (`specinit`)
-- **Status**: **Planned**.
+- **Status**: **Completed**.
+- **Accomplishments**:
+  - Implemented `utilities/specinit/SpecInit.spec` and `utilities/specinit/specinit.json` compiled to `bin/specinit`.
+  - Supports `--app` (default) and `--lib` project templates, `--force` overwrite guard, and `--help` usage.
+  - Generates `specbuild.json` (via `base:data:Json`), `.gitignore`, `src/` entrypoint/library class, and `tests/` `SpecUnitTest` starter suite using `base:sys:Uri` for cross-platform paths.
+  - Validated via unit test suite `tests/TestSpecInit.spec` (all passing).
 
 A new tool written in Spec (`utilities/specinit/SpecInit.spec`) to bootstrap new projects:
 - **Usage**:
@@ -269,7 +274,7 @@ Spec compiles to C11. Platform-specific headers and primitives in `RuntimePrelud
 |---|---|---|
 | **M1: Core Solidification** | - Phase 0.5 instance-model worklist clean (`speclint -a` = 0) [Completed - `v0.000.100`]<br>- Modern unit testing framework extensions & negative test suite porting [Completed]<br>- On-demand precompiled C runtime accelerator (`~/.cache/spec/runtime/` with auto-purge on failure) [Completed]<br>- Compiler diagnostics & structured spans migration to `ErrorText.spec` [Completed]<br>- Unified shared mutable closure capture semantics (`Box`) & `Parallel:sync`/`syncWith` [Completed]<br>- Enhanced Enum sum types & AST migration (`Statement`, `Expression`) + `match` `default:` closures [Completed] | Completed |
 | **M2: Modular Linter** | - Refactor `speclint` with reflection-based `LintRule` discovery [Completed]<br>- Separate formatting, naming, and AST idiom rules into dedicated classes [Completed]<br>- Instance-model migration rules (`AsConditionalRule`, `AsLoopsRule`) [Completed]<br>- CLI rule filtering flags (`--rule` and `--disable`) [Completed] | Completed (`v0.000.100`) |
-| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier) [Completed]<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`) [Completed]<br>- Build `specinit` project scaffolder [Planned]<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion) [Planned]<br>- Implement shared TUI color/status module [Planned] | In Progress |
+| **M3: Serialization & Tooling** | - Implement `base:data:Json` (JSON parser & stringifier) [Completed]<br>- Build `specbuild` manifest-driven orchestrator (`specbuild.json`) [Completed]<br>- Build `specinit` project scaffolder [Completed]<br>- Build `speclsp` Language Server Protocol binary (Diagnostics, Hover, Definition, Completion) [Planned]<br>- Implement shared TUI color/status module [Planned] | In Progress |
 | **M4: Platform & Packaging** | - Automated multi-platform release deployment (Linux, macOS, Windows bundles + source archive) [Completed]<br>- Cross-platform runtime & CI verification (Linux GCC/Clang, macOS Clang, Windows MinGW-w64, ASan+UBSan) [Completed]<br>- Cross-platform `base:sys:Uri` path/cache/temp abstraction [Completed]<br>- Networking sockets (`base:net:Socket`) & `Vector`/`Stack` collections [Completed]<br>- Standard library `base:sys:Time` & `base:sys:DateTime` [Completed]<br>- Complete `install.sh` for Linux [Planned] | In Progress |
 | **M5: 0.1 Alpha Release** | - Fixed-point bootstrap verification across GCC and Clang [Completed in CI]<br>- Full documentation sweep [Planned]<br>- Tag `v0.1.0-alpha` and publish release tarballs [Planned] | Planned |
 

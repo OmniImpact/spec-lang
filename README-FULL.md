@@ -137,9 +137,10 @@ whole package:
 replace Array of Array of String is using: [
 	['base', 'struct', Array],
 	['base', 'struct', Map],
-	['base', 'math', Math],
-	['base', 'sys', Output],
-	['base', 'iterator', Loops]
+	['base', 'math', as Math()],
+	['base', 'sys', as Output()],
+	['base', 'sys', as Conditional()],
+	['base', 'sys', as Loops()]
 ];
 ```
 
@@ -278,7 +279,7 @@ replace Array of Array of String is using: [
   ```
 
 - **High-Efficiency C11 Runtime & Memory Model**: Amortized $O(1)$ growable string buffers (`spec_str_append`), zero-allocation character table lookups, cached $O(1)$ string length queries, lazy `SpecArray` buffer allocation, and automatic deallocation of transient `Loop` instances.
-- **One Uniform Memory Path — ARC with Claim Pools, Compiler Included**: Memory is atomic reference counting; every function's temporaries register on a thread-local claim pool drained at scope exit (the Objective-C autorelease-pool shape). There is no garbage collector and **no separate compiler arena**: the compiler runs on exactly the ARC machinery it generates for user programs. A bump-arena experiment for compiler-phase AST nodes was measured at **+154 MB peak** — nodes die incrementally and ARC returns their blocks to glibc's tcache, while an arena hoards them until drain — and was removed as a falsified dead path; the dormant arena floor remains in the runtime prelude with nothing activating it.
+- **One Uniform Memory Path — ARC with Claim Pools, Compiler Included**: Memory is atomic reference counting; every function's temporaries register on a thread-local claim pool drained at scope exit. There is no garbage collector and no separate compiler arena: the compiler runs on the exact same ARC machinery it generates for user programs.
 
 - **Scope-Merged Imports (`as ClassName()`)**: Instance imports materialize an owned singleton instance scoped to the declaring class, merging its methods directly into bare scope with zero global namespace pollution:
   ```spec
@@ -388,18 +389,19 @@ canonical C file. Where it sits relative to the systems languages it draws on:
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
-| **Enums & matching** | Algebraic enums with payloads (desugared to real classes); `match` with compile-time exhaustiveness | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
+| **Enums & matching** | Enhanced Enum algebraic sum types with payloads (used throughout the compiler's own AST); `match` with compile-time exhaustiveness, `default:` closures, and nested early returns | Plain `int` constants, no namespacing or checking | Enums + pattern `switch` (recent) | Enums + `match`, exhaustiveness enforced |
 | **Generics** | `Class of T`, erased with cast insertion | None — macro and `_Generic` tricks | Erasure with bounds | Monomorphized, bounds-checked |
 | **Error handling** | Required defaults, callback pairs, `Result`-style ADTs | Return codes and `errno`, trivially ignored | Checked / unchecked exceptions | `Result<T, E>` + `?` propagation |
 | **Iteration & scopes** | Loop keywords retired; the `Loops` provider's bare `while`, `repeat`, and `until` inline to C11 statement expressions with zero allocation; scoped `as` eliminates callback pyramids | Primitive `while`/`for`/`break`; callbacks drift rightward | Primitive loops; `try-with-resources` | Primitive loops; `Drop` RAII |
 | **Conditionals** | `if({ ... }, { ... }, { ... })`, `match(on:, when:)`, and `match(when:)` calls through the `Conditional` as-import, inlined to native branches; match tables as arm literals | Primitive `if`/`else` | Primitive `if`/`else` | Primitive `if`/`else`, expression-form |
-| **Concurrency** | pthreads; mutex-protected collections; atomics; parallel fan-out | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
-| **Build model** | Transpiles to one C translation unit; `gcc` links; the compiler is written in Spec and bootstraps from a single canonical C file whose fixed point is verified on every build | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
+| **Concurrency** | pthreads; unified shared mutable closure captures (`Box`); `Parallel:run`, `Parallel:sync`/`syncWith` (striped mutexes); async `File`/`Time` timers; atomics | pthreads; no memory-model guarantees | Memory model + `java.util.concurrent` | Data races are compile errors |
+| **Build model** | Transpiles to one C translation unit with an on-demand precompiled runtime cache; `specinit` scaffolder, `specbuild` manifest orchestrator, `specunit`, and `speclint`; self-hosted fixed point verified across GCC and Clang on Linux, macOS, and Windows | Native compilers, headers, make | Bytecode + JIT on the JVM | Native, Cargo ecosystem |
 | **Runtime footprint** | Single static binary, no VM | Single binary, no VM | JVM required | Single binary, no VM |
 
 Spec's distinguishing ground: the override discipline (`replace`/`merge`), never-null
 defaults, enforced exhaustiveness, a strict root contract (`Any`-typed values may
 only call root members — cast for the rest), and a compiler written in itself that
-reproduces its own C seed byte-for-byte on every build. It is a young language — its
-standard library and tooling are minimal next to the others — but its compile-time
-guarantees are already stricter than C's in the areas it covers.
+reproduces its own C seed byte-for-byte on every build. Its standard library (`base:data:Json`,
+`base:sys:Time`/`DateTime`, `base:net:Socket`, `base:audio:Audio`, `base:sys:Uri`) and
+CLI toolchain (`specinit`, `specbuild`, `specunit`, `speclint`) cover end-to-end systems
+development with stricter compile-time guarantees than C.

@@ -1,0 +1,8 @@
+{
+  "name": "specinit",
+  "version": "0.1.0",
+  "source": "SpecInit.spec",
+  "source_dirs": [".", "../../spec"],
+  "output": "../../bin/specinit",
+  "flags": ["--quiet"]
+}

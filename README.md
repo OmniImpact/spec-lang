@@ -153,9 +153,9 @@ repeat(count: 3, worker: {
 - 📊 **[README-PERFORMANCE.md](README-PERFORMANCE.md)**: Measured performance — the same benchmark run in C, C++, Rust, Go, Java, Kotlin, JavaScript, Python, Ruby, and Spec, with build and execution profiles. Reproduce with `utilities/run_benchmarks.sh`.
 - 📚 **[Documentation Portal](docs/README.md)**: Main documentation index.
 - 📖 **[Language Guide](docs/language/README.md)**: Syntax, typing system, Never Null standard, held members, matching, and the iteration model.
-- 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:core`, `base:math`, `base:struct`, `base:iterator`, and `base:sys` (the control-flow providers and the console/file/terminal/process surfaces).
+- 📦 **[Standard Library Reference](docs/packages/README.md)**: Package summary tables and full API reference for `base:core`, `base:math`, `base:struct`, `base:iterator`, `base:data`, `base:net`, `base:audio`, and `base:sys`.
 - 📜 **[Code Style & SpecDoc Guide](docs/STYLE_GUIDE.md)**: Official code style conventions, architectural idioms, and the SpecDoc documentation standard.
-- 🛠️ **[Tooling & Compiler Guide](docs/tooling/README.md)**: Compiler CLI, module loader, tab linter, and Kate editor integration.
+- 🛠️ **[Tooling & Compiler Guide](docs/tooling/README.md)**: Compiler CLI (`spec`), project scaffolder (`specinit`), build orchestrator (`specbuild`), test runner (`specunit`), linter (`speclint`), and editor integrations.
 
 ---
 

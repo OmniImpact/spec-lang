@@ -11,10 +11,13 @@ This document details the standard library packages available in the Spec runtim
 | Package | Key Types & Functions | Description |
 |---|---|---|
 | **`base:math`** | `round`, `floor`, `ceil`, `toInt`, `toFloat`, `sqrt`, `pow`, `log`, `log2`, `sin`, `cos`, `tan`, `atan2`, `random`, `fastRandom`, `abs`, `min`, `max`, `clamp` | Math primitives, conversions, and transcendental functions. |
-| **`base:struct`** | `Array` — `length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]` · `Map` — `get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]` · `List` — `push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString` | Thread-safe collections with functional combinators. |
+| **`base:struct`** | `Array` (`length`, `get`, `set`, `add`, `pop`, `removeAt`, `slice`, `clear`, `indexOf`, `join`, `isEmpty`, `each`, `map`, `fold`, `filter`, `count`, `any`, `arr[i]`) · `Map` (`get*`, `set`, `has`, `remove`, `keys`, `length`, `each`, literals, `m[k]`) · `List` (`push`, `appendString`, `get`, `set`, `pop`, `length`, `clear`, `toString`) · `Stack` | Thread-safe collections with functional combinators. |
 | **`base:iterator`** | `Loop`, `LoopControl`, `LoopCallback` | The decoupled iteration abstractions the runners drive. |
-| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Output:line/consOut`, `Stderr:line`, `Input:consIn`, `File:fileRead/fileWrite/fileExists/fileRemove` (+ the async pair), `Ansi` (256-color, RGB, cursor, terminal size), `Process:execute/getPid/exit/sleep/clockMs/peakMemoryKb/threadCount/atomicAdd/atomicPut/atomicGet`, `Parallel:run`, `SourceLocation`, `StackFrame` | The control-flow providers and the console/file/terminal/process surfaces — all same-name wrappers over the `base:sysinternal` floors. The console pair `consOut`/`consIn` keeps the generic verbs (`read`/`write`) unambiguous for File under the merged as-import scope. |
-| **`base:core`** | `Any`, `Stringable`, `String` | The root class lattice and the string type over the `base:sysinternal` floor. |
+| **`base:data`** | `Json` (`parse`, `stringify`, `format`, typed getters), `JsonNull`, `JsonBool`, `JsonNumber` | Native recursive-descent JSON parser and serializer. |
+| **`base:net`** | `Socket` (`connect`, `listen`, `accept`, `send`, `receive`, `close`, `poll`, `setTimeout`) | Cross-platform TCP client and server stream sockets. |
+| **`base:audio`** | `Audio` (`open`, `write`, `drain`, `close`, `isOpen`) | Cross-platform raw PCM audio playback. |
+| **`base:sys`** | `Conditional` (`if`, `match`), `Loops` (`while`, `repeat`, `until`, `run`, `loop`), `Output:line/consOut`, `Stderr:line`, `Input:consIn`, `File` (sync & async), `Time` (monotonic ns/us/ms, epoch, `sleepNs`/`Us`/`Ms`, sync & async callback timers), `DateTime` (calendar, arithmetic, ISO-8601), `Uri` (cross-platform paths, temp/home/cache), `Box` (shared mutable heap cells), `Vector`, `AudioDevice`, `Ansi`, `Process`, `Parallel` (`run`, `sync`, `syncWith`), `SourceLocation`, `StackFrame` | Control-flow providers, system I/O, high-resolution timing, paths, concurrency, and process wrappers over `base:sysinternal`. |
+| **`base:core`** | `Any`, `Stringable`, `String`, `Enum` | The root class lattice, string type, and shared enum contract. |
 
 Full API reference by package below.
 
@@ -502,5 +505,5 @@ Strings in Spec provide built-in methods for lexical scanning, text transformati
 | 🛠️ **Tooling Guide** | Compiler CLI, linter, editor plugins | [docs/tooling/README.md](../tooling/README.md) |
 | 📂 **Examples** | Demo programs | [examples/](../../examples) |
 | 🧪 **Tests** | Positive and negative test suites | [tests/](../../tests) |
-| 📋 **Task Tracking** | Active development status | [TASKS.md](../../TASKS.md) |
+| 🗺️ **Alpha Roadmap** | 0.1 Alpha milestones and status | [ROADMAP-ALPHA.md](../../ROADMAP-ALPHA.md) |
 

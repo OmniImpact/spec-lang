@@ -260,7 +260,7 @@ check, and emit the NEXT generation's sources. Consequences:
   bin/spec --quiet -i utilities/speclint/SpecLint.spec -o bin/speclint
   bin/speclint -i path/to/file.spec        # one file (the old `spec --lint`)
   bin/speclint -t examples -t tests        # trees, recursive, repeatable
-  bin/speclint -a -i file.spec             # the Phase 0.5 instance-model audit
+  bin/speclint -a -i file.spec             # the instance-model audit
   ```
 
   Tree mode skips `#! specunit: negative` fixtures (compile-must-fail
@@ -470,8 +470,6 @@ legible, and fast:
 ---
 
 ## 6. The limits, concurrency contracts, and the falsification ledger
-
-*(Absorbed from the retired planning docs, 2026-11.)*
 
 ### The falsification ledger (measure, don't assume)
 

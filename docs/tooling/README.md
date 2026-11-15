@@ -140,7 +140,7 @@ bin/speclint -t examples -t tests
 
 `-t` is a directory, repeatable or comma-separated, scanned recursively
 (dot entries skipped; `#! specunit: negative` compile-must-fail
-fixtures are skipped too). The Phase 0.5 instance-model audit over the
+fixtures are skipped too). The instance-model audit over the
 fully loaded program is informational and always exits 0:
 
 ```bash
@@ -157,7 +157,6 @@ informational — optional-parameter advisories — and never gate), **2** usage
 - **Violation**: Any leading spaces used for indentation trigger a warning.
 - **Violation**: Trailing whitespace at the end of any line.
 - **Violation**: A column-0 closing brace whose indentation does not match the current nesting depth (one tab per open brace). String literals and comments are masked before brace counting, so brace characters inside them are ignored.
-- **Rationale**: Ensures deterministic, customizable visual alignment across editors while preventing indentation drift.
 
 #### 2. Optional Parameter Consistency
 - **Rule**: Optional method parameters must provide explicit default values in declarations.
@@ -205,4 +204,4 @@ The syntax definition provides:
 | 📦 **Standard Packages** | Standard library API reference | [docs/packages/README.md](../packages/README.md) |
 | 📂 **Examples** | Demo programs | [examples/](../../examples) |
 | 🧪 **Tests** | Positive test suites (`tests/`) and must-fail suites (`tests/negative/`) | [tests/](../../tests) |
-| 📋 **Task Tracking** | Active development status | [TASKS.md](../../TASKS.md) |
+| 🗺️ **Alpha Roadmap** | 0.1 Alpha milestones and status | [ROADMAP-ALPHA.md](../../ROADMAP-ALPHA.md) |

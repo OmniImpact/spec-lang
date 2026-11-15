@@ -954,5 +954,5 @@ consIn(ActionHandler:init());
 | 🛠️ **Tooling Guide** | Compiler CLI, linter, editor plugins | [docs/tooling/README.md](../tooling/README.md) |
 | 📂 **Examples** | Demo programs | [examples/](../../examples) |
 | 🧪 **Tests** | Positive and negative test suites | [tests/](../../tests) |
-| 📋 **Task Tracking** | Active development status | [TASKS.md](../../TASKS.md) |
+| 🗺️ **Alpha Roadmap** | 0.1 Alpha milestones and status | [ROADMAP-ALPHA.md](../../ROADMAP-ALPHA.md) |
 

@@ -3,7 +3,7 @@
 Strictly typed, class-based, compiles to C11 via `gcc`. Written in itself: the compiler is Spec source (`spec/base/compiler/`), bootstrapped from the canonical C seed `bootstrap/spec.c`, with the self-hosting fixed point (the compiler recompiles its own sources to byte-identical C) verified on every `./bootstrap.sh`. Never-null (no null; fallible reads require `default:`). Tabs for indentation.
 
 ## Layout
-- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String/Enum), `math`, `struct` (Array/Map/List), `iterator` (Loop/LoopControl/LoopCallback), `sys` (the control-flow providers Conditional and Loops, the console pair Output/Input/Stderr, File, Ansi, Process, Parallel, Introspection, Buf, Dir). The declared namespace IS the package; directories are organization only.
+- `spec/lib/base/` — the standard library, written in Spec: `core` (Any/Stringable/String/Enum), `math`, `struct` (Array/Map/List/Stack), `iterator` (Loop/LoopControl/LoopCallback), `data` (Json), `net` (Socket), `audio` (Audio), `sys` (Conditional, Loops, Output/Input/Stderr, File, Ansi, Process, Parallel, Introspection, Buf, Dir, Box, Uri, Vector, Time, DateTime, AudioDevice). The declared namespace IS the package; directories are organization only.
 - `spec/base/sysinternal/` — the C floor (Buf, Dir, Reflection, Introspection, Conditional, Loops): body-less declarations bound to C by the `spec_<snake(method)>` naming convention. Only the `base:sys` wrappers may call the floor; the checker enforces it structurally (the caller's namespace segments begin `['base', 'sys', ...]`).
 - `spec/base/compiler/` — the compiler: lexer, parser, checker, gen (CodeGenerator/BuiltinCallGenerator/DeclarationGenerator/RuntimePrelude), loader, driver. The linter is the standalone `utilities/speclint/` utility.
 - `bootstrap/spec.c` — the canonical seed. `bin/spec` — the built compiler.
@@ -126,7 +126,7 @@ Scoped region desugaring: `as: call(...)` and `as (params): call(...)` (or `retu
 `expr as Target` — `Int` `Float` (numeric), `Hex` `Bin` `Oct` (Int→String format w/ optional width; String→Int parse, failures yield 0), class names (up/downcast, unchecked), `Any` (identity). Chaining rejected. Class instances in concatenation render class name (generated `toString`); enums render variant name.
 
 ## Memory
-Reference counting with scope-end releases; runtime binaries verified leak-free under ASan/LSan. Claim pool for transient expression results (32-slot ring); parameters are borrows. The compiler process's own AST slack at exit is a known item (arena model, plan §8).
+Reference counting with scope-end releases; runtime binaries verified leak-free under ASan/LSan. Claim pool for transient expression results (32-slot ring); parameters are borrows. The compiler process's own AST slack at exit is a known item.
 
 ## Compiler
 - Exit: 0=ok, 1=compile/load/type/gcc error, 2=usage. Diagnostics on stderr.
