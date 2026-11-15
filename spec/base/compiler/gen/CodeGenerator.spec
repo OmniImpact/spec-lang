@@ -141,6 +141,7 @@ Class is CodeGenerator{
 		Process:mapFreeze(m: self:heldFieldTypes);
 		Process:mapFreeze(m: self:heldMethods);
 		Process:mapFreeze(m: self:heldResolvers);
+		Process:mapFreeze(m: self:forwardingWrappers);
 		Process:arrayFreeze(a: self:programClasses);
 		Process:arrayFreeze(a: classes);
 	}
@@ -207,6 +208,37 @@ Class is CodeGenerator{
 
 	## Unique-name counter for anonymous functions.
 	local Int is anonCounter: 0;
+
+	## Recursion guard for forwarding-wrapper unwrapping.
+	local Int is unwrapDepth: 0;
+
+	## Pre-extracted forwarding-wrapper body calls keyed by
+	## `qualifiedClass:methodName:overloadIdx`, frozen before parallel codegen.
+	local Map of String to Expression is forwardingWrappers: Map:init();
+
+	## Scans [classes] before parallel codegen (and before m:clearBody()) to
+	## record structural forwarding wrappers in [forwardingWrappers].
+	Function is collectForwardingWrappers(Array of ClassInfo is classes){
+		self:forwardingWrappers: Map:init();
+		classes:each(action: local Function(ClassInfo is c){
+			if({ c:typeParams:length() == 0 }, {
+				c:members:each(action: local Function(Member is m){
+					if({ m:kind == MemberKind:METHOD && !self:overriddenMethods:has(key: m:name) }, {
+						local Expression is bodyExpr: self:opt:forwardingBodyCall(m: m, allClassNames: self:allClassNames);
+						local Boolean is hasBody: match(on: bodyExpr, when: [
+							Expression:Call: local Function(CallData is uc){ return true; },
+							else: { false }
+						]);
+						if({ hasBody }, {
+							local Int is ovIdx: self:overloadIndexOf(classDef: c, method: m);
+							local String is fwKey: c:qualifiedName() . ':' . m:name . ':' . (ovIdx as String);
+							self:forwardingWrappers:set(key: fwKey, value: bodyExpr);
+						});
+					});
+				});
+			});
+		});
+	}
 
 	## Active inline-return variable (closure inlining).
 	local String is inlineReturnVar: '';
@@ -2521,6 +2553,32 @@ Class is CodeGenerator{
 		]);
 	}
 
+	## Unwraps a non-virtual call to a structural forwarding wrapper into its
+	## forwarded target call when safe, or returns '' to emit normally.
+	Function of String is maybeUnwrapForwardingCall(ClassInfo is cls, Member is m, CallData is call, String is resolvedType){
+		if({ self:unwrapDepth >= 8 || cls:name == '' || cls:typeParams:length() > 0 || self:overriddenMethods:has(key: call:name) }, {
+			return '';
+		});
+		local Int is ovIdx: self:overloadIndexOf(classDef: cls, method: m);
+		local String is fwKey: cls:qualifiedName() . ':' . m:name . ':' . (ovIdx as String);
+		if({ !self:forwardingWrappers:has(key: fwKey) }, {
+			return '';
+		});
+		local Expression is bodyExpr: self:forwardingWrappers:get(key: fwKey, default: Expression:Unknown);
+		local Expression is unwrapped: self:opt:tryUnwrapForwardingCall(m: m, bodyExpr: bodyExpr, outerCall: call, resolvedType: resolvedType);
+		local Boolean is hasUnwrapped: match(on: unwrapped, when: [
+			Expression:Call: local Function(CallData is uc){ return true; },
+			else: { false }
+		]);
+		if({ !hasUnwrapped }, {
+			return '';
+		});
+		self:unwrapDepth: self:unwrapDepth + 1;
+		local String is res: self:generateExpressionInner(expr: unwrapped);
+		self:unwrapDepth: self:unwrapDepth - 1;
+		return res;
+	}
+
 	## Emits a CALL expression: builtins, constructors, tagged variant
 	## constructors, virtual dispatch, direct dispatch.
 	##
@@ -2754,6 +2812,13 @@ Class is CodeGenerator{
 						return '({ ' . targetSym . '* _inst = ' . newSym . '_new(); ' . initSymbol . '((' . self:utils:cIdent(name: initCls) . '*)_inst' . argsJoined . '); _inst; })';
 					});
 					if({ mDef:kind == MemberKind:METHOD }, {
+						local ClassInfo is staticCls: self:findClass(name: symOwner);
+						if({ !self:isFieldFulClass(cls: staticCls) }, {
+							local String is unwrappedC: self:maybeUnwrapForwardingCall(cls: staticCls, m: mDef, call: call, resolvedType: expr:resolvedType);
+							if({ unwrappedC != '' }, {
+								return unwrappedC;
+							});
+						});
 						local String is callSymbol: self:overloadSymbol(className: symOwner, methodName: call:name, idx: call:overloadIndex);
 						if({ self:isFieldFulClass(cls: self:findClass(name: targetC)) }, {
 							return callSymbol . '((' . targetC . '*)(self->' . self:utils:cIdent(name: '_import_' . targetC) . ')' . argsJoined . ')';
@@ -2767,9 +2832,17 @@ Class is CodeGenerator{
 					if({ bpBuiltin != '' }, {
 						return bpBuiltin;
 					});
+					local ClassInfo is bpCls: self:findClass(name: call:bareProvider);
+					local Member is bpM: self:lookupOverloadedMemberGen(className: call:bareProvider, methodName: call:name, idx: call:overloadIndex);
+					if({ bpM:kind == MemberKind:METHOD && !self:isFieldFulClass(cls: bpCls) }, {
+						local String is bpUnwrapped: self:maybeUnwrapForwardingCall(cls: bpCls, m: bpM, call: call, resolvedType: expr:resolvedType);
+						if({ bpUnwrapped != '' }, {
+							return bpUnwrapped;
+						});
+					});
 					local String is bpArgs: self:formatCallArgumentsWith(className: call:bareProvider, methodName: call:name, idx: call:overloadIndex, args: call:args);
 					local String is bpSymbol: self:overloadSymbol(className: call:bareProvider, methodName: call:name, idx: call:overloadIndex);
-					if({ self:isFieldFulClass(cls: self:findClass(name: call:bareProvider)) }, {
+					if({ self:isFieldFulClass(cls: bpCls) }, {
 						return bpSymbol . '((' . call:bareProvider . '*)(self->' . self:utils:cIdent(name: '_import_' . call:bareProvider) . ')' . bpArgs . ')';
 					});
 					return bpSymbol . '(NULL' . bpArgs . ')';
@@ -2845,6 +2918,14 @@ Class is CodeGenerator{
 					if({ dispatchCls != '' && dispatchCls != objType }, {
 						objType: dispatchCls;
 						targetExprC: '((' . self:utils:cIdent(name: dispatchCls) . '*)' . targetC . ')';
+					});
+					local ClassInfo is instCls: self:findClass(name: objType);
+					local Member is instM: self:lookupOverloadedMemberGen(className: objType, methodName: call:name, idx: call:overloadIndex);
+					if({ instM:kind == MemberKind:METHOD && self:opt:isPureArgExpr(expr: call:target) }, {
+						local String is instUnwrapped: self:maybeUnwrapForwardingCall(cls: instCls, m: instM, call: call, resolvedType: expr:resolvedType);
+						if({ instUnwrapped != '' }, {
+							return instUnwrapped;
+						});
 					});
 					callStr: self:overloadSymbol(className: objType, methodName: call:name, idx: call:overloadIndex) . '(' . targetExprC . argsC . ') /* inst:' . objType . ':' . call:name . ' */';
 				});
@@ -4807,6 +4888,7 @@ Class is CodeGenerator{
 			classChunks:add(item: stringCopy(b: ''));
 			classHelpers:add(item: stringCopy(b: ''));
 		});
+		self:collectForwardingWrappers(classes: flattenedClasses);
 		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
@@ -4826,6 +4908,7 @@ Class is CodeGenerator{
 			wg:heldFieldTypes: self:heldFieldTypes;
 			wg:heldMethods: self:heldMethods;
 			wg:heldResolvers: self:heldResolvers;
+			wg:forwardingWrappers: self:forwardingWrappers;
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;
@@ -4980,6 +5063,7 @@ Class is CodeGenerator{
 			classChunks:add(item: stringCopy(b: ''));
 			classHelpers:add(item: stringCopy(b: ''));
 		});
+		self:collectForwardingWrappers(classes: flattenedClasses);
 		self:freezeRegistries(classes: flattenedClasses);
 		Parallel:run(threads: genThreads, iterations: genThreads, worker: local Function of Int(Int is threadIndex, Int is count){
 			local CodeGenerator is wg: CodeGenerator:init();
@@ -4999,6 +5083,7 @@ Class is CodeGenerator{
 			wg:heldFieldTypes: self:heldFieldTypes;
 			wg:heldMethods: self:heldMethods;
 			wg:heldResolvers: self:heldResolvers;
+			wg:forwardingWrappers: self:forwardingWrappers;
 			wg:methodSlotCount: self:methodSlotCount;
 			wg:names: self:names;
 			wg:policy: self:policy;
