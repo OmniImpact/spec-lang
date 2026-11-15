@@ -1433,25 +1433,30 @@ Class is Parser{
 		local Boolean is foundIs: false;
 		while({ running }, {
 			local Token is t: self:peekAhead(offset: offset);
+			local TokenKind is tk: t:getTokenKind();
 			local String is v: t:getValue();
-			if({ t:getTokenKind() == TokenKind:EOF }, {
+			if({ tk == TokenKind:EOF }, {
 				running: false;
 			}, {
-				if({ depth == 0 && (v == ']' || v == ',' || v == ';') }, {
-					running: false;
-				}, {
-					if({ v == '(' || v == '[' || v == '{' }, {
-						depth: depth + 1;
+				if({ tk != TokenKind:STRING }, {
+					if({ depth == 0 && (v == ']' || v == ',' || v == ';') }, {
+						running: false;
 					}, {
-						if({ v == ')' || v == ']' || v == '}' }, {
-							depth: depth - 1;
+						if({ v == '(' || v == '[' || v == '{' }, {
+							depth: depth + 1;
 						}, {
-							if({ depth == 0 && t:getTokenKind() == TokenKind:KEYWORD && v == Keyword:IS:value() }, {
-								foundIs: true;
-								running: false;
+							if({ v == ')' || v == ']' || v == '}' }, {
+								depth: depth - 1;
+							}, {
+								if({ depth == 0 && tk == TokenKind:KEYWORD && v == Keyword:IS:value() }, {
+									foundIs: true;
+									running: false;
+								});
 							});
 						});
 					});
+				});
+				if({ running }, {
 					offset: offset + 1;
 				});
 			});

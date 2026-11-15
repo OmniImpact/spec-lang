@@ -1,10 +1,10 @@
 #! Package base:struct
 #! Contiguous dynamic collections and associative hash maps.
 
-## An associative key-value map with string keys.
+## An associative key-value map.
 ##
 ## Runtime-managed: instances are the runtime's
-## SpecMap objects (64-bucket FNV-1a hash); this declaration is the API
+## SpecMap objects (8-bucket growing hash table); this declaration is the API
 ## surface. Values are stored either as refcounted strings or in the any
 ## slot, per the value's type; the typed getters read the matching slot.
 
@@ -23,24 +23,24 @@ Class is Map of K to V{
 	## @param default: Fallback value returned if key is absent.
 	## @return: Mapped value, or [default].
 	## @fallback: Returns [default] when [key] does not exist in the map.
-	Function of V is get(String is key, Any is default){
+	Function of V is get(K is key, Any is default){
 	}
 
 	## Looks up a string value by key, returning [default] if not found.
 	##
-	## @param key: Lookup key string.
+	## @param key: Lookup key.
 	## @param default: Fallback string returned if key is absent.
 	## @return: Mapped value, or [default].
 	## @fallback: Returns [default] when [key] does not exist in the map.
-	Function of String is getString(String is key, String is default){
+	Function of String is getString(K is key, String is default){
 	}
 
 	## Looks up an integer value by key, returning [default] if not found.
 	##
-	## @param key: Lookup key string.
+	## @param key: Lookup key.
 	## @param default: Fallback integer returned if key is absent.
 	## @return: Mapped value, or [default].
-	Function of Int is getInt(String is key, Int is default){
+	Function of Int is getInt(K is key, Int is default){
 		local String is s: self:getString(key: key, default: '');
 		if({ s:length() > 0 }, {
 			return s:parseInt(base: 10, default: default);
@@ -50,18 +50,18 @@ Class is Map of K to V{
 
 	## Looks up a float value by key, returning [default] if not found.
 	##
-	## @param key: Lookup key string.
+	## @param key: Lookup key.
 	## @param default: Fallback float returned if key is absent.
 	## @return: Mapped value, or [default].
-	Function of Float is getFloat(String is key, Float is default){
+	Function of Float is getFloat(K is key, Float is default){
 	}
 
 	## Looks up a boolean value by key, returning [default] if not found.
 	##
-	## @param key: Lookup key string.
+	## @param key: Lookup key.
 	## @param default: Fallback boolean returned if key is absent.
 	## @return: Mapped value, or [default].
-	Function of Boolean is getBool(String is key, Boolean is default){
+	Function of Boolean is getBool(K is key, Boolean is default){
 		local String is s: self:getString(key: key, default: '');
 		return match(on: s, when: [
 			'true': { true },
@@ -72,29 +72,29 @@ Class is Map of K to V{
 
 	## Inserts or updates an entry in the map.
 	##
-	## @param key: Entry key string.
+	## @param key: Entry key.
 	## @param value: Entry value.
-	Function is set(String is key, Any is value){
+	Function is set(K is key, Any is value){
 	}
 
 	## Determines whether an entry exists for the specified key.
 	##
 	## @param key: Key to test.
 	## @return: `true` if key is present, `false` otherwise.
-	Function of Boolean is has(String is key){
+	Function of Boolean is has(K is key){
 	}
 
 	## Removes the entry associated with [key].
 	##
 	## @param key: Key to remove.
 	## @return: `true` if removed, `false` if key was not present.
-	Function of Boolean is remove(String is key){
+	Function of Boolean is remove(K is key){
 	}
 
 	## Returns an array containing all keys currently present in the map.
 	##
-	## @return: [Array] of key strings.
-	Function of Array of String is keys(){
+	## @return: [Array] of keys.
+	Function of Array of K is keys(){
 	}
 
 	## Returns the total number of entries in the map.
@@ -121,7 +121,7 @@ Class is Map of K to V{
 	## @return: [Array] of values.
 	Function of Array is values(){
 		local Array is out: [];
-		self:each(action: local Function(String is k, Any is v){
+		self:each(action: local Function(K is k, Any is v){
 			out:add(item: v);
 		});
 		return out;
@@ -129,8 +129,8 @@ Class is Map of K to V{
 
 	## Removes all entries from the map.
 	Function is clear(){
-		local Array of String is ks: self:keys();
-		ks:each(action: local Function(String is k){
+		local Array of K is ks: self:keys();
+		ks:each(action: local Function(K is k){
 			self:remove(key: k);
 		});
 	}
@@ -139,8 +139,8 @@ Class is Map of K to V{
 	##
 	## @param other: Source map to merge in.
 	Function is merge(Map of K to V is other){
-		local Array of String is ks: other:keys();
-		ks:each(action: local Function(String is k){
+		local Array of K is ks: other:keys();
+		ks:each(action: local Function(K is k){
 			local String is sv: other:getString(key: k, default: '');
 			if({ sv != '' }, {
 				self:set(key: k, value: sv);
@@ -156,7 +156,7 @@ Class is Map of K to V{
 	## @return: Filtered [Map].
 	Function of Map is filter(Function of Boolean is predicate){
 		local Map is out: [:];
-		self:each(action: local Function(String is k, Any is v){
+		self:each(action: local Function(K is k, Any is v){
 			if({ predicate(k, v) }, {
 				out:set(key: k, value: v);
 			});
@@ -170,7 +170,7 @@ Class is Map of K to V{
 	## @return: `true` if any entry matches.
 	Function of Boolean is any(Function of Boolean is predicate){
 		local Boolean is found: false;
-		self:each(action: local Function(String is k, Any is v){
+		self:each(action: local Function(K is k, Any is v){
 			if({ !found && predicate(k, v) }, {
 				found: true;
 			});
@@ -184,7 +184,7 @@ Class is Map of K to V{
 	## @return: Count of matching entries.
 	Function of Int is count(Function of Boolean is predicate){
 		local Int is total: 0;
-		self:each(action: local Function(String is k, Any is v){
+		self:each(action: local Function(K is k, Any is v){
 			if({ predicate(k, v) }, {
 				total: total + 1;
 			});

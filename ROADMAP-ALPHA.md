@@ -281,7 +281,7 @@ Spec compiles to C11. Platform-specific headers and primitives in `RuntimePrelud
 ---
 
 ## 8. Pre-Alpha Language, Stdlib & Runtime Cleanup
-- **Status**: **In Progress**.
+- **Status**: **Completed**.
 
 Targeted ergonomics, type-safety, reliability, and runtime improvements before Alpha 0.1:
 

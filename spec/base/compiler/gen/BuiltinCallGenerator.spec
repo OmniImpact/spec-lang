@@ -893,15 +893,17 @@ Class is BuiltinCallGenerator{
 			a1: cg:generateExpression(expr: self:argValue(expr: expr, index: 1));
 		});
 		if({ m == 'init' }, {
-			return 'spec_map_new()';
+			local String is mapT: if({ cg:containerHint != '' }, { cg:containerHint }, { targetType });
+			return cg:mapNewCall(containerType: mapT, valIsArc: cg:containerElemIsArc(containerType: mapT));
 		});
+		local String is kSuf: cg:mapKeySuffix(containerType: targetType);
 		if({ m == 'set' }, {
 			# String values store directly via spec_xstrdup (so the SpecBuf*
 			# argument stays in argMode: true to be claimed in the pool);
-			# everything else boxes into the any-slot via spec_map_set_any.
+			# everything else boxes into the any-slot via spec_map_set*_any.
 			local String is keyC: 'spec_string_intern("")';
 			local String is valC: 'spec_string_intern("")';
-			local Boolean is isStrMap: targetType:contains(needle: 'String:String') || targetType:contains(needle: 'to String');
+			local Boolean is isStrMap: targetType:endsWith(suffix: ':String') || targetType:endsWith(suffix: 'to String');
 			local Boolean is valIsStr: true;
 			cd:args:each(action: local Function(NamedArg is arg){
 				if({ arg:name == 'key' }, {
@@ -924,30 +926,41 @@ Class is BuiltinCallGenerator{
 				});
 			});
 			if({ isStrMap || valIsStr }, {
-				return 'spec_map_set(' . targetC . ', ' . keyC . ', ' . valC . ')';
+				return 'spec_map_set' . kSuf . '(' . targetC . ', ' . keyC . ', ' . valC . ')';
 			});
-			return 'spec_map_set_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
+			return 'spec_map_set' . kSuf . '_any(' . targetC . ', ' . keyC . ', (void*)(intptr_t)(' . valC . '))';
 		});
 		if({ m == 'get' }, {
-			return 'spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			local String is valT: if({ targetType:startsWith(prefix: 'Map:') }, { cg:elemOfType(t: targetType) }, { 'String' });
+			local String is callC: 'spec_map_get' . kSuf . '(' . targetC . ', ' . a0 . ', (void*)(intptr_t)(' . a1 . '))';
+			if({ valT == 'Int' }, {
+				return '((long long)(intptr_t)' . callC . ')';
+			});
+			if({ valT == 'Boolean' }, {
+				return '((bool)(intptr_t)' . callC . ')';
+			});
+			if({ valT == 'String' }, {
+				return '((String)' . callC . ')';
+			});
+			return callC;
 		});
 		if({ m == 'getString' }, {
-			return '(String)spec_map_get(' . targetC . ', ' . a0 . ', ' . a1 . ')';
+			return '(String)spec_map_get' . kSuf . '(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
 		if({ m == 'getInt' }, {
 			return 'Map_getInt(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
 		if({ m == 'getFloat' }, {
-			return '((double)spec_map_get(' . targetC . ', ' . a0 . ', (void*)0))';
+			return '((double)spec_map_get' . kSuf . '(' . targetC . ', ' . a0 . ', (void*)0))';
 		});
 		if({ m == 'getBool' }, {
 			return 'Map_getBool(' . targetC . ', ' . a0 . ', ' . a1 . ')';
 		});
 		if({ m == 'has' }, {
-			return 'spec_map_has(' . targetC . ', ' . a0 . ')';
+			return 'spec_map_has' . kSuf . '(' . targetC . ', ' . a0 . ')';
 		});
 		if({ m == 'remove' }, {
-			return 'spec_map_remove(' . targetC . ', ' . a0 . ')';
+			return 'spec_map_remove' . kSuf . '(' . targetC . ', ' . a0 . ')';
 		});
 		if({ m == 'keys' }, {
 			return 'spec_map_keys(' . targetC . ')';
@@ -963,7 +976,7 @@ Class is BuiltinCallGenerator{
 					else: { false }
 				]);
 				if({ isAnon }, {
-					return cg:generateInlineMapEach(targetC: targetC, fnExpr: fnExpr);
+					return cg:generateInlineMapEach(targetC: targetC, targetType: targetType, fnExpr: fnExpr);
 				});
 			});
 		});

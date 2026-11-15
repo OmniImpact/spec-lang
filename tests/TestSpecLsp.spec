@@ -100,7 +100,15 @@ Class of SpecUnitTest is TestSpecLsp{
 
 		fileWrite(path: inPath, content: reqs, onSuccess: {}, onError: {});
 
-		local Int is code: Process:execute(command: '/bin/sh', args: ['-c', lsp . ' < ' . inPath . ' > ' . outPath]);
+		local Int is code: 1;
+		if({ Process:osName() == 'windows' }, {
+			local String is lspWin: lsp:replaceAll(search: '/', replacement: '\\');
+			local String is inWin: inPath:replaceAll(search: '/', replacement: '\\');
+			local String is outWin: outPath:replaceAll(search: '/', replacement: '\\');
+			code: Process:execute(command: 'cmd.exe', args: ['/c', lspWin . ' < ' . inWin . ' > ' . outWin]);
+		}, {
+			code: Process:execute(command: '/bin/sh', args: ['-c', lsp . ' < ' . inPath . ' > ' . outPath]);
+		});
 		Assert:areEqualInt(0, code);
 
 		local String is outRaw: fileRead(path: outPath, default: '', onSuccess: {}, onError: {});

@@ -36,6 +36,7 @@ Class is CodeGenerator{
 		['base', 'compiler', 'gen', RuntimePrelude],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'struct', as Sort()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Buf()],
 	];
@@ -559,6 +560,78 @@ Class is CodeGenerator{
 	Function of Boolean is containerElemIsArc(String is containerType){
 		local String is k: self:containerElemKind(containerType: containerType);
 		return k == 'object';
+	}
+
+	## Extracts the key type name from a Map type string ('Map:K:V' or
+	## 'Map of K to V'), defaulting to 'String' for bare 'Map'.
+	##
+	## @param containerType: Canonical or surface Map type name.
+	## @return: Key type name.
+	Function of String is mapKeyType(String is containerType){
+		if({ containerType:startsWith(prefix: 'Map:') }, {
+			local Array of String is parts: containerType:split(delimiter: ':');
+			if({ parts:length() >= 3 }, {
+				return parts:get(index: 1);
+			});
+		});
+		if({ containerType:startsWith(prefix: 'Map of ') }, {
+			local String is kv: containerType:substring(start: 7, end: containerType:length());
+			local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
+			if({ toIdx >= 0 }, {
+				return kv:substring(start: 0, end: toIdx);
+			});
+		});
+		return 'String';
+	}
+
+	## Classifies a Map key type into 'string', 'int', 'float', or 'object'.
+	##
+	## @param keyType: Key type name.
+	## @return: Key storage kind string.
+	Function of String is mapKeyKind(String is keyType){
+		if({ keyType == '' || keyType == 'String' || keyType == 'Any' || keyType == 'K' }, {
+			return 'string';
+		});
+		if({ keyType == 'Int' || keyType == 'Boolean' || keyType == 'Byte' }, {
+			return 'int';
+		});
+		if({ keyType == 'Float' }, {
+			return 'float';
+		});
+		return 'object';
+	}
+
+	## Returns the C runtime suffix ('', '_int', '_flt', '_obj') for a Map type.
+	##
+	## @param containerType: Map type name.
+	## @return: C helper suffix.
+	Function of String is mapKeySuffix(String is containerType){
+		local String is kk: self:mapKeyKind(keyType: self:mapKeyType(containerType: containerType));
+		return match(on: kk, when: [
+			'int': { '_int' },
+			'float': { '_flt' },
+			'object': { '_obj' },
+			else: { '' }
+		]);
+	}
+
+	## Emits the C constructor call for a Map with the given type and value ARC flag.
+	##
+	## @param containerType: Map type name.
+	## @param valIsArc: Whether values are ARC-managed objects.
+	## @return: C constructor call.
+	Function of String is mapNewCall(String is containerType, Boolean is valIsArc){
+		local String is kk: self:mapKeyKind(keyType: self:mapKeyType(containerType: containerType));
+		if({ kk == 'string' }, {
+			return if({ valIsArc }, { 'spec_map_new_object()' }, { 'spec_map_new()' });
+		});
+		local String is kkConst: match(on: kk, when: [
+			'int': { 'SPEC_KEY_INT' },
+			'float': { 'SPEC_KEY_FLOAT' },
+			else: { 'SPEC_KEY_OBJECT' }
+		]);
+		local String is vkConst: if({ valIsArc }, { 'SPEC_ELEM_OBJECT' }, { 'SPEC_ELEM_NONE' });
+		return 'spec_map_new_typed(' . kkConst . ', ' . vkConst . ')';
 	}
 
 	## True when the class currently being generated instance-imports
@@ -1918,20 +1991,21 @@ Class is CodeGenerator{
 	## @param expr: The MAP expression.
 	## @return: C compound-literal allocation.
 	Function of String is emitMapLiteral(Expression is expr, Array of Expression is keys, Array of Expression is values){
-		local String is newCall: 'spec_map_new()';
-		if({ self:containerHint != '' }, {
-			if({ self:containerElemIsArc(containerType: self:containerHint) }, {
-				newCall: 'spec_map_new_object()';
-			});
+		local String is mapType: self:containerHint;
+		local Boolean is valIsArc: false;
+		if({ mapType != '' }, {
+			valIsArc: self:containerElemIsArc(containerType: mapType);
 			self:containerHint: '';
 		}, {
-			if({ values:length() > 0 }, {
-				local String is valT: self:inferTargetType(expr: values:get(index: 0));
-				if({ self:isArcType(typeName: valT) }, {
-					newCall: 'spec_map_new_object()';
-				});
+			local String is kT: if({ keys:length() > 0 }, { self:inferTargetType(expr: keys:get(index: 0)) }, { 'String' });
+			local String is vT: if({ values:length() > 0 }, { self:inferTargetType(expr: values:get(index: 0)) }, { 'String' });
+			valIsArc: self:isArcType(typeName: vT);
+			if({ kT != '' && kT != 'String' && kT != 'Any' }, {
+				mapType: 'Map:' . kT . ':' . vT;
 			});
 		});
+		local String is newCall: self:mapNewCall(containerType: mapType, valIsArc: valIsArc);
+		local String is kSuf: self:mapKeySuffix(containerType: mapType);
 		local String is res: '({ SpecMap* _map = ' . newCall . ';';
 		local Int is idx: 0;
 		local Boolean is savedArgM: self:argMode;
@@ -1941,9 +2015,9 @@ Class is CodeGenerator{
 			local String is kC: self:generateExpression(expr: kExpr);
 			local String is vC: self:generateExpression(expr: vExpr);
 			if({ self:isStringExpr(expr: vExpr, exprC: vC) }, {
-				res: res . ' spec_map_set(_map, ' . kC . ', ' . vC . ');';
+				res: res . ' spec_map_set' . kSuf . '(_map, ' . kC . ', ' . vC . ');';
 			}, {
-				local String is setFn: if({ self:yieldsClaim(expr: vExpr) }, { 'spec_map_set_any_transfer' }, { 'spec_map_set_any' });
+				local String is setFn: if({ self:yieldsClaim(expr: vExpr) }, { 'spec_map_set' . kSuf . '_any_transfer' }, { 'spec_map_set' . kSuf . '_any' });
 				res: res . ' ' . setFn . '(_map, ' . kC . ', (void*)(intptr_t)(' . vC . '));';
 			});
 			idx: idx + 1;
@@ -2327,21 +2401,23 @@ Class is CodeGenerator{
 			if({ targetType:startsWith(prefix: 'Map:') }, {
 				valType: self:elemOfType(t: targetType);
 			});
+			local String is kSuf: self:mapKeySuffix(containerType: targetType);
+			local String is gFn: 'spec_map_get' . kSuf . '(';
 			return match(when: [
 				{ valType == 'String' }: {
-					'((String)spec_map_get(' . targetC . ', ' . indexC . ', spec_string_intern("")))'
+					'((String)' . gFn . targetC . ', ' . indexC . ', spec_string_intern("")))'
 				},
 				{ valType == Primitive:INT:value() }: {
-					'((long long)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', 0))'
+					'((long long)(intptr_t)' . gFn . targetC . ', ' . indexC . ', 0))'
 				},
 				{ valType == 'Float' }: {
-					'((double)spec_map_get(' . targetC . ', ' . indexC . ', 0))'
+					'((double)' . gFn . targetC . ', ' . indexC . ', 0))'
 				},
 				{ valType == 'Boolean' }: {
-					'((bool)(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', false))'
+					'((bool)(intptr_t)' . gFn . targetC . ', ' . indexC . ', false))'
 				},
 				else: {
-					'((' . self:cTypeFor(typeName: valType) . ')(intptr_t)spec_map_get(' . targetC . ', ' . indexC . ', NULL))'
+					'((' . self:cTypeFor(typeName: valType) . ')(intptr_t)' . gFn . targetC . ', ' . indexC . ', NULL))'
 				}
 			]);
 		});
@@ -3211,6 +3287,7 @@ Class is CodeGenerator{
 
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
+		sortStrings(values: outerKeys);
 		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
@@ -3278,7 +3355,9 @@ Class is CodeGenerator{
 		});
 
 		local String is hoistedDeclsC: '';
-		self:hoistedLocals:each(action: local Function(String is hName){
+		local Array of String is hoistedKeys1: self:hoistedLocals:keys();
+		sortStrings(values: hoistedKeys1);
+		hoistedKeys1:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
 			local String is hNameC: self:utils:cIdent(name: hName);
 			if({ self:boxedLocals:has(key: hName) }, {
@@ -3369,6 +3448,7 @@ Class is CodeGenerator{
 			]);
 		});
 
+		sortStrings(values: outerKeys);
 		outerKeys:each(action: local Function(String is k){
 			if({ paramNames:indexOf(search: k, default: -1) < 0 && !bodyLocals:has(key: k) }, {
 				local String is cVar: self:utils:cIdent(name: k);
@@ -3817,10 +3897,8 @@ Class is CodeGenerator{
 						});
 					},
 					'Map': {
-						boxInitC: "spec_map_new()";
-						if({ self:containerElemIsArc(containerType: self:formatTypeString(t: varType)) }, {
-							boxInitC: "spec_map_new_object()";
-						});
+						local String is mBoxT: self:formatTypeString(t: varType);
+						boxInitC: self:mapNewCall(containerType: mBoxT, valIsArc: self:containerElemIsArc(containerType: mBoxT));
 					},
 					else: {}
 				]);
@@ -3838,7 +3916,7 @@ Class is CodeGenerator{
 		# statement assigns, so a goto can never skip the initializer.
 		if({ self:hoistedLocals:has(key: varName) }, {
 			if({ hasInit }, {
-				if({ self:isContainerLiteral(expr: initExpr) }, {
+				if({ self:isContainerLiteral(expr: initExpr) || vTypeName == 'Map' }, {
 					self:setContainerHint(t: self:formatTypeString(t: varType));
 				});
 				local Boolean is hSavedArg: self:argMode;
@@ -3879,16 +3957,14 @@ Class is CodeGenerator{
 				return '    ' . cVarName . ' = ' . hNewCall . ";\n";
 			});
 			if({ vTypeName == 'Map' }, {
-				local String is hNewCall: 'spec_map_new()';
-				if({ self:containerElemIsArc(containerType: self:formatTypeString(t: varType)) }, {
-					hNewCall: 'spec_map_new_object()';
-				});
+				local String is hMapT: self:formatTypeString(t: varType);
+				local String is hNewCall: self:mapNewCall(containerType: hMapT, valIsArc: self:containerElemIsArc(containerType: hMapT));
 				return '    ' . cVarName . ' = ' . hNewCall . ";\n";
 			});
 			return '';
 		});
 		if({ hasInit }, {
-			if({ self:isContainerLiteral(expr: initExpr) }, {
+			if({ self:isContainerLiteral(expr: initExpr) || vTypeName == 'Map' }, {
 				self:setContainerHint(t: self:formatTypeString(t: varType));
 			});
 			local Boolean is savedArg: self:argMode;
@@ -3929,10 +4005,8 @@ Class is CodeGenerator{
 			return '    ' . vPrefix . autoPrefix . cType . ' ' . cVarName . ' = ' . newCall . ";\n";
 		});
 		if({ vTypeName == 'Map' }, {
-			local String is newCall: 'spec_map_new()';
-			if({ self:containerElemIsArc(containerType: self:formatTypeString(t: varType)) }, {
-				newCall: 'spec_map_new_object()';
-			});
+			local String is mapT: self:formatTypeString(t: varType);
+			local String is newCall: self:mapNewCall(containerType: mapT, valIsArc: self:containerElemIsArc(containerType: mapT));
 			return '    ' . vPrefix . autoPrefix . cType . ' ' . cVarName . ' = ' . newCall . ";\n";
 		});
 		return '    ' . vPrefix . autoPrefix . cType . ' ' . cVarName . " = 0;\n";
@@ -3962,10 +4036,11 @@ Class is CodeGenerator{
 				local String is valC: self:generateExpression(expr: assignValue);
 				self:argMode: savedArgIx;
 				if({ containerType:startsWith(prefix: 'Map:') || containerType == 'Map' }, {
+					local String is kSuf: self:mapKeySuffix(containerType: containerType);
 					if({ isStrMapAssign || self:isStringExpr(expr: assignValue, exprC: valC) }, {
-						return '    spec_map_set(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
+						return '    spec_map_set' . kSuf . '(' . containerC . ', ' . idxC . ', ' . valC . ");\n";
 					});
-					return '    spec_map_set_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
+					return '    spec_map_set' . kSuf . '_any(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 				});
 				return '    spec_array_set(' . containerC . ', ' . idxC . ', (void*)(intptr_t)(' . valC . "));\n";
 			},
@@ -4271,7 +4346,9 @@ Class is CodeGenerator{
 			bufAppendBuf(dst: bodyC, src: '    ' . retType . ' ' . self:cleanupRetVar . " = 0;\n");
 		});
 		bufAppendBuf(dst: bodyC, src: "    SPEC_POOL_AUTO;\n");
-		self:hoistedLocals:each(action: local Function(String is hName){
+		local Array of String is hoistedKeys2: self:hoistedLocals:keys();
+		sortStrings(values: hoistedKeys2);
+		hoistedKeys2:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
 			local String is hNameC: self:utils:cIdent(name: hName);
 			if({ self:boxedLocals:has(key: hName) }, {
@@ -5357,6 +5434,7 @@ Class is CodeGenerator{
 
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
+		sortStrings(values: outerKeys);
 		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
@@ -5460,6 +5538,7 @@ Class is CodeGenerator{
 
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
+		sortStrings(values: outerKeys);
 		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
@@ -5529,7 +5608,7 @@ Class is CodeGenerator{
 	## @param targetC: Generated C for the map.
 	## @param fnExpr: The ANON_FN argument (key, value).
 	## @return: C statement expression.
-	Function of String is generateInlineMapEach(String is targetC, Expression is fnExpr){
+	Function of String is generateInlineMapEach(String is targetC, String is targetType, Expression is fnExpr){
 		self:anonCounter: self:anonCounter + 1;
 		local Int is id: self:anonCounter;
 		local String is savedRetVar: self:inlineReturnVar;
@@ -5537,6 +5616,7 @@ Class is CodeGenerator{
 
 		local Map of String to String is savedVars: Map:init();
 		local Array of String is outerKeys: self:localVars:keys();
+		sortStrings(values: outerKeys);
 		outerKeys:each(action: local Function(String is k){
 			savedVars:set(key: k, value: self:localVars:getString(key: k, default: ''));
 		});
@@ -5560,8 +5640,31 @@ Class is CodeGenerator{
 		local String is paramDecl: '';
 		if({ fnParams:length() >= 1 }, {
 			local Parameter is p0: fnParams:get(index: 0);
-			self:localVars:set(key: p0:name, value: 'String');
-			paramDecl: paramDecl . '            SPEC_AUTO String ' . self:utils:cIdent(name: p0:name) . ' = spec_string_from_chars(' . eVar . "->key);\n";
+			local String is keyType: self:mapKeyType(containerType: targetType);
+			if({ (keyType == '' || keyType == 'String') && p0:paramType:name != '' && p0:paramType:name != 'Any' }, {
+				keyType: self:formatTypeString(t: p0:paramType);
+			});
+			self:localVars:set(key: p0:name, value: keyType);
+			local String is kIdent: self:utils:cIdent(name: p0:name);
+			local String is kKind: self:mapKeyKind(keyType: keyType);
+			if({ kKind == 'string' }, {
+				paramDecl: paramDecl . '            SPEC_AUTO String ' . kIdent . ' = spec_string_from_chars(' . eVar . "->key);\n";
+			}, {
+				if({ kKind == 'float' }, {
+					paramDecl: paramDecl . '            double ' . kIdent . ' = spec_u64_to_double(' . eVar . "->key_bits);\n";
+				}, {
+					if({ keyType == 'Boolean' }, {
+						paramDecl: paramDecl . '            bool ' . kIdent . ' = (' . eVar . "->key_bits != 0);\n";
+					}, {
+						if({ kKind == 'int' }, {
+							paramDecl: paramDecl . '            long long ' . kIdent . ' = (long long)(intptr_t)' . eVar . "->key_bits;\n";
+						}, {
+							local String is kCType: self:cTypeFor(typeName: keyType);
+							paramDecl: paramDecl . '            ' . kCType . ' ' . kIdent . ' = (' . kCType . ')(uintptr_t)' . eVar . "->key_bits;\n";
+						});
+					});
+				});
+			});
 		});
 		if({ fnParams:length() >= 2 }, {
 			local Parameter is p1: fnParams:get(index: 1);
@@ -5764,7 +5867,9 @@ Class is CodeGenerator{
 			]);
 		});
 		local String is hoistedDeclsC: '';
-		self:hoistedLocals:each(action: local Function(String is hName){
+		local Array of String is hoistedKeys1: self:hoistedLocals:keys();
+		sortStrings(values: hoistedKeys1);
+		hoistedKeys1:each(action: local Function(String is hName){
 			local String is hType: self:hoistedLocals:getString(key: hName, default: '');
 			local String is hNameC: self:utils:cIdent(name: hName);
 			if({ self:boxedLocals:has(key: hName) }, {

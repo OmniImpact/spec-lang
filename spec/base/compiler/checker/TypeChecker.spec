@@ -3043,11 +3043,13 @@ Class is TypeChecker{
 				if({ expected != '' && expected:startsWith(prefix: 'Map') }, {
 					# Value type from the expectation ('Map of K to V' both
 					# spellings); values must be assignable to it.
+					local String is keyT: '';
 					local String is valT: '';
 					# Both spellings: 'Map of K to V' and the canonical
 					# colon form 'Map:K:V' (formatTypeString's output).
 					local Array of String is mParts: expected:split(delimiter: ':');
 					if({ mParts:length() > 2 }, {
+						keyT: mParts:get(index: 1);
 						valT: mParts:get(index: 2);
 					}, {
 						local String is kv: expected:substring(start: 4, end: expected:length());
@@ -3056,16 +3058,22 @@ Class is TypeChecker{
 						});
 						local Int is toIdx: kv:indexOf(search: ' to ', default: -1);
 						if({ toIdx >= 0 }, {
+							keyT: kv:substring(start: 0, end: toIdx);
 							valT: kv:substring(start: toIdx + 4, end: kv:length());
 						});
 					});
 					keys:each(action: local Function(Expression is k){
-						self:inferExpressionType(expr: k);
+						local String is kT: self:inferExpressionType(expr: k);
+						if({ keyT != '' && kT != '' && kT != Primitive:ANY:value() && !self:isAssignable(target: keyT, source: kT) }, {
+							local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
+							self:addError(line: self:currentLine, msg: "Cannot assign '" . kT . "' key to 'Map:" . kDisplay . ":" . valT . "'.");
+						});
 					});
 					values:each(action: local Function(Expression is v){
 						local String is vT: self:inferExpressionType(expr: v);
 						if({ valT != '' && vT != '' && vT != Primitive:ANY:value() && !self:isAssignable(target: valT, source: vT) }, {
-							self:addError(line: self:currentLine, msg: "Cannot assign 'Map:String:" . vT . "' to 'Map:String:" . valT . "'.");
+							local String is kDisplay: if({ keyT != '' }, { keyT }, { 'String' });
+							self:addError(line: self:currentLine, msg: "Cannot assign 'Map:" . kDisplay . ":" . vT . "' to 'Map:" . kDisplay . ":" . valT . "'.");
 						});
 					});
 					res: expected;
@@ -4049,7 +4057,9 @@ Class is TypeChecker{
 										'getBool': { res: Primitive:BOOLEAN:value(); },
 										'indexOf': { res: Primitive:INT:value(); },
 										'join': { res: Primitive:STRING:value(); },
-										'keys': { res: 'Array of String'; },
+										'keys': {
+											res: if({ targetType:startsWith(prefix: 'Map:') && scParts:length() > 1 }, { 'Array:' . scParts:get(index: 1) }, { 'Array of String' });
+										},
 										'add': { res: self:names:voidName(); },
 										'set': { res: self:names:voidName(); },
 										'clear': { res: self:names:voidName(); },
@@ -4066,6 +4076,11 @@ Class is TypeChecker{
 											res: scParts:get(index: 2);
 										});
 									});
+								});
+								if({ (targetType == 'Map' || targetType:startsWith(prefix: 'Map:')) && method == 'keys' }, {
+									local Array of String is mkParts: targetType:split(delimiter: ':');
+									local String is kType: if({ mkParts:length() > 1 && mkParts:get(index: 1) != 'Any' }, { mkParts:get(index: 1) }, { Primitive:STRING:value() });
+									res: 'Array:' . kType;
 								});
 							}, {
 								if({ targetType:startsWith(prefix: 'Array') && method == 'map' }, {
