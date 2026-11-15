@@ -103,8 +103,11 @@ Class of SpecUnitTest is TestTime{
 		});
 		Assert:isTrue(Time:cancelTimer(timerId: t3));
 
-		# Wait for t1 and t2 to finish
-		Time:sleepMs(ms: 80);
+		# Poll for t1 and t2 to finish with a bounded timeout
+		local Int is waitStart: Time:monotonicMs();
+		while(evaluate: { (timeoutHits < 1 || intervalHits < 3) && (Time:monotonicMs() - waitStart) < 2000 }, iterate: {
+			Time:sleepMs(ms: 5);
+		});
 		Assert:areEqualInt(1, timeoutHits);
 		Assert:areEqualInt(3, intervalHits);
 		Assert:areEqualInt(0, cancelledHits);

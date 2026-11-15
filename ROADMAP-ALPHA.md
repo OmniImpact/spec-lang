@@ -280,4 +280,25 @@ Spec compiles to C11. Platform-specific headers and primitives in `RuntimePrelud
 
 ---
 
+## 8. Pre-Alpha Language, Stdlib & Runtime Cleanup
+- **Status**: **In Progress**.
+
+Targeted ergonomics, type-safety, reliability, and runtime improvements before Alpha 0.1:
+
+1. **Deterministic Async Tests (Slot-Polling with Timeout)**
+   - Replace fixed `sleep` waits in `tests/TestFileAsync.spec` and `tests/TestTime.spec` with `Time:monotonicMs()`-bounded polling loops (`Time:sleepMs(ms: 5)`) so tests are non-flaky under load and portable on Windows.
+2. **Unified `as` Import Class Access**
+   - Update `TypeChecker.spec` (`fileGrants` and `accessInClass`) so importing a class with `as` (e.g. `['base', 'sys', as File()]`) automatically grants full class access (type annotations, static calls, and `init()`) without requiring a separate plain import line.
+3. **Stronger Enum Sum-Type `match` Checks**
+   - Enforce exhaustiveness (all variants or `else:`) on both value-yielding and statement-form (void) enum `match`es (including empty `when: []`).
+   - Flag redundant `else:` when all enum variants are already covered.
+   - Validate tagged-variant payload closure arity and explicit parameter type annotations.
+4. **Comprehensive `onError` Callbacks in Stdlib I/O & Device Classes**
+   - Add optional `onError: Function(String is error)` callbacks receiving actual failure descriptions to `File:fileRemove`, `File:fileTemp`, `Dir:dirList`, `Socket` (`connect`, `listen`, `accept`, `send`, `sendString`, `receive`, `receiveString`), and `Audio` (`open`, `write`).
+5. **Flexible, Leaner `SpecMap` Implementation**
+   - Lower `SPEC_MAP_INITIAL_BUCKETS` from `64` to `8` (retaining dynamic doubling at load factor 1 via `spec_map_grow`).
+   - Generalize `SpecMap` and compiler `Map of K to V` codegen/typechecking to support `String`, `Int`, `Boolean`, `Float`, and `Enum`/object identity keys in addition to `String` keys.
+
+---
+
 *This document serves as the master planning guide for all work leading directly to the Spec 0.1 Alpha release.*

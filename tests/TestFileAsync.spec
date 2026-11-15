@@ -16,11 +16,23 @@ Class of SpecUnitTest is TestFileAsync{
 		['base', 'struct', Map],
 		['base', 'sys', File],
 		['base', 'sys', Process],
+		['base', 'sys', Time],
+		['base', 'sys', as Time()],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Process()],
-		['base', 'sys', as Conditional()]
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
+
+	## Polls an atomic slot until it leaves the pending (-1) sentinel or [timeoutMs] elapses.
+	Function of Int is waitForSlot(Int is slot, Int is timeoutMs: 5000){
+		local Int is start: Time:monotonicMs();
+		while(evaluate: { Process:atomicGet(slot: slot) == -1 && (Time:monotonicMs() - start) < timeoutMs }, iterate: {
+			Time:sleepMs(ms: 5);
+		});
+		return Process:atomicGet(slot: slot);
+	}
 
 	## Background write: onSuccess fires with the full byte count and
 	## onError stays silent.
@@ -42,9 +54,7 @@ Class of SpecUnitTest is TestFileAsync{
 		);
 
 		# Wait for background thread write to finish
-		Process:execute(command: 'sleep', args: ['0.1']);
-
-		local Int is wrote: Process:atomicGet(slot: 50);
+		local Int is wrote: self:waitForSlot(slot: 50);
 		local Int is expectedBytes: content:length();
 		Assert:areEqualInt(expectedBytes, wrote);
 	}
@@ -69,8 +79,7 @@ Class of SpecUnitTest is TestFileAsync{
 		);
 
 		# Wait for background thread write to finish
-		Process:execute(command: 'sleep', args: ['0.1']);
-		local Int is wrote: Process:atomicGet(slot: 50);
+		local Int is wrote: self:waitForSlot(slot: 50);
 		local Int is expectedBytes: content:length();
 		Assert:areEqualInt(expectedBytes, wrote);
 
@@ -80,7 +89,7 @@ Class of SpecUnitTest is TestFileAsync{
 		fileReadAsync(
 			path: asyncFile,
 			onSuccess: local Function(String is data){
-				Conditional:if(check: { data == content }, then: {
+				if(check: { data == content }, then: {
 					Process:atomicPut(slot: 51, value: 1);
 				}, else: {
 					Process:atomicPut(slot: 51, value: 0);
@@ -92,9 +101,7 @@ Class of SpecUnitTest is TestFileAsync{
 		);
 
 		# Wait for background thread read to finish
-		Process:execute(command: 'sleep', args: ['0.1']);
-
-		local Int is readOutcome: Process:atomicGet(slot: 51);
+		local Int is readOutcome: self:waitForSlot(slot: 51);
 		Assert:areEqualInt(1, readOutcome);
 	}
 }
