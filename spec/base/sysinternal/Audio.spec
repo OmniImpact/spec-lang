@@ -12,12 +12,20 @@ Class is Audio{
 	## @return: Audio stream handle (> 0), or -1 on failure.
 	Function of Int is audio_open(Int is sample_rate, Int is channels, Int is format);
 
+	## Opens an audio playback stream, invoking [on_error] on failure.
+	## Bound to `spec_audio_open_cb`.
+	Function of Int is audio_open_cb(Int is sample_rate, Int is channels, Int is format, Function is on_error);
+
 	## Writes PCM audio data to the output stream. Bound to `spec_audio_write`.
 	##
 	## @param handle: Audio stream handle returned by audio_open.
 	## @param buffer: List of Byte containing PCM audio samples.
 	## @return: Number of bytes written, or -1 on error.
 	Function of Int is audio_write(Int is handle, List of Byte is buffer);
+
+	## Writes PCM audio data to the output stream, invoking [on_error] on failure.
+	## Bound to `spec_audio_write_cb`.
+	Function of Int is audio_write_cb(Int is handle, List of Byte is buffer, Function is on_error);
 
 	## Drains the pending audio buffer queue until finished. Bound to `spec_audio_drain`.
 	##

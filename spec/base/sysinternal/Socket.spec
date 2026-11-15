@@ -12,6 +12,10 @@ Class is Socket{
 	## @return: Socket file descriptor, or -1 on error.
 	Function of Int is tcp_connect(String is host, Int is port, Int is timeout_ms);
 
+	## Connects to [host] on [port] via TCP, invoking [on_error] on failure.
+	## Bound to `spec_tcp_connect_cb`.
+	Function of Int is tcp_connect_cb(String is host, Int is port, Int is timeout_ms, Function is on_error);
+
 	## Binds and listens on [port] for incoming TCP connections. Bound to `spec_tcp_listen`.
 	##
 	## @param host: Interface to bind (empty string or "0.0.0.0" for any).
@@ -20,18 +24,30 @@ Class is Socket{
 	## @return: Listening socket file descriptor, or -1 on error.
 	Function of Int is tcp_listen(String is host, Int is port, Int is backlog);
 
+	## Binds and listens on [port], invoking [on_error] on failure.
+	## Bound to `spec_tcp_listen_cb`.
+	Function of Int is tcp_listen_cb(String is host, Int is port, Int is backlog, Function is on_error);
+
 	## Accepts an incoming connection on [fd]. Bound to `spec_socket_accept`.
 	##
 	## @param fd: Listening socket descriptor.
 	## @return: Connected client socket descriptor, or -1 on error.
 	Function of Int is socket_accept(Int is fd);
 
+	## Accepts an incoming connection on [fd], invoking [on_error] on failure.
+	## Bound to `spec_socket_accept_cb`.
+	Function of Int is socket_accept_cb(Int is fd, Function is on_error);
+
 	## Sends [data] over socket [fd]. Bound to `spec_socket_send`.
 	##
 	## @param fd: Connected socket descriptor.
 	## @param data: ByteBuffer containing payload.
 	## @return: Number of bytes sent, or -1 on error.
-	Function of Int is socket_send(Int is fd, ByteBuffer is data);
+	Function of Int is socket_send(Int is fd, List of Byte is data);
+
+	## Sends [data] over socket [fd], invoking [on_error] on failure.
+	## Bound to `spec_socket_send_cb`.
+	Function of Int is socket_send_cb(Int is fd, List of Byte is data, Function is on_error);
 
 	## Sends string [str] over socket [fd]. Bound to `spec_socket_send_str`.
 	##
@@ -40,12 +56,20 @@ Class is Socket{
 	## @return: Number of bytes sent, or -1 on error.
 	Function of Int is socket_send_str(Int is fd, String is str);
 
+	## Sends string [str] over socket [fd], invoking [on_error] on failure.
+	## Bound to `spec_socket_send_str_cb`.
+	Function of Int is socket_send_str_cb(Int is fd, String is str, Function is on_error);
+
 	## Receives up to [max_bytes] from socket [fd]. Bound to `spec_socket_recv`.
 	##
 	## @param fd: Connected socket descriptor.
 	## @param max_bytes: Maximum chunk size to read.
 	## @return: Received ByteBuffer, empty on EOF, or empty on error.
-	Function of ByteBuffer is socket_recv(Int is fd, Int is max_bytes);
+	Function of List of Byte is socket_recv(Int is fd, Int is max_bytes);
+
+	## Receives up to [max_bytes] from socket [fd], invoking [on_error] on failure.
+	## Bound to `spec_socket_recv_cb`.
+	Function of List of Byte is socket_recv_cb(Int is fd, Int is max_bytes, Function is on_error);
 
 	## Receives up to [max_bytes] as a String from socket [fd]. Bound to `spec_socket_recv_str`.
 	##
@@ -53,6 +77,10 @@ Class is Socket{
 	## @param max_bytes: Maximum chunk size to read.
 	## @return: Received String, or empty string on EOF/error.
 	Function of String is socket_recv_str(Int is fd, Int is max_bytes);
+
+	## Receives up to [max_bytes] as a String from socket [fd], invoking [on_error] on failure.
+	## Bound to `spec_socket_recv_str_cb`.
+	Function of String is socket_recv_str_cb(Int is fd, Int is max_bytes, Function is on_error);
 
 	## Closes socket [fd]. Bound to `spec_socket_close`.
 	##

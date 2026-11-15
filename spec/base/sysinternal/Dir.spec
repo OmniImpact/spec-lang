@@ -14,6 +14,15 @@ Class is Dir{
 	## @return: Entry names.
 	Function of Array of String is dirList(String is path);
 
+	## Names of the entries in directory [path] ('.' and '..' excluded),
+	## invoking [on_error] with an error description if opening fails.
+	## Bound to `spec_dir_list_cb`.
+	##
+	## @param path: Directory to list.
+	## @param on_error: Optional callback receiving error description.
+	## @return: Entry names, or empty array on failure.
+	Function of Array of String is dir_list_cb(String is path, Function is on_error);
+
 	## Directory containing the running spec executable.
 	##
 	## @return: The executable's directory.

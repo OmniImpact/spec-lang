@@ -81,16 +81,18 @@ Class is File{
 	## Deletes a file at the specified filesystem path.
 	##
 	## @param path: Path of the file to remove.
+	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: `true` if removed successfully, `false` otherwise.
-	Function of Boolean is fileRemove(String is path){
-		return base:sysinternal:File:file_remove(path: path);
+	Function of Boolean is fileRemove(String is path, Function is onError: local Function(String is error){}){
+		return base:sysinternal:File:file_remove_cb(path: path, on_error: onError);
 	}
 
 	## Creates a unique temporary file securely and returns its path.
 	##
 	## @param template: Path template ending in XXXXXX (defaults to '/tmp/spec_XXXXXX.c').
+	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Created file path, or empty string on failure.
-	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c'){
-		return base:sysinternal:File:file_temp(template: template);
+	Function of String is fileTemp(String is template: '/tmp/spec_XXXXXX.c', Function is onError: local Function(String is error){}){
+		return base:sysinternal:File:file_temp_cb(template: template, on_error: onError);
 	}
 }

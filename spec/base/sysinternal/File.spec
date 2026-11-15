@@ -68,10 +68,26 @@ Class is File{
 	## @return: `true` if removed successfully, `false` otherwise.
 	Function of Boolean is file_remove(String is path);
 
+	## Deletes a file at [path], invoking [on_error] on failure.
+	## Bound to `spec_file_remove_cb`.
+	##
+	## @param path: Path of the file to remove.
+	## @param on_error: Optional callback receiving the error description.
+	## @return: `true` if removed successfully, `false` otherwise.
+	Function of Boolean is file_remove_cb(String is path, Function is on_error);
+
 	## Creates a unique temporary file from template and returns its path,
 	## or empty string on failure. Bound to `spec_file_temp`.
 	##
 	## @param template: Path template ending in XXXXXX.
 	## @return: Path to created temporary file, or empty string.
 	Function of String is file_temp(String is template);
+
+	## Creates a unique temporary file from template, invoking [on_error] on failure.
+	## Bound to `spec_file_temp_cb`.
+	##
+	## @param template: Path template ending in XXXXXX.
+	## @param on_error: Optional callback receiving the error description.
+	## @return: Path to created temporary file, or empty string.
+	Function of String is file_temp_cb(String is template, Function is on_error);
 }

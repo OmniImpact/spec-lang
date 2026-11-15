@@ -9,12 +9,12 @@ Class is AudioDevice{
 		['base', 'sysinternal', Audio]
 	];
 
-	Function of Int is open(Int is sampleRate, Int is channels, Int is format){
-		return base:sysinternal:Audio:audio_open(sample_rate: sampleRate, channels: channels, format: format);
+	Function of Int is open(Int is sampleRate, Int is channels, Int is format, Function is onError: local Function(String is error){}){
+		return base:sysinternal:Audio:audio_open_cb(sample_rate: sampleRate, channels: channels, format: format, on_error: onError);
 	}
 
-	Function of Int is write(Int is handle, List of Byte is buffer){
-		return base:sysinternal:Audio:audio_write(handle: handle, buffer: buffer);
+	Function of Int is write(Int is handle, List of Byte is buffer, Function is onError: local Function(String is error){}){
+		return base:sysinternal:Audio:audio_write_cb(handle: handle, buffer: buffer, on_error: onError);
 	}
 
 	Function of Int is drain(Int is handle){

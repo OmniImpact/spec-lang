@@ -174,6 +174,7 @@ void* spec_arena_alloc_object(size_t size, void (*destroy)(void*));
 void spec_arena_drain_objects(void);
 long long spec_arena_used(SpecArena* a);
 SpecArray* spec_dir_list(SpecBuf* path);
+SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error);
 SpecBuf* spec_exe_dir(void);
 long long spec_file_size(SpecBuf* path);
 SpecBuf* spec_buf_new(size_t elem_size, int elem_kind);
@@ -238,7 +239,9 @@ void spec_file_read_async(String path, String def, SpecClosure* on_success, Spec
 void spec_file_write_async(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_exists(String path);
 bool spec_file_remove(String path);
+bool spec_file_remove_cb(String path, SpecClosure* on_error);
 String spec_file_temp(String template);
+String spec_file_temp_cb(String template, SpecClosure* on_error);
 long long spec_process_execute(String command, SpecArray* args);
 void spec_process_sleep(long long ms);
 long long spec_process_get_pid(void);
@@ -311,17 +314,26 @@ void spec_read_line(SpecClosure* on_line);
 String spec_read_bytes(long long count);
 void spec_console_binary_mode(void);
 long long spec_tcp_connect(String host, long long port, long long timeout_ms);
+long long spec_tcp_connect_cb(String host, long long port, long long timeout_ms, SpecClosure* on_error);
 long long spec_tcp_listen(String host, long long port, long long backlog);
+long long spec_tcp_listen_cb(String host, long long port, long long backlog, SpecClosure* on_error);
 long long spec_socket_accept(long long fd);
+long long spec_socket_accept_cb(long long fd, SpecClosure* on_error);
 long long spec_socket_send(long long fd, SpecByteBuffer* buf);
+long long spec_socket_send_cb(long long fd, SpecByteBuffer* buf, SpecClosure* on_error);
 long long spec_socket_send_str(long long fd, String str);
+long long spec_socket_send_str_cb(long long fd, String str, SpecClosure* on_error);
 SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes);
+SpecByteBuffer* spec_socket_recv_cb(long long fd, long long max_bytes, SpecClosure* on_error);
 String spec_socket_recv_str(long long fd, long long max_bytes);
+String spec_socket_recv_str_cb(long long fd, long long max_bytes, SpecClosure* on_error);
 long long spec_socket_close(long long fd);
 long long spec_socket_poll(long long fd, long long mode, long long timeout_ms);
 long long spec_socket_set_timeout(long long fd, long long timeout_ms);
 long long spec_audio_open(long long sample_rate, long long channels, long long format);
+long long spec_audio_open_cb(long long sample_rate, long long channels, long long format, SpecClosure* on_error);
 long long spec_audio_write(long long handle, SpecByteBuffer* buf);
+long long spec_audio_write_cb(long long handle, SpecByteBuffer* buf, SpecClosure* on_error);
 long long spec_audio_drain(long long handle);
 void spec_audio_close(long long handle);
 void spec_process_exit(long long status);
@@ -1054,6 +1066,14 @@ static SpecClosure* _spec_noop_closure = NULL;
 static inline SpecClosure* spec_noop_closure(void) {
     if (!_spec_noop_closure) { _spec_noop_closure = spec_closure_new((void*)_spec_noop_cb, NULL, NULL); }
     return _spec_noop_closure;
+}
+static inline void _spec_emit_str_error(SpecClosure* on_error, const char* msg) {
+    if (on_error && on_error->fn) {
+        const char* m = msg ? msg : "Unknown error";
+        String s = spec_string_from_bytes(m, strlen(m));
+        spec_call_closure_str(on_error, s);
+        spec_release(s);
+    }
 }
 
 /* Per-Type Constructors: invoked by : assignment for each type. */
@@ -2444,11 +2464,17 @@ long long spec_arena_used(SpecArena* a) {
     return (long long)a->used;
 }
 
-SpecArray* spec_dir_list(SpecBuf* path) {
+SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
     SpecArray* res = spec_array_new_object();
-    if (!path) return res;
+    if (!path || path->length == 0) {
+        _spec_emit_str_error(on_error, "Directory error: Empty path provided");
+        return res;
+    }
     DIR* d = opendir(spec_buf_to_cstring(path));
-    if (!d) return res;
+    if (!d) {
+        _spec_emit_str_error(on_error, strerror(errno));
+        return res;
+    }
     struct dirent* ent;
     while ((ent = readdir(d)) != NULL) {
         if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
@@ -2456,6 +2482,10 @@ SpecArray* spec_dir_list(SpecBuf* path) {
     }
     closedir(d);
     return res;
+}
+
+SpecArray* spec_dir_list(SpecBuf* path) {
+    return spec_dir_list_cb(path, NULL);
 }
 
 SpecBuf* spec_exe_dir(void) {
@@ -3132,12 +3162,23 @@ bool spec_file_exists(String path) {
     return false;
 }
 
-bool spec_file_remove(String path) {
-    if (!path || path->length == 0) return false;
-    return remove(spec_buf_to_cstring((SpecBuf*)path)) == 0;
+bool spec_file_remove_cb(String path, SpecClosure* on_error) {
+    if (!path || path->length == 0) {
+        _spec_emit_str_error(on_error, "File error: Empty or invalid file path provided");
+        return false;
+    }
+    if (remove(spec_buf_to_cstring((SpecBuf*)path)) != 0) {
+        _spec_emit_str_error(on_error, strerror(errno));
+        return false;
+    }
+    return true;
 }
 
-String spec_file_temp(String template) {
+bool spec_file_remove(String path) {
+    return spec_file_remove_cb(path, NULL);
+}
+
+String spec_file_temp_cb(String template, SpecClosure* on_error) {
 #if defined(_WIN32)
     CreateDirectoryA("/tmp", NULL);
 #endif
@@ -3185,7 +3226,9 @@ String spec_file_temp(String template) {
     }
 #endif
     if (fd == -1) {
+        int saved_errno = errno;
         free(buf);
+        _spec_emit_str_error(on_error, strerror(saved_errno));
         return spec_string_intern("");
     }
     close(fd);
@@ -3193,7 +3236,13 @@ String spec_file_temp(String template) {
         size_t final_len = strlen(buf) + strlen(suffix) + 1;
         char* final_path = (char*)spec_xmalloc(final_len);
         sprintf(final_path, "%s%s", buf, suffix);
-        rename(buf, final_path);
+        if (rename(buf, final_path) != 0) {
+            int saved_errno = errno;
+            free(final_path);
+            free(buf);
+            _spec_emit_str_error(on_error, strerror(saved_errno));
+            return spec_string_intern("");
+        }
         String res = spec_string_from_chars(final_path);
         free(final_path);
         free(buf);
@@ -3202,6 +3251,10 @@ String spec_file_temp(String template) {
     String res = spec_string_from_chars(buf);
     free(buf);
     return res;
+}
+
+String spec_file_temp(String template) {
+    return spec_file_temp_cb(template, NULL);
 }
 
 long long spec_process_execute(String command, SpecArray* args) {
@@ -3989,8 +4042,30 @@ void spec_console_binary_mode(void) {
 #endif
 }
 
-long long spec_tcp_connect(String host, long long port, long long timeout_ms) {
-    if (!host || port <= 0 || port > 65535) return -1;
+static inline void _spec_emit_last_sock_error(SpecClosure* on_error, const char* fallback) {
+    if (!on_error || !on_error->fn) return;
+#if defined(_WIN32)
+    int err = WSAGetLastError();
+    if (err != 0) {
+        char ebuf[64];
+        snprintf(ebuf, sizeof(ebuf), "Socket error: WSA error %d", err);
+        _spec_emit_str_error(on_error, ebuf);
+        return;
+    }
+#else
+    if (errno != 0) {
+        _spec_emit_str_error(on_error, strerror(errno));
+        return;
+    }
+#endif
+    _spec_emit_str_error(on_error, fallback ? fallback : "Socket error");
+}
+
+long long spec_tcp_connect_cb(String host, long long port, long long timeout_ms, SpecClosure* on_error) {
+    if (!host || port <= 0 || port > 65535) {
+        _spec_emit_str_error(on_error, "Socket error: Invalid host or port");
+        return -1;
+    }
 #if defined(_WIN32)
     _spec_ensure_winsock();
 #endif
@@ -4003,15 +4078,24 @@ long long spec_tcp_connect(String host, long long port, long long timeout_ms) {
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    if (getaddrinfo(h, port_str, &hints, &res) != 0 || !res) {
+    int gai_rc = getaddrinfo(h, port_str, &hints, &res);
+    if (gai_rc != 0 || !res) {
+#if defined(_WIN32)
+        char ebuf[96];
+        snprintf(ebuf, sizeof(ebuf), "Socket error: getaddrinfo failed (%d)", gai_rc);
+        _spec_emit_str_error(on_error, ebuf);
+#else
+        _spec_emit_str_error(on_error, gai_strerror(gai_rc));
+#endif
         return -1;
     }
 
     long long sock_fd = -1;
+    int last_err = 0;
     for (rp = res; rp != NULL; rp = rp->ai_next) {
 #if defined(_WIN32)
         SOCKET s = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (s == INVALID_SOCKET) continue;
+        if (s == INVALID_SOCKET) { last_err = WSAGetLastError(); continue; }
         if (timeout_ms > 0) {
             DWORD tv = (DWORD)timeout_ms;
             setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
@@ -4021,10 +4105,11 @@ long long spec_tcp_connect(String host, long long port, long long timeout_ms) {
             sock_fd = (long long)s;
             break;
         }
+        last_err = WSAGetLastError();
         closesocket(s);
 #else
         int s = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (s < 0) continue;
+        if (s < 0) { last_err = errno; continue; }
         if (timeout_ms > 0) {
             struct timeval tv;
             tv.tv_sec = timeout_ms / 1000;
@@ -4036,15 +4121,32 @@ long long spec_tcp_connect(String host, long long port, long long timeout_ms) {
             sock_fd = (long long)s;
             break;
         }
+        last_err = errno;
         close(s);
 #endif
     }
     freeaddrinfo(res);
+    if (sock_fd < 0) {
+#if defined(_WIN32)
+        char ebuf[64];
+        snprintf(ebuf, sizeof(ebuf), "Socket error: WSA error %d", last_err);
+        _spec_emit_str_error(on_error, ebuf);
+#else
+        _spec_emit_str_error(on_error, last_err != 0 ? strerror(last_err) : "Socket error: Connection failed");
+#endif
+    }
     return sock_fd;
 }
 
-long long spec_tcp_listen(String host, long long port, long long backlog) {
-    if (port <= 0 || port > 65535) return -1;
+long long spec_tcp_connect(String host, long long port, long long timeout_ms) {
+    return spec_tcp_connect_cb(host, port, timeout_ms, NULL);
+}
+
+long long spec_tcp_listen_cb(String host, long long port, long long backlog, SpecClosure* on_error) {
+    if (port <= 0 || port > 65535) {
+        _spec_emit_str_error(on_error, "Socket error: Invalid port");
+        return -1;
+    }
 #if defined(_WIN32)
     _spec_ensure_winsock();
 #endif
@@ -4058,16 +4160,25 @@ long long spec_tcp_listen(String host, long long port, long long backlog) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    if (getaddrinfo(h, port_str, &hints, &res) != 0 || !res) {
+    int gai_rc = getaddrinfo(h, port_str, &hints, &res);
+    if (gai_rc != 0 || !res) {
+#if defined(_WIN32)
+        char ebuf[96];
+        snprintf(ebuf, sizeof(ebuf), "Socket error: getaddrinfo failed (%d)", gai_rc);
+        _spec_emit_str_error(on_error, ebuf);
+#else
+        _spec_emit_str_error(on_error, gai_strerror(gai_rc));
+#endif
         return -1;
     }
 
 #if defined(_WIN32)
     SOCKET s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (s == INVALID_SOCKET) { freeaddrinfo(res); return -1; }
+    if (s == INVALID_SOCKET) { _spec_emit_last_sock_error(on_error, "Socket error: socket() failed"); freeaddrinfo(res); return -1; }
     BOOL opt = TRUE;
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
     if (bind(s, res->ai_addr, (int)res->ai_addrlen) != 0 || listen(s, backlog > 0 ? (int)backlog : 128) != 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: bind/listen failed");
         closesocket(s);
         freeaddrinfo(res);
         return -1;
@@ -4076,10 +4187,11 @@ long long spec_tcp_listen(String host, long long port, long long backlog) {
     return (long long)s;
 #else
     int s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (s < 0) { freeaddrinfo(res); return -1; }
+    if (s < 0) { _spec_emit_last_sock_error(on_error, "Socket error: socket() failed"); freeaddrinfo(res); return -1; }
     int opt = 1;
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     if (bind(s, res->ai_addr, res->ai_addrlen) != 0 || listen(s, backlog > 0 ? (int)backlog : 128) != 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: bind/listen failed");
         close(s);
         freeaddrinfo(res);
         return -1;
@@ -4089,44 +4201,96 @@ long long spec_tcp_listen(String host, long long port, long long backlog) {
 #endif
 }
 
-long long spec_socket_accept(long long fd) {
-    if (fd < 0) return -1;
+long long spec_tcp_listen(String host, long long port, long long backlog) {
+    return spec_tcp_listen_cb(host, port, backlog, NULL);
+}
+
+long long spec_socket_accept_cb(long long fd, SpecClosure* on_error) {
+    if (fd < 0) {
+        _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
+        return -1;
+    }
 #if defined(_WIN32)
     SOCKET s = accept((SOCKET)fd, NULL, NULL);
-    if (s == INVALID_SOCKET) return -1;
+    if (s == INVALID_SOCKET) {
+        _spec_emit_last_sock_error(on_error, "Socket error: accept() failed");
+        return -1;
+    }
     return (long long)s;
 #else
     int s = accept((int)fd, NULL, NULL);
+    if (s < 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: accept() failed");
+    }
     return (long long)s;
+#endif
+}
+
+long long spec_socket_accept(long long fd) {
+    return spec_socket_accept_cb(fd, NULL);
+}
+
+long long spec_socket_send_cb(long long fd, SpecByteBuffer* buf, SpecClosure* on_error) {
+    if (fd < 0) {
+        _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
+        return -1;
+    }
+    if (!buf || buf->length == 0) return 0;
+#if defined(_WIN32)
+    int n = send((SOCKET)fd, (const char*)buf->data, (int)buf->length, 0);
+    if (n == SOCKET_ERROR) {
+        _spec_emit_last_sock_error(on_error, "Socket error: send() failed");
+        return -1;
+    }
+    return (long long)n;
+#else
+    ssize_t n = send((int)fd, buf->data, buf->length, 0);
+    if (n < 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: send() failed");
+        return -1;
+    }
+    return (long long)n;
 #endif
 }
 
 long long spec_socket_send(long long fd, SpecByteBuffer* buf) {
-    if (fd < 0 || !buf || buf->length == 0) return 0;
-#if defined(_WIN32)
-    int n = send((SOCKET)fd, (const char*)buf->data, (int)buf->length, 0);
-    return (n == SOCKET_ERROR) ? -1 : (long long)n;
-#else
-    ssize_t n = send((int)fd, buf->data, buf->length, 0);
-    return (n < 0) ? -1 : (long long)n;
-#endif
+    return spec_socket_send_cb(fd, buf, NULL);
 }
 
-long long spec_socket_send_str(long long fd, String str) {
-    if (fd < 0 || !str || str->length == 0) return 0;
+long long spec_socket_send_str_cb(long long fd, String str, SpecClosure* on_error) {
+    if (fd < 0) {
+        _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
+        return -1;
+    }
+    if (!str || str->length == 0) return 0;
     const char* cs = spec_buf_to_cstring((SpecBuf*)str);
     size_t len = strlen(cs);
 #if defined(_WIN32)
     int n = send((SOCKET)fd, cs, (int)len, 0);
-    return (n == SOCKET_ERROR) ? -1 : (long long)n;
+    if (n == SOCKET_ERROR) {
+        _spec_emit_last_sock_error(on_error, "Socket error: send() failed");
+        return -1;
+    }
+    return (long long)n;
 #else
     ssize_t n = send((int)fd, cs, len, 0);
-    return (n < 0) ? -1 : (long long)n;
+    if (n < 0) {
+        _spec_emit_last_sock_error(on_error, "Socket error: send() failed");
+        return -1;
+    }
+    return (long long)n;
 #endif
 }
 
-SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
-    if (fd < 0) return NULL;
+long long spec_socket_send_str(long long fd, String str) {
+    return spec_socket_send_str_cb(fd, str, NULL);
+}
+
+SpecByteBuffer* spec_socket_recv_cb(long long fd, long long max_bytes, SpecClosure* on_error) {
+    if (fd < 0) {
+        _spec_emit_str_error(on_error, "Socket error: Socket is closed or invalid");
+        return NULL;
+    }
     if (max_bytes <= 0) max_bytes = 4096;
     if (max_bytes > 1048576) max_bytes = 1048576;
 
@@ -4138,6 +4302,7 @@ SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
     int n = recv((SOCKET)fd, (char*)b->data, (int)max_bytes, 0);
     if (n <= 0) {
         if (n == 0) { b->length = 0; return b; }
+        _spec_emit_last_sock_error(on_error, "Socket error: recv() failed");
         spec_release(b);
         return NULL;
     }
@@ -4147,6 +4312,7 @@ SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
     ssize_t n = recv((int)fd, b->data, (size_t)max_bytes, 0);
     if (n <= 0) {
         if (n == 0) { b->length = 0; return b; }
+        _spec_emit_last_sock_error(on_error, "Socket error: recv() failed");
         spec_release(b);
         return NULL;
     }
@@ -4155,12 +4321,20 @@ SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
 #endif
 }
 
-String spec_socket_recv_str(long long fd, long long max_bytes) {
-    SpecByteBuffer* b = spec_socket_recv(fd, max_bytes);
+SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes) {
+    return spec_socket_recv_cb(fd, max_bytes, NULL);
+}
+
+String spec_socket_recv_str_cb(long long fd, long long max_bytes, SpecClosure* on_error) {
+    SpecByteBuffer* b = spec_socket_recv_cb(fd, max_bytes, on_error);
     if (!b) return spec_string_intern("");
     String s = spec_bytebuffer_to_string(b);
     spec_release(b);
     return s;
+}
+
+String spec_socket_recv_str(long long fd, long long max_bytes) {
+    return spec_socket_recv_str_cb(fd, max_bytes, NULL);
 }
 
 long long spec_socket_close(long long fd) {
@@ -4214,7 +4388,7 @@ long long spec_socket_set_timeout(long long fd, long long timeout_ms) {
     return 0;
 }
 
-long long spec_audio_open(long long sample_rate, long long channels, long long format) {
+long long spec_audio_open_cb(long long sample_rate, long long channels, long long format, SpecClosure* on_error) {
     if (sample_rate <= 0) sample_rate = 44100;
     if (channels <= 0) channels = 2;
     if (format <= 0) format = 1;
@@ -4226,21 +4400,32 @@ long long spec_audio_open(long long sample_rate, long long channels, long long f
             break;
         }
     }
-    if (slot < 0) return -1;
+    if (slot < 0) {
+        _spec_emit_str_error(on_error, "Audio error: Maximum concurrent audio streams reached");
+        return -1;
+    }
 
 #if defined(__linux__)
-    if (!_spec_init_alsa()) return -1;
+    if (!_spec_init_alsa()) {
+        _spec_emit_str_error(on_error, "Audio error: Failed to initialize ALSA");
+        return -1;
+    }
     spec_snd_pcm_t* pcm = NULL;
     if (_spec_snd_pcm_open(&pcm, "default", 0, 0) != 0) {
+        _spec_emit_str_error(on_error, "Audio error: Failed to open ALSA PCM device");
         return -1;
     }
     if (_spec_snd_pcm_set_params(pcm, 2 /* S16_LE */, 3 /* RW_INTERLEAVED */, (unsigned int)channels, (unsigned int)sample_rate, 1, 500000) != 0) {
         if (_spec_snd_pcm_close) _spec_snd_pcm_close(pcm);
+        _spec_emit_str_error(on_error, "Audio error: Failed to configure ALSA PCM parameters");
         return -1;
     }
     _spec_audio_streams[slot].alsa_handle = pcm;
 #elif defined(_WIN32)
-    if (!_spec_init_winmm()) return -1;
+    if (!_spec_init_winmm()) {
+        _spec_emit_str_error(on_error, "Audio error: Failed to initialize WinMM");
+        return -1;
+    }
     WAVEFORMATEX wfx;
     memset(&wfx, 0, sizeof(wfx));
     wfx.wFormatTag = WAVE_FORMAT_PCM;
@@ -4251,11 +4436,15 @@ long long spec_audio_open(long long sample_rate, long long channels, long long f
     wfx.nAvgBytesPerSec = (DWORD)(sample_rate * wfx.nBlockAlign);
     HWAVEOUT hWave = NULL;
     if (_spec_waveOutOpen(&hWave, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) {
+        _spec_emit_str_error(on_error, "Audio error: waveOutOpen failed");
         return -1;
     }
     _spec_audio_streams[slot].h_wave_out = hWave;
 #elif defined(__APPLE__) && defined(__MACH__)
-    if (!_spec_init_audiotoolbox()) return -1;
+    if (!_spec_init_audiotoolbox()) {
+        _spec_emit_str_error(on_error, "Audio error: Failed to initialize AudioToolbox");
+        return -1;
+    }
     AudioStreamBasicDescription desc;
     memset(&desc, 0, sizeof(desc));
     desc.mSampleRate = (Float64)sample_rate;
@@ -4268,6 +4457,7 @@ long long spec_audio_open(long long sample_rate, long long channels, long long f
     desc.mBitsPerChannel = 16;
     AudioQueueRef queue = NULL;
     if (_spec_AudioQueueNewOutput(&desc, _spec_audio_queue_cb, NULL, NULL, NULL, 0, &queue) != noErr) {
+        _spec_emit_str_error(on_error, "Audio error: AudioQueueNewOutput failed");
         return -1;
     }
     _spec_AudioQueueStart(queue, NULL);
@@ -4281,11 +4471,22 @@ long long spec_audio_open(long long sample_rate, long long channels, long long f
     return (long long)(slot + 1);
 }
 
-long long spec_audio_write(long long handle, SpecByteBuffer* buf) {
+long long spec_audio_open(long long sample_rate, long long channels, long long format) {
+    return spec_audio_open_cb(sample_rate, channels, format, NULL);
+}
+
+long long spec_audio_write_cb(long long handle, SpecByteBuffer* buf, SpecClosure* on_error) {
     long long idx = handle - 1;
-    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active || !buf || buf->length == 0) return 0;
+    if (idx < 0 || idx >= 8 || !_spec_audio_streams[idx].active) {
+        _spec_emit_str_error(on_error, "Audio error: Audio stream is closed or invalid");
+        return -1;
+    }
+    if (!buf || buf->length == 0) return 0;
 #if defined(__linux__)
-    if (!_spec_snd_pcm_writei) return -1;
+    if (!_spec_snd_pcm_writei) {
+        _spec_emit_str_error(on_error, "Audio error: ALSA write function unavailable");
+        return -1;
+    }
     long long bytes_per_frame = _spec_audio_streams[idx].channels * 2;
     unsigned long frames = (unsigned long)(buf->length / bytes_per_frame);
     long res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, buf->data, frames);
@@ -4293,7 +4494,11 @@ long long spec_audio_write(long long handle, SpecByteBuffer* buf) {
         if (_spec_snd_pcm_recover) res = _spec_snd_pcm_recover((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, (int)res, 0);
         if (res == 0) res = _spec_snd_pcm_writei((spec_snd_pcm_t*)_spec_audio_streams[idx].alsa_handle, buf->data, frames);
     }
-    return (res > 0) ? (long long)(res * bytes_per_frame) : res;
+    if (res < 0) {
+        _spec_emit_str_error(on_error, "Audio error: Failed to write ALSA audio samples");
+        return res;
+    }
+    return (long long)(res * bytes_per_frame);
 #elif defined(_WIN32)
     HWAVEOUT hWave = _spec_audio_streams[idx].h_wave_out;
     WAVEHDR* hdr = (WAVEHDR*)spec_xmalloc(sizeof(WAVEHDR));
@@ -4313,9 +4518,15 @@ long long spec_audio_write(long long handle, SpecByteBuffer* buf) {
         if (_spec_AudioQueueEnqueueBuffer) _spec_AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
         return (long long)buf->length;
     }
+    _spec_emit_str_error(on_error, "Audio error: Failed to allocate AudioToolbox buffer");
     return -1;
 #endif
+    _spec_emit_str_error(on_error, "Audio error: Unsupported audio backend");
     return -1;
+}
+
+long long spec_audio_write(long long handle, SpecByteBuffer* buf) {
+    return spec_audio_write_cb(handle, buf, NULL);
 }
 
 long long spec_audio_drain(long long handle) {

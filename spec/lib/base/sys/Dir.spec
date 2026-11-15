@@ -15,9 +15,10 @@ Class is Dir{
 	## Order is filesystem-dependent; consumers must not rely on it.
 	##
 	## @param path: Directory to list.
+	## @param onError: Optional callback receiving error description on failure: `Function(String is error)`.
 	## @return: Entry names.
-	Function of Array of String is dirList(String is path){
-		return base:sysinternal:Dir:dirList(path: path);
+	Function of Array of String is dirList(String is path, Function is onError: local Function(String is error){}){
+		return base:sysinternal:Dir:dir_list_cb(path: path, on_error: onError);
 	}
 
 	## Directory containing the running spec executable.
