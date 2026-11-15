@@ -210,7 +210,7 @@ Enum of String is Level {
 		local CodeGenerator is cg: self:sampleCodeGen();
 		Assert:areEqualString('spec_to_string_int(42)', cg:wrapToString(expr: self:exprOf(src: '42'), exprC: '42'));
 		Assert:areEqualString('spec_to_string_bool(1)', cg:wrapToString(expr: self:exprOf(src: 'true'), exprC: '1'));
-		Assert:areEqualString('spec_string_intern("hi")', cg:wrapToString(expr: self:exprOf(src: "'hi'"), exprC: 'x'));
+		Assert:areEqualString('({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("hi"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })', cg:wrapToString(expr: self:exprOf(src: "'hi'"), exprC: 'x'));
 	}
 
 	Function is testExpressionEmission(){

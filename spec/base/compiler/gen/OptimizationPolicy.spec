@@ -43,12 +43,9 @@ Class is OptimizationPolicy{
 	}
 
 	## True when [m] (method) requires a SPEC_POOL_AUTO claim-pool frame.
-	## Pure-primitive methods with no managed locals, calls, or allocations
-	## do not touch the claim pool and can safely omit SPEC_POOL_AUTO.
+	## Receiving object parameters does not push onto the claim pool; only
+	## managed locals, allocations, or pool-touching calls require a frame.
 	Function of Boolean is methodNeedsPoolFrame(Member is m){
-		if({ self:paramsNeedPoolFrame(params: m:params) }, {
-			return true;
-		});
 		return self:stmtsNeedPoolFrame(stmts: m:body);
 	}
 

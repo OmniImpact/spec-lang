@@ -1743,9 +1743,15 @@ Class is CodeGenerator{
 	## @param expr: The expression node.
 	## @param exprC: Its generated C.
 	## @return: C producing a String.
+	## Emits a thread-safe cached string literal intern expression so loops
+	## avoid repeated hash lookups in _spec_intern_table.
+	Function of String is emitInternLiteral(String is raw){
+		return '({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("' . self:utils:escapeString(s: raw) . '"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })';
+	}
+
 	Function of String is wrapToString(Expression is expr, String is exprC){
 		local String is fastWrap: match(on: expr, when: [
-			Expression:StringLit: local Function of String(String is value){ return 'spec_string_intern("' . self:utils:escapeString(s: value) . '")'; },
+			Expression:StringLit: local Function of String(String is value){ return self:emitInternLiteral(raw: value); },
 			Expression:NumberLit: local Function of String(Int is value, String is text){ return 'spec_to_string_int(' . exprC . ')'; },
 			Expression:FloatLit: local Function of String(String is text){ return 'spec_to_string_float(' . exprC . ')'; },
 			Expression:BoolLit: local Function of String(Boolean is value){ return 'spec_to_string_bool(' . exprC . ')'; },
@@ -1878,10 +1884,76 @@ Class is CodeGenerator{
 	##
 	## @param expr: The expression node.
 	## @return: C expression string.
+	## True when evaluating [expr]'s subexpressions may itself push claims
+	## onto the current thread-local claim pool (so a frame mark/release is
+	## required around [expr]). Leaf calls with non-claiming args (e.g.
+	## recursive f(x - 1)) manage their own frame inside the callee and need
+	## no outer mark/release.
+	Function of Boolean is exprHasChildClaim(Expression is expr){
+		return match(on: expr, when: [
+			Expression:Call: local Function of Boolean(CallData is call){
+				local String is nm: call:name;
+				if({ nm == 'if' || nm == 'branch' || nm == 'match' || nm == 'while' || nm == 'until' || nm == 'repeat' }, {
+					return true;
+				});
+				local Boolean is has: self:claimStatus(expr: call:target) || self:exprHasChildClaim(expr: call:target);
+				if({ !has }, {
+					call:args:each(action: local Function(NamedArg is a){
+						if({ !has }, {
+							if({ self:claimStatus(expr: a:value) || self:exprHasChildClaim(expr: a:value) }, {
+								has: true;
+							});
+						});
+					});
+				});
+				return has;
+			},
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){
+				return self:claimStatus(expr: left) || self:claimStatus(expr: right)
+					|| self:exprHasChildClaim(expr: left) || self:exprHasChildClaim(expr: right);
+			},
+			Expression:ArrayLit: local Function of Boolean(Array of Expression is items){
+				local Boolean is has: false;
+				items:each(action: local Function(Expression is it){
+					if({ !has && (self:claimStatus(expr: it) || self:exprHasChildClaim(expr: it)) }, {
+						has: true;
+					});
+				});
+				return has;
+			},
+			Expression:MapLit: local Function of Boolean(Array of Expression is keys, Array of Expression is values){
+				local Boolean is has: false;
+				keys:each(action: local Function(Expression is k){
+					if({ !has && (self:claimStatus(expr: k) || self:exprHasChildClaim(expr: k)) }, {
+						has: true;
+					});
+				});
+				if({ !has }, {
+					values:each(action: local Function(Expression is v){
+						if({ !has && (self:claimStatus(expr: v) || self:exprHasChildClaim(expr: v)) }, {
+							has: true;
+						});
+					});
+				});
+				return has;
+			},
+			Expression:Index: local Function of Boolean(Expression is target, Expression is index){
+				return self:claimStatus(expr: target) || self:claimStatus(expr: index)
+					|| self:exprHasChildClaim(expr: target) || self:exprHasChildClaim(expr: index);
+			},
+			else: { false }
+		]);
+	}
+
 	Function of String is generateExpression(Expression is expr){
 		local String is c: self:generateExpressionInner(expr: expr);
 		if({ self:claimStatus(expr: expr) && self:argMode }, {
-			return self:claimWrapped(typeName: self:inferTargetType(expr: expr), valueC: c);
+			local String is typeName: self:inferTargetType(expr: expr);
+			if({ !self:exprHasChildClaim(expr: expr) }, {
+				local String is resC: self:cTypeFor(typeName: typeName);
+				return '((' . resC . ')spec_claim_pool((void*)(' . c . ')))';
+			});
+			return self:claimWrapped(typeName: typeName, valueC: c);
 		});
 		return c;
 	}
@@ -1900,7 +1972,7 @@ Class is CodeGenerator{
 			},
 			Expression:StringLit: local Function of String(String is value){
 				# Raw strings collapse into STRING upstream; one intern path.
-				return 'spec_string_intern("' . self:utils:escapeString(s: value) . '")';
+				return self:emitInternLiteral(raw: value);
 			},
 			Expression:NumberLit: local Function of String(Int is value, String is text){
 				local String is numC: '0';

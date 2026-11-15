@@ -149,23 +149,19 @@ Class is String{
 		if({ dlen == 0 }, {
 			local Int is i: 0;
 			repeat(count: slen, worker: {
-				res:add(item: self:substring(start: i, end: i + 1));
+				res:add(item: Buf:stringSubstring(b: self, start: i, end: i + 1));
 				i: i + 1;
 			});
 			return res;
 		});
 		local Int is pos: 0;
-		local Boolean is running: true;
-		while({ running }, {
-			local Int is idx: Buf:stringIndexOfFrom(b: self, needle: delimiter, from: pos, def: -1);
-			if({ idx < 0 }, {
-				running: false;
-			}, {
-				res:add(item: self:substring(start: pos, end: idx));
-				pos: idx + dlen;
-			});
+		local Int is idx: Buf:stringIndexOfFrom(b: self, needle: delimiter, from: 0, def: -1);
+		while({ idx >= 0 }, {
+			res:add(item: Buf:stringSubstring(b: self, start: pos, end: idx));
+			pos: idx + dlen;
+			idx: Buf:stringIndexOfFrom(b: self, needle: delimiter, from: pos, def: -1);
 		});
-		res:add(item: self:substring(start: pos, end: slen));
+		res:add(item: Buf:stringSubstring(b: self, start: pos, end: slen));
 		return res;
 	}
 
