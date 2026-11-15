@@ -15,6 +15,21 @@ Class is Process{
 	## @return: The exit status code.
 	Function of Int is process_execute(String is command, Array of String is args);
 
+	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
+	## Bound to `spec_process_raw_args`.
+	##
+	## @return: Array of raw CLI argument strings in order.
+	Function of Array of String is process_raw_args();
+
+	## Spawns [command] directly with [args] (without a shell) and measures
+	## exit code, wall time (us), CPU time (us), and peak RSS (KB).
+	## Bound to `spec_process_measure`.
+	##
+	## @param command: Executable name or path.
+	## @param args: Argument vector.
+	## @return: Map with keys 'exit', 'wall_us', 'cpu_us', 'rss_kb'.
+	Function of Map of String to String is process_measure(String is command, Array of String is args);
+
 	## Suspends the current thread for [milliseconds]. Bound to
 	## `spec_process_sleep`.
 	##

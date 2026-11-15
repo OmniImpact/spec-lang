@@ -262,6 +262,9 @@ bool spec_file_remove_cb(String path, SpecClosure* on_error);
 String spec_file_temp(String template);
 String spec_file_temp_cb(String template, SpecClosure* on_error);
 long long spec_process_execute(String command, SpecArray* args);
+void spec_set_cli_args(int argc, char** argv);
+SpecArray* spec_process_raw_args(void);
+SpecMap* spec_process_measure(String command, SpecArray* args);
 void spec_process_sleep(long long ms);
 long long spec_process_get_pid(void);
 String spec_process_getenv(String key, String def);
@@ -3520,6 +3523,182 @@ long long spec_process_execute(String command, SpecArray* args) {
     if (WIFSIGNALED(status)) return 128 + (long long)WTERMSIG(status);
     return (long long)WEXITSTATUS(status);
 #endif
+}
+
+static int g_spec_argc = 0;
+static char** g_spec_argv = NULL;
+
+void spec_set_cli_args(int argc, char** argv) {
+    g_spec_argc = argc;
+    g_spec_argv = argv;
+}
+
+SpecArray* spec_process_raw_args(void) {
+    SpecArray* out = spec_array_new_object();
+    for (int i = 1; i < g_spec_argc; i++) {
+        spec_array_add_owned(out, (void*)spec_string_from_chars(g_spec_argv[i] ? g_spec_argv[i] : ""));
+    }
+    return out;
+}
+
+static void spec_map_set_owned_int(SpecMap* m, const char* key, long long val) {
+    String k = spec_string_intern(key);
+    String v = spec_to_string_int(val);
+    spec_map_set(m, k, v);
+    spec_release(v);
+}
+
+SpecMap* spec_process_measure(String command, SpecArray* args) {
+    SpecMap* m = spec_map_new();
+    long long exit_code = -1;
+    long long wall_us = 0;
+    long long cpu_us = 0;
+    long long rss_kb = 0;
+    if (!command) {
+        spec_map_set_owned_int(m, "exit", exit_code);
+        spec_map_set_owned_int(m, "wall_us", wall_us);
+        spec_map_set_owned_int(m, "cpu_us", cpu_us);
+        spec_map_set_owned_int(m, "rss_kb", rss_kb);
+        return m;
+    }
+    const char* cc = spec_buf_to_cstring((SpecBuf*)command);
+    fflush(stdout);
+    fflush(stderr);
+#if defined(_WIN32)
+    size_t total_len = strlen(cc) + 1;
+    if (args) {
+        for (size_t i = 0; i < args->length; i++) {
+            if (!args->items[i]) continue;
+            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
+            total_len += strlen(a) * 2 + 4;
+        }
+    }
+    char* cmd_line = (char*)spec_xmalloc(total_len + 1);
+    char* w = cmd_line;
+    size_t cmd_len = strlen(cc);
+    memcpy(w, cc, cmd_len);
+    w += cmd_len;
+    if (args) {
+        for (size_t i = 0; i < args->length; i++) {
+            if (!args->items[i]) continue;
+            const char* a = spec_buf_to_cstring((SpecBuf*)args->items[i]);
+            *w++ = ' ';
+            bool needs_quote = (*a == 0);
+            for (size_t k = 0; a[k]; k++) {
+                if (a[k] == ' ' || a[k] == '\t' || a[k] == '\n' || a[k] == '\v' || a[k] == '\"') {
+                    needs_quote = true;
+                    break;
+                }
+            }
+            if (!needs_quote) {
+                size_t alen = strlen(a);
+                memcpy(w, a, alen);
+                w += alen;
+            } else {
+                *w++ = '\"';
+                size_t slashes = 0;
+                for (size_t k = 0; a[k]; k++) {
+                    if (a[k] == '\\') {
+                        slashes++;
+                    } else if (a[k] == '\"') {
+                        for (size_t s = 0; s < slashes * 2 + 1; s++) *w++ = '\\';
+                        *w++ = '\"';
+                        slashes = 0;
+                    } else {
+                        for (size_t s = 0; s < slashes; s++) *w++ = '\\';
+                        *w++ = a[k];
+                        slashes = 0;
+                    }
+                }
+                for (size_t s = 0; s < slashes * 2; s++) *w++ = '\\';
+                *w++ = '\"';
+            }
+        }
+    }
+    *w = 0;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    memset(&pi, 0, sizeof(pi));
+    LARGE_INTEGER freq, q0, q1;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&q0);
+    if (CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        QueryPerformanceCounter(&q1);
+        DWORD dw_exit = 1;
+        if (GetExitCodeProcess(pi.hProcess, &dw_exit)) exit_code = (long long)dw_exit;
+        FILETIME ft_create, ft_exit, ft_kernel, ft_user;
+        if (GetProcessTimes(pi.hProcess, &ft_create, &ft_exit, &ft_kernel, &ft_user)) {
+            ULARGE_INTEGER uk, uu;
+            uk.LowPart = ft_kernel.dwLowDateTime;
+            uk.HighPart = ft_kernel.dwHighDateTime;
+            uu.LowPart = ft_user.dwLowDateTime;
+            uu.HighPart = ft_user.dwHighDateTime;
+            cpu_us = (long long)((uk.QuadPart + uu.QuadPart) / 10ULL);
+        }
+        PROCESS_MEMORY_COUNTERS pmc;
+        memset(&pmc, 0, sizeof(pmc));
+        pmc.cb = sizeof(pmc);
+        if (GetProcessMemoryInfo(pi.hProcess, &pmc, sizeof(pmc))) {
+            rss_kb = (long long)(pmc.PeakWorkingSetSize / 1024ULL);
+        }
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        if (freq.QuadPart > 0) {
+            wall_us = (long long)(((q1.QuadPart - q0.QuadPart) * 1000000LL) / freq.QuadPart);
+        }
+    }
+    free(cmd_line);
+#else
+    size_t nargs = args ? args->length : 0;
+    char** argv_exec = (char**)spec_xmalloc((nargs + 2) * sizeof(char*));
+    argv_exec[0] = (char*)cc;
+    size_t aidx = 1;
+    if (args) {
+        for (size_t i = 0; i < args->length; i++) {
+            const char* a = args->items[i] ? spec_buf_to_cstring((SpecBuf*)args->items[i]) : "";
+            argv_exec[aidx++] = (char*)a;
+        }
+    }
+    argv_exec[aidx] = NULL;
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(cc, argv_exec);
+        _exit(127);
+    } else if (pid > 0) {
+        int status = 0;
+        struct rusage ru;
+        memset(&ru, 0, sizeof(ru));
+        pid_t wres;
+        do {
+            wres = wait4(pid, &status, 0, &ru);
+        } while (wres == -1 && errno == EINTR);
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        fflush(stdout);
+        fflush(stderr);
+        wall_us = (long long)(t1.tv_sec - t0.tv_sec) * 1000000LL + (long long)(t1.tv_nsec - t0.tv_nsec) / 1000LL;
+        if (wall_us < 0) wall_us = 0;
+        if (wres > 0) {
+            cpu_us = (long long)(ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000000LL + (long long)(ru.ru_utime.tv_usec + ru.ru_stime.tv_usec);
+            rss_kb = (long long)ru.ru_maxrss;
+#if defined(__APPLE__)
+            rss_kb /= 1024;
+#endif
+            if (WIFEXITED(status)) exit_code = (long long)WEXITSTATUS(status);
+            else if (WIFSIGNALED(status)) exit_code = 128 + (long long)WTERMSIG(status);
+        }
+    }
+    free(argv_exec);
+#endif
+    spec_map_set_owned_int(m, "exit", exit_code);
+    spec_map_set_owned_int(m, "wall_us", wall_us);
+    spec_map_set_owned_int(m, "cpu_us", cpu_us);
+    spec_map_set_owned_int(m, "rss_kb", rss_kb);
+    return m;
 }
 
 void spec_process_sleep(long long ms) {

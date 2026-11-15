@@ -4540,6 +4540,7 @@ Class is CodeGenerator{
 		m: m . "#if defined(_WIN32)\n";
 		m: m . "    CreateDirectoryA(\"/tmp\", NULL);\n";
 		m: m . "#endif\n";
+		m: m . "    spec_set_cli_args(argc, argv);\n";
 
 		m: m . "    srand((unsigned int)time(NULL));\n";
 		m: m . "    SPEC_AUTO SpecMap* args = spec_map_new();\n";

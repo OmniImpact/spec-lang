@@ -11,6 +11,7 @@ Class is Process{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
+		['base', 'struct', Map],
 		['base', 'sysinternal', Process]
 	];
 
@@ -25,6 +26,23 @@ Class is Process{
 	## ```
 	Function of Int is execute(String is command, Array of String is args){
 		return base:sysinternal:Process:process_execute(command: command, args: args);
+	}
+
+	## Returns the raw command-line arguments passed to the program (`argv[1..]`).
+	##
+	## @return: Array of argument strings in exact CLI order.
+	Function of Array of String is rawArgs(){
+		return base:sysinternal:Process:process_raw_args();
+	}
+
+	## Spawns [command] directly with [args] (without a shell) and measures
+	## exit code, wall time (`wall_us`), CPU time (`cpu_us`), and peak RSS (`rss_kb`).
+	##
+	## @param command: Executable name or path.
+	## @param args: Command-line arguments passed to the child process.
+	## @return: Map with stringified integer keys `'exit'`, `'wall_us'`, `'cpu_us'`, `'rss_kb'`.
+	Function of Map of String to String is measure(String is command, Array of String is args){
+		return base:sysinternal:Process:process_measure(command: command, args: args);
 	}
 
 	## Suspends execution of the current process for the specified duration.
