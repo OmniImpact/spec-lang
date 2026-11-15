@@ -91760,7 +91760,7 @@ static const SpecClassMeta Dir_spec_meta = {
 
 static const SpecMethodMeta Driver_spec_methods[] = {
     { "init", (void*)Driver_init, 4, 56 },
-    { "resolveEntryInit", (void*)Driver_resolveEntryInit, 4, 386 },
+    { "resolveEntryInit", (void*)Driver_resolveEntryInit, 4, 387 },
 };
 static const char* const Driver_spec_bases[] = {
     "Class",
@@ -95611,6 +95611,7 @@ void Driver_init(Driver* self, SpecMap* args) {
     if (spec_string_equals(os, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("windows"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    spec_array_add_object(gccArgs, (void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("-lws2_32"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	    spec_array_add_object(gccArgs, (void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("-lwinmm"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
+	    spec_array_add_object(gccArgs, (void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("-lpsapi"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));
 	};
     if (spec_string_equals(os, ({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("macos"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; }))) {
 	    spec_array_add_object(gccArgs, (void*)(({ static _Atomic(void*) _lit = NULL; void* _s = atomic_load_explicit(&_lit, memory_order_relaxed); if (__builtin_expect(!_s, 0)) { _s = (void*)spec_string_intern("-framework"); atomic_store_explicit(&_lit, _s, memory_order_relaxed); } (String)_s; })));

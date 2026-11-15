@@ -324,6 +324,7 @@ Class is Driver{
 		if({ os == 'windows' }, {
 			gccArgs:add(item: '-lws2_32');
 			gccArgs:add(item: '-lwinmm');
+			gccArgs:add(item: '-lpsapi');
 		});
 		if({ os == 'macos' }, {
 			gccArgs:add(item: '-framework');

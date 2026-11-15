@@ -30,7 +30,7 @@ case "$(uname -s)" in
 		if command -v mount >/dev/null 2>&1; then
 			mount -f "/${CUR_DRIVE}/tmp" /tmp 2>/dev/null || true
 		fi
-		EXTRA_LIBS="-lws2_32 -lwinmm"
+		EXTRA_LIBS="-lws2_32 -lwinmm -lpsapi"
 		;;
 	Darwin*)
 		EXTRA_LIBS="-framework AudioToolbox"
