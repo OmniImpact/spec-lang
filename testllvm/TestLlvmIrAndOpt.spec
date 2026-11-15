@@ -164,4 +164,68 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testClosureCapturesAndMatchLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_mcap_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_mcap_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_mcap_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: "Class is LlvmMatchCap{\n"
+			. "\treplace Array of Array of String is using: [\n"
+			. "\t\t['base', 'struct', Map],\n"
+			. "\t\t['base', 'sys', as Conditional()],\n"
+			. "\t\t['base', 'sys', as Output()],\n"
+			. "\t\t['base', 'sys', as Process()]\n"
+			. "\t];\n"
+			. "\treplace Function is init(Map of String to String is args){\n"
+			. "\t\tlocal Int is base: 100;\n"
+			. "\t\tlocal String is prefix: 'hi-';\n"
+			. "\t\tlocal Function of Int is addBase: local Function of Int(Int is x){\n"
+			. "\t\t\treturn base + x;\n"
+			. "\t\t};\n"
+			. "\t\tlocal Function of String is tagger: local Function of String(String is s){\n"
+			. "\t\t\treturn prefix . s;\n"
+			. "\t\t};\n"
+			. "\t\tlocal Int is sum: addBase(x: 23);\n"
+			. "\t\tlocal String is tag: tagger(s: 'two');\n"
+			. "\t\tlocal String is label: match(when: [\n"
+			. "\t\t\t{ sum == 100 }: { 'hundred' },\n"
+			. "\t\t\t{ sum == 123 }: { 'two' },\n"
+			. "\t\t\telse: { 'other' }\n"
+			. "\t\t]);\n"
+			. "\t\tlocal Int is score: match(on: tag, when: [\n"
+			. "\t\t\t'hi-one': { 10 },\n"
+			. "\t\t\t'hi-two': { 42 }\n"
+			. "\t\t], default: { 0 });\n"
+			. "\t\tif({ sum == 123 && label == 'two' && score == 42 }, {\n"
+			. "\t\t\tline('llvm-mcap-ok');\n"
+			. "\t\t}, {\n"
+			. "\t\t\tProcess:exit(status: 2);\n"
+			. "\t\t});\n"
+			. "\t}\n"
+			. "}\n";
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: '%struct.__env_'));
+		Assert:isTrue(ll:contains(needle: '_destroy('));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }

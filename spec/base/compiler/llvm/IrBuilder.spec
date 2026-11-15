@@ -23,6 +23,7 @@ Class is IrBuilder{
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', ControlFlowCallLowerer],
+		['base', 'compiler', 'llvm', MatchCallLowerer],
 		['base', 'compiler', 'llvm', StringCallLowerer],
 		['base', 'compiler', 'llvm', ArrayCallLowerer],
 		['base', 'compiler', 'llvm', MapCallLowerer],
@@ -568,9 +569,111 @@ Class is IrBuilder{
 		});
 	}
 
+	local Function is collectFreeInStmts(Array of Statement is stmts, Map of String to Boolean is bound, Map of String to String is outerSlots, Map of String to Boolean is seen, Array of String is out){
+		local Int is i: 0;
+		while({ i < stmts:length() }, {
+			local Statement is st: stmts:get(index: i);
+			match(on: st, when: [
+				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
+					if({ hasInit }, {
+						self:collectFreeInExpr(expr: initExpr, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					});
+					bound:set(key: varName, value: true);
+				},
+				Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+					self:collectFreeInExpr(expr: assignTarget, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					self:collectFreeInExpr(expr: assignValue, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+				},
+				Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
+					if({ hasReturnExpr }, {
+						self:collectFreeInExpr(expr: returnExpr, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					});
+				},
+				Statement:Expr: local Function(Expression is exprStmt){
+					self:collectFreeInExpr(expr: exprStmt, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+				}
+			], default: {});
+			i++;
+		});
+	}
+
+	local Function is collectFreeInExpr(Expression is expr, Map of String to Boolean is bound, Map of String to String is outerSlots, Map of String to Boolean is seen, Array of String is out){
+		match(on: expr, when: [
+			Expression:Ident: local Function(String is name){
+				if({ !bound:has(key: name) && outerSlots:has(key: name) && !seen:has(key: name) }, {
+					seen:set(key: name, value: true);
+					out:add(item: name);
+				});
+			},
+			Expression:Unary: local Function(String is _op, Expression is operand){
+				self:collectFreeInExpr(expr: operand, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+			},
+			Expression:Binary: local Function(String is _op, Expression is left, Expression is right){
+				self:collectFreeInExpr(expr: left, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+				self:collectFreeInExpr(expr: right, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+			},
+			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+				self:collectFreeInExpr(expr: inner, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+				local Int is ai: 0;
+				while({ ai < args:length() }, {
+					self:collectFreeInExpr(expr: args:get(index: ai), bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					ai++;
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is target, String is _f){
+				self:collectFreeInExpr(expr: target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+			},
+			Expression:Index: local Function(Expression is target, Expression is index){
+				self:collectFreeInExpr(expr: target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+				self:collectFreeInExpr(expr: index, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+			},
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				local Int is ii: 0;
+				while({ ii < items:length() }, {
+					self:collectFreeInExpr(expr: items:get(index: ii), bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					ii++;
+				});
+			},
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				local Int is mi: 0;
+				while({ mi < keys:length() }, {
+					self:collectFreeInExpr(expr: keys:get(index: mi), bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					self:collectFreeInExpr(expr: values:get(index: mi), bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					mi++;
+				});
+			},
+			Expression:Call: local Function(CallData is call){
+				self:collectFreeInExpr(expr: call:target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+				local Int is ci: 0;
+				while({ ci < call:args:length() }, {
+					local NamedArg is na: call:args:get(index: ci);
+					self:collectFreeInExpr(expr: na:value, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
+					ci++;
+				});
+			},
+			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+				local Map of String to Boolean is subBound: Map:init();
+				local Array of String is bKeys: bound:keys();
+				local Int is bi: 0;
+				while({ bi < bKeys:length() }, {
+					subBound:set(key: bKeys:get(index: bi, default: ''), value: true);
+					bi++;
+				});
+				local Int is pi: 0;
+				while({ pi < subParams:length() }, {
+					local Parameter is sp: subParams:get(index: pi);
+					subBound:set(key: sp:name, value: true);
+					pi++;
+				});
+				self:collectFreeInStmts(stmts: subBody, bound: subBound, outerSlots: outerSlots, seen: seen, out: out);
+			}
+		], default: {});
+	}
+
 	local Function of String is lowerAnonFn(Type is returnType, Array of Parameter is params, Array of Statement is body){
 		self:anonCounter: self:anonCounter + 1;
-		local String is fnName: '__anon_' . (self:anonCounter as String);
+		local Int is anonId: self:anonCounter;
+		local String is fnName: '__anon_' . (anonId as String);
 		local IrType is retTy: self:irTypeFor(specType: returnType:name);
 		if({ returnType:name == 'Function' }, {
 			if({ returnType:params:length() > 0 }, {
@@ -579,6 +682,33 @@ Class is IrBuilder{
 			}, {
 				retTy: IrType:Void;
 			});
+		});
+
+		# Collect free variables captured from enclosing function
+		local Map of String to Boolean is bound: Map:init();
+		local Int is bpi: 0;
+		while({ bpi < params:length() }, {
+			local Parameter is bp: params:get(index: bpi);
+			bound:set(key: bp:name, value: true);
+			bpi++;
+		});
+		local Map of String to Boolean is seenCap: Map:init();
+		local Array of String is captures: [];
+		self:collectFreeInStmts(stmts: body, bound: bound, outerSlots: self:localSlots, seen: seenCap, out: captures);
+
+		local String is envStructName: '__env_' . (anonId as String);
+		if({ captures:length() > 0 }, {
+			local IrStruct is envSt: IrStruct:init(name: envStructName);
+			envSt:addField(name: '_type_name', ty: IrType:Ptr);
+			envSt:addField(name: '_vtable', ty: IrType:Ptr);
+			local Int is ci: 0;
+			while({ ci < captures:length() }, {
+				local String is cname: captures:get(index: ci, default: '');
+				local IrType is cty: self:localTypes:get(key: cname, default: IrType:I64);
+				envSt:addField(name: cname, ty: cty);
+				ci++;
+			});
+			self:mod:addStruct(s: envSt);
 		});
 
 		# Save outer method builder state
@@ -611,6 +741,27 @@ Class is IrBuilder{
 		self:localTypes: Map:init();
 		self:ownedSlots: [];
 
+		# Unpack captured variables from %env into local slots
+		local Int is uci: 0;
+		while({ uci < captures:length() }, {
+			local String is cname: captures:get(index: uci, default: '');
+			local IrType is cty: savedTypes:get(key: cname, default: IrType:I64);
+			local String is fPtr: self:nextTmp();
+			self:emit(inst: IrInst:FieldPtr(dst: fPtr, objPtr: '%env', structName: envStructName, fieldIndex: uci + 2));
+			local String is loaded: self:nextTmp();
+			self:emit(inst: IrInst:Load(dst: loaded, slot: fPtr, ty: cty));
+			local String is capSlot: '%cap_' . cname;
+			self:localSlots:set(key: cname, value: capSlot);
+			self:localTypes:set(key: cname, value: cty);
+			self:emit(inst: IrInst:Alloca(slot: capSlot, ty: cty));
+			if({ cty == IrType:Ptr }, {
+				self:emit(inst: IrInst:Retain(val: loaded));
+				self:ownedSlots:add(item: capSlot);
+			});
+			self:emit(inst: IrInst:Store(slot: capSlot, val: loaded, ty: cty));
+			uci++;
+		});
+
 		pi: 0;
 		while({ pi < params:length() }, {
 			local Parameter is p: params:get(index: pi);
@@ -635,6 +786,35 @@ Class is IrBuilder{
 		});
 		self:mod:addFunction(fn: fn);
 
+		# Emit env destructor if captures exist
+		local String is destroyName: envStructName . '_destroy';
+		if({ captures:length() > 0 }, {
+			local IrFunction is dFn: IrFunction:init(name: destroyName, retType: IrType:Void);
+			dFn:sourceFile: savedFn:sourceFile;
+			dFn:line: self:currentLine;
+			dFn:addParam(name: '%env', ty: IrType:Ptr);
+			local IrBlock is dEntry: dFn:addBlock(label: 'entry');
+			self:curFn: dFn;
+			self:switchBlock(blk: dEntry);
+			self:tmpCounter: 0;
+			local Int is dci: 0;
+			while({ dci < captures:length() }, {
+				local String is cname: captures:get(index: dci, default: '');
+				local IrType is cty: savedTypes:get(key: cname, default: IrType:I64);
+				if({ cty == IrType:Ptr }, {
+					local String is dfPtr: self:nextTmp();
+					self:emit(inst: IrInst:FieldPtr(dst: dfPtr, objPtr: '%env', structName: envStructName, fieldIndex: dci + 2));
+					local String is dVal: self:nextTmp();
+					self:emit(inst: IrInst:Load(dst: dVal, slot: dfPtr, ty: IrType:Ptr));
+					self:emit(inst: IrInst:Release(val: dVal));
+				});
+				dci++;
+			});
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_rt_release', argTypes: [IrType:Ptr], args: ['%env']));
+			self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
+			self:mod:addFunction(fn: dFn);
+		});
+
 		# Restore outer method builder state
 		self:curFn: savedFn;
 		self:curBlk: savedBlk;
@@ -645,11 +825,36 @@ Class is IrBuilder{
 		self:localTypes: savedTypes;
 		self:ownedSlots: savedOwned;
 
+		# Allocate and populate %env in outer function if captures exist
+		local String is envVal: 'null';
+		local String is destroyPtr: 'null';
+		if({ captures:length() > 0 }, {
+			envVal: self:nextTmp();
+			self:emit(inst: IrInst:AllocObj(dst: envVal, structName: envStructName, destroyFn: 'null'));
+			local Int is oci: 0;
+			while({ oci < captures:length() }, {
+				local String is cname: captures:get(index: oci, default: '');
+				local String is oSlot: self:localSlots:get(key: cname, default: '');
+				local IrType is oTy: self:localTypes:get(key: cname, default: IrType:I64);
+				local String is oVal: self:nextTmp();
+				self:emit(inst: IrInst:Load(dst: oVal, slot: oSlot, ty: oTy));
+				if({ oTy == IrType:Ptr }, {
+					self:emit(inst: IrInst:Retain(val: oVal));
+				});
+				local String is dstPtr: self:nextTmp();
+				self:emit(inst: IrInst:FieldPtr(dst: dstPtr, objPtr: envVal, structName: envStructName, fieldIndex: oci + 2));
+				self:emit(inst: IrInst:Store(slot: dstPtr, val: oVal, ty: oTy));
+				oci++;
+			});
+			destroyPtr: self:nextTmp();
+			self:emit(inst: IrInst:GlobalAddr(dst: destroyPtr, globalName: destroyName));
+		});
+
 		local String is fnPtr: self:nextTmp();
 		self:emit(inst: IrInst:GlobalAddr(dst: fnPtr, globalName: fnName));
 		local String is clsTmp: self:nextTmp();
 		local Array of IrType is cT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
-		local Array of String is cV: [fnPtr, 'null', 'null'];
+		local Array of String is cV: [fnPtr, envVal, destroyPtr];
 		self:emit(inst: IrInst:IrCall(dst: clsTmp, hasDst: true, retType: IrType:Ptr, callee: 'spec_rt_closure_new', argTypes: cT, args: cV));
 		return clsTmp;
 	}
