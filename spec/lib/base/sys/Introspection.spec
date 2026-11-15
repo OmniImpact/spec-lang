@@ -9,7 +9,10 @@ Class is Introspection{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['base', 'sysinternal', Introspection]
+		['base', 'sysinternal', Introspection],
+		['base', 'struct', Array],
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()]
 	];
 
 	## The identity hash of an object: a stable per-object value derived
@@ -166,5 +169,24 @@ Class is Introspection{
 	## @return: true when the lattice contains the base.
 	Function of Boolean is extendsClass(String is className, String is baseName){
 		return base:sysinternal:Introspection:classExtends(className: className, baseName: baseName);
+	}
+
+	## Discovers every registered strict subclass of [baseName] and
+	## instantiates each via its zero-argument constructor.
+	##
+	## @param baseName: The base class name.
+	## @return: Array of instantiated subclass instances.
+	Function of Array of Any is instantiateSubclasses(String is baseName){
+		local Array of String is names: base:sysinternal:Introspection:classNames();
+		local Array of Any is found: [];
+		local Int is i: 0;
+		while({ i < names:length() }, {
+			local String is cname: names:get(index: i, default: '');
+			if({ cname != baseName && base:sysinternal:Introspection:classExtends(className: cname, baseName: baseName) }, {
+				found:add(item: base:sysinternal:Introspection:instantiate(className: cname));
+			});
+			i++;
+		});
+		return found;
 	}
 }

@@ -10,6 +10,7 @@ Class is OptimizerPipeline{
 		['base', 'compiler', 'opt', ConstantFoldPass],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'struct', Array],
+		['base', 'struct', as Sort()],
 		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -18,38 +19,20 @@ Class is OptimizerPipeline{
 	Array of SpecOptimizer is passes: [];
 
 	replace Function is init(){
-		local Array of String is names: Introspection:classNames();
-		local Array of SpecOptimizer is found: [];
+		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'SpecOptimizer');
+		Sort:sortBy(values: found, compare: local Function of Int(Any is a, Any is b){
+			local SpecOptimizer is pa: a as SpecOptimizer;
+			local SpecOptimizer is pb: b as SpecOptimizer;
+			if({ pa:order() != pb:order() }, { return pa:order() - pb:order(); });
+			if({ pa:name() < pb:name() }, { return -1; });
+			if({ pa:name() > pb:name() }, { return 1; });
+			return 0;
+		});
 		local Int is i: 0;
-		while({ i < names:length() }, {
-			local String is cname: names:get(index: i, default: '');
-			if({ cname != 'SpecOptimizer' && Introspection:extendsClass(className: cname, baseName: 'SpecOptimizer') }, {
-				local SpecOptimizer is opt: Introspection:instantiate(className: cname) as SpecOptimizer;
-				found:add(item: opt);
-			});
+		while({ i < found:length() }, {
+			self:passes:add(item: found:get(index: i) as SpecOptimizer);
 			i++;
 		});
-		# Deterministic insertion sort by (order, name)
-		local Int is n: found:length();
-		local Int is k: 1;
-		while({ k < n }, {
-			local SpecOptimizer is cur: found:get(index: k);
-			local Int is j: k - 1;
-			local Boolean is shifting: true;
-			while({ shifting && j >= 0 }, {
-				local SpecOptimizer is prev: found:get(index: j);
-				local Boolean is after: (prev:order() > cur:order()) || (prev:order() == cur:order() && prev:name() > cur:name());
-				if({ after }, {
-					found:set(index: j + 1, item: prev);
-					j--;
-				}, {
-					shifting: false;
-				});
-			});
-			found:set(index: j + 1, item: cur);
-			k++;
-		});
-		self:passes: found;
 	}
 
 	Function is run(IrModule is mod){

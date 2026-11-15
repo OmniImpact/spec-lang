@@ -21,8 +21,15 @@ Class is IrBuilder{
 		['base', 'compiler', 'ir', IrFunction],
 		['base', 'compiler', 'ir', IrStruct],
 		['base', 'compiler', 'ir', IrModule],
+		['base', 'compiler', 'llvm', CallLowerer],
+		['base', 'compiler', 'llvm', ControlFlowCallLowerer],
+		['base', 'compiler', 'llvm', StringCallLowerer],
+		['base', 'compiler', 'llvm', ArrayCallLowerer],
+		['base', 'compiler', 'llvm', MapCallLowerer],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
+		['base', 'struct', as Sort()],
+		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -39,8 +46,23 @@ Class is IrBuilder{
 	Map of String to String is localSlots: Map:init();
 	Map of String to IrType is localTypes: Map:init();
 	Array of String is ownedSlots: [];
+	Array of CallLowerer is callLowerers: [];
 
 	replace Function is init(){
+		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'CallLowerer');
+		Sort:sortBy(values: found, compare: local Function of Int(Any is a, Any is b){
+			local CallLowerer is ca: a as CallLowerer;
+			local CallLowerer is cb: b as CallLowerer;
+			if({ ca:order() != cb:order() }, { return ca:order() - cb:order(); });
+			if({ ca:name() < cb:name() }, { return -1; });
+			if({ ca:name() > cb:name() }, { return 1; });
+			return 0;
+		});
+		local Int is i: 0;
+		while({ i < found:length() }, {
+			self:callLowerers:add(item: found:get(index: i) as CallLowerer);
+			i++;
+		});
 	}
 
 	Function of String is nextTmp(){
@@ -265,7 +287,7 @@ Class is IrBuilder{
 		return 'null';
 	}
 
-	local Function is lowerStmts(Array of Statement is stmts){
+	Function is lowerStmts(Array of Statement is stmts){
 		local Int is i: 0;
 		while({ i < stmts:length() && !self:blkTerminated }, {
 			self:lowerStmt(stmt: stmts:get(index: i));
@@ -358,7 +380,7 @@ Class is IrBuilder{
 		self:currentLine: prevLine;
 	}
 
-	local Function of String is lowerExpr(Expression is expr){
+	Function of String is lowerExpr(Expression is expr){
 		return match(on: expr, when: [
 			Expression:NumberLit: local Function(Int is value, String is text){
 				local Int is v: value;
@@ -634,27 +656,20 @@ Class is IrBuilder{
 
 	local Function of String is lowerCall(Expression is expr, CallData is call){
 		local String is nm: call:name;
-		if({ nm == 'if' && call:args:length() >= 2 }, {
-			return self:lowerIfCall(expr: expr, call: call);
+
+		# Pluggable call lowerers (control flow, String, Array, Map, etc.)
+		local Int is cli: 0;
+		local Boolean is handled: false;
+		local String is loweredRes: '0';
+		while({ cli < self:callLowerers:length() && !handled }, {
+			local CallLowerer is cl: self:callLowerers:get(index: cli);
+			if({ cl:matches(b: self, expr: expr, call: call) }, {
+				loweredRes: cl:lower(b: self, expr: expr, call: call);
+				handled: true;
+			});
+			cli++;
 		});
-		if({ nm == 'while' && call:args:length() >= 2 }, {
-			self:lowerWhileCall(call: call);
-			return '0';
-		});
-		if({ nm == 'line' && call:args:length() >= 1 }, {
-			local NamedArg is lineArg: call:args:get(index: 0);
-			local String is txt: self:lowerExpr(expr: lineArg:value);
-			local Array of IrType is aT: [IrType:Ptr];
-			local Array of String is aV: [txt];
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_print_line', argTypes: aT, args: aV));
-			return '0';
-		});
-		if({ nm == 'exit' && call:args:length() >= 1 }, {
-			local NamedArg is exArg: call:args:get(index: 0);
-			local String is stV: self:lowerExpr(expr: exArg:value);
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_process_exit', argTypes: [IrType:I64], args: [stV]));
-			return '0';
-		});
+		if({ handled }, { return loweredRes; });
 
 		# Closure local variable call: fn(...)
 		if({ self:localSlots:has(key: nm) && self:localTypes:get(key: nm, default: IrType:I64) == IrType:Ptr }, {
@@ -689,143 +704,7 @@ Class is IrBuilder{
 			return cDst;
 		});
 
-		# Stdlib String / Array / Map runtime method lowering
 		local String is recvType: call:target:resolvedType;
-		if({ recvType == 'String' }, {
-			local String is sRecv: self:lowerExpr(expr: call:target);
-			if({ nm == 'length' }, {
-				local String is dst: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_string_length', argTypes: [IrType:Ptr], args: [sRecv]));
-				return dst;
-			});
-			if({ nm == 'contains' && call:args:length() >= 1 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local String is needle: self:lowerExpr(expr: na0:value);
-				local String is idxTmp: self:nextTmp();
-				local String is negOne: self:nextTmp();
-				self:emit(inst: IrInst:ConstInt(dst: negOne, value: -1));
-				self:emit(inst: IrInst:IrCall(dst: idxTmp, hasDst: true, retType: IrType:I64, callee: 'spec_string_index_of', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: [sRecv, needle, negOne]));
-				local String is zeroTmp: self:nextTmp();
-				self:emit(inst: IrInst:ConstInt(dst: zeroTmp, value: 0));
-				local String is dst: self:nextTmp();
-				self:emit(inst: IrInst:Cmp(dst: dst, op: '>=', lhs: idxTmp, rhs: zeroTmp, ty: IrType:I64));
-				return dst;
-			});
-			if({ nm == 'substring' && call:args:length() >= 2 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local NamedArg is na1: call:args:get(index: 1);
-				local String is st: self:lowerExpr(expr: na0:value);
-				local String is en: self:lowerExpr(expr: na1:value);
-				local String is dst: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_substring', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [sRecv, st, en]));
-				return dst;
-			});
-		});
-		if({ recvType == 'Array' || recvType:startsWith(prefix: 'Array of ') || recvType:startsWith(prefix: 'Array:') }, {
-			local String is aRecv: self:lowerExpr(expr: call:target);
-			if({ nm == 'length' }, {
-				local String is dst: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
-				return dst;
-			});
-			if({ nm == 'add' && call:args:length() >= 1 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local Expression is ivExpr: na0:value;
-				local String is iv: self:lowerExpr(expr: ivExpr);
-				local IrType is ity: self:irTypeFor(specType: ivExpr:resolvedType);
-				local String is ip: iv;
-				if({ ity != IrType:Ptr }, {
-					ip: self:nextTmp();
-					self:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
-				});
-				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, ip]));
-				return '0';
-			});
-			if({ nm == 'get' && call:args:length() >= 1 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local String is idxV: self:lowerExpr(expr: na0:value);
-				local String is raw: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, idxV]));
-				local IrType is grTy: self:irTypeFor(specType: expr:resolvedType);
-				if({ grTy != IrType:Ptr && grTy != IrType:Void }, {
-					local String is casted: self:nextTmp();
-					self:emit(inst: IrInst:IrCast(dst: casted, val: raw, fromType: IrType:Ptr, toType: grTy));
-					return casted;
-				});
-				return raw;
-			});
-			if({ nm == 'set' && call:args:length() >= 2 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local NamedArg is na1: call:args:get(index: 1);
-				local String is idxV: self:lowerExpr(expr: na0:value);
-				local Expression is ivExpr: na1:value;
-				local String is iv: self:lowerExpr(expr: ivExpr);
-				local IrType is ity: self:irTypeFor(specType: ivExpr:resolvedType);
-				local String is ip: iv;
-				if({ ity != IrType:Ptr }, {
-					ip: self:nextTmp();
-					self:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
-				});
-				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [aRecv, idxV, ip]));
-				return '0';
-			});
-		});
-		if({ recvType == 'Map' || recvType:startsWith(prefix: 'Map of ') || recvType:startsWith(prefix: 'Map:') }, {
-			local String is mRecv: self:lowerExpr(expr: call:target);
-			if({ nm == 'length' }, {
-				local String is dst: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_map_length', argTypes: [IrType:Ptr], args: [mRecv]));
-				return dst;
-			});
-			if({ nm == 'has' && call:args:length() >= 1 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local String is kv: self:lowerExpr(expr: na0:value);
-				local String is dst: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'spec_map_has', argTypes: [IrType:Ptr, IrType:Ptr], args: [mRecv, kv]));
-				return dst;
-			});
-			if({ nm == 'set' && call:args:length() >= 2 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local NamedArg is na1: call:args:get(index: 1);
-				local String is kv: self:lowerExpr(expr: na0:value);
-				local Expression is vvExpr: na1:value;
-				local String is vv: self:lowerExpr(expr: vvExpr);
-				local IrType is vty: self:irTypeFor(specType: vvExpr:resolvedType);
-				local String is vp: vv;
-				if({ vty != IrType:Ptr }, {
-					vp: self:nextTmp();
-					self:emit(inst: IrInst:IrCast(dst: vp, val: vv, fromType: vty, toType: IrType:Ptr));
-				});
-				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [mRecv, kv, vp]));
-				return '0';
-			});
-			if({ nm == 'get' && call:args:length() >= 1 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				local String is kv: self:lowerExpr(expr: na0:value);
-				local String is defV: 'null';
-				if({ call:args:length() >= 2 }, {
-					local NamedArg is na1: call:args:get(index: 1);
-					local Expression is dvExpr: na1:value;
-					local String is dv: self:lowerExpr(expr: dvExpr);
-					local IrType is dty: self:irTypeFor(specType: dvExpr:resolvedType);
-					if({ dty != IrType:Ptr }, {
-						defV: self:nextTmp();
-						self:emit(inst: IrInst:IrCast(dst: defV, val: dv, fromType: dty, toType: IrType:Ptr));
-					}, {
-						defV: dv;
-					});
-				});
-				local String is raw: self:nextTmp();
-				self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [mRecv, kv, defV]));
-				local IrType is mrTy: self:irTypeFor(specType: expr:resolvedType);
-				if({ mrTy != IrType:Ptr && mrTy != IrType:Void }, {
-					local String is casted: self:nextTmp();
-					self:emit(inst: IrInst:IrCast(dst: casted, val: raw, fromType: IrType:Ptr, toType: mrTy));
-					return casted;
-				});
-				return raw;
-			});
-		});
 
 		# Method / constructor call
 		local IrType is retTy: self:irTypeFor(specType: expr:resolvedType);
@@ -913,117 +792,5 @@ Class is IrBuilder{
 		if({ hasDst }, { dst: self:nextTmp(); });
 		self:emit(inst: IrInst:IrCall(dst: dst, hasDst: hasDst, retType: retTy, callee: calleeName, argTypes: argTypes, args: argVals));
 		return dst;
-	}
-
-	local Function of String is lowerIfCall(Expression is expr, CallData is call){
-		local NamedArg is condNa: call:args:get(index: 0);
-		local NamedArg is thenNa: call:args:get(index: 1);
-		local Expression is condExpr: condNa:value;
-		local Expression is thenExpr: thenNa:value;
-		local Boolean is hasElse: call:args:length() >= 3;
-
-		# Unwrap AnonFn cond: { cond }
-		local String is condVal: '0';
-		match(on: condExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-				if({ bd:length() > 0 }, {
-					local Statement is bs: bd:get(index: 0);
-					match(on: bs, when: [
-						Statement:Return: local Function(Expression is re, Boolean is hr){
-							if({ hr }, { condVal: self:lowerExpr(expr: re); });
-						},
-						Statement:Expr: local Function(Expression is es){
-							condVal: self:lowerExpr(expr: es);
-						}
-					], default: {});
-				});
-			}
-		], default: {
-			condVal: self:lowerExpr(expr: condExpr);
-		});
-
-		local String is thenLbl: self:nextLabel(prefix: 'if_then');
-		local String is elseLbl: self:nextLabel(prefix: 'if_else');
-		local String is endLbl: self:nextLabel(prefix: 'if_end');
-		if({ !hasElse }, { elseLbl: endLbl; });
-
-		self:terminate(inst: IrInst:CondBr(cond: condVal, thenLabel: thenLbl, elseLabel: elseLbl));
-
-		local IrBlock is thenBlk: self:curFn:addBlock(label: thenLbl);
-		self:switchBlock(blk: thenBlk);
-		match(on: thenExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-				self:lowerStmts(stmts: bd);
-			}
-		], default: { local String is _u1: self:lowerExpr(expr: thenExpr); });
-		if({ !self:blkTerminated }, {
-			self:terminate(inst: IrInst:Br(target: endLbl));
-		});
-
-		if({ hasElse }, {
-			local NamedArg is elseNa: call:args:get(index: 2);
-			local Expression is elseExpr: elseNa:value;
-			local IrBlock is elseBlk: self:curFn:addBlock(label: elseLbl);
-			self:switchBlock(blk: elseBlk);
-			match(on: elseExpr, when: [
-				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-					self:lowerStmts(stmts: bd);
-				}
-			], default: { local String is _u2: self:lowerExpr(expr: elseExpr); });
-			if({ !self:blkTerminated }, {
-				self:terminate(inst: IrInst:Br(target: endLbl));
-			});
-		});
-
-		local IrBlock is endBlk: self:curFn:addBlock(label: endLbl);
-		self:switchBlock(blk: endBlk);
-		return '0';
-	}
-
-	local Function is lowerWhileCall(CallData is call){
-		local NamedArg is condNa: call:args:get(index: 0);
-		local NamedArg is bodyNa: call:args:get(index: 1);
-		local Expression is condExpr: condNa:value;
-		local Expression is bodyExpr: bodyNa:value;
-
-		local String is hdrLbl: self:nextLabel(prefix: 'while_hdr');
-		local String is bodyLbl: self:nextLabel(prefix: 'while_body');
-		local String is endLbl: self:nextLabel(prefix: 'while_end');
-
-		self:terminate(inst: IrInst:Br(target: hdrLbl));
-
-		local IrBlock is hdrBlk: self:curFn:addBlock(label: hdrLbl);
-		self:switchBlock(blk: hdrBlk);
-		local String is condVal: '0';
-		match(on: condExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-				if({ bd:length() > 0 }, {
-					local Statement is bs: bd:get(index: 0);
-					match(on: bs, when: [
-						Statement:Return: local Function(Expression is re, Boolean is hr){
-							if({ hr }, { condVal: self:lowerExpr(expr: re); });
-						},
-						Statement:Expr: local Function(Expression is es){
-							condVal: self:lowerExpr(expr: es);
-						}
-					], default: {});
-				});
-			}
-		], default: { condVal: self:lowerExpr(expr: condExpr); });
-		self:terminate(inst: IrInst:CondBr(cond: condVal, thenLabel: bodyLbl, elseLabel: endLbl));
-
-		local IrBlock is bodyBlk: self:curFn:addBlock(label: bodyLbl);
-		self:switchBlock(blk: bodyBlk);
-		match(on: bodyExpr, when: [
-			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
-				self:lowerStmts(stmts: bd);
-			}
-		], default: { local String is _u3: self:lowerExpr(expr: bodyExpr); });
-		if({ !self:blkTerminated }, {
-			self:terminate(inst: IrInst:Br(target: hdrLbl));
-		});
-
-		local IrBlock is endBlk: self:curFn:addBlock(label: endLbl);
-		self:switchBlock(blk: endBlk);
 	}
 }
