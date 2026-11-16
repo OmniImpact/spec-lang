@@ -1252,7 +1252,7 @@ Class is IrBuilder{
 			local String is cache1: self:nextTmp();
 			self:emit(inst: IrInst:Load(dst: cache1, slot: '@' . cacheGlob, ty: IrType:Ptr));
 			local String is hasKey: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: hasKey, hasDst: true, retType: IrType:I1, callee: 'Vector_mapHas', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name']));
+			self:emit(inst: IrInst:IrCall(dst: hasKey, hasDst: true, retType: IrType:I1, callee: 'HashTable_mapHas', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name']));
 			local String is hitLbl: self:nextLabel(prefix: 'hcache_hit');
 			local String is missLbl: self:nextLabel(prefix: 'hcache_miss');
 			self:terminate(inst: IrInst:CondBr(cond: hasKey, thenLabel: hitLbl, elseLabel: missLbl));
@@ -1260,7 +1260,7 @@ Class is IrBuilder{
 			local IrBlock is hitBlk: fn:addBlock(label: hitLbl);
 			self:switchBlock(blk: hitBlk);
 			local String is hitRaw: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: hitRaw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapGet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', 'null']));
+			self:emit(inst: IrInst:IrCall(dst: hitRaw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', 'null']));
 			local String is hitVal: self:castIfNeeded(val: hitRaw, fromTy: IrType:Ptr, toTy: resTy);
 			if({ resArc && hitVal != 'null' }, { self:emit(inst: IrInst:Retain(val: hitVal)); });
 			self:emitPoolExit();
@@ -1276,7 +1276,7 @@ Class is IrBuilder{
 			local String is resolved: self:nextTmp();
 			self:emit(inst: IrInst:IrCall(dst: resolved, hasDst: true, retType: resTy, callee: rSym . '_resolveHeld', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%p_name', clos]));
 			local String is setRaw: self:castIfNeeded(val: resolved, fromTy: resTy, toTy: IrType:Ptr);
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_mapSetAny', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', setRaw]));
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'HashTable_mapSetAny', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', setRaw]));
 			if({ resArc && resolved != 'null' }, { self:emit(inst: IrInst:Retain(val: resolved)); });
 			self:emitPoolExit();
 			self:curPoolMark: '';
@@ -2111,9 +2111,9 @@ Class is IrBuilder{
 							});
 							local String is kp: self:castIfNeeded(val: iv, fromTy: self:irTypeFor(specType: kSpec), toTy: kArgTy);
 							local String is vp: self:castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							local String is setCallee: 'Vector_mapSet' . kSuf . 'Any';
+							local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
 							if({ assignValue:resolvedType == 'String' }, {
-								setCallee: 'Vector_mapSet' . kSuf;
+								setCallee: 'HashTable_mapSet' . kSuf;
 							});
 							self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, vp]));
 						}, {
@@ -2758,7 +2758,7 @@ Class is IrBuilder{
 						self:emit(inst: IrInst:ConstInt(dst: digitsVal, value: 0));
 					});
 					local String is dstB: self:nextTmp();
-					self:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'spec_int_to_base', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [v, baseVal, digitsVal]));
+					self:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', v, baseVal, digitsVal]));
 					return dstB;
 				});
 				local IrType is toTy: self:irTypeFor(specType: target);
@@ -2896,9 +2896,9 @@ Class is IrBuilder{
 					});
 					local Array of IrType is setT: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr];
 					local Array of String is setV: ['null', mp, kv, vp];
-					local String is setCallee: 'Vector_mapSet' . kSuf . 'Any';
+					local String is setCallee: 'HashTable_mapSet' . kSuf . 'Any';
 					if({ ve:resolvedType == 'String' }, {
-						setCallee: 'Vector_mapSet' . kSuf;
+						setCallee: 'HashTable_mapSet' . kSuf;
 					});
 					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: setT, args: setV));
 					mi++;
@@ -2935,7 +2935,7 @@ Class is IrBuilder{
 						local Int is esid: self:mod:internStringLiteral(value: '');
 						self:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
 					});
-					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, mDef]));
+					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'HashTable_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, mDef]));
 				}, {
 					local Array of IrType is gT: [IrType:Ptr, IrType:Ptr, IrType:I64];
 					local Array of String is gV: ['null', tv, iv];
@@ -3375,6 +3375,23 @@ Class is IrBuilder{
 	local Function of String is lowerCall(Expression is expr, CallData is call){
 		local String is nm: call:name;
 
+		if({ nm == 'toBase' && call:target:resolvedType == 'Int' }, {
+			local String is iv: self:lowerExpr(expr: call:target);
+			local String is baseV: '10';
+			local String is digV: '0';
+			if({ call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				if({ na0:name == 'digits' }, { digV: self:lowerExpr(expr: na0:value); }, { baseV: self:lowerExpr(expr: na0:value); });
+			});
+			if({ call:args:length() >= 2 }, {
+				local NamedArg is na1: call:args:get(index: 1);
+				if({ na1:name == 'base' }, { baseV: self:lowerExpr(expr: na1:value); }, { digV: self:lowerExpr(expr: na1:value); });
+			});
+			local String is dst: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Buf_intToBase', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:I64], args: ['null', iv, baseV, digV]));
+			return dst;
+		});
+
 		# Pluggable call lowerers (control flow, String, Array, Map, etc.)
 		local Int is cli: 0;
 		local Boolean is handled: false;
@@ -3688,7 +3705,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' }, {
 			return 'null';
 		});
 		if({ self:currentClass != '' && self:localSlots:has(key: 'self') }, {

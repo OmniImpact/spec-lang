@@ -50,20 +50,6 @@
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #pragma clang diagnostic ignored "-Wunused-value"
 #endif
-/* Forward declarations: SpecBuf-backed String layer (definitions below) */
-typedef struct SpecBuf SpecBuf;
-typedef SpecBuf* String;
-typedef struct SpecClosure SpecClosure;
-SpecBuf* spec_buf_new(size_t elem_size, int elem_kind);
-void spec_buf_append_bytes(SpecBuf* b, const char* s);
-void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src);
-const char* spec_buf_to_cstring(SpecBuf* b);
-String spec_string_from_bytes(const char* data, size_t n);
-String spec_string_copy(String b);
-bool spec_string_bytes_equal(String b, const char* c, size_t n);
-bool spec_string_equals(String a, String b);
-long long spec_string_compare(String a, String b);
-String spec_string_concat(String a, String b);
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pthread.h>
@@ -81,7 +67,6 @@ String spec_string_concat(String a, String b);
 #endif
 #include <stdatomic.h>
 
-/* Forward Declarations of Structs & Types */
 typedef struct SpecBuf SpecBuf;
 typedef SpecBuf* String;
 typedef struct SpecClosure SpecClosure;
@@ -90,101 +75,23 @@ typedef struct SpecMap SpecMap;
 typedef struct SpecMapEntry SpecMapEntry;
 typedef struct SpecByteBuffer SpecByteBuffer;
 typedef struct SpecAudioStream SpecAudioStream;
-typedef struct SpecLoopControl SpecLoopControl;
-typedef struct Loop Loop;
 
-/* Forward Prototypes of Runtime API */
 void spec_panic(const char* msg);
 void spec_panic_bounds(const char* coll, long long idx, size_t len);
-void spec_panic_cast(const char* actual, const char* target);
-void spec_panic_byte_range(long long v);
+String spec_string_from_bytes(const char* data, size_t n);
 String spec_string_from_chars(const char* c);
 String spec_string_intern(const char* c);
-String spec_to_string_int(long long v);
-String spec_to_string_float(double v);
-String spec_to_string_bool(bool v);
+bool spec_string_bytes_equal(String b, const char* c, size_t n);
+bool spec_string_equals(String a, String b);
+const char* spec_buf_to_cstring(SpecBuf* b);
+void spec_buf_destroy(void* self);
 void spec_array_destroy(void* self);
-SpecArray* spec_array_new(void);
-SpecArray* spec_array_new_object(void);
-void spec_array_add(SpecArray* a, void* item);
-void spec_array_add_owned(SpecArray* a, void* item);
 void spec_map_destroy(void* self);
-SpecMap* spec_map_new(void);
-SpecMap* spec_map_new_object(void);
-SpecMap* spec_map_new_typed(int key_kind, int val_kind);
-SpecLoopControl* LoopControl_new(void);
-void LoopControl_stop(SpecLoopControl* c);
+void spec_bytebuffer_destroy(void* self);
 void spec_async_task_started(void);
 void spec_async_task_finished(void);
-void spec_drain_async_tasks(void);
-void spec_buf_destroy(void* self);
-SpecArray* spec_dir_list(SpecBuf* path);
-SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error);
-SpecBuf* spec_exe_dir(void);
-long long spec_file_size(SpecBuf* path);
-void spec_bytebuffer_destroy(void* self);
-SpecByteBuffer* spec_bytebuffer_new(void);
-String spec_bytebuffer_to_string(SpecByteBuffer* b);
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
-bool spec_file_append(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
-void spec_file_read_async(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
-void spec_file_write_async(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
-bool spec_file_exists(String path);
-bool spec_file_remove(String path);
-bool spec_file_remove_cb(String path, SpecClosure* on_error);
-String spec_file_temp(String template);
-String spec_file_temp_cb(String template, SpecClosure* on_error);
-long long spec_process_execute(String command, SpecArray* args);
-void spec_set_cli_args(int argc, char** argv);
-SpecMap* spec_cli_args_map(long long argc, char** argv);
-SpecArray* spec_process_raw_args(void);
-SpecMap* spec_process_measure(String command, SpecArray* args);
-void spec_process_sleep(long long ms);
-long long spec_process_get_pid(void);
-String spec_process_getenv(String key, String def);
-String spec_process_os_name(void);
-static inline double spec_math_round(double v) { return round(v); }
-static inline double spec_math_floor(double v) { return floor(v); }
-static inline double spec_math_ceil(double v) { return ceil(v); }
-static inline double spec_math_abs(double v) { return fabs(v); }
-static inline double spec_math_min(double a, double b) { return (a < b) ? a : b; }
-static inline double spec_math_max(double a, double b) { return (a > b) ? a : b; }
-static inline double spec_math_clamp(double v, double lo, double hi) {
-    if (hi < lo) return lo;
-    if (v < lo) return lo;
-    if (v > hi) return hi;
-    return v;
-}
-static inline double spec_math_sqrt(double v) { return v < 0.0 ? 0.0 : sqrt(v); }
-double spec_math_sin(double v);
-double spec_math_cos(double v);
-double spec_math_tan(double v);
-double spec_math_atan2(double y, double x);
-double spec_math_log(double v);
-double spec_math_log2(double v);
-double spec_math_pow(double base, double exp);
-double spec_math_exp(double v);
-double spec_math_log10(double v);
-double spec_math_cbrt(double v);
-double spec_math_asin(double v);
-double spec_math_acos(double v);
-double spec_math_atan(double v);
-static inline double spec_math_fma(double a, double b, double c) { return fma(a, b, c); }
-static inline long long spec_math_to_int(double v) {
-    if (v != v) return 0;
-    if (v >= 9223372036854775808.0) return 9223372036854775807LL;
-    if (v <= -9223372036854775808.0) return (-9223372036854775807LL - 1);
-    return (long long)v;
-}
-static inline double spec_math_to_float(long long v) { return (double)v; }
-double spec_math_random(double min, double max);
-String spec_int_to_base(long long v, long long base, long long digits);
-long long spec_term_width(void);
-long long spec_term_height(void);
-long long spec_atomic_add(long long slot, long long v);
-long long spec_atomic_put(long long slot, long long v);
-long long spec_atomic_get(long long slot);
 extern __thread unsigned long long _spec_rng_state;
 static inline unsigned long long spec_rng_next(void) {
     unsigned long long x = _spec_rng_state;
@@ -201,65 +108,6 @@ static inline void spec_fast_random_seed(long long idx) {
     spec_rng_next();
     spec_rng_next();
 }
-static inline double spec_fast_random(void) {
-    if (__builtin_expect(_spec_rng_state == 0, 0)) spec_fast_random_seed(0x5DEECE66DULL);
-    return (double)(spec_rng_next() >> 11) * (1.0 / 9007199254740992.0);
-}
-long long spec_parallel_run(long long threads, long long iterations, void* worker_closure);
-void* spec_parallel_sync(void* action_closure);
-void* spec_parallel_sync_with(long long lock_key, void* action_closure);
-String spec_type_name(const void* obj);
-long long spec_clock_ms(void);
-long long spec_mem_peak_kb(void);
-long long spec_thread_count(void);
-long long spec_monitor_avg_cpu_pct(void);
-long long spec_monitor_peak_cpu_pct(void);
-long long spec_monitor_avg_mem_kb(void);
-long long spec_monitor_peak_mem_kb(void);
-void spec_monitor_start(void);
-void spec_monitor_stop(void);
-void spec_error_line(String s);
-void spec_print_line(String s);
-void spec_print(String s);
-void spec_read_line(SpecClosure* on_line);
-String spec_read_bytes(long long count);
-void spec_console_binary_mode(void);
-long long spec_tcp_connect(String host, long long port, long long timeout_ms);
-long long spec_tcp_connect_cb(String host, long long port, long long timeout_ms, SpecClosure* on_error);
-long long spec_tcp_listen(String host, long long port, long long backlog);
-long long spec_tcp_listen_cb(String host, long long port, long long backlog, SpecClosure* on_error);
-long long spec_socket_accept(long long fd);
-long long spec_socket_accept_cb(long long fd, SpecClosure* on_error);
-long long spec_socket_send(long long fd, SpecByteBuffer* buf);
-long long spec_socket_send_cb(long long fd, SpecByteBuffer* buf, SpecClosure* on_error);
-long long spec_socket_send_str(long long fd, String str);
-long long spec_socket_send_str_cb(long long fd, String str, SpecClosure* on_error);
-SpecByteBuffer* spec_socket_recv(long long fd, long long max_bytes);
-SpecByteBuffer* spec_socket_recv_cb(long long fd, long long max_bytes, SpecClosure* on_error);
-String spec_socket_recv_str(long long fd, long long max_bytes);
-String spec_socket_recv_str_cb(long long fd, long long max_bytes, SpecClosure* on_error);
-long long spec_socket_close(long long fd);
-long long spec_socket_poll(long long fd, long long mode, long long timeout_ms);
-long long spec_socket_set_timeout(long long fd, long long timeout_ms);
-long long spec_audio_open(long long sample_rate, long long channels, long long format);
-long long spec_audio_open_cb(long long sample_rate, long long channels, long long format, SpecClosure* on_error);
-long long spec_audio_write(long long handle, SpecByteBuffer* buf);
-long long spec_audio_write_cb(long long handle, SpecByteBuffer* buf, SpecClosure* on_error);
-long long spec_audio_drain(long long handle);
-void spec_audio_close(long long handle);
-void spec_process_exit(long long status);
-long long spec_time_monotonic_ns(void);
-long long spec_time_monotonic_us(void);
-long long spec_time_monotonic_ms(void);
-long long spec_time_epoch_ms(void);
-long long spec_time_epoch_ns(void);
-void spec_time_sleep_ms(long long ms);
-void spec_time_sleep_us(long long us);
-void spec_time_sleep_ns(long long ns);
-long long spec_time_local_offset_sec(long long epoch_sec);
-long long spec_time_set_timeout(long long ms, SpecClosure* callback);
-long long spec_time_set_interval(long long ms, long long count, SpecClosure* callback);
-bool spec_time_cancel_timer(long long timer_id);
 
 /* Platform Abstraction Layer (PAL) & OS Shims */
 static bool spec_pal_get_exe_path(char* buf, size_t size) {
@@ -749,40 +597,10 @@ static SpecMap* spec_map_new_kind(int kind) {
     return spec_map_new_typed_kind(SPEC_KEY_STRING, kind);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-/* Spec Loop Control Intrinsic */
-typedef struct SpecLoopControl {
-    bool stopped;
-    void* callback;
-    void (*on_complete)(void* callback, struct SpecLoopControl* control);
-} SpecLoopControl;
-
-typedef struct SpecLoopControl LoopControl;
-
-/* The decoupled loop object: instances are runtime-managed state
-   machines; the type is the opaque handle the runner signatures
-   reference. */
-typedef struct Loop Loop;
-
-
-
 /* Spec Async Task Manager */
 static int spec_in_flight_tasks = 0;
 static pthread_mutex_t spec_task_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t spec_task_cond = PTHREAD_COND_INITIALIZER;
-
-
-
 
 /* File Package Primitives with Callbacks and Async Worker Support */
 static inline void spec_call_closure_0(SpecClosure* cls) {
@@ -806,9 +624,6 @@ static inline void _spec_emit_str_error(SpecClosure* on_error, const char* msg) 
     }
 }
 
-/* String: the managed string type (initially char*, transitions to SpecBuf) */
-typedef SpecBuf* String;
-
 /* Unified Growable Buffer: elem_size=1 for bytes, 8 for pointers */
 typedef struct SpecBuf {
     void* data;
@@ -827,24 +642,6 @@ static void spec_buf_grow(SpecBuf* b, size_t needed) {
     b->data = spec_xrealloc(b->data, cap * b->elem_size);
     b->capacity = cap;
 }
-
-
-
-
-
-
-
-/* String: managed string backed by SpecBuf (elem_size=1) */
-typedef SpecBuf* String;
-
-
-
-
-
-
-
-
-
 
 /* Spec Byte Buffer: compact [Byte] storage (the string builder floor) */
 typedef struct SpecByteBuffer {
@@ -876,7 +673,6 @@ static void* spec_file_read_worker(void* arg) {
     return NULL;
 }
 
-
 static void* spec_file_write_worker(void* arg) {
     SpecFileTask* task = (SpecFileTask*)arg;
     spec_file_write(task->path, task->content, task->on_success_write, task->on_error);
@@ -889,21 +685,6 @@ static void* spec_file_write_worker(void* arg) {
     spec_async_task_finished();
     return NULL;
 }
-
-
-/* Process Package Primitives */
-
-
-
-
-/* Math Package Primitives */
-static inline long long spec_math_abs_int(long long v) { return v < 0 ? -v : v; }
-
-
-/* Integer Base Conversion */
-
-/* Terminal Metrics */
-
 
 /* Atomic Slots: dynamically growing chunked table.
    Starts low (0 chunks allocated) and allocates chunks on demand.
@@ -1270,10 +1051,6 @@ String spec_to_string_float(double v) {
     return spec_string_intern(buf);
 }
 
-String spec_to_string_bool(bool v) {
-    return spec_string_intern(v ? "true" : "false");
-}
-
 void spec_array_destroy(void* self) {
     SpecArray* a = (SpecArray*)self;
     if (a) {
@@ -1307,21 +1084,6 @@ SpecArray* spec_array_new(void) {
 
 SpecArray* spec_array_new_object(void) {
     return spec_array_new_kind(SPEC_ELEM_OBJECT);
-}
-
-void spec_array_add(SpecArray* a, void* item) {
-    if (!a) return;
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    bool mt = spec_is_multithreaded();
-    if (mt) _spec_array_lock(a);
-    if (a->length >= a->capacity) {
-        size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
-        a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
-        a->capacity = ncap;
-    }
-    if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
-    a->items[a->length++] = item;
-    if (mt) _spec_array_unlock(a);
 }
 
 void spec_array_add_owned(SpecArray* a, void* item) {
@@ -1441,37 +1203,6 @@ static String _spec_c_map_get_str(SpecMap* m, String key) {
     return NULL;
 }
 
-SpecLoopControl* LoopControl_new(void) {
-    SpecLoopControl* c = (SpecLoopControl*)spec_alloc(sizeof(SpecLoopControl), NULL);
-    if (c) {
-        c->stopped = false;
-        c->callback = NULL;
-        c->on_complete = NULL;
-    }
-    return c;
-}
-
-void LoopControl_stop(SpecLoopControl* c) {
-    if (c) c->stopped = true;
-}
-
-bool spec_loop_control_is_stopped(SpecLoopControl* c) {
-    return c ? c->stopped : false;
-}
-
-void spec_loop_control_complete(SpecLoopControl* c) {
-    if (c && c->on_complete) { c->on_complete(c->callback, c); }
-}
-
-SpecLoopControl* spec_loop_control_with_callback(void* cb, void (*on_complete)(void*, struct SpecLoopControl*)) {
-    SpecLoopControl* c = LoopControl_new();
-    if (c) {
-        c->callback = cb;
-        c->on_complete = on_complete;
-    }
-    return c;
-}
-
 void spec_async_task_started(void) {
     spec_thread_enter();
     pthread_mutex_lock(&spec_task_mutex);
@@ -1556,16 +1287,6 @@ SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {
     return b;
 }
 
-void spec_buf_append_bytes(SpecBuf* b, const char* s) {
-    if (!b || !s) return;
-    size_t n = strlen(s);
-    if (n == 0) return;
-    spec_buf_grow(b, n);
-    memcpy((unsigned char*)b->data + b->length, s, n);
-    b->length += n;
-    ((unsigned char*)b->data)[b->length] = 0;
-}
-
 void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src) {
     if (!dst || !src || src->length == 0) return;
     if (dst->elem_size != 1 || src->elem_size != 1) return;
@@ -1597,11 +1318,6 @@ String spec_string_from_bytes(const char* data, size_t n) {
         ((unsigned char*)b->data)[b->length] = 0;
     }
     return b;
-}
-
-String spec_string_copy(String b) {
-    if (!b || b->length == 0) return spec_buf_new(1, 0);
-    return spec_string_from_bytes((const char*)b->data, b->length);
 }
 
 bool spec_string_bytes_equal(String b, const char* c, size_t n) {
@@ -2282,51 +1998,9 @@ String spec_process_os_name(void) {
 #endif
 }
 
-double spec_math_sin(double v) { return sin(v); }
-
-double spec_math_cos(double v) { return cos(v); }
-
-double spec_math_tan(double v) { return tan(v); }
-
-double spec_math_atan2(double y, double x) { return atan2(y, x); }
-
-double spec_math_log(double v) { return v <= 0.0 ? 0.0 : log(v); }
-
-double spec_math_log2(double v) { return v <= 0.0 ? 0.0 : log2(v); }
-
-double spec_math_pow(double base, double exp) { return pow(base, exp); }
-
-double spec_math_exp(double v) { return exp(v); }
-
-double spec_math_log10(double v) { return v <= 0.0 ? 0.0 : log10(v); }
-
-double spec_math_cbrt(double v) { return cbrt(v); }
-
-double spec_math_asin(double v) { return asin(v); }
-
-double spec_math_acos(double v) { return acos(v); }
-
-double spec_math_atan(double v) { return atan(v); }
-
 double spec_math_random(double min, double max) {
     if (min >= max) return ((double)rand() / ((double)RAND_MAX + 1.0));
     return min + ((double)rand() / ((double)RAND_MAX + 1.0)) * (max - min);
-}
-
-String spec_int_to_base(long long v, long long base, long long digits) {
-    if (base < 2 || base > 36) base = 10;
-    if (digits < 0) digits = 0;
-    const char* digs = "0123456789abcdefghijklmnopqrstuvwxyz";
-    char buf[80];
-    int idx = 79;
-    buf[idx] = '\0';
-    int neg = v < 0;
-    unsigned long long u = neg ? (unsigned long long)(-(v + 1)) + 1ULL : (unsigned long long)v;
-    if (u == 0) buf[--idx] = '0';
-    while (u > 0) { buf[--idx] = digs[u % (unsigned long long)base]; u /= (unsigned long long)base; }
-    while ((79 - idx) < (int)digits && idx > 0) buf[--idx] = '0';
-    if (neg && idx > 0) buf[--idx] = '-';
-    return spec_string_from_chars(buf + idx);
 }
 
 long long spec_term_width(void) {
@@ -2375,10 +2049,6 @@ static void _spec_init_parallel_striped_mutexes(void) {
     pthread_mutexattr_destroy(&attr);
 }
 
-void* spec_parallel_sync(void* action_closure) {
-    return spec_parallel_sync_with(0, action_closure);
-}
-
 void* spec_parallel_sync_with(long long lock_key, void* action_closure) {
     SpecClosure* cls = (SpecClosure*)action_closure;
     if (!cls || !cls->fn) spec_panic("Parallel:sync received null action Function");
@@ -2389,6 +2059,10 @@ void* spec_parallel_sync_with(long long lock_key, void* action_closure) {
     void* res = ((void* (*)(void*))cls->fn)(cls->env);
     pthread_mutex_unlock(&_spec_parallel_striped_mutexes[idx]);
     return res;
+}
+
+void* spec_parallel_sync(void* action_closure) {
+    return spec_parallel_sync_with(0, action_closure);
 }
 
 long long spec_parallel_run(long long threads, long long iterations, void* worker_closure) {
@@ -2422,15 +2096,6 @@ long long spec_parallel_run(long long threads, long long iterations, void* worke
     free(tids);
     free(spawned);
     return total;
-}
-
-String spec_type_name(const void* obj) {
-    if (!obj || (uintptr_t)obj < 4096) return spec_string_intern("");
-    SpecHeader* h = SPEC_HEADER(obj);
-    if (h->destroy == spec_map_destroy) return spec_string_intern("Map");
-    if (h->destroy == spec_array_destroy) return spec_string_intern("Array");
-    if (h->destroy == spec_buf_destroy) return spec_string_intern("String");
-    return spec_string_intern(*((const char**)obj));
 }
 
 long long spec_clock_ms(void) {

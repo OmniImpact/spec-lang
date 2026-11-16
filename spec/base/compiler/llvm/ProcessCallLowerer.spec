@@ -105,7 +105,7 @@ Class of SysinternalCallLowerer is ProcessCallLowerer{
 			'monitor_peak_cpu_pct': { res: self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_monitor_peak_cpu_pct', argTypes: [], args: []); },
 			'map_freeze': {
 				local String is m: self:lowerNamedArg(b: b, call: call, argName: 'm', posIdx: 0, defVal: 'null');
-				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'Vector_mapFreeze', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', m]);
+				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'HashTable_mapFreeze', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', m]);
 			},
 			'array_freeze': {
 				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 0, defVal: 'null');

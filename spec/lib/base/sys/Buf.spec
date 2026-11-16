@@ -257,4 +257,45 @@ Class is Buf{
 	Function of Int is parseBase(String is b, Int is base, Int is def){
 		return b:parseInt(base: base, default: def);
 	}
+
+	## Formats integer [v] in [base] (2-36), zero-padded to at least [digits] digits.
+	Function of String is intToBase(Int is v, Int is base, Int is digits){
+		local Int is b: if({ base < 2 || base > 36 }, { 10 }, { base });
+		local Int is minDig: if({ digits < 0 }, { 0 }, { digits });
+		local Int is cap: if({ minDig + 4 > 80 }, { minDig + 4 }, { 80 });
+		local Int is scratch: Mem:alloc(bytes: cap);
+		local Int is idx: cap;
+		local Boolean is neg: v < 0;
+		local Int is u: v;
+		if({ u == 0 }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: scratch, byteOffset: idx, val: 48);
+		}, {
+			if({ neg }, {
+				local Int is rem0: 0 - (u % b);
+				u: 0 - (u / b);
+				idx: idx - 1;
+				local Int is ch0: if({ rem0 < 10 }, { 48 + rem0 }, { 87 + rem0 });
+				Mem:storeByte(ptr: scratch, byteOffset: idx, val: ch0);
+			});
+			while({ u > 0 }, {
+				local Int is rem: u % b;
+				u: u / b;
+				idx: idx - 1;
+				local Int is ch: if({ rem < 10 }, { 48 + rem }, { 87 + rem });
+				Mem:storeByte(ptr: scratch, byteOffset: idx, val: ch);
+			});
+		});
+		while({ (cap - idx) < minDig && idx > 1 }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: scratch, byteOffset: idx, val: 48);
+		});
+		if({ neg && idx > 0 }, {
+			idx: idx - 1;
+			Mem:storeByte(ptr: scratch, byteOffset: idx, val: 45);
+		});
+		local String is out: Mem:strFromBytes(srcAddr: scratch + idx, len: cap - idx);
+		Mem:free(ptr: scratch);
+		return out;
+	}
 }

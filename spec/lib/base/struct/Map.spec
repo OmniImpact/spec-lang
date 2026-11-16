@@ -13,6 +13,7 @@ Class is Map of K to V{
 
 	replace Array of Array of String is using: [
 		['base', 'struct', Array],
+		['base', 'sys', as HashTable()],
 		['base', 'sys', as Loops()],
 		['base', 'sys', as Conditional()]
 	];

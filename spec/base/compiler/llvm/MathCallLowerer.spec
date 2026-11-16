@@ -29,7 +29,6 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		if({ call:name == 'toBase' && call:target:resolvedType == 'Int' }, { return true; });
 		if({ !self:isFloorTarget(call: call, domain: 'Math') }, { return false; });
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
@@ -45,23 +44,6 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		local String is nm: call:name;
-		if({ nm == 'toBase' && call:target:resolvedType == 'Int' }, {
-			local String is iv: b:lowerExpr(expr: call:target);
-			local String is baseV: '10';
-			local String is digV: '0';
-			if({ call:args:length() >= 1 }, {
-				local NamedArg is na0: call:args:get(index: 0);
-				if({ na0:name == 'digits' }, { digV: b:lowerExpr(expr: na0:value); }, { baseV: b:lowerExpr(expr: na0:value); });
-			});
-			if({ call:args:length() >= 2 }, {
-				local NamedArg is na1: call:args:get(index: 1);
-				if({ na1:name == 'base' }, { baseV: b:lowerExpr(expr: na1:value); }, { digV: b:lowerExpr(expr: na1:value); });
-			});
-			local String is dst: b:nextTmp();
-			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_int_to_base', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [iv, baseV, digV]));
-			b:emitClaimPool(val: dst);
-			return dst;
-		});
 		local String is res: '0';
 		match(on: nm, when: [
 			'init': { res: 'null'; },
@@ -97,16 +79,20 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 			'math_atan2': {
 				local String is y: self:lowerNamedArg(b: b, call: call, argName: 'y', posIdx: 0, defVal: '0.0');
 				local String is x: self:lowerNamedArg(b: b, call: call, argName: 'x', posIdx: 1, defVal: '0.0');
-				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'spec_math_atan2', argTypes: [IrType:F64, IrType:F64], args: [y, x]);
+				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'atan2', argTypes: [IrType:F64, IrType:F64], args: [y, x]);
 			},
 			'math_pow': {
 				local String is x: self:lowerNamedArg(b: b, call: call, argName: 'base', posIdx: 0, defVal: '0.0');
 				local String is y: self:lowerNamedArg(b: b, call: call, argName: 'exp', posIdx: 1, defVal: '0.0');
-				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'spec_math_pow', argTypes: [IrType:F64, IrType:F64], args: [x, y]);
+				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'pow', argTypes: [IrType:F64, IrType:F64], args: [x, y]);
+			},
+			['math_log', 'math_log2', 'math_log10']: {
+				local String is v: self:lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');
+				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'spec_' . nm, argTypes: [IrType:F64], args: [v]);
 			},
 			else: {
 				local String is v: self:lowerNamedArg(b: b, call: call, argName: 'v', posIdx: 0, defVal: '0.0');
-				res: self:emitSysCall(b: b, retType: IrType:F64, callee: 'spec_' . nm, argTypes: [IrType:F64], args: [v]);
+				res: self:emitSysCall(b: b, retType: IrType:F64, callee: nm:substring(start: 5, end: nm:length()), argTypes: [IrType:F64], args: [v]);
 			}
 		]);
 		return res;
