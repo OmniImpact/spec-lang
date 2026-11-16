@@ -287,6 +287,8 @@ Class is Driver{
 		if({ useLlvm }, {
 			local Int is llvmGenT0: Process:clockMs();
 			local IrBuilder is irb: IrBuilder:init();
+			irb:entryInitOwner: self:entryInitOwner;
+			irb:entryInitTakesMap: self:entryInitTakesMap;
 			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
 			if({ !args:has(key: 'no-opt') }, {
 				local OptimizerPipeline is optPipe: OptimizerPipeline:init();

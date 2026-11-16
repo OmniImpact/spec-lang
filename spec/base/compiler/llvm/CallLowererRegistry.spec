@@ -16,6 +16,8 @@ Class is CallLowererRegistry{
 		['base', 'compiler', 'llvm', ProcessCallLowerer],
 		['base', 'compiler', 'llvm', FileCallLowerer],
 		['base', 'compiler', 'llvm', DirCallLowerer],
+		['base', 'compiler', 'llvm', NetAudioCallLowerer],
+		['base', 'compiler', 'llvm', IntrospectionCallLowerer],
 		['base', 'compiler', 'llvm', TimeCallLowerer],
 		['base', 'compiler', 'llvm', MathCallLowerer],
 		['base', 'compiler', 'llvm', MatchCallLowerer],

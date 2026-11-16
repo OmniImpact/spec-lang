@@ -48,7 +48,8 @@ Class of SysinternalCallLowerer is DirCallLowerer{
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
 		match(on: call:name, when: [
-			['dirList', 'fileSize']: { ok: argc >= 1; },
+			'init': { ok: r == 'Dir'; },
+			['dirList', 'dir_list_cb', 'fileSize']: { ok: argc >= 1; },
 			'exeDir': { ok: true; }
 		]);
 		return ok;
@@ -57,9 +58,11 @@ Class of SysinternalCallLowerer is DirCallLowerer{
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		local String is res: '0';
 		match(on: call:name, when: [
-			'dirList': {
+			'init': { res: 'null'; },
+			['dirList', 'dir_list_cb']: {
 				local String is p: self:lowerArg(b: b, call: call, idx: 0);
 				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
+				if({ errCb == 'null' }, { errCb: self:namedOrNull(b: b, call: call, argName: 'on_error'); });
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_dir_list_cb', argTypes: [IrType:Ptr, IrType:Ptr], args: [p, errCb]);
 			},
 			'exeDir': {

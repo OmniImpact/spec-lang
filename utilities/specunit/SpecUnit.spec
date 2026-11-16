@@ -128,7 +128,11 @@ Class is SpecUnit{
 		local String is root: args:getString(key: 'root', default: '.');
 		local String is dirsRaw: args:getString(key: 't', default: args:getString(key: 'tests', default: 'tests'));
 		local String is srcDirsRaw: args:getString(key: 'S', default: args:getString(key: 'source-dirs', default: ''));
+		local Boolean is useLlvm: args:has(key: 'llvm');
 		local String is srcDirFlags: self:buildSourceDirFlags(raw: srcDirsRaw);
+		if(check: { useLlvm }, then: {
+			srcDirFlags: ' --llvm' . srcDirFlags;
+		});
 		local Int is cores: Process:threadCount();
 		local String is jArg: args:getString(key: 'j', default: args:getString(key: 'threads', default: ''));
 		local Int is threads: 0;

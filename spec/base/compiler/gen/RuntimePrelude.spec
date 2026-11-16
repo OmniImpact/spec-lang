@@ -266,6 +266,7 @@ String spec_file_temp(String template);
 String spec_file_temp_cb(String template, SpecClosure* on_error);
 long long spec_process_execute(String command, SpecArray* args);
 void spec_set_cli_args(int argc, char** argv);
+SpecMap* spec_cli_args_map(long long argc, char** argv);
 SpecArray* spec_process_raw_args(void);
 SpecMap* spec_process_measure(String command, SpecArray* args);
 void spec_process_sleep(long long ms);
@@ -2560,6 +2561,23 @@ void LoopControl_stop(SpecLoopControl* c) {
     if (c) c->stopped = true;
 }
 
+bool spec_loop_control_is_stopped(SpecLoopControl* c) {
+    return c ? c->stopped : false;
+}
+
+void spec_loop_control_complete(SpecLoopControl* c) {
+    if (c && c->on_complete) { c->on_complete(c->callback, c); }
+}
+
+SpecLoopControl* spec_loop_control_with_callback(void* cb, void (*on_complete)(void*, struct SpecLoopControl*)) {
+    SpecLoopControl* c = LoopControl_new();
+    if (c) {
+        c->callback = cb;
+        c->on_complete = on_complete;
+    }
+    return c;
+}
+
 void spec_async_task_started(void) {
     spec_thread_enter();
     pthread_mutex_lock(&spec_task_mutex);
@@ -3603,6 +3621,57 @@ static char** g_spec_argv = NULL;
 void spec_set_cli_args(int argc, char** argv) {
     g_spec_argc = argc;
     g_spec_argv = argv;
+}
+
+static void spec_cli_arg_set(SpecMap* args, String key, String val) {
+    String prev = (String)spec_map_get(args, key, NULL);
+    if (prev) {
+        spec_map_set(args, key, spec_string_concat(prev, spec_string_concat(spec_string_intern("\n"), val)));
+    } else {
+        spec_map_set(args, key, val);
+    }
+}
+
+SpecMap* spec_cli_args_map(long long argc_ll, char** argv) {
+    int argc = (int)argc_ll;
+    spec_set_cli_args(argc, argv);
+    SpecMap* args = spec_map_new();
+    int pos_idx = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strncmp(argv[i], "--", 2) == 0) {
+            const char* eq = strchr(argv[i] + 2, '=');
+            if (eq) {
+                int klen = (int)(eq - (argv[i] + 2));
+                spec_cli_arg_set(args, spec_string_from_bytes(argv[i] + 2, klen), spec_string_from_chars(eq + 1));
+            } else {
+                const char* key = argv[i] + 2;
+                const char* val = "true";
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    val = argv[++i];
+                }
+                spec_cli_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));
+            }
+        } else if (argv[i][0] == '-' && argv[i][1] != 0) {
+            const char* eq = strchr(argv[i] + 1, '=');
+            if (eq) {
+                int klen = (int)(eq - (argv[i] + 1));
+                spec_cli_arg_set(args, spec_string_from_bytes(argv[i] + 1, klen), spec_string_from_chars(eq + 1));
+            } else {
+                const char* key = argv[i] + 1;
+                const char* val = "true";
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    val = argv[++i];
+                }
+                spec_cli_arg_set(args, spec_string_from_chars(key), spec_string_from_chars(val));
+            }
+        } else {
+            char pos_buf[16];
+            snprintf(pos_buf, sizeof(pos_buf), "%d", pos_idx++);
+            spec_cli_arg_set(args, spec_string_from_chars(pos_buf), spec_string_from_chars(argv[i]));
+            spec_cli_arg_set(args, spec_string_intern(""), spec_string_from_chars(argv[i]));
+        }
+    }
+    return args;
 }
 
 SpecArray* spec_process_raw_args(void) {
@@ -4928,6 +4997,9 @@ void* spec_rt_retain(void* obj) { return spec_retain(obj); }
 void spec_rt_release(void* obj) { spec_release(obj); }
 SpecClosure* spec_rt_closure_new(void* fn, void* env, void (*destroy_env)(void*)) { return spec_closure_new(fn, env, destroy_env); }
 SpecBox* spec_rt_box_new(int64_t val, bool is_arc) { return _spec_box_new(val, is_arc); }
+void* spec_rt_box_get(SpecBox* b) { return spec_box_get(b); }
+void spec_rt_box_set(SpecBox* b, void* new_val) { spec_box_set(b, new_val); }
+String spec_rt_box_to_string(SpecBox* b) { return spec_box_to_string(b); }
 ''';
 		return b;
 	}

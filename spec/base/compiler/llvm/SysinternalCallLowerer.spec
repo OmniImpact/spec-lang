@@ -33,11 +33,30 @@ Class of CallLowerer is SysinternalCallLowerer{
 
 	Function of String is receiverName(CallData is call){
 		if({ call:bareProvider != '' }, {
-			return call:bareProvider;
+			local String is bp: call:bareProvider;
+			if({ bp:contains(needle: ':') }, {
+				local Array of String is parts: bp:split(separator: ':');
+				if({ parts:length() > 0 }, { return parts:get(index: parts:length() - 1); });
+			});
+			return bp;
+		});
+		local String is rt: call:target:resolvedType;
+		if({ rt != '' && rt != 'Class' && rt != 'Any' && rt != 'Unknown' && rt != 'Void' }, {
+			if({ rt:contains(needle: ':') }, {
+				local Array of String is parts: rt:split(separator: ':');
+				if({ parts:length() > 0 }, { return parts:get(index: parts:length() - 1); });
+			});
+			return rt;
 		});
 		local String is res: '';
 		match(on: call:target, when: [
-			Expression:Ident: local Function(String is n){ res: n; }
+			Expression:Ident: local Function(String is n){ res: n; },
+			Expression:Path: local Function(Array of String is segs){
+				if({ segs:length() > 0 }, {
+					res: segs:get(index: segs:length() - 1);
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is t, String is fn){ res: fn; }
 		], default: {});
 		return res;
 	}

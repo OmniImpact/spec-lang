@@ -35,7 +35,21 @@ Class of CallLowerer is MatchCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		return call:name == 'match';
+		if({ call:name != 'match' }, { return false; });
+		local Boolean is isMapLit: false;
+		local Int is i: 0;
+		while({ i < call:args:length() }, {
+			local NamedArg is na: call:args:get(index: i);
+			if({ na:name == 'when' || (na:name == '' && i == 1) }, {
+				match(on: na:value, when: [
+					Expression:MapLit: local Function(Array of Expression is _ks, Array of Expression is _vs){
+						isMapLit: true;
+					}
+				], default: {});
+			});
+			i++;
+		});
+		return isMapLit;
 	}
 
 	local Function of Boolean is isElseKey(Expression is key){
@@ -64,6 +78,12 @@ Class of CallLowerer is MatchCallLowerer{
 	}
 
 	local Function is lowerArmBody(IrBuilder is b, Expression is armExpr, String is resSlot, IrType is resTy, Boolean is hasResult, String is endLbl){
+		local String is prevRetSlot: b:inlineReturnSlot;
+		local String is prevRetEnd: b:inlineReturnEndLbl;
+		local IrType is prevRetTy: b:inlineReturnTy;
+		b:inlineReturnSlot: if({ hasResult }, { resSlot }, { '' });
+		b:inlineReturnEndLbl: endLbl;
+		b:inlineReturnTy: resTy;
 		local Boolean is handledAnon: false;
 		match(on: armExpr, when: [
 			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
@@ -89,9 +109,110 @@ Class of CallLowerer is MatchCallLowerer{
 				b:emit(inst: IrInst:Store(slot: resSlot, val: v, ty: resTy));
 			});
 		});
+		b:inlineReturnSlot: prevRetSlot;
+		b:inlineReturnEndLbl: prevRetEnd;
+		b:inlineReturnTy: prevRetTy;
 		if({ !b:blkTerminated }, {
 			b:terminate(inst: IrInst:Br(target: endLbl));
 		});
+	}
+
+	local Function of String is emitKeyMatchCond(IrBuilder is b, Expression is onExpr, String is subjVal, IrType is subjTy, Expression is k){
+		local Boolean is isArrKey: false;
+		local Array of Expression is arrItems: [];
+		match(on: k, when: [
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				isArrKey: true;
+				arrItems: items;
+			}
+		], default: {});
+		if({ isArrKey }, {
+			if({ arrItems:length() == 0 }, {
+				local String is fTmp: b:nextTmp();
+				b:emit(inst: IrInst:ConstBool(dst: fTmp, value: false));
+				return fTmp;
+			});
+			local String is accCond: self:emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: 0));
+			local Int is ai: 1;
+			while({ ai < arrItems:length() }, {
+				local String is nxtCond: self:emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: arrItems:get(index: ai));
+				local String is orTmp: b:nextTmp();
+				b:emit(inst: IrInst:BinOp(dst: orTmp, op: '||', lhs: accCond, rhs: nxtCond, ty: IrType:I1));
+				accCond: orTmp;
+				ai++;
+			});
+			return accCond;
+		});
+
+		local String is variantStruct: '';
+		match(on: k, when: [
+			Expression:Path: local Function(Array of String is segs){
+				local String is joined: '';
+				local Int is si: 0;
+				while({ si < segs:length() }, {
+					if({ si > 0 }, { joined: joined . '_'; });
+					joined: joined . segs:get(index: si, default: '');
+					si++;
+				});
+				if({ joined != '' && b:mod:findStruct(name: joined):name != '' }, {
+					variantStruct: joined;
+				});
+			}
+		], default: {});
+		if({ variantStruct != '' }, {
+			local String is vSlot: b:nextTmp();
+			b:emit(inst: IrInst:Alloca(slot: vSlot, ty: IrType:I1));
+			local String is falseConst: b:nextTmp();
+			b:emit(inst: IrInst:ConstBool(dst: falseConst, value: false));
+			b:emit(inst: IrInst:Store(slot: vSlot, val: falseConst, ty: IrType:I1));
+			local String is nonNull: b:nextTmp();
+			b:emit(inst: IrInst:Cmp(dst: nonNull, op: '!=', lhs: subjVal, rhs: 'null', ty: IrType:Ptr));
+			local String is chkLbl: b:nextLabel(prefix: 'var_chk');
+			local String is doneLbl: b:nextLabel(prefix: 'var_done');
+			b:terminate(inst: IrInst:CondBr(cond: nonNull, thenLabel: chkLbl, elseLabel: doneLbl));
+			local IrBlock is chkBlk: b:curFn:addBlock(label: chkLbl);
+			b:switchBlock(blk: chkBlk);
+			local String is tnAddr: b:nextTmp();
+			b:emit(inst: IrInst:FieldPtr(dst: tnAddr, objPtr: subjVal, structName: variantStruct, fieldIndex: 0));
+			local String is tnVal: b:nextTmp();
+			b:emit(inst: IrInst:Load(dst: tnVal, slot: tnAddr, ty: IrType:Ptr));
+			local String is expTn: b:nextTmp();
+			b:emit(inst: IrInst:GlobalAddr(dst: expTn, globalName: '.typename.' . variantStruct));
+			local String is vCond: b:nextTmp();
+			b:emit(inst: IrInst:Cmp(dst: vCond, op: '==', lhs: tnVal, rhs: expTn, ty: IrType:Ptr));
+			b:emit(inst: IrInst:Store(slot: vSlot, val: vCond, ty: IrType:I1));
+			b:terminate(inst: IrInst:Br(target: doneLbl));
+			local IrBlock is doneBlk: b:curFn:addBlock(label: doneLbl);
+			b:switchBlock(blk: doneBlk);
+			local String is resCond: b:nextTmp();
+			b:emit(inst: IrInst:Load(dst: resCond, slot: vSlot, ty: IrType:I1));
+			return resCond;
+		});
+
+		local String is kVal: '';
+		local Boolean is resolvedEnumIdent: false;
+		local String is subjStruct: b:cStructName(qname: onExpr:resolvedType);
+		match(on: k, when: [
+			Expression:Ident: local Function(String is kn){
+				if({ !b:localSlots:has(key: kn) && subjStruct != '' && b:heldFields:has(key: subjStruct . ':' . kn) }, {
+					kVal: b:nextTmp();
+					b:emit(inst: IrInst:IrCall(dst: kVal, hasDst: true, retType: IrType:Ptr, callee: subjStruct . '_' . kn . '__ensure', argTypes: [], args: []));
+					b:emitClaimPool(val: kVal);
+					resolvedEnumIdent: true;
+				});
+			}
+		], default: {});
+		if({ !resolvedEnumIdent }, {
+			kVal: b:lowerExpr(expr: k);
+		});
+		local String is condVal: b:nextTmp();
+		if({ subjTy == IrType:Ptr && (onExpr:resolvedType == 'String' || k:resolvedType == 'String') }, {
+			b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [subjVal, kVal]));
+		}, {
+			if({ subjTy == IrType:Ptr && kVal == '0' }, { kVal: 'null'; });
+			b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));
+		});
+		return condVal;
 	}
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
@@ -118,6 +239,8 @@ Class of CallLowerer is MatchCallLowerer{
 			resSlot: '%match_res_' . (b:nextTmp());
 			resSlot: '%match_res_' . (b:tmpCounter as String);
 			b:emit(inst: IrInst:Alloca(slot: resSlot, ty: resTy));
+			local String is initDef: b:emitDefaultVal(ty: resTy);
+			b:emit(inst: IrInst:Store(slot: resSlot, val: initDef, ty: resTy));
 		});
 
 		local String is subjVal: '0';
@@ -165,39 +288,29 @@ Class of CallLowerer is MatchCallLowerer{
 							});
 						}
 					], default: {});
-					if({ variantStruct != '' }, {
-						local String is tnAddr: b:nextTmp();
-						b:emit(inst: IrInst:FieldPtr(dst: tnAddr, objPtr: subjVal, structName: variantStruct, fieldIndex: 0));
-						local String is tnVal: b:nextTmp();
-						b:emit(inst: IrInst:Load(dst: tnVal, slot: tnAddr, ty: IrType:Ptr));
-						local String is expTn: b:nextTmp();
-						b:emit(inst: IrInst:GlobalAddr(dst: expTn, globalName: '.typename.' . variantStruct));
-						condVal: b:nextTmp();
-						b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: tnVal, rhs: expTn, ty: IrType:Ptr));
-					}, {
-						local String is kVal: b:lowerExpr(expr: k);
-						condVal: b:nextTmp();
-						if({ subjTy == IrType:Ptr }, {
-							b:emit(inst: IrInst:IrCall(dst: condVal, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [subjVal, kVal]));
-						}, {
-							b:emit(inst: IrInst:Cmp(dst: condVal, op: '==', lhs: subjVal, rhs: kVal, ty: subjTy));
-						});
-					});
+					condVal: self:emitKeyMatchCond(b: b, onExpr: onExpr, subjVal: subjVal, subjTy: subjTy, k: k);
 				}, {
 					local Boolean is unwrapped: false;
 					match(on: k, when: [
 						Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is kbd){
 							unwrapped: true;
 							if({ kbd:length() > 0 }, {
-								local Statement is ks: kbd:get(index: 0);
-								match(on: ks, when: [
-									Statement:Return: local Function(Expression is re, Boolean is hr){
-										if({ hr }, { condVal: b:lowerExpr(expr: re); });
-									},
-									Statement:Expr: local Function(Expression is es){
-										condVal: b:lowerExpr(expr: es);
-									}
-								], default: {});
+								local Int is ki: 0;
+								while({ ki < (kbd:length() - 1) && !b:blkTerminated }, {
+									b:lowerStmt(stmt: kbd:get(index: ki));
+									ki++;
+								});
+								if({ !b:blkTerminated }, {
+									local Statement is ks: kbd:get(index: kbd:length() - 1);
+									match(on: ks, when: [
+										Statement:Return: local Function(Expression is re, Boolean is hr){
+											if({ hr }, { condVal: b:lowerExpr(expr: re); });
+										},
+										Statement:Expr: local Function(Expression is es){
+											condVal: b:lowerExpr(expr: es);
+										}
+									], default: {});
+								});
 							});
 						}
 					], default: {});
@@ -234,6 +347,7 @@ Class of CallLowerer is MatchCallLowerer{
 								b:emit(inst: IrInst:Store(slot: pSlot, val: pVal, ty: pty));
 								b:localSlots:set(key: p:name, value: pSlot);
 								b:localTypes:set(key: p:name, value: pty);
+								b:localSpecTypes:set(key: p:name, value: p:paramType:name);
 								pi++;
 							});
 						}
