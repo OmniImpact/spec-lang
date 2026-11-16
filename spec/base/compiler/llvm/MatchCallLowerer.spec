@@ -81,9 +81,11 @@ Class of CallLowerer is MatchCallLowerer{
 		local String is prevRetSlot: b:inlineReturnSlot;
 		local String is prevRetEnd: b:inlineReturnEndLbl;
 		local IrType is prevRetTy: b:inlineReturnTy;
-		b:inlineReturnSlot: if({ hasResult }, { resSlot }, { '' });
-		b:inlineReturnEndLbl: endLbl;
-		b:inlineReturnTy: resTy;
+		if({ hasResult }, {
+			b:inlineReturnSlot: resSlot;
+			b:inlineReturnEndLbl: endLbl;
+			b:inlineReturnTy: resTy;
+		});
 		local Boolean is handledAnon: false;
 		match(on: armExpr, when: [
 			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is bd){
@@ -294,11 +296,12 @@ Class of CallLowerer is MatchCallLowerer{
 					match(on: k, when: [
 						Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _ps, Array of Statement is kbd){
 							unwrapped: true;
+							b:pushScope();
 							if({ kbd:length() > 0 }, {
-								local Int is ki: 0;
-								while({ ki < (kbd:length() - 1) && !b:blkTerminated }, {
-									b:lowerStmt(stmt: kbd:get(index: ki));
-									ki++;
+								local Int is kbi: 0;
+								while({ kbi < (kbd:length() - 1) && !b:blkTerminated }, {
+									b:lowerStmt(stmt: kbd:get(index: kbi));
+									kbi++;
 								});
 								if({ !b:blkTerminated }, {
 									local Statement is ks: kbd:get(index: kbd:length() - 1);
@@ -312,6 +315,7 @@ Class of CallLowerer is MatchCallLowerer{
 									], default: {});
 								});
 							});
+							b:popScope();
 						}
 					], default: {});
 					if({ !unwrapped }, {
@@ -324,6 +328,7 @@ Class of CallLowerer is MatchCallLowerer{
 
 				local IrBlock is armBlk: b:curFn:addBlock(label: armLbl);
 				b:switchBlock(blk: armBlk);
+				b:pushScope();
 				if({ variantStruct != '' }, {
 					local IrStruct is vst: b:mod:findStruct(name: variantStruct);
 					match(on: v, when: [
@@ -343,17 +348,33 @@ Class of CallLowerer is MatchCallLowerer{
 								b:emit(inst: IrInst:Load(dst: pVal, slot: fPtr, ty: pty));
 								local String is pSlot: '%arm_' . p:name . '_' . (b:nextTmp());
 								pSlot: '%arm_' . p:name . '_' . (b:tmpCounter as String);
-								b:emit(inst: IrInst:Alloca(slot: pSlot, ty: pty));
-								b:emit(inst: IrInst:Store(slot: pSlot, val: pVal, ty: pty));
-								b:localSlots:set(key: p:name, value: pSlot);
-								b:localTypes:set(key: p:name, value: pty);
-								b:localSpecTypes:set(key: p:name, value: p:paramType:name);
+								local Boolean is pIsArc: b:isArcSpecType(specType: p:paramType:name);
+								local Boolean is pBoxed: b:capturedNames:has(key: p:name);
+								b:bindLocal(name: p:name, slot: pSlot, ty: pty, isArc: pIsArc, specType: p:paramType:name, isBoxed: pBoxed);
+								if({ pBoxed }, {
+									b:emit(inst: IrInst:Alloca(slot: pSlot, ty: IrType:Ptr));
+									if({ pIsArc && pVal != 'null' }, {
+										b:emit(inst: IrInst:Retain(val: pVal));
+									});
+									if({ b:curBlk:label != 'entry' }, {
+										local String is prevArmBox: b:nextTmp();
+										b:emit(inst: IrInst:Load(dst: prevArmBox, slot: pSlot, ty: IrType:Ptr));
+										b:emit(inst: IrInst:Release(val: prevArmBox));
+									});
+									local String is boxPtr: b:emitNewBox(initVal: pVal, ty: pty, isArc: pIsArc);
+									b:emit(inst: IrInst:Store(slot: pSlot, val: boxPtr, ty: IrType:Ptr));
+									b:ownedSlots:add(item: pSlot);
+								}, {
+									b:emit(inst: IrInst:Alloca(slot: pSlot, ty: pty));
+									b:emit(inst: IrInst:Store(slot: pSlot, val: pVal, ty: pty));
+								});
 								pi++;
 							});
 						}
 					], default: {});
 				});
 				self:lowerArmBody(b: b, armExpr: v, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
+				b:popScope();
 
 				local IrBlock is nextBlk: b:curFn:addBlock(label: nextLbl);
 				b:switchBlock(blk: nextBlk);
@@ -362,7 +383,9 @@ Class of CallLowerer is MatchCallLowerer{
 		});
 
 		if({ hasElse }, {
+			b:pushScope();
 			self:lowerArmBody(b: b, armExpr: elseExpr, resSlot: resSlot, resTy: resTy, hasResult: hasResult, endLbl: endLbl);
+			b:popScope();
 		}, {
 			if({ !b:blkTerminated }, {
 				b:terminate(inst: IrInst:Br(target: endLbl));

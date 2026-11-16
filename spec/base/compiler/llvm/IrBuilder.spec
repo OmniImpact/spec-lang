@@ -15,6 +15,8 @@ Class is IrBuilder{
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
 		['base', 'compiler', 'ast', NamedArg],
+		['base', 'compiler', 'ast', ClassBindings],
+		['base', 'compiler', 'lexer', Keyword],
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
 		['base', 'compiler', 'ir', IrBlock],
@@ -46,6 +48,13 @@ Class is IrBuilder{
 	Map of String to Boolean is boxedLocals: Map:init();
 	Map of String to Boolean is capturedNames: Map:init();
 	Array of String is ownedSlots: [];
+	Array of String is scopeVarStack: [];
+	Array of String is scopeOldSlotStack: [];
+	Array of IrType is scopeOldTypeStack: [];
+	Array of Boolean is scopeOldArcStack: [];
+	Array of String is scopeOldSpecTypeStack: [];
+	Array of Boolean is scopeOldBoxedStack: [];
+	Array of Int is scopeMarkStack: [];
 	String is curPoolMark: '';
 	Boolean is curFnRetIsArc: false;
 	String is inlineReturnSlot: '';
@@ -66,7 +75,9 @@ Class is IrBuilder{
 	Map of String to Boolean is heldMethods: Map:init();
 	Map of String to String is heldResolvers: Map:init();
 	Map of String to String is heldResolverRetTypes: Map:init();
+	ClassBindings is bindings: ClassBindings:init();
 	String is entryInitOwner: '';
+	Int is entryInitOverloadIndex: 0;
 	Boolean is entryInitTakesMap: false;
 	Array of String is globalVtableNames: [];
 	Map of String to Int is globalVtableMap: Map:init();
@@ -90,7 +101,7 @@ Class is IrBuilder{
 	}
 
 	Function of IrType is irTypeFor(String is specType){
-		if({ specType == 'Int' }, { return IrType:I64; });
+		if({ specType == 'Int' || specType == 'Byte' }, { return IrType:I64; });
 		if({ specType == 'Float' }, { return IrType:F64; });
 		if({ specType == 'Boolean' }, { return IrType:I1; });
 		if({ specType == 'Void' || specType == '' }, { return IrType:Void; });
@@ -98,7 +109,7 @@ Class is IrBuilder{
 	}
 
 	Function of Boolean is isArcSpecType(String is specType){
-		if({ specType == '' || specType == 'Void' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || self:curClassTypeParams:has(key: specType) }, {
+		if({ specType == '' || specType == 'Void' || specType == 'Any' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || self:curClassTypeParams:has(key: specType) }, {
 			return false;
 		});
 		return true;
@@ -146,11 +157,106 @@ Class is IrBuilder{
 		self:blkTerminated: false;
 	}
 
+	Function is resetScopes(){
+		self:scopeVarStack: [];
+		self:scopeOldSlotStack: [];
+		self:scopeOldTypeStack: [];
+		self:scopeOldArcStack: [];
+		self:scopeOldSpecTypeStack: [];
+		self:scopeOldBoxedStack: [];
+		self:scopeMarkStack: [];
+	}
+
+	Function is pushScope(){
+		self:scopeMarkStack:add(item: self:scopeVarStack:length());
+	}
+
+	Function is bindLocal(String is name, String is slot, IrType is ty, Boolean is isArc, String is specType, Boolean is isBoxed){
+		if({ self:scopeMarkStack:length() > 0 }, {
+			self:scopeVarStack:add(item: name);
+			if({ self:localSlots:has(key: name) }, {
+				self:scopeOldSlotStack:add(item: self:localSlots:get(key: name, default: ''));
+				self:scopeOldTypeStack:add(item: self:localTypes:get(key: name, default: IrType:I64));
+				self:scopeOldArcStack:add(item: self:localIsArc:get(key: name, default: false));
+				self:scopeOldSpecTypeStack:add(item: self:localSpecTypes:get(key: name, default: ''));
+				self:scopeOldBoxedStack:add(item: self:boxedLocals:has(key: name));
+			}, {
+				self:scopeOldSlotStack:add(item: '');
+				self:scopeOldTypeStack:add(item: IrType:I64);
+				self:scopeOldArcStack:add(item: false);
+				self:scopeOldSpecTypeStack:add(item: '');
+				self:scopeOldBoxedStack:add(item: false);
+			});
+		});
+		self:localSlots:set(key: name, value: slot);
+		self:localTypes:set(key: name, value: ty);
+		self:localIsArc:set(key: name, value: isArc);
+		self:localSpecTypes:set(key: name, value: specType);
+		if({ isBoxed }, {
+			self:boxedLocals:set(key: name, value: true);
+		}, {
+			if({ self:boxedLocals:has(key: name) }, {
+				self:boxedLocals:remove(key: name);
+			});
+		});
+	}
+
+	Function is popScope(){
+		if({ self:scopeMarkStack:length() == 0 }, { return; });
+		local Int is mark: self:scopeMarkStack:pop(default: 0);
+		while({ self:scopeVarStack:length() > mark }, {
+			local String is name: self:scopeVarStack:pop(default: '');
+			local String is oldSlot: self:scopeOldSlotStack:pop(default: '');
+			local IrType is oldTy: self:scopeOldTypeStack:pop(default: IrType:I64);
+			local Boolean is oldArc: self:scopeOldArcStack:pop(default: false);
+			local String is oldSpec: self:scopeOldSpecTypeStack:pop(default: '');
+			local Boolean is oldBoxed: self:scopeOldBoxedStack:pop(default: false);
+			if({ oldSlot == '' }, {
+				self:localSlots:remove(key: name);
+				self:localTypes:remove(key: name);
+				self:localIsArc:remove(key: name);
+				self:localSpecTypes:remove(key: name);
+				if({ self:boxedLocals:has(key: name) }, {
+					self:boxedLocals:remove(key: name);
+				});
+			}, {
+				self:localSlots:set(key: name, value: oldSlot);
+				self:localTypes:set(key: name, value: oldTy);
+				self:localIsArc:set(key: name, value: oldArc);
+				self:localSpecTypes:set(key: name, value: oldSpec);
+				if({ oldBoxed }, {
+					self:boxedLocals:set(key: name, value: true);
+				}, {
+					if({ self:boxedLocals:has(key: name) }, {
+						self:boxedLocals:remove(key: name);
+					});
+				});
+			});
+		});
+	}
+
 	local Function of Boolean is isStdlibClass(ClassInfo is cls){
-		local String is sf: cls:sourceFile;
-		if({ sf:contains(needle: 'sysinternal') }, { return true; });
-		if({ cls:name == 'Map' || cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
+		if({ self:bindings:isSysinternal(cls: cls) }, { return true; });
+		if({ cls:name == 'List' || cls:name == 'LoopControl' || cls:name == 'LoopCallback' || cls:name == 'Parallel' || cls:name == 'Class' || cls:name == 'Function' || cls:name == 'Int' || cls:name == 'Float' || cls:name == 'Boolean' || cls:name == 'Byte' || cls:name == 'Void' || cls:name == 'Any' || cls:name == 'Object' }, { return true; });
 		return false;
+	}
+
+	Function of String is baseTypeName(String is t){
+		local String is res: t;
+		local Int is ofIdx: res:indexOf(search: ' of ', default: -1);
+		if({ ofIdx > 0 }, {
+			res: res:substring(start: 0, end: ofIdx);
+		});
+		if({ res:contains(needle: ':') && !self:clsQNameMap:has(key: res) }, {
+			local Int is cIdx: res:indexOf(search: ':', default: -1);
+			if({ cIdx > 0 }, {
+				local String is cand: res:substring(start: 0, end: cIdx);
+				if({ cand == 'Array' || cand == 'Map' || cand == 'List' || self:clsQNameMap:has(key: cand) }, {
+					res: cand;
+				});
+			});
+		});
+		return res;
 	}
 
 	Function of String is cStructName(String is qname){
@@ -204,6 +310,7 @@ Class is IrBuilder{
 	}
 
 	local Function is buildVtable(IrStruct is st, ClassInfo is cls, Map of String to ClassInfo is clsMap){
+		if({ self:bindings:isTransparent(c: cls) }, { return; });
 		if({ st:vtableMethodNames:length() == 0 && self:globalVtableNames:length() > 0 }, {
 			local Int is gi: 0;
 			while({ gi < self:globalVtableNames:length() }, {
@@ -389,33 +496,7 @@ Class is IrBuilder{
 			local String is sname: self:cStructName(qname: cls:qualifiedName());
 			local Map of String to Boolean is hvis: Map:init();
 			hvis:set(key: cls:qualifiedName(), value: true);
-			if({ cls:baseClasses:length() > 0 }, {
-				local String is b0: cls:baseClasses:get(index: 0, default: '');
-				local ClassInfo is cur: self:resolveBaseClass(cls: cls, bname: b0, clsMap: clsMap);
-				while({ cur:name != '' && !hvis:has(key: cur:qualifiedName()) }, {
-					hvis:set(key: cur:qualifiedName(), value: true);
-					local String is bsname: self:cStructName(qname: cur:qualifiedName());
-					local Int is bmi: 0;
-					while({ bmi < cur:members:length() }, {
-						local Member is bm: cur:members:get(index: bmi);
-						if({ bm:kind == MemberKind:FIELD && bm:hasModifier(kw: Keyword:HELD) }, {
-							local String is hkS: sname . ':' . bm:name;
-							if({ !self:heldFields:has(key: hkS) }, {
-								local String is owner: self:heldFields:get(key: bsname . ':' . bm:name, default: bsname);
-								self:heldFields:set(key: hkS, value: owner);
-								self:heldFields:set(key: cls:name . ':' . bm:name, value: owner);
-							});
-						});
-						bmi++;
-					});
-					if({ cur:baseClasses:length() > 0 }, {
-						local String is nb: cur:baseClasses:get(index: 0, default: '');
-						cur: self:resolveBaseClass(cls: cur, bname: nb, clsMap: clsMap);
-					}, {
-						cur: cls;
-					});
-				});
-			});
+			self:inheritHeldFromAncestors(cls: cls, cur: cls, sname: sname, clsMap: clsMap, hvis: hvis);
 			ci++;
 		});
 
@@ -424,6 +505,7 @@ Class is IrBuilder{
 		ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is cls: allClasses:get(index: ci);
+			local Boolean is isTransCls: self:bindings:isTransparent(c: cls);
 			local String is sname: self:cStructName(qname: cls:qualifiedName());
 			self:currentClass: sname;
 			self:curClassTypeParams: Map:init();
@@ -447,17 +529,19 @@ Class is IrBuilder{
 					local Int is ovIdx: mCounts2:get(key: m:name, default: 0);
 					mCounts2:set(key: m:name, value: ovIdx + 1);
 					local String is fnName: if({ ovIdx > 0 }, { sname . '_' . m:name . '_' . ((ovIdx + 1) as String) }, { sname . '_' . m:name });
-					if({ !seenFns:has(key: fnName) }, {
+					if({ (!isTransCls || m:body:length() > 0) && !seenFns:has(key: fnName) }, {
 						seenFns:set(key: fnName, value: true);
 						self:buildMethod(cls: cls, m: m, fnName: fnName);
 					});
 				});
 				mi++;
 			});
-			local String is initFnName: sname . '_init';
-			if({ !seenFns:has(key: initFnName) }, {
-				seenFns:set(key: initFnName, value: true);
-				self:buildDefaultInit(cls: cls, sname: sname, initFn: initFnName);
+			if({ !isTransCls }, {
+				local String is initFnName: sname . '_init';
+				if({ !seenFns:has(key: initFnName) }, {
+					seenFns:set(key: initFnName, value: true);
+					self:buildDefaultInit(cls: cls, sname: sname, initFn: initFnName);
+				});
 			});
 			local IrStruct is st2: self:mod:findStruct(name: sname);
 			if({ st2:destroyFn != 'null' && !seenFns:has(key: st2:destroyFn) }, {
@@ -479,6 +563,33 @@ Class is IrBuilder{
 		});
 
 		return self:mod;
+	}
+
+	local Function is inheritHeldFromAncestors(ClassInfo is cls, ClassInfo is cur, String is sname, Map of String to ClassInfo is clsMap, Map of String to Boolean is hvis){
+		local Int is bi: 0;
+		while({ bi < cur:baseClasses:length() }, {
+			local String is bname: cur:baseClasses:get(index: bi, default: '');
+			local ClassInfo is bcls: self:resolveBaseClass(cls: cur, bname: bname, clsMap: clsMap);
+			if({ bcls:name != '' && !hvis:has(key: bcls:qualifiedName()) }, {
+				hvis:set(key: bcls:qualifiedName(), value: true);
+				local String is bsname: self:cStructName(qname: bcls:qualifiedName());
+				local Int is bmi: 0;
+				while({ bmi < bcls:members:length() }, {
+					local Member is bm: bcls:members:get(index: bmi);
+					if({ bm:kind == MemberKind:FIELD && bm:hasModifier(kw: Keyword:HELD) }, {
+						local String is hkS: sname . ':' . bm:name;
+						if({ !self:heldFields:has(key: hkS) }, {
+							local String is owner: self:heldFields:get(key: bsname . ':' . bm:name, default: bsname);
+							self:heldFields:set(key: hkS, value: owner);
+							self:heldFields:set(key: cls:name . ':' . bm:name, value: owner);
+						});
+					});
+					bmi++;
+				});
+				self:inheritHeldFromAncestors(cls: cls, cur: bcls, sname: sname, clsMap: clsMap, hvis: hvis);
+			});
+			bi++;
+		});
 	}
 
 	local Function is emitPoolEnter(){
@@ -551,14 +662,15 @@ Class is IrBuilder{
 		if({ self:entryInitOwner != '' }, {
 			initOwner: self:cStructName(qname: self:clsQNameMap:get(key: self:entryInitOwner, default: self:entryInitOwner));
 		});
+		local String is initSuf: if({ self:entryInitOverloadIndex > 0 }, { '_' . ((self:entryInitOverloadIndex + 1) as String) }, { '' });
 		if({ self:entryInitTakesMap }, {
 			local Array of IrType is initArgTypes: [IrType:Ptr, IrType:Ptr];
 			local Array of String is initArgs: [obj, argsMap];
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: initOwner . '_init', argTypes: initArgTypes, args: initArgs));
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: initOwner . '_init' . initSuf, argTypes: initArgTypes, args: initArgs));
 		}, {
 			local Array of IrType is initArgTypes: [IrType:Ptr];
 			local Array of String is initArgs: [obj];
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: initOwner . '_init', argTypes: initArgTypes, args: initArgs));
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: initOwner . '_init' . initSuf, argTypes: initArgTypes, args: initArgs));
 		});
 		self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_drain_async_tasks', argTypes: [], args: []));
 		self:emitPoolExit();
@@ -757,6 +869,9 @@ Class is IrBuilder{
 	}
 
 	local Function is emitFieldDefaults(ClassInfo is cls, Map of String to Boolean is seen){
+		local String is clsKey: '@cls:' . cls:qualifiedName();
+		if({ seen:has(key: clsKey) }, { return; });
+		seen:set(key: clsKey, value: true);
 		local Int is bi: 0;
 		while({ bi < cls:baseClasses:length() }, {
 			local String is bname: cls:baseClasses:get(index: bi, default: '');
@@ -785,7 +900,19 @@ Class is IrBuilder{
 					local IrType is fty: st:fieldTypes:get(index: fidx);
 					local String is ptr: self:nextTmp();
 					self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: '%self', structName: self:currentClass, fieldIndex: fidx));
+					local String is prevMapK: self:expectedMapKeyType;
+					local String is prevMapV: self:expectedMapValType;
+					if({ m:memberType:name == 'Map' && m:memberType:params:length() >= 1 }, {
+						local Type is mkp0: m:memberType:params:get(index: 0);
+						self:expectedMapKeyType: mkp0:name;
+						if({ m:memberType:params:length() >= 2 }, {
+							local Type is mkp1: m:memberType:params:get(index: 1);
+							self:expectedMapValType: mkp1:name;
+						});
+					});
 					local String is val: self:lowerExpr(expr: m:initExpr);
+					self:expectedMapKeyType: prevMapK;
+					self:expectedMapValType: prevMapV;
 					local IrType is vty: self:irTypeFor(specType: m:initExpr:resolvedType);
 					val: self:castIfNeeded(val: val, fromTy: vty, toTy: fty);
 					if({ st:fieldIsArc:get(index: fidx, default: false) }, {
@@ -845,14 +972,18 @@ Class is IrBuilder{
 					if({ m:params:length() == 0 }, { flags: flags + 2; });
 					if({ m:memberType:name == 'Function' && m:memberType:params:length() == 0 }, { flags: flags + 4; });
 					st:metaMethodNames:add(item: m:name);
-					st:metaMethodFns:add(item: sname . '_' . m:name);
+					if({ self:bindings:isTransparent(c: cls) && m:body:length() == 0 }, {
+						st:metaMethodFns:add(item: 'null');
+					}, {
+						st:metaMethodFns:add(item: sname . '_' . m:name);
+					});
 					st:metaMethodFlags:add(item: flags);
 					st:metaMethodLines:add(item: m:line);
 				});
 			});
 			mi++;
 		});
-		if({ !hasInitMember || hasZeroArgInit }, {
+		if({ (!hasInitMember || hasZeroArgInit) && !self:bindings:isTransparent(c: cls) && cls:baseClass != 'Enum' }, {
 			st:constructFn: sname . '__spec_construct';
 		});
 	}
@@ -1031,7 +1162,19 @@ Class is IrBuilder{
 			self:tmpCounter: 0;
 			self:lblCounter: 0;
 			self:curPoolMark: '';
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_panic_cast', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%env', '%env']));
+			local Int is pPreId: self:mod:internStringLiteral(value: "No held member '");
+			local String is pPre: self:nextTmp();
+			self:emit(inst: IrInst:ConstString(dst: pPre, strId: pPreId));
+			local String is pMid: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: pMid, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_concat', argTypes: [IrType:Ptr, IrType:Ptr], args: [pPre, '%env']));
+			local Int is pSufId: self:mod:internStringLiteral(value: "' on " . rSym);
+			local String is pSuf: self:nextTmp();
+			self:emit(inst: IrInst:ConstString(dst: pSuf, strId: pSufId));
+			local String is pMsg: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: pMsg, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_concat', argTypes: [IrType:Ptr, IrType:Ptr], args: [pMid, pSuf]));
+			local String is pCstr: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: pCstr, hasDst: true, retType: IrType:Ptr, callee: 'spec_buf_to_cstring', argTypes: [IrType:Ptr], args: [pMsg]));
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_panic', argTypes: [IrType:Ptr], args: [pCstr]));
 			local String is mDef: self:emitDefaultVal(ty: resTy);
 			self:terminate(inst: IrInst:Ret(hasVal: true, val: mDef, ty: resTy));
 			self:mod:addFunction(fn: missFn);
@@ -1098,16 +1241,10 @@ Class is IrBuilder{
 
 			local IrBlock is missBlk: fn:addBlock(label: missLbl);
 			self:switchBlock(blk: missBlk);
-			local String is cSz: self:nextTmp();
-			self:emit(inst: IrInst:ConstInt(dst: cSz, value: 16));
+			local String is missFnPtr: self:nextTmp();
+			self:emit(inst: IrInst:GlobalAddr(dst: missFnPtr, globalName: rSym . '_held_missing_fn'));
 			local String is clos: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: clos, hasDst: true, retType: IrType:Ptr, callee: 'spec_rt_alloc', argTypes: [IrType:I64, IrType:Ptr], args: [cSz, 'null']));
-			local String is fnPtrSlot: self:nextTmp();
-			self:emit(inst: IrInst:FieldPtr(dst: fnPtrSlot, objPtr: clos, structName: 'SpecClosure', fieldIndex: 0));
-			self:emit(inst: IrInst:Store(slot: fnPtrSlot, val: '@' . rSym . '_held_missing_fn', ty: IrType:Ptr));
-			local String is envSlot: self:nextTmp();
-			self:emit(inst: IrInst:FieldPtr(dst: envSlot, objPtr: clos, structName: 'SpecClosure', fieldIndex: 1));
-			self:emit(inst: IrInst:Store(slot: envSlot, val: '%p_name', ty: IrType:Ptr));
+			self:emit(inst: IrInst:IrCall(dst: clos, hasDst: true, retType: IrType:Ptr, callee: 'spec_rt_closure_new', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [missFnPtr, '%p_name', 'null']));
 			self:emitClaimPool(val: clos);
 			local String is resolved: self:nextTmp();
 			self:emit(inst: IrInst:IrCall(dst: resolved, hasDst: true, retType: resTy, callee: rSym . '_resolveHeld', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%p_name', clos]));
@@ -1163,7 +1300,7 @@ Class is IrBuilder{
 		self:emit(inst: IrInst:Store(slot: slot, val: val, ty: ty));
 	}
 
-	local Function of String is emitNewBox(String is initVal, IrType is ty, Boolean is isArc){
+	Function of String is emitNewBox(String is initVal, IrType is ty, Boolean is isArc){
 		local String is valI64: initVal;
 		if({ ty == IrType:F64 }, {
 			local String is pTmp: self:nextTmp();
@@ -1188,12 +1325,83 @@ Class is IrBuilder{
 		while({ i < stmts:length() }, {
 			local Statement is st: stmts:get(index: i);
 			match(on: st, when: [
-				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is varName, Expression is _ie, Boolean is _hi){
+				Statement:VarDecl: local Function(Array of String is _m, Type is _t, String is varName, Expression is initExpr, Boolean is hasInit){
 					decls:set(key: varName, value: true);
+					if({ hasInit }, { self:collectDeclNamesInExpr(expr: initExpr, decls: decls); });
+				},
+				Statement:Assign: local Function(Expression is t, Expression is v){
+					self:collectDeclNamesInExpr(expr: t, decls: decls);
+					self:collectDeclNamesInExpr(expr: v, decls: decls);
+				},
+				Statement:Expr: local Function(Expression is e){
+					self:collectDeclNamesInExpr(expr: e, decls: decls);
+				},
+				Statement:Return: local Function(Expression is e, Boolean is hr){
+					if({ hr }, { self:collectDeclNamesInExpr(expr: e, decls: decls); });
 				}
 			], default: {});
 			i++;
 		});
+	}
+
+	local Function is collectDeclNamesInExpr(Expression is expr, Map of String to Boolean is decls){
+		match(on: expr, when: [
+			Expression:Unary: local Function(String is _op, Expression is operand){
+				self:collectDeclNamesInExpr(expr: operand, decls: decls);
+			},
+			Expression:Binary: local Function(String is _op, Expression is left, Expression is right){
+				self:collectDeclNamesInExpr(expr: left, decls: decls);
+				self:collectDeclNamesInExpr(expr: right, decls: decls);
+			},
+			Expression:Cast: local Function(Expression is inner, String is _t, Array of Expression is args){
+				self:collectDeclNamesInExpr(expr: inner, decls: decls);
+				local Int is ai: 0;
+				while({ ai < args:length() }, {
+					self:collectDeclNamesInExpr(expr: args:get(index: ai), decls: decls);
+					ai++;
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is target, String is _f){
+				self:collectDeclNamesInExpr(expr: target, decls: decls);
+			},
+			Expression:Index: local Function(Expression is target, Expression is index){
+				self:collectDeclNamesInExpr(expr: target, decls: decls);
+				self:collectDeclNamesInExpr(expr: index, decls: decls);
+			},
+			Expression:ArrayLit: local Function(Array of Expression is items){
+				local Int is ii: 0;
+				while({ ii < items:length() }, {
+					self:collectDeclNamesInExpr(expr: items:get(index: ii), decls: decls);
+					ii++;
+				});
+			},
+			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+				local Int is mi: 0;
+				while({ mi < keys:length() }, {
+					self:collectDeclNamesInExpr(expr: keys:get(index: mi), decls: decls);
+					self:collectDeclNamesInExpr(expr: values:get(index: mi), decls: decls);
+					mi++;
+				});
+			},
+			Expression:Call: local Function(CallData is call){
+				self:collectDeclNamesInExpr(expr: call:target, decls: decls);
+				local Int is ci: 0;
+				while({ ci < call:args:length() }, {
+					local NamedArg is na: call:args:get(index: ci);
+					self:collectDeclNamesInExpr(expr: na:value, decls: decls);
+					ci++;
+				});
+			},
+			Expression:AnonFn: local Function(Type is _rt, Array of Parameter is subParams, Array of Statement is subBody){
+				local Int is pi: 0;
+				while({ pi < subParams:length() }, {
+					local Parameter is sp: subParams:get(index: pi);
+					decls:set(key: sp:name, value: true);
+					pi++;
+				});
+				self:collectDeclNamesInStmts(stmts: subBody, decls: decls);
+			}
+		], default: {});
 	}
 
 	local Function is collectAllAnonCapturesInStmts(Array of Statement is stmts, Map of String to Boolean is decls, Map of String to Boolean is out){
@@ -1260,10 +1468,78 @@ Class is IrBuilder{
 			},
 			Expression:Call: local Function(CallData is call){
 				self:collectAllAnonCapturesInExpr(expr: call:target, decls: decls, out: out);
+				local String is cnm: call:name;
+				local Boolean is isInlineCf: cnm == 'if' || cnm == 'branch' || cnm == 'while' || cnm == 'repeat' || cnm == 'until' || cnm == 'loop' || cnm == 'match';
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ci);
-					self:collectAllAnonCapturesInExpr(expr: na:value, decls: decls, out: out);
+					if({ isInlineCf }, {
+						local Boolean is handledInl: false;
+						match(on: na:value, when: [
+							Expression:AnonFn: local Function(Type is _rt, Array of Parameter is _sp, Array of Statement is subBody){
+								handledInl: true;
+								self:collectAllAnonCapturesInStmts(stmts: subBody, decls: decls, out: out);
+							},
+							Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
+								if({ cnm == 'match' }, {
+									handledInl: true;
+									local Int is mi: 0;
+									while({ mi < keys:length() }, {
+										local Expression is mk: keys:get(index: mi);
+										local Expression is mv: values:get(index: mi);
+										match(on: mk, when: [
+											Expression:AnonFn: local Function(Type is _krt, Array of Parameter is _ksp, Array of Statement is kBody){
+												self:collectAllAnonCapturesInStmts(stmts: kBody, decls: decls, out: out);
+											}
+										], default: {
+											self:collectAllAnonCapturesInExpr(expr: mk, decls: decls, out: out);
+										});
+										match(on: mv, when: [
+											Expression:AnonFn: local Function(Type is _vrt, Array of Parameter is _vsp, Array of Statement is vBody){
+												self:collectAllAnonCapturesInStmts(stmts: vBody, decls: decls, out: out);
+											}
+										], default: {
+											self:collectAllAnonCapturesInExpr(expr: mv, decls: decls, out: out);
+										});
+										mi++;
+									});
+								});
+							},
+							Expression:ArrayLit: local Function(Array of Expression is items){
+								if({ cnm == 'branch' }, {
+									handledInl: true;
+									local Int is bi: 0;
+									while({ bi < items:length() }, {
+										local Expression is bItem: items:get(index: bi);
+										match(on: bItem, when: [
+											Expression:ArrayLit: local Function(Array of Expression is pair){
+												local Int is pi: 0;
+												while({ pi < pair:length() }, {
+													local Expression is pItem: pair:get(index: pi);
+													match(on: pItem, when: [
+														Expression:AnonFn: local Function(Type is _prt, Array of Parameter is _psp, Array of Statement is pBody){
+															self:collectAllAnonCapturesInStmts(stmts: pBody, decls: decls, out: out);
+														}
+													], default: {
+														self:collectAllAnonCapturesInExpr(expr: pItem, decls: decls, out: out);
+													});
+													pi++;
+												});
+											}
+										], default: {
+											self:collectAllAnonCapturesInExpr(expr: bItem, decls: decls, out: out);
+										});
+										bi++;
+									});
+								});
+							}
+						], default: {});
+						if({ !handledInl }, {
+							self:collectAllAnonCapturesInExpr(expr: na:value, decls: decls, out: out);
+						});
+					}, {
+						self:collectAllAnonCapturesInExpr(expr: na:value, decls: decls, out: out);
+					});
 					ci++;
 				});
 			},
@@ -1292,7 +1568,7 @@ Class is IrBuilder{
 
 	local Function of String is structNameForLocal(String is name){
 		if({ name == 'self' }, { return self:currentClass; });
-		local String is st: '' . self:localSpecTypes:get(key: name, default: '');
+		local String is st: self:baseTypeName(t: '' . self:localSpecTypes:get(key: name, default: ''));
 		if({ st != '' }, {
 			local String is qn: st;
 			if({ self:clsQNameMap:has(key: st) }, { qn: '' . self:clsQNameMap:get(key: st, default: ''); });
@@ -1375,7 +1651,7 @@ Class is IrBuilder{
 				self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
 				self:emit(inst: IrInst:Load(dst: nextObj, slot: ptr, ty: fty));
 				obj: nextObj;
-				local String is fSpec: self:fieldSpecTypes:get(key: sname . ':' . seg, default: '');
+				local String is fSpec: self:baseTypeName(t: self:fieldSpecTypes:get(key: sname . ':' . seg, default: ''));
 				local String is fqn: '' . fSpec;
 				if({ self:clsQNameMap:has(key: fSpec) }, {
 					fqn: self:clsQNameMap:get(key: fSpec, default: '');
@@ -1399,7 +1675,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is structNameForExpr(Expression is expr){
-		local String is rt: expr:resolvedType;
+		local String is rt: self:baseTypeName(t: expr:resolvedType);
 		if({ rt != '' }, {
 			local String is qn: rt;
 			if({ self:clsQNameMap:has(key: rt) }, { qn: '' . self:clsQNameMap:get(key: rt, default: ''); });
@@ -1439,6 +1715,7 @@ Class is IrBuilder{
 		self:boxedLocals: Map:init();
 		self:capturedNames: Map:init();
 		self:ownedSlots: [];
+		self:resetScopes();
 
 		local Map of String to Boolean is decls: Map:init();
 		local Int is dpi: 0;
@@ -1555,13 +1832,10 @@ Class is IrBuilder{
 				local String is slot: '%var_' . varName . '_' . (self:nextTmp());
 				# Clean '%' from slot suffix so LLVM identifier is valid
 				slot: '%var_' . varName . '_' . (self:tmpCounter as String);
-				self:localSlots:set(key: varName, value: slot);
-				self:localTypes:set(key: varName, value: vty);
-				self:localIsArc:set(key: varName, value: vIsArc);
-				self:localSpecTypes:set(key: varName, value: varType:name);
 				local Boolean is isBoxed: self:capturedNames:has(key: varName);
+				self:bindLocal(name: varName, slot: slot, ty: vty, isArc: vIsArc, specType: varType:name, isBoxed: isBoxed);
+				local Boolean is declInEntry: self:curBlk:label == 'entry';
 				if({ isBoxed }, {
-					self:boxedLocals:set(key: varName, value: true);
 					self:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:Ptr));
 				}, {
 					self:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
@@ -1587,14 +1861,24 @@ Class is IrBuilder{
 					match(on: initExpr, when: [
 						Expression:StringLit: local Function(String is sv){ isStrLitInit: true; }
 					], default: {});
+					local Boolean is strCopyOwned: false;
 					if({ varType:name == 'String' && isStrLitInit && val != '' && val != 'null' }, {
 						local String is strCopy: self:nextTmp();
 						self:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [val]));
-						self:emitClaimPool(val: strCopy);
+						if({ isBoxed }, {
+							self:emitClaimPool(val: strCopy);
+						}, {
+							strCopyOwned: true;
+						});
 						val: strCopy;
 					});
-					if({ vIsArc && val != '' && val != 'null' }, {
+					if({ vIsArc && !strCopyOwned && val != '' && val != 'null' }, {
 						self:emit(inst: IrInst:Retain(val: val));
+					});
+					if({ (vIsArc || isBoxed) && !declInEntry }, {
+						local String is prevSlotVal: self:nextTmp();
+						self:emit(inst: IrInst:Load(dst: prevSlotVal, slot: slot, ty: IrType:Ptr));
+						self:emit(inst: IrInst:Release(val: prevSlotVal));
 					});
 					if({ isBoxed }, {
 						local String is boxPtr: self:emitNewBox(initVal: val, ty: vty, isArc: vIsArc);
@@ -1635,6 +1919,11 @@ Class is IrBuilder{
 							self:emit(inst: IrInst:Retain(val: defVal));
 						});
 					});
+					if({ (vIsArc || isBoxed) && !declInEntry }, {
+						local String is prevSlotVal2: self:nextTmp();
+						self:emit(inst: IrInst:Load(dst: prevSlotVal2, slot: slot, ty: IrType:Ptr));
+						self:emit(inst: IrInst:Release(val: prevSlotVal2));
+					});
 					if({ isBoxed }, {
 						local String is boxPtr: self:emitNewBox(initVal: defVal, ty: vty, isArc: vIsArc);
 						self:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
@@ -1647,7 +1936,16 @@ Class is IrBuilder{
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
+				if({ self:tryLowerAppendChain(assignTarget: assignTarget, assignValue: assignValue) }, {
+					self:currentLine: prevLine;
+					return;
+				});
+				local String is prevMapK: self:expectedMapKeyType;
+				local String is prevMapV: self:expectedMapValType;
+				self:setAssignTargetMapHints(assignTarget: assignTarget);
 				local String is val: self:lowerExpr(expr: assignValue);
+				self:expectedMapKeyType: prevMapK;
+				self:expectedMapValType: prevMapV;
 				local IrType is valTy: self:irTypeFor(specType: assignValue:resolvedType);
 				match(on: assignTarget, when: [
 					Expression:Ident: local Function(String is name){
@@ -1655,7 +1953,21 @@ Class is IrBuilder{
 							local IrType is ty: self:localTypes:get(key: name, default: IrType:I64);
 							local Boolean is isArc: self:localIsArc:get(key: name, default: false);
 							local String is cval: self:castIfNeeded(val: val, fromTy: valTy, toTy: ty);
-							self:emitStoreLocal(name: name, val: cval, ty: ty, isArc: isArc);
+							local Boolean is isStrLitAsgn: false;
+							match(on: assignValue, when: [
+								Expression:StringLit: local Function(String is _sv){ isStrLitAsgn: true; }
+							], default: {});
+							if({ isStrLitAsgn && !self:boxedLocals:has(key: name) && self:localSpecTypes:get(key: name, default: '') == 'String' && cval != '' && cval != 'null' }, {
+								local String is slot: self:localSlots:get(key: name, default: '');
+								local String is strCopy: self:nextTmp();
+								self:emit(inst: IrInst:IrCall(dst: strCopy, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_copy', argTypes: [IrType:Ptr], args: [cval]));
+								local String is oldVal: self:nextTmp();
+								self:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
+								self:emit(inst: IrInst:Release(val: oldVal));
+								self:emit(inst: IrInst:Store(slot: slot, val: strCopy, ty: IrType:Ptr));
+							}, {
+								self:emitStoreLocal(name: name, val: cval, ty: ty, isArc: isArc);
+							});
 						}, {
 							local String is hk: self:currentClass . ':' . name;
 							if({ self:heldFields:has(key: hk) }, {
@@ -1666,6 +1978,28 @@ Class is IrBuilder{
 								self:emit(inst: IrInst:ConstBool(dst: trueTmp, value: true));
 								self:emit(inst: IrInst:Store(slot: '@.held_init.' . owner . '.' . name, val: trueTmp, ty: IrType:I1));
 								self:emit(inst: IrInst:Store(slot: '@.held_val.' . owner . '.' . name, val: val, ty: hty));
+							}, {
+								if({ self:localSlots:has(key: 'self') }, {
+									local IrStruct is selfSt: self:mod:findStruct(name: self:currentClass);
+									local Int is sfidx: selfSt:fieldIndex(name: name);
+									if({ sfidx >= 0 }, {
+										local String is selfObj: self:emitLoadLocal(name: 'self', ty: IrType:Ptr);
+										local IrType is sfty: selfSt:fieldTypes:get(index: sfidx);
+										local Boolean is sfIsArc: selfSt:fieldIsArc:get(index: sfidx, default: false);
+										local String is scval: self:castIfNeeded(val: val, fromTy: valTy, toTy: sfty);
+										local String is sptr: self:nextTmp();
+										self:emit(inst: IrInst:FieldPtr(dst: sptr, objPtr: selfObj, structName: self:currentClass, fieldIndex: sfidx));
+										if({ sfIsArc }, {
+											if({ scval != '' && scval != 'null' }, {
+												self:emit(inst: IrInst:Retain(val: scval));
+											});
+											local String is oldSfVal: self:nextTmp();
+											self:emit(inst: IrInst:Load(dst: oldSfVal, slot: sptr, ty: IrType:Ptr));
+											self:emit(inst: IrInst:Release(val: oldSfVal));
+										});
+										self:emit(inst: IrInst:Store(slot: sptr, val: scval, ty: sfty));
+									});
+								});
 							});
 						});
 					},
@@ -1784,7 +2118,8 @@ Class is IrBuilder{
 					if({ val == '0' && self:curFn:retType == IrType:Ptr }, {
 						val: 'null';
 					});
-					if({ self:curFnRetIsArc && self:curFn:retType == IrType:Ptr && val != 'null' }, {
+					local Boolean is retExprIsArc: self:isArcSpecType(specType: returnExpr:resolvedType);
+					if({ (self:curFnRetIsArc || retExprIsArc) && self:curFn:retType == IrType:Ptr && val != 'null' }, {
 						self:emit(inst: IrInst:Retain(val: val));
 					});
 					self:emitReleaseOwnedLocals();
@@ -1837,6 +2172,177 @@ Class is IrBuilder{
 		self:currentLine: prevLine;
 	}
 
+	local Function is setMapHintsFromTypeStr(String is t){
+		local Int is toIdx: t:indexOf(search: ' to ', default: -1);
+		if({ t:startsWith(prefix: 'Map of ') && toIdx > 7 }, {
+			self:expectedMapKeyType: t:substring(start: 7, end: toIdx);
+			self:expectedMapValType: t:substring(start: toIdx + 4, end: t:length());
+			return;
+		});
+		if({ t:startsWith(prefix: 'Map:') }, {
+			local String is afterMap: t:substring(start: 4, end: t:length());
+			local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
+			if({ cIdx > 0 }, {
+				self:expectedMapKeyType: afterMap:substring(start: 0, end: cIdx);
+				self:expectedMapValType: afterMap:substring(start: cIdx + 1, end: afterMap:length());
+			});
+		});
+	}
+
+	local Function is setAssignTargetMapHints(Expression is assignTarget){
+		if({ assignTarget:resolvedType != '' && assignTarget:resolvedType != 'Map' }, {
+			self:setMapHintsFromTypeStr(t: assignTarget:resolvedType);
+			if({ self:expectedMapKeyType != '' }, { return; });
+		});
+		match(on: assignTarget, when: [
+			Expression:Ident: local Function(String is name){
+				if({ self:localSpecTypes:has(key: name) }, {
+					self:setMapHintsFromTypeStr(t: self:localSpecTypes:get(key: name, default: ''));
+				}, {
+					if({ self:fieldSpecTypes:has(key: self:currentClass . ':' . name) }, {
+						self:setMapHintsFromTypeStr(t: self:fieldSpecTypes:get(key: self:currentClass . ':' . name, default: ''));
+					});
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
+				local String is sname: self:structNameForExpr(expr: target);
+				if({ self:fieldSpecTypes:has(key: sname . ':' . fieldName) }, {
+					self:setMapHintsFromTypeStr(t: self:fieldSpecTypes:get(key: sname . ':' . fieldName, default: ''));
+				});
+			},
+			Expression:Path: local Function(Array of String is segs){
+				if({ segs:length() == 2 && segs:get(index: 0, default: '') == 'self' }, {
+					local String is fn: segs:get(index: 1, default: '');
+					if({ self:fieldSpecTypes:has(key: self:currentClass . ':' . fn) }, {
+						self:setMapHintsFromTypeStr(t: self:fieldSpecTypes:get(key: self:currentClass . ':' . fn, default: ''));
+					});
+				});
+			}
+		], default: {});
+	}
+
+	local Function of Boolean is collectAppendChainRhs(Expression is expr, String is targetName, Array of Expression is rhsOut){
+		return match(on: expr, when: [
+			Expression:Binary: local Function of Boolean(String is op, Expression is left, Expression is right){
+				if({ op != '.' }, { return false; });
+				local Boolean is leftIsTarget: match(on: left, when: [
+					Expression:Ident: local Function of Boolean(String is nm){ return nm == targetName; },
+					else: { false }
+				]);
+				if({ leftIsTarget }, {
+					rhsOut:add(item: right);
+					return true;
+				});
+				if({ self:collectAppendChainRhs(expr: left, targetName: targetName, rhsOut: rhsOut) }, {
+					rhsOut:add(item: right);
+					return true;
+				});
+				return false;
+			},
+			else: { false }
+		]);
+	}
+
+	local Function of String is lowerConcatRight(Expression is right){
+		local String is r: self:lowerExpr(expr: right);
+		local IrType is rTy: self:irTypeFor(specType: right:resolvedType);
+		if({ rTy == IrType:I64 }, {
+			local String is rsI: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: rsI, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [r]));
+			self:emitClaimPool(val: rsI);
+			return rsI;
+		});
+		if({ rTy == IrType:F64 }, {
+			local String is rsF: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: rsF, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [r]));
+			self:emitClaimPool(val: rsF);
+			return rsF;
+		});
+		if({ rTy == IrType:I1 }, {
+			local String is rsB: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: rsB, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [r]));
+			self:emitClaimPool(val: rsB);
+			return rsB;
+		});
+		if({ rTy == IrType:Ptr && right:resolvedType != 'String' && (self:clsMap:has(key: right:resolvedType) || right:resolvedType == 'Any') }, {
+			return self:emitObjectToString(objVal: r, specType: right:resolvedType);
+		});
+		return r;
+	}
+
+	local Function of String is lowerConcatChainNoClaim(Expression is expr){
+		return match(on: expr, when: [
+			Expression:Binary: local Function of String(String is op, Expression is left, Expression is right){
+				if({ op == '.' }, {
+					local Boolean is leftIsDot: match(on: left, when: [
+						Expression:Binary: local Function of Boolean(String is lop, Expression is _ll, Expression is _lr){ return lop == '.'; },
+						else: { false }
+					]);
+					local String is ls: '';
+					if({ leftIsDot }, {
+						ls: self:lowerConcatChainNoClaim(expr: left);
+					}, {
+						local String is l: self:lowerExpr(expr: left);
+						local IrType is lTy: self:irTypeFor(specType: left:resolvedType);
+						if({ lTy == IrType:I64 }, {
+							ls: self:nextTmp();
+							self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [l]));
+						}, {
+							if({ lTy == IrType:F64 }, {
+								ls: self:nextTmp();
+								self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [l]));
+							}, {
+								if({ lTy == IrType:I1 }, {
+									ls: self:nextTmp();
+									self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [l]));
+								}, {
+									ls: l;
+									self:emit(inst: IrInst:Retain(val: ls));
+								});
+							});
+						});
+					});
+					local String is rs: self:lowerConcatRight(right: right);
+					local String is dst: self:nextTmp();
+					self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_concat', argTypes: [IrType:Ptr, IrType:Ptr], args: [ls, rs]));
+					return dst;
+				});
+				return self:lowerExpr(expr: expr);
+			},
+			else: { self:lowerExpr(expr: expr) }
+		]);
+	}
+
+	local Function of Boolean is tryLowerAppendChain(Expression is assignTarget, Expression is assignValue){
+		local String is targetName: match(on: assignTarget, when: [
+			Expression:Ident: local Function of String(String is nm){ return nm; },
+			else: { '' }
+		]);
+		if({ targetName == '' || !self:localSlots:has(key: targetName) || self:boxedLocals:has(key: targetName) }, {
+			return false;
+		});
+		if({ self:localSpecTypes:get(key: targetName, default: '') != 'String' }, {
+			return false;
+		});
+		local Array of Expression is rhsList: [];
+		if({ !self:collectAppendChainRhs(expr: assignValue, targetName: targetName, rhsOut: rhsList) || rhsList:length() == 0 }, {
+			return false;
+		});
+		local String is slot: self:localSlots:get(key: targetName, default: '');
+		local String is curVal: self:nextTmp();
+		self:emit(inst: IrInst:Load(dst: curVal, slot: slot, ty: IrType:Ptr));
+		local Int is ri: 0;
+		while({ ri < rhsList:length() }, {
+			local String is rs: self:lowerConcatRight(right: rhsList:get(index: ri));
+			local String is nextVal: self:nextTmp();
+			self:emit(inst: IrInst:IrCall(dst: nextVal, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_concat', argTypes: [IrType:Ptr, IrType:Ptr], args: [curVal, rs]));
+			curVal: nextVal;
+			ri++;
+		});
+		self:emit(inst: IrInst:Store(slot: slot, val: curVal, ty: IrType:Ptr));
+		return true;
+	}
+
 	local Function of String is lowerIncDec(String is op, Expression is operand, IrType is ty){
 		local String is boxedName: '';
 		local String is slot: '';
@@ -1848,6 +2354,17 @@ Class is IrBuilder{
 					slotTy: self:localTypes:get(key: name, default: ty);
 					if({ self:boxedLocals:has(key: name) }, {
 						boxedName: name;
+					});
+				}, {
+					if({ self:localSlots:has(key: 'self') }, {
+						local IrStruct is selfSt: self:mod:findStruct(name: self:currentClass);
+						local Int is sfidx: selfSt:fieldIndex(name: name);
+						if({ sfidx >= 0 }, {
+							local String is selfObj: self:emitLoadLocal(name: 'self', ty: IrType:Ptr);
+							slotTy: selfSt:fieldTypes:get(index: sfidx);
+							slot: self:nextTmp();
+							self:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: selfObj, structName: self:currentClass, fieldIndex: sfidx));
+						});
 					});
 				});
 			},
@@ -2017,6 +2534,19 @@ Class is IrBuilder{
 					if({ hty == IrType:Ptr }, { self:emitClaimPool(val: dst); });
 					return dst;
 				});
+				if({ self:localSlots:has(key: 'self') }, {
+					local IrStruct is selfSt: self:mod:findStruct(name: self:currentClass);
+					local Int is sfidx: selfSt:fieldIndex(name: name);
+					if({ sfidx >= 0 }, {
+						local String is selfObj: self:emitLoadLocal(name: 'self', ty: IrType:Ptr);
+						local IrType is sfty: selfSt:fieldTypes:get(index: sfidx);
+						local String is sptr: self:nextTmp();
+						local String is sdst: self:nextTmp();
+						self:emit(inst: IrInst:FieldPtr(dst: sptr, objPtr: selfObj, structName: self:currentClass, fieldIndex: sfidx));
+						self:emit(inst: IrInst:Load(dst: sdst, slot: sptr, ty: sfty));
+						return sdst;
+					});
+				});
 				return '0';
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
@@ -2062,6 +2592,11 @@ Class is IrBuilder{
 					self:emit(inst: IrInst:Load(dst: scDst, slot: resSlot, ty: IrType:I1));
 					return scDst;
 				});
+				if({ op == '.' }, {
+					local String is catDst: self:lowerConcatChainNoClaim(expr: expr);
+					self:emitClaimPool(val: catDst);
+					return catDst;
+				});
 				local String is l: self:lowerExpr(expr: left);
 				local String is r: self:lowerExpr(expr: right);
 				local String is dst: self:nextTmp();
@@ -2095,50 +2630,6 @@ Class is IrBuilder{
 						if({ r == '0' }, { r: 'null'; });
 					});
 					self:emit(inst: IrInst:Cmp(dst: dst, op: op, lhs: l, rhs: r, ty: cmpTy));
-					return dst;
-				});
-				if({ op == '.' }, {
-					local IrType is lTy: self:irTypeFor(specType: left:resolvedType);
-					local IrType is rTy: self:irTypeFor(specType: right:resolvedType);
-					local String is ls: l;
-					if({ lTy == IrType:I64 }, {
-						ls: self:nextTmp();
-						self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [l]));
-					}, {
-						if({ lTy == IrType:F64 }, {
-							ls: self:nextTmp();
-							self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [l]));
-						}, {
-							if({ lTy == IrType:I1 }, {
-								ls: self:nextTmp();
-								self:emit(inst: IrInst:IrCall(dst: ls, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [l]));
-							});
-						});
-					});
-					local String is rs: r;
-					if({ rTy == IrType:I64 }, {
-						rs: self:nextTmp();
-						self:emit(inst: IrInst:IrCall(dst: rs, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [r]));
-					}, {
-						if({ rTy == IrType:F64 }, {
-							rs: self:nextTmp();
-							self:emit(inst: IrInst:IrCall(dst: rs, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [r]));
-						}, {
-							if({ rTy == IrType:I1 }, {
-								rs: self:nextTmp();
-								self:emit(inst: IrInst:IrCall(dst: rs, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [r]));
-							}, {
-								if({ rTy == IrType:Ptr && right:resolvedType != 'String' && (self:clsMap:has(key: right:resolvedType) || right:resolvedType == 'Any') }, {
-									rs: self:emitObjectToString(objVal: r, specType: right:resolvedType);
-								});
-							});
-						});
-					});
-					self:emit(inst: IrInst:Retain(val: ls));
-					local Array of IrType is cTypes: [IrType:Ptr, IrType:Ptr];
-					local Array of String is cArgs: [ls, rs];
-					self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_string_concat', argTypes: cTypes, args: cArgs));
-					self:emitClaimPool(val: dst);
 					return dst;
 				});
 				local IrType is ty: self:irTypeFor(specType: expr:resolvedType);
@@ -2244,6 +2735,12 @@ Class is IrBuilder{
 					return dstB;
 				});
 				local IrType is toTy: self:irTypeFor(specType: target);
+				if({ target == 'Byte' && inner:resolvedType != 'Byte' }, {
+					local String is bv: self:castIfNeeded(val: v, fromTy: fromTy, toTy: IrType:I64);
+					local String is dstByte: self:nextTmp();
+					self:emit(inst: IrInst:IrCall(dst: dstByte, hasDst: true, retType: IrType:I64, callee: '__spec_check_byte', argTypes: [IrType:I64], args: [bv]));
+					return dstByte;
+				});
 				if({ inner:resolvedType == 'String' && target == 'Int' }, {
 					local String is base10: self:nextTmp();
 					self:emit(inst: IrInst:ConstInt(dst: base10, value: 10));
@@ -2405,7 +2902,13 @@ Class is IrBuilder{
 						});
 					});
 					local String is kp: self:castIfNeeded(val: iv, fromTy: self:irTypeFor(specType: kSpec), toTy: kArgTy);
-					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [tv, kp, 'null']));
+					local String is mDef: 'null';
+					if({ expr:resolvedType == 'String' || expr:resolvedType == '' }, {
+						mDef: self:nextTmp();
+						local Int is esid: self:mod:internStringLiteral(value: '');
+						self:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
+					});
+					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [tv, kp, mDef]));
 				}, {
 					local Array of IrType is gT: [IrType:Ptr, IrType:I64];
 					local Array of String is gV: [tv, iv];
@@ -2464,9 +2967,18 @@ Class is IrBuilder{
 	local Function is collectFreeInExpr(Expression is expr, Map of String to Boolean is bound, Map of String to String is outerSlots, Map of String to Boolean is seen, Array of String is out){
 		match(on: expr, when: [
 			Expression:Ident: local Function(String is name){
-				if({ !bound:has(key: name) && outerSlots:has(key: name) && !seen:has(key: name) }, {
-					seen:set(key: name, value: true);
-					out:add(item: name);
+				if({ !bound:has(key: name) }, {
+					if({ outerSlots:has(key: name) }, {
+						if({ !seen:has(key: name) }, {
+							seen:set(key: name, value: true);
+							out:add(item: name);
+						});
+					}, {
+						if({ outerSlots:has(key: 'self') && !seen:has(key: 'self') && self:mod:findStruct(name: self:currentClass):fieldIndex(name: name) >= 0 }, {
+							seen:set(key: 'self', value: true);
+							out:add(item: 'self');
+						});
+					});
 				});
 			},
 			Expression:Unary: local Function(String is _op, Expression is operand){
@@ -2490,9 +3002,18 @@ Class is IrBuilder{
 			Expression:Path: local Function(Array of String is segments){
 				if({ segments:length() > 0 }, {
 					local String is seg0: segments:get(index: 0, default: '');
-					if({ !bound:has(key: seg0) && outerSlots:has(key: seg0) && !seen:has(key: seg0) }, {
-						seen:set(key: seg0, value: true);
-						out:add(item: seg0);
+					if({ !bound:has(key: seg0) }, {
+						if({ outerSlots:has(key: seg0) }, {
+							if({ !seen:has(key: seg0) }, {
+								seen:set(key: seg0, value: true);
+								out:add(item: seg0);
+							});
+						}, {
+							if({ outerSlots:has(key: 'self') && !seen:has(key: 'self') && self:mod:findStruct(name: self:currentClass):fieldIndex(name: seg0) >= 0 }, {
+								seen:set(key: 'self', value: true);
+								out:add(item: 'self');
+							});
+						});
 					});
 				});
 			},
@@ -2516,6 +3037,15 @@ Class is IrBuilder{
 				});
 			},
 			Expression:Call: local Function(CallData is call){
+				local Boolean is isBareCall: match(on: call:target, when: [
+					Expression:Ident: local Function of Boolean(String is tname){ return tname == 'self'; },
+					Expression:Unknown: local Function of Boolean(){ return true; },
+					else: { false }
+				]);
+				if({ isBareCall && !bound:has(key: call:name) && outerSlots:has(key: call:name) && !seen:has(key: call:name) }, {
+					seen:set(key: call:name, value: true);
+					out:add(item: call:name);
+				});
 				self:collectFreeInExpr(expr: call:target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 				local Int is ci: 0;
 				while({ ci < call:args:length() }, {
@@ -2599,6 +3129,13 @@ Class is IrBuilder{
 		local Map of String to Boolean is savedBoxed: self:boxedLocals;
 		local Map of String to Boolean is savedCaptured: self:capturedNames;
 		local Array of String is savedOwned: self:ownedSlots;
+		local Array of String is savedScopeVars: self:scopeVarStack;
+		local Array of String is savedScopeOldSlots: self:scopeOldSlotStack;
+		local Array of IrType is savedScopeOldTypes: self:scopeOldTypeStack;
+		local Array of Boolean is savedScopeOldArcs: self:scopeOldArcStack;
+		local Array of String is savedScopeOldSpecs: self:scopeOldSpecTypeStack;
+		local Array of Boolean is savedScopeOldBoxed: self:scopeOldBoxedStack;
+		local Array of Int is savedScopeMarks: self:scopeMarkStack;
 		local String is savedPoolMark: self:curPoolMark;
 		local Boolean is savedRetIsArc: self:curFnRetIsArc;
 
@@ -2625,6 +3162,7 @@ Class is IrBuilder{
 		self:boxedLocals: Map:init();
 		self:capturedNames: Map:init();
 		self:ownedSlots: [];
+		self:resetScopes();
 
 		local Map of String to Boolean is decls: Map:init();
 		local Int is dpi: 0;
@@ -2756,6 +3294,13 @@ Class is IrBuilder{
 		self:boxedLocals: savedBoxed;
 		self:capturedNames: savedCaptured;
 		self:ownedSlots: savedOwned;
+		self:scopeVarStack: savedScopeVars;
+		self:scopeOldSlotStack: savedScopeOldSlots;
+		self:scopeOldTypeStack: savedScopeOldTypes;
+		self:scopeOldArcStack: savedScopeOldArcs;
+		self:scopeOldSpecTypeStack: savedScopeOldSpecs;
+		self:scopeOldBoxedStack: savedScopeOldBoxed;
+		self:scopeMarkStack: savedScopeMarks;
 		self:curPoolMark: savedPoolMark;
 		self:curFnRetIsArc: savedRetIsArc;
 
@@ -2852,16 +3397,7 @@ Class is IrBuilder{
 			return cDst;
 		});
 
-		local String is recvType: call:target:resolvedType;
-		if({ recvType:contains(needle: ':') && !self:clsQNameMap:has(key: recvType) }, {
-			local Int is cIdx: recvType:indexOf(search: ':', default: -1);
-			if({ cIdx > 0 }, {
-				local String is baseT: recvType:substring(start: 0, end: cIdx);
-				if({ baseT == 'Array' || baseT == 'List' || self:clsQNameMap:has(key: baseT) }, {
-					recvType: baseT;
-				});
-			});
-		});
+		local String is recvType: self:baseTypeName(t: call:target:resolvedType);
 
 		# Method / constructor call
 		local IrType is retTy: self:irTypeFor(specType: expr:resolvedType);
@@ -2873,13 +3409,16 @@ Class is IrBuilder{
 				if({ tname != 'self' && self:localSlots:has(key: tname) && recvType != '' }, {
 					return self:cStructName(qname: recvType) . '_' . nm;
 				});
+				if({ tname != 'self' && !self:localSlots:has(key: tname) && self:localSlots:has(key: 'self') && self:mod:findStruct(name: self:currentClass):fieldIndex(name: tname) >= 0 && recvType != '' }, {
+					return self:cStructName(qname: recvType) . '_' . nm;
+				});
 				if({ tname != 'self' && !self:localSlots:has(key: tname) }, {
 					return self:cStructName(qname: tname) . '_' . nm;
 				});
 				return self:currentClass . '_' . nm;
 			},
 			Expression:Path: local Function of String(Array of String is segs){
-				if({ segs:length() >= 2 && (segs:get(index: 0, default: '') == 'self' || self:localSlots:has(key: segs:get(index: 0, default: '')) || self:heldFields:has(key: self:currentClass . ':' . segs:get(index: 0, default: '')) || self:heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: ''))) }, {
+				if({ segs:length() >= 2 && (segs:get(index: 0, default: '') == 'self' || self:localSlots:has(key: segs:get(index: 0, default: '')) || self:heldFields:has(key: self:currentClass . ':' . segs:get(index: 0, default: '')) || self:heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: '')) || (self:localSlots:has(key: 'self') && self:mod:findStruct(name: self:currentClass):fieldIndex(name: segs:get(index: 0, default: '')) >= 0)) }, {
 					if({ recvType != '' }, { return self:cStructName(qname: recvType) . '_' . nm; });
 				});
 				if({ segs:length() > 0 }, {
@@ -2894,7 +3433,7 @@ Class is IrBuilder{
 		# Receiver: self or local variable, else static class Path (or held field receiver)
 		local Boolean is hasRecv: match(on: call:target, when: [
 			Expression:Ident: local Function of Boolean(String is tname){
-				if({ tname == 'self' || self:localSlots:has(key: tname) }, {
+				if({ tname == 'self' || self:localSlots:has(key: tname) || (self:localSlots:has(key: 'self') && self:mod:findStruct(name: self:currentClass):fieldIndex(name: tname) >= 0) }, {
 					argTypes:add(item: IrType:Ptr);
 					argVals:add(item: self:lowerExpr(expr: call:target));
 					return true;
@@ -2902,7 +3441,7 @@ Class is IrBuilder{
 				return false;
 			},
 			Expression:Path: local Function of Boolean(Array of String is segs){
-				if({ segs:length() >= 2 && (segs:get(index: 0, default: '') == 'self' || self:localSlots:has(key: segs:get(index: 0, default: '')) || self:heldFields:has(key: self:currentClass . ':' . segs:get(index: 0, default: '')) || self:heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: ''))) }, {
+				if({ segs:length() >= 2 && (segs:get(index: 0, default: '') == 'self' || self:localSlots:has(key: segs:get(index: 0, default: '')) || self:heldFields:has(key: self:currentClass . ':' . segs:get(index: 0, default: '')) || self:heldFields:has(key: segs:get(index: 0, default: '') . ':' . segs:get(index: 1, default: '')) || (self:localSlots:has(key: 'self') && self:mod:findStruct(name: self:currentClass):fieldIndex(name: segs:get(index: 0, default: '')) >= 0)) }, {
 					argTypes:add(item: IrType:Ptr);
 					argVals:add(item: self:lowerExpr(expr: call:target));
 					return true;
@@ -3032,13 +3571,13 @@ Class is IrBuilder{
 					if({ tname == 'self' }, { isSelfTarget: true; });
 				}
 			], default: {});
-			if({ !isSelfTarget && recvType != '' }, {
+			if({ (!isSelfTarget || call:bareProvider != '') && recvType != '' }, {
 				recvStruct: self:cStructName(qname: recvType);
 				if({ self:mod:findStruct(name: recvStruct):name == '' && self:clsQNameMap:has(key: recvType) }, {
 					recvStruct: self:cStructName(qname: self:clsQNameMap:get(key: recvType, default: recvType));
 				});
 			});
-			if({ recvStruct != 'String' && recvStruct != 'Array' && recvStruct != 'List' }, {
+			if({ recvStruct != 'String' && recvStruct != 'Array' && recvStruct != 'Map' && recvStruct != 'Math' && recvStruct != 'List' }, {
 				local IrStruct is rst: self:mod:findStruct(name: recvStruct);
 				local String is vkey: if({ call:overloadIndex > 0 }, { nm . '_' . ((call:overloadIndex + 1) as String) }, { nm });
 				vslot: rst:vtableSlot(mname: vkey);
@@ -3122,6 +3661,9 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' }, {
+			return 'null';
+		});
 		if({ self:currentClass != '' && self:localSlots:has(key: 'self') }, {
 			local IrStruct is curSt: self:mod:findStruct(name: self:currentClass);
 			local Int is impIdx: curSt:fieldIndex(name: '_import_' . provStruct);

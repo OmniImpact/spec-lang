@@ -27,14 +27,15 @@ Class of SysinternalCallLowerer is ConsoleCallLowerer{
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
 		local String is nm: call:name;
-		local String is r: self:receiverName(call: call);
-		if({ nm == 'init' }, { return r == 'Output' || r == 'Console' || r == 'Stderr' || r == 'Terminal'; });
-		if({ nm == 'console_binary_mode' && (r == '' || r == 'Console') }, { return true; });
-		if({ (nm == 'read_bytes' || nm == 'read_line') && (r == '' || r == 'Console') && call:args:length() >= 1 }, { return true; });
-		if({ (nm == 'term_width' || nm == 'term_height') && (r == '' || r == 'Terminal') }, { return true; });
-		if({ nm != 'line' && nm != 'print' && nm != 'print_line' && nm != 'error_line' && nm != 'consOut' }, { return false; });
-		if({ call:args:length() < 1 }, { return false; });
-		return r == '' || r == 'Output' || r == 'Console' || r == 'Stderr';
+		if({ self:isFloorTarget(call: call, domain: 'Terminal') }, {
+			return nm == 'init' || nm == 'term_width' || nm == 'term_height';
+		});
+		if({ !self:isFloorTarget(call: call, domain: 'Console') }, { return false; });
+		if({ nm == 'init' || nm == 'console_binary_mode' }, { return true; });
+		if({ (nm == 'read_bytes' || nm == 'read_line' || nm == 'print_line' || nm == 'print' || nm == 'error_line') && call:args:length() >= 1 }, {
+			return true;
+		});
+		return false;
 	}
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
@@ -59,7 +60,7 @@ Class of SysinternalCallLowerer is ConsoleCallLowerer{
 			return self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_term_height', argTypes: [], args: []);
 		});
 		local String is txt: self:lowerArg(b: b, call: call, idx: 0);
-		if({ call:name == 'line' || call:name == 'print_line' }, {
+		if({ call:name == 'print_line' }, {
 			return self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_print_line', argTypes: [IrType:Ptr], args: [txt]);
 		});
 		if({ call:name == 'error_line' }, {

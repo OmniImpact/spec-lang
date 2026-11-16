@@ -288,6 +288,7 @@ Class is Driver{
 			local Int is llvmGenT0: Process:clockMs();
 			local IrBuilder is irb: IrBuilder:init();
 			irb:entryInitOwner: self:entryInitOwner;
+			irb:entryInitOverloadIndex: self:entryInitOverloadIndex;
 			irb:entryInitTakesMap: self:entryInitTakesMap;
 			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
 			if({ !args:has(key: 'no-opt') }, {
@@ -323,7 +324,7 @@ Class is Driver{
 				local RuntimePrelude is rpLlvm: RuntimePrelude:init();
 				fileWrite(path: runtimeH, content: rpLlvm:emitHeader());
 				fileWrite(path: runtimeC, content: '#include "spec_runtime.h"' . "\n" . rpLlvm:emitBody());
-				Process:execute(command: 'clang', args: ['-O2', '-w', '-c', runtimeC, '-o', runtimeO, '-pthread']);
+				Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
 			});
 
 			local Array of String is llArgs: ['-O2', '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];

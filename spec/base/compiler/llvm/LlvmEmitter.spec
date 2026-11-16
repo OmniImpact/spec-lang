@@ -14,6 +14,7 @@ Class is LlvmEmitter{
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'llvm', LlvmStructLayout],
 		['base', 'struct', Array],
+		['base', 'sys', as Buf()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -46,11 +47,21 @@ declare ptr @spec_rt_box_new(i64, i1)
 declare ptr @spec_rt_box_get(ptr)
 declare void @spec_rt_box_set(ptr, ptr)
 declare ptr @spec_rt_box_to_string(ptr)
+declare ptr @spec_box_new(i64, i1)
+declare ptr @spec_box_get(ptr)
+declare void @spec_box_set(ptr, ptr)
+declare i1 @spec_box_is_arc(ptr)
+declare ptr @spec_box_to_string(ptr)
+declare ptr @spec_arena_new()
+declare void @spec_arena_drain(ptr)
+declare i64 @spec_arena_used(ptr)
 declare ptr @spec_string_intern(ptr)
+declare ptr @spec_intern(ptr)
 declare ptr @spec_string_concat(ptr, ptr)
 declare i1 @spec_string_equals(ptr, ptr)
 declare i64 @spec_string_compare(ptr, ptr)
 declare i64 @spec_string_length(ptr)
+declare i64 @spec_buf_length(ptr)
 declare ptr @spec_string_substring(ptr, i64, i64)
 declare i64 @spec_string_index_of(ptr, ptr, i64)
 declare i64 @spec_string_index_of_from(ptr, ptr, i64, i64)
@@ -81,8 +92,14 @@ declare void @spec_vec_set(ptr, i64, ptr, ptr)
 declare ptr @spec_vec_pop(ptr, ptr, ptr)
 declare i64 @spec_vec_length(ptr)
 declare void @spec_vec_clear(ptr)
+declare ptr @spec_vec_get_at(ptr, i64, ptr)
+declare void @spec_vec_set_at(ptr, i64, ptr)
+declare void @spec_vec_add(ptr, ptr)
+declare ptr @spec_vec_pop_last(ptr, ptr)
+declare ptr @spec_vec_remove_at(ptr, i64, ptr)
 declare ptr @spec_type_name(ptr)
 declare i64 @spec_object_hash(ptr)
+declare i1 @spec_same_ref(ptr, ptr)
 declare i64 @spec_held_count(ptr)
 declare ptr @spec_held_name(ptr, i64)
 declare i1 @spec_has_held(ptr, ptr)
@@ -95,12 +112,25 @@ declare ptr @spec_class_source_file(ptr)
 declare i1 @spec_has_method(ptr, ptr)
 declare ptr @spec_instantiate(ptr)
 declare void @spec_invoke_void_by_name(ptr, ptr)
+declare void @spec_panic(ptr)
+declare void @spec_panic_byte_range(i64)
 declare void @spec_panic_cast(ptr, ptr)
 declare i32 @strcmp(ptr, ptr)
 define internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {
   %r = call i32 @strcmp(ptr %a, ptr %b)
   %eq = icmp eq i32 %r, 0
   ret i1 %eq
+}
+define internal i64 @__spec_check_byte(i64 %v) {
+  %lt = icmp slt i64 %v, 0
+  %gt = icmp sgt i64 %v, 255
+  %bad = or i1 %lt, %gt
+  br i1 %bad, label %fail, label %ok
+fail:
+  call void @spec_panic_byte_range(i64 %v)
+  br label %ok
+ok:
+  ret i64 %v
 }
 declare void @spec_print(ptr)
 declare void @spec_print_line(ptr)
@@ -141,10 +171,14 @@ declare void @spec_file_read_async(ptr, ptr, ptr, ptr)
 declare i1 @spec_file_write(ptr, ptr, ptr, ptr)
 declare i1 @spec_file_append(ptr, ptr, ptr, ptr)
 declare void @spec_file_write_async(ptr, ptr, ptr, ptr)
+declare ptr @spec_file_temp(ptr)
 declare ptr @spec_file_temp_cb(ptr, ptr)
+declare ptr @spec_dir_list(ptr)
 declare ptr @spec_dir_list_cb(ptr, ptr)
 declare ptr @spec_exe_dir()
 declare i64 @spec_file_size(ptr)
+declare void @spec_branch(ptr, ptr)
+declare void @spec_while(ptr, ptr)
 declare i64 @spec_time_monotonic_ns()
 declare i64 @spec_time_monotonic_us()
 declare i64 @spec_time_monotonic_ms()
@@ -165,6 +199,12 @@ declare double @fabs(double)
 declare double @fmin(double, double)
 declare double @fmax(double, double)
 declare double @fma(double, double, double)
+declare double @spec_math_sqrt(double)
+declare double @spec_math_fma(double, double, double)
+declare i64 @spec_math_to_int(double)
+declare double @spec_math_to_float(i64)
+declare double @spec_fast_random()
+declare void @spec_fast_random_seed(i64)
 declare double @spec_math_sin(double)
 declare double @spec_math_cos(double)
 declare double @spec_math_tan(double)
@@ -185,6 +225,8 @@ declare ptr @spec_array_new()
 declare ptr @spec_array_new_object()
 declare void @spec_array_add(ptr, ptr)
 declare void @spec_array_add_object(ptr, ptr)
+declare void @spec_array_add_owned(ptr, ptr)
+declare void @spec_array_add_array(ptr, ptr)
 declare i64 @spec_array_length(ptr)
 declare ptr @spec_array_get(ptr, i64)
 declare void @spec_array_set(ptr, i64, ptr)
@@ -422,20 +464,18 @@ declare void @spec_audio_close(i64)
 	}
 
 	local Function of String is escapeLlvmBytes(String is s){
+		local String is hex: '0123456789ABCDEF';
 		local String is res: '';
+		local Int is len: Buf:bufLength(b: s);
 		local Int is i: 0;
-		while({ i < s:length() }, {
-			local String is ch: s:charAt(index: i, default: '');
-			if({ ch == '\\' }, { res: res . '\\5C'; }, {
-				if({ ch == '"' }, { res: res . '\\22'; }, {
-					if({ ch == "\n" }, { res: res . '\\0A'; }, {
-						if({ ch == "\r" }, { res: res . '\\0D'; }, {
-							if({ ch == "\t" }, { res: res . '\\09'; }, {
-								res: res . ch;
-							});
-						});
-					});
-				});
+		while({ i < len }, {
+			local Int is b: Buf:bufGetByte(b: s, idx: i, def: 0);
+			if({ b < 32 || b >= 127 || b == 34 || b == 92 }, {
+				local Int is hi: (b >> 4) & 15;
+				local Int is lo: b & 15;
+				res: res . '\\' . Buf:stringSubstring(b: hex, start: hi, end: hi + 1) . Buf:stringSubstring(b: hex, start: lo, end: lo + 1);
+			}, {
+				res: res . Buf:stringSubstring(b: s, start: i, end: i + 1);
 			});
 			i++;
 		});

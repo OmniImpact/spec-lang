@@ -26,8 +26,8 @@ Class of SysinternalCallLowerer is NetAudioCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		local String is r: self:receiverName(call: call);
-		if({ r != '' && r != 'Audio' && r != 'Socket' }, { return false; });
+		if({ !self:isFloorTarget(call: call, domain: 'Audio') && !self:isFloorTarget(call: call, domain: 'Socket') }, { return false; });
+		if({ call:name == 'init' }, { return true; });
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
 		match(on: call:name, when: [

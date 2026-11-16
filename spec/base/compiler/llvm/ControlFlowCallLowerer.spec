@@ -33,13 +33,93 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		return 10;
 	}
 
+	local Function of Boolean is isAnonArg(CallData is call, Int is idx){
+		if({ idx >= call:args:length() }, { return false; });
+		local NamedArg is na: call:args:get(index: idx);
+		return match(on: na:value, when: [
+			Expression:AnonFn: local Function of Boolean(Type is _rt, Array of Parameter is _ps, Array of Statement is _bd){ return true; },
+			else: { false }
+		]);
+	}
+
+	local Function of Boolean is isSysConditionalTarget(CallData is call){
+		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Conditional') }, { return true; });
+		local Boolean is ok: false;
+		match(on: call:target, when: [
+			Expression:Path: local Function(Array of String is segs){
+				local Int is n: segs:length();
+				if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Conditional' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+					ok: true;
+				});
+			}
+		], default: {});
+		return ok;
+	}
+
+	local Function of Boolean is isSysLoopsTarget(CallData is call){
+		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Loops') }, { return true; });
+		local Boolean is ok: false;
+		match(on: call:target, when: [
+			Expression:Path: local Function(Array of String is segs){
+				local Int is n: segs:length();
+				if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Loops' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
+					ok: true;
+				});
+			}
+		], default: {});
+		return ok;
+	}
+
+	local Function of Boolean is isBareOrConditionalTarget(CallData is call){
+		if({ self:isSysConditionalTarget(call: call) }, { return true; });
+		if({ call:bareProvider == 'Conditional' || call:bareProvider:endsWith(suffix: ':Conditional') }, { return true; });
+		local Boolean is ok: false;
+		match(on: call:target, when: [
+			Expression:Unknown: local Function(){ ok: true; },
+			Expression:Ident: local Function(String is tn){
+				if({ tn == 'Conditional' || tn == '' || (tn == 'self' && call:bareProvider == '') }, { ok: true; });
+			},
+			Expression:Path: local Function(Array of String is segs){
+				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == 'Conditional' }, { ok: true; });
+			}
+		], default: {});
+		return ok;
+	}
+
+	local Function of Boolean is isBareOrLoopsTarget(CallData is call){
+		if({ self:isSysLoopsTarget(call: call) }, { return true; });
+		if({ call:bareProvider == 'Loops' || call:bareProvider:endsWith(suffix: ':Loops') }, { return true; });
+		local Boolean is ok: false;
+		match(on: call:target, when: [
+			Expression:Unknown: local Function(){
+				if({ call:bareProvider == '' }, { ok: true; });
+			},
+			Expression:Ident: local Function(String is tn){
+				if({ tn == 'Loops' || tn == '' || (tn == 'self' && call:bareProvider == '') }, { ok: true; });
+			},
+			Expression:Path: local Function(Array of String is segs){
+				if({ segs:length() > 0 && segs:get(index: segs:length() - 1, default: '') == 'Loops' }, { ok: true; });
+			},
+			Expression:FieldAccess: local Function(Expression is obj, String is mem){
+				if({ mem == 'Loops' }, { ok: true; });
+			}
+		], default: {});
+		return ok;
+	}
+
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
 		local String is nm: call:name;
 		if({ nm == 'init' }, {
 			local Boolean is isCf: false;
 			match(on: call:target, when: [
 				Expression:Ident: local Function(String is tn){
-					if({ tn == 'Conditional' || tn == 'Loops' || tn == 'LoopControl' }, { isCf: true; });
+					if({ tn == 'LoopControl' }, { isCf: true; });
+				},
+				Expression:Path: local Function(Array of String is segs){
+					local Int is n: segs:length();
+					if({ n >= 2 && segs:get(index: n - 2, default: '') == 'sysinternal' && (segs:get(index: n - 1, default: '') == 'Conditional' || segs:get(index: n - 1, default: '') == 'Loops') }, {
+						isCf: true;
+					});
 				}
 			], default: {});
 			return isCf;
@@ -54,30 +134,24 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			], default: {});
 			if({ isLc }, { return true; });
 		});
-		if({ (nm == 'if' || nm == 'branch') && call:args:length() >= 2 }, { return true; });
-		if({ nm == 'while' && call:args:length() >= 2 }, { return true; });
-		if({ nm == 'repeat' && call:args:length() == 2 }, { return self:isBareOrLoopsTarget(call: call); });
-		if({ nm == 'until' && call:args:length() == 2 }, { return self:isBareOrLoopsTarget(call: call); });
-		if({ nm == 'loop' && call:args:length() >= 2 }, { return self:isBareOrLoopsTarget(call: call); });
-		if({ nm == 'times' && call:args:length() == 2 }, { return self:isBareOrLoopsTarget(call: call); });
-		if({ nm == 'range' && call:args:length() == 3 }, { return self:isBareOrLoopsTarget(call: call); });
-		if({ nm == 'rangeStep' && call:args:length() == 4 }, { return self:isBareOrLoopsTarget(call: call); });
-		if({ nm == 'forever' && call:args:length() == 1 }, { return self:isBareOrLoopsTarget(call: call); });
+		if({ nm == 'branch' && call:args:length() >= 2 }, { return self:isSysConditionalTarget(call: call); });
+		if({ nm == 'if' && call:args:length() >= 2 }, {
+			return self:isBareOrConditionalTarget(call: call) && self:isAnonArg(call: call, idx: 0) && self:isAnonArg(call: call, idx: 1);
+		});
+		if({ nm == 'while' && call:args:length() >= 2 }, {
+			if({ self:isSysLoopsTarget(call: call) }, { return true; });
+			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: call:args:length() - 2) && self:isAnonArg(call: call, idx: call:args:length() - 1);
+		});
+		if({ nm == 'repeat' && call:args:length() == 2 }, {
+			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: 1);
+		});
+		if({ nm == 'until' && call:args:length() == 2 }, {
+			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: 0) && self:isAnonArg(call: call, idx: 1);
+		});
+		if({ nm == 'loop' && call:args:length() >= 2 }, {
+			return self:isBareOrLoopsTarget(call: call) && self:isAnonArg(call: call, idx: call:args:length() - 2) && self:isAnonArg(call: call, idx: call:args:length() - 1);
+		});
 		return false;
-	}
-
-	local Function of Boolean is isBareOrLoopsTarget(CallData is call){
-		local Boolean is ok: false;
-		match(on: call:target, when: [
-			Expression:Unknown: local Function(){ ok: true; },
-			Expression:Ident: local Function(String is tn){
-				if({ tn == 'Loops' || tn == 'self' || tn == '' }, { ok: true; });
-			},
-			Expression:FieldAccess: local Function(Expression is obj, String is mem){
-				if({ mem == 'Loops' }, { ok: true; });
-			}
-		], default: {});
-		return ok;
 	}
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
@@ -162,20 +236,31 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	}
 
 	local Function of String is lowerCondExpr(IrBuilder is b, Expression is condExpr){
+		local String is cMark: b:nextTmp();
+		b:emit(inst: IrInst:IrCall(dst: cMark, hasDst: true, retType: IrType:I64, callee: 'spec_pool_frame', argTypes: [], args: []));
 		local String is condVal: '0';
 		match(on: condExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				b:pushScope();
 				if({ bd:length() > 0 }, {
-					local Statement is bs: bd:get(index: 0);
-					match(on: bs, when: [
-						Statement:Return: local Function(Expression is re, Boolean is hr){
-							if({ hr }, { condVal: b:lowerExpr(expr: re); });
-						},
-						Statement:Expr: local Function(Expression is es){
-							condVal: b:lowerExpr(expr: es);
-						}
-					], default: {});
+					local Int is ci: 0;
+					while({ ci < (bd:length() - 1) && !b:blkTerminated }, {
+						b:lowerStmt(stmt: bd:get(index: ci));
+						ci++;
+					});
+					if({ !b:blkTerminated }, {
+						local Statement is bs: bd:get(index: bd:length() - 1);
+						match(on: bs, when: [
+							Statement:Return: local Function(Expression is re, Boolean is hr){
+								if({ hr }, { condVal: b:lowerExpr(expr: re); });
+							},
+							Statement:Expr: local Function(Expression is es){
+								condVal: b:lowerExpr(expr: es);
+							}
+						], default: {});
+					});
 				});
+				b:popScope();
 			}
 		], default: {
 			local IrType is cty: b:irTypeFor(specType: condExpr:resolvedType);
@@ -195,13 +280,18 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				condVal: b:lowerExpr(expr: condExpr);
 			});
 		});
+		if({ !b:blkTerminated }, {
+			b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [cMark]));
+		});
 		return condVal;
 	}
 
 	local Function is lowerBlockExpr(IrBuilder is b, Expression is blkExpr){
 		match(on: blkExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				b:pushScope();
 				b:lowerStmts(stmts: bd);
+				b:popScope();
 			}
 		], default: {
 			local IrType is bty: b:irTypeFor(specType: blkExpr:resolvedType);
@@ -226,6 +316,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local String is resVal: '';
 		match(on: blkExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
+				b:pushScope();
 				if({ expectedTy != IrType:Void && bd:length() > 0 }, {
 					local Int is lastIdx: bd:length() - 1;
 					local Int is i: 0;
@@ -255,6 +346,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 				}, {
 					b:lowerStmts(stmts: bd);
 				});
+				b:popScope();
 			}
 		], default: {
 			local IrType is bty: b:irTypeFor(specType: blkExpr:resolvedType);
@@ -273,15 +365,25 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local NamedArg is elseNa: thenNa;
 		local Boolean is hasFinally: false;
 		local NamedArg is finallyNa: thenNa;
-		local Int is ai: 2;
+		local Int is ai: 0;
 		while({ ai < call:args:length() }, {
 			local NamedArg is na: call:args:get(index: ai);
-			if({ na:name == 'finally' }, {
-				hasFinally: true;
-				finallyNa: na;
+			if({ na:name == 'check' }, {
+				condNa: na;
 			}, {
-				hasElse: true;
-				elseNa: na;
+				if({ na:name == 'then' }, {
+					thenNa: na;
+				}, {
+					if({ na:name == 'finally' }, {
+						hasFinally: true;
+						finallyNa: na;
+					}, {
+						if({ na:name == 'else' || ai >= 2 }, {
+							hasElse: true;
+							elseNa: na;
+						});
+					});
+				});
 			});
 			ai++;
 		});
@@ -305,7 +407,16 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		local IrBlock is thenBlk: b:curFn:addBlock(label: thenLbl);
 		b:switchBlock(blk: thenBlk);
 		if({ yieldVal }, {
+			local String is prevRetSlot: b:inlineReturnSlot;
+			local String is prevRetEnd: b:inlineReturnEndLbl;
+			local IrType is prevRetTy: b:inlineReturnTy;
+			b:inlineReturnSlot: resSlot;
+			b:inlineReturnEndLbl: endLbl;
+			b:inlineReturnTy: resTy;
 			local String is tv: self:lowerBlockExprVal(b: b, blkExpr: thenNa:value, expectedTy: resTy);
+			b:inlineReturnSlot: prevRetSlot;
+			b:inlineReturnEndLbl: prevRetEnd;
+			b:inlineReturnTy: prevRetTy;
 			if({ !b:blkTerminated }, {
 				if({ tv != '' }, {
 					b:emit(inst: IrInst:Store(slot: resSlot, val: tv, ty: resTy));
@@ -323,7 +434,16 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			local IrBlock is elseBlk: b:curFn:addBlock(label: elseLbl);
 			b:switchBlock(blk: elseBlk);
 			if({ yieldVal }, {
+				local String is prevRetSlot2: b:inlineReturnSlot;
+				local String is prevRetEnd2: b:inlineReturnEndLbl;
+				local IrType is prevRetTy2: b:inlineReturnTy;
+				b:inlineReturnSlot: resSlot;
+				b:inlineReturnEndLbl: endLbl;
+				b:inlineReturnTy: resTy;
 				local String is ev: self:lowerBlockExprVal(b: b, blkExpr: elseNa:value, expectedTy: resTy);
+				b:inlineReturnSlot: prevRetSlot2;
+				b:inlineReturnEndLbl: prevRetEnd2;
+				b:inlineReturnTy: prevRetTy2;
 				if({ !b:blkTerminated }, {
 					if({ ev != '' }, {
 						b:emit(inst: IrInst:Store(slot: resSlot, val: ev, ty: resTy));
@@ -352,6 +472,8 @@ Class of CallLowerer is ControlFlowCallLowerer{
 	}
 
 	local Function is lowerLoopBody(IrBuilder is b, Expression is bodyExpr, String is contLbl, String is breakLbl){
+		local String is iterMark: b:nextTmp();
+		b:emit(inst: IrInst:IrCall(dst: iterMark, hasDst: true, retType: IrType:I64, callee: 'spec_pool_frame', argTypes: [], args: []));
 		local Boolean is returnsBool: false;
 		match(on: bodyExpr, when: [
 			Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
@@ -363,6 +485,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		if({ returnsBool }, {
 			local String is contVal: self:lowerBlockExprVal(b: b, blkExpr: bodyExpr, expectedTy: IrType:I1);
 			if({ !b:blkTerminated }, {
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 				if({ contVal != '' }, {
 					b:terminate(inst: IrInst:CondBr(cond: contVal, thenLabel: contLbl, elseLabel: breakLbl));
 				}, {
@@ -372,6 +495,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 		}, {
 			self:lowerBlockExpr(b: b, blkExpr: bodyExpr);
 			if({ !b:blkTerminated }, {
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [iterMark]));
 				b:terminate(inst: IrInst:Br(target: contLbl));
 			});
 		});
@@ -407,6 +531,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			varsExpr: arg0:value;
 			hasVars: true;
 		});
+		b:pushScope();
 		if({ hasVars }, {
 			match(on: varsExpr, when: [
 				Expression:AnonFn: local Function(Type is rt, Array of Parameter is ps, Array of Statement is bd){
@@ -417,25 +542,36 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						local Boolean is pArc: b:isArcSpecType(specType: p:paramType:name);
 						local String is _wtmp: b:nextTmp();
 						local String is slot: '%wvar_' . p:name . '_' . (b:tmpCounter as String);
-						b:localSlots:set(key: p:name, value: slot);
-						b:localTypes:set(key: p:name, value: pty);
-						b:localIsArc:set(key: p:name, value: pArc);
-						b:localSpecTypes:set(key: p:name, value: p:paramType:name);
-						b:localSpecTypes:set(key: p:name, value: p:paramType:name);
-						b:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
+						local Boolean is pBoxed: b:capturedNames:has(key: p:name);
+						b:bindLocal(name: p:name, slot: slot, ty: pty, isArc: pArc, specType: p:paramType:name, isBoxed: pBoxed);
+						local Boolean is pInEntry: b:curBlk:label == 'entry';
+						if({ pBoxed }, {
+							b:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:Ptr));
+						}, {
+							b:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
+						});
+						local String is val: b:emitDefaultVal(ty: pty);
 						if({ p:hasDefault }, {
-							local String is val: b:lowerExpr(expr: p:defaultExpr);
+							val: b:lowerExpr(expr: p:defaultExpr);
 							local IrType is vty: b:irTypeFor(specType: p:defaultExpr:resolvedType);
 							val: b:castIfNeeded(val: val, fromTy: vty, toTy: pty);
 							if({ val == '' }, { val: b:emitDefaultVal(ty: pty); });
 							if({ pArc && val != '' && val != 'null' }, {
 								b:emit(inst: IrInst:Retain(val: val));
 							});
-							b:emit(inst: IrInst:Store(slot: slot, val: val, ty: pty));
-						}, {
-							b:emit(inst: IrInst:Store(slot: slot, val: b:emitDefaultVal(ty: pty), ty: pty));
 						});
-						if({ pArc }, { b:ownedSlots:add(item: slot); });
+						if({ (pArc || pBoxed) && !pInEntry }, {
+							local String is prevWVal: b:nextTmp();
+							b:emit(inst: IrInst:Load(dst: prevWVal, slot: slot, ty: IrType:Ptr));
+							b:emit(inst: IrInst:Release(val: prevWVal));
+						});
+						if({ pBoxed }, {
+							local String is boxPtr: b:emitNewBox(initVal: val, ty: pty, isArc: pArc);
+							b:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
+						}, {
+							b:emit(inst: IrInst:Store(slot: slot, val: val, ty: pty));
+						});
+						if({ pArc || pBoxed }, { b:ownedSlots:add(item: slot); });
 						pi++;
 					});
 					if({ bd:length() > 0 }, {
@@ -462,6 +598,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
 		b:switchBlock(blk: endBlk);
+		b:popScope();
 	}
 
 	local Function is lowerRepeatCall(IrBuilder is b, CallData is call){
@@ -596,6 +733,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 			});
 		});
 
+		b:pushScope();
 		if({ hasVars }, {
 			match(on: varsExpr, when: [
 				Expression:AnonFn: local Function(Type is rt, Array of Parameter is params, Array of Statement is bd){
@@ -605,18 +743,36 @@ Class of CallLowerer is ControlFlowCallLowerer{
 						local IrType is vty: b:irTypeFor(specType: p:paramType:name);
 						local String is _vtmp: b:nextTmp();
 						local String is slot: '%lvar_' . p:name . '_' . (b:tmpCounter as String);
-						b:localSlots:set(key: p:name, value: slot);
-						b:localTypes:set(key: p:name, value: vty);
-						b:localIsArc:set(key: p:name, value: b:isArcSpecType(specType: p:paramType:name));
-						b:localSpecTypes:set(key: p:name, value: p:paramType:name);
-						b:localSpecTypes:set(key: p:name, value: p:paramType:name);
-						b:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
+						local Boolean is vArc: b:isArcSpecType(specType: p:paramType:name);
+						local Boolean is vBoxed: b:capturedNames:has(key: p:name);
+						local Boolean is vInEntry: b:curBlk:label == 'entry';
+						b:bindLocal(name: p:name, slot: slot, ty: vty, isArc: vArc, specType: p:paramType:name, isBoxed: vBoxed);
+						if({ vBoxed }, {
+							b:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:Ptr));
+						}, {
+							b:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
+						});
+						local String is ival: b:emitDefaultVal(ty: vty);
 						if({ p:hasDefault }, {
 							local IrType is ity: b:irTypeFor(specType: p:defaultExpr:resolvedType);
-							local String is ival: b:lowerExpr(expr: p:defaultExpr);
+							ival: b:lowerExpr(expr: p:defaultExpr);
 							ival: b:castIfNeeded(val: ival, fromTy: ity, toTy: vty);
+							if({ vArc && ival != '' && ival != 'null' }, {
+								b:emit(inst: IrInst:Retain(val: ival));
+							});
+						});
+						if({ (vArc || vBoxed) && !vInEntry }, {
+							local String is prevLVal: b:nextTmp();
+							b:emit(inst: IrInst:Load(dst: prevLVal, slot: slot, ty: IrType:Ptr));
+							b:emit(inst: IrInst:Release(val: prevLVal));
+						});
+						if({ vBoxed }, {
+							local String is boxPtr: b:emitNewBox(initVal: ival, ty: vty, isArc: vArc);
+							b:emit(inst: IrInst:Store(slot: slot, val: boxPtr, ty: IrType:Ptr));
+						}, {
 							b:emit(inst: IrInst:Store(slot: slot, val: ival, ty: vty));
 						});
+						if({ vArc || vBoxed }, { b:ownedSlots:add(item: slot); });
 						pi++;
 					});
 				}
@@ -640,6 +796,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 
 		local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
 		b:switchBlock(blk: endBlk);
+		b:popScope();
 	}
 
 	local Function is bindWorkerParam(IrBuilder is b, Expression is workerExpr, String is val){
@@ -649,10 +806,7 @@ Class of CallLowerer is ControlFlowCallLowerer{
 					local Parameter is p: ps:get(index: 0);
 					local String is _ptmp: b:nextTmp();
 					local String is slot: '%lidx_' . p:name . '_' . (b:tmpCounter as String);
-					b:localSlots:set(key: p:name, value: slot);
-					b:localTypes:set(key: p:name, value: IrType:I64);
-					b:localIsArc:set(key: p:name, value: false);
-					b:localSpecTypes:set(key: p:name, value: 'Int');
+					b:bindLocal(name: p:name, slot: slot, ty: IrType:I64, isArc: false, specType: 'Int', isBoxed: false);
 					b:emit(inst: IrInst:Alloca(slot: slot, ty: IrType:I64));
 					b:emit(inst: IrInst:Store(slot: slot, val: val, ty: IrType:I64));
 				});

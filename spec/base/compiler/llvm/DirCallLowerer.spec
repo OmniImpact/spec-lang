@@ -43,13 +43,12 @@ Class of SysinternalCallLowerer is DirCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		local String is r: self:receiverName(call: call);
-		if({ r != '' && r != 'Dir' }, { return false; });
+		if({ !self:isFloorTarget(call: call, domain: 'Dir') }, { return false; });
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
 		match(on: call:name, when: [
-			'init': { ok: r == 'Dir'; },
-			['dirList', 'dir_list_cb', 'fileSize']: { ok: argc >= 1; },
+			'init': { ok: true; },
+			['dir_list', 'dir_list_cb', 'fileSize']: { ok: argc >= 1; },
 			'exeDir': { ok: true; }
 		]);
 		return ok;
@@ -59,17 +58,23 @@ Class of SysinternalCallLowerer is DirCallLowerer{
 		local String is res: '0';
 		match(on: call:name, when: [
 			'init': { res: 'null'; },
-			['dirList', 'dir_list_cb']: {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
-				if({ errCb == 'null' }, { errCb: self:namedOrNull(b: b, call: call, argName: 'on_error'); });
+			'dir_list': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_dir_list', argTypes: [IrType:Ptr], args: [p]);
+				b:emitClaimPool(val: res);
+			},
+			'dir_list_cb': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 1, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_dir_list_cb', argTypes: [IrType:Ptr, IrType:Ptr], args: [p, errCb]);
+				b:emitClaimPool(val: res);
 			},
 			'exeDir': {
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_exe_dir', argTypes: [], args: []);
+				b:emitClaimPool(val: res);
 			},
 			'fileSize': {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_file_size', argTypes: [IrType:Ptr], args: [p]);
 			}
 		]);

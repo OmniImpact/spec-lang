@@ -49,8 +49,8 @@ Class of CallLowerer is MapCallLowerer{
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
 		match(on: call:name, when: [
-			['length', 'keys', 'isEmpty', 'clear', 'values']: { ok: true; },
-			['has', 'get', 'getString', 'getInt', 'getFloat', 'getBoolean', 'getBool', 'remove', 'each', 'any', 'count', 'filter', 'merge']: { ok: argc >= 1; },
+			['length', 'keys']: { ok: true; },
+			['has', 'get', 'getString', 'getFloat', 'remove', 'each', 'any', 'count', 'filter']: { ok: argc >= 1; },
 			'set': { ok: argc >= 2; }
 		]);
 		return ok;
@@ -59,7 +59,7 @@ Class of CallLowerer is MapCallLowerer{
 	local Function of String is keySuffix(String is recvType, String is kSpecType){
 		if({ kSpecType == 'Int' || kSpecType == 'Boolean' || recvType:startsWith(prefix: 'Map of Int to ') || recvType:startsWith(prefix: 'Map:Int:') || recvType:startsWith(prefix: 'Map of Boolean to ') || recvType:startsWith(prefix: 'Map:Boolean:') }, { return '_int'; });
 		if({ kSpecType == 'Float' || recvType:startsWith(prefix: 'Map of Float to ') || recvType:startsWith(prefix: 'Map:Float:') }, { return '_flt'; });
-		if({ kSpecType == 'String' || recvType == 'Map' || recvType:startsWith(prefix: 'Map of String to ') || recvType:startsWith(prefix: 'Map:String:') || recvType:startsWith(prefix: 'Map of Any to ') || recvType:startsWith(prefix: 'Map:Any:') }, { return ''; });
+		if({ kSpecType == 'String' || kSpecType == 'K' || kSpecType == 'Any' || recvType == 'Map' || recvType:startsWith(prefix: 'Map of String to ') || recvType:startsWith(prefix: 'Map:String:') || recvType:startsWith(prefix: 'Map of K ') || recvType:startsWith(prefix: 'Map:K:') || recvType:startsWith(prefix: 'Map of Any to ') || recvType:startsWith(prefix: 'Map:Any:') }, { return ''; });
 		return '_obj';
 	}
 
@@ -89,10 +89,17 @@ Class of CallLowerer is MapCallLowerer{
 				local String is vSpec: resTy:substring(start: toIdx + 4, end: resTy:length());
 				if({ b:isArcSpecType(specType: vSpec) }, { vk: 1; });
 			}, {
-				if({ (resTy == 'Map' || resTy == '') && b:expectedMapValType != '' }, {
-					if({ b:isArcSpecType(specType: b:expectedMapValType) }, { vk: 1; });
+				if({ resTy:startsWith(prefix: 'Map:') }, {
+					local String is afterMap: resTy:substring(start: 4, end: resTy:length());
+					local Int is cIdx: afterMap:indexOf(search: ':', default: -1);
+					if({ cIdx >= 0 }, {
+						local String is vSpec2: afterMap:substring(start: cIdx + 1, end: afterMap:length());
+						if({ b:isArcSpecType(specType: vSpec2) }, { vk: 1; });
+					});
 				}, {
-					if({ resTy == 'Map' || resTy == '' }, { vk: 1; });
+					if({ (resTy == 'Map' || resTy == '') && b:expectedMapValType != '' }, {
+						if({ b:isArcSpecType(specType: b:expectedMapValType) }, { vk: 1; });
+					});
 				});
 			});
 			if({ kk != 0 || vk != 0 }, {
@@ -165,92 +172,6 @@ Class of CallLowerer is MapCallLowerer{
 				});
 				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kv, vp]));
 			},
-			'getInt': {
-				local NamedArg is na0: call:args:get(index: 0);
-				local Expression is kvExpr: na0:value;
-				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
-				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: IrType:Ptr);
-				local String is defInt: '0';
-				if({ call:args:length() >= 2 }, {
-					local NamedArg is na1: call:args:get(index: 1);
-					defInt: b:castIfNeeded(val: b:lowerExpr(expr: na1:value), fromTy: b:irTypeFor(specType: na1:value:resolvedType), toTy: IrType:I64);
-				}, {
-					local String is defTmp: b:nextTmp();
-					b:emit(inst: IrInst:ConstInt(dst: defTmp, value: 0));
-					defInt: defTmp;
-				});
-				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [mRecv, kv, 'null']));
-				local String is base10: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: base10, value: 10));
-				local String is parsed: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: parsed, hasDst: true, retType: IrType:I64, callee: 'String_parseInt', argTypes: [IrType:Ptr, IrType:I64, IrType:I64], args: [raw, base10, defInt]));
-				res: parsed;
-			},
-			['getBool', 'getBoolean']: {
-				local NamedArg is na0: call:args:get(index: 0);
-				local Expression is kvExpr: na0:value;
-				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
-				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: IrType:Ptr);
-				local String is defB: '0';
-				if({ call:args:length() >= 2 }, {
-					local NamedArg is na1: call:args:get(index: 1);
-					defB: b:castIfNeeded(val: b:lowerExpr(expr: na1:value), fromTy: b:irTypeFor(specType: na1:value:resolvedType), toTy: IrType:I1);
-				}, {
-					local String is defTmp: b:nextTmp();
-					b:emit(inst: IrInst:ConstBool(dst: defTmp, value: false));
-					defB: defTmp;
-				});
-				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [mRecv, kv, 'null']));
-				local String is resSlot: '%mbool_r_' . (b:nextTmp());
-				resSlot: '%mbool_r_' . (b:tmpCounter as String);
-				b:emit(inst: IrInst:Alloca(slot: resSlot, ty: IrType:I1));
-				b:emit(inst: IrInst:Store(slot: resSlot, val: defB, ty: IrType:I1));
-				local String is nonNull: b:nextTmp();
-				b:emit(inst: IrInst:Cmp(dst: nonNull, op: '!=', lhs: raw, rhs: 'null', ty: IrType:Ptr));
-				local String is chkTrueLbl: b:nextLabel(prefix: 'mbool_t');
-				local String is chkFalseLbl: b:nextLabel(prefix: 'mbool_f');
-				local String is setTrueLbl: b:nextLabel(prefix: 'mbool_st');
-				local String is setFalseLbl: b:nextLabel(prefix: 'mbool_sf');
-				local String is endLbl: b:nextLabel(prefix: 'mbool_end');
-				b:terminate(inst: IrInst:CondBr(cond: nonNull, thenLabel: chkTrueLbl, elseLabel: endLbl));
-
-				local IrBlock is chkTrueBlk: b:curFn:addBlock(label: chkTrueLbl);
-				b:switchBlock(blk: chkTrueBlk);
-				local String is trueStr: b:nextTmp();
-				b:emit(inst: IrInst:ConstString(dst: trueStr, strId: b:mod:internStringLiteral(value: 'true')));
-				local String is isT: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: isT, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [raw, trueStr]));
-				b:terminate(inst: IrInst:CondBr(cond: isT, thenLabel: setTrueLbl, elseLabel: chkFalseLbl));
-
-				local IrBlock is setTrueBlk: b:curFn:addBlock(label: setTrueLbl);
-				b:switchBlock(blk: setTrueBlk);
-				local String is tv: b:nextTmp();
-				b:emit(inst: IrInst:ConstBool(dst: tv, value: true));
-				b:emit(inst: IrInst:Store(slot: resSlot, val: tv, ty: IrType:I1));
-				b:terminate(inst: IrInst:Br(target: endLbl));
-
-				local IrBlock is chkFalseBlk: b:curFn:addBlock(label: chkFalseLbl);
-				b:switchBlock(blk: chkFalseBlk);
-				local String is falseStr: b:nextTmp();
-				b:emit(inst: IrInst:ConstString(dst: falseStr, strId: b:mod:internStringLiteral(value: 'false')));
-				local String is isF: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: isF, hasDst: true, retType: IrType:I1, callee: 'spec_string_equals', argTypes: [IrType:Ptr, IrType:Ptr], args: [raw, falseStr]));
-				b:terminate(inst: IrInst:CondBr(cond: isF, thenLabel: setFalseLbl, elseLabel: endLbl));
-
-				local IrBlock is setFalseBlk: b:curFn:addBlock(label: setFalseLbl);
-				b:switchBlock(blk: setFalseBlk);
-				local String is fv: b:nextTmp();
-				b:emit(inst: IrInst:ConstBool(dst: fv, value: false));
-				b:emit(inst: IrInst:Store(slot: resSlot, val: fv, ty: IrType:I1));
-				b:terminate(inst: IrInst:Br(target: endLbl));
-
-				local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
-				b:switchBlock(blk: endBlk);
-				res: b:nextTmp();
-				b:emit(inst: IrInst:Load(dst: res, slot: resSlot, ty: IrType:I1));
-			},
 			['get', 'getString', 'getFloat']: {
 				local NamedArg is na0: call:args:get(index: 0);
 				local Expression is kvExpr: na0:value;
@@ -270,6 +191,12 @@ Class of CallLowerer is MapCallLowerer{
 					}, {
 						defV: dv;
 					});
+				}, {
+					if({ call:name == 'getString' || expr:resolvedType == 'String' }, {
+						defV: b:nextTmp();
+						local Int is esid: b:mod:internStringLiteral(value: '');
+						b:emit(inst: IrInst:ConstString(dst: defV, strId: esid));
+					});
 				});
 				local String is raw: b:nextTmp();
 				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kv, defV]));
@@ -281,142 +208,6 @@ Class of CallLowerer is MapCallLowerer{
 				}, {
 					res: raw;
 				});
-			},
-			'isEmpty': {
-				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_map_length', argTypes: [IrType:Ptr], args: [mRecv]));
-				local String is zeroV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
-				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:Cmp(dst: dst, op: '==', lhs: lenV, rhs: zeroV, ty: IrType:I64));
-				res: dst;
-			},
-			'clear': {
-				local String is keysArr: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: keysArr, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_keys', argTypes: [IrType:Ptr], args: [mRecv]));
-				b:emitClaimPool(val: keysArr);
-				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [keysArr]));
-				local String is idxSlot: '%mclr_i_' . (b:nextTmp());
-				idxSlot: '%mclr_i_' . (b:tmpCounter as String);
-				b:emit(inst: IrInst:Alloca(slot: idxSlot, ty: IrType:I64));
-				local String is zeroV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
-				b:emit(inst: IrInst:Store(slot: idxSlot, val: zeroV, ty: IrType:I64));
-				local String is hdrLbl: b:nextLabel(prefix: 'mclr_hdr');
-				local String is bodyLbl: b:nextLabel(prefix: 'mclr_body');
-				local String is endLbl: b:nextLabel(prefix: 'mclr_end');
-				b:terminate(inst: IrInst:Br(target: hdrLbl));
-				local IrBlock is hdrBlk: b:curFn:addBlock(label: hdrLbl);
-				b:switchBlock(blk: hdrBlk);
-				local String is curI: b:nextTmp();
-				b:emit(inst: IrInst:Load(dst: curI, slot: idxSlot, ty: IrType:I64));
-				local String is condV: b:nextTmp();
-				b:emit(inst: IrInst:Cmp(dst: condV, op: '<', lhs: curI, rhs: lenV, ty: IrType:I64));
-				b:terminate(inst: IrInst:CondBr(cond: condV, thenLabel: bodyLbl, elseLabel: endLbl));
-				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
-				b:switchBlock(blk: bodyBlk);
-				local String is rawK: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawK, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [keysArr, curI]));
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:I1, callee: 'spec_map_remove', argTypes: [IrType:Ptr, IrType:Ptr], args: [mRecv, rawK]));
-				local String is oneV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: oneV, value: 1));
-				local String is nextI: b:nextTmp();
-				b:emit(inst: IrInst:BinOp(dst: nextI, op: '+', lhs: curI, rhs: oneV, ty: IrType:I64));
-				b:emit(inst: IrInst:Store(slot: idxSlot, val: nextI, ty: IrType:I64));
-				b:terminate(inst: IrInst:Br(target: hdrLbl));
-				local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
-				b:switchBlock(blk: endBlk);
-			},
-			'values': {
-				local String is outArr: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: outArr, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new_object', argTypes: [], args: []));
-				b:emitClaimPool(val: outArr);
-				local String is keysArr: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: keysArr, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_keys', argTypes: [IrType:Ptr], args: [mRecv]));
-				b:emitClaimPool(val: keysArr);
-				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [keysArr]));
-				local String is idxSlot: '%mval_i_' . (b:nextTmp());
-				idxSlot: '%mval_i_' . (b:tmpCounter as String);
-				b:emit(inst: IrInst:Alloca(slot: idxSlot, ty: IrType:I64));
-				local String is zeroV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
-				b:emit(inst: IrInst:Store(slot: idxSlot, val: zeroV, ty: IrType:I64));
-				local String is hdrLbl: b:nextLabel(prefix: 'mval_hdr');
-				local String is bodyLbl: b:nextLabel(prefix: 'mval_body');
-				local String is endLbl: b:nextLabel(prefix: 'mval_end');
-				b:terminate(inst: IrInst:Br(target: hdrLbl));
-				local IrBlock is hdrBlk: b:curFn:addBlock(label: hdrLbl);
-				b:switchBlock(blk: hdrBlk);
-				local String is curI: b:nextTmp();
-				b:emit(inst: IrInst:Load(dst: curI, slot: idxSlot, ty: IrType:I64));
-				local String is condV: b:nextTmp();
-				b:emit(inst: IrInst:Cmp(dst: condV, op: '<', lhs: curI, rhs: lenV, ty: IrType:I64));
-				b:terminate(inst: IrInst:CondBr(cond: condV, thenLabel: bodyLbl, elseLabel: endLbl));
-				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
-				b:switchBlock(blk: bodyBlk);
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: '');
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
-				local String is rawK: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawK, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [keysArr, curI]));
-				local String is kCast: b:castIfNeeded(val: rawK, fromTy: IrType:Ptr, toTy: kArgTy);
-				local String is rawV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawV, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kCast, 'null']));
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add', argTypes: [IrType:Ptr, IrType:Ptr], args: [outArr, rawV]));
-				local String is oneV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: oneV, value: 1));
-				local String is nextI: b:nextTmp();
-				b:emit(inst: IrInst:BinOp(dst: nextI, op: '+', lhs: curI, rhs: oneV, ty: IrType:I64));
-				b:emit(inst: IrInst:Store(slot: idxSlot, val: nextI, ty: IrType:I64));
-				b:terminate(inst: IrInst:Br(target: hdrLbl));
-				local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
-				b:switchBlock(blk: endBlk);
-				res: outArr;
-			},
-			'merge': {
-				local NamedArg is na0: call:args:get(index: 0);
-				local String is otherRecv: b:lowerExpr(expr: na0:value);
-				local String is keysArr: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: keysArr, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_keys', argTypes: [IrType:Ptr], args: [otherRecv]));
-				b:emitClaimPool(val: keysArr);
-				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [keysArr]));
-				local String is idxSlot: '%mmrg_i_' . (b:nextTmp());
-				idxSlot: '%mmrg_i_' . (b:tmpCounter as String);
-				b:emit(inst: IrInst:Alloca(slot: idxSlot, ty: IrType:I64));
-				local String is zeroV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
-				b:emit(inst: IrInst:Store(slot: idxSlot, val: zeroV, ty: IrType:I64));
-				local String is hdrLbl: b:nextLabel(prefix: 'mmrg_hdr');
-				local String is bodyLbl: b:nextLabel(prefix: 'mmrg_body');
-				local String is endLbl: b:nextLabel(prefix: 'mmrg_end');
-				b:terminate(inst: IrInst:Br(target: hdrLbl));
-				local IrBlock is hdrBlk: b:curFn:addBlock(label: hdrLbl);
-				b:switchBlock(blk: hdrBlk);
-				local String is curI: b:nextTmp();
-				b:emit(inst: IrInst:Load(dst: curI, slot: idxSlot, ty: IrType:I64));
-				local String is condV: b:nextTmp();
-				b:emit(inst: IrInst:Cmp(dst: condV, op: '<', lhs: curI, rhs: lenV, ty: IrType:I64));
-				b:terminate(inst: IrInst:CondBr(cond: condV, thenLabel: bodyLbl, elseLabel: endLbl));
-				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
-				b:switchBlock(blk: bodyBlk);
-				local String is kSuf: self:keySuffix(recvType: call:target:resolvedType, kSpecType: '');
-				local IrType is kArgTy: self:keyIrType(kSuf: kSuf);
-				local String is rawK: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawK, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [keysArr, curI]));
-				local String is kCast: b:castIfNeeded(val: rawK, fromTy: IrType:Ptr, toTy: kArgTy);
-				local String is rawV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawV, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [otherRecv, kCast, 'null']));
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set' . kSuf . '_any', argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kCast, rawV]));
-				local String is oneV: b:nextTmp();
-				b:emit(inst: IrInst:ConstInt(dst: oneV, value: 1));
-				local String is nextI: b:nextTmp();
-				b:emit(inst: IrInst:BinOp(dst: nextI, op: '+', lhs: curI, rhs: oneV, ty: IrType:I64));
-				b:emit(inst: IrInst:Store(slot: idxSlot, val: nextI, ty: IrType:I64));
-				b:terminate(inst: IrInst:Br(target: hdrLbl));
-				local IrBlock is endBlk: b:curFn:addBlock(label: endLbl);
-				b:switchBlock(blk: endBlk);
 			},
 			['each', 'any', 'count', 'filter']: {
 				local NamedArg is na0: call:args:get(index: 0);

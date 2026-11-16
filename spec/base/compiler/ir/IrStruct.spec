@@ -40,7 +40,8 @@ Class is IrStruct{
 		local Int is idx: self:fieldNames:length();
 		self:fieldNames:add(item: name);
 		self:fieldTypes:add(item: ty);
-		self:fieldIsArc:add(item: ty == IrType:Ptr);
+		local Boolean is isPtr: ty == IrType:Ptr;
+		self:fieldIsArc:add(item: isPtr);
 		return idx;
 	}
 

@@ -43,14 +43,13 @@ Class of SysinternalCallLowerer is FileCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		local String is r: self:receiverName(call: call);
-		if({ r != '' && r != 'File' }, { return false; });
+		if({ !self:isFloorTarget(call: call, domain: 'File') }, { return false; });
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
 		match(on: call:name, when: [
-			'init': { ok: r == 'File'; },
-			['fileExists', 'file_exists', 'fileRemove', 'file_remove_cb', 'fileRead', 'file_read', 'file_read_async', 'file_temp_cb']: { ok: argc >= 1; },
-			['fileWrite', 'file_write', 'file_append', 'file_write_async']: { ok: argc >= 2; }
+			'init': { ok: true; },
+			['file_exists', 'file_remove', 'file_remove_cb', 'file_read', 'file_read_async', 'file_temp', 'file_temp_cb']: { ok: argc >= 1; },
+			['file_write', 'file_append', 'file_write_async']: { ok: argc >= 2; }
 		]);
 		return ok;
 	}
@@ -59,59 +58,65 @@ Class of SysinternalCallLowerer is FileCallLowerer{
 		local String is res: '0';
 		match(on: call:name, when: [
 			'init': { res: 'null'; },
-			['fileExists', 'file_exists']: {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
+			'file_exists': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_exists', argTypes: [IrType:Ptr], args: [p]);
 			},
-			['fileRemove', 'file_remove_cb']: {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'on_error');
-				if({ errCb == 'null' }, { errCb: self:namedOrNull(b: b, call: call, argName: 'onError'); });
+			'file_remove': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_remove', argTypes: [IrType:Ptr], args: [p]);
+			},
+			'file_remove_cb': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 1, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_remove_cb', argTypes: [IrType:Ptr, IrType:Ptr], args: [p, errCb]);
 			},
-			['fileRead', 'file_read']: {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is defV: self:namedOrNull(b: b, call: call, argName: 'default');
-				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'onSuccess');
-				if({ okCb == 'null' }, { okCb: self:namedOrNull(b: b, call: call, argName: 'on_success'); });
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
-				if({ errCb == 'null' }, { errCb: self:namedOrNull(b: b, call: call, argName: 'on_error'); });
+			'file_read': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is defV: self:lowerNamedArg(b: b, call: call, argName: 'default', posIdx: 1, defVal: 'null');
+				local String is okCb: self:lowerNamedArg(b: b, call: call, argName: 'on_success', posIdx: 2, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 3, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_file_read', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, defV, okCb, errCb]);
+				b:emitClaimPool(val: res);
 			},
 			'file_read_async': {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is defV: self:namedOrNull(b: b, call: call, argName: 'default');
-				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'on_success');
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'on_error');
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is defV: self:lowerNamedArg(b: b, call: call, argName: 'default', posIdx: 1, defVal: 'null');
+				local String is okCb: self:lowerNamedArg(b: b, call: call, argName: 'on_success', posIdx: 2, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 3, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_file_read_async', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, defV, okCb, errCb]);
 			},
-			['fileWrite', 'file_write']: {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is c: self:lowerArg(b: b, call: call, idx: 1);
-				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'onSuccess');
-				if({ okCb == 'null' }, { okCb: self:namedOrNull(b: b, call: call, argName: 'on_success'); });
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'onError');
-				if({ errCb == 'null' }, { errCb: self:namedOrNull(b: b, call: call, argName: 'on_error'); });
+			'file_write': {
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is c: self:lowerNamedArg(b: b, call: call, argName: 'content', posIdx: 1, defVal: 'null');
+				local String is okCb: self:lowerNamedArg(b: b, call: call, argName: 'on_success', posIdx: 2, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 3, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_write', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, c, okCb, errCb]);
 			},
 			'file_append': {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is c: self:lowerArg(b: b, call: call, idx: 1);
-				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'on_success');
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'on_error');
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is c: self:lowerNamedArg(b: b, call: call, argName: 'content', posIdx: 1, defVal: 'null');
+				local String is okCb: self:lowerNamedArg(b: b, call: call, argName: 'on_success', posIdx: 2, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 3, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_file_append', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, c, okCb, errCb]);
 			},
 			'file_write_async': {
-				local String is p: self:lowerArg(b: b, call: call, idx: 0);
-				local String is c: self:lowerArg(b: b, call: call, idx: 1);
-				local String is okCb: self:namedOrNull(b: b, call: call, argName: 'on_success');
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'on_error');
+				local String is p: self:lowerNamedArg(b: b, call: call, argName: 'path', posIdx: 0, defVal: 'null');
+				local String is c: self:lowerNamedArg(b: b, call: call, argName: 'content', posIdx: 1, defVal: 'null');
+				local String is okCb: self:lowerNamedArg(b: b, call: call, argName: 'on_success', posIdx: 2, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 3, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_file_write_async', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [p, c, okCb, errCb]);
 			},
+			'file_temp': {
+				local String is tpl: self:lowerNamedArg(b: b, call: call, argName: 'template', posIdx: 0, defVal: 'null');
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_file_temp', argTypes: [IrType:Ptr], args: [tpl]);
+				b:emitClaimPool(val: res);
+			},
 			'file_temp_cb': {
-				local String is tpl: self:lowerArg(b: b, call: call, idx: 0);
-				local String is errCb: self:namedOrNull(b: b, call: call, argName: 'on_error');
+				local String is tpl: self:lowerNamedArg(b: b, call: call, argName: 'template', posIdx: 0, defVal: 'null');
+				local String is errCb: self:lowerNamedArg(b: b, call: call, argName: 'on_error', posIdx: 1, defVal: 'null');
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_file_temp_cb', argTypes: [IrType:Ptr, IrType:Ptr], args: [tpl, errCb]);
+				b:emitClaimPool(val: res);
 			}
 		]);
 		return res;
