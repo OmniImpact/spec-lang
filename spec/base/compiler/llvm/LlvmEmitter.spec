@@ -43,15 +43,6 @@ declare i64 @spec_pool_frame()
 declare void @spec_pool_release_to(i64)
 declare ptr @spec_claim_pool(ptr)
 declare ptr @spec_rt_closure_new(ptr, ptr, ptr)
-declare ptr @spec_rt_box_new(i64, i1)
-declare ptr @spec_rt_box_get(ptr)
-declare void @spec_rt_box_set(ptr, ptr)
-declare ptr @spec_rt_box_to_string(ptr)
-declare ptr @spec_box_new(i64, i1)
-declare ptr @spec_box_get(ptr)
-declare void @spec_box_set(ptr, ptr)
-declare i1 @spec_box_is_arc(ptr)
-declare ptr @spec_box_to_string(ptr)
 declare ptr @spec_arena_new()
 declare void @spec_arena_drain(ptr)
 declare i64 @spec_arena_used(ptr)
@@ -304,6 +295,115 @@ define internal i64 @__spec_mem_obj_to_addr(ptr %obj) alwaysinline {
 define internal ptr @__spec_mem_addr_to_obj(i64 %addr) alwaysinline {
   %p = inttoptr i64 %addr to ptr
   ret ptr %p
+}
+define internal i64 @__spec_mem_retain_addr(i64 %addr) alwaysinline {
+  %nz = icmp ne i64 %addr, 0
+  br i1 %nz, label %do_ret, label %done
+do_ret:
+  %p = inttoptr i64 %addr to ptr
+  call ptr @spec_rt_retain(ptr %p)
+  br label %done
+done:
+  ret i64 %addr
+}
+define internal void @__spec_mem_release_addr(i64 %addr) alwaysinline {
+  %nz = icmp ne i64 %addr, 0
+  br i1 %nz, label %do_rel, label %done
+do_rel:
+  %p = inttoptr i64 %addr to ptr
+  call void @spec_rt_release(ptr %p)
+  br label %done
+done:
+  ret void
+}
+define internal i64 @__spec_mem_claim_pool_addr(i64 %addr) alwaysinline {
+  %nz = icmp ne i64 %addr, 0
+  br i1 %nz, label %do_cl, label %done
+do_cl:
+  %p = inttoptr i64 %addr to ptr
+  call ptr @spec_claim_pool(ptr %p)
+  br label %done
+done:
+  ret i64 %addr
+}
+%struct.SpecBox = type { i64, i1 }
+define internal void @__spec_box_destroy(ptr %self) {
+  %isnull = icmp eq ptr %self, null
+  br i1 %isnull, label %done, label %chk
+chk:
+  %ap = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 1
+  %is_arc = load i1, ptr %ap
+  br i1 %is_arc, label %rel, label %done
+rel:
+  %vp = getelementptr inbounds %struct.SpecBox, ptr %self, i32 0, i32 0
+  %vi = load i64, ptr %vp
+  %nz = icmp ne i64 %vi, 0
+  br i1 %nz, label %do_rel, label %done
+do_rel:
+  %vptr = inttoptr i64 %vi to ptr
+  call void @spec_rt_release(ptr %vptr)
+  store i64 0, ptr %vp
+  br label %done
+done:
+  ret void
+}
+define internal ptr @spec_rt_box_new(i64 %val, i1 %is_arc) {
+  %b = call ptr @spec_rt_alloc(i64 16, ptr @__spec_box_destroy)
+  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0
+  store i64 %val, ptr %vp
+  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1
+  store i1 %is_arc, ptr %ap
+  ret ptr %b
+}
+define internal ptr @spec_rt_box_get(ptr %b) {
+  %isnull = icmp eq ptr %b, null
+  br i1 %isnull, label %null_ret, label %ok
+null_ret:
+  ret ptr null
+ok:
+  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0
+  %vi = load i64, ptr %vp
+  %vptr = inttoptr i64 %vi to ptr
+  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1
+  %is_arc = load i1, ptr %ap
+  %nz = icmp ne i64 %vi, 0
+  %do_arc = and i1 %is_arc, %nz
+  br i1 %do_arc, label %arc, label %done
+arc:
+  call ptr @spec_rt_retain(ptr %vptr)
+  call ptr @spec_claim_pool(ptr %vptr)
+  br label %done
+done:
+  ret ptr %vptr
+}
+define internal void @spec_rt_box_set(ptr %b, ptr %new_val) {
+  %isnull = icmp eq ptr %b, null
+  br i1 %isnull, label %done, label %ok
+ok:
+  %ap = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 1
+  %is_arc = load i1, ptr %ap
+  %vp = getelementptr inbounds %struct.SpecBox, ptr %b, i32 0, i32 0
+  %new_i = ptrtoint ptr %new_val to i64
+  br i1 %is_arc, label %arc, label %store_val
+arc:
+  %nn = icmp ne ptr %new_val, null
+  br i1 %nn, label %do_ret, label %chk_old
+do_ret:
+  call ptr @spec_rt_retain(ptr %new_val)
+  br label %chk_old
+chk_old:
+  %old_i = load i64, ptr %vp
+  %onz = icmp ne i64 %old_i, 0
+  br i1 %onz, label %do_rel, label %store_val
+do_rel:
+  %old_p = inttoptr i64 %old_i to ptr
+  call void @spec_rt_release(ptr %old_p)
+  br label %store_val
+store_val:
+  store i64 %new_i, ptr %vp
+  br label %done
+done:
+  ret void
 }
 define internal i64 @__spec_mem_float_to_bits(double %v) alwaysinline {
   %b = bitcast double %v to i64

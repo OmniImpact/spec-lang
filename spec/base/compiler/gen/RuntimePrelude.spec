@@ -119,7 +119,6 @@ typedef struct SpecLoopControl SpecLoopControl;
 typedef struct Loop Loop;
 typedef struct SpecArena SpecArena;
 typedef struct SpecVec SpecVec;
-typedef struct SpecBox SpecBox;
 
 /* Forward Prototypes of Runtime API */
 void spec_panic(const char* msg);
@@ -833,79 +832,6 @@ static inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_
     c->env = env;
     c->destroy_env = destroy_env;
     return c;
-}
-
-/* SpecBox: Heap-allocated reference cell for shared mutable closure captures */
-typedef struct SpecBox {
-    int64_t val;
-    bool is_arc;
-} SpecBox;
-
-static inline void spec_box_destroy(void* self) {
-    SpecBox* b = (SpecBox*)self;
-    if (b) {
-        if (b->is_arc && b->val) {
-            spec_release((void*)b->val);
-            b->val = 0;
-        }
-    }
-}
-
-static inline SpecBox* _spec_box_new(int64_t val, bool is_arc) {
-    SpecBox* b = (SpecBox*)spec_alloc(sizeof(SpecBox), spec_box_destroy);
-    b->val = val;
-    b->is_arc = is_arc;
-    return b;
-}
-#define spec_box_new(val, is_arc) _spec_box_new((int64_t)(intptr_t)(val), (is_arc))
-
-static inline void* spec_box_get(SpecBox* b) {
-    if (!b) return NULL;
-    void* val = (void*)b->val;
-    if (b->is_arc && val) {
-        spec_retain(val);
-        spec_claim_pool(val);
-    }
-    return val;
-}
-
-static inline void spec_box_set(SpecBox* b, void* new_val) {
-    if (!b) return;
-    if (b->is_arc) {
-        if (new_val) spec_retain(new_val);
-        if (b->val) spec_release((void*)b->val);
-    }
-    b->val = (int64_t)new_val;
-}
-
-static inline void spec_box_set_transfer(SpecBox* b, void* new_val) {
-    if (!b) return;
-    if (b->is_arc) {
-        if (b->val) spec_release((void*)b->val);
-    }
-    b->val = (int64_t)new_val;
-}
-
-static inline bool spec_box_is_arc(SpecBox* b) {
-    return b ? b->is_arc : false;
-}
-
-static inline String spec_box_to_string(SpecBox* b) {
-    if (!b) return spec_string_intern("Box()");
-    if (!b->is_arc) {
-        String inner = spec_to_string_int(b->val);
-        return spec_string_concat(spec_string_concat(spec_string_intern("Box("), inner), spec_string_intern(")"));
-    }
-    if (!b->val) {
-        return spec_string_intern("Box(null)");
-    }
-    SpecHeader* h = SPEC_HEADER((void*)b->val);
-    if (h->destroy == spec_buf_destroy) {
-        String s = (String)b->val;
-        return spec_string_concat(spec_string_concat(spec_string_intern("Box("), s), spec_string_intern(")"));
-    }
-    String tn = spec_type_name((void*)b->val);
-    return spec_string_concat(spec_string_concat(spec_string_intern("Box("), tn), spec_string_intern(")"));
 }
 
 /* Spec Runtime String Utilities */
@@ -4881,10 +4807,6 @@ void* spec_rt_alloc(size_t size, void (*destroy)(void*)) { return spec_alloc(siz
 void* spec_rt_retain(void* obj) { return spec_retain(obj); }
 void spec_rt_release(void* obj) { spec_release(obj); }
 SpecClosure* spec_rt_closure_new(void* fn, void* env, void (*destroy_env)(void*)) { return spec_closure_new(fn, env, destroy_env); }
-SpecBox* spec_rt_box_new(int64_t val, bool is_arc) { return _spec_box_new(val, is_arc); }
-void* spec_rt_box_get(SpecBox* b) { return spec_box_get(b); }
-void spec_rt_box_set(SpecBox* b, void* new_val) { spec_box_set(b, new_val); }
-String spec_rt_box_to_string(SpecBox* b) { return spec_box_to_string(b); }
 ''';
 		return b;
 	}

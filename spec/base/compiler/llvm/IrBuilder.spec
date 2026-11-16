@@ -446,12 +446,25 @@ Class is IrBuilder{
 				st:addField(name: '_vtable', ty: IrType:Ptr);
 				local Map of String to Boolean is seenFields: Map:init();
 				self:addInheritedFields(st: st, cls: cls, clsMap: clsMap, seenFields: seenFields);
+				local Boolean is hasArcField: false;
 				local Int is dfi: 2;
 				while({ dfi < st:fieldTypes:length() }, {
 					if({ st:fieldIsArc:get(index: dfi, default: false) }, {
-						st:destroyFn: sname . '_destroy';
+						hasArcField: true;
 					});
 					dfi++;
+				});
+				local Boolean is hasUserDestroy: false;
+				local Int is dmi: 0;
+				while({ dmi < cls:members:length() }, {
+					local Member is dm: cls:members:get(index: dmi);
+					if({ dm:kind == MemberKind:METHOD && dm:name == 'destroy' && dm:params:length() == 0 }, {
+						hasUserDestroy: true;
+					});
+					dmi++;
+				});
+				if({ hasArcField || hasUserDestroy }, {
+					st:destroyFn: sname . '__destroy';
 				});
 				local Map of String to Int is mCounts: Map:init();
 				local Int is mmi: 0;
@@ -546,7 +559,7 @@ Class is IrBuilder{
 			local IrStruct is st2: self:mod:findStruct(name: sname);
 			if({ st2:destroyFn != 'null' && !seenFns:has(key: st2:destroyFn) }, {
 				seenFns:set(key: st2:destroyFn, value: true);
-				self:buildDestroyHelper(st: st2, destroyFn: st2:destroyFn);
+				self:buildDestroyHelper(st: st2, cls: cls, sname: sname, destroyFn: st2:destroyFn);
 			});
 			if({ st2:constructFn != 'null' && !seenFns:has(key: st2:constructFn) }, {
 				seenFns:set(key: st2:constructFn, value: true);
@@ -618,7 +631,7 @@ Class is IrBuilder{
 		return 'null';
 	}
 
-	local Function is buildDestroyHelper(IrStruct is st, String is destroyFn){
+	local Function is buildDestroyHelper(IrStruct is st, ClassInfo is cls, String is sname, String is destroyFn){
 		local IrFunction is fn: IrFunction:init(name: destroyFn, retType: IrType:Void);
 		fn:addParam(name: '%self', ty: IrType:Ptr);
 		local IrBlock is entry: fn:addBlock(label: 'entry');
@@ -626,6 +639,14 @@ Class is IrBuilder{
 		self:switchBlock(blk: entry);
 		self:tmpCounter: 0;
 		self:curPoolMark: '';
+		local Int is dmi: 0;
+		while({ dmi < cls:members:length() }, {
+			local Member is dm: cls:members:get(index: dmi);
+			if({ dm:kind == MemberKind:METHOD && dm:name == 'destroy' && dm:params:length() == 0 }, {
+				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: sname . '_destroy', argTypes: [IrType:Ptr], args: ['%self']));
+			});
+			dmi++;
+		});
 		local Int is fi: 2;
 		while({ fi < st:fieldTypes:length() }, {
 			if({ st:fieldIsArc:get(index: fi, default: false) }, {

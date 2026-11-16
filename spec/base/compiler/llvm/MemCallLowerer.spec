@@ -33,7 +33,7 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 		local Boolean is ok: false;
 		match(on: call:name, when: [
 			'init': { ok: true; },
-			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64']: { ok: argc >= 1; },
+			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64']: { ok: argc >= 1; },
 			['realloc', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy']: { ok: argc >= 2; },
 			['copy', 'move', 'set', 'cmp', 'storeI64', 'storeI32', 'storeByte', 'storePtr', 'storeF64', 'atomicCasI64']: { ok: argc >= 3; }
 		]);
@@ -172,6 +172,18 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'addr', posIdx: 0, defVal: '0');
 				local String is rawPtr: self:emitSysCall(b: b, retType: IrType:Ptr, callee: '__spec_mem_addr_to_obj', argTypes: [IrType:I64], args: [a]);
 				res: b:castIfNeeded(val: rawPtr, fromTy: IrType:Ptr, toTy: b:irTypeFor(specType: expr:resolvedType));
+			},
+			'retainAddr': {
+				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'objAddr', posIdx: 0, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_retain_addr', argTypes: [IrType:I64], args: [a]);
+			},
+			'releaseAddr': {
+				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'objAddr', posIdx: 0, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:Void, callee: '__spec_mem_release_addr', argTypes: [IrType:I64], args: [a]);
+			},
+			'claimPoolAddr': {
+				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'objAddr', posIdx: 0, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_claim_pool_addr', argTypes: [IrType:I64], args: [a]);
 			},
 			'floatToBits': {
 				local String is v: self:lowerNamedArg(b: b, call: call, argName: 'val', posIdx: 0, defVal: '0.0');

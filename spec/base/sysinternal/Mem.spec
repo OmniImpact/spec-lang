@@ -30,6 +30,9 @@ Class is Mem{
 
 	Function of Int is objToAddr(Any is obj);
 	Function of Any is addrToObj(Int is addr);
+	Function of Int is retainAddr(Int is objAddr);
+	Function is releaseAddr(Int is objAddr);
+	Function of Int is claimPoolAddr(Int is objAddr);
 	Function of Int is floatToBits(Float is val);
 	Function of Float is bitsToFloat(Int is bits);
 

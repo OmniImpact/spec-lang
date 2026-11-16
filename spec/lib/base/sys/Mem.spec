@@ -92,6 +92,18 @@ Class is Mem{
 		return base:sysinternal:Mem:addrToObj(addr: addr);
 	}
 
+	Function of Int is retainAddr(Int is objAddr){
+		return base:sysinternal:Mem:retainAddr(objAddr: objAddr);
+	}
+
+	Function is releaseAddr(Int is objAddr){
+		base:sysinternal:Mem:releaseAddr(objAddr: objAddr);
+	}
+
+	Function of Int is claimPoolAddr(Int is objAddr){
+		return base:sysinternal:Mem:claimPoolAddr(objAddr: objAddr);
+	}
+
 	Function of Int is floatToBits(Float is val){
 		return base:sysinternal:Mem:floatToBits(val: val);
 	}

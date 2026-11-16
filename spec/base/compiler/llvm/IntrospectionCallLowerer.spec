@@ -33,11 +33,6 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 			return true;
 		});
 		local Int is argc: call:args:length();
-		if({ self:isFloorTarget(call: call, domain: 'Box') }, {
-			if({ call:name == 'init' || call:name == 'boxGet' || call:name == 'boxIsArc' || call:name == 'boxToString' }, { return true; });
-			if({ (call:name == 'boxNew' || call:name == 'boxSet') && argc >= 2 }, { return true; });
-			return false;
-		});
 		if({ self:isFloorTarget(call: call, domain: 'Arena') }, {
 			if({ call:name == 'init' || call:name == 'arenaNew' }, { return true; });
 			if({ (call:name == 'arenaDrain' || call:name == 'arenaUsed') && argc >= 1 }, { return true; });
@@ -145,35 +140,6 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 			'typeName': {
 				local String is o: b:lowerExpr(expr: call:target);
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o]);
-			},
-			'boxNew': {
-				local NamedArg is ba0: call:args:get(index: 0);
-				local IrType is bty: b:irTypeFor(specType: ba0:value:resolvedType);
-				local String is bv: b:castIfNeeded(val: b:lowerExpr(expr: ba0:value), fromTy: bty, toTy: IrType:I64);
-				local String is ia: self:lowerArg(b: b, call: call, idx: 1);
-				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_rt_box_new', argTypes: [IrType:I64, IrType:I1], args: [bv, ia]);
-			},
-			'boxGet': {
-				local String is bp: self:lowerArg(b: b, call: call, idx: 0);
-				local String is raw: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_rt_box_get', argTypes: [IrType:Ptr], args: [bp]);
-				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
-				res: b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
-			},
-			'boxSet': {
-				local String is bp: self:lowerArg(b: b, call: call, idx: 0);
-				local NamedArg is ba1: call:args:get(index: 1);
-				local IrType is bty: b:irTypeFor(specType: ba1:value:resolvedType);
-				local String is nv: b:castIfNeeded(val: b:lowerExpr(expr: ba1:value), fromTy: bty, toTy: IrType:Ptr);
-				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_rt_box_set', argTypes: [IrType:Ptr, IrType:Ptr], args: [bp, nv]);
-			},
-			'boxIsArc': {
-				local String is bp: self:lowerArg(b: b, call: call, idx: 0);
-				res: self:emitSysCall(b: b, retType: IrType:I1, callee: 'spec_box_is_arc', argTypes: [IrType:Ptr], args: [bp]);
-			},
-			'boxToString': {
-				local String is bp: self:lowerArg(b: b, call: call, idx: 0);
-				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_rt_box_to_string', argTypes: [IrType:Ptr], args: [bp]);
-				b:emitClaimPool(val: res);
 			},
 			'arenaNew': {
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_arena_new', argTypes: [], args: []);
