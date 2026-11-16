@@ -22,22 +22,9 @@ Class is IrBuilder{
 		['base', 'compiler', 'ir', IrStruct],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'llvm', CallLowerer],
-		['base', 'compiler', 'llvm', ControlFlowCallLowerer],
-		['base', 'compiler', 'llvm', SysinternalCallLowerer],
-		['base', 'compiler', 'llvm', ConsoleCallLowerer],
-		['base', 'compiler', 'llvm', ProcessCallLowerer],
-		['base', 'compiler', 'llvm', FileCallLowerer],
-		['base', 'compiler', 'llvm', DirCallLowerer],
-		['base', 'compiler', 'llvm', TimeCallLowerer],
-		['base', 'compiler', 'llvm', MathCallLowerer],
-		['base', 'compiler', 'llvm', MatchCallLowerer],
-		['base', 'compiler', 'llvm', StringCallLowerer],
-		['base', 'compiler', 'llvm', ArrayCallLowerer],
-		['base', 'compiler', 'llvm', MapCallLowerer],
+		['base', 'compiler', 'llvm', CallLowererRegistry],
 		['base', 'struct', Array],
 		['base', 'struct', Map],
-		['base', 'struct', as Sort()],
-		['base', 'sys', as Introspection()],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
 	];
@@ -61,20 +48,7 @@ Class is IrBuilder{
 	Map of String to Boolean is heldMethods: Map:init();
 
 	replace Function is init(){
-		local Array of Any is found: Introspection:instantiateSubclasses(baseName: 'CallLowerer');
-		Sort:sortBy(values: found, compare: local Function of Int(Any is a, Any is b){
-			local CallLowerer is ca: a as CallLowerer;
-			local CallLowerer is cb: b as CallLowerer;
-			if({ ca:order() != cb:order() }, { return ca:order() - cb:order(); });
-			if({ ca:name() < cb:name() }, { return -1; });
-			if({ ca:name() > cb:name() }, { return 1; });
-			return 0;
-		});
-		local Int is i: 0;
-		while({ i < found:length() }, {
-			self:callLowerers:add(item: found:get(index: i) as CallLowerer);
-			i++;
-		});
+		self:callLowerers: CallLowererRegistry:init():loadAll();
 	}
 
 	Function of String is nextTmp(){

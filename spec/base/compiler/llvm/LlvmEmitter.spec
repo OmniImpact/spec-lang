@@ -12,6 +12,7 @@ Class is LlvmEmitter{
 		['base', 'compiler', 'ir', IrStruct],
 		['base', 'compiler', 'ir', IrFunction],
 		['base', 'compiler', 'ir', IrModule],
+		['base', 'compiler', 'llvm', LlvmStructLayout],
 		['base', 'struct', Array],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()]
@@ -113,6 +114,11 @@ declare i64 @spec_map_length(ptr)
 		if({ mod:globalNames:length() > 0 }, { out: out . "\n"; });
 
 		# Struct types, vtables, and reflection metadata
+		local LlvmStructLayout is methodMetaLayout: LlvmStructLayout:methodMeta();
+		local LlvmStructLayout is classMetaLayout: LlvmStructLayout:classMeta();
+		local LlvmStructLayout is heldEntryLayout: LlvmStructLayout:heldEntry();
+		local String is methodMetaType: methodMetaLayout:llvmType();
+		local String is heldEntryType: heldEntryLayout:llvmType();
 		local Array of String is classMetaRefs: [];
 		local Array of String is heldEntryItems: [];
 		local Int is si: 0;
@@ -178,15 +184,15 @@ declare i64 @spec_map_length(ptr)
 					local Int is mfl: st:metaMethodFlags:get(index: mi, default: 0);
 					local Int is mln: st:metaMethodLines:get(index: mi, default: 0);
 					if({ mi > 0 }, { mItems: mItems . ', '; });
-					mItems: mItems . '{ ptr, ptr, i32, i32 } { ptr ' . mSym . ', ptr ' . mfnRef . ', i32 ' . (mfl as String) . ', i32 ' . (mln as String) . ' }';
+					mItems: mItems . methodMetaLayout:formatConst(values: [mSym, mfnRef, mfl as String, mln as String]);
 					mi++;
 				});
-				out: out . '@.methods.' . st:name . ' = private constant [' . (st:metaMethodNames:length() as String) . ' x { ptr, ptr, i32, i32 }] [' . mItems . "]\n";
+				out: out . '@.methods.' . st:name . ' = private constant [' . (st:metaMethodNames:length() as String) . ' x ' . methodMetaType . '] [' . mItems . "]\n";
 				methodsRef: '@.methods.' . st:name;
 			});
 
 			local String is ctorPtr: if({ st:constructFn == 'null' }, { 'null' }, { '@' . st:constructFn });
-			out: out . '@.meta.' . st:name . ' = private constant { ptr, ptr, ptr, i32, ptr, ptr, i32 } { ptr @.typename.' . st:name . ', ptr @.src.' . st:name . ', ptr ' . basesRef . ', i32 ' . (st:baseNames:length() as String) . ', ptr ' . ctorPtr . ', ptr ' . methodsRef . ', i32 ' . (st:metaMethodNames:length() as String) . " }\n";
+			out: out . '@.meta.' . st:name . ' = private constant ' . classMetaLayout:formatConst(values: ['@.typename.' . st:name, '@.src.' . st:name, basesRef, st:baseNames:length() as String, ctorPtr, methodsRef, st:metaMethodNames:length() as String]) . "\n";
 			classMetaRefs:add(item: 'ptr @.meta.' . st:name);
 
 			if({ st:heldNames:length() > 0 }, {
@@ -209,7 +215,7 @@ declare i64 @spec_map_length(ptr)
 				});
 				out: out . '@.held_names.' . st:name . ' = private constant [' . (st:heldNames:length() as String) . ' x ptr] [' . hnItems . "]\n";
 				out: out . '@.held_getters.' . st:name . ' = private constant [' . (st:heldGetters:length() as String) . ' x ptr] [' . hgItems . "]\n";
-				heldEntryItems:add(item: '{ ptr, ptr, i32, ptr } { ptr @.typename.' . st:name . ', ptr @.held_names.' . st:name . ', i32 ' . (st:heldNames:length() as String) . ', ptr @.held_getters.' . st:name . ' }');
+				heldEntryItems:add(item: heldEntryLayout:formatConst(values: ['@.typename.' . st:name, '@.held_names.' . st:name, st:heldNames:length() as String, '@.held_getters.' . st:name]));
 			});
 			si++;
 		});
@@ -231,7 +237,7 @@ declare i64 @spec_map_length(ptr)
 		});
 		out: out . 'define i32 @spec_class_registry_count() {' . "\n  ret i32 " . (cmCount as String) . "\n}\n";
 
-		heldEntryItems:add(item: '{ ptr, ptr, i32, ptr } zeroinitializer');
+		heldEntryItems:add(item: heldEntryType . ' zeroinitializer');
 		local String is heList: '';
 		local Int is hei: 0;
 		while({ hei < heldEntryItems:length() }, {
@@ -239,7 +245,7 @@ declare i64 @spec_map_length(ptr)
 			heList: heList . heldEntryItems:get(index: hei, default: '');
 			hei++;
 		});
-		out: out . '@spec_held_registry = constant [' . (heldEntryItems:length() as String) . ' x { ptr, ptr, i32, ptr }] [' . heList . "]\n\n";
+		out: out . '@spec_held_registry = constant [' . (heldEntryItems:length() as String) . ' x ' . heldEntryType . '] [' . heList . "]\n\n";
 
 		# String literal globals (null-terminated)
 		local Int is li: 0;
@@ -411,6 +417,9 @@ declare i64 @spec_map_length(ptr)
 				return dst . ' = getelementptr i8, ptr @' . globalName . ', i64 0';
 			},
 			IrInst:AllocObj: local Function of String(String is dst, String is structName, String is destroyFn){
+				local LlvmStructLayout is hdr: LlvmStructLayout:objHeader();
+				local String is tnIdx: hdr:fieldIndex(name: 'type_name') as String;
+				local String is vtIdx: hdr:fieldIndex(name: 'vtable') as String;
 				local String is szPtr: dst . '_szp';
 				local String is szVal: dst . '_sz';
 				local String is tnPtr: dst . '_tnp';
@@ -418,9 +427,9 @@ declare i64 @spec_map_length(ptr)
 				return szPtr . ' = getelementptr %struct.' . structName . ", ptr null, i32 1\n  "
 					. szVal . ' = ptrtoint ptr ' . szPtr . " to i64\n  "
 					. dst . ' = call ptr @spec_rt_alloc(i64 ' . szVal . ', ptr ' . destroyFn . ")\n  "
-					. tnPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ", i32 0, i32 0\n  "
+					. tnPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ', i32 0, i32 ' . tnIdx . "\n  "
 					. 'store ptr @.typename.' . structName . ', ptr ' . tnPtr . "\n  "
-					. vtPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ", i32 0, i32 1\n  "
+					. vtPtr . ' = getelementptr inbounds %struct.' . structName . ', ptr ' . dst . ', i32 0, i32 ' . vtIdx . "\n  "
 					. 'store ptr @.vtable.' . structName . ', ptr ' . vtPtr;
 			},
 			IrInst:FieldPtr: local Function of String(String is dst, String is objPtr, String is structName, Int is fieldIndex){

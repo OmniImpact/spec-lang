@@ -23,9 +23,14 @@ Class of SpecUnitTest is TestLlvmIrAndOpt{
 		['base', 'compiler', 'opt', OptimizerPipeline],
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'llvm', LlvmEmitter],
+		['base', 'compiler', 'llvm', CallLowerer],
+		['base', 'compiler', 'llvm', CallLowererRegistry],
+		['base', 'compiler', 'llvm', LlvmStructLayout],
 		['base', 'sys', as Conditional()],
 		['base', 'sys', as Loops()],
+		['base', 'sys', as Dir()],
 		['base', 'sys', as File()],
+		['base', 'sys', as Introspection()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Uri()]
 	];
@@ -556,5 +561,60 @@ Class is LlvmP8{
 		File:fileRemove(path: specPath);
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
+	}
+
+	Function is testCallLowererPluginsRegistered(){
+		local Array of CallLowerer is loaded: CallLowererRegistry:init():loadAll();
+		local Array of String is loadedTypes: [];
+		local Int is li: 0;
+		while({ li < loaded:length() }, {
+			loadedTypes:add(item: Introspection:typeIdentity(obj: loaded:get(index: li)));
+			li++;
+		});
+
+		local Array of String is entries: Dir:dirList(path: 'spec/base/compiler/llvm');
+		local Int is ei: 0;
+		local Int is checked: 0;
+		while({ ei < entries:length() }, {
+			local String is f: entries:get(index: ei, default: '');
+			if({ f:endsWith(suffix: 'CallLowerer.spec') && f != 'CallLowerer.spec' && f != 'SysinternalCallLowerer.spec' }, {
+				local String is clsName: f:substring(start: 0, end: f:length() - 5);
+				local String is qname: 'base:compiler:llvm:' . clsName;
+				local Boolean is found: false;
+				local Int is ti: 0;
+				while({ ti < loadedTypes:length() }, {
+					local String is tid: loadedTypes:get(index: ti, default: '');
+					if({ tid == clsName || tid == qname }, {
+						found: true;
+					});
+					ti++;
+				});
+				Assert:isTrue(found);
+				checked++;
+			});
+			ei++;
+		});
+		Assert:isTrue(checked >= 10);
+	}
+
+	Function is testLlvmStructLayouts(){
+		local LlvmStructLayout is hdr: LlvmStructLayout:objHeader();
+		Assert:areEqualInt(0, hdr:fieldIndex(name: 'type_name'));
+		Assert:areEqualInt(1, hdr:fieldIndex(name: 'vtable'));
+		Assert:areEqualString('{ ptr, ptr }', hdr:llvmType());
+
+		local LlvmStructLayout is mm: LlvmStructLayout:methodMeta();
+		Assert:areEqualInt(4, mm:fieldCount());
+		Assert:areEqualString('{ ptr, ptr, i32, i32 }', mm:llvmType());
+		Assert:areEqualString('{ ptr, ptr, i32, i32 } { ptr @n, ptr @f, i32 1, i32 42 }', mm:formatConst(values: ['@n', '@f', '1', '42']));
+
+		local LlvmStructLayout is cm: LlvmStructLayout:classMeta();
+		Assert:areEqualInt(7, cm:fieldCount());
+		Assert:areEqualInt(4, cm:fieldIndex(name: 'construct'));
+		Assert:areEqualString('{ ptr, ptr, ptr, i32, ptr, ptr, i32 }', cm:llvmType());
+
+		local LlvmStructLayout is he: LlvmStructLayout:heldEntry();
+		Assert:areEqualInt(4, he:fieldCount());
+		Assert:areEqualString('{ ptr, ptr, i32, ptr }', he:llvmType());
 	}
 }
