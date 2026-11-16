@@ -119,9 +119,6 @@ void spec_panic_cast(const char* actual, const char* target);
 void spec_panic_byte_range(long long v);
 String spec_string_from_chars(const char* c);
 String spec_string_intern(const char* c);
-size_t spec_pool_frame(void);
-void spec_pool_release_to(size_t mark);
-void* spec_claim_pool(void* obj);
 String spec_to_string_int(long long v);
 String spec_to_string_float(double v);
 String spec_to_string_bool(bool v);
@@ -525,17 +522,6 @@ static long long spec_pal_get_peak_rss_kb(void) {
 
 
 
-bool spec_is_subclass_of(const char* actual, const char* target);
-
-static inline void* spec_cast_check(const void* obj, const char* target) {
-    if (!obj) return NULL;
-    const char* actual = *((const char**)obj);
-    if (!spec_is_subclass_of(actual, target)) {
-        spec_panic_cast(actual, target);
-    }
-    return (void*)obj;
-}
-
 /* Spec Automated Reference Counting (ARC) Primitives */
 #define SPEC_S_IMMORTAL 1u
 #define SPEC_S_HASLEN 2u
@@ -688,7 +674,10 @@ extern __thread size_t _spec_pool_cap;
 
 static inline void spec_pool_thread_cleanup(void) {
     if (_spec_pool_stack) {
-        spec_pool_release_to(0);
+        while (_spec_pool_top > 0) {
+            void* obj = _spec_pool_stack[--_spec_pool_top];
+            if (obj) spec_release(obj);
+        }
         free(_spec_pool_stack);
         _spec_pool_stack = NULL;
         _spec_pool_top = 0;
@@ -696,31 +685,12 @@ static inline void spec_pool_thread_cleanup(void) {
     }
 }
 
-
 /* Spec First-Class Closure Representation */
 typedef struct SpecClosure {
     void* fn;
     void* env;
     void (*destroy_env)(void*);
 } SpecClosure;
-
-static inline void spec_closure_destroy(void* self) {
-    SpecClosure* c = (SpecClosure*)self;
-    if (c) {
-        if (c->env && c->destroy_env) {
-            c->destroy_env(c->env);
-            c->env = NULL;
-        }
-    }
-}
-
-static inline SpecClosure* spec_closure_new(void* fn, void* env, void (*destroy_env)(void*)) {
-    SpecClosure* c = (SpecClosure*)spec_alloc(sizeof(SpecClosure), spec_closure_destroy);
-    c->fn = fn;
-    c->env = env;
-    c->destroy_env = destroy_env;
-    return c;
-}
 
 /* Spec Runtime String Utilities */
 
@@ -1506,30 +1476,6 @@ String spec_string_intern(const char* c) {
     tbl->count++;
     pthread_mutex_unlock(&_spec_intern_lock);
     return s;
-}
-
-size_t spec_pool_frame(void) {
-    return _spec_pool_top;
-}
-
-void spec_pool_release_to(size_t mark) {
-    while (_spec_pool_top > mark) {
-        void* obj = _spec_pool_stack[--_spec_pool_top];
-        if (obj) spec_release(obj);
-    }
-}
-
-void* spec_claim_pool(void* obj) {
-    if (!obj) return NULL;
-    if (_spec_pool_top == _spec_pool_cap) {
-        size_t ncap = _spec_pool_cap == 0 ? 8 : _spec_pool_cap * 2;
-        void** grown = (void**)spec_xrealloc(_spec_pool_stack, sizeof(void*) * ncap);
-        if (!grown) spec_panic("Out of memory");
-        _spec_pool_stack = grown;
-        _spec_pool_cap = ncap;
-    }
-    _spec_pool_stack[_spec_pool_top++] = obj;
-    return obj;
 }
 
 String spec_to_string_int(long long v) {
@@ -3662,12 +3608,6 @@ void spec_audio_close(long long handle) {
 void spec_process_exit(long long status) {
     exit((int)status);
 }
-
-/* Non-inline ABI entrypoints for external/LLVM object linking */
-void* spec_rt_alloc(size_t size, void (*destroy)(void*)) { return spec_alloc(size, destroy); }
-void* spec_rt_retain(void* obj) { return spec_retain(obj); }
-void spec_rt_release(void* obj) { spec_release(obj); }
-SpecClosure* spec_rt_closure_new(void* fn, void* env, void (*destroy_env)(void*)) { return spec_closure_new(fn, env, destroy_env); }
 ''';
 		return b;
 	}

@@ -36,13 +36,9 @@ Class is LlvmEmitter{
 		local String is out: '''
 ; Spec LLVM IR (experimental)
 
-declare ptr @spec_rt_alloc(i64, ptr)
-declare ptr @spec_rt_retain(ptr)
-declare void @spec_rt_release(ptr)
-declare i64 @spec_pool_frame()
-declare void @spec_pool_release_to(i64)
-declare ptr @spec_claim_pool(ptr)
-declare ptr @spec_rt_closure_new(ptr, ptr, ptr)
+@_spec_pool_stack = external thread_local global ptr
+@_spec_pool_top = external thread_local global i64
+@_spec_pool_cap = external thread_local global i64
 declare ptr @spec_string_intern(ptr)
 declare ptr @spec_string_from_bytes(ptr, i64)
 declare ptr @spec_string_concat(ptr, ptr)
@@ -308,6 +304,154 @@ define internal void @__spec_mem_panic(ptr %b) alwaysinline {
   call void @spec_panic(ptr %c)
   ret void
 }
+%struct.SpecHeader = type { i32, ptr, i32, i32 }
+define internal ptr @spec_rt_alloc(i64 %size, ptr %destroy) {
+  %tsz = add i64 %size, 24
+  %h = call ptr @calloc(i64 1, i64 %tsz)
+  %isnull = icmp eq ptr %h, null
+  br i1 %isnull, label %oom, label %ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %ok
+ok:
+  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0
+  store i32 1, ptr %rcp
+  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  store ptr %destroy, ptr %dp
+  %obj = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 1
+  ret ptr %obj
+}
+define internal ptr @spec_rt_retain(ptr %obj) alwaysinline {
+  %isnull = icmp eq ptr %obj, null
+  br i1 %isnull, label %done, label %chk
+chk:
+  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
+  %sf = load atomic i32, ptr %sfp monotonic, align 4
+  %imm = and i32 %sf, 1
+  %is_imm = icmp ne i32 %imm, 0
+  br i1 %is_imm, label %done, label %inc
+inc:
+  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0
+  %old = atomicrmw add ptr %rcp, i32 1 monotonic, align 4
+  br label %done
+done:
+  ret ptr %obj
+}
+define internal void @spec_rt_release(ptr %obj) {
+  %isnull = icmp eq ptr %obj, null
+  br i1 %isnull, label %done, label %chk
+chk:
+  %h = getelementptr inbounds %struct.SpecHeader, ptr %obj, i64 -1
+  %sfp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 2
+  %sf = load atomic i32, ptr %sfp monotonic, align 4
+  %imm = and i32 %sf, 1
+  %is_imm = icmp ne i32 %imm, 0
+  br i1 %is_imm, label %done, label %dec
+dec:
+  %rcp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 0
+  %old = atomicrmw sub ptr %rcp, i32 1 acq_rel, align 4
+  %is_last = icmp eq i32 %old, 1
+  br i1 %is_last, label %dtor, label %done
+dtor:
+  %dp = getelementptr inbounds %struct.SpecHeader, ptr %h, i32 0, i32 1
+  %d = load ptr, ptr %dp
+  store ptr null, ptr %dp
+  %has_d = icmp ne ptr %d, null
+  br i1 %has_d, label %call_d, label %free_h
+call_d:
+  call void %d(ptr %obj)
+  br label %free_h
+free_h:
+  call void @free(ptr %h)
+  br label %done
+done:
+  ret void
+}
+define internal i64 @spec_pool_frame() alwaysinline {
+  %t = load i64, ptr @_spec_pool_top
+  ret i64 %t
+}
+define internal void @spec_pool_release_to(i64 %mark) {
+  br label %hdr
+hdr:
+  %top = load i64, ptr @_spec_pool_top
+  %gt = icmp ugt i64 %top, %mark
+  br i1 %gt, label %body, label %done
+body:
+  %ntop = sub i64 %top, 1
+  store i64 %ntop, ptr @_spec_pool_top
+  %stk = load ptr, ptr @_spec_pool_stack
+  %slot = getelementptr ptr, ptr %stk, i64 %ntop
+  %obj = load ptr, ptr %slot
+  %nn = icmp ne ptr %obj, null
+  br i1 %nn, label %rel, label %hdr
+rel:
+  call void @spec_rt_release(ptr %obj)
+  br label %hdr
+done:
+  ret void
+}
+define internal ptr @spec_claim_pool(ptr %obj) {
+  %isnull = icmp eq ptr %obj, null
+  br i1 %isnull, label %done, label %chk
+chk:
+  %top = load i64, ptr @_spec_pool_top
+  %cap = load i64, ptr @_spec_pool_cap
+  %eq = icmp eq i64 %top, %cap
+  br i1 %eq, label %grow, label %push
+grow:
+  %isz = icmp eq i64 %cap, 0
+  %cap2 = mul i64 %cap, 2
+  %ncap = select i1 %isz, i64 8, i64 %cap2
+  %bytes = mul i64 %ncap, 8
+  %ostk = load ptr, ptr @_spec_pool_stack
+  %oaddr = ptrtoint ptr %ostk to i64
+  %naddr = call i64 @__spec_mem_realloc(i64 %oaddr, i64 %bytes)
+  %nstk = inttoptr i64 %naddr to ptr
+  store ptr %nstk, ptr @_spec_pool_stack
+  store i64 %ncap, ptr @_spec_pool_cap
+  br label %push
+push:
+  %stk = load ptr, ptr @_spec_pool_stack
+  %slot = getelementptr ptr, ptr %stk, i64 %top
+  store ptr %obj, ptr %slot
+  %ntop = add i64 %top, 1
+  store i64 %ntop, ptr @_spec_pool_top
+  br label %done
+done:
+  ret ptr %obj
+}
+%struct.SpecClosure = type { ptr, ptr, ptr }
+define internal void @__spec_closure_destroy(ptr %self) {
+  %isnull = icmp eq ptr %self, null
+  br i1 %isnull, label %done, label %chk
+chk:
+  %ep = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 1
+  %env = load ptr, ptr %ep
+  %dp = getelementptr inbounds %struct.SpecClosure, ptr %self, i32 0, i32 2
+  %d = load ptr, ptr %dp
+  %has_env = icmp ne ptr %env, null
+  %has_d = icmp ne ptr %d, null
+  %both = and i1 %has_env, %has_d
+  br i1 %both, label %call_d, label %done
+call_d:
+  call void %d(ptr %env)
+  store ptr null, ptr %ep
+  br label %done
+done:
+  ret void
+}
+define internal ptr @spec_rt_closure_new(ptr %fn, ptr %env, ptr %destroy_env) {
+  %c = call ptr @spec_rt_alloc(i64 24, ptr @__spec_closure_destroy)
+  %fp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 0
+  store ptr %fn, ptr %fp
+  %ep = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 1
+  store ptr %env, ptr %ep
+  %dp = getelementptr inbounds %struct.SpecClosure, ptr %c, i32 0, i32 2
+  store ptr %destroy_env, ptr %dp
+  ret ptr %c
+}
 %struct.SpecBox = type { i64, i1 }
 define internal void @__spec_box_destroy(ptr %self) {
   %isnull = icmp eq ptr %self, null
@@ -570,7 +714,6 @@ declare i64 @spec_audio_write(i64, ptr)
 declare i64 @spec_audio_write_cb(i64, ptr, ptr)
 declare i64 @spec_audio_drain(i64)
 declare void @spec_audio_close(i64)
-%struct.SpecClosure = type { ptr, ptr, ptr }
 
 ''';
 
