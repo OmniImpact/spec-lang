@@ -20,7 +20,6 @@ Class of SpecUnitTest is TestPhase6Loader{
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'checker', TypeError],
 		['base', 'compiler', 'checker', TypeChecker],
-		['base', 'compiler', 'gen', CodeGenerator],
 		['base', 'compiler', 'ast', Member],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', Error],

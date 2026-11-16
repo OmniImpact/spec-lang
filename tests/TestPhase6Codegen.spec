@@ -1,17 +1,7 @@
 #! SpecUnit sweep (from phase6_codegen_test.spec): the pure-Spec code
 #! generator pipeline — parse the target program, load it through the
-#! resolver cascade, typecheck, emit a complete C11 translation unit,
-#! compile it with gcc, and execute the produced binary.
-#!
-#! Pipeline note: the old suite's gcc/run steps never printed their
-#! [PASS] lines — the driver contract gained registerProgram plus the
-#! entry-init fields and its embedded fixture still used the retired
-#! `output:line` / `replace local Function` spellings, so the emitted C
-#! could not compile (silently, the checks had no else branch). The
-#! fixture is updated to current spellings and the pipeline follows the
-#! driver's contract (Loader -> TypeChecker -> registerProgram ->
-#! entry-init fields -> generateProgram) so every original check holds
-#! for real.
+#! resolver cascade, typecheck, emit LLVM IR, compile it with clang,
+#! and execute the produced binary.
 
 Class of SpecUnitTest is TestPhase6Codegen{
 
@@ -20,13 +10,17 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		['specunit', SpecUnitRunner],
 		['specunit', as Assert()],
 		['base', 'struct', Array],
+		['base', 'struct', Map],
 		['base', 'iterator'],
 		['base', 'compiler', 'lexer', Token],
 		['base', 'compiler', 'lexer', Lexer],
 		['base', 'compiler', 'parser', Parser],
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'checker', TypeChecker],
-		['base', 'compiler', 'gen', CodeGenerator],
+		['base', 'compiler', 'driver', Driver],
+		['base', 'compiler', 'ir', IrModule],
+		['base', 'compiler', 'llvm', IrBuilder],
+		['base', 'compiler', 'llvm', LlvmEmitter],
 		['base', 'sys', as File()],
 		['base', 'sys', as Output()],
 		['base', 'sys', as Process()],
@@ -39,7 +33,7 @@ Class of SpecUnitTest is TestPhase6Codegen{
 	## spelled in the current language (as-Output import, replace
 	## Function init, class-prefixed Output:line call).
 	Function of String is fixtureSource(){
-		return "class HelloCodegen{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(Map of String to String is args){\n\t\tlocal String is msg: \"Hello from Pure Spec Code Generator!\";\n\t\tOutput:line(msg);\n\t}\n}";
+		return "Class is HelloCodegen{\n\treplace Array of Array of String is using: [\n\t\t['base', 'sys', as Output()]\n\t];\n\treplace Function is init(Map of String to String is args){\n\t\tlocal String is msg: \"Hello from Pure Spec Code Generator!\";\n\t\tOutput:line(msg);\n\t}\n}";
 	}
 
 	# Step 1: lexing & parsing the target program.
@@ -62,51 +56,37 @@ Class of SpecUnitTest is TestPhase6Codegen{
 		Assert:areEqualInt(0, errors:length());
 	}
 
-	# Steps 3-4: generate the C11 translation unit and write it out
-	# (streamed, as the driver does — and checked first, since the
-	# checker's call resolution is what keeps the transparent library
-	# classes' wrapper verbs emitted as provider calls).
-	Function is testCodegenEmitsAndWritesC(){
+	# Steps 3-4: generate the LLVM IR module and write it out.
+	Function is testCodegenEmitsAndWritesLlvm(){
 		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: self:fixtureSource());
 		local Loader is loader: Loader:init();
 		local ProgramNode is prog: loader:loadProgram(rootPath: '/tmp/pure_spec_fixture.spec');
 		local TypeChecker is tc: TypeChecker:init();
 		local Array of TypeError is errors: tc:checkProgram(program: prog);
 		Assert:areEqualInt(0, errors:length());
-		local CodeGenerator is cg: CodeGenerator:init();
-		cg:entryInitOwner: 'HelloCodegen';
-		cg:entryInitOverloadIndex: 0;
-		cg:entryInitTakesArgs: true;
-		cg:registerProgram(classes: prog:classes);
-		local Int is cLines: cg:generateProgramToFile(program: prog, entryClass: 'HelloCodegen', filePath: '/tmp/pure_spec_hello.c');
-		Assert:isTrue(cLines > 0);
+		local IrBuilder is irb: IrBuilder:init();
+		irb:entryInitOwner: 'HelloCodegen';
+		irb:entryInitOverloadIndex: 0;
+		irb:entryInitTakesMap: true;
+		local IrModule is irMod: irb:buildProgram(program: prog, entryClass: 'HelloCodegen');
+		local LlvmEmitter is emitter: LlvmEmitter:init();
+		local String is llText: emitter:emitModule(mod: irMod);
+		fileWrite(path: '/tmp/pure_spec_hello.ll', content: llText);
+		Assert:isTrue(llText:length() > 0);
 	}
 
-	# Steps 5-6: gcc-compile the generated C and execute the binary.
+	# Steps 5-6: compile via Driver and execute the binary.
 	Function is testGeneratedBinaryCompilesAndRuns(){
 		fileWrite(path: '/tmp/pure_spec_fixture.spec', content: self:fixtureSource());
-		local Loader is loader: Loader:init();
-		local ProgramNode is prog: loader:loadProgram(rootPath: '/tmp/pure_spec_fixture.spec');
-		local TypeChecker is tc: TypeChecker:init();
-		local Array of TypeError is errors: tc:checkProgram(program: prog);
-		Assert:areEqualInt(0, errors:length());
-		local CodeGenerator is cg: CodeGenerator:init();
-		cg:entryInitOwner: 'HelloCodegen';
-		cg:entryInitOverloadIndex: 0;
-		cg:entryInitTakesArgs: true;
-		cg:registerProgram(classes: prog:classes);
-		local String is ccBin: Process:getEnv(key: 'CC', default: 'gcc');
-		local Array of String is gccArgs: ['-O2', '-w', '/tmp/pure_spec_hello.c', '-o', '/tmp/pure_spec_hello', '-pthread', '-lm'];
-		local String is os: Process:osName();
-		if({ os == 'linux' }, {
-			gccArgs:add(item: '-ldl');
-		});
-		if({ os == 'windows' }, {
-			gccArgs:add(item: '-lws2_32');
-		});
-		local Int is gccCode: Process:execute(command: ccBin, args: gccArgs);
-		Assert:areEqualInt(0, gccCode);
+		local Map of String to String is cli: Map:init();
+		cli:set(key: 'i', value: '/tmp/pure_spec_fixture.spec');
+		cli:set(key: 'o', value: '/tmp/pure_spec_hello');
+		cli:set(key: 'quiet', value: 'true');
+		local Driver is d: Driver:init(args: cli);
 		local Int is runCode: Process:execute(command: '/tmp/pure_spec_hello', args: []);
 		Assert:areEqualInt(0, runCode);
+		fileRemove(path: '/tmp/pure_spec_hello');
+		fileRemove(path: '/tmp/pure_spec_hello.ll');
+		fileRemove(path: '/tmp/pure_spec_fixture.spec');
 	}
 }

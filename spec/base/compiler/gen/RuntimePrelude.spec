@@ -83,7 +83,6 @@ long long spec_string_length(String b);
 bool spec_string_equals(String a, String b);
 long long spec_string_compare(String a, String b);
 String spec_string_concat(String a, String b);
-String spec_string_concat_n(int count, ...);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
@@ -222,7 +221,6 @@ long long spec_string_length(String b);
 bool spec_string_equals(String a, String b);
 long long spec_string_compare(String a, String b);
 String spec_string_concat(String a, String b);
-String spec_string_concat_n(int count, ...);
 String spec_string_substring(String b, long long start, long long end);
 long long spec_string_index_of(String b, String needle, long long def);
 long long spec_string_index_of_from(String b, String needle, long long from, long long def);
@@ -723,26 +721,6 @@ static inline void spec_release(void* obj) {
     }
 }
 
-static inline void* spec_assign(void** dest, void* src) {
-    if (src) spec_retain(src);
-    if (*dest) spec_release(*dest);
-    *dest = src;
-    return src;
-}
-
-static inline void* spec_assign_transfer(void** dest, void* src) {
-    if (*dest) spec_release(*dest);
-    *dest = src;
-    return src;
-}
-
-static inline void spec_scope_cleanup(void* pptr) {
-    void* obj = *(void**)pptr;
-    if (obj) spec_release(obj);
-}
-
-#define SPEC_AUTO __attribute__((cleanup(spec_scope_cleanup)))
-
 /* Spec String Core: refcounted, NUL-terminated, optionally interned.
    A String value is a char* into a spec_alloc block whose header carries
    a cached length and an immortal flag for interned literals. */
@@ -820,13 +798,6 @@ static void spec_intern_resize_under_lock(void) {
 extern __thread void** _spec_pool_stack;
 extern __thread size_t _spec_pool_top;
 extern __thread size_t _spec_pool_cap;
-
-
-
-static inline void spec_pool_auto_cleanup(size_t* pmark) {
-    if (pmark) spec_pool_release_to(*pmark);
-}
-#define SPEC_POOL_AUTO size_t _spec_pool_mark __attribute__((cleanup(spec_pool_auto_cleanup))) = spec_pool_frame()
 
 static inline void spec_pool_thread_cleanup(void) {
     if (_spec_pool_stack) {
@@ -1118,45 +1089,18 @@ static pthread_cond_t spec_task_cond = PTHREAD_COND_INITIALIZER;
 
 
 /* File Package Primitives with Callbacks and Async Worker Support */
-static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
-    if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
-}
-
-/* the no-argument closure invoker for the
-   conditional floor. */
 static inline void spec_call_closure_0(SpecClosure* cls) {
     if (cls && cls->fn) { ((void (*)(void*))cls->fn)(cls->env); }
 }
 
-/* The conditional floor: the single primitive.
-   `else` is composed above it as `if(!check, else)`. */
-static inline void spec_branch(SpecClosure* check, SpecClosure* then) {
-    if (check && check->fn) {
-        if (((bool (*)(void*))check->fn)(check->env)) {
-            spec_call_closure_0(then);
-        }
-    }
+static inline void spec_call_closure_int(SpecClosure* cls, long long arg1) {
+    if (cls && cls->fn) { ((void (*)(void*, long long))cls->fn)(cls->env, arg1); }
 }
 
-/* The iteration floor: the single loop primitive.
-   `until` composes above it (run once, then while !evaluate); repeat
-   counts; run drives the Loop protocol. */
-static inline void spec_while(SpecClosure* evaluate, SpecClosure* iterate) {
-    while (evaluate && evaluate->fn && ((bool (*)(void*))evaluate->fn)(evaluate->env)) {
-        spec_call_closure_0(iterate);
-    }
-}
 static inline void spec_call_closure_str(SpecClosure* cls, void* arg1) {
     if (cls && cls->fn) { ((void (*)(void*, void*))cls->fn)(cls->env, arg1); }
 }
 
-/* No-op callback singleton: the default for optional error callbacks */
-static void _spec_noop_cb(void* env, const char* msg) { (void)env; (void)msg; }
-static SpecClosure* _spec_noop_closure = NULL;
-static inline SpecClosure* spec_noop_closure(void) {
-    if (!_spec_noop_closure) { _spec_noop_closure = spec_closure_new((void*)_spec_noop_cb, NULL, NULL); }
-    return _spec_noop_closure;
-}
 static inline void _spec_emit_str_error(SpecClosure* on_error, const char* msg) {
     if (on_error && on_error->fn) {
         const char* m = msg ? msg : "Unknown error";
@@ -1166,26 +1110,6 @@ static inline void _spec_emit_str_error(SpecClosure* on_error, const char* msg) 
     }
 }
 
-/* Per-Type Constructors: invoked by : assignment for each type. */
-String spec_string_intern(const char* c);
-String spec_string_from_chars(const char* c);
-/* Each constructor takes the source value and produces the type's
-   canonical internal representation. For primitives this is a cast;
-   for composite types it involves allocation and initialisation. */
-static inline long long spec_construct_int(long long v) { return v; }
-static inline unsigned char spec_construct_byte(long long v) {
-    if (v < 0 || v > 255) spec_panic_byte_range(v);
-    return (unsigned char)v;
-}
-
-static inline double spec_construct_float(double v) { return v; }
-
-static inline bool spec_construct_bool(bool v) { return v; }
-
-static inline String spec_construct_string(const void* src) {
-    if (!src) return spec_string_intern("");
-    return spec_string_copy((String)src);
-}
 /* String: the managed string type (initially char*, transitions to SpecBuf) */
 typedef SpecBuf* String;
 
@@ -1443,13 +1367,6 @@ static void* spec_parallel_worker(void* arg) {
 /* Identity hash: a stable per-object value derived from the address
    (mixed so neighboring allocations differ). The default toString's
    hash component. */
-
-/* Reference identity (the Introspection floor): pointer equality —
-   the runtime's identity notion (held singletons and enum variants
-   are distinct live instances, so address equality is the test). */
-static inline bool spec_same_ref(const void* a, const void* b) {
-    return a == b;
-}
 
 /* Held-member metadata: per-class held-member name
    tables, registered by the emitted Held Metadata section (the tables
@@ -2770,7 +2687,7 @@ void spec_buf_push_ptr(SpecBuf* b, void* item) {
 }
 
 void spec_buf_report(SpecClosure* error, const char* msg) {
-    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));
+    _spec_emit_str_error(error, msg);
 }
 
 long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {
@@ -2947,38 +2864,6 @@ String spec_string_concat(String a, String b) {
     return res;
 }
 
-String spec_string_concat_n(int count, ...) {
-    if (count <= 0) return spec_string_from_bytes("", 0);
-    va_list ap;
-    va_start(ap, count);
-    size_t total_len = 0;
-    String stack_parts[32];
-    String* parts = (count <= 32) ? stack_parts : (String*)spec_xmalloc((size_t)count * sizeof(String));
-    for (int i = 0; i < count; i++) {
-        String s = va_arg(ap, String);
-        parts[i] = s;
-        if (s) total_len += s->length;
-    }
-    va_end(ap);
-    String res = spec_buf_new(1, 0);
-    if (total_len > 0) {
-        spec_buf_grow(res, total_len);
-        unsigned char* dst = (unsigned char*)res->data;
-        size_t pos = 0;
-        for (int i = 0; i < count; i++) {
-            String s = parts[i];
-            if (s && s->length > 0) {
-                memcpy(dst + pos, s->data, s->length);
-                pos += s->length;
-            }
-        }
-        res->length = pos;
-        dst[pos] = 0;
-    }
-    if (parts != stack_parts) free(parts);
-    return res;
-}
-
 String spec_string_substring(String b, long long start, long long end) {
     if (!b) return spec_string_from_bytes("", 0);
     long long len = (long long)b->length;
@@ -3044,7 +2929,7 @@ void spec_bytebuffer_append_string(SpecByteBuffer* b, const char* s) {
 }
 
 void spec_bytebuffer_report(SpecClosure* error, const char* msg) {
-    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));
+    _spec_emit_str_error(error, msg);
 }
 
 long long spec_bytebuffer_get(SpecByteBuffer* b, long long idx, long long def, SpecClosure* error) {
@@ -3135,7 +3020,7 @@ void spec_vec_push(SpecVec* v, void* item) {
 }
 
 void spec_vec_report(SpecClosure* error, const char* msg) {
-    spec_call_closure_str(error ? error : spec_noop_closure(), spec_string_from_bytes(msg, strlen(msg)));
+    _spec_emit_str_error(error, msg);
 }
 
 void* spec_vec_get(SpecVec* v, long long idx, void* def, SpecClosure* error) {

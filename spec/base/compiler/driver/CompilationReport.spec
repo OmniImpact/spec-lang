@@ -61,7 +61,7 @@ Class is CompilationReport{
 		});
 		line('');
 		line('  ' . inputPath . ' -> ' . outputPath);
-		line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of C');
+		line('  ' . (classCount as String) . ' classes · ' . (methodCount as String) . ' methods · ' . (specLines as String) . ' lines of spec -> ' . (cLines as String) . ' lines of LLVM IR');
 		local String is times: '  time ' . (totalMs as String) . 'ms  (load ' . (loadMs as String) . ' · check ' . (checkMs as String) . ' · gen ' . (genMs as String);
 		if({ ccMs >= 0 }, {
 			times: times . ' · cc ' . (ccMs as String);

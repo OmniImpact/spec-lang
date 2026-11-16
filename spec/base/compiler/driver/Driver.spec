@@ -1,11 +1,11 @@
 #! Package base:compiler:driver
-#! The compiler driver: CLI orchestration over load, check, generate, cc.
+#! The compiler driver: CLI orchestration over load, check, generate, clang.
 ##
 ## Coordinates the Loader (multi-file package resolution), the
-## TypeChecker, and the CodeGenerator, and prints progress through
-## the CompilationReport. This is the class the spec binary's main
-## dispatches to with the parsed argument map; it IS
-## the entry point of the self-hosted compiler.
+## TypeChecker, the IrBuilder + OptimizerPipeline + LlvmEmitter, and
+## prints progress through the CompilationReport. This is the class
+## the spec binary's main dispatches to with the parsed argument map;
+## it IS the entry point of the self-hosted compiler.
 
 Class is Driver{
 	namespace: ['base', 'compiler', 'driver'];
@@ -14,6 +14,7 @@ Class is Driver{
 		['base', 'sys', as File()],
 		['base', 'sys', as Process()],
 		['base', 'sys', as Dir()],
+		['base', 'sys', as Buf()],
 		['base', 'compiler', 'ast', ProgramNode],
 		['base', 'compiler', 'ast', ClassInfo],
 		['base', 'compiler', 'ast', Member],
@@ -22,7 +23,6 @@ Class is Driver{
 		['base', 'compiler', 'loader', Loader],
 		['base', 'compiler', 'driver', CompilationReport],
 		['base', 'compiler', 'driver', OsLinkFlags],
-		['base', 'compiler', 'gen', CodeGenerator],
 		['base', 'compiler', 'gen', RuntimePrelude],
 		['base', 'compiler', 'ir', IrModule],
 		['base', 'compiler', 'opt', OptimizerPipeline],
@@ -99,7 +99,7 @@ Class is Driver{
 
 		if({ inputPath == '' }, {
 			Output:line('Spec Compiler (Pure Spec)');
-			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [-s <source_dir>...] [--emit-c <file>] [--threads <N>] [--debug] [--quiet]');
+			Stderr:line('Usage: spec -i <input.spec> -o <output_binary> [-s <source_dir>...] [--emit-llvm <file>] [--threads <N>] [--debug] [--quiet]');
 			Process:exit(status: 2);
 		});
 
@@ -118,14 +118,9 @@ Class is Driver{
 		local Int is ccMs: -1;
 		local CompilationReport is report: CompilationReport:init(quiet: quiet);
 
-		local String is emitCPath: args:getString(key: 'c', default: '');
-		if({ emitCPath == '' }, {
-			emitCPath: args:getString(key: 'emit-c', default: '');
-		});
 		local String is emitLlvmPath: args:getString(key: 'emit-llvm', default: '');
-		local Boolean is useLlvm: args:has(key: 'llvm') || emitLlvmPath != '';
 
-		if({ outputPath == '' && emitCPath == '' }, {
+		if({ outputPath == '' && emitLlvmPath == '' }, {
 			Stderr:line('Error: Missing output binary path (-o <output_binary>)');
 			Process:exit(status: 2);
 		});
@@ -244,155 +239,51 @@ Class is Driver{
 			Process:exit(status: 1);
 		});
 
-		local String is tempCPath: emitCPath;
-		if({ tempCPath == '' }, {
-			tempCPath: fileTemp(template: Uri:systemTempDir() . '/_spec_stage_XXXXXX.c');
-			if({ tempCPath == '' }, {
-				tempCPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.c';
-			});
+		# 4. LLVM IR code generation over the FULL loaded class set.
+		local Int is llvmGenT0: Process:clockMs();
+		local IrBuilder is irb: IrBuilder:init();
+		irb:entryInitOwner: self:entryInitOwner;
+		irb:entryInitOverloadIndex: self:entryInitOverloadIndex;
+		irb:entryInitTakesMap: self:entryInitTakesMap;
+		local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
+		if({ !args:has(key: 'no-opt') }, {
+			local OptimizerPipeline is optPipe: OptimizerPipeline:init();
+			optPipe:run(mod: irMod);
 		});
+		local LlvmEmitter is emitter: LlvmEmitter:init();
+		local String is llText: emitter:emitModule(mod: irMod);
+		genMs: Process:clockMs() - llvmGenT0;
 
-		local Boolean is useCache: (emitCPath == '' && outputPath != '' && !args:has(key: 'no-cache'));
-		local String is cacheDir: '';
-		local String is runtimeH: '';
-		local String is runtimeC: '';
-		local String is runtimeO: '';
-		if({ useCache }, {
-			cacheDir: Uri:runtimeCacheDir();
-			runtimeH: cacheDir . '/spec_runtime.h';
-			runtimeC: cacheDir . '/spec_runtime.c';
-			runtimeO: cacheDir . '/spec_runtime.o';
-			if({ args:has(key: 'clean-cache') }, {
-				fileRemove(path: runtimeO);
-				fileRemove(path: runtimeH);
-				fileRemove(path: runtimeC);
-			});
-			if({ !fileExists(path: runtimeO) || !fileExists(path: runtimeH) }, {
-				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
-				local RuntimePrelude is rp: RuntimePrelude:init();
-				fileWrite(path: runtimeH, content: rp:emitHeader());
-				fileWrite(path: runtimeC, content: '#include "spec_runtime.h"' . "\n" . rp:emitBody());
-				local String is coldCc: Process:getEnv(key: 'CC', default: 'gcc');
-				local Array of String is rArgs: ['-O2', '-w', '-c', runtimeC, '-o', runtimeO, '-pthread'];
-				local Int is rStat: Process:execute(command: coldCc, args: rArgs);
-				if({ rStat != 0 }, {
-					fileRemove(path: runtimeO);
-					fileRemove(path: runtimeH);
-					fileRemove(path: runtimeC);
-					useCache: false;
-				});
-			});
+		local Int is llLines: Buf:bufCountByte(b: llText, byteVal: 10);
+		local String is tempLlPath: emitLlvmPath;
+		if({ tempLlPath == '' }, {
+			tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
 		});
-
-		if({ useLlvm }, {
-			local Int is llvmGenT0: Process:clockMs();
-			local IrBuilder is irb: IrBuilder:init();
-			irb:entryInitOwner: self:entryInitOwner;
-			irb:entryInitOverloadIndex: self:entryInitOverloadIndex;
-			irb:entryInitTakesMap: self:entryInitTakesMap;
-			local IrModule is irMod: irb:buildProgram(program: program, entryClass: entryName);
-			if({ !args:has(key: 'no-opt') }, {
-				local OptimizerPipeline is optPipe: OptimizerPipeline:init();
-				optPipe:run(mod: irMod);
-			});
-			local LlvmEmitter is emitter: LlvmEmitter:init();
-			local String is llText: emitter:emitModule(mod: irMod);
-			genMs: Process:clockMs() - llvmGenT0;
-
-			local String is tempLlPath: emitLlvmPath;
-			if({ tempLlPath == '' }, {
-				tempLlPath: Uri:systemTempDir() . '/_spec_stage_' . (Process:getPid() as String) . '.ll';
-			});
-			fileWrite(path: tempLlPath, content: llText);
-			report:stage(n: 3, total: 4, label: 'generating LLVM IR');
-
-			if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
-				if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
-				Process:monitorStop();
-				return;
-			});
-
-			# Ensure spec_runtime.o exists for linking
-			if({ runtimeO == '' }, {
-				cacheDir: Uri:runtimeCacheDir();
-				runtimeH: cacheDir . '/spec_runtime.h';
-				runtimeC: cacheDir . '/spec_runtime.c';
-				runtimeO: cacheDir . '/spec_runtime.o';
-			});
-			if({ !fileExists(path: runtimeO) }, {
-				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
-				local RuntimePrelude is rpLlvm: RuntimePrelude:init();
-				fileWrite(path: runtimeH, content: rpLlvm:emitHeader());
-				fileWrite(path: runtimeC, content: '#include "spec_runtime.h"' . "\n" . rpLlvm:emitBody());
-				Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
-			});
-
-			local Array of String is llArgs: ['-O2', '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
-			local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
-			llOsFlags:each(action: local Function(String is fl){
-				llArgs:add(item: fl);
-			});
-			local Int is llCcT0: Process:clockMs();
-			local Int is llStat: Process:execute(command: 'clang', args: llArgs);
-			ccMs: Process:clockMs() - llCcT0;
-			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
-			if({ llStat != 0 }, {
-				Process:monitorStop();
-				Stderr:line('Error: clang failed on LLVM IR with exit status ' . (llStat as String));
-				Process:exit(status: 1);
-			});
-			Process:monitorStop();
-			report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: 0, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: fileSize(path: outputPath) / 1024);
-			return;
-		});
-
-		# 4. C11 code generation over the FULL loaded class set streamed to disk.
-		local CodeGenerator is cg: CodeGenerator:init();
-		if({ useCache && fileExists(path: runtimeO) }, {
-			cg:runtimeHeaderInclude: runtimeH;
-		});
-		cg:genThreads: threadCount;
-		# --debug: statements carry #line directives to their Spec source,
-		# locals stay volatile so the optimizer cannot fold or hoist them,
-		# and the backend compiles -O2 -g — full speed with inspectable
-		# values, Spec-line breakpoints and stepping under gdb.
-		cg:policy:debugEmission: debugMode;
-		cg:entryInitOwner: self:entryInitOwner;
-		cg:entryInitOverloadIndex: self:entryInitOverloadIndex;
-		cg:entryInitTakesArgs: self:entryInitTakesMap;
-		cg:registerProgram(classes: program:classes);
-		local Int is genT0: Process:clockMs();
-		local Int is cLines: cg:generateProgramToFile(program: program, entryClass: entryName, filePath: tempCPath);
-		genMs: Process:clockMs() - genT0;
-		if({ cLines < 0 }, {
-			Stderr:line('Error: Failed to write intermediate C code to ' . tempCPath);
-			Process:exit(status: 1);
-		});
-		report:stage(n: 3, total: 4, label: 'generating C · ' . (cLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
+		fileWrite(path: tempLlPath, content: llText);
+		report:stage(n: 3, total: 4, label: 'generating LLVM IR · ' . (llLines as String) . ' lines · ' . ((Process:peakMemoryKb() / 1024) as String) . ' MB');
 
 		if({ outputPath == '' || outputPath == '/dev/null' || outputPath == 'nul' || outputPath == 'NUL' }, {
-			if({ emitCPath == '' }, {
-				fileRemove(path: tempCPath);
-			});
+			if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
 			Process:monitorStop();
-			report:summary(inputPath: inputPath, outputPath: emitCPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
+			report:summary(inputPath: inputPath, outputPath: emitLlvmPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: -1, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: -1);
 			return;
 		});
 
-		# 5. Backend C compile.
-		local String is ccBin: Process:getEnv(key: 'CC', default: 'gcc');
-		local Array of String is gccArgs: ['-O2', '-w', tempCPath];
-		if({ useCache && fileExists(path: runtimeO) }, {
-			gccArgs:add(item: runtimeO);
+		# 5. Ensure spec_runtime.o exists and compile/link via clang.
+		local String is cacheDir: Uri:runtimeCacheDir();
+		local String is runtimeC: cacheDir . '/spec_runtime.c';
+		local String is runtimeO: cacheDir . '/spec_runtime.o';
+		if({ args:has(key: 'clean-cache') }, {
+			fileRemove(path: runtimeO);
+			fileRemove(path: runtimeC);
 		});
-		gccArgs:add(item: '-o');
-		gccArgs:add(item: outputPath);
-		gccArgs:add(item: '-pthread');
-		gccArgs:add(item: '-lm');
-		local Array of String is cOsFlags: OsLinkFlags:init(noPie: false):flags();
-		cOsFlags:each(action: local Function(String is fl){
-			gccArgs:add(item: fl);
+		if({ !fileExists(path: runtimeO) }, {
+			Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+			local RuntimePrelude is rp: RuntimePrelude:init();
+			fileWrite(path: runtimeC, content: rp:emitRuntime());
+			Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
 		});
+
 		if({ Process:osName() == 'linux' }, {
 			local Boolean is usesAudio: false;
 			program:classes:each(action: local Function(ClassInfo is cls){
@@ -404,32 +295,31 @@ Class is Driver{
 				Stderr:line('Notice: Program uses base:audio. If ALSA development headers are missing, please install:\n  Debian/Ubuntu: sudo apt-get install libasound2-dev\n  Fedora/RHEL:   sudo dnf install alsa-lib-devel');
 			});
 		});
+
+		local Array of String is llArgs: ['-O2', '-Wno-override-module', tempLlPath, runtimeO, '-o', outputPath, '-pthread', '-lm'];
+		local Array of String is llOsFlags: OsLinkFlags:init(noPie: true):flags();
+		llOsFlags:each(action: local Function(String is fl){
+			llArgs:add(item: fl);
+		});
 		if({ debugMode }, {
-			# Debug info rides full optimization: -g costs nothing, and the
-			# volatile-locals emission already keeps values inspectable.
-			gccArgs:add(item: '-g');
+			llArgs:add(item: '-g');
 		});
-		local Int is ccT0: Process:clockMs();
-		local Int is gccStatus: Process:execute(command: ccBin, args: gccArgs);
-		ccMs: Process:clockMs() - ccT0;
-		if({ emitCPath == '' }, {
-			fileRemove(path: tempCPath);
-		});
-		if({ gccStatus != 0 }, {
-			if({ useCache }, {
-				fileRemove(path: runtimeO);
-				fileRemove(path: runtimeH);
-				fileRemove(path: runtimeC);
-			});
+		local Int is llCcT0: Process:clockMs();
+		local Int is llStat: Process:execute(command: 'clang', args: llArgs);
+		ccMs: Process:clockMs() - llCcT0;
+		if({ emitLlvmPath == '' }, { fileRemove(path: tempLlPath); });
+		if({ llStat != 0 }, {
+			fileRemove(path: runtimeO);
+			fileRemove(path: runtimeC);
 			Process:monitorStop();
-			Stderr:line('Error: Backend C compiler (' . ccBin . ') failed with exit status ' . (gccStatus as String));
+			Stderr:line('Error: clang failed on LLVM IR with exit status ' . (llStat as String));
 			Process:exit(status: 1);
 		});
 
 		local Int is binBytes: Dir:fileSize(path: outputPath);
-		report:stage(n: 4, total: 4, label: 'compiling (' . ccBin . ') · ' . (ccMs as String) . 'ms');
+		report:stage(n: 4, total: 4, label: 'compiling (clang) · ' . (ccMs as String) . 'ms');
 		Process:monitorStop();
-		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: cLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
+		report:summary(inputPath: inputPath, outputPath: outputPath, classCount: classCount, methodCount: methodCount, specLines: specLines, cLines: llLines, totalMs: Process:clockMs() - t0, loadMs: loadMs, checkMs: checkMs, genMs: genMs, ccMs: ccMs, peakKb: Process:monitorPeakMemKb(), avgMemKb: Process:monitorAvgMemKb(), avgCpuPct: Process:monitorAvgCpuPct(), peakCpuPct: Process:monitorPeakCpuPct(), binKb: binBytes);
 	}
 
 	## Walks the inheritance lattice from [c] and classifies every init
