@@ -116,6 +116,15 @@ declare void @spec_panic(ptr)
 declare void @spec_panic_byte_range(i64)
 declare void @spec_panic_cast(ptr, ptr)
 declare i32 @strcmp(ptr, ptr)
+declare i64 @strlen(ptr)
+declare ptr @calloc(i64, i64)
+declare ptr @realloc(ptr, i64)
+declare void @free(ptr)
+declare ptr @memcpy(ptr, ptr, i64)
+declare ptr @memmove(ptr, ptr, i64)
+declare ptr @memset(ptr, i32, i64)
+declare i32 @memcmp(ptr, ptr, i64)
+@.str.oom = private unnamed_addr constant [14 x i8] c"Out of memory\00"
 define internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {
   %r = call i32 @strcmp(ptr %a, ptr %b)
   %eq = icmp eq i32 %r, 0
@@ -131,6 +140,231 @@ fail:
   br label %ok
 ok:
   ret i64 %v
+}
+define internal i64 @__spec_mem_alloc(i64 %bytes) alwaysinline {
+  %le = icmp sle i64 %bytes, 0
+  %sz = select i1 %le, i64 1, i64 %bytes
+  %p = call ptr @calloc(i64 1, i64 %sz)
+  %isnull = icmp eq ptr %p, null
+  br i1 %isnull, label %oom, label %ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %ok
+ok:
+  %addr = ptrtoint ptr %p to i64
+  ret i64 %addr
+}
+define internal i64 @__spec_mem_realloc(i64 %ptr, i64 %bytes) alwaysinline {
+  %le = icmp sle i64 %bytes, 0
+  %sz = select i1 %le, i64 1, i64 %bytes
+  %old = inttoptr i64 %ptr to ptr
+  %p = call ptr @realloc(ptr %old, i64 %sz)
+  %isnull = icmp eq ptr %p, null
+  br i1 %isnull, label %oom, label %ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %ok
+ok:
+  %addr = ptrtoint ptr %p to i64
+  ret i64 %addr
+}
+define internal void @__spec_mem_free(i64 %ptr) alwaysinline {
+  %nz = icmp ne i64 %ptr, 0
+  br i1 %nz, label %do_free, label %done
+do_free:
+  %p = inttoptr i64 %ptr to ptr
+  call void @free(ptr %p)
+  br label %done
+done:
+  ret void
+}
+define internal void @__spec_mem_copy(i64 %dst, i64 %src, i64 %bytes) alwaysinline {
+  %gt = icmp sgt i64 %bytes, 0
+  br i1 %gt, label %do_cp, label %done
+do_cp:
+  %d = inttoptr i64 %dst to ptr
+  %s = inttoptr i64 %src to ptr
+  call ptr @memcpy(ptr %d, ptr %s, i64 %bytes)
+  br label %done
+done:
+  ret void
+}
+define internal void @__spec_mem_move(i64 %dst, i64 %src, i64 %bytes) alwaysinline {
+  %gt = icmp sgt i64 %bytes, 0
+  br i1 %gt, label %do_mv, label %done
+do_mv:
+  %d = inttoptr i64 %dst to ptr
+  %s = inttoptr i64 %src to ptr
+  call ptr @memmove(ptr %d, ptr %s, i64 %bytes)
+  br label %done
+done:
+  ret void
+}
+define internal void @__spec_mem_set(i64 %dst, i64 %val, i64 %bytes) alwaysinline {
+  %gt = icmp sgt i64 %bytes, 0
+  br i1 %gt, label %do_set, label %done
+do_set:
+  %d = inttoptr i64 %dst to ptr
+  %v32 = trunc i64 %val to i32
+  call ptr @memset(ptr %d, i32 %v32, i64 %bytes)
+  br label %done
+done:
+  ret void
+}
+define internal i64 @__spec_mem_cmp(i64 %a, i64 %b, i64 %bytes) alwaysinline {
+  %le = icmp sle i64 %bytes, 0
+  br i1 %le, label %zero, label %do_cmp
+zero:
+  ret i64 0
+do_cmp:
+  %pa = inttoptr i64 %a to ptr
+  %pb = inttoptr i64 %b to ptr
+  %r32 = call i32 @memcmp(ptr %pa, ptr %pb, i64 %bytes)
+  %r64 = sext i32 %r32 to i64
+  ret i64 %r64
+}
+define internal i64 @__spec_mem_cstr_len(i64 %addr) alwaysinline {
+  %eq = icmp eq i64 %addr, 0
+  br i1 %eq, label %zero, label %do_len
+zero:
+  ret i64 0
+do_len:
+  %p = inttoptr i64 %addr to ptr
+  %n = call i64 @strlen(ptr %p)
+  ret i64 %n
+}
+define internal i64 @__spec_mem_load_i64(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load i64, ptr %p
+  ret i64 %v
+}
+define internal void @__spec_mem_store_i64(i64 %base, i64 %off, i64 %val) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  store i64 %val, ptr %p
+  ret void
+}
+define internal i64 @__spec_mem_load_i32(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load i32, ptr %p
+  %ext = zext i32 %v to i64
+  ret i64 %ext
+}
+define internal void @__spec_mem_store_i32(i64 %base, i64 %off, i64 %val) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %tr = trunc i64 %val to i32
+  store i32 %tr, ptr %p
+  ret void
+}
+define internal i64 @__spec_mem_load_byte(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load i8, ptr %p
+  %ext = zext i8 %v to i64
+  ret i64 %ext
+}
+define internal void @__spec_mem_store_byte(i64 %base, i64 %off, i64 %val) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %tr = trunc i64 %val to i8
+  store i8 %tr, ptr %p
+  ret void
+}
+define internal ptr @__spec_mem_load_ptr(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load ptr, ptr %p
+  ret ptr %v
+}
+define internal void @__spec_mem_store_ptr(i64 %base, i64 %off, ptr %val) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  store ptr %val, ptr %p
+  ret void
+}
+define internal double @__spec_mem_load_f64(i64 %base, i64 %off) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  %v = load double, ptr %p
+  ret double %v
+}
+define internal void @__spec_mem_store_f64(i64 %base, i64 %off, double %val) alwaysinline {
+  %p0 = inttoptr i64 %base to ptr
+  %p = getelementptr i8, ptr %p0, i64 %off
+  store double %val, ptr %p
+  ret void
+}
+define internal i64 @__spec_mem_obj_to_addr(ptr %obj) alwaysinline {
+  %a = ptrtoint ptr %obj to i64
+  ret i64 %a
+}
+define internal ptr @__spec_mem_addr_to_obj(i64 %addr) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  ret ptr %p
+}
+define internal i64 @__spec_mem_float_to_bits(double %v) alwaysinline {
+  %b = bitcast double %v to i64
+  ret i64 %b
+}
+define internal double @__spec_mem_bits_to_float(i64 %b) alwaysinline {
+  %v = bitcast i64 %b to double
+  ret double %v
+}
+define internal i64 @__spec_mem_atomic_load_i32(i64 %addr) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %v = load atomic i32, ptr %p monotonic, align 4
+  %ext = zext i32 %v to i64
+  ret i64 %ext
+}
+define internal void @__spec_mem_atomic_store_i32(i64 %addr, i64 %val) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %tr = trunc i64 %val to i32
+  store atomic i32 %tr, ptr %p release, align 4
+  ret void
+}
+define internal i64 @__spec_mem_atomic_add_i32(i64 %addr, i64 %delta) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %tr = trunc i64 %delta to i32
+  %old = atomicrmw add ptr %p, i32 %tr monotonic, align 4
+  %ext = zext i32 %old to i64
+  ret i64 %ext
+}
+define internal i64 @__spec_mem_atomic_sub_i32(i64 %addr, i64 %delta) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %tr = trunc i64 %delta to i32
+  %old = atomicrmw sub ptr %p, i32 %tr acq_rel, align 4
+  %ext = zext i32 %old to i64
+  ret i64 %ext
+}
+define internal i64 @__spec_mem_atomic_load_i64(i64 %addr) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %v = load atomic i64, ptr %p acquire, align 8
+  ret i64 %v
+}
+define internal void @__spec_mem_atomic_store_i64(i64 %addr, i64 %val) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  store atomic i64 %val, ptr %p release, align 8
+  ret void
+}
+define internal i64 @__spec_mem_atomic_add_i64(i64 %addr, i64 %delta) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %old = atomicrmw add ptr %p, i64 %delta seq_cst, align 8
+  ret i64 %old
+}
+define internal i1 @__spec_mem_atomic_cas_i64(i64 %addr, i64 %exp, i64 %des) alwaysinline {
+  %p = inttoptr i64 %addr to ptr
+  %res = cmpxchg ptr %p, i64 %exp, i64 %des acq_rel monotonic, align 8
+  %ok = extractvalue { i64, i1 } %res, 1
+  ret i1 %ok
+}
+define internal void @__spec_mem_call_destroy(i64 %fnAddr, i64 %objAddr) alwaysinline {
+  %fn = inttoptr i64 %fnAddr to ptr
+  %obj = inttoptr i64 %objAddr to ptr
+  call void %fn(ptr %obj)
+  ret void
 }
 declare void @spec_print(ptr)
 declare void @spec_print_line(ptr)

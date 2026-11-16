@@ -12,6 +12,7 @@ Class is CallLowererRegistry{
 		['base', 'compiler', 'llvm', CallLowerer],
 		['base', 'compiler', 'llvm', ControlFlowCallLowerer],
 		['base', 'compiler', 'llvm', SysinternalCallLowerer],
+		['base', 'compiler', 'llvm', MemCallLowerer],
 		['base', 'compiler', 'llvm', ConsoleCallLowerer],
 		['base', 'compiler', 'llvm', ProcessCallLowerer],
 		['base', 'compiler', 'llvm', FileCallLowerer],
