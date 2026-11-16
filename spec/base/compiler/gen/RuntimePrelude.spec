@@ -134,33 +134,6 @@ void spec_map_destroy(void* self);
 SpecMap* spec_map_new(void);
 SpecMap* spec_map_new_object(void);
 SpecMap* spec_map_new_typed(int key_kind, int val_kind);
-void spec_map_set(SpecMap* m, String key, String val);
-void spec_map_set_any(SpecMap* m, String key, void* val);
-void spec_map_set_any_transfer(SpecMap* m, String key, void* val);
-void* spec_map_get(SpecMap* m, String key, void* _default);
-bool spec_map_has(SpecMap* m, String key);
-bool spec_map_remove(SpecMap* m, String key);
-void spec_map_set_int(SpecMap* m, long long key, String val);
-void spec_map_set_int_any(SpecMap* m, long long key, void* val);
-void spec_map_set_int_any_transfer(SpecMap* m, long long key, void* val);
-void* spec_map_get_int(SpecMap* m, long long key, void* _default);
-bool spec_map_has_int(SpecMap* m, long long key);
-bool spec_map_remove_int(SpecMap* m, long long key);
-void spec_map_set_flt(SpecMap* m, double key, String val);
-void spec_map_set_flt_any(SpecMap* m, double key, void* val);
-void spec_map_set_flt_any_transfer(SpecMap* m, double key, void* val);
-void* spec_map_get_flt(SpecMap* m, double key, void* _default);
-bool spec_map_has_flt(SpecMap* m, double key);
-bool spec_map_remove_flt(SpecMap* m, double key);
-void spec_map_set_obj(SpecMap* m, void* key, String val);
-void spec_map_set_obj_any(SpecMap* m, void* key, void* val);
-void spec_map_set_obj_any_transfer(SpecMap* m, void* key, void* val);
-void* spec_map_get_obj(SpecMap* m, void* key, void* _default);
-bool spec_map_has_obj(SpecMap* m, void* key);
-bool spec_map_remove_obj(SpecMap* m, void* key);
-long long spec_map_length(SpecMap* m);
-SpecArray* spec_map_keys(SpecMap* m);
-void spec_map_freeze(SpecMap* m);
 SpecLoopControl* LoopControl_new(void);
 void LoopControl_stop(SpecLoopControl* c);
 void spec_async_task_started(void);
@@ -806,24 +779,8 @@ static SpecArray* spec_array_new_kind(int kind) {
 #define SPEC_KEY_FLOAT  2
 #define SPEC_KEY_OBJECT 3
 
-static inline uint64_t spec_double_to_u64(double d) {
-    if (d == 0.0) d = 0.0;
-    uint64_t u = 0;
-    memcpy(&u, &d, sizeof(u));
-    return u;
-}
-
-static inline double spec_u64_to_double(uint64_t u) {
-    double d = 0.0;
-    memcpy(&d, &u, sizeof(d));
-    return d;
-}
-
 typedef struct SpecMapEntry {
-    union {
-        char* key;
-        uint64_t key_bits;
-    };
+    uint64_t key_bits;
     void* value;
     bool is_str;
     struct SpecMapEntry* next;
@@ -836,49 +793,8 @@ typedef struct SpecMap {
     int key_kind;
     int val_kind;
     bool frozen;
-    pthread_mutex_t lock;
+    _Atomic uint64_t lock;
 } SpecMap;
-
-static inline size_t spec_hash_key(const char* key, size_t nbuckets) {
-    size_t h = 1469598103934665603ULL;
-    while (*key) {
-        h ^= (unsigned char)(*key++);
-        h *= 1099511628211ULL;
-    }
-    return h & (nbuckets - 1);
-}
-
-static inline size_t spec_hash_u64(uint64_t k, size_t nbuckets) {
-    k = (k ^ (k >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    k = (k ^ (k >> 27)) * 0x94d049bb133111ebULL;
-    k = k ^ (k >> 31);
-    return (size_t)k & (nbuckets - 1);
-}
-
-/* Doubles the table once the load factor reaches 1, so chains stay short
-   however large the map grows. Caller holds the map lock. */
-static void spec_map_grow(SpecMap* m) {
-    if (m->length < m->nbuckets) return;
-    size_t nb = m->nbuckets * 2;
-    SpecMapEntry** grown = (SpecMapEntry**)spec_xmalloc(sizeof(SpecMapEntry*) * nb);
-    memset(grown, 0, sizeof(SpecMapEntry*) * nb);
-    for (size_t i = 0; i < m->nbuckets; i++) {
-        SpecMapEntry* curr = m->buckets[i];
-        while (curr) {
-            SpecMapEntry* next = curr->next;
-            size_t idx = (m->key_kind == SPEC_KEY_STRING)
-                ? spec_hash_key(curr->key, nb)
-                : spec_hash_u64(curr->key_bits, nb);
-            curr->next = grown[idx];
-            grown[idx] = curr;
-            curr = next;
-        }
-    }
-    free(m->buckets);
-    m->buckets = grown;
-    m->nbuckets = nb;
-}
-
 
 static SpecMap* spec_map_new_typed_kind(int key_kind, int val_kind) {
     SpecMap* m = (SpecMap*)spec_alloc(sizeof(SpecMap), spec_map_destroy);
@@ -888,11 +804,7 @@ static SpecMap* spec_map_new_typed_kind(int key_kind, int val_kind) {
     m->nbuckets = SPEC_MAP_INITIAL_BUCKETS;
     m->buckets = (SpecMapEntry**)spec_xmalloc(sizeof(SpecMapEntry*) * m->nbuckets);
     memset(m->buckets, 0, sizeof(SpecMapEntry*) * m->nbuckets);
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&m->lock, &attr);
-    pthread_mutexattr_destroy(&attr);
+    atomic_init(&m->lock, 0);
     return m;
 }
 
@@ -1703,19 +1615,17 @@ void spec_array_add_owned(SpecArray* a, void* item) {
 
 void spec_map_destroy(void* self) {
     SpecMap* m = (SpecMap*)self;
-    if (m) {
-        pthread_mutex_destroy(&m->lock);
+    if (m && m->buckets) {
         for (size_t i = 0; i < m->nbuckets; i++) {
             SpecMapEntry* curr = m->buckets[i];
             while (curr) {
                 SpecMapEntry* next = curr->next;
-                if (m->key_kind == SPEC_KEY_STRING) {
-                    if (curr->key) free(curr->key);
-                } else if (m->key_kind == SPEC_KEY_OBJECT && curr->key_bits) {
+                if ((m->key_kind == SPEC_KEY_STRING || m->key_kind == SPEC_KEY_OBJECT) && curr->key_bits) {
                     spec_release((void*)(uintptr_t)curr->key_bits);
                 }
-                if (curr->is_str && curr->value) free(curr->value);
-                else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);
+                if ((curr->is_str || m->val_kind == SPEC_ELEM_OBJECT) && curr->value) {
+                    spec_release(curr->value);
+                }
                 free(curr);
                 curr = next;
             }
@@ -1737,312 +1647,72 @@ SpecMap* spec_map_new_typed(int key_kind, int val_kind) {
     return spec_map_new_typed_kind(key_kind, val_kind);
 }
 
-static inline size_t _spec_map_bucket(SpecMap* m, uint64_t key_bits, const char* ck, size_t nb) {
-    return (m->key_kind == SPEC_KEY_STRING) ? spec_hash_key(ck, nb) : spec_hash_u64(key_bits, nb);
+static inline size_t spec_hash_str_buf(String key, size_t nbuckets) {
+    if (!key) return 0;
+    const unsigned char* data = (const unsigned char*)key->data;
+    size_t len = key->length;
+    uint64_t h = 1469598103934665603ULL;
+    for (size_t i = 0; i < len; i++) {
+        h = (h ^ data[i]) * 1099511628211ULL;
+    }
+    return (size_t)(h & (nbuckets - 1));
 }
 
-static inline bool _spec_map_match(SpecMap* m, SpecMapEntry* curr, uint64_t key_bits, const char* ck) {
-    return (m->key_kind == SPEC_KEY_STRING) ? (strcmp(curr->key, ck) == 0) : (curr->key_bits == key_bits);
-}
-
-static void _spec_map_set_raw(SpecMap* m, uint64_t key_bits, const char* ck, void* val, bool val_is_str, bool retain_val) {
-    if (!m) return;
-    if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return; }
-    if (m->key_kind == SPEC_KEY_STRING && !ck) return;
-    bool mt = spec_is_multithreaded();
-    if (mt) pthread_mutex_lock(&m->lock);
-    size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
+static void _spec_c_map_set_str(SpecMap* m, String key, String val) {
+    if (!m || !key) return;
+    size_t idx = spec_hash_str_buf(key, m->nbuckets);
     SpecMapEntry* curr = m->buckets[idx];
     while (curr) {
-        if (_spec_map_match(m, curr, key_bits, ck)) {
-            if (curr->is_str && curr->value) free(curr->value);
-            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);
-            if (val_is_str) {
-                curr->value = (void*)spec_xstrdup(val ? (const char*)val : "");
-            } else {
-                if (retain_val && m->val_kind == SPEC_ELEM_OBJECT && val) spec_retain(val);
-                curr->value = val;
-            }
-            curr->is_str = val_is_str;
-            if (mt) pthread_mutex_unlock(&m->lock);
+        if (spec_string_equals((String)(uintptr_t)curr->key_bits, key)) {
+            if (val) spec_retain(val);
+            if ((curr->is_str || m->val_kind == SPEC_ELEM_OBJECT) && curr->value) spec_release(curr->value);
+            curr->value = val;
+            curr->is_str = true;
             return;
         }
         curr = curr->next;
     }
-    if (!val_is_str && retain_val && m->val_kind == SPEC_ELEM_OBJECT && val) spec_retain(val);
-    spec_map_grow(m);
-    idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
-    SpecMapEntry* e = (SpecMapEntry*)spec_xmalloc(sizeof(SpecMapEntry));
-    if (m->key_kind == SPEC_KEY_STRING) {
-        e->key = spec_xstrdup(ck);
-    } else {
-        if (m->key_kind == SPEC_KEY_OBJECT && key_bits) spec_retain((void*)(uintptr_t)key_bits);
-        e->key_bits = key_bits;
+    if (val) spec_retain(val);
+    spec_retain(key);
+    if (m->length >= m->nbuckets) {
+        size_t nb = m->nbuckets * 2;
+        SpecMapEntry** grown = (SpecMapEntry**)spec_xmalloc(sizeof(SpecMapEntry*) * nb);
+        memset(grown, 0, sizeof(SpecMapEntry*) * nb);
+        for (size_t i = 0; i < m->nbuckets; i++) {
+            SpecMapEntry* c = m->buckets[i];
+            while (c) {
+                SpecMapEntry* nx = c->next;
+                size_t gidx = spec_hash_str_buf((String)(uintptr_t)c->key_bits, nb);
+                c->next = grown[gidx];
+                grown[gidx] = c;
+                c = nx;
+            }
+        }
+        free(m->buckets);
+        m->buckets = grown;
+        m->nbuckets = nb;
+        idx = spec_hash_str_buf(key, nb);
     }
-    e->value = val_is_str ? (void*)spec_xstrdup(val ? (const char*)val : "") : val;
-    e->is_str = val_is_str;
+    SpecMapEntry* e = (SpecMapEntry*)spec_xmalloc(sizeof(SpecMapEntry));
+    e->key_bits = (uint64_t)(uintptr_t)key;
+    e->value = val;
+    e->is_str = true;
     e->next = m->buckets[idx];
     m->buckets[idx] = e;
     m->length++;
-    if (mt) pthread_mutex_unlock(&m->lock);
 }
 
-static void* _spec_map_get_raw(SpecMap* m, uint64_t key_bits, const char* ck, void* _default) {
-    if (!m) return _default;
-    if (m->key_kind == SPEC_KEY_STRING && !ck) return _default;
-    if (m->frozen || !spec_is_multithreaded()) {
-        size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
-        SpecMapEntry* curr = m->buckets[idx];
-        while (curr) {
-            if (_spec_map_match(m, curr, key_bits, ck)) {
-                void* res = curr->value;
-                if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : "");
-                return res;
-            }
-            curr = curr->next;
-        }
-        return _default;
-    }
-    pthread_mutex_lock(&m->lock);
-    size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
+static String _spec_c_map_get_str(SpecMap* m, String key) {
+    if (!m || !key) return NULL;
+    size_t idx = spec_hash_str_buf(key, m->nbuckets);
     SpecMapEntry* curr = m->buckets[idx];
     while (curr) {
-        if (_spec_map_match(m, curr, key_bits, ck)) {
-            void* res = curr->value;
-            if (curr->is_str) res = (void*)spec_string_from_chars(res ? (const char*)res : "");
-            pthread_mutex_unlock(&m->lock);
-            return res;
+        if (spec_string_equals((String)(uintptr_t)curr->key_bits, key)) {
+            return (String)curr->value;
         }
         curr = curr->next;
     }
-    pthread_mutex_unlock(&m->lock);
-    return _default;
-}
-
-static bool _spec_map_has_raw(SpecMap* m, uint64_t key_bits, const char* ck) {
-    if (!m) return false;
-    if (m->key_kind == SPEC_KEY_STRING && !ck) return false;
-    if (m->frozen || !spec_is_multithreaded()) {
-        size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
-        SpecMapEntry* curr = m->buckets[idx];
-        while (curr) {
-            if (_spec_map_match(m, curr, key_bits, ck)) return true;
-            curr = curr->next;
-        }
-        return false;
-    }
-    pthread_mutex_lock(&m->lock);
-    size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
-    SpecMapEntry* curr = m->buckets[idx];
-    while (curr) {
-        if (_spec_map_match(m, curr, key_bits, ck)) {
-            pthread_mutex_unlock(&m->lock);
-            return true;
-        }
-        curr = curr->next;
-    }
-    pthread_mutex_unlock(&m->lock);
-    return false;
-}
-
-static bool _spec_map_remove_raw(SpecMap* m, uint64_t key_bits, const char* ck) {
-    if (!m) return false;
-    if (m->frozen) { spec_panic("Mutation attempted on frozen Map"); return false; }
-    if (m->key_kind == SPEC_KEY_STRING && !ck) return false;
-    pthread_mutex_lock(&m->lock);
-    size_t idx = _spec_map_bucket(m, key_bits, ck, m->nbuckets);
-    SpecMapEntry* curr = m->buckets[idx];
-    SpecMapEntry* prev = NULL;
-    while (curr) {
-        if (_spec_map_match(m, curr, key_bits, ck)) {
-            if (prev) prev->next = curr->next;
-            else m->buckets[idx] = curr->next;
-            if (m->key_kind == SPEC_KEY_STRING) {
-                free(curr->key);
-            } else if (m->key_kind == SPEC_KEY_OBJECT && curr->key_bits) {
-                spec_release((void*)(uintptr_t)curr->key_bits);
-            }
-            if (curr->is_str && curr->value) free(curr->value);
-            else if (m->val_kind == SPEC_ELEM_OBJECT && curr->value) spec_release(curr->value);
-            free(curr);
-            m->length--;
-            pthread_mutex_unlock(&m->lock);
-            return true;
-        }
-        prev = curr;
-        curr = curr->next;
-    }
-    pthread_mutex_unlock(&m->lock);
-    return false;
-}
-
-void spec_map_set(SpecMap* m, String key, String val) {
-    if (!m || !key) return;
-    const char* ck = spec_buf_to_cstring((SpecBuf*)key);
-    const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;
-    _spec_map_set_raw(m, 0, ck, (void*)cv, true, false);
-}
-
-void spec_map_set_any(SpecMap* m, String key, void* val) {
-    if (!m || !key) return;
-    _spec_map_set_raw(m, 0, spec_buf_to_cstring((SpecBuf*)key), val, false, true);
-}
-
-void spec_map_set_any_transfer(SpecMap* m, String key, void* val) {
-    if (!m || !key) return;
-    _spec_map_set_raw(m, 0, spec_buf_to_cstring((SpecBuf*)key), val, false, false);
-}
-
-void* spec_map_get(SpecMap* m, String key, void* _default) {
-    if (!m || !key) return _default;
-    return _spec_map_get_raw(m, 0, spec_buf_to_cstring((SpecBuf*)key), _default);
-}
-
-bool spec_map_has(SpecMap* m, String key) {
-    if (!m || !key) return false;
-    return _spec_map_has_raw(m, 0, spec_buf_to_cstring((SpecBuf*)key));
-}
-
-bool spec_map_remove(SpecMap* m, String key) {
-    if (!m || !key) return false;
-    return _spec_map_remove_raw(m, 0, spec_buf_to_cstring((SpecBuf*)key));
-}
-
-void spec_map_set_int(SpecMap* m, long long key, String val) {
-    if (!m) return;
-    const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;
-    _spec_map_set_raw(m, (uint64_t)key, NULL, (void*)cv, true, false);
-}
-
-void spec_map_set_int_any(SpecMap* m, long long key, void* val) {
-    if (!m) return;
-    _spec_map_set_raw(m, (uint64_t)key, NULL, val, false, true);
-}
-
-void spec_map_set_int_any_transfer(SpecMap* m, long long key, void* val) {
-    if (!m) return;
-    _spec_map_set_raw(m, (uint64_t)key, NULL, val, false, false);
-}
-
-void* spec_map_get_int(SpecMap* m, long long key, void* _default) {
-    return _spec_map_get_raw(m, (uint64_t)key, NULL, _default);
-}
-
-bool spec_map_has_int(SpecMap* m, long long key) {
-    return _spec_map_has_raw(m, (uint64_t)key, NULL);
-}
-
-bool spec_map_remove_int(SpecMap* m, long long key) {
-    return _spec_map_remove_raw(m, (uint64_t)key, NULL);
-}
-
-void spec_map_set_flt(SpecMap* m, double key, String val) {
-    if (!m) return;
-    const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;
-    _spec_map_set_raw(m, spec_double_to_u64(key), NULL, (void*)cv, true, false);
-}
-
-void spec_map_set_flt_any(SpecMap* m, double key, void* val) {
-    if (!m) return;
-    _spec_map_set_raw(m, spec_double_to_u64(key), NULL, val, false, true);
-}
-
-void spec_map_set_flt_any_transfer(SpecMap* m, double key, void* val) {
-    if (!m) return;
-    _spec_map_set_raw(m, spec_double_to_u64(key), NULL, val, false, false);
-}
-
-void* spec_map_get_flt(SpecMap* m, double key, void* _default) {
-    return _spec_map_get_raw(m, spec_double_to_u64(key), NULL, _default);
-}
-
-bool spec_map_has_flt(SpecMap* m, double key) {
-    return _spec_map_has_raw(m, spec_double_to_u64(key), NULL);
-}
-
-bool spec_map_remove_flt(SpecMap* m, double key) {
-    return _spec_map_remove_raw(m, spec_double_to_u64(key), NULL);
-}
-
-void spec_map_set_obj(SpecMap* m, void* key, String val) {
-    if (!m) return;
-    const char* cv = val ? spec_buf_to_cstring((SpecBuf*)val) : NULL;
-    _spec_map_set_raw(m, (uint64_t)(uintptr_t)key, NULL, (void*)cv, true, false);
-}
-
-void spec_map_set_obj_any(SpecMap* m, void* key, void* val) {
-    if (!m) return;
-    _spec_map_set_raw(m, (uint64_t)(uintptr_t)key, NULL, val, false, true);
-}
-
-void spec_map_set_obj_any_transfer(SpecMap* m, void* key, void* val) {
-    if (!m) return;
-    _spec_map_set_raw(m, (uint64_t)(uintptr_t)key, NULL, val, false, false);
-}
-
-void* spec_map_get_obj(SpecMap* m, void* key, void* _default) {
-    return _spec_map_get_raw(m, (uint64_t)(uintptr_t)key, NULL, _default);
-}
-
-bool spec_map_has_obj(SpecMap* m, void* key) {
-    return _spec_map_has_raw(m, (uint64_t)(uintptr_t)key, NULL);
-}
-
-bool spec_map_remove_obj(SpecMap* m, void* key) {
-    return _spec_map_remove_raw(m, (uint64_t)(uintptr_t)key, NULL);
-}
-
-long long spec_map_length(SpecMap* m) {
-    if (!m) return 0;
-    if (m->frozen || !spec_is_multithreaded()) return (long long)m->length;
-    pthread_mutex_lock(&m->lock);
-    long long cnt = (long long)m->length;
-    pthread_mutex_unlock(&m->lock);
-    return cnt;
-}
-
-static inline void _spec_map_push_key(SpecMap* m, SpecArray* a, SpecMapEntry* curr) {
-    if (m->key_kind == SPEC_KEY_STRING) {
-        spec_array_add_owned(a, (void*)spec_string_from_chars(curr->key));
-    } else if (m->key_kind == SPEC_KEY_OBJECT) {
-        spec_array_add(a, (void*)(uintptr_t)curr->key_bits);
-    } else {
-        spec_array_add(a, (void*)(uintptr_t)curr->key_bits);
-    }
-}
-
-SpecArray* spec_map_keys(SpecMap* m) {
-    SpecArray* a = (m && (m->key_kind == SPEC_KEY_STRING || m->key_kind == SPEC_KEY_OBJECT))
-        ? spec_array_new_object()
-        : spec_array_new();
-    if (!m) return a;
-    if (m->frozen || !spec_is_multithreaded()) {
-        for (size_t i = 0; i < m->nbuckets; i++) {
-            SpecMapEntry* curr = m->buckets[i];
-            while (curr) {
-                _spec_map_push_key(m, a, curr);
-                curr = curr->next;
-            }
-        }
-        return a;
-    }
-    pthread_mutex_lock(&m->lock);
-    for (size_t i = 0; i < m->nbuckets; i++) {
-        SpecMapEntry* curr = m->buckets[i];
-        while (curr) {
-            _spec_map_push_key(m, a, curr);
-            curr = curr->next;
-        }
-    }
-    pthread_mutex_unlock(&m->lock);
-    return a;
-}
-
-void spec_map_freeze(SpecMap* m) {
-    if (!m) return;
-    pthread_mutex_lock(&m->lock);
-    m->frozen = true;
-    pthread_mutex_unlock(&m->lock);
+    return NULL;
 }
 
 SpecLoopControl* LoopControl_new(void) {
@@ -2628,11 +2298,11 @@ void spec_set_cli_args(int argc, char** argv) {
 }
 
 static void spec_cli_arg_set(SpecMap* args, String key, String val) {
-    String prev = (String)spec_map_get(args, key, NULL);
+    String prev = _spec_c_map_get_str(args, key);
     if (prev) {
-        spec_map_set(args, key, spec_string_concat(prev, spec_string_concat(spec_string_intern("\n"), val)));
+        _spec_c_map_set_str(args, key, spec_string_concat(spec_retain(prev), spec_string_concat(spec_string_intern("\n"), val)));
     } else {
-        spec_map_set(args, key, val);
+        _spec_c_map_set_str(args, key, val);
     }
 }
 
@@ -2689,7 +2359,7 @@ SpecArray* spec_process_raw_args(void) {
 static void spec_map_set_owned_int(SpecMap* m, const char* key, long long val) {
     String k = spec_string_intern(key);
     String v = spec_to_string_int(val);
-    spec_map_set(m, k, v);
+    _spec_c_map_set_str(m, k, v);
     spec_release(v);
 }
 

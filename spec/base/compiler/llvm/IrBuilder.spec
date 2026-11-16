@@ -567,6 +567,8 @@ Class is IrBuilder{
 			});
 			ci++;
 		});
+		self:currentClass: '';
+		self:currentMethod: '';
 
 		# 3. Emit held resolvers, RTTI hierarchy helpers, and main()
 		self:buildHeldResolvers();
@@ -606,7 +608,7 @@ Class is IrBuilder{
 	}
 
 	local Function is emitPoolEnter(){
-		if({ self:currentClass == 'Vector' }, {
+		if({ self:currentClass == 'Vector' && self:currentMethod != 'mapKeys' }, {
 			self:curPoolMark: '';
 			return;
 		});
@@ -1250,7 +1252,7 @@ Class is IrBuilder{
 			local String is cache1: self:nextTmp();
 			self:emit(inst: IrInst:Load(dst: cache1, slot: '@' . cacheGlob, ty: IrType:Ptr));
 			local String is hasKey: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: hasKey, hasDst: true, retType: IrType:I1, callee: 'spec_map_has', argTypes: [IrType:Ptr, IrType:Ptr], args: [cache1, '%p_name']));
+			self:emit(inst: IrInst:IrCall(dst: hasKey, hasDst: true, retType: IrType:I1, callee: 'Vector_mapHas', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name']));
 			local String is hitLbl: self:nextLabel(prefix: 'hcache_hit');
 			local String is missLbl: self:nextLabel(prefix: 'hcache_miss');
 			self:terminate(inst: IrInst:CondBr(cond: hasKey, thenLabel: hitLbl, elseLabel: missLbl));
@@ -1258,7 +1260,7 @@ Class is IrBuilder{
 			local IrBlock is hitBlk: fn:addBlock(label: hitLbl);
 			self:switchBlock(blk: hitBlk);
 			local String is hitRaw: self:nextTmp();
-			self:emit(inst: IrInst:IrCall(dst: hitRaw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [cache1, '%p_name', 'null']));
+			self:emit(inst: IrInst:IrCall(dst: hitRaw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapGet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', 'null']));
 			local String is hitVal: self:castIfNeeded(val: hitRaw, fromTy: IrType:Ptr, toTy: resTy);
 			if({ resArc && hitVal != 'null' }, { self:emit(inst: IrInst:Retain(val: hitVal)); });
 			self:emitPoolExit();
@@ -1274,7 +1276,7 @@ Class is IrBuilder{
 			local String is resolved: self:nextTmp();
 			self:emit(inst: IrInst:IrCall(dst: resolved, hasDst: true, retType: resTy, callee: rSym . '_resolveHeld', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%p_name', clos]));
 			local String is setRaw: self:castIfNeeded(val: resolved, fromTy: resTy, toTy: IrType:Ptr);
-			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set_any', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [cache1, '%p_name', setRaw]));
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_mapSetAny', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', cache1, '%p_name', setRaw]));
 			if({ resArc && resolved != 'null' }, { self:emit(inst: IrInst:Retain(val: resolved)); });
 			self:emitPoolExit();
 			self:curPoolMark: '';
@@ -2095,25 +2097,25 @@ Class is IrBuilder{
 							local String is kSuf: '';
 							local IrType is kArgTy: IrType:Ptr;
 							if({ kSpec == 'Int' || kSpec == 'Boolean' || tType:startsWith(prefix: 'Map of Int to ') || tType:startsWith(prefix: 'Map:Int:') || tType:startsWith(prefix: 'Map of Boolean to ') || tType:startsWith(prefix: 'Map:Boolean:') }, {
-								kSuf: '_int';
+								kSuf: 'Int';
 								kArgTy: IrType:I64;
 							}, {
 								if({ kSpec == 'Float' || tType:startsWith(prefix: 'Map of Float to ') || tType:startsWith(prefix: 'Map:Float:') }, {
-									kSuf: '_flt';
+									kSuf: 'Flt';
 									kArgTy: IrType:F64;
 								}, {
 									if({ kSpec != 'String' && kSpec != 'Any' && tType != 'Map' && !tType:startsWith(prefix: 'Map of String to ') && !tType:startsWith(prefix: 'Map:String:') && !tType:startsWith(prefix: 'Map of Any to ') }, {
-										kSuf: '_obj';
+										kSuf: 'Obj';
 									});
 								});
 							});
 							local String is kp: self:castIfNeeded(val: iv, fromTy: self:irTypeFor(specType: kSpec), toTy: kArgTy);
 							local String is vp: self:castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							local String is setCallee: 'spec_map_set' . kSuf . '_any';
+							local String is setCallee: 'Vector_mapSet' . kSuf . 'Any';
 							if({ assignValue:resolvedType == 'String' }, {
-								setCallee: 'spec_map_set' . kSuf;
+								setCallee: 'Vector_mapSet' . kSuf;
 							});
-							self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [tv, kp, vp]));
+							self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, vp]));
 						}, {
 							local String is idxV: self:castIfNeeded(val: iv, fromTy: self:irTypeFor(specType: index:resolvedType), toTy: IrType:I64);
 							local String is vp: self:castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
@@ -2872,15 +2874,15 @@ Class is IrBuilder{
 					local String is kSuf: '';
 					local IrType is kArgTy: IrType:Ptr;
 					if({ ke:resolvedType == 'Int' || ke:resolvedType == 'Boolean' }, {
-						kSuf: '_int';
+						kSuf: 'Int';
 						kArgTy: IrType:I64;
 					}, {
 						if({ ke:resolvedType == 'Float' }, {
-							kSuf: '_flt';
+							kSuf: 'Flt';
 							kArgTy: IrType:F64;
 						}, {
 							if({ ke:resolvedType != 'String' && ke:resolvedType != 'Any' }, {
-								kSuf: '_obj';
+								kSuf: 'Obj';
 							});
 						});
 					});
@@ -2892,11 +2894,11 @@ Class is IrBuilder{
 						vp: self:nextTmp();
 						self:emit(inst: IrInst:IrCast(dst: vp, val: vv, fromType: vty, toType: IrType:Ptr));
 					});
-					local Array of IrType is setT: [IrType:Ptr, kArgTy, IrType:Ptr];
-					local Array of String is setV: [mp, kv, vp];
-					local String is setCallee: 'spec_map_set' . kSuf . '_any';
+					local Array of IrType is setT: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr];
+					local Array of String is setV: ['null', mp, kv, vp];
+					local String is setCallee: 'Vector_mapSet' . kSuf . 'Any';
 					if({ ve:resolvedType == 'String' }, {
-						setCallee: 'spec_map_set' . kSuf;
+						setCallee: 'Vector_mapSet' . kSuf;
 					});
 					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: setT, args: setV));
 					mi++;
@@ -2914,15 +2916,15 @@ Class is IrBuilder{
 					local String is kSuf: '';
 					local IrType is kArgTy: IrType:Ptr;
 					if({ kSpec == 'Int' || kSpec == 'Boolean' || tType:startsWith(prefix: 'Map of Int to ') || tType:startsWith(prefix: 'Map:Int:') || tType:startsWith(prefix: 'Map of Boolean to ') || tType:startsWith(prefix: 'Map:Boolean:') }, {
-						kSuf: '_int';
+						kSuf: 'Int';
 						kArgTy: IrType:I64;
 					}, {
 						if({ kSpec == 'Float' || tType:startsWith(prefix: 'Map of Float to ') || tType:startsWith(prefix: 'Map:Float:') }, {
-							kSuf: '_flt';
+							kSuf: 'Flt';
 							kArgTy: IrType:F64;
 						}, {
 							if({ kSpec != 'String' && kSpec != 'Any' && tType != 'Map' && !tType:startsWith(prefix: 'Map of String to ') && !tType:startsWith(prefix: 'Map:String:') && !tType:startsWith(prefix: 'Map of Any to ') }, {
-								kSuf: '_obj';
+								kSuf: 'Obj';
 							});
 						});
 					});
@@ -2933,7 +2935,7 @@ Class is IrBuilder{
 						local Int is esid: self:mod:internStringLiteral(value: '');
 						self:emit(inst: IrInst:ConstString(dst: mDef, strId: esid));
 					});
-					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [tv, kp, mDef]));
+					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', tv, kp, mDef]));
 				}, {
 					local Array of IrType is gT: [IrType:Ptr, IrType:Ptr, IrType:I64];
 					local Array of String is gV: ['null', tv, iv];

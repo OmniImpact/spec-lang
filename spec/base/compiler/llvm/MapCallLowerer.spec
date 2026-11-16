@@ -57,15 +57,15 @@ Class of CallLowerer is MapCallLowerer{
 	}
 
 	local Function of String is keySuffix(String is recvType, String is kSpecType){
-		if({ kSpecType == 'Int' || kSpecType == 'Boolean' || recvType:startsWith(prefix: 'Map of Int to ') || recvType:startsWith(prefix: 'Map:Int:') || recvType:startsWith(prefix: 'Map of Boolean to ') || recvType:startsWith(prefix: 'Map:Boolean:') }, { return '_int'; });
-		if({ kSpecType == 'Float' || recvType:startsWith(prefix: 'Map of Float to ') || recvType:startsWith(prefix: 'Map:Float:') }, { return '_flt'; });
+		if({ kSpecType == 'Int' || kSpecType == 'Boolean' || recvType:startsWith(prefix: 'Map of Int to ') || recvType:startsWith(prefix: 'Map:Int:') || recvType:startsWith(prefix: 'Map of Boolean to ') || recvType:startsWith(prefix: 'Map:Boolean:') }, { return 'Int'; });
+		if({ kSpecType == 'Float' || recvType:startsWith(prefix: 'Map of Float to ') || recvType:startsWith(prefix: 'Map:Float:') }, { return 'Flt'; });
 		if({ kSpecType == 'String' || kSpecType == 'K' || kSpecType == 'Any' || recvType == 'Map' || recvType:startsWith(prefix: 'Map of String to ') || recvType:startsWith(prefix: 'Map:String:') || recvType:startsWith(prefix: 'Map of K ') || recvType:startsWith(prefix: 'Map:K:') || recvType:startsWith(prefix: 'Map of Any to ') || recvType:startsWith(prefix: 'Map:Any:') }, { return ''; });
-		return '_obj';
+		return 'Obj';
 	}
 
 	local Function of IrType is keyIrType(String is kSuf){
-		if({ kSuf == '_int' }, { return IrType:I64; });
-		if({ kSuf == '_flt' }, { return IrType:F64; });
+		if({ kSuf == 'Int' }, { return IrType:I64; });
+		if({ kSuf == 'Flt' }, { return IrType:F64; });
 		return IrType:Ptr;
 	}
 
@@ -123,13 +123,12 @@ Class of CallLowerer is MapCallLowerer{
 		match(on: call:name, when: [
 			'length': {
 				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_map_length', argTypes: [IrType:Ptr], args: [mRecv]));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'Vector_mapLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', mRecv]));
 				res: dst;
 			},
 			'keys': {
 				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_keys', argTypes: [IrType:Ptr], args: [mRecv]));
-				b:emitClaimPool(val: dst);
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapKeys', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', mRecv]));
 				res: dst;
 			},
 			'remove': {
@@ -140,7 +139,7 @@ Class of CallLowerer is MapCallLowerer{
 				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
 				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: kArgTy);
 				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'spec_map_remove' . kSuf, argTypes: [IrType:Ptr, kArgTy], args: [mRecv, kv]));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'Vector_mapRemove' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy], args: ['null', mRecv, kv]));
 				res: dst;
 			},
 			'has': {
@@ -151,7 +150,7 @@ Class of CallLowerer is MapCallLowerer{
 				local IrType is kty: b:irTypeFor(specType: kvExpr:resolvedType);
 				local String is kv: b:castIfNeeded(val: b:lowerExpr(expr: kvExpr), fromTy: kty, toTy: kArgTy);
 				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'spec_map_has' . kSuf, argTypes: [IrType:Ptr, kArgTy], args: [mRecv, kv]));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I1, callee: 'Vector_mapHas' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy], args: ['null', mRecv, kv]));
 				res: dst;
 			},
 			'set': {
@@ -166,11 +165,11 @@ Class of CallLowerer is MapCallLowerer{
 				local String is vv: b:lowerExpr(expr: vvExpr);
 				local IrType is vty: b:irTypeFor(specType: vvExpr:resolvedType);
 				local String is vp: b:castIfNeeded(val: vv, fromTy: vty, toTy: IrType:Ptr);
-				local String is setCallee: 'spec_map_set' . kSuf . '_any';
+				local String is setCallee: 'Vector_mapSet' . kSuf . 'Any';
 				if({ vvExpr:resolvedType == 'String' }, {
-					setCallee: 'spec_map_set' . kSuf;
+					setCallee: 'Vector_mapSet' . kSuf;
 				});
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kv, vp]));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: setCallee, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', mRecv, kv, vp]));
 			},
 			['get', 'getString', 'getFloat']: {
 				local NamedArg is na0: call:args:get(index: 0);
@@ -199,7 +198,7 @@ Class of CallLowerer is MapCallLowerer{
 					});
 				});
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kv, defV]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', mRecv, kv, defV]));
 				local IrType is mrTy: b:irTypeFor(specType: expr:resolvedType);
 				if({ mrTy != IrType:Ptr && mrTy != IrType:Void }, {
 					local String is casted: b:nextTmp();
@@ -238,8 +237,7 @@ Class of CallLowerer is MapCallLowerer{
 				b:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
 
 				local String is keysArr: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: keysArr, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_keys', argTypes: [IrType:Ptr], args: [mRecv]));
-				b:emitClaimPool(val: keysArr);
+				b:emit(inst: IrInst:IrCall(dst: keysArr, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapKeys', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', mRecv]));
 				local String is lenV: b:nextTmp();
 				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', keysArr]));
 
@@ -267,8 +265,8 @@ Class of CallLowerer is MapCallLowerer{
 					outMap: b:nextTmp();
 					if({ kSuf != '' }, {
 						local Int is kk: 3;
-						if({ kSuf == '_int' }, { kk: 1; });
-						if({ kSuf == '_flt' }, { kk: 2; });
+						if({ kSuf == 'Int' }, { kk: 1; });
+						if({ kSuf == 'Flt' }, { kk: 2; });
 						local String is kkV: b:nextTmp();
 						b:emit(inst: IrInst:ConstInt(dst: kkV, value: kk));
 						local String is vkV: b:nextTmp();
@@ -306,7 +304,7 @@ Class of CallLowerer is MapCallLowerer{
 				b:emit(inst: IrInst:IrCall(dst: rawK, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', keysArr, curI]));
 				local String is kCast: b:castIfNeeded(val: rawK, fromTy: IrType:Ptr, toTy: kArgTy);
 				local String is rawV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawV, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kCast, 'null']));
+				b:emit(inst: IrInst:IrCall(dst: rawV, hasDst: true, retType: IrType:Ptr, callee: 'Vector_mapGet' . kSuf, argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', mRecv, kCast, 'null']));
 				local String is kVal: b:castIfNeeded(val: rawK, fromTy: IrType:Ptr, toTy: kTy);
 				local String is vVal: b:castIfNeeded(val: rawV, fromTy: IrType:Ptr, toTy: vTy);
 
@@ -338,7 +336,7 @@ Class of CallLowerer is MapCallLowerer{
 						b:terminate(inst: IrInst:Br(target: stepLbl));
 					});
 					if({ call:name == 'filter' }, {
-						b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set' . kSuf . '_any', argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [outMap, kCast, rawV]));
+						b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_mapSet' . kSuf . 'Any', argTypes: [IrType:Ptr, IrType:Ptr, kArgTy, IrType:Ptr], args: ['null', outMap, kCast, rawV]));
 						b:terminate(inst: IrInst:Br(target: stepLbl));
 					});
 				});
