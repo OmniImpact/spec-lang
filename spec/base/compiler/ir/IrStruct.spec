@@ -16,6 +16,7 @@ Class is IrStruct{
 	String is sourceFileBase: '';
 	Array of String is fieldNames: [];
 	Array of IrType is fieldTypes: [];
+	Array of Boolean is fieldIsArc: [];
 	Array of String is vtableMethodNames: [];
 	Array of String is vtableFns: [];
 	Array of String is baseNames: [];
@@ -39,6 +40,15 @@ Class is IrStruct{
 		local Int is idx: self:fieldNames:length();
 		self:fieldNames:add(item: name);
 		self:fieldTypes:add(item: ty);
+		self:fieldIsArc:add(item: ty == IrType:Ptr);
+		return idx;
+	}
+
+	Function of Int is addFieldArc(String is name, IrType is ty, Boolean is isArc){
+		local Int is idx: self:fieldNames:length();
+		self:fieldNames:add(item: name);
+		self:fieldTypes:add(item: ty);
+		self:fieldIsArc:add(item: isArc);
 		return idx;
 	}
 

@@ -50,6 +50,17 @@ declare i64 @spec_string_length(ptr)
 declare ptr @spec_string_substring(ptr, i64, i64)
 declare i64 @spec_string_index_of(ptr, ptr, i64)
 declare ptr @spec_to_string_int(i64)
+declare ptr @spec_to_string_float(double)
+declare ptr @spec_to_string_bool(i1)
+declare ptr @spec_int_to_base(i64, i64, i64)
+declare ptr @spec_type_name(ptr)
+declare void @spec_panic_cast(ptr, ptr)
+declare i32 @strcmp(ptr, ptr)
+define internal i1 @__spec_cstr_eq(ptr %a, ptr %b) {
+  %r = call i32 @strcmp(ptr %a, ptr %b)
+  %eq = icmp eq i32 %r, 0
+  ret i1 %eq
+}
 declare void @spec_print(ptr)
 declare void @spec_print_line(ptr)
 declare void @spec_process_exit(i64)
@@ -449,6 +460,16 @@ declare i64 @spec_map_length(ptr)
 				});
 				if({ fromType == IrType:Ptr && (toType == IrType:I64 || toType == IrType:I1) }, {
 					return dst . ' = ptrtoint ptr ' . val . ' to ' . self:llvmType(ty: toType);
+				});
+				if({ fromType == IrType:F64 && toType == IrType:Ptr }, {
+					local String is bits: dst . '_bits';
+					return bits . " = bitcast double " . val . " to i64\n  "
+						. dst . ' = inttoptr i64 ' . bits . ' to ptr';
+				});
+				if({ fromType == IrType:Ptr && toType == IrType:F64 }, {
+					local String is bits: dst . '_bits';
+					return bits . " = ptrtoint ptr " . val . " to i64\n  "
+						. dst . ' = bitcast i64 ' . bits . ' to double';
 				});
 				if({ fromType == IrType:I1 && toType == IrType:I64 }, { return dst . ' = zext i1 ' . val . ' to i64'; });
 				if({ fromType == IrType:I64 && toType == IrType:I1 }, { return dst . ' = icmp ne i64 ' . val . ', 0'; });

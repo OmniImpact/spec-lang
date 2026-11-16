@@ -40,10 +40,15 @@ Class is IrBuilder{
 	Boolean is blkTerminated: false;
 	Map of String to String is localSlots: Map:init();
 	Map of String to IrType is localTypes: Map:init();
+	Map of String to Boolean is localIsArc: Map:init();
+	Map of String to String is localSpecTypes: Map:init();
 	Array of String is ownedSlots: [];
 	String is curPoolMark: '';
+	Boolean is curFnRetIsArc: false;
 	Array of CallLowerer is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
+	Map of String to String is clsQNameMap: Map:init();
+	Map of String to String is methodParamPtrMask: Map:init();
 	Map of String to String is heldFields: Map:init();
 	Map of String to String is heldFieldTypes: Map:init();
 	Map of String to Boolean is heldMethods: Map:init();
@@ -68,6 +73,20 @@ Class is IrBuilder{
 		if({ specType == 'Boolean' }, { return IrType:I1; });
 		if({ specType == 'Void' || specType == '' }, { return IrType:Void; });
 		return IrType:Ptr;
+	}
+
+	Function of Boolean is isArcSpecType(String is specType){
+		if({ specType == '' || specType == 'Void' || specType == 'Int' || specType == 'Float' || specType == 'Boolean' || specType == 'Byte' || specType == 'Any' }, {
+			return false;
+		});
+		return true;
+	}
+
+	local Function of String is castIfNeeded(String is val, IrType is fromTy, IrType is toTy){
+		if({ fromTy == toTy || fromTy == IrType:Void || val == '' }, { return val; });
+		local String is dst: self:nextTmp();
+		self:emit(inst: IrInst:IrCast(dst: dst, val: val, fromType: fromTy, toType: toTy));
+		return dst;
 	}
 
 	Function is emit(IrInst is inst){
@@ -118,7 +137,7 @@ Class is IrBuilder{
 				seenFields:set(key: m:name, value: true);
 				local IrType is fty: self:irTypeFor(specType: m:memberType:name);
 				if({ fty == IrType:Void }, { fty: IrType:Ptr; });
-				st:addField(name: m:name, ty: fty);
+				st:addFieldArc(name: m:name, ty: fty, isArc: self:isArcSpecType(specType: m:memberType:name));
 			});
 			mi++;
 		});
@@ -176,16 +195,21 @@ Class is IrBuilder{
 		});
 
 		local Map of String to ClassInfo is clsMap: Map:init();
+		local Map of String to String is clsQNameMap: Map:init();
 		local Int is ci: 0;
 		while({ ci < allClasses:length() }, {
 			local ClassInfo is c0: allClasses:get(index: ci);
 			clsMap:set(key: c0:qualifiedName(), value: c0);
+			clsQNameMap:set(key: c0:qualifiedName(), value: c0:qualifiedName());
 			if({ c0:outerName == '' }, {
 				clsMap:set(key: c0:name, value: c0);
+				clsQNameMap:set(key: c0:name, value: c0:qualifiedName());
 			});
 			ci++;
 		});
 		self:clsMap: clsMap;
+		self:clsQNameMap: clsQNameMap;
+		self:methodParamPtrMask: Map:init();
 		self:heldFields: Map:init();
 		self:heldFieldTypes: Map:init();
 		self:heldMethods: Map:init();
@@ -218,10 +242,29 @@ Class is IrBuilder{
 				self:addInheritedFields(st: st, cls: cls, clsMap: clsMap, seenFields: seenFields);
 				local Int is dfi: 2;
 				while({ dfi < st:fieldTypes:length() }, {
-					if({ st:fieldTypes:get(index: dfi) == IrType:Ptr }, {
+					if({ st:fieldIsArc:get(index: dfi, default: false) }, {
 						st:destroyFn: sname . '_destroy';
 					});
 					dfi++;
+				});
+				local Int is mmi: 0;
+				while({ mmi < cls:members:length() }, {
+					local Member is mm: cls:members:get(index: mmi);
+					if({ mm:kind == MemberKind:METHOD }, {
+						local String is mask: '';
+						local Int is mpi: 0;
+						while({ mpi < mm:params:length() }, {
+							local Parameter is mp: mm:params:get(index: mpi);
+							if({ self:irTypeFor(specType: mp:paramType:name) == IrType:Ptr }, {
+								mask: mask . '1';
+							}, {
+								mask: mask . '0';
+							});
+							mpi++;
+						});
+						self:methodParamPtrMask:set(key: sname . '_' . mm:name, value: mask);
+					});
+					mmi++;
 				});
 				self:buildVtable(st: st, cls: cls, clsMap: clsMap);
 				self:registerClassMetaAndHeld(st: st, cls: cls, sname: sname);
@@ -268,7 +311,8 @@ Class is IrBuilder{
 			ci++;
 		});
 
-		# 3. Emit C main() entry shim if entryClass is non-empty
+		# 3. Emit RTTI hierarchy helpers (spec_is_subclass_of / spec_cast_check) and main()
+		self:buildRttiHelpers(allClasses: allClasses);
 		if({ entryClass != '' }, {
 			self:buildMainEntry(entryClass: entryClass);
 		});
@@ -312,7 +356,7 @@ Class is IrBuilder{
 		self:curPoolMark: '';
 		local Int is fi: 2;
 		while({ fi < st:fieldTypes:length() }, {
-			if({ st:fieldTypes:get(index: fi) == IrType:Ptr }, {
+			if({ st:fieldIsArc:get(index: fi, default: false) }, {
 				local String is fptr: self:nextTmp();
 				self:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: '%self', structName: st:name, fieldIndex: fi));
 				local String is fval: self:nextTmp();
@@ -351,6 +395,180 @@ Class is IrBuilder{
 		self:mod:addFunction(fn: mainFn);
 	}
 
+	local Function is collectAncestors(ClassInfo is cls, Map of String to Boolean is seen, Array of String is out){
+		local Int is bi: 0;
+		while({ bi < cls:baseClasses:length() }, {
+			local String is bn: cls:baseClasses:get(index: bi, default: '');
+			if({ bn != '' && !seen:has(key: bn) }, {
+				seen:set(key: bn, value: true);
+				out:add(item: bn);
+				if({ self:clsMap:has(key: bn) }, {
+					local ClassInfo is bcls: self:clsMap:get(key: bn, default: cls);
+					self:collectAncestors(cls: bcls, seen: seen, out: out);
+				});
+			});
+			bi++;
+		});
+	}
+
+	local Function is buildRttiHelpers(Array of ClassInfo is allClasses){
+		# spec_is_subclass_of(ptr %actual, ptr %target) -> i1
+		local IrFunction is subFn: IrFunction:init(name: 'spec_is_subclass_of', retType: IrType:I1);
+		subFn:addParam(name: '%actual', ty: IrType:Ptr);
+		subFn:addParam(name: '%target', ty: IrType:Ptr);
+		local IrBlock is entry: subFn:addBlock(label: 'entry');
+		self:curFn: subFn;
+		self:switchBlock(blk: entry);
+		self:tmpCounter: 0;
+		self:lblCounter: 0;
+		self:curPoolMark: '';
+
+		local String is aNull: self:nextTmp();
+		self:emit(inst: IrInst:Cmp(dst: aNull, op: '==', lhs: '%actual', rhs: 'null', ty: IrType:Ptr));
+		local String is tNull: self:nextTmp();
+		self:emit(inst: IrInst:Cmp(dst: tNull, op: '==', lhs: '%target', rhs: 'null', ty: IrType:Ptr));
+		local String is eitherNull: self:nextTmp();
+		self:emit(inst: IrInst:BinOp(dst: eitherNull, op: '|', lhs: aNull, rhs: tNull, ty: IrType:I1));
+		local String is retFalseLbl: self:nextLabel(prefix: 'rtti_false');
+		local String is nonNullLbl: self:nextLabel(prefix: 'rtti_nn');
+		self:terminate(inst: IrInst:CondBr(cond: eitherNull, thenLabel: retFalseLbl, elseLabel: nonNullLbl));
+
+		local IrBlock is nnBlk: subFn:addBlock(label: nonNullLbl);
+		self:switchBlock(blk: nnBlk);
+		local String is retTrueLbl: self:nextLabel(prefix: 'rtti_true');
+		local String is eqSelf: self:nextTmp();
+		self:emit(inst: IrInst:IrCall(dst: eqSelf, hasDst: true, retType: IrType:I1, callee: '__spec_cstr_eq', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%actual', '%target']));
+		local String is chkAnyLbl: self:nextLabel(prefix: 'rtti_any');
+		self:terminate(inst: IrInst:CondBr(cond: eqSelf, thenLabel: retTrueLbl, elseLabel: chkAnyLbl));
+
+		local IrBlock is anyBlk: subFn:addBlock(label: chkAnyLbl);
+		self:switchBlock(blk: anyBlk);
+		local Int is anyStrId: self:mod:internStringLiteral(value: 'Any');
+		local String is anyPtr: self:nextTmp();
+		self:emit(inst: IrInst:GlobalAddr(dst: anyPtr, globalName: '.str.' . (anyStrId as String)));
+		local String is eqAny: self:nextTmp();
+		self:emit(inst: IrInst:IrCall(dst: eqAny, hasDst: true, retType: IrType:I1, callee: '__spec_cstr_eq', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%target', anyPtr]));
+		local String is chkStrLbl: self:nextLabel(prefix: 'rtti_str');
+		self:terminate(inst: IrInst:CondBr(cond: eqAny, thenLabel: retTrueLbl, elseLabel: chkStrLbl));
+
+		local IrBlock is strBlk: subFn:addBlock(label: chkStrLbl);
+		self:switchBlock(blk: strBlk);
+		local Int is strStrId: self:mod:internStringLiteral(value: 'Stringable');
+		local String is strPtr: self:nextTmp();
+		self:emit(inst: IrInst:GlobalAddr(dst: strPtr, globalName: '.str.' . (strStrId as String)));
+		local String is eqStr: self:nextTmp();
+		self:emit(inst: IrInst:IrCall(dst: eqStr, hasDst: true, retType: IrType:I1, callee: '__spec_cstr_eq', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%target', strPtr]));
+		local String is nextChkLbl: self:nextLabel(prefix: 'rtti_cls');
+		self:terminate(inst: IrInst:CondBr(cond: eqStr, thenLabel: retTrueLbl, elseLabel: nextChkLbl));
+
+		local IrBlock is curChkBlk: subFn:addBlock(label: nextChkLbl);
+		self:switchBlock(blk: curChkBlk);
+		local Int is ci: 0;
+		while({ ci < allClasses:length() }, {
+			local ClassInfo is cls: allClasses:get(index: ci);
+			if({ !self:isStdlibClass(cls: cls) || cls:baseClasses:length() > 0 }, {
+				local Array of String is ancs: [];
+				self:collectAncestors(cls: cls, seen: Map:init(), out: ancs);
+				if({ ancs:length() > 0 }, {
+					local Int is qnId: self:mod:internStringLiteral(value: cls:qualifiedName());
+					local String is qnPtr: self:nextTmp();
+					self:emit(inst: IrInst:GlobalAddr(dst: qnPtr, globalName: '.str.' . (qnId as String)));
+					local String is eqCls: self:nextTmp();
+					self:emit(inst: IrInst:IrCall(dst: eqCls, hasDst: true, retType: IrType:I1, callee: '__spec_cstr_eq', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%actual', qnPtr]));
+					local String is matchClsLbl: self:nextLabel(prefix: 'rtti_m');
+					local String is skipClsLbl: self:nextLabel(prefix: 'rtti_n');
+					self:terminate(inst: IrInst:CondBr(cond: eqCls, thenLabel: matchClsLbl, elseLabel: skipClsLbl));
+
+					local IrBlock is mBlk: subFn:addBlock(label: matchClsLbl);
+					self:switchBlock(blk: mBlk);
+					local Int is ai: 0;
+					while({ ai < ancs:length() }, {
+						local String is aname: ancs:get(index: ai, default: '');
+						local Int is aId: self:mod:internStringLiteral(value: aname);
+						local String is aPtr: self:nextTmp();
+						self:emit(inst: IrInst:GlobalAddr(dst: aPtr, globalName: '.str.' . (aId as String)));
+						local String is eqAnc: self:nextTmp();
+						self:emit(inst: IrInst:IrCall(dst: eqAnc, hasDst: true, retType: IrType:I1, callee: '__spec_cstr_eq', argTypes: [IrType:Ptr, IrType:Ptr], args: ['%target', aPtr]));
+						local String is nextAncLbl: self:nextLabel(prefix: 'rtti_a');
+						self:terminate(inst: IrInst:CondBr(cond: eqAnc, thenLabel: retTrueLbl, elseLabel: nextAncLbl));
+						local IrBlock is aBlk: subFn:addBlock(label: nextAncLbl);
+						self:switchBlock(blk: aBlk);
+						ai++;
+					});
+					self:terminate(inst: IrInst:Br(target: retFalseLbl));
+
+					curChkBlk: subFn:addBlock(label: skipClsLbl);
+					self:switchBlock(blk: curChkBlk);
+				});
+			});
+			ci++;
+		});
+		self:terminate(inst: IrInst:Br(target: retFalseLbl));
+
+		local IrBlock is trueBlk: subFn:addBlock(label: retTrueLbl);
+		self:switchBlock(blk: trueBlk);
+		local String is tVal: self:nextTmp();
+		self:emit(inst: IrInst:ConstBool(dst: tVal, value: true));
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: tVal, ty: IrType:I1));
+
+		local IrBlock is falseBlk: subFn:addBlock(label: retFalseLbl);
+		self:switchBlock(blk: falseBlk);
+		local String is fVal: self:nextTmp();
+		self:emit(inst: IrInst:ConstBool(dst: fVal, value: false));
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: fVal, ty: IrType:I1));
+		self:mod:addFunction(fn: subFn);
+
+		# spec_cast_check(ptr %obj, ptr %target) -> ptr
+		local IrFunction is ccFn: IrFunction:init(name: 'spec_cast_check', retType: IrType:Ptr);
+		ccFn:addParam(name: '%obj', ty: IrType:Ptr);
+		ccFn:addParam(name: '%target', ty: IrType:Ptr);
+		local IrBlock is ccEntry: ccFn:addBlock(label: 'entry');
+		self:curFn: ccFn;
+		self:switchBlock(blk: ccEntry);
+		self:tmpCounter: 0;
+		self:lblCounter: 0;
+		local String is isNull: self:nextTmp();
+		self:emit(inst: IrInst:Cmp(dst: isNull, op: '==', lhs: '%obj', rhs: 'null', ty: IrType:Ptr));
+		local String is ccNullLbl: self:nextLabel(prefix: 'cc_null');
+		local String is ccChkLbl: self:nextLabel(prefix: 'cc_chk');
+		self:terminate(inst: IrInst:CondBr(cond: isNull, thenLabel: ccNullLbl, elseLabel: ccChkLbl));
+
+		local IrBlock is ccNullBlk: ccFn:addBlock(label: ccNullLbl);
+		self:switchBlock(blk: ccNullBlk);
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: 'null', ty: IrType:Ptr));
+
+		local IrBlock is ccChkBlk: ccFn:addBlock(label: ccChkLbl);
+		self:switchBlock(blk: ccChkBlk);
+		local String is actualType: self:nextTmp();
+		self:emit(inst: IrInst:Load(dst: actualType, slot: '%obj', ty: IrType:Ptr));
+		local String is ok: self:nextTmp();
+		self:emit(inst: IrInst:IrCall(dst: ok, hasDst: true, retType: IrType:I1, callee: 'spec_is_subclass_of', argTypes: [IrType:Ptr, IrType:Ptr], args: [actualType, '%target']));
+		local String is ccOkLbl: self:nextLabel(prefix: 'cc_ok');
+		local String is ccFailLbl: self:nextLabel(prefix: 'cc_fail');
+		self:terminate(inst: IrInst:CondBr(cond: ok, thenLabel: ccOkLbl, elseLabel: ccFailLbl));
+
+		local IrBlock is ccFailBlk: ccFn:addBlock(label: ccFailLbl);
+		self:switchBlock(blk: ccFailBlk);
+		self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_panic_cast', argTypes: [IrType:Ptr, IrType:Ptr], args: [actualType, '%target']));
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: '%obj', ty: IrType:Ptr));
+
+		local IrBlock is ccOkBlk: ccFn:addBlock(label: ccOkLbl);
+		self:switchBlock(blk: ccOkBlk);
+		self:terminate(inst: IrInst:Ret(hasVal: true, val: '%obj', ty: IrType:Ptr));
+		self:mod:addFunction(fn: ccFn);
+	}
+
+	local Function of String is methodReturnSpecType(Type is mt){
+		if({ mt:name == 'Function' }, {
+			if({ mt:params:length() > 0 }, {
+				local Type is rt: mt:params:get(index: 0);
+				return rt:name;
+			});
+			return 'Void';
+		});
+		return mt:name;
+	}
+
 	local Function of IrType is methodReturnType(Type is mt){
 		if({ mt:name == 'Function' }, {
 			if({ mt:params:length() > 0 }, {
@@ -382,7 +600,9 @@ Class is IrBuilder{
 				if({ fidx >= 0 }, {
 					local IrType is fty: st:fieldTypes:get(index: fidx);
 					local String is val: self:lowerExpr(expr: m:initExpr);
-					if({ fty == IrType:Ptr && val != '' && val != 'null' }, {
+					local IrType is vty: self:irTypeFor(specType: m:initExpr:resolvedType);
+					val: self:castIfNeeded(val: val, fromTy: vty, toTy: fty);
+					if({ st:fieldIsArc:get(index: fidx, default: false) && val != '' && val != 'null' }, {
 						self:emit(inst: IrInst:Retain(val: val));
 					});
 					local String is ptr: self:nextTmp();
@@ -480,7 +700,10 @@ Class is IrBuilder{
 		self:lblCounter: 0;
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
+		self:localIsArc: Map:init();
+		self:localSpecTypes: Map:init();
 		self:ownedSlots: [];
+		self:curFnRetIsArc: self:isArcSpecType(specType: self:methodReturnSpecType(mt: m:memberType));
 		self:emitPoolEnter();
 
 		local String is valGlob: '@.held_val.' . sname . '.' . m:name;
@@ -517,6 +740,27 @@ Class is IrBuilder{
 		self:mod:addFunction(fn: fn);
 	}
 
+	local Function of String is structNameForLocal(String is name){
+		if({ name == 'self' }, { return self:currentClass; });
+		local String is st: self:localSpecTypes:get(key: name, default: '');
+		if({ st != '' }, {
+			local String is qn: self:clsQNameMap:get(key: st, default: st);
+			local String is cs: self:cStructName(qname: qn);
+			if({ self:mod:findStruct(name: cs):name != '' }, { return cs; });
+		});
+		return self:currentClass;
+	}
+
+	local Function of String is structNameForExpr(Expression is expr){
+		local String is rt: expr:resolvedType;
+		if({ rt != '' }, {
+			local String is qn: self:clsQNameMap:get(key: rt, default: rt);
+			local String is cs: self:cStructName(qname: qn);
+			if({ self:mod:findStruct(name: cs):name != '' }, { return cs; });
+		});
+		return self:currentClass;
+	}
+
 	local Function is buildMethod(ClassInfo is cls, Member is m){
 		local IrType is retTy: self:methodReturnType(mt: m:memberType);
 		local String is fnName: self:cStructName(qname: cls:qualifiedName()) . '_' . m:name;
@@ -542,13 +786,17 @@ Class is IrBuilder{
 		self:lblCounter: 0;
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
+		self:localIsArc: Map:init();
+		self:localSpecTypes: Map:init();
 		self:ownedSlots: [];
+		self:curFnRetIsArc: self:isArcSpecType(specType: self:methodReturnSpecType(mt: m:memberType));
 		self:emitPoolEnter();
 
 		if({ !isHeldMethod }, {
 			# Bind 'self' into stack slot
 			self:localSlots:set(key: 'self', value: '%self_slot');
 			self:localTypes:set(key: 'self', value: IrType:Ptr);
+			self:localIsArc:set(key: 'self', value: true);
 			self:emit(inst: IrInst:Alloca(slot: '%self_slot', ty: IrType:Ptr));
 			self:emit(inst: IrInst:Store(slot: '%self_slot', val: '%self', ty: IrType:Ptr));
 		});
@@ -560,6 +808,8 @@ Class is IrBuilder{
 			local String is slot: '%slot_' . p:name;
 			self:localSlots:set(key: p:name, value: slot);
 			self:localTypes:set(key: p:name, value: pty);
+			self:localIsArc:set(key: p:name, value: self:isArcSpecType(specType: p:paramType:name));
+			self:localSpecTypes:set(key: p:name, value: p:paramType:name);
 			self:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
 			self:emit(inst: IrInst:Store(slot: slot, val: '%p_' . p:name, ty: pty));
 			pi++;
@@ -628,15 +878,20 @@ Class is IrBuilder{
 		match(on: stmt, when: [
 			Statement:VarDecl: local Function(Array of String is modifiers, Type is varType, String is varName, Expression is initExpr, Boolean is hasInit){
 				local IrType is vty: self:irTypeFor(specType: varType:name);
+				local Boolean is vIsArc: self:isArcSpecType(specType: varType:name);
 				local String is slot: '%var_' . varName . '_' . (self:nextTmp());
 				# Clean '%' from slot suffix so LLVM identifier is valid
 				slot: '%var_' . varName . '_' . (self:tmpCounter as String);
 				self:localSlots:set(key: varName, value: slot);
 				self:localTypes:set(key: varName, value: vty);
+				self:localIsArc:set(key: varName, value: vIsArc);
+				self:localSpecTypes:set(key: varName, value: varType:name);
 				self:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
 				if({ hasInit }, {
 					local String is val: self:lowerExpr(expr: initExpr);
-					if({ vty == IrType:Ptr && val != '' && val != 'null' }, {
+					local IrType is initTy: self:irTypeFor(specType: initExpr:resolvedType);
+					val: self:castIfNeeded(val: val, fromTy: initTy, toTy: vty);
+					if({ vIsArc && val != '' && val != 'null' }, {
 						self:emit(inst: IrInst:Retain(val: val));
 					});
 					self:emit(inst: IrInst:Store(slot: slot, val: val, ty: vty));
@@ -644,24 +899,29 @@ Class is IrBuilder{
 					local String is defVal: self:emitDefaultVal(ty: vty);
 					self:emit(inst: IrInst:Store(slot: slot, val: defVal, ty: vty));
 				});
-				if({ vty == IrType:Ptr }, {
+				if({ vIsArc }, {
 					self:ownedSlots:add(item: slot);
 				});
 			},
 			Statement:Assign: local Function(Expression is assignTarget, Expression is assignValue){
 				local String is val: self:lowerExpr(expr: assignValue);
+				local IrType is valTy: self:irTypeFor(specType: assignValue:resolvedType);
 				match(on: assignTarget, when: [
 					Expression:Ident: local Function(String is name){
 						if({ self:localSlots:has(key: name) }, {
 							local String is slot: self:localSlots:get(key: name, default: '');
 							local IrType is ty: self:localTypes:get(key: name, default: IrType:I64);
-							if({ ty == IrType:Ptr }, {
-								self:emit(inst: IrInst:Retain(val: val));
+							local Boolean is isArc: self:localIsArc:get(key: name, default: false);
+							local String is cval: self:castIfNeeded(val: val, fromTy: valTy, toTy: ty);
+							if({ isArc }, {
+								if({ cval != '' && cval != 'null' }, {
+									self:emit(inst: IrInst:Retain(val: cval));
+								});
 								local String is oldVal: self:nextTmp();
 								self:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: IrType:Ptr));
 								self:emit(inst: IrInst:Release(val: oldVal));
 							});
-							self:emit(inst: IrInst:Store(slot: slot, val: val, ty: ty));
+							self:emit(inst: IrInst:Store(slot: slot, val: cval, ty: ty));
 						}, {
 							local String is hk: self:currentClass . ':' . name;
 							if({ self:heldFields:has(key: hk) }, {
@@ -677,21 +937,24 @@ Class is IrBuilder{
 					},
 					Expression:FieldAccess: local Function(Expression is target, String is fieldName){
 						local String is obj: self:lowerExpr(expr: target);
-						local IrStruct is st: self:mod:findStruct(name: self:currentClass);
+						local String is sname: self:structNameForExpr(expr: target);
+						local IrStruct is st: self:mod:findStruct(name: sname);
 						local Int is fidx: st:fieldIndex(name: fieldName);
 						if({ fidx >= 0 }, {
 							local IrType is fty: st:fieldTypes:get(index: fidx);
+							local Boolean is fIsArc: st:fieldIsArc:get(index: fidx, default: false);
+							local String is cval: self:castIfNeeded(val: val, fromTy: valTy, toTy: fty);
 							local String is ptr: self:nextTmp();
-							self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: self:currentClass, fieldIndex: fidx));
-							if({ fty == IrType:Ptr }, {
-								if({ val != '' && val != 'null' }, {
-									self:emit(inst: IrInst:Retain(val: val));
+							self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
+							if({ fIsArc }, {
+								if({ cval != '' && cval != 'null' }, {
+									self:emit(inst: IrInst:Retain(val: cval));
 								});
 								local String is oldFVal: self:nextTmp();
 								self:emit(inst: IrInst:Load(dst: oldFVal, slot: ptr, ty: IrType:Ptr));
 								self:emit(inst: IrInst:Release(val: oldFVal));
 							});
-							self:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
+							self:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
 						});
 					},
 					Expression:Path: local Function(Array of String is segments){
@@ -702,24 +965,25 @@ Class is IrBuilder{
 								local IrType is sty: self:localTypes:get(key: seg0, default: IrType:Ptr);
 								local String is obj: self:nextTmp();
 								self:emit(inst: IrInst:Load(dst: obj, slot: slot, ty: sty));
-								local String is sname: self:currentClass;
-								if({ seg0 != 'self' }, { sname: self:cStructName(qname: seg0); });
+								local String is sname: self:structNameForLocal(name: seg0);
 								local String is fname: segments:get(index: segments:length() - 1, default: '');
 								local IrStruct is st: self:mod:findStruct(name: sname);
 								local Int is fidx: st:fieldIndex(name: fname);
 								if({ fidx >= 0 }, {
 									local IrType is fty: st:fieldTypes:get(index: fidx);
+									local Boolean is fIsArc: st:fieldIsArc:get(index: fidx, default: false);
+									local String is cval: self:castIfNeeded(val: val, fromTy: valTy, toTy: fty);
 									local String is ptr: self:nextTmp();
 									self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
-									if({ fty == IrType:Ptr }, {
-										if({ val != '' && val != 'null' }, {
-											self:emit(inst: IrInst:Retain(val: val));
+									if({ fIsArc }, {
+										if({ cval != '' && cval != 'null' }, {
+											self:emit(inst: IrInst:Retain(val: cval));
 										});
 										local String is oldPVal: self:nextTmp();
 										self:emit(inst: IrInst:Load(dst: oldPVal, slot: ptr, ty: IrType:Ptr));
 										self:emit(inst: IrInst:Release(val: oldPVal));
 									});
-									self:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
+									self:emit(inst: IrInst:Store(slot: ptr, val: cval, ty: fty));
 								});
 							}, {
 								local String is seg1: segments:get(index: 1, default: '');
@@ -741,18 +1005,20 @@ Class is IrBuilder{
 			Statement:Return: local Function(Expression is returnExpr, Boolean is hasReturnExpr){
 				if({ hasReturnExpr }, {
 					local String is val: self:lowerExpr(expr: returnExpr);
+					local IrType is valTy: self:irTypeFor(specType: returnExpr:resolvedType);
+					val: self:castIfNeeded(val: val, fromTy: valTy, toTy: self:curFn:retType);
 					if({ val == '' && self:curFn:retType != IrType:Void }, {
 						val: self:emitDefaultVal(ty: self:curFn:retType);
 					});
 					if({ val == '0' && self:curFn:retType == IrType:Ptr }, {
 						val: 'null';
 					});
-					if({ self:curFn:retType == IrType:Ptr && val != 'null' }, {
+					if({ self:curFnRetIsArc && self:curFn:retType == IrType:Ptr && val != 'null' }, {
 						self:emit(inst: IrInst:Retain(val: val));
 					});
 					self:emitReleaseOwnedLocals();
 					self:emitPoolExit();
-					if({ self:curFn:retType == IrType:Ptr && val != 'null' }, {
+					if({ self:curFnRetIsArc && self:curFn:retType == IrType:Ptr && val != 'null' }, {
 						self:emitClaimPool(val: val);
 					});
 					self:terminate(inst: IrInst:Ret(hasVal: true, val: val, ty: self:curFn:retType));
@@ -781,12 +1047,13 @@ Class is IrBuilder{
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
 				local String is obj: self:lowerExpr(expr: target);
-				local IrStruct is st: self:mod:findStruct(name: self:currentClass);
+				local String is sname: self:structNameForExpr(expr: target);
+				local IrStruct is st: self:mod:findStruct(name: sname);
 				local Int is fidx: st:fieldIndex(name: fieldName);
 				if({ fidx >= 0 }, {
 					slotTy: st:fieldTypes:get(index: fidx);
 					slot: self:nextTmp();
-					self:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: self:currentClass, fieldIndex: fidx));
+					self:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: sname, fieldIndex: fidx));
 				});
 			},
 			Expression:Path: local Function(Array of String is segments){
@@ -797,8 +1064,7 @@ Class is IrBuilder{
 						local IrType is lsty: self:localTypes:get(key: seg0, default: IrType:Ptr);
 						local String is obj: self:nextTmp();
 						self:emit(inst: IrInst:Load(dst: obj, slot: lslot, ty: lsty));
-						local String is sname: self:currentClass;
-						if({ seg0 != 'self' }, { sname: self:cStructName(qname: seg0); });
+						local String is sname: self:structNameForLocal(name: seg0);
 						local String is fname: segments:get(index: segments:length() - 1, default: '');
 						local IrStruct is st: self:mod:findStruct(name: sname);
 						local Int is fidx: st:fieldIndex(name: fname);
@@ -923,13 +1189,14 @@ Class is IrBuilder{
 			},
 			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
 				local String is obj: self:lowerExpr(expr: target);
-				local IrStruct is st: self:mod:findStruct(name: self:currentClass);
+				local String is sname: self:structNameForExpr(expr: target);
+				local IrStruct is st: self:mod:findStruct(name: sname);
 				local Int is fidx: st:fieldIndex(name: fieldName);
 				if({ fidx >= 0 }, {
 					local IrType is fty: st:fieldTypes:get(index: fidx);
 					local String is ptr: self:nextTmp();
 					local String is dst: self:nextTmp();
-					self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: self:currentClass, fieldIndex: fidx));
+					self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
 					self:emit(inst: IrInst:Load(dst: dst, slot: ptr, ty: fty));
 					return dst;
 				});
@@ -943,7 +1210,7 @@ Class is IrBuilder{
 						local IrType is sty: self:localTypes:get(key: seg0, default: IrType:Ptr);
 						local String is obj: self:nextTmp();
 						self:emit(inst: IrInst:Load(dst: obj, slot: slot, ty: sty));
-						local String is sname: self:currentClass;
+						local String is sname: self:structNameForLocal(name: seg0);
 						local String is fname: segments:get(index: segments:length() - 1, default: '');
 						local IrStruct is st: self:mod:findStruct(name: sname);
 						local Int is fidx: st:fieldIndex(name: fname);
@@ -976,14 +1243,53 @@ Class is IrBuilder{
 			Expression:Cast: local Function(Expression is inner, String is target, Array of Expression is args){
 				local String is v: self:lowerExpr(expr: inner);
 				local IrType is fromTy: self:irTypeFor(specType: inner:resolvedType);
+				if({ target == 'Hex' || target == 'Bin' || target == 'Oct' }, {
+					local Int is base: 16;
+					if({ target == 'Bin' }, { base: 2; });
+					if({ target == 'Oct' }, { base: 8; });
+					local String is baseVal: self:nextTmp();
+					self:emit(inst: IrInst:ConstInt(dst: baseVal, value: base));
+					local String is digitsVal: '';
+					if({ args:length() > 0 }, {
+						digitsVal: self:lowerExpr(expr: args:get(index: 0));
+					}, {
+						digitsVal: self:nextTmp();
+						self:emit(inst: IrInst:ConstInt(dst: digitsVal, value: 0));
+					});
+					local String is dstB: self:nextTmp();
+					self:emit(inst: IrInst:IrCall(dst: dstB, hasDst: true, retType: IrType:Ptr, callee: 'spec_int_to_base', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [v, baseVal, digitsVal]));
+					return dstB;
+				});
 				local IrType is toTy: self:irTypeFor(specType: target);
-				if({ fromTy == toTy }, { return v; });
-				if({ fromTy == IrType:I64 && toTy == IrType:Ptr }, {
-					local String is dst: self:nextTmp();
-					local Array of IrType is aT: [IrType:I64];
-					local Array of String is aV: [v];
-					self:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: aT, args: aV));
-					return dst;
+				if({ target == 'String' && fromTy != IrType:Ptr }, {
+					local String is dstS: self:nextTmp();
+					if({ fromTy == IrType:F64 }, {
+						self:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_float', argTypes: [IrType:F64], args: [v]));
+						return dstS;
+					});
+					if({ fromTy == IrType:I1 }, {
+						self:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_bool', argTypes: [IrType:I1], args: [v]));
+						return dstS;
+					});
+					self:emit(inst: IrInst:IrCall(dst: dstS, hasDst: true, retType: IrType:Ptr, callee: 'spec_to_string_int', argTypes: [IrType:I64], args: [v]));
+					return dstS;
+				});
+				if({ fromTy == toTy }, {
+					if({ fromTy == IrType:Ptr && target == 'String' && inner:resolvedType != 'String' && self:clsMap:has(key: inner:resolvedType) }, {
+						local String is tnDst: self:nextTmp();
+						self:emit(inst: IrInst:IrCall(dst: tnDst, hasDst: true, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [v]));
+						return tnDst;
+					});
+					if({ fromTy == IrType:Ptr && target != 'Any' && target != '' && target != 'String' && self:clsQNameMap:has(key: target) }, {
+						local String is tQName: self:clsQNameMap:get(key: target, default: target);
+						local Int is tStrId: self:mod:internStringLiteral(value: tQName);
+						local String is tPtr: self:nextTmp();
+						self:emit(inst: IrInst:GlobalAddr(dst: tPtr, globalName: '.str.' . (tStrId as String)));
+						local String is ccDst: self:nextTmp();
+						self:emit(inst: IrInst:IrCall(dst: ccDst, hasDst: true, retType: IrType:Ptr, callee: 'spec_cast_check', argTypes: [IrType:Ptr, IrType:Ptr], args: [v, tPtr]));
+						return ccDst;
+					});
+					return v;
 				});
 				local String is dst: self:nextTmp();
 				self:emit(inst: IrInst:IrCast(dst: dst, val: v, fromType: fromTy, toType: toTy));
@@ -1133,6 +1439,15 @@ Class is IrBuilder{
 			Expression:FieldAccess: local Function(Expression is target, String is _f){
 				self:collectFreeInExpr(expr: target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 			},
+			Expression:Path: local Function(Array of String is segments){
+				if({ segments:length() > 0 }, {
+					local String is seg0: segments:get(index: 0, default: '');
+					if({ !bound:has(key: seg0) && outerSlots:has(key: seg0) && !seen:has(key: seg0) }, {
+						seen:set(key: seg0, value: true);
+						out:add(item: seg0);
+					});
+				});
+			},
 			Expression:Index: local Function(Expression is target, Expression is index){
 				self:collectFreeInExpr(expr: target, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
 				self:collectFreeInExpr(expr: index, bound: bound, outerSlots: outerSlots, seen: seen, out: out);
@@ -1185,12 +1500,15 @@ Class is IrBuilder{
 		local Int is anonId: self:anonCounter;
 		local String is fnName: '__anon_' . (anonId as String);
 		local IrType is retTy: self:irTypeFor(specType: returnType:name);
+		local String is retSpecType: returnType:name;
 		if({ returnType:name == 'Function' }, {
 			if({ returnType:params:length() > 0 }, {
 				local Type is rt: returnType:params:get(index: 0);
 				retTy: self:irTypeFor(specType: rt:name);
+				retSpecType: rt:name;
 			}, {
 				retTy: IrType:Void;
+				retSpecType: '';
 			});
 		});
 
@@ -1229,8 +1547,11 @@ Class is IrBuilder{
 		local Int is savedLbl: self:lblCounter;
 		local Map of String to String is savedSlots: self:localSlots;
 		local Map of String to IrType is savedTypes: self:localTypes;
+		local Map of String to Boolean is savedIsArc: self:localIsArc;
+		local Map of String to String is savedSpecTypes: self:localSpecTypes;
 		local Array of String is savedOwned: self:ownedSlots;
 		local String is savedPoolMark: self:curPoolMark;
+		local Boolean is savedRetIsArc: self:curFnRetIsArc;
 
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
 		fn:sourceFile: savedFn:sourceFile;
@@ -1250,7 +1571,10 @@ Class is IrBuilder{
 		self:lblCounter: 0;
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
+		self:localIsArc: Map:init();
+		self:localSpecTypes: Map:init();
 		self:ownedSlots: [];
+		self:curFnRetIsArc: self:isArcSpecType(specType: retSpecType);
 		self:emitPoolEnter();
 
 		# Unpack captured variables from %env into local slots
@@ -1258,6 +1582,7 @@ Class is IrBuilder{
 		while({ uci < captures:length() }, {
 			local String is cname: captures:get(index: uci, default: '');
 			local IrType is cty: savedTypes:get(key: cname, default: IrType:I64);
+			local Boolean is cArc: savedIsArc:get(key: cname, default: false);
 			local String is fPtr: self:nextTmp();
 			self:emit(inst: IrInst:FieldPtr(dst: fPtr, objPtr: '%env', structName: envStructName, fieldIndex: uci + 2));
 			local String is loaded: self:nextTmp();
@@ -1265,8 +1590,10 @@ Class is IrBuilder{
 			local String is capSlot: '%cap_' . cname;
 			self:localSlots:set(key: cname, value: capSlot);
 			self:localTypes:set(key: cname, value: cty);
+			self:localIsArc:set(key: cname, value: cArc);
+			self:localSpecTypes:set(key: cname, value: savedSpecTypes:get(key: cname, default: ''));
 			self:emit(inst: IrInst:Alloca(slot: capSlot, ty: cty));
-			if({ cty == IrType:Ptr }, {
+			if({ cArc }, {
 				self:emit(inst: IrInst:Retain(val: loaded));
 				self:ownedSlots:add(item: capSlot);
 			});
@@ -1281,6 +1608,8 @@ Class is IrBuilder{
 			local String is slot: '%slot_' . p:name;
 			self:localSlots:set(key: p:name, value: slot);
 			self:localTypes:set(key: p:name, value: pty);
+			self:localIsArc:set(key: p:name, value: self:isArcSpecType(specType: p:paramType:name));
+			self:localSpecTypes:set(key: p:name, value: p:paramType:name);
 			self:emit(inst: IrInst:Alloca(slot: slot, ty: pty));
 			self:emit(inst: IrInst:Store(slot: slot, val: '%p_' . p:name, ty: pty));
 			pi++;
@@ -1314,8 +1643,8 @@ Class is IrBuilder{
 			local Int is dci: 0;
 			while({ dci < captures:length() }, {
 				local String is cname: captures:get(index: dci, default: '');
-				local IrType is cty: savedTypes:get(key: cname, default: IrType:I64);
-				if({ cty == IrType:Ptr }, {
+				local Boolean is cArc: savedIsArc:get(key: cname, default: false);
+				if({ cArc }, {
 					local String is dfPtr: self:nextTmp();
 					self:emit(inst: IrInst:FieldPtr(dst: dfPtr, objPtr: '%env', structName: envStructName, fieldIndex: dci + 2));
 					local String is dVal: self:nextTmp();
@@ -1337,8 +1666,11 @@ Class is IrBuilder{
 		self:lblCounter: savedLbl;
 		self:localSlots: savedSlots;
 		self:localTypes: savedTypes;
+		self:localIsArc: savedIsArc;
+		self:localSpecTypes: savedSpecTypes;
 		self:ownedSlots: savedOwned;
 		self:curPoolMark: savedPoolMark;
+		self:curFnRetIsArc: savedRetIsArc;
 
 		# Allocate and populate %env in outer function if captures exist
 		local String is envVal: 'null';
@@ -1351,9 +1683,10 @@ Class is IrBuilder{
 				local String is cname: captures:get(index: oci, default: '');
 				local String is oSlot: self:localSlots:get(key: cname, default: '');
 				local IrType is oTy: self:localTypes:get(key: cname, default: IrType:I64);
+				local Boolean is oArc: self:localIsArc:get(key: cname, default: false);
 				local String is oVal: self:nextTmp();
 				self:emit(inst: IrInst:Load(dst: oVal, slot: oSlot, ty: oTy));
-				if({ oTy == IrType:Ptr }, {
+				if({ oArc }, {
 					self:emit(inst: IrInst:Retain(val: oVal));
 				});
 				local String is dstPtr: self:nextTmp();
@@ -1513,11 +1846,20 @@ Class is IrBuilder{
 				argTypes:add(item: IrType:Ptr);
 				argVals:add(item: obj);
 				local Int is ai: 0;
+				local String is ctorMask: self:methodParamPtrMask:get(key: clsName . '_init', default: '');
 				while({ ai < call:args:length() }, {
 					local NamedArg is na: call:args:get(index: ai);
 					local Expression is av: na:value;
-					argTypes:add(item: self:irTypeFor(specType: av:resolvedType));
-					argVals:add(item: self:lowerExpr(expr: av));
+					local IrType is atyC: self:irTypeFor(specType: av:resolvedType);
+					local String is avalC: self:lowerExpr(expr: av);
+					if({ ai < ctorMask:length() && ctorMask:charAt(index: ai, default: '0') == '1' }, {
+						if({ atyC != IrType:Ptr && atyC != IrType:Void }, {
+							avalC: self:castIfNeeded(val: avalC, fromTy: atyC, toTy: IrType:Ptr);
+							atyC: IrType:Ptr;
+						});
+					});
+					argTypes:add(item: atyC);
+					argVals:add(item: avalC);
 					ai++;
 				});
 				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: clsName . '_init', argTypes: argTypes, args: argVals));
@@ -1547,13 +1889,21 @@ Class is IrBuilder{
 		});
 
 		local Int is ai: 0;
+		local String is calleeMask: self:methodParamPtrMask:get(key: calleeName, default: '');
 		while({ ai < call:args:length() }, {
 			local NamedArg is na2: call:args:get(index: ai);
 			local Expression is av: na2:value;
 			local IrType is aty: self:irTypeFor(specType: av:resolvedType);
 			if({ aty == IrType:Void }, { aty: IrType:I64; });
+			local String is aval: self:lowerExpr(expr: av);
+			if({ ai < calleeMask:length() && calleeMask:charAt(index: ai, default: '0') == '1' }, {
+				if({ aty != IrType:Ptr }, {
+					aval: self:castIfNeeded(val: aval, fromTy: aty, toTy: IrType:Ptr);
+					aty: IrType:Ptr;
+				});
+			});
 			argTypes:add(item: aty);
-			argVals:add(item: self:lowerExpr(expr: av));
+			argVals:add(item: aval);
 			ai++;
 		});
 

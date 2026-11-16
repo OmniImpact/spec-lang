@@ -704,4 +704,133 @@ Class is LlvmP9{
 		File:fileRemove(path: llPath);
 		File:fileRemove(path: binPath);
 	}
+
+	Function is testAnyBoxingRttiCastsAndCallbacksLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_p10_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_p10_' . pid . '.ll';
+		local String is dataPath: tmp . '/spec_llvm_p10_data_' . pid . '.txt';
+		local String is binPath: tmp . '/spec_llvm_p10_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		File:fileWrite(path: dataPath, content: 'hello-callback', onSuccess: local Function(){}, onError: local Function(String is e){});
+
+		local String is src: '''
+Class is Animal{
+	String is kind: 'animal';
+	replace Function is init(){ return; }
+}
+
+Class of Animal is Dog{
+	Int is barks: 3;
+	replace Function is init(){ return; }
+}
+
+Class is AnyBox{
+	Any is val: 0;
+	replace Function is init(Any is v){
+		self:val: v;
+	}
+	Function of Any is getVal(){
+		return self:val;
+	}
+}
+
+Class is Counter{
+	Int is n: 0;
+	replace Function is init(){ return; }
+}
+
+Class is LlvmP10{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as File()],
+		['base', 'sys', as Output()],
+		['base', 'sys', as Process()]
+	];
+	Function of Any is echoAny(Any is x){
+		return x;
+	}
+	replace Function is init(Map of String to String is args){
+		# 1. Any boxing/unboxing with Int, Float, Boolean, Class
+		local Any is aInt: 42;
+		local Int is i: aInt as Int;
+		if({ i != 42 }, { Process:exit(status: 2); });
+
+		local Any is aFlt: 3.5;
+		local Float is f: aFlt as Float;
+		if({ f < 3.4 || f > 3.6 }, { Process:exit(status: 3); });
+
+		local Any is aBool: true;
+		local Boolean is b: aBool as Boolean;
+		if({ !b }, { Process:exit(status: 4); });
+
+		local AnyBox is box: AnyBox:init(v: 99);
+		if({ (box:getVal() as Int) != 99 }, { Process:exit(status: 5); });
+		local Any is echoed: self:echoAny(x: 2.25);
+		local Float is ef: echoed as Float;
+		if({ ef < 2.2 || ef > 2.3 }, { Process:exit(status: 6); });
+
+		# 2. Runtime class downcast & scalar->String/Hex/Bin/Oct casts
+		local Animal is a: Dog:init();
+		local Dog is d: a as Dog;
+		if({ d:barks != 3 }, { Process:exit(status: 7); });
+
+		local String is hx: 255 as Hex;
+		if({ hx != 'ff' }, { Process:exit(status: 8); });
+		local String is bn: 5 as Bin;
+		if({ bn != '101' }, { Process:exit(status: 9); });
+		local String is oc: 9 as Oct;
+		if({ oc != '11' }, { Process:exit(status: 10); });
+		local String is fs: 1.5 as String;
+		if({ !fs:contains(needle: '1.5') }, { Process:exit(status: 11); });
+		local String is bs: true as String;
+		if({ bs != 'true' }, { Process:exit(status: 12); });
+		local String is tn: d as String;
+		if({ tn != 'Dog' }, { Process:exit(status: 13); });
+
+		# 3. C-callback SpecClosure with captured variable
+		local Counter is ctr: Counter:init();
+		local String is content: File:fileRead(
+			path: '__DATA_PATH__',
+			onSuccess: local Function(String is s){
+				ctr:n: ctr:n + 1;
+				if({ s != 'hello-callback' }, { Process:exit(status: 14); });
+			},
+			onError: local Function(String is e){
+				Process:exit(status: 15);
+			},
+			default: ''
+		);
+		if({ ctr:n != 1 || content != 'hello-callback' }, { Process:exit(status: 16); });
+		line('llvm-p10-ok');
+	}
+}
+''';
+		src: src:replaceAll(search: '__DATA_PATH__', replacement: dataPath);
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: 'define ptr @spec_cast_check('));
+		Assert:isTrue(ll:contains(needle: 'define i1 @spec_is_subclass_of('));
+		Assert:isTrue(ll:contains(needle: '@spec_to_string_float('));
+		Assert:isTrue(ll:contains(needle: '@spec_type_name('));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: dataPath);
+		File:fileRemove(path: binPath);
+	}
 }
