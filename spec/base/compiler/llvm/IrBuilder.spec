@@ -41,6 +41,7 @@ Class is IrBuilder{
 	Map of String to String is localSlots: Map:init();
 	Map of String to IrType is localTypes: Map:init();
 	Array of String is ownedSlots: [];
+	String is curPoolMark: '';
 	Array of CallLowerer is callLowerers: [];
 	Map of String to ClassInfo is clsMap: Map:init();
 	Map of String to String is heldFields: Map:init();
@@ -215,6 +216,13 @@ Class is IrBuilder{
 				st:addField(name: '_vtable', ty: IrType:Ptr);
 				local Map of String to Boolean is seenFields: Map:init();
 				self:addInheritedFields(st: st, cls: cls, clsMap: clsMap, seenFields: seenFields);
+				local Int is dfi: 2;
+				while({ dfi < st:fieldTypes:length() }, {
+					if({ st:fieldTypes:get(index: dfi) == IrType:Ptr }, {
+						st:destroyFn: sname . '_destroy';
+					});
+					dfi++;
+				});
 				self:buildVtable(st: st, cls: cls, clsMap: clsMap);
 				self:registerClassMetaAndHeld(st: st, cls: cls, sname: sname);
 				self:mod:addStruct(s: st);
@@ -249,6 +257,10 @@ Class is IrBuilder{
 				mi++;
 			});
 			local IrStruct is st2: self:mod:findStruct(name: sname);
+			if({ st2:destroyFn != 'null' && !seenFns:has(key: st2:destroyFn) }, {
+				seenFns:set(key: st2:destroyFn, value: true);
+				self:buildDestroyHelper(st: st2, destroyFn: st2:destroyFn);
+			});
 			if({ st2:constructFn != 'null' && !seenFns:has(key: st2:constructFn) }, {
 				seenFns:set(key: st2:constructFn, value: true);
 				self:buildConstructHelper(cls: cls, sname: sname, ctorFn: st2:constructFn);
@@ -264,6 +276,56 @@ Class is IrBuilder{
 		return self:mod;
 	}
 
+	local Function is emitPoolEnter(){
+		local String is mark: self:nextTmp();
+		self:emit(inst: IrInst:IrCall(dst: mark, hasDst: true, retType: IrType:I64, callee: 'spec_pool_frame', argTypes: [], args: []));
+		self:curPoolMark: mark;
+	}
+
+	local Function is emitPoolExit(){
+		if({ self:curPoolMark != '' }, {
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_pool_release_to', argTypes: [IrType:I64], args: [self:curPoolMark]));
+		});
+	}
+
+	local Function is emitClaimPool(String is val){
+		if({ val != '' && val != 'null' }, {
+			self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Ptr, callee: 'spec_claim_pool', argTypes: [IrType:Ptr], args: [val]));
+		});
+	}
+
+	local Function of String is destroyFnFor(String is structName){
+		local IrStruct is st: self:mod:findStruct(name: structName);
+		if({ st:name != '' && st:destroyFn != 'null' }, {
+			return '@' . st:destroyFn;
+		});
+		return 'null';
+	}
+
+	local Function is buildDestroyHelper(IrStruct is st, String is destroyFn){
+		local IrFunction is fn: IrFunction:init(name: destroyFn, retType: IrType:Void);
+		fn:addParam(name: '%self', ty: IrType:Ptr);
+		local IrBlock is entry: fn:addBlock(label: 'entry');
+		self:curFn: fn;
+		self:switchBlock(blk: entry);
+		self:tmpCounter: 0;
+		self:curPoolMark: '';
+		local Int is fi: 2;
+		while({ fi < st:fieldTypes:length() }, {
+			if({ st:fieldTypes:get(index: fi) == IrType:Ptr }, {
+				local String is fptr: self:nextTmp();
+				self:emit(inst: IrInst:FieldPtr(dst: fptr, objPtr: '%self', structName: st:name, fieldIndex: fi));
+				local String is fval: self:nextTmp();
+				self:emit(inst: IrInst:Load(dst: fval, slot: fptr, ty: IrType:Ptr));
+				self:emit(inst: IrInst:Release(val: fval));
+				self:emit(inst: IrInst:Store(slot: fptr, val: 'null', ty: IrType:Ptr));
+			});
+			fi++;
+		});
+		self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
+		self:mod:addFunction(fn: fn);
+	}
+
 	local Function is buildMainEntry(String is entryClass){
 		local IrFunction is mainFn: IrFunction:init(name: 'main', retType: IrType:I64);
 		mainFn:addParam(name: '%argc', ty: IrType:I64);
@@ -271,13 +333,18 @@ Class is IrBuilder{
 		local IrBlock is entry: mainFn:addBlock(label: 'entry');
 		self:curFn: mainFn;
 		self:switchBlock(blk: entry);
+		self:tmpCounter: 0;
+		self:emitPoolEnter();
 
-		# Allocate entry object (64 bytes minimum for SpecHeader + fields) and call Entry_init(obj, null)
+		# Allocate entry object and call Entry_init(obj, null)
 		local String is obj: self:nextTmp();
-		self:emit(inst: IrInst:AllocObj(dst: obj, structName: entryClass, destroyFn: 'null'));
+		self:emit(inst: IrInst:AllocObj(dst: obj, structName: entryClass, destroyFn: self:destroyFnFor(structName: entryClass)));
 		local Array of IrType is initArgTypes: [IrType:Ptr, IrType:Ptr];
 		local Array of String is initArgs: [obj, 'null'];
 		self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: entryClass . '_init', argTypes: initArgTypes, args: initArgs));
+		self:emitPoolExit();
+		self:emit(inst: IrInst:Release(val: obj));
+		self:curPoolMark: '';
 		local String is zero: self:nextTmp();
 		self:emit(inst: IrInst:ConstInt(dst: zero, value: 0));
 		self:terminate(inst: IrInst:Ret(hasVal: true, val: zero, ty: IrType:I64));
@@ -315,6 +382,9 @@ Class is IrBuilder{
 				if({ fidx >= 0 }, {
 					local IrType is fty: st:fieldTypes:get(index: fidx);
 					local String is val: self:lowerExpr(expr: m:initExpr);
+					if({ fty == IrType:Ptr && val != '' && val != 'null' }, {
+						self:emit(inst: IrInst:Retain(val: val));
+					});
 					local String is ptr: self:nextTmp();
 					self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: '%self', structName: self:currentClass, fieldIndex: fidx));
 					self:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
@@ -381,7 +451,7 @@ Class is IrBuilder{
 		self:switchBlock(blk: entry);
 		self:tmpCounter: 0;
 		local String is obj: self:nextTmp();
-		self:emit(inst: IrInst:AllocObj(dst: obj, structName: sname, destroyFn: 'null'));
+		self:emit(inst: IrInst:AllocObj(dst: obj, structName: sname, destroyFn: self:destroyFnFor(structName: sname)));
 		local Boolean is hasZeroInit: false;
 		local Int is mi: 0;
 		while({ mi < cls:members:length() }, {
@@ -411,6 +481,7 @@ Class is IrBuilder{
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
 		self:ownedSlots: [];
+		self:emitPoolEnter();
 
 		local String is valGlob: '@.held_val.' . sname . '.' . m:name;
 		local String is initGlob: '@.held_init.' . sname . '.' . m:name;
@@ -429,6 +500,9 @@ Class is IrBuilder{
 		if({ m:hasInit }, {
 			local String is iv: self:lowerExpr(expr: m:initExpr);
 			if({ iv == '' }, { iv: self:emitDefaultVal(ty: hty); });
+			if({ hty == IrType:Ptr && iv != 'null' }, {
+				self:emit(inst: IrInst:Retain(val: iv));
+			});
 			self:emit(inst: IrInst:Store(slot: valGlob, val: iv, ty: hty));
 		});
 		self:terminate(inst: IrInst:Br(target: doneLbl));
@@ -437,6 +511,8 @@ Class is IrBuilder{
 		self:switchBlock(blk: doneBlk);
 		local String is res: self:nextTmp();
 		self:emit(inst: IrInst:Load(dst: res, slot: valGlob, ty: hty));
+		self:emitPoolExit();
+		self:curPoolMark: '';
 		self:terminate(inst: IrInst:Ret(hasVal: true, val: res, ty: hty));
 		self:mod:addFunction(fn: fn);
 	}
@@ -467,6 +543,7 @@ Class is IrBuilder{
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
 		self:ownedSlots: [];
+		self:emitPoolEnter();
 
 		if({ !isHeldMethod }, {
 			# Bind 'self' into stack slot
@@ -496,6 +573,7 @@ Class is IrBuilder{
 
 		if({ !self:blkTerminated }, {
 			self:emitReleaseOwnedLocals();
+			self:emitPoolExit();
 			if({ retTy == IrType:Void }, {
 				self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 			}, {
@@ -503,6 +581,7 @@ Class is IrBuilder{
 				self:terminate(inst: IrInst:Ret(hasVal: true, val: defVal, ty: retTy));
 			});
 		});
+		self:curPoolMark: '';
 
 		self:mod:addFunction(fn: fn);
 	}
@@ -557,15 +636,8 @@ Class is IrBuilder{
 				self:emit(inst: IrInst:Alloca(slot: slot, ty: vty));
 				if({ hasInit }, {
 					local String is val: self:lowerExpr(expr: initExpr);
-					if({ vty == IrType:Ptr }, {
-						local Boolean is needsRetain: match(on: initExpr, when: [
-							Expression:Ident: local Function of Boolean(String is _n){ return true; },
-							Expression:FieldAccess: local Function of Boolean(Expression is _t, String is _f){ return true; },
-							Expression:Index: local Function of Boolean(Expression is _t, Expression is _i){ return true; }
-						], default: { return false; });
-						if({ needsRetain }, {
-							self:emit(inst: IrInst:Retain(val: val));
-						});
+					if({ vty == IrType:Ptr && val != '' && val != 'null' }, {
+						self:emit(inst: IrInst:Retain(val: val));
 					});
 					self:emit(inst: IrInst:Store(slot: slot, val: val, ty: vty));
 				}, {
@@ -611,6 +683,14 @@ Class is IrBuilder{
 							local IrType is fty: st:fieldTypes:get(index: fidx);
 							local String is ptr: self:nextTmp();
 							self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: self:currentClass, fieldIndex: fidx));
+							if({ fty == IrType:Ptr }, {
+								if({ val != '' && val != 'null' }, {
+									self:emit(inst: IrInst:Retain(val: val));
+								});
+								local String is oldFVal: self:nextTmp();
+								self:emit(inst: IrInst:Load(dst: oldFVal, slot: ptr, ty: IrType:Ptr));
+								self:emit(inst: IrInst:Release(val: oldFVal));
+							});
 							self:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
 						});
 					},
@@ -631,6 +711,14 @@ Class is IrBuilder{
 									local IrType is fty: st:fieldTypes:get(index: fidx);
 									local String is ptr: self:nextTmp();
 									self:emit(inst: IrInst:FieldPtr(dst: ptr, objPtr: obj, structName: sname, fieldIndex: fidx));
+									if({ fty == IrType:Ptr }, {
+										if({ val != '' && val != 'null' }, {
+											self:emit(inst: IrInst:Retain(val: val));
+										});
+										local String is oldPVal: self:nextTmp();
+										self:emit(inst: IrInst:Load(dst: oldPVal, slot: ptr, ty: IrType:Ptr));
+										self:emit(inst: IrInst:Release(val: oldPVal));
+									});
 									self:emit(inst: IrInst:Store(slot: ptr, val: val, ty: fty));
 								});
 							}, {
@@ -663,9 +751,14 @@ Class is IrBuilder{
 						self:emit(inst: IrInst:Retain(val: val));
 					});
 					self:emitReleaseOwnedLocals();
+					self:emitPoolExit();
+					if({ self:curFn:retType == IrType:Ptr && val != 'null' }, {
+						self:emitClaimPool(val: val);
+					});
 					self:terminate(inst: IrInst:Ret(hasVal: true, val: val, ty: self:curFn:retType));
 				}, {
 					self:emitReleaseOwnedLocals();
+					self:emitPoolExit();
 					self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 				});
 			},
@@ -863,6 +956,7 @@ Class is IrBuilder{
 					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add', argTypes: addT, args: addV));
 					ii++;
 				});
+				self:emitClaimPool(val: arr);
 				return arr;
 			},
 			Expression:MapLit: local Function(Array of Expression is keys, Array of Expression is values){
@@ -887,6 +981,7 @@ Class is IrBuilder{
 					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_map_set', argTypes: setT, args: setV));
 					mi++;
 				});
+				self:emitClaimPool(val: mp);
 				return mp;
 			},
 			Expression:Index: local Function(Expression is target, Expression is index){
@@ -1069,6 +1164,7 @@ Class is IrBuilder{
 		local Map of String to String is savedSlots: self:localSlots;
 		local Map of String to IrType is savedTypes: self:localTypes;
 		local Array of String is savedOwned: self:ownedSlots;
+		local String is savedPoolMark: self:curPoolMark;
 
 		local IrFunction is fn: IrFunction:init(name: fnName, retType: retTy);
 		fn:sourceFile: savedFn:sourceFile;
@@ -1089,6 +1185,7 @@ Class is IrBuilder{
 		self:localSlots: Map:init();
 		self:localTypes: Map:init();
 		self:ownedSlots: [];
+		self:emitPoolEnter();
 
 		# Unpack captured variables from %env into local slots
 		local Int is uci: 0;
@@ -1126,6 +1223,7 @@ Class is IrBuilder{
 		self:lowerStmts(stmts: body);
 		if({ !self:blkTerminated }, {
 			self:emitReleaseOwnedLocals();
+			self:emitPoolExit();
 			if({ retTy == IrType:Void }, {
 				self:terminate(inst: IrInst:Ret(hasVal: false, val: '', ty: IrType:Void));
 			}, {
@@ -1133,6 +1231,7 @@ Class is IrBuilder{
 				self:terminate(inst: IrInst:Ret(hasVal: true, val: defVal, ty: retTy));
 			});
 		});
+		self:curPoolMark: '';
 		self:mod:addFunction(fn: fn);
 
 		# Emit env destructor if captures exist
@@ -1173,6 +1272,7 @@ Class is IrBuilder{
 		self:localSlots: savedSlots;
 		self:localTypes: savedTypes;
 		self:ownedSlots: savedOwned;
+		self:curPoolMark: savedPoolMark;
 
 		# Allocate and populate %env in outer function if captures exist
 		local String is envVal: 'null';
@@ -1205,6 +1305,7 @@ Class is IrBuilder{
 		local Array of IrType is cT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
 		local Array of String is cV: [fnPtr, envVal, destroyPtr];
 		self:emit(inst: IrInst:IrCall(dst: clsTmp, hasDst: true, retType: IrType:Ptr, callee: 'spec_rt_closure_new', argTypes: cT, args: cV));
+		self:emitClaimPool(val: clsTmp);
 		return clsTmp;
 	}
 
@@ -1342,7 +1443,7 @@ Class is IrBuilder{
 					if({ pathCName != '' }, { clsName: pathCName; });
 				});
 				local String is obj: self:nextTmp();
-				self:emit(inst: IrInst:AllocObj(dst: obj, structName: clsName, destroyFn: 'null'));
+				self:emit(inst: IrInst:AllocObj(dst: obj, structName: clsName, destroyFn: self:destroyFnFor(structName: clsName)));
 				argTypes:add(item: IrType:Ptr);
 				argVals:add(item: obj);
 				local Int is ai: 0;
@@ -1354,6 +1455,7 @@ Class is IrBuilder{
 					ai++;
 				});
 				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: clsName . '_init', argTypes: argTypes, args: argVals));
+				self:emitClaimPool(val: obj);
 				return obj;
 			});
 		});
@@ -1362,8 +1464,9 @@ Class is IrBuilder{
 			local String is provStruct: self:cStructName(qname: call:bareProvider);
 			if({ self:mod:findStruct(name: provStruct):name != '' }, {
 				local String is provObj: self:nextTmp();
-				self:emit(inst: IrInst:AllocObj(dst: provObj, structName: provStruct, destroyFn: 'null'));
+				self:emit(inst: IrInst:AllocObj(dst: provObj, structName: provStruct, destroyFn: self:destroyFnFor(structName: provStruct)));
 				self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: provStruct . '_init', argTypes: [IrType:Ptr], args: [provObj]));
+				self:emitClaimPool(val: provObj);
 				argTypes: [IrType:Ptr];
 				argVals: [provObj];
 				hasRecv: true;

@@ -20,6 +20,7 @@ Class is IrStruct{
 	Array of String is vtableFns: [];
 	Array of String is baseNames: [];
 	String is constructFn: 'null';
+	String is destroyFn: 'null';
 	Array of String is metaMethodNames: [];
 	Array of String is metaMethodFns: [];
 	Array of Int is metaMethodFlags: [];

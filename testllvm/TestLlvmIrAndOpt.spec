@@ -617,4 +617,89 @@ Class is LlvmP8{
 		Assert:areEqualInt(4, he:fieldCount());
 		Assert:areEqualString('{ ptr, ptr, i32, ptr }', he:llvmType());
 	}
+
+	Function is testArcDestructionAndPoolLlvm(){
+		local String is tmp: Uri:systemTempDir();
+		local String is pid: Process:getPid() as String;
+		local String is specPath: tmp . '/spec_llvm_p9_' . pid . '.spec';
+		local String is llPath: tmp . '/spec_llvm_p9_' . pid . '.ll';
+		local String is binPath: tmp . '/spec_llvm_p9_bin_' . pid;
+		if({ Process:osName() == 'windows' }, {
+			binPath: binPath . '.exe';
+		});
+
+		local String is src: '''
+Class is Res{
+	String is name: '';
+	replace Function is init(String is name){
+		self:name: name;
+	}
+	Function of String is getName(){
+		return self:name;
+	}
+}
+
+Class is Holder{
+	Res is item;
+	replace Function is init(Res is item){
+		self:item: item;
+	}
+	Function is setItem(Res is nextItem){
+		self:item: nextItem;
+	}
+	Function of Res is getItem(){
+		return self:item;
+	}
+}
+
+Class is LlvmP9{
+	replace Array of Array of String is using: [
+		['base', 'sys', as Conditional()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Output()],
+		['base', 'sys', as Process()]
+	];
+	Function of Res is makeRes(String is tag){
+		return Res:init(name: tag);
+	}
+	replace Function is init(Map of String to String is args){
+		local Res is r1: Res:init(name: 'first');
+		local Holder is h: Holder:init(item: r1);
+		if({ h:getItem():getName() != 'first' }, { Process:exit(status: 2); });
+
+		h:setItem(nextItem: Res:init(name: 'second'));
+		if({ h:getItem():getName() != 'second' }, { Process:exit(status: 3); });
+
+		local Int is i: 0;
+		while({ i < 10 }, {
+			h:setItem(nextItem: self:makeRes(tag: 'loop_' . (i as String)));
+			i: i + 1;
+		});
+		if({ h:getItem():getName() != 'loop_9' }, { Process:exit(status: 4); });
+		line('llvm-p9-ok');
+	}
+}
+''';
+
+		local Boolean is wrote: File:fileWrite(path: specPath, content: src, onSuccess: local Function(){}, onError: local Function(String is e){});
+		Assert:isTrue(wrote);
+
+		local String is specBin: Process:getEnv(key: 'SPEC_BIN', default: 'bin/spec');
+		local Int is compRc: Process:execute(command: specBin, args: ['--llvm', '--emit-llvm', llPath, '--quiet', '-i', specPath, '-o', binPath]);
+		Assert:areEqualInt(0, compRc);
+
+		local String is ll: File:fileRead(path: llPath, onSuccess: local Function(String is s){}, onError: local Function(String is e){}, default: '');
+		Assert:isTrue(ll:contains(needle: 'define void @Holder_destroy(ptr %self)'));
+		Assert:isTrue(ll:contains(needle: 'define void @Res_destroy(ptr %self)'));
+		Assert:isTrue(ll:contains(needle: '@spec_pool_frame()'));
+		Assert:isTrue(ll:contains(needle: '@spec_pool_release_to('));
+		Assert:isTrue(ll:contains(needle: '@spec_claim_pool('));
+
+		local Int is runRc: Process:execute(command: binPath, args: []);
+		Assert:areEqualInt(0, runRc);
+
+		File:fileRemove(path: specPath);
+		File:fileRemove(path: llPath);
+		File:fileRemove(path: binPath);
+	}
 }
