@@ -33,22 +33,7 @@ Class of CallLowerer is ArrayCallLowerer{
 		return 30;
 	}
 
-	local Function of Boolean is isSysVecTarget(CallData is call){
-		if({ call:bareProvider:endsWith(suffix: ':sysinternal:Vector') }, { return true; });
-		local Boolean is ok: false;
-		match(on: call:target, when: [
-			Expression:Path: local Function(Array of String is segs){
-				local Int is n: segs:length();
-				if({ n >= 2 && segs:get(index: n - 1, default: '') == 'Vector' && segs:get(index: n - 2, default: '') == 'sysinternal' }, {
-					ok: true;
-				});
-			}
-		], default: {});
-		return ok;
-	}
-
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
-		local Boolean is isVec: self:isSysVecTarget(call: call);
 		local Boolean is isArrInit: false;
 		match(on: call:target, when: [
 			Expression:Ident: local Function(String is tn){
@@ -56,14 +41,6 @@ Class of CallLowerer is ArrayCallLowerer{
 			}
 		], default: {});
 		if({ isArrInit }, { return true; });
-		if({ isVec }, {
-			if({ call:name == 'init' }, { return true; });
-			local Boolean is okVec: false;
-			match(on: call:name, when: [
-				['vecLength', 'vecGetAt', 'vecSetAt', 'vecAdd', 'vecPopLast', 'vecRemoveAt', 'vecClear']: { okVec: true; }
-			]);
-			return okVec;
-		});
 		local String is recvType: call:target:resolvedType;
 		if({ recvType != 'Array' && !recvType:startsWith(prefix: 'Array of ') && !recvType:startsWith(prefix: 'Array:') && recvType != 'List' && !recvType:startsWith(prefix: 'List of ') && !recvType:startsWith(prefix: 'List:') }, {
 			return false;
@@ -88,64 +65,6 @@ Class of CallLowerer is ArrayCallLowerer{
 	}
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
-		local Boolean is isVec: self:isSysVecTarget(call: call);
-		if({ isVec }, {
-			if({ call:name == 'init' }, { return 'null'; });
-			local NamedArg is va0: call:args:get(index: 0);
-			local String is vArg: b:lowerExpr(expr: va0:value);
-			local String is nm: call:name;
-			if({ nm == 'vecLength' }, {
-				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_vec_length', argTypes: [IrType:Ptr], args: [vArg]));
-				return dst;
-			});
-			if({ nm == 'vecClear' }, {
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_vec_clear', argTypes: [IrType:Ptr], args: [vArg]));
-				return '0';
-			});
-			if({ nm == 'vecAdd' }, {
-				local NamedArg is va1: call:args:get(index: 1);
-				local String is itV: b:castIfNeeded(val: b:lowerExpr(expr: va1:value), fromTy: b:irTypeFor(specType: va1:value:resolvedType), toTy: IrType:Ptr);
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_vec_add', argTypes: [IrType:Ptr, IrType:Ptr], args: [vArg, itV]));
-				return '0';
-			});
-			if({ nm == 'vecGetAt' }, {
-				local NamedArg is va1: call:args:get(index: 1);
-				local NamedArg is va2: call:args:get(index: 2);
-				local String is idxV: b:lowerExpr(expr: va1:value);
-				local String is defV: b:castIfNeeded(val: b:lowerExpr(expr: va2:value), fromTy: b:irTypeFor(specType: va2:value:resolvedType), toTy: IrType:Ptr);
-				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_vec_get_at', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [vArg, idxV, defV]));
-				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
-				return b:castIfNeeded(val: dst, fromTy: IrType:Ptr, toTy: retTy);
-			});
-			if({ nm == 'vecSetAt' }, {
-				local NamedArg is va1: call:args:get(index: 1);
-				local NamedArg is va2: call:args:get(index: 2);
-				local String is idxV: b:lowerExpr(expr: va1:value);
-				local String is itV: b:castIfNeeded(val: b:lowerExpr(expr: va2:value), fromTy: b:irTypeFor(specType: va2:value:resolvedType), toTy: IrType:Ptr);
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_vec_set_at', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [vArg, idxV, itV]));
-				return '0';
-			});
-			if({ nm == 'vecPopLast' }, {
-				local NamedArg is va1: call:args:get(index: 1);
-				local String is defV: b:castIfNeeded(val: b:lowerExpr(expr: va1:value), fromTy: b:irTypeFor(specType: va1:value:resolvedType), toTy: IrType:Ptr);
-				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_vec_pop_last', argTypes: [IrType:Ptr, IrType:Ptr], args: [vArg, defV]));
-				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
-				return b:castIfNeeded(val: dst, fromTy: IrType:Ptr, toTy: retTy);
-			});
-			if({ nm == 'vecRemoveAt' }, {
-				local NamedArg is va1: call:args:get(index: 1);
-				local NamedArg is va2: call:args:get(index: 2);
-				local String is idxV: b:lowerExpr(expr: va1:value);
-				local String is defV: b:castIfNeeded(val: b:lowerExpr(expr: va2:value), fromTy: b:irTypeFor(specType: va2:value:resolvedType), toTy: IrType:Ptr);
-				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_vec_remove_at', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [vArg, idxV, defV]));
-				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
-				return b:castIfNeeded(val: dst, fromTy: IrType:Ptr, toTy: retTy);
-			});
-		});
 		if({ call:name == 'init' }, {
 			local String is dst: b:nextTmp();
 			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_new', argTypes: [], args: []));
@@ -159,12 +78,12 @@ Class of CallLowerer is ArrayCallLowerer{
 			if({ isByteList }, {
 				if({ call:name == 'length' }, {
 					local String is dst: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_bytebuffer_length', argTypes: [IrType:Ptr], args: [aRecv]));
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'Vector_byteBufLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 					return dst;
 				});
 				if({ call:name == 'isEmpty' }, {
 					local String is lenV: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_bytebuffer_length', argTypes: [IrType:Ptr], args: [aRecv]));
+					b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_byteBufLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 					local String is zeroV: b:nextTmp();
 					b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
 					local String is dst: b:nextTmp();
@@ -172,27 +91,24 @@ Class of CallLowerer is ArrayCallLowerer{
 					return dst;
 				});
 				if({ call:name == 'clear' }, {
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_bytebuffer_clear', argTypes: [IrType:Ptr], args: [aRecv]));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_byteBufClear', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 					return '0';
 				});
 				if({ call:name == 'toString' }, {
 					local String is dst: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_bytebuffer_to_string', argTypes: [IrType:Ptr], args: [aRecv]));
-					b:emitClaimPool(val: dst);
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'Vector_byteBufToString', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 					return dst;
 				});
 				if({ call:name == 'push' }, {
 					local NamedArg is na0: call:args:get(index: 0);
 					local String is bv: b:castIfNeeded(val: b:lowerExpr(expr: na0:value), fromTy: b:irTypeFor(specType: na0:value:resolvedType), toTy: IrType:I64);
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_bytebuffer_push', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, bv]));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_byteBufPush', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', aRecv, bv]));
 					return '0';
 				});
 				if({ call:name == 'appendString' }, {
 					local NamedArg is na0: call:args:get(index: 0);
 					local String is sv: b:lowerExpr(expr: na0:value);
-					local String is cstr: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: cstr, hasDst: true, retType: IrType:Ptr, callee: 'spec_buf_to_cstring', argTypes: [IrType:Ptr], args: [sv]));
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_bytebuffer_append_string', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, cstr]));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_byteBufAppendString', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, sv]));
 					return '0';
 				});
 				if({ call:name == 'get' }, {
@@ -209,7 +125,7 @@ Class of CallLowerer is ArrayCallLowerer{
 						errV: b:lowerExpr(expr: na2:value);
 					});
 					local String is dst: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_bytebuffer_get', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:Ptr], args: [aRecv, idxV, defV, errV]));
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'Vector_byteBufGet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64, IrType:Ptr], args: ['null', aRecv, idxV, defV, errV]));
 					if({ b:irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
 						return b:castIfNeeded(val: dst, fromTy: IrType:I64, toTy: IrType:Ptr);
 					});
@@ -225,7 +141,7 @@ Class of CallLowerer is ArrayCallLowerer{
 						local NamedArg is na2: call:args:get(index: 2);
 						errV: b:lowerExpr(expr: na2:value);
 					});
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_bytebuffer_set', argTypes: [IrType:Ptr, IrType:I64, IrType:I64, IrType:Ptr], args: [aRecv, idxV, iv, errV]));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_byteBufSet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:I64, IrType:Ptr], args: ['null', aRecv, idxV, iv, errV]));
 					return '0';
 				});
 				if({ call:name == 'pop' }, {
@@ -240,22 +156,22 @@ Class of CallLowerer is ArrayCallLowerer{
 						errV: b:lowerExpr(expr: na1:value);
 					});
 					local String is dst: b:nextTmp();
-					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_bytebuffer_pop', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [aRecv, defV, errV]));
+					b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'Vector_byteBufPop', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr], args: ['null', aRecv, defV, errV]));
 					if({ b:irTypeFor(specType: expr:resolvedType) == IrType:Ptr }, {
 						return b:castIfNeeded(val: dst, fromTy: IrType:I64, toTy: IrType:Ptr);
 					});
 					return dst;
 				});
 			});
-			# Generic List of T -> SpecVec*
+			# Generic List of T -> SpecArray* via Vector
 			if({ call:name == 'length' }, {
 				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_vec_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 				return dst;
 			});
 			if({ call:name == 'isEmpty' }, {
 				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_vec_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 				local String is zeroV: b:nextTmp();
 				b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
 				local String is dst: b:nextTmp();
@@ -263,13 +179,13 @@ Class of CallLowerer is ArrayCallLowerer{
 				return dst;
 			});
 			if({ call:name == 'clear' }, {
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_vec_clear', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecClear', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 				return '0';
 			});
 			if({ call:name == 'push' }, {
 				local NamedArg is na0: call:args:get(index: 0);
 				local String is iv: b:castIfNeeded(val: b:lowerExpr(expr: na0:value), fromTy: b:irTypeFor(specType: na0:value:resolvedType), toTy: IrType:Ptr);
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_vec_push', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, iv]));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecAdd', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, iv]));
 				return '0';
 			});
 			if({ call:name == 'get' }, {
@@ -286,7 +202,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					errV: b:lowerExpr(expr: na2:value);
 				});
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_vec_get', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr, IrType:Ptr], args: [aRecv, idxV, defV, errV]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, idxV, defV, errV]));
 				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
 				if({ retTy != IrType:Ptr && retTy != IrType:Void }, {
 					return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
@@ -303,7 +219,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					local NamedArg is na2: call:args:get(index: 2);
 					errV: b:lowerExpr(expr: na2:value);
 				});
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_vec_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr, IrType:Ptr], args: [aRecv, idxV, iv, errV]));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecSet', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, idxV, iv, errV]));
 				return '0';
 			});
 			if({ call:name == 'pop' }, {
@@ -318,7 +234,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					errV: b:lowerExpr(expr: na1:value);
 				});
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_vec_pop', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: [aRecv, defV, errV]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecPop', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, defV, errV]));
 				local IrType is retTy: b:irTypeFor(specType: expr:resolvedType);
 				if({ retTy != IrType:Ptr && retTy != IrType:Void }, {
 					return b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: retTy);
@@ -330,15 +246,15 @@ Class of CallLowerer is ArrayCallLowerer{
 		match(on: call:name, when: [
 			'length': {
 				local String is dst: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 				res: dst;
 			},
 			'clear': {
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_clear', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecClear', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 			},
 			'isEmpty': {
 				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 				local String is zeroV: b:nextTmp();
 				b:emit(inst: IrInst:ConstInt(dst: zeroV, value: 0));
 				local String is dst: b:nextTmp();
@@ -356,15 +272,15 @@ Class of CallLowerer is ArrayCallLowerer{
 				]);
 				local Boolean is isArrArg: isArrLit && (ivTyName == 'Array' || ivTyName:startsWith(prefix: 'Array of ') || ivTyName:startsWith(prefix: 'Array:'));
 				if({ isArrArg }, {
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add_array', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, iv]));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecAddArray', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, iv]));
 				}, {
 					local IrType is ity: b:irTypeFor(specType: ivTyName);
 					local String is ip: b:castIfNeeded(val: iv, fromTy: ity, toTy: IrType:Ptr);
-					local String is addCallee: 'spec_array_add';
+					local String is addCallee: 'Vector_vecAdd';
 					if({ b:isArcSpecType(specType: ivTyName) }, {
-						addCallee: 'spec_array_add_object';
+						addCallee: 'Vector_vecAddObject';
 					});
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, ip]));
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, ip]));
 				});
 			},
 			'get': {
@@ -375,9 +291,9 @@ Class of CallLowerer is ArrayCallLowerer{
 					local NamedArg is na1: call:args:get(index: 1);
 					local IrType is dty: b:irTypeFor(specType: na1:value:resolvedType);
 					local String is defV: b:castIfNeeded(val: b:lowerExpr(expr: na1:value), fromTy: dty, toTy: IrType:Ptr);
-					b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_vec_get_at', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [aRecv, idxV, defV]));
+					b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr], args: ['null', aRecv, idxV, defV]));
 				}, {
-					b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, idxV]));
+					b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', aRecv, idxV]));
 				});
 				local IrType is grTy: b:irTypeFor(specType: expr:resolvedType);
 				if({ grTy != IrType:Ptr && grTy != IrType:Void }, {
@@ -395,7 +311,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					defV: b:castIfNeeded(val: b:lowerExpr(expr: na0:value), fromTy: b:irTypeFor(specType: na0:value:resolvedType), toTy: IrType:Ptr);
 				});
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_pop', argTypes: [IrType:Ptr, IrType:Ptr], args: [aRecv, defV]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecPopLast', argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', aRecv, defV]));
 				local IrType is prTy: b:irTypeFor(specType: expr:resolvedType);
 				res: b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: prTy);
 			},
@@ -408,7 +324,7 @@ Class of CallLowerer is ArrayCallLowerer{
 					defV: b:castIfNeeded(val: b:lowerExpr(expr: na1:value), fromTy: b:irTypeFor(specType: na1:value:resolvedType), toTy: IrType:Ptr);
 				});
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_remove_at', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [aRecv, idxV, defV]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecRemoveAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr], args: ['null', aRecv, idxV, defV]));
 				local IrType is rrTy: b:irTypeFor(specType: expr:resolvedType);
 				res: b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: rrTy);
 			},
@@ -420,7 +336,7 @@ Class of CallLowerer is ArrayCallLowerer{
 				local String is iv: b:lowerExpr(expr: ivExpr);
 				local IrType is ity: b:irTypeFor(specType: ivExpr:resolvedType);
 				local String is ip: b:castIfNeeded(val: iv, fromTy: ity, toTy: IrType:Ptr);
-				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [aRecv, idxV, ip]));
+				b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecSetAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr], args: ['null', aRecv, idxV, ip]));
 			},
 			'each': {
 				local NamedArg is na0: call:args:get(index: 0);
@@ -446,7 +362,7 @@ Class of CallLowerer is ArrayCallLowerer{
 				if({ elemTy == IrType:Void }, { elemTy: IrType:Ptr; });
 
 				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 				local String is idxSlot: '%each_i_' . (b:nextTmp());
 				idxSlot: '%each_i_' . (b:tmpCounter as String);
 				b:emit(inst: IrInst:Alloca(slot: idxSlot, ty: IrType:I64));
@@ -470,7 +386,7 @@ Class of CallLowerer is ArrayCallLowerer{
 				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 				b:switchBlock(blk: bodyBlk);
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, curI]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', aRecv, curI]));
 				local String is elemV: raw;
 				if({ elemTy != IrType:Ptr }, {
 					elemV: b:nextTmp();
@@ -533,7 +449,7 @@ Class of CallLowerer is ArrayCallLowerer{
 				b:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
 
 				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 
 				local String is accSlot: '';
 				local String is outArr: '';
@@ -592,16 +508,16 @@ Class of CallLowerer is ArrayCallLowerer{
 				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 				b:switchBlock(blk: bodyBlk);
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, curI]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', aRecv, curI]));
 				local String is elemV: b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: elemTy);
 
 				if({ call:name == 'map' }, {
 					local String is mRes: b:nextTmp();
 					b:emit(inst: IrInst:IndirectCall(dst: mRes, hasDst: true, retType: outElemTy, fnPtr: fnPtrVal, argTypes: [IrType:Ptr, elemTy], args: [envVal, elemV]));
 					local String is mPtr: b:castIfNeeded(val: mRes, fromTy: outElemTy, toTy: IrType:Ptr);
-					local String is addCallee: 'spec_array_add';
-					if({ outElemTy == IrType:Ptr }, { addCallee: 'spec_array_add_object'; });
-					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr], args: [outArr, mPtr]));
+					local String is addCallee: 'Vector_vecAdd';
+					if({ outElemTy == IrType:Ptr }, { addCallee: 'Vector_vecAddObject'; });
+					b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', outArr, mPtr]));
 					b:terminate(inst: IrInst:Br(target: stepLbl));
 				}, {
 					local String is pRes: b:nextTmp();
@@ -631,9 +547,9 @@ Class of CallLowerer is ArrayCallLowerer{
 						b:terminate(inst: IrInst:Br(target: stepLbl));
 					});
 					if({ call:name == 'filter' }, {
-						local String is addCallee: 'spec_array_add';
-						if({ elemTy == IrType:Ptr }, { addCallee: 'spec_array_add_object'; });
-						b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr], args: [outArr, raw]));
+						local String is addCallee: 'Vector_vecAdd';
+						if({ elemTy == IrType:Ptr }, { addCallee: 'Vector_vecAddObject'; });
+						b:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: addCallee, argTypes: [IrType:Ptr, IrType:Ptr, IrType:Ptr], args: ['null', outArr, raw]));
 						b:terminate(inst: IrInst:Br(target: stepLbl));
 					});
 				});
@@ -708,7 +624,7 @@ Class of CallLowerer is ArrayCallLowerer{
 				b:emit(inst: IrInst:Load(dst: envVal, slot: envPtrAddr, ty: IrType:Ptr));
 
 				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [aRecv]));
+				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', aRecv]));
 
 				local String is accSlot: '%afld_a_' . (b:nextTmp());
 				accSlot: '%afld_a_' . (b:tmpCounter as String);
@@ -738,7 +654,7 @@ Class of CallLowerer is ArrayCallLowerer{
 				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 				b:switchBlock(blk: bodyBlk);
 				local String is raw: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [aRecv, curI]));
+				b:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', aRecv, curI]));
 				local String is elemV: b:castIfNeeded(val: raw, fromTy: IrType:Ptr, toTy: elemTy);
 				local String is curAcc: b:nextTmp();
 				b:emit(inst: IrInst:Load(dst: curAcc, slot: accSlot, ty: accTy));

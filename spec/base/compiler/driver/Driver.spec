@@ -119,10 +119,18 @@ Class is Driver{
 		local CompilationReport is report: CompilationReport:init(quiet: quiet);
 
 		local String is emitLlvmPath: args:getString(key: 'emit-llvm', default: '');
+		local String is emitRuntimePath: args:getString(key: 'emit-runtime', default: '');
+		if({ emitRuntimePath != '' }, {
+			local RuntimePrelude is rpOut: RuntimePrelude:init();
+			fileWrite(path: emitRuntimePath, content: rpOut:emitRuntime());
+		});
 
-		if({ outputPath == '' && emitLlvmPath == '' }, {
+		if({ outputPath == '' && emitLlvmPath == '' && emitRuntimePath == '' }, {
 			Stderr:line('Error: Missing output binary path (-o <output_binary>)');
 			Process:exit(status: 2);
+		});
+		if({ outputPath == '' && emitLlvmPath == '' && emitRuntimePath != '' }, {
+			return;
 		});
 
 		# 1. Multi-file module loading and dependency resolution.
@@ -277,10 +285,16 @@ Class is Driver{
 			fileRemove(path: runtimeO);
 			fileRemove(path: runtimeC);
 		});
-		if({ !fileExists(path: runtimeO) }, {
+		if({ !fileExists(path: runtimeO) || args:has(key: 'clean-cache') }, {
 			Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
 			local RuntimePrelude is rp: RuntimePrelude:init();
-			fileWrite(path: runtimeC, content: rp:emitRuntime());
+			if({ !fileWrite(path: runtimeC, content: rp:emitRuntime()) }, {
+				cacheDir: Uri:systemTempDir() . '/spec_cache/runtime';
+				runtimeC: cacheDir . '/spec_runtime.c';
+				runtimeO: cacheDir . '/spec_runtime.o';
+				Process:execute(command: 'mkdir', args: ['-p', cacheDir]);
+				fileWrite(path: runtimeC, content: rp:emitRuntime());
+			});
 			Process:execute(command: 'clang', args: ['-O2', '-c', runtimeC, '-o', runtimeO, '-pthread']);
 		});
 

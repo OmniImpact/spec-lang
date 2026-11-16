@@ -35,6 +35,7 @@ Class is Mem{
 	Function of Int is claimPoolAddr(Int is objAddr);
 	Function of String is strFromBytes(Int is srcAddr, Int is len);
 	Function of String is internStr(String is s);
+	Function is panic(String is msg);
 	Function of Int is floatToBits(Float is val);
 	Function of Float is bitsToFloat(Int is bits);
 

@@ -241,7 +241,7 @@ Class of CallLowerer is MapCallLowerer{
 				b:emit(inst: IrInst:IrCall(dst: keysArr, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_keys', argTypes: [IrType:Ptr], args: [mRecv]));
 				b:emitClaimPool(val: keysArr);
 				local String is lenV: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'spec_array_length', argTypes: [IrType:Ptr], args: [keysArr]));
+				b:emit(inst: IrInst:IrCall(dst: lenV, hasDst: true, retType: IrType:I64, callee: 'Vector_vecLength', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', keysArr]));
 
 				local String is accSlot: '';
 				local String is outMap: '';
@@ -303,7 +303,7 @@ Class of CallLowerer is MapCallLowerer{
 				local IrBlock is bodyBlk: b:curFn:addBlock(label: bodyLbl);
 				b:switchBlock(blk: bodyBlk);
 				local String is rawK: b:nextTmp();
-				b:emit(inst: IrInst:IrCall(dst: rawK, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: [IrType:Ptr, IrType:I64], args: [keysArr, curI]));
+				b:emit(inst: IrInst:IrCall(dst: rawK, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64], args: ['null', keysArr, curI]));
 				local String is kCast: b:castIfNeeded(val: rawK, fromTy: IrType:Ptr, toTy: kArgTy);
 				local String is rawV: b:nextTmp();
 				b:emit(inst: IrInst:IrCall(dst: rawV, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [mRecv, kCast, 'null']));

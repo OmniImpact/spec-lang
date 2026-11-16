@@ -109,7 +109,7 @@ Class of SysinternalCallLowerer is ProcessCallLowerer{
 			},
 			'array_freeze': {
 				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'a', posIdx: 0, defVal: 'null');
-				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_array_freeze', argTypes: [IrType:Ptr], args: [a]);
+				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'Vector_vecFreeze', argTypes: [IrType:Ptr, IrType:Ptr], args: ['null', a]);
 			},
 			'run': {
 				local String is thr: self:lowerNamedArg(b: b, call: call, argName: 'threads', posIdx: 0, defVal: '1');

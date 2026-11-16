@@ -606,6 +606,10 @@ Class is IrBuilder{
 	}
 
 	local Function is emitPoolEnter(){
+		if({ self:currentClass == 'Vector' }, {
+			self:curPoolMark: '';
+			return;
+		});
 		local String is mark: self:nextTmp();
 		self:emit(inst: IrInst:IrCall(dst: mark, hasDst: true, retType: IrType:I64, callee: 'spec_pool_frame', argTypes: [], args: []));
 		self:curPoolMark: mark;
@@ -1930,9 +1934,9 @@ Class is IrBuilder{
 						self:emit(inst: IrInst:Retain(val: defVal));
 					}, {
 						if({ varType:name == 'List' || varType:name:startsWith(prefix: 'List of ') || varType:name:startsWith(prefix: 'List:') }, {
-							local String is vecCtor: 'spec_vec_new_object';
+							local String is vecCtor: 'spec_array_new_object';
 							if({ listElem != '' && !self:isArcSpecType(specType: listElem) }, {
-								vecCtor: 'spec_vec_new';
+								vecCtor: 'spec_array_new';
 							});
 							defVal: self:nextTmp();
 							self:emit(inst: IrInst:IrCall(dst: defVal, hasDst: true, retType: IrType:Ptr, callee: vecCtor, argTypes: [], args: []));
@@ -2113,7 +2117,7 @@ Class is IrBuilder{
 						}, {
 							local String is idxV: self:castIfNeeded(val: iv, fromTy: self:irTypeFor(specType: index:resolvedType), toTy: IrType:I64);
 							local String is vp: self:castIfNeeded(val: val, fromTy: valTy, toTy: IrType:Ptr);
-							self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_set', argTypes: [IrType:Ptr, IrType:I64, IrType:Ptr], args: [tv, idxV, vp]));
+							self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecSetAt', argTypes: [IrType:Ptr, IrType:Ptr, IrType:I64, IrType:Ptr], args: ['null', tv, idxV, vp]));
 						});
 					}
 				], default: {});
@@ -2831,9 +2835,9 @@ Class is IrBuilder{
 							self:emit(inst: IrInst:IrCast(dst: ip, val: iv, fromType: ity, toType: IrType:Ptr));
 						});
 					});
-					local Array of IrType is addT: [IrType:Ptr, IrType:Ptr];
-					local Array of String is addV: [arr, ip];
-					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'spec_array_add', argTypes: addT, args: addV));
+					local Array of IrType is addT: [IrType:Ptr, IrType:Ptr, IrType:Ptr];
+					local Array of String is addV: ['null', arr, ip];
+					self:emit(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'Vector_vecAdd', argTypes: addT, args: addV));
 					ii++;
 				});
 				self:emitClaimPool(val: arr);
@@ -2931,9 +2935,9 @@ Class is IrBuilder{
 					});
 					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_map_get' . kSuf, argTypes: [IrType:Ptr, kArgTy, IrType:Ptr], args: [tv, kp, mDef]));
 				}, {
-					local Array of IrType is gT: [IrType:Ptr, IrType:I64];
-					local Array of String is gV: [tv, iv];
-					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'spec_array_get', argTypes: gT, args: gV));
+					local Array of IrType is gT: [IrType:Ptr, IrType:Ptr, IrType:I64];
+					local Array of String is gV: ['null', tv, iv];
+					self:emit(inst: IrInst:IrCall(dst: raw, hasDst: true, retType: IrType:Ptr, callee: 'Vector_vecGetChecked', argTypes: gT, args: gV));
 				});
 				local IrType is rty: self:irTypeFor(specType: expr:resolvedType);
 				if({ rty != IrType:Ptr && rty != IrType:Void }, {
@@ -3682,7 +3686,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'Buf' || provStruct == 'Mem' }, {
 			return 'null';
 		});
 		if({ self:currentClass != '' && self:localSlots:has(key: 'self') }, {

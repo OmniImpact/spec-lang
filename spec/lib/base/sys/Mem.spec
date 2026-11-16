@@ -112,6 +112,10 @@ Class is Mem{
 		return base:sysinternal:Mem:internStr(s: s);
 	}
 
+	Function is panic(String is msg){
+		base:sysinternal:Mem:panic(msg: msg);
+	}
+
 	Function of Int is floatToBits(Float is val){
 		return base:sysinternal:Mem:floatToBits(val: val);
 	}

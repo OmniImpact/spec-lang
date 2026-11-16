@@ -111,7 +111,6 @@ typedef struct SpecClassMeta SpecClassMeta;
 typedef struct SpecMethodMeta SpecMethodMeta;
 typedef struct SpecLoopControl SpecLoopControl;
 typedef struct Loop Loop;
-typedef struct SpecVec SpecVec;
 
 /* Forward Prototypes of Runtime API */
 void spec_panic(const char* msg);
@@ -130,16 +129,7 @@ void spec_array_destroy(void* self);
 SpecArray* spec_array_new(void);
 SpecArray* spec_array_new_object(void);
 void spec_array_add(SpecArray* a, void* item);
-void spec_array_add_object(SpecArray* a, void* item);
 void spec_array_add_owned(SpecArray* a, void* item);
-void spec_array_add_array(SpecArray* a, SpecArray* other);
-long long spec_array_length(SpecArray* a);
-void* spec_array_get(SpecArray* a, long long idx);
-void spec_array_set(SpecArray* a, long long idx, void* item);
-void* spec_array_pop(SpecArray* a, void* def);
-void* spec_array_remove_at(SpecArray* a, long long idx, void* def);
-void spec_array_clear(SpecArray* a);
-void spec_array_freeze(SpecArray* a);
 void spec_map_destroy(void* self);
 SpecMap* spec_map_new(void);
 SpecMap* spec_map_new_object(void);
@@ -183,32 +173,7 @@ SpecBuf* spec_exe_dir(void);
 long long spec_file_size(SpecBuf* path);
 void spec_bytebuffer_destroy(void* self);
 SpecByteBuffer* spec_bytebuffer_new(void);
-void spec_bytebuffer_push(SpecByteBuffer* b, long long v);
-void spec_bytebuffer_append_string(SpecByteBuffer* b, const char* s);
-void spec_bytebuffer_report(SpecClosure* error, const char* msg);
-long long spec_bytebuffer_get(SpecByteBuffer* b, long long idx, long long def, SpecClosure* error);
-void spec_bytebuffer_set(SpecByteBuffer* b, long long idx, long long v, SpecClosure* error);
-long long spec_bytebuffer_pop(SpecByteBuffer* b, long long def, SpecClosure* error);
-long long spec_bytebuffer_length(SpecByteBuffer* b);
-void spec_bytebuffer_clear(SpecByteBuffer* b);
 String spec_bytebuffer_to_string(SpecByteBuffer* b);
-void spec_vec_destroy(void* self);
-SpecVec* spec_vec_new_kind(int kind);
-SpecVec* spec_vec_new(void);
-SpecVec* spec_vec_new_object(void);
-SpecVec* spec_vec_new_string(void);
-void spec_vec_push(SpecVec* v, void* item);
-void spec_vec_report(SpecClosure* error, const char* msg);
-void* spec_vec_get(SpecVec* v, long long idx, void* def, SpecClosure* error);
-void spec_vec_set(SpecVec* v, long long idx, void* item, SpecClosure* error);
-void* spec_vec_pop(SpecVec* v, void* def, SpecClosure* error);
-long long spec_vec_length(void* v);
-void spec_vec_clear(void* v);
-void* spec_vec_get_at(void* v, long long idx, void* def);
-void spec_vec_set_at(void* v, long long idx, void* item);
-void spec_vec_add(void* v, void* item);
-void* spec_vec_pop_last(void* v, void* def);
-void* spec_vec_remove_at(void* v, long long idx, void* def);
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_write(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
 bool spec_file_append(String path, String content, SpecClosure* on_success, SpecClosure* on_error);
@@ -796,9 +761,19 @@ typedef struct SpecArray {
     size_t capacity;
     int elem_kind;
     bool frozen;
-    pthread_mutex_t lock;
+    _Atomic uint64_t lock;
 } SpecArray;
 
+static inline void _spec_array_lock(SpecArray* a) {
+    uint64_t expected = 0;
+    while (!atomic_compare_exchange_weak_explicit(&a->lock, &expected, 1, memory_order_acquire, memory_order_relaxed)) {
+        expected = 0;
+    }
+}
+
+static inline void _spec_array_unlock(SpecArray* a) {
+    atomic_store_explicit(&a->lock, 0, memory_order_release);
+}
 
 static SpecArray* spec_array_new_kind(int kind) {
     SpecArray* a = (SpecArray*)spec_alloc(sizeof(SpecArray), spec_array_destroy);
@@ -807,11 +782,7 @@ static SpecArray* spec_array_new_kind(int kind) {
     a->capacity = 0;
     a->elem_kind = kind;
     a->frozen = false;
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&a->lock, &attr);
-    pthread_mutexattr_destroy(&attr);
+    atomic_init(&a->lock, 0);
     return a;
 }
 
@@ -1032,36 +1003,6 @@ typedef struct SpecByteBuffer {
     size_t length;
     size_t capacity;
 } SpecByteBuffer;
-
-
-
-
-
-
-
-
-
-
-
-/* Spec Vec: lean pointer-vector skeleton for non-byte [T] (methods in a later phase) */
-typedef struct SpecVec {
-    void** items;
-    size_t length;
-    size_t capacity;
-    int elem_kind;
-} SpecVec;
-
-
-
-
-
-
-
-
-
-
-
-
 
 typedef struct {
     String path;
@@ -1334,8 +1275,8 @@ static void spec_method_names_collect(SpecArray* out, const SpecClassMeta* cls) 
     for (int i = 0; i < cls->method_count; i++) {
         String nm = spec_string_intern(cls->methods[i].name);
         bool dup = false;
-        for (long long j = 0; j < spec_array_length(out); j++) {
-            String seen = (String)(intptr_t)spec_array_get(out, j);
+        for (size_t j = 0; j < out->length; j++) {
+            String seen = (String)(intptr_t)out->items[j];
             if (seen && spec_string_equals(seen, nm)) { dup = true; break; }
         }
         if (!dup) spec_array_add(out, (void*)nm);
@@ -1704,7 +1645,6 @@ void spec_array_destroy(void* self) {
                 if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);
             }
         }
-        pthread_mutex_destroy(&a->lock);
         if (a->items) free(a->items);
     }
 }
@@ -1735,7 +1675,7 @@ void spec_array_add(SpecArray* a, void* item) {
     if (!a) return;
     if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     bool mt = spec_is_multithreaded();
-    if (mt) pthread_mutex_lock(&a->lock);
+    if (mt) _spec_array_lock(a);
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
         a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
@@ -1743,19 +1683,14 @@ void spec_array_add(SpecArray* a, void* item) {
     }
     if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
     a->items[a->length++] = item;
-    if (mt) pthread_mutex_unlock(&a->lock);
-}
-
-void spec_array_add_object(SpecArray* a, void* item) {
-    if (a && a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;
-    spec_array_add(a, item);
+    if (mt) _spec_array_unlock(a);
 }
 
 void spec_array_add_owned(SpecArray* a, void* item) {
     if (!a) return;
     if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
     bool mt = spec_is_multithreaded();
-    if (mt) pthread_mutex_lock(&a->lock);
+    if (mt) _spec_array_lock(a);
     if (a->elem_kind == SPEC_ELEM_NONE) a->elem_kind = SPEC_ELEM_OBJECT;
     if (a->length >= a->capacity) {
         size_t ncap = (a->capacity == 0) ? 8 : a->capacity * 2;
@@ -1763,159 +1698,7 @@ void spec_array_add_owned(SpecArray* a, void* item) {
         a->capacity = ncap;
     }
     a->items[a->length++] = item;
-    if (mt) pthread_mutex_unlock(&a->lock);
-}
-
-void spec_array_add_array(SpecArray* a, SpecArray* other) {
-    if (!a || !other) return;
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    if (a == other) {
-        pthread_mutex_lock(&a->lock);
-        size_t n = a->length;
-        if (a->length + n > a->capacity) {
-            size_t ncap = a->capacity ? a->capacity * 2 : 8;
-            while (ncap < a->length + n) ncap *= 2;
-            a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
-            a->capacity = ncap;
-        }
-        for (size_t i = 0; i < n; i++) {
-            void* item = a->items[i];
-            if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
-            a->items[a->length++] = item;
-        }
-        pthread_mutex_unlock(&a->lock);
-        return;
-    }
-    if ((uintptr_t)a < (uintptr_t)other) {
-        pthread_mutex_lock(&a->lock);
-        pthread_mutex_lock(&other->lock);
-    } else {
-        pthread_mutex_lock(&other->lock);
-        pthread_mutex_lock(&a->lock);
-    }
-    size_t n = other->length;
-    if (a->length + n > a->capacity) {
-        size_t ncap = a->capacity ? a->capacity * 2 : 8;
-        while (ncap < a->length + n) ncap *= 2;
-        a->items = (void**)spec_xrealloc(a->items, sizeof(void*) * ncap);
-        a->capacity = ncap;
-    }
-    for (size_t i = 0; i < n; i++) {
-        void* item = other->items[i];
-        if (a->elem_kind == SPEC_ELEM_OBJECT && item) spec_retain(item);
-        a->items[a->length++] = item;
-    }
-    pthread_mutex_unlock(&a->lock);
-    pthread_mutex_unlock(&other->lock);
-}
-
-long long spec_array_length(SpecArray* a) {
-    if (!a) return 0;
-    if (a->frozen || !spec_is_multithreaded()) return (long long)a->length;
-    pthread_mutex_lock(&a->lock);
-    long long len = (long long)a->length;
-    pthread_mutex_unlock(&a->lock);
-    return len;
-}
-
-void* spec_array_get(SpecArray* a, long long idx) {
-    if (!a) spec_panic("Null pointer access on uninitialized Array");
-    if (a->frozen || !spec_is_multithreaded()) {
-        if (idx < 0 || (size_t)idx >= a->length) {
-            spec_panic_bounds("Array", idx, a->length);
-            return NULL;
-        }
-        void* val = a->items[idx];
-        if (a->elem_kind == SPEC_ELEM_OBJECT && val) {
-            spec_retain(val);
-            spec_claim_pool(val);
-        }
-        return val;
-    }
-    pthread_mutex_lock(&a->lock);
-    if (idx < 0 || (size_t)idx >= a->length) {
-        size_t len = a->length;
-        pthread_mutex_unlock(&a->lock);
-        spec_panic_bounds("Array", idx, len);
-        return NULL;
-    }
-    void* val = a->items[idx];
-    if (a->elem_kind == SPEC_ELEM_OBJECT && val) {
-        spec_retain(val);
-        spec_claim_pool(val);
-    }
-    pthread_mutex_unlock(&a->lock);
-    return val;
-}
-
-void spec_array_set(SpecArray* a, long long idx, void* item) {
-    if (!a) spec_panic("Null pointer access on uninitialized Array");
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    bool mt = spec_is_multithreaded();
-    if (mt) pthread_mutex_lock(&a->lock);
-    if (idx < 0 || (size_t)idx >= a->length) {
-        size_t len = a->length;
-        if (mt) pthread_mutex_unlock(&a->lock);
-        spec_panic_bounds("Array assignment", idx, len);
-        return;
-    }
-    if (a->elem_kind == SPEC_ELEM_OBJECT) {
-        if (item) spec_retain(item);
-        if (a->items[idx]) spec_release(a->items[idx]);
-    }
-    a->items[idx] = item;
-    if (mt) pthread_mutex_unlock(&a->lock);
-}
-
-void* spec_array_pop(SpecArray* a, void* def) {
-    if (!a) return def;
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return def; }
-    pthread_mutex_lock(&a->lock);
-    void* val = def;
-    if (a->length > 0) {
-        val = a->items[--a->length];
-    } else if (a->elem_kind == SPEC_ELEM_OBJECT && def) {
-        spec_retain(def);
-    }
-    pthread_mutex_unlock(&a->lock);
-    return val;
-}
-
-void* spec_array_remove_at(SpecArray* a, long long idx, void* def) {
-    if (!a || idx < 0) return def;
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return def; }
-    pthread_mutex_lock(&a->lock);
-    void* removed = def;
-    if ((size_t)idx < a->length) {
-        removed = a->items[idx];
-        for (size_t i = (size_t)idx; i + 1 < a->length; i++) {
-            a->items[i] = a->items[i + 1];
-        }
-        a->length--;
-    } else if (a->elem_kind == SPEC_ELEM_OBJECT && def) {
-        spec_retain(def);
-    }
-    pthread_mutex_unlock(&a->lock);
-    return removed;
-}
-
-void spec_array_clear(SpecArray* a) {
-    if (!a) return;
-    if (a->frozen) { spec_panic("Mutation attempted on frozen Array"); return; }
-    pthread_mutex_lock(&a->lock);
-    for (size_t i = 0; i < a->length; i++) {
-        if (!a->items[i]) continue;
-        if (a->elem_kind == SPEC_ELEM_OBJECT) spec_release(a->items[i]);
-    }
-    a->length = 0;
-    pthread_mutex_unlock(&a->lock);
-}
-
-void spec_array_freeze(SpecArray* a) {
-    if (!a) return;
-    pthread_mutex_lock(&a->lock);
-    a->frozen = true;
-    pthread_mutex_unlock(&a->lock);
+    if (mt) _spec_array_unlock(a);
 }
 
 void spec_map_destroy(void* self) {
@@ -2483,251 +2266,9 @@ SpecByteBuffer* spec_bytebuffer_new(void) {
     return b;
 }
 
-void spec_bytebuffer_push(SpecByteBuffer* b, long long v) {
-    if (!b) return;
-    if (b->length >= b->capacity) {
-        b->capacity = (b->capacity == 0) ? 16 : b->capacity * 2;
-        b->data = (unsigned char*)spec_xrealloc(b->data, b->capacity);
-    }
-    b->data[b->length++] = (unsigned char)v;
-}
-
-void spec_bytebuffer_append_string(SpecByteBuffer* b, const char* s) {
-    if (!b || !s) return;
-    size_t n = strlen(s);
-    if (n == 0) return;
-    if (b->length + n > b->capacity) {
-        size_t cap = (b->capacity == 0) ? 16 : b->capacity;
-        while (cap < b->length + n) cap *= 2;
-        b->data = (unsigned char*)spec_xrealloc(b->data, cap);
-        b->capacity = cap;
-    }
-    memcpy(b->data + b->length, s, n);
-    b->length += n;
-}
-
-void spec_bytebuffer_report(SpecClosure* error, const char* msg) {
-    _spec_emit_str_error(error, msg);
-}
-
-long long spec_bytebuffer_get(SpecByteBuffer* b, long long idx, long long def, SpecClosure* error) {
-    if (!b) { spec_bytebuffer_report(error, "byte buffer is uninitialized"); return def; }
-    if (idx < 0 || (size_t)idx >= b->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "byte buffer index out of bounds: index %lld for length %zu", idx, b->length);
-        spec_bytebuffer_report(error, msg);
-        return def;
-    }
-    return (long long)b->data[idx];
-}
-
-void spec_bytebuffer_set(SpecByteBuffer* b, long long idx, long long v, SpecClosure* error) {
-    if (!b) { spec_bytebuffer_report(error, "byte buffer is uninitialized"); return; }
-    if (idx < 0 || (size_t)idx >= b->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "byte buffer assignment out of bounds: index %lld for length %zu", idx, b->length);
-        spec_bytebuffer_report(error, msg);
-        return;
-    }
-    b->data[idx] = (unsigned char)v;
-}
-
-long long spec_bytebuffer_pop(SpecByteBuffer* b, long long def, SpecClosure* error) {
-    if (!b) { spec_bytebuffer_report(error, "byte buffer is uninitialized"); return def; }
-    if (b->length == 0) {
-        spec_bytebuffer_report(error, "byte buffer pop on empty buffer");
-        return def;
-    }
-    return (long long)b->data[--b->length];
-}
-
-long long spec_bytebuffer_length(SpecByteBuffer* b) {
-    return b ? (long long)b->length : 0;
-}
-
-void spec_bytebuffer_clear(SpecByteBuffer* b) {
-    if (b) b->length = 0;
-}
-
 String spec_bytebuffer_to_string(SpecByteBuffer* b) {
     if (!b || b->length == 0) return spec_string_intern("");
     return spec_string_from_bytes((const char*)b->data, b->length);
-}
-
-void spec_vec_destroy(void* self) {
-    SpecVec* v = (SpecVec*)self;
-    if (v) {
-        for (size_t i = 0; i < v->length; i++) {
-            if (!v->items[i]) continue;
-            if (v->elem_kind == 1) spec_release(v->items[i]);
-        }
-        if (v->items) free(v->items);
-    }
-}
-
-SpecVec* spec_vec_new_kind(int kind) {
-    SpecVec* v = (SpecVec*)spec_alloc(sizeof(SpecVec), spec_vec_destroy);
-    v->items = NULL;
-    v->length = 0;
-    v->capacity = 0;
-    v->elem_kind = kind;
-    return v;
-}
-
-SpecVec* spec_vec_new(void) {
-    return spec_vec_new_kind(0);
-}
-
-SpecVec* spec_vec_new_object(void) {
-    return spec_vec_new_kind(1);
-}
-
-SpecVec* spec_vec_new_string(void) {
-    return spec_vec_new_object();
-}
-
-void spec_vec_push(SpecVec* v, void* item) {
-    if (!v) return;
-    if (v->length >= v->capacity) {
-        size_t ncap = (v->capacity == 0) ? 8 : v->capacity * 2;
-        v->items = (void**)spec_xrealloc(v->items, sizeof(void*) * ncap);
-        v->capacity = ncap;
-    }
-    if (v->elem_kind == 1 && item) spec_retain(item);
-    v->items[v->length++] = item;
-}
-
-void spec_vec_report(SpecClosure* error, const char* msg) {
-    _spec_emit_str_error(error, msg);
-}
-
-void* spec_vec_get(SpecVec* v, long long idx, void* def, SpecClosure* error) {
-    if (!v) { spec_vec_report(error, "vector is uninitialized"); return def; }
-    if (idx < 0 || (size_t)idx >= v->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "vector index out of bounds: index %lld for length %zu", idx, v->length);
-        spec_vec_report(error, msg);
-        return def;
-    }
-    void* val = v->items[idx];
-    return val;
-}
-
-void spec_vec_set(SpecVec* v, long long idx, void* item, SpecClosure* error) {
-    if (!v) { spec_vec_report(error, "vector is uninitialized"); return; }
-    if (idx < 0 || (size_t)idx >= v->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "vector assignment out of bounds: index %lld for length %zu", idx, v->length);
-        spec_vec_report(error, msg);
-        return;
-    }
-    if (v->elem_kind == 1) {
-        if (item) spec_retain(item);
-        if (v->items[idx]) spec_release(v->items[idx]);
-    }
-    v->items[idx] = item;
-}
-
-void* spec_vec_pop(SpecVec* v, void* def, SpecClosure* error) {
-    if (!v) { spec_vec_report(error, "vector is uninitialized"); return def; }
-    if (v->length == 0) {
-        spec_vec_report(error, "vector pop on empty vector");
-        if (v->elem_kind == 1 && def) spec_retain(def);
-        return def;
-    }
-    return v->items[--v->length];
-}
-
-long long spec_vec_length(void* v) {
-    if (!v) return 0;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) return spec_array_length((SpecArray*)v);
-    return (long long)((SpecVec*)v)->length;
-}
-
-void spec_vec_clear(void* v) {
-    if (!v) return;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) { spec_array_clear((SpecArray*)v); return; }
-    SpecVec* vec = (SpecVec*)v;
-    for (size_t i = 0; i < vec->length; i++) {
-        if (!vec->items[i]) continue;
-        if (vec->elem_kind == 1) spec_release(vec->items[i]);
-    }
-    vec->length = 0;
-}
-
-void* spec_vec_get_at(void* v, long long idx, void* def) {
-    if (!v) return def;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) {
-        SpecArray* a = (SpecArray*)v;
-        if (idx < 0 || (size_t)idx >= a->length) return def;
-        return spec_array_get(a, idx);
-    }
-    SpecVec* vec = (SpecVec*)v;
-    if (idx < 0 || (size_t)idx >= vec->length) return def;
-    void* val = vec->items[idx];
-    if (vec->elem_kind == 1 && val) {
-        spec_retain(val);
-        spec_claim_pool(val);
-    }
-    return val;
-}
-
-void spec_vec_set_at(void* v, long long idx, void* item) {
-    if (!v) return;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) {
-        SpecArray* a = (SpecArray*)v;
-        if (idx < 0 || (size_t)idx >= a->length) return;
-        spec_array_set(a, idx, item);
-        return;
-    }
-    SpecVec* vec = (SpecVec*)v;
-    if (idx < 0 || (size_t)idx >= vec->length) return;
-    if (vec->elem_kind == 1) {
-        if (item) spec_retain(item);
-        if (vec->items[idx]) spec_release(vec->items[idx]);
-    }
-    vec->items[idx] = item;
-}
-
-void spec_vec_add(void* v, void* item) {
-    if (!v) return;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) {
-        spec_array_add((SpecArray*)v, item);
-        return;
-    }
-    spec_vec_push((SpecVec*)v, item);
-}
-
-void* spec_vec_pop_last(void* v, void* def) {
-    if (!v) return def;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) {
-        return spec_array_pop((SpecArray*)v, def);
-    }
-    SpecVec* vec = (SpecVec*)v;
-    if (vec->length == 0) return def;
-    return vec->items[--vec->length];
-}
-
-void* spec_vec_remove_at(void* v, long long idx, void* def) {
-    if (!v || idx < 0) return def;
-    SpecHeader* h = SPEC_HEADER(v);
-    if (h->destroy == spec_array_destroy) {
-        return spec_array_remove_at((SpecArray*)v, idx, def);
-    }
-    SpecVec* vec = (SpecVec*)v;
-    if ((size_t)idx >= vec->length) return def;
-    void* val = vec->items[idx];
-    for (size_t i = (size_t)idx; i + 1 < vec->length; i++) {
-        vec->items[i] = vec->items[i + 1];
-    }
-    vec->length--;
-    return val;
 }
 
 String spec_file_read(String path, String def, SpecClosure* on_success, SpecClosure* on_error) {
@@ -3492,7 +3033,6 @@ String spec_type_name(const void* obj) {
     SpecHeader* h = SPEC_HEADER(obj);
     if (h->destroy == spec_map_destroy) return spec_string_intern("Map");
     if (h->destroy == spec_array_destroy) return spec_string_intern("Array");
-    if (h->destroy == spec_vec_destroy) return spec_string_intern("Vector");
     if (h->destroy == spec_buf_destroy) return spec_string_intern("String");
     return spec_string_intern(*((const char**)obj));
 }
@@ -3552,7 +3092,6 @@ String spec_type_identity(const void* obj) {
     SpecHeader* h = SPEC_HEADER(obj);
     if (h->destroy == spec_map_destroy) return spec_string_intern("Map");
     if (h->destroy == spec_array_destroy) return spec_string_intern("Array");
-    if (h->destroy == spec_vec_destroy) return spec_string_intern("Vector");
     if (h->destroy == spec_buf_destroy) return spec_string_intern("String");
     return spec_type_name(obj);
 }
