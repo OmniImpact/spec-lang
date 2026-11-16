@@ -769,6 +769,69 @@ Class is IrBuilder{
 		self:currentLine: prevLine;
 	}
 
+	local Function of String is lowerIncDec(String is op, Expression is operand, IrType is ty){
+		local String is slot: '';
+		local IrType is slotTy: ty;
+		match(on: operand, when: [
+			Expression:Ident: local Function(String is name){
+				if({ self:localSlots:has(key: name) }, {
+					slot: self:localSlots:get(key: name, default: '');
+					slotTy: self:localTypes:get(key: name, default: ty);
+				});
+			},
+			Expression:FieldAccess: local Function(Expression is target, String is fieldName){
+				local String is obj: self:lowerExpr(expr: target);
+				local IrStruct is st: self:mod:findStruct(name: self:currentClass);
+				local Int is fidx: st:fieldIndex(name: fieldName);
+				if({ fidx >= 0 }, {
+					slotTy: st:fieldTypes:get(index: fidx);
+					slot: self:nextTmp();
+					self:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: self:currentClass, fieldIndex: fidx));
+				});
+			},
+			Expression:Path: local Function(Array of String is segments){
+				if({ segments:length() >= 2 }, {
+					local String is seg0: segments:get(index: 0, default: '');
+					if({ self:localSlots:has(key: seg0) }, {
+						local String is lslot: self:localSlots:get(key: seg0, default: '');
+						local IrType is lsty: self:localTypes:get(key: seg0, default: IrType:Ptr);
+						local String is obj: self:nextTmp();
+						self:emit(inst: IrInst:Load(dst: obj, slot: lslot, ty: lsty));
+						local String is sname: self:currentClass;
+						if({ seg0 != 'self' }, { sname: self:cStructName(qname: seg0); });
+						local String is fname: segments:get(index: segments:length() - 1, default: '');
+						local IrStruct is st: self:mod:findStruct(name: sname);
+						local Int is fidx: st:fieldIndex(name: fname);
+						if({ fidx >= 0 }, {
+							slotTy: st:fieldTypes:get(index: fidx);
+							slot: self:nextTmp();
+							self:emit(inst: IrInst:FieldPtr(dst: slot, objPtr: obj, structName: sname, fieldIndex: fidx));
+						});
+					});
+				});
+			}
+		], default: {});
+		if({ slot == '' }, {
+			return self:emitDefaultVal(ty: ty);
+		});
+		local String is oldVal: self:nextTmp();
+		self:emit(inst: IrInst:Load(dst: oldVal, slot: slot, ty: slotTy));
+		local String is one: self:nextTmp();
+		if({ slotTy == IrType:F64 }, {
+			self:emit(inst: IrInst:ConstFloat(dst: one, text: '1.0'));
+		}, {
+			self:emit(inst: IrInst:ConstInt(dst: one, value: 1));
+		});
+		local String is binOp: if({ op == 'post++' || op == '++' }, { '+' }, { '-' });
+		local String is newVal: self:nextTmp();
+		self:emit(inst: IrInst:BinOp(dst: newVal, op: binOp, lhs: oldVal, rhs: one, ty: slotTy));
+		self:emit(inst: IrInst:Store(slot: slot, val: newVal, ty: slotTy));
+		if({ op == 'post++' || op == 'post--' }, {
+			return oldVal;
+		});
+		return newVal;
+	}
+
 	Function of String is lowerExpr(Expression is expr){
 		return match(on: expr, when: [
 			Expression:NumberLit: local Function(Int is value, String is text){
@@ -814,10 +877,13 @@ Class is IrBuilder{
 				return '0';
 			},
 			Expression:Unary: local Function(String is op, Expression is operand){
-				local String is v: self:lowerExpr(expr: operand);
-				local String is dst: self:nextTmp();
 				local IrType is ty: self:irTypeFor(specType: expr:resolvedType);
 				if({ ty == IrType:Void }, { ty: IrType:I64; });
+				if({ op == 'post++' || op == 'post--' || op == '++' || op == '--' }, {
+					return self:lowerIncDec(op: op, operand: operand, ty: ty);
+				});
+				local String is v: self:lowerExpr(expr: operand);
+				local String is dst: self:nextTmp();
 				self:emit(inst: IrInst:UnaryOp(dst: dst, op: op, operand: v, ty: ty));
 				return dst;
 			},

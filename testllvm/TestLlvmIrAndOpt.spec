@@ -673,9 +673,11 @@ Class is LlvmP9{
 		local Int is i: 0;
 		while({ i < 10 }, {
 			h:setItem(nextItem: self:makeRes(tag: 'loop_' . (i as String)));
-			i: i + 1;
+			i++;
 		});
 		if({ h:getItem():getName() != 'loop_9' }, { Process:exit(status: 4); });
+		local Int is x: 5;
+		if({ x++ != 5 || x != 6 || --x != 5 }, { Process:exit(status: 5); });
 		line('llvm-p9-ok');
 	}
 }
