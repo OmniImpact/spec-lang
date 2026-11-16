@@ -58,18 +58,12 @@ SpecBuf* spec_buf_new(size_t elem_size, int elem_kind);
 void spec_buf_append_bytes(SpecBuf* b, const char* s);
 void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src);
 const char* spec_buf_to_cstring(SpecBuf* b);
-long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def);
-long long spec_buf_count_byte(SpecBuf* b, long long byte_val);
 String spec_string_from_bytes(const char* data, size_t n);
 String spec_string_copy(String b);
 bool spec_string_bytes_equal(String b, const char* c, size_t n);
-long long spec_string_length(String b);
 bool spec_string_equals(String a, String b);
 long long spec_string_compare(String a, String b);
 String spec_string_concat(String a, String b);
-String spec_string_substring(String b, long long start, long long end);
-long long spec_string_index_of(String b, String needle, long long def);
-long long spec_string_index_of_from(String b, String needle, long long from, long long def);
 #include <dirent.h>
 #include <sys/stat.h>
 #include <pthread.h>
@@ -101,7 +95,6 @@ typedef struct SpecClassMeta SpecClassMeta;
 typedef struct SpecMethodMeta SpecMethodMeta;
 typedef struct SpecLoopControl SpecLoopControl;
 typedef struct Loop Loop;
-typedef struct SpecArena SpecArena;
 typedef struct SpecVec SpecVec;
 
 /* Forward Prototypes of Runtime API */
@@ -109,7 +102,6 @@ void spec_panic(const char* msg);
 void spec_panic_bounds(const char* coll, long long idx, size_t len);
 void spec_panic_cast(const char* actual, const char* target);
 void spec_panic_byte_range(long long v);
-void spec_activate_process_arena(void);
 String spec_string_from_chars(const char* c);
 String spec_string_intern(const char* c);
 size_t spec_pool_frame(void);
@@ -118,8 +110,6 @@ void* spec_claim_pool(void* obj);
 String spec_to_string_int(long long v);
 String spec_to_string_float(double v);
 String spec_to_string_bool(bool v);
-String spec_intern(String s);
-String spec_string_from_char_code(long long code);
 void spec_array_destroy(void* self);
 SpecArray* spec_array_new(void);
 SpecArray* spec_array_new_object(void);
@@ -171,42 +161,10 @@ void spec_async_task_started(void);
 void spec_async_task_finished(void);
 void spec_drain_async_tasks(void);
 void spec_buf_destroy(void* self);
-SpecArena* spec_arena_new(void);
-void spec_arena_drain(SpecArena* a);
-void* spec_arena_alloc_object(size_t size, void (*destroy)(void*));
-void spec_arena_drain_objects(void);
-long long spec_arena_used(SpecArena* a);
 SpecArray* spec_dir_list(SpecBuf* path);
 SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error);
 SpecBuf* spec_exe_dir(void);
 long long spec_file_size(SpecBuf* path);
-SpecBuf* spec_buf_new(size_t elem_size, int elem_kind);
-void spec_buf_push_byte(SpecBuf* b, long long v);
-void spec_buf_append_bytes(SpecBuf* b, const char* s);
-void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src);
-void spec_buf_push_ptr(SpecBuf* b, void* item);
-void spec_buf_report(SpecClosure* error, const char* msg);
-long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def);
-long long spec_buf_count_byte(SpecBuf* b, long long byte_val);
-void spec_buf_set_byte(SpecBuf* b, long long idx, long long v, SpecClosure* error);
-long long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error);
-void* spec_buf_get_ptr(SpecBuf* b, long long idx, void* def, SpecClosure* error);
-void spec_buf_set_ptr(SpecBuf* b, long long idx, void* item, SpecClosure* error);
-void* spec_buf_pop_ptr(SpecBuf* b, void* def, SpecClosure* error);
-long long spec_buf_length(SpecBuf* b);
-void spec_buf_clear(SpecBuf* b);
-const char* spec_buf_to_cstring(SpecBuf* b);
-String spec_string_from_literal(const char* lit);
-String spec_string_from_bytes(const char* data, size_t n);
-String spec_string_copy(String b);
-bool spec_string_bytes_equal(String b, const char* c, size_t n);
-long long spec_string_length(String b);
-bool spec_string_equals(String a, String b);
-long long spec_string_compare(String a, String b);
-String spec_string_concat(String a, String b);
-String spec_string_substring(String b, long long start, long long end);
-long long spec_string_index_of(String b, String needle, long long def);
-long long spec_string_index_of_from(String b, String needle, long long from, long long def);
 void spec_bytebuffer_destroy(void* self);
 SpecByteBuffer* spec_bytebuffer_new(void);
 void spec_bytebuffer_push(SpecByteBuffer* b, long long v);
@@ -624,14 +582,6 @@ static inline void* spec_cast_check(const void* obj, const char* target) {
     return (void*)obj;
 }
 
-/* The process object arena flag: the compiler driver activates it; user
-   programs never do. Lives at the top so every container constructor
-   below can consult it. */
-extern bool _spec_arena_active;
-void* spec_arena_alloc_object(size_t size, void (*destroy)(void*));
-void spec_arena_drain_objects(void);
-
-
 /* Spec Automated Reference Counting (ARC) Primitives */
 #define SPEC_S_IMMORTAL 1u
 #define SPEC_S_HASLEN 2u
@@ -1031,68 +981,6 @@ typedef struct SpecBuf {
     size_t elem_size;
     int elem_kind;
 } SpecBuf;
-
-
-/* The compilation arena: bump allocation over growing blocks. */
-typedef struct ArenaBlock {
-    struct ArenaBlock* next;
-    size_t used;
-    size_t cap;
-    char* data;
-} ArenaBlock;
-
-typedef struct SpecArena {
-    ArenaBlock* head;
-    size_t used;
-} SpecArena;
-
-#define ARENA_BLOCK_SIZE (2 * 1024 * 1024)
-
-static ArenaBlock* arena_block_new(size_t cap) {
-    ArenaBlock* b = (ArenaBlock*)malloc(sizeof(ArenaBlock) + cap);
-    if (!b) { fprintf(stderr, "[Spec Panic] Out of memory\n"); exit(1); }
-    b->data = (char*)(b + 1);
-    b->cap = cap;
-    b->used = 0;
-    b->next = NULL;
-    return b;
-}
-
-static void* spec_arena_alloc(SpecArena* a, size_t size) {
-    size = (size + 15) & ~(size_t)15;
-    if (!a->head || a->head->used + size > a->head->cap) {
-        size_t cap = ARENA_BLOCK_SIZE;
-        if (size > cap) cap = size;
-        ArenaBlock* nb = arena_block_new(cap);
-        nb->next = a->head;
-        a->head = nb;
-    }
-    void* p = a->head->data + a->head->used;
-    a->head->used += size;
-    a->used += size;
-    memset(p, 0, size);
-    return p;
-}
-
-
-
-/* Object arena: header-carrying allocations from arena memory. Refcounts
-   guard aliasing during compilation; the pending finalizers (field
-   releases) run at drain, then the blocks free wholesale. */
-typedef struct ArenaFinalizer {
-    struct ArenaFinalizer* next;
-    SpecHeader* header;
-} ArenaFinalizer;
-
-static pthread_mutex_t _spec_arena_mutex = PTHREAD_MUTEX_INITIALIZER;
-static ArenaFinalizer* _spec_object_arena_finalizers = NULL;
-static SpecArena _spec_object_arena = { NULL, 0 };
-
-void spec_arena_drain_objects(void);
-
-
-
-
 
 static void spec_buf_grow(SpecBuf* b, size_t needed) {
     size_t need = needed + ((b->elem_size == 1) ? 1 : 0);
@@ -1664,7 +1552,6 @@ static bool _spec_init_winmm(void) {
 #endif
 
 /* Runtime Implementation */
-bool _spec_arena_active = false;
 __thread void** _spec_pool_stack = NULL;
 __thread size_t _spec_pool_top = 0;
 __thread size_t _spec_pool_cap = 0;
@@ -1688,10 +1575,6 @@ void spec_panic_cast(const char* actual, const char* target) {
 void spec_panic_byte_range(long long v) {
     fprintf(stderr, "[Spec Runtime Panic] Byte cast out of range: %lld (must be 0..255)\n", v);
     exit(1);
-}
-
-void spec_activate_process_arena(void) {
-    _spec_arena_active = true;
 }
 
 String spec_string_from_chars(const char* c) {
@@ -1786,17 +1669,6 @@ String spec_to_string_float(double v) {
 
 String spec_to_string_bool(bool v) {
     return spec_string_intern(v ? "true" : "false");
-}
-
-String spec_intern(String s) {
-    if (!s) return spec_string_intern("");
-    return spec_string_intern(spec_buf_to_cstring(s));
-}
-
-String spec_string_from_char_code(long long code) {
-    if (code < 0 || code > 255) return spec_string_intern("");
-    char one[2] = { (char)code, '\0' };
-    return spec_string_intern(one);
 }
 
 void spec_array_destroy(void* self) {
@@ -2426,73 +2298,7 @@ void spec_drain_async_tasks(void) {
 void spec_buf_destroy(void* self) {
     SpecBuf* b = (SpecBuf*)self;
     if (!b) return;
-    if (b->data && b->elem_size == 8 && b->elem_kind != 0) {
-        void** items = (void**)b->data;
-        for (size_t i = 0; i < b->length; i++) {
-            if (!items[i]) continue;
-            if (b->elem_kind == 1) spec_release(items[i]);
-        }
-    }
     if (b->data) { free(b->data); b->data = NULL; }
-}
-
-SpecArena* spec_arena_new(void) {
-    return (SpecArena*)calloc(1, sizeof(SpecArena));
-}
-
-void spec_arena_drain(SpecArena* a) {
-    ArenaBlock* b = a->head;
-    while (b) {
-        ArenaBlock* next = b->next;
-        free(b);
-        b = next;
-    }
-    a->head = NULL;
-    a->used = 0;
-}
-
-void* spec_arena_alloc_object(size_t size, void (*destroy)(void*)) {
-    static int drain_registered = 0;
-    pthread_mutex_lock(&_spec_arena_mutex);
-    if (!drain_registered) {
-        atexit(spec_arena_drain_objects);
-        drain_registered = 1;
-    }
-    char* mem = (char*)spec_arena_alloc(&_spec_object_arena, sizeof(SpecHeader) + size);
-    SpecHeader* h = (SpecHeader*)mem;
-    h->ref_count = 1;
-    h->destroy = destroy;
-    /* Arena-owned: release runs the destructor (freeing malloc'd data)
-       but the header block stays for the wholesale drain. Refcounts stay
-       accurate so transients reclaim their data during compilation. */
-    h->sflags = SPEC_S_ARENA;
-    h->slen = 0;
-    ArenaFinalizer* f = (ArenaFinalizer*)spec_arena_alloc(&_spec_object_arena, sizeof(ArenaFinalizer));
-    f->next = _spec_object_arena_finalizers;
-    f->header = h;
-    _spec_object_arena_finalizers = f;
-    pthread_mutex_unlock(&_spec_arena_mutex);
-    return (void*)(mem + sizeof(SpecHeader));
-}
-
-void spec_arena_drain_objects(void) {
-    pthread_mutex_lock(&_spec_arena_mutex);
-    ArenaFinalizer* f = _spec_object_arena_finalizers;
-    while (f) {
-        if (f->header->destroy) {
-            void (*d)(void*) = f->header->destroy;
-            f->header->destroy = NULL;
-            d((void*)(f->header + 1));
-        }
-        f = f->next;
-    }
-    _spec_object_arena_finalizers = NULL;
-    spec_arena_drain(&_spec_object_arena);
-    pthread_mutex_unlock(&_spec_arena_mutex);
-}
-
-long long spec_arena_used(SpecArena* a) {
-    return (long long)a->used;
 }
 
 SpecArray* spec_dir_list_cb(SpecBuf* path, SpecClosure* on_error) {
@@ -2547,13 +2353,6 @@ SpecBuf* spec_buf_new(size_t elem_size, int elem_kind) {
     return b;
 }
 
-void spec_buf_push_byte(SpecBuf* b, long long v) {
-    if (!b) return;
-    spec_buf_grow(b, 1);
-    ((unsigned char*)b->data)[b->length++] = (unsigned char)v;
-    ((unsigned char*)b->data)[b->length] = 0;
-}
-
 void spec_buf_append_bytes(SpecBuf* b, const char* s) {
     if (!b || !s) return;
     size_t n = strlen(s);
@@ -2581,124 +2380,9 @@ void spec_buf_append_buf(SpecBuf* dst, SpecBuf* src) {
     ((unsigned char*)dst->data)[dst->length] = 0;
 }
 
-void spec_buf_push_ptr(SpecBuf* b, void* item) {
-    if (!b) return;
-    spec_buf_grow(b, 1);
-    if (b->elem_kind == 1 && item) spec_retain(item);
-    ((void**)b->data)[b->length++] = item;
-}
-
-void spec_buf_report(SpecClosure* error, const char* msg) {
-    _spec_emit_str_error(error, msg);
-}
-
-long long spec_buf_get_byte(SpecBuf* b, long long idx, long long def) {
-    if (!b) { return def; }
-    if (idx < 0 || (size_t)idx >= b->length) return def;
-    return (long long)((unsigned char*)b->data)[idx];
-}
-
-long long spec_buf_count_byte(SpecBuf* b, long long byte_val) {
-    if (!b || b->length == 0) return 0;
-    unsigned char target = (unsigned char)byte_val;
-    const unsigned char* p = (const unsigned char*)b->data;
-    size_t len = b->length;
-    long long count = 0;
-    while (len > 0) {
-        const unsigned char* found = (const unsigned char*)memchr(p, target, len);
-        if (!found) break;
-        count++;
-        size_t offset = (size_t)(found - p) + 1;
-        p += offset;
-        len -= offset;
-    }
-    return count;
-}
-
-void spec_buf_set_byte(SpecBuf* b, long long idx, long long v, SpecClosure* error) {
-    if (!b) { spec_buf_report(error, "buffer is uninitialized"); return; }
-    if (idx < 0 || (size_t)idx >= b->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "buffer assignment out of bounds: index %lld for length %zu", idx, b->length);
-        spec_buf_report(error, msg);
-        return;
-    }
-    ((unsigned char*)b->data)[idx] = (unsigned char)v;
-}
-
-long long spec_buf_pop_byte(SpecBuf* b, long long def, SpecClosure* error) {
-    if (!b) { spec_buf_report(error, "buffer is uninitialized"); return def; }
-    if (b->length == 0) {
-        spec_buf_report(error, "buffer pop on empty buffer");
-        return def;
-    }
-    long long out = (long long)((unsigned char*)b->data)[--b->length];
-    ((unsigned char*)b->data)[b->length] = 0;
-    return out;
-}
-
-void* spec_buf_get_ptr(SpecBuf* b, long long idx, void* def, SpecClosure* error) {
-    if (!b) { spec_buf_report(error, "buffer is uninitialized"); return def; }
-    if (idx < 0 || (size_t)idx >= b->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "buffer index out of bounds: index %lld for length %zu", idx, b->length);
-        spec_buf_report(error, msg);
-        return def;
-    }
-    return ((void**)b->data)[idx];
-}
-
-void spec_buf_set_ptr(SpecBuf* b, long long idx, void* item, SpecClosure* error) {
-    if (!b) { spec_buf_report(error, "buffer is uninitialized"); return; }
-    if (idx < 0 || (size_t)idx >= b->length) {
-        char msg[96];
-        snprintf(msg, sizeof(msg), "buffer assignment out of bounds: index %lld for length %zu", idx, b->length);
-        spec_buf_report(error, msg);
-        return;
-    }
-    if (b->elem_kind == 1) {
-        if (item) spec_retain(item);
-        if (((void**)b->data)[idx]) spec_release(((void**)b->data)[idx]);
-    }
-    ((void**)b->data)[idx] = item;
-}
-
-void* spec_buf_pop_ptr(SpecBuf* b, void* def, SpecClosure* error) {
-    if (!b) { return def; }
-    if (b->length == 0) {
-        spec_buf_report(error, "buffer pop on empty buffer");
-        if (b->elem_kind == 1 && def) spec_retain(def);
-        return def;
-    }
-    return ((void**)b->data)[--b->length];
-}
-
-long long spec_buf_length(SpecBuf* b) {
-    return b ? (long long)b->length : 0;
-}
-
-void spec_buf_clear(SpecBuf* b) {
-    if (!b) return;
-    if (b->data && b->elem_size == 8 && b->elem_kind != 0) {
-        void** items = (void**)b->data;
-        for (size_t i = 0; i < b->length; i++) {
-            if (!items[i]) continue;
-            if (b->elem_kind == 1) spec_release(items[i]);
-        }
-    }
-    b->length = 0;
-    if (b->data && b->elem_size == 1) ((unsigned char*)b->data)[0] = 0;
-}
-
 const char* spec_buf_to_cstring(SpecBuf* b) {
     if (!b || b->length == 0) return "";
     return (const char*)b->data;
-}
-
-String spec_string_from_literal(const char* lit) {
-    String b = spec_buf_new(1, 0);
-    if (lit && *lit) spec_buf_append_bytes(b, lit);
-    return b;
 }
 
 String spec_string_from_bytes(const char* data, size_t n) {
@@ -2721,10 +2405,6 @@ bool spec_string_bytes_equal(String b, const char* c, size_t n) {
     if (!b || b->length != n) return false;
     if (n == 0) return true;
     return memcmp(b->data, c, n) == 0;
-}
-
-long long spec_string_length(String b) {
-    return spec_buf_length(b);
 }
 
 bool spec_string_equals(String a, String b) {
@@ -2764,34 +2444,6 @@ String spec_string_concat(String a, String b) {
     spec_buf_append_buf(res, b);
     spec_release(a);
     return res;
-}
-
-String spec_string_substring(String b, long long start, long long end) {
-    if (!b) return spec_string_from_bytes("", 0);
-    long long len = (long long)b->length;
-    long long s = start < 0 ? 0 : start;
-    long long e = end > len ? len : end;
-    if (s >= e) return spec_string_from_bytes("", 0);
-    return spec_string_from_bytes((const char*)b->data + s, (size_t)(e - s));
-}
-
-long long spec_string_index_of(String b, String needle, long long def) {
-    return spec_string_index_of_from(b, needle, 0, def);
-}
-
-long long spec_string_index_of_from(String b, String needle, long long from, long long def) {
-    if (!b || !needle) return def;
-    if (from < 0) from = 0;
-    if (needle->length == 0) return (from <= (long long)b->length) ? from : def;
-    long long slen = (long long)b->length;
-    long long nlen = (long long)needle->length;
-    if (from + nlen > slen) return def;
-    const unsigned char* haystack = (const unsigned char*)b->data;
-    const unsigned char* nd = (const unsigned char*)needle->data;
-    for (long long i = from; i + nlen <= slen; i++) {
-        if (haystack[i] == nd[0] && memcmp(haystack + i, nd, (size_t)nlen) == 0) return i;
-    }
-    return def;
 }
 
 void spec_bytebuffer_destroy(void* self) {

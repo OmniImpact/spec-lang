@@ -48,7 +48,7 @@ Class of CallLowerer is SysinternalCallLowerer{
 			}
 		], default: {});
 		if({ isPathMatch }, { return true; });
-		if({ domain == 'Console' || domain == 'Terminal' || domain == 'Reflection' || domain == 'Arena' || domain == 'Mem' }, {
+		if({ domain == 'Console' || domain == 'Terminal' || domain == 'Reflection' || domain == 'Mem' }, {
 			if({ isIdentMatch || call:bareProvider == domain }, { return true; });
 		});
 		return false;

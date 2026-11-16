@@ -33,11 +33,6 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 			return true;
 		});
 		local Int is argc: call:args:length();
-		if({ self:isFloorTarget(call: call, domain: 'Arena') }, {
-			if({ call:name == 'init' || call:name == 'arenaNew' }, { return true; });
-			if({ (call:name == 'arenaDrain' || call:name == 'arenaUsed') && argc >= 1 }, { return true; });
-			return false;
-		});
 		if({ self:isFloorTarget(call: call, domain: 'Reflection') }, {
 			if({ call:name == 'init' || call:name == 'class' || call:name == 'method' }, { return true; });
 			return false;
@@ -140,17 +135,6 @@ Class of SysinternalCallLowerer is IntrospectionCallLowerer{
 			'typeName': {
 				local String is o: b:lowerExpr(expr: call:target);
 				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_type_name', argTypes: [IrType:Ptr], args: [o]);
-			},
-			'arenaNew': {
-				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: 'spec_arena_new', argTypes: [], args: []);
-			},
-			'arenaDrain': {
-				local String is ap: self:lowerArg(b: b, call: call, idx: 0);
-				res: self:emitSysCall(b: b, retType: IrType:Void, callee: 'spec_arena_drain', argTypes: [IrType:Ptr], args: [ap]);
-			},
-			'arenaUsed': {
-				local String is ap: self:lowerArg(b: b, call: call, idx: 0);
-				res: self:emitSysCall(b: b, retType: IrType:I64, callee: 'spec_arena_used', argTypes: [IrType:Ptr], args: [ap]);
 			}
 		]);
 		return res;

@@ -1,17 +1,14 @@
 #! Package base:sys
-#! Public wrapper over the sysinternal byte-buffer floor.
-##
-## The ONLY classes allowed to call base:sysinternal are the same-name
-## wrappers in base:sys (enforced by the checker). Wrapper bodies address
-## the floor by its full qualified chain; everything outside this package
-## addresses the floor through these public methods. Methods here may add
-## to the floor's surface, but the floor itself stays absolutely minimal.
+#! Public byte-buffer and string operations implemented in pure Spec over Mem.
 
 Class is Buf{
 	namespace: ['base', 'sys'];
 
 	replace Array of Array of String is using: [
-		['base', 'sysinternal', Buf]
+		['base', 'sys', as Mem()],
+		['base', 'sys', as Loops()],
+		['base', 'sys', as Conditional()],
+		['base', 'struct', Array]
 	];
 
 	## Number of bytes held by the buffer [b].
@@ -19,7 +16,9 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: Byte count.
 	Function of Int is bufLength(String is b){
-		return base:sysinternal:Buf:bufLength(b: b);
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return 0; });
+		return Mem:loadI64(ptr: addr, byteOffset: 8);
 	}
 
 	## Byte value at [idx], or [def] when out of bounds.
@@ -29,7 +28,12 @@ Class is Buf{
 	## @param def: Fallback when [idx] is out of bounds.
 	## @return: The byte value, or [def].
 	Function of Int is bufGetByte(String is b, Int is idx, Int is def){
-		return base:sysinternal:Buf:bufGetByte(b: b, idx: idx, def: def);
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return def; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ idx < 0 || idx >= len }, { return def; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:loadByte(ptr: data, byteOffset: idx);
 	}
 
 	## Count occurrences of [byteVal] in buffer [b].
@@ -38,7 +42,21 @@ Class is Buf{
 	## @param byteVal: Target byte value.
 	## @return: Occurrence count.
 	Function of Int is bufCountByte(String is b, Int is byteVal){
-		return base:sysinternal:Buf:bufCountByte(b: b, byteVal: byteVal);
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return 0; });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return 0; });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		local Int is target: byteVal & 255;
+		local Int is count: 0;
+		local Int is i: 0;
+		while({ i < len }, {
+			if({ Mem:loadByte(ptr: data, byteOffset: i) == target }, {
+				count: count + 1;
+			});
+			i: i + 1;
+		});
+		return count;
 	}
 
 	## Refcounted copy of buffer [b].
@@ -46,7 +64,12 @@ Class is Buf{
 	## @param b: The buffer.
 	## @return: An owned copy sharing no storage with [b].
 	Function of String is stringCopy(String is b){
-		return base:sysinternal:Buf:stringCopy(b: b);
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		if({ len <= 0 }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:strFromBytes(srcAddr: data, len: len);
 	}
 
 	## Returns the process-interned form of [s]: equal contents yield
@@ -55,7 +78,7 @@ Class is Buf{
 	## @param s: The string.
 	## @return: The interned string.
 	Function of String is intern(String is s){
-		return base:sysinternal:Buf:intern(b: s);
+		return Mem:internStr(s: s);
 	}
 
 	## Bytes [start] (inclusive) to [end] (exclusive) of buffer [b].
@@ -65,7 +88,14 @@ Class is Buf{
 	## @param end: Exclusive end index.
 	## @return: The sub-buffer.
 	Function of String is stringSubstring(String is b, Int is start, Int is end){
-		return base:sysinternal:Buf:stringSubstring(b: b, start: start, end: end);
+		local Int is addr: Mem:objToAddr(obj: b);
+		if({ addr == 0 }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is len: Mem:loadI64(ptr: addr, byteOffset: 8);
+		local Int is s: if({ start < 0 }, { 0 }, { start });
+		local Int is e: if({ end > len }, { len }, { end });
+		if({ s >= e }, { return Mem:strFromBytes(srcAddr: 0, len: 0); });
+		local Int is data: Mem:loadI64(ptr: addr, byteOffset: 0);
+		return Mem:strFromBytes(srcAddr: data + s, len: e - s);
 	}
 
 	## First index of [needle] within buffer [b], or [def] when absent.
@@ -75,7 +105,7 @@ Class is Buf{
 	## @param def: Fallback when absent (conventionally -1).
 	## @return: The index, or [def].
 	Function of Int is stringIndexOf(String is b, String is needle, Int is def){
-		return base:sysinternal:Buf:stringIndexOf(b: b, needle: needle, def: def);
+		return self:stringIndexOfFrom(b: b, needle: needle, from: 0, def: def);
 	}
 
 	## First index of [needle] within buffer [b] at or after [from], or [def] when absent.
@@ -86,7 +116,31 @@ Class is Buf{
 	## @param def: Fallback when absent (conventionally -1).
 	## @return: The index, or [def].
 	Function of Int is stringIndexOfFrom(String is b, String is needle, Int is from, Int is def){
-		return base:sysinternal:Buf:stringIndexOfFrom(b: b, needle: needle, from: from, def: def);
+		local Int is bAddr: Mem:objToAddr(obj: b);
+		local Int is nAddr: Mem:objToAddr(obj: needle);
+		if({ bAddr == 0 || nAddr == 0 }, { return def; });
+		local Int is start: from;
+		if({ start < 0 }, { start: 0; });
+		local Int is slen: Mem:loadI64(ptr: bAddr, byteOffset: 8);
+		local Int is nlen: Mem:loadI64(ptr: nAddr, byteOffset: 8);
+		if({ nlen == 0 }, {
+			if({ start <= slen }, { return start; });
+			return def;
+		});
+		if({ start + nlen > slen }, { return def; });
+		local Int is hay: Mem:loadI64(ptr: bAddr, byteOffset: 0);
+		local Int is nd: Mem:loadI64(ptr: nAddr, byteOffset: 0);
+		local Int is firstByte: Mem:loadByte(ptr: nd, byteOffset: 0);
+		local Int is i: start;
+		while({ i + nlen <= slen }, {
+			if({ Mem:loadByte(ptr: hay, byteOffset: i) == firstByte }, {
+				if({ Mem:cmp(a: hay + i, b: nd, bytes: nlen) == 0 }, {
+					return i;
+				});
+			});
+			i: i + 1;
+		});
+		return def;
 	}
 
 	## Buffer [b] with every [search] occurrence replaced by [replacement].
@@ -164,7 +218,33 @@ Class is Buf{
 	## @param dst: The buffer grown in place.
 	## @param src: The bytes appended.
 	Function is bufAppendBuf(String is dst, String is src){
-		base:sysinternal:Buf:bufAppendBuf(dst: dst, src: src);
+		local Int is dAddr: Mem:objToAddr(obj: dst);
+		local Int is sAddr: Mem:objToAddr(obj: src);
+		if({ dAddr == 0 || sAddr == 0 }, { return; });
+		local Int is sLen: Mem:loadI64(ptr: sAddr, byteOffset: 8);
+		if({ sLen <= 0 }, { return; });
+		local Int is dLen: Mem:loadI64(ptr: dAddr, byteOffset: 8);
+		local Int is dCap: Mem:loadI64(ptr: dAddr, byteOffset: 16);
+		local Int is need: sLen + 1;
+		local Int is dData: Mem:loadI64(ptr: dAddr, byteOffset: 0);
+		if({ dLen + need > dCap }, {
+			local Int is cap: if({ dCap == 0 }, { 16 }, { dCap * 2 });
+			while({ cap < dLen + need }, {
+				cap: cap * 2;
+			});
+			dData: Mem:realloc(ptr: dData, bytes: cap);
+			Mem:storeI64(ptr: dAddr, byteOffset: 0, val: dData);
+			Mem:storeI64(ptr: dAddr, byteOffset: 16, val: cap);
+		});
+		local Int is sData: Mem:loadI64(ptr: sAddr, byteOffset: 0);
+		if({ dAddr == sAddr }, {
+			Mem:copy(dst: dData + dLen, src: dData, bytes: sLen);
+		}, {
+			Mem:copy(dst: dData + dLen, src: sData, bytes: sLen);
+		});
+		local Int is newLen: dLen + sLen;
+		Mem:storeI64(ptr: dAddr, byteOffset: 8, val: newLen);
+		Mem:storeByte(ptr: dData, byteOffset: newLen, val: 0);
 	}
 
 	## Parses buffer [b] as an integer in [base] (2-36), accepting 0x/0b/0o

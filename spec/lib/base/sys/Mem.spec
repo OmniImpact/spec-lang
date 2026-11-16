@@ -104,6 +104,14 @@ Class is Mem{
 		return base:sysinternal:Mem:claimPoolAddr(objAddr: objAddr);
 	}
 
+	Function of String is strFromBytes(Int is srcAddr, Int is len){
+		return base:sysinternal:Mem:strFromBytes(srcAddr: srcAddr, len: len);
+	}
+
+	Function of String is internStr(String is s){
+		return base:sysinternal:Mem:internStr(s: s);
+	}
+
 	Function of Int is floatToBits(Float is val){
 		return base:sysinternal:Mem:floatToBits(val: val);
 	}

@@ -33,8 +33,8 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 		local Boolean is ok: false;
 		match(on: call:name, when: [
 			'init': { ok: true; },
-			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64']: { ok: argc >= 1; },
-			['realloc', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy']: { ok: argc >= 2; },
+			['alloc', 'free', 'cstrLen', 'objToAddr', 'addrToObj', 'retainAddr', 'releaseAddr', 'claimPoolAddr', 'internStr', 'floatToBits', 'bitsToFloat', 'atomicLoadI32', 'atomicLoadI64']: { ok: argc >= 1; },
+			['realloc', 'strFromBytes', 'loadI64', 'loadI32', 'loadByte', 'loadPtr', 'loadF64', 'atomicStoreI32', 'atomicAddI32', 'atomicSubI32', 'atomicStoreI64', 'atomicAddI64', 'callDestroy']: { ok: argc >= 2; },
 			['copy', 'move', 'set', 'cmp', 'storeI64', 'storeI32', 'storeByte', 'storePtr', 'storeF64', 'atomicCasI64']: { ok: argc >= 3; }
 		]);
 		return ok;
@@ -184,6 +184,16 @@ Class of SysinternalCallLowerer is MemCallLowerer{
 			'claimPoolAddr': {
 				local String is a: self:lowerNamedArg(b: b, call: call, argName: 'objAddr', posIdx: 0, defVal: '0');
 				res: self:emitSysCall(b: b, retType: IrType:I64, callee: '__spec_mem_claim_pool_addr', argTypes: [IrType:I64], args: [a]);
+			},
+			'strFromBytes': {
+				local String is src: self:lowerNamedArg(b: b, call: call, argName: 'srcAddr', posIdx: 0, defVal: '0');
+				local String is n: self:lowerNamedArg(b: b, call: call, argName: 'len', posIdx: 1, defVal: '0');
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: '__spec_mem_str_from_bytes', argTypes: [IrType:I64, IrType:I64], args: [src, n]);
+				b:emitClaimPool(val: res);
+			},
+			'internStr': {
+				local String is sp: self:lowerArgAsPtr(b: b, call: call, argName: 's', posIdx: 0);
+				res: self:emitSysCall(b: b, retType: IrType:Ptr, callee: '__spec_mem_intern_str', argTypes: [IrType:Ptr], args: [sp]);
 			},
 			'floatToBits': {
 				local String is v: self:lowerNamedArg(b: b, call: call, argName: 'val', posIdx: 0, defVal: '0.0');

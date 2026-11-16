@@ -43,25 +43,13 @@ declare i64 @spec_pool_frame()
 declare void @spec_pool_release_to(i64)
 declare ptr @spec_claim_pool(ptr)
 declare ptr @spec_rt_closure_new(ptr, ptr, ptr)
-declare ptr @spec_arena_new()
-declare void @spec_arena_drain(ptr)
-declare i64 @spec_arena_used(ptr)
 declare ptr @spec_string_intern(ptr)
-declare ptr @spec_intern(ptr)
+declare ptr @spec_string_from_bytes(ptr, i64)
 declare ptr @spec_string_concat(ptr, ptr)
 declare i1 @spec_string_equals(ptr, ptr)
 declare i64 @spec_string_compare(ptr, ptr)
-declare i64 @spec_string_length(ptr)
-declare i64 @spec_buf_length(ptr)
-declare ptr @spec_string_substring(ptr, i64, i64)
-declare i64 @spec_string_index_of(ptr, ptr, i64)
-declare i64 @spec_string_index_of_from(ptr, ptr, i64, i64)
-declare i64 @spec_buf_get_byte(ptr, i64, i64)
-declare i64 @spec_buf_count_byte(ptr, i64)
-declare void @spec_buf_append_buf(ptr, ptr)
 declare ptr @spec_buf_to_cstring(ptr)
 declare ptr @spec_string_copy(ptr)
-declare ptr @spec_string_from_char_code(i64)
 declare ptr @spec_to_string_int(i64)
 declare ptr @spec_to_string_float(double)
 declare ptr @spec_to_string_bool(i1)
@@ -325,6 +313,16 @@ do_cl:
   br label %done
 done:
   ret i64 %addr
+}
+define internal ptr @__spec_mem_str_from_bytes(i64 %srcAddr, i64 %len) alwaysinline {
+  %p = inttoptr i64 %srcAddr to ptr
+  %s = call ptr @spec_string_from_bytes(ptr %p, i64 %len)
+  ret ptr %s
+}
+define internal ptr @__spec_mem_intern_str(ptr %b) alwaysinline {
+  %c = call ptr @spec_buf_to_cstring(ptr %b)
+  %s = call ptr @spec_string_intern(ptr %c)
+  ret ptr %s
 }
 %struct.SpecBox = type { i64, i1 }
 define internal void @__spec_box_destroy(ptr %self) {

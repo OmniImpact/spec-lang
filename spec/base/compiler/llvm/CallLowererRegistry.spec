@@ -22,7 +22,6 @@ Class is CallLowererRegistry{
 		['base', 'compiler', 'llvm', TimeCallLowerer],
 		['base', 'compiler', 'llvm', MathCallLowerer],
 		['base', 'compiler', 'llvm', MatchCallLowerer],
-		['base', 'compiler', 'llvm', StringCallLowerer],
 		['base', 'compiler', 'llvm', ArrayCallLowerer],
 		['base', 'compiler', 'llvm', MapCallLowerer],
 		['base', 'struct', Array],

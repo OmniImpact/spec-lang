@@ -9,8 +9,10 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 		['base', 'compiler', 'llvm', IrBuilder],
 		['base', 'compiler', 'ast', Expression],
 		['base', 'compiler', 'ast', CallData],
+		['base', 'compiler', 'ast', NamedArg],
 		['base', 'compiler', 'ir', IrType],
 		['base', 'compiler', 'ir', IrInst],
+		['base', 'struct', Array],
 		['base', 'sys', as Conditional()]
 	];
 
@@ -27,6 +29,7 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 	}
 
 	replace Function of Boolean is matches(IrBuilder is b, Expression is expr, CallData is call){
+		if({ call:name == 'toBase' && call:target:resolvedType == 'Int' }, { return true; });
 		if({ !self:isFloorTarget(call: call, domain: 'Math') }, { return false; });
 		local Int is argc: call:args:length();
 		local Boolean is ok: false;
@@ -42,6 +45,23 @@ Class of SysinternalCallLowerer is MathCallLowerer{
 
 	replace Function of String is lower(IrBuilder is b, Expression is expr, CallData is call){
 		local String is nm: call:name;
+		if({ nm == 'toBase' && call:target:resolvedType == 'Int' }, {
+			local String is iv: b:lowerExpr(expr: call:target);
+			local String is baseV: '10';
+			local String is digV: '0';
+			if({ call:args:length() >= 1 }, {
+				local NamedArg is na0: call:args:get(index: 0);
+				if({ na0:name == 'digits' }, { digV: b:lowerExpr(expr: na0:value); }, { baseV: b:lowerExpr(expr: na0:value); });
+			});
+			if({ call:args:length() >= 2 }, {
+				local NamedArg is na1: call:args:get(index: 1);
+				if({ na1:name == 'base' }, { baseV: b:lowerExpr(expr: na1:value); }, { digV: b:lowerExpr(expr: na1:value); });
+			});
+			local String is dst: b:nextTmp();
+			b:emit(inst: IrInst:IrCall(dst: dst, hasDst: true, retType: IrType:Ptr, callee: 'spec_int_to_base', argTypes: [IrType:I64, IrType:I64, IrType:I64], args: [iv, baseV, digV]));
+			b:emitClaimPool(val: dst);
+			return dst;
+		});
 		local String is res: '0';
 		match(on: nm, when: [
 			'init': { res: 'null'; },
