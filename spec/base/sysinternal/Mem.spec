@@ -49,4 +49,10 @@ Class is Mem{
 	Function of Boolean is atomicCasI64(Int is addr, Int is expected, Int is desired);
 
 	Function is callDestroy(Int is fnPtr, Int is objPtr);
+	Function of Any is callConstruct(Int is fnAddr);
+	Function of Int is classRegistryAddr();
+	Function of Int is classRegistryCount();
+	Function of Int is heldRegistryAddr();
+	Function of String is cstrToStr(Int is cstrAddr);
+	Function of String is typeNameOf(Any is obj);
 }

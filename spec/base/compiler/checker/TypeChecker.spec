@@ -1952,7 +1952,7 @@ Class is TypeChecker{
 														already: true;
 													});
 												});
-												if({ !already && self:findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
+												if({ !already && className != self:currentClassName && self:findMemberOwnerClass(className: className, memberName: methodName) != '' }, {
 													acc:add(item: className);
 												});
 											},

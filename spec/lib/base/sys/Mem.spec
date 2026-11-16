@@ -159,4 +159,28 @@ Class is Mem{
 	Function is callDestroy(Int is fnPtr, Int is objPtr){
 		base:sysinternal:Mem:callDestroy(fnPtr: fnPtr, objPtr: objPtr);
 	}
+
+	Function of Any is callConstruct(Int is fnAddr){
+		return base:sysinternal:Mem:callConstruct(fnAddr: fnAddr);
+	}
+
+	Function of Int is classRegistryAddr(){
+		return base:sysinternal:Mem:classRegistryAddr();
+	}
+
+	Function of Int is classRegistryCount(){
+		return base:sysinternal:Mem:classRegistryCount();
+	}
+
+	Function of Int is heldRegistryAddr(){
+		return base:sysinternal:Mem:heldRegistryAddr();
+	}
+
+	Function of String is cstrToStr(Int is cstrAddr){
+		return base:sysinternal:Mem:cstrToStr(cstrAddr: cstrAddr);
+	}
+
+	Function of String is typeNameOf(Any is obj){
+		return base:sysinternal:Mem:typeNameOf(obj: obj);
+	}
 }

@@ -52,20 +52,6 @@ declare ptr @spec_to_string_bool(i1)
 declare ptr @spec_int_to_base(i64, i64, i64)
 declare ptr @spec_bytebuffer_new()
 declare ptr @spec_type_name(ptr)
-declare i64 @spec_object_hash(ptr)
-declare i1 @spec_same_ref(ptr, ptr)
-declare i64 @spec_held_count(ptr)
-declare ptr @spec_held_name(ptr, i64)
-declare i1 @spec_has_held(ptr, ptr)
-declare i64 @spec_held_index_of(ptr)
-declare i1 @spec_class_extends(ptr, ptr)
-declare ptr @spec_type_identity(ptr)
-declare ptr @spec_class_names()
-declare ptr @spec_method_names(ptr)
-declare ptr @spec_class_source_file(ptr)
-declare i1 @spec_has_method(ptr, ptr)
-declare ptr @spec_instantiate(ptr)
-declare void @spec_invoke_void_by_name(ptr, ptr)
 declare void @spec_panic(ptr)
 declare void @spec_panic_byte_range(i64)
 declare void @spec_panic_cast(ptr, ptr)
@@ -591,6 +577,29 @@ define internal void @__spec_mem_call_destroy(i64 %fnAddr, i64 %objAddr) alwaysi
   %obj = inttoptr i64 %objAddr to ptr
   call void %fn(ptr %obj)
   ret void
+}
+define internal ptr @__spec_mem_call_construct(i64 %fnAddr) alwaysinline {
+  %fn = inttoptr i64 %fnAddr to ptr
+  %obj = call ptr %fn()
+  ret ptr %obj
+}
+define internal i64 @__spec_mem_class_reg_addr() alwaysinline {
+  %a = ptrtoint ptr @spec_class_registry to i64
+  ret i64 %a
+}
+define internal i64 @__spec_mem_class_reg_count() alwaysinline {
+  %c32 = call i32 @spec_class_registry_count()
+  %c64 = zext i32 %c32 to i64
+  ret i64 %c64
+}
+define internal i64 @__spec_mem_held_reg_addr() alwaysinline {
+  %a = ptrtoint ptr @spec_held_registry to i64
+  ret i64 %a
+}
+define internal ptr @__spec_mem_cstr_to_str(i64 %cstrAddr) alwaysinline {
+  %p = inttoptr i64 %cstrAddr to ptr
+  %s = call ptr @spec_string_intern(ptr %p)
+  ret ptr %s
 }
 declare void @spec_print(ptr)
 declare void @spec_print_line(ptr)

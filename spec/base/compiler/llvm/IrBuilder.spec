@@ -3688,7 +3688,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'Buf' || provStruct == 'Mem' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' }, {
 			return 'null';
 		});
 		if({ self:currentClass != '' && self:localSlots:has(key: 'self') }, {
