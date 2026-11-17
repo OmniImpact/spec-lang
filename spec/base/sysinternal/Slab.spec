@@ -1,13 +1,12 @@
 #! Package base:sysinternal
-#! Pure-Spec unmanaged floor for the 64 KiB aligned small-object slab allocator.
+#! Pure-Spec unmanaged floor for the 64 KiB aligned fixed-size-class slab allocator.
 ##
-## Size classes (total slot bytes including 16-byte SpecHeader):
-##   class 0:  32B (payload   1..16B)
-##   class 1:  48B (payload  17..32B)
-##   class 2:  64B (payload  33..48B)
-##   class 3:  80B (payload  49..64B)
-##   class 4: 144B (payload  65..128B)
-##   class 5: 272B (payload 129..256B)
+## Size classes (total slot bytes, up to 4 KiB; > 4 KiB uses OS VM directly):
+##   class 0:   32B   class 5:  272B
+##   class 1:   48B   class 6:  512B
+##   class 2:   64B   class 7: 1024B
+##   class 3:   80B   class 8: 2048B
+##   class 4:  144B   class 9: 4096B
 ##
 ## Slab header (96 bytes at offset 0 of each 64 KiB aligned slab):
 ##   offset  0: slotSize   (i64)
@@ -17,15 +16,15 @@
 ##   offset 32: bumpOff    (i64: next uncarved offset in [96..65536])
 ##   offset 40: localFree  (i64: head of singly-linked local freelist)
 ##   offset 48: remoteFree (atomic i64: head of lock-free CAS remote freelist)
-##   offset 56: nextSlab   (i64: next slab in partial list)
+##   offset 56: nextSlab   (i64: next slab in partial/spare list)
 ##   offset 64: prevSlab   (i64: prev slab in partial list)
 ##   offset 72: inPartial  (i64: 1 if linked in partial list, 0 otherwise)
 ##   offset 80: isFresh    (i64: 1 if freshly mmap'd / zeroed by OS, 0 if reused)
 ##
-## ThreadState layout (144 bytes = 6 classes * 24 bytes, stored in TLS slot 14):
+## ThreadState layout (240 bytes = 10 classes * 24 bytes in 4096B VM page, TLS slot 14):
 ##   class base +  0: active  (i64: current active slab)
 ##   class base +  8: partial (i64: doubly-linked list head of other slabs)
-##   class base + 16: spare   (i64: at most 1 cached empty slab)
+##   class base + 16: spare   (i64: singly-linked list of empty cached slabs)
 
 Class is Slab{
 	namespace: ['base', 'sysinternal'];
@@ -36,13 +35,17 @@ Class is Slab{
 		['base', 'sysinternal', as Loops()]
 	];
 
-	Function of Int is classForPayload(Int is payloadSize){
-		if({ payloadSize <= 64 }, {
-			if({ payloadSize <= 1 }, { return 0; });
-			return (payloadSize - 1) >> 4;
+	Function of Int is classForSize(Int is totalBytes){
+		if({ totalBytes <= 80 }, {
+			if({ totalBytes <= 32 }, { return 0; });
+			return (totalBytes - 17) >> 4;
 		});
-		if({ payloadSize <= 128 }, { return 4; });
-		if({ payloadSize <= 256 }, { return 5; });
+		if({ totalBytes <= 144 }, { return 4; });
+		if({ totalBytes <= 272 }, { return 5; });
+		if({ totalBytes <= 512 }, { return 6; });
+		if({ totalBytes <= 1024 }, { return 7; });
+		if({ totalBytes <= 2048 }, { return 8; });
+		if({ totalBytes <= 4096 }, { return 9; });
 		return -1;
 	}
 
@@ -52,13 +55,17 @@ Class is Slab{
 		if({ cls == 2 }, { return 64; });
 		if({ cls == 3 }, { return 80; });
 		if({ cls == 4 }, { return 144; });
-		return 272;
+		if({ cls == 5 }, { return 272; });
+		if({ cls == 6 }, { return 512; });
+		if({ cls == 7 }, { return 1024; });
+		if({ cls == 8 }, { return 2048; });
+		return 4096;
 	}
 
 	Function of Int is getThreadState(){
 		local Int is st: Mem:tlsGetI64(slot: 14);
 		if({ st == 0 }, {
-			st: Mem:alloc(bytes: 144);
+			st: base:sysinternal:Mem:vmAlloc(bytes: 4096);
 			Mem:tlsSetI64(slot: 14, val: st);
 		});
 		return st;
@@ -117,7 +124,7 @@ Class is Slab{
 			local Int is next: Mem:loadI64(ptr: lf, byteOffset: 0);
 			Mem:storeI64(ptr: slab, byteOffset: 40, val: next);
 			self:incLive(slab: slab);
-			Mem:set(dst: lf + 16, byteVal: 0, bytes: slotSize - 16);
+			Mem:set(dst: lf, byteVal: 0, bytes: slotSize);
 			return lf;
 		});
 		local Int is bump: Mem:loadI64(ptr: slab, byteOffset: 32);
@@ -126,7 +133,7 @@ Class is Slab{
 			Mem:storeI64(ptr: slab, byteOffset: 32, val: bump + slotSize);
 			self:incLive(slab: slab);
 			if({ Mem:loadI64(ptr: slab, byteOffset: 80) == 0 }, {
-				Mem:set(dst: slot + 16, byteVal: 0, bytes: slotSize - 16);
+				Mem:set(dst: slot, byteVal: 0, bytes: slotSize);
 			});
 			return slot;
 		});
@@ -135,7 +142,7 @@ Class is Slab{
 			local Int is rnext: Mem:loadI64(ptr: rf, byteOffset: 0);
 			Mem:storeI64(ptr: slab, byteOffset: 40, val: rnext);
 			self:incLive(slab: slab);
-			Mem:set(dst: rf + 16, byteVal: 0, bytes: slotSize - 16);
+			Mem:set(dst: rf, byteVal: 0, bytes: slotSize);
 			return rf;
 		});
 		return 0;
@@ -169,10 +176,10 @@ Class is Slab{
 			Mem:storeI64(ptr: sp, byteOffset: 32, val: 96 + slotSize);
 			Mem:storeI64(ptr: sp, byteOffset: 40, val: 0);
 			Mem:storeI64(ptr: sp, byteOffset: 80, val: 0);
-			Mem:atomicAddI64(addr: sp + 24, delta: 1);
+			Mem:storeI64(ptr: sp, byteOffset: 24, val: 1);
 			Mem:storeI64(ptr: base, byteOffset: 0, val: sp);
 			local Int is spSlot: sp + 96;
-			Mem:set(dst: spSlot + 16, byteVal: 0, bytes: slotSize - 16);
+			Mem:set(dst: spSlot, byteVal: 0, bytes: slotSize);
 			return spSlot;
 		});
 
@@ -187,7 +194,7 @@ Class is Slab{
 		return ns + 96;
 	}
 
-	Function of Int is allocObj(Int is cls){
+	Function of Int is allocSlot(Int is cls){
 		local Int is state: Mem:tlsGetI64(slot: 14);
 		if({ state == 0 }, {
 			state: self:getThreadState();
@@ -205,7 +212,7 @@ Class is Slab{
 				}, {
 					Mem:storeI64(ptr: s, byteOffset: 24, val: Mem:loadI64(ptr: s, byteOffset: 24) + 1);
 				});
-				Mem:set(dst: lf + 16, byteVal: 0, bytes: slotSize - 16);
+				Mem:set(dst: lf, byteVal: 0, bytes: slotSize);
 				return lf;
 			});
 			local Int is bump: Mem:loadI64(ptr: s, byteOffset: 32);
@@ -218,7 +225,7 @@ Class is Slab{
 					Mem:storeI64(ptr: s, byteOffset: 24, val: Mem:loadI64(ptr: s, byteOffset: 24) + 1);
 				});
 				if({ Mem:loadI64(ptr: s, byteOffset: 80) == 0 }, {
-					Mem:set(dst: slot + 16, byteVal: 0, bytes: slotSize - 16);
+					Mem:set(dst: slot, byteVal: 0, bytes: slotSize);
 				});
 				return slot;
 			});
@@ -231,7 +238,7 @@ Class is Slab{
 				}, {
 					Mem:storeI64(ptr: s, byteOffset: 24, val: Mem:loadI64(ptr: s, byteOffset: 24) + 1);
 				});
-				Mem:set(dst: rf + 16, byteVal: 0, bytes: slotSize - 16);
+				Mem:set(dst: rf, byteVal: 0, bytes: slotSize);
 				return rf;
 			});
 			self:linkPartial(base: base, slab: s);
@@ -240,15 +247,15 @@ Class is Slab{
 		return self:allocSlow(state: state, cls: cls, slotSize: slotSize);
 	}
 
-	Function is freeSlot(Int is hdrAddr){
-		local Int is s: hdrAddr & (-65536);
+	Function is freeSlot(Int is slotAddr){
+		local Int is s: slotAddr & (-65536);
 		local Int is myState: Mem:tlsGetI64(slot: 14);
 		local Boolean is mt: base:sysinternal:Mem:isMultithreaded();
 		local Int is owner: if({ mt }, { Mem:atomicLoadI64(addr: s + 16) }, { Mem:loadI64(ptr: s, byteOffset: 16) });
 		if({ myState != 0 && owner == myState }, {
 			local Int is oldLf: Mem:loadI64(ptr: s, byteOffset: 40);
-			Mem:storeI64(ptr: hdrAddr, byteOffset: 0, val: oldLf);
-			Mem:storeI64(ptr: s, byteOffset: 40, val: hdrAddr);
+			Mem:storeI64(ptr: slotAddr, byteOffset: 0, val: oldLf);
+			Mem:storeI64(ptr: s, byteOffset: 40, val: slotAddr);
 			local Int is oldLive: 0;
 			if({ mt }, {
 				oldLive: Mem:atomicAddI64(addr: s + 24, delta: -1);
@@ -276,8 +283,8 @@ Class is Slab{
 		local Boolean is pushed: false;
 		while({ !pushed }, {
 			local Int is oldRf: Mem:atomicLoadI64(addr: s + 48);
-			Mem:storeI64(ptr: hdrAddr, byteOffset: 0, val: oldRf);
-			pushed: Mem:atomicCasI64(addr: s + 48, expected: oldRf, desired: hdrAddr);
+			Mem:storeI64(ptr: slotAddr, byteOffset: 0, val: oldRf);
+			pushed: Mem:atomicCasI64(addr: s + 48, expected: oldRf, desired: slotAddr);
 		});
 		local Int is oldLiveR: Mem:atomicAddI64(addr: s + 24, delta: -1);
 		if({ oldLiveR == 1 }, {
@@ -301,7 +308,7 @@ Class is Slab{
 		if({ myState == 0 }, { return; });
 		Mem:tlsSetI64(slot: 14, val: 0);
 		local Int is c: 0;
-		while({ c < 6 }, {
+		while({ c < 10 }, {
 			local Int is base: myState + (c * 24);
 			local Int is act: Mem:loadI64(ptr: base, byteOffset: 0);
 			if({ act != 0 }, {
@@ -321,6 +328,6 @@ Class is Slab{
 			});
 			c: c + 1;
 		});
-		Mem:free(ptr: myState);
+		base:sysinternal:Mem:vmFree(ptr: myState, bytes: 4096);
 	}
 }

@@ -19,19 +19,21 @@ Class is Arc{
 		['base', 'sysinternal', as Mem()],
 		['base', 'sysinternal', as Conditional()],
 		['base', 'sysinternal', as Loops()],
-		['base', 'sysinternal', as Slab()]
+		['base', 'sysinternal', as Slab()],
+		['base', 'sysinternal', as Heap()]
 	];
 
 	Function of Int is allocObj(Int is size, Int is destroyFn){
-		local Int is cls: Slab:classForPayload(payloadSize: size);
+		local Int is req: if({ size <= 0 }, { 1 }, { size });
+		local Int is cls: Slab:classForSize(totalBytes: 16 + req);
 		if({ cls >= 0 }, {
-			local Int is sh: Slab:allocObj(cls: cls);
+			local Int is sh: Slab:allocSlot(cls: cls);
 			Mem:storeI32(ptr: sh, byteOffset: 0, val: 1);
 			Mem:storeI32(ptr: sh, byteOffset: 4, val: (cls + 1) << 16);
 			Mem:storeI64(ptr: sh, byteOffset: 8, val: destroyFn);
 			return sh + 16;
 		});
-		local Int is h: Mem:alloc(bytes: 16 + size);
+		local Int is h: Heap:allocMem(bytes: 16 + req);
 		Mem:storeI32(ptr: h, byteOffset: 0, val: 1);
 		Mem:storeI32(ptr: h, byteOffset: 4, val: 0);
 		Mem:storeI64(ptr: h, byteOffset: 8, val: destroyFn);
@@ -58,10 +60,10 @@ Class is Arc{
 		if({ (sf2 & 4) != 0 }, { return; });
 		local Int is slen: sf2 >> 16;
 		if({ slen != 0 }, {
-			Slab:freeSlot(hdrAddr: h);
+			Slab:freeSlot(slotAddr: h);
 			return;
 		});
-		Mem:free(ptr: h);
+		Heap:freeMem(ptr: h);
 	}
 
 	Function is release(Int is objAddr){

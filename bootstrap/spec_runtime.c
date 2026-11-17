@@ -134,6 +134,27 @@ long long spec_pal_slab_alloc(void) {
 void spec_pal_slab_free(long long addr) {
     if (addr) VirtualFree((void*)(intptr_t)addr, 0, MEM_RELEASE);
 }
+
+long long spec_pal_vm_alloc(long long bytes) {
+    SIZE_T sz = (SIZE_T)(bytes <= 0 ? 4096 : bytes);
+    void* p = VirtualAlloc(NULL, sz, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    return (long long)(intptr_t)p;
+}
+
+void spec_pal_vm_free(long long addr, long long bytes) {
+    (void)bytes;
+    if (addr) VirtualFree((void*)(intptr_t)addr, 0, MEM_RELEASE);
+}
+
+long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new_bytes) {
+    if (!addr) return spec_pal_vm_alloc(new_bytes);
+    long long np = spec_pal_vm_alloc(new_bytes);
+    if (!np) return 0;
+    size_t cp = (size_t)(old_bytes < new_bytes ? old_bytes : new_bytes);
+    if (cp > 0) memcpy((void*)(intptr_t)np, (void*)(intptr_t)addr, cp);
+    spec_pal_vm_free(addr, old_bytes);
+    return np;
+}
 #elif defined(__APPLE__) && defined(__MACH__)
 #define _DARWIN_C_SOURCE
 #include <sys/types.h>
@@ -258,6 +279,31 @@ long long spec_pal_slab_alloc(void) {
 
 void spec_pal_slab_free(long long addr) {
     if (addr) munmap((void*)(intptr_t)addr, 65536);
+}
+
+long long spec_pal_vm_alloc(long long bytes) {
+    size_t sz = (size_t)((bytes <= 0 ? 4096 : bytes + 4095) & ~4095LL);
+    void* p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    return (p == MAP_FAILED) ? 0 : (long long)(intptr_t)p;
+}
+
+void spec_pal_vm_free(long long addr, long long bytes) {
+    if (!addr) return;
+    size_t sz = (size_t)((bytes <= 0 ? 4096 : bytes + 4095) & ~4095LL);
+    munmap((void*)(intptr_t)addr, sz);
+}
+
+long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new_bytes) {
+    if (!addr) return spec_pal_vm_alloc(new_bytes);
+    size_t old_sz = (size_t)((old_bytes <= 0 ? 4096 : old_bytes + 4095) & ~4095LL);
+    size_t new_sz = (size_t)((new_bytes <= 0 ? 4096 : new_bytes + 4095) & ~4095LL);
+    if (old_sz == new_sz) return addr;
+    long long np = spec_pal_vm_alloc(new_bytes);
+    if (!np) return 0;
+    size_t cp = (size_t)(old_bytes < new_bytes ? old_bytes : new_bytes);
+    if (cp > 0) memcpy((void*)(intptr_t)np, (void*)(intptr_t)addr, cp);
+    spec_pal_vm_free(addr, old_bytes);
+    return np;
 }
 #elif defined(__linux__)
 #define _GNU_SOURCE
@@ -387,6 +433,27 @@ long long spec_pal_slab_alloc(void) {
 
 void spec_pal_slab_free(long long addr) {
     if (addr) munmap((void*)(intptr_t)addr, 65536);
+}
+
+long long spec_pal_vm_alloc(long long bytes) {
+    size_t sz = (size_t)((bytes <= 0 ? 4096 : bytes + 4095) & ~4095LL);
+    void* p = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    return (p == MAP_FAILED) ? 0 : (long long)(intptr_t)p;
+}
+
+void spec_pal_vm_free(long long addr, long long bytes) {
+    if (!addr) return;
+    size_t sz = (size_t)((bytes <= 0 ? 4096 : bytes + 4095) & ~4095LL);
+    munmap((void*)(intptr_t)addr, sz);
+}
+
+long long spec_pal_vm_realloc(long long addr, long long old_bytes, long long new_bytes) {
+    if (!addr) return spec_pal_vm_alloc(new_bytes);
+    size_t old_sz = (size_t)((old_bytes <= 0 ? 4096 : old_bytes + 4095) & ~4095LL);
+    size_t new_sz = (size_t)((new_bytes <= 0 ? 4096 : new_bytes + 4095) & ~4095LL);
+    if (old_sz == new_sz) return addr;
+    void* p = mremap((void*)(intptr_t)addr, old_sz, new_sz, MREMAP_MAYMOVE);
+    return (p == MAP_FAILED) ? 0 : (long long)(intptr_t)p;
 }
 #endif
 
@@ -764,6 +831,10 @@ long long spec_pal_file_temp(long long tpl_cstr) {
         return (long long)(intptr_t)final_path;
     }
     return (long long)(intptr_t)buf;
+}
+
+void spec_pal_file_free(long long ptr) {
+    if (ptr) free((void*)(intptr_t)ptr);
 }
 #if defined(_WIN32)
 long long spec_pal_process_execute_cstr(long long cmd_cstr, long long argv_addr, long long nargs_ll) {
@@ -1539,6 +1610,10 @@ long long spec_pal_read_line(long long out_len_addr) {
     buf[len] = '\0';
     if (out_len) *out_len = (long long)len;
     return (long long)(intptr_t)buf;
+}
+
+void spec_pal_console_free(long long ptr) {
+    if (ptr) free((void*)(intptr_t)ptr);
 }
 
 long long spec_pal_read_bytes(long long dst_addr, long long count) {

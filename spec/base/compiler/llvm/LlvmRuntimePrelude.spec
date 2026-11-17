@@ -243,40 +243,15 @@ done:
 	Function of String is emitMemIntrinsics(){
 		return '''
 define internal i64 @__spec_mem_alloc(i64 %bytes) alwaysinline {
-  %le = icmp sle i64 %bytes, 0
-  %sz = select i1 %le, i64 1, i64 %bytes
-  %p = call ptr @calloc(i64 1, i64 %sz)
-  %isnull = icmp eq ptr %p, null
-  br i1 %isnull, label %oom, label %ok
-oom:
-  call void @spec_panic(ptr @.str.oom)
-  br label %ok
-ok:
-  %addr = ptrtoint ptr %p to i64
-  ret i64 %addr
+  %a = call i64 @Heap_allocMem(ptr null, i64 %bytes)
+  ret i64 %a
 }
 define internal i64 @__spec_mem_realloc(i64 %ptr, i64 %bytes) alwaysinline {
-  %le = icmp sle i64 %bytes, 0
-  %sz = select i1 %le, i64 1, i64 %bytes
-  %old = inttoptr i64 %ptr to ptr
-  %p = call ptr @realloc(ptr %old, i64 %sz)
-  %isnull = icmp eq ptr %p, null
-  br i1 %isnull, label %oom, label %ok
-oom:
-  call void @spec_panic(ptr @.str.oom)
-  br label %ok
-ok:
-  %addr = ptrtoint ptr %p to i64
-  ret i64 %addr
+  %a = call i64 @Heap_reallocMem(ptr null, i64 %ptr, i64 %bytes)
+  ret i64 %a
 }
 define internal void @__spec_mem_free(i64 %ptr) alwaysinline {
-  %nz = icmp ne i64 %ptr, 0
-  br i1 %nz, label %do_free, label %done
-do_free:
-  %p = inttoptr i64 %ptr to ptr
-  call void @free(ptr %p)
-  br label %done
-done:
+  call void @Heap_freeMem(ptr null, i64 %ptr)
   ret void
 }
 define internal void @__spec_mem_copy(i64 %dst, i64 %src, i64 %bytes) alwaysinline {
@@ -477,13 +452,8 @@ sbo:
   ret ptr %b
 heap:
   %need = add i64 %len, 1
-  %hd = call noalias ptr @malloc(i64 %need)
-  %isnull = icmp eq ptr %hd, null
-  br i1 %isnull, label %oom, label %heap_ok
-oom:
-  call void @spec_panic(ptr @.str.oom)
-  br label %heap_ok
-heap_ok:
+  %hda = call i64 @__spec_mem_alloc(i64 %need)
+  %hd = inttoptr i64 %hda to ptr
   store ptr %hd, ptr %b, align 8
   %cap_p2 = getelementptr inbounds i8, ptr %b, i64 16
   store i64 %need, ptr %cap_p2, align 8
@@ -664,6 +634,9 @@ define internal ptr @spec_string_intern(ptr %c) nounwind {
 declare void @spec_pal_format_float(double, i64) nounwind
 declare i64 @spec_pal_slab_alloc() nounwind
 declare void @spec_pal_slab_free(i64) nounwind
+declare i64 @spec_pal_vm_alloc(i64) nounwind
+declare void @spec_pal_vm_free(i64, i64) nounwind
+declare i64 @spec_pal_vm_realloc(i64, i64, i64) nounwind
 define internal i64 @__spec_mem_slab_alloc() alwaysinline {
   %a = call i64 @spec_pal_slab_alloc()
   %isnull = icmp eq i64 %a, 0
@@ -677,6 +650,30 @@ ok:
 define internal void @__spec_mem_slab_free(i64 %addr) alwaysinline {
   call void @spec_pal_slab_free(i64 %addr)
   ret void
+}
+define internal i64 @__spec_mem_vm_alloc(i64 %bytes) alwaysinline {
+  %a = call i64 @spec_pal_vm_alloc(i64 %bytes)
+  %isnull = icmp eq i64 %a, 0
+  br i1 %isnull, label %oom, label %ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %ok
+ok:
+  ret i64 %a
+}
+define internal void @__spec_mem_vm_free(i64 %addr, i64 %bytes) alwaysinline {
+  call void @spec_pal_vm_free(i64 %addr, i64 %bytes)
+  ret void
+}
+define internal i64 @__spec_mem_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes) alwaysinline {
+  %a = call i64 @spec_pal_vm_realloc(i64 %addr, i64 %oldBytes, i64 %newBytes)
+  %isnull = icmp eq i64 %a, 0
+  br i1 %isnull, label %oom, label %ok
+oom:
+  call void @spec_panic(ptr @.str.oom)
+  br label %ok
+ok:
+  ret i64 %a
 }
 define internal i1 @__spec_mem_is_multithreaded() alwaysinline {
   %mt = load atomic i32, ptr @g_spec_active_threads acquire, align 4
@@ -717,7 +714,8 @@ chk_sbo:
   %is_sbo = icmp eq ptr %d, %inl
   br i1 %is_sbo, label %done, label %do_free
 do_free:
-  call void @free(ptr %d)
+  %da = ptrtoint ptr %d to i64
+  call void @__spec_mem_free(i64 %da)
   store ptr null, ptr %self, align 8
   br label %done
 done:
@@ -1035,7 +1033,9 @@ crit:
   %has_seg2 = icmp ne ptr %seg2, null
   br i1 %has_seg2, label %unlock, label %alloc_seg
 alloc_seg:
-  %new_seg = call ptr @calloc(i64 %seg_sz, i64 8)
+  %seg_bytes = mul i64 %seg_sz, 8
+  %new_seg_a = call i64 @__spec_mem_alloc(i64 %seg_bytes)
+  %new_seg = inttoptr i64 %new_seg_a to ptr
   store atomic ptr %new_seg, ptr %lp release, align 8
   br label %unlock
 unlock:

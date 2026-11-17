@@ -290,15 +290,13 @@ Class of SpecOptimizer is ConcatFusionPass{
 
 		local IrBlock is finBlk: fn:addBlock(label: 'finish');
 		local String is finAddr: '%fin_addr';
-		local String is finPtr: '%fin_ptr';
 		local String is res: '%res';
 		finBlk:append(inst: IrInst:Load(dst: finAddr, slot: bufSlot, ty: IrType:I64));
-		finBlk:append(inst: IrInst:IrCast(dst: finPtr, val: finAddr, fromType: IrType:I64, toType: IrType:Ptr));
 		finBlk:append(inst: IrInst:IrCall(dst: res, hasDst: true, retType: IrType:Ptr, callee: '__spec_mem_str_from_bytes', argTypes: [IrType:I64, IrType:I64], args: [finAddr, totalVal]));
 		finBlk:append(inst: IrInst:CondBr(cond: isSmall, thenLabel: 'ret_blk', elseLabel: 'free_large'));
 
 		local IrBlock is freeBlk: fn:addBlock(label: 'free_large');
-		freeBlk:append(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: 'free', argTypes: [IrType:Ptr], args: [finPtr]));
+		freeBlk:append(inst: IrInst:IrCall(dst: '', hasDst: false, retType: IrType:Void, callee: '__spec_mem_free', argTypes: [IrType:I64], args: [finAddr]));
 		freeBlk:append(inst: IrInst:Br(target: 'ret_blk'));
 
 		local IrBlock is retBlk: fn:addBlock(label: 'ret_blk');

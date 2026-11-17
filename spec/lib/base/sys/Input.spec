@@ -35,7 +35,7 @@ Class is Input{
 		Mem:free(ptr: lenBuf);
 		if({ lineAddr != 0 }, {
 			local String is text: Mem:strFromBytes(srcAddr: lineAddr, len: len);
-			Mem:free(ptr: lineAddr);
+			base:sysinternal:Console:pal_console_free(ptr: lineAddr);
 			if({ self:hasClosure(cb: onLine) }, {
 				onLine(text);
 			});

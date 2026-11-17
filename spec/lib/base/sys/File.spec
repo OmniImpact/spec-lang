@@ -56,7 +56,7 @@ Class is File{
 			return defStr;
 		});
 		local String is res: Mem:strFromBytes(srcAddr: bufAddr, len: len);
-		Mem:free(ptr: bufAddr);
+		base:sysinternal:File:pal_file_free(ptr: bufAddr);
 		if({ self:hasClosure(cb: onSuccess) }, {
 			onSuccess(res);
 		});
@@ -142,7 +142,7 @@ Class is File{
 		});
 		local Int is olen: Mem:cstrLen(cstrAddr: outAddr);
 		local String is res: Mem:strFromBytes(srcAddr: outAddr, len: olen);
-		Mem:free(ptr: outAddr);
+		base:sysinternal:File:pal_file_free(ptr: outAddr);
 		return res;
 	}
 }

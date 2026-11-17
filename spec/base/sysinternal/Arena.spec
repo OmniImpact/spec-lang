@@ -25,7 +25,7 @@ Class is Arena{
 	Function of Int is create(Int is defaultChunkBytes){
 		local Int is csz: if({ defaultChunkBytes > 4096 }, { defaultChunkBytes }, { 65536 });
 		local Int is a: Mem:alloc(bytes: 40);
-		local Int is ch: Mem:alloc(bytes: 24 + csz);
+		local Int is ch: base:sysinternal:Mem:vmAlloc(bytes: 24 + csz);
 		Mem:storeI64(ptr: ch, byteOffset: 0, val: 0);
 		Mem:storeI64(ptr: ch, byteOffset: 8, val: 0);
 		Mem:storeI64(ptr: ch, byteOffset: 16, val: csz);
@@ -46,7 +46,7 @@ Class is Arena{
 		if({ used + total > cap }, {
 			local Int is defCsz: Mem:loadI64(ptr: arenaAddr, byteOffset: 8);
 			local Int is ncsz: if({ total > defCsz }, { total }, { defCsz });
-			local Int is nch: Mem:alloc(bytes: 24 + ncsz);
+			local Int is nch: base:sysinternal:Mem:vmAlloc(bytes: 24 + ncsz);
 			Mem:storeI64(ptr: nch, byteOffset: 0, val: ch);
 			Mem:storeI64(ptr: nch, byteOffset: 8, val: 0);
 			Mem:storeI64(ptr: nch, byteOffset: 16, val: ncsz);
@@ -97,7 +97,8 @@ Class is Arena{
 			local Int is cur: Mem:loadI64(ptr: head, byteOffset: 0);
 			while({ cur != 0 }, {
 				local Int is nxt: Mem:loadI64(ptr: cur, byteOffset: 0);
-				Mem:free(ptr: cur);
+				local Int is ccap: Mem:loadI64(ptr: cur, byteOffset: 16);
+				base:sysinternal:Mem:vmFree(ptr: cur, bytes: 24 + ccap);
 				cur: nxt;
 			});
 			Mem:storeI64(ptr: head, byteOffset: 0, val: 0);
@@ -114,7 +115,10 @@ Class is Arena{
 		if({ arenaAddr == 0 }, { return; });
 		self:reset(arenaAddr: arenaAddr);
 		local Int is head: Mem:loadI64(ptr: arenaAddr, byteOffset: 0);
-		if({ head != 0 }, { Mem:free(ptr: head); });
+		if({ head != 0 }, {
+			local Int is hcap: Mem:loadI64(ptr: head, byteOffset: 16);
+			base:sysinternal:Mem:vmFree(ptr: head, bytes: 24 + hcap);
+		});
 		local Int is list: Mem:loadI64(ptr: arenaAddr, byteOffset: 16);
 		if({ list != 0 }, { Mem:free(ptr: list); });
 		Mem:free(ptr: arenaAddr);

@@ -6,18 +6,19 @@ language's source, and the measurement harness live under
 [`utilities/benchmarks/`](utilities/benchmarks/) and
 [`utilities/run_benchmarks.sh`](utilities/run_benchmarks.sh).
 
-**Headline (Spec @ `e0f0cbc`, `feature/llvm` direct LLVM IR backend + pure-Spec ARC/Pool/Intern floor + `SpecOptimizer`):**
+**Headline (Spec `feature/llvm` — direct LLVM IR backend + pure-Spec ARC/Slab/Heap/Arena/Pool/Intern over OS VM floor + `SpecOptimizer`):**
 
 - **Tight numeric loop (`mc_pi`):** Spec reaches **163.0M pts/s** (1 thread,
   `0.99× C`) and **877.2M pts/s** (8 threads, `0.87× C`, `0.229s` wall, **2.5 MB**
   RSS; peak `980.4M`) — **at parity with C, C++, Rust, Go, and JVM** on 1 thread
   (and **2.17× faster** on 1t / **1.90× faster** on 8t than the retired C backend's 75.0M / 461.9M pts/s).
-- **Allocation & recursion (`binary_trees`):** Spec reaches **16.1M nodes/s**
-  (1 thread, `0.44× C`, `0.62× Rust`) and scales `3.56×` to **57.2M nodes/s**
-  (8 threads, `0.63× C`, `0.74× Rust`) — **3.5× faster than Python** and
-  **4.5× faster than Ruby**.
-- **Strings & hash maps (`word_freq`):** Spec processes **1.57M lines/s**
-  (`0.44× C`, `0.46× Rust`, `0.92× V8`) — **3.2× faster than Python and Ruby** — at
+- **Allocation & recursion (`binary_trees`):** Spec reaches **24.5M nodes/s**
+  (1 thread, `0.66× C`, `0.94× Rust`) and scales to **61.4M nodes/s**
+  (8 threads, `0.68× C`, `0.79× Rust`, `0.81× V8`) — **5.4× faster than Python** and
+  **6.8× faster than Ruby**, at **162.8 MB** (1t) / **611.0 MB** (8t) RSS
+  (down ~20% from `202.4 MB` / `761.8 MB` before the 16B header + 64 KiB slab cartons).
+- **Strings & hash maps (`word_freq`):** Spec processes **2.17M lines/s**
+  (`0.62× C`, `0.64× Rust`, **1.28× V8**) — **4.4× faster than Python and Ruby** — at
   **3.1 MB** peak RSS (matching C's 2.2 MB and Rust's 2.8 MB, vs ~193 MB on the JVM).
 
 ---
@@ -82,24 +83,24 @@ datapoints.
 
 | Language | Threads | Rate (nodes/s) | × C | × Spec | Wall (s) | CPU util | Peak RSS |
 |---|---|---|---|---|---|---|---|
-| Kotlin (JVM) | 1 | 154,250,000 | 4.19 | 9.61 | 0.552 | 137% | 434.4 MB |
-| Java (C2 JIT) | 1 | 151,850,000 | 4.12 | 9.46 | 0.551 | 133% | 423.7 MB |
-| JavaScript (V8) | 1 | 75,564,000 | 2.05 | 4.71 | 0.984 | 118% | 223.0 MB |
-| Go | 1 | 43,654,000 | 1.18 | 2.72 | 1.570 | 266% | 37.6 MB |
-| C (anchor) | 1 | 36,839,000 | 1.00 | 2.29 | 1.858 | 100% | 34.5 MB |
-| C++ | 1 | 30,904,000 | 0.84 | 1.92 | 2.227 | 100% | 36.9 MB |
-| Rust | 1 | 26,009,000 | 0.71 | 1.62 | 2.641 | 100% | 35.0 MB |
-| **Spec (LLVM + ARC)** | **1** | **16,059,000** | **0.44** | **1.00** | **4.323** | **100%** | **202.4 MB** |
-| Python 3.14 | 1 | 4,541,600 | 0.12 | 0.28 | 0.730 | 100% | 13.8 MB |
-| Ruby 3.3 (no YJIT) | 1 | 3,609,800 | 0.10 | 0.22 | 0.962 | 100% | 23.5 MB |
-| Kotlin (JVM) | 8 | 397,280,000 | 4.38 | 6.95 | 0.276 | 553% | 442.2 MB |
-| Java (C2 JIT) | 8 | 355,900,000 | 3.92 | 6.22 | 0.302 | 521% | 586.5 MB |
-| Go | 8 | 143,730,000 | 1.59 | 2.51 | 0.488 | 933% | 126.1 MB |
-| C (anchor) | 8 | 90,681,000 | 1.00 | 1.59 | 0.758 | 632% | 165.3 MB |
-| C++ | 8 | 86,701,000 | 0.96 | 1.52 | 0.812 | 631% | 167.7 MB |
-| Rust | 8 | 77,561,000 | 0.86 | 1.36 | 0.906 | 623% | 149.2 MB |
-| JavaScript (V8 workers) | 8 | 76,048,000 | 0.84 | 1.33 | 1.018 | 682% | 624.2 MB |
-| **Spec (LLVM + ARC)** | **8** | **57,182,000** | **0.63** | **1.00** | **1.274** | **614%** | **761.8 MB** |
+| Kotlin (JVM) | 1 | 154,250,000 | 4.19 | 6.30 | 0.552 | 137% | 434.4 MB |
+| Java (C2 JIT) | 1 | 151,850,000 | 4.12 | 6.20 | 0.551 | 133% | 423.7 MB |
+| JavaScript (V8) | 1 | 75,564,000 | 2.05 | 3.09 | 0.984 | 118% | 223.0 MB |
+| Go | 1 | 43,654,000 | 1.18 | 1.78 | 1.570 | 266% | 37.6 MB |
+| C (anchor) | 1 | 36,839,000 | 1.00 | 1.50 | 1.858 | 100% | 34.5 MB |
+| C++ | 1 | 30,904,000 | 0.84 | 1.26 | 2.227 | 100% | 36.9 MB |
+| Rust | 1 | 26,009,000 | 0.71 | 1.06 | 2.641 | 100% | 35.0 MB |
+| **Spec (LLVM + ARC + Slab)** | **1** | **24,483,000** | **0.66** | **1.00** | **2.823** | **100%** | **162.8 MB** |
+| Python 3.14 | 1 | 4,541,600 | 0.12 | 0.19 | 0.730 | 100% | 13.8 MB |
+| Ruby 3.3 (no YJIT) | 1 | 3,609,800 | 0.10 | 0.15 | 0.962 | 100% | 23.5 MB |
+| Kotlin (JVM) | 8 | 397,280,000 | 4.38 | 6.47 | 0.276 | 553% | 442.2 MB |
+| Java (C2 JIT) | 8 | 355,900,000 | 3.92 | 5.80 | 0.302 | 521% | 586.5 MB |
+| Go | 8 | 143,730,000 | 1.59 | 2.34 | 0.488 | 933% | 126.1 MB |
+| C (anchor) | 8 | 90,681,000 | 1.00 | 1.48 | 0.758 | 632% | 165.3 MB |
+| C++ | 8 | 86,701,000 | 0.96 | 1.41 | 0.812 | 631% | 167.7 MB |
+| Rust | 8 | 77,561,000 | 0.86 | 1.26 | 0.906 | 623% | 149.2 MB |
+| JavaScript (V8 workers) | 8 | 76,048,000 | 0.84 | 1.24 | 1.018 | 682% | 624.2 MB |
+| **Spec (LLVM + ARC + Slab)** | **8** | **61,395,000** | **0.68** | **1.00** | **1.136** | **594%** | **611.0 MB** |
 
 ---
 
@@ -107,16 +108,16 @@ datapoints.
 
 | Language | Rate (lines/s) | × C | × Spec | Wall (s) | CPU util | Peak RSS |
 |---|---|---|---|---|---|---|
-| C++ | 3,840,200 | 1.09 | 2.45 | 0.263 | 100% | 4.6 MB |
-| C (anchor) | 3,532,800 | 1.00 | 2.25 | 0.284 | 100% | 2.2 MB |
-| Go | 3,472,700 | 0.98 | 2.22 | 0.291 | 106% | 7.9 MB |
-| Rust | 3,408,600 | 0.96 | 2.17 | 0.295 | 100% | 2.8 MB |
-| Java (C2 JIT) | 3,205,100 | 0.91 | 2.04 | 0.458 | 210% | 192.8 MB |
-| Kotlin (JVM) | 2,816,900 | 0.80 | 1.80 | 0.522 | 196% | 193.9 MB |
-| JavaScript (V8) | 1,697,700 | 0.48 | 1.08 | 0.663 | 103% | 58.7 MB |
-| **Spec (LLVM + ARC)** | **1,567,400** | **0.44** | **1.00** | **0.640** | **100%** | **3.1 MB** |
-| Ruby 3.3 (no YJIT) | 495,030 | 0.14 | 0.32 | 0.473 | 100% | 20.4 MB |
-| Python 3.14 | 482,420 | 0.14 | 0.31 | 0.432 | 100% | 11.3 MB |
+| C++ | 3,840,200 | 1.09 | 1.77 | 0.263 | 100% | 4.6 MB |
+| C (anchor) | 3,532,800 | 1.00 | 1.63 | 0.284 | 100% | 2.2 MB |
+| Go | 3,472,700 | 0.98 | 1.60 | 0.291 | 106% | 7.9 MB |
+| Rust | 3,408,600 | 0.96 | 1.57 | 0.295 | 100% | 2.8 MB |
+| Java (C2 JIT) | 3,205,100 | 0.91 | 1.47 | 0.458 | 210% | 192.8 MB |
+| Kotlin (JVM) | 2,816,900 | 0.80 | 1.30 | 0.522 | 196% | 193.9 MB |
+| **Spec (LLVM + ARC + Slab)** | **2,173,900** | **0.62** | **1.00** | **0.461** | **100%** | **3.1 MB** |
+| JavaScript (V8) | 1,697,700 | 0.48 | 0.78 | 0.663 | 103% | 58.7 MB |
+| Ruby 3.3 (no YJIT) | 495,030 | 0.14 | 0.23 | 0.473 | 100% | 20.4 MB |
+| Python 3.14 | 482,420 | 0.14 | 0.22 | 0.432 | 100% | 11.3 MB |
 
 ---
 
@@ -132,6 +133,14 @@ datapoints.
 | Kotlin | `kotlinc` | 2.497s / 387.0 MB | 2.667s / 419.1 MB | 2.561s / 404.8 MB |
 | **Spec** | **`bin/spec` → LLVM IR** | **3.796s / 109.7 MB** | **3.410s / 108.4 MB** | **3.391s / 108.4 MB** |
 | Node / Python / Ruby | — (interpreted) | — | — | — |
+
+---
+
+## Conclusions from the LLVM & Pure-Spec Runtime Work
+
+1. **Direct LLVM IR + `SpecOptimizer` closes the numeric gap:** `mc_pi` sits at `0.99× C` (1t) and `0.87× C` (8t), eliminating the C-codegen indirection overhead.
+2. **Pure-Spec 64 KiB slab cartons (`Slab.spec`) + 16B packed `SpecHeader` + single-thread non-atomic fast paths:** Cutting per-object header overhead from 24B → 16B and moving small/medium allocations (`32..4096` bytes) into O(1) 64 KiB aligned slab cartons dropped `binary_trees` RSS by ~20% (`202.4 → 162.8 MB` 1t, `761.8 → 611.0 MB` 8t) and lifted throughput by **+52%** on 1t (`16.1M → 24.5M nodes/s`, `0.94× Rust`) and **+39%** on `word_freq` (`1.57M → 2.17M lines/s`, `1.28× V8`).
+3. **Zero glibc heap dependency in Spec-managed memory:** Routing `Arc`, `Slab`, `Heap` (`allocMem`/`reallocMem`/`freeMem`), `Arena`, `Pool`, and `Intern` over a thin OS virtual-memory floor (`mmap`/`mremap`/`VirtualAlloc`) keeps runtime behavior deterministic across platforms with `3.1 MB` RSS on `word_freq` and zero regression.
 
 ---
 

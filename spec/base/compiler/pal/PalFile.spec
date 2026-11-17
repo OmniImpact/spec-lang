@@ -191,6 +191,10 @@ long long spec_pal_file_temp(long long tpl_cstr) {
     }
     return (long long)(intptr_t)buf;
 }
+
+void spec_pal_file_free(long long ptr) {
+    if (ptr) free((void*)(intptr_t)ptr);
+}
 ```;
 	}
 }

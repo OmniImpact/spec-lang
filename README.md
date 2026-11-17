@@ -1,6 +1,6 @@
 # Spec Programming Language
 
-**Spec** is an elegant, concurrent-first, unblockable programming language that compiles directly to native machine code via LLVM IR — and it is fully self-hosted: the compiler is written in Spec and reproduces its own LLVM IR (`bootstrap/spec.ll`) and C PAL (`bootstrap/spec_runtime.c`) seeds byte-for-byte on every build. Memory is automatic reference counting over per-scope claim pools implemented in pure Spec — no garbage collector, no GC pauses — and the compiler itself runs on the exact same ARC machinery its generated programs use.
+**Spec** is an elegant, concurrent-first programming language that compiles directly to native machine code via LLVM IR — and it is fully self-hosted: the compiler is written in Spec and reproduces its own LLVM IR (`bootstrap/spec.ll`) and C PAL (`bootstrap/spec_runtime.c`) seeds byte-for-byte on every build. Memory is automatic reference counting over per-scope claim pools implemented in pure Spec — no garbage collector, no GC pauses — and the compiler itself runs on the exact same ARC machinery its generated programs use.
 
 ```spec
 Class is HelloWorld{
@@ -12,7 +12,7 @@ Class is HelloWorld{
 
 	replace Function is init(Map of String to String is args){
 		local String is name: args:getString(key: 'name', default: 'User');
-		line(greeting . ' ' . name);   # the as-import merges Output's line() into scope
+		line('Hello, ' . name);        # the as-import merges Output's line() into scope
 	}
 
 }
@@ -185,7 +185,7 @@ bin/spec -i examples/helloworld.spec --emit-llvm helloworld.ll
 
 ### Running Tests
 ```bash
-# Run the complete test suite (130+ unit and integration test suites)
+# Run the complete test suite (100+ unit and integration test suites)
 bin/specunit
 ```
 
@@ -234,7 +234,7 @@ lattice (`base:core`), math (`base:math`), collections (`base:struct`),
 iteration (`base:iterator`), JSON serialization (`base:data`), networking (`base:net`),
 audio (`base:audio`), and the control-flow, console, file, time, OS dispatch, and
 process surfaces (`base:sys`) — all written in Spec over the `base:sysinternal`
-unmanaged floor (`Arc`, `Pool`, `Arena`, `Intern`, `Mem`) and scalar/byte-slice OS PAL.
+unmanaged floor (`Arc`, `Slab`, `Heap`, `Pool`, `Arena`, `Intern`, `Mem`) and scalar/byte-slice OS PAL.
 A summary table of every package and its functions lives in the
 **[Standard Library Reference](docs/packages/README.md)**.
 

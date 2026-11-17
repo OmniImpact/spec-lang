@@ -13,6 +13,9 @@ Class is Mem{
 	Function is free(Int is ptr);
 	Function of Int is slabAlloc();
 	Function is slabFree(Int is ptr);
+	Function of Int is vmAlloc(Int is bytes);
+	Function is vmFree(Int is ptr, Int is bytes);
+	Function of Int is vmRealloc(Int is ptr, Int is oldBytes, Int is newBytes);
 	Function is copy(Int is dst, Int is src, Int is bytes);
 	Function is move(Int is dst, Int is src, Int is bytes);
 	Function is set(Int is dst, Int is byteVal, Int is bytes);

@@ -8,6 +8,7 @@ Class is Console{
 	Function is pal_print_line(Int is data_addr, Int is len);
 	Function is pal_error_line(Int is data_addr, Int is len);
 	Function of Int is pal_read_line(Int is out_len_addr);
+	Function is pal_console_free(Int is ptr);
 	Function of Int is pal_read_bytes(Int is dst_addr, Int is count);
 	Function is console_binary_mode();
 }

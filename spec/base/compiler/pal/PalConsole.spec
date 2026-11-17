@@ -84,6 +84,10 @@ long long spec_pal_read_line(long long out_len_addr) {
     return (long long)(intptr_t)buf;
 }
 
+void spec_pal_console_free(long long ptr) {
+    if (ptr) free((void*)(intptr_t)ptr);
+}
+
 long long spec_pal_read_bytes(long long dst_addr, long long count) {
     if (!dst_addr || count <= 0) return 0;
     char* buf = (char*)(intptr_t)dst_addr;

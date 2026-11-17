@@ -3727,7 +3727,7 @@ Class is IrBuilder{
 	}
 
 	local Function of String is emitImportFieldOrAlloc(String is provStruct, String is rawName){
-		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
+		if({ provStruct == 'Math' || provStruct == 'String' || provStruct == 'Array' || provStruct == 'Map' || provStruct == 'Vector' || provStruct == 'HashTable' || provStruct == 'Buf' || provStruct == 'Mem' || provStruct == 'Introspection' || provStruct == 'CliArgs' || provStruct == 'Dir' || provStruct == 'File' || provStruct == 'Process' || provStruct == 'Output' || provStruct == 'Stderr' || provStruct == 'Input' || provStruct == 'AudioDevice' || provStruct == 'Arc' || provStruct == 'Slab' || provStruct == 'Heap' || provStruct == 'Pool' || provStruct == 'Arena' || provStruct == 'Intern' }, {
 			return 'null';
 		});
 		if({ self:clsMap:has(key: provStruct) && self:bindings:isSysinternal(cls: self:clsMap:get(key: provStruct, default: ClassInfo:init(name: '', baseClass: '', members: []))) }, {

@@ -13,7 +13,7 @@ compares to the languages it draws on.
    - [Minimal Core & Maximum Standard Library](#1-minimal-core--maximum-standard-library)
    - [Classes and Functions as First-Class Types](#2-classes-and-functions-as-first-class-types-uniform-declarations)
    - [The "Never Null" Safety Standard](#3-the-never-null-safety-standard)
-   - [Unblockable & Concurrency-First Iteration](#4-unblockable--concurrency-first-iteration)
+   - [Concurrency-First Iteration](#4-concurrency-first-iteration)
    - [Scoped Region Desugaring (`as`)](#5-scoped-region-desugaring-as)
    - [Tab-Based Indentation Standard](#6-tab-based-indentation-standard)
    - [Multi-File Module Resolution](#7-multi-file-module-resolution)
@@ -68,7 +68,7 @@ In Spec, `null` does not exist as a runtime value, pointer, or type:
 - **Deferred Initialization**: Class fields may be declared without inline values provided they are assigned in `init(...)` before use.
 - **Default Fallbacks**: Any operation reading from a source that could be empty requires an explicit default fallback argument (e.g., `getString(key, default)`, `pop(default)`, `charAt(index, default)`).
 
-### 4. Unblockable & Concurrency-First Iteration
+### 4. Concurrency-First Iteration
 Spec has no primitive loop keywords (`while`, `for`, `do`). Iteration is decoupled into lifecycle objects or inlined scoped loops through the `Loops` provider (`['base', 'sys', as Loops()]`):
 - **`while({ cond }, { step })`**: The bare predicate loop, inlined directly to native LLVM IR basic blocks with zero closures and zero heap allocations.
 - **`while([vars], { cond }, { step })`**: The scoped-variable loop. Variables are scoped strictly to the loop construct:
@@ -278,8 +278,8 @@ replace Array of Array of String is using: [
   );
   ```
 
-- **High-Efficiency LLVM IR Backend & Pure-Spec Runtime**: 24-byte `SpecBuf` small-buffer optimization (SBO), 4-bucket thread-local small-object freelists in pure Spec (`Arc.spec`), structural `SpecOptimizer` passes (`DevirtPass`, `ArcPeepholePass`, `PoolElisionPass`, `WrapperUnwrapPass`, `ConcatFusionPass`, `InlineHintPass`), and zero-allocation character table lookups.
-- **One Uniform Memory Path — Pure-Spec ARC with Claim Pools, Compiler Included**: Memory is automatic reference counting (`base:sysinternal:Arc`) over thread-local claim pools (`base:sysinternal:Pool`) drained at scope exit. Both `Arc` and `Pool` (along with `Arena` and `Intern`) are written in pure Spec over `base:sysinternal:Mem` and compiled inside the same `IrModule` as user code. There is no garbage collector and no separate compiler arena: the compiler runs on the exact same ARC machinery it generates for user programs.
+- **High-Efficiency LLVM IR Backend & Pure-Spec Runtime**: 24-byte `SpecBuf` small-buffer optimization (SBO), 16-byte packed `SpecHeader`, 10-class 64 KiB aligned slab cartons (`Slab.spec`, `32..4096` bytes) with single-threaded non-atomic fast paths in `Arc` and `Slab`, general raw heap (`Heap.spec`) over `Slab` and OS virtual memory (`mmap`/`mremap`/`VirtualAlloc`, zero glibc `malloc`/`free` in Spec-managed memory), structural `SpecOptimizer` passes (`DevirtPass`, `ArcPeepholePass`, `PoolElisionPass`, `WrapperUnwrapPass`, `ConcatFusionPass`, `InlineHintPass`), and zero-allocation character table lookups.
+- **One Uniform Memory Path — Pure-Spec ARC with Claim Pools, Compiler Included**: Memory is automatic reference counting (`base:sysinternal:Arc`) over thread-local claim pools (`base:sysinternal:Pool`) drained at scope exit. `Arc`, `Slab`, `Heap`, `Pool`, `Arena`, and `Intern` are all written in pure Spec over `base:sysinternal:Mem`'s OS virtual memory floor and compiled inside the same `IrModule` as user code. There is no garbage collector and no separate compiler arena: the compiler runs on the exact same ARC machinery it generates for user programs.
 
 - **Scope-Merged Imports (`as ClassName()`)**: Instance imports materialize an owned singleton instance scoped to the declaring class, merging its methods directly into bare scope with zero global namespace pollution:
   ```spec
@@ -316,7 +316,7 @@ replace Array of Array of String is using: [
   ]);
   ```
 
-- **Structural `sysinternal` Floor Isolation**: Low-level memory intrinsics (`Mem`), unmanaged runtime primitives (`Arc`, `Pool`, `Arena`, `Intern`), and scalar/byte-slice OS PAL declarations live in `base:sysinternal:*` floor classes. The compiler structurally enforces that only classes whose declared namespace begins with `['base', 'sys', ...]` (plus `base:core`, `base:struct`, `base:math`, `base:net`, `base:audio` stdlib wrappers) may invoke the floor, ensuring all userland code interacts through clean, type-safe Spec wrappers.
+- **Structural `sysinternal` Floor Isolation**: Low-level memory intrinsics (`Mem`), unmanaged runtime primitives (`Arc`, `Slab`, `Heap`, `Pool`, `Arena`, `Intern`), and scalar/byte-slice OS PAL declarations live in `base:sysinternal:*` floor classes. The compiler structurally enforces that only classes whose declared namespace begins with `['base', 'sys', ...]` (plus `base:core`, `base:struct`, `base:math`, `base:net`, `base:audio` stdlib wrappers) may invoke the floor, ensuring all userland code interacts through clean, type-safe Spec wrappers.
 
 ---
 
@@ -386,7 +386,7 @@ rebuilds itself from its canonical LLVM IR (`bootstrap/spec.ll`) and scalar OS P
 |---|---|---|---|---|
 | **Typing** | Static, compiler-enforced (narrowing, container elements, call sites, exhaustiveness, root-contract calls) | Static, weak — unchecked casts, implicit conversions | Static, strong, runtime-checked casts | Static, strongest: affine types, full inference |
 | **Null safety** | Never-null: no null value; fallible reads require explicit defaults | `NULL` everywhere | `null` everywhere; `Optional` opt-in | `Option<T>`, compiler-enforced |
-| **Memory** | Reference counting with per-scope claim pools; the compiler runs on the same ARC as its generated programs — no separate compiler arena; verified crash-free under ASan/UBSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
+| **Memory** | Reference counting with per-scope claim pools over pure-Spec 64 KiB slab cartons and an OS VM floor (`mmap`/`VirtualAlloc`, no glibc `malloc`/`free` in Spec memory); the compiler runs on the same ARC as its generated programs — no separate compiler arena; verified crash-free under ASan/UBSan; no general collector yet | Fully manual (`malloc`/`free`) | Tracing GC | Ownership, compile-time frees |
 | **OOP model** | Classes, multiple inheritance with **ambiguity errors**; abstract-by-convention interfaces; four-tier visibility (public / `local` / `contained` / `held`) | None — hand-rolled with structs and function pointers | Single inheritance + interfaces; four visibility levels, all overridable | Traits + composition |
 | **Dispatch** | Virtual tables (vtables), most-derived wins; root-typed `Any` refs dispatch dynamically; held functions and the held enum contract (`of`/`values`) dispatch through the class name; the enum identity contract (`name`/`ordinal`) lives on the shared Enum root, reflectively over the metadata floor | Whatever you build — switches or hand-made vtables | All methods virtual by default | Static by default; `dyn` trait objects |
 | **Override safety** | `replace` mandatory on overrides; `merge` for data/behavior composition; non-public members cannot be shadowed | None — nothing to override | `@Override` optional (advisory) | No override concept (no inheritance) |
